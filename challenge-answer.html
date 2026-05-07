@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘의 질문에 답하기 — VoiceUp</title>
+  <style>
+    :root {
+      --primary: #D63384; --rose: #FF6B9D; --coral: #FF8FAB;
+      --bg: #FFF5F8; --bg2: #FFEEF4; --surface: #FFFFFF; --surface2: #FFF0F5;
+      --text: #2D1022; --text-muted: #7D4A66; --text-dim: #B08098;
+      --border: rgba(214,51,132,0.15); --border-soft: rgba(214,51,132,0.08);
+      --radius: 20px; --radius-sm: 12px;
+      --shadow: 0 4px 20px rgba(214,51,132,0.10); --shadow-lg: 0 12px 48px rgba(214,51,132,0.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+    .gradient-text { background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 99px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .25s; border: none; }
+    .btn-primary { background: linear-gradient(135deg,var(--primary),var(--rose)); color: #fff; box-shadow: 0 8px 24px rgba(214,51,132,.4); }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-ghost { background: var(--surface); color: var(--primary); border: 2px solid rgba(214,51,132,.25); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(255,245,248,.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(214,51,132,.1); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 20px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; }
+    .nav-back { font-size: 14px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .nav-back:hover { color: var(--primary); }
+    .hero { padding: 100px 0 60px; position: relative; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; pointer-events: none; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(70px); }
+    .orb-1 { width: 400px; height: 400px; background: #FCE4EC; opacity: .5; top: -100px; right: -100px; }
+    .orb-2 { width: 300px; height: 300px; background: #FFE4EF; opacity: .5; bottom: -80px; left: -60px; }
+    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(214,51,132,.08) 1.5px,transparent 1.5px); background-size: 32px 32px; }
+    .hero-inner { position: relative; z-index: 1; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; background: rgba(194,24,91,.12); color: #C2185B; border: 1px solid rgba(194,24,91,.25); margin-bottom: 16px; }
+    .hero-emoji { font-size: 64px; margin-bottom: 16px; display: block; }
+    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: 900; line-height: 1.2; margin-bottom: 14px; }
+    .hero-desc { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; }
+    .hero-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+    .meta-chip { background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+    .meta-chip strong { color: var(--primary); }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    section { padding: 60px 0; }
+    section + section { padding-top: 0; }
+    .section-label { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 900; margin-bottom: 24px; }
+    .overview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 40px; }
+    .overview-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
+    .overview-val { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .overview-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .curriculum-list { display: flex; flex-direction: column; gap: 16px; }
+    .curriculum-week { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .week-header { display: flex; align-items: center; gap: 16px; padding: 20px 24px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .week-num { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,var(--primary),var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; }
+    .week-info { flex: 1; }
+    .week-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .week-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .week-arrow { font-size: 18px; color: var(--text-dim); transition: transform .3s; }
+    .curriculum-week.open .week-arrow { transform: rotate(90deg); }
+    .week-body { display: none; padding: 0 24px 20px; border-top: 1px solid var(--border-soft); }
+    .curriculum-week.open .week-body { display: block; }
+    .lesson-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .lesson-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+    .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .benefit-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
+    .benefit-icon { font-size: 28px; margin-bottom: 10px; }
+    .benefit-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .benefit-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+    .cta-box { background: linear-gradient(135deg,var(--primary),var(--rose),var(--coral)); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(214,51,132,.4); }
+    .cta-box::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.08); }
+    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 900; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
+    .cta-desc { font-size: 15px; color: rgba(255,255,255,.85); margin-bottom: 28px; position: relative; z-index: 1; }
+    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.12); position: relative; z-index: 1; }
+    .btn-white:hover { transform: translateY(-2px); }
+    footer { border-top: 1px solid var(--border); padding: 36px 0; background: var(--bg2); }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-logo { font-size: 18px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .footer-copy { font-size: 12px; color: var(--text-dim); }
+    @media (max-width: 600px) { .benefits-grid { grid-template-columns: 1fr; } .hero-actions { flex-direction: column; } .hero-actions .btn { width: 100%; } }
+  </style>
+</head>
+<body>
+<nav><div class="container nav-inner"><a class="logo" href="index.html">VoiceUp 🌸</a><a class="nav-back" href="index.html">← 챌린지 목록으로</a></div></nav>
+
+<section class="hero">
+  <div class="hero-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="dots-bg"></div></div>
+  <div class="container hero-inner">
+    <div class="hero-badge">💬 즉흥 답변</div>
+    <span class="hero-emoji">💬</span>
+    <h1 class="hero-title"><span class="gradient-text">오늘의 질문에</span> 답하기</h1>
+    <p class="hero-desc">매일 하나의 질문이 주어지고, 2분 안에 즉흥으로 답하는 챌린지예요. 머릿속 생각을 바로 말로 꺼내는 능력, 지금부터 키워봐요.</p>
+    <div class="hero-meta">
+      <div class="meta-chip">⏱️ 소요시간 <strong>2분</strong></div>
+      <div class="meta-chip">👥 참여자 <strong>976명</strong></div>
+      <div class="meta-chip">⭐ 만족도 <strong>4.6점</strong></div>
+      <div class="meta-chip">📊 난이도 <strong>초급</strong></div>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#">🌸 지금 바로 도전하기</a>
+      <a class="btn btn-ghost" href="index.html">← 목록으로</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="overview-grid">
+      <div class="overview-card"><div class="overview-val">4주</div><div class="overview-label">커리큘럼</div></div>
+      <div class="overview-card"><div class="overview-val">8강</div><div class="overview-label">총 강의 수</div></div>
+      <div class="overview-card"><div class="overview-val">2분</div><div class="overview-label">1회 도전 시간</div></div>
+    </div>
+    <div class="section-label">Curriculum</div>
+    <h2 class="section-title">4주 커리큘럼</h2>
+    <div class="curriculum-list">
+      <div class="curriculum-week open">
+        <div class="week-header"><div class="week-num">1</div><div class="week-info"><div class="week-title">즉흥 말하기의 기초</div><div class="week-sub">2강 · 생각을 말로 바로 꺼내는 연습</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">💡</div><div><strong>즉흥 말하기가 왜 어려울까?</strong>머릿속 생각이 입 밖으로 나오지 않는 이유를 파악하고, 긴장을 푸는 방법부터 시작해요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🗣️</div><div><strong>1분 자유 말하기 도전</strong>주제 없이 1분 동안 말하는 연습으로 '말하기 근육'을 깨워요. 틀려도 괜찮아요!</div></div>
+        </div></div>
+      </div>
+      <div class="curriculum-week">
+        <div class="week-header"><div class="week-num">2</div><div class="week-info"><div class="week-title">답변 구조 만들기</div><div class="week-sub">2강 · 두괄식으로 핵심을 먼저 말하는 법</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">📌</div><div><strong>두괄식 답변의 힘</strong>결론을 먼저 말하고 이유를 붙이는 구조로 훨씬 명확하게 전달해요. 연습하면 자연스러워져요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">⏰</div><div><strong>2분 안에 완성하기</strong>시작·중간·끝을 2분에 맞게 분배하는 타이밍 감각을 익혀요.</div></div>
+        </div></div>
+      </div>
+      <div class="curriculum-week">
+        <div class="week-header"><div class="week-num">3</div><div class="week-info"><div class="week-title">다양한 질문 유형 정복</div><div class="week-sub">2강 · 의견형·경험형·가치관형 질문 대응법</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">💬</div><div><strong>의견형 질문: "어떻게 생각하세요?"</strong>내 생각을 정리해서 간결하게 전달하는 방법을 배워요. 정답이 없는 질문도 자신 있게 답해요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🌟</div><div><strong>경험형 질문: "언제 그랬나요?"</strong>나의 실제 경험을 생생하게 전달하는 스토리텔링 기법을 익혀요.</div></div>
+        </div></div>
+      </div>
+      <div class="curriculum-week">
+        <div class="week-header"><div class="week-num">4</div><div class="week-info"><div class="week-title">실전 즉흥 답변 & 피드백</div><div class="week-sub">2강 · 매일 질문에 답하며 실력 굳히기</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">🎯</div><div><strong>예상 밖 질문 도전</strong>처음 보는 질문에도 당황하지 않고 즉흥으로 답하는 연습을 해요. 반복이 자신감이에요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🤖</div><div><strong>AI 즉흥 답변 피드백</strong>논리 흐름·말 속도·필러 단어(어… 그…) 사용 빈도를 AI가 분석해서 알려줘요.</div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="container">
+    <div class="section-label">Benefits</div>
+    <h2 class="section-title">이런 걸 얻을 수 있어요</h2>
+    <div class="benefits-grid">
+      <div class="benefit-card"><div class="benefit-icon">⚡</div><div class="benefit-title">즉흥 대응력 향상</div><p class="benefit-desc">갑작스러운 발표·질문·회의에도 당황하지 않고 바로 말할 수 있게 돼요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">🧠</div><div class="benefit-title">논리적 사고 훈련</div><p class="benefit-desc">두괄식 구조로 말하는 습관이 생겨 생각을 명확하게 정리할 수 있어요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">😊</div><div class="benefit-title">일상 대화 자신감</div><p class="benefit-desc">친구·직장 동료와의 대화에서도 자연스럽게 내 생각을 표현하게 돼요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">📈</div><div class="benefit-title">매일 성장 확인</div><p class="benefit-desc">하루 2분 투자로 4주 후 눈에 띄게 달라진 나를 발견할 수 있어요.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0; padding-bottom:80px;">
+  <div class="container">
+    <div class="cta-box">
+      <h2 class="cta-title">오늘의 질문, 지금 바로 답해볼까요? 💬</h2>
+      <p class="cta-desc">매일 2분의 연습이 당신의 언어를 바꿔요.</p>
+      <a class="btn btn-white" href="#">🌸 오늘의 질문 도전하기</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="container footer-inner"><div class="footer-logo">VoiceUp 🌸</div><div class="footer-copy">© 2025 VoiceUp. All rights reserved.</div></div></footer>
+<script>
+  document.querySelectorAll('.week-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const week = h.parentElement;
+      const isOpen = week.classList.contains('open');
+      document.querySelectorAll('.curriculum-week').forEach(w => w.classList.remove('open'));
+      if (!isOpen) week.classList.add('open');
+    });
+  });
+</script>
+</body>
+</html>

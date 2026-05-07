@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3분 설득 스피치 — VoiceUp</title>
+  <style>
+    :root {
+      --primary: #D63384; --rose: #FF6B9D; --coral: #FF8FAB;
+      --bg: #FFF5F8; --bg2: #FFEEF4; --surface: #FFFFFF; --surface2: #FFF0F5;
+      --text: #2D1022; --text-muted: #7D4A66; --text-dim: #B08098;
+      --border: rgba(214,51,132,0.15); --border-soft: rgba(214,51,132,0.08);
+      --radius: 20px; --radius-sm: 12px;
+      --shadow: 0 4px 20px rgba(214,51,132,0.10); --shadow-lg: 0 12px 48px rgba(214,51,132,0.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+    .gradient-text { background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 99px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .25s; border: none; }
+    .btn-primary { background: linear-gradient(135deg,var(--primary),var(--rose)); color: #fff; box-shadow: 0 8px 24px rgba(214,51,132,.4); }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-ghost { background: var(--surface); color: var(--primary); border: 2px solid rgba(214,51,132,.25); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(255,245,248,.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(214,51,132,.1); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 20px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; }
+    .nav-back { font-size: 14px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .nav-back:hover { color: var(--primary); }
+    .hero { padding: 100px 0 60px; position: relative; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; pointer-events: none; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(70px); }
+    .orb-1 { width: 400px; height: 400px; background: #FCE4EC; opacity: .5; top: -100px; right: -100px; }
+    .orb-2 { width: 300px; height: 300px; background: #FFE4EF; opacity: .5; bottom: -80px; left: -60px; }
+    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(214,51,132,.08) 1.5px,transparent 1.5px); background-size: 32px 32px; }
+    .hero-inner { position: relative; z-index: 1; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; background: rgba(194,24,91,.12); color: #C2185B; border: 1px solid rgba(194,24,91,.25); margin-bottom: 16px; }
+    .hero-emoji { font-size: 64px; margin-bottom: 16px; display: block; }
+    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: 900; line-height: 1.2; margin-bottom: 14px; }
+    .hero-desc { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; }
+    .hero-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+    .meta-chip { background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+    .meta-chip strong { color: var(--primary); }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    section { padding: 60px 0; }
+    section + section { padding-top: 0; }
+    .section-label { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 900; margin-bottom: 24px; }
+    .overview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 40px; }
+    .overview-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
+    .overview-val { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .overview-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .curriculum-list { display: flex; flex-direction: column; gap: 16px; }
+    .curriculum-week { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .week-header { display: flex; align-items: center; gap: 16px; padding: 20px 24px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .week-num { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,var(--primary),var(--rose)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; }
+    .week-info { flex: 1; }
+    .week-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .week-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .week-arrow { font-size: 18px; color: var(--text-dim); transition: transform .3s; }
+    .curriculum-week.open .week-arrow { transform: rotate(90deg); }
+    .week-body { display: none; padding: 0 24px 20px; border-top: 1px solid var(--border-soft); }
+    .curriculum-week.open .week-body { display: block; }
+    .lesson-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .lesson-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+    .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .benefit-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
+    .benefit-icon { font-size: 28px; margin-bottom: 10px; }
+    .benefit-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .benefit-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+    .cta-box { background: linear-gradient(135deg,var(--primary),var(--rose),var(--coral)); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(214,51,132,.4); }
+    .cta-box::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.08); }
+    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 900; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
+    .cta-desc { font-size: 15px; color: rgba(255,255,255,.85); margin-bottom: 28px; position: relative; z-index: 1; }
+    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.12); position: relative; z-index: 1; }
+    .btn-white:hover { transform: translateY(-2px); }
+    footer { border-top: 1px solid var(--border); padding: 36px 0; background: var(--bg2); }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-logo { font-size: 18px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .footer-copy { font-size: 12px; color: var(--text-dim); }
+    @media (max-width: 600px) { .benefits-grid { grid-template-columns: 1fr; } .hero-actions { flex-direction: column; } .hero-actions .btn { width: 100%; } }
+  </style>
+</head>
+<body>
+<nav><div class="container nav-inner"><a class="logo" href="index.html">VoiceUp 🌸</a><a class="nav-back" href="index.html">← 챌린지 목록으로</a></div></nav>
+
+<section class="hero">
+  <div class="hero-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="dots-bg"></div></div>
+  <div class="container hero-inner">
+    <div class="hero-badge">🗣️ 스피치</div>
+    <span class="hero-emoji">🗣️</span>
+    <h1 class="hero-title"><span class="gradient-text">3분 설득 스피치</span> 챌린지</h1>
+    <p class="hero-desc">내 생각을 3분 안에 상대방의 마음을 움직이도록 전달하는 챌린지예요. 프레젠테이션·면접·일상 설득까지, 말 한마디의 힘을 키워봐요.</p>
+    <div class="hero-meta">
+      <div class="meta-chip">⏱️ 소요시간 <strong>3분</strong></div>
+      <div class="meta-chip">👥 참여자 <strong>1,209명</strong></div>
+      <div class="meta-chip">⭐ 만족도 <strong>4.8점</strong></div>
+      <div class="meta-chip">📊 난이도 <strong>중급</strong></div>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#">🌸 지금 바로 도전하기</a>
+      <a class="btn btn-ghost" href="index.html">← 목록으로</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="overview-grid">
+      <div class="overview-card"><div class="overview-val">4주</div><div class="overview-label">커리큘럼</div></div>
+      <div class="overview-card"><div class="overview-val">12강</div><div class="overview-label">총 강의 수</div></div>
+      <div class="overview-card"><div class="overview-val">3분</div><div class="overview-label">1회 도전 시간</div></div>
+    </div>
+    <div class="section-label">Curriculum</div>
+    <h2 class="section-title">4주 커리큘럼</h2>
+    <div class="curriculum-list">
+      <div class="curriculum-week open">
+        <div class="week-header"><div class="week-num">1</div><div class="week-info"><div class="week-title">설득의 원리 이해하기</div><div class="week-sub">3강 · 사람은 왜 설득되는가</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">🧠</div><div><strong>설득의 3요소: 로고스·에토스·파토스</strong>논리(로고스)·신뢰(에토스)·감정(파토스)으로 어떻게 사람을 움직이는지 배워요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🎯</div><div><strong>청중 분석하기</strong>누구에게 말하느냐에 따라 설득 방식이 달라져요. 상대방의 관심사·감정·니즈를 파악하는 법을 익혀요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🗣️</div><div><strong>나의 첫 3분 스피치 녹화</strong>아직 다듬지 않아도 괜찮아요. 지금의 나를 기록하고 4주 후와 비교해봐요.</div></div>
+        </div></div>
+      </div>
+      <div class="curriculum-week">
+        <div class="week-header"><div class="week-num">2</div><div class="week-info"><div class="week-title">스피치 구조 설계하기</div><div class="week-sub">3강 · 서론·본론·결론을 3분에 담는 법</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">📝</div><div><strong>후킹 오프닝 만들기</strong>첫 15초에 청중의 시선을 사로잡는 오프닝 기술(질문·통계·스토리)을 배워요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">📊</div><div><strong>본론: 근거 3가지 구성하기</strong>핵심 주장을 뒷받침하는 근거를 간결하게 3가지로 정리하는 법을 익혀요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🔥</div><div><strong>행동 촉구 클로징</strong>마지막에 청중이 무언가를 하고 싶어지게 만드는 강력한 클로징 기법을 배워요.</div></div>
+        </div></div>
+      </div>
+      <div class="curriculum-week">
+        <div class="week-header"><div class="week-num">3</div><div class="week-info"><div class="week-title">전달력 높이기</div><div class="week-sub">3강 · 목소리·속도·제스처로 스피치 완성하기</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">🎙️</div><div><strong>강약과 포즈의 기술</strong>중요한 부분에서 목소리를 높이고 포즈(침묵)를 활용해 메시지를 극적으로 전달해요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">👐</div><div><strong>제스처·시선 처리</strong>손짓·시선이 스피치 신뢰도를 높여줘요. 자연스러운 제스처 패턴을 연습해요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🏃</div><div><strong>속도 조절 훈련</strong>너무 빠르지도 느리지도 않게, 청중이 따라올 수 있는 속도로 말하는 감각을 키워요.</div></div>
+        </div></div>
+      </div>
+      <div class="curriculum-week">
+        <div class="week-header"><div class="week-num">4</div><div class="week-info"><div class="week-title">실전 설득 스피치 완성</div><div class="week-sub">3강 · 실제 주제로 완성된 스피치 발표하기</div></div><div class="week-arrow">›</div></div>
+        <div class="week-body"><div class="lesson-list">
+          <div class="lesson-item"><div class="lesson-icon">💼</div><div><strong>직장·취업 주제 스피치</strong>면접, 프레젠테이션, 팀 설득 상황에서 바로 쓸 수 있는 실전 스피치를 완성해요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">👥</div><div><strong>커뮤니티 발표 & 피드백</strong>같은 챌린지 멤버들 앞에서 발표하고 실시간 피드백을 받아봐요.</div></div>
+          <div class="lesson-item"><div class="lesson-icon">🤖</div><div><strong>AI 종합 스피치 분석</strong>4주 전 첫 녹화와 비교해서 얼마나 성장했는지 AI가 수치로 보여줘요.</div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="container">
+    <div class="section-label">Benefits</div>
+    <h2 class="section-title">이런 걸 얻을 수 있어요</h2>
+    <div class="benefits-grid">
+      <div class="benefit-card"><div class="benefit-icon">🎯</div><div class="benefit-title">설득력 있는 말하기</div><p class="benefit-desc">논리와 감정을 함께 담아 상대방의 마음을 움직이는 스피치를 만들어요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">🏆</div><div class="benefit-title">프레젠테이션 자신감</div><p class="benefit-desc">발표·보고·회의에서 자신 있게 내 의견을 펼칠 수 있게 돼요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">🎙️</div><div class="benefit-title">목소리·전달력 향상</div><p class="benefit-desc">강약·속도·포즈를 활용해서 전달력이 눈에 띄게 달라져요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">📈</div><div class="benefit-title">성장 데이터 확인</div><p class="benefit-desc">AI가 4주 전과 비교해서 구체적인 성장 수치를 보여줘요.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0; padding-bottom:80px;">
+  <div class="container">
+    <div class="cta-box">
+      <h2 class="cta-title">3분으로 세상을 설득해봐요 🗣️</h2>
+      <p class="cta-desc">말 한마디의 힘을 4주 만에 경험하세요.</p>
+      <a class="btn btn-white" href="#">🌸 설득 스피치 챌린지 시작하기</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="container footer-inner"><div class="footer-logo">VoiceUp 🌸</div><div class="footer-copy">© 2025 VoiceUp. All rights reserved.</div></div></footer>
+<script>
+  document.querySelectorAll('.week-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const week = h.parentElement;
+      const isOpen = week.classList.contains('open');
+      document.querySelectorAll('.curriculum-week').forEach(w => w.classList.remove('open'));
+      if (!isOpen) week.classList.add('open');
+    });
+  });
+</script>
+</body>
+</html>
