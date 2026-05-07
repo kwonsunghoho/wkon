@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoiceUp — 목소리로 시작하는 챌린지</title>
+  <style>
+    :root {
+      --primary: #D63384;
+      --primary-light: #E8608A;
+      --primary-dark: #B02871;
+      --rose: #FF6B9D;
+      --rose-light: #FF85B3;
+      --coral: #FF8FAB;
+      --peach: #FFB3C6;
+      --lavender: #E8B4D4;
+      --blush: #FCE4EC;
+      --bg: #FFF5F8;
+      --bg2: #FFEEF4;
+      --bg3: #FFE4EF;
+      --surface: #FFFFFF;
+      --surface2: #FFF0F5;
+      --text: #2D1022;
+      --text-muted: #7D4A66;
+      --text-dim: #B08098;
+      --border: rgba(214,51,132,0.15);
+      --border-soft: rgba(214,51,132,0.08);
+      --radius: 20px;
+      --radius-sm: 12px;
+      --shadow: 0 4px 20px rgba(214,51,132,0.10);
+      --shadow-lg: 0 12px 48px rgba(214,51,132,0.18);
+      --shadow-xl: 0 24px 64px rgba(214,51,132,0.22);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg3); }
+    ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 99px; }
+
+    /* ── UTILS ── */
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 700;
+      background: linear-gradient(135deg, rgba(214,51,132,.12), rgba(255,107,157,.1));
+      color: var(--primary); border: 1px solid rgba(214,51,132,.25);
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 28px; border-radius: 99px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      text-decoration: none; transition: all .25s ease; border: none; outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      color: #fff; box-shadow: 0 8px 24px rgba(214,51,132,.4);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(214,51,132,.55); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-ghost {
+      background: var(--surface); color: var(--primary);
+      border: 2px solid rgba(214,51,132,.25);
+    }
+    .btn-ghost:hover { background: var(--surface2); border-color: var(--primary); }
+
+    .section-label {
+      font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: clamp(24px, 4vw, 42px); font-weight: 900;
+      line-height: 1.2; margin-bottom: 14px; color: var(--text);
+    }
+    .section-desc { font-size: 15px; color: var(--text-muted); line-height: 1.8; }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--rose) 50%, var(--coral) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 14px 0;
+      background: rgba(255,245,248,.95);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(214,51,132,.1);
+      transition: all .3s;
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+    .logo {
+      font-size: 20px; font-weight: 900;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      text-decoration: none; flex-shrink: 0;
+    }
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+    .nav-links a {
+      font-size: 14px; font-weight: 600; color: var(--text-muted);
+      text-decoration: none; transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--primary); }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .nav-cta { padding: 10px 18px; font-size: 13px; }
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 8px; background: none; border: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--primary); border-radius: 2px; transition: all .3s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-menu {
+      display: none; position: fixed; top: 60px; left: 0; right: 0; bottom: 0;
+      background: rgba(255,245,248,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 28px 24px; z-index: 99; overflow-y: auto;
+    }
+    .mobile-menu.open { display: flex; flex-direction: column; gap: 0; }
+    .mobile-menu ul { list-style: none; display: flex; flex-direction: column; }
+    .mobile-menu li { border-bottom: 1px solid var(--border); }
+    .mobile-menu a {
+      display: block; padding: 18px 0;
+      font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
+    }
+    .mobile-menu-cta { margin-top: 28px; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100svh; display: flex; align-items: center;
+      padding: 100px 0 60px; position: relative; overflow: hidden;
+    }
+    .hero-bg { position: absolute; inset: 0; pointer-events: none; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); }
+    .orb-1 { width: 500px; height: 500px; background: #F9A8D4; opacity: .55; top: -150px; right: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: #FBCFE8; opacity: .6; bottom: -100px; left: -80px; }
+    .orb-3 { width: 300px; height: 300px; background: #FDE68A; opacity: .2; top: 40%; left: 40%; }
+    .dots-bg {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(214,51,132,.10) 1.5px, transparent 1.5px);
+      background-size: 34px 34px;
+    }
+    .hero-content {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+    }
+    .hero-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #F472B6; flex-shrink: 0;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0% { box-shadow: 0 0 0 0 rgba(244,114,182,.5); }
+      70% { box-shadow: 0 0 0 10px rgba(244,114,182,0); }
+      100% { box-shadow: 0 0 0 0 rgba(244,114,182,0); }
+    }
+    .hero-title {
+      font-size: clamp(30px, 5vw, 56px); font-weight: 900;
+      line-height: 1.15; letter-spacing: -1px; margin-bottom: 18px;
+    }
+    .hero-desc { font-size: 16px; color: var(--text-muted); line-height: 1.85; margin-bottom: 32px; }
+    .hero-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .hero-stats {
+      display: flex; gap: 24px; margin-top: 36px; padding-top: 24px;
+      border-top: 1px solid rgba(214,51,132,.15); flex-wrap: wrap;
+    }
+    .stat-num {
+      font-size: 22px; font-weight: 900;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .hero-card-main {
+      background: #fff; border: 1.5px solid rgba(214,51,132,.18);
+      border-radius: var(--radius); padding: 24px;
+      box-shadow: var(--shadow-xl); position: relative; overflow: hidden;
+    }
+    .hero-card-main::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--rose), var(--coral));
+    }
+    .card-user { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .user-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .user-meta { font-size: 11px; color: var(--text-muted); }
+    .day-badge {
+      display: inline-block; background: linear-gradient(135deg, var(--primary), var(--rose));
+      color: #fff; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700;
+    }
+    .waveform {
+      display: flex; align-items: center; gap: 2px; height: 48px; margin: 14px 0;
+      padding: 8px 10px; background: var(--surface2); border-radius: 10px;
+    }
+    .waveform-bar {
+      flex: 1; border-radius: 3px;
+      background: linear-gradient(to top, var(--primary), var(--rose-light));
+      animation: wave 1.2s ease-in-out infinite;
+    }
+    @keyframes wave { 0%,100%{transform:scaleY(.2)} 50%{transform:scaleY(1)} }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+    .card-reactions { display: flex; gap: 10px; }
+    .reaction { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+    .reaction.active { color: var(--primary); }
+    .record-btn {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(214,51,132,.45);
+      animation: pulse-btn 2s ease-in-out infinite;
+    }
+    @keyframes pulse-btn {
+      0%,100% { box-shadow: 0 4px 16px rgba(214,51,132,.4); }
+      50% { box-shadow: 0 4px 28px rgba(214,51,132,.7); }
+    }
+    .record-icon { width: 13px; height: 13px; background: #fff; border-radius: 50%; }
+    .float-card {
+      position: absolute; background: #fff; border: 1.5px solid rgba(214,51,132,.18);
+      border-radius: var(--radius-sm); padding: 12px 16px;
+      box-shadow: var(--shadow-lg); font-size: 12px; white-space: nowrap;
+    }
+    .float-card-1 { top: -24px; right: 0; animation: float1 4s ease-in-out infinite; }
+    .float-card-2 { bottom: -20px; left: 0; animation: float2 4s ease-in-out infinite 1.2s; }
+    @keyframes float1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+    .float-label { font-weight: 700; color: var(--text); font-size: 12px; }
+    .float-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── HOW ── */
+    .how { padding: 90px 0; background: var(--bg2); }
+    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+    .step-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 32px 24px; text-align: center;
+      transition: all .3s; box-shadow: var(--shadow);
+    }
+    .step-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--rose); }
+    .step-icon {
+      width: 60px; height: 60px; border-radius: 18px; margin: 0 auto 18px;
+      display: flex; align-items: center; justify-content: center; font-size: 26px;
+    }
+    .step-num { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--rose); margin-bottom: 8px; }
+    .step-title { font-size: 17px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+    .step-desc { font-size: 13px; color: var(--text-muted); line-height: 1.75; }
+
+    /* ── CHALLENGES ── */
+    .challenges { padding: 90px 0; }
+    .challenges-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 36px; }
+    .challenges-tabs {
+      display: flex; gap: 6px; padding: 5px;
+      background: var(--surface2); border-radius: 12px;
+    }
+    .tab-btn {
+      padding: 8px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
+      cursor: pointer; border: none; background: transparent; color: var(--text-muted);
+      transition: all .2s; -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      color: #fff; box-shadow: 0 4px 12px rgba(214,51,132,.35);
+    }
+    .challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .challenge-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: all .3s; cursor: pointer; box-shadow: var(--shadow);
+    }
+    .challenge-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--rose); }
+    .challenge-thumb {
+      height: 120px; display: flex; align-items: center; justify-content: center; font-size: 44px;
+    }
+    .challenge-body { padding: 18px; }
+    .challenge-tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .tag { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+    .tag-voice { background: rgba(214,51,132,.1); color: var(--primary); }
+    .tag-speech { background: rgba(255,107,157,.12); color: var(--rose); }
+    .tag-express { background: rgba(255,143,171,.12); color: #E2527A; }
+    .tag-video { background: rgba(255,179,198,.2); color: #C2185B; }
+    .tag-answer { background: rgba(255,228,236,.6); color: #B5386B; }
+    .challenge-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+    .challenge-desc { font-size: 12px; color: var(--text-muted); line-height: 1.65; margin-bottom: 14px; }
+    .challenge-footer { display: flex; justify-content: space-between; align-items: center; }
+    .challenge-meta { font-size: 11px; color: var(--text-muted); }
+    .challenge-meta span { color: var(--primary); font-weight: 700; }
+    .challenge-action {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      color: #fff; border-radius: 99px; font-size: 12px; font-weight: 700;
+      cursor: pointer; border: none; transition: all .2s;
+      box-shadow: 0 4px 10px rgba(214,51,132,.3);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .challenge-card.featured { grid-column: span 2; }
+    .challenge-card.featured .challenge-thumb { height: 160px; font-size: 60px; }
+    .difficulty { display: flex; gap: 4px; margin-bottom: 10px; }
+    .diff-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    /* ── INSTRUCTORS (풀너비 한 장씩 캐러셀) ── */
+    .instructors { padding: 90px 0; background: var(--bg2); overflow: hidden; }
+
+    .inst-scroll-wrapper {
+      position: relative; margin-top: 44px;
+      max-width: 640px; margin-left: auto; margin-right: auto;
+      padding: 8px 0 4px;
+      overflow: hidden;
+    }
+
+    .inst-scroll-track {
+      display: flex;
+      flex-wrap: nowrap;
+      width: 100%;
+      transition: transform .45s cubic-bezier(.4,0,.2,1);
+      will-change: transform;
+    }
+
+    /* 화살표 버튼 */
+    .inst-nav {
+      display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 28px;
+    }
+    .inst-arrow {
+      width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border);
+      background: #fff; color: var(--primary); font-size: 22px; font-weight: 300;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .2s; box-shadow: var(--shadow);
+      -webkit-tap-highlight-color: transparent; user-select: none;
+    }
+    .inst-arrow:hover { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: var(--shadow-lg); }
+    .inst-arrow:active { transform: scale(.93); }
+    .inst-dots { display: flex; gap: 8px; align-items: center; }
+    .inst-dot {
+      width: 8px; height: 8px; border-radius: 99px; background: var(--peach);
+      cursor: pointer; transition: all .35s; -webkit-tap-highlight-color: transparent;
+    }
+    .inst-dot.active { width: 28px; background: var(--primary); }
+
+    /* 강사 카드 — 컨테이너 전체 너비 */
+    .inst-card {
+      flex: 0 0 100%;
+      background: #fff; border: 1.5px solid rgba(214,51,132,.18);
+      border-radius: 24px; overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      transition: transform .45s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* 사진 플레이스홀더 */
+    .inst-photo-area {
+      width: 100%; aspect-ratio: 4/3;
+      position: relative; overflow: hidden;
+    }
+    .inst-photo-placeholder {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      border: 2.5px dashed rgba(214,51,132,.3);
+      background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD9 50%, #EDE7F6 100%);
+      cursor: pointer; transition: all .2s;
+    }
+    .inst-card:nth-child(2) .inst-photo-placeholder {
+      background: linear-gradient(135deg, #FCE4EC 0%, #FFCDD2 50%, #FFE0B2 100%);
+    }
+    .inst-photo-placeholder:hover { border-color: var(--primary); }
+    .photo-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(255,255,255,.7); border: 2px dashed rgba(214,51,132,.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .photo-hint { font-size: 12px; font-weight: 600; color: var(--text-muted); text-align: center; line-height: 1.5; }
+    .photo-hint strong { color: var(--primary); display: block; font-size: 13px; margin-bottom: 2px; }
+
+    /* 실제 사진 들어왔을 때 */
+    .inst-photo-area img {
+      width: 100%; height: 100%; object-fit: cover; object-position: top;
+    }
+
+    /* 카드 탑 그라데이션 배지 */
+    .inst-card-accent {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    }
+    .inst-card:nth-child(1) .inst-card-accent {
+      background: linear-gradient(90deg, var(--primary), var(--rose));
+    }
+    .inst-card:nth-child(2) .inst-card-accent {
+      background: linear-gradient(90deg, var(--rose), #FF8FAB);
+    }
+
+    .inst-card-body { padding: 24px; }
+
+    .inst-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+    .inst-name { font-size: 20px; font-weight: 900; color: var(--text); }
+    .inst-role {
+      font-size: 12px; font-weight: 700; margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .inst-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+    .inst-tag {
+      padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 700;
+      background: var(--surface2); color: var(--primary);
+      border: 1px solid rgba(214,51,132,.18);
+    }
+    .inst-desc {
+      font-size: 13.5px; color: var(--text-muted); line-height: 1.8;
+      margin-bottom: 20px; padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .inst-career-section { margin-bottom: 16px; }
+    .inst-career-title {
+      font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .inst-career-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .inst-career-list { display: flex; flex-direction: column; gap: 7px; }
+    .inst-career-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 13px; color: var(--text-muted); line-height: 1.6;
+    }
+    .inst-career-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      margin-top: 6px; flex-shrink: 0;
+    }
+    .inst-career-item strong { color: var(--text); font-weight: 700; }
+
+    .inst-stat-row {
+      display: flex; gap: 10px; margin-top: 18px;
+      padding-top: 18px; border-top: 1px solid var(--border-soft);
+    }
+    .inst-stat {
+      flex: 1; background: var(--surface2); border-radius: 10px;
+      padding: 12px 8px; text-align: center; border: 1px solid rgba(214,51,132,.1);
+    }
+    .inst-stat-num {
+      font-size: 17px; font-weight: 900;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .inst-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; }
+
+    /* ── COMMUNITY ── */
+    .community { padding: 90px 0; }
+    .community-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+    .community-feed { display: flex; flex-direction: column; gap: 10px; }
+    .feed-item {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px;
+      display: flex; align-items: flex-start; gap: 12px;
+      transition: all .3s; box-shadow: var(--shadow);
+    }
+    .feed-item:hover { border-color: var(--rose); box-shadow: var(--shadow-lg); }
+    .feed-avatar {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #fff;
+    }
+    .feed-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .feed-time { font-size: 10px; color: var(--text-dim); }
+    .feed-tag { font-size: 11px; font-weight: 700; color: var(--primary); }
+    .feed-text { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-top: 3px; }
+    .feed-likes { margin-top: 6px; font-size: 11px; color: var(--text-dim); }
+    .community-proof { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
+    .proof-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 18px; box-shadow: var(--shadow);
+    }
+    .proof-num {
+      font-size: 26px; font-weight: 900;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .proof-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── CATEGORIES ── */
+    .categories { padding: 80px 0; background: var(--bg3); }
+    .cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 40px; }
+    .cat-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 24px 12px; text-align: center;
+      cursor: pointer; transition: all .3s; box-shadow: var(--shadow);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--rose); }
+    .cat-card:hover .cat-name { color: var(--primary); }
+    .cat-card:active { transform: scale(.97); }
+    .cat-icon { font-size: 32px; margin-bottom: 10px; display: block; }
+    .cat-name { font-size: 14px; font-weight: 800; margin-bottom: 4px; color: var(--text); transition: color .2s; }
+    .cat-count { font-size: 11px; color: var(--text-muted); }
+
+    /* ── TESTIMONIALS ── */
+    .testimonials { padding: 90px 0; }
+    .testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+    .testi-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 24px; transition: all .3s; box-shadow: var(--shadow);
+    }
+    .testi-card:hover { border-color: var(--rose); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    .testi-quote {
+      font-size: 36px; line-height: 1; margin-bottom: 10px; font-family: Georgia, serif;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stars { color: #F59E0B; font-size: 12px; margin-bottom: 8px; }
+    .testi-text { font-size: 14px; line-height: 1.8; color: var(--text-muted); margin-bottom: 18px; }
+    .testi-text strong { color: var(--text); }
+    .testi-user { display: flex; align-items: center; gap: 10px; }
+    .testi-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .testi-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .testi-role { font-size: 11px; color: var(--text-muted); }
+
+    /* ── CTA ── */
+    .cta-section { padding: 90px 0; }
+    .cta-box {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--rose) 55%, var(--coral) 100%);
+      border-radius: 24px; padding: 72px 40px; text-align: center;
+      position: relative; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(214,51,132,.45);
+    }
+    .cta-box::before {
+      content: ''; position: absolute; top: -80px; right: -80px;
+      width: 280px; height: 280px; border-radius: 50%; background: rgba(255,255,255,.08);
+    }
+    .cta-box::after {
+      content: ''; position: absolute; bottom: -100px; left: -60px;
+      width: 250px; height: 250px; border-radius: 50%; background: rgba(255,255,255,.06);
+    }
+    .cta-title { font-size: clamp(24px, 4vw, 42px); font-weight: 900; color: #fff; margin-bottom: 14px; position: relative; z-index: 1; line-height: 1.25; }
+    .cta-desc { font-size: 16px; color: rgba(255,255,255,.88); margin-bottom: 36px; line-height: 1.8; position: relative; z-index: 1; }
+    .cta-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; position: relative; z-index: 1; }
+    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 15px 32px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .btn-white:hover { transform: translateY(-2px); }
+    .btn-outline-white { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.55); font-size: 14px; }
+    .btn-outline-white:hover { background: rgba(255,255,255,.12); border-color: #fff; }
+    .cta-note { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 18px; position: relative; z-index: 1; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--border); padding: 40px 0; background: var(--bg2); }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-logo {
+      font-size: 18px; font-weight: 900;
+      background: linear-gradient(135deg, var(--primary), var(--rose));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-links a { font-size: 12px; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--primary); }
+    .footer-copy { font-size: 11px; color: var(--text-dim); }
+
+    /* ── REVEAL ── */
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity .55s ease, transform .55s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ════════════════════════════
+       MOBILE OPTIMIZATION
+    ════════════════════════════ */
+    @media (max-width: 1024px) {
+      .cat-grid { grid-template-columns: repeat(3, 1fr); }
+      .challenge-card.featured { grid-column: span 1; }
+      .challenge-card.featured .challenge-thumb { height: 120px; font-size: 44px; }
+      .inst-card { flex: 0 0 340px; }
+    }
+
+    @media (max-width: 768px) {
+      /* Nav */
+      .nav-links, .nav-right .btn-ghost { display: none; }
+      .hamburger { display: flex; }
+      nav { padding: 12px 0; }
+
+      /* Hero */
+      .hero { padding: 80px 0 48px; min-height: auto; }
+      .hero-content { grid-template-columns: 1fr; gap: 36px; }
+      .hero-visual { order: -1; }
+      .float-card-1 { right: -8px; }
+      .float-card-2 { left: -8px; }
+
+      /* Sections */
+      .how { padding: 72px 0; }
+      .how-grid { grid-template-columns: 1fr; gap: 14px; }
+      .step-card { padding: 28px 20px; display: flex; align-items: flex-start; gap: 16px; text-align: left; }
+      .step-icon { margin: 0; flex-shrink: 0; width: 52px; height: 52px; font-size: 22px; }
+
+      /* Challenges */
+      .challenges { padding: 72px 0; }
+      .challenges-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .challenges-tabs { overflow-x: auto; scrollbar-width: none; }
+      .challenges-tabs::-webkit-scrollbar { display: none; }
+
+      /* Instructors */
+      .instructors { padding: 72px 0; }
+
+      /* Community */
+      .community { padding: 72px 0; }
+      .community-inner { grid-template-columns: 1fr; gap: 40px; }
+
+      /* Categories */
+      .categories { padding: 72px 0; }
+      .cat-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+      /* Testimonials */
+      .testimonials { padding: 72px 0; }
+      .testi-grid { grid-template-columns: 1fr; gap: 14px; }
+
+      /* CTA */
+      .cta-section { padding: 72px 0; }
+      .cta-box { padding: 48px 20px; border-radius: 20px; }
+      .cta-actions { flex-direction: column; width: 100%; }
+      .cta-actions .btn { width: 100%; justify-content: center; }
+
+      /* Footer */
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 0 16px; }
+
+      /* Hero */
+      .hero-title { font-size: 28px; }
+      .hero-actions { flex-direction: column; width: 100%; }
+      .hero-actions .btn { width: 100%; justify-content: center; }
+      .hero-stats { gap: 16px; }
+
+      /* Categories: 2열 */
+      .cat-grid { grid-template-columns: repeat(2, 1fr); }
+      .cat-card { padding: 20px 10px; }
+
+      /* Challenges */
+      .challenge-grid { grid-template-columns: 1fr; }
+
+      /* Instructor card */
+      .inst-card-body { padding: 18px; }
+
+      /* How step */
+      .step-card { flex-direction: column; text-align: center; }
+      .step-icon { margin: 0 auto; }
+
+      /* Testi */
+      .testi-grid { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="logo" href="#">VoiceUp 🌸</a>
+    <ul class="nav-links">
+      <li><a href="#challenges">챌린지</a></li>
+      <li><a href="#instructors">강사진</a></li>
+      <li><a href="#community">커뮤니티</a></li>
+      <li><a href="#testimonials">후기</a></li>
+    </ul>
+    <div class="nav-right">
+      <a class="btn btn-ghost nav-cta" href="#">로그인</a>
+      <a class="btn btn-primary nav-cta" href="#">무료 시작하기</a>
+    </div>
+    <button class="hamburger" id="hamburger" aria-label="메뉴">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- 모바일 메뉴 -->
+<div class="mobile-menu" id="mobileMenu">
+  <ul>
+    <li><a href="#challenges">챌린지</a></li>
+    <li><a href="#instructors">강사진</a></li>
+    <li><a href="#community">커뮤니티</a></li>
+    <li><a href="#testimonials">후기</a></li>
+  </ul>
+  <div class="mobile-menu-cta">
+    <a class="btn btn-primary" href="#" style="width:100%; justify-content:center; font-size:16px; padding:16px;">🌸 무료로 시작하기</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="dots-bg"></div>
+  </div>
+  <div class="container">
+    <div class="hero-content">
+      <div>
+        <div class="hero-eyebrow">
+          <div class="live-dot"></div>
+          <span class="badge">💕 지금 2,847명이 함께하는 중</span>
+        </div>
+        <h1 class="hero-title">
+          말하는 게 두렵다면,<br>
+          <span class="gradient-text">30초만 도전해봐요</span> 🎙️
+        </h1>
+        <p class="hero-desc">
+          보이스, 스피치, 표현력, 영상면접까지.<br>
+          챌린지 하나로 시작하면 어느새 달라진<br>
+          나를 발견하게 될 거예요.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#challenges" style="font-size:16px; padding:15px 30px;">🌸 첫 챌린지 시작하기</a>
+          <a class="btn btn-ghost" href="#how">어떻게 하나요?</a>
+        </div>
+        <div class="hero-stats">
+          <div><div class="stat-num">14.2K</div><div class="stat-label">누적 참여자</div></div>
+          <div><div class="stat-num">98K+</div><div class="stat-label">제출된 챌린지</div></div>
+          <div><div class="stat-num">4.9★</div><div class="stat-label">평균 만족도</div></div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div style="position:relative; padding:30px 16px;">
+          <div class="hero-card-main">
+            <div class="card-user">
+              <div class="avatar">지</div>
+              <div>
+                <div class="user-name">김지수님의 오늘 챌린지</div>
+                <div class="user-meta">30초 자기소개 · <span class="day-badge">Day 7 🔥</span></div>
+              </div>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">🎙️ 녹음 중...</div>
+            <div class="waveform" id="waveform"></div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);">
+              <span>0:00</span>
+              <span style="color:var(--primary); font-weight:600;">● 녹음 중</span>
+              <span>0:30</span>
+            </div>
+            <div class="card-footer">
+              <div class="card-reactions">
+                <span class="reaction active">💕 124</span>
+                <span class="reaction">💬 18</span>
+                <span class="reaction">🌸 응원</span>
+              </div>
+              <div class="record-btn"><div class="record-icon"></div></div>
+            </div>
+          </div>
+          <div class="float-card float-card-1">
+            <div class="float-label">🏆 주간 TOP 10</div>
+            <div class="float-sub">목소리 챌린지 달성!</div>
+          </div>
+          <div class="float-card float-card-2">
+            <div class="float-label">🎯 AI 피드백</div>
+            <div class="float-sub">발음 정확도 92점 🎉</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="reveal" style="text-align:center; max-width:480px; margin:0 auto 44px;">
+      <div class="section-label">How it works</div>
+      <h2 class="section-title">딱 3단계면 충분해요 💗</h2>
+      <p class="section-desc">준비물도, 복잡한 과정도 없어요. 지금 바로 시작할 수 있어요.</p>
+    </div>
+    <div class="how-grid">
+      <div class="step-card reveal">
+        <div class="step-icon" style="background:linear-gradient(135deg,#FCE4EC,#F8BBD9);">🎯</div>
+        <div>
+          <div class="step-num">STEP 01</div>
+          <h3 class="step-title">챌린지 고르기</h3>
+          <p class="step-desc">원하는 주제를 골라요. 30초짜리 초간단 챌린지부터 시작해도 완전 OK!</p>
+        </div>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.1s">
+        <div class="step-icon" style="background:linear-gradient(135deg,#FFE4E8,#FFCCD5);">🎙️</div>
+        <div>
+          <div class="step-num">STEP 02</div>
+          <h3 class="step-title">녹음 또는 영상 올리기</h3>
+          <p class="step-desc">스마트폰으로 바로! 편집 없이 올려도 돼요. 있는 그대로가 제일 좋아요.</p>
+        </div>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.2s">
+        <div class="step-icon" style="background:linear-gradient(135deg,#FFF0F5,#FFE4EF);">✨</div>
+        <div>
+          <div class="step-num">STEP 03</div>
+          <h3 class="step-title">피드백 받고 성장하기</h3>
+          <p class="step-desc">AI 분석 + 전문 강사 피드백 + 커뮤니티 응원. 매일 조금씩 달라지는 내가 느껴져요.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHALLENGES -->
+<section class="challenges" id="challenges">
+  <div class="container">
+    <div class="challenges-header reveal">
+      <div>
+        <div class="section-label">Today's Challenges</div>
+        <h2 class="section-title">오늘의 챌린지 💪</h2>
+      </div>
+      <div class="challenges-tabs">
+        <button class="tab-btn active">전체</button>
+        <button class="tab-btn">인기</button>
+        <button class="tab-btn">최신</button>
+        <button class="tab-btn">초급</button>
+      </div>
+    </div>
+    <div class="challenge-grid reveal">
+      <div class="challenge-card featured">
+        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FCE4EC,#F8BBD9,#EDE7F6);">🎙️</div>
+        <div class="challenge-body">
+          <div class="challenge-tags">
+            <span class="tag tag-voice">보이스</span>
+            <span style="background:rgba(214,51,132,.1);color:var(--primary);padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;">🔥 이번 주 인기</span>
+          </div>
+          <div class="difficulty">
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#FBCFE8;"></div>
+          </div>
+          <h3 class="challenge-title">30초 자기소개 챌린지 — "처음 만나는 나"</h3>
+          <p class="challenge-desc">딱 30초. 편하게 자신을 소개해보세요. 억양, 발음보다 자연스러움에 집중해요. 첫 챌린지로 딱이에요! 🌸</p>
+          <div class="challenge-footer">
+            <div class="challenge-meta"><span>3,291명</span> 참여 · <span>4.8★</span></div>
+            <button class="challenge-action">도전하기 →</button>
+          </div>
+        </div>
+      </div>
+      <div class="challenge-card">
+        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FFE4E8,#FCE4EC);">🎭</div>
+        <div class="challenge-body">
+          <div class="challenge-tags"><span class="tag tag-express">표현력</span></div>
+          <div class="difficulty">
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#FBCFE8;"></div>
+            <div class="diff-dot" style="background:#FBCFE8;"></div>
+          </div>
+          <h3 class="challenge-title">감정 한 문장 표현하기</h3>
+          <p class="challenge-desc">기쁨, 설렘, 두근거림… 목소리로 감정을 담아보세요.</p>
+          <div class="challenge-footer">
+            <div class="challenge-meta"><span>1,842명</span> 참여</div>
+            <button class="challenge-action">도전하기 →</button>
+          </div>
+        </div>
+      </div>
+      <div class="challenge-card">
+        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FCE4EC,#FFE4EF);">📹</div>
+        <div class="challenge-body">
+          <div class="challenge-tags"><span class="tag tag-video">영상면접</span></div>
+          <div class="difficulty">
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#FBCFE8;"></div>
+          </div>
+          <h3 class="challenge-title">1분 면접 답변 챌린지</h3>
+          <p class="challenge-desc">"당신의 강점은?" 질문에 1분 답변. AI가 실시간 분석해줘요!</p>
+          <div class="challenge-footer">
+            <div class="challenge-meta"><span>2,104명</span> 참여</div>
+            <button class="challenge-action">도전하기 →</button>
+          </div>
+        </div>
+      </div>
+      <div class="challenge-card">
+        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FFF0F5,#FCE4EC);">💬</div>
+        <div class="challenge-body">
+          <div class="challenge-tags"><span class="tag tag-answer">즉흥 답변</span></div>
+          <div class="difficulty">
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#FBCFE8;"></div>
+            <div class="diff-dot" style="background:#FBCFE8;"></div>
+          </div>
+          <h3 class="challenge-title">오늘의 질문에 답하기</h3>
+          <p class="challenge-desc">매일 새 주제! 즉흥으로 말하는 연습을 재미있게 해요.</p>
+          <div class="challenge-footer">
+            <div class="challenge-meta"><span>976명</span> 참여</div>
+            <button class="challenge-action">도전하기 →</button>
+          </div>
+        </div>
+      </div>
+      <div class="challenge-card">
+        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FFCDD2,#FCE4EC);">🗣️</div>
+        <div class="challenge-body">
+          <div class="challenge-tags"><span class="tag tag-speech">스피치</span></div>
+          <div class="difficulty">
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#F472B6;"></div>
+            <div class="diff-dot" style="background:#F472B6;"></div>
+          </div>
+          <h3 class="challenge-title">3분 설득 스피치</h3>
+          <p class="challenge-desc">좋아하는 걸 3분 안에 설득해보세요. 논리력 + 표현력 동시에!</p>
+          <div class="challenge-footer">
+            <div class="challenge-meta"><span>1,209명</span> 참여</div>
+            <button class="challenge-action">도전하기 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTRUCTORS — 가로 스크롤 캐러셀 -->
+<section class="instructors" id="instructors">
+  <div class="container">
+    <div class="reveal" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div class="section-label">Instructors</div>
+        <h2 class="section-title" style="margin-bottom:6px;">전문 강사진을 소개해요 💕</h2>
+        <p class="section-desc">현장 경험이 풍부한 두 전문가가 직접 챌린지를 설계하고 피드백을 드려요.</p>
+      </div>
+      <div style="font-size:13px; color:var(--text-dim); display:flex; align-items:center; gap:6px; flex-shrink:0;">
+        <span>‹ › 버튼으로 이동</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 스크롤 트랙 (container 밖으로 넘치게) -->
+  <div class="inst-scroll-wrapper reveal" style="transition-delay:.1s;">
+    <div class="inst-scroll-track" id="instTrack">
+
+      <!-- 권성호 강사 -->
+      <div class="inst-card">
+        <div style="position:relative;">
+          <div class="inst-card-accent"></div>
+          <!-- 📸 사진 플레이스홀더 -->
+          <div class="inst-photo-area">
+            <div class="inst-photo-placeholder" id="photo1" onclick="triggerUpload(1)">
+              <div class="photo-icon">📷</div>
+              <div class="photo-hint">
+                <strong>권성호 강사 사진</strong>
+                탭해서 사진 추가하기
+              </div>
+            </div>
+            <input type="file" id="fileInput1" accept="image/*" style="display:none" onchange="previewPhoto(1, this)" />
+          </div>
+        </div>
+        <div class="inst-card-body">
+          <div class="inst-name">권성호 강사</div>
+          <div class="inst-role">보이스 & 스피치 전문가 · 몬스터크루 대표</div>
+          <div class="inst-tags">
+            <span class="inst-tag">발성 트레이닝</span>
+            <span class="inst-tag">스피치 코칭</span>
+            <span class="inst-tag">항공과 특강</span>
+            <span class="inst-tag">보이스 코칭</span>
+          </div>
+          <p class="inst-desc">
+            10년간 보이스&스피치 전문 교육기관 <strong>몬스터크루</strong>를 운영하며 수많은 수강생의 목소리를 변화시켜온 전문가예요.
+          </p>
+          <div class="inst-career-section">
+            <div class="inst-career-title">✈️ 항공 & 교육</div>
+            <div class="inst-career-list">
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>국내 항공과 대학 <strong>항공사 특강 프로그램 보이스 코칭</strong> 다수 진행</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>항공과 다수 대학 <strong>초빙 강연 및 산학협력</strong> 참여</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>몬스터크루 10년간</strong> 취업&보이스 전문 교육기관 운영</span></div>
+            </div>
+          </div>
+          <div class="inst-career-section">
+            <div class="inst-career-title">🎙️ 콘텐츠 & 미디어</div>
+            <div class="inst-career-list">
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>보이스&커뮤니케이션 <strong>전문 칼럼</strong> 언론 기고 연재</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>유튜브 & 팟캐스트</strong> 출연</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>발성 트레이닝 <strong>자체 코칭북</strong> 개발 및 보급</span></div>
+            </div>
+          </div>
+          <div class="inst-stat-row">
+            <div class="inst-stat"><div class="inst-stat-num">10년</div><div class="inst-stat-label">전문 교육 경력</div></div>
+            <div class="inst-stat"><div class="inst-stat-num">3,000+</div><div class="inst-stat-label">온라인 수강생</div></div>
+            <div class="inst-stat"><div class="inst-stat-num">多수</div><div class="inst-stat-label">대학 특강</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 박새암 강사 -->
+      <div class="inst-card">
+        <div style="position:relative;">
+          <div class="inst-card-accent"></div>
+          <!-- 📸 사진 플레이스홀더 -->
+          <div class="inst-photo-area">
+            <div class="inst-photo-placeholder" id="photo2" onclick="triggerUpload(2)">
+              <div class="photo-icon">📷</div>
+              <div class="photo-hint">
+                <strong>박새암 강사 사진</strong>
+                탭해서 사진 추가하기
+              </div>
+            </div>
+            <input type="file" id="fileInput2" accept="image/*" style="display:none" onchange="previewPhoto(2, this)" />
+          </div>
+        </div>
+        <div class="inst-card-body">
+          <div class="inst-name">박새암 강사</div>
+          <div class="inst-role">객실승무원 출신 · 면접 & 스피치 전문가</div>
+          <div class="inst-tags">
+            <span class="inst-tag">승무원 면접</span>
+            <span class="inst-tag">영상면접</span>
+            <span class="inst-tag">쇼호스트</span>
+            <span class="inst-tag">자기브랜딩</span>
+          </div>
+          <p class="inst-desc">
+            FSC·LCC 객실승무원 9년 경력. <strong>직접 겪은 합격 경험</strong>으로 누구보다 실전적인 면접 전략을 알려드려요.
+          </p>
+          <div class="inst-career-section">
+            <div class="inst-career-title">✈️ 항공 승무원 경력</div>
+            <div class="inst-career-list">
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>외항사 FSC & 국내 LCC <strong>객실승무원 9년차</strong></span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>동방항공</strong> 비즈니스 클래스 · <strong>에어서울</strong> 부사무장 · <strong>티웨이</strong> 경력직 최합</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>채널A <strong>《비행기 타고가요》 시즌1</strong> 출연</span></div>
+            </div>
+          </div>
+          <div class="inst-career-section">
+            <div class="inst-career-title">🎯 채용 & 면접 전문성</div>
+            <div class="inst-career-list">
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>국토부 주관 2025 항공잡페어</strong> 취업컨설턴트</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>NCS 기반 채용면접관 2급</strong> · 공사기업 외부 면접관</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>MONSTERCREW 대표강사 · 누적 수강생 <strong>1,000명+</strong></span></div>
+            </div>
+          </div>
+          <div class="inst-career-section">
+            <div class="inst-career-title">📺 라이브커머스 & 방송</div>
+            <div class="inst-career-list">
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>LFmall 전속 쇼호스트</strong> · 현) 프리랜서 쇼호스트</span></div>
+              <div class="inst-career-item"><div class="inst-career-dot"></div><span>누적 방송 <strong>1,000회+</strong> 진행</span></div>
+            </div>
+          </div>
+          <div class="inst-stat-row">
+            <div class="inst-stat"><div class="inst-stat-num">9년</div><div class="inst-stat-label">승무원 경력</div></div>
+            <div class="inst-stat"><div class="inst-stat-num">1,000+</div><div class="inst-stat-label">면접 컨설팅</div></div>
+            <div class="inst-stat"><div class="inst-stat-num">1,000회</div><div class="inst-stat-label">누적 방송</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 화살표 + 도트 네비게이션 -->
+  <div class="container">
+    <div class="inst-nav">
+      <button class="inst-arrow" id="instPrev" aria-label="이전">‹</button>
+      <div class="inst-dots">
+        <div class="inst-dot active" data-idx="0"></div>
+        <div class="inst-dot" data-idx="1"></div>
+      </div>
+      <button class="inst-arrow" id="instNext" aria-label="다음">›</button>
+    </div>
+  </div>
+</section>
+
+<!-- COMMUNITY -->
+<section class="community" id="community">
+  <div class="container">
+    <div class="community-inner">
+      <div class="community-feed reveal">
+        <div style="margin-bottom:18px;">
+          <div class="section-label">Live Feed</div>
+          <h2 class="section-title" style="max-width:300px;">지금도 누군가 도전하고 있어요 🌸</h2>
+        </div>
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:linear-gradient(135deg,var(--primary),var(--rose));">박</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+              <span class="feed-name">박민준</span><span class="feed-time">방금 전</span><span class="feed-tag">#영상면접</span>
+            </div>
+            <p class="feed-text">처음엔 너무 떨렸는데 세 번 하고 나니 <strong style="color:var(--text);">자신감이 생겼어요!</strong> 🙌</p>
+            <div class="feed-likes">💕 34 · 💬 7</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:linear-gradient(135deg,var(--rose),var(--coral));">이</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+              <span class="feed-name">이수연</span><span class="feed-time">3분 전</span><span class="feed-tag">#보이스</span>
+            </div>
+            <p class="feed-text">30초 챌린지 완료! AI 점수 <strong style="color:var(--primary);">88점</strong> 나왔어요 🎉</p>
+            <div class="feed-likes">💕 51 · 💬 12</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:linear-gradient(135deg,#FBBF24,#F97316);">최</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+              <span class="feed-name">최예진</span><span class="feed-time">8분 전</span><span class="feed-tag">#스피치</span>
+            </div>
+            <p class="feed-text">매일 하니까 <strong style="color:var(--text);">말투가 확실히 달라진 것</strong> 같아요! 💪</p>
+            <div class="feed-likes">💕 89 · 💬 23</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-avatar" style="background:linear-gradient(135deg,#A78BFA,var(--primary));">정</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+              <span class="feed-name">정예린</span><span class="feed-time">15분 전</span><span class="feed-tag">#표현력</span>
+            </div>
+            <p class="feed-text">감정 표현 챌린지 처음 해봤는데 <strong style="color:var(--text);">생각보다 너무 재밌어요!</strong> 🌸</p>
+            <div class="feed-likes">💕 42 · 💬 9</div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal" style="transition-delay:.15s">
+        <div class="section-label">Community</div>
+        <h2 class="section-title">혼자 하지 않아도 돼요 💕</h2>
+        <p class="section-desc">같은 목표를 가진 사람들과 함께해요. 서로 응원하고 피드백 나누는 따뜻한 커뮤니티가 있어요.</p>
+        <div class="community-proof">
+          <div class="proof-card"><div class="proof-num">14.2K</div><div class="proof-label">함께하는 멤버</div></div>
+          <div class="proof-card"><div class="proof-num">98K+</div><div class="proof-label">공유된 챌린지</div></div>
+          <div class="proof-card"><div class="proof-num">250K+</div><div class="proof-label">남겨진 응원</div></div>
+          <div class="proof-card"><div class="proof-num">30일</div><div class="proof-label">최장 연속 달성</div></div>
+        </div>
+        <a class="btn btn-primary" href="#" style="margin-top:24px;">커뮤니티 참여하기 →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="categories" id="categories">
+  <div class="container">
+    <div class="reveal" style="text-align:center; max-width:460px; margin:0 auto;">
+      <div class="section-label">Categories</div>
+      <h2 class="section-title">원하는 분야를 골라보세요 🎀</h2>
+      <p class="section-desc">뭐부터 해야 할지 모르겠다면, 가장 쉬운 것부터!</p>
+    </div>
+    <div class="cat-grid reveal" style="transition-delay:.1s">
+      <div class="cat-card"><span class="cat-icon">🎙️</span><div class="cat-name">보이스</div><div class="cat-count">챌린지 24개</div></div>
+      <div class="cat-card"><span class="cat-icon">🗣️</span><div class="cat-name">스피치</div><div class="cat-count">챌린지 18개</div></div>
+      <div class="cat-card"><span class="cat-icon">🎭</span><div class="cat-name">표현력</div><div class="cat-count">챌린지 15개</div></div>
+      <div class="cat-card"><span class="cat-icon">📹</span><div class="cat-name">영상면접</div><div class="cat-count">챌린지 12개</div></div>
+      <div class="cat-card"><span class="cat-icon">💬</span><div class="cat-name">즉흥 답변</div><div class="cat-count">챌린지 20개</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials" id="testimonials">
+  <div class="container">
+    <div class="reveal" style="text-align:center; max-width:460px; margin:0 auto;">
+      <div class="section-label">Reviews</div>
+      <h2 class="section-title">"나도 해봤어요" 후기들 💌</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <div class="testi-quote">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">처음엔 그냥 <strong>호기심에 한 번만 해보려 했는데</strong> 어느새 3주째 매일 하고 있어요. 목소리에 자신감이 생겼어요!</p>
+        <div class="testi-user">
+          <div class="testi-avatar">박</div>
+          <div><div class="testi-name">박지민</div><div class="testi-role">대학생 · 보이스 챌린지 21일 달성 🔥</div></div>
+        </div>
+      </div>
+      <div class="testi-card reveal" style="transition-delay:.1s">
+        <div class="testi-quote">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">면접 준비하면서 영상면접 챌린지를 했는데, <strong>실제 면접에서 훨씬 덜 긴장</strong>했어요. 강력 추천!</p>
+        <div class="testi-user">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,var(--rose),var(--coral));">김</div>
+          <div><div class="testi-name">김현우</div><div class="testi-role">취준생 · 영상면접 챌린지 15일</div></div>
+        </div>
+      </div>
+      <div class="testi-card reveal" style="transition-delay:.2s">
+        <div class="testi-quote">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">AI 피드백이 <strong>너무 구체적</strong>이라서 놀랐어요. 매번 성장하는 게 눈에 보여서 동기부여가 확실해요!</p>
+        <div class="testi-user">
+          <div class="testi-avatar" style="background:linear-gradient(135deg,var(--lavender),var(--primary));">이</div>
+          <div><div class="testi-name">이서연</div><div class="testi-role">직장인 · 스피치 챌린지 30일 달성 🎉</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-box reveal">
+      <h2 class="cta-title">"나도 해볼까?" 그 생각,<br>지금이 딱 좋아요 🌸</h2>
+      <p class="cta-desc">준비 없이도 괜찮아요. 완벽하지 않아도 괜찮아요.<br>그냥 시작하면, 이미 절반은 성공한 거예요.</p>
+      <div class="cta-actions">
+        <a class="btn btn-white" href="#">🌸 무료로 첫 챌린지 시작하기</a>
+        <a class="btn btn-outline-white" href="#challenges">챌린지 둘러보기</a>
+      </div>
+      <p class="cta-note">💳 신용카드 불필요 · ⚡ 30초면 시작 가능 · 🔒 언제든지 탈퇴 가능</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container footer-inner">
+    <div class="footer-logo">VoiceUp 🌸</div>
+    <div class="footer-links">
+      <a href="#">서비스 소개</a>
+      <a href="#">이용약관</a>
+      <a href="#">개인정보처리방침</a>
+      <a href="#">문의하기</a>
+    </div>
+    <div class="footer-copy">© 2025 VoiceUp. All rights reserved.</div>
+  </div>
+</footer>
+
+<script>
+  /* ── 웨이브폼 ── */
+  const wf = document.getElementById('waveform');
+  if (wf) {
+    for (let i = 0; i < 28; i++) {
+      const b = document.createElement('div');
+      b.className = 'waveform-bar';
+      b.style.animationDelay = `${Math.random() * 1.2}s`;
+      b.style.animationDuration = `${0.7 + Math.random() * 0.8}s`;
+      wf.appendChild(b);
+    }
+  }
+
+  /* ── 햄버거 ── */
+  const hb = document.getElementById('hamburger');
+  const mm = document.getElementById('mobileMenu');
+  hb.addEventListener('click', () => {
+    hb.classList.toggle('open');
+    mm.classList.toggle('open');
+    document.body.style.overflow = mm.classList.contains('open') ? 'hidden' : '';
+  });
+  mm.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    hb.classList.remove('open');
+    mm.classList.remove('open');
+    document.body.style.overflow = '';
+  }));
+
+  /* ── 스크롤 reveal ── */
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  /* ── 탭 버튼 ── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  /* ── 네비바 스크롤 ── */
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').style.boxShadow =
+      window.scrollY > 40 ? '0 4px 20px rgba(214,51,132,.12)' : 'none';
+  });
+
+  /* ── 챌린지 버튼 ── */
+  document.querySelectorAll('.challenge-action').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ 시작했어요!';
+      btn.style.background = 'linear-gradient(135deg,#F472B6,#EC4899)';
+      setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1800);
+    });
+  });
+
+  /* ── 강사 캐러셀 (슬라이드) ── */
+  const track = document.getElementById('instTrack');
+  const dots = document.querySelectorAll('.inst-dot');
+  const cards = track.querySelectorAll('.inst-card');
+  const total = cards.length;
+  let cur = 0;
+  let startX = 0;
+  let isDragging = false;
+
+  function goTo(idx) {
+    cur = (idx + total) % total;
+    track.style.transform = `translateX(-${cur * 100}%)`;
+    dots.forEach((d, i) => d.classList.toggle('active', i === cur));
+  }
+
+  document.getElementById('instPrev').addEventListener('click', () => goTo(cur - 1));
+  document.getElementById('instNext').addEventListener('click', () => goTo(cur + 1));
+  dots.forEach(dot => dot.addEventListener('click', () => goTo(+dot.dataset.idx)));
+
+  /* 터치 스와이프 */
+  track.addEventListener('touchstart', e => { startX = e.touches[0].clientX; isDragging = true; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    if (!isDragging) return;
+    const diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) goTo(diff > 0 ? cur + 1 : cur - 1);
+    isDragging = false;
+  }, { passive: true });
+
+  /* ── 사진 업로드 (임시 미리보기) ── */
+  function triggerUpload(n) {
+    document.getElementById('fileInput' + n).click();
+  }
+  function previewPhoto(n, input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const area = document.getElementById('photo' + n).parentElement;
+      const placeholder = document.getElementById('photo' + n);
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      area.replaceChild(img, placeholder);
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+</script>
+</body>
+</html>
