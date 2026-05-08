@@ -771,7 +771,7 @@
     </ul>
     <div class="nav-right">
       <a class="btn btn-ghost nav-cta" href="#">로그인</a>
-      <a class="btn btn-primary nav-cta" href="#">무료 시작하기</a>
+      <a class="btn btn-primary nav-cta" href="#">시작하기</a>
     </div>
     <button class="hamburger" id="hamburger" aria-label="메뉴">
       <span></span><span></span><span></span>
@@ -1402,6 +1402,239 @@
     };
     reader.readAsDataURL(input.files[0]);
   }
+
+  /* 로그인/회원가입 모달 */
+  const API_URL = "https://script.google.com/macros/s/AKfycbyQPdkGJyj8WDwoNmbZiM1ST_kYdL6fdVnEwcllyBuT88VK7nV8uRWKG8l_PaBWrHuTlA/exec";
+  let isLoggedIn = localStorage.getItem('voiceupUser') ? true : false;
+  let currentUser = localStorage.getItem('voiceupUser');
+
+  function showLoginModal() {
+    document.getElementById('loginModal').style.display = 'flex';
+  }
+
+  function showSignupModal() {
+    document.getElementById('loginModal').style.display = 'none';
+    document.getElementById('signupModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('loginModal').style.display = 'none';
+    document.getElementById('signupModal').style.display = 'none';
+  }
+
+  async function handleLogin() {
+    const userId = document.getElementById('loginId').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!userId || !password) {
+      alert('아이디와 비밀번호를 입력하세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'login',
+          userId: userId,
+          password: password
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        localStorage.setItem('voiceupUser', JSON.stringify({name: result.name, userId: userId}));
+        alert(result.message);
+        closeModal();
+        location.reload();
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('오류가 발생했습니다.');
+    }
+  }
+
+  async function handleSignup() {
+    const userId = document.getElementById('signupId').value;
+    const password = document.getElementById('signupPassword').value;
+    const name = document.getElementById('signupName').value;
+    const phone = document.getElementById('signupPhone').value;
+    const birthDate = document.getElementById('signupBirthDate').value;
+
+    if (!userId || !password || !name || !phone || !birthDate) {
+      alert('모든 항목을 입력하세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'signup',
+          userId: userId,
+          password: password,
+          name: name,
+          phone: phone,
+          birthDate: birthDate
+        })
+      });
+
+      const result = await response.json();
+      alert(result.message);
+      if (result.success) {
+        closeModal();
+        showLoginModal();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('오류가 발생했습니다.');
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('voiceupUser');
+    location.reload();
+  }
+
+  // 초기 로드 시 사용자 정보 표시
+  window.addEventListener('load', () => {
+    updateNavbar();
+  });
+
+  function updateNavbar() {
+    const user = JSON.parse(localStorage.getItem('voiceupUser'));
+    const loginBtn = document.querySelector('a[href="#"][class*="nav-cta"]');
+    const signupBtn = document.querySelector('a[href="#"][class*="btn-primary"][class*="nav-cta"]');
+
+    if (user) {
+      loginBtn.textContent = `${user.name} 님`;
+      loginBtn.onclick = logout;
+      signupBtn.style.display = 'none';
+    } else {
+      loginBtn.textContent = '로그인';
+      loginBtn.onclick = (e) => {
+        e.preventDefault();
+        showLoginModal();
+      };
+      signupBtn.textContent = '시작하기';
+      signupBtn.onclick = (e) => {
+        e.preventDefault();
+        showSignupModal();
+      };
+      signupBtn.style.display = 'inline-flex';
+    }
+  }
 </script>
+
+<!-- 로그인 모달 -->
+<div id="loginModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2>로그인</h2>
+    <input type="text" id="loginId" placeholder="아이디" class="modal-input">
+    <input type="password" id="loginPassword" placeholder="비밀번호" class="modal-input">
+    <button onclick="handleLogin()" class="modal-btn">로그인</button>
+    <p style="text-align:center; margin-top:15px; font-size:14px;">
+      아직 계정이 없으신가요? <a href="#" onclick="showSignupModal(); return false;" style="color:var(--primary); text-decoration:none; font-weight:bold;">회원가입</a>
+    </p>
+  </div>
+</div>
+
+<!-- 회원가입 모달 -->
+<div id="signupModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2>회원가입</h2>
+    <input type="text" id="signupName" placeholder="이름" class="modal-input">
+    <input type="text" id="signupId" placeholder="아이디" class="modal-input">
+    <input type="password" id="signupPassword" placeholder="비밀번호" class="modal-input">
+    <input type="tel" id="signupPhone" placeholder="휴대폰 (010-0000-0000)" class="modal-input">
+    <input type="date" id="signupBirthDate" class="modal-input">
+    <button onclick="handleSignup()" class="modal-btn">회원가입</button>
+  </div>
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.modal-content h2 {
+  margin-bottom: 30px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 12px;
+  border: 1.5px solid rgba(214,51,132,0.2);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(214,51,132,0.1);
+}
+
+.modal-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--rose));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(214,51,132,0.3);
+}
+
+.close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 28px;
+  cursor: pointer;
+  color: #999;
+}
+
+.close:hover {
+  color: #333;
+}
+</style>
+
 </body>
 </html>
