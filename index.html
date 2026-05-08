@@ -1345,11 +1345,29 @@
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
-  /* ── 탭 버튼 ── */
+  /* ── 챌린지 필터 탭 ── */
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const category = btn.dataset.category;
+
+      // 탭 active 상태 업데이트
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+
+      // 챌린지 카드 필터링 (부드러운 애니메이션 포함)
+      document.querySelectorAll('.challenge-card').forEach(card => {
+        const tagText = card.querySelector('.tag')?.textContent || '';
+        const isMatch = category === 'all' || tagText === category;
+
+        if (isMatch) {
+          card.style.opacity = '0';
+          card.style.display = 'block';
+          setTimeout(() => card.style.opacity = '1', 50);
+        } else {
+          card.style.opacity = '0';
+          setTimeout(() => card.style.display = 'none', 300);
+        }
+      });
     });
   });
 
