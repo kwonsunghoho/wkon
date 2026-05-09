@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>영상면접 합격 각 챌린지 — MONC</title>
+  <style>
+    :root {
+      --primary: #D63384; --rose: #FF6B9D; --coral: #FF8FAB;
+      --bg: #FFF5F8; --bg2: #FFEEF4; --bg3: #FFE4EF;
+      --surface: #FFFFFF; --surface2: #FFF0F5;
+      --text: #2D1022; --text-muted: #7D4A66; --text-dim: #B08098;
+      --border: rgba(214,51,132,0.15); --border-soft: rgba(214,51,132,0.08);
+      --radius: 20px; --radius-sm: 12px;
+      --shadow: 0 4px 20px rgba(214,51,132,0.10);
+      --shadow-lg: 0 12px 48px rgba(214,51,132,0.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+    .gradient-text { background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 99px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .25s; border: none; }
+    .btn-primary { background: linear-gradient(135deg,var(--primary),var(--rose)); color: #fff; box-shadow: 0 8px 24px rgba(214,51,132,.4); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(214,51,132,.55); }
+    .btn-ghost { background: var(--surface); color: var(--primary); border: 2px solid rgba(214,51,132,.25); }
+    .btn-ghost:hover { background: var(--surface2); }
+
+    /* NAV */
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(255,245,248,.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(214,51,132,.1); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 20px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; }
+    .nav-back { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .nav-back:hover { color: var(--primary); }
+
+    /* HERO */
+    .hero { padding: 100px 0 60px; position: relative; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; pointer-events: none; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(70px); }
+    .orb-1 { width: 400px; height: 400px; background: #F9A8D4; opacity: .5; top: -100px; right: -100px; }
+    .orb-2 { width: 300px; height: 300px; background: #FBCFE8; opacity: .5; bottom: -80px; left: -60px; }
+    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(214,51,132,.08) 1.5px,transparent 1.5px); background-size: 32px 32px; }
+    .hero-inner { position: relative; z-index: 1; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); text-decoration: none; margin-bottom: 24px; transition: color .2s; font-weight: 600; }
+    .back-link:hover { color: var(--primary); }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; background: rgba(214,51,132,.12); color: var(--primary); border: 1px solid rgba(214,51,132,.25); margin-bottom: 16px; }
+    .hero-emoji { font-size: 64px; margin-bottom: 16px; display: block; }
+    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: 900; line-height: 1.2; margin-bottom: 14px; }
+    .hero-desc { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; }
+    .hero-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+    .meta-chip { background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+    .meta-chip strong { color: var(--primary); }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* SECTION */
+    section { padding: 60px 0; }
+    section + section { padding-top: 0; }
+    .section-label { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 900; margin-bottom: 24px; }
+
+    /* OVERVIEW CARDS */
+    .overview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 40px; }
+    .overview-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
+    .overview-val { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .overview-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* CURRICULUM */
+    .curriculum-list { display: flex; flex-direction: column; gap: 16px; }
+    .curriculum-week {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+    }
+    .week-header {
+      display: flex; align-items: center; gap: 16px; padding: 20px 24px;
+      cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .week-num {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg,var(--primary),var(--rose));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #fff;
+    }
+    .week-info { flex: 1; }
+    .week-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .week-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .week-arrow { font-size: 18px; color: var(--text-dim); transition: transform .3s; }
+    .curriculum-week.open .week-arrow { transform: rotate(90deg); }
+    .week-body { display: none; padding: 0 24px 20px; border-top: 1px solid var(--border-soft); }
+    .curriculum-week.open .week-body { display: block; }
+    .lesson-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .lesson-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+
+    /* WHAT YOU GET */
+    .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .benefit-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
+    .benefit-icon { font-size: 28px; margin-bottom: 10px; }
+    .benefit-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .benefit-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+    /* CTA */
+    .cta-box { background: linear-gradient(135deg,var(--primary),var(--rose),var(--coral)); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(214,51,132,.4); }
+    .cta-box::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.08); }
+    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 900; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
+    .cta-desc { font-size: 15px; color: rgba(255,255,255,.85); margin-bottom: 28px; position: relative; z-index: 1; }
+    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.12); position: relative; z-index: 1; }
+    .btn-white:hover { transform: translateY(-2px); }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 36px 0; background: var(--bg2); }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-logo { font-size: 18px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--rose)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .footer-copy { font-size: 12px; color: var(--text-dim); }
+
+    @media (max-width: 600px) {
+      .overview-grid { grid-template-columns: repeat(3,1fr); gap: 10px; }
+      .benefits-grid { grid-template-columns: 1fr; }
+      .hero-actions { flex-direction: column; }
+      .hero-actions .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-inner">
+    <a class="logo" href="index.html">MONC 🌸</a>
+    <a class="nav-back" href="index.html">← 챌린지 목록으로</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="dots-bg"></div>
+  </div>
+  <div class="container hero-inner">
+    <div class="hero-badge">🎭 표현력</div>
+    <span class="hero-emoji">🎭</span>
+    <h1 class="hero-title"><span class="gradient-text">영.합.각</span> - 영상면접 합격 각</h1>
+    <p class="hero-desc">카메라 앞에서 어떻게 보여야 하고, 어떻게 말해야 하고, 어떻게 기억되어야 하는지를 2주 동안 완성합니다.</p>
+    <div class="hero-meta">
+      <div class="meta-chip">⏱️ 하루 <strong>10-15분</strong></div>
+      <div class="meta-chip">✅ 수료율 <strong>95%</strong></div>
+      <div class="meta-chip">📈 평균 성과 <strong>87%</strong></div>
+      <div class="meta-chip">👨‍🏫 전문가 <strong>가이던스 영상</strong></div>
+      <div class="meta-chip">💬 <strong>실시간 소통</strong></div>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#" onclick="openApplicationModal(); return false;">🌸 지금 바로 도전하기</a>
+      <a class="btn btn-ghost" href="index.html">← 목록으로</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="overview-grid">
+      <div class="overview-card"><div class="overview-val">2주</div><div class="overview-label">커리큘럼</div></div>
+      <div class="overview-card"><div class="overview-val">10강</div><div class="overview-label">총 강의 수</div></div>
+      <div class="overview-card"><div class="overview-val">1분</div><div class="overview-label">최종 영상 길이</div></div>
+    </div>
+
+    <div class="section-label">Curriculum</div>
+    <h2 class="section-title">2주 커리큘럼</h2>
+    <div class="curriculum-list">
+
+      <div class="curriculum-week open">
+        <div class="week-header">
+          <div class="week-num">1</div>
+          <div class="week-info">
+            <div class="week-title">카메라 이미지 세팅</div>
+            <div class="week-sub">화면 속 첫인상부터 조명까지, 영상면접용 이미지 완성하기</div>
+          </div>
+          <div class="week-arrow">›</div>
+        </div>
+        <div class="week-body">
+          <div class="lesson-list">
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 1. 캐릭터 찾기</strong>1분 자기소개 영상을 촬영해 카메라 속 나의 첫인상과 객관적 이미지를 확인합니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 2. 스타일링</strong>나의 이미지에 맞는 의상, 헤어, 메이크업 조합을 찾아 영상면접용 스타일을 세팅합니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 3. 미소·아이컨택</strong>얼굴 근육을 풀고, 자연스러운 미소와 카메라 렌즈를 보는 시선을 연습합니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 4. 자세·각도</strong>카메라 높이, 얼굴 크기, 자세, 조명 등을 점검해 가장 안정적인 촬영 환경을 찾습니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 5. 이미지 파이널</strong>1~4일차에 세팅한 요소를 모두 적용해 중간 파이널 영상을 촬영합니다.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="curriculum-week">
+        <div class="week-header">
+          <div class="week-num">2</div>
+          <div class="week-info">
+            <div class="week-title">말하기 전달력 파이널</div>
+            <div class="week-sub">답변이 자연스럽고 설득력 있게 들리도록 말하기 완성하기</div>
+          </div>
+          <div class="week-arrow">›</div>
+        </div>
+        <div class="week-body">
+          <div class="lesson-list">
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 6. 오프닝</strong>첫 15초 안에 시선을 사로잡을 수 있는 자기소개 첫 문장을 만듭니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 7. 구어체 스크립트</strong>딱딱한 문어체 답변을 말하기에 자연스러운 구어체 자기소개로 바꿉니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 8. 호흡구간</strong>답변을 의미 단위로 끊어 말하며 안정감 있고 신뢰감 있는 전달력을 만듭니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 9. 인토네이션</strong>말의 높낮이와 리듬을 조절해 딱딱한 말투에서 자연스러운 대화체로 바꿉니다.</div></div>
+            <div class="lesson-item"><div class="lesson-icon">🎬</div><div><strong>DAY 10. 최종 촬영</strong>2주 동안 준비한 이미지와 말하기 요소를 모두 적용해 최종 1분 자기소개 영상을 완성합니다.</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section style="padding-top: 0;">
+  <div class="container">
+    <div class="section-label">Results</div>
+    <h2 class="section-title">이런 걸 얻을 수 있어요</h2>
+    <div class="benefits-grid">
+      <div class="benefit-card"><div class="benefit-icon">😌</div><div class="benefit-title">나만의 편안한 톤</div><p class="benefit-desc">억지로 바꾸지 않고, 내가 가진 목소리 안에서 가장 편안하고 안정적인 톤을 찾아요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">💪</div><div class="benefit-title">목에 무리 없는 말하기</div><p class="benefit-desc">긴장해도 목이 조이지 않는 안정적인 발성 습관을 익혀요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">🎭</div><div class="benefit-title">분위기에 맞는 목소리</div><p class="benefit-desc">면접, 아나운싱, 내레이션 등 상황에 맞게 목소리를 조절하는 방법을 배워요.</p></div>
+      <div class="benefit-card"><div class="benefit-icon">🎯</div><div class="benefit-title">신뢰감 있는 표현</div><p class="benefit-desc">깊이 있고 안정적인 목소리로 말끝까지 명확하게 전달하는 능력을 갖춰요.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2주 과정의 핵심 변화 -->
+<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(252,228,236,.3), rgba(248,187,217,.15));">
+  <div class="container">
+    <div class="section-label">Core of the Program</div>
+    <h2 class="section-title">2주 과정의 핵심 변화</h2>
+    <div style="max-width: 720px; margin: 0 auto;">
+      <div style="background: white; padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
+        <p style="margin-bottom: 24px;">이 과정은 <strong style="color: var(--primary);">단순한 발성 수업이 아닙니다.</strong></p>
+
+        <p style="margin-bottom: 20px;">
+          <strong style="color: var(--text); display: block; margin-bottom: 8px;">1주차에는</strong>
+          목에 힘을 빼고, 소리가 편안하게 나오는 길을 찾습니다.
+        </p>
+
+        <p style="margin-bottom: 20px;">
+          <strong style="color: var(--text); display: block; margin-bottom: 8px;">2주차에는</strong>
+          그 목소리를 실제 대본에 적용하며<br>정보 전달, 공감, 무게감 있는 표현까지 연습합니다.
+        </p>
+
+        <p style="padding-top: 20px; border-top: 1px solid var(--border);">
+          결국 학생들은<br>
+          <strong style="color: var(--primary);">"어떻게 소리를 내야 하는지"</strong>를 아는 것에서 끝나지 않고,<br>
+          <strong style="color: var(--primary);">"어떤 상황에서 어떤 목소리를 사용해야 하는지"</strong>까지 익히게 됩니다.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 이런 학생에게 추천합니다 -->
+<section style="padding: 60px 0;">
+  <div class="container">
+    <div class="section-label">Recommended For</div>
+    <h2 class="section-title">이런 학생에게 추천합니다</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+        <div style="font-size: 28px; margin-bottom: 12px;">😰</div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">면접에서 긴장하면 목소리가 높아지는 학생</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">긴장 상황에서도 안정적인 목소리를 유지하는 방법을 배워요.</div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+        <div style="font-size: 28px; margin-bottom: 12px;">💪</div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">말을 할 때 목에 힘이 많이 들어가는 학생</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">불필요한 목의 긴장을 풀고 편안하게 말하는 법을 익혀요.</div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+        <div style="font-size: 28px; margin-bottom: 12px;">📢</div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">답변 내용은 준비했지만 전달력이 약한 학생</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">목소리로 신뢰감을 전달하는 기술을 배워요.</div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+        <div style="font-size: 28px; margin-bottom: 12px;">🎯</div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">말끝이 흐려져 자신감이 없어 보이는 학생</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">끝까지 명확하고 안정적인 발성을 연습해요.</div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+        <div style="font-size: 28px; margin-bottom: 12px;">✨</div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">목소리가 가볍거나 어린 느낌으로 들리는 학생</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">깊이 있고 무게감 있는 목소리를 만들어요.</div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+        <div style="font-size: 28px; margin-bottom: 12px;">🎙️</div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">아나운서처럼 안정적이고 신뢰감 있는 목소리를 만들고 싶은 학생</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">전문적인 발성과 표현력을 모두 익혀요.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 최종 목표 -->
+<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(214,51,132,.05), rgba(255,107,157,.05));">
+  <div class="container">
+    <div class="section-label">Final Goal</div>
+    <h2 class="section-title">최종 목표</h2>
+    <div style="max-width: 720px; margin: 0 auto;">
+      <div style="background: white; padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
+        <p style="margin-bottom: 24px; font-weight: 600; color: var(--text);">2주 후에는</p>
+
+        <ul style="list-style: none; padding: 0; margin-bottom: 28px;">
+          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
+            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">✓</span>
+            내 목소리의 가장 편안한 톤을 알고,
+          </li>
+          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
+            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">✓</span>
+            목에 무리 없이 안정적으로 말하는 방법을 익히며,
+          </li>
+          <li style="padding-left: 28px; position: relative;">
+            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">✓</span>
+            대본과 면접 답변에 어울리는 목소리 사용법을 연습하게 됩니다.
+          </li>
+        </ul>
+
+        <p style="padding-top: 24px; border-top: 1px solid var(--border);">
+          <span style="display: block; font-weight: 700; color: var(--text); margin-bottom: 8px;">목소리를 억지로 바꾸는 것이 아니라,</span>
+          내가 가진 목소리를 더 단단하고 깊이 있게 사용하는 것.<br>
+          <span style="font-weight: 700; color: var(--primary);">그것이 이번 보이스 커리큘럼의 핵심입니다.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top: 0; padding-bottom: 80px;">
+  <div class="container">
+    <div class="cta-box">
+      <h2 class="cta-title">2주의 기적, 지금 시작하세요 🌸</h2>
+      <p class="cta-desc">내 목소리를 찾고, 자신감 있게 표현하는 2주 과정</p>
+      <a class="btn btn-white" href="#" onclick="openApplicationModal(); return false;">🎙️ 2주의 기적 챌린지 참여하기</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-inner">
+    <div class="footer-logo">MONC 🌸</div>
+    <div class="footer-copy">© 2025 MONC. All rights reserved.</div>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.week-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const week = h.parentElement;
+      const isOpen = week.classList.contains('open');
+      document.querySelectorAll('.curriculum-week').forEach(w => w.classList.remove('open'));
+      if (!isOpen) week.classList.add('open');
+    });
+  });
+
+  function openApplicationModal() {
+    document.getElementById('applicationModal').style.display = 'flex';
+    updateTotalPrice();
+  }
+
+  function closeApplicationModal() {
+    document.getElementById('applicationModal').style.display = 'none';
+  }
+
+  // 체크박스 변경 시 총액 계산 및 커리큘럼 표시
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('challenge-checkbox')) {
+      updateTotalPrice();
+      updateCurriculumVisibility();
+    }
+  });
+
+  function updateCurriculumVisibility() {
+    const voiceChallenge = Array.from(document.querySelectorAll('.challenge-checkbox:checked')).some(
+      cb => cb.dataset.name.includes('보.신.각(보이스)')
+    );
+    const curriculumSection = document.getElementById('curriculumSection');
+    if (curriculumSection) {
+      curriculumSection.style.display = voiceChallenge ? 'block' : 'none';
+    }
+  }
+
+  function toggleWeekModal(week) {
+    const content = document.getElementById(week + 'ContentModal');
+    const arrow = event.target.closest('div').querySelector('span');
+    if (content && content.style.display === 'none') {
+      content.style.display = 'block';
+      arrow.style.transform = 'rotate(90deg)';
+    } else if (content) {
+      content.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function updateTotalPrice() {
+    const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
+    let total = 0;
+    checkboxes.forEach(cb => {
+      total += parseInt(cb.dataset.price);
+    });
+
+    const selectedCountEl = document.getElementById('selectedCount');
+    const totalPriceEl = document.getElementById('totalPrice');
+    if (selectedCountEl) selectedCountEl.textContent = checkboxes.length;
+    if (totalPriceEl) totalPriceEl.textContent = total.toLocaleString();
+  }
+
+  const APPLICATION_API_URL = "https://script.google.com/macros/s/AKfycbzEDVtM28XFOgaXrOODtW_xk58vYGOEylk93khh180AAfHh265DhCirTmUrQk1B5FT5/exec";
+
+  async function submitApplication() {
+    const name = document.getElementById('appName').value;
+    const phone = document.getElementById('appPhone').value;
+
+    if (!name || !phone) {
+      alert('이름과 전화번호를 입력해주세요.');
+      return;
+    }
+
+    const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
+    if (checkboxes.length === 0) {
+      alert('신청할 챌린지를 선택해주세요.');
+      return;
+    }
+
+    const challenges = Array.from(checkboxes).map(cb => ({
+      name: cb.dataset.name,
+      price: parseInt(cb.dataset.price)
+    }));
+
+    const totalPrice = challenges.reduce((sum, c) => sum + c.price, 0);
+
+    try {
+      const response = await fetch(APPLICATION_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'application',
+          name: name,
+          phone: phone,
+          challenges: challenges,
+          totalPrice: totalPrice,
+          timestamp: new Date().toLocaleString('ko-KR')
+        })
+      });
+
+      const result = await response.json();
+      alert(result.message);
+      if (result.success) {
+        closeApplicationModal();
+        document.getElementById('appName').value = '';
+        document.getElementById('appPhone').value = '';
+        document.querySelectorAll('.challenge-checkbox').forEach(cb => cb.checked = false);
+        updateTotalPrice();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('오류가 발생했습니다.');
+    }
+  }
+</script>
+
+<!-- 챌린지 신청 모달 -->
+<div id="applicationModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+    <span class="close" onclick="closeApplicationModal()">&times;</span>
+    <h2>챌린지 신청</h2>
+
+    <input type="text" id="appName" placeholder="이름" class="modal-input">
+    <input type="tel" id="appPhone" placeholder="전화번호 (010-0000-0000)" class="modal-input">
+
+    <!-- 챌린지 선택 -->
+    <div style="margin-top: 20px; margin-bottom: 15px;">
+      <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">신청 챌린지 선택</h3>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="보.신.각(보이스) - 목소리 챌린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">보.신.각(보이스)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">목소리 챌린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="스.피.닝(스피치) - 말 맛 챌린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">스.피.닝(스피치)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">말 맛 챌린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="영.합.각(표현력) - 영상면접 표현력 챌린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">영.합.각(표현력)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">영상면접 표현력 챌린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="승.자.각(답변) - 답변 챌린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">승.자.각(답변)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">답변 챌린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+    </div>
+
+    <!-- 상세 커리큘럼 (보신각 챌린지) -->
+    <div id="curriculumSection" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border);">
+      <div style="font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 16px;">📋 상세 커리큘럼</div>
+
+      <!-- Week 1 -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;" onclick="toggleWeekModal('week1')">
+          <span style="font-size: 16px;">▶</span>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text);">1주차: 내 목소리 찾기</div>
+        </div>
+        <div id="week1ContentModal" style="display: none; padding-left: 24px;">
+          <!-- Item 1 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 월요일 — 나에게 편한 톤 찾기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">목구멍을 넓히고 공기가 자연스럽게 빠져나가는 감각을 익힙니다.</div>
+          </div>
+          <!-- Item 2 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 화요일 — 목소리가 잘 나오는 자세 찾기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">긴장한 상태에서도 목이 조이지 않는 말하기 자세를 찾습니다.</div>
+          </div>
+          <!-- Item 3 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 수요일 — 단단한 아나운서 목소리 만들기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">허밍을 활용해 소리에 울림을 입히고 선명함을 만듭니다.</div>
+          </div>
+          <!-- Item 4 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 목요일 - 금요일 — 반복 훈련과 짧은 문장 적용</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">배운 감각을 반복하며 짧은 문장에서도 목소리의 안정감을 유지합니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Week 2 -->
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;" onclick="toggleWeekModal('week2')">
+          <span style="font-size: 16px;">▶</span>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text);">2주차: 만들어진 목소리로 대본에 적응하기</div>
+        </div>
+        <div id="week2ContentModal" style="display: none; padding-left: 24px;">
+          <!-- Item 1 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 월요일 - 화요일 — 안정적인 정보 전달과 중간톤 굳히기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">신뢰감 있는 중간 톤을 찾아 문장 안에서 일정하게 유지하는 연습을 합니다.</div>
+          </div>
+          <!-- Item 2 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 수요일 - 금요일 — 호흡의 길이 조절과 감정 울림 확장</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">대본의 분위기에 따라 호흡, 리듬, 깊이를 조절하는 연습을 합니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 가격 안내 -->
+    <div style="background: var(--bg2); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">각 챌린지 구성</div>
+      <div style="font-size: 13px; color: var(--text); margin-bottom: 2px;">참가비: 2만원</div>
+      <div style="font-size: 13px; color: var(--text); margin-bottom: 10px;">보증금: 2만원</div>
+      <div style="border-top: 1px solid rgba(214,51,132,0.2); padding-top: 10px;">
+        <div style="font-size: 14px; font-weight: 700; color: var(--primary);">
+          선택된 챌린지: <span id="selectedCount">0</span>개
+        </div>
+        <div style="font-size: 18px; font-weight: 900; color: var(--primary); margin-top: 5px;">
+          총액: <span id="totalPrice">0</span>원
+        </div>
+      </div>
+    </div>
+
+    <!-- 입금 안내 -->
+    <div style="background: rgba(255,107,157,0.1); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(214,51,132,0.2);">
+      <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">입금 정보</div>
+      <div style="font-size: 13px; color: var(--text); line-height: 1.6;">
+        <div>은행: 신한</div>
+        <div>계좌: 110-254-022354</div>
+        <div>예금주: 권성호</div>
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(214,51,132,0.15);">
+        입금 후 아래 신청 버튼을 눌러주세요
+      </div>
+    </div>
+
+    <button onclick="submitApplication()" class="modal-btn">신청하기</button>
+  </div>
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.modal-content h2 {
+  margin-bottom: 30px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 12px;
+  border: 1.5px solid rgba(214,51,132,0.2);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(214,51,132,0.1);
+}
+
+.modal-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--rose));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(214,51,132,0.3);
+}
+
+.close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 28px;
+  cursor: pointer;
+  color: #999;
+}
+
+.close:hover {
+  color: #333;
+}
+</style>
+
+</body>
+</html>
