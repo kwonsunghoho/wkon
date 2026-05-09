@@ -337,50 +337,64 @@
     /* ── INSTRUCTORS ── */
     .instructors { padding: 90px 0; background: var(--bg2); }
 
-    .inst-scroll-wrapper {
+    .inst-container {
       position: relative;
       margin: 44px auto 0;
       max-width: 640px;
-      overflow: hidden;
-      -webkit-clip-path: inset(0 0 0 0);
-      clip-path: inset(0 0 0 0);
     }
 
-    .inst-scroll-track {
+    /* 강사 탭 선택 버튼 */
+    .inst-tabs {
       display: flex;
-      flex-wrap: nowrap;
-      width: 100%;
-      touch-action: pan-y;
-      transition: transform .45s cubic-bezier(.4,0,.2,1);
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 28px;
     }
-
-    /* 화살표 버튼 */
-    .inst-nav {
-      display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 28px;
+    .inst-tab {
+      padding: 10px 24px;
+      border: 2px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 99px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      box-shadow: var(--shadow);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
-    .inst-arrow {
-      width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border);
-      background: #fff; color: var(--primary); font-size: 22px; font-weight: 300;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: all .2s; box-shadow: var(--shadow);
-      -webkit-tap-highlight-color: transparent; user-select: none;
+    .inst-tab:hover {
+      border-color: var(--primary);
+      color: var(--primary);
     }
-    .inst-arrow:hover { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: var(--shadow-lg); }
-    .inst-arrow:active { transform: scale(.93); }
-    .inst-dots { display: flex; gap: 8px; align-items: center; }
-    .inst-dot {
-      width: 8px; height: 8px; border-radius: 99px; background: var(--peach);
-      cursor: pointer; transition: all .35s; -webkit-tap-highlight-color: transparent;
+    .inst-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
     }
-    .inst-dot.active { width: 28px; background: var(--primary); }
+    .inst-tab:active {
+      transform: scale(.97);
+    }
 
     /* 강사 카드 */
     .inst-card {
-      flex: 0 0 95%;
-      min-width: 95%;
-      background: #fff; border: 1.5px solid rgba(214,51,132,.18);
-      border-radius: 24px; overflow: hidden;
+      background: #fff;
+      border: 1.5px solid rgba(214,51,132,.18);
+      border-radius: 24px;
+      overflow: hidden;
       box-shadow: var(--shadow-lg);
+      display: none;
+      animation: fadeIn .3s ease-in-out;
+    }
+    .inst-card.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* 사진 플레이스홀더 */
@@ -1045,11 +1059,10 @@
   </div>
 
   <div class="reveal" style="transition-delay:.1s;">
-  <div class="inst-scroll-wrapper">
-    <div class="inst-scroll-track" id="instTrack">
+  <div class="inst-container">
 
       <!-- 박새암 강사 -->
-      <div class="inst-card">
+      <div class="inst-card inst-card-park active" data-instructor="park">
         <div style="position:relative;">
           <div class="inst-card-accent"></div>
           <!-- 📸 박새암 강사 사진 -->
@@ -1101,7 +1114,7 @@
       </div>
 
       <!-- 권성호 강사 -->
-      <div class="inst-card">
+      <div class="inst-card inst-card-kwon" data-instructor="kwon">
         <div style="position:relative;">
           <div class="inst-card-accent"></div>
           <!-- 📸 권성호 강사 사진 -->
@@ -1145,19 +1158,14 @@
         </div>
       </div>
 
-    </div>
   </div>
   </div>
 
   <!-- 화살표 + 도트 네비게이션 -->
   <div class="container">
-    <div class="inst-nav">
-      <button class="inst-arrow" id="instPrev" aria-label="이전">‹</button>
-      <div class="inst-dots">
-        <div class="inst-dot active" data-idx="0"></div>
-        <div class="inst-dot" data-idx="1"></div>
-      </div>
-      <button class="inst-arrow" id="instNext" aria-label="다음">›</button>
+    <div class="inst-tabs">
+      <button class="inst-tab active" data-instructor="park">박새암</button>
+      <button class="inst-tab" data-instructor="kwon">권성호</button>
     </div>
   </div>
 </section>
@@ -1386,32 +1394,26 @@
   });
 
   /* ── 강사 캐러셀 (슬라이드) ── */
-  const track = document.getElementById('instTrack');
-  const dots = document.querySelectorAll('.inst-dot');
-  const cards = track.querySelectorAll('.inst-card');
-  const total = cards.length;
-  let cur = 0;
-  let startX = 0;
-  let isDragging = false;
+  /* 강사 탭 선택 */
+  const tabs = document.querySelectorAll('.inst-tab');
+  const cards = document.querySelectorAll('.inst-card');
 
-  function goTo(idx) {
-    cur = (idx + total) % total;
-    track.style.transform = `translateX(-${cur * 100}%)`;
-    dots.forEach((d, i) => d.classList.toggle('active', i === cur));
+  function showInstructor(instructorId) {
+    // 모든 탭과 카드 비활성화
+    tabs.forEach(tab => tab.classList.remove('active'));
+    cards.forEach(card => card.classList.remove('active'));
+
+    // 선택된 탭과 카드만 활성화
+    document.querySelector(`.inst-tab[data-instructor="${instructorId}"]`)?.classList.add('active');
+    document.querySelector(`.inst-card[data-instructor="${instructorId}"]`)?.classList.add('active');
   }
 
-  document.getElementById('instPrev').addEventListener('click', () => goTo(cur - 1));
-  document.getElementById('instNext').addEventListener('click', () => goTo(cur + 1));
-  dots.forEach(dot => dot.addEventListener('click', () => goTo(+dot.dataset.idx)));
-
-  /* 터치 스와이프 */
-  track.addEventListener('touchstart', e => { startX = e.touches[0].clientX; isDragging = true; }, { passive: true });
-  track.addEventListener('touchend', e => {
-    if (!isDragging) return;
-    const diff = startX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) goTo(diff > 0 ? cur + 1 : cur - 1);
-    isDragging = false;
-  }, { passive: true });
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const instructorId = tab.dataset.instructor;
+      showInstructor(instructorId);
+    });
+  });
 
   /* ── 사진 업로드 (임시 미리보기) ── */
   function triggerUpload(n) {
