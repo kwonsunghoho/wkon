@@ -45,18 +45,24 @@ async function applyIndexRecruit() {
     const status = getStatus(start, end);
     const badge  = card.querySelector('.recruit-status');
     const action = card.querySelector('.challenge-action');
-    const period = card.querySelector('.recruit-period strong');
+    const periodEl = card.querySelector('.recruit-period');
+    const periodStrong = card.querySelector('.recruit-period strong');
 
-    if (period) period.textContent = fmtPeriod(start, end);
+    if (periodStrong) periodStrong.textContent = fmtPeriod(start, end);
 
     if (status === 'upcoming') {
-      if (badge)  { badge.textContent = '모집 예정'; badge.className = 'recruit-status status-upcoming'; }
-      if (action) action.textContent = '모집 예정';
+      if (badge)    { badge.textContent = '⏰ 모집 예정'; badge.className = 'recruit-status status-upcoming'; }
+      if (action)   action.textContent = '모집 예정';
+      if (periodEl) {
+        periodEl.classList.add('is-upcoming');
+        // 달력 이모지 앞에 텍스트 강조
+        const strong = periodEl.querySelector('strong');
+        if (strong) periodEl.innerHTML = `📅 <span style="font-size:11.5px;font-weight:700;color:var(--text-muted)">모집 시작일</span> <strong>${fmtPeriod(start, end)}</strong>`;
+      }
       card.classList.add('is-disabled');
     } else if (status === 'closed') {
       if (badge)  { badge.textContent = '모집 마감'; badge.className = 'recruit-status status-closed'; }
       if (action) action.textContent = '모집 마감';
-      card.classList.add('is-disabled');
     } else {
       if (badge)  { badge.textContent = '🔥 모집 중'; badge.className = 'recruit-status status-recruiting'; }
     }
