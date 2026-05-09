@@ -1648,12 +1648,14 @@
 
   function updateTotalPrice() {
     const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
-    let total = 0;
-    checkboxes.forEach(cb => {
-      total += parseInt(cb.dataset.price);
-    });
+    const count = checkboxes.length;
+    const participation = count * 20000;
+    const deposit = count * 20000;
+    const total = participation + deposit;
 
-    document.getElementById('selectedCount').textContent = checkboxes.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('participationFee').textContent = participation.toLocaleString();
+    document.getElementById('depositFee').textContent = deposit.toLocaleString();
     document.getElementById('totalPrice').textContent = total.toLocaleString();
   }
 
@@ -1677,7 +1679,7 @@
       price: parseInt(cb.dataset.price)
     }));
 
-    const totalPrice = challenges.reduce((sum, c) => sum + c.price, 0);
+    const totalPrice = checkboxes.length * 40000; // 참가비(2만) + 보증금(2만)
 
     try {
       const response = await fetch(APPLICATION_API_URL, {
@@ -1886,22 +1888,24 @@
       </div>
     </div>
 
-    <!-- 참가비 합계 -->
-    <div style="background:var(--bg2); padding:15px; border-radius:12px; margin-bottom:10px;">
-      <div style="font-size:14px; font-weight:700; color:var(--primary);">
+    <!-- 납부 금액 안내 -->
+    <div style="background:var(--bg2); padding:15px; border-radius:12px; margin-bottom:15px;">
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px;">
         선택된 챌린지: <span id="selectedCount">0</span>개
       </div>
-      <div style="font-size:18px; font-weight:900; color:var(--primary); margin-top:5px;">
-        참가비 합계: <span id="totalPrice">0</span>원
-      </div>
-    </div>
-
-    <!-- 보증금 안내 -->
-    <div style="background:rgba(34,197,94,.07); border:1.5px solid rgba(34,197,94,.25); padding:12px 15px; border-radius:12px; margin-bottom:15px;">
-      <div style="font-size:12px; font-weight:800; color:#16a34a; margin-bottom:4px;">💰 보증금 안내 (챌린지당 2만원)</div>
-      <div style="font-size:12px; color:var(--text-muted); line-height:1.7;">
-        챌린지를 수료하면 <strong style="color:#16a34a;">전액 환급</strong>돼요!<br>
-        <span style="color:var(--text); font-weight:600;">최종 납부액 = 참가비 + 보증금 = 챌린지당 총 4만원</span>
+      <div style="background:white; border-radius:10px; padding:12px; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:var(--text);">
+          <span>참가비</span>
+          <span><span id="participationFee">0</span>원</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:var(--text-muted);">
+          <span>보증금 <span style="font-size:11px;">(수료 시 전액 환급 💚)</span></span>
+          <span><span id="depositFee">0</span>원</span>
+        </div>
+        <div style="border-top:1.5px solid var(--border); padding-top:10px; display:flex; justify-content:space-between; align-items:baseline;">
+          <span style="font-size:14px; font-weight:800; color:var(--primary);">지금 입금할 금액</span>
+          <span style="font-size:20px; font-weight:900; color:var(--primary);"><span id="totalPrice">0</span>원</span>
+        </div>
       </div>
     </div>
 
