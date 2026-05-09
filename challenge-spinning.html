@@ -142,14 +142,14 @@
     <h1 class="hero-title"><span class="gradient-text">스.피.닝</span> - 듣기 좋은 말투 만들기</h1>
     <p class="hero-desc">정확한 발음, 안정적인 호흡, 밝은 미소, 자연스러운 인토네이션, 신뢰감 있는 끝맺음, 쉬운 표현까지 단계적으로 연습하며 차분하고 준비된 사람으로 느끼게 합니다.</p>
     <div class="hero-meta">
+      <div class="meta-chip" id="recruitChip" data-recruit-start="2026-05-15" data-recruit-end="2026-06-15">📅 모집 <strong>5/15 ~ 6/15</strong></div>
       <div class="meta-chip">⏱️ 하루 <strong>10-15분</strong></div>
       <div class="meta-chip">✅ 수료율 <strong>95%</strong></div>
       <div class="meta-chip">📈 평균 성과 <strong>87%</strong></div>
       <div class="meta-chip">👨‍🏫 전문가 <strong>가이던스 영상</strong></div>
-      <div class="meta-chip">💬 <strong>실시간 소통</strong></div>
     </div>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="#" onclick="openApplicationModal(); return false;">🌸 지금 바로 도전하기</a>
+      <a class="btn btn-primary apply-btn" href="#" onclick="handleApply(event)">🌸 지금 바로 도전하기</a>
       <a class="btn btn-ghost" href="index.html">← 목록으로</a>
     </div>
   </div>
@@ -372,7 +372,7 @@
     <div class="cta-box">
       <h2 class="cta-title">지금 바로 시작하세요 🗣️</h2>
       <p class="cta-desc">또렷하고 신뢰감 있는 말투로 면접관의 마음을 사로잡는 2주 과정</p>
-      <a class="btn btn-white" href="#" onclick="openApplicationModal(); return false;">🗣️ 스.피.닝 챌린지 참여하기</a>
+      <a class="btn btn-white apply-btn" href="#" onclick="handleApply(event)">🗣️ 스.피.닝 챌린지 참여하기</a>
     </div>
   </div>
 </section>
@@ -398,6 +398,39 @@
     document.getElementById('applicationModal').style.display = 'flex';
     updateTotalPrice();
   }
+
+  // 모집 기간 체크
+  function getRecruitState() {
+    const chip = document.getElementById('recruitChip');
+    if (!chip) return 'open';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const start = new Date(chip.dataset.recruitStart);
+    const end = new Date(chip.dataset.recruitEnd); end.setHours(23,59,59,999);
+    if (today < start) return 'upcoming';
+    if (today > end) return 'closed';
+    return 'open';
+  }
+  function handleApply(e) {
+    e.preventDefault();
+    const state = getRecruitState();
+    if (state === 'upcoming') { alert('아직 모집 시작 전이에요. 모집 시작일을 기다려주세요!'); return; }
+    if (state === 'closed') { alert('이번 회차는 모집이 마감됐어요. 다음 회차를 기다려주세요!'); return; }
+    openApplicationModal();
+  }
+  (function() {
+    const state = getRecruitState();
+    if (state === 'open') return;
+    document.querySelectorAll('.apply-btn').forEach(btn => {
+      btn.style.opacity = '.55';
+      btn.style.filter = 'grayscale(.4)';
+      btn.style.cursor = 'not-allowed';
+      btn.textContent = state === 'upcoming' ? '⏰ 모집 예정' : '❌ 모집 마감';
+    });
+    const chip = document.getElementById('recruitChip');
+    if (chip) {
+      chip.innerHTML = (state === 'upcoming' ? '⏰ 모집 예정 ' : '❌ 모집 마감 ') + chip.innerHTML.replace('📅 모집 ','');
+    }
+  })();
 
   function closeApplicationModal() {
     document.getElementById('applicationModal').style.display = 'none';
