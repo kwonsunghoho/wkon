@@ -345,6 +345,7 @@
   </div>
 </footer>
 
+<script src="recruit.js"></script>
 <script>
   document.querySelectorAll('.week-header').forEach(h => {
     h.addEventListener('click', () => {
@@ -360,42 +361,16 @@
     updateTotalPrice();
   }
 
-  // 모집 기간 체크
-  function getRecruitState() {
-    const chip = document.getElementById('recruitChip');
-    if (!chip) return 'open';
-    const today = new Date(); today.setHours(0,0,0,0);
-    const start = new Date(chip.dataset.recruitStart);
-    const end = new Date(chip.dataset.recruitEnd); end.setHours(23,59,59,999);
-    if (today < start) return 'upcoming';
-    if (today > end) return 'closed';
-    return 'open';
-  }
+  // 구글 시트 모집 기간 연동
+  applyDetailRecruit('voice');
 
   function handleApply(e) {
     e.preventDefault();
-    const state = getRecruitState();
+    const state = window._recruitStatus || 'open';
     if (state === 'upcoming') { alert('아직 모집 시작 전이에요. 모집 시작일을 기다려주세요!'); return; }
-    if (state === 'closed') { alert('이번 회차는 모집이 마감됐어요. 다음 회차를 기다려주세요!'); return; }
+    if (state === 'closed')   { alert('이번 회차는 모집이 마감됐어요. 다음 회차를 기다려주세요!'); return; }
     openApplicationModal();
   }
-
-  // 페이지 로드 시 버튼 상태 업데이트
-  (function() {
-    const state = getRecruitState();
-    if (state === 'open') return;
-    document.querySelectorAll('.apply-btn').forEach(btn => {
-      btn.style.opacity = '.55';
-      btn.style.filter = 'grayscale(.4)';
-      btn.style.cursor = 'not-allowed';
-      btn.textContent = state === 'upcoming' ? '⏰ 모집 예정' : '❌ 모집 마감';
-    });
-    const chip = document.getElementById('recruitChip');
-    if (chip) {
-      chip.innerHTML = (state === 'upcoming' ? '⏰ 모집 예정 ' : '❌ 모집 마감 ') + chip.innerHTML.replace('📅 모집 ','');
-      chip.style.background = state === 'closed' ? 'rgba(120,120,120,.1)' : 'rgba(214,51,132,.08)';
-    }
-  })();
 
   function closeApplicationModal() {
     document.getElementById('applicationModal').style.display = 'none';
