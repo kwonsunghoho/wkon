@@ -54,10 +54,9 @@ async function applyIndexRecruit() {
       if (badge)    { badge.textContent = '⏰ 모집 예정'; badge.className = 'recruit-status status-upcoming'; }
       if (action)   action.textContent = '모집 예정';
       if (periodEl) {
+        // innerHTML 바꾸기 전에 클래스 유지되도록 먼저 내용 교체 후 클래스 추가
+        periodEl.innerHTML = `📅 <span style="font-size:11px;font-weight:700;opacity:.8">모집 시작일</span> <strong>${fmtPeriod(start, end)}</strong>`;
         periodEl.classList.add('is-upcoming');
-        // 달력 이모지 앞에 텍스트 강조
-        const strong = periodEl.querySelector('strong');
-        if (strong) periodEl.innerHTML = `📅 <span style="font-size:11.5px;font-weight:700;color:var(--text-muted)">모집 시작일</span> <strong>${fmtPeriod(start, end)}</strong>`;
       }
       card.classList.add('is-disabled');
     } else if (status === 'closed') {
