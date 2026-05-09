@@ -43,6 +43,11 @@ async function applyIndexRecruit() {
     if (!start || !end) return;
 
     const status = getStatus(start, end);
+
+    // 모달 체크박스 비활성화용 상태 저장
+    window._challengeStatuses = window._challengeStatuses || {};
+    window._challengeStatuses[id] = status;
+
     const badge  = card.querySelector('.recruit-status');
     const action = card.querySelector('.challenge-action');
     const periodEl = card.querySelector('.recruit-period');

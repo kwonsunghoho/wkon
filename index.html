@@ -1609,6 +1609,39 @@
 
   function openApplicationModal() {
     document.getElementById('applicationModal').style.display = 'flex';
+
+    // 모집예정/마감 체크박스 비활성화
+    const statuses = window._challengeStatuses || {};
+    document.querySelectorAll('.challenge-checkbox[data-recruit-id]').forEach(cb => {
+      const status = statuses[cb.dataset.recruitId];
+      const label  = cb.closest('label');
+      const disabled = status === 'upcoming' || status === 'closed';
+
+      cb.disabled = disabled;
+      if (disabled) cb.checked = false;
+
+      if (label) {
+        label.style.opacity = disabled ? '.45' : '1';
+        label.style.pointerEvents = disabled ? 'none' : '';
+        // 기존 상태 태그 제거 후 재생성
+        const old = label.querySelector('.modal-status-tag');
+        if (old) old.remove();
+        if (disabled) {
+          const tag = document.createElement('span');
+          tag.className = 'modal-status-tag';
+          tag.textContent = status === 'upcoming' ? '⏰ 모집예정' : '마감';
+          tag.style.cssText = `
+            font-size:10px; font-weight:800; padding:2px 7px; border-radius:99px;
+            margin-left:4px; white-space:nowrap;
+            background:${status === 'upcoming' ? 'rgba(214,51,132,.12)' : 'rgba(120,120,120,.15)'};
+            color:${status === 'upcoming' ? 'var(--primary)' : '#888'};
+            border:1px solid ${status === 'upcoming' ? 'rgba(214,51,132,.3)' : 'rgba(120,120,120,.3)'};
+          `;
+          label.querySelector('div').appendChild(tag);
+        }
+      }
+    });
+
     updateTotalPrice();
   }
 
@@ -1743,7 +1776,7 @@
 
       <!-- 보신각 -->
       <label style="display:flex; align-items:center; gap:10px; margin-bottom:6px; cursor:pointer;">
-        <input type="checkbox" class="challenge-checkbox" data-price="20000" data-deposit="20000" data-name="보.신.각(보이스) - 목소리 챌린지" data-curriculum="currVoice">
+        <input type="checkbox" class="challenge-checkbox" data-price="20000" data-deposit="20000" data-name="보.신.각(보이스) - 목소리 챌린지" data-curriculum="currVoice" data-recruit-id="voice">
         <div style="flex:1;">
           <div style="font-size:14px; font-weight:600;">보.신.각(보이스)</div>
           <div style="font-size:12px; color:var(--text-muted);">목소리 챌린지</div>
@@ -1778,7 +1811,7 @@
 
       <!-- 스피닝 -->
       <label style="display:flex; align-items:center; gap:10px; margin-bottom:6px; cursor:pointer;">
-        <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000" data-name="스.피.닝(스피치) - 말 맛 챌린지" data-curriculum="currSpinning">
+        <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000" data-name="스.피.닝(스피치) - 말 맛 챌린지" data-curriculum="currSpinning" data-recruit-id="spinning">
         <div style="flex:1;">
           <div style="font-size:14px; font-weight:600;">스.피.닝(스피치)</div>
           <div style="font-size:12px; color:var(--text-muted);">말 맛 챌린지</div>
@@ -1817,7 +1850,7 @@
 
       <!-- 영합각 -->
       <label style="display:flex; align-items:center; gap:10px; margin-bottom:6px; cursor:pointer;">
-        <input type="checkbox" class="challenge-checkbox" data-price="25000" data-deposit="30000" data-name="영.합.각(표현력) - 영상면접 표현력 챌린지" data-curriculum="currExpression">
+        <input type="checkbox" class="challenge-checkbox" data-price="25000" data-deposit="30000" data-name="영.합.각(표현력) - 영상면접 표현력 챌린지" data-curriculum="currExpression" data-recruit-id="expression">
         <div style="flex:1;">
           <div style="font-size:14px; font-weight:600;">영.합.각(표현력)</div>
           <div style="font-size:12px; color:var(--text-muted);">영상면접 표현력 챌린지</div>
@@ -1856,7 +1889,7 @@
 
       <!-- 승자각 -->
       <label style="display:flex; align-items:center; gap:10px; margin-bottom:6px; cursor:pointer;">
-        <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000" data-name="승.자.각(답변) - 답변 챌린지" data-curriculum="currAnswer">
+        <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000" data-name="승.자.각(답변) - 답변 챌린지" data-curriculum="currAnswer" data-recruit-id="answer">
         <div style="flex:1;">
           <div style="font-size:14px; font-weight:600;">승.자.각(답변)</div>
           <div style="font-size:12px; color:var(--text-muted);">답변 챌린지</div>
