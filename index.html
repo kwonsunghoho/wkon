@@ -677,6 +677,12 @@
     .reveal { opacity: 0; transform: translateY(20px); transition: opacity .55s ease, transform .55s ease; }
     .reveal.visible { opacity: 1; transform: translateY(0); }
 
+    /* ── CURRICULUM TOGGLE ── */
+    #curriculumSection > div > div:first-child span {
+      display: inline-block;
+      transition: transform .2s ease;
+    }
+
     /* ════════════════════════════
        MOBILE OPTIMIZATION
     ════════════════════════════ */
@@ -1436,12 +1442,33 @@
     document.getElementById('applicationModal').style.display = 'none';
   }
 
-  // 체크박스 변경 시 총액 계산
+  // 체크박스 변경 시 총액 계산 및 커리큘럼 표시
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('challenge-checkbox')) {
       updateTotalPrice();
+      updateCurriculumVisibility();
     }
   });
+
+  function updateCurriculumVisibility() {
+    const voiceChallenge = Array.from(document.querySelectorAll('.challenge-checkbox:checked')).some(
+      cb => cb.dataset.name.includes('보.신.각(보이스)')
+    );
+    const curriculumSection = document.getElementById('curriculumSection');
+    curriculumSection.style.display = voiceChallenge ? 'block' : 'none';
+  }
+
+  function toggleWeek(week) {
+    const content = document.getElementById(week + 'Content');
+    const arrow = event.target.closest('div').querySelector('span');
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      content.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
 
   function updateTotalPrice() {
     const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
@@ -1553,6 +1580,111 @@
         </div>
         <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
       </label>
+    </div>
+
+    <!-- 상세 커리큘럼 (보신각 챌린지) -->
+    <div id="curriculumSection" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border);">
+      <div style="font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 16px;">📋 상세 커리큘럼</div>
+
+      <!-- Week 1 -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;" onclick="toggleWeek('week1')">
+          <span style="font-size: 16px;">▶</span>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text);">1주차: 나의 목소리 찾기</div>
+        </div>
+        <div id="week1Content" style="display: none; padding-left: 24px;">
+          <!-- Day 1 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 월요일 - 야유와 한숨</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 야유(야~) 발성 5분, 한숨(헉~) 5분 반복</div>
+              <div><strong>효과:</strong> 성대 이완, 깊은 호흡 형성</div>
+            </div>
+          </div>
+          <!-- Day 2 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 화요일 - 누웠다 일어나기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 누운 상태에서 발성 후 일어나면서 음성 지속</div>
+              <div><strong>효과:</strong> 복부 호흡 강화, 안정적인 성대 진동</div>
+            </div>
+          </div>
+          <!-- Day 3 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 수요일 - 허밍</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> '음~' 소리로 5-10분 허밍 연습</div>
+              <div><strong>효과:</strong> 공명강 활성화, 음성 울림 개선</div>
+            </div>
+          </div>
+          <!-- Day 4 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 목요일 - 반복 훈련</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 월-수요일 훈련 방법 반복 복합 연습</div>
+              <div><strong>효과:</strong> 습득한 발성법 체계화</div>
+            </div>
+          </div>
+          <!-- Day 5 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 금요일 - 복습 및 개선</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 주간 훈련 복습 및 약한 부분 집중 훈련</div>
+              <div><strong>효과:</strong> 개인 맞춤형 발성 개선</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Week 2 -->
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;" onclick="toggleWeek('week2')">
+          <span style="font-size: 16px;">▶</span>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text);">2주차: 공명 있는 목소리 만들기</div>
+        </div>
+        <div id="week2Content" style="display: none; padding-left: 24px;">
+          <!-- Day 1 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 월요일 - 입술 공명 훈련</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 입술을 떨며 발성 (Lip Trill) 3-5분</div>
+              <div><strong>효과:</strong> 입술 진동을 통한 공명강 자극</div>
+            </div>
+          </div>
+          <!-- Day 2 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 화요일 - 코공명 훈련</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 코를 통해 '음~' 발성, 콧대에서 울림 감지</div>
+              <div><strong>효과:</strong> 비공강 공명 강화, 따뜻한 톤 형성</div>
+            </div>
+          </div>
+          <!-- Day 3 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 수요일 - 가슴 공명 훈련</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 손을 가슴에 올린 후 낮은 음역대 발성</div>
+              <div><strong>효과:</strong> 가슴 공명강 활성화, 깊이 있는 음성</div>
+            </div>
+          </div>
+          <!-- Day 4 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 목요일 - 복합 공명 훈련</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 코-입술-가슴 공명을 순차적으로 연결</div>
+              <div><strong>효과:</strong> 풍부한 음향 울림, 전문적인 목소리</div>
+            </div>
+          </div>
+          <!-- Day 5 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 금요일 - 통합 연습 및 평가</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+              <div><strong>방법:</strong> 2주간 배운 모든 방법을 한 문장에 녹음</div>
+              <div><strong>효과:</strong> 2주 학습 성과 측정 및 피드백 준비</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 가격 안내 -->
