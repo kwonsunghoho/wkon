@@ -355,8 +355,326 @@
   });
 
   function openApplicationModal() {
-    window.location.href = 'index.html#신청하기';
+    document.getElementById('applicationModal').style.display = 'flex';
+    updateTotalPrice();
+  }
+
+  function closeApplicationModal() {
+    document.getElementById('applicationModal').style.display = 'none';
+  }
+
+  // 체크박스 변경 시 총액 계산 및 커리큘럼 표시
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('challenge-checkbox')) {
+      updateTotalPrice();
+      updateCurriculumVisibility();
+    }
+  });
+
+  function updateCurriculumVisibility() {
+    const voiceChallenge = Array.from(document.querySelectorAll('.challenge-checkbox:checked')).some(
+      cb => cb.dataset.name.includes('보.신.각(보이스)')
+    );
+    const curriculumSection = document.getElementById('curriculumSection');
+    if (curriculumSection) {
+      curriculumSection.style.display = voiceChallenge ? 'block' : 'none';
+    }
+  }
+
+  function toggleWeekModal(week) {
+    const content = document.getElementById(week + 'ContentModal');
+    const arrow = event.target.closest('div').querySelector('span');
+    if (content && content.style.display === 'none') {
+      content.style.display = 'block';
+      arrow.style.transform = 'rotate(90deg)';
+    } else if (content) {
+      content.style.display = 'none';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function updateTotalPrice() {
+    const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
+    let total = 0;
+    checkboxes.forEach(cb => {
+      total += parseInt(cb.dataset.price);
+    });
+
+    const selectedCountEl = document.getElementById('selectedCount');
+    const totalPriceEl = document.getElementById('totalPrice');
+    if (selectedCountEl) selectedCountEl.textContent = checkboxes.length;
+    if (totalPriceEl) totalPriceEl.textContent = total.toLocaleString();
+  }
+
+  const APPLICATION_API_URL = "https://script.google.com/macros/s/AKfycbzEDVtM28XFOgaXrOODtW_xk58vYGOEylk93khh180AAfHh265DhCirTmUrQk1B5FT5/exec";
+
+  async function submitApplication() {
+    const name = document.getElementById('appName').value;
+    const phone = document.getElementById('appPhone').value;
+
+    if (!name || !phone) {
+      alert('이름과 전화번호를 입력해주세요.');
+      return;
+    }
+
+    const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
+    if (checkboxes.length === 0) {
+      alert('신청할 챘린지를 선택해주세요.');
+      return;
+    }
+
+    const challenges = Array.from(checkboxes).map(cb => ({
+      name: cb.dataset.name,
+      price: parseInt(cb.dataset.price)
+    }));
+
+    const totalPrice = challenges.reduce((sum, c) => sum + c.price, 0);
+
+    try {
+      const response = await fetch(APPLICATION_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'application',
+          name: name,
+          phone: phone,
+          challenges: challenges,
+          totalPrice: totalPrice,
+          timestamp: new Date().toLocaleString('ko-KR')
+        })
+      });
+
+      const result = await response.json();
+      alert(result.message);
+      if (result.success) {
+        closeApplicationModal();
+        document.getElementById('appName').value = '';
+        document.getElementById('appPhone').value = '';
+        document.querySelectorAll('.challenge-checkbox').forEach(cb => cb.checked = false);
+        updateTotalPrice();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('오류가 발생했습니다.');
+    }
   }
 </script>
+
+<!-- 챘린지 신청 모달 -->
+<div id="applicationModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+    <span class="close" onclick="closeApplicationModal()">&times;</span>
+    <h2>챘린지 신청</h2>
+
+    <input type="text" id="appName" placeholder="이름" class="modal-input">
+    <input type="tel" id="appPhone" placeholder="전화번호 (010-0000-0000)" class="modal-input">
+
+    <!-- 챘린지 선택 -->
+    <div style="margin-top: 20px; margin-bottom: 15px;">
+      <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">신청 챘린지 선택</h3>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="보.신.각(보이스) - 목소리 챘린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">보.신.각(보이스)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">목소리 챘린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="스.피.닝(스피치) - 말 맛 챘린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">스.피.닝(스피치)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">말 맛 챘린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="영.합.각(표현력) - 영상면접 표현력 챘린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">영.합.각(표현력)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">영상면접 표현력 챘린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; cursor: pointer;">
+        <input type="checkbox" class="challenge-checkbox" data-price="40000" data-name="승.자.각(답변) - 답변 챘린지">
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">승.자.각(답변)</div>
+          <div style="font-size: 12px; color: var(--text-muted);">답변 챘린지</div>
+        </div>
+        <span style="font-size: 12px; color: var(--primary); font-weight: 700;">4만원</span>
+      </label>
+    </div>
+
+    <!-- 상세 커리큘럼 (보신각 챘린지) -->
+    <div id="curriculumSection" style="display: none; background: var(--surface2); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border);">
+      <div style="font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 16px;">📋 상세 커리큘럼</div>
+
+      <!-- Week 1 -->
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;" onclick="toggleWeekModal('week1')">
+          <span style="font-size: 16px;">▶</span>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text);">1주차: 내 목소리 찾기</div>
+        </div>
+        <div id="week1ContentModal" style="display: none; padding-left: 24px;">
+          <!-- Item 1 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 월요일 — 나에게 편한 톤 찾기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">목구멍을 넓히고 공기가 자연스럽게 빠져나가는 감각을 익힙니다.</div>
+          </div>
+          <!-- Item 2 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 화요일 — 목소리가 잘 나오는 자세 찾기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">긴장한 상태에서도 목이 조이지 않는 말하기 자세를 찾습니다.</div>
+          </div>
+          <!-- Item 3 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 수요일 — 단단한 아나운서 목소리 만들기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">허밍을 활용해 소리에 울림을 입히고 선명함을 만듭니다.</div>
+          </div>
+          <!-- Item 4 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">📅 목요일 - 금요일 — 반복 훈련과 짧은 문장 적용</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">배운 감각을 반복하며 짧은 문장에서도 목소리의 안정감을 유지합니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Week 2 -->
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;" onclick="toggleWeekModal('week2')">
+          <span style="font-size: 16px;">▶</span>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text);">2주차: 만들어진 목소리로 대본에 적응하기</div>
+        </div>
+        <div id="week2ContentModal" style="display: none; padding-left: 24px;">
+          <!-- Item 1 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 월요일 - 화요일 — 안정적인 정보 전달과 중간톤 굳히기</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">신뢰감 있는 중간 톤을 찾아 문장 안에서 일정하게 유지하는 연습을 합니다.</div>
+          </div>
+          <!-- Item 2 -->
+          <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--rose);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--rose); margin-bottom: 6px;">📅 수요일 - 금요일 — 호흡의 길이 조절과 감정 울림 확장</div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">대본의 분위기에 따라 호흡, 리듬, 깊이를 조절하는 연습을 합니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 가격 안내 -->
+    <div style="background: var(--bg2); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">각 챘린지 구성</div>
+      <div style="font-size: 13px; color: var(--text); margin-bottom: 2px;">참가비: 2만원</div>
+      <div style="font-size: 13px; color: var(--text); margin-bottom: 10px;">보증금: 2만원</div>
+      <div style="border-top: 1px solid rgba(214,51,132,0.2); padding-top: 10px;">
+        <div style="font-size: 14px; font-weight: 700; color: var(--primary);">
+          선택된 챘린지: <span id="selectedCount">0</span>개
+        </div>
+        <div style="font-size: 18px; font-weight: 900; color: var(--primary); margin-top: 5px;">
+          총액: <span id="totalPrice">0</span>원
+        </div>
+      </div>
+    </div>
+
+    <!-- 입금 안내 -->
+    <div style="background: rgba(255,107,157,0.1); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(214,51,132,0.2);">
+      <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">입금 정보</div>
+      <div style="font-size: 13px; color: var(--text); line-height: 1.6;">
+        <div>은행: 신한</div>
+        <div>계좌: 110-254-022354</div>
+        <div>예금주: 권성호</div>
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(214,51,132,0.15);">
+        입금 후 아래 신청 버튼을 눌러주세요
+      </div>
+    </div>
+
+    <button onclick="submitApplication()" class="modal-btn">신청하기</button>
+  </div>
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.modal-content h2 {
+  margin-bottom: 30px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 12px;
+  border: 1.5px solid rgba(214,51,132,0.2);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(214,51,132,0.1);
+}
+
+.modal-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--rose));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(214,51,132,0.3);
+}
+
+.close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 28px;
+  cursor: pointer;
+  color: #999;
+}
+
+.close:hover {
+  color: #333;
+}
+</style>
+
 </body>
 </html>
