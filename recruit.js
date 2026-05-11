@@ -73,6 +73,27 @@ async function applyIndexRecruit() {
   });
 }
 
+/* ── 카드 없이도 전체 챌린지 상태 로드 (모달 공용) ── */
+const RECRUIT_FALLBACKS = {
+  voice:      { start: '2026-05-01', end: '2026-05-31' },
+  expression: { start: '2026-05-05', end: '2026-05-25' },
+  spinning:   { start: '2026-05-15', end: '2026-06-15' },
+  answer:     { start: '2026-04-01', end: '2026-04-30' }
+};
+
+async function loadChallengeStatuses() {
+  if (window._challengeStatuses) return;
+  let data = null;
+  try { data = await loadRecruitData(); } catch(e) {}
+  window._challengeStatuses = {};
+  Object.entries(RECRUIT_FALLBACKS).forEach(([id, fb]) => {
+    const d = data ? data[id] : null;
+    const start = (d && d.start) || fb.start;
+    const end   = (d && d.end)   || fb.end;
+    window._challengeStatuses[id] = getStatus(start, end);
+  });
+}
+
 /* ── 챌린지 상세 페이지: 버튼·칩 상태 적용 ── */
 async function applyDetailRecruit(challengeId) {
   const data = await loadRecruitData();
