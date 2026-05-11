@@ -8,9 +8,12 @@ async function loadRecruitData() {
     const rows = text.trim().split('\n').slice(1); // 첫 줄(헤더) 제외
     const data = {};
     rows.forEach(row => {
-      const cols = row.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
-      if (cols[0]) data[cols[0]] = { start: cols[1], end: cols[2] };
+      // CSV 파싱: 쌍따옴표 필드 처리
+      const cols = row.match(/(".*?"|[^,]+)(?=,|$)/g) || row.split(',');
+      const clean = cols.map(s => s.trim().replace(/^"|"$/g, '').trim());
+      if (clean[0]) data[clean[0]] = { start: clean[1], end: clean[2] };
     });
+    console.log('[MONC 모집] 구글 시트 데이터:', data);
     return data;
   } catch (e) {
     console.warn('모집 데이터 로드 실패 (하드코딩 값 사용):', e);
@@ -18,17 +21,46 @@ async function loadRecruitData() {
   }
 }
 
+/* 날짜 문자열을 Date 객체로 변환
+   지원 형식: YYYY-MM-DD / YYYY. M. D. / M/D/YYYY / YYYY/MM/DD */
+function parseDate(str) {
+  if (!str) return null;
+  const s = str.trim();
+
+  // YYYY-MM-DD 또는 YYYY/MM/DD
+  let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+
+  // YYYY. M. D. (구글 시트 한국어 형식)
+  m = s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+
+  // M/D/YYYY (구글 시트 영문 형식)
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[1]-1, +m[2]);
+
+  // 그 외 브라우저 기본 파싱 시도
+  const d = new Date(s);
+  if (!isNaN(d)) return d;
+
+  console.warn('[MONC 모집] 날짜 파싱 실패:', s);
+  return null;
+}
+
 function getStatus(start, end) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const s = new Date(start);
-  const e = new Date(end); e.setHours(23, 59, 59, 999);
+  const s = parseDate(start);
+  const e = parseDate(end);
+  if (!s || !e) { console.warn('[MONC 모집] 날짜 오류 — start:', start, 'end:', end); return 'upcoming'; }
+  e.setHours(23, 59, 59, 999);
+  console.log('[MONC 모집] 상태 계산 — 오늘:', today.toLocaleDateString(), '시작:', s.toLocaleDateString(), '종료:', e.toLocaleDateString());
   if (today < s) return 'upcoming';
   if (today > e) return 'closed';
   return 'open';
 }
 
 function fmtPeriod(start, end) {
-  const f = d => { const dt = new Date(d); return `${dt.getMonth()+1}/${dt.getDate()}`; };
+  const f = d => { const dt = parseDate(d); return dt ? `${dt.getMonth()+1}/${dt.getDate()}` : '?'; };
   return `${f(start)} ~ ${f(end)}`;
 }
 
