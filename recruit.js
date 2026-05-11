@@ -99,6 +99,7 @@ async function applyIndexRecruit() {
     } else if (status === 'closed') {
       if (badge)  { badge.textContent = '모집 마감'; badge.className = 'recruit-status status-closed'; }
       if (action) action.textContent = '모집 마감';
+      card.classList.add('is-disabled');
     } else {
       if (badge)  { badge.textContent = '🔥 모집 중'; badge.className = 'recruit-status status-recruiting'; }
     }
