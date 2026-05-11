@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>OG 이미지 생성기</title></head>
+<body style="background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;color:white;">
+<p style="margin-bottom:16px;font-size:18px;">⏳ og-image.png 생성 중...</p>
+<canvas id="c" width="1200" height="630" style="border-radius:12px;max-width:90vw;"></canvas>
+<button id="dl" style="display:none;margin-top:20px;padding:14px 36px;background:#D63384;color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">📥 og-image.png 저장</button>
+
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const W = 1200, H = 630;
+
+// ── 배경 그라디언트
+const bg = ctx.createLinearGradient(0, 0, W, H);
+bg.addColorStop(0, '#FFF5F8');
+bg.addColorStop(1, '#FFEEF4');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, W, H);
+
+// ── 장식 원 (흐린 핑크)
+function blurCircle(x, y, r, color, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+blurCircle(970, 110, 260, '#F9A8D4', 0.55);
+blurCircle(150, 520, 220, '#FBCFE8', 0.5);
+blurCircle(580, 630, 200, '#FFB3C6', 0.35);
+
+// ── 점 패턴
+ctx.fillStyle = 'rgba(214,51,132,0.07)';
+for (let x = 0; x < W; x += 32)
+  for (let y = 0; y < H; y += 32)
+    { ctx.beginPath(); ctx.arc(x+1.5, y+1.5, 1.5, 0, Math.PI*2); ctx.fill(); }
+
+// ── 흰색 카드
+ctx.save();
+ctx.shadowColor = 'rgba(214,51,132,0.12)';
+ctx.shadowBlur = 40;
+roundRect(ctx, 80, 55, 1040, 520, 28, 'rgba(255,255,255,0.8)');
+ctx.restore();
+
+// ── 좌측 핑크 바
+const barGrad = ctx.createLinearGradient(0, 55, 0, 575);
+barGrad.addColorStop(0, '#D63384');
+barGrad.addColorStop(1, '#FF6B9D');
+roundRect(ctx, 80, 55, 10, 520, 5, barGrad);
+
+// ── MONC 로고
+ctx.font = '900 56px "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+const logoGrad = ctx.createLinearGradient(148, 0, 340, 0);
+logoGrad.addColorStop(0, '#D63384');
+logoGrad.addColorStop(1, '#FF6B9D');
+ctx.fillStyle = logoGrad;
+ctx.fillText('MONC', 148, 152);
+
+ctx.font = '600 20px "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = 'rgba(125,74,102,0.85)';
+ctx.fillText('목소리로 시작하는 2주 챌린지', 148, 192);
+
+// ── 구분선
+ctx.strokeStyle = 'rgba(214,51,132,0.2)';
+ctx.lineWidth = 1.5;
+ctx.beginPath(); ctx.moveTo(148, 215); ctx.lineTo(700, 215); ctx.stroke();
+
+// ── 메인 타이틀
+ctx.font = '900 58px "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = '#2D1022';
+ctx.fillText('오늘의 나를', 148, 295);
+
+ctx.fillStyle = '#2D1022';
+ctx.fillText('', 148, 365);
+// "꺼내는" 핑크, "시간" 다크
+ctx.font = '900 58px "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = '#D63384';
+ctx.fillText('꺼내는', 148, 365);
+const kw = ctx.measureText('꺼내는').width;
+ctx.fillStyle = '#2D1022';
+ctx.fillText(' 시간', 148 + kw, 365);
+
+// ── 서브 설명
+ctx.font = '500 23px "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = 'rgba(125,74,102,0.9)';
+ctx.fillText('목소리 · 눈빛 · 말투 · 첫인상, 하나씩 꺼내봐요', 148, 418);
+
+// ── 챌린지 배지
+const badges = [
+  { text: '🎙 보.신.각', fill: true },
+  { text: '🗣 스.피.닝', fill: true },
+  { text: '🎭 영.합.각', fill: false },
+  { text: '💬 승.자.각', fill: false },
+];
+let bx = 148;
+badges.forEach(b => {
+  ctx.font = '700 16px "Apple SD Gothic Neo", sans-serif';
+  const tw = ctx.measureText(b.text).width + 36;
+  if (b.fill) {
+    const pg = ctx.createLinearGradient(bx, 0, bx+tw, 0);
+    pg.addColorStop(0, '#D63384'); pg.addColorStop(1, '#FF6B9D');
+    roundRect(ctx, bx, 445, tw, 42, 21, pg);
+    ctx.fillStyle = 'white';
+  } else {
+    roundRect(ctx, bx, 445, tw, 42, 21, '#FFE4EF');
+    ctx.strokeStyle = '#D63384'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, 445, tw, 42, 21);
+    ctx.stroke();
+    ctx.fillStyle = '#D63384';
+  }
+  ctx.font = '700 16px "Apple SD Gothic Neo", sans-serif';
+  ctx.fillText(b.text, bx + tw/2 - ctx.measureText(b.text).width/2, 471);
+  bx += tw + 12;
+});
+
+// ── 오른쪽 꽃 이모지
+ctx.font = '130px serif';
+ctx.fillText('🌸', 880, 380);
+
+// ── 오른쪽 통계 텍스트
+ctx.font = '600 15px "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = 'rgba(125,74,102,0.75)';
+ctx.textAlign = 'center';
+ctx.fillText('2주 완성', 895, 488);
+ctx.fillText('4가지 챌린지', 990, 488);
+ctx.fillText('보증금 환급제', 1090, 488);
+ctx.textAlign = 'left';
+
+// ── URL
+ctx.font = '500 16px "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = 'rgba(176,128,152,0.75)';
+ctx.fillText('kwonsunghoho.github.io/wkon', 148, 548);
+
+// ── 저장 버튼 표시
+const btn = document.getElementById('dl');
+btn.style.display = 'block';
+document.querySelector('p').textContent = '✅ 완성! 아래 버튼으로 저장하세요';
+
+btn.onclick = () => {
+  const a = document.createElement('a');
+  a.download = 'og-image.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+};
+
+// ─── helper
+function roundRect(ctx, x, y, w, h, r, style) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if (typeof style === 'string') { ctx.fillStyle = style; ctx.fill(); }
+  else if (style) { ctx.fillStyle = style; ctx.fill(); }
+}
+</script>
+</body>
+</html>
