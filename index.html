@@ -1975,7 +1975,11 @@
     document.getElementById('totalPrice').textContent = total.toLocaleString();
   }
 
+  let _isSubmitting = false;
+
   async function submitApplication() {
+    if (_isSubmitting) return;  // 이미 전송 중이면 무시
+
     const name = document.getElementById('appName').value;
     const phone = document.getElementById('appPhone').value;
     const account = document.getElementById('appAccount').value;
@@ -1990,6 +1994,15 @@
       alert('신청할 챌린지를 선택해주세요.');
       return;
     }
+
+    // 버튼 비활성화 + 로딩 텍스트
+    _isSubmitting = true;
+    const btn = document.querySelector('.modal-btn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '신청 중...';
+    btn.style.opacity = '0.7';
+    btn.style.cursor  = 'not-allowed';
 
     const challenges = Array.from(checkboxes).map(cb => ({
       name: cb.dataset.name,
@@ -2026,6 +2039,12 @@
     } catch (error) {
       console.error('Error:', error);
       alert('오류가 발생했습니다.');
+    } finally {
+      _isSubmitting = false;
+      btn.disabled = false;
+      btn.textContent = originalText;
+      btn.style.opacity = '1';
+      btn.style.cursor  = 'pointer';
     }
   }
 
