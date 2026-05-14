@@ -295,7 +295,11 @@ function updateTotalPrice() {
   document.getElementById('totalPrice').textContent        = (participation + deposit).toLocaleString();
 }
 
+let _isSubmitting = false;
+
 async function submitApplication() {
+  if (_isSubmitting) return;  // 이미 전송 중이면 무시
+
   const name    = document.getElementById('appName').value.trim();
   const phone   = document.getElementById('appPhone').value.trim();
   const account = document.getElementById('appAccount').value.trim();
@@ -310,6 +314,15 @@ async function submitApplication() {
     alert('신청할 챌린지를 선택해주세요.');
     return;
   }
+
+  // 버튼 비활성화 + 로딩 텍스트
+  _isSubmitting = true;
+  const btn = document.querySelector('.app-modal-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '신청 중...';
+  btn.style.opacity = '0.7';
+  btn.style.cursor  = 'not-allowed';
 
   const challenges = Array.from(checkboxes).map(cb => ({ name: cb.dataset.name, price: parseInt(cb.dataset.price) }));
   let totalPrice = 0;
@@ -332,5 +345,12 @@ async function submitApplication() {
     }
   } catch(e) {
     alert('오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    // 성공/실패 모두 버튼 원상복구
+    _isSubmitting = false;
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.style.opacity = '1';
+    btn.style.cursor  = 'pointer';
   }
 }
