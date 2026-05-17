@@ -732,8 +732,19 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
     .stars { color: #F59E0B; font-size: 12px; margin-bottom: 8px; }
-    .testi-text { font-size: 14px; line-height: 1.8; color: var(--text-muted); margin-bottom: 18px; }
+    .testi-text { font-size: 14px; line-height: 1.8; color: var(--text-muted); margin-bottom: 6px; }
+    .testi-text.clamped {
+      display: -webkit-box; -webkit-box-orient: vertical;
+      -webkit-line-clamp: 5; overflow: hidden;
+    }
     .testi-text strong { color: var(--text); }
+    .testi-more-btn {
+      display: none; font-size: 12px; font-weight: 600;
+      color: var(--primary); background: none; border: none;
+      padding: 0; margin-bottom: 14px; cursor: pointer;
+      letter-spacing: -.2px;
+    }
+    .testi-more-btn.visible { display: inline-block; }
     .testi-user { display: flex; align-items: center; gap: 10px; }
     .testi-avatar {
       width: 38px; height: 38px; border-radius: 50%;
@@ -1807,6 +1818,14 @@
     });
   });
 
+  /* ── 후기 더보기 토글 ── */
+  function toggleTesti(btn) {
+    const txt = btn.previousElementSibling;
+    const clamped = txt.classList.contains('clamped');
+    txt.classList.toggle('clamped', !clamped);
+    btn.textContent = clamped ? '접기 ↑' : '더보기 ↓';
+  }
+
   /* ── 모집 기간 (구글 시트 연동) ── */
   applyIndexRecruit();
 
@@ -1836,13 +1855,22 @@
           <div class="testi-card reveal" ${delay}>
             <div class="testi-quote">"</div>
             <div class="stars">★★★★★</div>
-            <p class="testi-text">${String(r.text).replace(/\n/g, '<br>')}</p>
+            <p class="testi-text clamped">${String(r.text).replace(/\n/g, '<br>')}</p>
+            <button class="testi-more-btn" onclick="toggleTesti(this)">더보기 ↓</button>
             <div class="testi-user">
               <div class="testi-avatar" style="background:${grad};">${initial}</div>
               <div><div class="testi-name">${String(r.name)}</div></div>
             </div>
           </div>`;
       }).join('');
+      // 텍스트가 실제로 잘릴 때만 "더보기" 버튼 표시
+      grid.querySelectorAll('.testi-text.clamped').forEach(el => {
+        if (el.scrollHeight > el.clientHeight + 2) {
+          el.nextElementSibling.classList.add('visible');
+        } else {
+          el.classList.remove('clamped'); // 짧은 글은 클램프 해제
+        }
+      });
       // 새로 생긴 카드에 reveal 옵저버 적용
       grid.querySelectorAll('.reveal').forEach(el => obs.observe(el));
     } catch(e) {
