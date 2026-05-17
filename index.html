@@ -1855,13 +1855,6 @@
     'linear-gradient(135deg,var(--coral),var(--peach))',
     'linear-gradient(135deg,var(--primary),var(--lavender))',
   ];
-  function autoSummary(text) {
-    const lines = String(text).replace(/\r/g, '').split('\n')
-      .map(l => l.trim())
-      .filter(l => l && !/^\d+[.)]\s/.test(l)); // 번호 제목(1. 2. 등) 제외
-    const first = lines[0] || '';
-    return first.length > 36 ? first.slice(0, 34) + '…' : first;
-  }
   function renderReviews(reviews, grid) {
     if (!Array.isArray(reviews) || reviews.length === 0) return;
     grid.innerHTML = reviews.map((r, i) => {
@@ -1874,7 +1867,7 @@
             <div class="testi-avatar" style="background:${grad};">${initial}</div>
             <div><div class="testi-name">${String(r.name)}</div></div>
           </div>
-          <div class="testi-summary">${(r.summary && r.summary.toUpperCase() !== 'TRUE') ? String(r.summary) : autoSummary(r.text)}</div>
+          <div class="testi-summary">${String(r.summary || '')}</div>
           <p class="testi-text clamped">${String(r.text).replace(/\n/g, '<br>')}</p>
           <button class="testi-more-btn" onclick="toggleTesti(this)">더보기 ↓</button>
         </div>`;
