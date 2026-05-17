@@ -1687,33 +1687,9 @@
       <div class="section-label">Reviews</div>
       <h2 class="section-title">"나도 해봤어요" 후기들 💌</h2>
     </div>
-    <div class="testi-grid">
-      <div class="testi-card reveal">
-        <div class="testi-quote">"</div>
-        <div class="stars">★★★★★</div>
-        <p class="testi-text">처음엔 그냥 <strong>호기심에 한 번만 해보려 했는데</strong> 어느새 3주째 매일 하고 있어요. 목소리에 자신감이 생겼어요!</p>
-        <div class="testi-user">
-          <div class="testi-avatar">박</div>
-          <div><div class="testi-name">박지민</div><div class="testi-role">대학생 · 보이스 챌린지 21일 달성 🔥</div></div>
-        </div>
-      </div>
-      <div class="testi-card reveal" style="transition-delay:.1s">
-        <div class="testi-quote">"</div>
-        <div class="stars">★★★★★</div>
-        <p class="testi-text">면접 준비하면서 영상면접 챌린지를 했는데, <strong>실제 면접에서 훨씬 덜 긴장</strong>했어요. 강력 추천!</p>
-        <div class="testi-user">
-          <div class="testi-avatar" style="background:linear-gradient(135deg,var(--rose),var(--coral));">김</div>
-          <div><div class="testi-name">김현우</div><div class="testi-role">취준생 · 영상면접 챌린지 15일</div></div>
-        </div>
-      </div>
-      <div class="testi-card reveal" style="transition-delay:.2s">
-        <div class="testi-quote">"</div>
-        <div class="stars">★★★★★</div>
-        <p class="testi-text">코치님 피드백이 <strong>너무 구체적</strong>이라서 놀랐어요. 매번 성장하는 게 눈에 보여서 동기부여가 확실해요!</p>
-        <div class="testi-user">
-          <div class="testi-avatar" style="background:linear-gradient(135deg,var(--lavender),var(--primary));">이</div>
-          <div><div class="testi-name">이서연</div><div class="testi-role">직장인 · 스피치 챌린지 30일 달성 🎉</div></div>
-        </div>
+    <div class="testi-grid" id="testiGrid">
+      <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-dim); font-size:14px;">
+        후기를 불러오는 중... 💌
       </div>
     </div>
   </div>
@@ -1833,6 +1809,46 @@
 
   /* ── 모집 기간 (구글 시트 연동) ── */
   applyIndexRecruit();
+
+  /* ── 후기 (구글 시트 연동) ── */
+  (async function loadReviews() {
+    const grid = document.getElementById('testiGrid');
+    if (!grid) return;
+    const avatarGradients = [
+      'linear-gradient(135deg,var(--primary),var(--rose))',
+      'linear-gradient(135deg,var(--rose),var(--coral))',
+      'linear-gradient(135deg,var(--lavender),var(--primary))',
+      'linear-gradient(135deg,var(--coral),var(--peach))',
+      'linear-gradient(135deg,var(--primary),var(--lavender))',
+    ];
+    try {
+      const res = await fetch(APPLICATION_API_URL + '?action=reviews');
+      const reviews = await res.json();
+      if (!Array.isArray(reviews) || reviews.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);font-size:14px;">아직 등록된 후기가 없어요.</div>';
+        return;
+      }
+      grid.innerHTML = reviews.map((r, i) => {
+        const initial = String(r.name).trim().charAt(0);
+        const grad = avatarGradients[i % avatarGradients.length];
+        const delay = i % 3 === 0 ? '' : `style="transition-delay:${(i % 3) * 0.1}s"`;
+        return `
+          <div class="testi-card reveal" ${delay}>
+            <div class="testi-quote">"</div>
+            <div class="stars">★★★★★</div>
+            <p class="testi-text">${String(r.text).replace(/\n/g, '<br>')}</p>
+            <div class="testi-user">
+              <div class="testi-avatar" style="background:${grad};">${initial}</div>
+              <div><div class="testi-name">${String(r.name)}</div></div>
+            </div>
+          </div>`;
+      }).join('');
+      // 새로 생긴 카드에 reveal 옵저버 적용
+      grid.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    } catch(e) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);font-size:14px;">후기를 불러오지 못했어요.</div>';
+    }
+  })();
 
   /* ── 네비바 스크롤 ── */
   window.addEventListener('scroll', () => {
