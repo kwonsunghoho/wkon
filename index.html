@@ -1929,13 +1929,15 @@
       else el.classList.remove('clamped');
     });
   }
+  const shuffle = arr => arr.slice().sort(() => Math.random() - 0.5);
+
   (async function loadReviews() {
     const grid = document.getElementById('testiGrid');
     if (!grid) return;
-    // 1) 캐시 있으면 즉시 표시
+    // 1) 캐시 있으면 즉시 표시 (섞어서)
     const cached = localStorage.getItem(REVIEWS_CACHE_KEY);
     if (cached) {
-      try { renderReviews(JSON.parse(cached), grid); } catch(e) {}
+      try { renderReviews(shuffle(JSON.parse(cached)), grid); } catch(e) {}
     }
     // 2) 백그라운드에서 최신 데이터 fetch & 캐시 갱신
     try {
@@ -1943,7 +1945,7 @@
       const reviews = await res.json();
       if (Array.isArray(reviews) && reviews.length > 0) {
         localStorage.setItem(REVIEWS_CACHE_KEY, JSON.stringify(reviews));
-        renderReviews(reviews, grid); // 최신으로 업데이트
+        renderReviews(shuffle(reviews), grid); // 섞어서 표시
       }
     } catch(e) {
       if (!cached) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);font-size:14px;">후기를 불러오지 못했어요.</div>';
