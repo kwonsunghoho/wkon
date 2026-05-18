@@ -643,6 +643,7 @@
       animation: testi-scroll-reverse 38s linear infinite;
     }
     .testi-grid:hover .testi-track { animation-play-state: paused; }
+    .testi-track.is-dragging { cursor: grabbing; user-select: none; }
     @keyframes testi-scroll {
       0%   { transform: translateX(0); }
       100% { transform: translateX(-50%); }
@@ -1585,13 +1586,101 @@
   }
   const shuffle = arr => arr.slice().sort(() => Math.random() - 0.5);
 
+  /* ── 후기 마키 터치 스와이프 ── */
+  function setupTestiSwipe(grid) {
+    const tracks = Array.from(grid.querySelectorAll('.testi-track'));
+    if (!tracks.length) return;
+
+    const DURS = [44, 38]; // 각 트랙 애니메이션 시간(초)
+
+    function getTranslateX(el) {
+      const m = new DOMMatrix(getComputedStyle(el).transform);
+      return m.m41; // px 단위 translateX
+    }
+
+    function resumeAtPosition(track, dur, x) {
+      const halfW = track.scrollWidth / 2;
+      const isReverse = track.classList.contains('reverse');
+      const progress = isReverse
+        ? Math.max(0, Math.min(1, (halfW + x) / halfW))
+        : Math.max(0, Math.min(1, -x / halfW));
+      const delay = -(progress * dur);
+      const animName = isReverse ? 'testi-scroll-reverse' : 'testi-scroll';
+      track.style.transform = '';
+      track.style.animation = 'none';
+      void track.offsetWidth; // reflow — 애니메이션 재시작 트리거
+      track.style.animation = `${animName} ${dur}s linear ${delay}s infinite`;
+    }
+
+    let startX = 0, startY = 0;
+    let capturedX = [];
+    let lastDelta = 0;
+    let lockDir = null; // 'h' | 'v' | null
+
+    grid.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      lastDelta = 0;
+      lockDir = null;
+      capturedX = tracks.map(t => getTranslateX(t));
+      tracks.forEach(t => t.style.animationPlayState = 'paused');
+    }, { passive: true });
+
+    grid.addEventListener('touchmove', e => {
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+
+      // 첫 이동에서 방향 결정
+      if (!lockDir) {
+        lockDir = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+      }
+      if (lockDir !== 'h') return; // 세로 스크롤이면 마키는 건드리지 않음
+
+      lastDelta = dx;
+      tracks.forEach((t, i) => {
+        const dir = t.classList.contains('reverse') ? -1 : 1;
+        t.style.transform = `translateX(${capturedX[i] + dx * dir}px)`;
+        t.classList.add('is-dragging');
+      });
+    }, { passive: true });
+
+    grid.addEventListener('touchend', () => {
+      tracks.forEach(t => t.classList.remove('is-dragging'));
+
+      if (lockDir === 'h') {
+        // 드래그한 위치 기준으로 애니메이션 재개
+        tracks.forEach((t, i) => {
+          const dir = t.classList.contains('reverse') ? -1 : 1;
+          const finalX = capturedX[i] + lastDelta * dir;
+          resumeAtPosition(t, DURS[i], finalX);
+        });
+      } else {
+        // 세로 스크롤이었거나 탭 → 그냥 재개
+        tracks.forEach(t => t.style.animationPlayState = '');
+      }
+      lockDir = null;
+    });
+
+    grid.addEventListener('touchcancel', () => {
+      lockDir = null;
+      tracks.forEach(t => {
+        t.classList.remove('is-dragging');
+        t.style.transform = '';
+        t.style.animationPlayState = '';
+      });
+    });
+  }
+
   (async function loadReviews() {
     const grid = document.getElementById('testiGrid');
     if (!grid) return;
     // 1) 캐시 있으면 즉시 표시 (섞어서)
     const cached = localStorage.getItem(REVIEWS_CACHE_KEY);
     if (cached) {
-      try { renderReviews(shuffle(JSON.parse(cached)), grid); } catch(e) {}
+      try {
+        renderReviews(shuffle(JSON.parse(cached)), grid);
+        setupTestiSwipe(grid);
+      } catch(e) {}
     }
     // 2) 백그라운드에서 최신 데이터 fetch & 캐시 갱신
     try {
@@ -1600,6 +1689,7 @@
       if (Array.isArray(reviews) && reviews.length > 0) {
         localStorage.setItem(REVIEWS_CACHE_KEY, JSON.stringify(reviews));
         renderReviews(shuffle(reviews), grid); // 섞어서 표시
+        setupTestiSwipe(grid);
       }
     } catch(e) {
       if (!cached) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);font-size:14px;">후기를 불러오지 못했어요.</div>';
