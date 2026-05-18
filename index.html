@@ -287,6 +287,19 @@
     .part-label { font-size:12px; color:#903858; }
     .part-label strong { color:#c0204a; font-weight:800; }
 
+    /* 히어로 챌린지 전환 도트 */
+    .hero-switch-dots { display:flex; gap:8px; margin-top:28px; }
+    .hero-switch-dot {
+      width:8px; height:8px; border-radius:100px; background:#ffd0e0;
+      border:none; cursor:pointer; padding:0; transition:all .3s;
+    }
+    .hero-switch-dot.active { width:24px; background:#e83a72; }
+    /* 히어로 좌측 콘텐츠 전환 페이드 */
+    .hero-badge, .hero-title, .hero-sub { transition:opacity .22s ease; }
+    .hero-left.switching .hero-badge,
+    .hero-left.switching .hero-title,
+    .hero-left.switching .hero-sub { opacity:0; }
+
     /* ── HOW ── */
     .how { padding: 90px 0; background: var(--bg2); }
     .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
@@ -983,6 +996,12 @@
       <div><div class="stat-num">3일</div><div class="stat-label">평균 변화 체감 기간</div></div>
       <div><div class="stat-num">5.0★</div><div class="stat-label">수료생 만족도</div></div>
     </div>
+    <div class="hero-switch-dots">
+      <button class="hero-switch-dot active" onclick="heroSwitchTo(0)" aria-label="보신각"></button>
+      <button class="hero-switch-dot" onclick="heroSwitchTo(1)" aria-label="영합각"></button>
+      <button class="hero-switch-dot" onclick="heroSwitchTo(2)" aria-label="스피닝"></button>
+      <button class="hero-switch-dot" onclick="heroSwitchTo(3)" aria-label="승자각"></button>
+    </div>
   </div>
   <div class="hero-right">
     <div class="mock-card">
@@ -1451,25 +1470,101 @@
     }
   });
 
-  /* ── Hero 타이핑 애니메이션 ── */
-  const words = ["달라집니다", "깊어집니다", "선명해져요", "기억돼요", "강해져요"];
-  let wi = 0, ci = 0, deleting = false, paused = false;
-  const dynEl = document.getElementById('dynword');
-  if (dynEl) {
-    function tick() {
-      if (paused) { paused = false; setTimeout(tick, 1400); return; }
-      const w = words[wi];
-      if (!deleting) {
-        dynEl.textContent = w.slice(0, ++ci);
-        if (ci === w.length) { deleting = true; paused = true; }
+  /* ── Hero 챌린지 순환 (4가지) ── */
+  const _heroData = [
+    {
+      badge:'🎙 보이스 챌린지 · 2주', static:'내 목소리가',
+      words:['달라집니다','깊어집니다','선명해져요','기억돼요','강해져요'],
+      sub:'말끝, 호흡, 발음, 전달력.<br>MONC 보.신.각으로 2주 안에 바꿔요.',
+      recTime:'0:17 / 0:30', mission:'30초 자기소개 미션', day:'Day 7',
+      streak:'7일 연속 달성!', members:'127명',
+    },
+    {
+      badge:'🎭 영상면접 챌린지 · 2주', static:'카메라 앞 내 모습이',
+      words:['달라져요','당당해져요','빛나요','기억돼요','합격해요'],
+      sub:'표정, 시선, 말투까지.<br>MONC 영.합.각으로 합격 이미지를 만들어요.',
+      recTime:'0:42 / 1:00', mission:'1분 자기소개 영상', day:'Day 5',
+      streak:'5일 연속 달성!', members:'98명',
+    },
+    {
+      badge:'🗣 스피치 챌린지 · 2주', static:'내 말투가',
+      words:['생생해져요','달라져요','살아나요','기억돼요','설득해요'],
+      sub:'호흡, 리듬, 강약, 말끝.<br>MONC 스.피.닝으로 듣기 좋은 말투를 만들어요.',
+      recTime:'0:22 / 0:30', mission:'30초 스피치 미션', day:'Day 9',
+      streak:'9일 연속 달성!', members:'113명',
+    },
+    {
+      badge:'💬 면접 챌린지 · 2주', static:'내 면접 답변이',
+      words:['완성돼요','달라져요','설득해요','빛나요','합격해요'],
+      sub:'기본 질문, 경험 질문, 합격 답변.<br>MONC 승.자.각으로 자신감 있는 면접을 만들어요.',
+      recTime:'답변 7 / 10', mission:'핵심 면접 답변 완성', day:'Day 11',
+      streak:'11일 연속 달성!', members:'89명',
+    },
+  ];
+
+  let _heroIdx = 0;
+  let _heroAutoTimer = null;
+  let _typingTimer = null;
+  let _wi = 0, _ci = 0, _del = false, _pau = false;
+  const _dynEl  = document.getElementById('dynword');
+  const _heroLeft = document.querySelector('.hero-left');
+
+  function _startTyping(words) {
+    clearTimeout(_typingTimer);
+    _wi = 0; _ci = 0; _del = false; _pau = false;
+    if (_dynEl) _dynEl.textContent = '';
+    function _t() {
+      if (_pau) { _pau = false; _typingTimer = setTimeout(_t, 1400); return; }
+      const w = words[_wi];
+      if (!_del) {
+        if (_dynEl) _dynEl.textContent = w.slice(0, ++_ci);
+        if (_ci === w.length) { _del = true; _pau = true; }
       } else {
-        dynEl.textContent = w.slice(0, --ci);
-        if (ci === 0) { deleting = false; wi = (wi + 1) % words.length; }
+        if (_dynEl) _dynEl.textContent = w.slice(0, --_ci);
+        if (_ci === 0) { _del = false; _wi = (_wi + 1) % words.length; }
       }
-      setTimeout(tick, deleting ? 55 : 105);
+      _typingTimer = setTimeout(_t, _del ? 55 : 105);
     }
-    tick();
+    _t();
   }
+
+  function heroSwitchTo(idx) {
+    if (idx === _heroIdx && _heroLeft && !_heroLeft.classList.contains('switching')) return;
+    _heroIdx = idx;
+    const d = _heroData[idx];
+    if (_heroLeft) _heroLeft.classList.add('switching');
+    setTimeout(() => {
+      // 좌측 텍스트
+      const badgeEl  = document.querySelector('.hero-badge');
+      const staticEl = document.querySelector('.hero-title .static');
+      const subEl    = document.querySelector('.hero-sub');
+      if (badgeEl)  badgeEl.textContent  = d.badge;
+      if (staticEl) staticEl.textContent = d.static;
+      if (subEl)    subEl.innerHTML      = d.sub;
+      // 우측 카드
+      const timeEl   = document.querySelector('.rec-time');
+      const textEl   = document.querySelector('.mock-text');
+      const dayEl    = document.querySelector('.mock-day');
+      const strkEl   = document.querySelector('.streak-name');
+      const partEl   = document.querySelector('.part-label');
+      if (timeEl)  timeEl.textContent  = d.recTime;
+      if (textEl)  textEl.textContent  = d.mission;
+      if (dayEl)   dayEl.textContent   = d.day;
+      if (strkEl)  strkEl.textContent  = d.streak;
+      if (partEl)  partEl.innerHTML    = `<strong>${d.members}</strong> 함께 참여 중 🌸`;
+      // 도트
+      document.querySelectorAll('.hero-switch-dot').forEach((el,i) => el.classList.toggle('active', i===idx));
+      // 타이핑 재시작
+      _startTyping(d.words);
+      if (_heroLeft) _heroLeft.classList.remove('switching');
+    }, 220);
+    clearInterval(_heroAutoTimer);
+    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 6000);
+  }
+
+  // 초기 실행
+  _startTyping(_heroData[0].words);
+  _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 6000);
 
   /* ── 햄버거 ── */
   const hb = document.getElementById('hamburger');
