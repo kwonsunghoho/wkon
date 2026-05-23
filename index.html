@@ -341,90 +341,119 @@
       box-shadow: 0 4px 12px rgba(214,51,132,.2) !important;
     }
     .challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    /* ── 챌린지 카드 (리디자인) ── */
     .challenge-card {
-      background: #fff; border: 1.5px solid var(--border);
-      border-radius: var(--radius); overflow: hidden;
-      transition: all .3s; cursor: pointer; box-shadow: var(--shadow);
-      text-decoration: none; color: inherit; display: block;
+      background: #fff; border: none;
+      border-radius: 24px; overflow: hidden;
+      transition: transform .35s cubic-bezier(.34,1.4,.64,1), box-shadow .35s;
+      cursor: pointer;
+      box-shadow: 0 6px 28px rgba(45,16,34,.13);
+      text-decoration: none; color: inherit; display: flex; flex-direction: column;
       -webkit-tap-highlight-color: transparent;
+      will-change: transform;
     }
-    .challenge-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--rose); }
-    .challenge-card.is-disabled { pointer-events: none; opacity: .55; filter: grayscale(.3); }
-    .challenge-card.is-disabled:hover { transform: none; box-shadow: var(--shadow); border-color: var(--border); }
+    .challenge-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 24px 64px rgba(45,16,34,.22);
+    }
+    .challenge-card.is-disabled { pointer-events: none; opacity: .5; filter: grayscale(.4); }
+    .challenge-card.is-disabled:hover { transform: none; box-shadow: 0 6px 28px rgba(45,16,34,.13); }
+
+    /* 카드 헤더 (다크 그라디언트) */
+    .card-header {
+      position: relative; overflow: hidden;
+      padding: 24px 22px 22px;
+      min-height: 155px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .challenge-card.featured .card-header { min-height: 180px; }
+    .card-header-orb1 {
+      position: absolute; border-radius: 50%; pointer-events: none;
+      width: 180px; height: 180px; top: -60px; right: -50px;
+      background: rgba(255,255,255,.07);
+    }
+    .card-header-orb2 {
+      position: absolute; border-radius: 50%; pointer-events: none;
+      width: 90px; height: 90px; bottom: -30px; left: 16px;
+      background: rgba(255,107,157,.18);
+    }
+    .card-header-orb3 {
+      position: absolute; border-radius: 50%; pointer-events: none;
+      width: 50px; height: 50px; top: 20px; left: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .card-emoji { font-size: 32px; margin-bottom: 10px; display: block; filter: drop-shadow(0 2px 6px rgba(0,0,0,.35)); line-height: 1; }
+    .card-name  { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: -.03em; line-height: 1; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(0,0,0,.3); }
+    .card-sub   { font-size: 11.5px; color: rgba(255,255,255,.65); font-weight: 600; letter-spacing: .01em; }
+
+    /* 모집 배지 (헤더 우상단) */
+    .recruit-status {
+      position: absolute; top: 14px; right: 14px;
+      padding: 5px 12px; border-radius: 99px;
+      font-size: 11.5px; font-weight: 800;
+      backdrop-filter: blur(8px); z-index: 2; letter-spacing: .2px;
+    }
     @keyframes recruit-pulse {
-      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.7), 0 4px 12px rgba(34,197,94,.4); }
-      60%  { box-shadow: 0 0 0 9px rgba(34,197,94,0), 0 4px 12px rgba(34,197,94,.4); }
-      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0), 0 4px 12px rgba(34,197,94,.4); }
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.6), 0 3px 10px rgba(34,197,94,.4); }
+      60%     { box-shadow: 0 0 0 7px rgba(34,197,94,0), 0 3px 10px rgba(34,197,94,.4); }
     }
-    .recruit-status { position: absolute; top: 10px; left: 10px; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 800; backdrop-filter: blur(8px); z-index: 2; letter-spacing: .3px; }
     .status-recruiting {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(34,197,94,.4);
+      background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff;
+      box-shadow: 0 3px 10px rgba(34,197,94,.4);
       animation: recruit-pulse 1.8s ease-out infinite;
     }
-    .status-upcoming { background: rgba(255,255,255,.95); color: var(--primary); border: 1.5px solid var(--primary); font-size: 12px; }
-    .status-closed   { background: rgba(120,120,120,.85); color: #fff; font-size: 12px; }
+    .status-upcoming { background: rgba(255,255,255,.92); color: var(--primary); border: 1.5px solid rgba(214,51,132,.4); }
+    .status-closed   { background: rgba(60,60,60,.75); color: #ddd; }
+
+    /* 카드 바디 */
+    .challenge-body {
+      padding: 18px 20px 20px;
+      display: flex; flex-direction: column; flex: 1;
+    }
+
+    /* 결과 체크리스트 */
+    .card-outcomes { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+    .outcome-item {
+      font-size: 12.5px; color: var(--text); font-weight: 600;
+      display: flex; align-items: center; gap: 7px; line-height: 1.4;
+    }
+    .outcome-item::before {
+      content: '✓'; color: var(--primary); font-weight: 900;
+      font-size: 12px; flex-shrink: 0;
+    }
+
     /* 모집 기간 바 */
     .recruit-period {
       display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
       font-size: 12px; font-weight: 700; padding: 9px 12px;
-      border-radius: 10px; margin-bottom: 12px; border: 1.5px solid transparent;
+      border-radius: 10px; margin-bottom: 14px; border: 1.5px solid transparent;
     }
     .period-icon { flex-shrink: 0; font-size: 13px; }
     .period-dates { flex: 1; color: var(--text); font-weight: 800; font-size: 12.5px; }
-
-    /* 상태별 색상 */
-    .rp-open {
-      background: rgba(34,197,94,.07); border-color: rgba(34,197,94,.25);
-    }
-    .rp-upcoming {
-      background: rgba(214,51,132,.06); border-color: rgba(214,51,132,.2);
-    }
-    .rp-closed {
-      background: rgba(130,130,130,.06); border-color: rgba(130,130,130,.15);
-    }
+    .rp-open     { background: rgba(34,197,94,.07); border-color: rgba(34,197,94,.25); }
+    .rp-upcoming { background: rgba(214,51,132,.06); border-color: rgba(214,51,132,.2); }
+    .rp-closed   { background: rgba(130,130,130,.06); border-color: rgba(130,130,130,.15); }
 
     /* D-day 칩 */
-    .dday-chip {
-      font-size: 11px; font-weight: 800; padding: 3px 9px;
-      border-radius: 99px; white-space: nowrap; flex-shrink: 0; letter-spacing: -.2px;
-    }
+    .dday-chip { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; letter-spacing: -.2px; }
     .dday-open    { background: #dcfce7; color: #15803d; }
     .dday-urgent  { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; box-shadow: 0 2px 8px rgba(239,68,68,.35); }
     .dday-upcoming{ background: rgba(214,51,132,.1); color: var(--primary); border: 1px solid rgba(214,51,132,.25); }
     .dday-closed  { background: rgba(130,130,130,.12); color: #888; }
-    .challenge-thumb { position: relative; }
-    .challenge-thumb {
-      height: 120px; display: flex; align-items: center; justify-content: center; font-size: 44px;
-    }
-    .challenge-body { padding: 18px; }
-    .challenge-tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-    .tag { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
-    .tag-voice { background: rgba(214,51,132,.1); color: var(--primary); }
-    .tag-speech { background: rgba(255,107,157,.12); color: var(--rose); }
-    .tag-express { background: rgba(255,143,171,.12); color: #E2527A; }
-    .tag-video { background: rgba(255,179,198,.2); color: #C2185B; }
-    .tag-answer { background: rgba(255,228,236,.6); color: #B5386B; }
-    .challenge-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
-    .challenge-desc { font-size: 13px; color: var(--text); line-height: 1.7; margin-bottom: 14px; font-weight: 500; text-align: center; }
-    .challenge-body { display: flex; flex-direction: column; }
-    .challenge-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: auto; padding-top: 12px; }
-    .challenge-meta { font-size: 11px; color: var(--text-muted); }
-    .challenge-meta span { color: var(--primary); font-weight: 700; }
+
+    /* CTA 버튼 */
+    .challenge-footer { margin-top: auto; }
     .challenge-action {
-      display: inline-block;
-      padding: 12px 24px;
+      display: block; width: 100%; padding: 13px;
       background: linear-gradient(135deg, var(--primary), var(--rose));
-      color: #fff; border-radius: 99px; font-size: 13px; font-weight: 700;
-      cursor: pointer; border: none; transition: all .2s;
-      box-shadow: 0 4px 10px rgba(214,51,132,.3);
+      color: #fff; border-radius: 14px; font-size: 13.5px; font-weight: 800;
+      cursor: pointer; border: none; transition: all .22s;
+      box-shadow: 0 4px 16px rgba(214,51,132,.35);
+      text-align: center; text-decoration: none;
       -webkit-tap-highlight-color: transparent;
-      text-decoration: none;
     }
-    .challenge-action:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(214,51,132,.4); }
+    .challenge-action:hover { box-shadow: 0 8px 28px rgba(214,51,132,.5); }
     .challenge-card.featured { grid-column: span 2; }
-    .challenge-card.featured .challenge-thumb { height: 160px; font-size: 60px; }
     .difficulty { display: flex; gap: 4px; margin-bottom: 10px; }
     .diff-dot { width: 7px; height: 7px; border-radius: 50%; }
 
@@ -853,7 +882,7 @@
     @media (max-width: 1024px) {
       .cat-grid { grid-template-columns: repeat(3, 1fr); }
       .challenge-card.featured { grid-column: span 1; }
-      .challenge-card.featured .challenge-thumb { height: 120px; font-size: 44px; }
+      .challenge-card.featured .card-header { min-height: 155px; }
     }
 
     @media (max-width: 768px) {
@@ -1136,79 +1165,98 @@
     </div>
 
     <div class="challenge-grid reveal">
+      <!-- 보신각 -->
       <a class="challenge-card featured" href="challenge-voice.html" data-category="보이스" data-recruit-id="voice" data-recruit-start="2026-05-01" data-recruit-end="2026-05-31">
-        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FCE4EC,#F8BBD9,#EDE7F6);">
-          <span class="recruit-status"></span>🎙️
+        <div class="card-header" style="background:linear-gradient(145deg,#2d1022 0%,#5c1840 55%,#8b2558 100%);">
+          <div class="card-header-orb1"></div>
+          <div class="card-header-orb2"></div>
+          <div class="card-header-orb3"></div>
+          <span class="recruit-status"></span>
+          <span class="card-emoji">🎙️</span>
+          <div class="card-name">보.신.각</div>
+          <div class="card-sub">보이스 신분상승 각 · 2주</div>
         </div>
         <div class="challenge-body">
-          <h3 class="challenge-title">[🎙️ 보이스] 보.신.각 — 보이스 신분상승 각</h3>
-          <p class="challenge-desc">작게 들리던 내 목소리를, 면접관이 기억하는 목소리로.</p>
+          <div class="card-outcomes">
+            <div class="outcome-item">말끝이 또렷하게 바뀌어요</div>
+            <div class="outcome-item">목소리에 자신감이 생겨요</div>
+            <div class="outcome-item">면접관이 기억하는 목소리로</div>
+          </div>
           <div class="recruit-period">📅 모집 <strong>5/1 ~ 5/31</strong></div>
-          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">오늘 미션 미리보기</div>
-            <div style="font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:10px;">30초 자기소개를 녹음하고<br>말끝, 호흡, 발음 선명도를 체크해요.</div>
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">완료 후 얻는 것</div>
-            <div style="font-size:12px; color:var(--primary); font-weight:600;">전달력 · 안정감 · 또렷한 말끝</div>
-          </div>
           <div class="challenge-footer">
-            <span class="challenge-action">내 목소리 바꿔보기</span>
+            <span class="challenge-action">내 목소리 바꿔보기 →</span>
           </div>
         </div>
       </a>
+
+      <!-- 영합각 -->
       <a class="challenge-card" href="challenge-expression.html" data-category="표현력" data-recruit-id="expression" data-recruit-start="2026-05-05" data-recruit-end="2026-05-25">
-        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FFE4E8,#FCE4EC);">
-          <span class="recruit-status"></span>🎭
+        <div class="card-header" style="background:linear-gradient(145deg,#1e0a2e 0%,#4a1060 55%,#7c2d9c 100%);">
+          <div class="card-header-orb1"></div>
+          <div class="card-header-orb2"></div>
+          <div class="card-header-orb3"></div>
+          <span class="recruit-status"></span>
+          <span class="card-emoji">🎭</span>
+          <div class="card-name">영.합.각</div>
+          <div class="card-sub">영상면접 합격 각 · 2주</div>
         </div>
         <div class="challenge-body">
-          <h3 class="challenge-title">[🎭 표현력] 영.합.각 — 영상면접 합격 각</h3>
-          <p class="challenge-desc">표정, 시선, 말투까지 합격 이미지로 다듬는 영상면접 챌린지.</p>
+          <div class="card-outcomes">
+            <div class="outcome-item">카메라 앞 긴장감이 없어져요</div>
+            <div class="outcome-item">표정과 시선이 자연스러워져요</div>
+            <div class="outcome-item">영상면접 합격 이미지 완성</div>
+          </div>
           <div class="recruit-period">📅 모집 <strong>5/5 ~ 5/25</strong></div>
-          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">오늘 미션 미리보기</div>
-            <div style="font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:10px;">1분 자기소개 영상을 촬영하고<br>첫인상, 표정, 시선, 말투 피드백을 받아요.</div>
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">완료 후 얻는 것</div>
-            <div style="font-size:12px; color:var(--primary); font-weight:600;">카메라 적응력 · 자연스러운 미소 · 영상면접 자신감</div>
-          </div>
           <div class="challenge-footer">
-            <span class="challenge-action">영상면접 감각 깨우기</span>
+            <span class="challenge-action">영상면접 감각 깨우기 →</span>
           </div>
         </div>
       </a>
+
+      <!-- 스피닝 -->
       <a class="challenge-card" href="challenge-spinning.html" data-category="스피치" data-recruit-id="spinning" data-recruit-start="2026-05-15" data-recruit-end="2026-06-15">
-        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FFF0F5,#FCE4EC);">
-          <span class="recruit-status"></span>🗣️
+        <div class="card-header" style="background:linear-gradient(145deg,#0f1a2e 0%,#1e3a6e 55%,#2d5aa0 100%);">
+          <div class="card-header-orb1"></div>
+          <div class="card-header-orb2"></div>
+          <div class="card-header-orb3"></div>
+          <span class="recruit-status"></span>
+          <span class="card-emoji">🗣️</span>
+          <div class="card-name">스.피.닝</div>
+          <div class="card-sub">듣기 좋은 말투 만들기 · 2주</div>
         </div>
         <div class="challenge-body">
-          <h3 class="challenge-title">[🗣️ 스피치] 스.피.닝 — 듣기 좋은 말투 만들기</h3>
-          <p class="challenge-desc">대답은 했는데 기억에 남지 않는 말, 이제는 기억되는 말로 바꿔줄게요.</p>
-          <div class="recruit-period">📅 모집 <strong>5/15 ~ 6/15</strong></div>
-          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">오늘 미션 미리보기</div>
-            <div style="font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:10px;">30초 스크립트를 읽고<br>호흡, 강약, 말끝 처리를 훈련해요.</div>
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">완료 후 얻는 것</div>
-            <div style="font-size:12px; color:var(--primary); font-weight:600;">호흡감 · 리듬감 · 말의 생동감</div>
+          <div class="card-outcomes">
+            <div class="outcome-item">리듬감 있는 말투로 바뀌어요</div>
+            <div class="outcome-item">호흡과 강약이 안정돼요</div>
+            <div class="outcome-item">기억에 남는 말하기 완성</div>
           </div>
+          <div class="recruit-period">📅 모집 <strong>5/15 ~ 6/15</strong></div>
           <div class="challenge-footer">
-            <span class="challenge-action">말하기 감각 깨우기</span>
+            <span class="challenge-action">말하기 감각 깨우기 →</span>
           </div>
         </div>
       </a>
+
+      <!-- 승자각 -->
       <a class="challenge-card" href="challenge-answer.html" data-category="면접" data-recruit-id="answer" data-recruit-start="2026-04-01" data-recruit-end="2026-04-30">
-        <div class="challenge-thumb" style="background:linear-gradient(135deg,#FFF0F5,#FCE4EC);">
-          <span class="recruit-status"></span>💬
+        <div class="card-header" style="background:linear-gradient(145deg,#1a0f08 0%,#4a2010 55%,#7c3820 100%);">
+          <div class="card-header-orb1"></div>
+          <div class="card-header-orb2"></div>
+          <div class="card-header-orb3"></div>
+          <span class="recruit-status"></span>
+          <span class="card-emoji">💬</span>
+          <div class="card-name">승.자.각</div>
+          <div class="card-sub">승무원 자신감 상승 각 · 2주</div>
         </div>
         <div class="challenge-body">
-          <h3 class="challenge-title">[💬 면접] 승.자.각 — 승무원 자신감 상승 각</h3>
-          <p class="challenge-desc">자주 나오는 10개 필수 답변으로 합격에 한 발짝 더 가까워져요.</p>
-          <div class="recruit-period">📅 모집 <strong>4/1 ~ 4/30</strong></div>
-          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">오늘 미션 미리보기</div>
-            <div style="font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:10px;">기본 질문 5개와<br>경험 질문 5개를 완성해요.</div>
-            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">완료 후 얻는 것</div>
-            <div style="font-size:12px; color:var(--primary); font-weight:600;">답변 완성도 · 자신감 · 합격력</div>
+          <div class="card-outcomes">
+            <div class="outcome-item">핵심 답변 10개가 완성돼요</div>
+            <div class="outcome-item">면접 자신감이 올라가요</div>
+            <div class="outcome-item">나만의 합격 스토리 완성</div>
           </div>
+          <div class="recruit-period">📅 모집 <strong>4/1 ~ 4/30</strong></div>
           <div class="challenge-footer">
-            <span class="challenge-action">합격 답변 만들기</span>
+            <span class="challenge-action">합격 답변 만들기 →</span>
           </div>
         </div>
       </a>
@@ -1644,6 +1692,17 @@
     txt.classList.toggle('clamped', !clamped);
     btn.textContent = clamped ? '접기 ↑' : '더보기 ↓';
   }
+
+  /* ── 챌린지 카드 3D 틸트 ── */
+  document.querySelectorAll('.challenge-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width  - 0.5;
+      const y = (e.clientY - r.top)  / r.height - 0.5;
+      card.style.transform = `translateY(-10px) perspective(700px) rotateX(${-y*7}deg) rotateY(${x*7}deg)`;
+    });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+  });
 
   /* ── 모집 기간 (구글 시트 연동) ── */
   applyIndexRecruit();
