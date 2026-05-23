@@ -5,10 +5,9 @@ async function loadRecruitData() {
   try {
     const res = await fetch(RECRUIT_CSV + '&_=' + Date.now());
     const text = await res.text();
-    const rows = text.trim().split('\n').slice(1); // 첫 줄(헤더) 제외
+    const rows = text.trim().split('\n').slice(1);
     const data = {};
     rows.forEach(row => {
-      // CSV 파싱: 쌍따옴표 필드 처리
       const cols = row.match(/(".*?"|[^,]+)(?=,|$)/g) || row.split(',');
       const clean = cols.map(s => s.trim().replace(/^"|"$/g, '').trim());
       if (clean[0]) data[clean[0]] = { start: clean[1], end: clean[2] };
@@ -21,28 +20,18 @@ async function loadRecruitData() {
   }
 }
 
-/* 날짜 문자열을 Date 객체로 변환
-   지원 형식: YYYY-MM-DD / YYYY. M. D. / M/D/YYYY / YYYY/MM/DD */
+/* 날짜 문자열을 Date 객체로 변환 */
 function parseDate(str) {
   if (!str) return null;
   const s = str.trim();
-
-  // YYYY-MM-DD 또는 YYYY/MM/DD
   let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
   if (m) return new Date(+m[1], +m[2]-1, +m[3]);
-
-  // YYYY. M. D. (구글 시트 한국어 형식)
   m = s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
   if (m) return new Date(+m[1], +m[2]-1, +m[3]);
-
-  // M/D/YYYY (구글 시트 영문 형식)
   m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m) return new Date(+m[3], +m[1]-1, +m[2]);
-
-  // 그 외 브라우저 기본 파싱 시도
   const d = new Date(s);
   if (!isNaN(d)) return d;
-
   console.warn('[MONC 모집] 날짜 파싱 실패:', s);
   return null;
 }
@@ -53,7 +42,6 @@ function getStatus(start, end) {
   const e = parseDate(end);
   if (!s || !e) { console.warn('[MONC 모집] 날짜 오류 — start:', start, 'end:', end); return 'upcoming'; }
   e.setHours(23, 59, 59, 999);
-  console.log('[MONC 모집] 상태 계산 — 오늘:', today.toLocaleDateString(), '시작:', s.toLocaleDateString(), '종료:', e.toLocaleDateString());
   if (today < s) return 'upcoming';
   if (today > e) return 'closed';
   return 'open';
@@ -62,6 +50,34 @@ function getStatus(start, end) {
 function fmtPeriod(start, end) {
   const f = d => { const dt = parseDate(d); return dt ? `${dt.getMonth()+1}/${dt.getDate()}` : '?'; };
   return `${f(start)} ~ ${f(end)}`;
+}
+
+/* D-day 계산
+   open    → 마감까지 남은 일수
+   upcoming → 시작까지 남은 일수 */
+function getDday(start, end, status) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = parseDate(status === 'upcoming' ? start : end);
+  if (!target) return null;
+  const diff = Math.round((target - today) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return null;
+  if (diff === 0) return 'D-Day';
+  return `D-${diff}`;
+}
+
+/* D-day 칩 HTML 생성 */
+function makeDdayChip(dday, status) {
+  if (!dday) return '';
+  const num = dday === 'D-Day' ? 0 : parseInt(dday.replace('D-', ''));
+  let cls, label;
+  if (status === 'upcoming') {
+    cls = 'dday-upcoming';
+    label = dday === 'D-Day' ? '오늘 오픈!' : `${dday} 후 오픈`;
+  } else {
+    cls = num <= 3 ? 'dday-urgent' : 'dday-open';
+    label = dday === 'D-Day' ? '오늘 마감!' : `${dday} 마감`;
+  }
+  return `<span class="dday-chip ${cls}">${label}</span>`;
 }
 
 /* ── 메인 페이지: 카드 상태 적용 ── */
@@ -76,25 +92,30 @@ async function applyIndexRecruit() {
 
     const status = getStatus(start, end);
 
-    // 모달 체크박스 비활성화용 상태 저장
     window._challengeStatuses = window._challengeStatuses || {};
     window._challengeStatuses[id] = status;
 
-    const badge  = card.querySelector('.recruit-status');
-    const action = card.querySelector('.challenge-action');
+    const badge    = card.querySelector('.recruit-status');
+    const action   = card.querySelector('.challenge-action');
     const periodEl = card.querySelector('.recruit-period');
-    const periodStrong = card.querySelector('.recruit-period strong');
+    const dday     = getDday(start, end, status);
 
-    if (periodStrong) periodStrong.textContent = fmtPeriod(start, end);
+    // 모집 기간 바 재구성
+    if (periodEl) {
+      const chipHtml = makeDdayChip(dday, status);
+      if (status === 'upcoming') {
+        periodEl.innerHTML = `<span class="period-icon">📅</span><span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
+      } else if (status === 'closed') {
+        periodEl.innerHTML = `<span class="period-icon">📅</span><span class="period-dates">${fmtPeriod(start, end)}</span><span class="dday-chip dday-closed">마감</span>`;
+      } else {
+        periodEl.innerHTML = `<span class="period-icon">📅</span><span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
+      }
+      periodEl.className = `recruit-period rp-${status}`;
+    }
 
     if (status === 'upcoming') {
-      if (badge)    { badge.textContent = '⏰ 모집 예정'; badge.className = 'recruit-status status-upcoming'; }
-      if (action)   action.textContent = '모집 예정';
-      if (periodEl) {
-        // innerHTML 바꾸기 전에 클래스 유지되도록 먼저 내용 교체 후 클래스 추가
-        periodEl.innerHTML = `📅 <span style="font-size:11px;font-weight:700;opacity:.8">모집 시작일</span> <strong>${fmtPeriod(start, end)}</strong>`;
-        periodEl.classList.add('is-upcoming');
-      }
+      if (badge)  { badge.textContent = '⏰ 모집 예정'; badge.className = 'recruit-status status-upcoming'; }
+      if (action) action.textContent = '모집 예정';
       card.classList.add('is-disabled');
     } else if (status === 'closed') {
       if (badge)  { badge.textContent = '모집 마감'; badge.className = 'recruit-status status-closed'; }
@@ -137,18 +158,20 @@ async function applyDetailRecruit(challengeId) {
   if (!start || !end) return;
 
   const status = getStatus(start, end);
+  const dday   = getDday(start, end, status);
 
-  // 칩 텍스트 업데이트
   if (chip) {
     const strongEl = chip.querySelector('strong');
     if (strongEl) strongEl.textContent = fmtPeriod(start, end);
-    if (status !== 'open') {
+    if (status === 'open' && dday) {
+      chip.innerHTML = `📅 모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`;
+      chip.style.background = '';
+    } else if (status !== 'open') {
       chip.innerHTML = (status === 'upcoming' ? '⏰ 모집 예정 ' : '❌ 모집 마감 ') + fmtPeriod(start, end);
       chip.style.background = status === 'closed' ? 'rgba(120,120,120,.1)' : 'rgba(214,51,132,.08)';
     }
   }
 
-  // 버튼 비활성화
   if (status !== 'open') {
     document.querySelectorAll('.apply-btn').forEach(btn => {
       btn.style.opacity = '.55';
@@ -158,6 +181,5 @@ async function applyDetailRecruit(challengeId) {
     });
   }
 
-  // handleApply에서 사용할 상태 저장
   window._recruitStatus = status;
 }
