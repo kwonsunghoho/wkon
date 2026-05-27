@@ -746,6 +746,18 @@
     }
     .testi-name { font-size: 13px; font-weight: 700; color: var(--text); }
     .testi-role { font-size: 11px; color: var(--text-muted); }
+    .testi-naver {
+      font-size: 10px; font-weight: 800; letter-spacing: -.2px;
+      background: #03C75A; color: #fff;
+      padding: 3px 8px; border-radius: 99px; white-space: nowrap;
+    }
+    .testi-source {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; font-weight: 700; color: #03C75A;
+      text-decoration: none; margin-top: 12px;
+      transition: opacity .2s;
+    }
+    .testi-source:hover { opacity: .7; }
 
     /* ── CTA ── */
     .cta-section { padding: 90px 0; }
@@ -1112,6 +1124,7 @@
     <div class="reveal" style="text-align:center; max-width:460px; margin:0 auto;">
       <div class="section-label">Reviews</div>
       <h2 class="section-title">"나도 해봤어요" 후기들 💌</h2>
+      <p id="testiCount" style="font-size:14px; color:var(--text-muted); margin-top:8px;"></p>
     </div>
     <div class="testi-grid" id="testiGrid">
       <!-- 스켈레톤 (JS 로딩 전) -->
@@ -1725,19 +1738,25 @@
 
   function renderReviews(reviews, grid) {
     if (!Array.isArray(reviews) || reviews.length === 0) return;
+    const countEl = document.getElementById('testiCount');
+    if (countEl) countEl.textContent = `지금까지 총 ${reviews.length}명이 남긴 후기예요 ✨`;
     const makeCard = (r, i) => {
       const initial  = String(r.name).trim().charAt(0);
       const badge    = r.challenge ? String(r.challenge).trim() : initial;
       const badgeClr = (r.challenge && _challengeColors[badge]) || _avatarGrads[i % _avatarGrads.length];
       return `
         <div class="testi-card">
-          <div class="testi-user" style="margin-bottom:14px;">
-            <div class="testi-avatar" style="background:${badgeClr};">${badge}</div>
-            <div><div class="testi-name">${String(r.name)}</div></div>
+          <div class="testi-user" style="margin-bottom:14px; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="testi-avatar" style="background:${badgeClr};">${badge}</div>
+              <div><div class="testi-name">${String(r.name)}</div></div>
+            </div>
+            <span class="testi-naver">N 네이버 카페</span>
           </div>
           <div class="testi-summary">${String(r.summary || '')}</div>
           <p class="testi-text clamped">${String(r.text).replace(/\n/g, '<br>')}</p>
           <button class="testi-more-btn" onclick="toggleTesti(this)">더보기 ↓</button>
+          ${r.link ? `<a class="testi-source" href="${String(r.link)}" target="_blank" rel="noopener">원문 보기 →</a>` : ''}
         </div>`;
     };
 
