@@ -66,13 +66,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- 보신각 -->
         <label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;">
-          <input type="checkbox" class="challenge-checkbox" data-price="20000" data-deposit="20000"
+          <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000"
             data-name="보.신.각(보이스) - 목소리 챌린지" data-curriculum="currVoice" data-recruit-id="voice">
           <div style="flex:1;">
             <div style="font-size:14px;font-weight:600;">보.신.각(보이스)</div>
             <div style="font-size:12px;color:#7D4A66;">목소리 챌린지</div>
           </div>
-          <span style="font-size:12px;color:#D63384;font-weight:700;white-space:nowrap;">참가비 2만원</span>
+          <span style="font-size:12px;color:#D63384;font-weight:700;white-space:nowrap;">참가비 3만원</span>
         </label>
         <div id="currVoice" style="display:none;background:#FFF0F5;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid rgba(214,51,132,.15);">
           <div style="font-size:12px;font-weight:700;color:#D63384;margin-bottom:10px;">📋 2주 커리큘럼 — 보신각</div>
