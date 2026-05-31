@@ -1,5 +1,5 @@
 /* ── 공용 챌린지 신청 모달 ── */
-const APPLICATION_API_URL = "https://script.google.com/macros/s/AKfycbzEDVtM28XFOgaXrOODtW_xk58vYGOEylk93khh180AAfHh265DhCirTmUrQk1B5FT5/exec";
+const APPLICATION_API_URL = "https://script.google.com/macros/s/AKfycbxrUFhRQvAAC3HZM8QuFCrrRfWRCQ8BA_j9-kvfLvW57QIroF0OsNahynY2Xi1RFnGz1w/exec";
 
 /* ── CSS 주입 ── */
 (function injectStyle() {
