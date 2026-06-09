@@ -209,7 +209,12 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="background:rgba(255,107,157,.1);padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid rgba(214,51,132,.2);">
         <div style="font-size:12px;font-weight:700;color:#D63384;margin-bottom:8px;">입금 정보</div>
         <div style="font-size:13px;color:#2D1022;line-height:1.6;">
-          <div>은행: 신한</div><div>계좌: 110-254-022354</div><div>예금주: 권성호</div>
+          <div>은행: 신한</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span>계좌: <strong id="acctNumber">110-254-022354</strong></span>
+            <button type="button" onclick="copyAccount(this)" style="font-size:11px;font-weight:700;color:#fff;background:#D63384;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 복사</button>
+          </div>
+          <div>예금주: 권성호</div>
         </div>
         <div style="font-size:12px;color:#7D4A66;margin-top:10px;padding-top:10px;border-top:1px solid rgba(214,51,132,.15);">
           입금 후 아래 신청 버튼을 눌러주세요
@@ -293,6 +298,30 @@ function updateTotalPrice() {
   document.getElementById('participationFee').textContent  = participation.toLocaleString();
   document.getElementById('depositFee').textContent        = deposit.toLocaleString();
   document.getElementById('totalPrice').textContent        = (participation + deposit).toLocaleString();
+}
+
+/* 계좌번호 복사 */
+function copyAccount(btn) {
+  const num = (document.getElementById('acctNumber') &&
+               document.getElementById('acctNumber').textContent || '').trim();
+  const done = () => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ 복사됨';
+    btn.style.background = '#16a34a';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = '#D63384'; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(num).then(done).catch(() => _fallbackCopy(num, done));
+  } else {
+    _fallbackCopy(num, done);
+  }
+}
+function _fallbackCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); cb && cb(); } catch(e) { alert('복사 실패: ' + text); }
+  document.body.removeChild(ta);
 }
 
 let _isSubmitting = false;
