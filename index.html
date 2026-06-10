@@ -1021,6 +1021,22 @@
       color: #fff;
       border-color: var(--action);
     }
+    /* 지금 듣기 표시 (전/후 헷갈림 방지) */
+    .ba-now {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12.5px; font-weight: 700; color: var(--text-muted);
+      margin-top: -4px;
+    }
+    .ba-now strong { color: var(--action); }            /* 후(After) 기본 */
+    .ba-now.is-before strong { color: var(--primary); } /* 전(Before) */
+    .ba-now-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+      animation: baNowPulse 1s ease-in-out infinite;
+    }
+    .ba-now.is-before .ba-now-dot { color: var(--primary); }
+    .ba-now:not(.is-before) .ba-now-dot { color: var(--action); }
+    @keyframes baNowPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
     /* 커스텀 플레이어 */
     .ba-player {
       display: flex; align-items: center; gap: 12px;
@@ -1349,15 +1365,16 @@
       <div class="ba-card">
         <div class="ba-card-top">
           <div class="ba-challenge-tag">🎙️ 보신각</div>
-          <div class="ba-name">챌린저 A</div>
+          <div class="ba-name">챌린저 D</div>
         </div>
-        <p class="ba-quote">"저에게 어울리는 톤을 찾은 것 같아 도움 많이 되었습니다!"</p>
+        <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
         <div class="ba-toggle-btns">
           <button class="ba-toggle-btn ba-btn-before" data-card="voice" data-type="before"
-            data-src="audio/challenger-a-before.mp3">😓 전</button>
+            data-src="audio/challenger-d-before.mp3">😓 전</button>
           <button class="ba-toggle-btn ba-btn-after active" data-card="voice" data-type="after"
-            data-src="audio/challenger-a-after.mp3">✨ 후</button>
+            data-src="audio/challenger-d-after.mp3">✨ 후</button>
         </div>
+        <div class="ba-now" id="ba-now-voice"></div>
         <div class="ba-player" id="ba-player-voice">
           <audio id="ba-audio-voice" preload="none"></audio>
           <button class="ba-play-btn" id="ba-play-voice" aria-label="재생">
@@ -1386,6 +1403,7 @@
           <button class="ba-toggle-btn ba-btn-after active" data-card="spinning" data-type="after"
             data-src="audio/spinning-a-after.m4a">✨ 후</button>
         </div>
+        <div class="ba-now" id="ba-now-spinning"></div>
         <div class="ba-player" id="ba-player-spinning">
           <audio id="ba-audio-spinning" preload="none"></audio>
           <button class="ba-play-btn" id="ba-play-spinning" aria-label="재생">
@@ -2502,6 +2520,21 @@
     return m + ':' + (s < 10 ? '0' : '') + s;
   }
 
+  // "지금 듣기: 전/후" 라벨 갱신 (전/후 헷갈림 방지)
+  function updateBANow(card) {
+    var lbl = document.getElementById('ba-now-' + card);
+    if (!lbl) return;
+    var active = document.querySelector('.ba-toggle-btn.active[data-card="' + card + '"]');
+    var isAfter = !active || active.dataset.type === 'after';
+    var audio = document.getElementById('ba-audio-' + card);
+    var playing = audio && !audio.paused && !audio.ended;
+    lbl.classList.toggle('is-before', !isAfter);
+    var name = isAfter ? '후 (After)' : '전 (Before)';
+    lbl.innerHTML = (playing ? '<span class="ba-now-dot"></span>재생 중 · ' : '지금 듣기: ') + '<strong>' + name + '</strong>';
+  }
+  function refreshBANow() { ['voice', 'spinning'].forEach(updateBANow); }
+  refreshBANow();
+
   // 토글 버튼 (전/후 전환)
   document.querySelectorAll('.ba-toggle-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -2538,6 +2571,7 @@
       playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>';
       currentAudio = null;
       currentPlayBtn = null;
+      refreshBANow();
     });
   });
 
@@ -2572,12 +2606,14 @@
         playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
         currentAudio = audio;
         currentPlayBtn = playBtn;
+        refreshBANow();
       } else {
         audio.pause();
         playBtn.classList.remove('playing');
         playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>';
         currentAudio = null;
         currentPlayBtn = null;
+        refreshBANow();
       }
     });
 
@@ -2597,6 +2633,7 @@
       if (timeEl) timeEl.textContent = '0:00';
       currentAudio = null;
       currentPlayBtn = null;
+      refreshBANow();
     });
 
     // 진행 바 클릭으로 탐색
