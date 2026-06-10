@@ -428,11 +428,10 @@
     /* 카드 헤더 (다크 그라디언트) */
     .card-header {
       position: relative; overflow: hidden;
-      padding: 24px 22px 22px;
-      min-height: 155px;
-      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 22px 22px 0;
+      display: flex; flex-direction: column;
     }
-    .challenge-card.featured .card-header { min-height: 180px; }
+    .challenge-card.featured .card-header { /* featured는 2-col 너비, 높이는 콘텐츠 기준 */ }
     .card-header-orb1 {
       position: absolute; border-radius: 50%; pointer-events: none;
       width: 180px; height: 180px; top: -60px; right: -50px;
@@ -449,8 +448,8 @@
       background: rgba(255,255,255,.05);
     }
     .card-emoji { font-size: 32px; margin-bottom: 10px; display: block; filter: drop-shadow(0 2px 6px rgba(0,0,0,.35)); line-height: 1; }
-    .card-name  { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: -.03em; line-height: 1; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(0,0,0,.3); }
-    .card-sub   { font-size: 11.5px; color: rgba(255,255,255,.65); font-weight: 600; letter-spacing: .01em; }
+    .card-name  { font-size: clamp(36px, 4.5vw, 44px); font-weight: 900; color: #fff; letter-spacing: -.04em; line-height: 1; margin-bottom: 6px; text-shadow: 0 2px 14px rgba(0,0,0,.45); }
+    .card-sub   { font-size: 13px; color: rgba(255,255,255,.72); font-weight: 600; letter-spacing: .01em; }
 
     /* 모집 배지 (헤더 우상단) */
     .recruit-status {
@@ -522,6 +521,57 @@
     .challenge-card.featured { grid-column: span 2; }
     .difficulty { display: flex; gap: 4px; margin-bottom: 10px; }
     .diff-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    /* ── 웨이브폼 애니메이션 ── */
+    @keyframes wf-voice {
+      0%, 100% { transform: scaleY(0.15); }
+      50%      { transform: scaleY(1); }
+    }
+    @keyframes wf-spin {
+      0%, 100% { transform: scaleY(0.1); }
+      50%      { transform: scaleY(1); }
+    }
+    @keyframes wf-expr {
+      0%, 100% { transform: scaleY(0.35); }
+      50%      { transform: scaleY(1); }
+    }
+    @keyframes wf-ans {
+      0%,  12% { transform: scaleY(1); }
+      22%, 55% { transform: scaleY(0.06); }
+      65%, 78% { transform: scaleY(0.85); }
+      88%,100% { transform: scaleY(0.06); }
+    }
+    .wf-area {
+      display: flex; align-items: flex-end; gap: 2px;
+      height: 120px; margin-top: 16px;
+      padding: 0; overflow: hidden;
+    }
+    .wf-bar {
+      flex: 1; min-width: 2px; max-width: 10px;
+      height: var(--h, 60%);
+      border-radius: 3px 3px 0 0;
+      transform-origin: bottom center;
+      will-change: transform;
+    }
+    .wf-voice .wf-bar {
+      background: linear-gradient(to top, rgba(255,130,170,.65), rgba(255,205,230,.95));
+      animation: wf-voice var(--dur,1.6s) ease-in-out var(--d,0s) infinite;
+    }
+    .wf-spin .wf-bar {
+      background: linear-gradient(to top, rgba(100,170,255,.65), rgba(180,225,255,.95));
+      animation: wf-spin var(--dur,1.0s) ease-in-out var(--d,0s) infinite;
+    }
+    .wf-expr .wf-bar {
+      background: linear-gradient(to top, rgba(160,110,255,.65), rgba(220,195,255,.95));
+      animation: wf-expr var(--dur,2.0s) ease-in-out var(--d,0s) infinite;
+    }
+    .wf-ans .wf-bar {
+      background: linear-gradient(to top, rgba(235,160,70,.65), rgba(255,225,155,.95));
+      animation: wf-ans var(--dur,1.2s) ease-in-out var(--d,0s) infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .wf-bar { animation-play-state: paused !important; }
+    }
 
     /* ── INSTRUCTORS ── */
     .instructors { padding: var(--section-y) 0; background: var(--bg); }
@@ -1204,6 +1254,7 @@
 
       /* Challenges */
       .challenge-grid { grid-template-columns: 1fr; }
+      .wf-area { height: 88px; }
 
       /* Instructor card */
       .inst-card-body { padding: 18px; }
@@ -1543,21 +1594,42 @@
     <div class="challenge-grid reveal">
       <!-- 보신각 -->
       <a class="challenge-card featured" href="challenge-voice.html" data-category="보이스" data-recruit-id="voice" data-recruit-start="2026-06-01" data-recruit-end="2026-06-28">
-        <div class="card-header" style="background:linear-gradient(145deg,#2d1022 0%,#5c1840 55%,#8b2558 100%);">
-          <div class="card-header-orb1"></div>
-          <div class="card-header-orb2"></div>
-          <div class="card-header-orb3"></div>
+        <div class="card-header" style="background:linear-gradient(145deg,#200c19 0%,#4a1433 55%,#7a2050 100%);">
           <span class="recruit-status"></span>
-          <span class="card-emoji">🎙️</span>
           <div class="card-name">보.신.각</div>
-          <div class="card-sub">보이스 신분상승 각 · 2주</div>
+          <div class="card-sub">2주 만에 목소리가 달라져요</div>
+          <div class="wf-area wf-voice">
+            <span class="wf-bar" style="--h:50%;--d:0s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:75%;--d:0.3s;--dur:1.4s"></span>
+            <span class="wf-bar" style="--h:45%;--d:0.6s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:90%;--d:0.15s;--dur:1.5s"></span>
+            <span class="wf-bar" style="--h:65%;--d:0.9s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:100%;--d:0.45s;--dur:1.4s"></span>
+            <span class="wf-bar" style="--h:55%;--d:1.2s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:80%;--d:0.75s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:40%;--d:1.5s;--dur:1.5s"></span>
+            <span class="wf-bar" style="--h:95%;--d:0.1s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:60%;--d:0.8s;--dur:1.4s"></span>
+            <span class="wf-bar" style="--h:85%;--d:1.3s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:70%;--d:0.5s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:50%;--d:0.2s;--dur:1.5s"></span>
+            <span class="wf-bar" style="--h:90%;--d:1.0s;--dur:1.4s"></span>
+            <span class="wf-bar" style="--h:65%;--d:0.65s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:100%;--d:1.4s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:55%;--d:0.35s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:75%;--d:1.7s;--dur:1.4s"></span>
+            <span class="wf-bar" style="--h:40%;--d:0.55s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:85%;--d:0.85s;--dur:1.5s"></span>
+            <span class="wf-bar" style="--h:60%;--d:1.25s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:45%;--d:0.4s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:80%;--d:1.6s;--dur:1.4s"></span>
+            <span class="wf-bar" style="--h:55%;--d:0.25s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:90%;--d:0.95s;--dur:1.5s"></span>
+            <span class="wf-bar" style="--h:65%;--d:1.45s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:50%;--d:0.7s;--dur:1.4s"></span>
+          </div>
         </div>
         <div class="challenge-body">
-          <div class="card-outcomes">
-            <div class="outcome-item">말끝이 또렷하게 바뀌어요</div>
-            <div class="outcome-item">목소리에 자신감이 생겨요</div>
-            <div class="outcome-item">면접관이 기억하는 목소리로</div>
-          </div>
           <div class="recruit-period">📅 모집 <strong>6/1 ~ 6/28</strong></div>
           <div class="challenge-footer">
             <span class="challenge-action">내 목소리 바꿔보기 →</span>
@@ -1567,21 +1639,38 @@
 
       <!-- 영합각 -->
       <a class="challenge-card" href="challenge-expression.html" data-category="표현력" data-recruit-id="expression" data-recruit-start="2026-06-08" data-recruit-end="2026-07-05">
-        <div class="card-header" style="background:linear-gradient(145deg,#1e0a2e 0%,#4a1060 55%,#7c2d9c 100%);">
-          <div class="card-header-orb1"></div>
-          <div class="card-header-orb2"></div>
-          <div class="card-header-orb3"></div>
+        <div class="card-header" style="background:linear-gradient(145deg,#180820 0%,#3d0d52 55%,#6a2485 100%);">
           <span class="recruit-status"></span>
-          <span class="card-emoji">🎭</span>
           <div class="card-name">영.합.각</div>
-          <div class="card-sub">영상면접 합격 각 · 2주</div>
+          <div class="card-sub">카메라 앞에서도 자연스럽게</div>
+          <div class="wf-area wf-expr">
+            <span class="wf-bar" style="--h:48%;--d:0s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:56%;--d:0.8s;--dur:2.0s"></span>
+            <span class="wf-bar" style="--h:54%;--d:0.4s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:62%;--d:1.3s;--dur:2.2s"></span>
+            <span class="wf-bar" style="--h:58%;--d:0.2s;--dur:1.9s"></span>
+            <span class="wf-bar" style="--h:66%;--d:1.7s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:52%;--d:0.6s;--dur:2.1s"></span>
+            <span class="wf-bar" style="--h:64%;--d:2.0s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:56%;--d:1.0s;--dur:2.0s"></span>
+            <span class="wf-bar" style="--h:60%;--d:0.35s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:54%;--d:1.5s;--dur:2.2s"></span>
+            <span class="wf-bar" style="--h:68%;--d:0.7s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:58%;--d:0.15s;--dur:1.9s"></span>
+            <span class="wf-bar" style="--h:52%;--d:1.85s;--dur:2.0s"></span>
+            <span class="wf-bar" style="--h:62%;--d:0.5s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:56%;--d:1.1s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:64%;--d:1.9s;--dur:2.2s"></span>
+            <span class="wf-bar" style="--h:50%;--d:0.3s;--dur:1.9s"></span>
+            <span class="wf-bar" style="--h:58%;--d:1.4s;--dur:1.7s"></span>
+            <span class="wf-bar" style="--h:66%;--d:0.9s;--dur:2.0s"></span>
+            <span class="wf-bar" style="--h:54%;--d:0.45s;--dur:1.8s"></span>
+            <span class="wf-bar" style="--h:60%;--d:1.6s;--dur:2.1s"></span>
+            <span class="wf-bar" style="--h:52%;--d:0.65s;--dur:1.6s"></span>
+            <span class="wf-bar" style="--h:48%;--d:1.75s;--dur:1.9s"></span>
+          </div>
         </div>
         <div class="challenge-body">
-          <div class="card-outcomes">
-            <div class="outcome-item">카메라 앞 긴장감이 없어져요</div>
-            <div class="outcome-item">표정과 시선이 자연스러워져요</div>
-            <div class="outcome-item">영상면접 합격 이미지 완성</div>
-          </div>
           <div class="recruit-period">📅 모집 <strong>6/8 ~ 7/5</strong></div>
           <div class="challenge-footer">
             <span class="challenge-action">영상면접 감각 깨우기 →</span>
@@ -1591,21 +1680,38 @@
 
       <!-- 스피닝 -->
       <a class="challenge-card" href="challenge-spinning.html" data-category="스피치" data-recruit-id="spinning" data-recruit-start="2026-06-02" data-recruit-end="2026-06-29">
-        <div class="card-header" style="background:linear-gradient(145deg,#0f1a2e 0%,#1e3a6e 55%,#2d5aa0 100%);">
-          <div class="card-header-orb1"></div>
-          <div class="card-header-orb2"></div>
-          <div class="card-header-orb3"></div>
+        <div class="card-header" style="background:linear-gradient(145deg,#0c1524 0%,#19305c 55%,#264d8c 100%);">
           <span class="recruit-status"></span>
-          <span class="card-emoji">🗣️</span>
           <div class="card-name">스.피.닝</div>
-          <div class="card-sub">듣기 좋은 말투 만들기 · 2주</div>
+          <div class="card-sub">리듬감 있는 말투가 생겨요</div>
+          <div class="wf-area wf-spin">
+            <span class="wf-bar" style="--h:35%;--d:0s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:52%;--d:0.05s;--dur:0.95s"></span>
+            <span class="wf-bar" style="--h:68%;--d:0.1s;--dur:1.05s"></span>
+            <span class="wf-bar" style="--h:80%;--d:0.15s;--dur:0.9s"></span>
+            <span class="wf-bar" style="--h:90%;--d:0.2s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:96%;--d:0.25s;--dur:1.05s"></span>
+            <span class="wf-bar" style="--h:98%;--d:0.3s;--dur:0.95s"></span>
+            <span class="wf-bar" style="--h:92%;--d:0.35s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:78%;--d:0.4s;--dur:1.05s"></span>
+            <span class="wf-bar" style="--h:60%;--d:0.45s;--dur:0.9s"></span>
+            <span class="wf-bar" style="--h:44%;--d:0.5s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:30%;--d:0.55s;--dur:0.95s"></span>
+            <span class="wf-bar" style="--h:36%;--d:0.6s;--dur:1.05s"></span>
+            <span class="wf-bar" style="--h:54%;--d:0.65s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:72%;--d:0.7s;--dur:0.9s"></span>
+            <span class="wf-bar" style="--h:86%;--d:0.75s;--dur:1.05s"></span>
+            <span class="wf-bar" style="--h:94%;--d:0.8s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:96%;--d:0.85s;--dur:0.95s"></span>
+            <span class="wf-bar" style="--h:84%;--d:0.9s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:68%;--d:0.95s;--dur:1.05s"></span>
+            <span class="wf-bar" style="--h:50%;--d:1.0s;--dur:0.9s"></span>
+            <span class="wf-bar" style="--h:38%;--d:1.05s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:28%;--d:1.1s;--dur:0.95s"></span>
+            <span class="wf-bar" style="--h:32%;--d:1.15s;--dur:1.0s"></span>
+          </div>
         </div>
         <div class="challenge-body">
-          <div class="card-outcomes">
-            <div class="outcome-item">리듬감 있는 말투로 바뀌어요</div>
-            <div class="outcome-item">호흡과 강약이 안정돼요</div>
-            <div class="outcome-item">기억에 남는 말하기 완성</div>
-          </div>
           <div class="recruit-period">📅 모집 <strong>6/2 ~ 6/29</strong></div>
           <div class="challenge-footer">
             <span class="challenge-action">말하기 감각 깨우기 →</span>
@@ -1615,21 +1721,38 @@
 
       <!-- 승자각 -->
       <a class="challenge-card" href="challenge-answer.html" data-category="면접" data-recruit-id="answer" data-recruit-start="2026-06-09" data-recruit-end="2026-07-06">
-        <div class="card-header" style="background:linear-gradient(145deg,#1a0f08 0%,#4a2010 55%,#7c3820 100%);">
-          <div class="card-header-orb1"></div>
-          <div class="card-header-orb2"></div>
-          <div class="card-header-orb3"></div>
+        <div class="card-header" style="background:linear-gradient(145deg,#140c06 0%,#3d1a0c 55%,#6a2e18 100%);">
           <span class="recruit-status"></span>
-          <span class="card-emoji">💬</span>
           <div class="card-name">승.자.각</div>
-          <div class="card-sub">승무원 자신감 상승 각 · 2주</div>
+          <div class="card-sub">합격을 만드는 내 답변 완성</div>
+          <div class="wf-area wf-ans">
+            <span class="wf-bar" style="--h:88%;--d:0s;--dur:1.1s"></span>
+            <span class="wf-bar" style="--h:18%;--d:0.05s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:94%;--d:0.25s;--dur:1.3s"></span>
+            <span class="wf-bar" style="--h:15%;--d:0.1s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:78%;--d:0.5s;--dur:1.2s"></span>
+            <span class="wf-bar" style="--h:22%;--d:0.2s;--dur:1.1s"></span>
+            <span class="wf-bar" style="--h:100%;--d:0.65s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:14%;--d:0.05s;--dur:1.3s"></span>
+            <span class="wf-bar" style="--h:84%;--d:0.85s;--dur:1.1s"></span>
+            <span class="wf-bar" style="--h:20%;--d:0.3s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:72%;--d:1.05s;--dur:1.2s"></span>
+            <span class="wf-bar" style="--h:18%;--d:0.4s;--dur:1.1s"></span>
+            <span class="wf-bar" style="--h:92%;--d:1.25s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:16%;--d:0.15s;--dur:1.3s"></span>
+            <span class="wf-bar" style="--h:82%;--d:0.55s;--dur:1.2s"></span>
+            <span class="wf-bar" style="--h:20%;--d:0.75s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:96%;--d:0.95s;--dur:1.1s"></span>
+            <span class="wf-bar" style="--h:14%;--d:0.35s;--dur:1.3s"></span>
+            <span class="wf-bar" style="--h:88%;--d:1.15s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:22%;--d:0.1s;--dur:1.2s"></span>
+            <span class="wf-bar" style="--h:78%;--d:0.8s;--dur:1.1s"></span>
+            <span class="wf-bar" style="--h:18%;--d:0.45s;--dur:1.0s"></span>
+            <span class="wf-bar" style="--h:84%;--d:1.1s;--dur:1.3s"></span>
+            <span class="wf-bar" style="--h:16%;--d:0.6s;--dur:1.1s"></span>
+          </div>
         </div>
         <div class="challenge-body">
-          <div class="card-outcomes">
-            <div class="outcome-item">핵심 답변 10개가 완성돼요</div>
-            <div class="outcome-item">면접 자신감이 올라가요</div>
-            <div class="outcome-item">나만의 합격 스토리 완성</div>
-          </div>
           <div class="recruit-period">📅 모집 <strong>6/9 ~ 7/6</strong></div>
           <div class="challenge-footer">
             <span class="challenge-action">합격 답변 만들기 →</span>
@@ -2036,6 +2159,17 @@
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  /* ── 웨이브폼: 뷰포트 밖 카드는 애니메이션 일시정지 (CPU 절약) ── */
+  if ('IntersectionObserver' in window) {
+    const wfObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        const state = e.isIntersecting ? 'running' : 'paused';
+        e.target.querySelectorAll('.wf-bar').forEach(bar => { bar.style.animationPlayState = state; });
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.wf-area').forEach(area => wfObs.observe(area));
+  }
 
   /* ── 카테고리 항목 클릭 함수 ── */
   function clickCategoryTab(category) {
