@@ -2266,22 +2266,46 @@
   const tabs = document.querySelectorAll('.inst-tab');
   const cards = document.querySelectorAll('.inst-card');
 
+  const instOrder = ['kwon', 'park'];
+  let instTimer = null;
+
   function showInstructor(instructorId) {
-    // 모든 탭과 카드 비활성화
     tabs.forEach(tab => tab.classList.remove('active'));
     cards.forEach(card => card.classList.remove('active'));
-
-    // 선택된 탭과 카드만 활성화
     document.querySelector(`.inst-tab[data-instructor="${instructorId}"]`)?.classList.add('active');
     document.querySelector(`.inst-card[data-instructor="${instructorId}"]`)?.classList.add('active');
   }
 
+  function nextInstructor() {
+    const activeTab = document.querySelector('.inst-tab.active');
+    const currentId = activeTab ? activeTab.dataset.instructor : instOrder[0];
+    const nextIdx = (instOrder.indexOf(currentId) + 1) % instOrder.length;
+    showInstructor(instOrder[nextIdx]);
+  }
+
+  function startInstTimer() {
+    stopInstTimer();
+    instTimer = setInterval(nextInstructor, 5500);
+  }
+
+  function stopInstTimer() {
+    if (instTimer) { clearInterval(instTimer); instTimer = null; }
+  }
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      const instructorId = tab.dataset.instructor;
-      showInstructor(instructorId);
+      showInstructor(tab.dataset.instructor);
+      startInstTimer();
     });
   });
+
+  const instSection = document.getElementById('instructors');
+  if (instSection) {
+    instSection.addEventListener('mouseenter', stopInstTimer);
+    instSection.addEventListener('mouseleave', startInstTimer);
+  }
+
+  startInstTimer();
 
   /* ── 사진 업로드 (임시 미리보기) ── */
   function triggerUpload(n) {
