@@ -1612,6 +1612,559 @@
     @media (max-width: 768px) {
       .hero-mini-player, .hero-feedback { max-width: 100%; }
     }
+
+    /* ═══════════════════════════════════════════════════
+       HERO SCENE — 풀스크린 4-슬라이드 재설계
+       (기존 .hero / .hero-left / .hero-right 완전 대체)
+    ═══════════════════════════════════════════════════ */
+
+    .hero-scene {
+      position: relative;
+      width: 100%;
+      min-height: max(100vh, 680px);
+      overflow: hidden;
+    }
+
+    /* 개별 슬라이드 — absolute stack, opacity로 전환 */
+    .hs-slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .55s ease;
+      z-index: 0;
+    }
+    .hs-slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 1;
+    }
+
+    /* 배경 레이어 */
+    .hs-bg { position: absolute; inset: 0; z-index: 1; }
+
+    /* 가독성 오버레이 */
+    .hs-overlay { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+
+    /* 헤드라인 텍스트 블록 */
+    .hs-text {
+      position: absolute;
+      top: max(80px, 14%);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(820px, 90%);
+      z-index: 4;
+      text-align: center;
+    }
+    .hs-h1 {
+      font-size: clamp(36px, 5.5vw, 62px);
+      font-weight: 800;
+      letter-spacing: -.025em;
+      line-height: 1.2;
+      color: #fff;
+      text-shadow: 0 2px 24px rgba(0,0,0,.3);
+      word-break: keep-all;
+      margin: 0 0 14px;
+    }
+    .hs-accent { color: var(--action); }
+    .hs-sub {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255,255,255,.72);
+      margin: 0;
+    }
+    .hs-after-wrap {
+      margin-top: 22px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .4s ease, transform .4s ease;
+      pointer-events: none;
+    }
+    .hs-after-wrap.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .hs-after-link {
+      font-size: 14px; font-weight: 700;
+      color: rgba(255,255,255,.82); text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .hs-after-link:hover { color: #fff; }
+
+    /* 플레이어 */
+    .hs-player {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .hs-play-btn {
+      width: 64px; height: 64px;
+      min-width: 44px; min-height: 44px;
+      border-radius: 50%;
+      background: var(--action);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 0 0 10px rgba(12,128,145,.22), 0 4px 28px rgba(12,128,145,.45);
+    }
+    .hs-play-btn:hover:not(:disabled) {
+      background: var(--action-dark);
+      transform: scale(1.08);
+      box-shadow: 0 0 0 14px rgba(12,128,145,.18), 0 6px 36px rgba(12,128,145,.55);
+    }
+    .hs-play-btn:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+    .hs-play-label {
+      font-size: 12px; font-weight: 600; letter-spacing: .05em;
+      color: rgba(255,255,255,.65); text-align: center;
+    }
+
+    /* 피드백 말풍선 */
+    .hs-feedback {
+      position: absolute;
+      bottom: 23%; right: 6%;
+      max-width: 296px;
+      z-index: 6;
+      display: flex; align-items: flex-start; gap: 8px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: hs-fb-in .5s ease 1.1s forwards;
+    }
+    @keyframes hs-fb-in { to { opacity: 1; transform: translateY(0); } }
+    .hs-fb-av {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
+      flex-shrink: 0; margin-top: 16px;
+    }
+    .hs-fb-body { flex: 1; }
+    .hs-fb-name { font-size: 10px; font-weight: 600; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+    .hs-fb-bubble {
+      background: rgba(255,249,229,.95);
+      border-radius: 4px 16px 16px 16px;
+      padding: 10px 14px; font-size: 13px; color: #2e2e2e;
+      line-height: 1.55; box-shadow: 0 4px 20px rgba(0,0,0,.22);
+      word-break: keep-all;
+    }
+
+    /* CTA 바 (슬라이드 외부 — 항상 표시) */
+    .hs-cta-bar {
+      position: absolute;
+      bottom: 10%; left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      display: flex; align-items: center; gap: 16px;
+      flex-wrap: wrap; justify-content: center; white-space: nowrap;
+    }
+    .hs-cta-sec {
+      font-size: 14px; font-weight: 600;
+      color: rgba(255,255,255,.72); text-decoration: none;
+      transition: color .2s;
+    }
+    .hs-cta-sec:hover { color: #fff; }
+    #hs-slide-3.active ~ .hs-cta-bar .hs-cta-sec {
+      color: rgba(45,16,34,.5);
+    }
+    #hs-slide-3.active ~ .hs-cta-bar .hs-cta-sec:hover {
+      color: rgba(45,16,34,.9);
+    }
+
+    /* 인디케이터 (슬라이드 외부) */
+    .hs-indicator {
+      position: absolute;
+      bottom: 3.5%; left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .hs-slide-label {
+      font-size: 12px; font-weight: 700; letter-spacing: .14em;
+      color: var(--action); opacity: .85; transition: opacity .22s;
+    }
+    .hs-dots { display: flex; gap: 8px; align-items: center; }
+    .hs-dot {
+      width: 8px; height: 8px; border-radius: 100px;
+      background: rgba(255,255,255,.3);
+      border: none; cursor: pointer; padding: 0;
+      transition: all .3s ease;
+    }
+    .hs-dot.active { width: 24px; background: rgba(255,255,255,.85); }
+
+    /* ══════════════════════════════
+       슬라이드 0 : 보신각 — Recording Booth
+    ══════════════════════════════ */
+    .hs-bg-0 { background: #140608; }
+
+    .hs-mic-svg {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(260px, 34vw); height: auto;
+      opacity: .1; pointer-events: none; z-index: 2;
+    }
+
+    .hs-rings {
+      position: absolute; left: 50%; top: 50%;
+      width: 0; height: 0;
+      pointer-events: none; z-index: 2;
+    }
+    .hsr {
+      position: absolute; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,.55);
+      animation: hs-ring 3.5s ease-out infinite;
+    }
+    .hsr1 { width:90px;height:90px;margin:-45px 0 0 -45px;animation-delay:0s; }
+    .hsr2 { width:90px;height:90px;margin:-45px 0 0 -45px;animation-delay:.875s; }
+    .hsr3 { width:90px;height:90px;margin:-45px 0 0 -45px;animation-delay:1.75s; }
+    .hsr4 { width:90px;height:90px;margin:-45px 0 0 -45px;animation-delay:2.625s; }
+    @keyframes hs-ring {
+      0%   { transform: scale(1);   opacity: .6; }
+      100% { transform: scale(8.5); opacity: 0; }
+    }
+
+    .hs-wf {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 170px;
+      display: flex; align-items: flex-end; gap: 3px;
+      pointer-events: none; z-index: 2;
+    }
+    .hswb {
+      flex: 1;
+      height: var(--wh, 80px);
+      border-radius: 3px 3px 0 0;
+      background: rgba(255,255,255,.52);
+      transform-origin: bottom center;
+      will-change: transform;
+      animation: hswb-pulse var(--wd, 1.6s) ease-in-out var(--wdl, 0s) infinite;
+    }
+    .hswb.wf-lit { background: rgba(255,255,255,.95); }
+    @keyframes hswb-pulse {
+      0%,100% { transform: scaleY(.08); opacity: .22; }
+      50%      { transform: scaleY(1);   opacity: .88; }
+    }
+
+    .hs-overlay-0 {
+      background: linear-gradient(180deg,
+        rgba(20,6,8,.7) 0%, rgba(20,6,8,0) 28%,
+        rgba(20,6,8,0) 55%, rgba(20,6,8,.72) 100%);
+    }
+
+    /* ══════════════════════════════
+       슬라이드 1 : 영합각 — Viewfinder
+    ══════════════════════════════ */
+    .hs-bg-1 { background: linear-gradient(145deg,#0D0618 0%,#1e0a30 55%,#3a1458 100%); }
+    .hs-overlay-1 {
+      background: linear-gradient(180deg,rgba(13,6,24,.7) 0%,rgba(13,6,24,0) 30%,rgba(13,6,24,0) 52%,rgba(13,6,24,.7) 100%);
+    }
+
+    /* 뷰파인더 원형 (dashed) */
+    .hs-vf-circle {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(340px, 46vw); height: min(340px, 46vw);
+      border-radius: 50%;
+      border: 2px dashed rgba(255,255,255,.25);
+      z-index: 2; pointer-events: none;
+    }
+
+    /* 코너 브라켓 */
+    .hs-vf-corners {
+      position: absolute; left: 50%; top: 50%;
+      width: min(380px, 52vw); height: min(380px, 52vw);
+      transform: translate(-50%, -50%);
+      z-index: 2; pointer-events: none;
+    }
+    .hs-vf-corner {
+      position: absolute; width: 28px; height: 28px;
+      border-color: rgba(255,255,255,.55); border-style: solid;
+    }
+    .hs-vf-corner.tl { top:0; left:0;   border-width: 2px 0 0 2px; }
+    .hs-vf-corner.tr { top:0; right:0;  border-width: 2px 2px 0 0; }
+    .hs-vf-corner.bl { bottom:0; left:0;  border-width: 0 0 2px 2px; }
+    .hs-vf-corner.br { bottom:0; right:0; border-width: 0 2px 2px 0; }
+
+    /* 크로스헤어 */
+    .hs-vf-cross {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px; height: 20px;
+      z-index: 2; pointer-events: none;
+    }
+    .hs-vf-cross::before {
+      content: ''; position: absolute;
+      width: 20px; height: 1px;
+      background: rgba(255,255,255,.38);
+      top: 50%; left: 0; transform: translateY(-50%);
+    }
+    .hs-vf-cross::after {
+      content: ''; position: absolute;
+      width: 1px; height: 20px;
+      background: rgba(255,255,255,.38);
+      left: 50%; top: 0; transform: translateX(-50%);
+    }
+
+    /* REC 인디케이터 */
+    .hs-vf-rec {
+      position: absolute;
+      top: max(74px, 12%); left: 5%;
+      z-index: 4; pointer-events: none;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700; letter-spacing: .1em;
+      color: rgba(255,255,255,.8);
+    }
+    .hs-rec-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ff3b3b; flex-shrink: 0;
+      animation: hs-rec-blink 1.2s ease-in-out infinite;
+    }
+    @keyframes hs-rec-blink {
+      0%,100% { opacity: 1; }
+      50%     { opacity: .15; }
+    }
+
+    /* ══════════════════════════════
+       슬라이드 2 : 스피닝 — Metronome
+    ══════════════════════════════ */
+    .hs-bg-2 { background: linear-gradient(160deg,#060f26 0%,#0c1b3d 60%,#112850 100%); }
+    .hs-overlay-2 {
+      background: linear-gradient(180deg,rgba(6,15,38,.72) 0%,rgba(6,15,38,0) 28%,rgba(6,15,38,0) 55%,rgba(6,15,38,.7) 100%);
+    }
+
+    /* 오선 (5 staff lines) */
+    .hs-staff { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .hs-stline { position: absolute; left: 0; right: 0; height: 1px; background: rgba(255,255,255,.13); }
+    .hs-stline:nth-child(1) { top: 28%; }
+    .hs-stline:nth-child(2) { top: 35%; }
+    .hs-stline:nth-child(3) { top: 42%; }
+    .hs-stline:nth-child(4) { top: 49%; }
+    .hs-stline:nth-child(5) { top: 56%; }
+
+    /* 플로팅 음표 */
+    .hs-snotes { position: absolute; inset: 0; overflow: hidden; z-index: 2; pointer-events: none; }
+    .hs-snote {
+      position: absolute;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(255,255,255,.38);
+      top: var(--ny, 42%);
+      animation: hs-note-drift var(--nd, 10s) linear var(--ndl, 0s) infinite;
+    }
+    @keyframes hs-note-drift {
+      from { left: 106%; opacity: 0; }
+      7%   { opacity: .72; }
+      85%  { opacity: .35; }
+      to   { left: -4%; opacity: 0; }
+    }
+
+    /* 메트로놈 진자 */
+    .hs-metro {
+      position: absolute; left: 7%; bottom: 10%;
+      z-index: 3; display: flex; flex-direction: column; align-items: center;
+    }
+    .hs-metro-rod {
+      width: 3px; height: 155px;
+      background: rgba(255,255,255,.5); border-radius: 2px;
+      transform-origin: bottom center;
+      animation: hs-pend 2.2s cubic-bezier(.37,0,.63,1) infinite;
+      position: relative;
+    }
+    .hs-metro-rod::after {
+      content: ''; position: absolute;
+      top: 16%; left: 50%; transform: translateX(-50%);
+      width: 12px; height: 12px; border-radius: 50%;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 0 10px rgba(255,255,255,.35);
+    }
+    @keyframes hs-pend {
+      0%,100% { transform: rotate(-22deg); }
+      50%     { transform: rotate(22deg); }
+    }
+    .hs-metro-base {
+      width: 0; height: 0;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-top: 30px solid rgba(255,255,255,.26);
+    }
+
+    /* 스피닝 플레이어 — 중앙 오선 위 큰 음표 */
+    .hs-player-note { top: 42%; }
+    .hs-note-stem {
+      width: 2px; height: 54px;
+      background: rgba(255,255,255,.55); border-radius: 1px;
+      margin-left: 26px; margin-bottom: -2px; flex-shrink: 0;
+    }
+
+    /* 오선 진행 바 */
+    .hs-staff-progress {
+      width: min(260px, 68vw); height: 2px;
+      background: rgba(255,255,255,.18); border-radius: 1px; overflow: hidden;
+      margin-top: 6px;
+    }
+    .hs-sp-bar {
+      width: 0; height: 100%;
+      background: var(--action); border-radius: 1px;
+      transition: width .12s linear;
+    }
+
+    /* ══════════════════════════════
+       슬라이드 3 : 승자각 — 답변 키워드 아키텍처
+    ══════════════════════════════ */
+    .hs-bg-3 {
+      background: linear-gradient(145deg, #faf6ef 0%, #f0e8d6 55%, #e8dcc8 100%);
+    }
+    .hs-overlay-3 {
+      background: linear-gradient(180deg,
+        rgba(250,246,239,.92) 0%, rgba(250,246,239,.1) 22%,
+        rgba(232,220,200,.1) 68%, rgba(232,220,200,.92) 100%);
+    }
+    /* 라이트 배경 텍스트 */
+    .hs-h1-dark  { color: #1a1020 !important; text-shadow: none !important; }
+    .hs-sub-dark { color: rgba(30,20,10,.52) !important; }
+    .hs-fb-name-dark { color: rgba(30,20,10,.38) !important; }
+
+    /* 플로팅 키워드 워터마크 */
+    .hs-ans-kw {
+      position: absolute; color: #2d1022;
+      font-weight: 800; white-space: nowrap;
+      pointer-events: none; z-index: 1;
+      letter-spacing: -0.01em; line-height: 1;
+    }
+
+    /* 답변 구조 SVG 다이어그램 */
+    .hs-ans-diagram {
+      position: absolute; left: 50%; top: 54%;
+      transform: translate(-50%,-50%);
+      z-index: 2; width: min(700px, 96vw); overflow: visible;
+    }
+    .hs-ans-line {
+      stroke: rgba(45,16,34,.14); stroke-width: 1.8; fill: none;
+      stroke-dasharray: 350; stroke-dashoffset: 350;
+    }
+    .hs-ans-line-1 { animation: hs-line-draw .65s ease .30s forwards; }
+    .hs-ans-line-2 { animation: hs-line-draw .55s ease .38s forwards; }
+    .hs-ans-line-3 { animation: hs-line-draw .48s ease .44s forwards; }
+    .hs-ans-line-4 { animation: hs-line-draw .55s ease .38s forwards; }
+    .hs-ans-line-5 { animation: hs-line-draw .65s ease .30s forwards; }
+    .hs-ans-cn {
+      fill: none; stroke: var(--action); stroke-width: 2.5;
+      transform-box: fill-box; transform-origin: center;
+      opacity: 0; animation: hs-node-pop .45s ease .08s forwards;
+    }
+    .hs-ans-sn {
+      fill: none; stroke: rgba(45,16,34,.22); stroke-width: 1.8;
+      transform-box: fill-box; transform-origin: center; opacity: 0;
+    }
+    .hs-ans-sn-1 { animation: hs-node-pop .38s ease .78s forwards; }
+    .hs-ans-sn-2 { animation: hs-node-pop .38s ease .92s forwards; }
+    .hs-ans-sn-3 { animation: hs-node-pop .38s ease 1.04s forwards; }
+    .hs-ans-sn-4 { animation: hs-node-pop .38s ease .92s forwards; }
+    .hs-ans-sn-5 { animation: hs-node-pop .38s ease .78s forwards; }
+    .hs-ans-n10 {
+      font-size: 34px; font-weight: 900; fill: #1a1020; text-anchor: middle;
+      opacity: 0; animation: hs-node-pop .4s ease .12s forwards;
+    }
+    .hs-ans-nlbl {
+      font-size: 10px; font-weight: 700; fill: var(--action); text-anchor: middle;
+      letter-spacing: .1em;
+      opacity: 0; animation: hs-node-pop .4s ease .18s forwards;
+    }
+    .hs-ans-stxt {
+      font-size: 12px; font-weight: 800; fill: rgba(45,16,34,.72);
+      text-anchor: middle; dominant-baseline: central;
+    }
+    .hs-ans-stxt-1 { opacity: 0; animation: hs-node-pop .36s ease .83s forwards; }
+    .hs-ans-stxt-2 { opacity: 0; animation: hs-node-pop .36s ease .97s forwards; }
+    .hs-ans-stxt-3 { opacity: 0; animation: hs-node-pop .36s ease 1.09s forwards; }
+    .hs-ans-stxt-4 { opacity: 0; animation: hs-node-pop .36s ease .97s forwards; }
+    .hs-ans-stxt-5 { opacity: 0; animation: hs-node-pop .36s ease .83s forwards; }
+
+    @keyframes hs-line-draw { to { stroke-dashoffset: 0; } }
+    @keyframes hs-node-pop {
+      0%   { opacity: 0; transform: scale(.72); }
+      65%  { transform: scale(1.08); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ══ 전/후 토글 플레이어 ══ */
+    .hs-toggle-player {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .hs-tp-label {
+      font-size: 11px; font-weight: 600; letter-spacing: .04em;
+      color: rgba(255,255,255,.45); text-align: center; min-height: 15px;
+      transition: color .2s;
+    }
+    .hs-tp-label.playing { color: var(--action); }
+    .hs-tp-btns { display: flex; gap: 10px; align-items: center; }
+    .hs-tp-btn {
+      padding: 10px 22px; border-radius: 28px;
+      border: 1.5px solid rgba(255,255,255,.32);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.48); cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      transition: all .22s ease; min-width: 72px;
+    }
+    .hs-tp-btn .hs-tp-main { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+    .hs-tp-btn .hs-tp-sub  { font-size: 9px; font-weight: 600; letter-spacing: .06em; opacity: .7; }
+    .hs-tp-btn.active {
+      background: var(--action); border-color: var(--action);
+      color: #fff; transform: scale(1.06);
+      box-shadow: 0 4px 20px rgba(12,128,145,.45);
+    }
+    .hs-tp-btn.active .hs-tp-sub { opacity: 1; }
+    .hs-tp-btn:disabled { opacity: .28; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+    /* 스피닝 — 원형 음표 버튼 + 줄기 */
+    .hs-toggle-player.hs-tp-note { top: 42%; }
+    .hs-tp-note .hs-tp-btn {
+      width: 62px; height: 62px; border-radius: 50%;
+      padding: 0; min-width: unset; position: relative;
+      justify-content: center;
+    }
+    .hs-tp-note .hs-tp-btn::before {
+      content: ''; position: absolute;
+      right: 10px; bottom: 100%;
+      width: 2px; height: 44px;
+      background: rgba(255,255,255,.45); border-radius: 1px;
+    }
+    .hs-tp-note .hs-tp-btn.active::before { background: var(--action); }
+    .hs-tp-note .hs-tp-main { font-size: 14px; }
+    .hs-tp-note .hs-tp-sub  { font-size: 8px; }
+
+    /* 후 모드 웨이브폼 — teal 진행 */
+    .hs-wf.hs-wf-after .hswb      { background: rgba(12,128,145,.3); }
+    .hs-wf.hs-wf-after .hswb.wf-lit { background: var(--action); }
+
+    /* ── Reduced Motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .hsr, .hswb { animation-play-state: paused !important; }
+      .hs-feedback { animation: none !important; opacity: 1; transform: none; }
+      .hs-after-wrap, .hs-slide { transition: none; }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .hs-text { top: max(72px,11%); width: 88%; }
+      .hs-h1 { font-size: clamp(32px,9vw,44px); }
+      .hs-player { top: 51%; }
+      .hs-feedback {
+        bottom: auto; top: 63%;
+        right: 4%; max-width: min(260px,84vw);
+      }
+      .hs-wf { height: 120px; }
+      .hs-cta-bar {
+        bottom: 13%; flex-direction: column;
+        gap: 10px; width: 88%;
+      }
+      .hs-cta-bar .btn { width: 100%; justify-content: center; text-align: center; }
+      .hs-indicator { bottom: 5%; }
+    }
+    @media (max-width: 480px) {
+      .hs-h1 { font-size: clamp(28px,9vw,38px); }
+      .hs-text { top: max(68px,10%); }
+    }
   </style>
 </head>
 <body>
@@ -1675,74 +2228,286 @@
   </div>
 </div>
 
-<!-- HERO -->
-<section class="hero" id="home">
-  <div class="hero-left">
-    <div class="hero-badge">🎙 보이스 챌린지 · 2주</div>
-    <h1 class="hero-title" id="hero-headline">
-      면접관 앞에서 <span class="hero-accent">목소리</span>가 떨려요?
-    </h1>
-    <p class="hero-sub">MONC 챌린지로 2주 안에 달라져요</p>
-    <div class="hero-ctas">
-      <a class="btn btn-action" id="hero-cta-main" href="#" onclick="openApplicationModal(); return false;" style="font-size:16px;">내 목소리 바뀌는 거 듣기</a>
-      <a class="btn-secondary-hero" href="#how">어떻게 하나요? →</a>
+<!-- HERO SCENE -->
+<section class="hero-scene" id="home">
+  <audio id="hero-audio" preload="none"></audio>
+
+  <!-- ─── 슬라이드 0 : 보신각 — Recording Booth ─── -->
+  <div class="hs-slide active" id="hs-slide-0">
+    <div class="hs-bg hs-bg-0">
+      <!-- 마이크 워터마크 -->
+      <svg class="hs-mic-svg" viewBox="0 0 80 130" fill="white" aria-hidden="true" focusable="false">
+        <rect x="24" y="6" width="32" height="56" rx="16" ry="16"/>
+        <path d="M12 62 Q12 94 40 94 Q68 94 68 62" stroke="white" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <rect x="37" y="94" width="6" height="20" rx="3"/>
+        <rect x="22" y="112" width="36" height="6" rx="3"/>
+      </svg>
+      <!-- 펄스 링 -->
+      <div class="hs-rings" aria-hidden="true">
+        <span class="hsr hsr1"></span>
+        <span class="hsr hsr2"></span>
+        <span class="hsr hsr3"></span>
+        <span class="hsr hsr4"></span>
+      </div>
+      <!-- 하단 웨이브폼 (32 bars) -->
+      <div class="hs-wf" id="hs-wf-0" aria-hidden="true">
+        <span class="hswb" style="--wh:120px;--wd:1.65s;--wdl:0s"></span>
+        <span class="hswb" style="--wh:70px;--wd:1.4s;--wdl:0.42s"></span>
+        <span class="hswb" style="--wh:145px;--wd:1.75s;--wdl:0.85s"></span>
+        <span class="hswb" style="--wh:55px;--wd:1.5s;--wdl:0.23s"></span>
+        <span class="hswb" style="--wh:165px;--wd:1.8s;--wdl:1.10s"></span>
+        <span class="hswb" style="--wh:95px;--wd:1.45s;--wdl:0.57s"></span>
+        <span class="hswb" style="--wh:135px;--wd:1.65s;--wdl:1.38s"></span>
+        <span class="hswb" style="--wh:75px;--wd:1.55s;--wdl:0.76s"></span>
+        <span class="hswb" style="--wh:155px;--wd:1.7s;--wdl:1.65s"></span>
+        <span class="hswb" style="--wh:105px;--wd:1.4s;--wdl:0.12s"></span>
+        <span class="hswb" style="--wh:140px;--wd:1.8s;--wdl:0.93s"></span>
+        <span class="hswb" style="--wh:115px;--wd:1.6s;--wdl:1.28s"></span>
+        <span class="hswb" style="--wh:100px;--wd:1.5s;--wdl:0.48s"></span>
+        <span class="hswb" style="--wh:145px;--wd:1.75s;--wdl:1.55s"></span>
+        <span class="hswb" style="--wh:80px;--wd:1.45s;--wdl:0.28s"></span>
+        <span class="hswb" style="--wh:165px;--wd:1.65s;--wdl:1.05s"></span>
+        <span class="hswb" style="--wh:125px;--wd:1.55s;--wdl:0.65s"></span>
+        <span class="hswb" style="--wh:100px;--wd:1.7s;--wdl:1.42s"></span>
+        <span class="hswb" style="--wh:145px;--wd:1.8s;--wdl:0.32s"></span>
+        <span class="hswb" style="--wh:70px;--wd:1.4s;--wdl:1.18s"></span>
+        <span class="hswb" style="--wh:135px;--wd:1.5s;--wdl:0.72s"></span>
+        <span class="hswb" style="--wh:90px;--wd:1.65s;--wdl:1.48s"></span>
+        <span class="hswb" style="--wh:155px;--wd:1.75s;--wdl:0.15s"></span>
+        <span class="hswb" style="--wh:80px;--wd:1.45s;--wdl:0.88s"></span>
+        <span class="hswb" style="--wh:125px;--wd:1.6s;--wdl:1.35s"></span>
+        <span class="hswb" style="--wh:110px;--wd:1.55s;--wdl:0.52s"></span>
+        <span class="hswb" style="--wh:145px;--wd:1.7s;--wdl:1.02s"></span>
+        <span class="hswb" style="--wh:60px;--wd:1.4s;--wdl:0.38s"></span>
+        <span class="hswb" style="--wh:105px;--wd:1.8s;--wdl:1.58s"></span>
+        <span class="hswb" style="--wh:135px;--wd:1.6s;--wdl:0.68s"></span>
+        <span class="hswb" style="--wh:80px;--wd:1.5s;--wdl:0.22s"></span>
+        <span class="hswb" style="--wh:120px;--wd:1.65s;--wdl:0.95s"></span>
+      </div>
     </div>
-    <div class="hero-stats">
-      <div><div class="stat-num">92%</div><div class="stat-label">수료 후 자신감 향상</div></div>
-      <div><div class="stat-num">3일</div><div class="stat-label">평균 변화 체감 기간</div></div>
-      <div><div class="stat-num">5.0★</div><div class="stat-label">수료생 만족도</div></div>
+    <div class="hs-overlay hs-overlay-0" aria-hidden="true"></div>
+    <!-- 헤드라인 -->
+    <div class="hs-text">
+      <h1 class="hs-h1">면접관 앞에서 <span class="hs-accent">목소리</span>가 떨려요?</h1>
+      <p class="hs-sub">MONC 챌린지로 2주 안에 달라져요</p>
     </div>
-    <div class="hero-slide-label" id="hero-slide-label" aria-live="polite">보.신.각</div>
-    <div class="hero-switch-dots">
-      <button class="hero-switch-dot active" onclick="heroSwitchTo(0)" aria-label="보신각"></button>
-      <button class="hero-switch-dot" onclick="heroSwitchTo(1)" aria-label="영합각"></button>
-      <button class="hero-switch-dot" onclick="heroSwitchTo(2)" aria-label="스피닝"></button>
-      <button class="hero-switch-dot" onclick="heroSwitchTo(3)" aria-label="승자각"></button>
-    </div>
-  </div>
-  <div class="hero-right" id="hero-right" style="background:linear-gradient(145deg,#1a0a0e 0%,#4a0e18 55%,#7a1c2c 100%);">
-    <audio id="hero-audio" preload="none" src="audio/challenger-c-before.mp3"></audio>
-    <!-- 미니 비포 플레이어 -->
-    <div class="hero-mini-player">
-      <div class="hmp-top">
-        <button class="hero-play-btn" id="hero-play-btn" aria-label="재생">
-          <svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    <!-- 전/후 토글 플레이어 — 마이크 좌우 -->
+    <div class="hs-toggle-player hs-tp-voice">
+      <div class="hs-tp-label" id="hs-tp-lbl-0">▶ 탭해서 듣기</div>
+      <div class="hs-tp-btns">
+        <button class="hs-tp-btn active" data-mode="before" aria-pressed="true">
+          <span class="hs-tp-main">전</span>
+          <span class="hs-tp-sub">Before</span>
         </button>
-        <div class="hmp-label-wf">
-          <div class="hmp-label">전(Before)</div>
-          <div class="hero-mini-wf" id="hero-mini-wf" aria-hidden="true">
-            <span class="hmwb" style="--hd:0s;--hh:28px"></span>
-            <span class="hmwb" style="--hd:0.12s;--hh:18px"></span>
-            <span class="hmwb" style="--hd:0.26s;--hh:32px"></span>
-            <span class="hmwb" style="--hd:0.41s;--hh:20px"></span>
-            <span class="hmwb" style="--hd:0.16s;--hh:26px"></span>
-            <span class="hmwb" style="--hd:0.36s;--hh:34px"></span>
-            <span class="hmwb" style="--hd:0.05s;--hh:16px"></span>
-            <span class="hmwb" style="--hd:0.31s;--hh:30px"></span>
-            <span class="hmwb" style="--hd:0.21s;--hh:22px"></span>
-            <span class="hmwb" style="--hd:0.47s;--hh:28px"></span>
-            <span class="hmwb" style="--hd:0.09s;--hh:20px"></span>
-            <span class="hmwb" style="--hd:0.38s;--hh:34px"></span>
-            <span class="hmwb" style="--hd:0.23s;--hh:18px"></span>
-            <span class="hmwb" style="--hd:0.14s;--hh:26px"></span>
-          </div>
-        </div>
-      </div>
-      <div class="hero-after-label" id="hero-after-label" aria-hidden="true">
-        <a href="#before-after" class="hero-after-link">↓ 어떻게 바뀌었는지 듣기</a>
+        <button class="hs-tp-btn" data-mode="after" aria-pressed="false">
+          <span class="hs-tp-main">후</span>
+          <span class="hs-tp-sub">After</span>
+        </button>
       </div>
     </div>
-    <!-- 코치 피드백 말풍선 -->
-    <div class="hero-feedback" id="hero-feedback">
-      <div class="hf-avatar" aria-hidden="true">권</div>
-      <div class="hf-body">
-        <div class="hf-name">권성호 원장</div>
-        <div class="hf-bubble" id="hf-bubble-text">
-          후두 위치가 한결 내려갔어요. 목에서 짜내던 소리가 가슴 울림으로 바뀌고 있어요 🎙️
-        </div>
+    <!-- 피드백 말풍선 -->
+    <div class="hs-feedback" id="hs-fb-0">
+      <div class="hs-fb-av" aria-hidden="true">권</div>
+      <div class="hs-fb-body">
+        <div class="hs-fb-name">권성호 원장</div>
+        <div class="hs-fb-bubble">후두 위치가 한결 내려갔어요. 목에서 짜내던 소리가 가슴 울림으로 바뀌고 있어요 🎙️</div>
       </div>
+    </div>
+  </div><!-- /slide-0 -->
+
+  <!-- ─── 슬라이드 1 : 영합각 — Viewfinder ─── -->
+  <div class="hs-slide" id="hs-slide-1">
+    <div class="hs-bg hs-bg-1">
+      <div class="hs-vf-circle" aria-hidden="true"></div>
+      <div class="hs-vf-corners" aria-hidden="true">
+        <div class="hs-vf-corner tl"></div>
+        <div class="hs-vf-corner tr"></div>
+        <div class="hs-vf-corner bl"></div>
+        <div class="hs-vf-corner br"></div>
+      </div>
+      <div class="hs-vf-cross" aria-hidden="true"></div>
+    </div>
+    <div class="hs-overlay hs-overlay-1" aria-hidden="true"></div>
+    <!-- REC 인디케이터 (overlay 위) -->
+    <div class="hs-vf-rec" aria-hidden="true">
+      <div class="hs-rec-dot"></div>
+      <span>REC</span>
+    </div>
+    <!-- 헤드라인 -->
+    <div class="hs-text">
+      <h1 class="hs-h1">카메라 앞에서 <span class="hs-accent">표정</span>이 굳나요?</h1>
+      <p class="hs-sub">MONC 챌린지로 2주 안에 달라져요</p>
+    </div>
+    <!-- 전/후 토글 (오디오 없음 — 영상 전환 안내) -->
+    <div class="hs-toggle-player">
+      <div class="hs-tp-label"></div>
+      <div class="hs-tp-btns">
+        <button class="hs-tp-btn" disabled data-mode="before" aria-pressed="false">
+          <span class="hs-tp-main">전</span>
+          <span class="hs-tp-sub">Before</span>
+        </button>
+        <button class="hs-tp-btn" disabled data-mode="after" aria-pressed="false">
+          <span class="hs-tp-main">후</span>
+          <span class="hs-tp-sub">After</span>
+        </button>
+      </div>
+      <a href="#before-after" class="hs-after-link" style="margin-top:10px;">↓ 영상으로 확인하기</a>
+    </div>
+    <!-- 피드백 말풍선 -->
+    <div class="hs-feedback" id="hs-fb-1">
+      <div class="hs-fb-av" aria-hidden="true">권</div>
+      <div class="hs-fb-body">
+        <div class="hs-fb-name">권성호 원장</div>
+        <div class="hs-fb-bubble">카메라 보면서 시선이 흔들리던 게 많이 안정됐어요. 이제 보는 사람과 눈을 마주치는 느낌이 들어요</div>
+      </div>
+    </div>
+  </div><!-- /slide-1 -->
+
+  <!-- ─── 슬라이드 2 : 스피닝 — Metronome ─── -->
+  <div class="hs-slide" id="hs-slide-2">
+    <div class="hs-bg hs-bg-2">
+      <!-- 오선 -->
+      <div class="hs-staff" aria-hidden="true">
+        <div class="hs-stline"></div>
+        <div class="hs-stline"></div>
+        <div class="hs-stline"></div>
+        <div class="hs-stline"></div>
+        <div class="hs-stline"></div>
+      </div>
+      <!-- 플로팅 음표 (오선 위를 흘러가는 음표 점들) -->
+      <div class="hs-snotes" aria-hidden="true">
+        <span class="hs-snote" style="--ny:28%;--nd:9s;--ndl:0s"></span>
+        <span class="hs-snote" style="--ny:42%;--nd:11s;--ndl:2.2s"></span>
+        <span class="hs-snote" style="--ny:35%;--nd:8.5s;--ndl:4.8s"></span>
+        <span class="hs-snote" style="--ny:49%;--nd:12s;--ndl:1.4s"></span>
+        <span class="hs-snote" style="--ny:28%;--nd:10s;--ndl:7.2s"></span>
+        <span class="hs-snote" style="--ny:56%;--nd:9.5s;--ndl:3.6s"></span>
+        <span class="hs-snote" style="--ny:42%;--nd:11.5s;--ndl:6.1s"></span>
+        <span class="hs-snote" style="--ny:35%;--nd:8s;--ndl:9.3s"></span>
+        <span class="hs-snote" style="--ny:49%;--nd:10.5s;--ndl:5.5s"></span>
+        <span class="hs-snote" style="--ny:56%;--nd:9s;--ndl:8s"></span>
+        <span class="hs-snote" style="--ny:35%;--nd:12.5s;--ndl:0.8s"></span>
+        <span class="hs-snote" style="--ny:28%;--nd:10s;--ndl:11s"></span>
+      </div>
+      <!-- 메트로놈 진자 -->
+      <div class="hs-metro" aria-hidden="true">
+        <div class="hs-metro-rod"></div>
+        <div class="hs-metro-base"></div>
+      </div>
+    </div>
+    <div class="hs-overlay hs-overlay-2" aria-hidden="true"></div>
+    <!-- 헤드라인 -->
+    <div class="hs-text">
+      <h1 class="hs-h1">말이 빨라지고 <span class="hs-accent">숨</span>이 가빠지나요?</h1>
+      <p class="hs-sub">MONC 챌린지로 2주 안에 달라져요</p>
+    </div>
+    <!-- 전/후 토글 플레이어 — 오선 위 음표형 버튼 -->
+    <div class="hs-toggle-player hs-tp-note">
+      <div class="hs-tp-label" id="hs-tp-lbl-2">▶ 탭해서 듣기</div>
+      <div class="hs-tp-btns">
+        <button class="hs-tp-btn active" data-mode="before" aria-pressed="true">
+          <span class="hs-tp-main">전</span>
+          <span class="hs-tp-sub">Before</span>
+        </button>
+        <button class="hs-tp-btn" data-mode="after" aria-pressed="false">
+          <span class="hs-tp-main">후</span>
+          <span class="hs-tp-sub">After</span>
+        </button>
+      </div>
+      <div class="hs-staff-progress">
+        <div class="hs-sp-bar" id="hs-sp-bar-2"></div>
+      </div>
+    </div>
+    <!-- 피드백 말풍선 -->
+    <div class="hs-feedback" id="hs-fb-2">
+      <div class="hs-fb-av" aria-hidden="true">권</div>
+      <div class="hs-fb-body">
+        <div class="hs-fb-name">권성호 원장</div>
+        <div class="hs-fb-bubble">말 끝에서 숨을 안 쓰고 먹는 소리가 났었는데, 오늘은 끝까지 호흡이 살아있네요</div>
+      </div>
+    </div>
+  </div><!-- /slide-2 -->
+
+  <!-- ─── 슬라이드 3 : 승자각 (placeholder — light) ─── -->
+  <div class="hs-slide" id="hs-slide-3">
+    <div class="hs-bg hs-bg-3">
+      <!-- 플로팅 키워드 워터마크 -->
+      <span class="hs-ans-kw" style="top:3%;left:2%;font-size:72px;opacity:.055;transform:rotate(-6deg)">차별화</span>
+      <span class="hs-ans-kw" style="top:6%;left:58%;font-size:28px;opacity:.08;transform:rotate(4deg)">스토리텔링</span>
+      <span class="hs-ans-kw" style="top:12%;left:78%;font-size:44px;opacity:.06;transform:rotate(-3deg)">진정성</span>
+      <span class="hs-ans-kw" style="top:18%;left:5%;font-size:22px;opacity:.09;transform:rotate(-5deg)">핵심역량</span>
+      <span class="hs-ans-kw" style="top:22%;left:40%;font-size:18px;opacity:.07;transform:rotate(3deg)">자기소개</span>
+      <span class="hs-ans-kw" style="top:28%;left:70%;font-size:20px;opacity:.08;transform:rotate(6deg)">직무</span>
+      <span class="hs-ans-kw" style="top:32%;left:14%;font-size:54px;opacity:.05;transform:rotate(-4deg)">두괄식</span>
+      <span class="hs-ans-kw" style="top:38%;left:62%;font-size:18px;opacity:.08;transform:rotate(-7deg)">가치관</span>
+      <span class="hs-ans-kw" style="top:42%;left:82%;font-size:26px;opacity:.07;transform:rotate(5deg)">열정</span>
+      <span class="hs-ans-kw" style="top:46%;left:3%;font-size:24px;opacity:.08;transform:rotate(-3deg)">설득력</span>
+      <span class="hs-ans-kw" style="top:52%;left:52%;font-size:16px;opacity:.1;transform:rotate(2deg)">논리</span>
+      <span class="hs-ans-kw" style="top:58%;left:74%;font-size:38px;opacity:.055;transform:rotate(-5deg)">목표</span>
+      <span class="hs-ans-kw" style="top:62%;left:8%;font-size:28px;opacity:.08;transform:rotate(4deg)">협업</span>
+      <span class="hs-ans-kw" style="top:66%;left:40%;font-size:64px;opacity:.045;transform:rotate(-2deg)">강점</span>
+      <span class="hs-ans-kw" style="top:72%;left:76%;font-size:18px;opacity:.09;transform:rotate(7deg)">리더십</span>
+      <span class="hs-ans-kw" style="top:76%;left:18%;font-size:22px;opacity:.08;transform:rotate(-6deg)">문제해결</span>
+      <span class="hs-ans-kw" style="top:80%;left:56%;font-size:20px;opacity:.07;transform:rotate(4deg)">성장</span>
+      <span class="hs-ans-kw" style="top:85%;left:30%;font-size:30px;opacity:.06;transform:rotate(-3deg)">경험</span>
+      <span class="hs-ans-kw" style="top:90%;left:68%;font-size:16px;opacity:.09;transform:rotate(5deg)">자신감</span>
+      <span class="hs-ans-kw" style="top:93%;left:6%;font-size:42px;opacity:.05;transform:rotate(-5deg)">핵심메시지</span>
+      <!-- 답변 구조 다이어그램 -->
+      <svg class="hs-ans-diagram" viewBox="0 0 700 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- 연결선 -->
+        <line class="hs-ans-line hs-ans-line-1" x1="350" y1="94" x2="70"  y2="172"/>
+        <line class="hs-ans-line hs-ans-line-2" x1="350" y1="94" x2="210" y2="172"/>
+        <line class="hs-ans-line hs-ans-line-3" x1="350" y1="94" x2="350" y2="172"/>
+        <line class="hs-ans-line hs-ans-line-4" x1="350" y1="94" x2="490" y2="172"/>
+        <line class="hs-ans-line hs-ans-line-5" x1="350" y1="94" x2="630" y2="172"/>
+        <!-- 결론 노드 -->
+        <circle class="hs-ans-cn" cx="350" cy="52" r="42"/>
+        <text class="hs-ans-n10" x="350" y="60">10</text>
+        <text class="hs-ans-nlbl" x="350" y="77">결론</text>
+        <!-- 근거 노드 5개 -->
+        <circle class="hs-ans-sn hs-ans-sn-1" cx="70"  cy="196" r="24"/>
+        <circle class="hs-ans-sn hs-ans-sn-2" cx="210" cy="196" r="24"/>
+        <circle class="hs-ans-sn hs-ans-sn-3" cx="350" cy="196" r="24"/>
+        <circle class="hs-ans-sn hs-ans-sn-4" cx="490" cy="196" r="24"/>
+        <circle class="hs-ans-sn hs-ans-sn-5" cx="630" cy="196" r="24"/>
+        <text class="hs-ans-stxt hs-ans-stxt-1" x="70"  y="196">두괄식</text>
+        <text class="hs-ans-stxt hs-ans-stxt-2" x="210" y="196">스토리</text>
+        <text class="hs-ans-stxt hs-ans-stxt-3" x="350" y="196">차별화</text>
+        <text class="hs-ans-stxt hs-ans-stxt-4" x="490" y="196">강점</text>
+        <text class="hs-ans-stxt hs-ans-stxt-5" x="630" y="196">진정성</text>
+      </svg>
+    </div>
+    <div class="hs-overlay hs-overlay-3" aria-hidden="true"></div>
+    <div class="hs-text">
+      <h1 class="hs-h1 hs-h1-dark"><span class="hs-accent">답변</span>이 자꾸 흐려지나요?</h1>
+      <p class="hs-sub hs-sub-dark">MONC 챌린지로 2주 안에 달라져요</p>
+    </div>
+    <div class="hs-feedback" id="hs-fb-3">
+      <div class="hs-fb-av" aria-hidden="true">권</div>
+      <div class="hs-fb-body">
+        <div class="hs-fb-name hs-fb-name-dark">권성호 원장</div>
+        <div class="hs-fb-bubble">두괄식으로 핵심부터 말하는 구조가 자리 잡혔어요. 듣는 사람이 결론을 먼저 알고 들으니 훨씬 명확해요</div>
+      </div>
+    </div>
+  </div><!-- /slide-3 -->
+
+  <!-- ─── CTA 바 (공통) ─── -->
+  <div class="hs-cta-bar">
+    <a class="btn btn-action" id="hs-cta-main" href="#" onclick="openApplicationModal(); return false;" style="font-size:16px;">내 목소리 바뀌는 거 듣기</a>
+    <a class="hs-cta-sec" href="#before-after">더 많은 변화 사례 보기 →</a>
+  </div>
+
+  <!-- ─── 인디케이터 (공통) ─── -->
+  <div class="hs-indicator">
+    <div class="hs-slide-label" id="hs-label" aria-live="polite">보.신.각</div>
+    <div class="hs-dots">
+      <button class="hs-dot active" onclick="heroSwitchTo(0)" aria-label="보신각"></button>
+      <button class="hs-dot" onclick="heroSwitchTo(1)" aria-label="영합각"></button>
+      <button class="hs-dot" onclick="heroSwitchTo(2)" aria-label="스피닝"></button>
+      <button class="hs-dot" onclick="heroSwitchTo(3)" aria-label="승자각"></button>
     </div>
   </div>
+
 </section>
 
 <!-- BEFORE / AFTER -->
@@ -2389,188 +3154,167 @@
     }
   });
 
-  /* ── Hero 챌린지 순환 (4가지) ── */
-  const _heroData = [
-    {
-      badge: '🎙 보이스 챌린지 · 2주',
-      slideLabel: '보.신.각',
-      headline: '면접관 앞에서 <span class="hero-accent">목소리</span>가 떨려요?',
-      ctaText: '내 목소리 바뀌는 거 듣기',
-      audioSrc: 'audio/challenger-c-before.mp3',
-      playerBg: 'linear-gradient(145deg,#1a0a0e 0%,#4a0e18 55%,#7a1c2c 100%)',
-      playerLight: false,
-      afterLabel: '↓ 어떻게 바뀌었는지 듣기',
-      afterHref: '#before-after',
-      feedback: '후두 위치가 한결 내려갔어요. 목에서 짜내던 소리가 가슴 울림으로 바뀌고 있어요 🎙️',
-    },
-    {
-      badge: '🎭 영상면접 챌린지 · 2주',
-      slideLabel: '영.합.각',
-      headline: '카메라 앞에서 <span class="hero-accent">표정</span>이 굳나요?',
-      ctaText: '표정 바뀌는 거 보기',
-      audioSrc: null,
-      playerBg: 'linear-gradient(145deg,#0D0618 0%,#1e0a30 55%,#3a1458 100%)',
-      playerLight: false,
-      afterLabel: '↓ 비포애프터 보기',
-      afterHref: '#before-after',
-      feedback: '카메라 보면서 시선이 흔들리던 게 많이 안정됐어요. 이제 보는 사람과 눈을 마주치는 느낌이 들어요',
-    },
-    {
-      badge: '🗣 스피치 챌린지 · 2주',
-      slideLabel: '스.피.닝',
-      headline: '말이 빨라지고 <span class="hero-accent">숨</span>이 가빠지나요?',
-      ctaText: '내 말투 바뀌는 거 듣기',
-      audioSrc: 'audio/spinning-c-before.m4a',
-      playerBg: 'linear-gradient(145deg,#07102A 0%,#0e1d40 55%,#183060 100%)',
-      playerLight: false,
-      afterLabel: '↓ 어떻게 바뀌었는지 듣기',
-      afterHref: '#before-after',
-      feedback: '말 끝에서 숨을 안 쓰고 먹는 소리가 났었는데, 오늘은 끝까지 호흡이 살아있네요',
-    },
-    {
-      badge: '💬 면접 챌린지 · 2주',
-      slideLabel: '승.자.각',
-      headline: '<span class="hero-accent">답변</span>이 자꾸 흐려지나요?',
-      ctaText: '답변 바뀌는 거 듣기',
-      audioSrc: null,
-      playerBg: 'linear-gradient(145deg,#f5f2ec 0%,#ece8df 100%)',
-      playerLight: true,
-      afterLabel: '↓ 비포애프터 보기',
-      afterHref: '#before-after',
-      feedback: '두괄식으로 핵심부터 말하는 구조가 자리 잡혔어요. 듣는 사람이 결론을 먼저 알고 들으니 훨씬 명확해요',
-    },
+  /* ── 히어로 씬 — 전/후 토글 플레이어 ── */
+  const _hsData = [
+    { slideLabel:'보.신.각', ctaText:'내 목소리 바뀌는 거 듣기', beforeSrc:'audio/challenger-c-before.mp3', afterSrc:'audio/challenger-c-after.mp3' },
+    { slideLabel:'영.합.각', ctaText:'표정 바뀌는 거 보기',       beforeSrc: null, afterSrc: null },
+    { slideLabel:'스.피.닝', ctaText:'내 말투 바뀌는 거 듣기',    beforeSrc:'audio/spinning-c-before.m4a', afterSrc:'audio/spinning-c-after.m4a' },
+    { slideLabel:'승.자.각', ctaText:'답변 바뀌는 거 듣기',        beforeSrc: null, afterSrc: null },
   ];
 
   let _heroIdx = 0;
+  let _heroMode = 'before';
   let _heroAutoTimer = null;
-  const _heroLeft = document.querySelector('.hero-left');
+  const _hAudio = document.getElementById('hero-audio');
 
   function _heroPlayerReset() {
-    const pb = document.getElementById('hero-play-btn');
-    if (pb) {
-      pb.innerHTML = '<svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
-      pb.setAttribute('aria-label', '재생');
+    const wf = document.getElementById('hs-wf-0');
+    if (wf) { wf.querySelectorAll('.hswb').forEach(b => b.classList.remove('wf-lit')); wf.classList.remove('hs-wf-after'); }
+    const spBar = document.getElementById('hs-sp-bar-2');
+    if (spBar) spBar.style.width = '0';
+  }
+
+  function _heroLabelUpdate(mode, playing) {
+    const slide = document.querySelector('.hs-slide.active');
+    if (!slide) return;
+    const lbl = slide.querySelector('.hs-tp-label');
+    if (!lbl) return;
+    if (playing) {
+      lbl.textContent = mode === 'before' ? '지금 듣는 중: 전(Before)' : '지금 듣는 중: 후(After)';
+      lbl.classList.add('playing');
+    } else {
+      lbl.textContent = '▶ 탭해서 듣기';
+      lbl.classList.remove('playing');
     }
-    const wf = document.getElementById('hero-mini-wf');
-    if (wf) wf.querySelectorAll('.hmwb').forEach(b => b.classList.remove('lit'));
-    const al = document.getElementById('hero-after-label');
-    if (al) al.classList.remove('visible');
   }
 
   function heroSwitchTo(idx) {
-    if (idx === _heroIdx && _heroLeft && !_heroLeft.classList.contains('switching')) return;
-    // 재생 중이면 정지
-    const ae = document.getElementById('hero-audio');
-    if (ae && !ae.paused) { ae.pause(); ae.currentTime = 0; _heroPlayerReset(); }
+    if (idx === _heroIdx) return;
+    if (_hAudio && !_hAudio.paused) { _hAudio.pause(); _hAudio.currentTime = 0; }
+    _heroPlayerReset();
+
+    const slides = document.querySelectorAll('.hs-slide');
+    slides[_heroIdx]?.classList.remove('active');
+    slides[idx]?.classList.add('active');
     _heroIdx = idx;
-    const d = _heroData[idx];
-    if (_heroLeft) _heroLeft.classList.add('switching');
-    setTimeout(() => {
-      // 좌측
-      const hlEl = document.getElementById('hero-headline');
-      if (hlEl) hlEl.innerHTML = d.headline;
-      const badgeEl = document.querySelector('.hero-badge');
-      if (badgeEl) badgeEl.textContent = d.badge;
-      const ctaEl = document.getElementById('hero-cta-main');
-      if (ctaEl) ctaEl.textContent = d.ctaText;
-      const lblEl = document.getElementById('hero-slide-label');
-      if (lblEl) lblEl.textContent = d.slideLabel;
-      // 우측 배경
-      const rightEl = document.getElementById('hero-right');
-      if (rightEl) {
-        rightEl.style.background = d.playerBg;
-        rightEl.classList.toggle('hero-right-light', !!d.playerLight);
-      }
-      // 오디오
-      if (ae) { ae.src = d.audioSrc || ''; if (d.audioSrc) ae.load(); }
-      const pb = document.getElementById('hero-play-btn');
-      if (pb) pb.disabled = !d.audioSrc;
-      // after-label
-      const al = document.getElementById('hero-after-label');
-      if (al) {
-        al.classList.remove('visible');
-        const lnk = al.querySelector('a');
-        if (lnk) { lnk.textContent = d.afterLabel; lnk.href = d.afterHref; }
-      }
-      // 피드백 말풍선 + 애니메이션 리셋
-      const fbEl = document.getElementById('hf-bubble-text');
-      if (fbEl) fbEl.textContent = d.feedback;
-      const hfEl = document.getElementById('hero-feedback');
-      if (hfEl) { hfEl.style.animation = 'none'; hfEl.offsetHeight; hfEl.style.animation = ''; }
-      // 도트
-      document.querySelectorAll('.hero-switch-dot').forEach((el,i) => el.classList.toggle('active', i===idx));
-      if (_heroLeft) _heroLeft.classList.remove('switching');
-    }, 220);
+    _heroMode = 'before';
+
+    const d = _hsData[idx];
+    const ctaEl = document.getElementById('hs-cta-main');
+    if (ctaEl) ctaEl.textContent = d.ctaText;
+    const lblEl = document.getElementById('hs-label');
+    if (lblEl) lblEl.textContent = d.slideLabel;
+    document.querySelectorAll('.hs-dot').forEach((el, i) => el.classList.toggle('active', i === idx));
+
+    /* 새 슬라이드 토글 초기화 */
+    const newSlide = document.getElementById('hs-slide-' + idx);
+    if (newSlide) {
+      newSlide.querySelectorAll('.hs-tp-btn:not([disabled])').forEach(btn => {
+        const isBefore = btn.dataset.mode === 'before';
+        btn.classList.toggle('active', isBefore);
+        btn.setAttribute('aria-pressed', String(isBefore));
+      });
+      const lbl = newSlide.querySelector('.hs-tp-label');
+      if (lbl) { lbl.textContent = d.beforeSrc ? '▶ 탭해서 듣기' : ''; lbl.classList.remove('playing'); }
+    }
+
+    const fbEl = document.getElementById('hs-fb-' + idx);
+    if (fbEl) { fbEl.style.animation = 'none'; fbEl.offsetHeight; fbEl.style.animation = ''; }
+
     clearInterval(_heroAutoTimer);
-    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 5000);
+    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
   }
 
-  /* ── 히어로 미니 플레이어 ── */
-  const _hAudio = document.getElementById('hero-audio');
-  const _hPlayBtn = document.getElementById('hero-play-btn');
-  const _hMiniWf = document.getElementById('hero-mini-wf');
-  const _hAfterLbl = document.getElementById('hero-after-label');
+  /* ── 전/후 토글 클릭 핸들러 ── */
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.hs-tp-btn');
+    if (!btn || btn.disabled) return;
+    const mode = btn.dataset.mode;
+    const d = _hsData[_heroIdx];
+    const src = mode === 'before' ? d.beforeSrc : d.afterSrc;
+    if (!src) return;
 
-  if (_hPlayBtn) {
-    _hPlayBtn.addEventListener('click', () => {
-      if (!_hAudio || !_hAudio.src || _hAudio.src === window.location.href) return;
-      if (_hAudio.paused) _hAudio.play().catch(() => {});
-      else _hAudio.pause();
+    /* 같은 모드 재클릭 → 재생/일시정지 토글 */
+    if (_heroMode === mode && _hAudio && !_hAudio.paused) {
+      _hAudio.pause();
+      return;
+    }
+
+    /* 모드 전환 또는 최초 재생 */
+    if (_hAudio) {
+      _hAudio.pause();
+      _hAudio.currentTime = 0;
+    }
+    _heroPlayerReset();
+    _heroMode = mode;
+
+    /* 버튼 상태 업데이트 */
+    const slide = document.querySelector('.hs-slide.active');
+    slide?.querySelectorAll('.hs-tp-btn').forEach(b => {
+      const isActive = b.dataset.mode === mode;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-pressed', String(isActive));
     });
-  }
+
+    /* 웨이브폼 모드 전환 (보신각) */
+    const wf = document.getElementById('hs-wf-0');
+    if (wf) wf.classList.toggle('hs-wf-after', mode === 'after');
+
+    if (_hAudio) {
+      _hAudio.src = src;
+      _hAudio.load();
+      _hAudio.play().catch(() => {});
+    }
+  });
+
   if (_hAudio) {
     _hAudio.addEventListener('play', () => {
-      const pb = document.getElementById('hero-play-btn');
-      if (pb) {
-        pb.innerHTML = '<svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
-        pb.setAttribute('aria-label', '일시정지');
-      }
-      if (_hMiniWf) _hMiniWf.querySelectorAll('.hmwb').forEach(b => b.classList.add('lit'));
+      _heroLabelUpdate(_heroMode, true);
       clearInterval(_heroAutoTimer); _heroAutoTimer = null;
     });
     _hAudio.addEventListener('pause', () => {
-      const pb = document.getElementById('hero-play-btn');
-      if (pb) {
-        pb.innerHTML = '<svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
-        pb.setAttribute('aria-label', '재생');
-      }
+      _heroLabelUpdate(_heroMode, false);
       if (!_heroAutoTimer)
-        _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 5000);
+        _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
     });
     _hAudio.addEventListener('ended', () => {
       _heroPlayerReset();
-      if (_hAfterLbl) _hAfterLbl.classList.add('visible');
+      _heroLabelUpdate(_heroMode, false);
       if (!_heroAutoTimer)
-        _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 6000);
+        _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 6000);
     });
     _hAudio.addEventListener('timeupdate', () => {
-      if (!_hAudio.duration || !_hMiniWf) return;
-      const bars = _hMiniWf.querySelectorAll('.hmwb');
-      const litCt = Math.round((_hAudio.currentTime / _hAudio.duration) * bars.length);
-      bars.forEach((b, i) => b.classList.toggle('lit', i < litCt));
+      if (!_hAudio.duration) return;
+      const prog = _hAudio.currentTime / _hAudio.duration;
+      if (_heroIdx === 0) {
+        const wf = document.getElementById('hs-wf-0');
+        if (wf) {
+          const bars = wf.querySelectorAll('.hswb');
+          const litCt = Math.round(prog * bars.length);
+          bars.forEach((b, i) => b.classList.toggle('wf-lit', i < litCt));
+        }
+      } else if (_heroIdx === 2) {
+        const spBar = document.getElementById('hs-sp-bar-2');
+        if (spBar) spBar.style.width = (prog * 100) + '%';
+      }
     });
   }
 
-  // 초기 실행
-  _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 5000);
+  _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
 
-  /* ── Hero 스와이프 ── */
+  /* ── 스와이프 ── */
   (function() {
-    const heroEl = document.querySelector('.hero');
+    const heroEl = document.querySelector('.hero-scene');
     if (!heroEl) return;
     let sx = 0, sy = 0, moved = false;
-    heroEl.addEventListener('touchstart', e => {
-      sx = e.touches[0].clientX;
-      sy = e.touches[0].clientY;
-      moved = false;
-    }, { passive: true });
-    heroEl.addEventListener('touchmove', e => { moved = true; }, { passive: true });
+    heroEl.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; moved = false; }, { passive: true });
+    heroEl.addEventListener('touchmove', () => { moved = true; }, { passive: true });
     heroEl.addEventListener('touchend', e => {
       if (!moved) return;
       const dx = e.changedTouches[0].clientX - sx;
       const dy = e.changedTouches[0].clientY - sy;
-      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return; // 너무 짧거나 세로 스크롤
-      heroSwitchTo(((_heroIdx + (dx < 0 ? 1 : -1)) + _heroData.length) % _heroData.length);
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+      heroSwitchTo(((_heroIdx + (dx < 0 ? 1 : -1)) + _hsData.length) % _hsData.length);
     }, { passive: true });
   })();
 
