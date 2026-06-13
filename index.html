@@ -351,17 +351,24 @@
     .part-label strong { color:#c0204a; font-weight:800; }
 
     /* 히어로 챌린지 전환 도트 */
-    .hero-switch-dots { display:flex; gap:8px; margin-top:28px; }
+    .hero-switch-dots { display:flex; gap:8px; margin-top:8px; }
     .hero-switch-dot {
       width:8px; height:8px; border-radius:100px; background:#ffd0e0;
       border:none; cursor:pointer; padding:0; transition:all .3s;
     }
     .hero-switch-dot.active { width:24px; background:#e83a72; }
+    /* 슬라이드 라벨 */
+    .hero-slide-label {
+      font-size:13px; font-weight:600; letter-spacing:0.12em;
+      color:var(--action); opacity:.75; margin-top:28px; margin-bottom:0;
+      transition:opacity .22s ease;
+    }
     /* 히어로 좌측 콘텐츠 전환 페이드 */
-    .hero-badge, .hero-title, .hero-sub { transition:opacity .22s ease; }
+    .hero-badge, .hero-title, .hero-sub, .hero-slide-label { transition:opacity .22s ease; }
     .hero-left.switching .hero-badge,
     .hero-left.switching .hero-title,
-    .hero-left.switching .hero-sub { opacity:0; }
+    .hero-left.switching .hero-sub,
+    .hero-left.switching .hero-slide-label { opacity:0; }
 
     /* ── HOW ── */
     .how { padding: var(--section-y) 0; background: var(--surface); }
@@ -1513,6 +1520,98 @@
       .cc-ans-inner { height: 244px; }
       .cc-ans-num { font-size: 112px; }
     }
+
+    /* ── 히어로 리디자인 ── */
+    .hero-title { font-size: clamp(36px, 5.2vw, 60px); letter-spacing: -0.02em; }
+    .hero-accent { color: var(--action); }
+    .hero-right { transition: background .35s ease; }
+    .hero-right::before, .hero-right::after { transition: opacity .35s; }
+    .hero-right-light::before, .hero-right-light::after { opacity: 0; }
+
+    /* 미니 비포 플레이어 */
+    .hero-mini-player {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+      border-radius: 20px; padding: 22px 24px;
+      width: 100%; max-width: 280px; position: relative; z-index: 1;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+    .hero-right-light .hero-mini-player {
+      background: rgba(0,0,0,.06); border-color: rgba(0,0,0,.1);
+    }
+    .hmp-top { display: flex; align-items: center; gap: 16px; }
+    .hero-play-btn {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--action); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .2s, transform .15s;
+      min-width: 44px; min-height: 44px;
+    }
+    .hero-play-btn:hover:not(:disabled) { background: var(--action-dark); transform: scale(1.06); }
+    .hero-play-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .hmp-label-wf { flex: 1; min-width: 0; }
+    .hmp-label {
+      font-size: 11px; font-weight: 700; color: rgba(255,255,255,.6);
+      letter-spacing: .06em; margin-bottom: 8px; text-transform: uppercase;
+    }
+    .hero-right-light .hmp-label { color: rgba(30,30,30,.45); }
+    .hero-mini-wf { display: flex; align-items: flex-end; gap: 3px; height: 36px; }
+    .hmwb {
+      flex: 1; border-radius: 2px 2px 0 0;
+      background: rgba(255,255,255,.28); transition: background .15s;
+      animation: hmwb-pulse 1.6s ease-in-out var(--hd, 0s) infinite;
+    }
+    .hmwb.lit { background: rgba(255,255,255,.88); }
+    .hero-right-light .hmwb { background: rgba(30,30,30,.16); }
+    .hero-right-light .hmwb.lit { background: var(--action); }
+    @keyframes hmwb-pulse {
+      0%, 100% { height: 5px; }
+      50% { height: var(--hh, 22px); }
+    }
+    .hero-after-label {
+      margin-top: 14px; opacity: 0; transform: translateY(6px);
+      transition: opacity .4s ease, transform .4s ease; pointer-events: none;
+    }
+    .hero-after-label.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .hero-after-link {
+      font-size: 13px; color: rgba(255,255,255,.82);
+      text-decoration: none; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .hero-after-link:hover { color: #fff; }
+    .hero-right-light .hero-after-link { color: var(--action); }
+
+    /* 코치 피드백 말풍선 */
+    .hero-feedback {
+      display: flex; align-items: flex-start; gap: 10px;
+      max-width: 280px; width: 100%; position: relative; z-index: 1;
+      opacity: 0; transform: translateY(10px);
+      animation: hf-appear .5s ease .3s forwards;
+    }
+    @keyframes hf-appear { to { opacity: 1; transform: translateY(0); } }
+    .hf-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; flex-shrink: 0; margin-top: 16px;
+    }
+    .hf-body { flex: 1; }
+    .hf-name { font-size: 10px; color: rgba(255,255,255,.5); margin-bottom: 4px; font-weight: 600; }
+    .hero-right-light .hf-name { color: rgba(30,30,30,.4); }
+    .hf-bubble {
+      background: #FFF9E5; border-radius: 4px 16px 16px 16px;
+      padding: 10px 14px; font-size: 13px; color: #333;
+      line-height: 1.55; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+      word-break: keep-all;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-feedback { animation: none; opacity: 1; transform: none; }
+      .hero-after-label { transition: none; }
+      .hmwb { animation: none; height: 22px; }
+    }
+    @media (max-width: 768px) {
+      .hero-mini-player, .hero-feedback { max-width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -1579,17 +1678,13 @@
 <!-- HERO -->
 <section class="hero" id="home">
   <div class="hero-left">
-    <div class="hero-badge">🌸 보이스 챌린지 · 2주</div>
-    <h1 class="hero-title">
-      <span class="static">내 목소리가</span>
-      <div class="dynamic-wrap">
-        <span class="dynamic" id="dynword"></span>
-        <span class="cursor"></span>
-      </div>
+    <div class="hero-badge">🎙 보이스 챌린지 · 2주</div>
+    <h1 class="hero-title" id="hero-headline">
+      면접관 앞에서 <span class="hero-accent">목소리</span>가 떨려요?
     </h1>
-    <p class="hero-sub">말끝, 호흡, 발음, 전달력.<br>MONC 보.신.각으로 2주 안에 바꿔요.</p>
+    <p class="hero-sub">MONC 챌린지로 2주 안에 달라져요</p>
     <div class="hero-ctas">
-      <a class="btn btn-action" href="#" onclick="openApplicationModal(); return false;" style="font-size:16px;">챌린지 시작하기</a>
+      <a class="btn btn-action" id="hero-cta-main" href="#" onclick="openApplicationModal(); return false;" style="font-size:16px;">내 목소리 바뀌는 거 듣기</a>
       <a class="btn-secondary-hero" href="#how">어떻게 하나요? →</a>
     </div>
     <div class="hero-stats">
@@ -1597,6 +1692,7 @@
       <div><div class="stat-num">3일</div><div class="stat-label">평균 변화 체감 기간</div></div>
       <div><div class="stat-num">5.0★</div><div class="stat-label">수료생 만족도</div></div>
     </div>
+    <div class="hero-slide-label" id="hero-slide-label" aria-live="polite">보.신.각</div>
     <div class="hero-switch-dots">
       <button class="hero-switch-dot active" onclick="heroSwitchTo(0)" aria-label="보신각"></button>
       <button class="hero-switch-dot" onclick="heroSwitchTo(1)" aria-label="영합각"></button>
@@ -1604,40 +1700,47 @@
       <button class="hero-switch-dot" onclick="heroSwitchTo(3)" aria-label="승자각"></button>
     </div>
   </div>
-  <div class="hero-right">
-    <div class="mock-card">
-      <div class="mock-rec">
-        <div class="rec-dot"></div>
-        <span class="rec-label">REC</span>
-        <span class="rec-time">0:17 / 0:30</span>
-      </div>
-      <div class="mock-waveform">
-        <span></span><span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
-      <div class="mock-bottom">
-        <span class="mock-text">30초 자기소개 미션</span>
-        <span class="mock-day">Day 7</span>
-      </div>
-    </div>
-    <div class="streak-card">
-      <div class="streak-left">
-        <span class="streak-icon">🔥</span>
-        <div>
-          <div class="streak-name">7일 연속 달성!</div>
-          <div class="streak-sub">오늘도 화이팅 💕</div>
+  <div class="hero-right" id="hero-right" style="background:linear-gradient(145deg,#1a0a0e 0%,#4a0e18 55%,#7a1c2c 100%);">
+    <audio id="hero-audio" preload="none" src="audio/challenger-c-before.mp3"></audio>
+    <!-- 미니 비포 플레이어 -->
+    <div class="hero-mini-player">
+      <div class="hmp-top">
+        <button class="hero-play-btn" id="hero-play-btn" aria-label="재생">
+          <svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="hmp-label-wf">
+          <div class="hmp-label">전(Before)</div>
+          <div class="hero-mini-wf" id="hero-mini-wf" aria-hidden="true">
+            <span class="hmwb" style="--hd:0s;--hh:28px"></span>
+            <span class="hmwb" style="--hd:0.12s;--hh:18px"></span>
+            <span class="hmwb" style="--hd:0.26s;--hh:32px"></span>
+            <span class="hmwb" style="--hd:0.41s;--hh:20px"></span>
+            <span class="hmwb" style="--hd:0.16s;--hh:26px"></span>
+            <span class="hmwb" style="--hd:0.36s;--hh:34px"></span>
+            <span class="hmwb" style="--hd:0.05s;--hh:16px"></span>
+            <span class="hmwb" style="--hd:0.31s;--hh:30px"></span>
+            <span class="hmwb" style="--hd:0.21s;--hh:22px"></span>
+            <span class="hmwb" style="--hd:0.47s;--hh:28px"></span>
+            <span class="hmwb" style="--hd:0.09s;--hh:20px"></span>
+            <span class="hmwb" style="--hd:0.38s;--hh:34px"></span>
+            <span class="hmwb" style="--hd:0.23s;--hh:18px"></span>
+            <span class="hmwb" style="--hd:0.14s;--hh:26px"></span>
+          </div>
         </div>
       </div>
-      <span class="streak-badge">+84명</span>
-    </div>
-    <div class="hero-participants">
-      <div class="hero-avatars">
-        <div class="h-av" style="background:#f4829a;">지</div>
-        <div class="h-av" style="background:#f4a0b8;">민</div>
-        <div class="h-av" style="background:#f0b8cc;">수</div>
-        <div class="h-av" style="background:#e890ac;">하</div>
+      <div class="hero-after-label" id="hero-after-label" aria-hidden="true">
+        <a href="#before-after" class="hero-after-link">↓ 어떻게 바뀌었는지 듣기</a>
       </div>
-      <div class="part-label"><strong>127명</strong> 함께 참여 중 🌸</div>
+    </div>
+    <!-- 코치 피드백 말풍선 -->
+    <div class="hero-feedback" id="hero-feedback">
+      <div class="hf-avatar" aria-hidden="true">권</div>
+      <div class="hf-body">
+        <div class="hf-name">권성호 원장</div>
+        <div class="hf-bubble" id="hf-bubble-text">
+          후두 위치가 한결 내려갔어요. 목에서 짜내던 소리가 가슴 울림으로 바뀌고 있어요 🎙️
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -2289,98 +2392,167 @@
   /* ── Hero 챌린지 순환 (4가지) ── */
   const _heroData = [
     {
-      badge:'🎙 보이스 챌린지 · 2주', static:'내 목소리가',
-      words:['달라집니다','깊어집니다','선명해져요','기억돼요','강해져요'],
-      sub:'말끝, 호흡, 발음, 전달력.<br>MONC 보.신.각으로 2주 안에 바꿔요.',
-      recTime:'0:17 / 0:30', mission:'30초 자기소개 미션', day:'Day 7',
-      streak:'7일 연속 달성!', members:'127명',
+      badge: '🎙 보이스 챌린지 · 2주',
+      slideLabel: '보.신.각',
+      headline: '면접관 앞에서 <span class="hero-accent">목소리</span>가 떨려요?',
+      ctaText: '내 목소리 바뀌는 거 듣기',
+      audioSrc: 'audio/challenger-c-before.mp3',
+      playerBg: 'linear-gradient(145deg,#1a0a0e 0%,#4a0e18 55%,#7a1c2c 100%)',
+      playerLight: false,
+      afterLabel: '↓ 어떻게 바뀌었는지 듣기',
+      afterHref: '#before-after',
+      feedback: '후두 위치가 한결 내려갔어요. 목에서 짜내던 소리가 가슴 울림으로 바뀌고 있어요 🎙️',
     },
     {
-      badge:'🎭 영상면접 챌린지 · 2주', static:'카메라 앞 내 모습이',
-      words:['달라져요','당당해져요','빛나요','기억돼요','합격해요'],
-      sub:'표정, 시선, 말투까지.<br>MONC 영.합.각으로 합격 이미지를 만들어요.',
-      recTime:'0:42 / 1:00', mission:'1분 자기소개 영상', day:'Day 5',
-      streak:'5일 연속 달성!', members:'98명',
+      badge: '🎭 영상면접 챌린지 · 2주',
+      slideLabel: '영.합.각',
+      headline: '카메라 앞에서 <span class="hero-accent">표정</span>이 굳나요?',
+      ctaText: '표정 바뀌는 거 보기',
+      audioSrc: null,
+      playerBg: 'linear-gradient(145deg,#0D0618 0%,#1e0a30 55%,#3a1458 100%)',
+      playerLight: false,
+      afterLabel: '↓ 비포애프터 보기',
+      afterHref: '#before-after',
+      feedback: '카메라 보면서 시선이 흔들리던 게 많이 안정됐어요. 이제 보는 사람과 눈을 마주치는 느낌이 들어요',
     },
     {
-      badge:'🗣 스피치 챌린지 · 2주', static:'내 말투가',
-      words:['생생해져요','달라져요','살아나요','기억돼요','설득해요'],
-      sub:'호흡, 리듬, 강약, 말끝.<br>MONC 스.피.닝으로 듣기 좋은 말투를 만들어요.',
-      recTime:'0:22 / 0:30', mission:'30초 스피치 미션', day:'Day 9',
-      streak:'9일 연속 달성!', members:'113명',
+      badge: '🗣 스피치 챌린지 · 2주',
+      slideLabel: '스.피.닝',
+      headline: '말이 빨라지고 <span class="hero-accent">숨</span>이 가빠지나요?',
+      ctaText: '내 말투 바뀌는 거 듣기',
+      audioSrc: 'audio/spinning-c-before.m4a',
+      playerBg: 'linear-gradient(145deg,#07102A 0%,#0e1d40 55%,#183060 100%)',
+      playerLight: false,
+      afterLabel: '↓ 어떻게 바뀌었는지 듣기',
+      afterHref: '#before-after',
+      feedback: '말 끝에서 숨을 안 쓰고 먹는 소리가 났었는데, 오늘은 끝까지 호흡이 살아있네요',
     },
     {
-      badge:'💬 면접 챌린지 · 2주', static:'내 면접 답변이',
-      words:['완성돼요','달라져요','설득해요','빛나요','합격해요'],
-      sub:'기본 질문, 경험 질문, 합격 답변.<br>MONC 승.자.각으로 자신감 있는 면접을 만들어요.',
-      recTime:'답변 7 / 10', mission:'핵심 면접 답변 완성', day:'Day 11',
-      streak:'11일 연속 달성!', members:'89명',
+      badge: '💬 면접 챌린지 · 2주',
+      slideLabel: '승.자.각',
+      headline: '<span class="hero-accent">답변</span>이 자꾸 흐려지나요?',
+      ctaText: '답변 바뀌는 거 듣기',
+      audioSrc: null,
+      playerBg: 'linear-gradient(145deg,#f5f2ec 0%,#ece8df 100%)',
+      playerLight: true,
+      afterLabel: '↓ 비포애프터 보기',
+      afterHref: '#before-after',
+      feedback: '두괄식으로 핵심부터 말하는 구조가 자리 잡혔어요. 듣는 사람이 결론을 먼저 알고 들으니 훨씬 명확해요',
     },
   ];
 
   let _heroIdx = 0;
   let _heroAutoTimer = null;
-  let _typingTimer = null;
-  let _wi = 0, _ci = 0, _del = false, _pau = false;
-  const _dynEl  = document.getElementById('dynword');
   const _heroLeft = document.querySelector('.hero-left');
 
-  function _startTyping(words) {
-    clearTimeout(_typingTimer);
-    _wi = 0; _ci = 0; _del = false; _pau = false;
-    if (_dynEl) _dynEl.textContent = '';
-    function _t() {
-      if (_pau) { _pau = false; _typingTimer = setTimeout(_t, 1400); return; }
-      const w = words[_wi];
-      if (!_del) {
-        if (_dynEl) _dynEl.textContent = w.slice(0, ++_ci);
-        if (_ci === w.length) { _del = true; _pau = true; }
-      } else {
-        if (_dynEl) _dynEl.textContent = w.slice(0, --_ci);
-        if (_ci === 0) { _del = false; _wi = (_wi + 1) % words.length; }
-      }
-      _typingTimer = setTimeout(_t, _del ? 55 : 105);
+  function _heroPlayerReset() {
+    const pb = document.getElementById('hero-play-btn');
+    if (pb) {
+      pb.innerHTML = '<svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+      pb.setAttribute('aria-label', '재생');
     }
-    _t();
+    const wf = document.getElementById('hero-mini-wf');
+    if (wf) wf.querySelectorAll('.hmwb').forEach(b => b.classList.remove('lit'));
+    const al = document.getElementById('hero-after-label');
+    if (al) al.classList.remove('visible');
   }
 
   function heroSwitchTo(idx) {
     if (idx === _heroIdx && _heroLeft && !_heroLeft.classList.contains('switching')) return;
+    // 재생 중이면 정지
+    const ae = document.getElementById('hero-audio');
+    if (ae && !ae.paused) { ae.pause(); ae.currentTime = 0; _heroPlayerReset(); }
     _heroIdx = idx;
     const d = _heroData[idx];
     if (_heroLeft) _heroLeft.classList.add('switching');
     setTimeout(() => {
-      // 좌측 텍스트
-      const badgeEl  = document.querySelector('.hero-badge');
-      const staticEl = document.querySelector('.hero-title .static');
-      const subEl    = document.querySelector('.hero-sub');
-      if (badgeEl)  badgeEl.textContent  = d.badge;
-      if (staticEl) staticEl.textContent = d.static;
-      if (subEl)    subEl.innerHTML      = d.sub;
-      // 우측 카드
-      const timeEl   = document.querySelector('.rec-time');
-      const textEl   = document.querySelector('.mock-text');
-      const dayEl    = document.querySelector('.mock-day');
-      const strkEl   = document.querySelector('.streak-name');
-      const partEl   = document.querySelector('.part-label');
-      if (timeEl)  timeEl.textContent  = d.recTime;
-      if (textEl)  textEl.textContent  = d.mission;
-      if (dayEl)   dayEl.textContent   = d.day;
-      if (strkEl)  strkEl.textContent  = d.streak;
-      if (partEl)  partEl.innerHTML    = `<strong>${d.members}</strong> 함께 참여 중 🌸`;
+      // 좌측
+      const hlEl = document.getElementById('hero-headline');
+      if (hlEl) hlEl.innerHTML = d.headline;
+      const badgeEl = document.querySelector('.hero-badge');
+      if (badgeEl) badgeEl.textContent = d.badge;
+      const ctaEl = document.getElementById('hero-cta-main');
+      if (ctaEl) ctaEl.textContent = d.ctaText;
+      const lblEl = document.getElementById('hero-slide-label');
+      if (lblEl) lblEl.textContent = d.slideLabel;
+      // 우측 배경
+      const rightEl = document.getElementById('hero-right');
+      if (rightEl) {
+        rightEl.style.background = d.playerBg;
+        rightEl.classList.toggle('hero-right-light', !!d.playerLight);
+      }
+      // 오디오
+      if (ae) { ae.src = d.audioSrc || ''; if (d.audioSrc) ae.load(); }
+      const pb = document.getElementById('hero-play-btn');
+      if (pb) pb.disabled = !d.audioSrc;
+      // after-label
+      const al = document.getElementById('hero-after-label');
+      if (al) {
+        al.classList.remove('visible');
+        const lnk = al.querySelector('a');
+        if (lnk) { lnk.textContent = d.afterLabel; lnk.href = d.afterHref; }
+      }
+      // 피드백 말풍선 + 애니메이션 리셋
+      const fbEl = document.getElementById('hf-bubble-text');
+      if (fbEl) fbEl.textContent = d.feedback;
+      const hfEl = document.getElementById('hero-feedback');
+      if (hfEl) { hfEl.style.animation = 'none'; hfEl.offsetHeight; hfEl.style.animation = ''; }
       // 도트
       document.querySelectorAll('.hero-switch-dot').forEach((el,i) => el.classList.toggle('active', i===idx));
-      // 타이핑 재시작
-      _startTyping(d.words);
       if (_heroLeft) _heroLeft.classList.remove('switching');
     }, 220);
     clearInterval(_heroAutoTimer);
-    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 4000);
+    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 5000);
+  }
+
+  /* ── 히어로 미니 플레이어 ── */
+  const _hAudio = document.getElementById('hero-audio');
+  const _hPlayBtn = document.getElementById('hero-play-btn');
+  const _hMiniWf = document.getElementById('hero-mini-wf');
+  const _hAfterLbl = document.getElementById('hero-after-label');
+
+  if (_hPlayBtn) {
+    _hPlayBtn.addEventListener('click', () => {
+      if (!_hAudio || !_hAudio.src || _hAudio.src === window.location.href) return;
+      if (_hAudio.paused) _hAudio.play().catch(() => {});
+      else _hAudio.pause();
+    });
+  }
+  if (_hAudio) {
+    _hAudio.addEventListener('play', () => {
+      const pb = document.getElementById('hero-play-btn');
+      if (pb) {
+        pb.innerHTML = '<svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+        pb.setAttribute('aria-label', '일시정지');
+      }
+      if (_hMiniWf) _hMiniWf.querySelectorAll('.hmwb').forEach(b => b.classList.add('lit'));
+      clearInterval(_heroAutoTimer); _heroAutoTimer = null;
+    });
+    _hAudio.addEventListener('pause', () => {
+      const pb = document.getElementById('hero-play-btn');
+      if (pb) {
+        pb.innerHTML = '<svg viewBox="0 0 24 24" fill="white" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+        pb.setAttribute('aria-label', '재생');
+      }
+      if (!_heroAutoTimer)
+        _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 5000);
+    });
+    _hAudio.addEventListener('ended', () => {
+      _heroPlayerReset();
+      if (_hAfterLbl) _hAfterLbl.classList.add('visible');
+      if (!_heroAutoTimer)
+        _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 6000);
+    });
+    _hAudio.addEventListener('timeupdate', () => {
+      if (!_hAudio.duration || !_hMiniWf) return;
+      const bars = _hMiniWf.querySelectorAll('.hmwb');
+      const litCt = Math.round((_hAudio.currentTime / _hAudio.duration) * bars.length);
+      bars.forEach((b, i) => b.classList.toggle('lit', i < litCt));
+    });
   }
 
   // 초기 실행
-  _startTyping(_heroData[0].words);
-  _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 4000);
+  _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx+1) % _heroData.length), 5000);
 
   /* ── Hero 스와이프 ── */
   (function() {
