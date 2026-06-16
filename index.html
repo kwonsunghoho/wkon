@@ -3237,7 +3237,11 @@
     if (fbEl) { fbEl.style.animation = 'none'; fbEl.offsetHeight; fbEl.style.animation = ''; }
 
     clearInterval(_heroAutoTimer);
-    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
+    if (idx === 1) {
+      _heroAutoTimer = null; // 영합각: 동영상 슬라이드 — 자동 전환 중지
+    } else {
+      _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
+    }
   }
 
   /* ── 전/후 토글 클릭 핸들러 ── */
@@ -3367,6 +3371,7 @@
     heroEl.addEventListener('touchmove', () => { moved = true; }, { passive: true });
     heroEl.addEventListener('touchend', e => {
       if (!moved) return;
+      if (_heroIdx === 1) return; // 영합각 동영상 슬라이드: 스와이프 차단
       const dx = e.changedTouches[0].clientX - sx;
       const dy = e.changedTouches[0].clientY - sy;
       if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
