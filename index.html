@@ -2360,13 +2360,7 @@
     </div>
     <!-- 유튜브 쇼츠 임베드 -->
     <div class="hs-yt-wrap">
-      <iframe
-        src="https://www.youtube.com/embed/s1a0ozDYMMo?rel=0&modestbranding=1&playsinline=1"
-        title="영합각 비포애프터 영상"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-        loading="lazy">
-      </iframe>
+      <div id="hs-yt-player"></div>
     </div>
     <!-- 피드백 말풍선 -->
     <div class="hs-feedback" id="hs-fb-1">
@@ -3179,6 +3173,7 @@
 
   let _heroIdx = 0;
   let _heroMode = 'before';
+  let _ytPlaying = false;
   let _heroAutoTimer = null;
   const _hAudio = document.getElementById('hero-audio');
 
@@ -3236,12 +3231,9 @@
     const fbEl = document.getElementById('hs-fb-' + idx);
     if (fbEl) { fbEl.style.animation = 'none'; fbEl.offsetHeight; fbEl.style.animation = ''; }
 
+    if (_ytPlayer && typeof _ytPlayer.pauseVideo === 'function') { _ytPlayer.pauseVideo(); }
     clearInterval(_heroAutoTimer);
-    if (idx === 1) {
-      _heroAutoTimer = null; // 영합각: 동영상 슬라이드 — 자동 전환 중지
-    } else {
-      _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
-    }
+    _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
   }
 
   /* ── 전/후 토글 클릭 핸들러 ── */
@@ -3321,6 +3313,34 @@
 
   _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
 
+  /* ── 영합각 유튜브 IFrame API ── */
+  var _ytPlayer = null;
+  window.onYouTubeIframeAPIReady = function() {
+    _ytPlayer = new YT.Player('hs-yt-player', {
+      videoId: 's1a0ozDYMMo',
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+      events: {
+        onStateChange: function(event) {
+          if (event.data === YT.PlayerState.PLAYING) {
+            _ytPlaying = true;
+            clearInterval(_heroAutoTimer);
+            _heroAutoTimer = null;
+          } else {
+            _ytPlaying = false;
+            if (!_heroAutoTimer) {
+              _heroAutoTimer = setInterval(() => heroSwitchTo((_heroIdx + 1) % _hsData.length), 5000);
+            }
+          }
+        }
+      }
+    });
+  };
+  (function() {
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  })();
+
   /* ── 승자각 키워드 바운스 ── */
   (function() {
     const bg3 = document.querySelector('#hs-slide-3 .hs-bg-3');
@@ -3371,7 +3391,7 @@
     heroEl.addEventListener('touchmove', () => { moved = true; }, { passive: true });
     heroEl.addEventListener('touchend', e => {
       if (!moved) return;
-      if (_heroIdx === 1) return; // 영합각 동영상 슬라이드: 스와이프 차단
+      if (_heroIdx === 1 && _ytPlaying) return; // 영합각: 영상 재생 중일 때만 스와이프 차단
       const dx = e.changedTouches[0].clientX - sx;
       const dy = e.changedTouches[0].clientY - sy;
       if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
