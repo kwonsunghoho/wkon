@@ -72,12 +72,54 @@
     update();
   }
 
+  function initCountUp() {
+    var els = document.querySelectorAll('[data-count-up]');
+    if (!els.length) return;
+
+    function run(el) {
+      var target = parseFloat(el.getAttribute('data-count-up'));
+      var suffix = el.getAttribute('data-count-suffix') || '';
+      if (prefersReducedMotion || isNaN(target)) {
+        el.textContent = target + suffix;
+        return;
+      }
+      var duration = 1200;
+      var start = null;
+      function step(ts) {
+        if (start === null) start = ts;
+        var progress = Math.min(1, (ts - start) / duration);
+        var current = Math.round(target * progress);
+        el.textContent = current + suffix;
+        if (progress < 1) window.requestAnimationFrame(step);
+      }
+      window.requestAnimationFrame(step);
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(run);
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          run(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    els.forEach(function (el) { observer.observe(el); });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initReveal();
     initStickyPanel();
+    initCountUp();
   });
 
   window.MoncScrollFx = window.MoncScrollFx || {};
   window.MoncScrollFx.initReveal = initReveal;
   window.MoncScrollFx.initStickyPanel = initStickyPanel;
+  window.MoncScrollFx.initCountUp = initCountUp;
 })();
