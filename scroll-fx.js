@@ -77,18 +77,25 @@
     if (!els.length) return;
 
     function run(el) {
-      var target = parseFloat(el.getAttribute('data-count-up'));
+      var raw = el.getAttribute('data-count-up');
+      var target = parseFloat(raw);
       var suffix = el.getAttribute('data-count-suffix') || '';
       if (prefersReducedMotion || isNaN(target)) {
         el.textContent = target + suffix;
         return;
       }
+      // 소수점 자리수는 원본 문자열 기준으로 결정 (예: "14.2" → 소수 1자리).
+      // 정수 값은 기존과 동일하게 Math.round()로 반올림.
+      var dotIndex = raw.indexOf('.');
+      var decimals = dotIndex === -1 ? 0 : raw.length - dotIndex - 1;
       var duration = 1200;
       var start = null;
       function step(ts) {
         if (start === null) start = ts;
         var progress = Math.min(1, (ts - start) / duration);
-        var current = Math.round(target * progress);
+        var current = decimals > 0
+          ? (target * progress).toFixed(decimals)
+          : Math.round(target * progress);
         el.textContent = current + suffix;
         if (progress < 1) window.requestAnimationFrame(step);
       }
