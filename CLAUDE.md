@@ -60,5 +60,23 @@ The index defines the design tokens; **detail pages each carry their own inline 
 ### Audio (before/after recordings on detail pages)
 `audio/` holds challenger before/after clips referenced by the detail pages. Naming is positional: `challenger-a-before.mp3` … (voice page) and `spinning-a-before.m4a` … (spinning page). Watch for double extensions when files are added on Windows (e.g. `*.mp3.m4a`).
 
+### Hero scene carousel (`index.html`)
+The landing page hero section is a **4-slide full-screen carousel** (`.hero-scene` > `.hs-slide`), stacked with `position: absolute` and toggled via `opacity` + `pointer-events`. Controlled by `heroSwitchTo(idx)` in JS.
+
+Slides (0-indexed):
+| idx | id | 이름 | 특이사항 |
+|---|---|---|---|
+| 0 | `hs-slide-0` | 보신각 | 전/후 오디오 (`challenger-c-before.mp3` / `challenger-c-after.mp3`), 웨이브폼 바 |
+| 1 | `hs-slide-1` | 영합각 | YouTube Shorts (`s1a0ozDYMMo`) 임베드, **YT IFrame API**로 재생 상태 추적 — 재생 중 스와이프/자동전환 차단 |
+| 2 | `hs-slide-2` | 스피닝 | 전/후 오디오 (`spinning-c-before.m4a` / `spinning-c-after.m4a`), 원형 버튼 UI |
+| 3 | `hs-slide-3` | 승자각 | light cream 배경, 20개 키워드 bounce 애니메이션 (`setInterval 16ms`), 5-node SVG 두괄식 다이어그램 |
+
+Key JS globals: `_heroIdx`, `_heroMode`, `_heroAutoTimer` (5초 자동전환), `_ytPlaying` (YT 재생 상태 플래그), `_ytPlayer` (YT.Player 인스턴스).
+
+슬라이드 3(승자각)은 배경이 밝은 크림색이라 CTA 보조 텍스트 색을 별도로 오버라이드: `#hs-slide-3.active ~ .hs-cta-bar .hs-cta-sec`.
+
+### Google Apps Script — 중복 신청 처리
+`학생현황` 시트에 **항상 새 행으로 추가** (전화번호 중복 여부 무관). 기존의 find-and-update 로직은 데이터 덮어쓰기 문제로 제거됨. Apps Script 편집은 Google 콘솔에서 수행 후 새 버전으로 재배포 필요.
+
 ## Conventions
 - Commit messages and in-code comments are written in Korean (matching the existing history and content).
