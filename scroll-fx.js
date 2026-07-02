@@ -156,6 +156,21 @@
         if (isNaN(scaleK)) scaleK = SCALE_K;
         pin.style.transform = 'scale(' + (1 + progress * scaleK) + ')';
         pin.style.opacity = String(1 - progress);
+
+        // 줌/페이드가 완료(progress===1)되면 sticky를 풀어 pin이 뷰포트에 계속
+        // 고정되지 않고 wrap과 함께 자연스럽게 스크롤되어 사라지도록 함 —
+        // 그래야 뒤이은 섹션이 곧바로 이어서 올라와 빈 스크롤 구간이 생기지 않음.
+        // 위로 스크롤해 progress가 다시 1 밑으로 내려가면 sticky를 복원해
+        // 역방향 스크롤에서도 동일한 효과가 재생되도록 함.
+        if (progress >= 1) {
+          if (pin.style.position !== 'absolute') {
+            pin.style.position = 'absolute';
+            pin.style.top = '0';
+          }
+        } else if (pin.style.position === 'absolute') {
+          pin.style.position = 'sticky';
+          pin.style.top = '0';
+        }
       });
     }
 
