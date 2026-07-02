@@ -176,20 +176,12 @@
           toneBridge.style.opacity = String(eased);
         }
 
-        // 줌/페이드가 완료(progress===1)되면 sticky를 풀어 pin이 뷰포트에 계속
-        // 고정되지 않고 wrap과 함께 자연스럽게 스크롤되어 사라지도록 함 —
-        // 그래야 뒤이은 섹션이 곧바로 이어서 올라와 빈 스크롤 구간이 생기지 않음.
-        // 위로 스크롤해 progress가 다시 1 밑으로 내려가면 sticky를 복원해
-        // 역방향 스크롤에서도 동일한 효과가 재생되도록 함.
-        if (progress >= 1) {
-          if (pin.style.position !== 'absolute') {
-            pin.style.position = 'absolute';
-            pin.style.top = '0';
-          }
-        } else if (pin.style.position === 'absolute') {
-          pin.style.position = 'sticky';
-          pin.style.top = '0';
-        }
+        // position은 CSS의 기본 sticky 그대로 둔다 — wrap의 runway를 다 소진하면
+        // sticky는 브라우저가 수학적으로 정확히 같은 지점에서(점프 없이) 자연스럽게
+        // 풀어주므로 JS가 수동으로 absolute로 전환할 필요가 없다. (이전에 수동
+        // 전환을 했을 때 그 순간 위치가 튀면서 확대된 하늘 대신 창문 프레임이
+        // 다시 보이는 버그가 있었음 — 원인은 top:0 기준점이 sticky의 "뷰포트
+        // 상단"에서 absolute의 "wrap 상단"으로 바뀌며 위치가 어긋났기 때문.)
       });
     }
 
