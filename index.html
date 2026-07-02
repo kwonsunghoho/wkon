@@ -124,7 +124,7 @@
       background: rgba(255,250,243,.95);
       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(36, 26, 18,.1);
-      transition: all .3s;
+      transition: background .3s, border-color .3s, box-shadow .3s;
     }
     .nav-inner { display: flex; align-items: center; justify-content: space-between; }
     .logo {
@@ -132,6 +132,7 @@
       background: linear-gradient(135deg, var(--primary), var(--rose));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
       text-decoration: none; flex-shrink: 0;
+      transition: -webkit-text-fill-color .3s;
     }
     .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
     .nav-links a {
@@ -139,6 +140,20 @@
       text-decoration: none; transition: color .2s;
     }
     .nav-links a:hover { color: var(--primary); }
+
+    /* hero-window-intro 구간 위에 떠 있는 동안 nav를 투명화 + 밝은 텍스트로 전환
+       (스크롤 리스너는 index.html 하단 스크립트의 '네비바 스크롤' 섹션에서 토글) */
+    nav.nav-transparent {
+      background: linear-gradient(to bottom, rgba(36,26,18,.35), rgba(36,26,18,0));
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border-bottom-color: transparent;
+    }
+    nav.nav-transparent .logo {
+      background: none; -webkit-text-fill-color: #fff; color: #fff;
+    }
+    nav.nav-transparent .nav-links a { color: rgba(255,255,255,.92); }
+    nav.nav-transparent .nav-links a:hover { color: #fff; }
+    nav.nav-transparent .hamburger span { background: #fff; }
     .nav-right { display: flex; align-items: center; gap: 8px; }
     .nav-cta { padding: 12px 28px; font-size: 15px; font-weight: 700; }
     .hamburger {
@@ -1970,7 +1985,7 @@
 </div>
 
 <!-- HERO WINDOW INTRO -->
-<section class="hero-window-intro" data-zoom-exit data-zoom-scale="1.4" data-zoom-runway="120">
+<section class="hero-window-intro" data-zoom-exit data-zoom-scale="1.4" data-zoom-runway="120" data-zoom-fade="none">
   <div class="zoom-exit-pin">
     <picture>
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile.jpg">
@@ -3399,10 +3414,22 @@
   })();
 
   /* ── 네비바 스크롤 ── */
-  window.addEventListener('scroll', () => {
-    document.getElementById('navbar').style.boxShadow =
+  const heroWindowIntroEl = document.querySelector('.hero-window-intro');
+  function updateNavbarOnScroll() {
+    const navbarEl = document.getElementById('navbar');
+    navbarEl.style.boxShadow =
       window.scrollY > 40 ? '0 4px 20px rgba(36, 26, 18,.12)' : 'none';
-  });
+
+    // hero-window-intro 구간(사진 위) 위에 떠 있는 동안만 nav를 투명화.
+    // reduced-motion이어도 .hero-window-intro의 실제 렌더 높이(getBoundingClientRect)를
+    // 기준으로 판단하므로 별도 분기 없이 자연스럽게 동작 (충돌/오류 없음).
+    if (heroWindowIntroEl) {
+      const introBottom = heroWindowIntroEl.getBoundingClientRect().bottom;
+      navbarEl.classList.toggle('nav-transparent', introBottom > 0);
+    }
+  }
+  window.addEventListener('scroll', updateNavbarOnScroll);
+  updateNavbarOnScroll(); // 페이지 로드 직후(스크롤 이벤트 발생 전)에도 초기 상태 반영
 
   /* ── 강사 캐러셀 (슬라이드) ── */
   /* 강사 탭 선택 */

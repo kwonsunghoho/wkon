@@ -155,7 +155,11 @@
         var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
         if (isNaN(scaleK)) scaleK = SCALE_K;
         pin.style.transform = 'scale(' + (1 + progress * scaleK) + ')';
-        pin.style.opacity = String(1 - progress);
+        // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지) —
+        // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 속성이 없으면 기존과 동일하게
+        // progress에 따라 선형으로 페이드아웃.
+        var fadeAttr = wrap.getAttribute('data-zoom-fade');
+        pin.style.opacity = fadeAttr === 'none' ? '1' : String(1 - progress);
 
         // 줌/페이드가 완료(progress===1)되면 sticky를 풀어 pin이 뷰포트에 계속
         // 고정되지 않고 wrap과 함께 자연스럽게 스크롤되어 사라지도록 함 —
