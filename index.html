@@ -362,11 +362,21 @@
       .chx-slide, .chx-ch .c-dim, .chx-ch .c-lit, .chx-desc { transition: none; }
     }
 
-    /* ── Mobile — 리스트 위 / 패널 아래 스택 ── */
+    /* ── Mobile — 아코디언: 활성 이름 '바로 아래'에 이미지 패널 삽입 ──
+       (JS chxPlacePanel이 패널을 활성 .chx-item 뒤로 이동. 데스크톱의
+       '이름 옆 이미지' 의도를, 세로 화면에선 '이름 밑 이미지'로 대응) */
     @media (max-width: 768px) {
-      .chx { grid-template-columns: 1fr; gap: 24px; align-items: start; }
+      .chx { grid-template-columns: 1fr; gap: 0; align-items: stretch; }
+      .chx-list { gap: 10px; align-items: stretch; }
       .chx-title { font-size: clamp(30px, 9vw, 42px); }
-      .chx-panel { height: min(430px, 112vw); }
+      /* 패널이 리스트 안 flex 아이템으로 들어오므로 항상 전체 폭 + 상하 여백 */
+      .chx-panel {
+        width: 100%; align-self: stretch;
+        height: min(360px, 88vw);
+        margin: 6px 0 18px;
+      }
+      /* 비활성 이름은 왼쪽 정렬 그대로(스태거 애니 유지), 패널만 stretch */
+      .chx-item { align-self: flex-start; }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1374,13 +1384,15 @@
     }
 
     /* ── Mobile ── */
+    /* 카드를 화면 가득 채우면(86vw) 캐러셀 느낌이 죽고 위쪽 미디어 여백이
+       비어 보여, 너비·높이를 줄여 양옆 카드가 확실히 걸쳐 보이도록(C안) */
     @media (max-width: 768px) {
-      .hs-stage { height: min(70vh, 560px); height: min(70svh, 560px); --card-w: min(420px, 84vw); }
+      .hs-stage { height: min(56vh, 440px); height: min(56svh, 440px); --card-w: min(420px, 78vw); }
       .hs-card-content { padding: 22px 22px 24px; }
       .hs-h1 { font-size: clamp(20px, 6vw, 26px); }
     }
     @media (max-width: 480px) {
-      .hs-stage { --card-w: 86vw; }
+      .hs-stage { --card-w: 78vw; }
     }
 
   </style>
@@ -2327,10 +2339,36 @@
       });
     });
 
+    /* 모바일 아코디언: 패널을 활성 이름 '바로 뒤'로 이동해 이미지가 탭한
+       이름 밑에 펼쳐지게 함. 데스크톱은 원래 자리(.chx의 2번째 컬럼)로 복귀. */
+    const chxEl = document.getElementById('chx');
+    const chxList = chxEl && chxEl.querySelector('.chx-list');
+    const chxPanel = chxEl && chxEl.querySelector('.chx-panel');
+    const chxMobileMq = window.matchMedia('(max-width: 768px)');
+
+    function chxPlacePanel(idx) {
+      if (!chxPanel || !chxList) return;
+      if (chxMobileMq.matches) {
+        const active = items[idx];
+        // 활성 이름 다음이 이미 패널이면 이동 불필요(불필요한 리플로우 방지)
+        if (active && active.nextElementSibling !== chxPanel) active.after(chxPanel);
+      } else if (chxPanel.parentElement !== chxEl) {
+        chxList.after(chxPanel); // 데스크톱 원위치
+      }
+    }
+
     function chxActivate(idx) {
       items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
       slides.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+      chxPlacePanel(idx);
     }
+
+    // 뷰포트 전환(회전/리사이즈) 시 패널 위치 재배치
+    chxMobileMq.addEventListener('change', () => {
+      const activeIdx = items.findIndex(el => el.classList.contains('is-active'));
+      chxPlacePanel(activeIdx < 0 ? 0 : activeIdx);
+    });
+    chxPlacePanel(0); // 초기 배치(활성=보신각)
 
     items.forEach((item, i) => {
       /* 터치 기기에서는 탭 한 번에 mouseenter → click이 연달아 발화해

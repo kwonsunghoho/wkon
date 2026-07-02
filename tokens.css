@@ -103,7 +103,14 @@ html {
    .zoom-exit-pin이 sticky로 고정된 채 scale-up + fade-out 됨 (scroll-fx.js: initZoomExit)
    주의: 각 페이지 inline <style>이 tokens.css보다 나중에 로드되어 .hero-scene 같은 단일 클래스
    규칙이 캐스케이드상 뒤에 오므로, [data-zoom-exit] 셀렉터를 이중으로 써서 우선순위를 높임 */
-[data-zoom-exit][data-zoom-exit] { position: relative; min-height: 160vh; }
+[data-zoom-exit][data-zoom-exit] {
+  position: relative; min-height: 160vh;
+  /* 핀이 scale로 확대될 때 가로로 최대 ~1000px까지 부풀어 iOS가 페이지
+     전체를 축소(zoom-out)시키던 '화면 좁게 고착' 버그의 실제 원인.
+     clip은 스크롤 컨테이너를 만들지 않아 sticky 줌 연출을 깨지 않으면서
+     가로 스필만 잘라냄 (구형 iOS<16은 무시 → html의 overflow-x가 폴백) */
+  overflow-x: clip;
+}
 [data-zoom-exit] > .zoom-exit-pin {
   position: sticky;
   top: 0;
