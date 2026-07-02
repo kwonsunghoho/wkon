@@ -376,13 +376,17 @@
         width: 100%; align-self: stretch;
         height: min(360px, 88vw);
         margin: 6px 0 18px;
-        transition: height .46s cubic-bezier(.22,.61,.36,1),
-                    margin .46s cubic-bezier(.22,.61,.36,1),
-                    opacity .34s ease;
       }
-      .chx-panel.chx-collapsed {
-        height: 0; opacity: 0;
-        margin-top: 0; margin-bottom: 0;
+      /* 부드럽게 나타나기: height(레이아웃) 애니메이션은 모바일에서 매 프레임
+         리플로우가 일어나 '뚝뚝' 끊기므로, GPU로 합성되는 transform+opacity만
+         사용. 공간(height)은 즉시 확보하고 패널만 살짝 내려오며 페이드인. */
+      .chx-panel.chx-anim-in {
+        animation: chx-reveal .42s cubic-bezier(.22,.61,.36,1) both;
+        will-change: transform, opacity;
+      }
+      @keyframes chx-reveal {
+        from { opacity: 0; transform: translateY(-12px) scale(.985); }
+        to   { opacity: 1; transform: none; }
       }
       /* 비활성 이름은 왼쪽 정렬 그대로(스태거 애니 유지), 패널만 stretch */
       .chx-item { align-self: flex-start; }
@@ -2357,12 +2361,13 @@
 
     const chxReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // 커튼 열리듯 펼침: '접힘(height 0)'을 잠깐 붙였다 떼면 트랜지션이 발동.
+    // 살짝 내려오며 페이드인(transform+opacity, GPU 합성이라 매끄러움).
+    // 클래스를 뗐다 붙이며 강제 리플로우해 매 탭마다 애니메이션 재시작.
     function chxAnimatePanel() {
       if (chxReduce) return; // 모션 최소화 설정이면 애니메이션 생략
-      chxPanel.classList.add('chx-collapsed');
-      void chxPanel.offsetHeight; // 강제 리플로우: 접힘 상태를 브라우저에 먼저 반영
-      chxPanel.classList.remove('chx-collapsed'); // → 펼침으로 부드럽게 전환
+      chxPanel.classList.remove('chx-anim-in');
+      void chxPanel.offsetHeight; // 강제 리플로우: 애니메이션을 처음부터 다시 재생
+      chxPanel.classList.add('chx-anim-in');
     }
 
     function chxPlacePanel(idx, animate) {
@@ -2375,7 +2380,7 @@
           if (animate) chxAnimatePanel();
         }
       } else if (chxPanel.parentElement !== chxEl) {
-        chxPanel.classList.remove('chx-collapsed');
+        chxPanel.classList.remove('chx-anim-in');
         chxList.after(chxPanel); // 데스크톱 원위치
       }
     }
