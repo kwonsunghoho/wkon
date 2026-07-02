@@ -130,6 +130,16 @@
     var SCALE_K = 0.32; // 기본 최대 scale = 1 + SCALE_K (data-zoom-scale 속성으로 섹션별 오버라이드 가능)
     var ticking = false;
 
+    // data-zoom-runway(vh 단위 숫자)가 있으면 기본 160vh 대신 해당 값을 min-height로 적용.
+    // (CSS의 [data-zoom-exit][data-zoom-exit] { min-height: 160vh } 기본값을 인라인 스타일로 오버라이드)
+    wraps.forEach(function (wrap) {
+      var runwayAttr = wrap.getAttribute('data-zoom-runway');
+      var runwayVh = runwayAttr ? parseFloat(runwayAttr) : NaN;
+      if (!isNaN(runwayVh)) {
+        wrap.style.minHeight = runwayVh + 'vh';
+      }
+    });
+
     function update() {
       ticking = false;
       wraps.forEach(function (wrap) {
