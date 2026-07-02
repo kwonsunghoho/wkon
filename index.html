@@ -1342,24 +1342,31 @@
     .hero-window-intro .zoom-exit-pin {
       background-color: var(--bg);
     }
-    .hero-window-img {
+    /* 창문 프레임(벽)은 고정 - 그 안의 하늘만 옆으로 흘러가야 실제 비행기
+       창밖을 보는 느낌이 나서, 프레임과 하늘을 별도 레이어로 분리:
+       .hero-window-sky (뒤, 패닝) + .hero-window-frame (앞, 고정, 중앙 투명) */
+    .hero-window-sky-wrap {
+      position: absolute; inset: 0; overflow: hidden; z-index: 1;
+    }
+    .hero-window-sky {
       display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      /* 스크롤과 무관하게 구름이 옆으로 천천히 흘러가는 느낌 - 비행기 창밖을
-         보는 듯한 느낌을 진입 직후부터 줌. scale(1.16)로 살짝 확대해둬서
-         좌우로 패닝해도 이미지 가장자리가 드러나지 않게 함.
-         부모(.zoom-exit-pin)는 JS가 scroll 기반 scale을 주므로, 여기 자체
-         transform은 자식 img에 별도로 걸어 서로 충돌하지 않게 함. */
+      position: absolute; top: 50%; left: 50%;
+      height: 130%; width: auto; max-width: none;
+      transform: translate(-50%, -50%);
       animation: hero-window-drift 26s linear infinite alternate;
     }
     @keyframes hero-window-drift {
-      0%   { transform: scale(1.16) translateX(-2.8%); }
-      100% { transform: scale(1.16) translateX(2.8%); }
+      0%   { margin-left: -4%; }
+      100% { margin-left: 4%; }
+    }
+    .hero-window-frame {
+      display: block;
+      position: absolute; inset: 0; z-index: 2;
+      width: 100%; height: 100%;
+      object-fit: cover;
     }
     @media (prefers-reduced-motion: reduce) {
-      .hero-window-img { animation: none; }
+      .hero-window-sky { animation: none; }
     }
     /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
        히어로씬 첫 슬라이드의 다크브라운 톤으로 서서히 물들어, 밝은 하늘에서
@@ -2013,9 +2020,12 @@
 <!-- HERO WINDOW INTRO -->
 <section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
   <div class="zoom-exit-pin">
+    <div class="hero-window-sky-wrap">
+      <img src="images/hero-sky-pan.jpg" alt="" class="hero-window-sky">
+    </div>
     <picture>
-      <source media="(max-width: 640px)" srcset="images/hero-window-mobile.jpg">
-      <img src="images/hero-window-desktop.jpg" alt="" class="hero-window-img" width="1672" height="941">
+      <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
+      <img src="images/hero-window-desktop-frame.webp" alt="" class="hero-window-frame" width="1672" height="941">
     </picture>
     <div class="zoom-tone-bridge"></div>
   </div>
