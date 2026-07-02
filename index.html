@@ -208,80 +208,111 @@
     .step-title { font-size: var(--fs-h3); font-weight: var(--fw-semi); margin-bottom: 8px; color: var(--text); }
     .step-desc { font-size: 13px; color: var(--text-muted); line-height: 1.75; }
 
-    /* ── CHALLENGES ── */
+    /* ═══════════════════════════════════════════════════
+       CHALLENGES — 호버 슬라이드쇼 (텍스트 리스트 + 이미지 패널)
+       왼쪽 챌린지명에 호버/탭하면 글자가 한 글자씩 차오르고
+       오른쪽 패널이 clip-path로 부드럽게 전환됨.
+       (기존 4-카드 그리드 + 탭 필터 완전 대체)
+    ═══════════════════════════════════════════════════ */
     .challenges { padding: var(--section-y) 0; background: var(--surface); }
-    .challenges-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 36px; }
-    .challenges-tabs {
-      display: flex; gap: 6px; padding: 5px;
-      background: var(--surface2); border-radius: 12px;
+
+    .chx {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: clamp(28px, 5vw, 72px);
+      align-items: center;
     }
-    .tab-btn {
-      padding: 8px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
-      cursor: pointer; border: none; background: transparent; color: var(--text-muted);
-      transition: all .2s; -webkit-tap-highlight-color: transparent;
-      white-space: nowrap;
+
+    /* ── 왼쪽: 챌린지명 리스트 ── */
+    .chx-list { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .chx-item {
+      background: none; border: none; padding: 6px 0; cursor: pointer;
+      text-align: left; -webkit-tap-highlight-color: transparent;
     }
-    .tab-btn.active {
-      background: linear-gradient(135deg, var(--primary), var(--rose));
-      color: #fff; box-shadow: 0 4px 12px rgba(36, 26, 18,.35);
+    .chx-title {
+      display: block;
+      font-size: clamp(34px, 4.6vw, 56px);
+      font-weight: 900; letter-spacing: -.03em; line-height: 1.1;
+      color: var(--text); white-space: nowrap;
     }
-    .category-item:hover {
-      background: linear-gradient(135deg, rgba(255, 243, 230,.8), rgba(255,217,184,.6)) !important;
-      border-color: var(--primary) !important;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(36, 26, 18,.2) !important;
+    /* 글자별 2중 레이어 — JS(chx init)가 글자를 .chx-ch(span)로 쪼갬.
+       흐린 글자(c-dim)가 위로 빠지고 코랄 글자(c-lit)가 아래에서 차오름 */
+    .chx-ch { position: relative; display: inline-block; overflow: hidden; }
+    .chx-ch .c-dim, .chx-ch .c-lit {
+      display: inline-block;
+      transition: transform .3s cubic-bezier(.25,.46,.45,.94);
+      transition-delay: var(--chd, 0s);
     }
-    .challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-    /* ── 챌린지 카드 (리디자인) ── */
-    .challenge-card {
-      background: #fff; border: none;
+    .c-dim { opacity: .18; }
+    .c-lit { position: absolute; left: 0; top: 0; transform: translateY(110%); color: var(--action); }
+    .chx-item.is-active .c-dim { transform: translateY(-110%); }
+    .chx-item.is-active .c-lit { transform: translateY(0); }
+    .chx-desc {
+      display: block; margin-top: 5px;
+      font-size: 13px; font-weight: 600; color: var(--text-muted);
+      opacity: 0; transform: translateY(4px);
+      transition: opacity .35s ease .12s, transform .35s ease .12s;
+    }
+    .chx-item.is-active .chx-desc { opacity: 1; transform: none; }
+    /* 마감/예정 챌린지 — 리스트에서 흐리게 */
+    .chx-item.is-closed .c-lit { color: var(--text-dim); }
+    .chx-item.is-closed .chx-title { opacity: .75; }
+
+    /* ── 오른쪽: 이미지 패널 ── */
+    .chx-panel {
+      position: relative;
+      height: min(520px, 58vw);
       border-radius: 24px; overflow: hidden;
-      transition: transform .35s cubic-bezier(.34,1.4,.64,1), box-shadow .35s;
-      cursor: pointer;
-      box-shadow: 0 6px 28px rgba(36,26,18,.13);
-      text-decoration: none; color: inherit; display: flex; flex-direction: column;
-      -webkit-tap-highlight-color: transparent;
-      will-change: transform;
+      box-shadow: var(--shadow-lg);
+      background: var(--bg2);
     }
-    .challenge-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 24px 64px rgba(36,26,18,.22);
+    .chx-slide {
+      position: absolute; inset: 0; display: block;
+      text-decoration: none; color: inherit;
+      clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+      transition: clip-path .8s cubic-bezier(.33,1,.68,1);
+      pointer-events: none; z-index: 1;
     }
-    .challenge-card.is-disabled { pointer-events: none; opacity: .5; filter: grayscale(.4); }
-    .challenge-card.is-disabled:hover { transform: none; box-shadow: 0 6px 28px rgba(36,26,18,.13); }
+    .chx-slide.is-active {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+      pointer-events: auto; z-index: 2;
+    }
+    /* 미디어 — 실사 사진 준비 전 웜톤 placeholder.
+       교체 시 .chx-media 안에 <img>/<video>를 넣으면 됨 */
+    .chx-media { position: absolute; inset: 0; }
+    .chx-media-0 { background: linear-gradient(160deg, #7a5c44, #4a3626 60%, #8a6a4a); }
+    .chx-media-1 { background: linear-gradient(160deg, #6d6a58, #3e3a2e 60%, #8a7a5a); }
+    .chx-media-2 { background: linear-gradient(160deg, #8a6a4a, #5a3e26 60%, #a07a4a); }
+    .chx-media-3 { background: linear-gradient(160deg, #7a6a52, #4a3a2a 60%, #9a8258); }
+    .chx-mark {
+      position: absolute; left: 50%; top: 36%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(56px, 8vw, 104px); font-weight: 900;
+      color: rgba(255,250,243,.13); letter-spacing: .01em;
+      white-space: nowrap; user-select: none;
+    }
+    /* 하단 정보 가독성용 크림 그라디언트 */
+    .chx-slide-grad {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
+      background: linear-gradient(180deg, transparent, rgba(255,250,243,.9) 58%, var(--bg));
+      pointer-events: none;
+    }
+    .chx-info {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 20px 22px 22px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .chx-info .recruit-period { margin-bottom: 0; background: rgba(255,255,255,.75); }
+    /* 모집 마감/예정 — 패널 흐림 + 클릭 차단 (recruit.js가 is-disabled 토글) */
+    .chx-slide.is-disabled { pointer-events: none !important; }
+    .chx-slide.is-disabled .chx-media { filter: grayscale(.55); opacity: .8; }
 
-    /* 카드 헤더 (다크 그라디언트) */
-    .card-header {
-      position: relative; overflow: hidden;
-      padding: 22px 22px 0;
-      display: flex; flex-direction: column;
-    }
-    .challenge-card.featured .card-header { /* featured는 2-col 너비, 높이는 콘텐츠 기준 */ }
-    .card-header-orb1 {
-      position: absolute; border-radius: 50%; pointer-events: none;
-      width: 180px; height: 180px; top: -60px; right: -50px;
-      background: rgba(255,255,255,.07);
-    }
-    .card-header-orb2 {
-      position: absolute; border-radius: 50%; pointer-events: none;
-      width: 90px; height: 90px; bottom: -30px; left: 16px;
-      background: rgba(154, 91, 30,.18);
-    }
-    .card-header-orb3 {
-      position: absolute; border-radius: 50%; pointer-events: none;
-      width: 50px; height: 50px; top: 20px; left: 50%;
-      background: rgba(255,255,255,.05);
-    }
-    .card-emoji { font-size: 32px; margin-bottom: 10px; display: block; filter: drop-shadow(0 2px 6px rgba(0,0,0,.35)); line-height: 1; }
-    .card-name  { font-size: clamp(36px, 4.5vw, 44px); font-weight: 900; color: #fff; letter-spacing: -.04em; line-height: 1; margin-bottom: 6px; text-shadow: 0 2px 14px rgba(0,0,0,.45); }
-    .card-sub   { font-size: 13px; color: rgba(255,255,255,.72); font-weight: 600; letter-spacing: .01em; }
-
-    /* 모집 배지 (헤더 우상단) */
+    /* ── 모집 배지 (recruit.js가 채움) ── */
     .recruit-status {
       position: absolute; top: 14px; right: 14px;
       padding: 5px 12px; border-radius: 99px;
       font-size: 11.5px; font-weight: 800;
-      backdrop-filter: blur(8px); z-index: 2; letter-spacing: .2px;
+      backdrop-filter: blur(8px); z-index: 3; letter-spacing: .2px;
     }
     @keyframes recruit-pulse {
       0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.6), 0 3px 10px rgba(34,197,94,.4); }
@@ -295,28 +326,11 @@
     .status-upcoming { background: rgba(255,255,255,.92); color: var(--primary); border: 1.5px solid rgba(36, 26, 18,.4); }
     .status-closed   { background: rgba(60,60,60,.75); color: #ddd; }
 
-    /* 카드 바디 */
-    .challenge-body {
-      padding: 18px 20px 20px;
-      display: flex; flex-direction: column; flex: 1;
-    }
-
-    /* 결과 체크리스트 */
-    .card-outcomes { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
-    .outcome-item {
-      font-size: 12.5px; color: var(--text); font-weight: 600;
-      display: flex; align-items: center; gap: 7px; line-height: 1.4;
-    }
-    .outcome-item::before {
-      content: '✓'; color: var(--primary); font-weight: 900;
-      font-size: 12px; flex-shrink: 0;
-    }
-
-    /* 모집 기간 바 */
+    /* ── 모집 기간 바 (recruit.js가 채움) ── */
     .recruit-period {
       display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
       font-size: 12px; font-weight: 700; padding: 9px 12px;
-      border-radius: 10px; margin-bottom: 14px; border: 1.5px solid transparent;
+      border-radius: 10px; border: 1.5px solid transparent;
     }
     .period-icon { flex-shrink: 0; font-size: 13px; }
     .period-dates { flex: 1; color: var(--text); font-weight: 800; font-size: 12.5px; }
@@ -324,15 +338,14 @@
     .rp-upcoming { background: rgba(36, 26, 18,.06); border-color: rgba(36, 26, 18,.2); }
     .rp-closed   { background: rgba(130,130,130,.06); border-color: rgba(130,130,130,.15); }
 
-    /* D-day 칩 */
+    /* ── D-day 칩 ── */
     .dday-chip { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; letter-spacing: -.2px; }
     .dday-open    { background: #dcfce7; color: #15803d; }
     .dday-urgent  { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; box-shadow: 0 2px 8px rgba(239,68,68,.35); }
     .dday-upcoming{ background: rgba(36, 26, 18,.1); color: var(--primary); border: 1px solid rgba(36, 26, 18,.25); }
     .dday-closed  { background: rgba(130,130,130,.12); color: #888; }
 
-    /* CTA 버튼 */
-    .challenge-footer { margin-top: auto; }
+    /* ── CTA (recruit.js가 텍스트 토글) ── */
     .challenge-action {
       display: block; width: 100%; padding: 13px;
       background: linear-gradient(135deg, var(--primary), var(--rose));
@@ -342,60 +355,18 @@
       text-align: center; text-decoration: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .challenge-action:hover { box-shadow: 0 8px 28px rgba(36, 26, 18,.5); }
-    .challenge-card.featured { grid-column: span 2; }
-    .difficulty { display: flex; gap: 4px; margin-bottom: 10px; }
-    .diff-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .chx-slide:hover .challenge-action { box-shadow: 0 8px 28px rgba(36, 26, 18,.5); }
 
-    /* ── 웨이브폼 애니메이션 ── */
-    @keyframes wf-voice {
-      0%, 100% { transform: scaleY(0.15); }
-      50%      { transform: scaleY(1); }
-    }
-    @keyframes wf-spin {
-      0%, 100% { transform: scaleY(0.1); }
-      50%      { transform: scaleY(1); }
-    }
-    @keyframes wf-expr {
-      0%, 100% { transform: scaleY(0.35); }
-      50%      { transform: scaleY(1); }
-    }
-    @keyframes wf-ans {
-      0%,  12% { transform: scaleY(1); }
-      22%, 55% { transform: scaleY(0.06); }
-      65%, 78% { transform: scaleY(0.85); }
-      88%,100% { transform: scaleY(0.06); }
-    }
-    .wf-area {
-      display: flex; align-items: flex-end; gap: 2px;
-      height: 120px; margin-top: 16px;
-      padding: 0; overflow: hidden;
-    }
-    .wf-bar {
-      flex: 1; min-width: 2px; max-width: 10px;
-      height: var(--h, 60%);
-      border-radius: 3px 3px 0 0;
-      transform-origin: bottom center;
-      will-change: transform;
-    }
-    .wf-voice .wf-bar {
-      background: linear-gradient(to top, rgba(255,107,53,.65), rgba(255,176,136,.95));
-      animation: wf-voice var(--dur,1.6s) ease-in-out var(--d,0s) infinite;
-    }
-    .wf-spin .wf-bar {
-      background: linear-gradient(to top, rgba(100,170,255,.65), rgba(180,225,255,.95));
-      animation: wf-spin var(--dur,1.0s) ease-in-out var(--d,0s) infinite;
-    }
-    .wf-expr .wf-bar {
-      background: linear-gradient(to top, rgba(160,110,255,.65), rgba(220,195,255,.95));
-      animation: wf-expr var(--dur,2.0s) ease-in-out var(--d,0s) infinite;
-    }
-    .wf-ans .wf-bar {
-      background: linear-gradient(to top, rgba(235,160,70,.65), rgba(255,225,155,.95));
-      animation: wf-ans var(--dur,1.2s) ease-in-out var(--d,0s) infinite;
-    }
+    /* ── Reduced Motion ── */
     @media (prefers-reduced-motion: reduce) {
-      .wf-bar { animation-play-state: paused !important; }
+      .chx-slide, .chx-ch .c-dim, .chx-ch .c-lit, .chx-desc { transition: none; }
+    }
+
+    /* ── Mobile — 리스트 위 / 패널 아래 스택 ── */
+    @media (max-width: 768px) {
+      .chx { grid-template-columns: 1fr; gap: 24px; align-items: start; }
+      .chx-title { font-size: clamp(30px, 9vw, 42px); }
+      .chx-panel { height: min(430px, 112vw); }
     }
 
     /* ── INSTRUCTORS ── */
@@ -1011,8 +982,6 @@
     ════════════════════════════ */
     @media (max-width: 1024px) {
       .cat-grid { grid-template-columns: repeat(3, 1fr); }
-      .challenge-card.featured { grid-column: span 1; }
-      .challenge-card.featured .card-header { min-height: 155px; }
     }
 
     @media (max-width: 768px) {
@@ -1031,9 +1000,6 @@
 
       /* Challenges */
       .challenges { padding: var(--section-y-mobile) 0; }
-      .challenges-header { flex-direction: column; align-items: flex-start; gap: 14px; }
-      .challenges-tabs { overflow-x: auto; scrollbar-width: none; }
-      .challenges-tabs::-webkit-scrollbar { display: none; }
 
       /* Instructors */
       .instructors { padding: var(--section-y-mobile) 0; }
@@ -1071,9 +1037,6 @@
       .cat-grid { grid-template-columns: repeat(2, 1fr); }
       .cat-card { padding: 20px 10px; }
 
-      /* Challenges */
-      .challenge-grid { grid-template-columns: 1fr; }
-      .wf-area { height: 88px; }
 
       /* Instructor card */
       .inst-card-body { padding: 18px; }
@@ -1093,257 +1056,6 @@
       .ba-yt-thumb, .ba-yt-iframe { border-radius: 10px; }
     }
 
-    /* ══════════════════════════════════════════════
-       CARD 1 — 보신각 : RECORDING BOOTH
-    ══════════════════════════════════════════════ */
-    .cc-voice-inner {
-      position: relative; overflow: hidden;
-      background:
-        radial-gradient(95% 72% at 50% 22%, rgba(255,107,53,.16), transparent 62%),
-        linear-gradient(160deg, #2E1B0E 0%, #17100A 100%);
-      height: 290px; flex-shrink: 0;
-    }
-    /* 마이크 SVG 워터마크 */
-    .cc-voice-mic {
-      position: absolute; pointer-events: none;
-      width: 118px;
-      left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      opacity: 0.1;
-    }
-    /* 음파 동심원 */
-    .cc-voice-rings {
-      position: absolute; pointer-events: none;
-      left: 50%; top: 38%;
-      z-index: 1;
-    }
-    .pring {
-      position: absolute; border-radius: 50%;
-      border: 1.5px solid rgba(255,255,255,.45);
-      width: 54px; height: 54px;
-      margin: -27px 0 0 -27px;
-      animation: voice-ring 3.2s ease-out infinite;
-    }
-    .pr2 { animation-delay: .85s; }
-    .pr3 { animation-delay: 1.7s; }
-    .pr4 { animation-delay: 2.55s; }
-    @keyframes voice-ring {
-      0%   { transform: scale(1); opacity: .65; }
-      100% { transform: scale(5.2); opacity: 0; }
-    }
-    /* 텍스트 영역 */
-    .cc-voice-text {
-      position: absolute; top: 22px; left: 22px; right: 22px; z-index: 4;
-    }
-    /* 웨이브폼 바 (하단) */
-    .cc-voice-wf {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 96px;
-      display: flex; align-items: flex-end; gap: 3px;
-      padding: 0 18px; z-index: 4; overflow: hidden;
-    }
-    .vbar {
-      flex: 1; height: var(--vh, 50%);
-      background: rgba(255,255,255,.72);
-      border-radius: 2px 2px 0 0;
-      transform-origin: bottom center; will-change: transform;
-      animation: vbar-pulse var(--vdur,1.6s) ease-in-out var(--vd,0s) infinite;
-    }
-    @keyframes vbar-pulse {
-      0%, 100% { transform: scaleY(.14); opacity: .28; }
-      50%       { transform: scaleY(1);  opacity: .88; }
-    }
-    .cc-voice-inner > .recruit-status { z-index: 6; }
-    @media (prefers-reduced-motion: reduce) {
-      .pring, .vbar { animation-play-state: paused !important; }
-    }
-    @media (max-width: 768px) {
-      .cc-voice-inner { height: 244px; }
-      .cc-voice-wf    { height: 76px; }
-    }
-
-    /* CARD 2 — 스피닝 : METRONOME */
-    .cc-spin-inner {
-      position: relative; overflow: hidden;
-      background:
-        radial-gradient(95% 72% at 50% 20%, rgba(255,176,136,.15), transparent 62%),
-        linear-gradient(160deg, #2A1D10 0%, #14100B 100%);
-      height: 290px; flex-shrink: 0;
-    }
-    .cc-spin-inner > .recruit-status { z-index: 6; }
-    .cc-spin-staff {
-      position: absolute; left: 0; right: 0; top: 46%;
-      pointer-events: none; display: flex; flex-direction: column;
-      gap: 11px; z-index: 1;
-    }
-    .staff-line { height: 1px; background: rgba(255,255,255,.13); }
-    .cc-spin-notes {
-      position: absolute; inset: 0; pointer-events: none;
-      overflow: hidden; z-index: 2;
-    }
-    .snote {
-      position: absolute; bottom: -30px;
-      color: rgba(255,255,255,.22); font-size: 20px;
-      animation: snote-float 4s ease-in infinite;
-    }
-    .sn1 { left: 10%;  animation-delay: 0s;    animation-duration: 4.2s; }
-    .sn2 { left: 26%;  animation-delay: 1.1s;  animation-duration: 3.8s; }
-    .sn3 { left: 48%;  animation-delay: 0.5s;  animation-duration: 4.5s; }
-    .sn4 { left: 65%;  animation-delay: 2.0s;  animation-duration: 3.6s; }
-    .sn5 { left: 80%;  animation-delay: 1.5s;  animation-duration: 4.8s; }
-    .sn6 { left: 38%;  animation-delay: 2.8s;  animation-duration: 3.9s; }
-    @keyframes snote-float {
-      0%   { transform: translateY(0) translateX(0);       opacity: 0; }
-      12%  { opacity: .22; }
-      50%  { transform: translateY(-140px) translateX(8px); }
-      88%  { opacity: .22; }
-      100% { transform: translateY(-290px) translateX(-6px); opacity: 0; }
-    }
-    .cc-spin-pend-wrap {
-      position: absolute; left: 50%; top: 7%; z-index: 3;
-      transform: translateX(-50%); pointer-events: none;
-    }
-    .cc-spin-pend {
-      transform-origin: top center; width: 20px;
-      animation: pend-swing 1.1s cubic-bezier(.4,0,.6,1) infinite alternate;
-    }
-    .pend-rod {
-      width: 2px; height: 114px;
-      background: rgba(255,255,255,.65);
-      margin: 0 auto; border-radius: 1px;
-    }
-    .pend-bob {
-      width: 18px; height: 18px;
-      background: rgba(255,255,255,.82);
-      border-radius: 50%; margin: -9px auto 0;
-      box-shadow: 0 0 14px rgba(255,255,255,.28);
-    }
-    @keyframes pend-swing {
-      from { transform: rotate(-24deg); }
-      to   { transform: rotate(24deg); }
-    }
-    .cc-spin-text {
-      position: absolute; top: 22px; left: 22px; right: 22px; z-index: 4;
-    }
-    .cc-spin-bpm {
-      position: absolute; bottom: 16px; right: 18px; z-index: 4;
-      color: rgba(255,255,255,.48); font-size: 13px; font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .cc-spin-pend, .snote { animation-play-state: paused !important; }
-    }
-    @media (max-width: 768px) {
-      .cc-spin-inner { height: 244px; }
-      .pend-rod { height: 88px; }
-    }
-
-    /* CARD 3 — 영합각 : VIEWFINDER */
-    .cc-view-inner {
-      position: relative; overflow: hidden;
-      background:
-        radial-gradient(95% 72% at 50% 22%, rgba(184,122,61,.20), transparent 62%),
-        linear-gradient(160deg, #33220F 0%, #1A120C 100%);
-      height: 290px; flex-shrink: 0;
-    }
-    .cc-view-inner > .recruit-status { z-index: 6; }
-    .cc-view-circle {
-      position: absolute; left: 50%; top: 52%;
-      transform: translate(-50%, -50%);
-      width: 182px; height: 182px;
-      border-radius: 50%;
-      border: 1.5px dashed rgba(255,255,255,.32);
-      pointer-events: none; z-index: 1;
-      animation: vf-pulse 3s ease-in-out infinite;
-    }
-    @keyframes vf-pulse {
-      0%, 100% { opacity: .32; transform: translate(-50%, -50%) scale(1); }
-      50%       { opacity: .55; transform: translate(-50%, -50%) scale(1.05); }
-    }
-    .cc-view-corners { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
-    .vc-corner {
-      position: absolute; width: 20px; height: 20px;
-      border-color: rgba(255,255,255,.72); border-style: solid;
-    }
-    .vc-tl { top: 16px; left: 16px; border-width: 2px 0 0 2px; }
-    .vc-tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; }
-    .vc-bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; }
-    .vc-br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
-    .cc-view-rec {
-      position: absolute; top: 20px; right: 18px; z-index: 4;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .rec-dot {
-      width: 8px; height: 8px;
-      background: #ff3040; border-radius: 50%;
-      animation: rec-blink 1.2s ease-in-out infinite;
-    }
-    .rec-label {
-      color: rgba(255,255,255,.75); font-size: 11px;
-      font-weight: 700; letter-spacing: 0.12em;
-    }
-    @keyframes rec-blink {
-      0%, 44% { opacity: 1; }
-      50%, 94% { opacity: 0; }
-      100% { opacity: 1; }
-    }
-    .cc-view-live {
-      position: absolute; bottom: 18px; right: 18px; z-index: 4;
-      display: flex; align-items: center; gap: 4px;
-      color: rgba(255,255,255,.55); font-size: 11px;
-      font-weight: 700; letter-spacing: 0.1em;
-    }
-    .live-dot {
-      width: 7px; height: 7px;
-      background: #22cc88; border-radius: 50%;
-      box-shadow: 0 0 6px rgba(34,204,136,.55);
-    }
-    .cc-view-timer {
-      position: absolute; bottom: 16px; left: 22px; z-index: 4;
-      color: rgba(255,255,255,.6); font-size: 14px; font-weight: 700;
-      font-family: monospace; letter-spacing: 0.08em;
-    }
-    .cc-view-text {
-      position: absolute; top: 22px; left: 22px; right: 80px; z-index: 4;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .cc-view-circle, .rec-dot { animation-play-state: paused !important; }
-    }
-    @media (max-width: 768px) {
-      .cc-view-inner { height: 244px; }
-      .cc-view-circle { width: 152px; height: 152px; }
-    }
-
-    /* CARD 4 — 승자각 : KEYWORD ARCHITECTURE */
-    .cc-ans-inner {
-      position: relative; overflow: hidden;
-      background:
-        radial-gradient(95% 72% at 50% 22%, rgba(255,176,136,.22), transparent 62%),
-        #FFF9F1;
-      height: 290px; flex-shrink: 0;
-    }
-    .cc-ans-inner > .recruit-status { z-index: 6; }
-    .cc-ans-kws {
-      position: absolute; inset: 0; pointer-events: none; z-index: 1;
-    }
-    .akw {
-      position: absolute; color: #241A12;
-      font-weight: 700; letter-spacing: 0.02em; white-space: nowrap;
-    }
-    .cc-ans-num {
-      position: absolute; left: 50%; top: 54%;
-      transform: translate(-50%, -50%);
-      font-size: 152px; font-weight: 900; line-height: 1;
-      color: rgba(36,26,18,.055); pointer-events: none; z-index: 1;
-      letter-spacing: -0.06em; user-select: none;
-    }
-    .cc-ans-text {
-      position: absolute; top: 22px; left: 22px; right: 22px; z-index: 4;
-    }
-    @media (max-width: 768px) {
-      .cc-ans-inner { height: 244px; }
-      .cc-ans-num { font-size: 112px; }
-    }
 
     /* ═══════════════════════════════════════════════════
        HERO WINDOW INTRO — 비행기 창문 줌인(빨려들어가는) 인트로
@@ -1927,233 +1639,76 @@
 <!-- CHALLENGES -->
 <section class="challenges" id="challenges">
   <div class="container">
-    <div class="challenges-header reveal">
-      <div>
-        <div class="section-label">MONC Challenge</div>
-        <h2 class="section-title">몬크 챌린지</h2>
-      </div>
-      <div class="challenges-tabs">
-        <button class="tab-btn active" data-category="all">전체</button>
-        <button class="tab-btn" data-category="보이스">보이스</button>
-        <button class="tab-btn" data-category="스피치">스피치</button>
-        <button class="tab-btn" data-category="표현력">표현력</button>
-        <button class="tab-btn" data-category="답변">답변</button>
-      </div>
+    <div class="reveal" style="margin-bottom: 44px;">
+      <div class="section-label">MONC Challenge</div>
+      <h2 class="section-title">몬크 챌린지</h2>
+      <p class="section-desc">챌린지 이름 위에 올려 미리 만나보세요.</p>
     </div>
 
-    <!-- 카테고리 설명 -->
-    <div style="background: linear-gradient(135deg, rgba(255, 243, 230,.5), rgba(255,217,184,.3)); padding: 24px; border-radius: 16px; margin-bottom: 32px;">
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; font-weight: 600;">카테고리에서 원하는 분야를 골라보세요</p>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-        <div class="category-item" onclick="clickCategoryTab('보이스')" style="padding: 12px; background: rgba(255,255,255,.8); border-radius: 10px; border: 1px solid rgba(36, 26, 18,.1); cursor: pointer; transition: all .2s;">
-          <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px;">보이스</div>
-          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">나만의 차별화된 목소리 만들기</div>
-        </div>
-        <div class="category-item" onclick="clickCategoryTab('스피치')" style="padding: 12px; background: rgba(255,255,255,.8); border-radius: 10px; border: 1px solid rgba(36, 26, 18,.1); cursor: pointer; transition: all .2s;">
-          <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px;">스피치</div>
-          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">말 맛 높이기</div>
-        </div>
-        <div class="category-item" onclick="clickCategoryTab('표현력')" style="padding: 12px; background: rgba(255,255,255,.8); border-radius: 10px; border: 1px solid rgba(36, 26, 18,.1); cursor: pointer; transition: all .2s;">
-          <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px;">표현력</div>
-          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">자연스러운 표정과 미소 만들기</div>
-        </div>
-        <div class="category-item" onclick="clickCategoryTab('답변')" style="padding: 12px; background: rgba(255,255,255,.8); border-radius: 10px; border: 1px solid rgba(36, 26, 18,.1); cursor: pointer; transition: all .2s;">
-          <div style="font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px;">답변</div>
-          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">차별화된 나만의 답변 만들기</div>
-        </div>
-      </div>
-    </div>
+    <div class="chx reveal" id="chx">
 
-    <div class="challenge-grid reveal">
-      <!-- 보신각 : Recording Booth -->
-      <a class="challenge-card featured" href="challenge-voice.html" data-category="보이스" data-recruit-id="voice" data-recruit-start="2026-06-01" data-recruit-end="2026-06-28" data-reveal>
-        <div class="cc-voice-inner">
+      <!-- 왼쪽: 챌린지명 리스트 (JS가 글자를 쪼개 스태거 애니메이션 적용) -->
+      <div class="chx-list">
+        <button class="chx-item is-active" data-idx="0" data-href="challenge-voice.html">
+          <span class="chx-title">보.신.각</span>
+          <span class="chx-desc">2주 만에 목소리가 달라져요</span>
+        </button>
+        <button class="chx-item" data-idx="1" data-href="challenge-expression.html">
+          <span class="chx-title">영.합.각</span>
+          <span class="chx-desc">카메라 앞에서도 자연스럽게</span>
+        </button>
+        <button class="chx-item" data-idx="2" data-href="challenge-spinning.html">
+          <span class="chx-title">스.피.닝</span>
+          <span class="chx-desc">리듬을 타며 발음이 터진다</span>
+        </button>
+        <button class="chx-item" data-idx="3" data-href="challenge-answer.html">
+          <span class="chx-title">승.자.각</span>
+          <span class="chx-desc">2주에 답변 10개 완성</span>
+        </button>
+      </div>
+
+      <!-- 오른쪽: 이미지 패널 — 실사 사진 준비되면 .chx-media 안에 <img> 삽입 후
+           chx-media-N 그라디언트 클래스 제거. recruit.js가 .challenge-card[data-recruit-id]
+           안의 .recruit-status/.recruit-period/.challenge-action을 채움 -->
+      <div class="chx-panel">
+        <a class="challenge-card chx-slide is-active" href="challenge-voice.html" data-idx="0" data-recruit-id="voice" data-recruit-start="2026-06-01" data-recruit-end="2026-06-28">
+          <div class="chx-media chx-media-0" aria-hidden="true"><span class="chx-mark">보.신.각</span></div>
+          <div class="chx-slide-grad" aria-hidden="true"></div>
           <span class="recruit-status"></span>
-          <!-- 마이크 실루엣 워터마크 -->
-          <svg class="cc-voice-mic" viewBox="0 0 80 130" fill="white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="24" y="6" width="32" height="58" rx="16"/>
-            <path d="M12 64 Q12 96 40 96 Q68 96 68 64" stroke="white" stroke-width="5" fill="none" stroke-linecap="round"/>
-            <rect x="37" y="96" width="6" height="20" rx="3"/>
-            <rect x="22" y="114" width="36" height="6" rx="3"/>
-          </svg>
-          <!-- 음파 동심원 4겹 -->
-          <div class="cc-voice-rings" aria-hidden="true">
-            <span class="pring pr1"></span>
-            <span class="pring pr2"></span>
-            <span class="pring pr3"></span>
-            <span class="pring pr4"></span>
-          </div>
-          <!-- 텍스트 -->
-          <div class="cc-voice-text">
-            <div class="card-name">보.신.각</div>
-            <div class="card-sub" style="color:rgba(255,255,255,.68)">2주 만에 목소리가 달라져요</div>
-          </div>
-          <!-- 오디오 웨이브폼 -->
-          <div class="cc-voice-wf" aria-hidden="true">
-            <span class="vbar" style="--vh:48%;--vd:0s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:72%;--vd:0.4s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:38%;--vd:0.8s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:88%;--vd:0.2s;--vdur:1.5s"></span>
-            <span class="vbar" style="--vh:55%;--vd:1.1s;--vdur:1.7s"></span>
-            <span class="vbar" style="--vh:100%;--vd:0.55s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:45%;--vd:1.4s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:82%;--vd:0.75s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:35%;--vd:1.7s;--vdur:1.5s"></span>
-            <span class="vbar" style="--vh:92%;--vd:0.1s;--vdur:1.7s"></span>
-            <span class="vbar" style="--vh:62%;--vd:0.9s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:78%;--vd:1.3s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:50%;--vd:0.45s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:90%;--vd:1.6s;--vdur:1.5s"></span>
-            <span class="vbar" style="--vh:68%;--vd:0.25s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:40%;--vd:1.0s;--vdur:1.7s"></span>
-            <span class="vbar" style="--vh:85%;--vd:0.6s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:58%;--vd:1.45s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:75%;--vd:0.3s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:42%;--vd:1.2s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:95%;--vd:0.7s;--vdur:1.5s"></span>
-            <span class="vbar" style="--vh:55%;--vd:1.5s;--vdur:1.7s"></span>
-            <span class="vbar" style="--vh:80%;--vd:0.15s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:45%;--vd:0.85s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:70%;--vd:1.35s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:38%;--vd:0.5s;--vdur:1.5s"></span>
-            <span class="vbar" style="--vh:88%;--vd:1.0s;--vdur:1.7s"></span>
-            <span class="vbar" style="--vh:52%;--vd:0.35s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:64%;--vd:1.6s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:35%;--vd:0.65s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:90%;--vd:0.2s;--vdur:1.5s"></span>
-            <span class="vbar" style="--vh:60%;--vd:0.9s;--vdur:1.7s"></span>
-            <span class="vbar" style="--vh:75%;--vd:1.25s;--vdur:1.4s"></span>
-            <span class="vbar" style="--vh:45%;--vd:0.55s;--vdur:1.6s"></span>
-            <span class="vbar" style="--vh:82%;--vd:1.7s;--vdur:1.8s"></span>
-            <span class="vbar" style="--vh:50%;--vd:0.4s;--vdur:1.5s"></span>
-          </div>
-        </div>
-        <div class="challenge-body">
-          <div class="recruit-period">📅 모집 <strong>6/1 ~ 6/28</strong></div>
-          <div class="challenge-footer">
+          <div class="chx-info">
+            <div class="recruit-period">📅 모집 <strong>6/1 ~ 6/28</strong></div>
             <span class="challenge-action">내 목소리 바꿔보기 →</span>
           </div>
-        </div>
-      </a>
-
-      <!-- 영합각 : Viewfinder -->
-      <a class="challenge-card" href="challenge-expression.html" data-category="표현력" data-recruit-id="expression" data-recruit-start="2026-06-08" data-recruit-end="2026-07-05" data-reveal>
-        <div class="cc-view-inner">
+        </a>
+        <a class="challenge-card chx-slide" href="challenge-expression.html" data-idx="1" data-recruit-id="expression" data-recruit-start="2026-06-08" data-recruit-end="2026-07-05">
+          <div class="chx-media chx-media-1" aria-hidden="true"><span class="chx-mark">영.합.각</span></div>
+          <div class="chx-slide-grad" aria-hidden="true"></div>
           <span class="recruit-status"></span>
-          <!-- 뷰파인더 원형 프레임 -->
-          <div class="cc-view-circle" aria-hidden="true"></div>
-          <!-- 4코너 브래킷 -->
-          <div class="cc-view-corners" aria-hidden="true">
-            <span class="vc-corner vc-tl"></span>
-            <span class="vc-corner vc-tr"></span>
-            <span class="vc-corner vc-bl"></span>
-            <span class="vc-corner vc-br"></span>
-          </div>
-          <!-- REC 표시 -->
-          <div class="cc-view-rec" aria-hidden="true">
-            <span class="rec-dot"></span>
-            <span class="rec-label">REC</span>
-          </div>
-          <!-- LIVE 뱃지 -->
-          <div class="cc-view-live" aria-hidden="true">
-            <span class="live-dot"></span>
-            <span>LIVE</span>
-          </div>
-          <!-- 녹화 타이머 (JS로 구동) -->
-          <div class="cc-view-timer" aria-hidden="true">00:00</div>
-          <!-- 텍스트 -->
-          <div class="cc-view-text">
-            <div class="card-name">영.합.각</div>
-            <div class="card-sub" style="color:rgba(255,255,255,.68)">카메라 앞에서도 자연스럽게</div>
-          </div>
-        </div>
-        <div class="challenge-body">
-          <div class="recruit-period">📅 모집 <strong>6/8 ~ 7/5</strong></div>
-          <div class="challenge-footer">
+          <div class="chx-info">
+            <div class="recruit-period">📅 모집 <strong>6/8 ~ 7/5</strong></div>
             <span class="challenge-action">영상면접 감각 깨우기 →</span>
           </div>
-        </div>
-      </a>
-
-      <!-- 스피닝 : Metronome -->
-      <a class="challenge-card" href="challenge-spinning.html" data-category="스피치" data-recruit-id="spinning" data-recruit-start="2026-06-02" data-recruit-end="2026-06-29" data-reveal>
-        <div class="cc-spin-inner">
+        </a>
+        <a class="challenge-card chx-slide" href="challenge-spinning.html" data-idx="2" data-recruit-id="spinning" data-recruit-start="2026-06-02" data-recruit-end="2026-06-29">
+          <div class="chx-media chx-media-2" aria-hidden="true"><span class="chx-mark">스.피.닝</span></div>
+          <div class="chx-slide-grad" aria-hidden="true"></div>
           <span class="recruit-status"></span>
-          <!-- 악보 오선 5줄 -->
-          <div class="cc-spin-staff" aria-hidden="true">
-            <div class="staff-line"></div>
-            <div class="staff-line"></div>
-            <div class="staff-line"></div>
-            <div class="staff-line"></div>
-            <div class="staff-line"></div>
-          </div>
-          <!-- 떠오르는 음표들 -->
-          <div class="cc-spin-notes" aria-hidden="true">
-            <span class="snote sn1">♪</span>
-            <span class="snote sn2">♩</span>
-            <span class="snote sn3">♫</span>
-            <span class="snote sn4">♪</span>
-            <span class="snote sn5">♩</span>
-            <span class="snote sn6">♫</span>
-          </div>
-          <!-- 메트로놈 진자 -->
-          <div class="cc-spin-pend-wrap" aria-hidden="true">
-            <div class="cc-spin-pend">
-              <div class="pend-rod"></div>
-              <div class="pend-bob"></div>
-            </div>
-          </div>
-          <!-- 텍스트 -->
-          <div class="cc-spin-text">
-            <div class="card-name">스.피.닝</div>
-            <div class="card-sub" style="color:rgba(255,255,255,.68)">리듬을 타며 발음이 터진다</div>
-          </div>
-          <div class="cc-spin-bpm" aria-hidden="true">♩= 120</div>
-        </div>
-        <div class="challenge-body">
-          <div class="recruit-period">📅 모집 <strong>6/2 ~ 6/29</strong></div>
-          <div class="challenge-footer">
+          <div class="chx-info">
+            <div class="recruit-period">📅 모집 <strong>6/2 ~ 6/29</strong></div>
             <span class="challenge-action">말하기 감각 깨우기 →</span>
           </div>
-        </div>
-      </a>
-
-      <!-- 승자각 : Keyword Architecture -->
-      <a class="challenge-card" href="challenge-answer.html" data-category="면접" data-recruit-id="answer" data-recruit-start="2026-06-09" data-recruit-end="2026-07-06" data-reveal>
-        <div class="cc-ans-inner">
+        </a>
+        <a class="challenge-card chx-slide" href="challenge-answer.html" data-idx="3" data-recruit-id="answer" data-recruit-start="2026-06-09" data-recruit-end="2026-07-06">
+          <div class="chx-media chx-media-3" aria-hidden="true"><span class="chx-mark">승.자.각</span></div>
+          <div class="chx-slide-grad" aria-hidden="true"></div>
           <span class="recruit-status"></span>
-          <!-- 흩어진 키워드 워터마크 -->
-          <div class="cc-ans-kws" aria-hidden="true">
-            <span class="akw" style="top:8%;left:6%;font-size:10px;opacity:.1;transform:rotate(-7deg)">스토리텔링</span>
-            <span class="akw" style="top:14%;left:62%;font-size:12px;opacity:.1;transform:rotate(5deg)">차별화</span>
-            <span class="akw" style="top:32%;left:10%;font-size:11px;opacity:.13;transform:rotate(-4deg)">핵심역량</span>
-            <span class="akw" style="top:50%;left:56%;font-size:11px;opacity:.1;transform:rotate(8deg)">자기소개</span>
-            <span class="akw" style="top:66%;left:8%;font-size:12px;opacity:.12;transform:rotate(-6deg)">경험</span>
-            <span class="akw" style="top:20%;left:78%;font-size:10px;opacity:.12;transform:rotate(3deg)">강점</span>
-            <span class="akw" style="top:72%;left:38%;font-size:14px;opacity:.09;transform:rotate(-2deg)">성장</span>
-            <span class="akw" style="top:82%;left:62%;font-size:10px;opacity:.12;transform:rotate(7deg)">직무</span>
-            <span class="akw" style="top:44%;left:80%;font-size:11px;opacity:.13;transform:rotate(-11deg)">열정</span>
-            <span class="akw" style="top:38%;left:42%;font-size:12px;opacity:.09;transform:rotate(4deg)">목표</span>
-            <span class="akw" style="top:78%;left:22%;font-size:11px;opacity:.11;transform:rotate(-6deg)">가치관</span>
-            <span class="akw" style="top:6%;left:40%;font-size:10px;opacity:.12;transform:rotate(8deg)">리더십</span>
-            <span class="akw" style="top:88%;left:72%;font-size:10px;opacity:.1;transform:rotate(-4deg)">협업</span>
-            <span class="akw" style="top:56%;left:4%;font-size:11px;opacity:.1;transform:rotate(3deg)">문제해결</span>
-          </div>
-          <!-- 큰 숫자 10 워터마크 -->
-          <div class="cc-ans-num" aria-hidden="true">10</div>
-          <!-- 텍스트 -->
-          <div class="cc-ans-text">
-            <div class="card-name" style="color:#1a1a2e">승.자.각</div>
-            <div class="card-sub" style="color:rgba(36,26,18,.55)">2주에 답변 10개 완성</div>
-          </div>
-        </div>
-        <div class="challenge-body">
-          <div class="recruit-period">📅 모집 <strong>6/9 ~ 7/6</strong></div>
-          <div class="challenge-footer">
+          <div class="chx-info">
+            <div class="recruit-period">📅 모집 <strong>6/9 ~ 7/6</strong></div>
             <span class="challenge-action">합격 답변 만들기 →</span>
           </div>
-        </div>
-      </a>
+        </a>
+      </div>
+
     </div>
   </div>
 </section>
@@ -2606,62 +2161,7 @@
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
-  /* ── 웨이브폼 + 카드 애니메이션: 뷰포트 밖이면 일시정지 (CPU 절약) ── */
-  if ('IntersectionObserver' in window) {
-    const wfObs = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        const state = e.isIntersecting ? 'running' : 'paused';
-        e.target.querySelectorAll('.wf-bar, .pring, .vbar, .snote, .cc-spin-pend').forEach(el => { el.style.animationPlayState = state; });
-      });
-    }, { threshold: 0.1 });
-    document.querySelectorAll('.wf-area').forEach(area => wfObs.observe(area));
-    document.querySelectorAll('.cc-voice-inner, .cc-spin-inner, .cc-view-inner').forEach(el => wfObs.observe(el));
-  }
 
-  /* ── 영합각 뷰파인더 녹화 타이머 ── */
-  (function() {
-    const timerEl = document.querySelector('.cc-view-timer');
-    if (!timerEl) return;
-    let t = 0;
-    setInterval(() => {
-      t++;
-      timerEl.textContent =
-        String(Math.floor(t / 60)).padStart(2, '0') + ':' +
-        String(t % 60).padStart(2, '0');
-    }, 1000);
-  })();
-
-  /* ── 카테고리 항목 클릭 함수 ── */
-  function clickCategoryTab(category) {
-    const btn = document.querySelector(`[data-category="${category}"]`);
-    if (btn) btn.click();
-  }
-
-  /* ── 챌린지 필터 탭 ── */
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const category = btn.dataset.category;
-
-      // 탭 active 상태 업데이트
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // 챌린지 카드 필터링 (부드러운 애니메이션 포함)
-      document.querySelectorAll('.challenge-card').forEach(card => {
-        const cardCategory = card.dataset.category || '';
-        const isMatch = category === 'all' || cardCategory === category;
-
-        if (isMatch) {
-          card.style.opacity = '0';
-          card.style.display = 'block';
-          setTimeout(() => card.style.opacity = '1', 50);
-        } else {
-          card.style.opacity = '0';
-          setTimeout(() => card.style.display = 'none', 300);
-        }
-      });
-    });
-  });
 
   /* ── 후기 더보기 토글 ── */
   function toggleTesti(btn) {
@@ -2671,19 +2171,63 @@
     btn.textContent = clamped ? '접기 ↑' : '더보기 ↓';
   }
 
-  /* ── 챌린지 카드 3D 틸트 ── */
-  document.querySelectorAll('.challenge-card').forEach(card => {
-    card.addEventListener('mousemove', e => {
-      const r = card.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width  - 0.5;
-      const y = (e.clientY - r.top)  / r.height - 0.5;
-      card.style.transform = `translateY(-10px) perspective(700px) rotateX(${-y*7}deg) rotateY(${x*7}deg)`;
+  /* ── 챌린지 호버 슬라이드쇼 ── */
+  (function() {
+    const items  = [...document.querySelectorAll('.chx-item')];
+    const slides = [...document.querySelectorAll('.chx-slide')];
+    if (!items.length) return;
+
+    /* 제목을 글자 단위로 쪼개 2중 레이어(c-dim/c-lit) 스태거 준비 */
+    items.forEach(item => {
+      const t = item.querySelector('.chx-title');
+      const chars = [...t.textContent.trim()];
+      t.textContent = '';
+      chars.forEach((ch, i) => {
+        const wrap = document.createElement('span');
+        wrap.className = 'chx-ch';
+        wrap.style.setProperty('--chd', (i * 0.028) + 's');
+        const dim = document.createElement('span');
+        dim.className = 'c-dim';
+        dim.textContent = ch;
+        const lit = document.createElement('span');
+        lit.className = 'c-lit';
+        lit.textContent = ch;
+        lit.setAttribute('aria-hidden', 'true');
+        wrap.append(dim, lit);
+        t.appendChild(wrap);
+      });
     });
-    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
-  });
+
+    function chxActivate(idx) {
+      items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+      slides.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+    }
+
+    items.forEach((item, i) => {
+      item.addEventListener('mouseenter', () => chxActivate(i));
+      item.addEventListener('focus', () => chxActivate(i));
+      item.addEventListener('click', () => {
+        /* 모바일: 첫 탭 = 선택, 활성 상태에서 다시 탭 = 상세페이지 이동 */
+        if (!item.classList.contains('is-active')) { chxActivate(i); return; }
+        if (item.classList.contains('is-closed')) return;
+        window.location.href = item.dataset.href;
+      });
+    });
+  })();
+
+  /* 모집 상태를 왼쪽 리스트에도 반영 — 마감/예정 챌린지는 흐리게 + 이동 차단 */
+  function chxSyncStates() {
+    const st = window._challengeStatuses || {};
+    document.querySelectorAll('.chx-slide[data-recruit-id]').forEach(slide => {
+      const s = st[slide.dataset.recruitId];
+      if (!s || s === 'open') return;
+      const item = document.querySelector('.chx-item[data-idx="' + slide.dataset.idx + '"]');
+      if (item) item.classList.add('is-closed');
+    });
+  }
 
   /* ── 모집 기간 (구글 시트 연동) ── */
-  applyIndexRecruit();
+  applyIndexRecruit().then(chxSyncStates);
 
   /* ── 후기 (캐시 우선 로딩) ── */
   const REVIEWS_CACHE_KEY = 'monc_reviews_v2';
