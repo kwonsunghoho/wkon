@@ -1348,16 +1348,24 @@
     .hero-window-sky-wrap {
       position: absolute; inset: 0; overflow: hidden; z-index: 1;
     }
+    /* 한 방향으로 끊김 없이 계속 흐르게 하는 마퀴 기법 — 같은 하늘 사진을
+       옆으로 두 장 이어붙인 뒤, 정확히 한 장 폭(-50%)만큼 이동하고 나면
+       화면에는 처음 상태와 동일하게 보여서 이음매 없이 무한 반복됨. */
+    .hero-window-sky-track {
+      position: absolute; top: 50%; left: 0;
+      height: 130%;
+      display: flex;
+      transform: translateY(-50%);
+      animation: hero-window-drift 16s linear infinite;
+    }
     .hero-window-sky {
       display: block;
-      position: absolute; top: 50%; left: 50%;
-      height: 130%; width: auto; max-width: none;
-      transform: translate(-50%, -50%);
-      animation: hero-window-drift 3.2s ease-in-out infinite alternate;
+      height: 100%; width: auto; max-width: none;
+      flex-shrink: 0;
     }
     @keyframes hero-window-drift {
-      0%   { margin-left: -10%; }
-      100% { margin-left: 10%; }
+      from { transform: translateY(-50%) translateX(0); }
+      to   { transform: translateY(-50%) translateX(-50%); }
     }
     .hero-window-frame {
       display: block;
@@ -1366,7 +1374,7 @@
       object-fit: cover;
     }
     @media (prefers-reduced-motion: reduce) {
-      .hero-window-sky { animation: none; }
+      .hero-window-sky-track { animation: none; }
     }
     /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
        히어로씬 첫 슬라이드의 다크브라운 톤으로 서서히 물들어, 밝은 하늘에서
@@ -2021,7 +2029,10 @@
 <section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
   <div class="zoom-exit-pin">
     <div class="hero-window-sky-wrap zoom-content-fade">
-      <img src="images/hero-sky-pan.jpg" alt="" class="hero-window-sky">
+      <div class="hero-window-sky-track">
+        <img src="images/hero-sky-pan.jpg" alt="" class="hero-window-sky">
+        <img src="images/hero-sky-pan.jpg" alt="" class="hero-window-sky" aria-hidden="true">
+      </div>
     </div>
     <picture class="zoom-content-fade">
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
