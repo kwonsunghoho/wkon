@@ -140,6 +140,12 @@
       }
     });
 
+    // smoothstep 이징 — 선형(progress 그대로)보다 시작/끝이 완만해 "확 당겨지는"
+    // 느낌 대신 서서히 가속했다 서서히 감속하는 자연스러운 확대감을 줌.
+    function easeInOut(p) {
+      return p * p * (3 - 2 * p);
+    }
+
     function update() {
       ticking = false;
       wraps.forEach(function (wrap) {
@@ -151,15 +157,24 @@
         var runway = rect.height - vh;
         var progress = runway > 0 ? (-rect.top) / runway : 0;
         progress = Math.min(1, Math.max(0, progress));
+        var eased = easeInOut(progress);
         var scaleAttr = wrap.getAttribute('data-zoom-scale');
         var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
         if (isNaN(scaleK)) scaleK = SCALE_K;
-        pin.style.transform = 'scale(' + (1 + progress * scaleK) + ')';
+        pin.style.transform = 'scale(' + (1 + eased * scaleK) + ')';
         // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지) —
         // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 속성이 없으면 기존과 동일하게
         // progress에 따라 선형으로 페이드아웃.
         var fadeAttr = wrap.getAttribute('data-zoom-fade');
-        pin.style.opacity = fadeAttr === 'none' ? '1' : String(1 - progress);
+        pin.style.opacity = fadeAttr === 'none' ? '1' : String(1 - eased);
+
+        // 다음 섹션(주로 어두운 톤)으로 자연스럽게 이어지도록, wrap 안에
+        // .zoom-tone-bridge 요소가 있으면 진행률에 따라 어두운 그라디언트를
+        // 서서히 덧씌워 톤이 미리 어두워지기 시작하게 함 (급격한 톤 전환 방지).
+        var toneBridge = wrap.querySelector('.zoom-tone-bridge');
+        if (toneBridge) {
+          toneBridge.style.opacity = String(eased);
+        }
 
         // 줌/페이드가 완료(progress===1)되면 sticky를 풀어 pin이 뷰포트에 계속
         // 고정되지 않고 wrap과 함께 자연스럽게 스크롤되어 사라지도록 함 —

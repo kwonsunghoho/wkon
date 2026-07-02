@@ -1347,18 +1347,32 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      /* 스크롤과 무관하게 항상 미세하게 움직이는 하늘 - 진입 직후부터 동적인 느낌.
+      /* 스크롤과 무관하게 구름이 옆으로 천천히 흘러가는 느낌 - 비행기 창밖을
+         보는 듯한 느낌을 진입 직후부터 줌. scale(1.16)로 살짝 확대해둬서
+         좌우로 패닝해도 이미지 가장자리가 드러나지 않게 함.
          부모(.zoom-exit-pin)는 JS가 scroll 기반 scale을 주므로, 여기 자체
          transform은 자식 img에 별도로 걸어 서로 충돌하지 않게 함. */
-      animation: hero-window-drift 14s ease-in-out infinite alternate;
-      transform-origin: 55% 45%;
+      animation: hero-window-drift 26s linear infinite alternate;
     }
     @keyframes hero-window-drift {
-      0%   { transform: scale(1.04) translate(0, 0); }
-      100% { transform: scale(1.11) translate(-1.2%, -1.6%); }
+      0%   { transform: scale(1.16) translateX(-2.8%); }
+      100% { transform: scale(1.16) translateX(2.8%); }
     }
     @media (prefers-reduced-motion: reduce) {
       .hero-window-img { animation: none; }
+    }
+    /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
+       히어로씬 첫 슬라이드의 다크브라운 톤으로 서서히 물들어, 밝은 하늘에서
+       어두운 챌린지 화면으로 넘어갈 때 톤이 급격히 끊기지 않도록 함. */
+    .zoom-tone-bridge {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 35%, #140608 100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .zoom-tone-bridge { display: none; }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1997,12 +2011,13 @@
 </div>
 
 <!-- HERO WINDOW INTRO -->
-<section class="hero-window-intro" data-zoom-exit data-zoom-scale="4.5" data-zoom-runway="120" data-zoom-fade="none">
+<section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
   <div class="zoom-exit-pin">
     <picture>
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile.jpg">
       <img src="images/hero-window-desktop.jpg" alt="" class="hero-window-img" width="1672" height="941">
     </picture>
+    <div class="zoom-tone-bridge"></div>
   </div>
 </section>
 
