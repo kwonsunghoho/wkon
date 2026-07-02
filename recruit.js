@@ -104,17 +104,17 @@ async function applyIndexRecruit() {
     if (periodEl) {
       const chipHtml = makeDdayChip(dday, status);
       if (status === 'upcoming') {
-        periodEl.innerHTML = `<span class="period-icon">📅</span><span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
+        periodEl.innerHTML = `<span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
       } else if (status === 'closed') {
-        periodEl.innerHTML = `<span class="period-icon">📅</span><span class="period-dates">${fmtPeriod(start, end)}</span><span class="dday-chip dday-closed">마감</span>`;
+        periodEl.innerHTML = `<span class="period-dates">${fmtPeriod(start, end)}</span><span class="dday-chip dday-closed">마감</span>`;
       } else {
-        periodEl.innerHTML = `<span class="period-icon">📅</span><span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
+        periodEl.innerHTML = `<span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
       }
       periodEl.className = `recruit-period rp-${status}`;
     }
 
     if (status === 'upcoming') {
-      if (badge)  { badge.textContent = '⏰ 모집 예정'; badge.className = 'recruit-status status-upcoming'; }
+      if (badge) { badge.textContent = '모집 예정'; badge.className = 'recruit-status status-upcoming'; }
       if (action) action.textContent = '모집 예정';
       card.classList.add('is-disabled');
     } else if (status === 'closed') {
@@ -122,7 +122,7 @@ async function applyIndexRecruit() {
       if (action) action.textContent = '모집 마감';
       card.classList.add('is-disabled');
     } else {
-      if (badge)  { badge.textContent = '🔥 모집 중'; badge.className = 'recruit-status status-recruiting'; }
+      if (badge) { badge.textContent = '모집 중'; badge.className = 'recruit-status status-recruiting'; }
     }
   });
 }
@@ -164,10 +164,10 @@ async function applyDetailRecruit(challengeId) {
     const strongEl = chip.querySelector('strong');
     if (strongEl) strongEl.textContent = fmtPeriod(start, end);
     if (status === 'open' && dday) {
-      chip.innerHTML = `📅 모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`;
+      chip.innerHTML = `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`;
       chip.style.background = '';
     } else if (status !== 'open') {
-      chip.innerHTML = (status === 'upcoming' ? '⏰ 모집 예정 ' : '❌ 모집 마감 ') + fmtPeriod(start, end);
+      chip.innerHTML = (status === 'upcoming' ? '모집 예정 ' : '모집 마감 ') + fmtPeriod(start, end);
       chip.style.background = status === 'closed' ? 'rgba(120,120,120,.1)' : 'rgba(214,51,132,.08)';
     }
   }
@@ -177,7 +177,7 @@ async function applyDetailRecruit(challengeId) {
       btn.style.opacity = '.55';
       btn.style.filter = 'grayscale(.4)';
       btn.style.cursor = 'not-allowed';
-      btn.textContent = status === 'upcoming' ? '⏰ 모집 예정' : '❌ 모집 마감';
+      btn.textContent = status === 'upcoming' ? '모집 예정' : '모집 마감';
     });
   }
 

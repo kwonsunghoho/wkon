@@ -75,13 +75,13 @@ document.addEventListener('DOMContentLoaded', function() {
           <span style="font-size:12px;color:#241A12;font-weight:700;white-space:nowrap;">참가비 3만원</span>
         </label>
         <div id="currVoice" style="display:none;background:#FFF7ED;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid rgba(36,26,18,.15);">
-          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">📋 2주 커리큘럼 — 보신각</div>
+          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">2주 커리큘럼 — 보신각</div>
           <div onclick="toggleCurr('cv1')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
             <span style="font-size:11px;color:#241A12;">▶</span><span style="font-size:12px;font-weight:700;">1주차: 내 목소리 찾기</span>
           </div>
           <div id="cv1" style="display:none;padding-left:16px;margin-bottom:8px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              📅 월 — 나에게 편한 톤 찾기<br>📅 화 — 목소리가 잘 나오는 자세<br>📅 수 — 단단한 아나운서 목소리 만들기<br>📅 목·금 — 반복 훈련과 짧은 문장 적용
+              월 — 나에게 편한 톤 찾기<br>화 — 목소리가 잘 나오는 자세<br>수 — 단단한 아나운서 목소리 만들기<br>목·금 — 반복 훈련과 짧은 문장 적용
             </div>
           </div>
           <div onclick="toggleCurr('cv2')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           <div id="cv2" style="display:none;padding-left:16px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              📅 월·화 — 안정적인 정보 전달과 중간톤 굳히기<br>📅 수·금 — 호흡의 길이 조절과 감정 울림 확장
+              월·화 — 안정적인 정보 전달과 중간톤 굳히기<br>수·금 — 호흡의 길이 조절과 감정 울림 확장
             </div>
           </div>
         </div>
@@ -105,13 +105,13 @@ document.addEventListener('DOMContentLoaded', function() {
           <span style="font-size:12px;color:#241A12;font-weight:700;white-space:nowrap;">참가비 3만원</span>
         </label>
         <div id="currSpinning" style="display:none;background:#FFF7ED;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid rgba(36,26,18,.15);">
-          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">📋 2주 커리큘럼 — 스피닝</div>
+          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">2주 커리큘럼 — 스피닝</div>
           <div onclick="toggleCurr('cs1')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
             <span style="font-size:11px;color:#241A12;">▶</span><span style="font-size:12px;font-weight:700;">1주차: 말의 기본기를 만드는 주간</span>
           </div>
           <div id="cs1" style="display:none;padding-left:16px;margin-bottom:8px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              📅 DAY 1 — 정확한 발음 1<br>📅 DAY 2 — 정확한 발음 2<br>📅 DAY 3 — 숨 쉬면서 말하기<br>📅 DAY 4 — 웃으면서 말하기<br>📅 DAY 5 — 인토네이션 &amp; 미소 체크
+              DAY 1 — 정확한 발음 1<br>DAY 2 — 정확한 발음 2<br>DAY 3 — 숨 쉬면서 말하기<br>DAY 4 — 웃으면서 말하기<br>DAY 5 — 인토네이션 &amp; 미소 체크
             </div>
           </div>
           <div onclick="toggleCurr('cs2')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           <div id="cs2" style="display:none;padding-left:16px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              📅 DAY 6 — 신뢰도 있게 말하기<br>📅 DAY 7 — 음의 고저 만들기<br>📅 DAY 8 — 쿠셔닝 표현 사용하기<br>📅 DAY 9 — 쉽게 말하기<br>📅 DAY 10 — 최종 스피치 발표
+              DAY 6 — 신뢰도 있게 말하기<br>DAY 7 — 음의 고저 만들기<br>DAY 8 — 쿠셔닝 표현 사용하기<br>DAY 9 — 쉽게 말하기<br>DAY 10 — 최종 스피치 발표
             </div>
           </div>
         </div>
@@ -135,13 +135,13 @@ document.addEventListener('DOMContentLoaded', function() {
           <span style="font-size:12px;color:#241A12;font-weight:700;white-space:nowrap;">참가비 3만원</span>
         </label>
         <div id="currExpression" style="display:none;background:#FFF7ED;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid rgba(36,26,18,.15);">
-          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">📋 2주 커리큘럼 — 영합각</div>
+          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">2주 커리큘럼 — 영합각</div>
           <div onclick="toggleCurr('ce1')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
             <span style="font-size:11px;color:#241A12;">▶</span><span style="font-size:12px;font-weight:700;">1주차: 카메라 이미지 세팅</span>
           </div>
           <div id="ce1" style="display:none;padding-left:16px;margin-bottom:8px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              🎬 DAY 1 — 캐릭터 찾기<br>🎬 DAY 2 — 스타일링<br>🎬 DAY 3 — 미소·아이컨택<br>🎬 DAY 4 — 자세·각도<br>🎬 DAY 5 — 이미지 파이널
+              DAY 1 — 캐릭터 찾기<br>DAY 2 — 스타일링<br>DAY 3 — 미소·아이컨택<br>DAY 4 — 자세·각도<br>DAY 5 — 이미지 파이널
             </div>
           </div>
           <div onclick="toggleCurr('ce2')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           <div id="ce2" style="display:none;padding-left:16px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              🎬 DAY 6 — 오프닝<br>🎬 DAY 7 — 구어체 스크립트<br>🎬 DAY 8 — 호흡구간<br>🎬 DAY 9 — 인토네이션<br>🎬 DAY 10 — 최종 촬영
+              DAY 6 — 오프닝<br>DAY 7 — 구어체 스크립트<br>DAY 8 — 호흡구간<br>DAY 9 — 인토네이션<br>DAY 10 — 최종 촬영
             </div>
           </div>
         </div>
@@ -165,13 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
           <span style="font-size:12px;color:#241A12;font-weight:700;white-space:nowrap;">참가비 3만원</span>
         </label>
         <div id="currAnswer" style="display:none;background:#FFF7ED;border-radius:10px;padding:14px;margin-bottom:20px;border:1px solid rgba(36,26,18,.15);">
-          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">📋 2주 커리큘럼 — 승자각</div>
+          <div style="font-size:12px;font-weight:700;color:#241A12;margin-bottom:10px;">2주 커리큘럼 — 승자각</div>
           <div onclick="toggleCurr('ca1')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
             <span style="font-size:11px;color:#241A12;">▶</span><span style="font-size:12px;font-weight:700;">1주차: 기본 질문으로 나를 설명하는 힘 만들기</span>
           </div>
           <div id="ca1" style="display:none;padding-left:16px;margin-bottom:8px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              📅 DAY 1 — 정확한 발음 1<br>📅 DAY 2 — 정확한 발음 2<br>📅 DAY 3 — 숨 쉬면서 말하기<br>📅 DAY 4 — 웃으면서 말하기<br>📅 DAY 5 — 인토네이션 &amp; 미소 체크
+              DAY 1 — 정확한 발음 1<br>DAY 2 — 정확한 발음 2<br>DAY 3 — 숨 쉬면서 말하기<br>DAY 4 — 웃으면서 말하기<br>DAY 5 — 인토네이션 &amp; 미소 체크
             </div>
           </div>
           <div onclick="toggleCurr('ca2')" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;user-select:none;">
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           <div id="ca2" style="display:none;padding-left:16px;">
             <div style="font-size:11px;color:#6B5744;line-height:2;">
-              📅 DAY 6 — 신뢰도 있게 말하기<br>📅 DAY 7 — 음의 고저 만들기<br>📅 DAY 8 — 쿠셔닝 표현 사용하기<br>📅 DAY 9 — 쉽게 말하기<br>📅 DAY 10 — 최종 스피치 발표
+              DAY 6 — 신뢰도 있게 말하기<br>DAY 7 — 음의 고저 만들기<br>DAY 8 — 쿠셔닝 표현 사용하기<br>DAY 9 — 쉽게 말하기<br>DAY 10 — 최종 스피치 발표
             </div>
           </div>
         </div>
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <span>참가비</span><span><span id="participationFee">0</span>원</span>
           </div>
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;color:#6B5744;">
-            <span>보증금 <span style="font-size:11px;">(수료 시 전액 환급 💚)</span></span>
+            <span>보증금 <span style="font-size:11px;">(수료 시 전액 환급)</span></span>
             <span><span id="depositFee">0</span>원</span>
           </div>
           <div style="border-top:1.5px solid rgba(36,26,18,.15);padding-top:10px;display:flex;justify-content:space-between;align-items:baseline;">
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div>은행: 신한</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span>계좌: <strong id="acctNumber">110-254-022354</strong></span>
-            <button type="button" onclick="copyAccount(this)" style="font-size:11px;font-weight:700;color:#fff;background:#241A12;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 복사</button>
+            <button type="button" onclick="copyAccount(this)" style="font-size:11px;font-weight:700;color:#fff;background:#241A12;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap;">복사</button>
           </div>
           <div>예금주: 권성호</div>
         </div>
@@ -257,7 +257,7 @@ async function openApplicationModal() {
       if (disabled) {
         const tag = document.createElement('span');
         tag.className = 'modal-status-tag';
-        tag.textContent = status === 'upcoming' ? '⏰ 모집예정' : '마감';
+        tag.textContent = status === 'upcoming' ? '모집예정' : '마감';
         tag.style.cssText = `
           background:${status === 'upcoming' ? 'rgba(36,26,18,.12)' : 'rgba(120,120,120,.15)'};
           color:${status === 'upcoming' ? '#241A12' : '#888'};
