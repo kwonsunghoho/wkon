@@ -369,6 +369,85 @@
       .chx-panel { height: min(430px, 112vw); }
     }
 
+    /* ═══════════════════════════════════════════════════
+       CHALLENGE ADVISOR — 3문항 진단 위젯
+       세 질문에 답하면 즉시 결과 표시(버튼 없음), 답을 바꾸면 즉시 갱신.
+       질문 1·2는 1점, 질문 3은 2점 가중치 — 로직은 하단 스크립트 'adv' 블록.
+    ═══════════════════════════════════════════════════ */
+    .advisor { padding: var(--section-y) 0; background: var(--bg2); }
+    .adv { max-width: 880px; margin: 0 auto; }
+
+    .adv-q { margin-bottom: 28px; }
+    .adv-q-title {
+      font-size: 16px; font-weight: 800; color: var(--text);
+      margin-bottom: 12px; word-break: keep-all;
+    }
+    .adv-q-title .adv-q-num { color: var(--action); margin-right: 6px; }
+    .adv-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .adv-opt {
+      padding: 14px 16px; border-radius: 14px;
+      border: 1.5px solid var(--border);
+      background: var(--surface); color: var(--text-muted);
+      font-size: 14px; font-weight: 600; line-height: 1.5;
+      text-align: left; cursor: pointer; word-break: keep-all;
+      transition: border-color .18s, background .18s, color .18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .adv-opt:hover { border-color: rgba(201,71,30,.45); }
+    .adv-opt.is-on {
+      border-color: var(--action);
+      background: var(--action-tint);
+      color: var(--text);
+      box-shadow: 0 2px 12px rgba(201,71,30,.14);
+    }
+
+    /* ── 결과 영역 ── */
+    .adv-result { margin-top: 8px; }
+    .adv-res-head {
+      font-size: clamp(19px, 2.6vw, 24px); font-weight: 800;
+      color: var(--text); margin: 26px 0 18px; text-align: center;
+      word-break: keep-all;
+    }
+    .adv-card {
+      background: var(--surface); border-radius: 18px;
+      border: 1.5px solid var(--border-soft);
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .adv-card-band { height: 10px; }
+    .adv-card-body { padding: 20px 22px; }
+    .adv-card-label {
+      font-size: 11.5px; font-weight: 800; letter-spacing: .06em;
+      color: var(--action); margin-bottom: 8px;
+    }
+    .adv-card-name { font-size: 22px; font-weight: 900; color: var(--text); letter-spacing: -.02em; margin-bottom: 8px; }
+    .adv-card-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; word-break: keep-all; }
+    .adv-card.adv-main .adv-card-body { padding: 26px 28px; }
+    .adv-card.adv-main .adv-card-name { font-size: 27px; }
+    .adv-card.adv-sub .adv-card-name { font-size: 18px; }
+    .adv-card.adv-sub .adv-card-desc { font-size: 13px; }
+    .adv-subs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .adv-subs.solo { grid-template-columns: 1fr; }
+
+    .adv-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+    .adv-ctas .btn { font-size: 15px; }
+
+    /* 결과 등장 페이드인 */
+    @keyframes adv-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .adv-res-in { animation: adv-in .45s ease both; }
+    @media (prefers-reduced-motion: reduce) {
+      .adv-res-in { animation: none; }
+      .adv-opt { transition: none; }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .advisor { padding: var(--section-y-mobile) 0; }
+      .adv-opts { grid-template-columns: 1fr; }
+      .adv-subs { grid-template-columns: 1fr; }
+      .adv-ctas { flex-direction: column; }
+      .adv-ctas .btn { width: 100%; justify-content: center; text-align: center; }
+    }
+
     /* ── INSTRUCTORS ── */
     .instructors { padding: var(--section-y) 0; background: var(--bg); }
 
@@ -1636,6 +1715,52 @@
   </div>
 </section>
 
+<!-- CHALLENGE ADVISOR — 3문항 진단 위젯 (로직: 하단 스크립트 'adv' 블록) -->
+<section class="advisor" id="advisor">
+  <div class="container">
+    <div class="reveal" style="text-align:center; max-width:520px; margin:0 auto 40px;">
+      <div class="section-label">Challenge Finder</div>
+      <h2 class="section-title">나에게 맞는 챌린지 찾기</h2>
+      <p class="section-desc">세 가지 질문에 답하면, 지금 나에게 필요한 챌린지를 바로 알려드려요.</p>
+    </div>
+
+    <div class="adv reveal">
+      <div class="adv-q">
+        <div class="adv-q-title"><span class="adv-q-num">Q1.</span>면접 답변을 할 때, 가장 먼저 막히는 지점은?</div>
+        <div class="adv-opts" role="group" aria-label="질문 1. 면접 답변을 할 때, 가장 먼저 막히는 지점은?">
+          <button class="adv-opt" data-q="0" data-k="s" aria-pressed="false">뭐라고 답해야 할지 내용부터 안 떠오른다</button>
+          <button class="adv-opt" data-q="0" data-k="p" aria-pressed="false">내용은 있는데 말로 하면 밋밋해진다</button>
+          <button class="adv-opt" data-q="0" data-k="b" aria-pressed="false">말하다 보면 목소리가 떨리고 흔들린다</button>
+          <button class="adv-opt" data-q="0" data-k="y" aria-pressed="false">카메라 앞에만 서면 표정과 시선이 굳는다</button>
+        </div>
+      </div>
+
+      <div class="adv-q">
+        <div class="adv-q-title"><span class="adv-q-num">Q2.</span>녹음·녹화된 내 모습을 다시 보면?</div>
+        <div class="adv-opts" role="group" aria-label="질문 2. 녹음, 녹화된 내 모습을 다시 보면?">
+          <button class="adv-opt" data-q="1" data-k="b" aria-pressed="false">목소리 톤이 어색하고 얇게 들린다</button>
+          <button class="adv-opt" data-q="1" data-k="y" aria-pressed="false">표정이 어색하고 시선이 불안하다</button>
+          <button class="adv-opt" data-q="1" data-k="p" aria-pressed="false">틀린 건 없는데 밋밋하고 지루하다</button>
+          <button class="adv-opt" data-q="1" data-k="s" aria-pressed="false">답변 내용이 뻔하고 남들이랑 똑같다</button>
+        </div>
+      </div>
+
+      <div class="adv-q">
+        <div class="adv-q-title"><span class="adv-q-num">Q3.</span>딱 하나만 바꿀 수 있다면?</div>
+        <div class="adv-opts" role="group" aria-label="질문 3. 딱 하나만 바꿀 수 있다면?">
+          <button class="adv-opt" data-q="2" data-k="b" aria-pressed="false">떨리지 않는 안정적인 목소리</button>
+          <button class="adv-opt" data-q="2" data-k="y" aria-pressed="false">화면 속에서도 자연스러운 나</button>
+          <button class="adv-opt" data-q="2" data-k="p" aria-pressed="false">듣는 사람을 끌어당기는 말맛</button>
+          <button class="adv-opt" data-q="2" data-k="s" aria-pressed="false">면접관이 기억하는 나만의 답변</button>
+        </div>
+      </div>
+
+      <!-- 결과 — 세 답변이 모두 선택되면 JS가 여기에 렌더 -->
+      <div class="adv-result" id="advResult" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
 <!-- CHALLENGES -->
 <section class="challenges" id="challenges">
   <div class="container">
@@ -2225,6 +2350,97 @@
       if (item) item.classList.add('is-closed');
     });
   }
+
+  /* ── 챌린지 어드바이저 (adv) — 3문항 진단 ──
+     질문 1·2는 1점, 질문 3은 2점(마지막 질문이 본인의 진짜 욕구라 동점을 깸).
+     세 답변이 모두 선택되면 즉시 결과 렌더, 답을 바꾸면 즉시 갱신. */
+  (function() {
+    const result = document.getElementById('advResult');
+    if (!result) return;
+
+    const CH = {
+      b: { name: '보신각', area: '목소리', href: 'challenge-voice.html', media: 0,
+           desc: '떨리고 흔들리는 목소리를 안정적인 톤으로. 목소리의 기초 체력을 만들어요.',
+           syn: '소리가 안정되면 나머지 훈련 효과가 배가돼요.' },
+      y: { name: '영합각', area: '영상면접', href: 'challenge-expression.html', media: 1,
+           desc: '카메라 앞에서도 대면처럼. 화면 속 표정과 시선을 자연스럽게 만들어요.',
+           syn: '목소리·말맛 훈련을 화면 위 실전으로 연결해요.' },
+      p: { name: '스피닝', area: '말맛', href: 'challenge-spinning.html', media: 2,
+           desc: '밋밋한 전달을 살아있는 말맛으로. 같은 내용도 다르게 들리게 해요.',
+           syn: '안정된 소리에 전달력을 얹으면 완성도가 달라져요.' },
+      s: { name: '승자각', area: '답변 작성', href: 'challenge-answer.html', media: 3,
+           desc: '뻔한 답변 대신 면접관이 기억하는 답변. 내용 자체를 차별화해요.',
+           syn: '좋은 전달에 좋은 내용까지, 둘 다 잡는 조합이에요.' },
+    };
+    const WEIGHTS = [1, 1, 2];
+    const answers = [null, null, null];
+
+    function card(key, main) {
+      const c = CH[key];
+      const label = main ? ('핵심 챌린지 · ' + c.area) : ('함께 하면 시너지 · ' + c.area);
+      return '<div class="adv-card ' + (main ? 'adv-main' : 'adv-sub') + '">'
+        + '<div class="adv-card-band chx-media-' + c.media + '"></div>'
+        + '<div class="adv-card-body">'
+        + '<div class="adv-card-label">' + label + '</div>'
+        + '<div class="adv-card-name">' + c.name + '</div>'
+        + '<div class="adv-card-desc">' + (main ? c.desc : c.syn) + '</div>'
+        + '</div></div>';
+    }
+
+    function render() {
+      if (answers.some(a => a === null)) return;
+
+      const score = {};
+      answers.forEach((k, i) => { score[k] = (score[k] || 0) + WEIGHTS[i]; });
+      /* 점수 내림차순, 동점이면 질문 3의 답(진짜 욕구)이 앞으로 */
+      const keys = Object.keys(score).sort((a, b) =>
+        (score[b] - score[a]) || (a === answers[2] ? -1 : b === answers[2] ? 1 : 0));
+
+      let html;
+      if (keys.length === 1) {
+        /* 케이스 A — 세 답변이 모두 같은 챌린지 (단일 추천) */
+        const k = keys[0];
+        html = '<div class="adv-res-in">'
+          + '<div class="adv-res-head">고민이 하나로 뚜렷해요. 이 챌린지에 집중하세요.</div>'
+          + card(k, true)
+          + '<div class="adv-ctas">'
+          /* CTA 목적지: 챌린지 상세 페이지 — 별도 신청 페이지가 생기면 URL 교체 */
+          + '<a class="btn btn-action" href="' + CH[k].href + '">' + CH[k].name + ' 시작하기</a>'
+          + '</div></div>';
+      } else {
+        /* 케이스 B — 2~3개 챌린지 조합 추천 */
+        const top = keys[0];
+        const rest = keys.slice(1);
+        const comboNames = keys.map(k => CH[k].name).join(' + ');
+        html = '<div class="adv-res-in">'
+          + '<div class="adv-res-head">당신에게 필요한 조합이에요.</div>'
+          + card(top, true)
+          + '<div class="adv-subs' + (rest.length === 1 ? ' solo' : '') + '">'
+          + rest.map(k => card(k, false)).join('')
+          + '</div>'
+          + '<div class="adv-ctas">'
+          /* CTA 목적지: 핵심 챌린지 상세 페이지 — 별도 신청 페이지가 생기면 URL 교체 */
+          + '<a class="btn btn-ghost" href="' + CH[top].href + '">' + CH[top].name + '만 시작하기</a>'
+          /* 조합 신청 — 복수 선택 가능한 기존 신청 모달을 열어요. 별도 신청 페이지가 생기면 교체 */
+          + '<a class="btn btn-action" href="#" onclick="openApplicationModal(); return false;">조합으로 함께 시작하기 (' + comboNames + ')</a>'
+          + '</div></div>';
+      }
+      result.innerHTML = html;
+    }
+
+    document.querySelectorAll('.adv-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const q = +btn.dataset.q;
+        answers[q] = btn.dataset.k;
+        document.querySelectorAll('.adv-opt[data-q="' + q + '"]').forEach(b => {
+          const on = b === btn;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+        render();
+      });
+    });
+  })();
 
   /* ── 모집 기간 (구글 시트 연동) ── */
   applyIndexRecruit().then(chxSyncStates);
