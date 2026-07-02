@@ -1149,42 +1149,25 @@
     .hero-window-intro .zoom-exit-pin {
       background-color: var(--bg);
     }
-    /* 창문 프레임(벽)은 고정 - 그 안의 하늘도 배경(그라디언트)은 고정,
-       구름만 옆으로 흘러가야 실제 비행기 창밖을 보는 느낌이 나서 3개
-       레이어로 분리: .hero-window-sky-bg(고정 그라디언트) +
-       .hero-window-clouds(패닝, 구름만 추출된 투명 PNG) +
-       .hero-window-frame(고정, 중앙 투명 프레임) */
+    /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러가야 실제
+       비행기 창밖 느낌이 남. 하늘은 좌우로 이어지는 4800x1000 타일
+       한 장(hero-sky-tile.webp)을 background-position-x 애니메이션으로
+       무한 패닝. 세로는 스크롤 진행에 따라 JS가 background-position-y(%)를
+       0→100%로 밀어 타일 하단(구름층)이 드러남 — X는 애니메이션,
+       Y는 인라인 스타일이라 서로 충돌하지 않음. */
     .hero-window-sky-bg {
       position: absolute; inset: 0; z-index: 1;
-      background-image: url('images/hero-sky-gradient.svg');
-      background-size: 100% 1200px;
-      background-repeat: repeat-y;
+      background-image: url('images/hero-sky-tile.webp');
+      /* 높이 130%로 키워 세로 패닝 여유(30%)를 확보. 타일 비율 4.8:1이라
+         표시 폭은 130vh × 4.8 = 624vh — 애니메이션 이동량과 일치해야 이음매 없음 */
+      background-size: auto 130%;
+      background-repeat: repeat-x;
       background-position: 0 0;
-      background-attachment: scroll;
+      animation: hero-sky-pan 32s linear infinite;
     }
-    .hero-window-clouds-wrap {
-      position: absolute; inset: 0; overflow: hidden; z-index: 2;
-    }
-    /* 한 방향으로 끊김 없이 계속 흐르게 하는 마퀴 기법 — 같은 구름 PNG를
-       옆으로 두 장 이어붙인 뒤, 정확히 한 장 폭(-50%)만큼 이동하고 나면
-       화면에는 처음 상태와 동일하게 보여서 이음매 없이 무한 반복됨.
-       (구름 사이는 투명이라 사진 전체를 이어붙일 때와 달리 이음매가
-       거의 티나지 않음) */
-    .hero-window-clouds-track {
-      position: absolute; top: 25%; left: 0;
-      height: 130%;
-      display: flex;
-      transform: translateY(-50%);
-      animation: hero-window-drift 16s linear infinite;
-    }
-    .hero-window-clouds {
-      display: block;
-      height: 100%; width: auto; max-width: none;
-      flex-shrink: 0;
-    }
-    @keyframes hero-window-drift {
-      from { transform: translateY(-50%) translateX(0); }
-      to   { transform: translateY(-50%) translateX(-50%); }
+    @keyframes hero-sky-pan {
+      from { background-position-x: 0; }
+      to   { background-position-x: -624vh; }
     }
     .hero-window-frame {
       display: block;
@@ -1193,7 +1176,7 @@
       object-fit: cover;
     }
     @media (prefers-reduced-motion: reduce) {
-      .hero-window-clouds-track { animation: none; }
+      .hero-window-sky-bg { animation: none; }
     }
     /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
        히어로 캐러셀의 밝은 크림/베이지 톤으로 서서히 물들어, 밝은 하늘에서
@@ -1448,12 +1431,6 @@
 <section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
   <div class="zoom-exit-pin">
     <div class="hero-window-sky-bg zoom-content-fade"></div>
-    <div class="hero-window-clouds-wrap zoom-content-fade">
-      <div class="hero-window-clouds-track">
-        <img src="images/hero-sky-clouds.webp" alt="" class="hero-window-clouds">
-        <img src="images/hero-sky-clouds.webp" alt="" class="hero-window-clouds" aria-hidden="true">
-      </div>
-    </div>
     <picture class="zoom-content-fade">
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
       <img src="images/hero-window-desktop-frame.webp" alt="" class="hero-window-frame" width="1672" height="941">
@@ -2632,12 +2609,11 @@
       // Calculate progress 0–1 (0 = top of section, 1 = bottom of section)
       const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
 
-      // Panning range: 0 to -500px (reveals bottom of gradient)
-      const panOffset = -progress * 500;
-
+      // 세로 패닝: 0%(타일 상단·파란 하늘) → 100%(타일 하단·구름층).
+      // X는 CSS 애니메이션(hero-sky-pan)이 담당하므로 Y만 인라인으로 제어
       const skyBgEl = document.querySelector('.hero-window-sky-bg');
       if (skyBgEl) {
-        skyBgEl.style.backgroundPosition = `0 ${panOffset}px`;
+        skyBgEl.style.backgroundPositionY = (progress * 100) + '%';
       }
     }
   }
