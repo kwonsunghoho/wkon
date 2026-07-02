@@ -85,3 +85,20 @@
 @media (prefers-reduced-motion: reduce) {
   [data-sticky-from], [data-sticky-to] { transition: none; }
 }
+
+/* 히어로 스크롤 줌아웃(빨려들어가는) 연출 — [data-zoom-exit]가 스크롤 runway를 제공하고
+   .zoom-exit-pin이 sticky로 고정된 채 scale-up + fade-out 됨 (scroll-fx.js: initZoomExit)
+   주의: 각 페이지 inline <style>이 tokens.css보다 나중에 로드되어 .hero-scene 같은 단일 클래스
+   규칙이 캐스케이드상 뒤에 오므로, [data-zoom-exit] 셀렉터를 이중으로 써서 우선순위를 높임 */
+[data-zoom-exit][data-zoom-exit] { position: relative; min-height: 160vh; }
+[data-zoom-exit] > .zoom-exit-pin {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-zoom-exit][data-zoom-exit] { min-height: 0; }
+  [data-zoom-exit] > .zoom-exit-pin { position: relative; top: auto; height: auto; }
+}
