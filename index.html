@@ -1342,23 +1342,32 @@
     .hero-window-intro .zoom-exit-pin {
       background-color: var(--bg);
     }
-    /* 창문 프레임(벽)은 고정 - 그 안의 하늘만 옆으로 흘러가야 실제 비행기
-       창밖을 보는 느낌이 나서, 프레임과 하늘을 별도 레이어로 분리:
-       .hero-window-sky (뒤, 패닝) + .hero-window-frame (앞, 고정, 중앙 투명) */
-    .hero-window-sky-wrap {
-      position: absolute; inset: 0; overflow: hidden; z-index: 1;
+    /* 창문 프레임(벽)은 고정 - 그 안의 하늘도 배경(그라디언트)은 고정,
+       구름만 옆으로 흘러가야 실제 비행기 창밖을 보는 느낌이 나서 3개
+       레이어로 분리: .hero-window-sky-bg(고정 그라디언트) +
+       .hero-window-clouds(패닝, 구름만 추출된 투명 PNG) +
+       .hero-window-frame(고정, 중앙 투명 프레임) */
+    .hero-window-sky-bg {
+      position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(to bottom,
+        #053a78 0%, #0b4b93 15%, #2270b7 35%, #6ca8d8 55%, #cddce2 70%, #e8ecec 100%);
     }
-    /* 한 방향으로 끊김 없이 계속 흐르게 하는 마퀴 기법 — 같은 하늘 사진을
+    .hero-window-clouds-wrap {
+      position: absolute; inset: 0; overflow: hidden; z-index: 2;
+    }
+    /* 한 방향으로 끊김 없이 계속 흐르게 하는 마퀴 기법 — 같은 구름 PNG를
        옆으로 두 장 이어붙인 뒤, 정확히 한 장 폭(-50%)만큼 이동하고 나면
-       화면에는 처음 상태와 동일하게 보여서 이음매 없이 무한 반복됨. */
-    .hero-window-sky-track {
+       화면에는 처음 상태와 동일하게 보여서 이음매 없이 무한 반복됨.
+       (구름 사이는 투명이라 사진 전체를 이어붙일 때와 달리 이음매가
+       거의 티나지 않음) */
+    .hero-window-clouds-track {
       position: absolute; top: 50%; left: 0;
       height: 130%;
       display: flex;
       transform: translateY(-50%);
       animation: hero-window-drift 16s linear infinite;
     }
-    .hero-window-sky {
+    .hero-window-clouds {
       display: block;
       height: 100%; width: auto; max-width: none;
       flex-shrink: 0;
@@ -1374,7 +1383,7 @@
       object-fit: cover;
     }
     @media (prefers-reduced-motion: reduce) {
-      .hero-window-sky-track { animation: none; }
+      .hero-window-clouds-track { animation: none; }
     }
     /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
        히어로씬 첫 슬라이드의 다크브라운 톤으로 서서히 물들어, 밝은 하늘에서
@@ -2028,10 +2037,11 @@
 <!-- HERO WINDOW INTRO -->
 <section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
   <div class="zoom-exit-pin">
-    <div class="hero-window-sky-wrap zoom-content-fade">
-      <div class="hero-window-sky-track">
-        <img src="images/hero-sky-pan.jpg" alt="" class="hero-window-sky">
-        <img src="images/hero-sky-pan.jpg" alt="" class="hero-window-sky" aria-hidden="true">
+    <div class="hero-window-sky-bg zoom-content-fade"></div>
+    <div class="hero-window-clouds-wrap zoom-content-fade">
+      <div class="hero-window-clouds-track">
+        <img src="images/hero-sky-clouds.webp" alt="" class="hero-window-clouds">
+        <img src="images/hero-sky-clouds.webp" alt="" class="hero-window-clouds" aria-hidden="true">
       </div>
     </div>
     <picture class="zoom-content-fade">
