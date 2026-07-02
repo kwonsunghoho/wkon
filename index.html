@@ -1151,23 +1151,39 @@
     }
     /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러가야 실제
        비행기 창밖 느낌이 남. 하늘은 좌우로 이어지는 4800x1000 타일
-       한 장(hero-sky-tile.webp)을 background-position-x 애니메이션으로
-       무한 패닝. 세로는 스크롤 진행에 따라 JS가 background-position-y(%)를
-       0→100%로 밀어 타일 하단(구름층)이 드러남 — X는 애니메이션,
-       Y는 인라인 스타일이라 서로 충돌하지 않음. */
+       한 장(hero-sky-tile.webp)을 transform 기반으로 무한 패닝.
+       (background-position 애니메이션은 GPU 합성이 안 돼 매 프레임
+       거대 레이어를 리페인트 — 모바일 버벅임의 주범이라 transform으로 교체)
+       X 패닝은 .hero-window-sky-x의 CSS 애니메이션, 세로는 스크롤 진행에
+       따라 JS가 .hero-window-sky-y의 translateY(px)를 밀어 타일 하단
+       (구름층)이 드러남 — 요소가 분리돼 있어 서로 충돌하지 않음. */
     .hero-window-sky-bg {
       position: absolute; inset: 0; z-index: 1;
+      overflow: hidden;
+    }
+    .hero-window-sky-y {
+      position: absolute; left: 0; top: 0;
+      width: 100%;
+      /* 130vh로 키워 세로 패닝 여유를 확보. svh가 아닌 vh 고정인 이유:
+         타일 주기(높이 × 4.8)가 애니메이션 이동량 624vh와 일치해야 이음매가 없음.
+         컨테이너(100svh)와의 실제 차이는 JS가 px로 계산해 translateY */
+      height: 130vh;
+      will-change: transform;
+    }
+    .hero-window-sky-x {
+      position: absolute; left: 0; top: 0;
+      height: 100%;
+      /* 타일 1주기(624vh)만큼 밀려도 뷰포트가 항상 차 있도록 여유 폭 확보 */
+      width: calc(624vh + 100vw);
       background-image: url('images/hero-sky-tile.webp');
-      /* 높이 130%로 키워 세로 패닝 여유(30%)를 확보. 타일 비율 4.8:1이라
-         표시 폭은 130vh × 4.8 = 624vh — 애니메이션 이동량과 일치해야 이음매 없음 */
-      background-size: auto 130%;
+      background-size: auto 100%;
       background-repeat: repeat-x;
-      background-position: 0 0;
       animation: hero-sky-pan 90s linear infinite;
+      will-change: transform;
     }
     @keyframes hero-sky-pan {
-      from { background-position-x: 0; }
-      to   { background-position-x: -624vh; }
+      from { transform: translateX(0); }
+      to   { transform: translateX(-624vh); } /* 타일 표시폭 130vh × 4.8 = 정확히 1주기 */
     }
     .hero-window-frame {
       display: block;
@@ -1176,7 +1192,7 @@
       object-fit: cover;
     }
     @media (prefers-reduced-motion: reduce) {
-      .hero-window-sky-bg { animation: none; }
+      .hero-window-sky-x { animation: none; }
     }
     /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
        히어로 캐러셀의 밝은 크림/베이지 톤으로 서서히 물들어, 밝은 하늘에서
@@ -1203,6 +1219,8 @@
       position: relative;
       width: 100%;
       min-height: max(100vh, 680px);
+      /* 모바일 주소창 수축/확장 시 vh 변동으로 인한 레이아웃 점프 방지 */
+      min-height: max(100svh, 680px);
       overflow: hidden;
       /* 카드 바깥 배경 — 살짝 짙은 베이지로 카드를 은은하게 띄우고,
          하단은 --bg로 내려가 아래 Before/After 섹션과 자연스럽게 이어짐 */
@@ -1226,6 +1244,7 @@
       width: 100%;
       flex: 0 0 auto;
       height: min(72vh, 600px);
+      height: min(72svh, 600px);
       --card-w: min(560px, 62vw);
     }
 
@@ -1356,7 +1375,7 @@
 
     /* ── Mobile ── */
     @media (max-width: 768px) {
-      .hs-stage { height: min(70vh, 560px); --card-w: min(420px, 84vw); }
+      .hs-stage { height: min(70vh, 560px); height: min(70svh, 560px); --card-w: min(420px, 84vw); }
       .hs-card-content { padding: 22px 22px 24px; }
       .hs-h1 { font-size: clamp(20px, 6vw, 26px); }
     }
@@ -1430,7 +1449,9 @@
 <!-- HERO WINDOW INTRO -->
 <section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
   <div class="zoom-exit-pin">
-    <div class="hero-window-sky-bg zoom-content-fade"></div>
+    <div class="hero-window-sky-bg zoom-content-fade">
+      <div class="hero-window-sky-y"><div class="hero-window-sky-x"></div></div>
+    </div>
     <picture class="zoom-content-fade">
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
       <img src="images/hero-window-desktop-frame.webp" alt="" class="hero-window-frame" width="1672" height="941">
@@ -1440,7 +1461,9 @@
 </section>
 
 <!-- HERO SCENE -->
-<section class="hero-scene" id="home" data-zoom-exit>
+<!-- 주의: data-zoom-exit를 다시 붙이지 말 것 — 스크롤 시 캐러셀 전체가
+     opacity 페이드되어 모바일에서 한 화면 분량의 빈 구간이 생겼던 원인 -->
+<section class="hero-scene" id="home">
   <audio id="hero-audio" preload="none"></audio>
 
   <div class="zoom-exit-pin">
@@ -1744,7 +1767,7 @@
     <div class="reveal" style="margin-bottom: 44px;">
       <div class="section-label">MONC Challenge</div>
       <h2 class="section-title">몬크 챌린지</h2>
-      <p class="section-desc">챌린지 이름 위에 올려 미리 만나보세요.</p>
+      <p class="section-desc">챌린지 이름을 선택해 미리 만나보세요.</p>
     </div>
 
     <div class="chx reveal" id="chx">
@@ -2306,8 +2329,16 @@
     }
 
     items.forEach((item, i) => {
-      item.addEventListener('mouseenter', () => chxActivate(i));
-      item.addEventListener('focus', () => chxActivate(i));
+      /* 터치 기기에서는 탭 한 번에 mouseenter → click이 연달아 발화해
+         "첫 탭 = 선택"이 무력화되고 즉시 페이지 이동되는 버그가 있었음.
+         pointerType으로 실제 마우스 호버만 활성화 트리거로 사용 */
+      item.addEventListener('pointerenter', e => {
+        if (e.pointerType === 'mouse') chxActivate(i);
+      });
+      /* 키보드 포커스(Tab)만 활성화 — 터치 탭이 만드는 포커스는 제외 */
+      item.addEventListener('focus', () => {
+        if (item.matches(':focus-visible')) chxActivate(i);
+      });
       item.addEventListener('click', () => {
         /* 모바일: 첫 탭 = 선택, 활성 상태에서 다시 탭 = 상세페이지 이동 */
         if (!item.classList.contains('is-active')) { chxActivate(i); return; }
@@ -2586,10 +2617,17 @@
     }
   })();
 
-  /* ── 네비바 스크롤 ── */
+  /* ── 네비바 스크롤 ──
+     스크롤마다 querySelector + getBoundingClientRect를 반복하던 구조가
+     모바일 버벅임을 유발해, 요소는 한 번만 캐싱하고 rAF로 스로틀. */
   const heroWindowIntroEl = document.querySelector('.hero-window-intro');
+  const navbarEl = document.getElementById('navbar');
+  const skyBgEl = document.querySelector('.hero-window-sky-bg');
+  const skyYEl = document.querySelector('.hero-window-sky-y');
+  let navTicking = false;
+
   function updateNavbarOnScroll() {
-    const navbarEl = document.getElementById('navbar');
+    navTicking = false;
     navbarEl.style.boxShadow =
       window.scrollY > 40 ? '0 4px 20px rgba(36, 26, 18,.12)' : 'none';
 
@@ -2597,27 +2635,25 @@
     // reduced-motion이어도 .hero-window-intro의 실제 렌더 높이(getBoundingClientRect)를
     // 기준으로 판단하므로 별도 분기 없이 자연스럽게 동작 (충돌/오류 없음).
     if (heroWindowIntroEl) {
-      const introBottom = heroWindowIntroEl.getBoundingClientRect().bottom;
-      navbarEl.classList.toggle('nav-transparent', introBottom > 0);
-    }
-
-    // Sky panning: adjust background-position based on scroll progress
-    if (heroWindowIntroEl) {
       const rect = heroWindowIntroEl.getBoundingClientRect();
-      const sectionHeight = rect.height;
+      navbarEl.classList.toggle('nav-transparent', rect.bottom > 0);
 
-      // Calculate progress 0–1 (0 = top of section, 1 = bottom of section)
-      const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
-
-      // 세로 패닝: 0%(타일 상단·파란 하늘) → 100%(타일 하단·구름층).
-      // X는 CSS 애니메이션(hero-sky-pan)이 담당하므로 Y만 인라인으로 제어
-      const skyBgEl = document.querySelector('.hero-window-sky-bg');
-      if (skyBgEl) {
-        skyBgEl.style.backgroundPositionY = (progress * 100) + '%';
+      // 세로 패닝: 진행 0(타일 상단·파란 하늘) → 1(타일 하단·구름층).
+      // X는 CSS 애니메이션(hero-sky-pan), Y는 여기서 translateY(px)로 제어.
+      // 하늘(130vh)과 컨테이너(100svh)의 실제 높이 차를 px로 계산 —
+      // 주소창 수축으로 svh≠vh여도 정확히 타일 하단까지만 이동.
+      if (skyYEl && skyBgEl) {
+        const progress = Math.max(0, Math.min(1, -rect.top / rect.height));
+        const overflowPx = skyYEl.offsetHeight - skyBgEl.clientHeight;
+        skyYEl.style.transform = 'translateY(' + (-progress * overflowPx).toFixed(1) + 'px)';
       }
     }
   }
-  window.addEventListener('scroll', updateNavbarOnScroll);
+  function onNavbarScroll() {
+    if (!navTicking) { navTicking = true; requestAnimationFrame(updateNavbarOnScroll); }
+  }
+  window.addEventListener('scroll', onNavbarScroll, { passive: true });
+  window.addEventListener('resize', onNavbarScroll, { passive: true });
   updateNavbarOnScroll(); // 페이지 로드 직후(스크롤 이벤트 발생 전)에도 초기 상태 반영
 
   /* ── 강사 캐러셀 (슬라이드) ── */

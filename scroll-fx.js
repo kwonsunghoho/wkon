@@ -123,7 +123,11 @@
     var wraps = document.querySelectorAll('[data-zoom-exit]');
     if (!wraps.length) return;
 
-    if (prefersReducedMotion) {
+    // 모바일에서는 줌 연출 자체를 끔 — 풀스크린 요소 대배율 scale은 저사양
+    // 기기에서 프레임 드랍을 유발하고, 긴 runway가 빈 스크롤 구간이 됨.
+    // (tokens.css의 max-width:768px 미디어쿼리가 정적 레이아웃을 담당)
+    var smallViewport = window.matchMedia('(max-width: 768px)').matches;
+    if (prefersReducedMotion || smallViewport) {
       return; // CSS 쪽에서 sticky/min-height를 해제해 정적 레이아웃으로 표시
     }
 

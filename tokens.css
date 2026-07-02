@@ -95,6 +95,7 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100svh; /* 모바일 주소창 수축/확장 시 sticky 핀 점프 방지 */
   overflow: hidden;
   will-change: transform, opacity;
 }
@@ -102,5 +103,13 @@
   /* .hs-slide 자식들이 position:absolute라 height:auto인 부모에 높이를 전달하지 못해
      0px로 붕괴하는 문제를 방지하기 위해 pin에 실제 높이(100vh)를 명시적으로 유지 */
   [data-zoom-exit][data-zoom-exit] { min-height: 0; }
-  [data-zoom-exit] > .zoom-exit-pin { position: relative; top: auto; height: 100vh; }
+  [data-zoom-exit] > .zoom-exit-pin { position: relative; top: auto; height: 100vh; height: 100svh; }
+}
+/* 모바일: 줌 연출 비활성 (scroll-fx.js initZoomExit의 동일 분기와 한 쌍).
+   풀스크린 요소를 최대 4배 이상 scale하면 래스터 메모리가 폭증해 저사양
+   기기에서 프레임 드랍이 나고, 긴 runway(160~220vh)가 빈 스크롤 구간을
+   만들므로 정적인 1화면 섹션으로 표시한다. */
+@media (max-width: 768px) {
+  [data-zoom-exit][data-zoom-exit] { min-height: 0; }
+  [data-zoom-exit] > .zoom-exit-pin { position: relative; top: auto; height: 100vh; height: 100svh; }
 }
