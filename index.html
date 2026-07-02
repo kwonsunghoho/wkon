@@ -3500,6 +3500,23 @@
       const introBottom = heroWindowIntroEl.getBoundingClientRect().bottom;
       navbarEl.classList.toggle('nav-transparent', introBottom > 0);
     }
+
+    // Sky panning: adjust background-position based on scroll progress
+    if (heroWindowIntroEl) {
+      const rect = heroWindowIntroEl.getBoundingClientRect();
+      const sectionHeight = rect.height;
+
+      // Calculate progress 0–1 (0 = top of section, 1 = bottom of section)
+      const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
+
+      // Panning range: 0 to -500px (reveals bottom of gradient)
+      const panOffset = -progress * 500;
+
+      const skyBgEl = document.querySelector('.hero-window-sky-bg');
+      if (skyBgEl) {
+        skyBgEl.style.backgroundPosition = `0 ${panOffset}px`;
+      }
+    }
   }
   window.addEventListener('scroll', updateNavbarOnScroll);
   updateNavbarOnScroll(); // 페이지 로드 직후(스크롤 이벤트 발생 전)에도 초기 상태 반영
