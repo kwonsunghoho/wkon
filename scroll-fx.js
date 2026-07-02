@@ -176,6 +176,19 @@
           toneBridge.style.opacity = String(eased);
         }
 
+        // .zoom-content-fade가 붙은 요소(사진 레이어 등)는 확대 막바지(진행률
+        // 70~100%) 구간에서 완전히 페이드아웃시킴. pin이 sticky에서 풀려
+        // 일반 스크롤로 넘어간 뒤에는 확대된 이미지의 다른 부분(가장자리 등)이
+        // 뷰포트에 걸쳐 보일 수 있는데, 그 전에 이미지 자체를 미리 지워버려서
+        // "프레임이 다시 보이는" 것을 원천 차단.
+        var contentFadeEls = wrap.querySelectorAll('.zoom-content-fade');
+        if (contentFadeEls.length) {
+          var contentOpacity = 1 - Math.max(0, (progress - 0.7) / 0.3);
+          contentFadeEls.forEach(function (el) {
+            el.style.opacity = String(contentOpacity);
+          });
+        }
+
         // position은 CSS의 기본 sticky 그대로 둔다 — wrap의 runway를 다 소진하면
         // sticky는 브라우저가 수학적으로 정확히 같은 지점에서(점프 없이) 자연스럽게
         // 풀어주므로 JS가 수동으로 absolute로 전환할 필요가 없다. (이전에 수동
