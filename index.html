@@ -369,11 +369,20 @@
       .chx { grid-template-columns: 1fr; gap: 0; align-items: stretch; }
       .chx-list { gap: 10px; align-items: stretch; }
       .chx-title { font-size: clamp(30px, 9vw, 42px); }
-      /* 패널이 리스트 안 flex 아이템으로 들어오므로 항상 전체 폭 + 상하 여백 */
+      /* 패널이 리스트 안 flex 아이템으로 들어오므로 항상 전체 폭 + 상하 여백.
+         탭 시 '접힘(height 0)' → '펼침'으로 트랜지션해 커튼 열리듯 나타남.
+         (JS chxAnimatePanel이 chx-collapsed를 잠깐 붙였다 떼며 트리거) */
       .chx-panel {
         width: 100%; align-self: stretch;
         height: min(360px, 88vw);
         margin: 6px 0 18px;
+        transition: height .46s cubic-bezier(.22,.61,.36,1),
+                    margin .46s cubic-bezier(.22,.61,.36,1),
+                    opacity .34s ease;
+      }
+      .chx-panel.chx-collapsed {
+        height: 0; opacity: 0;
+        margin-top: 0; margin-bottom: 0;
       }
       /* 비활성 이름은 왼쪽 정렬 그대로(스태거 애니 유지), 패널만 stretch */
       .chx-item { align-self: flex-start; }
@@ -2346,13 +2355,27 @@
     const chxPanel = chxEl && chxEl.querySelector('.chx-panel');
     const chxMobileMq = window.matchMedia('(max-width: 768px)');
 
-    function chxPlacePanel(idx) {
+    const chxReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // 커튼 열리듯 펼침: '접힘(height 0)'을 잠깐 붙였다 떼면 트랜지션이 발동.
+    function chxAnimatePanel() {
+      if (chxReduce) return; // 모션 최소화 설정이면 애니메이션 생략
+      chxPanel.classList.add('chx-collapsed');
+      void chxPanel.offsetHeight; // 강제 리플로우: 접힘 상태를 브라우저에 먼저 반영
+      chxPanel.classList.remove('chx-collapsed'); // → 펼침으로 부드럽게 전환
+    }
+
+    function chxPlacePanel(idx, animate) {
       if (!chxPanel || !chxList) return;
       if (chxMobileMq.matches) {
         const active = items[idx];
         // 활성 이름 다음이 이미 패널이면 이동 불필요(불필요한 리플로우 방지)
-        if (active && active.nextElementSibling !== chxPanel) active.after(chxPanel);
+        if (active && active.nextElementSibling !== chxPanel) {
+          active.after(chxPanel);
+          if (animate) chxAnimatePanel();
+        }
       } else if (chxPanel.parentElement !== chxEl) {
+        chxPanel.classList.remove('chx-collapsed');
         chxList.after(chxPanel); // 데스크톱 원위치
       }
     }
@@ -2360,15 +2383,15 @@
     function chxActivate(idx) {
       items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
       slides.forEach((el, i) => el.classList.toggle('is-active', i === idx));
-      chxPlacePanel(idx);
+      chxPlacePanel(idx, true); // 사용자 선택 → 펼침 애니메이션
     }
 
-    // 뷰포트 전환(회전/리사이즈) 시 패널 위치 재배치
+    // 뷰포트 전환(회전/리사이즈) 시 패널 위치 재배치(애니메이션 없이)
     chxMobileMq.addEventListener('change', () => {
       const activeIdx = items.findIndex(el => el.classList.contains('is-active'));
-      chxPlacePanel(activeIdx < 0 ? 0 : activeIdx);
+      chxPlacePanel(activeIdx < 0 ? 0 : activeIdx, false);
     });
-    chxPlacePanel(0); // 초기 배치(활성=보신각)
+    chxPlacePanel(0, false); // 초기 배치(활성=보신각) — 로드 시엔 애니메이션 생략
 
     items.forEach((item, i) => {
       /* 터치 기기에서는 탭 한 번에 mouseenter → click이 연달아 발화해
