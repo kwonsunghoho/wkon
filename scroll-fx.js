@@ -127,7 +127,7 @@
       return; // CSS 쪽에서 sticky/min-height를 해제해 정적 레이아웃으로 표시
     }
 
-    var SCALE_K = 0.32; // progress 1일 때 최대 scale = 1 + SCALE_K
+    var SCALE_K = 0.32; // 기본 최대 scale = 1 + SCALE_K (data-zoom-scale 속성으로 섹션별 오버라이드 가능)
     var ticking = false;
 
     function update() {
@@ -141,7 +141,10 @@
         var runway = rect.height - vh;
         var progress = runway > 0 ? (-rect.top) / runway : 0;
         progress = Math.min(1, Math.max(0, progress));
-        pin.style.transform = 'scale(' + (1 + progress * SCALE_K) + ')';
+        var scaleAttr = wrap.getAttribute('data-zoom-scale');
+        var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
+        if (isNaN(scaleK)) scaleK = SCALE_K;
+        pin.style.transform = 'scale(' + (1 + progress * scaleK) + ')';
         pin.style.opacity = String(1 - progress);
       });
     }
