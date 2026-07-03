@@ -53,7 +53,8 @@ Each challenge's identity is the `data-recruit-id` (`voice` / `expression` / `sp
 
 ### Design system (`tokens.css`)
 Shared design tokens live in `tokens.css` (linked by `index.html` + the detail/legal pages + the member pages login/mypage/admin). Core conventions:
-- **`feature/full-redesign` uses the Warm Sunrise palette (`tokens.css`):** brown text (`--primary` #241A12), cream background (`--bg` #FFFAF3), and **coral (`--action` #C9471E) reserved exclusively for conversion CTAs** (신청/시작/참여) via `.btn-action`. If something is coral, it means "this submits an application." Don't use coral for decoration. (The old pink `#D63384` / teal `#0C8091` description applied to `main` before the redesign — it does **not** apply on this branch.)
+- **팔레트 (2026-07-04 리브랜드):** 넓은 면·배경 = 베이지 `--bg #E9E4D8`; **타이틀·전환 CTA = 오렌지 `--action #F27945`**; 중간 강조·액센트 = 네이비 `--accent #194192`; 본문 = 다크 뉴트럴 `--text #26221C`. ⚠️ 오렌지는 흰 글씨 대비가 낮으므로(≈2.7:1) **CTA 버튼은 오렌지 배경 + 진한 글씨 `--action-ink #2A1206`(≈5.6:1)** 로 구성한다. 섹션 타이틀=오렌지(`.section-title`), 에이브로우 라벨=네이비(`.section-label`). (구 Warm Sunrise 브라운/코랄 및 그 이전 pink/teal 설명은 모두 폐기.) 잔여: 일부 하드코딩 갈색(상세페이지 아바타 등) 정리 미완.
+- **UI 디자인 원칙:** 모든 UI 작업은 [docs/design-principles.md](docs/design-principles.md)의 **모바일 UI 9대 원칙**(가독성 12pt+ / 터치 44px+ / 명도대비 4.5:1 / 아이콘 통일 / 라운드 기조 / 계층 / 여백 / 그룹핑 / 큼직한 레이아웃)을 엄격히 준수한다. 회원 99%가 모바일 유입 → **375px에서 먼저 검증**.
 - Typography (`--fs-*`), spacing (`--space-*`, 8px scale), radius scale (8/14/20/24), and section background rhythm are all tokenized. Prefer tokens over hardcoded values.
 - Icons are inline SVG `<symbol>`s in a sprite at the top of `<body>`, recolored via `currentColor`. There is a mobile sticky CTA bar (`.mobile-cta-bar`, shown ≤768px).
 
