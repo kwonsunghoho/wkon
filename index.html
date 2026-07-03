@@ -423,6 +423,43 @@
       box-shadow: 0 2px 12px rgba(201,71,30,.14);
     }
 
+    /* ── 단계형 진행: 한 문항씩 카드로, 답 선택 시 다음으로 자동 이동 ── */
+    .adv-progress {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      margin-bottom: 26px;
+    }
+    .adv-back {
+      border: none; background: none; cursor: pointer;
+      font-size: 14px; font-weight: 700; color: var(--text-muted);
+      padding: 6px 4px; -webkit-tap-highlight-color: transparent;
+    }
+    .adv-back:hover { color: var(--action); }
+    .adv-dots { display: flex; gap: 8px; }
+    .adv-dot {
+      width: 8px; height: 8px; border-radius: 99px;
+      background: var(--border); transition: transform .3s, background .3s;
+    }
+    .adv-dot.is-done { background: var(--action); }
+    .adv-dot.is-current { background: var(--action); transform: scale(1.4); }
+    .adv-step-label { font-size: 13px; font-weight: 800; color: var(--text-muted); min-width: 42px; }
+
+    /* 한 번에 한 문항만 표시 (JS가 .is-current 토글) */
+    .adv-q { display: none; margin-bottom: 0; }
+    .adv-q.is-current { display: block; animation: adv-step-in .34s cubic-bezier(.22,.61,.36,1) both; }
+    @keyframes adv-step-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .adv-q-num { display: none; } /* 진행 점/라벨이 단계를 보여주므로 'Q1.' 숫자는 숨김 */
+    .adv-q-title { font-size: clamp(17px, 2.2vw, 20px); margin-bottom: 18px; text-align: center; }
+    /* 옵션을 한 열의 큰 카드로 (선택하기 쉽게) */
+    .adv-opts { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; gap: 12px; }
+    .adv-opt { padding: 18px 20px; font-size: 15px; }
+    .adv-restart {
+      border: none; background: none; cursor: pointer; display: block; margin: 22px auto 0;
+      font-size: 13px; font-weight: 700; color: var(--text-dim);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .adv-restart:hover { color: var(--action); }
+    @media (prefers-reduced-motion: reduce) { .adv-q.is-current { animation: none; } }
+
     /* ── 결과 영역 ── */
     .adv-result { margin-top: 8px; }
     .adv-res-head {
@@ -2414,6 +2451,42 @@
     const WEIGHTS = [1, 1, 2];
     const answers = [null, null, null];
 
+    /* ── 단계형: 한 문항씩 카드로 보여주고, 답 선택 시 다음으로 자동 이동 ── */
+    const advEl = document.querySelector('.adv');
+    const questions = [...document.querySelectorAll('.adv-q')];
+    let step = 0;
+
+    // 진행 표시(이전 버튼 + 점 + n/총)를 첫 문항 앞에 삽입
+    const progress = document.createElement('div');
+    progress.className = 'adv-progress';
+    progress.innerHTML =
+      '<button class="adv-back" type="button" aria-label="이전 질문">‹ 이전</button>'
+      + '<div class="adv-dots">' + questions.map(() => '<span class="adv-dot"></span>').join('') + '</div>'
+      + '<span class="adv-step-label"></span>';
+    advEl.insertBefore(progress, questions[0]);
+    const backBtn = progress.querySelector('.adv-back');
+    const dots = [...progress.querySelectorAll('.adv-dot')];
+    const stepLabel = progress.querySelector('.adv-step-label');
+
+    function showStep(i) {
+      step = i;
+      result.innerHTML = '';        // 재진입 시 이전 결과 제거
+      progress.style.display = '';
+      questions.forEach((q, idx) => q.classList.toggle('is-current', idx === i));
+      dots.forEach((d, idx) => {
+        d.classList.toggle('is-current', idx === i);
+        d.classList.toggle('is-done', idx < i);
+      });
+      stepLabel.textContent = (i + 1) + ' / ' + questions.length;
+      backBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
+    }
+    function showResult() {
+      questions.forEach(q => q.classList.remove('is-current'));
+      progress.style.display = 'none';
+      render();
+    }
+    backBtn.addEventListener('click', () => { if (step > 0) showStep(step - 1); });
+
     function card(key, main) {
       const c = CH[key];
       const label = main ? ('핵심 챌린지 · ' + c.area) : ('함께 하면 시너지 · ' + c.area);
@@ -2465,6 +2538,9 @@
           + '</div></div>';
       }
       result.innerHTML = html;
+      const inner = result.querySelector('.adv-res-in');
+      if (inner) inner.insertAdjacentHTML('beforeend',
+        '<button class="adv-restart" type="button">↺ 다시 진단하기</button>');
     }
 
     document.querySelectorAll('.adv-opt').forEach(btn => {
@@ -2476,9 +2552,25 @@
           b.classList.toggle('is-on', on);
           b.setAttribute('aria-pressed', String(on));
         });
-        render();
+        // 선택 하이라이트를 잠깐 보여준 뒤 다음 문항(또는 결과)으로 자동 이동
+        setTimeout(() => {
+          if (q + 1 < questions.length) showStep(q + 1);
+          else showResult();
+        }, 240);
       });
     });
+
+    // 결과의 '다시 진단하기' → 초기화 후 첫 문항으로
+    result.addEventListener('click', (e) => {
+      if (!e.target.closest('.adv-restart')) return;
+      answers[0] = answers[1] = answers[2] = null;
+      document.querySelectorAll('.adv-opt').forEach(b => {
+        b.classList.remove('is-on'); b.setAttribute('aria-pressed', 'false');
+      });
+      showStep(0);
+    });
+
+    showStep(0); // 첫 문항부터 시작
   })();
 
   /* ── 모집 기간 (구글 시트 연동) ── */
