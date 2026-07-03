@@ -73,6 +73,18 @@
     .ba .empty { font-size: 13px; color: var(--text-dim); padding: 14px 0; }
 
     .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
+
+    .apps-list { list-style: none; }
+    .apps-list li { padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
+    .apps-list li:last-child { border-bottom: 0; }
+    .al-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .al-ch { font-weight: 700; font-size: 15px; }
+    .al-date { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+    .al-status { margin-top: 4px; font-size: 12px; }
+    .al-badge { display: inline-block; font-weight: 700; border-radius: 999px; padding: 2px 10px; margin-right: 6px; font-size: 12px; }
+    .al-paid { background: #eaf6ec; color: #1a7f37; }
+    .al-refund { background: var(--action-tint); color: var(--action-dark); }
+    .al-wait { background: var(--surface2); color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -115,6 +127,12 @@
         <h2>코치 코멘트</h2>
         <p class="hint">코치가 남긴 피드백이에요.</p>
         <ul class="comments" id="commentList"></ul>
+      </div>
+
+      <div class="card">
+        <h2>내 신청 내역</h2>
+        <p class="hint">신청하신 챌린지예요. (신청 시 전화번호와 연락처가 같으면 자동으로 연결돼요.)</p>
+        <ul class="apps-list" id="myApps"><li style="color:var(--text-dim);border:0;">불러오는 중…</li></ul>
       </div>
 
       <div class="card">
@@ -222,6 +240,28 @@
         } else {
           slot.innerHTML = '<div class="empty">챌린지를 수료하면 여기에서 비교할 수 있어요.</div>';
         }
+      }
+
+      // 내 신청 내역 (RLS: member_id = 본인)
+      const CH_LABEL_MP = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
+      const myAppsEl = document.getElementById('myApps');
+      const { data: myApps } = await MONC.sb.from('applications')
+        .select('created_at, challenges, total_price, paid, refunded')
+        .eq('member_id', me)
+        .order('created_at', { ascending: false });
+      if (!myApps || !myApps.length) {
+        myAppsEl.innerHTML = '<li style="color:var(--text-dim);border:0;">아직 신청 내역이 없어요. 전화번호를 입력해두면 신청과 자동으로 연결돼요.</li>';
+      } else {
+        myAppsEl.innerHTML = myApps.map(a => {
+          const chs = Array.isArray(a.challenges) ? a.challenges.map(c => `${CH_LABEL_MP[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ') : '';
+          const d = new Date(a.created_at);
+          const badge = a.refunded ? '<span class="al-badge al-refund">환급완료</span>'
+            : (a.paid ? '<span class="al-badge al-paid">입금완료</span>' : '<span class="al-badge al-wait">입금대기</span>');
+          return `<li>
+            <div class="al-top"><span class="al-ch">${esc(chs)}</span><span class="al-date">${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</span></div>
+            <div class="al-status">${badge}<span style="color:var(--text-muted)">${(a.total_price||0).toLocaleString()}원</span></div>
+          </li>`;
+        }).join('');
       }
 
       document.getElementById('loading').style.display = 'none';
