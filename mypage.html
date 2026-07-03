@@ -114,6 +114,17 @@
           <div class="slot after"><div class="tag">After · 수료 후</div><div id="afterSlot"></div></div>
         </div>
       </div>
+
+      <div class="card">
+        <h2>연락처</h2>
+        <p class="hint">신청 내역과 결과를 연결하려면 신청 시 사용한 전화번호를 입력해 주세요.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input id="phoneInput" type="tel" inputmode="numeric" placeholder="010-0000-0000"
+            style="flex:1; min-width:180px; padding:14px; font-size:16px; border:1px solid var(--border); border-radius:var(--radius-xs);">
+          <button id="phoneSave" class="logout" style="padding:14px 20px; font-size:15px;">저장</button>
+        </div>
+        <div id="phoneMsg" style="font-size:13px; color:var(--text-dim); margin-top:8px; min-height:16px;"></div>
+      </div>
     </div>
 
     <div class="loading" id="loading">불러오는 중…</div>
@@ -138,6 +149,17 @@
       const metaBits = [];
       if (profile && profile.email) metaBits.push(profile.email);
       document.getElementById('hMeta').textContent = metaBits.join(' · ');
+
+      // 연락처(phone) 로드 + 저장
+      const phoneInput = document.getElementById('phoneInput');
+      const phoneMsg = document.getElementById('phoneMsg');
+      if (profile && profile.phone) phoneInput.value = profile.phone;
+      document.getElementById('phoneSave').addEventListener('click', async () => {
+        const phone = phoneInput.value.trim();
+        phoneMsg.textContent = '저장 중…';
+        const { error } = await MONC.sb.from('members').update({ phone }).eq('id', me);
+        phoneMsg.textContent = error ? ('저장 실패: ' + error.message) : '저장됐어요.';
+      });
 
       // 날짜별 기록 (RLS 상 내 것만 조회됨)
       const { data: records } = await MONC.sb
