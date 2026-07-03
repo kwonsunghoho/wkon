@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MONC 마이페이지</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6;
+    }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 24px 20px 80px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); }
+    .brand b { color: var(--action); }
+    .logout { font-size: 13px; color: var(--text-muted); background: none; border: 1px solid var(--border);
+              border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+    .logout:hover { border-color: var(--action); color: var(--action); }
+
+    .hello { margin: 20px 0 6px; font-size: 26px; font-weight: 700; }
+    .hello .name { color: var(--action); }
+    .meta { color: var(--text-muted); font-size: 15px; margin-bottom: 24px; }
+
+    .card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; }
+    .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .card .hint { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; }
+
+    /* 진행률 요약 */
+    .summary { display: flex; gap: 12px; flex-wrap: wrap; }
+    .stat { flex: 1; min-width: 90px; background: var(--surface2); border-radius: var(--radius-sm);
+            padding: 14px; text-align: center; }
+    .stat .num { font-size: 28px; font-weight: 700; }
+    .stat .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .stat.ok .num { color: #1a7f37; }
+    .stat.no .num { color: var(--action-dark); }
+
+    /* 14일 그리드 */
+    .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .day { border-radius: var(--radius-xs); padding: 8px 4px; text-align: center; font-size: 12px;
+           border: 1px solid var(--border-soft); background: #fff; position: relative; cursor: default; }
+    .day .dn { font-weight: 700; font-size: 13px; }
+    .day .ic { font-size: 15px; margin-top: 2px; display: block; height: 18px; }
+    .day.success { background: #eaf6ec; border-color: #bfe3c6; }
+    .day.success .ic { color: #1a7f37; }
+    .day.fail { background: var(--action-tint); border-color: #f2c9b8; }
+    .day.fail .ic { color: var(--action-dark); }
+    .day.pending { color: var(--text-dim); }
+    .day.has-comment::after { content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px;
+           border-radius: 50%; background: var(--action); }
+
+    /* 코멘트 목록 */
+    .comments { list-style: none; }
+    .comments li { padding: 12px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 12px; }
+    .comments li:last-child { border-bottom: 0; }
+    .cm-day { flex: 0 0 52px; font-weight: 700; font-size: 13px; color: var(--text-muted); }
+    .cm-body { font-size: 15px; }
+    .cm-status { font-size: 12px; font-weight: 700; margin-left: 6px; }
+    .cm-status.ok { color: #1a7f37; } .cm-status.no { color: var(--action-dark); }
+
+    /* Before/After */
+    .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .ba { grid-template-columns: 1fr; } .days { grid-template-columns: repeat(7, 1fr); } }
+    .ba .slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
+    .ba .slot .tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 10px; }
+    .ba .slot.after .tag { color: var(--action); }
+    .ba audio { width: 100%; }
+    .ba .empty { font-size: 13px; color: var(--text-dim); padding: 14px 0; }
+
+    .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">MO<b>N</b>C</div>
+      <button class="logout" id="logoutBtn">로그아웃</button>
+    </div>
+
+    <div id="content" style="display:none;">
+      <h1 class="hello"><span class="name" id="hName">회원</span>님의 챌린지</h1>
+      <p class="meta" id="hMeta"></p>
+
+      <div class="card">
+        <h2>진행 요약</h2>
+        <p class="hint">2주(14일) 미션 결과예요.</p>
+        <div class="summary">
+          <div class="stat ok"><div class="num" id="sOk">0</div><div class="lbl">성공</div></div>
+          <div class="stat no"><div class="num" id="sNo">0</div><div class="lbl">아쉬움</div></div>
+          <div class="stat"><div class="num" id="sLeft">14</div><div class="lbl">남은 미션</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>날짜별 결과</h2>
+        <p class="hint">초록은 성공, 주황은 아쉬움, 회색은 아직이에요. 점(•)이 있으면 코멘트가 있어요.</p>
+        <div class="days" id="daysGrid"></div>
+      </div>
+
+      <div class="card">
+        <h2>코치 코멘트</h2>
+        <p class="hint">코치가 남긴 피드백이에요.</p>
+        <ul class="comments" id="commentList"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Before / After</h2>
+        <p class="hint">입과 전과 수료 후 목소리를 비교해보세요.</p>
+        <div class="ba">
+          <div class="slot before"><div class="tag">Before · 입과 전</div><div id="beforeSlot"></div></div>
+          <div class="slot after"><div class="tag">After · 수료 후</div><div id="afterSlot"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">불러오는 중…</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', () => MONC.signOut());
+
+    function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+    (async () => {
+      const session = await MONC.requireSession();
+      if (!session) return;
+
+      const me = session.user.id;
+      const profile = await MONC.getMyProfile();
+
+      // 이름/메타
+      document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';
+      const metaBits = [];
+      if (profile && profile.email) metaBits.push(profile.email);
+      document.getElementById('hMeta').textContent = metaBits.join(' · ');
+
+      // 날짜별 기록 (RLS 상 내 것만 조회됨)
+      const { data: records } = await MONC.sb
+        .from('daily_records')
+        .select('day_number, status, comment')
+        .eq('member_id', me)
+        .order('day_number', { ascending: true });
+
+      const byDay = {};
+      (records || []).forEach(r => { byDay[r.day_number] = r; });
+
+      let ok = 0, no = 0;
+      const gridEl = document.getElementById('daysGrid');
+      let gridHtml = '';
+      for (let d = 1; d <= MONC.TOTAL_DAYS; d++) {
+        const r = byDay[d];
+        let cls = 'pending', ic = '·';
+        if (r && r.status === 'success') { cls = 'success'; ic = '○'; ok++; }
+        else if (r && r.status === 'fail') { cls = 'fail'; ic = '×'; no++; }
+        const hasC = r && r.comment ? ' has-comment' : '';
+        gridHtml += `<div class="day ${cls}${hasC}"><span class="dn">${d}일</span><span class="ic">${ic}</span></div>`;
+      }
+      gridEl.innerHTML = gridHtml;
+
+      document.getElementById('sOk').textContent = ok;
+      document.getElementById('sNo').textContent = no;
+      document.getElementById('sLeft').textContent = MONC.TOTAL_DAYS - ok - no;
+
+      // 코멘트 목록
+      const cmEl = document.getElementById('commentList');
+      const withComments = (records || []).filter(r => r.comment && r.comment.trim());
+      if (!withComments.length) {
+        cmEl.innerHTML = '<li><span class="cm-body" style="color:var(--text-dim)">아직 코멘트가 없어요.</span></li>';
+      } else {
+        cmEl.innerHTML = withComments.map(r => {
+          const st = r.status === 'success'
+            ? '<span class="cm-status ok">성공</span>'
+            : '<span class="cm-status no">아쉬움</span>';
+          return `<li><span class="cm-day">${r.day_number}일차</span><span class="cm-body">${esc(r.comment)}${st}</span></li>`;
+        }).join('');
+      }
+
+      // Before / After 음성
+      const { data: recs } = await MONC.sb
+        .from('recordings')
+        .select('type, storage_path')
+        .eq('member_id', me);
+      const recMap = {};
+      (recs || []).forEach(x => { recMap[x.type] = x.storage_path; });
+
+      for (const type of ['before', 'after']) {
+        const slot = document.getElementById(type + 'Slot');
+        if (recMap[type]) {
+          const url = await MONC.getSignedUrl(recMap[type]);
+          slot.innerHTML = url
+            ? `<audio controls preload="none" src="${url}"></audio>`
+            : '<div class="empty">재생 링크를 불러오지 못했어요.</div>';
+        } else {
+          slot.innerHTML = '<div class="empty">아직 등록된 파일이 없어요.</div>';
+        }
+      }
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+    })();
+  </script>
+</body>
+</html>

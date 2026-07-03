@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MONC 로그인</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: linear-gradient(160deg, var(--bg) 0%, var(--bg3) 100%);
+      color: var(--text); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      width: 100%; max-width: 400px; padding: 44px 32px; text-align: center;
+    }
+    .logo { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); }
+    .logo b { color: var(--action); }
+    .sub { margin-top: 10px; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+    .g-btn {
+      margin-top: 32px; width: 100%; display: flex; align-items: center; justify-content: center;
+      gap: 10px; padding: 14px 20px; font-size: 16px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff;
+      color: var(--text); transition: box-shadow .2s, transform .1s;
+    }
+    .g-btn:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+    .g-btn:disabled { opacity: .55; cursor: default; transform: none; }
+    .g-btn svg { width: 20px; height: 20px; }
+    .status { margin-top: 18px; font-size: 13px; color: var(--text-dim); min-height: 18px; }
+    .status.err { color: var(--action-dark); }
+    .foot { margin-top: 28px; font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+    .foot a { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">MO<b>N</b>C 챌린지</div>
+    <p class="sub">2주 챌린지 결과 확인은<br>구글 계정으로 로그인하세요.</p>
+
+    <button class="g-btn" id="googleBtn">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      <span id="btnLabel">구글로 로그인</span>
+    </button>
+
+    <div class="status" id="status"></div>
+
+    <p class="foot">
+      로그인하면 <a href="terms.html">이용약관</a> 및 <a href="privacy.html">개인정보처리방침</a>에<br>동의하는 것으로 간주됩니다.
+    </p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    const statusEl = document.getElementById('status');
+    const btn = document.getElementById('googleBtn');
+    function setStatus(t, isErr) { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!isErr); }
+
+    // 역할에 따라 알맞은 페이지로 보냄
+    async function routeByRole() {
+      const profile = await MONC.getMyProfile();
+      if (!profile) return; // 프로필이 아직 없으면(드묾) 그대로 로그인 화면 유지
+      window.location.replace(profile.role === 'admin' ? 'admin.html' : 'mypage.html');
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      setStatus('구글 로그인 창으로 이동 중…');
+      // 로그인 후 이 페이지로 돌아와서 routeByRole() 이 분기 처리
+      const { error } = await MONC.signInWithGoogle(window.location.origin + window.location.pathname);
+      if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = false; }
+    });
+
+    // 이미 로그인돼 있으면(또는 방금 로그인하고 돌아왔으면) 바로 분기
+    (async () => {
+      if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
+      const session = await MONC.getSession();
+      if (session) { setStatus('로그인 확인 중…'); routeByRole(); }
+    })();
+  </script>
+</body>
+</html>

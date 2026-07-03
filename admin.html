@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MONC 관리자</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.55; }
+    .topbar { display: flex; align-items: center; justify-content: space-between;
+              padding: 14px 22px; background: var(--surface); border-bottom: 1px solid var(--border-soft); position: sticky; top: 0; z-index: 10; }
+    .brand { font-size: 19px; font-weight: 700; color: var(--primary); }
+    .brand b { color: var(--action); }
+    .badge { font-size: 11px; font-weight: 700; color: #fff; background: var(--action);
+             border-radius: 999px; padding: 3px 9px; margin-left: 8px; vertical-align: middle; }
+    .logout { font-size: 13px; color: var(--text-muted); background: none; border: 1px solid var(--border);
+              border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+    .logout:hover { border-color: var(--action); color: var(--action); }
+
+    .layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
+    @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } .side { border-right: 0; border-bottom: 1px solid var(--border-soft); } }
+
+    .side { background: var(--surface); border-right: 1px solid var(--border-soft); padding: 16px; }
+    .side h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); margin-bottom: 10px; }
+    .search { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs);
+              font-size: 14px; margin-bottom: 12px; }
+    .mlist { list-style: none; display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
+    .mitem { padding: 10px 12px; border-radius: var(--radius-xs); cursor: pointer; border: 1px solid transparent; }
+    .mitem:hover { background: var(--surface2); }
+    .mitem.active { background: var(--action-tint); border-color: #f2c9b8; }
+    .mitem .mn { font-weight: 600; font-size: 15px; }
+    .mitem .me { font-size: 12px; color: var(--text-dim); }
+    .mitem .madm { font-size: 10px; color: var(--action); font-weight: 700; }
+    .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
+
+    .main { padding: 24px; }
+    .empty-main { color: var(--text-dim); text-align: center; padding: 80px 20px; }
+
+    .panel { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+             box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; }
+    .panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+
+    .prow { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 12px; color: var(--text-muted); }
+    .field input, .field select { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; }
+    .field input[readonly] { background: var(--surface2); color: var(--text-muted); }
+
+    .btn { font-size: 14px; font-weight: 600; border: 0; border-radius: var(--radius-xs); padding: 9px 16px; cursor: pointer; }
+    .btn-action { background: var(--action); color: #fff; }
+    .btn-action:hover { background: var(--action-dark); }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm { padding: 6px 10px; font-size: 13px; }
+
+    /* 14일 편집 테이블 */
+    .drow { display: grid; grid-template-columns: 60px 220px 1fr 64px; gap: 10px; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+    @media (max-width: 640px) { .drow { grid-template-columns: 44px 1fr; row-gap: 6px; } .drow .d-comment, .drow .d-save { grid-column: 1 / -1; } }
+    .drow .d-num { font-weight: 700; font-size: 14px; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+    .seg button { border: 0; background: #fff; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); }
+    .seg button.on-ok { background: #1a7f37; color: #fff; }
+    .seg button.on-no { background: var(--action); color: #fff; }
+    .seg button.on-clear { background: var(--text-dim); color: #fff; }
+    .d-comment input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    .d-save button { width: 100%; }
+    .drow.dirty { background: #fffaf0; }
+
+    .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .ba { grid-template-columns: 1fr; } }
+    .ba .slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; }
+    .ba .slot .tag { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .ba .slot.after .tag { color: var(--action); }
+    .ba audio { width: 100%; margin: 8px 0; }
+    .ba .slot .cur { font-size: 12px; color: var(--text-dim); word-break: break-all; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary);
+             color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
+    .toast.show { opacity: 1; }
+    .loading { text-align: center; color: var(--text-dim); padding: 80px 0; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">MO<b>N</b>C <span class="badge">관리자</span></div>
+    <button class="logout" id="logoutBtn">로그아웃</button>
+  </div>
+
+  <div class="loading" id="loading">확인 중…</div>
+
+  <div class="layout" id="layout" style="display:none;">
+    <aside class="side">
+      <h2>회원 (<span id="mCount">0</span>)</h2>
+      <input class="search" id="search" placeholder="이름·이메일 검색" />
+      <ul class="mlist" id="mlist"></ul>
+
+      <div class="newcohort">
+        <h2>기수 추가</h2>
+        <div class="field" style="margin-bottom:8px;">
+          <input id="cohortName" placeholder="예: MONC 1기" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        </div>
+        <button class="btn btn-ghost btn-sm" id="addCohortBtn">+ 기수 만들기</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="empty-main" id="emptyMain">왼쪽에서 회원을 선택하세요.</div>
+      <div id="detail" style="display:none;"></div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    const sb = () => MONC.sb;
+    let members = [], cohorts = [], currentId = null;
+
+    function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
+    function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => MONC.signOut());
+
+    async function loadCohorts() {
+      const { data } = await sb().from('cohorts').select('*').order('created_at', { ascending: true });
+      cohorts = data || [];
+    }
+
+    async function loadMembers() {
+      const { data } = await sb().from('members').select('*').order('created_at', { ascending: true });
+      members = data || [];
+      renderMemberList();
+    }
+
+    function renderMemberList() {
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const list = members.filter(m =>
+        !q || (m.name && m.name.toLowerCase().includes(q)) || (m.email && m.email.toLowerCase().includes(q)));
+      document.getElementById('mCount').textContent = members.length;
+      document.getElementById('mlist').innerHTML = list.map(m => `
+        <li class="mitem ${m.id === currentId ? 'active' : ''}" data-id="${m.id}">
+          <div class="mn">${esc(m.name || '(이름 없음)')} ${m.role === 'admin' ? '<span class="madm">관리자</span>' : ''}</div>
+          <div class="me">${esc(m.email || '이메일 없음')}</div>
+        </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
+      document.querySelectorAll('.mitem').forEach(el => el.addEventListener('click', () => selectMember(el.dataset.id)));
+    }
+
+    async function selectMember(id) {
+      currentId = id;
+      renderMemberList();
+      document.getElementById('emptyMain').style.display = 'none';
+      const detail = document.getElementById('detail');
+      detail.style.display = 'block';
+      detail.innerHTML = '<div class="loading">불러오는 중…</div>';
+
+      const m = members.find(x => x.id === id);
+      const [{ data: records }, { data: recs }] = await Promise.all([
+        sb().from('daily_records').select('day_number, status, comment').eq('member_id', id),
+        sb().from('recordings').select('type, storage_path').eq('member_id', id),
+      ]);
+      const byDay = {}; (records || []).forEach(r => byDay[r.day_number] = r);
+      const recMap = {}; (recs || []).forEach(r => recMap[r.type] = r.storage_path);
+
+      const cohortOpts = ['<option value="">(미배정)</option>']
+        .concat(cohorts.map(c => `<option value="${c.id}" ${m.cohort_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
+
+      let daysHtml = '';
+      for (let d = 1; d <= MONC.TOTAL_DAYS; d++) {
+        const r = byDay[d] || {};
+        const st = r.status || '';
+        daysHtml += `
+        <div class="drow" data-day="${d}">
+          <div class="d-num">${d}일</div>
+          <div class="seg" data-status="${st}">
+            <button type="button" data-set="success" class="${st==='success'?'on-ok':''}">성공</button>
+            <button type="button" data-set="fail" class="${st==='fail'?'on-no':''}">아쉬움</button>
+            <button type="button" data-set="" class="${st===''?'on-clear':''}">미정</button>
+          </div>
+          <div class="d-comment"><input type="text" value="${esc(r.comment || '')}" placeholder="코멘트(선택)"></div>
+          <div class="d-save"><button type="button" class="btn btn-action btn-sm">저장</button></div>
+        </div>`;
+      }
+
+      detail.innerHTML = `
+        <div class="panel">
+          <h3>회원 정보</h3>
+          <div class="prow">
+            <div class="field"><label>이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
+            <div class="field"><label>이메일</label><input value="${esc(m.email || '')}" readonly></div>
+            <div class="field"><label>기수</label><select id="fCohort">${cohortOpts}</select></div>
+            <div class="field"><label>권한</label><input value="${m.role === 'admin' ? '관리자' : '회원'}" readonly></div>
+            <button class="btn btn-action" id="saveProfile">정보 저장</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>날짜별 미션 (1~14일)</h3>
+          <div id="daysEdit">${daysHtml}</div>
+        </div>
+
+        <div class="panel">
+          <h3>Before / After 음성</h3>
+          <div class="ba">
+            ${baSlot('before', recMap.before)}
+            ${baSlot('after', recMap.after)}
+          </div>
+        </div>`;
+
+      wireDetail(id, recMap);
+    }
+
+    function baSlot(type, path) {
+      const label = type === 'before' ? 'Before · 입과 전' : 'After · 수료 후';
+      return `<div class="slot ${type}">
+        <div class="tag">${label}</div>
+        <div id="cur-${type}" class="cur">${path ? '등록됨: ' + esc(path) : '아직 없음'}</div>
+        <div id="play-${type}"></div>
+        <input type="file" id="file-${type}" accept="audio/*" style="font-size:12px;margin-top:8px;width:100%">
+        <button class="btn btn-ghost btn-sm" data-upload="${type}" style="margin-top:8px">업로드</button>
+      </div>`;
+    }
+
+    function wireDetail(id, recMap) {
+      // 상태 세그먼트 토글
+      document.querySelectorAll('#daysEdit .seg').forEach(seg => {
+        seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+          const val = b.dataset.set;
+          seg.dataset.status = val;
+          seg.querySelectorAll('button').forEach(x => x.classList.remove('on-ok','on-no','on-clear'));
+          b.classList.add(val === 'success' ? 'on-ok' : val === 'fail' ? 'on-no' : 'on-clear');
+          seg.closest('.drow').classList.add('dirty');
+        }));
+      });
+      document.querySelectorAll('#daysEdit .d-comment input').forEach(inp =>
+        inp.addEventListener('input', () => inp.closest('.drow').classList.add('dirty')));
+
+      // 날짜별 저장
+      document.querySelectorAll('#daysEdit .d-save button').forEach(btn => btn.addEventListener('click', async () => {
+        const row = btn.closest('.drow');
+        const day = parseInt(row.dataset.day, 10);
+        const status = row.querySelector('.seg').dataset.status;
+        const comment = row.querySelector('.d-comment input').value.trim() || null;
+        btn.disabled = true; btn.textContent = '…';
+        try {
+          if (!status) {
+            // 미정 → 기존 기록 삭제
+            await sb().from('daily_records').delete().eq('member_id', id).eq('day_number', day);
+          } else {
+            const { error } = await sb().from('daily_records')
+              .upsert({ member_id: id, day_number: day, status, comment }, { onConflict: 'member_id,day_number' });
+            if (error) throw error;
+          }
+          row.classList.remove('dirty');
+          toast(day + '일차 저장됨');
+        } catch (e) { alert('저장 실패: ' + e.message); }
+        btn.disabled = false; btn.textContent = '저장';
+      }));
+
+      // 회원 정보 저장 (이름 + 기수)
+      document.getElementById('saveProfile').addEventListener('click', async () => {
+        const name = document.getElementById('fName').value.trim() || null;
+        const cohort_id = document.getElementById('fCohort').value || null;
+        const { error } = await sb().from('members').update({ name, cohort_id }).eq('id', id);
+        if (error) { alert('저장 실패: ' + error.message); return; }
+        const m = members.find(x => x.id === id); if (m) { m.name = name; m.cohort_id = cohort_id; }
+        renderMemberList();
+        toast('회원 정보 저장됨');
+      });
+
+      // 음성 업로드
+      document.querySelectorAll('[data-upload]').forEach(btn => btn.addEventListener('click', async () => {
+        const type = btn.dataset.upload;
+        const file = document.getElementById('file-' + type).files[0];
+        if (!file) { alert('파일을 선택하세요.'); return; }
+        const ext = (file.name.split('.').pop() || 'mp3').toLowerCase();
+        const path = `${id}/${type}.${ext}`;
+        btn.disabled = true; btn.textContent = '업로드 중…';
+        try {
+          const up = await sb().storage.from('recordings').upload(path, file, { upsert: true });
+          if (up.error) throw up.error;
+          const { error } = await sb().from('recordings')
+            .upsert({ member_id: id, type, storage_path: path }, { onConflict: 'member_id,type' });
+          if (error) throw error;
+          document.getElementById('cur-' + type).textContent = '등록됨: ' + path;
+          const url = await MONC.getSignedUrl(path);
+          document.getElementById('play-' + type).innerHTML = url ? `<audio controls src="${url}"></audio>` : '';
+          toast((type === 'before' ? 'Before' : 'After') + ' 업로드 완료');
+        } catch (e) { alert('업로드 실패: ' + e.message); }
+        btn.disabled = false; btn.textContent = '업로드';
+      }));
+
+      // 기존 음성 미리듣기 링크 생성
+      ['before','after'].forEach(async type => {
+        if (recMap[type]) {
+          const url = await MONC.getSignedUrl(recMap[type]);
+          if (url) document.getElementById('play-' + type).innerHTML = `<audio controls preload="none" src="${url}"></audio>`;
+        }
+      });
+    }
+
+    // 기수 추가
+    document.getElementById('addCohortBtn').addEventListener('click', async () => {
+      const name = document.getElementById('cohortName').value.trim();
+      if (!name) { alert('기수 이름을 입력하세요.'); return; }
+      const { error } = await sb().from('cohorts').insert({ name });
+      if (error) { alert('추가 실패: ' + error.message); return; }
+      document.getElementById('cohortName').value = '';
+      await loadCohorts();
+      toast('기수 추가됨');
+    });
+
+    document.getElementById('search').addEventListener('input', renderMemberList);
+
+    // 진입 가드 + 초기 로드
+    (async () => {
+      const admin = await MONC.requireAdmin();
+      if (!admin) return;
+      await loadCohorts();
+      await loadMembers();
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('layout').style.display = 'grid';
+    })();
+  </script>
+</body>
+</html>
