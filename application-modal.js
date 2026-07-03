@@ -33,8 +33,8 @@
     .app-modal-input:focus { outline:none; border-color:#241A12; box-shadow:0 0 0 3px rgba(36,26,18,.1); }
     .app-modal-btn {
       width:100%; padding:14px;
-      background:linear-gradient(135deg,#241A12,#9A5B1E);
-      color:#fff; border:none; border-radius:10px;
+      background:var(--action);
+      color:var(--action-ink); border:none; border-radius:10px;
       font-weight:700; font-size:15px; cursor:pointer;
       margin-top:8px; transition:all .25s; font-family:inherit;
     }
