@@ -327,7 +327,7 @@ function _fallbackCopy(text, cb) {
 let _isSubmitting = false;
 
 async function submitApplication() {
-  if (_isSubmitting) return;  // 이미 전송 중이면 무시
+  if (_isSubmitting) return;
 
   const name    = document.getElementById('appName').value.trim();
   const phone   = document.getElementById('appPhone').value.trim();
@@ -337,14 +337,16 @@ async function submitApplication() {
     alert('이름, 전화번호, 보증금 환급 계좌를 모두 입력해주세요.');
     return;
   }
-
   const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
   if (checkboxes.length === 0) {
     alert('신청할 챌린지를 선택해주세요.');
     return;
   }
+  if (!window.MONC || !window.MONC.sb) {
+    alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.');
+    return;
+  }
 
-  // 버튼 비활성화 + 로딩 텍스트
   _isSubmitting = true;
   const btn = document.querySelector('.app-modal-btn');
   const originalText = btn.textContent;
@@ -353,29 +355,34 @@ async function submitApplication() {
   btn.style.opacity = '0.7';
   btn.style.cursor  = 'not-allowed';
 
-  const challenges = Array.from(checkboxes).map(cb => ({ name: cb.dataset.name, price: parseInt(cb.dataset.price) }));
+  try { if (typeof loadChallengeStatuses === 'function') await loadChallengeStatuses(); } catch (e) {}
+  const rounds = window._challengeRounds || {};
+  const challenges = Array.from(checkboxes).map(cb => ({
+    challenge: cb.dataset.recruitId,
+    name: cb.dataset.name,
+    round: (rounds[cb.dataset.recruitId] != null ? rounds[cb.dataset.recruitId] : null),
+    price: parseInt(cb.dataset.price)
+  }));
   let totalPrice = 0;
   checkboxes.forEach(cb => { totalPrice += parseInt(cb.dataset.price) + parseInt(cb.dataset.deposit); });
 
   try {
-    const res    = await fetch(APPLICATION_API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action:'application', name, phone, account, challenges, totalPrice, timestamp: new Date().toLocaleString('ko-KR') })
+    const { error } = await window.MONC.sb.from('applications').insert({
+      name: name, phone: phone, refund_account: account,
+      challenges: challenges, total_price: totalPrice
     });
-    const result = await res.json();
-    alert(result.message);
-    if (result.success) {
-      closeApplicationModal();
-      document.getElementById('appName').value    = '';
-      document.getElementById('appPhone').value   = '';
-      document.getElementById('appAccount').value = '';
-      document.querySelectorAll('.challenge-checkbox').forEach(cb => cb.checked = false);
-      updateTotalPrice();
-    }
-  } catch(e) {
+    if (error) throw error;
+    alert('신청이 완료되었습니다! 확인 후 안내드리겠습니다.');
+    closeApplicationModal();
+    document.getElementById('appName').value    = '';
+    document.getElementById('appPhone').value   = '';
+    document.getElementById('appAccount').value = '';
+    document.querySelectorAll('.challenge-checkbox').forEach(cb => cb.checked = false);
+    updateTotalPrice();
+  } catch (error) {
+    console.error('신청 오류:', error);
     alert('오류가 발생했습니다. 다시 시도해주세요.');
   } finally {
-    // 성공/실패 모두 버튼 원상복구
     _isSubmitting = false;
     btn.disabled = false;
     btn.textContent = originalText;
