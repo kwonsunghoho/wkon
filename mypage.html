@@ -164,9 +164,16 @@
       const me = session.user.id;
       const profile = await MONC.getMyProfile();
 
-      // 이름/메타
+      // 이름/메타 (소속 기수 · 챌린지 기간 · 이메일 순. 없는 항목은 생략)
       document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';
       const metaBits = [];
+      const cohort = profile && profile.cohorts;   // FK 조인 결과(없으면 null)
+      if (cohort && cohort.name) metaBits.push(cohort.name);
+      if (cohort && cohort.start_date && cohort.end_date) {
+        // '2026-07-10' → '7/10' 형태로 간결하게
+        const md = s => { const p = String(s).split('-'); return p.length === 3 ? (+p[1]) + '/' + (+p[2]) : s; };
+        metaBits.push(md(cohort.start_date) + '~' + md(cohort.end_date));
+      }
       if (profile && profile.email) metaBits.push(profile.email);
       document.getElementById('hMeta').textContent = metaBits.join(' · ');
 
