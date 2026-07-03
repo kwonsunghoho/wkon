@@ -19,6 +19,21 @@
               border-radius: 999px; padding: 6px 14px; cursor: pointer; }
     .logout:hover { border-color: var(--action); color: var(--action); }
 
+    .tabs { display: flex; gap: 4px; padding: 0 22px; background: var(--surface); border-bottom: 1px solid var(--border-soft); position: sticky; top: 57px; z-index: 9; overflow-x: auto; }
+    .tabbtn { border: 0; background: none; padding: 12px 16px; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tabbtn.active { color: var(--action); border-bottom-color: var(--action); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .rounds-wrap { padding: 24px; max-width: 900px; }
+    .round-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .round-form .field label { font-size: 12px; color: var(--text-muted); }
+    .round-form input, .round-form select { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; }
+    .round-list { display: flex; flex-direction: column; gap: 8px; }
+    .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .round-item .ri-main { font-weight: 700; font-size: 15px; }
+    .round-item .ri-sub { font-size: 13px; color: var(--text-muted); }
+    .round-item .ri-del { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+
     .layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
     @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } .side { border-right: 0; border-bottom: 1px solid var(--border-soft); } }
 
@@ -92,8 +107,14 @@
     <button class="logout" id="logoutBtn">로그아웃</button>
   </div>
 
+  <div class="tabs" id="tabs" style="display:none;">
+    <button class="tabbtn active" data-tab="members">회원 관리</button>
+    <button class="tabbtn" data-tab="rounds">모집일정</button>
+  </div>
+
   <div class="loading" id="loading">확인 중…</div>
 
+  <div class="tab-panel active" id="panel-members">
   <div class="layout" id="layout" style="display:none;">
     <aside class="side">
       <h2>회원 (<span id="mCount">0</span>)</h2>
@@ -113,6 +134,28 @@
       <div class="empty-main" id="emptyMain">왼쪽에서 회원을 선택하세요.</div>
       <div id="detail" style="display:none;"></div>
     </main>
+  </div>
+
+  </div><!-- /panel-members -->
+
+  <div class="tab-panel" id="panel-rounds">
+    <div class="rounds-wrap">
+      <form class="round-form" id="roundForm">
+        <div class="field"><label>챌린지</label>
+          <select id="rfChallenge">
+            <option value="voice">보이스</option>
+            <option value="expression">표현력</option>
+            <option value="spinning">스피닝</option>
+            <option value="answer">답변</option>
+          </select></div>
+        <div class="field"><label>기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
+        <div class="field"><label>모집 시작</label><input id="rfStart" type="date"></div>
+        <div class="field"><label>모집 마감</label><input id="rfEnd" type="date"></div>
+        <div class="field"><label>프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
+        <button class="btn btn-action" type="submit">추가/수정</button>
+      </form>
+      <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -321,6 +364,59 @@
 
     document.getElementById('search').addEventListener('input', renderMemberList);
 
+    // ── 탭 전환 ──
+    function initTabs() {
+      document.querySelectorAll('.tabbtn').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('.tabbtn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        document.getElementById('panel-' + b.dataset.tab).classList.add('active');
+      }));
+    }
+
+    // ── 모집일정(challenge_rounds) CRUD ──
+    const CH_LABEL = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
+
+    async function loadRounds() {
+      const listEl = document.getElementById('roundList');
+      const { data, error } = await MONC.sb.from('challenge_rounds')
+        .select('*').order('challenge').order('round');
+      if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 모집일정이 없습니다.</div>'; return; }
+      listEl.innerHTML = data.map(r => `
+        <div class="round-item">
+          <div>
+            <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
+            <div class="ri-sub">모집 ${r.recruit_start} ~ ${r.recruit_end}${r.program_start ? ' · 시작 ' + r.program_start : ''}</div>
+          </div>
+          <button class="ri-del" data-id="${r.id}">삭제</button>
+        </div>`).join('');
+      listEl.querySelectorAll('.ri-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 기수를 삭제할까요?')) return;
+        const { error } = await MONC.sb.from('challenge_rounds').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadRounds();
+      }));
+    }
+
+    document.getElementById('roundForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const row = {
+        challenge: document.getElementById('rfChallenge').value,
+        round: parseInt(document.getElementById('rfRound').value, 10),
+        recruit_start: document.getElementById('rfStart').value,
+        recruit_end: document.getElementById('rfEnd').value,
+        program_start: document.getElementById('rfProgram').value || null,
+      };
+      if (!row.round || !row.recruit_start || !row.recruit_end) { alert('기수·모집 시작·마감을 입력하세요.'); return; }
+      const { error } = await MONC.sb.from('challenge_rounds')
+        .upsert(row, { onConflict: 'challenge,round' });
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast('저장됨');
+      document.getElementById('rfRound').value = '';
+      loadRounds();
+    });
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();
@@ -329,6 +425,9 @@
       await loadMembers();
       document.getElementById('loading').style.display = 'none';
       document.getElementById('layout').style.display = 'grid';
+      document.getElementById('tabs').style.display = 'flex';
+      initTabs();
+      loadRounds();
     })();
   </script>
 </body>
