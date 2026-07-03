@@ -74,7 +74,13 @@
     .search { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs);
               font-size: 14px; margin-bottom: 12px; }
     .mlist { list-style: none; display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
-    .mitem { padding: 10px 12px; border-radius: var(--radius-xs); cursor: pointer; border: 1px solid transparent; }
+    .mitem { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-xs); border: 1px solid transparent; }
+    .mitem .minfo { flex: 1; min-width: 0; cursor: pointer; }
+    .mchk { width: 16px; height: 16px; flex: 0 0 auto; cursor: pointer; }
+    .bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 10px; background: var(--surface2); border-radius: var(--radius-xs); }
+    .bulk-bar label { font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+    .bulk-bar select { padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; max-width: 130px; }
+    .bulk-bar .bulk-count { font-size: 12px; color: var(--action-dark); font-weight: 700; margin-left: auto; }
     .mitem:hover { background: var(--surface2); }
     .mitem.active { background: var(--action-tint); border-color: #f2c9b8; }
     .mitem .mn { font-weight: 600; font-size: 15px; }
@@ -153,6 +159,13 @@
     <aside class="side">
       <h2>회원 (<span id="mCount">0</span>)</h2>
       <input class="search" id="search" placeholder="이름·이메일 검색" />
+      <div class="bulk-bar">
+        <label><input type="checkbox" id="selAll"> 전체</label>
+        <label><input type="checkbox" id="unassignedOnly"> 미배정만</label>
+        <select id="bulkCohort"><option value="">기수 선택…</option></select>
+        <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
+        <span class="bulk-count" id="selCount"></span>
+      </div>
       <ul class="mlist" id="mlist"></ul>
 
       <div class="newcohort">
@@ -222,6 +235,8 @@
   <script>
     const sb = () => MONC.sb;
     let members = [], cohorts = [], currentId = null;
+    const selected = new Set();   // 일괄 배정용으로 체크된 회원 id
+    let visibleIds = [];          // 현재 필터/검색으로 보이는 회원 id (전체선택 대상)
 
     function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -231,6 +246,13 @@
     async function loadCohorts() {
       const { data } = await sb().from('cohorts').select('*').order('created_at', { ascending: true });
       cohorts = data || [];
+      const sel = document.getElementById('bulkCohort');
+      if (sel) {
+        const keep = sel.value;   // 선택 중이던 기수 유지
+        sel.innerHTML = '<option value="">기수 선택…</option>' +
+          cohorts.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+        sel.value = keep;
+      }
     }
 
     async function loadMembers() {
@@ -241,15 +263,36 @@
 
     function renderMemberList() {
       const q = document.getElementById('search').value.trim().toLowerCase();
-      const list = members.filter(m =>
-        !q || (m.name && m.name.toLowerCase().includes(q)) || (m.email && m.email.toLowerCase().includes(q)));
+      const unassignedOnly = document.getElementById('unassignedOnly').checked;
+      const list = members.filter(m => {
+        if (unassignedOnly && m.cohort_id) return false;
+        if (!q) return true;
+        return (m.name && m.name.toLowerCase().includes(q)) || (m.email && m.email.toLowerCase().includes(q));
+      });
+      visibleIds = list.map(m => m.id);
       document.getElementById('mCount').textContent = members.length;
       document.getElementById('mlist').innerHTML = list.map(m => `
         <li class="mitem ${m.id === currentId ? 'active' : ''}" data-id="${m.id}">
-          <div class="mn">${esc(m.name || '(이름 없음)')} ${m.role === 'admin' ? '<span class="madm">관리자</span>' : ''}</div>
-          <div class="me">${esc(m.email || '이메일 없음')}</div>
+          <input type="checkbox" class="mchk" data-id="${m.id}" ${selected.has(m.id) ? 'checked' : ''}>
+          <div class="minfo" data-id="${m.id}">
+            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.role === 'admin' ? '<span class="madm">관리자</span>' : ''}</div>
+            <div class="me">${esc(m.email || '이메일 없음')}</div>
+          </div>
         </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
-      document.querySelectorAll('.mitem').forEach(el => el.addEventListener('click', () => selectMember(el.dataset.id)));
+      document.querySelectorAll('.minfo').forEach(el => el.addEventListener('click', () => selectMember(el.dataset.id)));
+      document.querySelectorAll('.mchk').forEach(cb => cb.addEventListener('change', () => {
+        if (cb.checked) selected.add(cb.dataset.id); else selected.delete(cb.dataset.id);
+        syncBulkUI();
+      }));
+      syncBulkUI();
+    }
+
+    // 선택 개수 → 카운트/배정버튼/전체선택 체크박스 상태 동기화
+    function syncBulkUI() {
+      const n = selected.size;
+      document.getElementById('selCount').textContent = n ? (n + '명 선택') : '';
+      document.getElementById('bulkAssign').disabled = !n;
+      document.getElementById('selAll').checked = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
     }
 
     async function selectMember(id) {
@@ -420,6 +463,25 @@
     });
 
     document.getElementById('search').addEventListener('input', renderMemberList);
+    document.getElementById('unassignedOnly').addEventListener('change', renderMemberList);
+    document.getElementById('selAll').addEventListener('change', e => {
+      if (e.target.checked) visibleIds.forEach(id => selected.add(id));
+      else visibleIds.forEach(id => selected.delete(id));
+      renderMemberList();
+    });
+    document.getElementById('bulkAssign').addEventListener('click', async () => {
+      const ids = [...selected];
+      if (!ids.length) { alert('회원을 선택하세요.'); return; }
+      const cohortId = document.getElementById('bulkCohort').value;
+      if (!cohortId) { alert('배정할 기수를 선택하세요.'); return; }
+      const cohort = cohorts.find(c => c.id === cohortId);
+      if (!confirm(ids.length + '명을 「' + (cohort ? cohort.name : '') + '」(으)로 배정할까요?')) return;
+      const { error } = await sb().from('members').update({ cohort_id: cohortId }).in('id', ids);
+      if (error) { alert('배정 실패: ' + error.message); return; }
+      selected.clear();
+      await loadMembers();
+      toast(ids.length + '명 배정 완료');
+    });
 
     // ── 탭 전환 ──
     function initTabs() {
