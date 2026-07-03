@@ -1,7 +1,32 @@
 /* ── 구글 시트 모집 기간 연동 ── */
 const RECRUIT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjh43-8SUZxM41_RnjiRuUgOxaUFicDmWFAT2EtthjHY5EjzQlA7X3vzYDTNUE0sUnVMfRUfCtomM3/pub?gid=0&single=true&output=csv';
 
-async function loadRecruitData() {
+/* challenge_rounds(Supabase)에서 챌린지별 "현재 기수"를 읽어
+   {challenge: {start, end, round}} 형태로 반환. 실패 시 구글 시트로 폴백. */
+async function loadRecruitDataFromSupabase() {
+  if (!window.MONC || !window.MONC.sb) return null;
+  const { data, error } = await window.MONC.sb
+    .from('challenge_rounds')
+    .select('challenge, round, recruit_start, recruit_end')
+    .order('recruit_end', { ascending: true });
+  if (error || !data) { console.warn('[MONC 모집] Supabase 조회 실패:', error); return null; }
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const byChallenge = {};
+  data.forEach(r => { (byChallenge[r.challenge] = byChallenge[r.challenge] || []).push(r); });
+
+  const out = {};
+  Object.entries(byChallenge).forEach(([ch, rounds]) => {
+    // 현재 기수 = recruit_end >= 오늘 중 가장 이른 것, 없으면 가장 최근(마지막) 것
+    const upcoming = rounds.filter(r => new Date(r.recruit_end) >= today);
+    const chosen = upcoming.length ? upcoming[0] : rounds[rounds.length - 1];
+    out[ch] = { start: chosen.recruit_start, end: chosen.recruit_end, round: chosen.round };
+  });
+  console.log('[MONC 모집] Supabase 데이터:', out);
+  return out;
+}
+
+async function loadRecruitDataFromCsv() {
   try {
     const res = await fetch(RECRUIT_CSV + '&_=' + Date.now());
     const text = await res.text();
@@ -12,12 +37,18 @@ async function loadRecruitData() {
       const clean = cols.map(s => s.trim().replace(/^"|"$/g, '').trim());
       if (clean[0]) data[clean[0]] = { start: clean[1], end: clean[2] };
     });
-    console.log('[MONC 모집] 구글 시트 데이터:', data);
+    console.log('[MONC 모집] 구글 시트 데이터(폴백):', data);
     return data;
   } catch (e) {
     console.warn('모집 데이터 로드 실패 (하드코딩 값 사용):', e);
     return null;
   }
+}
+
+async function loadRecruitData() {
+  const sb = await loadRecruitDataFromSupabase();
+  if (sb) return sb;
+  return await loadRecruitDataFromCsv();  // 전환 검증 기간 폴백
 }
 
 /* 날짜 문자열을 Date 객체로 변환 */
@@ -95,6 +126,9 @@ async function applyIndexRecruit() {
     window._challengeStatuses = window._challengeStatuses || {};
     window._challengeStatuses[id] = status;
 
+    window._challengeRounds = window._challengeRounds || {};
+    if (d && d.round != null) window._challengeRounds[id] = d.round;
+
     const badge    = card.querySelector('.recruit-status');
     const action   = card.querySelector('.challenge-action');
     const periodEl = card.querySelector('.recruit-period');
@@ -145,6 +179,9 @@ async function loadChallengeStatuses() {
     const start = (d && d.start) || fb.start;
     const end   = (d && d.end)   || fb.end;
     window._challengeStatuses[id] = getStatus(start, end);
+
+    window._challengeRounds = window._challengeRounds || {};
+    if (d && d.round != null) window._challengeRounds[id] = d.round;
   });
 }
 
