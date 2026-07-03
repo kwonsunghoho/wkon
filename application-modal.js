@@ -1,5 +1,5 @@
 /* ── 공용 챌린지 신청 모달 ── */
-const APPLICATION_API_URL = "https://script.google.com/macros/s/AKfycbxrUFhRQvAAC3HZM8QuFCrrRfWRCQ8BA_j9-kvfLvW57QIroF0OsNahynY2Xi1RFnGz1w/exec";
+/* 구 Apps Script(APPLICATION_API_URL) 제거됨 — 신청은 Supabase applications 로 이전 */
 
 /* ── CSS 주입 ── */
 (function injectStyle() {
