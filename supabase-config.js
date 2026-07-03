@@ -57,7 +57,7 @@
     if (!session) return null;
     const { data, error } = await sb
       .from('members')
-      .select('id, name, email, role, cohort_id')
+      .select('id, name, email, role, cohort_id, phone')
       .eq('id', session.user.id)
       .single();
     if (error) { console.error('프로필 조회 실패', error); return null; }
