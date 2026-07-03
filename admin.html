@@ -50,6 +50,8 @@
     .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .app-card .ac-tg.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
     .app-card .ac-tg.on-refund { background: var(--action); color: #fff; border-color: var(--action); }
+    .app-card .ac-del { margin-left: auto; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--action-dark); }
+    .app-card .ac-del:hover { background: var(--action-tint); }
 
     .reviews-wrap { padding: 20px; max-width: 900px; }
     .rv-upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -509,6 +511,7 @@
           <div class="ac-toggles">
             <button class="ac-tg ${a.paid ? 'on' : ''}" data-field="paid">입금 ${a.paid ? '✓' : ''}</button>
             <button class="ac-tg ${a.refunded ? 'on on-refund' : ''}" data-field="refunded">환급 ${a.refunded ? '✓' : ''}</button>
+            <button class="ac-del">삭제</button>
           </div>
         </div>`).join('');
       body.querySelectorAll('.ac-tg').forEach(btn => btn.addEventListener('click', async () => {
@@ -519,6 +522,14 @@
         const { error } = await MONC.sb.from('applications').update({ [field]: next }).eq('id', id);
         if (error) { alert('저장 실패: ' + error.message); return; }
         app[field] = next; renderApps(); toast('저장됨');
+      }));
+      body.querySelectorAll('.ac-del').forEach(btn => btn.addEventListener('click', async () => {
+        const id = btn.closest('.app-card').dataset.id;
+        const app = _apps.find(x => x.id === id);
+        if (!confirm(`'${app ? app.name : ''}' 신청을 삭제할까요? 되돌릴 수 없어요.`)) return;
+        const { error } = await MONC.sb.from('applications').delete().eq('id', id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        _apps = _apps.filter(x => x.id !== id); renderApps(); toast('삭제됨');
       }));
     }
 
