@@ -849,6 +849,12 @@
       width: 300px; flex-shrink: 0;
     }
     .testi-card:hover { border-color: var(--rose); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    /* 후기 이미지 카드 (카톡 스크린샷) */
+    .testi-img-card { width: 220px; flex-shrink: 0; padding: 0; border: 0; background: transparent; box-shadow: none; border-radius: var(--radius); }
+    .testi-img-card:hover { border: 0; transform: translateY(-4px); }
+    .testi-img-card img { width: 100%; height: auto; display: block; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .testi-grid .testi-track { align-items: flex-start; }
+    @media (max-width: 768px) { .testi-img-card { width: 180px; } }
     .testi-summary {
       font-size: 13px; font-weight: 700; line-height: 1.4;
       color: var(--primary); margin-bottom: 10px;
@@ -2734,41 +2740,20 @@
     '승.자.각': 'linear-gradient(135deg,#FF8F4D,#9A5B1E)',
   };
 
-  function renderReviews(reviews, grid) {
-    if (!Array.isArray(reviews) || reviews.length === 0) return;
+  function renderReviews(items, grid) {
+    if (!Array.isArray(items) || items.length === 0) { grid.innerHTML = ''; return; }
     const countEl = document.getElementById('testiCount');
-    if (countEl) countEl.textContent = `지금까지 총 ${reviews.length}명이 남긴 후기예요`;
-    const makeCard = (r, i) => {
-      const name     = String(r.name).trim();
-      const badgeClr = _avatarGrads[i % _avatarGrads.length];
-      return `
-        <div class="testi-card">
-          <div class="testi-user" style="margin-bottom:14px; justify-content:space-between;">
-            <div class="testi-avatar" style="background:${badgeClr};">${name}</div>
-            <span class="testi-naver">N 네이버 카페</span>
-          </div>
-          <div class="testi-summary">${String(r.summary || '')}</div>
-          <p class="testi-text clamped">${String(r.text).replace(/\n/g, '<br>')}</p>
-          <button class="testi-more-btn" onclick="toggleTesti(this)">더보기 ↓</button>
-          ${r.link ? `<a class="testi-source" href="${String(r.link)}" target="_blank" rel="noopener">원문 보기 →</a>` : ''}
-        </div>`;
-    };
-
-    // 카드를 절반씩 나눠 2개 줄로 배치 (홀수면 1개 더 앞줄에)
-    const mid = Math.ceil(reviews.length / 2);
-    const row1 = reviews.slice(0, mid).map(makeCard).join('');
-    const row2 = reviews.slice(mid).map(makeCard).join('');
-
-    // 각 트랙: 원본 + 복제본으로 무한 루프
+    if (countEl) countEl.textContent = `실제 참여자 후기 ${items.length}건`;
+    const makeCard = (r) => `
+      <div class="testi-card testi-img-card">
+        <img src="${r.url}" alt="${String(r.caption || '참여자 후기').replace(/"/g, '&quot;')}" loading="lazy">
+      </div>`;
+    const mid = Math.ceil(items.length / 2);
+    const row1 = items.slice(0, mid).map(makeCard).join('');
+    const row2 = items.slice(mid).map(makeCard).join('') || row1;
     grid.innerHTML = `
       <div class="testi-track">${row1}${row1}</div>
       <div class="testi-track reverse">${row2}${row2}</div>`;
-
-    // 더보기 버튼: 텍스트가 실제로 넘칠 때만 표시
-    grid.querySelectorAll('.testi-text.clamped').forEach(el => {
-      if (el.scrollHeight > el.clientHeight + 2) el.nextElementSibling.classList.add('visible');
-      else el.classList.remove('clamped');
-    });
   }
   const shuffle = arr => arr.slice().sort(() => Math.random() - 0.5);
 
@@ -2859,26 +2844,26 @@
 
   (async function loadReviews() {
     const grid = document.getElementById('testiGrid');
+    const section = document.getElementById('testimonials');
     if (!grid) return;
-    // 1) 캐시 있으면 즉시 표시 (섞어서)
-    const cached = localStorage.getItem(REVIEWS_CACHE_KEY);
-    if (cached) {
-      try {
-        renderReviews(shuffle(JSON.parse(cached)), grid);
-        setupTestiSwipe(grid);
-      } catch(e) {}
-    }
-    // 2) 백그라운드에서 최신 데이터 fetch & 캐시 갱신
+    if (!window.MONC || !window.MONC.sb) { if (section) section.style.display = 'none'; return; }
     try {
-      const res = await fetch(APPLICATION_API_URL + '?action=reviews');
-      const reviews = await res.json();
-      if (Array.isArray(reviews) && reviews.length > 0) {
-        localStorage.setItem(REVIEWS_CACHE_KEY, JSON.stringify(reviews));
-        renderReviews(shuffle(reviews), grid); // 섞어서 표시
-        setupTestiSwipe(grid);
-      }
-    } catch(e) {
-      if (!cached) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);font-size:14px;">후기를 불러오지 못했어요.</div>';
+      const { data, error } = await window.MONC.sb.from('reviews')
+        .select('image_path, caption, sort_order, created_at')
+        .eq('visible', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      const items = (data || []).map(r => ({
+        url: window.MONC.sb.storage.from('reviews').getPublicUrl(r.image_path).data.publicUrl,
+        caption: r.caption
+      }));
+      if (!items.length) { if (section) section.style.display = 'none'; return; }  // 후기 없으면 섹션 숨김
+      renderReviews(items, grid);
+      setupTestiSwipe(grid);
+    } catch (e) {
+      console.warn('후기 로드 실패:', e);
+      if (section) section.style.display = 'none';
     }
   })();
 
