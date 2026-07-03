@@ -23,11 +23,15 @@
   // 로그인 페이지 경로(상대). 다른 페이지에서 미로그인 시 이리로 보냄.
   const LOGIN_PAGE = 'login.html';
 
-  // 구글 로그인 시작. 끝나면 returnTo(기본: 현재 페이지)로 되돌아온다.
-  async function signInWithGoogle(returnTo) {
+  // OAuth 로그인 시작(provider: 'google' | 'kakao' | …). 끝나면 returnTo로 되돌아온다.
+  async function signInWithProvider(provider, returnTo, extra) {
     const redirectTo = returnTo || window.location.href.split('#')[0].split('?')[0];
-    return sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+    return sb.auth.signInWithOAuth({ provider, options: Object.assign({ redirectTo }, extra || {}) });
   }
+  function signInWithGoogle(returnTo) { return signInWithProvider('google', returnTo); }
+  // 카카오는 닉네임만 요청. 이메일(account_email)을 요청하면 비즈앱이 아닌 경우
+  // "설정하지 않은 동의항목" KOE205 에러가 나므로 scope 를 profile_nickname 으로 한정.
+  function signInWithKakao(returnTo)  { return signInWithProvider('kakao', returnTo, { scopes: 'profile_nickname' }); }
 
   async function signOut() {
     await sb.auth.signOut();
@@ -86,7 +90,8 @@
   // 전역 노출
   window.MONC = {
     sb, TOTAL_DAYS, LOGIN_PAGE,
-    signInWithGoogle, signOut, getSession, requireSession,
+    signInWithProvider, signInWithGoogle, signInWithKakao,
+    signOut, getSession, requireSession,
     getMyProfile, requireAdmin, getSignedUrl,
   };
 })();
