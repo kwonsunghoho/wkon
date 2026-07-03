@@ -51,10 +51,10 @@ Each challenge's identity is the `data-recruit-id` (`voice` / `expression` / `sp
 ### Reviews on the index
 `loadReviews()` in `index.html` fetches `?action=reviews`, renders a horizontally-scrolling marquee, and caches results in `localStorage` under `monc_reviews_v1` (shown instantly on repeat visits, refreshed in the background).
 
-### Design system (index.html `:root`)
-The index defines the design tokens; **detail pages each carry their own inline `:root`** and do not share the index's variables. Core conventions:
-- **Pink (`--primary` #D63384) is the brand color; teal (`--action` #0C8091) is reserved exclusively for conversion CTAs** (신청/시작/참여) via `.btn-action`. If something is teal, it means "this submits an application." Don't use teal for decoration.
-- Typography (`--fs-*`), spacing (`--space-*`, 8px scale), radius scale (8/14/20/24), and section background rhythm (alternating white / light-pink, with the final CTA band in teal tint) are all tokenized. Prefer tokens over hardcoded values.
+### Design system (`tokens.css`)
+Shared design tokens live in `tokens.css` (linked by `index.html` + the detail/legal pages + the member pages login/mypage/admin). Core conventions:
+- **`feature/full-redesign` uses the Warm Sunrise palette (`tokens.css`):** brown text (`--primary` #241A12), cream background (`--bg` #FFFAF3), and **coral (`--action` #C9471E) reserved exclusively for conversion CTAs** (신청/시작/참여) via `.btn-action`. If something is coral, it means "this submits an application." Don't use coral for decoration. (The old pink `#D63384` / teal `#0C8091` description applied to `main` before the redesign — it does **not** apply on this branch.)
+- Typography (`--fs-*`), spacing (`--space-*`, 8px scale), radius scale (8/14/20/24), and section background rhythm are all tokenized. Prefer tokens over hardcoded values.
 - Icons are inline SVG `<symbol>`s in a sprite at the top of `<body>`, recolored via `currentColor`. There is a mobile sticky CTA bar (`.mobile-cta-bar`, shown ≤768px).
 
 ### Audio (before/after recordings on detail pages)
