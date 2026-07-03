@@ -2303,6 +2303,45 @@
     document.body.style.overflow = '';
   }));
 
+  /* ── 로그인 세션 → 내비 상태 반영 (로그인 시 로그인버튼→마이페이지) ── */
+  (async function initAuthNav() {
+    if (!window.MONC) return; // supabase-config 로드 실패 시 로그아웃 UI 유지
+    function escH(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    let session = null;
+    try { session = await MONC.getSession(); } catch (e) { return; }
+    if (!session) return; // 로그아웃: 기본 마크업 유지
+
+    let profile = null;
+    try { profile = await MONC.getMyProfile(); } catch (e) {}
+    const name = (profile && profile.name) ? profile.name : '회원';
+    const initial = (name.trim().charAt(0)) || '·';
+
+    // 데스크톱 nav-right 교체
+    const navRight = document.querySelector('.nav-right');
+    if (navRight) {
+      navRight.innerHTML =
+        '<a class="mypage-pill" href="mypage.html"><span class="nav-avatar">' + escH(initial) +
+        '</span>마이페이지</a>' +
+        '<a class="btn btn-action nav-cta" href="#" onclick="openApplicationModal(); return false;">신청하기</a>';
+    }
+
+    // 모바일 메뉴: 최상단 회원 카드 삽입 + 로그인 버튼 제거
+    const mmEl = document.getElementById('mobileMenu');
+    if (mmEl) {
+      const card = document.createElement('a');
+      card.className = 'mm-member-card';
+      card.href = 'mypage.html';
+      card.innerHTML =
+        '<span class="mm-avatar">' + escH(initial) + '</span>' +
+        '<span class="mm-member-text"><b>' + escH(name) + '</b> 님' +
+        '<span class="mm-go">마이페이지 가기 →</span></span>';
+      mmEl.insertBefore(card, mmEl.firstElementChild);
+      const loginBtn = mmEl.querySelector('.mm-login');
+      if (loginBtn) loginBtn.remove();
+    }
+  })();
+
   /* ── 스크롤 reveal ── */
   const obs = new IntersectionObserver((entries) => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
