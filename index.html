@@ -362,34 +362,33 @@
       .chx-slide, .chx-ch .c-dim, .chx-ch .c-lit, .chx-desc { transition: none; }
     }
 
-    /* ── Mobile — 아코디언: 활성 이름 '바로 아래'에 이미지 패널 삽입 ──
-       (JS chxPlacePanel이 패널을 활성 .chx-item 뒤로 이동. 데스크톱의
-       '이름 옆 이미지' 의도를, 세로 화면에선 '이름 밑 이미지'로 대응) */
+    /* ── Mobile — 카드 4장 스택 ──
+       세로 화면에선 호버가 없으니, 각 챌린지를 '이름 + 이미지 카드'가
+       함께 있는 카드로 전부 펼쳐 보여줌. 펼침/접힘 동작이 없어 끊김 없음.
+       JS(chxApplyMode)가 각 이미지 슬라이드를 대응 이름 바로 뒤로 이동. */
     @media (max-width: 768px) {
       .chx { grid-template-columns: 1fr; gap: 0; align-items: stretch; }
-      .chx-list { gap: 10px; align-items: stretch; }
+      .chx-list { gap: 0; align-items: stretch; }
+      .chx-panel { display: none; } /* 슬라이드가 리스트로 옮겨져 비므로 숨김 */
+
+      /* 이름: 2중 레이어(호버 애니용)를 단순화해 항상 진하게 읽히도록 */
+      .chx-item { align-self: flex-start; padding: 8px 0 2px; }
       .chx-title { font-size: clamp(30px, 9vw, 42px); }
-      /* 패널이 리스트 안 flex 아이템으로 들어오므로 항상 전체 폭 + 상하 여백.
-         탭 시 '접힘(height 0)' → '펼침'으로 트랜지션해 커튼 열리듯 나타남.
-         (JS chxAnimatePanel이 chx-collapsed를 잠깐 붙였다 떼며 트리거) */
-      .chx-panel {
-        width: 100%; align-self: stretch;
-        height: min(360px, 88vw);
-        margin: 6px 0 18px;
+      .chx-title .c-dim { opacity: 1; }
+      .chx-title .c-lit { display: none; }
+      .chx-item.is-closed .chx-title { opacity: .55; }
+      .chx-desc { opacity: 1 !important; transform: none !important; margin-top: 4px; }
+
+      /* 이미지 슬라이드를 흐름상의 카드로 전환 (원래는 패널 안 absolute) */
+      .chx-slide {
+        position: relative; inset: auto;
+        clip-path: none !important;   /* 클립 리빌 해제 — 항상 완전 표시 */
+        pointer-events: auto; opacity: 1 !important;
+        width: 100%; height: min(360px, 82vw);
+        margin: 10px 0 26px;
+        border-radius: 20px; overflow: hidden;
+        box-shadow: var(--shadow-lg);
       }
-      /* 부드럽게 나타나기: height(레이아웃) 애니메이션은 모바일에서 매 프레임
-         리플로우가 일어나 '뚝뚝' 끊기므로, GPU로 합성되는 transform+opacity만
-         사용. 공간(height)은 즉시 확보하고 패널만 살짝 내려오며 페이드인. */
-      .chx-panel.chx-anim-in {
-        animation: chx-reveal .42s cubic-bezier(.22,.61,.36,1) both;
-        will-change: transform, opacity;
-      }
-      @keyframes chx-reveal {
-        from { opacity: 0; transform: translateY(-12px) scale(.985); }
-        to   { opacity: 1; transform: none; }
-      }
-      /* 비활성 이름은 왼쪽 정렬 그대로(스태거 애니 유지), 패널만 stretch */
-      .chx-item { align-self: flex-start; }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -2352,67 +2351,47 @@
       });
     });
 
-    /* 모바일 아코디언: 패널을 활성 이름 '바로 뒤'로 이동해 이미지가 탭한
-       이름 밑에 펼쳐지게 함. 데스크톱은 원래 자리(.chx의 2번째 컬럼)로 복귀. */
+    /* 데스크톱=호버 슬라이드쇼(활성 슬라이드만 clip-path로 드러냄) /
+       모바일=카드 4장 스택(각 이미지 카드를 대응 이름 뒤로 옮겨 전부 표시).
+       패널이 펼쳐지지 않으므로(레이아웃 애니 없음) 끊김이 원천적으로 없음. */
     const chxEl = document.getElementById('chx');
-    const chxList = chxEl && chxEl.querySelector('.chx-list');
     const chxPanel = chxEl && chxEl.querySelector('.chx-panel');
     const chxMobileMq = window.matchMedia('(max-width: 768px)');
 
-    const chxReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    // 살짝 내려오며 페이드인(transform+opacity, GPU 합성이라 매끄러움).
-    // 클래스를 뗐다 붙이며 강제 리플로우해 매 탭마다 애니메이션 재시작.
-    function chxAnimatePanel() {
-      if (chxReduce) return; // 모션 최소화 설정이면 애니메이션 생략
-      chxPanel.classList.remove('chx-anim-in');
-      void chxPanel.offsetHeight; // 강제 리플로우: 애니메이션을 처음부터 다시 재생
-      chxPanel.classList.add('chx-anim-in');
-    }
-
-    function chxPlacePanel(idx, animate) {
-      if (!chxPanel || !chxList) return;
-      if (chxMobileMq.matches) {
-        const active = items[idx];
-        // 활성 이름 다음이 이미 패널이면 이동 불필요(불필요한 리플로우 방지)
-        if (active && active.nextElementSibling !== chxPanel) {
-          active.after(chxPanel);
-          if (animate) chxAnimatePanel();
-        }
-      } else if (chxPanel.parentElement !== chxEl) {
-        chxPanel.classList.remove('chx-anim-in');
-        chxList.after(chxPanel); // 데스크톱 원위치
-      }
-    }
-
     function chxActivate(idx) {
+      if (chxMobileMq.matches) return; // 모바일은 카드가 전부 보이므로 무시
       items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
       slides.forEach((el, i) => el.classList.toggle('is-active', i === idx));
-      chxPlacePanel(idx, true); // 사용자 선택 → 펼침 애니메이션
     }
 
-    // 뷰포트 전환(회전/리사이즈) 시 패널 위치 재배치(애니메이션 없이)
-    chxMobileMq.addEventListener('change', () => {
-      const activeIdx = items.findIndex(el => el.classList.contains('is-active'));
-      chxPlacePanel(activeIdx < 0 ? 0 : activeIdx, false);
-    });
-    chxPlacePanel(0, false); // 초기 배치(활성=보신각) — 로드 시엔 애니메이션 생략
+    // 모바일(카드) ↔ 데스크톱(패널) 레이아웃 전환. 실제 바뀔 때만 DOM 이동.
+    let chxMode = null;
+    function chxApplyMode() {
+      const mobile = chxMobileMq.matches;
+      if ((chxMode === 'mobile') === mobile) return;
+      chxMode = mobile ? 'mobile' : 'desktop';
+      if (mobile) {
+        // 각 이미지 카드를 대응하는 이름 바로 뒤로 옮기고 전부 표시
+        items.forEach((item, i) => { item.after(slides[i]); slides[i].classList.add('is-active'); });
+      } else {
+        // 데스크톱 복귀: 카드를 패널로 되돌리고 첫 번째만 활성
+        slides.forEach((slide, i) => { chxPanel.appendChild(slide); slide.classList.toggle('is-active', i === 0); });
+        items.forEach((el, i) => el.classList.toggle('is-active', i === 0));
+      }
+    }
+    chxMobileMq.addEventListener('change', chxApplyMode);
+    chxApplyMode();
 
     items.forEach((item, i) => {
-      /* 터치 기기에서는 탭 한 번에 mouseenter → click이 연달아 발화해
-         "첫 탭 = 선택"이 무력화되고 즉시 페이지 이동되는 버그가 있었음.
-         pointerType으로 실제 마우스 호버만 활성화 트리거로 사용 */
-      item.addEventListener('pointerenter', e => {
-        if (e.pointerType === 'mouse') chxActivate(i);
-      });
-      /* 키보드 포커스(Tab)만 활성화 — 터치 탭이 만드는 포커스는 제외 */
-      item.addEventListener('focus', () => {
-        if (item.matches(':focus-visible')) chxActivate(i);
-      });
+      // 실제 마우스 호버만 활성화(터치 탭이 만드는 pointerenter/focus는 제외)
+      item.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') chxActivate(i); });
+      item.addEventListener('focus', () => { if (item.matches(':focus-visible')) chxActivate(i); });
       item.addEventListener('click', () => {
-        /* 모바일: 첫 탭 = 선택, 활성 상태에서 다시 탭 = 상세페이지 이동 */
+        if (item.classList.contains('is-closed')) return; // 마감/예정은 이동 차단
+        // 모바일: 카드가 이미 다 보이므로 이름 탭 = 바로 상세로 이동
+        if (chxMobileMq.matches) { window.location.href = item.dataset.href; return; }
+        // 데스크톱: 첫 탭 = 미리보기, 다시 탭하면 이동
         if (!item.classList.contains('is-active')) { chxActivate(i); return; }
-        if (item.classList.contains('is-closed')) return;
         window.location.href = item.dataset.href;
       });
     });
