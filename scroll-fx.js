@@ -127,13 +127,24 @@
       return; // CSS 쪽에서 sticky/min-height를 해제해 정적 레이아웃으로 표시
     }
 
+    // 모바일에서도 줌 연출은 유지하되(transform 기반이라 GPU 합성으로 충분히
+    // 부드러움), 짧은 뷰포트에서 긴 runway가 빈 스크롤 구간이 되지 않도록
+    // data-zoom-runway-mobile / data-zoom-scale-mobile 오버라이드를 지원.
+    var smallViewport = window.matchMedia('(max-width: 768px)').matches;
+
+    function attrFor(wrap, name) {
+      // 모바일이면 <name>-mobile 우선, 없으면 기본 속성으로 폴백
+      var v = smallViewport ? wrap.getAttribute(name + '-mobile') : null;
+      return v !== null ? v : wrap.getAttribute(name);
+    }
+
     var SCALE_K = 0.32; // 기본 최대 scale = 1 + SCALE_K (data-zoom-scale 속성으로 섹션별 오버라이드 가능)
     var ticking = false;
 
     // data-zoom-runway(vh 단위 숫자)가 있으면 기본 160vh 대신 해당 값을 min-height로 적용.
     // (CSS의 [data-zoom-exit][data-zoom-exit] { min-height: 160vh } 기본값을 인라인 스타일로 오버라이드)
     wraps.forEach(function (wrap) {
-      var runwayAttr = wrap.getAttribute('data-zoom-runway');
+      var runwayAttr = attrFor(wrap, 'data-zoom-runway');
       var runwayVh = runwayAttr ? parseFloat(runwayAttr) : NaN;
       if (!isNaN(runwayVh)) {
         wrap.style.minHeight = runwayVh + 'vh';
@@ -158,7 +169,7 @@
         var progress = runway > 0 ? (-rect.top) / runway : 0;
         progress = Math.min(1, Math.max(0, progress));
         var eased = easeInOut(progress);
-        var scaleAttr = wrap.getAttribute('data-zoom-scale');
+        var scaleAttr = attrFor(wrap, 'data-zoom-scale');
         var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
         if (isNaN(scaleK)) scaleK = SCALE_K;
         pin.style.transform = 'scale(' + (1 + eased * scaleK) + ')';

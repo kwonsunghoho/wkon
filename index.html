@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>MONC — 몬크 챌린지 | 목소리·눈빛·말투·첫인상</title>
 
   <!-- Open Graph / SNS 공유 -->
@@ -436,11 +436,33 @@
       .chx-slide, .chx-ch .c-dim, .chx-ch .c-lit, .chx-desc { transition: none; }
     }
 
-    /* ── Mobile — 리스트 위 / 패널 아래 스택 ── */
+    /* ── Mobile — 카드 4장 스택 ──
+       세로 화면에선 호버가 없으니, 각 챌린지를 '이름 + 이미지 카드'가
+       함께 있는 카드로 전부 펼쳐 보여줌. 펼침/접힘 동작이 없어 끊김 없음.
+       JS(chxApplyMode)가 각 이미지 슬라이드를 대응 이름 바로 뒤로 이동. */
     @media (max-width: 768px) {
-      .chx { grid-template-columns: 1fr; gap: 24px; align-items: start; }
+      .chx { grid-template-columns: 1fr; gap: 0; align-items: stretch; }
+      .chx-list { gap: 0; align-items: stretch; }
+      .chx-panel { display: none; } /* 슬라이드가 리스트로 옮겨져 비므로 숨김 */
+
+      /* 이름: 2중 레이어(호버 애니용)를 단순화해 항상 진하게 읽히도록 */
+      .chx-item { align-self: flex-start; padding: 8px 0 2px; }
       .chx-title { font-size: clamp(30px, 9vw, 42px); }
-      .chx-panel { height: min(430px, 112vw); }
+      .chx-title .c-dim { opacity: 1; }
+      .chx-title .c-lit { display: none; }
+      .chx-item.is-closed .chx-title { opacity: .55; }
+      .chx-desc { opacity: 1 !important; transform: none !important; margin-top: 4px; }
+
+      /* 이미지 슬라이드를 흐름상의 카드로 전환 (원래는 패널 안 absolute) */
+      .chx-slide {
+        position: relative; inset: auto;
+        clip-path: none !important;   /* 클립 리빌 해제 — 항상 완전 표시 */
+        pointer-events: auto; opacity: 1 !important;
+        width: 100%; height: min(360px, 82vw);
+        margin: 10px 0 26px;
+        border-radius: 20px; overflow: hidden;
+        box-shadow: var(--shadow-lg);
+      }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -474,6 +496,43 @@
       color: var(--text);
       box-shadow: 0 2px 12px rgba(201,71,30,.14);
     }
+
+    /* ── 단계형 진행: 한 문항씩 카드로, 답 선택 시 다음으로 자동 이동 ── */
+    .adv-progress {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      margin-bottom: 26px;
+    }
+    .adv-back {
+      border: none; background: none; cursor: pointer;
+      font-size: 14px; font-weight: 700; color: var(--text-muted);
+      padding: 6px 4px; -webkit-tap-highlight-color: transparent;
+    }
+    .adv-back:hover { color: var(--action); }
+    .adv-dots { display: flex; gap: 8px; }
+    .adv-dot {
+      width: 8px; height: 8px; border-radius: 99px;
+      background: var(--border); transition: transform .3s, background .3s;
+    }
+    .adv-dot.is-done { background: var(--action); }
+    .adv-dot.is-current { background: var(--action); transform: scale(1.4); }
+    .adv-step-label { font-size: 13px; font-weight: 800; color: var(--text-muted); min-width: 42px; }
+
+    /* 한 번에 한 문항만 표시 (JS가 .is-current 토글) */
+    .adv-q { display: none; margin-bottom: 0; }
+    .adv-q.is-current { display: block; animation: adv-step-in .34s cubic-bezier(.22,.61,.36,1) both; }
+    @keyframes adv-step-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .adv-q-num { display: none; } /* 진행 점/라벨이 단계를 보여주므로 'Q1.' 숫자는 숨김 */
+    .adv-q-title { font-size: clamp(17px, 2.2vw, 20px); margin-bottom: 18px; text-align: center; }
+    /* 옵션을 한 열의 큰 카드로 (선택하기 쉽게) */
+    .adv-opts { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; gap: 12px; }
+    .adv-opt { padding: 18px 20px; font-size: 15px; }
+    .adv-restart {
+      border: none; background: none; cursor: pointer; display: block; margin: 22px auto 0;
+      font-size: 13px; font-weight: 700; color: var(--text-dim);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .adv-restart:hover { color: var(--action); }
+    @media (prefers-reduced-motion: reduce) { .adv-q.is-current { animation: none; } }
 
     /* ── 결과 영역 ── */
     .adv-result { margin-top: 8px; }
@@ -1225,23 +1284,39 @@
     }
     /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러가야 실제
        비행기 창밖 느낌이 남. 하늘은 좌우로 이어지는 4800x1000 타일
-       한 장(hero-sky-tile.webp)을 background-position-x 애니메이션으로
-       무한 패닝. 세로는 스크롤 진행에 따라 JS가 background-position-y(%)를
-       0→100%로 밀어 타일 하단(구름층)이 드러남 — X는 애니메이션,
-       Y는 인라인 스타일이라 서로 충돌하지 않음. */
+       한 장(hero-sky-tile.webp)을 transform 기반으로 무한 패닝.
+       (background-position 애니메이션은 GPU 합성이 안 돼 매 프레임
+       거대 레이어를 리페인트 — 모바일 버벅임의 주범이라 transform으로 교체)
+       X 패닝은 .hero-window-sky-x의 CSS 애니메이션, 세로는 스크롤 진행에
+       따라 JS가 .hero-window-sky-y의 translateY(px)를 밀어 타일 하단
+       (구름층)이 드러남 — 요소가 분리돼 있어 서로 충돌하지 않음. */
     .hero-window-sky-bg {
       position: absolute; inset: 0; z-index: 1;
+      overflow: hidden;
+    }
+    .hero-window-sky-y {
+      position: absolute; left: 0; top: 0;
+      width: 100%;
+      /* 130vh로 키워 세로 패닝 여유를 확보. svh가 아닌 vh 고정인 이유:
+         타일 주기(높이 × 4.8)가 애니메이션 이동량 624vh와 일치해야 이음매가 없음.
+         컨테이너(100svh)와의 실제 차이는 JS가 px로 계산해 translateY */
+      height: 130vh;
+      will-change: transform;
+    }
+    .hero-window-sky-x {
+      position: absolute; left: 0; top: 0;
+      height: 100%;
+      /* 타일 1주기(624vh)만큼 밀려도 뷰포트가 항상 차 있도록 여유 폭 확보 */
+      width: calc(624vh + 100vw);
       background-image: url('images/hero-sky-tile.webp');
-      /* 높이 130%로 키워 세로 패닝 여유(30%)를 확보. 타일 비율 4.8:1이라
-         표시 폭은 130vh × 4.8 = 624vh — 애니메이션 이동량과 일치해야 이음매 없음 */
-      background-size: auto 130%;
+      background-size: auto 100%;
       background-repeat: repeat-x;
-      background-position: 0 0;
-      animation: hero-sky-pan 90s linear infinite;
+      animation: hero-sky-pan 145s linear infinite; /* 구름 패닝 속도 (은은하게) */
+      will-change: transform;
     }
     @keyframes hero-sky-pan {
-      from { background-position-x: 0; }
-      to   { background-position-x: -624vh; }
+      from { transform: translateX(0); }
+      to   { transform: translateX(-624vh); } /* 타일 표시폭 130vh × 4.8 = 정확히 1주기 */
     }
     .hero-window-frame {
       display: block;
@@ -1250,7 +1325,7 @@
       object-fit: cover;
     }
     @media (prefers-reduced-motion: reduce) {
-      .hero-window-sky-bg { animation: none; }
+      .hero-window-sky-x { animation: none; }
     }
     /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
        히어로 캐러셀의 밝은 크림/베이지 톤으로 서서히 물들어, 밝은 하늘에서
@@ -1277,6 +1352,8 @@
       position: relative;
       width: 100%;
       min-height: max(100vh, 680px);
+      /* 모바일 주소창 수축/확장 시 vh 변동으로 인한 레이아웃 점프 방지 */
+      min-height: max(100svh, 680px);
       overflow: hidden;
       /* 카드 바깥 배경 — 살짝 짙은 베이지로 카드를 은은하게 띄우고,
          하단은 --bg로 내려가 아래 Before/After 섹션과 자연스럽게 이어짐 */
@@ -1300,6 +1377,7 @@
       width: 100%;
       flex: 0 0 auto;
       height: min(72vh, 600px);
+      height: min(72svh, 600px);
       --card-w: min(560px, 62vw);
     }
 
@@ -1429,13 +1507,15 @@
     }
 
     /* ── Mobile ── */
+    /* 카드를 화면 가득 채우면(86vw) 캐러셀 느낌이 죽고 위쪽 미디어 여백이
+       비어 보여, 너비·높이를 줄여 양옆 카드가 확실히 걸쳐 보이도록(C안) */
     @media (max-width: 768px) {
-      .hs-stage { height: min(70vh, 560px); --card-w: min(420px, 84vw); }
+      .hs-stage { height: min(56vh, 440px); height: min(56svh, 440px); --card-w: min(420px, 78vw); }
       .hs-card-content { padding: 22px 22px 24px; }
       .hs-h1 { font-size: clamp(20px, 6vw, 26px); }
     }
     @media (max-width: 480px) {
-      .hs-stage { --card-w: 86vw; }
+      .hs-stage { --card-w: 78vw; }
     }
 
   </style>
@@ -1504,9 +1584,13 @@
 </div>
 
 <!-- HERO WINDOW INTRO -->
-<section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-fade="none">
+<!-- data-zoom-runway-mobile: 짧은 뷰포트에서 긴 runway는 빈 스크롤 구간이 되므로
+     모바일은 줌 구간을 축소 (연출 자체는 데스크톱과 동일하게 동작) -->
+<section class="hero-window-intro" data-zoom-exit data-zoom-scale="3.2" data-zoom-runway="220" data-zoom-runway-mobile="170" data-zoom-fade="none">
   <div class="zoom-exit-pin">
-    <div class="hero-window-sky-bg zoom-content-fade"></div>
+    <div class="hero-window-sky-bg zoom-content-fade">
+      <div class="hero-window-sky-y"><div class="hero-window-sky-x"></div></div>
+    </div>
     <picture class="zoom-content-fade">
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
       <img src="images/hero-window-desktop-frame.webp" alt="" class="hero-window-frame" width="1672" height="941">
@@ -1516,7 +1600,9 @@
 </section>
 
 <!-- HERO SCENE -->
-<section class="hero-scene" id="home" data-zoom-exit>
+<!-- 주의: data-zoom-exit를 다시 붙이지 말 것 — 스크롤 시 캐러셀 전체가
+     opacity 페이드되어 모바일에서 한 화면 분량의 빈 구간이 생겼던 원인 -->
+<section class="hero-scene" id="home">
   <audio id="hero-audio" preload="none"></audio>
 
   <div class="zoom-exit-pin">
@@ -1768,59 +1854,13 @@
   </div>
 </section>
 
-<!-- CHALLENGE ADVISOR — 3문항 진단 위젯 (로직: 하단 스크립트 'adv' 블록) -->
-<section class="advisor" id="advisor">
-  <div class="container">
-    <div class="reveal" style="text-align:center; max-width:520px; margin:0 auto 40px;">
-      <div class="section-label">Challenge Finder</div>
-      <h2 class="section-title">나에게 맞는 챌린지 찾기</h2>
-      <p class="section-desc">세 가지 질문에 답하면, 지금 나에게 필요한 챌린지를 바로 알려드려요.</p>
-    </div>
-
-    <div class="adv reveal">
-      <div class="adv-q">
-        <div class="adv-q-title"><span class="adv-q-num">Q1.</span>면접 답변을 할 때, 가장 먼저 막히는 지점은?</div>
-        <div class="adv-opts" role="group" aria-label="질문 1. 면접 답변을 할 때, 가장 먼저 막히는 지점은?">
-          <button class="adv-opt" data-q="0" data-k="s" aria-pressed="false">뭐라고 답해야 할지 내용부터 안 떠오른다</button>
-          <button class="adv-opt" data-q="0" data-k="p" aria-pressed="false">내용은 있는데 말로 하면 밋밋해진다</button>
-          <button class="adv-opt" data-q="0" data-k="b" aria-pressed="false">말하다 보면 목소리가 떨리고 흔들린다</button>
-          <button class="adv-opt" data-q="0" data-k="y" aria-pressed="false">카메라 앞에만 서면 표정과 시선이 굳는다</button>
-        </div>
-      </div>
-
-      <div class="adv-q">
-        <div class="adv-q-title"><span class="adv-q-num">Q2.</span>녹음·녹화된 내 모습을 다시 보면?</div>
-        <div class="adv-opts" role="group" aria-label="질문 2. 녹음, 녹화된 내 모습을 다시 보면?">
-          <button class="adv-opt" data-q="1" data-k="b" aria-pressed="false">목소리 톤이 어색하고 얇게 들린다</button>
-          <button class="adv-opt" data-q="1" data-k="y" aria-pressed="false">표정이 어색하고 시선이 불안하다</button>
-          <button class="adv-opt" data-q="1" data-k="p" aria-pressed="false">틀린 건 없는데 밋밋하고 지루하다</button>
-          <button class="adv-opt" data-q="1" data-k="s" aria-pressed="false">답변 내용이 뻔하고 남들이랑 똑같다</button>
-        </div>
-      </div>
-
-      <div class="adv-q">
-        <div class="adv-q-title"><span class="adv-q-num">Q3.</span>딱 하나만 바꿀 수 있다면?</div>
-        <div class="adv-opts" role="group" aria-label="질문 3. 딱 하나만 바꿀 수 있다면?">
-          <button class="adv-opt" data-q="2" data-k="b" aria-pressed="false">떨리지 않는 안정적인 목소리</button>
-          <button class="adv-opt" data-q="2" data-k="y" aria-pressed="false">화면 속에서도 자연스러운 나</button>
-          <button class="adv-opt" data-q="2" data-k="p" aria-pressed="false">듣는 사람을 끌어당기는 말맛</button>
-          <button class="adv-opt" data-q="2" data-k="s" aria-pressed="false">면접관이 기억하는 나만의 답변</button>
-        </div>
-      </div>
-
-      <!-- 결과 — 세 답변이 모두 선택되면 JS가 여기에 렌더 -->
-      <div class="adv-result" id="advResult" aria-live="polite"></div>
-    </div>
-  </div>
-</section>
-
 <!-- CHALLENGES -->
 <section class="challenges" id="challenges">
   <div class="container">
     <div class="reveal" style="margin-bottom: 44px;">
       <div class="section-label">MONC Challenge</div>
       <h2 class="section-title">몬크 챌린지</h2>
-      <p class="section-desc">챌린지 이름 위에 올려 미리 만나보세요.</p>
+      <p class="section-desc">챌린지 이름을 선택해 미리 만나보세요.</p>
     </div>
 
     <div class="chx reveal" id="chx">
@@ -2081,20 +2121,48 @@
   </div>
 </section>
 
-<!-- CATEGORIES -->
-<section class="categories" id="categories">
+<!-- CHALLENGE ADVISOR — '뭐부터 해야 할지 모르겠다면' 자리로 이동 (3문항 진단, 로직: 하단 스크립트 'adv' 블록) -->
+<section class="advisor" id="advisor">
   <div class="container">
-    <div class="reveal" style="text-align:center; max-width:460px; margin:0 auto;">
-      <div class="section-label">Categories</div>
-      <h2 class="section-title">원하는 분야를 골라보세요</h2>
-      <p class="section-desc">뭐부터 해야 할지 모르겠다면, 가장 쉬운 것부터!</p>
+    <div class="reveal" style="text-align:center; max-width:520px; margin:0 auto 40px;">
+      <div class="section-label">Challenge Finder</div>
+      <h2 class="section-title">뭐부터 해야 할지 모르겠다면</h2>
+      <p class="section-desc">세 가지 질문에 답하면, 지금 나에게 딱 맞는 챌린지를 바로 알려드려요.</p>
     </div>
-    <div class="cat-grid reveal" style="transition-delay:.1s">
-      <div class="cat-card" data-reveal><span class="cat-icon"><svg><use href="#i-mic"/></svg></span><div class="cat-name">보이스</div><div class="cat-count">챌린지 24개</div></div>
-      <div class="cat-card" data-reveal><span class="cat-icon"><svg><use href="#i-audio"/></svg></span><div class="cat-name">스피치</div><div class="cat-count">챌린지 18개</div></div>
-      <div class="cat-card" data-reveal><span class="cat-icon"><svg><use href="#i-smile"/></svg></span><div class="cat-name">표현력</div><div class="cat-count">챌린지 15개</div></div>
-      <div class="cat-card" data-reveal><span class="cat-icon"><svg><use href="#i-video"/></svg></span><div class="cat-name">영상면접</div><div class="cat-count">챌린지 12개</div></div>
-      <div class="cat-card" data-reveal><span class="cat-icon"><svg><use href="#i-message"/></svg></span><div class="cat-name">즉흥 답변</div><div class="cat-count">챌린지 20개</div></div>
+
+    <div class="adv reveal">
+      <div class="adv-q">
+        <div class="adv-q-title"><span class="adv-q-num">Q1.</span>면접 답변을 할 때, 가장 먼저 막히는 지점은?</div>
+        <div class="adv-opts" role="group" aria-label="질문 1. 면접 답변을 할 때, 가장 먼저 막히는 지점은?">
+          <button class="adv-opt" data-q="0" data-k="s" aria-pressed="false">뭐라고 답해야 할지 내용부터 안 떠오른다</button>
+          <button class="adv-opt" data-q="0" data-k="p" aria-pressed="false">내용은 있는데 말로 하면 밋밋해진다</button>
+          <button class="adv-opt" data-q="0" data-k="b" aria-pressed="false">말하다 보면 목소리가 떨리고 흔들린다</button>
+          <button class="adv-opt" data-q="0" data-k="y" aria-pressed="false">카메라 앞에만 서면 표정과 시선이 굳는다</button>
+        </div>
+      </div>
+
+      <div class="adv-q">
+        <div class="adv-q-title"><span class="adv-q-num">Q2.</span>녹음·녹화된 내 모습을 다시 보면?</div>
+        <div class="adv-opts" role="group" aria-label="질문 2. 녹음, 녹화된 내 모습을 다시 보면?">
+          <button class="adv-opt" data-q="1" data-k="b" aria-pressed="false">목소리 톤이 어색하고 얇게 들린다</button>
+          <button class="adv-opt" data-q="1" data-k="y" aria-pressed="false">표정이 어색하고 시선이 불안하다</button>
+          <button class="adv-opt" data-q="1" data-k="p" aria-pressed="false">틀린 건 없는데 밋밋하고 지루하다</button>
+          <button class="adv-opt" data-q="1" data-k="s" aria-pressed="false">답변 내용이 뻔하고 남들이랑 똑같다</button>
+        </div>
+      </div>
+
+      <div class="adv-q">
+        <div class="adv-q-title"><span class="adv-q-num">Q3.</span>딱 하나만 바꿀 수 있다면?</div>
+        <div class="adv-opts" role="group" aria-label="질문 3. 딱 하나만 바꿀 수 있다면?">
+          <button class="adv-opt" data-q="2" data-k="b" aria-pressed="false">떨리지 않는 안정적인 목소리</button>
+          <button class="adv-opt" data-q="2" data-k="y" aria-pressed="false">화면 속에서도 자연스러운 나</button>
+          <button class="adv-opt" data-q="2" data-k="p" aria-pressed="false">듣는 사람을 끌어당기는 말맛</button>
+          <button class="adv-opt" data-q="2" data-k="s" aria-pressed="false">면접관이 기억하는 나만의 답변</button>
+        </div>
+      </div>
+
+      <!-- 결과 — 세 답변이 모두 선택되면 JS가 여기에 렌더 -->
+      <div class="adv-result" id="advResult" aria-live="polite"></div>
     </div>
   </div>
 </section>
@@ -2195,7 +2263,9 @@
   const _heroReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* 카드들을 활성 인덱스 기준 거리(distance)별로 배치.
-     활성=중앙(0도), 좌우 이웃=바깥으로 ±4도 기울고 축소+반투명, 그 밖=숨김.
+     활성=중앙(0도), 좌우 이웃=바깥으로 ±4도 기울고 축소, 그 밖=숨김.
+     이웃 카드도 완전 불투명 유지 — 반투명(0.7)이 "캐러셀이 투명해진다"로
+     체감돼 제거. 깊이감은 scale/rotate/z-index만으로 표현.
      transform+opacity에 CSS transition이 걸려 있어 부드럽게 전환됨. */
   function heroLayout() {
     _hsCards.forEach((card, i) => {
@@ -2207,7 +2277,7 @@
         card.style.opacity = '0';
         card.style.pointerEvents = 'none';
       } else {
-        card.style.opacity = d === 0 ? '1' : '0.7';
+        card.style.opacity = '1';
         card.style.pointerEvents = 'auto';
       }
       const scale = d === 0 ? 1 : 0.86;
@@ -2442,18 +2512,47 @@
       });
     });
 
+    /* 데스크톱=호버 슬라이드쇼(활성 슬라이드만 clip-path로 드러냄) /
+       모바일=카드 4장 스택(각 이미지 카드를 대응 이름 뒤로 옮겨 전부 표시).
+       패널이 펼쳐지지 않으므로(레이아웃 애니 없음) 끊김이 원천적으로 없음. */
+    const chxEl = document.getElementById('chx');
+    const chxPanel = chxEl && chxEl.querySelector('.chx-panel');
+    const chxMobileMq = window.matchMedia('(max-width: 768px)');
+
     function chxActivate(idx) {
+      if (chxMobileMq.matches) return; // 모바일은 카드가 전부 보이므로 무시
       items.forEach((el, i) => el.classList.toggle('is-active', i === idx));
       slides.forEach((el, i) => el.classList.toggle('is-active', i === idx));
     }
 
+    // 모바일(카드) ↔ 데스크톱(패널) 레이아웃 전환. 실제 바뀔 때만 DOM 이동.
+    let chxMode = null;
+    function chxApplyMode() {
+      const mobile = chxMobileMq.matches;
+      if ((chxMode === 'mobile') === mobile) return;
+      chxMode = mobile ? 'mobile' : 'desktop';
+      if (mobile) {
+        // 각 이미지 카드를 대응하는 이름 바로 뒤로 옮기고 전부 표시
+        items.forEach((item, i) => { item.after(slides[i]); slides[i].classList.add('is-active'); });
+      } else {
+        // 데스크톱 복귀: 카드를 패널로 되돌리고 첫 번째만 활성
+        slides.forEach((slide, i) => { chxPanel.appendChild(slide); slide.classList.toggle('is-active', i === 0); });
+        items.forEach((el, i) => el.classList.toggle('is-active', i === 0));
+      }
+    }
+    chxMobileMq.addEventListener('change', chxApplyMode);
+    chxApplyMode();
+
     items.forEach((item, i) => {
-      item.addEventListener('mouseenter', () => chxActivate(i));
-      item.addEventListener('focus', () => chxActivate(i));
+      // 실제 마우스 호버만 활성화(터치 탭이 만드는 pointerenter/focus는 제외)
+      item.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') chxActivate(i); });
+      item.addEventListener('focus', () => { if (item.matches(':focus-visible')) chxActivate(i); });
       item.addEventListener('click', () => {
-        /* 모바일: 첫 탭 = 선택, 활성 상태에서 다시 탭 = 상세페이지 이동 */
+        if (item.classList.contains('is-closed')) return; // 마감/예정은 이동 차단
+        // 모바일: 카드가 이미 다 보이므로 이름 탭 = 바로 상세로 이동
+        if (chxMobileMq.matches) { window.location.href = item.dataset.href; return; }
+        // 데스크톱: 첫 탭 = 미리보기, 다시 탭하면 이동
         if (!item.classList.contains('is-active')) { chxActivate(i); return; }
-        if (item.classList.contains('is-closed')) return;
         window.location.href = item.dataset.href;
       });
     });
@@ -2493,6 +2592,42 @@
     };
     const WEIGHTS = [1, 1, 2];
     const answers = [null, null, null];
+
+    /* ── 단계형: 한 문항씩 카드로 보여주고, 답 선택 시 다음으로 자동 이동 ── */
+    const advEl = document.querySelector('.adv');
+    const questions = [...document.querySelectorAll('.adv-q')];
+    let step = 0;
+
+    // 진행 표시(이전 버튼 + 점 + n/총)를 첫 문항 앞에 삽입
+    const progress = document.createElement('div');
+    progress.className = 'adv-progress';
+    progress.innerHTML =
+      '<button class="adv-back" type="button" aria-label="이전 질문">‹ 이전</button>'
+      + '<div class="adv-dots">' + questions.map(() => '<span class="adv-dot"></span>').join('') + '</div>'
+      + '<span class="adv-step-label"></span>';
+    advEl.insertBefore(progress, questions[0]);
+    const backBtn = progress.querySelector('.adv-back');
+    const dots = [...progress.querySelectorAll('.adv-dot')];
+    const stepLabel = progress.querySelector('.adv-step-label');
+
+    function showStep(i) {
+      step = i;
+      result.innerHTML = '';        // 재진입 시 이전 결과 제거
+      progress.style.display = '';
+      questions.forEach((q, idx) => q.classList.toggle('is-current', idx === i));
+      dots.forEach((d, idx) => {
+        d.classList.toggle('is-current', idx === i);
+        d.classList.toggle('is-done', idx < i);
+      });
+      stepLabel.textContent = (i + 1) + ' / ' + questions.length;
+      backBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
+    }
+    function showResult() {
+      questions.forEach(q => q.classList.remove('is-current'));
+      progress.style.display = 'none';
+      render();
+    }
+    backBtn.addEventListener('click', () => { if (step > 0) showStep(step - 1); });
 
     function card(key, main) {
       const c = CH[key];
@@ -2545,6 +2680,9 @@
           + '</div></div>';
       }
       result.innerHTML = html;
+      const inner = result.querySelector('.adv-res-in');
+      if (inner) inner.insertAdjacentHTML('beforeend',
+        '<button class="adv-restart" type="button">↺ 다시 진단하기</button>');
     }
 
     document.querySelectorAll('.adv-opt').forEach(btn => {
@@ -2556,9 +2694,25 @@
           b.classList.toggle('is-on', on);
           b.setAttribute('aria-pressed', String(on));
         });
-        render();
+        // 선택 하이라이트를 잠깐 보여준 뒤 다음 문항(또는 결과)으로 자동 이동
+        setTimeout(() => {
+          if (q + 1 < questions.length) showStep(q + 1);
+          else showResult();
+        }, 240);
       });
     });
+
+    // 결과의 '다시 진단하기' → 초기화 후 첫 문항으로
+    result.addEventListener('click', (e) => {
+      if (!e.target.closest('.adv-restart')) return;
+      answers[0] = answers[1] = answers[2] = null;
+      document.querySelectorAll('.adv-opt').forEach(b => {
+        b.classList.remove('is-on'); b.setAttribute('aria-pressed', 'false');
+      });
+      showStep(0);
+    });
+
+    showStep(0); // 첫 문항부터 시작
   })();
 
   /* ── 모집 기간 (구글 시트 연동) ── */
@@ -2728,10 +2882,17 @@
     }
   })();
 
-  /* ── 네비바 스크롤 ── */
+  /* ── 네비바 스크롤 ──
+     스크롤마다 querySelector + getBoundingClientRect를 반복하던 구조가
+     모바일 버벅임을 유발해, 요소는 한 번만 캐싱하고 rAF로 스로틀. */
   const heroWindowIntroEl = document.querySelector('.hero-window-intro');
+  const navbarEl = document.getElementById('navbar');
+  const skyBgEl = document.querySelector('.hero-window-sky-bg');
+  const skyYEl = document.querySelector('.hero-window-sky-y');
+  let navTicking = false;
+
   function updateNavbarOnScroll() {
-    const navbarEl = document.getElementById('navbar');
+    navTicking = false;
     navbarEl.style.boxShadow =
       window.scrollY > 40 ? '0 4px 20px rgba(36, 26, 18,.12)' : 'none';
 
@@ -2739,27 +2900,25 @@
     // reduced-motion이어도 .hero-window-intro의 실제 렌더 높이(getBoundingClientRect)를
     // 기준으로 판단하므로 별도 분기 없이 자연스럽게 동작 (충돌/오류 없음).
     if (heroWindowIntroEl) {
-      const introBottom = heroWindowIntroEl.getBoundingClientRect().bottom;
-      navbarEl.classList.toggle('nav-transparent', introBottom > 0);
-    }
-
-    // Sky panning: adjust background-position based on scroll progress
-    if (heroWindowIntroEl) {
       const rect = heroWindowIntroEl.getBoundingClientRect();
-      const sectionHeight = rect.height;
+      navbarEl.classList.toggle('nav-transparent', rect.bottom > 0);
 
-      // Calculate progress 0–1 (0 = top of section, 1 = bottom of section)
-      const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
-
-      // 세로 패닝: 0%(타일 상단·파란 하늘) → 100%(타일 하단·구름층).
-      // X는 CSS 애니메이션(hero-sky-pan)이 담당하므로 Y만 인라인으로 제어
-      const skyBgEl = document.querySelector('.hero-window-sky-bg');
-      if (skyBgEl) {
-        skyBgEl.style.backgroundPositionY = (progress * 100) + '%';
+      // 세로 패닝: 진행 0(타일 상단·파란 하늘) → 1(타일 하단·구름층).
+      // X는 CSS 애니메이션(hero-sky-pan), Y는 여기서 translateY(px)로 제어.
+      // 하늘(130vh)과 컨테이너(100svh)의 실제 높이 차를 px로 계산 —
+      // 주소창 수축으로 svh≠vh여도 정확히 타일 하단까지만 이동.
+      if (skyYEl && skyBgEl) {
+        const progress = Math.max(0, Math.min(1, -rect.top / rect.height));
+        const overflowPx = skyYEl.offsetHeight - skyBgEl.clientHeight;
+        skyYEl.style.transform = 'translateY(' + (-progress * overflowPx).toFixed(1) + 'px)';
       }
     }
   }
-  window.addEventListener('scroll', updateNavbarOnScroll);
+  function onNavbarScroll() {
+    if (!navTicking) { navTicking = true; requestAnimationFrame(updateNavbarOnScroll); }
+  }
+  window.addEventListener('scroll', onNavbarScroll, { passive: true });
+  window.addEventListener('resize', onNavbarScroll, { passive: true });
   updateNavbarOnScroll(); // 페이지 로드 직후(스크롤 이벤트 발생 전)에도 초기 상태 반영
 
   /* ── 강사 캐러셀 (슬라이드) ── */
