@@ -2449,12 +2449,18 @@
     const name = (profile && profile.name) ? profile.name : '회원';
     const initial = (name.trim().charAt(0)) || '·';
 
+    // 관리자는 회원 마이페이지가 아니라 관리자 페이지로 보낸다.
+    const isAdmin = !!(profile && profile.role === 'admin');
+    const memberHref = isAdmin ? 'admin.html' : 'mypage.html';
+    const pillLabel = isAdmin ? '관리자 페이지' : '마이페이지';
+    const goLabel = isAdmin ? '관리자 페이지 가기 →' : '마이페이지 가기 →';
+
     // 데스크톱 nav-right 교체
     const navRight = document.querySelector('.nav-right');
     if (navRight) {
       navRight.innerHTML =
-        '<a class="mypage-pill" href="mypage.html"><span class="nav-avatar">' + escH(initial) +
-        '</span>마이페이지</a>' +
+        '<a class="mypage-pill" href="' + memberHref + '"><span class="nav-avatar">' + escH(initial) +
+        '</span>' + pillLabel + '</a>' +
         '<a class="btn btn-action nav-cta" href="#" onclick="openApplicationModal(); return false;">신청하기</a>';
     }
 
@@ -2463,11 +2469,11 @@
     if (mmEl) {
       const card = document.createElement('a');
       card.className = 'mm-member-card';
-      card.href = 'mypage.html';
+      card.href = memberHref;
       card.innerHTML =
         '<span class="mm-avatar">' + escH(initial) + '</span>' +
         '<span class="mm-member-text"><b>' + escH(name) + '</b> 님' +
-        '<span class="mm-go">마이페이지 가기 →</span></span>';
+        '<span class="mm-go">' + goLabel + '</span></span>';
       mmEl.insertBefore(card, mmEl.firstElementChild);
       const loginBtn = mmEl.querySelector('.mm-login');
       if (loginBtn) loginBtn.remove();

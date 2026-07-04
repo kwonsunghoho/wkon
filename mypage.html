@@ -15,6 +15,11 @@
     .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); }
     .brand b { color: var(--action); }
+    .brand-link { color: inherit; text-decoration: none; }
+    .brand-link:hover { opacity: .7; }
+    .admin-link { font-size: 13px; color: var(--action); text-decoration: none; border: 1px solid var(--action);
+      border-radius: 999px; padding: 6px 12px; margin-right: 8px; font-weight: 600; }
+    .admin-link:hover { background: var(--action); color: #fff; }
     .logout { font-size: 13px; color: var(--text-muted); background: none; border: 1px solid var(--border);
               border-radius: 999px; padding: 6px 14px; cursor: pointer; }
     .logout:hover { border-color: var(--action); color: var(--action); }
@@ -90,8 +95,11 @@
 <body>
   <div class="wrap">
     <div class="topbar">
-      <div class="brand">MO<b>N</b>C</div>
-      <button class="logout" id="logoutBtn">로그아웃</button>
+      <div class="brand"><a href="index.html" class="brand-link" title="홈으로">MO<b>N</b>C</a></div>
+      <div style="display:flex; align-items:center;">
+        <a href="admin.html" class="admin-link" id="adminLink" style="display:none;">관리자 페이지</a>
+        <button class="logout" id="logoutBtn">로그아웃</button>
+      </div>
     </div>
 
     <div id="content" style="display:none;">
@@ -163,6 +171,12 @@
 
       const me = session.user.id;
       const profile = await MONC.getMyProfile();
+
+      // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)
+      if (profile && profile.role === 'admin') {
+        const al = document.getElementById('adminLink');
+        if (al) al.style.display = '';
+      }
 
       // 이름/메타
       document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';
