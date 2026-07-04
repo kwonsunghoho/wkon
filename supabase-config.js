@@ -57,7 +57,9 @@
     if (!session) return null;
     const { data, error } = await sb
       .from('members')
-      .select('id, name, email, role, cohort_id, phone, is_owner')
+      // cohorts(...) 는 cohort_id FK 로 연결된 기수 정보(없으면 null). 마이페이지 기간 표시용.
+      // is_owner 는 오너 전용 관리자 임명 UI 판단용.
+      .select('id, name, email, role, cohort_id, phone, is_owner, cohorts(name, start_date, end_date)')
       .eq('id', session.user.id)
       .single();
     if (error) { console.error('프로필 조회 실패', error); return null; }

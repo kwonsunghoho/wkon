@@ -18,10 +18,11 @@
     .brand-link { color: inherit; text-decoration: none; }
     .brand-link:hover { opacity: .7; }
     .admin-link { font-size: 13px; color: var(--action); text-decoration: none; border: 1px solid var(--action);
-      border-radius: 999px; padding: 6px 12px; margin-right: 8px; font-weight: 600; }
+      border-radius: 999px; padding: 10px 14px; min-height: 44px; margin-right: 8px; font-weight: 700;
+      display: inline-flex; align-items: center; }
     .admin-link:hover { background: var(--action); color: #fff; }
-    .logout { font-size: 13px; color: var(--text-muted); background: none; border: 1px solid var(--border);
-              border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+    .logout { font-size: 14px; color: var(--text-muted); background: none; border: 1px solid var(--border);
+              border-radius: 999px; padding: 10px 18px; min-height: 44px; cursor: pointer; }
     .logout:hover { border-color: var(--action); color: var(--action); }
 
     .hello { margin: 20px 0 6px; font-size: 30px; font-weight: 800; }
@@ -31,7 +32,7 @@
     .card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
             box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; }
     .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .card .hint { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; }
+    .card .hint { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
 
     /* 진행률 요약 */
     .summary { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -53,7 +54,7 @@
     .day.success .ic { color: #1a7f37; }
     .day.fail { background: var(--action-tint); border-color: #f2c9b8; }
     .day.fail .ic { color: var(--action-dark); }
-    .day.pending { color: var(--text-dim); }
+    .day.pending { color: var(--text-muted); }
     .day.has-comment::after { content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px;
            border-radius: 50%; background: var(--action); }
 
@@ -75,7 +76,7 @@
     .ba .slot.after { outline: 2px solid var(--action); outline-offset: -2px; }
     .ba .slot.after .tag { color: var(--action); }
     .ba audio { width: 100%; }
-    .ba .empty { font-size: 13px; color: var(--text-dim); padding: 14px 0; }
+    .ba .empty { font-size: 14px; color: var(--text-muted); padding: 14px 0; }
 
     .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
 
@@ -178,9 +179,16 @@
         if (al) al.style.display = '';
       }
 
-      // 이름/메타
+      // 이름/메타 (소속 기수 · 챌린지 기간 · 이메일 순. 없는 항목은 생략)
       document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';
       const metaBits = [];
+      const cohort = profile && profile.cohorts;   // FK 조인 결과(없으면 null)
+      if (cohort && cohort.name) metaBits.push(cohort.name);
+      if (cohort && cohort.start_date && cohort.end_date) {
+        // '2026-07-10' → '7/10' 형태로 간결하게
+        const md = s => { const p = String(s).split('-'); return p.length === 3 ? (+p[1]) + '/' + (+p[2]) : s; };
+        metaBits.push(md(cohort.start_date) + '~' + md(cohort.end_date));
+      }
       if (profile && profile.email) metaBits.push(profile.email);
       document.getElementById('hMeta').textContent = metaBits.join(' · ');
 
@@ -226,7 +234,7 @@
       const cmEl = document.getElementById('commentList');
       const withComments = (records || []).filter(r => r.comment && r.comment.trim());
       if (!withComments.length) {
-        cmEl.innerHTML = '<li><span class="cm-body" style="color:var(--text-dim)">아직 코멘트가 없어요.</span></li>';
+        cmEl.innerHTML = '<li><span class="cm-body" style="color:var(--text-muted)">아직 코멘트가 없어요.</span></li>';
       } else {
         cmEl.innerHTML = withComments.map(r => {
           const st = r.status === 'success'
@@ -264,7 +272,7 @@
         .eq('member_id', me)
         .order('created_at', { ascending: false });
       if (!myApps || !myApps.length) {
-        myAppsEl.innerHTML = '<li style="color:var(--text-dim);border:0;">아직 신청 내역이 없어요. 전화번호를 입력해두면 신청과 자동으로 연결돼요.</li>';
+        myAppsEl.innerHTML = '<li style="color:var(--text-muted);border:0;">아직 신청 내역이 없어요. 전화번호를 입력해두면 신청과 자동으로 연결돼요.</li>';
       } else {
         myAppsEl.innerHTML = myApps.map(a => {
           const chs = Array.isArray(a.challenges) ? a.challenges.map(c => `${CH_LABEL_MP[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ') : '';
