@@ -35,7 +35,8 @@
 
   async function signOut() {
     await sb.auth.signOut();
-    window.location.href = LOGIN_PAGE;
+    // 로그아웃 후에는 로그인 창이 아니라 홈으로 (미로그인 접근 시 requireSession 이 login 으로 보냄)
+    window.location.href = 'index.html';
   }
 
   // 현재 세션(로그인 정보). 없으면 null.
