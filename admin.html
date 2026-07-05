@@ -233,6 +233,10 @@
 
   <div class="tab-panel" id="panel-questions">
     <div class="rounds-wrap">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        평소엔 <b>활성 문제가 매일 자동으로 순환</b>됩니다(자정에 교체·전원 동일). 특정 날짜에 원하는 문제를 내보내려면
+        <b>오늘 지정</b> 버튼이나 날짜를 지정해 <b>고정</b>하세요. 목록에서 <b style="color:var(--action)">▶ 오늘 노출 중</b>이 지금 나가는 문제예요.
+      </p>
       <form class="round-form" id="questionForm" style="grid-template-columns:1fr;">
         <div class="field"><label>문제 내용</label>
           <textarea id="qfContent" rows="2" placeholder="예: 예상치 못한 문제를 침착하게 해결했던 경험"
@@ -732,6 +736,7 @@
     const Q_CAT = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
     let _questions = [], _editQid = null;
     function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function dayIndexLocal() { const d = new Date(); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 86400000); }
 
     function resetQForm() {
       _editQid = null;
@@ -753,14 +758,23 @@
       _questions = data || [];
       if (!_questions.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 문제가 없습니다. 위에서 추가하세요.</div>'; return; }
       const today = todayStr();
+      // 오늘 실제 노출되는 문제 = 고정(오늘 날짜) 우선, 없으면 활성 풀 자동 순환 (sojae.html 과 동일 규칙)
+      let effectiveId = null;
+      const pinnedToday = _questions.find(q => q.active && q.scheduled_date === today);
+      if (pinnedToday) effectiveId = pinnedToday.id;
+      else {
+        const pool = _questions.filter(q => q.active).sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+        if (pool.length) effectiveId = pool[dayIndexLocal() % pool.length].id;
+      }
       listEl.innerHTML = _questions.map(q => {
-        const isToday = q.scheduled_date === today;
-        const sched = q.scheduled_date ? (isToday ? '오늘의 문제' : ('예정 ' + q.scheduled_date)) : '대기';
+        const isEffective = q.id === effectiveId;
+        const pin = q.scheduled_date ? (q.scheduled_date === today ? '오늘 고정' : ('예정 고정 ' + q.scheduled_date)) : '자동 순환';
+        const liveTag = isEffective ? '<b style="color:var(--action)">▶ 오늘 노출 중</b> · ' : '';
         return `
-        <div class="round-item" data-id="${q.id}" style="${q.active ? '' : 'opacity:.55;'}">
+        <div class="round-item" data-id="${q.id}" style="${q.active ? '' : 'opacity:.55;'}${isEffective ? 'box-shadow:inset 3px 0 0 var(--action);' : ''}">
           <div>
             <div class="ri-main">${esc(q.content)}</div>
-            <div class="ri-sub">${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · <b style="color:${isToday ? 'var(--action)' : 'var(--text-muted)'}">${sched}</b>${q.active ? '' : ' · 숨김'}</div>
+            <div class="ri-sub">${liveTag}${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
             <button class="ri-del q-today" data-id="${q.id}" style="color:var(--action-dark);border-color:var(--action)">오늘 지정</button>
