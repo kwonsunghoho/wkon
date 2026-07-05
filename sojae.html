@@ -80,6 +80,16 @@
     .snd.on { background: var(--action); color: var(--action-ink); border-color: transparent; }
     .snd:active { transform: scale(.94); }
     .foot { text-align: center; margin-top: 8px; font-size: 11px; color: var(--text-dim); }
+    #refineCta { display: block; width: 100%; background: transparent; color: var(--action);
+      border: 1.5px solid var(--action); border-radius: 13px; padding: 12px; font-size: 14px;
+      font-weight: 700; cursor: pointer; margin-bottom: 10px; min-height: 44px; }
+    #writeMode .wlabel { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+    #finalTa { min-height: 120px; max-height: none; overflow: auto; resize: vertical; }
+    #saveBtn { display: block; width: 100%; margin-top: 10px; background: var(--action);
+      color: var(--action-ink); border: none; border-radius: 14px; padding: 14px; font-size: 15px;
+      font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
+    #saveBtn:disabled { opacity: .7; cursor: default; }
+    #saveFoot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-dim); min-height: 16px; }
   </style>
 </head>
 <body>
@@ -92,28 +102,39 @@
   </div>
 
   <div class="stepbar">
-    <span class="on">1 되묻기</span><span class="sep">›</span>
-    <span>2 다듬기</span><span class="sep">›</span>
-    <span>3 최종 작성</span>
+    <span class="on" id="step1">1 되묻기</span><span class="sep">›</span>
+    <span id="step2">2 다듬기</span><span class="sep">›</span>
+    <span id="step3">3 최종 작성</span>
   </div>
 
   <div class="chat" id="chat"><!-- 메시지는 JS가 렌더 --></div>
 
   <div class="composer">
-    <span class="hint" id="hint">막히면 여기서 도움받기</span>
-    <div class="pillrow">
-      <button class="pill" id="help">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
-        잘 안 떠올라요
-      </button>
+    <!-- 되묻기 모드 -->
+    <div id="askMode">
+      <button id="refineCta" style="display:none;">모은 이야기로 다듬어볼까요 →</button>
+      <span class="hint" id="hint">막히면 여기서 도움받기</span>
+      <div class="pillrow">
+        <button class="pill" id="help">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
+          잘 안 떠올라요
+        </button>
+      </div>
+      <div class="field">
+        <textarea id="ta" rows="1" placeholder="떠오르는 대로 편하게 적어보세요"></textarea>
+        <button class="snd" id="snd" aria-label="전송">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+      <div class="foot">Enter 전송 · Shift+Enter 줄바꿈 · 지금은 AI 응답이 예시입니다</div>
     </div>
-    <div class="field">
-      <textarea id="ta" rows="1" placeholder="떠오르는 대로 편하게 적어보세요"></textarea>
-      <button class="snd" id="snd" aria-label="전송">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-      </button>
+    <!-- 최종작성 모드 -->
+    <div id="writeMode" style="display:none;">
+      <div class="wlabel">최종 답변 — 위 뼈대를 보고 내 말로 완성하세요</div>
+      <div class="field"><textarea id="finalTa" rows="4" placeholder="내 말로 최종 답변을 작성하세요"></textarea></div>
+      <button id="saveBtn">답변집에 저장</button>
+      <div id="saveFoot"></div>
     </div>
-    <div class="foot">Enter 전송 · Shift+Enter 줄바꿈 · 지금은 AI 응답이 예시입니다</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -171,8 +192,21 @@
       d.className = 'bub ' + cls; d.innerHTML = html;
       chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
     }
-    function ai(html){ bubble('ai', '<div class="who"><span class="ava">R</span>연구원</div>' + html); }
-    function me(text){ bubble('me', esc(text)); }
+    // 되묻기 대화 로그 — 다듬기 프롬프트의 {collected_materials} 재료 (docs/prompts/sojae-refine.md)
+    // TODO(save): 로그인 붙이면 discovery_messages 에도 저장.
+    const transcript = [];
+    function ai(html){
+      bubble('ai', '<div class="who"><span class="ava">R</span>연구원</div>' + html);
+      transcript.push({ role: 'researcher', content: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() });
+    }
+    function me(text){
+      bubble('me', esc(text));
+      transcript.push({ role: 'user', content: text });
+    }
+    // 지원자가 꺼낸 재료만 모아 텍스트로 (Edge Function 에 {collected_materials} 로 주입)
+    function collectedMaterials(){
+      return transcript.filter(t => t.role === 'user').map((t, i) => (i + 1) + '. ' + t.content).join('\n');
+    }
 
     // ── 입력/전송 ──
     const ta = document.getElementById('ta'), snd = document.getElementById('snd');
@@ -185,10 +219,13 @@
       hint.classList.add('show'); setTimeout(()=>hint.classList.remove('show'), 3400);
     }
     function resetIdle(){ clearTimeout(idleT); idleT = setTimeout(pulse, 8000); }
+    let userMsgCount = 0;
     function send(){
       const v = ta.value.trim(); if(!v) return;
       me(v); ta.value=''; grow(); toggle();
       // TODO(save): 되묻기 재료를 sessions/messages 테이블에 저장(로그인 필요)
+      userMsgCount++;
+      if (userMsgCount >= 2) document.getElementById('refineCta').style.display = 'block';
       setTimeout(()=>{ ai(askResearcher(false)); }, 650);
       resetIdle();
     }
@@ -196,6 +233,72 @@
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
     snd.addEventListener('click', send);
     help.addEventListener('click', ()=>{ ai(askResearcher(true)); resetIdle(); });
+
+    // ── 다듬기(뼈대) stub ─────────────────────────────────────────────
+    // TODO(AI): Sonnet Edge Function 으로 교체 — 프롬프트는 docs/prompts/sojae-refine.md,
+    //   {question}=currentQuestion.content, {category}=CAT_LABEL[category],
+    //   {collected_materials}=collectedMaterials() 주입. 아래는 화면 흐름용 가짜 뼈대.
+    function refineSkeleton(){
+      const mats = transcript.filter(t => t.role === 'user').map(t => t.content);
+      const hook = mats[0] ? '“' + esc(mats[0].slice(0, 24)) + (mats[0].length > 24 ? '…' : '') + '”' : '꺼낸 이야기';
+      if (category === 'judgment') {
+        // 상황판단형: 경험 서술이 아니라 판단·대처 흐름 (프롬프트 [유형별 주의])
+        return '<b>답변 뼈대 — 판단·대처 흐름으로</b><br><br>'
+          + '① <b>판단 기준</b> — 이 상황에서 무엇을 최우선으로 볼지(안전·규정·승객 마음) 먼저 한 문장으로.<br>'
+          + '② <b>즉시 대처</b> — 그 기준에 따라 내가 먼저 할 행동을 순서대로. 여기에 무게를 두세요.<br>'
+          + '③ <b>후속 마무리</b> — 동료·선임 공유, 승객 재확인까지 한 문장으로.<br><br>'
+          + '<b>강점 포인트</b>: ' + hook + ' 에서 보인 침착한 기준 잡기. 그대로 살리세요.<br><br>'
+          + '이제 아래 칸에서 “나는 이렇게 판단하고, 이렇게 대처하겠다” 흐름으로 직접 완성해보세요.';
+      }
+      return '<b>답변 뼈대 — 이 순서로 말해보세요</b><br><br>'
+        + '① <b>장면 꺼내기</b> — ' + hook + ' 상황을 한두 문장으로. 언제·어디서였는지만 간결히.<br>'
+        + '② <b>나의 행동</b> — 그때 무엇을 어떤 순서로 했는지. 답변의 무게는 여기에.<br>'
+        + '③ <b>결과와 느낀 점</b> — 상대 반응·결과 + 그때 감정을 한 문장으로.<br>'
+        + '④ <b>승무원과 연결</b> — 이 경험이 기내에서 어떻게 이어질지로 마무리.<br><br>'
+        + '<b>강점 포인트</b>: 직접 겪은 구체적인 장면이 있다는 것. 표정·말 같은 디테일을 살리면 더 생생해져요.<br><br>'
+        + '완성 문장은 제가 만들지 않아요 — 아래 칸에 지원자님의 말로 직접 채워보세요.';
+    }
+
+    // ── 다듬기 진입 → 최종 작성 모드 ──
+    document.getElementById('refineCta').addEventListener('click', () => {
+      clearTimeout(idleT);                                   // 되묻기 넛지 중지
+      document.getElementById('askMode').style.display = 'none';
+      document.getElementById('step1').classList.remove('on');
+      document.getElementById('step2').classList.add('on');
+      ai('좋아요, 지금까지 꺼낸 이야기로 뼈대를 잡아볼게요.');
+      setTimeout(() => {
+        ai(refineSkeleton());
+        document.getElementById('step3').classList.add('on');
+        document.getElementById('writeMode').style.display = 'block';
+        chat.scrollTop = chat.scrollHeight;
+      }, 800);
+    });
+
+    // ── 답변집 저장 (answers upsert — 문제당 1개, 재저장=수정) ──
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('saveBtn');
+      const footEl = document.getElementById('saveFoot');
+      const content = document.getElementById('finalTa').value.trim();
+      if (!content) { footEl.textContent = '답변을 입력하세요.'; return; }
+      btn.disabled = true; footEl.textContent = '저장 중…';
+      try {
+        const session = await MONC.getSession();
+        if (!session) {
+          footEl.innerHTML = '저장하려면 <a href="login.html" style="color:var(--accent);font-weight:700;">로그인</a>이 필요해요. (작성 내용은 이 화면에 남아 있어요)';
+        } else if (!currentQuestion) {
+          footEl.textContent = '문제 정보를 불러오지 못해 저장할 수 없어요. 새로고침 후 다시 시도해 주세요.';
+        } else {
+          const { error } = await MONC.sb.from('answers').upsert(
+            { member_id: session.user.id, question_id: currentQuestion.id, content },
+            { onConflict: 'member_id,question_id' });
+          if (error) throw error;
+          footEl.textContent = '답변집에 저장됐어요.';
+          btn.textContent = '다시 저장';
+          // TODO(save): discovery_sessions stage='done' + transcript 를 discovery_messages 에 저장
+        }
+      } catch (e) { footEl.textContent = '저장 실패: ' + e.message; }
+      btn.disabled = false;
+    });
 
     // 로드 직후 한 번 펄스로 위치 각인, 이후 idle마다
     setTimeout(pulse, 1800);
