@@ -126,7 +126,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
       </div>
-      <div class="foot">Enter 전송 · Shift+Enter 줄바꿈 · 지금은 AI 응답이 예시입니다</div>
+      <div class="foot">Enter 전송 · Shift+Enter 줄바꿈</div>
     </div>
     <!-- 최종작성 모드 -->
     <div id="writeMode" style="display:none;">
@@ -172,16 +172,36 @@
     };
     const HELP_REPLY = '좋아요, 같이 찾아봐요. 거창한 사건이 아니어도 돼요 — <b>예상과 달랐던 \'작은 순간\'</b> 하나부터 떠올려볼까요? 그때 몸이 먼저 어떻게 움직였나요?';
 
-    // ── AI 호출 자리(stub) ──────────────────────────────────────────────
-    // TODO(AI): 아래 canned 응답을 Supabase Edge Function 호출로 교체.
-    //   const { data } = await MONC.sb.functions.invoke('materialize',
-    //     { body: { question_id, category, stage:'ask', history, help } });
-    //   되묻기=Haiku, 다듬기=Sonnet, prompt caching 적용. 포인트 차감도 이 함수 안에서.
+    // ── AI 호출: Edge Function 'sojae-chat' (되묻기=Haiku 4.5, 다듬기=Sonnet 5) ──
+    // 함수 코드: supabase/functions/sojae-chat/index.ts (오너가 콘솔 배포 + ANTHROPIC_API_KEY 시크릿)
+    // 미배포·비로그인 등 실패 시 canned 응답으로 폴백 → 화면은 항상 동작.
     let _step = 0;
-    function askResearcher(help) {
+    function cannedAsk(help) {
       const list = FOLLOWUPS[category] || FOLLOWUPS.experience;
       if (help) return HELP_REPLY;
       const t = list[_step % list.length]; _step++; return t;
+    }
+    async function askAI(help) {
+      try {
+        const { data, error } = await MONC.sb.functions.invoke('sojae-chat', {
+          body: { stage: 'ask', question_id: currentQuestion && currentQuestion.id,
+                  category, help: !!help, history: transcript },
+        });
+        if (error || !data || !data.message) throw error || new Error('빈 응답');
+        // AI가 "재료가 충분히 모였어요"([멈춤] 신호)라고 판단하면 다듬기 버튼 노출
+        if (data.materials_sufficient) document.getElementById('refineCta').style.display = 'block';
+        return esc(data.message).replace(/\n/g, '<br>');
+      } catch (_) { return cannedAsk(help); }
+    }
+    async function refineAI() {
+      try {
+        const { data, error } = await MONC.sb.functions.invoke('sojae-chat', {
+          body: { stage: 'refine', question_id: currentQuestion && currentQuestion.id,
+                  category, materials: collectedMaterials() },
+        });
+        if (error || !data || !data.message) throw error || new Error('빈 응답');
+        return esc(data.message).replace(/\n/g, '<br>');
+      } catch (_) { return refineSkeleton(); }
     }
 
     // ── 렌더 헬퍼 ──
@@ -207,6 +227,19 @@
     function collectedMaterials(){
       return transcript.filter(t => t.role === 'user').map((t, i) => (i + 1) + '. ' + t.content).join('\n');
     }
+    // 응답 대기 말풍선(…) — 채워지기 전에는 transcript 에 넣지 않는다
+    function aiPending(){
+      const d = document.createElement('div');
+      d.className = 'bub ai';
+      d.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div><span style="color:var(--text-dim);">생각 중…</span>';
+      chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+    function aiFill(el, html){
+      el.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div>' + html;
+      chat.scrollTop = chat.scrollHeight;
+      transcript.push({ role: 'researcher', content: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() });
+    }
 
     // ── 입력/전송 ──
     const ta = document.getElementById('ta'), snd = document.getElementById('snd');
@@ -226,18 +259,21 @@
       // TODO(save): 되묻기 재료를 sessions/messages 테이블에 저장(로그인 필요)
       userMsgCount++;
       if (userMsgCount >= 2) document.getElementById('refineCta').style.display = 'block';
-      setTimeout(()=>{ ai(askResearcher(false)); }, 650);
+      const p = aiPending();
+      askAI(false).then(html => aiFill(p, html));
       resetIdle();
     }
     ta.addEventListener('input', ()=>{ grow(); toggle(); resetIdle(); });
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
     snd.addEventListener('click', send);
-    help.addEventListener('click', ()=>{ ai(askResearcher(true)); resetIdle(); });
+    help.addEventListener('click', ()=>{
+      transcript.push({ role: 'help', content: '잘 안 떠올라요' });   // 서버에서 [막힘 대응] 트리거
+      const p = aiPending();
+      askAI(true).then(html => aiFill(p, html));
+      resetIdle();
+    });
 
-    // ── 다듬기(뼈대) stub ─────────────────────────────────────────────
-    // TODO(AI): Sonnet Edge Function 으로 교체 — 프롬프트는 docs/prompts/sojae-refine.md,
-    //   {question}=currentQuestion.content, {category}=CAT_LABEL[category],
-    //   {collected_materials}=collectedMaterials() 주입. 아래는 화면 흐름용 가짜 뼈대.
+    // ── 다듬기(뼈대) 폴백 — Edge Function 실패 시에만 사용 (실호출은 refineAI) ──
     function refineSkeleton(){
       const mats = transcript.filter(t => t.role === 'user').map(t => t.content);
       const hook = mats[0] ? '“' + esc(mats[0].slice(0, 24)) + (mats[0].length > 24 ? '…' : '') + '”' : '꺼낸 이야기';
@@ -266,12 +302,13 @@
       document.getElementById('step1').classList.remove('on');
       document.getElementById('step2').classList.add('on');
       ai('좋아요, 지금까지 꺼낸 이야기로 뼈대를 잡아볼게요.');
-      setTimeout(() => {
-        ai(refineSkeleton());
+      const p = aiPending();
+      refineAI().then(html => {
+        aiFill(p, html);
         document.getElementById('step3').classList.add('on');
         document.getElementById('writeMode').style.display = 'block';
         chat.scrollTop = chat.scrollHeight;
-      }, 800);
+      });
     });
 
     // ── 답변집 저장 (answers upsert — 문제당 1개, 재저장=수정) ──
