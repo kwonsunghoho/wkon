@@ -123,6 +123,13 @@
     .note-a { padding: 0 14px 14px; font-size: 14px; color: var(--text); line-height: 1.65; white-space: pre-wrap;
       border-top: 1px dashed var(--border-soft); margin: 4px 14px 0; padding: 12px 0 14px; }
     .nt-empty { font-size: 14px; color: var(--text-muted); }
+    /* 작성 중 / 완료 그룹 */
+    .notes-group { display: flex; flex-direction: column; gap: 10px; }
+    .notes-grouplabel { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: .02em; margin: 0; }
+    .note-draft { display: block; padding: 14px; text-decoration: none; color: inherit; border-left: 3px solid var(--action); }
+    .note-draft:hover { background: var(--surface); }
+    .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+    .note-draft .note-more { display: inline-block; font-size: 12px; font-weight: 700; color: var(--action-dark); margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -235,32 +242,57 @@
     }
 
     // ── 내 답변노트 (answers + questions 조인, RLS 상 내 것만) ──
+    //    작성 중(status=draft) → '이어서 작성' / 완료(status=final) → 펼쳐보기.
     async function loadAnswerNotes(memberId) {
       const el = document.getElementById('answerNotes');
       try {
-        const { data, error } = await MONC.sb.from('answers')
-          .select('content, updated_at, questions(content, category)')
-          .eq('member_id', memberId)
-          .order('updated_at', { ascending: false });
+        // status 컬럼이 있으면 draft/final 분리, 없으면(마이그레이션 전) 전부 완료로 폴백.
+        let { data, error } = await MONC.sb.from('answers')
+          .select('content, status, updated_at, question_id, questions(content, category)')
+          .eq('member_id', memberId).order('updated_at', { ascending: false });
+        if (error) {
+          ({ data, error } = await MONC.sb.from('answers')
+            .select('content, updated_at, question_id, questions(content, category)')
+            .eq('member_id', memberId).order('updated_at', { ascending: false }));
+        }
         if (error) throw error;
         if (!data || !data.length) {
           el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
           return;
         }
-        el.innerHTML = data.map(a => {
+        const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
+        const catOf = q => (window.SOJAE && window.SOJAE.CAT_LABEL[(q || {}).category]) || '소재 발굴';
+        const drafts = data.filter(a => (a.status || 'final') === 'draft');
+        const finals = data.filter(a => (a.status || 'final') !== 'draft');
+
+        const draftCard = a => {
           const q = a.questions || {};
-          const cat = (window.SOJAE && window.SOJAE.CAT_LABEL[q.category]) || '소재 발굴';
-          const d = new Date(a.updated_at);
-          const ds = d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+          const preview = a.content && a.content.trim()
+            ? esc(a.content.trim().slice(0, 60)) + (a.content.trim().length > 60 ? '…' : '')
+            : '아직 작성 전 — 눌러서 이어쓰기';
+          return `<a class="note note-draft" href="sojae.html?q=${encodeURIComponent(a.question_id)}">
+            <div class="note-top"><span class="note-cat">${esc(catOf(q))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
+            <div class="note-q">${esc(q.content || '(문제 정보 없음)')}</div>
+            <div class="note-preview">${preview}</div>
+            <span class="note-more">이어서 작성 →</span>
+          </a>`;
+        };
+        const finalCard = a => {
+          const q = a.questions || {};
           return `<details class="note">
             <summary>
-              <div class="note-top"><span class="note-cat">${esc(cat)}</span><span class="note-date">${ds}</span></div>
+              <div class="note-top"><span class="note-cat">${esc(catOf(q))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
               <div class="note-q">${esc(q.content || '(문제 정보 없음)')}</div>
               <span class="note-more">답변 보기 ▾</span>
             </summary>
             <div class="note-a">${esc(a.content)}</div>
           </details>`;
-        }).join('');
+        };
+
+        let html = '';
+        if (drafts.length) html += '<div class="notes-group"><p class="notes-grouplabel">작성 중 · ' + drafts.length + '</p>' + drafts.map(draftCard).join('') + '</div>';
+        if (finals.length) html += '<div class="notes-group"><p class="notes-grouplabel">완료 · ' + finals.length + '</p>' + finals.map(finalCard).join('') + '</div>';
+        el.innerHTML = html;
       } catch (_) {
         el.innerHTML = '<p class="nt-empty">답변을 불러오지 못했어요.</p>';
       }

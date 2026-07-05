@@ -130,9 +130,9 @@
     </div>
     <!-- 최종작성 모드 -->
     <div id="writeMode" style="display:none;">
-      <div class="wlabel">최종 답변 — 위 뼈대를 보고 내 말로 완성하세요</div>
+      <div class="wlabel">최종 답변 — 위 뼈대를 보고 내 말로 완성하세요. <b>작성 중인 내용은 자동 저장돼요.</b></div>
       <div class="field"><textarea id="finalTa" rows="4" placeholder="내 말로 최종 답변을 작성하세요"></textarea></div>
-      <button id="saveBtn">답변집에 저장</button>
+      <button id="saveBtn">답변집에 저장(완료)</button>
       <div id="saveFoot"></div>
     </div>
   </div>
@@ -147,12 +147,12 @@
     let currentQuestion = null;      // 저장 단계에서 쓸 오늘의 문제 행
     const FALLBACK_QUESTION = '예상치 못한 문제를 침착하게 해결했던 경험';  // DB 조회 실패 시 표시·AI 전달용
 
-    // ── 이어쓰기(히스토리): localStorage 즉시 복원 + 로그인 시 서버(discovery_*) 미러 ──
-    //    중간에 나갔다 와도 대화가 그대로 이어진다. 문제당 1슬롯 + 이미 저장된 만큼은 건너뛰어 중복 없음.
-    const DRAFT_PREFIX = 'monc_sojae_draft_v1:';
-    let _draftKey = null;      // 오늘의 문제 확정 후 세팅(문제당 1개 → 중복 없음)
-    let _srvSession = null;    // discovery_sessions.id (로그인 시)
+    // ── 이어쓰기(서버 단일 원천) ──
+    //    대화·뼈대 → discovery_sessions/discovery_messages, 답변 초안 → answers(status=draft).
+    //    되묻기 시작부터 자동 저장. 나갔다/날 바뀌어도 마이페이지에서 ?q=id 로 다시 열어 이어쓰기.
+    let _srvSession = null;    // discovery_sessions.id
     let _srvSynced = 0;        // 서버에 이미 저장된 메시지 수 → 재방문해도 중복 삽입 방지
+    let _answerStatus = null;  // null | 'draft' | 'final' — 초안 저장이 완료본을 덮어쓰지 않게
     let _restoring = false;    // 복원 렌더 중엔 저장/서버동기 건너뜀
 
     // ── 되묻기 질문(가짜) — 유형별로 결이 다름. 실제로는 Haiku Edge Function이 생성 ──
@@ -230,12 +230,10 @@
     function ai(html){
       bubble('ai', '<div class="who"><span class="ava">R</span>연구원</div>' + html);
       transcript.push({ role: 'researcher', content: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() });
-      persistLocal();
     }
     function me(text){
       bubble('me', esc(text));
       transcript.push({ role: 'user', content: text });
-      persistLocal();
     }
     // 지원자가 꺼낸 재료만 모아 텍스트로 (Edge Function 에 {collected_materials} 로 주입)
     function collectedMaterials(){
@@ -253,7 +251,6 @@
       el.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div>' + html;
       chat.scrollTop = chat.scrollHeight;
       transcript.push({ role: 'researcher', content: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() });
-      persistLocal();
     }
 
     // ── 입력/전송 ──
@@ -275,7 +272,7 @@
       me(v); ta.value=''; grow(); toggle();
       userMsgCount++;
       if (userMsgCount >= 2) document.getElementById('refineCta').style.display = 'block';
-      persistLocal();
+      saveDraftAnswer();   // 첫 전송부터 answers 초안 행 생성 → 마이페이지 '작성 중'에 노출
       _busy = true;
       const p = aiPending();
       askAI(false).then(html => { aiFill(p, html); _busy = false; syncServer(); });
@@ -287,7 +284,6 @@
     help.addEventListener('click', ()=>{
       if (_busy || !_ready) return;
       transcript.push({ role: 'help', content: '잘 안 떠올라요' });   // 서버에서 [막힘 대응] 트리거
-      persistLocal();
       _busy = true;
       const p = aiPending();
       askAI(true).then(html => { aiFill(p, html); _busy = false; syncServer(); });
@@ -316,23 +312,23 @@
         + '완성 문장은 제가 만들지 않아요 — 아래 칸에 지원자님의 말로 직접 채워보세요.';
     }
 
-    // ── 이어쓰기 저장/복원 ────────────────────────────────────────────────
-    // localStorage: 즉시·오프라인·비로그인에서도 항상 작동(진행 중 초안 보존).
-    function persistLocal(){
-      if (_restoring || !_draftKey) return;
-      if (!transcript.some(t => t.role === 'user')) return;   // 사용자가 적기 전엔 저장 안 함(빈 초안 방지)
+    // ── 이어쓰기 저장/복원 (서버 단일 원천) ──────────────────────────────
+    // 답변 초안: answers 에 status='draft' 로 upsert(문제당 1행). 완료본이면 final 유지(다운그레이드 방지).
+    async function saveDraftAnswer(){
+      if (_restoring || !currentQuestion) return;
+      let session;
+      try { session = await MONC.getSession(); } catch (_) { return; }
+      if (!session) return;
       try {
-        localStorage.setItem(_draftKey, JSON.stringify({
-          qid: currentQuestion ? currentQuestion.id : null,
-          category, transcript, step: _step, userMsgCount,
-          refine: document.getElementById('refineCta').style.display === 'block',
-          mode: document.getElementById('writeMode').style.display === 'block' ? 'write' : 'ask',
-          final: document.getElementById('finalTa').value,
-          ts: Date.now(),
-        }));
+        const status = _answerStatus === 'final' ? 'final' : 'draft';
+        const { error } = await MONC.sb.from('answers').upsert(
+          { member_id: session.user.id, question_id: currentQuestion.id,
+            content: document.getElementById('finalTa').value, status },
+          { onConflict: 'member_id,question_id' });
+        if (!error) _answerStatus = status;
       } catch (_) {}
     }
-    // 서버(로그인 시): 세션 1행(문제당 unique) + 아직 안 올린 메시지만 추가 → 재방문해도 중복 없음.
+    // 대화·뼈대: 세션 1행(문제당 unique) + 아직 안 올린 메시지만 추가 → 재방문해도 중복 없음.
     async function syncServer(stage){
       if (_restoring || !currentQuestion) return;
       let session;
@@ -381,44 +377,41 @@
       document.getElementById('step3').classList.add('on');
       document.getElementById('writeMode').style.display = 'block';
     }
-    // 진입 시 복원: localStorage 우선(즉시), 없으면 로그인 상태에서 서버 조회(기기 이동).
-    async function restoreDraft(){
-      let saved = null;
-      try { const raw = _draftKey && localStorage.getItem(_draftKey); if (raw) saved = JSON.parse(raw); } catch (_) {}
-      if (!saved) saved = await restoreFromServer();
-      if (!saved || !Array.isArray(saved.transcript) || !saved.transcript.length) return false;
-      _restoring = true;
-      if (saved.category && CAT_LABEL[saved.category]) {
-        category = saved.category;
-        document.getElementById('catBadge').textContent = CAT_LABEL[category];
-      }
-      replayTranscript(saved.transcript);
-      _step = saved.step || 0;
-      userMsgCount = transcript.filter(t => t.role === 'user').length;
-      if (saved.refine || userMsgCount >= 2) document.getElementById('refineCta').style.display = 'block';
-      if (saved.mode === 'write') showWriteMode();
-      if (saved.final) document.getElementById('finalTa').value = saved.final;
-      _restoring = false;
-      persistLocal();     // 서버발 복원이면 localStorage 에도 캐시
-      syncServer();       // 세션 확보 + 중복방지 기준선 맞춤
-      return true;
-    }
-    // 로그인 상태에서 서버 세션/메시지로 복원(기기 이동 케이스).
-    async function restoreFromServer(){
+    // 진입 시 복원(서버): 그 문제의 대화·뼈대(discovery) + 답변 초안(answers) 을 화면에 재현.
+    async function restoreSession(){
       let session;
-      try { session = await MONC.getSession(); } catch (_) { return null; }
-      if (!session || !currentQuestion) return null;
+      try { session = await MONC.getSession(); } catch (_) { return false; }
+      if (!session || !currentQuestion) return false;
+      let msgs = [], sess = null, answer = null;
       try {
         const { data: s } = await MONC.sb.from('discovery_sessions')
           .select('id, stage').eq('member_id', session.user.id).eq('question_id', currentQuestion.id).maybeSingle();
-        if (!s) return null;
-        const { data: msgs } = await MONC.sb.from('discovery_messages')
-          .select('role, content').eq('session_id', s.id).order('created_at', { ascending: true });
-        if (!msgs || !msgs.length) return null;
-        return { qid: currentQuestion.id, category, transcript: msgs,
-                 mode: (s.stage === 'write' || s.stage === 'done') ? 'write' : 'ask',
-                 refine: msgs.filter(m => m.role === 'user').length >= 2, final: '' };
-      } catch (_) { return null; }
+        sess = s || null;
+        if (sess) {
+          const r = await MONC.sb.from('discovery_messages')
+            .select('role, content').eq('session_id', sess.id).order('created_at', { ascending: true });
+          msgs = r.data || [];
+        }
+        const { data: a } = await MONC.sb.from('answers')
+          .select('content, status').eq('member_id', session.user.id).eq('question_id', currentQuestion.id).maybeSingle();
+        answer = a || null;
+      } catch (_) {}
+      // 되살릴 게 아무것도 없으면 새 세션(인사말)로.
+      if (!msgs.length && !(answer && answer.content)) return false;
+      _restoring = true;
+      if (sess) { _srvSession = sess.id; _srvSynced = msgs.length; }   // 이후 syncServer 가 새 메시지만 추가(중복 방지)
+      if (answer) _answerStatus = answer.status || 'draft';
+      replayTranscript(msgs);
+      userMsgCount = transcript.filter(t => t.role === 'user').length;
+      if (userMsgCount >= 2) document.getElementById('refineCta').style.display = 'block';
+      // 뼈대까지 갔거나(=write/done) 이미 답변을 쓰기 시작했으면 최종작성 모드로 복원
+      const inWrite = (sess && (sess.stage === 'write' || sess.stage === 'done')) || (answer && answer.content);
+      if (inWrite) {
+        showWriteMode();
+        if (answer && answer.content) document.getElementById('finalTa').value = answer.content;
+      }
+      _restoring = false;
+      return true;
     }
 
     // ── 다듬기 진입 → 최종 작성 모드 ──
@@ -439,12 +432,14 @@
         document.getElementById('writeMode').style.display = 'block';
         chat.scrollTop = chat.scrollHeight;
         _busy = false;
-        persistLocal();
         syncServer('write');
       });
     });
-    // 최종 답변 초안도 즉시 이어쓰기 저장
-    document.getElementById('finalTa').addEventListener('input', persistLocal);
+    // 최종 답변 초안 자동 저장(디바운스 800ms)
+    let _draftT;
+    document.getElementById('finalTa').addEventListener('input', () => {
+      clearTimeout(_draftT); _draftT = setTimeout(saveDraftAnswer, 800);
+    });
 
     // ── 답변집 저장 (answers upsert — 문제당 1개, 재저장=수정) ──
     document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -455,36 +450,40 @@
       btn.disabled = true; footEl.textContent = '저장 중…';
       try {
         const session = await MONC.getSession();
-        if (!session) {
-          footEl.innerHTML = '저장하려면 <a href="login.html" style="color:var(--accent);font-weight:700;">로그인</a>이 필요해요. (작성 내용은 이 화면에 남아 있어요)';
-        } else if (!currentQuestion) {
-          footEl.textContent = '문제 정보를 불러오지 못해 저장할 수 없어요. 새로고침 후 다시 시도해 주세요.';
+        if (!session || !currentQuestion) {
+          footEl.textContent = '문제 정보를 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.';
         } else {
           const { error } = await MONC.sb.from('answers').upsert(
-            { member_id: session.user.id, question_id: currentQuestion.id, content },
+            { member_id: session.user.id, question_id: currentQuestion.id, content, status: 'final' },
             { onConflict: 'member_id,question_id' });
           if (error) throw error;
-          footEl.textContent = '답변집에 저장됐어요.';
+          _answerStatus = 'final';               // 이후 자동 저장이 완료본을 draft 로 되돌리지 않게
+          footEl.textContent = '답변집에 저장됐어요. (완료)';
           btn.textContent = '다시 저장';
-          try { if (_draftKey) localStorage.removeItem(_draftKey); } catch (_) {}  // 완료 → 진행중 초안 정리
           syncServer('done');   // 되묻기 대화도 서버에 마저 기록 + 세션 완료 표시
         }
       } catch (e) { footEl.textContent = '저장 실패: ' + e.message; }
       btn.disabled = false;
     });
 
-    // ── 진입: 오늘의 문제 확정 → 첫 되묻기 ── (선정 로직은 공용 sojae-common.js: KST 기준)
-    // TODO(guard): 저장·포인트 붙일 때 MONC.requireSession()으로 가드 + 포인트 차감.
+    // ── 진입: 로그인 가드 → 문제 확정(오늘 또는 ?q=) → 복원 또는 첫 되묻기 ──
+    // ?q=<문제id> 로 오면 그 문제를 열어 이어쓰기(오늘 문제에 안 묶임 → 날짜 넘어가도 복원).
+    async function fetchQuestionById(id) {
+      try {
+        const { data } = await MONC.sb.from('questions').select('*').eq('id', id).maybeSingle();
+        return data || null;
+      } catch (_) { return null; }
+    }
     (async () => {
-      const q = await window.SOJAE.fetchTodayQuestion(MONC.sb);
+      const session = await MONC.requireSession();   // 미로그인 → login 으로 이동
+      if (!session) return;
+      const qid = new URLSearchParams(location.search).get('q');
+      const q = qid ? await fetchQuestionById(qid) : await window.SOJAE.fetchTodayQuestion(MONC.sb);
       if (q) { currentQuestion = q; if (CAT_LABEL[q.category]) category = q.category; }
       document.getElementById('catBadge').textContent = CAT_LABEL[category];
-      // 문제당 1개의 이어쓰기 슬롯(중복 없음). 폴백 문제는 'fallback' 키.
-      _draftKey = DRAFT_PREFIX + (currentQuestion ? currentQuestion.id : 'fallback');
-      // 중간에 나갔다 온 경우 저장된 대화 복원 → 복원되면 인사말 생략(중복 방지)
-      const restored = await restoreDraft();
+      // 저장돼 있으면 대화·뼈대·초안 복원 → 복원되면 인사말 생략(중복 방지)
+      const restored = await restoreSession();
       if (!restored) {
-        // 폴백: DB에서 못 불러와도 화면은 유지(로그인 안 했거나 마이그레이션 전)
         const content = q ? q.content : FALLBACK_QUESTION;
         ai('안녕하세요. 오늘 문제는 <b>' + esc(content) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
       }
