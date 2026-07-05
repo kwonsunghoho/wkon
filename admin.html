@@ -152,6 +152,7 @@
     <button class="tabbtn" data-tab="rounds">모집일정</button>
     <button class="tabbtn" data-tab="apps">신청자 현황</button>
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
+    <button class="tabbtn" data-tab="questions">기출문제</button>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
@@ -227,6 +228,31 @@
         <button class="btn btn-action" id="rvUpload">업로드</button>
       </div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-questions">
+    <div class="rounds-wrap">
+      <form class="round-form" id="questionForm" style="grid-template-columns:1fr;">
+        <div class="field"><label>문제 내용</label>
+          <textarea id="qfContent" rows="2" placeholder="예: 예상치 못한 문제를 침착하게 해결했던 경험"
+            style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>유형</label>
+            <select id="qfCategory">
+              <option value="experience">경험 발굴형</option>
+              <option value="values">가치관형</option>
+              <option value="judgment">상황 판단형</option>
+              <option value="company">정보·기업 분석형</option>
+            </select></div>
+          <div class="field"><label>항공사(선택)</label><input id="qfAirline" placeholder="예: 대한항공"></div>
+          <div class="field"><label>오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
+          <button class="btn btn-action" type="submit" id="qfSubmit">추가</button>
+          <button class="btn btn-ghost" type="button" id="qfCancel" style="display:none;">취소</button>
+        </div>
+      </form>
+      <div class="round-list" id="questionList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -702,6 +728,105 @@
       btn.disabled = false; btn.textContent = '업로드';
     });
 
+    // ── 기출문제(questions) CRUD ──
+    const Q_CAT = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
+    let _questions = [], _editQid = null;
+    function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+    function resetQForm() {
+      _editQid = null;
+      document.getElementById('qfContent').value = '';
+      document.getElementById('qfAirline').value = '';
+      document.getElementById('qfDate').value = '';
+      document.getElementById('qfCategory').value = 'experience';
+      document.getElementById('qfSubmit').textContent = '추가';
+      document.getElementById('qfCancel').style.display = 'none';
+    }
+
+    async function loadQuestions() {
+      const listEl = document.getElementById('questionList');
+      const { data, error } = await MONC.sb.from('questions')
+        .select('*')
+        .order('scheduled_date', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false });
+      if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      _questions = data || [];
+      if (!_questions.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 문제가 없습니다. 위에서 추가하세요.</div>'; return; }
+      const today = todayStr();
+      listEl.innerHTML = _questions.map(q => {
+        const isToday = q.scheduled_date === today;
+        const sched = q.scheduled_date ? (isToday ? '오늘의 문제' : ('예정 ' + q.scheduled_date)) : '대기';
+        return `
+        <div class="round-item" data-id="${q.id}" style="${q.active ? '' : 'opacity:.55;'}">
+          <div>
+            <div class="ri-main">${esc(q.content)}</div>
+            <div class="ri-sub">${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · <b style="color:${isToday ? 'var(--action)' : 'var(--text-muted)'}">${sched}</b>${q.active ? '' : ' · 숨김'}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del q-today" data-id="${q.id}" style="color:var(--action-dark);border-color:var(--action)">오늘 지정</button>
+            <button class="ri-del q-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
+            <button class="ri-del q-edit" data-id="${q.id}">수정</button>
+            <button class="ri-del q-del" data-id="${q.id}">삭제</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      // 오늘의 문제로 지정 (다른 문제의 오늘 날짜는 먼저 비워 유일성 보장)
+      listEl.querySelectorAll('.q-today').forEach(b => b.addEventListener('click', async () => {
+        const id = b.dataset.id, today = todayStr();
+        await MONC.sb.from('questions').update({ scheduled_date: null }).eq('scheduled_date', today);
+        const { error } = await MONC.sb.from('questions').update({ scheduled_date: today, active: true }).eq('id', id);
+        if (error) { alert('지정 실패: ' + error.message); return; }
+        toast('오늘의 문제로 지정됨'); loadQuestions();
+      }));
+      // 노출/숨김
+      listEl.querySelectorAll('.q-active').forEach(b => b.addEventListener('click', async () => {
+        const id = b.dataset.id, q = _questions.find(x => x.id === id);
+        const { error } = await MONC.sb.from('questions').update({ active: !q.active }).eq('id', id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast('변경됨'); loadQuestions();
+      }));
+      // 수정 → 폼에 채우고 수정 모드
+      listEl.querySelectorAll('.q-edit').forEach(b => b.addEventListener('click', () => {
+        const q = _questions.find(x => x.id === b.dataset.id); if (!q) return;
+        _editQid = q.id;
+        document.getElementById('qfContent').value = q.content || '';
+        document.getElementById('qfCategory').value = q.category || 'experience';
+        document.getElementById('qfAirline').value = q.airline || '';
+        document.getElementById('qfDate').value = q.scheduled_date || '';
+        document.getElementById('qfSubmit').textContent = '수정 저장';
+        document.getElementById('qfCancel').style.display = '';
+        document.getElementById('questionForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      // 삭제
+      listEl.querySelectorAll('.q-del').forEach(b => b.addEventListener('click', async () => {
+        const q = _questions.find(x => x.id === b.dataset.id);
+        if (!confirm(`'${esc((q && q.content || '').slice(0, 20))}…' 문제를 삭제할까요? 되돌릴 수 없어요.`)) return;
+        const { error } = await MONC.sb.from('questions').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadQuestions();
+      }));
+    }
+
+    document.getElementById('questionForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const content = document.getElementById('qfContent').value.trim();
+      if (!content) { alert('문제 내용을 입력하세요.'); return; }
+      const row = {
+        content,
+        category: document.getElementById('qfCategory').value,
+        airline: document.getElementById('qfAirline').value.trim() || null,
+        scheduled_date: document.getElementById('qfDate').value || null,
+      };
+      const { error } = _editQid
+        ? await MONC.sb.from('questions').update(row).eq('id', _editQid)
+        : await MONC.sb.from('questions').insert(row);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast(_editQid ? '수정됨' : '추가됨');
+      resetQForm(); loadQuestions();
+    });
+    document.getElementById('qfCancel').addEventListener('click', resetQForm);
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();
@@ -716,6 +841,7 @@
       loadRounds();
       loadApplications();
       loadReviewsAdmin();
+      loadQuestions();
     })();
   </script>
 </body>

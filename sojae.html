@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>MONC · 소재 발굴</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    /* 다크모드 단말에서 입력칸(textarea)이 브라우저 기본 다크로 렌더되는 것 차단 */
+    html { color-scheme: light; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      height: 100vh; height: 100svh; display: flex; flex-direction: column;
+      max-width: 480px; margin: 0 auto; line-height: 1.5;
+    }
+
+    /* 상단 바 */
+    .appbar { display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; gap: 10px; flex: 0 0 auto; }
+    .appbar .back { display: inline-flex; align-items: center; gap: 6px;
+      font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none;
+      min-height: 44px; }
+    .appbar .back svg { width: 18px; height: 18px; }
+    .badge { display: inline-flex; align-items: center; background: var(--accent-tint);
+      color: var(--accent); font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; }
+
+    /* 진행 단계 */
+    .stepbar { display: flex; align-items: center; gap: 6px; padding: 0 16px 12px;
+      font-size: 12px; color: var(--text-dim); flex: 0 0 auto; flex-wrap: wrap; }
+    .stepbar .on { color: var(--action); font-weight: 700; }
+    .stepbar .sep { opacity: .5; }
+
+    /* 대화 영역 (스크롤) */
+    .chat { flex: 1 1 auto; overflow-y: auto; padding: 4px 16px 8px;
+      display: flex; flex-direction: column; gap: 12px; }
+    .who { display: flex; align-items: center; gap: 6px; font-size: 12px;
+      color: var(--accent); font-weight: 700; margin-bottom: 5px; }
+    .ava { width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+      color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+    .bub { max-width: 84%; font-size: 15px; line-height: 1.55; padding: 11px 13px; border-radius: 16px; }
+    .bub b { font-weight: 700; }
+    .ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border-soft);
+      border-bottom-left-radius: 6px; color: var(--text); }
+    .me { align-self: flex-end; background: var(--action); color: var(--action-ink);
+      border-bottom-right-radius: 6px; }
+
+    /* 하단 입력부 */
+    .composer { flex: 0 0 auto; padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
+      background: var(--bg); border-top: 1px solid var(--border-soft); }
+    .hint { display: block; text-align: center; font-size: 12px; color: var(--action);
+      height: 16px; opacity: 0; transform: translateY(4px);
+      transition: opacity .3s, transform .3s; margin-bottom: 4px; }
+    .hint.show { opacity: 1; transform: translateY(0); }
+    .pillrow { display: flex; justify-content: center; margin-bottom: 10px; }
+    .pill { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700;
+      border-radius: 999px; padding: 10px 18px; min-height: 44px; cursor: pointer;
+      background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent);
+      color-scheme: light; }
+    .pill svg { width: 16px; height: 16px; }
+    @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(242,121,69,.55); }
+      70% { box-shadow: 0 0 0 11px rgba(242,121,69,0); } 100% { box-shadow: 0 0 0 0 rgba(242,121,69,0); } }
+    @keyframes pop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .pill.nudge { animation: ring 1s ease-out 3, pop 1s ease-in-out 3; }
+    @media (prefers-reduced-motion: reduce) { .pill.nudge { animation: none; } }
+
+    .field { display: flex; align-items: center; gap: 8px; background: var(--bg2);
+      border: 1px solid var(--border-soft); border-radius: 18px; padding: 8px 8px 8px 14px;
+      color-scheme: light; }
+    .field textarea { flex: 1; border: none; outline: none; background: var(--bg2); color: var(--text);
+      resize: none; overflow: hidden; font-family: inherit; font-size: 15px; line-height: 1.6;
+      min-height: 26px; max-height: 132px; padding: 3px 0; color-scheme: light; }
+    .field textarea::placeholder { color: var(--text-dim); }
+    .snd { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-dim); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s, color .15s, transform .1s; color-scheme: light; }
+    .snd svg { width: 20px; height: 20px; }
+    .snd.on { background: var(--action); color: var(--action-ink); border-color: transparent; }
+    .snd:active { transform: scale(.94); }
+    .foot { text-align: center; margin-top: 8px; font-size: 11px; color: var(--text-dim); }
+  </style>
+</head>
+<body>
+  <div class="appbar">
+    <a class="back" href="mypage.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      소재 발굴
+    </a>
+    <span class="badge" id="catBadge">경험 발굴형</span>
+  </div>
+
+  <div class="stepbar">
+    <span class="on">1 되묻기</span><span class="sep">›</span>
+    <span>2 다듬기</span><span class="sep">›</span>
+    <span>3 최종 작성</span>
+  </div>
+
+  <div class="chat" id="chat"><!-- 메시지는 JS가 렌더 --></div>
+
+  <div class="composer">
+    <span class="hint" id="hint">막히면 여기서 도움받기</span>
+    <div class="pillrow">
+      <button class="pill" id="help">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
+        잘 안 떠올라요
+      </button>
+    </div>
+    <div class="field">
+      <textarea id="ta" rows="1" placeholder="떠오르는 대로 편하게 적어보세요"></textarea>
+      <button class="snd" id="snd" aria-label="전송">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
+    </div>
+    <div class="foot">Enter 전송 · Shift+Enter 줄바꿈 · 지금은 AI 응답이 예시입니다</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    // ── 문제 유형: URL ?cat= 로 전달(없으면 기본). 실제로는 questions 테이블의 category ──
+    const CATS = ['경험 발굴형', '가치관형', '상황 판단형', '정보·기업 분석형'];
+    const params = new URLSearchParams(location.search);
+    const category = CATS.includes(params.get('cat')) ? params.get('cat') : '경험 발굴형';
+    document.getElementById('catBadge').textContent = category;
+
+    // TODO(questions): 실제로는 ?q=<id> 로 questions 테이블에서 문제를 로드.
+    const QUESTION = '예상치 못한 문제를 침착하게 해결했던 경험';
+
+    // ── 되묻기 질문(가짜) — 유형별로 결이 다름. 실제로는 Haiku Edge Function이 생성 ──
+    const FOLLOWUPS = {
+      '경험 발굴형': [
+        '그 상황이 구체적으로 어떤 자리였어요? 언제·어디서 있었던 일인지부터요.',
+        '그 순간 가장 먼저 든 생각은 뭐였나요?',
+        '그때 어떻게 행동했는지, 몸이 먼저 어떻게 움직였는지 떠올려볼까요?',
+        '그 일이 끝나고 스스로 어떤 점이 남았어요?',
+        '그 경험이 승무원 일과 어떻게 연결될 수 있을까요?'
+      ],
+      '가치관형': [
+        '그렇게 생각하게 된 결정적인 계기가 있었나요?',
+        '그 가치를 지키려다 손해를 감수했던 순간이 있어요?',
+        '반대되는 상황에 놓였을 때 어떻게 판단했나요?'
+      ],
+      '상황 판단형': [
+        '그 상황에서 가장 먼저 고려한 기준은 뭐였나요?',
+        '가능한 선택지가 여러 개였을 텐데, 왜 그 방법이었어요?',
+        '승객·동료 입장에서 다시 본다면 어떤 점을 챙기겠어요?'
+      ],
+      '정보·기업 분석형': [
+        '그 항공사에서 가장 인상 깊었던 서비스나 방향은 뭐였나요?',
+        '그 점이 왜 지원자님에게 특별하게 다가왔어요?',
+        '본인의 어떤 강점이 거기에 맞닿아 있다고 생각해요?'
+      ]
+    };
+    const HELP_REPLY = '좋아요, 같이 찾아봐요. 거창한 사건이 아니어도 돼요 — <b>예상과 달랐던 \'작은 순간\'</b> 하나부터 떠올려볼까요? 그때 몸이 먼저 어떻게 움직였나요?';
+
+    // ── AI 호출 자리(stub) ──────────────────────────────────────────────
+    // TODO(AI): 아래 canned 응답을 Supabase Edge Function 호출로 교체.
+    //   const { data } = await MONC.sb.functions.invoke('materialize',
+    //     { body: { question_id, category, stage:'ask', history, help } });
+    //   되묻기=Haiku, 다듬기=Sonnet, prompt caching 적용. 포인트 차감도 이 함수 안에서.
+    let _step = 0;
+    function askResearcher(help) {
+      const list = FOLLOWUPS[category] || FOLLOWUPS['경험 발굴형'];
+      if (help) return HELP_REPLY;
+      const t = list[_step % list.length]; _step++; return t;
+    }
+
+    // ── 렌더 헬퍼 ──
+    const chat = document.getElementById('chat');
+    function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function bubble(cls, html){
+      const d = document.createElement('div');
+      d.className = 'bub ' + cls; d.innerHTML = html;
+      chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+    }
+    function ai(html){ bubble('ai', '<div class="who"><span class="ava">R</span>연구원</div>' + html); }
+    function me(text){ bubble('me', esc(text)); }
+
+    // 첫 인사 + 첫 되묻기
+    ai('안녕하세요. 오늘 문제는 <b>' + esc(QUESTION) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
+
+    // ── 입력/전송 ──
+    const ta = document.getElementById('ta'), snd = document.getElementById('snd');
+    const help = document.getElementById('help'), hint = document.getElementById('hint');
+    let idleT;
+    function grow(){ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight,132)+'px'; }
+    function toggle(){ ta.value.trim() ? snd.classList.add('on') : snd.classList.remove('on'); }
+    function pulse(){
+      help.classList.remove('nudge'); void help.offsetWidth; help.classList.add('nudge');
+      hint.classList.add('show'); setTimeout(()=>hint.classList.remove('show'), 3400);
+    }
+    function resetIdle(){ clearTimeout(idleT); idleT = setTimeout(pulse, 8000); }
+    function send(){
+      const v = ta.value.trim(); if(!v) return;
+      me(v); ta.value=''; grow(); toggle();
+      // TODO(save): 되묻기 재료를 sessions/messages 테이블에 저장(로그인 필요)
+      setTimeout(()=>{ ai(askResearcher(false)); }, 650);
+      resetIdle();
+    }
+    ta.addEventListener('input', ()=>{ grow(); toggle(); resetIdle(); });
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+    snd.addEventListener('click', send);
+    help.addEventListener('click', ()=>{ ai(askResearcher(true)); resetIdle(); });
+
+    // 로드 직후 한 번 펄스로 위치 각인, 이후 idle마다
+    setTimeout(pulse, 1800);
+    resetIdle();
+
+    // ── 세션(선택) ── 지금은 UI/흐름 확인용이라 로그인 없이도 열림.
+    // TODO(guard): 저장·포인트 붙일 때 MONC.requireSession()으로 가드 + 포인트 차감.
+    (async () => {
+      try {
+        const s = await MONC.getSession();
+        if (s) { /* 추후: 프로필로 인사말 개인화, 진행 중 세션 재개 */ }
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>
