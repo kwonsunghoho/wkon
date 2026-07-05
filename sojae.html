@@ -139,9 +139,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="sojae-common.js"></script>
   <script>
     // ── 문제 유형 코드 → 라벨 (questions.category 와 매칭) ──
-    const CAT_LABEL = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
+    const CAT_LABEL = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
     let category = 'experience';     // 오늘의 문제에서 확정
     let currentQuestion = null;      // 저장 단계에서 쓸 오늘의 문제 행
     const FALLBACK_QUESTION = '예상치 못한 문제를 침착하게 해결했던 경험';  // DB 조회 실패 시 표시·AI 전달용
@@ -349,29 +350,10 @@
       btn.disabled = false;
     });
 
-    // ── 오늘의 문제 = 고정(scheduled_date=오늘) 우선, 없으면 활성 풀에서 날짜 자동 순환 ──
-    //    서버/cron 없이 날짜로 계산 → 로컬 자정에 자동으로 다음 문제. 전원 같은 문제(공통).
-    function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-    function dayIndexLocal(){ const d=new Date(); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 86400000); }
-    async function getTodayQuestion(){
-      try {
-        const today = todayStr();
-        // 1) 관리자가 그 날짜에 고정한 문제 우선
-        const pin = await MONC.sb.from('questions').select('*').eq('active', true).eq('scheduled_date', today).limit(1);
-        if (pin.data && pin.data.length) return pin.data[0];
-        // 2) 없으면 활성 풀을 안정 정렬(created_at) 후 날짜 인덱스로 자동 순환
-        // created_at 동률(시드 일괄 INSERT) 대비 id 2차 정렬 — 전원 동일 순서 보장
-        const pool = await MONC.sb.from('questions').select('*').eq('active', true)
-          .order('created_at', { ascending: true }).order('id', { ascending: true });
-        if (pool.data && pool.data.length) return pool.data[dayIndexLocal() % pool.data.length];
-      } catch (_) {}
-      return null;   // 비로그인 / 마이그레이션 전 / 빈 풀
-    }
-
-    // ── 진입: 오늘의 문제 확정 → 첫 되묻기 ──
+    // ── 진입: 오늘의 문제 확정 → 첫 되묻기 ── (선정 로직은 공용 sojae-common.js: KST 기준)
     // TODO(guard): 저장·포인트 붙일 때 MONC.requireSession()으로 가드 + 포인트 차감.
     (async () => {
-      const q = await getTodayQuestion();
+      const q = await window.SOJAE.fetchTodayQuestion(MONC.sb);
       if (q) {
         currentQuestion = q;
         if (CAT_LABEL[q.category]) category = q.category;

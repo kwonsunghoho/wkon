@@ -264,6 +264,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="sojae-common.js"></script>
   <script>
     const sb = () => MONC.sb;
     let members = [], cohorts = [], currentId = null, myProfile = null;
@@ -733,10 +734,9 @@
     });
 
     // ── 기출문제(questions) CRUD ──
-    const Q_CAT = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
+    const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
+    const todayStr = window.SOJAE.todayStr; // KST 기준 — sojae/mypage와 동일
     let _questions = [], _editQid = null;
-    function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-    function dayIndexLocal() { const d = new Date(); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 86400000); }
 
     function resetQForm() {
       _editQid = null;
@@ -758,16 +758,9 @@
       _questions = data || [];
       if (!_questions.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 문제가 없습니다. 위에서 추가하세요.</div>'; return; }
       const today = todayStr();
-      // 오늘 실제 노출되는 문제 = 고정(오늘 날짜) 우선, 없으면 활성 풀 자동 순환 (sojae.html 과 동일 규칙)
-      let effectiveId = null;
-      const pinnedToday = _questions.find(q => q.active && q.scheduled_date === today);
-      if (pinnedToday) effectiveId = pinnedToday.id;
-      else {
-        // created_at 동률 대비 id 2차 정렬 — sojae.html/mypage.html의 DB 정렬과 동일 규칙 유지
-        const pool = _questions.filter(q => q.active).sort((a, b) =>
-          a.created_at === b.created_at ? (a.id < b.id ? -1 : 1) : (a.created_at < b.created_at ? -1 : 1));
-        if (pool.length) effectiveId = pool[dayIndexLocal() % pool.length].id;
-      }
+      // 오늘 실제 노출되는 문제 — 선정 로직은 공용 sojae-common.js(sojae/mypage와 100% 동일)
+      const eff = window.SOJAE.pickEffective(_questions);
+      const effectiveId = eff ? eff.id : null;
       listEl.innerHTML = _questions.map(q => {
         const isEffective = q.id === effectiveId;
         const pin = q.scheduled_date ? (q.scheduled_date === today ? '오늘 고정' : ('예정 고정 ' + q.scheduled_date)) : '자동 순환';
@@ -790,9 +783,16 @@
       // 오늘의 문제로 지정 (다른 문제의 오늘 날짜는 먼저 비워 유일성 보장)
       listEl.querySelectorAll('.q-today').forEach(b => b.addEventListener('click', async () => {
         const id = b.dataset.id, today = todayStr();
-        await MONC.sb.from('questions').update({ scheduled_date: null }).eq('scheduled_date', today);
+        // 다른 문제의 오늘 고정을 먼저 비워 유일성 확보(비원자 2-step — 관리자 동시조작은 드묾)
+        await MONC.sb.from('questions').update({ scheduled_date: null }).eq('scheduled_date', today).neq('id', id);
         const { error } = await MONC.sb.from('questions').update({ scheduled_date: today, active: true }).eq('id', id);
-        if (error) { alert('지정 실패: ' + error.message); return; }
+        if (error) {
+          // 23505 = unique_violation: 다른 관리자가 방금 오늘 문제를 잡은 경우
+          const msg = (error.code === '23505' || /duplicate|unique/i.test(error.message))
+            ? '다른 관리자가 방금 오늘의 문제를 지정한 것 같아요. 새로고침 후 다시 시도하세요.'
+            : ('지정 실패: ' + error.message);
+          alert(msg); loadQuestions(); return;
+        }
         toast('오늘의 문제로 지정됨'); loadQuestions();
       }));
       // 노출/숨김

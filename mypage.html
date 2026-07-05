@@ -170,27 +170,18 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="sojae-common.js"></script>
   <script>
     document.getElementById('logoutBtn').addEventListener('click', () => MONC.signOut());
 
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
-    // ── 오늘의 문제 (sojae.html 과 동일 규칙: 고정 우선 → 활성 풀 날짜 자동 순환) ──
-    const Q_CAT_LABEL = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
-    function qTodayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-    function qDayIndex(){ const d=new Date(); return Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000); }
+    // ── 오늘의 문제 (선정 로직은 공용 sojae-common.js: KST 기준, sojae.html과 100% 동일) ──
     async function loadTodayQuestion() {
       const qEl = document.getElementById('todayQ'), catEl = document.getElementById('todayCat'), card = document.getElementById('todayCard');
       try {
-        const today = qTodayStr();
-        const { data: pin } = await MONC.sb.from('questions').select('*').eq('active', true).eq('scheduled_date', today).limit(1);
-        let q = pin && pin[0];
-        if (!q) {
-          const { data: pool } = await MONC.sb.from('questions').select('*').eq('active', true)
-            .order('created_at', { ascending: true }).order('id', { ascending: true });   // 동률 대비 2차 정렬(sojae.html과 동일 규칙)
-          if (pool && pool.length) q = pool[qDayIndex() % pool.length];
-        }
-        if (q) { qEl.textContent = q.content; catEl.textContent = Q_CAT_LABEL[q.category] || '소재 발굴'; }
+        const q = await window.SOJAE.fetchTodayQuestion(MONC.sb);
+        if (q) { qEl.textContent = q.content; catEl.textContent = window.SOJAE.CAT_LABEL[q.category] || '소재 발굴'; }
         else { qEl.textContent = '오늘의 문제가 아직 준비 중이에요.'; catEl.style.display = 'none'; card.removeAttribute('href'); card.style.cursor = 'default'; }
       } catch (_) { qEl.textContent = '오늘의 문제를 불러오지 못했어요.'; catEl.style.display = 'none'; }
     }
