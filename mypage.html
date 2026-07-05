@@ -107,6 +107,14 @@
       <h1 class="hello"><span class="name" id="hName">회원</span>님의 챌린지</h1>
       <p class="meta" id="hMeta"></p>
 
+      <a class="card" id="todayCard" href="sojae.html"
+         style="display:block;text-decoration:none;color:inherit;border-left:4px solid var(--action);">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent);margin-bottom:8px;">오늘의 소재 발굴</div>
+        <span id="todayCat" style="display:inline-block;background:var(--accent-tint);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;">경험 발굴형</span>
+        <div id="todayQ" style="font-size:17px;font-weight:700;line-height:1.45;margin:10px 0 16px;">불러오는 중…</div>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:var(--action);color:var(--action-ink);font-weight:700;font-size:15px;border-radius:var(--radius-xs);padding:12px 18px;min-height:44px;">소재 발굴 시작 →</span>
+      </a>
+
       <div class="card">
         <h2>진행 요약</h2>
         <p class="hint">2주(14일) 미션 결과예요.</p>
@@ -166,9 +174,29 @@
 
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
+    // ── 오늘의 문제 (sojae.html 과 동일 규칙: 고정 우선 → 활성 풀 날짜 자동 순환) ──
+    const Q_CAT_LABEL = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
+    function qTodayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function qDayIndex(){ const d=new Date(); return Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000); }
+    async function loadTodayQuestion() {
+      const qEl = document.getElementById('todayQ'), catEl = document.getElementById('todayCat'), card = document.getElementById('todayCard');
+      try {
+        const today = qTodayStr();
+        const { data: pin } = await MONC.sb.from('questions').select('*').eq('active', true).eq('scheduled_date', today).limit(1);
+        let q = pin && pin[0];
+        if (!q) {
+          const { data: pool } = await MONC.sb.from('questions').select('*').eq('active', true).order('created_at', { ascending: true });
+          if (pool && pool.length) q = pool[qDayIndex() % pool.length];
+        }
+        if (q) { qEl.textContent = q.content; catEl.textContent = Q_CAT_LABEL[q.category] || '소재 발굴'; }
+        else { qEl.textContent = '오늘의 문제가 아직 준비 중이에요.'; catEl.style.display = 'none'; card.removeAttribute('href'); card.style.cursor = 'default'; }
+      } catch (_) { qEl.textContent = '오늘의 문제를 불러오지 못했어요.'; catEl.style.display = 'none'; }
+    }
+
     (async () => {
       const session = await MONC.requireSession();
       if (!session) return;
+      loadTodayQuestion();
 
       const me = session.user.id;
       const profile = await MONC.getMyProfile();
