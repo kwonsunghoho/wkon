@@ -91,6 +91,38 @@
     .al-paid { background: #eaf6ec; color: #1a7f37; }
     .al-refund { background: var(--action-tint); color: var(--action-dark); }
     .al-wait { background: var(--surface2); color: var(--text-muted); }
+
+    /* 상단 섹션 바로가기 네비 (스티키) */
+    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+    .secnav { position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto;
+      margin: 0 -20px 18px; padding: 10px 20px; background: var(--bg);
+      -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .secnav::-webkit-scrollbar { display: none; }
+    .secnav-chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px;
+      padding: 8px 15px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap;
+      color: var(--accent); background: var(--surface); border: 1px solid var(--border-soft);
+      text-decoration: none; transition: background .15s, color .15s, border-color .15s; }
+    .secnav-chip:hover { border-color: var(--accent); }
+    .secnav-chip.active { color: var(--action-ink); background: var(--action); border-color: transparent; }
+    /* 스티키 네비에 가리지 않도록 앵커 오프셋 */
+    .card, #todayCard { scroll-margin-top: 70px; }
+
+    /* 내 답변노트 */
+    .notes-list { display: flex; flex-direction: column; gap: 10px; }
+    .note { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface2); }
+    .note > summary { list-style: none; cursor: pointer; padding: 14px; }
+    .note > summary::-webkit-details-marker { display: none; }
+    .note-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 7px; }
+    .note-cat { display: inline-block; background: var(--accent-tint); color: var(--accent); font-size: 11px;
+      font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+    .note-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .note-q { font-size: 14px; font-weight: 700; line-height: 1.45; }
+    .note-more { display: inline-block; font-size: 12px; color: var(--accent); margin-top: 8px; font-weight: 700; }
+    .note[open] .note-q { color: var(--action-dark); }
+    .note[open] .note-more { color: var(--text-muted); }
+    .note-a { padding: 0 14px 14px; font-size: 14px; color: var(--text); line-height: 1.65; white-space: pre-wrap;
+      border-top: 1px dashed var(--border-soft); margin: 4px 14px 0; padding: 12px 0 14px; }
+    .nt-empty { font-size: 14px; color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -107,6 +139,16 @@
       <h1 class="hello"><span class="name" id="hName">회원</span>님의 챌린지</h1>
       <p class="meta" id="hMeta"></p>
 
+      <nav class="secnav" id="secnav" aria-label="대시보드 바로가기">
+        <a href="#todayCard" class="secnav-chip">오늘의 발굴</a>
+        <a href="#sec-answers" class="secnav-chip">답변노트</a>
+        <a href="#sec-summary" class="secnav-chip">진행 요약</a>
+        <a href="#sec-ba" class="secnav-chip">Before/After</a>
+        <a href="#sec-days" class="secnav-chip">날짜별 결과</a>
+        <a href="#sec-comments" class="secnav-chip">코치 코멘트</a>
+        <a href="#sec-apps" class="secnav-chip">신청 내역</a>
+      </nav>
+
       <a class="card" id="todayCard" href="sojae.html"
          style="display:block;text-decoration:none;color:inherit;border-left:4px solid var(--action);">
         <div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent);margin-bottom:8px;">오늘의 소재 발굴</div>
@@ -116,7 +158,13 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
 
-      <div class="card">
+      <div class="card" id="sec-answers">
+        <h2>내 답변노트</h2>
+        <p class="hint">소재 발굴로 완성한 답변이 모여요. 눌러서 펼쳐보세요.</p>
+        <div class="notes-list" id="answerNotes"><p class="nt-empty">불러오는 중…</p></div>
+      </div>
+
+      <div class="card" id="sec-summary">
         <h2>진행 요약</h2>
         <p class="hint">2주(14일) 미션 결과예요.</p>
         <div class="summary">
@@ -126,7 +174,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="sec-ba">
         <h2>Before / After</h2>
         <p class="hint">입과 전과 수료 후 목소리를 비교해보세요.</p>
         <div class="ba">
@@ -135,19 +183,19 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="sec-days">
         <h2>날짜별 결과</h2>
         <p class="hint">초록은 성공, 주황은 아쉬움, 회색은 아직이에요. 점(•)이 있으면 코멘트가 있어요.</p>
         <div class="days" id="daysGrid"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="sec-comments">
         <h2>코치 코멘트</h2>
         <p class="hint">코치가 남긴 피드백이에요.</p>
         <ul class="comments" id="commentList"></ul>
       </div>
 
-      <div class="card">
+      <div class="card" id="sec-apps">
         <h2>내 신청 내역</h2>
         <p class="hint">신청하신 챌린지예요. (신청 시 전화번호와 연락처가 같으면 자동으로 연결돼요.)</p>
         <ul class="apps-list" id="myApps"><li style="color:var(--text-dim);border:0;">불러오는 중…</li></ul>
@@ -186,12 +234,74 @@
       } catch (_) { qEl.textContent = '오늘의 문제를 불러오지 못했어요.'; catEl.style.display = 'none'; }
     }
 
+    // ── 내 답변노트 (answers + questions 조인, RLS 상 내 것만) ──
+    async function loadAnswerNotes(memberId) {
+      const el = document.getElementById('answerNotes');
+      try {
+        const { data, error } = await MONC.sb.from('answers')
+          .select('content, updated_at, questions(content, category)')
+          .eq('member_id', memberId)
+          .order('updated_at', { ascending: false });
+        if (error) throw error;
+        if (!data || !data.length) {
+          el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
+          return;
+        }
+        el.innerHTML = data.map(a => {
+          const q = a.questions || {};
+          const cat = (window.SOJAE && window.SOJAE.CAT_LABEL[q.category]) || '소재 발굴';
+          const d = new Date(a.updated_at);
+          const ds = d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+          return `<details class="note">
+            <summary>
+              <div class="note-top"><span class="note-cat">${esc(cat)}</span><span class="note-date">${ds}</span></div>
+              <div class="note-q">${esc(q.content || '(문제 정보 없음)')}</div>
+              <span class="note-more">답변 보기 ▾</span>
+            </summary>
+            <div class="note-a">${esc(a.content)}</div>
+          </details>`;
+        }).join('');
+      } catch (_) {
+        el.innerHTML = '<p class="nt-empty">답변을 불러오지 못했어요.</p>';
+      }
+    }
+
+    // ── 상단 섹션 네비 활성 표시(스크롤 스파이) ──
+    // 스크롤 때마다 '기준선(네비 아래)을 지난 마지막 섹션'을 다시 계산 → 즉시 점프에도 정체 없음.
+    function initSecNav() {
+      const chips = Array.from(document.querySelectorAll('.secnav-chip'));
+      if (!chips.length) return;
+      const sections = [], chipFor = {};
+      chips.forEach(c => {
+        const id = c.getAttribute('href').slice(1), el = document.getElementById(id);
+        if (el) { sections.push(el); chipFor[id] = c; }
+      });
+      if (!sections.length) return;
+      function setActive() {
+        const line = 90;                 // 스티키 네비 바로 아래 기준선
+        let cur = sections[0];
+        for (const el of sections) { if (el.getBoundingClientRect().top - line <= 0) cur = el; else break; }
+        // 문서 끝에 닿으면 마지막 섹션 활성(하단 섹션은 기준선까지 못 올라옴)
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) cur = sections[sections.length - 1];
+        chips.forEach(c => c.classList.remove('active'));
+        if (chipFor[cur.id]) chipFor[cur.id].classList.add('active');
+      }
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => { setActive(); ticking = false; });
+      }, { passive: true });
+      setActive();
+    }
+
     (async () => {
       const session = await MONC.requireSession();
       if (!session) return;
       loadTodayQuestion();
 
       const me = session.user.id;
+      loadAnswerNotes(me);
       const profile = await MONC.getMyProfile();
 
       // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)
@@ -309,6 +419,7 @@
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
+      initSecNav();   // 콘텐츠가 보인 뒤에 스크롤 스파이 시작
     })();
   </script>
 </body>
