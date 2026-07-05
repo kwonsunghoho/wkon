@@ -763,7 +763,9 @@
       const pinnedToday = _questions.find(q => q.active && q.scheduled_date === today);
       if (pinnedToday) effectiveId = pinnedToday.id;
       else {
-        const pool = _questions.filter(q => q.active).sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+        // created_at 동률 대비 id 2차 정렬 — sojae.html/mypage.html의 DB 정렬과 동일 규칙 유지
+        const pool = _questions.filter(q => q.active).sort((a, b) =>
+          a.created_at === b.created_at ? (a.id < b.id ? -1 : 1) : (a.created_at < b.created_at ? -1 : 1));
         if (pool.length) effectiveId = pool[dayIndexLocal() % pool.length].id;
       }
       listEl.innerHTML = _questions.map(q => {

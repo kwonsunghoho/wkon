@@ -118,20 +118,28 @@ const HELP_MARKER =
 // ── 되묻기 대화 이력 → Anthropic messages 변환 ──────────────────────────────
 // 규칙: 첫 메시지는 user 여야 함(선행 인사말 assistant 는 생략 — 문제는 system 에 있음).
 //       연속 같은 role 은 API 가 한 턴으로 합쳐줌(허용).
+// 비용 방어: 인증된 사용자라도 초대형 페이로드로 토큰 과금을 유발하지 못하게 캡
+const MAX_HISTORY_ITEMS = 40;      // 최근 40개 턴만
+const MAX_MSG_CHARS = 2000;        // 메시지당 2,000자
+const MAX_MATERIALS_CHARS = 8000;  // 다듬기 재료 최대 8,000자
+const MAX_QUESTION_CHARS = 300;    // 폴백 문제 텍스트 최대 300자
+
 function toMessages(
   history: unknown,
   help: boolean,
 ): Array<{ role: string; content: string }> {
   const msgs: Array<{ role: string; content: string }> = [];
-  for (const h of Array.isArray(history) ? history : []) {
+  const items = (Array.isArray(history) ? history : []).slice(-MAX_HISTORY_ITEMS);
+  for (const h of items) {
     if (!h || typeof h.content !== "string" || !h.content.trim()) continue;
+    const content = h.content.slice(0, MAX_MSG_CHARS);
     if (h.role === "user") {
-      msgs.push({ role: "user", content: h.content });
+      msgs.push({ role: "user", content });
     } else if (h.role === "help") {
       msgs.push({ role: "user", content: HELP_MARKER });
     } else if (h.role === "researcher") {
       if (msgs.length === 0) continue; // 첫 메시지가 assistant 가 되면 400
-      msgs.push({ role: "assistant", content: h.content });
+      msgs.push({ role: "assistant", content });
     }
   }
   if (help && (msgs.length === 0 || msgs[msgs.length - 1].role !== "user")) {
@@ -178,15 +186,20 @@ Deno.serve(async (req) => {
         ? body.category
         : "experience";
     if (body.question_id) {
-      const { data: q } = await supa
+      const { data: q, error: qErr } = await supa
         .from("questions")
         .select("content, category")
         .eq("id", body.question_id)
         .single();
+      if (qErr) console.error("question fetch failed:", qErr.message, "id=", body.question_id);
       if (q) {
         qContent = q.content;
         if (ASK_TYPES[q.category]) category = q.category;
       }
+    }
+    // DB 조회 실패/미제공 시 클라이언트가 보낸 문제 텍스트로 폴백(캡 적용) — 화면과 AI 컨텍스트 불일치 방지
+    if (!qContent && typeof body.question_text === "string") {
+      qContent = body.question_text.slice(0, MAX_QUESTION_CHARS);
     }
     const catLabel = CAT_LABEL[category];
 
@@ -215,7 +228,7 @@ Deno.serve(async (req) => {
       system = [
         { type: "text", text: REFINE_SYSTEM, cache_control: { type: "ephemeral" } },
       ];
-      const materials = typeof body.materials === "string" ? body.materials : "";
+      const materials = (typeof body.materials === "string" ? body.materials : "").slice(0, MAX_MATERIALS_CHARS);
       messages = [
         {
           role: "user",

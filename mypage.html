@@ -186,7 +186,8 @@
         const { data: pin } = await MONC.sb.from('questions').select('*').eq('active', true).eq('scheduled_date', today).limit(1);
         let q = pin && pin[0];
         if (!q) {
-          const { data: pool } = await MONC.sb.from('questions').select('*').eq('active', true).order('created_at', { ascending: true });
+          const { data: pool } = await MONC.sb.from('questions').select('*').eq('active', true)
+            .order('created_at', { ascending: true }).order('id', { ascending: true });   // 동률 대비 2차 정렬(sojae.html과 동일 규칙)
           if (pool && pool.length) q = pool[qDayIndex() % pool.length];
         }
         if (q) { qEl.textContent = q.content; catEl.textContent = Q_CAT_LABEL[q.category] || '소재 발굴'; }

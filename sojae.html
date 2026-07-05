@@ -29,7 +29,7 @@
 
     /* 진행 단계 */
     .stepbar { display: flex; align-items: center; gap: 6px; padding: 0 16px 12px;
-      font-size: 12px; color: var(--text-dim); flex: 0 0 auto; flex-wrap: wrap; }
+      font-size: 12px; color: var(--text-muted); flex: 0 0 auto; flex-wrap: wrap; }
     .stepbar .on { color: var(--action); font-weight: 700; }
     .stepbar .sep { opacity: .5; }
 
@@ -79,17 +79,17 @@
     .snd svg { width: 20px; height: 20px; }
     .snd.on { background: var(--action); color: var(--action-ink); border-color: transparent; }
     .snd:active { transform: scale(.94); }
-    .foot { text-align: center; margin-top: 8px; font-size: 11px; color: var(--text-dim); }
+    .foot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
     #refineCta { display: block; width: 100%; background: transparent; color: var(--action);
       border: 1.5px solid var(--action); border-radius: 13px; padding: 12px; font-size: 14px;
       font-weight: 700; cursor: pointer; margin-bottom: 10px; min-height: 44px; }
-    #writeMode .wlabel { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+    #writeMode .wlabel { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
     #finalTa { min-height: 120px; max-height: none; overflow: auto; resize: vertical; }
     #saveBtn { display: block; width: 100%; margin-top: 10px; background: var(--action);
       color: var(--action-ink); border: none; border-radius: 14px; padding: 14px; font-size: 15px;
       font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
     #saveBtn:disabled { opacity: .7; cursor: default; }
-    #saveFoot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-dim); min-height: 16px; }
+    #saveFoot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted); min-height: 16px; }
   </style>
 </head>
 <body>
@@ -144,6 +144,7 @@
     const CAT_LABEL = { experience:'경험 발굴형', values:'가치관형', judgment:'상황 판단형', company:'정보·기업 분석형' };
     let category = 'experience';     // 오늘의 문제에서 확정
     let currentQuestion = null;      // 저장 단계에서 쓸 오늘의 문제 행
+    const FALLBACK_QUESTION = '예상치 못한 문제를 침착하게 해결했던 경험';  // DB 조회 실패 시 표시·AI 전달용
 
     // ── 되묻기 질문(가짜) — 유형별로 결이 다름. 실제로는 Haiku Edge Function이 생성 ──
     const FOLLOWUPS = {
@@ -185,6 +186,7 @@
       try {
         const { data, error } = await MONC.sb.functions.invoke('sojae-chat', {
           body: { stage: 'ask', question_id: currentQuestion && currentQuestion.id,
+                  question_text: (currentQuestion && currentQuestion.content) || FALLBACK_QUESTION,
                   category, help: !!help, history: transcript },
         });
         if (error || !data || !data.message) throw error || new Error('빈 응답');
@@ -197,6 +199,7 @@
       try {
         const { data, error } = await MONC.sb.functions.invoke('sojae-chat', {
           body: { stage: 'refine', question_id: currentQuestion && currentQuestion.id,
+                  question_text: (currentQuestion && currentQuestion.content) || FALLBACK_QUESTION,
                   category, materials: collectedMaterials() },
         });
         if (error || !data || !data.message) throw error || new Error('빈 응답');
@@ -231,7 +234,7 @@
     function aiPending(){
       const d = document.createElement('div');
       d.className = 'bub ai';
-      d.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div><span style="color:var(--text-dim);">생각 중…</span>';
+      d.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div><span style="color:var(--text-muted);">생각 중…</span>';
       chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
       return d;
     }
@@ -253,23 +256,28 @@
     }
     function resetIdle(){ clearTimeout(idleT); idleT = setTimeout(pulse, 8000); }
     let userMsgCount = 0;
+    let _busy = false;    // AI 응답 대기 중 — 연타/동시요청 방지
+    let _ready = false;   // 오늘의 문제 로드 완료 전 전송 방지
     function send(){
-      const v = ta.value.trim(); if(!v) return;
+      const v = ta.value.trim(); if(!v || _busy || !_ready) return;
       me(v); ta.value=''; grow(); toggle();
       // TODO(save): 되묻기 재료를 sessions/messages 테이블에 저장(로그인 필요)
       userMsgCount++;
       if (userMsgCount >= 2) document.getElementById('refineCta').style.display = 'block';
+      _busy = true;
       const p = aiPending();
-      askAI(false).then(html => aiFill(p, html));
+      askAI(false).then(html => { aiFill(p, html); _busy = false; });
       resetIdle();
     }
     ta.addEventListener('input', ()=>{ grow(); toggle(); resetIdle(); });
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
     snd.addEventListener('click', send);
     help.addEventListener('click', ()=>{
+      if (_busy || !_ready) return;
       transcript.push({ role: 'help', content: '잘 안 떠올라요' });   // 서버에서 [막힘 대응] 트리거
+      _busy = true;
       const p = aiPending();
-      askAI(true).then(html => aiFill(p, html));
+      askAI(true).then(html => { aiFill(p, html); _busy = false; });
       resetIdle();
     });
 
@@ -297,6 +305,9 @@
 
     // ── 다듬기 진입 → 최종 작성 모드 ──
     document.getElementById('refineCta').addEventListener('click', () => {
+      if (_busy) return;                                     // 되묻기 응답 대기 중엔 전환 금지
+      _busy = true;
+      document.getElementById('refineCta').style.display = 'none';  // 중복 클릭 방지
       clearTimeout(idleT);                                   // 되묻기 넛지 중지
       document.getElementById('askMode').style.display = 'none';
       document.getElementById('step1').classList.remove('on');
@@ -308,6 +319,7 @@
         document.getElementById('step3').classList.add('on');
         document.getElementById('writeMode').style.display = 'block';
         chat.scrollTop = chat.scrollHeight;
+        _busy = false;
       });
     });
 
@@ -337,10 +349,6 @@
       btn.disabled = false;
     });
 
-    // 로드 직후 한 번 펄스로 위치 각인, 이후 idle마다
-    setTimeout(pulse, 1800);
-    resetIdle();
-
     // ── 오늘의 문제 = 고정(scheduled_date=오늘) 우선, 없으면 활성 풀에서 날짜 자동 순환 ──
     //    서버/cron 없이 날짜로 계산 → 로컬 자정에 자동으로 다음 문제. 전원 같은 문제(공통).
     function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -352,7 +360,9 @@
         const pin = await MONC.sb.from('questions').select('*').eq('active', true).eq('scheduled_date', today).limit(1);
         if (pin.data && pin.data.length) return pin.data[0];
         // 2) 없으면 활성 풀을 안정 정렬(created_at) 후 날짜 인덱스로 자동 순환
-        const pool = await MONC.sb.from('questions').select('*').eq('active', true).order('created_at', { ascending: true });
+        // created_at 동률(시드 일괄 INSERT) 대비 id 2차 정렬 — 전원 동일 순서 보장
+        const pool = await MONC.sb.from('questions').select('*').eq('active', true)
+          .order('created_at', { ascending: true }).order('id', { ascending: true });
         if (pool.data && pool.data.length) return pool.data[dayIndexLocal() % pool.data.length];
       } catch (_) {}
       return null;   // 비로그인 / 마이그레이션 전 / 빈 풀
@@ -370,8 +380,11 @@
       } else {
         // 폴백: DB에서 못 불러와도 화면은 유지(로그인 안 했거나 마이그레이션 전)
         document.getElementById('catBadge').textContent = CAT_LABEL[category];
-        ai('안녕하세요. 오늘 문제는 <b>예상치 못한 문제를 침착하게 해결했던 경험</b>이에요. 혹시 떠오르는 순간이 있나요?');
+        ai('안녕하세요. 오늘 문제는 <b>' + esc(FALLBACK_QUESTION) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
       }
+      _ready = true;                       // 문제 확정 후에만 전송 허용
+      setTimeout(pulse, 1800);             // 인사말이 뜬 뒤에 넛지 시작
+      resetIdle();
     })();
   </script>
 </body>
