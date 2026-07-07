@@ -200,6 +200,18 @@
           });
         }
 
+        // .zoom-bezel-fade(창틀 + 벽 패널)는 하늘(.zoom-content-fade)보다 더 일찍
+        // (진행률 30%~55%) 사라진다. 뒤에는 풀뷰포트 하늘(sky-bg)이 깔려 있어,
+        // 창틀이 지워지면 하늘이 화면을 가득 채운다 → 확대 도중 "창틀"이 아니라
+        // "하늘만" 보이게 된다. (창이 개구부보다 커서 하단 창틀이 걸치던 문제 해결.)
+        var bezelFadeEls = wrap.querySelectorAll('.zoom-bezel-fade');
+        if (bezelFadeEls.length) {
+          var bezelOpacity = 1 - Math.max(0, (progress - 0.30) / 0.25);
+          bezelFadeEls.forEach(function (el) {
+            el.style.opacity = String(bezelOpacity);
+          });
+        }
+
         // position은 CSS의 기본 sticky 그대로 둔다 — wrap의 runway를 다 소진하면
         // sticky는 브라우저가 수학적으로 정확히 같은 지점에서(점프 없이) 자연스럽게
         // 풀어주므로 JS가 수동으로 absolute로 전환할 필요가 없다. (이전에 수동

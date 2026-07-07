@@ -1286,15 +1286,20 @@
     }
     .hero-window-intro .zoom-exit-pin {
       background-color: var(--bg);
+      /* 줌인 원점을 위로 올림 — 기본 원점(중앙 50%)이면 창(개구부) 중심이 화면
+         중앙보다 아래에 있어 확대할수록 아래 창틀이 드러난다. 개구부가 화면
+         중앙에 놓이도록 고정점을 올려, 확대 시 위·아래 창틀이 함께 화면 밖으로
+         빠지고 하늘만 남게 한다. (모바일 기본값, 데스크톱은 아래 미디어쿼리) */
+      transform-origin: 50% 8%;
     }
-    /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러가야 실제
-       비행기 창밖 느낌이 남. 하늘은 좌우로 이어지는 4800x1000 타일
-       한 장(hero-sky-tile.webp)을 transform 기반으로 무한 패닝.
-       (background-position 애니메이션은 GPU 합성이 안 돼 매 프레임
-       거대 레이어를 리페인트 — 모바일 버벅임의 주범이라 transform으로 교체)
-       X 패닝은 .hero-window-sky-x의 CSS 애니메이션, 세로는 스크롤 진행에
-       따라 JS가 .hero-window-sky-y의 translateY(px)를 밀어 타일 하단
-       (구름층)이 드러남 — 요소가 분리돼 있어 서로 충돌하지 않음. */
+    /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러 실제 비행기
+       창밖 느낌을 낸다. 노을 파노라마는 해가 고정이라 그대로는 무한 반복이
+       불가능하므로, [원본|좌우반전] 미러 타일(hero-sky-sunset.webp)로 만들어
+       repeat-x 경계가 완벽히 맞물리게 했다(seamless 무한 흐름 — 해도 은은히
+       흘러 지나감). 가로 흐름은 transform 기반(GPU 합성 → 모바일 리페인트 잼
+       방지), 세로는 스크롤 진행에 따라 JS가 .hero-window-sky-y의 translateY(px)를
+       밀어 위쪽 하늘 → 아래 구름층이 드러남 — 가로(sky-x)·세로(sky-y)가
+       분리돼 서로 충돌하지 않음. */
     .hero-window-sky-bg {
       position: absolute; inset: 0; z-index: 1;
       overflow: hidden;
@@ -1302,32 +1307,71 @@
     .hero-window-sky-y {
       position: absolute; left: 0; top: 0;
       width: 100%;
-      /* 130vh로 키워 세로 패닝 여유를 확보. svh가 아닌 vh 고정인 이유:
-         타일 주기(높이 × 4.8)가 애니메이션 이동량 624vh와 일치해야 이음매가 없음.
-         컨테이너(100svh)와의 실제 차이는 JS가 px로 계산해 translateY */
+      /* 130vh로 키워 세로 스크롤 팬(위 하늘 → 아래 구름) 여유를 확보.
+         컨테이너(100svh)와의 실제 높이차를 JS가 px로 계산해 translateY로 민다. */
       height: 130vh;
       will-change: transform;
     }
     .hero-window-sky-x {
       position: absolute; left: 0; top: 0;
       height: 100%;
-      /* 타일 1주기(624vh)만큼 밀려도 뷰포트가 항상 차 있도록 여유 폭 확보 */
-      width: calc(624vh + 100vw);
-      background-image: url('images/hero-sky-tile.webp');
+      /* 미러 타일(원본+반전)이 seamless라 repeat-x로 무한 흐름 가능.
+         1주기(=타일 표시폭 780vh)만큼 밀려도 뷰포트가 늘 차도록 여유 폭 확보 */
+      width: calc(780vh + 100vw);
+      background-image: url('images/hero-sky-sunset.webp');
       background-size: auto 100%;
       background-repeat: repeat-x;
-      animation: hero-sky-pan 145s linear infinite; /* 구름 패닝 속도 (은은하게) */
+      animation: hero-sky-pan 150s linear infinite; /* 하늘이 흐르는 속도 */
       will-change: transform;
     }
     @keyframes hero-sky-pan {
       from { transform: translateX(0); }
-      to   { transform: translateX(-624vh); } /* 타일 표시폭 130vh × 4.8 = 정확히 1주기 */
+      /* 타일 표시폭 = 130vh(높이) × (4344/724 = 6.0) = 780vh → 정확히 1주기 */
+      to   { transform: translateX(-780vh); }
     }
     .hero-window-frame {
       display: block;
       position: absolute; inset: 0; z-index: 2;
       width: 100%; height: 100%;
       object-fit: cover;
+    }
+    /* 벽 톤 패널 — 데스크톱에서만 사용. 기본은 숨김(모바일 프레임은
+       cover로 풀블리드라 여백이 없음). */
+    .hero-window-wall { display: none; }
+    /* 데스크톱: object-fit:cover는 16:9보다 넓은 뷰포트에서 창문을 '폭' 기준으로
+       확대해 창이 커지고 상단 네비게이션을 침범했다. 창을 뷰포트 높이의 90%로
+       (살짝만) 줄이고 '하단 정렬'해 해결 — 창이 화면을 꽉 채우는 비행기 창
+       느낌은 유지하되, 아래는 바닥까지 차고 창(개구부) 상단은 nav 아래로 충분히
+       내려온다. 프레임 바깥은 위쪽(나머지 10vh, nav가 얹힘)과 좌우만 벽 패널로
+       덮고(하단은 여백이 없어 패널 불필요), 패널 그라디언트는 100vh에 정렬해
+       프레임 가장자리 톤(위 어둡고 가운데 밝고 아래 어둠)과 맞물려 이음매가
+       안 보인다. */
+    @media (min-width: 641px) {
+      /* 데스크톱은 창이 하단 정렬(90vh)이라 개구부가 핀의 56.8% 지점(더 아래)에
+         있어, 모바일보다 고정점을 더 내려(25%) 개구부를 화면 중앙에 맞춘다. */
+      .hero-window-intro .zoom-exit-pin { transform-origin: 50% 25%; }
+      .hero-window-frame {
+        left: 50%; right: auto; bottom: 0; top: auto;
+        width: calc(90vh * 1.77684); height: 90vh;
+        max-width: none;
+        transform: translateX(-50%);
+      }
+      .hero-window-wall {
+        display: block;
+        position: absolute; z-index: 2;
+        pointer-events: none;
+        background-image: linear-gradient(180deg,
+          #443e39 0%, #524c47 10%, #786e66 33%, #8a7c73 55%,
+          #6b6055 80%, #5b544f 100%);
+        background-size: 100% 100vh;
+        background-repeat: no-repeat;
+      }
+      /* 프레임(90vh, 하단 정렬) 바깥 여백: 위 10vh + 좌우(50vw − 79.96vh,
+         79.96 = 90×1.77684 ÷ 2). L/R 세로 그라디언트는 프레임 좌우 가장자리와,
+         T는 위쪽 가장자리(10vh 지점 #524c47)와 맞물린다. */
+      .hero-window-wall.l { left: 0;  top: 0; bottom: 0; width: max(0px, calc(50vw - 79.96vh)); background-position: left center; }
+      .hero-window-wall.r { right: 0; top: 0; bottom: 0; width: max(0px, calc(50vw - 79.96vh)); background-position: right center; }
+      .hero-window-wall.t { left: 0; right: 0; top: 0; height: 10vh; background-position: center top; }
     }
     @media (prefers-reduced-motion: reduce) {
       .hero-window-sky-x { animation: none; }
@@ -1596,10 +1640,13 @@
     <div class="hero-window-sky-bg zoom-content-fade">
       <div class="hero-window-sky-y"><div class="hero-window-sky-x"></div></div>
     </div>
-    <picture class="zoom-content-fade">
+    <picture class="zoom-bezel-fade">
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
       <img src="images/hero-window-desktop-frame.webp" alt="" class="hero-window-frame" width="1672" height="941">
     </picture>
+    <div class="hero-window-wall l zoom-bezel-fade"></div>
+    <div class="hero-window-wall r zoom-bezel-fade"></div>
+    <div class="hero-window-wall t zoom-bezel-fade"></div>
     <div class="zoom-tone-bridge"></div>
   </div>
 </section>
