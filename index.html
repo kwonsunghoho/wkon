@@ -1428,9 +1428,14 @@
 
     /* 미디어(영상/플레이스홀더) 레이어 */
     .hs-media { position: absolute; inset: 0; z-index: 0; }
-    .hs-video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    /* 실제 촬영 영상 교체 전까지 카드별 웜톤 플레이스홀더 그라디언트.
-       <video data-src="...">에 파일이 준비되면 JS가 src로 승격 */
+    /* 세로 사진(3:4)을 카드(약 1:1)에 cover로 채우면 상하가 잘림 —
+       인물 얼굴이 상단에 있으므로 크롭 기준점을 위쪽으로 올림 */
+    .hs-img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: 50% 28%;
+      display: block;
+    }
+    /* 이미지 로드 전/실패 시 노출되는 카드별 웜톤 폴백 그라디언트 */
     .hs-card[data-idx="0"] .hs-media { background: linear-gradient(160deg,#7a5c44,#4a3626 60%,#8a6a4a); }
     .hs-card[data-idx="1"] .hs-media { background: linear-gradient(160deg,#6d6a58,#3e3a2e 60%,#8a7a5a); }
     .hs-card[data-idx="2"] .hs-media { background: linear-gradient(160deg,#8a6a4a,#5a3e26 60%,#a07a4a); }
@@ -1637,7 +1642,7 @@
       <!-- ── 카드 0 : 보신각 ── -->
       <div class="hs-card is-active" id="hs-card-0" data-idx="0">
         <div class="hs-media">
-          <video class="hs-video" data-src="video/hero-voice.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <img class="hs-img" src="images/hero-voice.webp" alt="" fetchpriority="high" aria-hidden="true">
         </div>
         <div class="hs-card-overlay" aria-hidden="true"></div>
         <div class="hs-card-badge">보.신.각</div>
@@ -1662,7 +1667,7 @@
       <!-- ── 카드 1 : 영합각 ── -->
       <div class="hs-card" id="hs-card-1" data-idx="1">
         <div class="hs-media">
-          <video class="hs-video" data-src="video/hero-expression.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <img class="hs-img" src="images/hero-expression.webp" alt="" loading="lazy" decoding="async" aria-hidden="true">
         </div>
         <div class="hs-card-overlay" aria-hidden="true"></div>
         <div class="hs-card-badge">영.합.각</div>
@@ -1676,7 +1681,7 @@
       <!-- ── 카드 2 : 스피닝 ── -->
       <div class="hs-card" id="hs-card-2" data-idx="2">
         <div class="hs-media">
-          <video class="hs-video" data-src="video/hero-spinning.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <img class="hs-img" src="images/hero-spinning.webp" alt="" loading="lazy" decoding="async" aria-hidden="true">
         </div>
         <div class="hs-card-overlay" aria-hidden="true"></div>
         <div class="hs-card-badge">스.피.닝</div>
@@ -1701,7 +1706,7 @@
       <!-- ── 카드 3 : 승자각 ── -->
       <div class="hs-card" id="hs-card-3" data-idx="3">
         <div class="hs-media">
-          <video class="hs-video" data-src="video/hero-answer.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <img class="hs-img" src="images/hero-answer.webp" alt="" loading="lazy" decoding="async" aria-hidden="true">
         </div>
         <div class="hs-card-overlay" aria-hidden="true"></div>
         <div class="hs-card-badge">승.자.각</div>
@@ -2312,18 +2317,6 @@
     });
   }
 
-  /* 활성 카드 영상만 재생. 영상 파일을 video/ 폴더에 넣고 각 <video>의
-     data-src를 src로 바꾸면 자동 재생됨 (현재는 플레이스홀더 그라디언트). */
-  function heroUpdateVideos() {
-    _hsCards.forEach((card, i) => {
-      const v = card.querySelector('.hs-video');
-      if (!v) return;
-      if (!(v.getAttribute('src') || v.currentSrc)) return;
-      if (i === _heroIdx && !_heroReduce) { v.play().catch(() => {}); }
-      else { v.pause(); }
-    });
-  }
-
   function _heroResetAuto(delay) {
     clearInterval(_heroAutoTimer);
     _heroAutoTimer = setInterval(() => heroSwitchTo(_heroIdx + 1), delay || 5000);
@@ -2350,7 +2343,6 @@
     _heroIdx = idx;
     _heroMode = 'before';
     heroLayout();
-    heroUpdateVideos();
 
     /* 새 활성 카드 전/후 토글 초기화 */
     const card = _hsCards[idx];
@@ -2420,7 +2412,6 @@
 
   /* 초기 레이아웃 + 자동전환 시작 */
   heroLayout();
-  heroUpdateVideos();
   _heroResetAuto();
 
   /* ── 스와이프 ── */
