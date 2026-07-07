@@ -88,6 +88,7 @@
     .mitem .mn { font-weight: 600; font-size: 15px; }
     .mitem .me { font-size: 13px; color: var(--text-muted); }
     .mitem .madm { font-size: 12px; color: var(--action); font-weight: 700; }
+    .mitem .msj { font-size: 11px; color: var(--accent); font-weight: 700; background: var(--accent-tint); padding: 1px 6px; border-radius: 999px; }
     .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
 
     .main { padding: 24px; }
@@ -167,6 +168,8 @@
         <label><input type="checkbox" id="unassignedOnly"> 미배정만</label>
         <select id="bulkCohort"><option value="">기수 선택…</option></select>
         <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
+        <button class="btn btn-ghost btn-sm" id="bulkSojaeOn" disabled>소재 발굴 켜기</button>
+        <button class="btn btn-ghost btn-sm" id="bulkSojaeOff" disabled>끄기</button>
         <span class="bulk-count" id="selCount"></span>
       </div>
       <ul class="mlist" id="mlist"></ul>
@@ -308,7 +311,7 @@
         <li class="mitem ${m.id === currentId ? 'active' : ''}" data-id="${m.id}">
           <input type="checkbox" class="mchk" data-id="${m.id}" ${selected.has(m.id) ? 'checked' : ''}>
           <div class="minfo" data-id="${m.id}">
-            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}</div>
+            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}${m.sojae_enabled ? ' <span class="msj">소재</span>' : ''}</div>
             <div class="me">${esc(m.email || '이메일 없음')}</div>
           </div>
         </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
@@ -325,6 +328,8 @@
       const n = selected.size;
       document.getElementById('selCount').textContent = n ? (n + '명 선택') : '';
       document.getElementById('bulkAssign').disabled = !n;
+      document.getElementById('bulkSojaeOn').disabled = !n;
+      document.getElementById('bulkSojaeOff').disabled = !n;
       document.getElementById('selAll').checked = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
     }
 
@@ -375,6 +380,7 @@
             <div class="field"><label>이메일</label><input value="${esc(m.email || '')}" readonly></div>
             <div class="field"><label>기수</label><select id="fCohort">${cohortOpts}</select></div>
             <div class="field"><label>권한</label>${roleField(m)}</div>
+            <div class="field"><label>소재 발굴</label>${sojaeField(m)}</div>
             <button class="btn btn-action" id="saveProfile">정보 저장</button>
           </div>
         </div>
@@ -411,6 +417,17 @@
         <button type="button" id="roleToggle" data-to="${makeAdmin ? 'admin' : 'member'}"
           class="btn btn-sm ${makeAdmin ? 'btn-action' : 'btn-ghost'}">
           ${makeAdmin ? '관리자로 지정' : '회원으로 강등'}</button>
+      </div>`;
+    }
+
+    // 소재 발굴 권한 필드: 모든 관리자가 켜고 끌 수 있다(오너 전용 아님).
+    function sojaeField(m) {
+      const on = !!m.sojae_enabled;
+      return `<div style="display:flex;align-items:center;gap:8px">
+        <span style="font-weight:600">${on ? '사용 가능' : '잠금'}</span>
+        <button type="button" id="sojaeToggle" data-to="${on ? 'off' : 'on'}"
+          class="btn btn-sm ${on ? 'btn-ghost' : 'btn-action'}">
+          ${on ? '권한 끄기' : '권한 켜기'}</button>
       </div>`;
     }
 
@@ -488,6 +505,20 @@
         selectMember(id); // 상세 다시 그려 버튼 라벨 갱신
       });
 
+      // 소재 발굴 권한 토글 (모든 관리자). RLS/can_sojae() 가 서버에서도 실제 접근 통제.
+      const sojaeToggle = document.getElementById('sojaeToggle');
+      if (sojaeToggle) sojaeToggle.addEventListener('click', async () => {
+        const to = sojaeToggle.dataset.to === 'on';   // 켤지 여부
+        const m = members.find(x => x.id === id);
+        sojaeToggle.disabled = true;
+        const { error } = await sb().from('members').update({ sojae_enabled: to }).eq('id', id);
+        if (error) { alert('변경 실패: ' + error.message); sojaeToggle.disabled = false; return; }
+        if (m) m.sojae_enabled = to;
+        renderMemberList();
+        toast('소재 발굴 ' + (to ? '권한 켜짐' : '권한 꺼짐'));
+        selectMember(id); // 상세 다시 그려 버튼 라벨 갱신
+      });
+
       // 음성 업로드
       document.querySelectorAll('[data-upload]').forEach(btn => btn.addEventListener('click', async () => {
         const type = btn.dataset.upload;
@@ -550,6 +581,21 @@
       await loadMembers();
       toast(ids.length + '명 배정 완료');
     });
+
+    // 소재 발굴 권한 일괄 켜기/끄기 (선택된 회원 대상, 모든 관리자)
+    async function bulkSetSojae(enabled) {
+      const ids = [...selected];
+      if (!ids.length) { alert('회원을 선택하세요.'); return; }
+      const label = enabled ? '소재 발굴 권한을 켤까요' : '소재 발굴 권한을 끌까요';
+      if (!confirm(ids.length + '명의 ' + label + '?')) return;
+      const { error } = await sb().from('members').update({ sojae_enabled: enabled }).in('id', ids);
+      if (error) { alert('변경 실패: ' + error.message); return; }
+      selected.clear();
+      await loadMembers();
+      toast(ids.length + '명 소재 발굴 ' + (enabled ? '켜짐' : '꺼짐'));
+    }
+    document.getElementById('bulkSojaeOn').addEventListener('click', () => bulkSetSojae(true));
+    document.getElementById('bulkSojaeOff').addEventListener('click', () => bulkSetSojae(false));
 
     // ── 탭 전환 ──
     function initTabs() {

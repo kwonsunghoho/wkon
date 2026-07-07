@@ -474,9 +474,28 @@
         return data || null;
       } catch (_) { return null; }
     }
+    // 권한 없는 회원용 안내 화면 (문제·AI 로드 전에 차단)
+    function showNoAccess() {
+      document.body.innerHTML =
+        '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;'
+        + 'text-align:center;padding:32px 24px;gap:14px;">'
+        + '<svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="var(--text-dim)" '
+        + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+        + '<div style="font-size:18px;font-weight:800;color:var(--text);">아직 소재 발굴 권한이 없어요</div>'
+        + '<div style="font-size:14px;color:var(--text-muted);line-height:1.6;">관리자 승인 후 이용할 수 있어요.</div>'
+        + '<a href="mypage.html" style="margin-top:6px;display:inline-flex;align-items:center;justify-content:center;'
+        + 'background:var(--action);color:var(--action-ink);font-weight:700;font-size:15px;'
+        + 'border-radius:var(--radius-xs,12px);padding:12px 22px;min-height:44px;text-decoration:none;">'
+        + '마이페이지로</a></div>';
+    }
+
     (async () => {
       const session = await MONC.requireSession();   // 미로그인 → login 으로 이동
       if (!session) return;
+      // 소재 발굴 권한 확인 — 없으면 안내 화면으로 차단(문제·AI 로드 안 함)
+      const profile = await MONC.getMyProfile();
+      if (!MONC.hasSojaeAccess(profile)) { showNoAccess(); return; }
       const qid = new URLSearchParams(location.search).get('q');
       const q = qid ? await fetchQuestionById(qid) : await window.SOJAE.fetchTodayQuestion(MONC.sb);
       if (q) { currentQuestion = q; if (CAT_LABEL[q.category]) category = q.category; }

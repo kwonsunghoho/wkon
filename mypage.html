@@ -161,7 +161,7 @@
         <div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent);margin-bottom:8px;">오늘의 소재 발굴</div>
         <span id="todayCat" style="display:inline-block;background:var(--accent-tint);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;">경험 발굴형</span>
         <div id="todayQ" style="font-size:17px;font-weight:700;line-height:1.45;margin:10px 0 16px;">불러오는 중…</div>
-        <span style="display:inline-flex;align-items:center;gap:6px;background:var(--action);color:var(--action-ink);font-weight:700;font-size:15px;border-radius:var(--radius-xs);padding:12px 18px;min-height:44px;">소재 발굴 시작
+        <span id="todayCta" style="display:inline-flex;align-items:center;gap:6px;background:var(--action);color:var(--action-ink);font-weight:700;font-size:15px;border-radius:var(--radius-xs);padding:12px 18px;min-height:44px;">소재 발굴 시작
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
 
@@ -298,6 +298,25 @@
       }
     }
 
+    // ── 소재 발굴 권한 없는 회원: 오늘의 발굴 카드를 잠금 표시(클릭 불가) ──
+    function lockSojaeCard() {
+      const card = document.getElementById('todayCard');
+      if (!card) return;
+      card.removeAttribute('href');        // <a> 에서 href 제거 → 클릭해도 이동 안 함
+      card.style.cursor = 'default';
+      card.style.opacity = '.78';
+      const cta = document.getElementById('todayCta');
+      if (cta) {
+        cta.style.background = 'var(--bg2)';
+        cta.style.color = 'var(--text-muted)';
+        cta.innerHTML =
+          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" '
+          + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+          + '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+          + '관리자 승인 후 이용 가능';
+      }
+    }
+
     // ── 상단 섹션 네비 활성 표시(스크롤 스파이) ──
     // 스크롤 때마다 '기준선(네비 아래)을 지난 마지막 섹션'을 다시 계산 → 즉시 점프에도 정체 없음.
     function initSecNav() {
@@ -341,6 +360,9 @@
         const al = document.getElementById('adminLink');
         if (al) al.style.display = '';
       }
+
+      // 소재 발굴 권한 없으면 오늘의 발굴 카드 잠금
+      if (!MONC.hasSojaeAccess(profile)) lockSojaeCard();
 
       // 이름/메타 (소속 기수 · 챌린지 기간 · 이메일 순. 없는 항목은 생략)
       document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';

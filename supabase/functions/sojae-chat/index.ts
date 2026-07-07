@@ -176,6 +176,17 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supa.auth.getUser();
     if (!user) return json({ error: "로그인이 필요합니다" }, 401);
 
+    // 소재 발굴 권한 확인 (sojae_enabled 또는 관리자). RLS 하에서 본인 행만 읽힘.
+    // AI 호출(=비용) 전에 막아야 하므로 RLS 와 별개로 여기서 명시적으로 검사한다.
+    const { data: me } = await supa
+      .from("members")
+      .select("sojae_enabled, role")
+      .eq("id", user.id)
+      .single();
+    if (!me || (!me.sojae_enabled && me.role !== "admin")) {
+      return json({ error: "소재 발굴 권한이 없습니다" }, 403);
+    }
+
     const body = await req.json();
     const stage = body.stage === "refine" ? "refine" : "ask";
 
