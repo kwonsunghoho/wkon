@@ -1335,43 +1335,15 @@
       width: 100%; height: 100%;
       object-fit: cover;
     }
-    /* 벽 톤 패널 — 데스크톱에서만 사용. 기본은 숨김(모바일 프레임은
-       cover로 풀블리드라 여백이 없음). */
-    .hero-window-wall { display: none; }
-    /* 데스크톱: object-fit:cover는 16:9보다 넓은 뷰포트에서 창문을 '폭' 기준으로
-       확대해 창이 커지고 상단 네비게이션을 침범했다. 창을 뷰포트 높이의 90%로
-       (살짝만) 줄이고 '하단 정렬'해 해결 — 창이 화면을 꽉 채우는 비행기 창
-       느낌은 유지하되, 아래는 바닥까지 차고 창(개구부) 상단은 nav 아래로 충분히
-       내려온다. 프레임 바깥은 위쪽(나머지 10vh, nav가 얹힘)과 좌우만 벽 패널로
-       덮고(하단은 여백이 없어 패널 불필요), 패널 그라디언트는 100vh에 정렬해
-       프레임 가장자리 톤(위 어둡고 가운데 밝고 아래 어둠)과 맞물려 이음매가
-       안 보인다. */
+    /* 데스크톱 히어로 프레임은 좌우 벽이 이미지에 직접 그려진 '와이드(2.6:1)'
+       이미지라, object-fit:cover만으로 화면을 꽉 채운다(좌우 여백 0). 이미지가
+       어떤 모니터보다 가로로 넓어 cover가 '높이 기준'으로 맞춰지므로, 창 크기는
+       뷰포트 높이에 비례해 항상 일정하고 남는 좌우는 벽이 넘쳐 채운다.
+       → 모바일·데스크톱 모두 기본 규칙(inset:0 + cover)만으로 동작, 별도 벽 패널 불필요. */
     @media (min-width: 641px) {
-      /* 데스크톱은 창이 하단 정렬(90vh)이라 개구부가 핀의 56.8% 지점(더 아래)에
-         있어, 모바일보다 고정점을 더 내려(25%) 개구부를 화면 중앙에 맞춘다. */
-      .hero-window-intro .zoom-exit-pin { transform-origin: 50% 25%; }
-      .hero-window-frame {
-        left: 50%; right: auto; bottom: 0; top: auto;
-        width: calc(90vh * 1.77684); height: 90vh;
-        max-width: none;
-        transform: translateX(-50%);
-      }
-      .hero-window-wall {
-        display: block;
-        position: absolute; z-index: 2;
-        pointer-events: none;
-        background-image: linear-gradient(180deg,
-          #443e39 0%, #524c47 10%, #786e66 33%, #8a7c73 55%,
-          #6b6055 80%, #5b544f 100%);
-        background-size: 100% 100vh;
-        background-repeat: no-repeat;
-      }
-      /* 프레임(90vh, 하단 정렬) 바깥 여백: 위 10vh + 좌우(50vw − 79.96vh,
-         79.96 = 90×1.77684 ÷ 2). L/R 세로 그라디언트는 프레임 좌우 가장자리와,
-         T는 위쪽 가장자리(10vh 지점 #524c47)와 맞물린다. */
-      .hero-window-wall.l { left: 0;  top: 0; bottom: 0; width: max(0px, calc(50vw - 79.96vh)); background-position: left center; }
-      .hero-window-wall.r { right: 0; top: 0; bottom: 0; width: max(0px, calc(50vw - 79.96vh)); background-position: right center; }
-      .hero-window-wall.t { left: 0; right: 0; top: 0; height: 10vh; background-position: center top; }
+      /* 개구부가 화면 세로 중앙 부근이라 줌 고정점을 중앙으로. (확대 초반
+         프레이밍용 — 창틀은 zoom-bezel-fade로 사라져 결국 하늘만 남는다.) */
+      .hero-window-intro .zoom-exit-pin { transform-origin: 50% 50%; }
     }
     @media (prefers-reduced-motion: reduce) {
       .hero-window-sky-x { animation: none; }
@@ -1642,11 +1614,8 @@
     </div>
     <picture class="zoom-bezel-fade">
       <source media="(max-width: 640px)" srcset="images/hero-window-mobile-frame.webp">
-      <img src="images/hero-window-desktop-frame.webp" alt="" class="hero-window-frame" width="1672" height="941">
+      <img src="images/hero-window-desktop-wide.webp" alt="" class="hero-window-frame" width="2023" height="777">
     </picture>
-    <div class="hero-window-wall l zoom-bezel-fade"></div>
-    <div class="hero-window-wall r zoom-bezel-fade"></div>
-    <div class="hero-window-wall t zoom-bezel-fade"></div>
     <div class="zoom-tone-bridge"></div>
   </div>
 </section>
