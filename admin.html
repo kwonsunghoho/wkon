@@ -45,6 +45,8 @@
     .app-card .ac-name { font-weight: 800; font-size: 16px; }
     .app-card .ac-date { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
     .app-card .ac-phone { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+    .app-card .ac-refund { font-size: 13px; color: var(--text-muted); margin-top: 4px; word-break: break-all; }
+    .app-card .ac-refund b { color: var(--text); font-weight: 700; }
     .app-card .ac-ch { font-size: 13px; color: var(--text); margin: 8px 0; }
     .app-card .ac-linked { font-size: 12px; font-weight: 700; color: #1a7f37; }
     .app-card .ac-unlinked { font-size: 12px; color: var(--text-muted); }
@@ -378,6 +380,8 @@
           <div class="prow">
             <div class="field"><label>이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
             <div class="field"><label>이메일</label><input value="${esc(m.email || '')}" readonly></div>
+            <div class="field"><label>전화번호</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="전화번호"></div>
+            <div class="field"><label>전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공"></div>
             <div class="field"><label>기수</label><select id="fCohort">${cohortOpts}</select></div>
             <div class="field"><label>권한</label>${roleField(m)}</div>
             <div class="field"><label>소재 발굴</label>${sojaeField(m)}</div>
@@ -481,10 +485,19 @@
       // 회원 정보 저장 (이름 + 기수)
       document.getElementById('saveProfile').addEventListener('click', async () => {
         const name = document.getElementById('fName').value.trim() || null;
+        const phone = document.getElementById('fPhone').value.trim() || null;
+        const major = document.getElementById('fMajor').value.trim() || null;
         const cohort_id = document.getElementById('fCohort').value || null;
-        const { error } = await sb().from('members').update({ name, cohort_id }).eq('id', id);
+        const m = members.find(x => x.id === id);
+        let savedMajor = major;
+        // 전공(major) 컬럼이 아직 없을 수 있어, major 포함 저장이 실패하면 major 빼고 재시도
+        let { error } = await sb().from('members').update({ name, phone, major, cohort_id }).eq('id', id);
+        if (error && /major/i.test(error.message || '')) {
+          savedMajor = m ? m.major : null;   // 전공은 저장 못 함(컬럼 미적용) — 로컬 상태도 기존값 유지
+          ({ error } = await sb().from('members').update({ name, phone, cohort_id }).eq('id', id));
+        }
         if (error) { alert('저장 실패: ' + error.message); return; }
-        const m = members.find(x => x.id === id); if (m) { m.name = name; m.cohort_id = cohort_id; }
+        if (m) { m.name = name; m.phone = phone; m.major = savedMajor; m.cohort_id = cohort_id; }
         renderMemberList();
         toast('회원 정보 저장됨');
       });
@@ -683,6 +696,7 @@
             <span class="ac-date">${fmtDate(a.created_at)}</span>
           </div>
           <div class="ac-phone">${esc(a.phone)} ${a.member_id ? '<span class="ac-linked">● 회원연결됨</span>' : '<span class="ac-unlinked">○ 미연결</span>'}</div>
+          <div class="ac-refund">환급계좌: ${a.refund_account ? '<b>' + esc(a.refund_account) + '</b>' : '<span style="color:var(--text-dim)">미입력</span>'}</div>
           <div class="ac-ch">${esc(chSummary(a.challenges))} · ${(a.total_price||0).toLocaleString()}원</div>
           <div class="ac-toggles">
             <button class="ac-tg ${a.paid ? 'on' : ''}" data-field="paid">입금 ${a.paid ? '✓' : ''}</button>
@@ -710,9 +724,9 @@
     }
 
     function appsToCsv() {
-      const head = ['신청일자','이름','전화','챌린지/기수','총액','입금','환급','회원연결'];
+      const head = ['신청일자','이름','전화','환급계좌','챌린지/기수','총액','입금','환급','회원연결'];
       const rows = _apps.map(a => [
-        new Date(a.created_at).toLocaleString('ko-KR'), a.name, a.phone,
+        new Date(a.created_at).toLocaleString('ko-KR'), a.name, a.phone, a.refund_account || '',
         chSummary(a.challenges), a.total_price || 0, a.paid ? 'Y':'N', a.refunded ? 'Y':'N', a.member_id ? 'Y':'N'
       ]);
       const csv = [head, ...rows].map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
