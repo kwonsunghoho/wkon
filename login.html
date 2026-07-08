@@ -95,7 +95,11 @@
     async function routeByRole() {
       const profile = await MONC.getMyProfile();
       if (!profile) return; // 프로필이 아직 없으면(드묾) 그대로 로그인 화면 유지
-      window.location.replace(profile.role === 'admin' ? 'admin.html' : 'mypage.html');
+      if (profile.role === 'admin') { window.location.replace('admin.html'); return; }
+      // 전화번호 미입력 = 온보딩(프로필 완성) 미완료 → 온보딩으로. 한 번 건너뛰면(monc_onboard_done) 다시 강제 안 함.
+      let skipped = false; try { skipped = !!localStorage.getItem('monc_onboard_done'); } catch (e) {}
+      if (!profile.phone && !skipped) { window.location.replace('onboarding.html'); return; }
+      window.location.replace('mypage.html');
     }
 
     const returnHere = () => window.location.origin + window.location.pathname;

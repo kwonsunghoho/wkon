@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>프로필 완성 · MONC</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: linear-gradient(160deg, var(--bg) 0%, var(--bg3) 100%);
+      color: var(--text); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      width: 100%; max-width: 420px; padding: 40px 30px; text-align: center;
+    }
+    .logo { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); }
+    .logo b { color: var(--action); }
+    h1 { font-size: 20px; font-weight: 900; margin-top: 16px; color: var(--action); }
+    .sub { margin-top: 8px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+    form { margin-top: 24px; text-align: left; }
+    .field-label { font-size: 13px; font-weight: 800; margin: 14px 0 6px; }
+    .field-label:first-child { margin-top: 0; }
+    .field-label .opt { font-weight: 600; color: var(--text-dim); font-size: 12px; }
+    .inp {
+      width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 15px; font-family: inherit; background: #fff; color: var(--text);
+    }
+    .inp:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-tint); }
+    .save-btn {
+      width: 100%; margin-top: 22px; padding: 15px; border: none; border-radius: 12px;
+      background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900;
+      font-family: inherit; cursor: pointer; transition: background .2s, transform .1s;
+    }
+    .save-btn:hover { background: var(--action-hover); }
+    .save-btn:active { transform: scale(.99); }
+    .save-btn:disabled { opacity: .6; cursor: default; }
+    .skip { display: inline-block; margin-top: 16px; font-size: 13px; color: var(--text-muted); text-decoration: underline; background: none; border: none; cursor: pointer; min-height: 44px; }
+    .status { margin-top: 14px; font-size: 13px; color: var(--text-muted); min-height: 18px; }
+    .status.err { color: var(--action-dark); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">MO<b>N</b>C</div>
+    <h1>환영해요! 프로필을 완성해주세요</h1>
+    <p class="sub">신청과 2주 성장 기록을 매끄럽게 연결하려면<br>몇 가지만 알려주세요.</p>
+
+    <form id="onboardForm" onsubmit="return false;">
+      <div class="field-label">이름</div>
+      <input type="text" id="obName" class="inp" placeholder="홍길동" autocomplete="name">
+      <div class="field-label">전화번호</div>
+      <input type="tel" id="obPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric">
+      <div class="field-label">전공 <span class="opt">(선택)</span></div>
+      <input type="text" id="obMajor" class="inp" placeholder="예: 항공서비스학과, 영어영문학과">
+
+      <button type="button" class="save-btn" id="saveBtn">저장하고 시작하기</button>
+    </form>
+    <button type="button" class="skip" id="skipBtn">나중에 할게요</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    const statusEl = document.getElementById('status');
+    const setStatus = (t, err) => { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!err); };
+    const nameEl = document.getElementById('obName');
+    const phoneEl = document.getElementById('obPhone');
+    const majorEl = document.getElementById('obMajor');
+    const saveBtn = document.getElementById('saveBtn');
+    const skipBtn = document.getElementById('skipBtn');
+    const nextPage = () => new URLSearchParams(location.search).get('returnTo') || 'mypage.html';
+
+    (async () => {
+      if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
+      const session = await MONC.requireSession(); // 미로그인 시 login.html 로 보냄
+      if (!session) return;
+      const me = session.user.id;
+
+      const profile = await MONC.getMyProfile();
+      if (profile) {
+        if (profile.name)  nameEl.value  = profile.name;
+        if (profile.phone) phoneEl.value = profile.phone;
+      }
+      // 전공은 공용 getMyProfile 셀렉트에 없어(컬럼 미생성 대비) 별도로 방어적 조회
+      try {
+        const { data } = await MONC.sb.from('members').select('major').eq('id', me).single();
+        if (data && data.major) majorEl.value = data.major;
+      } catch (e) {}
+
+      saveBtn.addEventListener('click', async () => {
+        const name = nameEl.value.trim(), phone = phoneEl.value.trim(), major = majorEl.value.trim();
+        if (!name || !phone) { setStatus('이름과 전화번호를 입력해주세요.', true); return; }
+        saveBtn.disabled = true; setStatus('저장 중…');
+
+        // 전공 컬럼(major)이 아직 없을 수 있어, 실패하면 전공 빼고 재시도
+        let { error } = await MONC.sb.from('members').update({ name, phone, major }).eq('id', me);
+        if (error && /major/i.test(error.message || '')) {
+          ({ error } = await MONC.sb.from('members').update({ name, phone }).eq('id', me));
+        }
+        if (error) { setStatus('저장 실패: ' + error.message, true); saveBtn.disabled = false; return; }
+
+        try { localStorage.setItem('monc_onboard_done', '1'); } catch (e) {}
+        location.replace(nextPage());
+      });
+
+      skipBtn.addEventListener('click', () => {
+        try { localStorage.setItem('monc_onboard_done', '1'); } catch (e) {}
+        location.replace(nextPage());
+      });
+    })();
+  </script>
+</body>
+</html>

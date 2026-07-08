@@ -34,9 +34,13 @@ This is the single biggest footgun. The challenge sign-up modal is implemented t
 
 Any change to pricing, the deposit, the bank account number, the submit/duplicate-guard logic, or the modal fields **must be made in both files**. `APPLICATION_API_URL` is also declared independently in each (currently identical — keep them identical).
 
+**⚠️ 2026-07-08 업데이트 — 신청 창구가 `apply.html`(별도 페이지)로 이관됨.** index·상세페이지의 모든 "신청하기" CTA는 이제 팝업을 열지 않고 `apply.html`로 이동한다(상세페이지는 `apply.html?c=<recruit-id>`로 해당 챌린지 프리셀렉트). 위 두 모달 코드는 **삭제하지 않고 남았지만 휴면(미사용)** 상태다(`openApplicationModal`은 정의부 + `?openModal=true` 자동열기에만 남음). **가격·보증금·계좌번호·커리큘럼·제출 스키마의 실사용 소스는 이제 `apply.html`** 이니 변경은 여기를 우선 수정한다. (모달 2곳은 향후 정리 예정.)
+
 ### Pages
 - `index.html` — the landing page. Large and self-contained: design tokens, all sections, the inline modal, review loading, and most JS live here.
-- Active detail pages (linked from the index cards, each loads `application-modal.js`): `challenge-voice.html` (보신각), `challenge-expression.html` (영합각), `challenge-spinning.html` (스피닝), `challenge-answer.html` (승자각).
+- `apply.html` — **신청·결제 전용 페이지(2026-07-08 신설, 모든 신청 CTA의 목적지).** 구조: 히어로 → 챌린지 카드 4개(카드 클릭=선택+2주 커리큘럼 아코디언 펼침, 다중선택 장바구니) → 회원가입 유도 배너(→`login.html`) → 조합 추천 배너 → FAQ 아코디언 → 계좌이체 신청폼 → 하단 고정 요약바. `?c=voice,answer` 쿼리로 프리셀렉트. `supabase-config.js`+`recruit.js` 로드, `loadChallengeStatuses()`로 마감/모집예정 카드 비활성, 제출은 `MONC.sb.from('applications').insert(...)`(모달과 동일 스키마). 챌린지 데이터·FAQ는 페이지 하단 인라인 `<script>`의 `CHALLENGES`/`FAQ` 배열. FAQ #3(진행방식)·#6(수료기준)·#7(환불)은 오너 확정 전 임시 문구. **회원 모드**: 로그인 시 `getMyProfile()`로 이름·전화 자동 채움(입력칸 숨김)·`applications.insert`에 `member_id` 포함(→마이페이지 '내 신청내역' 연동, `applications.member_id` 컬럼 사용)·전화가 프로필에 없으면 입력받아 `members`에 저장. 비로그인은 전체 폼 + 로그인 유도 배너. 강조 애니메이션: 회원가입 배너(테두리+글로우 브리딩+버튼 샤인), 하단 신청바(선택 시 펄스) — `prefers-reduced-motion` 시 정지.
+- `onboarding.html` — **회원 온보딩(2026-07-08 신설).** 첫 로그인 후 `login.html`의 `routeByRole()`이 `!profile.phone && !localStorage.monc_onboard_done`이면 여기로 보냄. 이름·전화·**전공(major)** 입력 → `members` 저장 후 마이페이지(또는 `?returnTo`)로. ⚠️ `members.major` 컬럼은 마이그레이션 `20260708120000_member_major.sql`로 오너가 Supabase에 직접 추가해야 함(미적용 시 전공만 방어적으로 무시, 이름·전화는 정상 저장). `getMyProfile()` 공용 셀렉트에는 major를 넣지 않음(컬럼 미생성 시 전체 프로필 조회가 깨지므로) — major는 필요한 곳에서 별도 방어 조회.
+- Active detail pages (index 카드에서 링크, 각자 `application-modal.js` 로드하지만 신청 버튼은 이제 `apply.html?c=<id>`로 이동): `challenge-voice.html` (보신각), `challenge-expression.html` (영합각), `challenge-spinning.html` (스피닝), `challenge-answer.html` (승자각).
 - `challenge-express.html` and `challenge-speech.html` are **legacy/unused** — not linked from the index and do not load the shared modal. Don't edit these assuming they're live.
 - `terms.html`, `privacy.html` — legal pages linked from the footer.
 - `index.backup-*.html` — manual timestamped backups, not part of the site.

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>챌린지 신청 · MONC</title>
+<meta name="description" content="MONC 2주 면접 챌린지 — 원하는 챌린지를 골라 담고 한 번에 신청하세요. 수료 시 보증금 전액 환급.">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: var(--lh-body);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 96px; /* 하단 고정바 공간 */
+  }
+  a { color: inherit; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 18px; }
+
+  /* ── 상단 바 ── */
+  .top-bar {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(233,228,216,.92);
+    backdrop-filter: saturate(1.2) blur(8px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .top-inner { display: flex; align-items: center; justify-content: space-between; height: 54px; }
+  .brand { font-weight: 900; font-size: 20px; letter-spacing: .02em; text-decoration: none; color: var(--text); }
+  .top-login { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 13px; font-weight: 700; color: var(--accent); text-decoration: none; padding: 8px 10px; }
+
+  /* ── 히어로 ── */
+  .hero { text-align: center; padding: 34px 0 26px; }
+  .hero .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--accent); margin-bottom: 10px; }
+  .hero h1 { margin: 0; font-size: clamp(28px, 8vw, 44px); font-weight: 900; line-height: 1.2; color: var(--action); }
+  .hero p { margin: 12px 0 0; font-size: 15px; color: var(--text-muted); }
+  .trust { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  .trust span {
+    font-size: 12px; font-weight: 700; background: var(--surface);
+    border: 1px solid var(--border-soft); border-radius: 99px; padding: 7px 13px;
+  }
+  .trust i { color: var(--action-dark); font-style: normal; margin-right: 4px; }
+
+  /* ── 섹션 공통 ── */
+  .sec { padding: 14px 0; }
+  .sec-title { font-size: 20px; font-weight: 900; margin: 0 0 4px; }
+  .sec-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+
+  /* ── 챌린지 카드 ── */
+  .card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 12px; overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .card.selected { border-color: var(--action); box-shadow: 0 6px 22px rgba(242,121,69,.18); }
+  .card.disabled { opacity: .5; }
+  .card-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px; cursor: pointer; user-select: none; }
+  .card.disabled .card-head { cursor: not-allowed; }
+  .card-check {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: transparent; margin-top: 2px; transition: all .2s;
+  }
+  .card.selected .card-check { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+  .card-main { flex: 1; min-width: 0; }
+  .card-name { font-size: 17px; font-weight: 900; }
+  .card-name .tag { font-size: 12px; font-weight: 700; color: var(--accent); margin-left: 4px; }
+  .card-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+  .card-bullets { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.7; }
+  .card-bullets div::before { content: '· '; color: var(--action-dark); }
+  .card-price { flex: none; text-align: right; font-weight: 900; font-size: 14px; white-space: nowrap; margin-top: 2px; }
+  .card-price small { display: block; font-weight: 600; font-size: 12px; color: var(--text-muted); }
+  .status-tag {
+    display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 7px;
+    border-radius: 99px; margin-left: 6px; vertical-align: 1px;
+  }
+  .status-upcoming { background: var(--accent-tint); color: var(--accent-dark); }
+  .status-closed { background: rgba(120,120,120,.16); color: #7a7a7a; }
+
+  .curr-toggle {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 800;
+    color: var(--accent); cursor: pointer; padding: 4px 16px 14px; user-select: none;
+    min-height: 44px; box-sizing: border-box;
+  }
+  .curr-toggle .arw { transition: transform .2s; font-size: 10px; }
+  .card.curr-open .curr-toggle .arw { transform: rotate(90deg); }
+
+  .curr-body { display: none; padding: 0 16px 16px; }
+  .card.curr-open .curr-body { display: block; }
+  .curr-inner { background: var(--surface2); border-radius: var(--radius-xs); padding: 14px; }
+  .curr-inner .h { font-size: 12px; font-weight: 900; color: var(--accent); margin-bottom: 10px; }
+  .curr-week { font-size: 13px; font-weight: 800; margin: 10px 0 4px; }
+  .curr-week:first-of-type { margin-top: 0; }
+  .curr-days { font-size: 12px; color: var(--text-muted); line-height: 1.9; padding-left: 2px; }
+
+  /* ── 회원가입 유도 배너 ── */
+  .signup-banner {
+    background: var(--accent); color: #fff; border-radius: var(--radius-sm);
+    padding: 22px 20px; text-align: center; margin: 10px 0 6px;
+    border: 2px solid var(--action); position: relative;
+    animation: bannerBreathe 2.6s ease-in-out infinite;
+  }
+  .signup-banner .jump { font-size: 12px; font-weight: 800; color: var(--action); margin-bottom: 6px; }
+  .signup-banner h3 { margin: 0; font-size: 18px; font-weight: 900; line-height: 1.45; }
+  .signup-banner .desc { font-size: 12.5px; color: #C9D4EA; margin-top: 8px; }
+  .signup-banner a.btn {
+    display: inline-block; margin-top: 16px; background: var(--action); color: var(--action-ink);
+    font-size: 14px; font-weight: 900; padding: 12px 26px; border-radius: 10px; text-decoration: none;
+    position: relative; overflow: hidden; box-shadow: 0 4px 16px rgba(242,121,69,.45);
+  }
+
+  /* ── 조합 추천 배너 ── */
+  .combo {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--surface); border: 1px dashed var(--action);
+    border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 6px;
+  }
+  .combo .txt { flex: 1; min-width: 180px; }
+  .combo .txt b { font-size: 14px; font-weight: 900; }
+  .combo .txt p { margin: 3px 0 0; font-size: 12px; color: var(--text-muted); }
+  .combo button {
+    flex: none; background: var(--accent); color: #fff; border: none;
+    font-size: 13px; font-weight: 900; padding: 12px 18px; border-radius: 10px; cursor: pointer;
+    min-height: 44px; box-sizing: border-box;
+  }
+
+  /* ── FAQ ── */
+  .faq-item { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-xs); margin-bottom: 8px; overflow: hidden; }
+  .faq-q { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px; cursor: pointer; user-select: none; font-size: 14px; font-weight: 800; }
+  .faq-q .pm { flex: none; font-size: 18px; color: var(--action-dark); transition: transform .2s; }
+  .faq-item.open .faq-q .pm { transform: rotate(45deg); }
+  .faq-a { display: none; padding: 0 16px 16px; font-size: 13px; color: var(--text-muted); line-height: 1.75; }
+  .faq-item.open .faq-a { display: block; }
+
+  /* ── 신청 폼 ── */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px 18px; }
+  .field-label { font-size: 12.5px; font-weight: 800; margin: 14px 0 6px; }
+  .field-label:first-child { margin-top: 0; }
+  .inp {
+    width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 15px; font-family: inherit; background: #fff; color: var(--text);
+  }
+  .inp:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-tint); }
+
+  .member-badge { background: var(--accent-tint); border: 1px solid rgba(25,65,146,.25); border-radius: 12px; padding: 13px 15px; margin-bottom: 8px; }
+  .member-badge .mb-title { font-size: 14px; font-weight: 900; color: var(--accent-dark); }
+  .member-badge .mb-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.55; }
+  .guest-nudge { display: flex; align-items: center; gap: 10px; background: var(--action-tint); border: 1px solid rgba(217,83,31,.25); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+  .guest-nudge .gn-txt { flex: 1; font-size: 12.5px; color: var(--text); line-height: 1.5; }
+  .guest-nudge .gn-txt b { color: var(--action-dark); }
+  .guest-nudge .gn-btn { flex: none; background: var(--accent); color: #fff; font-size: 13px; font-weight: 800; padding: 10px 16px; border-radius: 9px; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; box-sizing: border-box; }
+
+  .summary { background: var(--bg2); border-radius: 12px; padding: 15px; margin-top: 18px; }
+  .summary .cnt { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+  .summary .box { background: #fff; border-radius: 10px; padding: 13px; font-size: 13px; }
+  .summary .row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .summary .row.muted { color: var(--text-muted); }
+  .summary .total { border-top: 1.5px solid var(--border); padding-top: 10px; margin-top: 4px; display: flex; justify-content: space-between; align-items: baseline; }
+  .summary .total .lbl { font-size: 14px; font-weight: 900; color: var(--action-dark); }
+  .summary .total .amt { font-size: 22px; font-weight: 900; color: var(--action-dark); }
+
+  .bank { background: var(--action-tint); border: 1px solid rgba(217,83,31,.25); border-radius: 12px; padding: 15px; margin-top: 12px; }
+  .bank .h { font-size: 12px; font-weight: 800; color: var(--action-dark); margin-bottom: 8px; }
+  .bank .line { font-size: 13.5px; line-height: 1.7; }
+  .bank .acct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bank .acct strong { font-size: 15px; }
+  .copy-btn { font-size: 11px; font-weight: 800; color: #fff; background: var(--action-dark); border: none; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+  .bank .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(217,83,31,.2); }
+
+  .submit-btn {
+    width: 100%; margin-top: 16px; padding: 16px; border: none; border-radius: 12px;
+    background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900;
+    font-family: inherit; cursor: pointer; transition: background .2s, transform .1s;
+  }
+  .submit-btn:hover { background: var(--action-hover); }
+  .submit-btn:active { transform: scale(.99); }
+
+  /* ── 하단 고정 바 ── */
+  .sticky-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--action); box-shadow: 0 -6px 24px rgba(36,26,18,.16);
+  }
+  .sticky-inner { max-width: 720px; margin: 0 auto; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .sticky-info .c { font-size: 11px; font-weight: 800; color: var(--action-ink); opacity: .8; }
+  .sticky-info .a { font-size: 18px; font-weight: 900; color: var(--action-ink); }
+  .sticky-go { flex: none; background: var(--action-ink); color: #fff; border: none; font-size: 15px; font-weight: 900; padding: 13px 26px; border-radius: 10px; cursor: pointer; font-family: inherit; }
+  .sticky-bar.empty .sticky-go { opacity: .55; }
+
+  /* ── 강조: 회원가입 배너(테두리+글로우 브리딩+버튼 샤인) · 하단 신청바(선택 시 펄스) ── */
+  @keyframes bannerBreathe {
+    0%, 100% { box-shadow: 0 6px 22px rgba(25,65,146,.28), 0 0 0 0 rgba(242,121,69,0); }
+    50%      { box-shadow: 0 6px 22px rgba(25,65,146,.28), 0 0 28px 3px rgba(242,121,69,.55); }
+  }
+  @keyframes btnShine { 0% { transform: translateX(-180%) skewX(-20deg); } 45%, 100% { transform: translateX(420%) skewX(-20deg); } }
+  @keyframes moncPulseInk { 0% { box-shadow: 0 0 0 0 rgba(42,18,6,.5); } 70% { box-shadow: 0 0 0 12px rgba(42,18,6,0); } 100% { box-shadow: 0 0 0 0 rgba(42,18,6,0); } }
+  .signup-banner a.btn::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 30%; height: 100%; pointer-events: none;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
+    transform: translateX(-180%) skewX(-20deg); animation: btnShine 3.2s ease-in-out infinite;
+  }
+  .sticky-bar:not(.empty) .sticky-go { animation: moncPulseInk 1.8s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .signup-banner { animation: none !important; }
+    .signup-banner a.btn::after, .sticky-bar .sticky-go { animation: none !important; }
+  }
+
+  footer { text-align: center; padding: 30px 0 20px; color: var(--text-dim); font-size: 12px; }
+  footer .fl { font-weight: 900; color: var(--text-muted); font-size: 16px; margin-bottom: 4px; }
+  footer a { color: var(--text-dim); text-decoration: none; margin: 0 6px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="wrap top-inner">
+    <a href="index.html" class="brand">MONC</a>
+    <a href="login.html" class="top-login">로그인 / 마이페이지</a>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- ① 히어로 -->
+  <section class="hero">
+    <div class="eyebrow">몬크 면접 연구소</div>
+    <h1>2주 뒤,<br>확실하게 변화하는 트레이닝</h1>
+    <p>원하는 챌린지를 골라 담고 한 번에 신청하세요.</p>
+    <div class="trust">
+      <span><i>✓</i>수료 시 보증금 100% 환급</span>
+      <span><i>★</i>실제 후기</span>
+      <span><i>◎</i>2주 데일리 커리큘럼</span>
+    </div>
+  </section>
+
+  <!-- ② 챌린지 카드 -->
+  <section class="sec">
+    <h2 class="sec-title">챌린지를 선택하세요<span style="font-size:14px; font-weight:700; color:var(--text-muted);"> (중복 선택 가능)</span></h2>
+    <p class="sec-sub">카드를 누르면 커리큘럼을 볼 수 있습니다.</p>
+    <div id="cards"></div>
+  </section>
+
+  <!-- ③ 회원가입 유도 배너 -->
+  <section class="sec">
+    <div class="signup-banner">
+      <div class="jump">잠깐!</div>
+      <h3>회원가입하면 2주간<br>성장한 내 모습을 매일 확인!</h3>
+      <div class="desc">데일리 기록 · 전/후 비교 · 나만의 마이페이지</div>
+      <a href="login.html" class="btn">3초 회원가입하기</a>
+    </div>
+  </section>
+
+  <!-- ④ 조합 추천 -->
+  <section class="sec">
+    <div class="combo">
+      <div class="txt">
+        <b>목소리 + 답변 함께 하면 시너지 최고</b>
+        <p>가장 많이 함께 신청하는 조합이에요. (할인은 없지만 효과는 확실!)</p>
+      </div>
+      <button type="button" id="comboBtn">두 개 담기</button>
+    </div>
+  </section>
+
+  <!-- ⑤ FAQ -->
+  <section class="sec">
+    <h2 class="sec-title">자주 묻는 질문</h2>
+    <div id="faq"></div>
+  </section>
+
+  <!-- ⑥ 신청·결제 폼 -->
+  <section class="sec" id="applyForm">
+    <h2 class="sec-title">신청하기</h2>
+    <p class="sec-sub">입금 후 아래 정보를 입력하고 신청 버튼을 눌러주세요.</p>
+    <div class="form-card">
+      <!-- 로그인 회원: 정보 자동 채움 안내 -->
+      <div id="memberBadge" class="member-badge" style="display:none;">
+        <div class="mb-title"><span data-name>회원</span>님으로 신청 중이에요</div>
+        <div class="mb-sub">이름·전화가 자동으로 채워졌어요. 신청 내역은 마이페이지에서 확인할 수 있어요.</div>
+      </div>
+      <!-- 비회원: 로그인 유도 -->
+      <div id="guestNudge" class="guest-nudge" style="display:none;">
+        <div class="gn-txt">회원이면 <b>로그인</b>하고 간편하게 — 신청 내역·2주 성장 기록이 연동돼요.</div>
+        <a class="gn-btn" href="login.html">로그인</a>
+      </div>
+
+      <div id="rowName">
+        <div class="field-label">이름</div>
+        <input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name">
+      </div>
+      <div id="rowPhone">
+        <div class="field-label">전화번호</div>
+        <input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel">
+      </div>
+      <div class="field-label">보증금 환급 계좌</div>
+      <input type="text" id="appAccount" class="inp" placeholder="예: 신한 110-000-000000 홍길동">
+
+      <div class="summary">
+        <div class="cnt">선택된 챌린지: <span id="selCount">0</span>개</div>
+        <div class="box">
+          <div class="row"><span>참가비</span><span><span id="feePart">0</span>원</span></div>
+          <div class="row muted"><span>보증금 <span style="font-size:11px;">(수료 시 전액 환급)</span></span><span><span id="feeDep">0</span>원</span></div>
+          <div class="total"><span class="lbl">지금 입금할 금액</span><span class="amt"><span id="feeTotal">0</span>원</span></div>
+        </div>
+      </div>
+
+      <div class="bank">
+        <div class="h">입금 정보</div>
+        <div class="line">
+          <div>은행: 신한</div>
+          <div class="acct"><span>계좌: <strong id="acctNum">110-254-022354</strong></span><button type="button" class="copy-btn" onclick="copyAccount(this)">복사</button></div>
+          <div>예금주: 권성호</div>
+        </div>
+        <div class="note">입금 후 신청 버튼을 눌러주세요. 확인 후 안내드리겠습니다.</div>
+      </div>
+
+      <button type="button" class="submit-btn" id="submitBtn" onclick="submitApplication()">신청하기</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="fl">MONC</div>
+  <div>© 2025 MONC. All rights reserved.</div>
+  <div style="margin-top:8px;"><a href="terms.html">이용약관</a>·<a href="privacy.html">개인정보처리방침</a></div>
+</footer>
+
+<!-- ⑦ 하단 고정 바 -->
+<div class="sticky-bar empty" id="stickyBar">
+  <div class="sticky-inner">
+    <div class="sticky-info">
+      <div class="c" id="stickyCount">챌린지를 선택하세요</div>
+      <div class="a"><span id="stickyTotal">0</span>원</div>
+    </div>
+    <button type="button" class="sticky-go" id="stickyGo">신청하기</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="recruit.js"></script>
+<script>
+/* ── 챌린지 데이터 (커리큘럼은 기존 신청 모달 내용 그대로) ── */
+const CHALLENGES = [
+  {
+    id: 'voice', name: '보.신.각', tag: '보이스', sub: '목소리 챌린지 · 2주',
+    fullName: '보.신.각(보이스) - 목소리 챌린지',
+    bullets: ['내 목소리 톤 찾기', '흔들리지 않는 전달력'],
+    weeks: [
+      { t: '1주차 · 내 목소리 찾기', d: ['월 — 나에게 편한 톤 찾기', '화 — 목소리가 잘 나오는 자세', '수 — 단단한 아나운서 목소리 만들기', '목·금 — 반복 훈련과 짧은 문장 적용'] },
+      { t: '2주차 · 대본에 목소리 적용', d: ['월·화 — 안정적인 정보 전달과 중간톤 굳히기', '수·금 — 호흡의 길이 조절과 감정 울림 확장'] }
+    ]
+  },
+  {
+    id: 'answer', name: '승.자.각', tag: '답변', sub: '답변 챌린지 · 2주',
+    fullName: '승.자.각(답변) - 답변 챌린지',
+    bullets: ['기본·경험 질문 대비', '나다운 답변 완성'],
+    weeks: [
+      { t: '1주차 · 기본 질문으로 나를 설명하는 힘', d: ['DAY 1 — 정확한 발음 1', 'DAY 2 — 정확한 발음 2', 'DAY 3 — 숨 쉬면서 말하기', 'DAY 4 — 웃으면서 말하기', 'DAY 5 — 인토네이션 & 미소 체크'] },
+      { t: '2주차 · 경험 질문으로 나다운 답변 완성', d: ['DAY 6 — 신뢰도 있게 말하기', 'DAY 7 — 음의 고저 만들기', 'DAY 8 — 쿠셔닝 표현 사용하기', 'DAY 9 — 쉽게 말하기', 'DAY 10 — 최종 스피치 발표'] }
+    ]
+  },
+  {
+    id: 'expression', name: '영.합.각', tag: '표현력', sub: '영상면접 표현력 챌린지 · 2주',
+    fullName: '영.합.각(표현력) - 영상면접 표현력 챌린지',
+    bullets: ['카메라 이미지 세팅', '전달력 있는 말하기'],
+    weeks: [
+      { t: '1주차 · 카메라 이미지 세팅', d: ['DAY 1 — 캐릭터 찾기', 'DAY 2 — 스타일링', 'DAY 3 — 미소·아이컨택', 'DAY 4 — 자세·각도', 'DAY 5 — 이미지 파이널'] },
+      { t: '2주차 · 말하기 전달력 파이널', d: ['DAY 6 — 오프닝', 'DAY 7 — 구어체 스크립트', 'DAY 8 — 호흡구간', 'DAY 9 — 인토네이션', 'DAY 10 — 최종 촬영'] }
+    ]
+  },
+  {
+    id: 'spinning', name: '스.피.닝', tag: '스피치', sub: '말 맛 챌린지 · 2주',
+    fullName: '스.피.닝(스피치) - 말 맛 챌린지',
+    bullets: ['정확한 발음·호흡', '면접 답변에 말투 입히기'],
+    weeks: [
+      { t: '1주차 · 말의 기본기를 만드는 주간', d: ['DAY 1 — 정확한 발음 1', 'DAY 2 — 정확한 발음 2', 'DAY 3 — 숨 쉬면서 말하기', 'DAY 4 — 웃으면서 말하기', 'DAY 5 — 인토네이션 & 미소 체크'] },
+      { t: '2주차 · 면접 답변에 말투를 입히는 주간', d: ['DAY 6 — 신뢰도 있게 말하기', 'DAY 7 — 음의 고저 만들기', 'DAY 8 — 쿠셔닝 표현 사용하기', 'DAY 9 — 쉽게 말하기', 'DAY 10 — 최종 스피치 발표'] }
+    ]
+  }
+];
+
+const PRICE = 30000, DEPOSIT = 30000;
+
+/* ── FAQ 데이터 ──
+   ⚠️ #3(진행 방식)·#6(수료 기준)·#7(환불)은 오너 실제 운영 정보로 확정 필요. 현재는 안전 문구. */
+const FAQ = [
+  { q: '보증금은 언제 돌려받나요?', a: '2주 커리큘럼을 모두 수료하면 보증금 3만원을 입력하신 환급 계좌로 전액 돌려드려요.' },
+  { q: '참가비·보증금이 각각 얼마예요?', a: '챌린지당 참가비 3만원 + 보증금 3만원, 총 6만원이에요. 보증금은 수료 시 전액 환급됩니다.' },
+  { q: '어떻게 진행되나요?', a: '2주(14일) 동안 매일 미션을 수행하고 기록·피드백을 받는 온라인 프로그램이에요. 자세한 진행 방법은 신청 후 안내드려요.' },
+  { q: '여러 챌린지를 같이 해도 되나요?', a: '네, 원하는 만큼 골라 담을 수 있어요. 목소리와 답변을 함께 하는 분들이 많아요.' },
+  { q: '결제는 어떻게 하나요?', a: '신한 계좌로 입금하신 뒤 신청 버튼을 눌러주시면 돼요. 확인 후 안내 연락을 드립니다.' },
+  { q: '수료 기준이 뭔가요?', a: '매일 미션에 성실히 참여하시면 돼요. 구체적인 수료 기준은 신청 후 상세히 안내드려요.' },
+  { q: '중간에 그만두면 환불되나요?', a: '중도 환불 규정은 문의 주시면 자세히 안내드릴게요.' }
+];
+
+/* ── 렌더링 ── */
+function renderCards() {
+  const root = document.getElementById('cards');
+  root.innerHTML = CHALLENGES.map(c => `
+    <div class="card" data-id="${c.id}">
+      <div class="card-head" data-role="select">
+        <div class="card-check">✓</div>
+        <div class="card-main">
+          <div class="card-name">${c.name}<span class="tag">${c.tag}</span><span class="status-tag" data-status></span></div>
+          <div class="card-sub">${c.sub}</div>
+          <div class="card-bullets">${c.bullets.map(b => `<div>${b}</div>`).join('')}</div>
+        </div>
+        <div class="card-price">6만원<small>참가 3만 + 보증 3만</small></div>
+      </div>
+      <div class="curr-toggle" data-role="curr"><span class="arw">▶</span> 2주 커리큘럼 보기</div>
+      <div class="curr-body">
+        <div class="curr-inner">
+          ${c.weeks.map(w => `<div class="curr-week">${w.t}</div><div class="curr-days">${w.d.join('<br>')}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  root.querySelectorAll('.card').forEach(card => {
+    const id = card.dataset.id;
+    card.querySelector('[data-role="select"]').addEventListener('click', () => toggleSelect(id));
+    card.querySelector('[data-role="curr"]').addEventListener('click', (e) => { e.stopPropagation(); card.classList.toggle('curr-open'); });
+  });
+}
+
+function renderFaq() {
+  const root = document.getElementById('faq');
+  root.innerHTML = FAQ.map(f => `
+    <div class="faq-item">
+      <div class="faq-q">${f.q}<span class="pm">+</span></div>
+      <div class="faq-a">${f.a}</div>
+    </div>
+  `).join('');
+  root.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+  });
+}
+
+/* ── 선택 로직 ── */
+function cardEl(id) { return document.querySelector('.card[data-id="' + id + '"]'); }
+
+function toggleSelect(id) {
+  const card = cardEl(id);
+  if (card.classList.contains('disabled')) return;
+  const nowSelected = !card.classList.contains('selected');
+  card.classList.toggle('selected', nowSelected);
+  card.classList.toggle('curr-open', nowSelected); // 선택 시 커리큘럼 자동 펼침
+  updateSummary();
+}
+
+function selectedIds() {
+  return Array.from(document.querySelectorAll('.card.selected')).map(c => c.dataset.id);
+}
+
+function updateSummary() {
+  const n = selectedIds().length;
+  const part = n * PRICE, dep = n * DEPOSIT, total = part + dep;
+  document.getElementById('selCount').textContent = n;
+  document.getElementById('feePart').textContent = part.toLocaleString();
+  document.getElementById('feeDep').textContent = dep.toLocaleString();
+  document.getElementById('feeTotal').textContent = total.toLocaleString();
+
+  const bar = document.getElementById('stickyBar');
+  document.getElementById('stickyTotal').textContent = total.toLocaleString();
+  document.getElementById('stickyCount').textContent = n === 0 ? '챌린지를 선택하세요' : ('선택 ' + n + '개');
+  bar.classList.toggle('empty', n === 0);
+}
+
+/* ── 모집 상태 반영 (마감/모집예정 카드 비활성) ── */
+async function applyStatuses() {
+  try { await loadChallengeStatuses(); } catch (e) {}
+  const statuses = window._challengeStatuses || {};
+  CHALLENGES.forEach(c => {
+    const st = statuses[c.id];
+    const card = cardEl(c.id);
+    const tag = card.querySelector('[data-status]');
+    if (st === 'upcoming' || st === 'closed') {
+      card.classList.add('disabled');
+      card.classList.remove('selected', 'curr-open');
+      tag.textContent = st === 'upcoming' ? '모집예정' : '마감';
+      tag.className = 'status-tag ' + (st === 'upcoming' ? 'status-upcoming' : 'status-closed');
+    } else {
+      tag.textContent = '';
+      tag.className = 'status-tag';
+    }
+  });
+  updateSummary();
+}
+
+/* ── URL ?c= 프리셀렉트 (상세페이지에서 넘어올 때) ── */
+function preselectFromUrl() {
+  const p = new URLSearchParams(location.search).get('c');
+  if (!p) return;
+  p.split(',').map(s => s.trim()).forEach(id => {
+    const card = cardEl(id);
+    if (card && !card.classList.contains('disabled')) {
+      card.classList.add('selected', 'curr-open');
+    }
+  });
+  updateSummary();
+}
+
+/* ── 계좌 복사 ── */
+function copyAccount(btn) {
+  const num = (document.getElementById('acctNum').textContent || '').trim();
+  const done = () => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(num).then(done).catch(() => fallbackCopy(num, done));
+  } else { fallbackCopy(num, done); }
+}
+function fallbackCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); cb && cb(); } catch (e) { alert('복사 실패: ' + text); }
+  document.body.removeChild(ta);
+}
+
+/* ── 로그인 회원: 이름·전화 자동 채움 + 계정(member_id) 연동 준비 ── */
+let _memberId = null, _profileHadPhone = false;
+async function initMember() {
+  let profile = null;
+  try { profile = await window.MONC.getMyProfile(); } catch (e) {}
+  if (profile && profile.id) {
+    _memberId = profile.id;
+    _profileHadPhone = !!profile.phone;
+    const badge = document.getElementById('memberBadge');
+    badge.querySelector('[data-name]').textContent = profile.name || '회원';
+    badge.style.display = 'block';
+    if (profile.name)  { document.getElementById('appName').value  = profile.name;  document.getElementById('rowName').style.display  = 'none'; }
+    if (profile.phone) { document.getElementById('appPhone').value = profile.phone; document.getElementById('rowPhone').style.display = 'none'; }
+  } else {
+    document.getElementById('guestNudge').style.display = 'flex';
+  }
+}
+
+/* ── 신청 제출 (application-modal.js와 동일 스키마 + 회원이면 member_id) ── */
+let _isSubmitting = false;
+async function submitApplication() {
+  if (_isSubmitting) return;
+
+  const name = document.getElementById('appName').value.trim();
+  const phone = document.getElementById('appPhone').value.trim();
+  const account = document.getElementById('appAccount').value.trim();
+  const ids = selectedIds();
+
+  if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (!name || !phone || !account) { alert('이름, 전화번호, 보증금 환급 계좌를 모두 입력해주세요.'); return; }
+  if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+
+  _isSubmitting = true;
+  const btn = document.getElementById('submitBtn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '신청 중...'; btn.style.opacity = '.7';
+
+  try { await loadChallengeStatuses(); } catch (e) {}
+  const rounds = window._challengeRounds || {};
+  const challenges = ids.map(id => {
+    const c = CHALLENGES.find(x => x.id === id);
+    return { challenge: id, name: c.fullName, round: (rounds[id] != null ? rounds[id] : null), price: PRICE };
+  });
+  const totalPrice = ids.length * (PRICE + DEPOSIT);
+
+  const payload = { name: name, phone: phone, refund_account: account, challenges: challenges, total_price: totalPrice };
+  if (_memberId) payload.member_id = _memberId; // 회원이면 계정 연동 → 마이페이지 '내 신청내역'
+
+  try {
+    const { error } = await window.MONC.sb.from('applications').insert(payload);
+    if (error) throw error;
+    // 회원이 전화를 새로 입력했으면 프로필에도 저장(다음 신청부터 자동 채움 + 연동)
+    if (_memberId && !_profileHadPhone && phone) {
+      try { await window.MONC.sb.from('members').update({ phone: phone }).eq('id', _memberId); _profileHadPhone = true; document.getElementById('rowPhone').style.display = 'none'; } catch (e) {}
+    }
+    alert(_memberId
+      ? '신청이 완료되었습니다! 확인 후 안내드리겠습니다.\n마이페이지에서 신청 내역을 확인할 수 있어요.'
+      : '신청이 완료되었습니다! 확인 후 안내드리겠습니다.\n회원가입하시면 2주간의 성장을 매일 기록할 수 있어요.');
+    document.getElementById('appAccount').value = '';
+    if (!_memberId) { document.getElementById('appName').value = ''; document.getElementById('appPhone').value = ''; }
+    document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected', 'curr-open'));
+    updateSummary();
+    if (_memberId) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else document.querySelector('.signup-banner').scrollIntoView({ behavior: 'smooth' }); // 비회원 회원가입 유도
+  } catch (e) {
+    console.error('신청 오류:', e);
+    alert('오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    _isSubmitting = false;
+    btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
+  }
+}
+
+/* ── 초기화 ── */
+renderCards();
+renderFaq();
+updateSummary();
+document.getElementById('comboBtn').addEventListener('click', () => {
+  ['voice', 'answer'].forEach(id => {
+    const card = cardEl(id);
+    if (card && !card.classList.contains('disabled') && !card.classList.contains('selected')) {
+      card.classList.add('selected', 'curr-open');
+    }
+  });
+  updateSummary();
+  document.getElementById('applyForm').scrollIntoView({ behavior: 'smooth' });
+});
+document.getElementById('stickyGo').addEventListener('click', () => {
+  if (selectedIds().length === 0) { document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
+  document.getElementById('applyForm').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => document.getElementById('appName').focus(), 400);
+});
+applyStatuses().then(preselectFromUrl);
+initMember();
+</script>
+</body>
+</html>
