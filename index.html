@@ -1215,39 +1215,81 @@
     }
     .ba-detail-link:hover { color: var(--rose); }
 
-    /* ── BLIND QUIZ (당신이 면접관이라면?) ── */
+    /* ── BLIND QUIZ (당신이 면접관이라면?) — 몰입형: 사진 인트로 + 실루엣 영상 씬 ── */
     .bq-section { padding: var(--section-y) 0; background: var(--bg2); }
-    .bq-card {
+    .bq-stage {
       max-width: 520px; margin: 0 auto;
       background: var(--surface);
       border: 1.5px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 32px 28px;
       box-shadow: var(--shadow);
+      overflow: hidden;
       word-break: keep-all; /* 한글 어절 단위 줄바꿈 */
     }
     /* .bq-intro/.bq-reveal/.bq-result의 display:flex가 UA의 [hidden]{display:none}과
        동일 특이도로 캐스케이드에서 이겨버리므로 명시적으로 차단 */
-    .bq-card [hidden] { display: none !important; }
-    /* 인트로 */
-    .bq-intro { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
-    .bq-intro-icon {
-      width: 64px; height: 64px; border-radius: 50%;
-      background: var(--accent-tint); color: var(--accent);
-      display: flex; align-items: center; justify-content: center;
+    .bq-stage [hidden] { display: none !important; }
+    /* 인트로 — 면접장 입장 씬 */
+    .bq-intro { position: relative; min-height: 460px; display: flex; align-items: flex-end; }
+    .bq-intro-media { position: absolute; inset: 0; overflow: hidden; }
+    .bq-intro-media img {
+      width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%;
+      transform-origin: 50% 35%;
+      animation: bq-kenburns 16s ease-in-out infinite alternate;
     }
-    .bq-intro-text { font-size: 16px; color: var(--text-muted); line-height: 1.65; }
-    .bq-intro-text strong { color: var(--text); font-weight: 800; }
-    .bq-intro-meta { font-size: 13px; font-weight: 700; color: var(--text-dim); }
-    .bq-start-btn { min-height: 52px; padding: 14px 36px; font-size: 16px; font-weight: 800; }
-    /* 라운드 */
-    .bq-round-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-    .bq-round-num { font-size: 13px; font-weight: 800; color: var(--text-dim); letter-spacing: .04em; }
-    .bq-round-tag {
-      font-size: 12px; font-weight: 800;
-      background: var(--accent-tint); color: var(--accent);
-      border-radius: 99px; padding: 4px 12px;
+    @keyframes bq-kenburns { from { transform: scale(1); } to { transform: scale(1.12) translateX(-2%); } }
+    .bq-intro::after { /* 스크림 — 사진 위 텍스트 대비 확보 */
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(15,14,20,.1) 0%, rgba(15,14,20,0) 30%, rgba(15,14,20,.55) 62%, rgba(12,11,16,.9) 100%);
     }
+    .bq-intro-overlay {
+      position: relative; z-index: 1; width: 100%;
+      padding: 28px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      text-align: center; color: #fff;
+    }
+    .bq-intro-badge {
+      font-size: 12px; font-weight: 700; letter-spacing: .02em;
+      color: #F3EFE7; background: rgba(20,20,26,.55);
+      border: 1px solid rgba(255,255,255,.22);
+      padding: 5px 13px; border-radius: 99px;
+    }
+    .bq-intro-title { font-size: clamp(24px, 6.4vw, 30px); font-weight: 900; line-height: 1.3; color: #fff; }
+    .bq-intro-sub { font-size: 15px; line-height: 1.6; color: rgba(255,255,255,.88); }
+    .bq-intro-sub strong { color: #fff; font-weight: 800; }
+    .bq-intro-meta { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.66); }
+    .bq-start-btn { min-height: 52px; padding: 14px 36px; font-size: 16px; font-weight: 800; margin-top: 4px; }
+    /* 판정 라운드 — 실루엣 영상 씬 */
+    .bq-scene { position: relative; aspect-ratio: 16 / 9; background: #131722; }
+    .bq-scene video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .bq-scene::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(10,12,18,.45) 0%, rgba(10,12,18,0) 34%, rgba(10,12,18,0) 62%, rgba(10,12,18,.5) 100%);
+    }
+    .bq-scene-top {
+      position: absolute; z-index: 1; top: 12px; left: 14px; right: 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .bq-scene-badge {
+      font-size: 11.5px; font-weight: 800; color: #F3EFE7;
+      background: rgba(16,18,26,.62); border: 1px solid rgba(255,255,255,.18);
+      padding: 4px 11px; border-radius: 99px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .bq-scene-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--action); }
+    .bq-scene-badge.is-live::before { animation: bq-blink 1.1s ease-in-out infinite; }
+    @keyframes bq-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+    .bq-dots { display: inline-flex; gap: 5px; flex: 0 0 auto; }
+    .bq-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); }
+    .bq-dots i.on { background: var(--action); }
+    .bq-scene-tag {
+      position: absolute; z-index: 1; left: 14px; bottom: 12px;
+      font-size: 11.5px; font-weight: 800; color: #F3EFE7;
+      background: rgba(25,65,146,.72); padding: 4px 11px; border-radius: 99px;
+    }
+    /* 판정 콘솔 */
+    .bq-console { padding: 18px 18px 22px; }
+    .bq-round-num { font-size: 12px; font-weight: 800; color: var(--text-dim); letter-spacing: .04em; margin-bottom: 10px; }
     .bq-clips { display: flex; flex-direction: column; gap: 10px; }
     .bq-clip {
       display: flex; align-items: center; gap: 12px;
@@ -1272,6 +1314,13 @@
     .bq-clip-badge { font-size: 11px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
     .bq-clip-badge.is-before { background: rgba(36,26,18,.1); color: var(--primary); }
     .bq-clip-badge.is-after { background: var(--action); color: var(--action-ink); }
+    .bq-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+    .bq-eq i { width: 3px; height: 30%; border-radius: 2px; background: var(--accent); opacity: .35; }
+    .bq-clip.playing .bq-eq i { opacity: 1; background: var(--action); animation: bq-eq .7s ease-in-out infinite alternate; }
+    .bq-clip.playing .bq-eq i:nth-child(2) { animation-delay: .12s; }
+    .bq-clip.playing .bq-eq i:nth-child(3) { animation-delay: .24s; }
+    .bq-clip.playing .bq-eq i:nth-child(4) { animation-delay: .36s; }
+    @keyframes bq-eq { from { height: 25%; } to { height: 100%; } }
     .bq-clip-bar { display: block; height: 4px; border-radius: 99px; background: rgba(38,34,28,.12); overflow: hidden; }
     .bq-clip-fill { display: block; height: 100%; width: 0%; background: var(--accent); border-radius: 99px; transition: width .1s linear; }
     /* 판정 */
@@ -1298,7 +1347,7 @@
     .bq-explain strong { color: var(--text); }
     .bq-next-btn { min-height: 48px; padding: 12px 32px; font-size: 15px; font-weight: 800; margin-top: 4px; }
     /* 최종 결과 */
-    .bq-result { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .bq-result { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 24px; }
     .bq-score { font-size: 14px; font-weight: 700; color: var(--text-dim); }
     .bq-score-big { font-size: clamp(24px, 6vw, 32px); font-weight: 900; color: var(--text); line-height: 1.3; }
     .bq-score-big strong { color: var(--action); }
@@ -1311,9 +1360,16 @@
       text-decoration: underline; text-underline-offset: 3px;
       padding: 8px; -webkit-tap-highlight-color: transparent;
     }
+    /* 접근성 — 모션 최소화 */
+    @media (prefers-reduced-motion: reduce) {
+      .bq-intro-media img,
+      .bq-scene-badge.is-live::before,
+      .bq-clip.playing .bq-eq i { animation: none; }
+    }
     @media (max-width: 768px) {
       .bq-section { padding: var(--section-y-mobile) 0; }
-      .bq-card { padding: 26px 18px; }
+      .bq-intro { min-height: 420px; }
+      .bq-console { padding: 16px 14px 20px; }
     }
 
     /* ── CURRICULUM TOGGLE ── */
@@ -1818,49 +1874,62 @@
       <h2 class="section-title">당신이 면접관이라면?</h2>
       <p class="section-desc">훈련 전/후 라벨을 가렸습니다.<br>면접관의 귀로 직접 판정해 보세요.</p>
     </div>
-    <div class="bq-card reveal" data-reveal>
+    <div class="bq-stage reveal" data-reveal>
 
-      <!-- 인트로 -->
+      <!-- 인트로: 면접장 입장 -->
       <div class="bq-intro" id="bq-intro">
-        <div class="bq-intro-icon"><svg width="28" height="28"><use href="#i-audio"/></svg></div>
-        <p class="bq-intro-text">지원자 A와 B, 두 목소리를 들려드립니다.<br>하나는 훈련 전, 하나는 훈련 후 —<br><strong>당신이라면 누구를 통과시키시겠어요?</strong></p>
-        <div class="bq-intro-meta">🎧 5라운드 · 약 1분 · 이어폰 추천</div>
-        <button class="btn btn-action bq-start-btn" id="bq-start" type="button">판정 시작하기</button>
+        <div class="bq-intro-media">
+          <img src="images/bq-intro.jpg" alt="네 명의 면접관 앞에 앉은 승무원 지원자" loading="lazy" decoding="async">
+        </div>
+        <div class="bq-intro-overlay">
+          <div class="bq-intro-badge">면접장 입장</div>
+          <h3 class="bq-intro-title">오늘, 당신이<br>면접관입니다</h3>
+          <p class="bq-intro-sub">지원자 A와 B — 하나는 훈련 전, 하나는 훈련 후.<br><strong>당신이라면 누구를 통과시키시겠어요?</strong></p>
+          <div class="bq-intro-meta">🎧 5라운드 · 약 1분 · 이어폰 추천</div>
+          <button class="btn btn-action bq-start-btn" id="bq-start" type="button">판정 시작하기</button>
+        </div>
       </div>
 
-      <!-- 라운드 -->
+      <!-- 라운드: 실루엣 영상 씬 + 판정 콘솔 -->
       <div class="bq-round" id="bq-round" hidden>
-        <div class="bq-round-top">
-          <div class="bq-round-num" id="bq-round-num">ROUND 1/5</div>
-          <div class="bq-round-tag" id="bq-round-tag">보신각</div>
-        </div>
-        <div class="bq-clips">
-          <button class="bq-clip" type="button" data-slot="0">
-            <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
-            <span class="bq-clip-info">
-              <span class="bq-clip-name">지원자 A <span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
-              <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
-            </span>
-          </button>
-          <button class="bq-clip" type="button" data-slot="1">
-            <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
-            <span class="bq-clip-info">
-              <span class="bq-clip-name">지원자 B <span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
-              <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
-            </span>
-          </button>
-        </div>
-        <div class="bq-question" id="bq-question">
-          <p class="bq-q-text" id="bq-q-text">두 목소리를 모두 들어보세요</p>
-          <div class="bq-answers">
-            <button class="bq-answer-btn" type="button" data-slot="0" disabled>지원자 A</button>
-            <button class="bq-answer-btn" type="button" data-slot="1" disabled>지원자 B</button>
+        <div class="bq-scene">
+          <video id="bq-video" src="video/bq-candidate.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <div class="bq-scene-top">
+            <span class="bq-scene-badge" id="bq-scene-badge">블라인드 심사 중</span>
+            <span class="bq-dots" id="bq-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           </div>
+          <span class="bq-scene-tag" id="bq-round-tag">보신각 · 목소리</span>
         </div>
-        <div class="bq-reveal" id="bq-reveal" hidden>
-          <div class="bq-verdict" id="bq-verdict"></div>
-          <p class="bq-explain" id="bq-explain"></p>
-          <button class="btn btn-action bq-next-btn" id="bq-next" type="button">다음 라운드 →</button>
+        <div class="bq-console">
+          <div class="bq-round-num" id="bq-round-num">ROUND 1/5</div>
+          <div class="bq-clips">
+            <button class="bq-clip" type="button" data-slot="0">
+              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="bq-clip-info">
+                <span class="bq-clip-name">지원자 A <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
+                <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
+              </span>
+            </button>
+            <button class="bq-clip" type="button" data-slot="1">
+              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="bq-clip-info">
+                <span class="bq-clip-name">지원자 B <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
+                <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
+              </span>
+            </button>
+          </div>
+          <div class="bq-question" id="bq-question">
+            <p class="bq-q-text" id="bq-q-text">두 목소리를 모두 들어보세요</p>
+            <div class="bq-answers">
+              <button class="bq-answer-btn" type="button" data-slot="0" disabled>지원자 A</button>
+              <button class="bq-answer-btn" type="button" data-slot="1" disabled>지원자 B</button>
+            </div>
+          </div>
+          <div class="bq-reveal" id="bq-reveal" hidden>
+            <div class="bq-verdict" id="bq-verdict"></div>
+            <p class="bq-explain" id="bq-explain"></p>
+            <button class="btn btn-action bq-next-btn" id="bq-next" type="button">다음 라운드 →</button>
+          </div>
         </div>
       </div>
 
