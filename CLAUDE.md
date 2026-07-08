@@ -61,6 +61,9 @@ Shared design tokens live in `tokens.css` (linked by `index.html` + the detail/l
 ### Audio (before/after recordings on detail pages)
 `audio/` holds challenger before/after clips referenced by the detail pages. Naming is positional: `challenger-a-before.mp3` … (voice page) and `spinning-a-before.m4a` … (spinning page). Watch for double extensions when files are added on Windows (e.g. `*.mp3.m4a`).
 
+### 면접관 체험 블라인드 퀴즈 (`index.html` #blind-quiz)
+사진 인트로(`images/bq-intro.jpg`) + 실루엣 영상 씬(`video/bq-candidate.mp4`, muted loop — 클립 재생 중일 때만 재생/배지 "지원자 X 답변 중" 전환, `syncScene()`) + 판정 콘솔 구조. 퀴즈 로직(5라운드, `audio/` 전/후 풀 랜덤)은 IIFE에 있고, 루트 셀렉터는 `.bq-stage`(구 `.bq-card`). `prefers-reduced-motion`이면 영상 자동재생·Ken Burns·EQ 애니메이션 정지.
+
 ### Hero scene carousel (`index.html`)
 The landing page hero section is a **4-slide full-screen carousel** (`.hero-scene` > `.hs-slide`), stacked with `position: absolute` and toggled via `opacity` + `pointer-events`. Controlled by `heroSwitchTo(idx)` in JS.
 
