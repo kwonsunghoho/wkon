@@ -1611,31 +1611,6 @@
       margin: 0 0 16px;
     }
 
-    /* 전/후 토글 플레이어 (오디오 있는 카드만) */
-    .hs-toggle-player { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-    .hs-tp-label {
-      font-size: 11px; font-weight: 600; letter-spacing: .02em;
-      color: var(--text-dim); min-height: 14px; transition: color .2s;
-    }
-    .hs-tp-label.playing { color: var(--action); }
-    .hs-tp-btns { display: flex; gap: 8px; }
-    .hs-tp-btn {
-      padding: 8px 18px; border-radius: 22px;
-      border: 1.5px solid var(--border);
-      background: rgba(255,255,255,.5);
-      color: var(--text-muted); cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 1px;
-      line-height: 1.05; transition: all .2s ease;
-    }
-    .hs-tp-btn .hs-tp-main { font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
-    .hs-tp-btn .hs-tp-sub  { font-size: 8px; font-weight: 600; letter-spacing: .06em; opacity: .75; }
-    .hs-tp-btn.active {
-      background: var(--action); border-color: var(--action); color: #fff;
-      box-shadow: 0 4px 16px rgba(201,71,30,.35);
-    }
-    .hs-tp-btn.active .hs-tp-sub { opacity: 1; }
-    .hs-tp-btn:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
-
     /* 비활성 카드의 내부 인터랙션 차단 (카드 자체 클릭 → 해당 슬라이드로 이동) */
     .hs-card:not(.is-active) .hs-card-content { pointer-events: none; }
 
@@ -1760,8 +1735,6 @@
 <!-- 주의: data-zoom-exit를 다시 붙이지 말 것 — 스크롤 시 캐러셀 전체가
      opacity 페이드되어 모바일에서 한 화면 분량의 빈 구간이 생겼던 원인 -->
 <section class="hero-scene" id="home">
-  <audio id="hero-audio" preload="none"></audio>
-
   <div class="zoom-exit-pin">
   <div class="hs-carousel">
     <div class="hs-stage" id="hs-stage">
@@ -1775,17 +1748,6 @@
         <div class="hs-card-content">
           <h1 class="hs-h1"><span class="hs-accent">목소리</span>가 첫인상을 바꿉니다</h1>
           <p class="hs-sub">MONC 챌린지가 전과 후로 증명해요</p>
-          <div class="hs-toggle-player">
-            <div class="hs-tp-label">▶ 탭해서 듣기</div>
-            <div class="hs-tp-btns">
-              <button class="hs-tp-btn active" data-mode="before" aria-pressed="true">
-                <span class="hs-tp-main">전</span><span class="hs-tp-sub">Before</span>
-              </button>
-              <button class="hs-tp-btn" data-mode="after" aria-pressed="false">
-                <span class="hs-tp-main">후</span><span class="hs-tp-sub">After</span>
-              </button>
-            </div>
-          </div>
           <div class="hs-name">보.신.각</div>
         </div>
       </div>
@@ -1812,17 +1774,6 @@
         <div class="hs-card-content">
           <h1 class="hs-h1"><span class="hs-accent">말투</span>에 몰입도가 올라갑니다</h1>
           <p class="hs-sub">MONC 챌린지가 전과 후로 증명해요</p>
-          <div class="hs-toggle-player">
-            <div class="hs-tp-label">▶ 탭해서 듣기</div>
-            <div class="hs-tp-btns">
-              <button class="hs-tp-btn active" data-mode="before" aria-pressed="true">
-                <span class="hs-tp-main">전</span><span class="hs-tp-sub">Before</span>
-              </button>
-              <button class="hs-tp-btn" data-mode="after" aria-pressed="false">
-                <span class="hs-tp-main">후</span><span class="hs-tp-sub">After</span>
-              </button>
-            </div>
-          </div>
           <div class="hs-name">스.피.닝</div>
         </div>
       </div>
@@ -2469,17 +2420,9 @@
   });
 
   /* ── 히어로 씬 — 센터형 캐러셀 ── */
-  const _hsData = [
-    { beforeSrc:'audio/challenger-c-before.mp3', afterSrc:'audio/challenger-c-after.mp3' },
-    { beforeSrc: null, afterSrc: null },
-    { beforeSrc:'audio/spinning-c-before.m4a', afterSrc:'audio/spinning-c-after.m4a' },
-    { beforeSrc: null, afterSrc: null },
-  ];
   const _hsCards = [...document.querySelectorAll('.hs-card')];
   let _heroIdx = 0;
-  let _heroMode = 'before';
   let _heroAutoTimer = null;
-  const _hAudio = document.getElementById('hero-audio');
   const _heroReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* 카드들을 활성 인덱스 기준 거리(distance)별로 배치.
@@ -2513,40 +2456,11 @@
     _heroAutoTimer = setInterval(() => heroSwitchTo(_heroIdx + 1), delay || 5000);
   }
 
-  function _heroLabelUpdate(mode, playing) {
-    const card = document.querySelector('.hs-card.is-active');
-    const lbl = card && card.querySelector('.hs-tp-label');
-    if (!lbl) return;
-    if (playing) {
-      lbl.textContent = mode === 'before' ? '지금 듣는 중: 전(Before)' : '지금 듣는 중: 후(After)';
-      lbl.classList.add('playing');
-    } else {
-      lbl.textContent = '▶ 탭해서 듣기';
-      lbl.classList.remove('playing');
-    }
-  }
-
   function heroSwitchTo(idx) {
-    idx = ((idx % _hsData.length) + _hsData.length) % _hsData.length;
+    idx = ((idx % _hsCards.length) + _hsCards.length) % _hsCards.length;
     if (idx === _heroIdx) { _heroResetAuto(); return; }
-    if (_hAudio && !_hAudio.paused) { _hAudio.pause(); _hAudio.currentTime = 0; }
-
     _heroIdx = idx;
-    _heroMode = 'before';
     heroLayout();
-
-    /* 새 활성 카드 전/후 토글 초기화 */
-    const card = _hsCards[idx];
-    const d = _hsData[idx];
-    if (card) {
-      card.querySelectorAll('.hs-tp-btn').forEach(btn => {
-        const isBefore = btn.dataset.mode === 'before';
-        btn.classList.toggle('active', isBefore);
-        btn.setAttribute('aria-pressed', String(isBefore));
-      });
-      const lbl = card.querySelector('.hs-tp-label');
-      if (lbl) { lbl.textContent = d.beforeSrc ? '▶ 탭해서 듣기' : ''; lbl.classList.remove('playing'); }
-    }
     _heroResetAuto();
   }
 
@@ -2561,45 +2475,6 @@
       heroSwitchTo(i);
     });
   });
-
-  /* ── 전/후 토글 클릭 (활성 카드에서만) ── */
-  document.addEventListener('click', e => {
-    const btn = e.target.closest('.hs-tp-btn');
-    if (!btn || btn.disabled) return;
-    const card = btn.closest('.hs-card');
-    if (!card || !card.classList.contains('is-active')) return;
-    const mode = btn.dataset.mode;
-    const d = _hsData[_heroIdx];
-    const src = mode === 'before' ? d.beforeSrc : d.afterSrc;
-    if (!src) return;
-
-    /* 같은 모드 재클릭 → 일시정지 */
-    if (_heroMode === mode && _hAudio && !_hAudio.paused) { _hAudio.pause(); return; }
-
-    if (_hAudio) { _hAudio.pause(); _hAudio.currentTime = 0; }
-    _heroMode = mode;
-    card.querySelectorAll('.hs-tp-btn').forEach(b => {
-      const on = b.dataset.mode === mode;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-pressed', String(on));
-    });
-    if (_hAudio) { _hAudio.src = src; _hAudio.load(); _hAudio.play().catch(() => {}); }
-  });
-
-  if (_hAudio) {
-    _hAudio.addEventListener('play', () => {
-      _heroLabelUpdate(_heroMode, true);
-      clearInterval(_heroAutoTimer); _heroAutoTimer = null;
-    });
-    _hAudio.addEventListener('pause', () => {
-      _heroLabelUpdate(_heroMode, false);
-      if (!_heroAutoTimer) _heroResetAuto();
-    });
-    _hAudio.addEventListener('ended', () => {
-      _heroLabelUpdate(_heroMode, false);
-      if (!_heroAutoTimer) _heroResetAuto(6000);
-    });
-  }
 
   /* 초기 레이아웃 + 자동전환 시작 */
   heroLayout();
