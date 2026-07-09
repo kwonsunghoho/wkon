@@ -881,19 +881,21 @@
     .mc-review-capture:hover .mc-capture-label { color: var(--mc-navy); }
     .mc-review-capture:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: 3px; border-radius: 8px; }
     /* 원문 캡처 라이트박스 — 섹션당 1개 재사용, 오버레이/ESC/X로 닫힘 */
+    /* 세로로 긴 후기 스크린샷은 높이에 맞춰 줄이면 글씨가 작아지므로 폭 기준으로 크게
+       띄우고(길면 세로 스크롤) 이미지 탭 시 더 확대한다. (reviews.html 라이트박스와 동일 방식) */
     .mc-lightbox {
-      position: fixed; inset: 0; z-index: 300;
-      display: flex; align-items: center; justify-content: center;
-      padding: 24px; background: rgba(0, 0, 0, .45);
+      position: fixed; inset: 0; z-index: 300; overflow: auto; text-align: center;
+      padding: 24px 16px 40px; background: rgba(0, 0, 0, .55); -webkit-overflow-scrolling: touch;
     }
     .mc-lightbox[hidden] { display: none; }
     .mc-lightbox img {
-      max-width: min(92vw, 560px); max-height: 88vh;
-      object-fit: contain; border-radius: 14px; background: #fff;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+      display: inline-block; width: min(94vw, 780px); height: auto; max-width: none;
+      border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+      cursor: zoom-in;
     }
+    .mc-lightbox img.zoomed { width: min(170vw, 1300px); cursor: zoom-out; }
     .mc-lightbox-close {
-      position: absolute; top: 14px; right: 16px;
+      position: fixed; top: 14px; right: 16px; z-index: 2;
       width: 44px; height: 44px; border-radius: 50%; border: 0;
       background: rgba(255, 255, 255, .18); color: #fff;
       font-size: 26px; line-height: 1; cursor: pointer;
@@ -2077,7 +2079,7 @@
       <div class="mc-rolling-stage"><p class="mc-rolling-text" id="mcRollingText"></p></div>
     </div>
 
-    <!-- 실제 후기 카드 — 데이터는 JS REVIEW_CARDS 배열 (이름은 김O연 마스킹 필수) -->
+    <!-- 대표 후기 카드 — reviews 테이블의 '대표(sort_order≥1)' 실제 후기 (admin '후기 관리'에서 지정) -->
     <div class="mc-reviews reveal" id="mcReviews"></div>
 
     <!-- 후기 모음 페이지(reviews.html) — 기수별·챌린지별 실제 후기 그리드 -->
@@ -2879,9 +2881,10 @@
   applyIndexRecruit().then(chxSyncStates);
 
   /* ── COMMUNITY 섹션 (사회적 증거) ──
-     지표·롤링 문구·후기 카드의 실제 값은 Supabase site_config 테이블에서 로드하며,
-     ★ 관리자 페이지(admin.html)의 '홈 커뮤니티' 탭에서 수정한다.
-     아래 상수들은 site_config 미적용(마이그레이션 전)·로드 실패 시에만 쓰는 폴백.
+     지표·롤링 문구는 site_config(admin '홈 커뮤니티' 탭에서 수정),
+     ★ 후기 카드는 reviews 테이블의 '대표(sort_order≥1)' 지정 후기에서 로드
+       (admin '후기 관리' 탭에서 대표 번호를 매기면 그 순서대로 홈에 노출).
+     아래 두 상수는 site_config 로드 실패 시 폴백.
      ⚠️ 개인의 "몇 분 전" 실시간 활동을 꾸며내는 연출은 재도입 금지. */
 
   // 집계 지표 폴백
@@ -2894,31 +2897,45 @@
     '혼자였으면 못 했을 거예요',
   ];
 
-  // 후기 카드 폴백 — captureUrl이 있으면 '원문 캡처 보기' 행 + 라이트박스, ''이면 행 미표시.
-  // ⚠️ 이름은 반드시 마스킹(김O연) — 전체 이름 노출 금지.
-  const REVIEW_CARDS = [
-    { name: '김O연', tag: '영합각', quote: '세 번 하고 나니까 카메라 앞에서 덜 떨려요.', captureUrl: '' },
-    { name: '이O수', tag: '보신각', quote: '말끝이 흔들리는 습관이 있었는데 잡혔어요.', captureUrl: '' },
-    { name: '최O진', tag: '스피닝', quote: '매일 하니까 말투가 확실히 달라졌어요.', captureUrl: '' },
-  ];
-
-  // site_config에서 3개 키를 한 번에 로드 — 테이블 미생성/네트워크 실패 시 {} 반환(폴백 사용)
+  // site_config에서 지표·롤링 문구 로드 (후기 카드는 loadCommunityCards로 분리)
   async function loadCommunityConfig() {
     if (!window.MONC || !window.MONC.sb) return {};
     try {
       const { data, error } = await window.MONC.sb.from('site_config')
         .select('key, value')
-        .in('key', ['community_stats', 'community_phrases', 'community_reviews']);
+        .in('key', ['community_stats', 'community_phrases']);
       if (error || !data) return {};
       return Object.fromEntries(data.map(r => [r.key, r.value]));
     } catch (e) { return {}; }
   }
 
+  // 홈 대표 후기 카드 — reviews 테이블에서 '대표(sort_order≥1)'로 지정한 실제 후기를
+  //   sort_order 오름차순으로. 대표 미지정 시 최근 후기 3개로 자동 채움(가짜 카드 없음).
+  //   name=실명, tag=챌린지, quote=한줄평(분류), captureUrl=스크린샷 원본.
+  async function loadCommunityCards() {
+    if (!window.MONC || !window.MONC.sb) return [];
+    const pub = (p) => window.MONC.sb.storage.from('reviews').getPublicUrl(p).data.publicUrl;
+    const map = (rows) => (rows || []).map(r => ({
+      name: r.reviewer_name || '몬크 챌린저',
+      tag: r.challenge || '',
+      quote: r.quote || '',
+      captureUrl: r.image_path ? pub(r.image_path) : '',
+    }));
+    try {
+      // 홈은 티저 — 대표 상위 3개만(전체는 reviews.html). 대표 미지정 시 최근 3개.
+      const rep = await window.MONC.sb.from('reviews').select('*')
+        .eq('visible', true).gte('sort_order', 1).order('sort_order', { ascending: true }).limit(3);
+      if (rep.data && rep.data.length) return map(rep.data);
+      const fb = await window.MONC.sb.from('reviews').select('*')
+        .eq('visible', true).order('created_at', { ascending: false }).limit(3);
+      return map(fb.data);
+    } catch (e) { return []; }
+  }
+
   (async function initCommunity() {
-    const cfg = await loadCommunityConfig();
+    const [cfg, cards] = await Promise.all([loadCommunityConfig(), loadCommunityCards()]);
     const statsData = (cfg.community_stats && typeof cfg.community_stats === 'object') ? cfg.community_stats : COMMUNITY_STATS;
     const phrases = (Array.isArray(cfg.community_phrases) && cfg.community_phrases.length) ? cfg.community_phrases : ROLLING_PHRASES;
-    const cards = (Array.isArray(cfg.community_reviews) && cfg.community_reviews.length) ? cfg.community_reviews : REVIEW_CARDS;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -2970,9 +2987,8 @@
       }
     }
 
-    /* 3) 후기 카드 렌더 — REVIEW_CARDS 배열 기반.
-       [Supabase 연동 지점] reviews 테이블에서 받아오려면 조회 결과를 같은 필드
-       ({ name, tag, quote, captureUrl })로 매핑해 renderCards에 넘기면 된다. */
+    /* 3) 후기 카드 렌더 — loadCommunityCards()가 reviews 테이블 '대표'에서 가져온 실제 후기.
+       카드가 없으면(=DB 접근 실패) 가짜를 넣지 않고 비워 둔다. */
     const reviewsEl = document.getElementById('mcReviews');
     function renderCards(cards) {
       reviewsEl.innerHTML = cards.map(r => {
@@ -2997,7 +3013,7 @@
         </article>`;
       }).join('');
     }
-    if (reviewsEl) renderCards(cards);
+    if (reviewsEl) { if (cards.length) renderCards(cards); else reviewsEl.innerHTML = ''; }
 
     /* 4) 원문 캡처 라이트박스 — 섹션당 1개(#mcLightbox) 재사용.
        오버레이 클릭/ESC/X로 닫힘. 열릴 때 배경 스크롤 잠금,
@@ -3012,13 +3028,16 @@
         lbTrigger = trigger || null;
         lbImg.src = src;
         lbImg.alt = alt || '후기 원문 캡처';
+        lbImg.classList.remove('zoomed');
         lbEl.hidden = false;
+        lbEl.scrollTop = 0;
         document.body.style.overflow = 'hidden'; // 배경 스크롤 잠금
         lbClose.focus();
       }
       function closeLb() {
         lbEl.hidden = true;
         lbImg.removeAttribute('src');
+        lbImg.classList.remove('zoomed');
         document.body.style.overflow = '';
         if (lbTrigger) { lbTrigger.focus(); lbTrigger = null; }
       }
@@ -3028,6 +3047,7 @@
         const btn = e.target.closest('.mc-review-capture');
         if (btn && btn.dataset.capture) openLb(btn.dataset.capture, btn.dataset.alt, btn);
       });
+      lbImg.addEventListener('click', (e) => { e.stopPropagation(); lbImg.classList.toggle('zoomed'); }); // 탭 확대 토글
       lbClose.addEventListener('click', closeLb);
       lbEl.addEventListener('click', (e) => { if (e.target === lbEl) closeLb(); }); // 오버레이 클릭 닫기
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lbEl.hidden) closeLb(); });
