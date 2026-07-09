@@ -68,6 +68,7 @@
     .rv-meta { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .rv-meta .row { display: flex; gap: 6px; align-items: center; }
     .rv-order { width: 52px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    .rv-cap { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     .rv-btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: var(--radius-xs); padding: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .rv-btn.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
     .rv-del { color: var(--action-dark); border-color: var(--action); }
@@ -253,7 +254,7 @@
     <div class="reviews-wrap">
       <div class="rv-upload">
         <input type="file" id="rvFile" accept="image/*">
-        <input type="text" id="rvCaption" placeholder="설명(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <input type="text" id="rvCaption" placeholder="라벨 (예: 승자각 · 최종합격)" title="후기 이미지 아래 칩으로 표시됩니다(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
         <button class="btn btn-action" id="rvUpload">업로드</button>
       </div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
@@ -895,6 +896,7 @@
         <div class="rv-item ${r.visible ? '' : 'hidden'}" data-id="${r.id}" data-path="${esc(r.image_path)}">
           <img src="${esc(rvUrl(r.image_path))}" alt="${esc(r.caption || '후기')}">
           <div class="rv-meta">
+            <div class="row"><input type="text" class="rv-cap" value="${esc(r.caption || '')}" placeholder="라벨(예: 승자각 · 최종합격)" title="라벨 — 후기 이미지 아래 칩으로 표시(비우면 안 나옴)"></div>
             <div class="row"><input type="number" class="rv-order" value="${r.sort_order}" title="순서"><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
             <div class="row"><button class="rv-btn rv-del">삭제</button></div>
           </div>
@@ -909,6 +911,13 @@
         const id = inp.closest('.rv-item').dataset.id;
         const { error } = await MONC.sb.from('reviews').update({ sort_order: parseInt(inp.value || '0', 10) }).eq('id', id);
         if (error) { alert('실패: ' + error.message); return; } toast('순서 저장');
+      }));
+      // 라벨(caption) 수정 — 이미 올라간 후기(대량 업로드분 포함)에 나중에 라벨 부여/변경
+      grid.querySelectorAll('.rv-cap').forEach(inp => inp.addEventListener('change', async () => {
+        const id = inp.closest('.rv-item').dataset.id;
+        const val = inp.value.trim();
+        const { error } = await MONC.sb.from('reviews').update({ caption: val || null }).eq('id', id);
+        if (error) { alert('실패: ' + error.message); return; } toast('라벨 저장');
       }));
       grid.querySelectorAll('.rv-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('이 후기를 삭제할까요?')) return;

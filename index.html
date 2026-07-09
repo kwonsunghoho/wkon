@@ -870,57 +870,51 @@
     /* ── TESTIMONIALS ── */
     .testimonials { padding: var(--section-y) 0; background: var(--bg); }
 
-    /* 마퀴 래퍼 */
+    /* 후기 그리드 — 동일 크기 타일 정적 배치 (데스크톱 4열 / 모바일 2열) */
     .testi-grid {
-      overflow: hidden; margin-top: 44px; position: relative;
-      display: flex; flex-direction: column; gap: 16px;
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
-      mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+      margin-top: 44px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
     }
-    /* 스크롤 트랙 */
-    .testi-track {
-      display: flex; gap: 18px; width: max-content;
-      animation: testi-scroll 44s linear infinite;
+    .testi-hidden { display: none; }
+    .testi-more-wrap { text-align: center; margin-top: 28px; }
+    .testi-more-btn {
+      appearance: none; cursor: pointer;
+      background: #fff; color: var(--accent);
+      border: 1.5px solid var(--accent); border-radius: 999px;
+      padding: 12px 28px; font-size: 15px; font-weight: 800;
+      transition: background .2s, color .2s;
     }
-    .testi-track.reverse {
-      animation: testi-scroll-reverse 38s linear infinite;
-    }
-    .testi-grid:hover .testi-track { animation-play-state: paused; }
-    .testi-track.is-dragging { cursor: grabbing; user-select: none; }
-    @keyframes testi-scroll {
-      0%   { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-    @keyframes testi-scroll-reverse {
-      0%   { transform: translateX(-50%); }
-      100% { transform: translateX(0); }
-    }
-    /* 스켈레톤 로딩 중엔 flex row */
-    .testi-skel-wrap { display: flex; gap: 18px; }
+    .testi-more-btn:hover { background: var(--accent); color: #fff; }
     .testi-card {
       background: #fff; border: 1.5px solid var(--border);
       border-radius: var(--radius); padding: 26px; transition: all .3s; box-shadow: var(--shadow);
       width: 300px; flex-shrink: 0;
     }
     .testi-card:hover { border-color: var(--rose); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-    /* 후기 이미지 카드 (카톡 스크린샷) — 원본 크기가 제각각이라 고정 비율(3:4) 박스로
-       균일하게 크롭해 마키가 들쭉날쭉해 보이지 않게 한다. 잘리지 않은 원본 전체는
+    /* 후기 이미지 카드 (후기 스크린샷) — 원본 크기가 제각각이라 고정 비율(3:4) 박스로
+       균일하게 크롭해 그리드가 들쭉날쭉해 보이지 않게 한다. 잘리지 않은 원본 전체는
        클릭(탭) 시 라이트박스(.testi-lightbox)로 크게 보여준다. */
+    /* 카드 높이는 3:4로 고정(그리드 균일). 내부는 세로 플렉스라 caption 라벨이 있으면
+       이미지 영역이 조금 줄고 아래에 칩이 뜨고, 없으면 이미지가 카드를 꽉 채운다. */
     .testi-img-card {
-      width: 190px; aspect-ratio: 3 / 4; flex-shrink: 0;
+      width: 100%; aspect-ratio: 3 / 4;
       padding: 0; border: 0; background: #fff;
       border-radius: var(--radius); overflow: hidden;
       box-shadow: var(--shadow); cursor: zoom-in;
       position: relative; transition: transform .3s;
+      display: flex; flex-direction: column;
     }
     .testi-img-card:hover { transform: translateY(-4px); }
+    .testi-img-card .testi-shot { position: relative; flex: 1; min-height: 0; overflow: hidden; }
     .testi-img-card img {
       width: 100%; height: 100%;
       object-fit: cover; object-position: top center;
       display: block;
     }
-    /* 확대 힌트 배지 — 모바일엔 hover가 없어 항상 표시(탭 가능함을 알림) */
-    .testi-img-card::after {
+    /* 확대 힌트 배지 — 모바일엔 hover가 없어 항상 표시(탭 가능함을 알림). 이미지 영역 기준. */
+    .testi-img-card .testi-shot::after {
       content: '⤢'; position: absolute; right: 8px; bottom: 8px;
       width: 26px; height: 26px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
@@ -928,10 +922,21 @@
       -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
       pointer-events: none;
     }
-    .testi-grid .testi-track { align-items: flex-start; }
-    @media (max-width: 768px) { .testi-img-card { width: 150px; } }
+    /* caption 라벨 칩(예: "승자각 · 최종합격") — 있을 때만 이미지 아래에 렌더 */
+    .testi-tagrow { padding: 7px 9px; display: flex; }
+    .testi-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      max-width: 100%; font-size: 12px; font-weight: 800; line-height: 1.2;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(242, 121, 69, .14); color: var(--action-ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    @media (max-width: 768px) {
+      .testi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 32px; }
+      .testi-tag { font-size: 11px; padding: 3px 8px; }
+    }
 
-    /* 후기 원본 라이트박스 (마키 카드 클릭 시 잘리지 않은 전체 이미지) */
+    /* 후기 원본 라이트박스 (그리드 카드 클릭 시 잘리지 않은 전체 이미지) */
     .testi-lightbox {
       position: fixed; inset: 0; z-index: 300;
       display: flex; align-items: center; justify-content: center;
@@ -1517,9 +1522,6 @@
       /* How step */
       .step-card { flex-direction: column; text-align: center; }
       .step-icon { margin: 0 auto; }
-
-      /* Testi */
-      .testi-track { gap: 12px; }
 
       /* Before/After — mobile */
       .ba-cards { grid-template-columns: 1fr; }
@@ -2156,7 +2158,7 @@
 <section class="testimonials" id="testimonials">
   <!-- 구 nav '커뮤니티' 링크(#community) 앵커 — 섹션을 통합했으므로 여기로 착지 -->
   <span id="community" aria-hidden="true"></span>
-  <!-- 후기 블록(헤더 + 마키) — 후기가 없거나 로드 실패 시 loadReviews가 이 블록만
+  <!-- 후기 블록(헤더 + 그리드) — 후기가 없거나 로드 실패 시 loadReviews가 이 블록만
        숨긴다. 아래 커뮤니티 통계·CTA·#community 앵커는 섹션에 남아 항상 노출된다.
        (예전엔 섹션 전체를 숨겨서, 통합 후 후기가 없으면 커뮤니티 CTA까지 사라졌음) -->
   <div id="reviewsBlock">
@@ -2168,15 +2170,21 @@
       </div>
     </div>
 
-    <!-- 실제 후기 이미지 마키 (풀블리드 · 고정 비율 카드로 균일 · 클릭 시 원본) -->
-    <div class="testi-grid" id="testiGrid">
-      <!-- 스켈레톤 (JS 로딩 전) — 이미지 카드 비율(3:4)에 맞춘 세로형 -->
-      <div class="testi-skel-wrap">
-        <div class="skel-line" style="width:190px;aspect-ratio:3/4;border-radius:var(--radius);flex-shrink:0;"></div>
-        <div class="skel-line" style="width:190px;aspect-ratio:3/4;border-radius:var(--radius);flex-shrink:0;"></div>
-        <div class="skel-line" style="width:190px;aspect-ratio:3/4;border-radius:var(--radius);flex-shrink:0;"></div>
-        <div class="skel-line" style="width:190px;aspect-ratio:3/4;border-radius:var(--radius);flex-shrink:0;"></div>
-        <div class="skel-line" style="width:190px;aspect-ratio:3/4;border-radius:var(--radius);flex-shrink:0;"></div>
+    <!-- 실제 후기 이미지 — 동일 크기 타일 정적 그리드 (클릭 시 원본 라이트박스) -->
+    <div class="container">
+      <div class="testi-grid" id="testiGrid">
+        <!-- 스켈레톤 (JS 로딩 전) — 그리드 타일 비율(3:4) -->
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+        <div class="skel-line" style="aspect-ratio:3/4;border-radius:var(--radius);"></div>
+      </div>
+      <div class="testi-more-wrap" id="testiMoreWrap" hidden>
+        <button class="testi-more-btn" id="testiMoreBtn" type="button">후기 더보기</button>
       </div>
     </div>
   </div>
@@ -3017,107 +3025,40 @@
     if (!Array.isArray(items) || items.length === 0) { grid.innerHTML = ''; return; }
     const countEl = document.getElementById('testiCount');
     if (countEl) countEl.textContent = `실제 참여자 후기 ${items.length}건`;
-    const makeCard = (r) => `
-      <div class="testi-card testi-img-card">
-        <img src="${r.url}" alt="${String(r.caption || '참여자 후기').replace(/"/g, '&quot;')}" loading="lazy">
+    const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const LIMIT = 12; // 처음 12개만 노출, 나머지는 '더보기'로 펼침
+    const makeCard = (r, i) => {
+      const label = (r.caption || '').trim();
+      const tag = label
+        ? `<div class="testi-tagrow"><span class="testi-tag">${escHtml(label)}</span></div>`
+        : '';
+      return `
+      <div class="testi-card testi-img-card${i >= LIMIT ? ' testi-hidden' : ''}">
+        <div class="testi-shot"><img src="${escHtml(r.url)}" alt="${escHtml(label || '참여자 후기')}" loading="lazy"></div>
+        ${tag}
       </div>`;
-    const mid = Math.ceil(items.length / 2);
-    const row1 = items.slice(0, mid).map(makeCard).join('');
-    const row2 = items.slice(mid).map(makeCard).join('') || row1;
-    grid.innerHTML = `
-      <div class="testi-track">${row1}${row1}</div>
-      <div class="testi-track reverse">${row2}${row2}</div>`;
-  }
-  const shuffle = arr => arr.slice().sort(() => Math.random() - 0.5);
+    };
+    grid.innerHTML = items.map(makeCard).join('');
 
-  /* ── 후기 마키 터치 스와이프 ── */
-  function setupTestiSwipe(grid) {
-    const tracks = Array.from(grid.querySelectorAll('.testi-track'));
-    if (!tracks.length) return;
-
-    const DURS = [44, 38]; // 각 트랙 애니메이션 시간(초)
-
-    function getTranslateX(el) {
-      const m = new DOMMatrix(getComputedStyle(el).transform);
-      return m.m41; // px 단위 translateX
-    }
-
-    function resumeAtPosition(track, dur, x) {
-      const halfW = track.scrollWidth / 2;
-      const isReverse = track.classList.contains('reverse');
-      const progress = isReverse
-        ? Math.max(0, Math.min(1, (halfW + x) / halfW))
-        : Math.max(0, Math.min(1, -x / halfW));
-      const delay = -(progress * dur);
-      const animName = isReverse ? 'testi-scroll-reverse' : 'testi-scroll';
-      track.style.transform = '';
-      track.style.animation = 'none';
-      void track.offsetWidth; // reflow — 애니메이션 재시작 트리거
-      track.style.animation = `${animName} ${dur}s linear ${delay}s infinite`;
-    }
-
-    let startX = 0, startY = 0;
-    let capturedX = [];
-    let lastDelta = 0;
-    let lockDir = null; // 'h' | 'v' | null
-
-    grid.addEventListener('touchstart', e => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      lastDelta = 0;
-      lockDir = null;
-      capturedX = tracks.map(t => getTranslateX(t));
-      tracks.forEach(t => t.style.animationPlayState = 'paused');
-    }, { passive: true });
-
-    grid.addEventListener('touchmove', e => {
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-
-      // 첫 이동에서 방향 결정
-      if (!lockDir) {
-        lockDir = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
-      }
-      if (lockDir !== 'h') return; // 세로 스크롤이면 마키는 건드리지 않음
-
-      lastDelta = dx;
-      tracks.forEach((t, i) => {
-        const dir = t.classList.contains('reverse') ? -1 : 1;
-        t.style.transform = `translateX(${capturedX[i] + dx * dir}px)`;
-        t.classList.add('is-dragging');
-      });
-    }, { passive: true });
-
-    grid.addEventListener('touchend', () => {
-      tracks.forEach(t => t.classList.remove('is-dragging'));
-
-      if (lockDir === 'h') {
-        // 드래그한 위치 기준으로 애니메이션 재개
-        tracks.forEach((t, i) => {
-          const dir = t.classList.contains('reverse') ? -1 : 1;
-          const finalX = capturedX[i] + lastDelta * dir;
-          resumeAtPosition(t, DURS[i], finalX);
-        });
+    // 더보기 — 12개 초과분을 펼침
+    const moreWrap = document.getElementById('testiMoreWrap');
+    const moreBtn = document.getElementById('testiMoreBtn');
+    if (moreWrap && moreBtn) {
+      if (items.length > LIMIT) {
+        moreWrap.hidden = false;
+        moreBtn.textContent = `후기 더보기 (${items.length - LIMIT})`;
+        moreBtn.onclick = () => {
+          grid.querySelectorAll('.testi-hidden').forEach(el => el.classList.remove('testi-hidden'));
+          moreWrap.hidden = true;
+        };
       } else {
-        // 세로 스크롤이었거나 탭 → 그냥 재개
-        tracks.forEach(t => t.style.animationPlayState = '');
+        moreWrap.hidden = true;
       }
-      lockDir = null;
-    });
-
-    grid.addEventListener('touchcancel', () => {
-      lockDir = null;
-      tracks.forEach(t => {
-        t.classList.remove('is-dragging');
-        t.style.transform = '';
-        t.style.animationPlayState = '';
-      });
-    });
+    }
   }
-
   (async function loadReviews() {
     const grid = document.getElementById('testiGrid');
-    // 후기 없음/실패 시 후기 블록(헤더+마키)만 숨긴다. 섹션 전체를 숨기면 통합된
+    // 후기 없음/실패 시 후기 블록(헤더+그리드)만 숨긴다. 섹션 전체를 숨기면 통합된
     // 커뮤니티 통계·카카오 CTA·#community 앵커까지 사라지므로 reviewsBlock만 대상.
     const reviewsBlock = document.getElementById('reviewsBlock');
     if (!grid) return;
@@ -3135,7 +3076,6 @@
       }));
       if (!items.length) { if (reviewsBlock) reviewsBlock.style.display = 'none'; return; }  // 후기 없으면 후기 블록만 숨김
       renderReviews(items, grid);
-      setupTestiSwipe(grid);
     } catch (e) {
       console.warn('후기 로드 실패:', e);
       if (reviewsBlock) reviewsBlock.style.display = 'none';
@@ -3143,8 +3083,8 @@
   })();
 
   /* ── 후기 원본 라이트박스 ──
-     마키 카드는 고정 비율로 크롭돼 있어(들쭉날쭉 방지), 잘리지 않은 원본 전체는
-     카드 클릭(탭) 시 라이트박스로 크게 보여준다. 마키에 동적으로 추가되는 카드까지
+     그리드 카드는 고정 비율로 크롭돼 있어(들쭉날쭉 방지), 잘리지 않은 원본 전체는
+     카드 클릭(탭) 시 라이트박스로 크게 보여준다. 그리드에 동적으로 추가되는 카드까지
      커버하도록 grid에 이벤트 위임. */
   (function initTestiLightbox() {
     const grid = document.getElementById('testiGrid');
