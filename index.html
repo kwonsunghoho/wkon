@@ -614,6 +614,12 @@
       position: relative;
       margin: 44px auto 0;
       max-width: 640px;
+      /* 카드 3장을 같은 그리드 셀(1/1)에 겹쳐 쌓아, 컨테이너 높이를 항상 '가장 큰
+         카드' 기준으로 고정한다. 예전엔 display:none/block 토글이라 카드마다 높이가
+         달라, 5.5초 자동 전환 때마다 섹션 높이가 바뀌며 아래 내용 전체가 위아래로
+         튀었다(리플로우). start 정렬로 카드는 자기 높이 그대로 위에 붙는다. */
+      display: grid;
+      align-items: start;
     }
 
     /* 강사 탭 선택 버튼 */
@@ -659,11 +665,19 @@
       border-radius: 24px;
       overflow: hidden;
       box-shadow: var(--shadow-lg);
-      display: none;
-      animation: fadeIn .3s ease-in-out;
+      /* 3장 모두 같은 셀에 겹침. 비활성 카드는 visibility:hidden으로 '안 보이되
+         레이아웃 박스는 유지' → 그리드 행 높이가 늘 최대 카드 기준으로 유지돼
+         전환 시 페이지가 튀지 않는다. (display:none으로 접으면 높이가 사라져 튐) */
+      grid-area: 1 / 1;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
     .inst-card.active {
-      display: block;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      animation: fadeIn .3s ease-in-out;
     }
     @keyframes fadeIn {
       from { opacity: 0; }
