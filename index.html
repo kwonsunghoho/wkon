@@ -874,8 +874,9 @@
        스크린샷이 긴 글 이미지라 여러 장을 작게 늘어놓으면 지저분해서, 한 장씩
        크게 보여주고 넘기게 한다. 전체 원본은 이미지 클릭 시 라이트박스로. */
     .testi-grid { margin-top: 44px; }
-    .testi-carousel { position: relative; max-width: 440px; margin: 0 auto; }
-    .tc-viewport { overflow: hidden; border-radius: 18px; }
+    .testi-carousel { max-width: 500px; margin: 0 auto; }
+    .tc-stage { display: flex; align-items: center; gap: 8px; }
+    .tc-viewport { flex: 1; min-width: 0; overflow: hidden; border-radius: 18px; }
     .tc-track { display: flex; transition: transform .35s ease; will-change: transform; }
     .tc-slide { flex: 0 0 100%; }
     .tc-card { background: #fff; border: 1.5px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
@@ -883,13 +884,12 @@
     .tc-imgwrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
     .tc-tagrow { padding: 0 0 14px; display: flex; justify-content: center; }
     .tc-arrow {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      width: 42px; height: 42px; border-radius: 50%;
+      flex: 0 0 auto;
+      width: 40px; height: 40px; border-radius: 50%;
       border: 1px solid var(--border); background: #fff; color: var(--text);
-      box-shadow: var(--shadow); cursor: pointer; z-index: 2;
+      box-shadow: var(--shadow); cursor: pointer;
       font-size: 24px; line-height: 1; display: flex; align-items: center; justify-content: center;
     }
-    .tc-prev { left: 8px; } .tc-next { right: 8px; }
     .tc-arrow:hover { background: var(--action); color: var(--action-ink); border-color: var(--action); }
     .tc-counter { text-align: center; margin-top: 16px; font-size: 14px; font-weight: 800; color: var(--text-muted); }
     /* caption 라벨 칩(예: "승자각 · 최종합격") — 있을 때만 이미지 아래에 렌더 */
@@ -902,10 +902,9 @@
     }
     @media (max-width: 768px) {
       .testi-grid { margin-top: 32px; }
-      .testi-carousel { max-width: 330px; }
+      .tc-stage { gap: 5px; }
       .tc-imgwrap { height: 440px; }
-      .tc-arrow { width: 38px; height: 38px; font-size: 22px; }
-      .tc-prev { left: 4px; } .tc-next { right: 4px; }
+      .tc-arrow { width: 34px; height: 34px; font-size: 20px; }
     }
 
     /* 후기 원본 라이트박스 (그리드 카드 클릭 시 잘리지 않은 전체 이미지) */
@@ -3000,9 +2999,11 @@
     const many = items.length > 1;
     grid.innerHTML = `
       <div class="testi-carousel">
-        <div class="tc-viewport"><div class="tc-track">${items.map(slide).join('')}</div></div>
-        ${many ? '<button class="tc-arrow tc-prev" type="button" aria-label="이전 후기">‹</button>' +
-                 '<button class="tc-arrow tc-next" type="button" aria-label="다음 후기">›</button>' : ''}
+        <div class="tc-stage">
+          ${many ? '<button class="tc-arrow tc-prev" type="button" aria-label="이전 후기">‹</button>' : ''}
+          <div class="tc-viewport"><div class="tc-track">${items.map(slide).join('')}</div></div>
+          ${many ? '<button class="tc-arrow tc-next" type="button" aria-label="다음 후기">›</button>' : ''}
+        </div>
         ${many ? `<div class="tc-counter"><span id="tcCur">1</span> / ${items.length}</div>` : ''}
       </div>`;
     if (many) initCarousel(grid, items.length, featuredCount);
