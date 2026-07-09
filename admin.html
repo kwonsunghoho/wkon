@@ -61,6 +61,11 @@
 
     .reviews-wrap { padding: 20px; max-width: 900px; }
     .rv-upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .rv-upload-bulk { margin-bottom: 8px; }
+    .rv-section-title { font-size: 13px; font-weight: 800; color: var(--text-muted); margin: 0 0 6px 2px; }
+    .rv-bulk-status { font-size: 13px; color: var(--text-muted); margin: 0 2px 20px; line-height: 1.5; }
+    .rv-bulk-status .ok { color: #1a7f37; font-weight: 700; }
+    .rv-bulk-status .err { color: #c0392b; font-weight: 700; }
     .rv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
     .rv-item { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); overflow: hidden; }
     .rv-item img { width: 100%; display: block; aspect-ratio: 3/4; object-fit: cover; background: var(--surface2); }
@@ -252,10 +257,18 @@
 
   <div class="tab-panel" id="panel-reviews">
     <div class="reviews-wrap">
+      <div class="rv-section-title">여러 장 한번에 (자동 압축 · 라벨 없이)</div>
+      <div class="rv-upload rv-upload-bulk">
+        <input type="file" id="rvBulkFile" accept="image/*" multiple style="flex:1;min-width:160px;">
+        <button class="btn btn-action" id="rvBulkUpload">여러 장 올리기</button>
+      </div>
+      <div class="rv-bulk-status" id="rvBulkStatus"></div>
+
+      <div class="rv-section-title">1장 (라벨 포함)</div>
       <div class="rv-upload">
         <input type="file" id="rvFile" accept="image/*">
         <input type="text" id="rvCaption" placeholder="라벨 (예: 승자각 · 최종합격)" title="후기 이미지 아래 칩으로 표시됩니다(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
-        <button class="btn btn-action" id="rvUpload">업로드</button>
+        <button class="btn btn-action" id="rvUpload">1장 올리기</button>
       </div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -927,22 +940,73 @@
         if (error) { alert('삭제 실패: ' + error.message); return; } toast('삭제됨'); loadReviewsAdmin();
       }));
     }
+    // 모바일 최적화 — 긴 변 1080px 축소 + WebP(미지원 시 JPEG) 0.82 압축.
+    // 압축본이 원본보다 크거나 디코드 실패하면 원본 그대로 올린다.
+    async function optimizeReviewImage(file) {
+      const MAX_EDGE = 1080, QUALITY = 0.82;
+      let bitmap;
+      try { bitmap = await createImageBitmap(file); }
+      catch (e) { throw new Error('이미지 디코드 실패(HEIC 등 미지원 형식일 수 있음)'); }
+      const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+      const w = Math.round(bitmap.width * scale), h = Math.round(bitmap.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+      if (bitmap.close) bitmap.close();
+      const toBlob = (type, q) => new Promise(res => canvas.toBlob(res, type, q));
+      let blob = await toBlob('image/webp', QUALITY), type = 'image/webp', ext = 'webp';
+      if (!blob || blob.type !== 'image/webp') { blob = await toBlob('image/jpeg', QUALITY); type = 'image/jpeg'; ext = 'jpg'; }
+      if (!blob || blob.size >= file.size) {
+        const oext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        return { blob: file, type: file.type || 'image/jpeg', ext: oext };
+      }
+      return { blob, type, ext };
+    }
+
+    // 후기 1장 저장(압축 → 스토리지 업로드 → 행 삽입). caption 은 null 가능.
+    async function uploadReviewImage(file, caption) {
+      const opt = await optimizeReviewImage(file);
+      const path = `${crypto.randomUUID()}.${opt.ext}`;
+      const up = await MONC.sb.storage.from('reviews').upload(path, opt.blob, { upsert: false, contentType: opt.type });
+      if (up.error) throw up.error;
+      const { error } = await MONC.sb.from('reviews').insert({ image_path: path, caption: caption || null, sort_order: 0 });
+      if (error) { await MONC.sb.storage.from('reviews').remove([path]); throw error; } // 고아 파일 정리
+    }
+
+    // 1장(라벨 포함)
     document.getElementById('rvUpload').addEventListener('click', async () => {
       const f = document.getElementById('rvFile').files[0];
       if (!f) { alert('이미지를 선택하세요.'); return; }
-      const btn = document.getElementById('rvUpload'); btn.disabled = true; btn.textContent = '업로드 중…';
+      const btn = document.getElementById('rvUpload'); btn.disabled = true; btn.textContent = '올리는 중…';
       try {
-        const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
-        const path = `${crypto.randomUUID()}.${ext}`;
-        const up = await MONC.sb.storage.from('reviews').upload(path, f, { upsert: false });
-        if (up.error) throw up.error;
         const caption = document.getElementById('rvCaption').value.trim() || null;
-        const { error } = await MONC.sb.from('reviews').insert({ image_path: path, caption, sort_order: 0 });
-        if (error) throw error;
+        await uploadReviewImage(f, caption);
         document.getElementById('rvFile').value = ''; document.getElementById('rvCaption').value = '';
         toast('업로드 완료'); loadReviewsAdmin();
       } catch (e) { alert('업로드 실패: ' + e.message); }
-      btn.disabled = false; btn.textContent = '업로드';
+      btn.disabled = false; btn.textContent = '1장 올리기';
+    });
+
+    // 여러 장 한번에(라벨 없이 · 순차 업로드 · 진행률 표시)
+    document.getElementById('rvBulkUpload').addEventListener('click', async () => {
+      const files = Array.from(document.getElementById('rvBulkFile').files || []);
+      if (!files.length) { alert('이미지를 선택하세요.'); return; }
+      files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      const btn = document.getElementById('rvBulkUpload'); btn.disabled = true;
+      const status = document.getElementById('rvBulkStatus');
+      let ok = 0, fail = 0; const fails = [];
+      for (let i = 0; i < files.length; i++) {
+        btn.textContent = `올리는 중… ${i + 1}/${files.length}`;
+        status.textContent = `${i + 1} / ${files.length} 처리 중…`;
+        try { await uploadReviewImage(files[i], null); ok++; }
+        catch (e) { fail++; fails.push(files[i].name + ': ' + (e.message || e)); }
+      }
+      document.getElementById('rvBulkFile').value = '';
+      btn.disabled = false; btn.textContent = '여러 장 올리기';
+      status.innerHTML = `<span class="ok">완료 ${ok}장</span>` + (fail ? ` · <span class="err">실패 ${fail}장</span>` : '')
+        + (fails.length ? '<br>' + fails.map(x => esc(x)).join('<br>') : '');
+      toast(`업로드 완료 (${ok}장)`);
+      loadReviewsAdmin();
     });
 
     // ── 기출문제(questions) CRUD ──
