@@ -72,7 +72,10 @@
     .rv-item.hidden img { opacity: .4; }
     .rv-meta { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .rv-meta .row { display: flex; gap: 6px; align-items: center; }
-    .rv-order { width: 52px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    .rv-order { width: 46px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    .rv-rank { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; color: var(--text-muted); }
+    .rv-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 4px 2px 16px; }
+    .rv-hint b { color: var(--action); }
     .rv-cap { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     .rv-btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: var(--radius-xs); padding: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .rv-btn.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
@@ -270,6 +273,8 @@
         <input type="text" id="rvCaption" placeholder="라벨 (예: 승자각 · 최종합격)" title="후기 이미지 아래 칩으로 표시됩니다(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
         <button class="btn btn-action" id="rvUpload">1장 올리기</button>
       </div>
+      <div class="rv-section-title">올린 후기 · 대표 선정</div>
+      <div class="rv-hint">각 후기의 <b>대표</b> 칸에 숫자를 넣으면 홈 후기에서 앞으로 나옵니다. <b>0=일반</b>, <b>1 이상=대표</b>(작을수록 앞·자동으로 먼저 순환). 대표 7~8개에 1~8을 매기면 그 순서대로 노출돼요.</div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
@@ -910,7 +915,7 @@
           <img src="${esc(rvUrl(r.image_path))}" alt="${esc(r.caption || '후기')}">
           <div class="rv-meta">
             <div class="row"><input type="text" class="rv-cap" value="${esc(r.caption || '')}" placeholder="라벨(예: 승자각 · 최종합격)" title="라벨 — 후기 이미지 아래 칩으로 표시(비우면 안 나옴)"></div>
-            <div class="row"><input type="number" class="rv-order" value="${r.sort_order}" title="순서"><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
+            <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
             <div class="row"><button class="rv-btn rv-del">삭제</button></div>
           </div>
         </div>`).join('');

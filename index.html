@@ -2983,7 +2983,7 @@
     '승.자.각': 'linear-gradient(135deg,#FF8F4D,#9A5B1E)',
   };
 
-  function renderReviews(items, grid) {
+  function renderReviews(items, grid, featuredCount) {
     if (!Array.isArray(items) || items.length === 0) { grid.innerHTML = ''; return; }
     const countEl = document.getElementById('testiCount');
     if (countEl) countEl.textContent = `실제 참여자 후기 ${items.length}건`;
@@ -3005,41 +3005,43 @@
                  '<button class="tc-arrow tc-next" type="button" aria-label="다음 후기">›</button>' : ''}
         ${many ? `<div class="tc-counter"><span id="tcCur">1</span> / ${items.length}</div>` : ''}
       </div>`;
-    if (many) initCarousel(grid, items.length);
+    if (many) initCarousel(grid, items.length, featuredCount);
   }
 
-  // 후기 캐러셀 컨트롤러 — 좌우 버튼·스와이프·자동전환(6초, prefers-reduced-motion·hover 시 정지)
-  function initCarousel(root, count) {
+  // 후기 캐러셀 컨트롤러 — 좌우 버튼·스와이프로 전체(count) 탐색.
+  // 자동전환(6초)은 '대표'(앞쪽 autoN개)만 순환하고, 사용자가 직접 넘기면 자동전환은 멈춘다.
+  // (prefers-reduced-motion·hover 시에도 정지)
+  function initCarousel(root, count, featuredCount) {
     const carousel = root.querySelector('.testi-carousel');
     if (!carousel) return;
     const track = carousel.querySelector('.tc-track');
     const curEl = carousel.querySelector('#tcCur');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let idx = 0, timer = null;
+    const autoN = featuredCount > 0 ? featuredCount : count; // 대표 없으면 전체 순환(폴백)
+    let idx = 0, timer = null, userDone = false;
 
-    function go(i) {
+    function go(i) { // 전체 범위 순환
       idx = (i + count) % count;
       track.style.transform = `translateX(-${idx * 100}%)`;
       if (curEl) curEl.textContent = idx + 1;
     }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function play() { if (reduce) return; stop(); timer = setInterval(() => go(idx + 1), 6000); }
-    function step(d) { go(idx + d); stop(); play(); } // 조작 후 타이머 리셋
+    function play() { if (reduce || userDone || autoN <= 1) return; stop(); timer = setInterval(() => go((idx + 1) % autoN), 6000); }
+    function manual(d) { userDone = true; stop(); go(idx + d); } // 직접 넘기면 자동전환 종료
 
-    carousel.querySelector('.tc-prev').addEventListener('click', () => step(-1));
-    carousel.querySelector('.tc-next').addEventListener('click', () => step(1));
+    carousel.querySelector('.tc-prev').addEventListener('click', () => manual(-1));
+    carousel.querySelector('.tc-next').addEventListener('click', () => manual(1));
     carousel.addEventListener('mouseenter', stop);
-    carousel.addEventListener('mouseleave', play);
+    carousel.addEventListener('mouseleave', play); // userDone이면 play()가 즉시 반환
 
-    // 터치 스와이프 (가로 이동일 때만)
+    // 터치 스와이프 (가로 이동일 때만) — 스와이프도 직접 조작이므로 자동전환 종료
     let sx = 0, sy = 0, lock = null;
     carousel.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; lock = null; stop(); }, { passive: true });
     carousel.addEventListener('touchmove', e => {
       if (lock === null) lock = Math.abs(e.touches[0].clientX - sx) > Math.abs(e.touches[0].clientY - sy) ? 'h' : 'v';
     }, { passive: true });
     carousel.addEventListener('touchend', e => {
-      if (lock === 'h') { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) go(idx + (dx < 0 ? 1 : -1)); }
-      play();
+      if (lock === 'h') { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) manual(dx < 0 ? 1 : -1); }
     });
 
     go(0); play();
@@ -3058,12 +3060,18 @@
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
       if (error) throw error;
-      const items = (data || []).map(r => ({
+      const rows = (data || []).map(r => ({
         url: window.MONC.sb.storage.from('reviews').getPublicUrl(r.image_path).data.publicUrl,
-        caption: r.caption
+        caption: r.caption,
+        rank: Number(r.sort_order) || 0,        // 대표 순위: 0=일반, 1↑=대표(작을수록 앞)
+        created: r.created_at || ''
       }));
-      if (!items.length) { if (reviewsBlock) reviewsBlock.style.display = 'none'; return; }  // 후기 없으면 후기 블록만 숨김
-      renderReviews(items, grid);
+      if (!rows.length) { if (reviewsBlock) reviewsBlock.style.display = 'none'; return; }  // 후기 없으면 후기 블록만 숨김
+      // 대표(rank≥1)를 앞으로(순위 오름차순), 일반(rank 0)은 뒤에 등록순으로.
+      const featured = rows.filter(r => r.rank >= 1).sort((a, b) => a.rank - b.rank || a.created.localeCompare(b.created));
+      const regular = rows.filter(r => r.rank < 1); // 쿼리에서 이미 created_at 오름차순
+      const items = featured.concat(regular);
+      renderReviews(items, grid, featured.length); // 자동전환은 대표 개수까지만 순환
     } catch (e) {
       console.warn('후기 로드 실패:', e);
       if (reviewsBlock) reviewsBlock.style.display = 'none';
