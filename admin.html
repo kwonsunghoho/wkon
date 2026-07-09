@@ -93,6 +93,10 @@
     .rv-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 4px 2px 16px; }
     .rv-hint b { color: var(--action); }
     .rv-cap { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    .rv-cls { gap: 6px; }
+    .rv-ch { flex: 1; min-width: 0; padding: 6px 4px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; background: #fff; }
+    .rv-co { width: 54px; flex: 0 0 auto; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    .rv-nm { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     .rv-btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: var(--radius-xs); padding: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .rv-btn.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
     .rv-del { color: var(--action-dark); border-color: var(--action); }
@@ -936,15 +940,33 @@
       const { data, error } = await MONC.sb.from('reviews').select('*').order('sort_order').order('created_at');
       if (error) { grid.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       if (!data.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 후기가 없습니다. 카톡 스크린샷을 업로드하세요.</div>'; return; }
+      const CH_OPTS = ['', '보신각', '영합각', '스피닝', '승자각'];
       grid.innerHTML = data.map(r => `
         <div class="rv-item ${r.visible ? '' : 'hidden'}" data-id="${r.id}" data-path="${esc(r.image_path)}">
           <img src="${esc(rvUrl(r.image_path))}" alt="${esc(r.caption || '후기')}">
           <div class="rv-meta">
+            <div class="row rv-cls" title="후기 페이지(reviews.html) 기수·챌린지 필터에 쓰임">
+              <select class="rv-ch" title="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(챌린지)'}</option>`).join('')}</select>
+              <input type="number" class="rv-co" value="${r.cohort != null ? r.cohort : ''}" placeholder="기수" min="0" title="기수(숫자). 비우면 미상">
+            </div>
+            <div class="row"><input type="text" class="rv-nm" value="${esc(r.reviewer_name || '')}" placeholder="이름(예: 김O연)" title="작성자 이름"></div>
             <div class="row"><input type="text" class="rv-cap" value="${esc(r.caption || '')}" placeholder="라벨(예: 승자각 · 최종합격)" title="라벨 — 후기 이미지 아래 칩으로 표시(비우면 안 나옴)"></div>
             <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
             <div class="row"><button class="rv-btn rv-del">삭제</button></div>
           </div>
         </div>`).join('');
+      // 분류 필드 저장(챌린지·기수·이름) — site_config가 아니라 reviews 컬럼. 마이그레이션 미적용 시 컬럼 없음 에러 안내.
+      const saveField = async (id, patch) => {
+        const { error } = await MONC.sb.from('reviews').update(patch).eq('id', id);
+        if (error) { alert('저장 실패: ' + error.message + '\n(reviews 분류 컬럼 마이그레이션 20260710130000 미적용일 수 있어요)'); return false; }
+        toast('저장됨'); return true;
+      };
+      grid.querySelectorAll('.rv-ch').forEach(sel => sel.addEventListener('change', () =>
+        saveField(sel.closest('.rv-item').dataset.id, { challenge: sel.value || null })));
+      grid.querySelectorAll('.rv-co').forEach(inp => inp.addEventListener('change', () =>
+        saveField(inp.closest('.rv-item').dataset.id, { cohort: inp.value === '' ? null : parseInt(inp.value, 10) })));
+      grid.querySelectorAll('.rv-nm').forEach(inp => inp.addEventListener('change', () =>
+        saveField(inp.closest('.rv-item').dataset.id, { reviewer_name: inp.value.trim() || null })));
       grid.querySelectorAll('.rv-vis').forEach(b => b.addEventListener('click', async () => {
         const id = b.closest('.rv-item').dataset.id;
         const cur = b.classList.contains('on');
