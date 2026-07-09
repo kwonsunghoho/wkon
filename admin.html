@@ -50,6 +50,8 @@
     .app-card .ac-ch { font-size: 13px; color: var(--text); margin: 8px 0; }
     .app-card .ac-linked { font-size: 12px; font-weight: 700; color: #1a7f37; }
     .app-card .ac-unlinked { font-size: 12px; color: var(--text-muted); }
+    .app-card .ac-guest { font-size: 12px; font-weight: 700; color: var(--action-dark); }
+    .app-card .ac-sub { font-weight: 400; color: var(--text-muted); }
     .app-card .ac-toggles { display: flex; gap: 8px; margin-top: 8px; }
     .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .app-card .ac-tg.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
@@ -138,6 +140,28 @@
     .ba .slot.after .tag { color: var(--action); }
     .ba audio { width: 100%; margin: 8px 0; }
     .ba .slot .cur { font-size: 12px; color: var(--text-dim); word-break: break-all; }
+
+    /* 회원 상세 — 상단 요약 스탯 */
+    .mstats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .mstat { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+    .mstat b { color: var(--text); }
+    .mstat.paid { background: #e7f5ec; border-color: #bce3c9; color: #1a7f37; }
+    .mstat.wait { background: var(--action-tint); border-color: #f2c9b8; color: var(--action-dark); }
+    .mstat.refund { background: var(--accent-tint); border-color: #c2d0ea; color: var(--accent); }
+    /* 회원 상세 — 신청/답변 미니 리스트 */
+    .mini-empty { color: var(--text-dim); font-size: 13px; padding: 8px 0; }
+    .note-adm { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; background: var(--surface2); }
+    .note-adm summary { cursor: pointer; list-style: none; }
+    .note-adm summary::-webkit-details-marker { display: none; }
+    .note-adm .na-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted); align-items: center; }
+    .note-adm .na-cat { font-weight: 700; color: var(--accent); }
+    .note-adm .na-q { font-weight: 700; font-size: 14px; margin-top: 3px; }
+    .note-adm .na-body { margin-top: 8px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: var(--text); border-top: 1px solid var(--border-soft); padding-top: 8px; }
+    .note-adm.draft { border-left: 3px solid var(--action); }
+    .na-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
+    .na-badge.draft { background: var(--action-tint); color: var(--action-dark); }
+    .na-badge.final { background: #e7f5ec; color: #1a7f37; }
+
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary);
              color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
     .toast.show { opacity: 1; }
@@ -335,6 +359,19 @@
       document.getElementById('selAll').checked = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
     }
 
+    // 회원 답변노트 조회 — status(draft/final) 컬럼이 없으면(마이그레이션 전) 빼고 재시도.
+    async function fetchAnswers(id) {
+      let r = await sb().from('answers')
+        .select('content, status, updated_at, question_id, questions(content, category)')
+        .eq('member_id', id).order('updated_at', { ascending: false });
+      if (r.error) {
+        r = await sb().from('answers')
+          .select('content, updated_at, question_id, questions(content, category)')
+          .eq('member_id', id).order('updated_at', { ascending: false });
+      }
+      return r.data || [];
+    }
+
     async function selectMember(id) {
       currentId = id;
       renderMemberList();
@@ -347,12 +384,65 @@
       detail.innerHTML = '<div class="loading">불러오는 중…</div>';
 
       const m = members.find(x => x.id === id);
-      const [{ data: records }, { data: recs }] = await Promise.all([
+      // 신청 내역은 배지 판정과 '같은 소스·같은 기준'을 쓰려고 전역 _apps 를 재사용한다.
+      // (예전엔 .or(phone.eq.<원문>) DB 쿼리라 하이픈 유무까지 정확히 같아야 매칭돼, 숫자정규화 배지와 어긋났다.)
+      if (!_appsLoaded) await loadApplications();
+      const [{ data: records }, { data: recs }, answers] = await Promise.all([
         sb().from('daily_records').select('day_number, status, comment').eq('member_id', id),
         sb().from('recordings').select('type, storage_path').eq('member_id', id),
+        fetchAnswers(id),
       ]);
       const byDay = {}; (records || []).forEach(r => byDay[r.day_number] = r);
       const recMap = {}; (recs || []).forEach(r => recMap[r.type] = r.storage_path);
+      // 이 회원 것: member_id 로 연결됐거나(로그인 신청), 전화번호 숫자가 회원 프로필과 일치(비로그인 신청).
+      // 배지의 appMembership()/memberPhoneSet() 과 동일한 \D 정규화 → 두 화면 판정이 항상 일치.
+      const myDigits = (m.phone || '').replace(/\D/g, '');
+      const appList = _apps.filter(a =>
+        a.member_id === id || (!a.member_id && myDigits && (a.phone || '').replace(/\D/g, '') === myDigits)
+      );
+
+      // 상단 요약 스탯(진행중/입금/환급 한눈에)
+      const okN = (records || []).filter(r => r.status === 'success').length;
+      const noN = (records || []).filter(r => r.status === 'fail').length;
+      const anyPaid = appList.some(a => a.paid);
+      const anyRefund = appList.some(a => a.refunded);
+      const pendingPay = appList.some(a => !a.paid && !a.refunded);
+      const statsHtml = `<div class="mstats">
+        <span class="mstat">미션 <b>${okN + noN}</b>/${MONC.TOTAL_DAYS}일 · 성공 <b>${okN}</b> · 아쉬움 <b>${noN}</b></span>
+        <span class="mstat">신청 <b>${appList.length}</b>건</span>
+        ${anyPaid ? '<span class="mstat paid">입금완료</span>' : ''}
+        ${pendingPay ? '<span class="mstat wait">입금대기</span>' : ''}
+        ${anyRefund ? '<span class="mstat refund">환급완료</span>' : ''}
+      </div>`;
+
+      // 신청 내역(입금/환급 토글은 wireDetail 에서 연결)
+      const appsHtml = appList.length ? appList.map(a => `
+        <div class="app-card" data-app="${a.id}">
+          <div class="ac-top">
+            <span class="ac-name">${esc(chSummary(a.challenges)) || '(챌린지 미상)'}</span>
+            <span class="ac-date">${fmtDate(a.created_at)}</span>
+          </div>
+          <div class="ac-ch">${(a.total_price || 0).toLocaleString()}원 · ${a.member_id === id ? '<span class="ac-linked">● 회원연결됨</span>' : '<span class="ac-unlinked">○ 전화매칭</span>'}</div>
+          <div class="ac-toggles">
+            <button class="ac-tg ${a.paid ? 'on' : ''}" data-appfield="paid" data-app="${a.id}">입금 ${a.paid ? '✓' : ''}</button>
+            <button class="ac-tg ${a.refunded ? 'on on-refund' : ''}" data-appfield="refunded" data-app="${a.id}">환급 ${a.refunded ? '✓' : ''}</button>
+          </div>
+        </div>`).join('') : '<div class="mini-empty">신청 내역이 없습니다.</div>';
+
+      // 답변노트(완료/작성중)
+      const catOf = q => (window.SOJAE && window.SOJAE.CAT_LABEL[(q || {}).category]) || '소재 발굴';
+      const fmtDay = s => { const d = new Date(s); return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`; };
+      const ansHtml = (answers && answers.length) ? answers.map(a => {
+        const q = a.questions || {};
+        const isDraft = (a.status || 'final') === 'draft';
+        return `<details class="note-adm ${isDraft ? 'draft' : ''}">
+          <summary>
+            <div class="na-top"><span class="na-cat">${esc(catOf(q))}</span><span>${fmtDay(a.updated_at)}<span class="na-badge ${isDraft ? 'draft' : 'final'}">${isDraft ? '작성중' : '완료'}</span></span></div>
+            <div class="na-q">${esc(q.content || '(문제 정보 없음)')}</div>
+          </summary>
+          <div class="na-body">${esc(a.content || '(작성 전)')}</div>
+        </details>`;
+      }).join('') : '<div class="mini-empty">저장된 답변이 없습니다.</div>';
 
       const cohortOpts = ['<option value="">(미배정)</option>']
         .concat(cohorts.map(c => `<option value="${c.id}" ${m.cohort_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
@@ -377,11 +467,12 @@
       detail.innerHTML = `
         <div class="panel">
           <h3>회원 정보</h3>
+          ${statsHtml}
           <div class="prow">
             <div class="field"><label>이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
             <div class="field"><label>이메일</label><input value="${esc(m.email || '')}" readonly></div>
-            <div class="field"><label>전화번호</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="전화번호"></div>
-            <div class="field"><label>전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공"></div>
+            <div class="field"><label>연락처</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></div>
+            <div class="field"><label>전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공(선택)"></div>
             <div class="field"><label>기수</label><select id="fCohort">${cohortOpts}</select></div>
             <div class="field"><label>권한</label>${roleField(m)}</div>
             <div class="field"><label>소재 발굴</label>${sojaeField(m)}</div>
@@ -390,8 +481,18 @@
         </div>
 
         <div class="panel">
+          <h3>신청 내역 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 입금·환급 여기서 바로 관리</span></h3>
+          <div id="appsInDetail">${appsHtml}</div>
+        </div>
+
+        <div class="panel">
           <h3>날짜별 미션 (1~14일)</h3>
           <div id="daysEdit">${daysHtml}</div>
+        </div>
+
+        <div class="panel">
+          <h3>답변노트 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 소재 발굴로 저장한 답변</span></h3>
+          <div id="answersInDetail">${ansHtml}</div>
         </div>
 
         <div class="panel">
@@ -482,7 +583,7 @@
         btn.disabled = false; btn.textContent = '저장';
       }));
 
-      // 회원 정보 저장 (이름 + 기수)
+      // 회원 정보 저장 (이름 + 연락처 + 전공 + 기수)
       document.getElementById('saveProfile').addEventListener('click', async () => {
         const name = document.getElementById('fName').value.trim() || null;
         const phone = document.getElementById('fPhone').value.trim() || null;
@@ -501,6 +602,21 @@
         renderMemberList();
         toast('회원 정보 저장됨');
       });
+
+      // 신청 입금/환급 토글 — applications 를 직접 갱신(신청자 현황 탭과 같은 소스).
+      document.querySelectorAll('#appsInDetail .ac-tg').forEach(btn => btn.addEventListener('click', async () => {
+        const appId = btn.dataset.app;
+        const field = btn.dataset.appfield;
+        const on = !btn.classList.contains('on');
+        btn.disabled = true;
+        const { error } = await sb().from('applications').update({ [field]: on }).eq('id', appId);
+        if (error) { alert('저장 실패: ' + error.message); btn.disabled = false; return; }
+        if (field === 'paid') { btn.classList.toggle('on', on); btn.textContent = '입금 ' + (on ? '✓' : ''); }
+        else { btn.classList.toggle('on', on); btn.classList.toggle('on-refund', on); btn.textContent = '환급 ' + (on ? '✓' : ''); }
+        const cached = _apps.find(x => x.id === appId); if (cached) cached[field] = on;  // 신청자 현황 탭 캐시도 동기화
+        btn.disabled = false;
+        toast('저장됨');
+      }));
 
       // 관리자 임명/강등 (오너 전용 버튼). RLS/트리거가 서버에서도 이중 방어.
       const roleToggle = document.getElementById('roleToggle');
@@ -664,11 +780,29 @@
     });
 
     // ── 신청자 현황(applications) ──
-    let _apps = [];
+    let _apps = [], _appsLoaded = false;
     function fmtDate(iso) { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
     function chSummary(challenges) {
       if (!Array.isArray(challenges)) return '';
       return challenges.map(c => `${CH_LABEL[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ');
+    }
+
+    // 신청자의 회원 여부 판정 — member_id 링크가 있거나(로그인 상태로 신청), 전화번호가 회원 프로필과
+    // 일치하면(가입만 하고 이 신청은 미연결) '회원'. 저장된 플래그가 아니라 members 와 매번 대조해 계산하므로,
+    // 나중에 가입하거나 프로필에 전화를 넣으면 새로고침 시 자동으로 '회원'으로 바뀐다(과거 신청도 소급).
+    function memberPhoneSet() {
+      return new Set(members.map(m => (m.phone || '').replace(/\D/g, '')).filter(Boolean));
+    }
+    function appMembership(a, phoneSet) {
+      if (a.member_id) return 'linked';                 // 로그인 상태로 신청 → 확실한 회원(연결됨)
+      const d = (a.phone || '').replace(/\D/g, '');
+      if (d && phoneSet.has(d)) return 'phone';         // 가입은 했으나 이 신청은 미연결(전화 일치)
+      return 'guest';                                    // 비회원
+    }
+    function membershipBadge(status) {
+      return status === 'linked' ? '<span class="ac-linked">● 회원</span>'
+           : status === 'phone'  ? '<span class="ac-linked">● 회원<span class="ac-sub"> · 전화매칭</span></span>'
+           : '<span class="ac-guest">○ 비회원</span>';
     }
 
     async function loadApplications() {
@@ -677,6 +811,7 @@
         .select('*').order('created_at', { ascending: false });
       if (error) { body.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       _apps = data || [];
+      _appsLoaded = true;
       renderApps();
     }
 
@@ -689,13 +824,14 @@
       document.getElementById('appCount').textContent = `${list.length} / ${_apps.length}건`;
       const body = document.getElementById('appsBody');
       if (!list.length) { body.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'; return; }
+      const phoneSet = memberPhoneSet();
       body.innerHTML = list.map(a => `
         <div class="app-card" data-id="${a.id}">
           <div class="ac-top">
             <span class="ac-name">${esc(a.name)}</span>
             <span class="ac-date">${fmtDate(a.created_at)}</span>
           </div>
-          <div class="ac-phone">${esc(a.phone)} ${a.member_id ? '<span class="ac-linked">● 회원연결됨</span>' : '<span class="ac-unlinked">○ 미연결</span>'}</div>
+          <div class="ac-phone">${esc(a.phone)} ${membershipBadge(appMembership(a, phoneSet))}</div>
           <div class="ac-refund">환급계좌: ${a.refund_account ? '<b>' + esc(a.refund_account) + '</b>' : '<span style="color:var(--text-dim)">미입력</span>'}</div>
           <div class="ac-ch">${esc(chSummary(a.challenges))} · ${(a.total_price||0).toLocaleString()}원</div>
           <div class="ac-toggles">
@@ -724,11 +860,17 @@
     }
 
     function appsToCsv() {
-      const head = ['신청일자','이름','전화','환급계좌','챌린지/기수','총액','입금','환급','회원연결'];
-      const rows = _apps.map(a => [
-        new Date(a.created_at).toLocaleString('ko-KR'), a.name, a.phone, a.refund_account || '',
-        chSummary(a.challenges), a.total_price || 0, a.paid ? 'Y':'N', a.refunded ? 'Y':'N', a.member_id ? 'Y':'N'
-      ]);
+      const phoneSet = memberPhoneSet();
+      const head = ['신청일자','이름','전화','환급계좌','챌린지/기수','총액','입금','환급','회원여부','연결상태'];
+      const rows = _apps.map(a => {
+        const ms = appMembership(a, phoneSet);
+        return [
+          new Date(a.created_at).toLocaleString('ko-KR'), a.name, a.phone, a.refund_account || '',
+          chSummary(a.challenges), a.total_price || 0, a.paid ? 'Y':'N', a.refunded ? 'Y':'N',
+          ms === 'guest' ? '비회원' : '회원',
+          ms === 'linked' ? '연결됨' : (ms === 'phone' ? '전화매칭' : '-')
+        ];
+      });
       const csv = [head, ...rows].map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -738,7 +880,8 @@
     }
 
     document.getElementById('appSearch').addEventListener('input', renderApps);
-    document.getElementById('appRefresh').addEventListener('click', loadApplications);
+    // 새로고침 시 회원 목록도 다시 읽어, 그 사이 가입/전화등록한 사람이 '회원'으로 즉시 반영되게 한다.
+    document.getElementById('appRefresh').addEventListener('click', async () => { await loadMembers(); await loadApplications(); });
     document.getElementById('appCsv').addEventListener('click', appsToCsv);
 
     // ── 후기 관리(reviews) ──
