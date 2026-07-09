@@ -52,8 +52,8 @@ Fetches `RECRUIT_CSV`, falls back to `RECRUIT_FALLBACKS` (and per-card `data-rec
 - `loadChallengeStatuses()` — populates `window._challengeStatuses` so the modal can disable checkboxes for closed/upcoming challenges.
 Each challenge's identity is the `data-recruit-id` (`voice` / `expression` / `spinning` / `answer`), used consistently across cards, fallbacks, and the sheet.
 
-### Reviews on the index
-`loadReviews()` in `index.html` fetches `?action=reviews`, renders a horizontally-scrolling marquee, and caches results in `localStorage` under `monc_reviews_v1` (shown instantly on repeat visits, refreshed in the background).
+### COMMUNITY 섹션 (index, 2026-07-10 리디자인)
+구 "LIVE FEED" 후기 캐러셀/라이트박스(`loadReviews()`·Supabase reviews 조회)는 **제거**되고, `#community` 사회적 증거 섹션으로 교체됨. 구성: 집계 지표 3카드(카운트업, IntersectionObserver 1회) + '가장 좋았던 점' 롤링 배너(네이비) + 후기 카드(이름 마스킹 + quote 텍스트 + 선택적 '원문 캡처 보기'→`#mcLightbox` 라이트박스) + '후기 더 보기' CTA(placeholder href). **데이터·문구는 Supabase `site_config` 테이블(key: `community_stats`/`community_phrases`/`community_reviews`, jsonb)에서 로드하고, admin.html의 '홈 커뮤니티' 탭에서 수정한다.** `index.html` 하단 JS 상수(`COMMUNITY_STATS` 등)는 site_config 미적용·로드 실패 시 폴백. ⚠️ `site_config`는 마이그레이션 `20260710120000_site_config.sql`을 오너가 Supabase SQL Editor에서 직접 실행해야 생성됨(미적용이어도 홈은 폴백으로 정상). 원문 캡처 이미지는 기존 `reviews` 스토리지 버킷의 `captures/` 경로에 업로드. CSS는 `.mc-community` 스코프(--mc-* 아이보리-네이비-골드 토큰). nav 앵커 `#community`(섹션)·`#testimonials`(내부 span) 둘 다 유지. ⚠️ 개인의 "몇 분 전" 실시간 활동 연출은 재도입 금지. **admin 후기 관리 탭·bulk-reviews.html은 여전히 Supabase `reviews` 테이블에 쓰지만, index는 더 이상 읽지 않음**(자료 보존 · 추후 '후기 더 보기' 페이지에서 소비 예정).
 
 ### Design system (`tokens.css`)
 Shared design tokens live in `tokens.css` (linked by `index.html` + the detail/legal pages + the member pages login/mypage/admin). Core conventions:

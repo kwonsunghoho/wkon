@@ -808,48 +808,6 @@
     }
     .inst-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; }
 
-    /* ── COMMUNITY ── */
-    .community { padding: var(--section-y) 0; background: var(--bg-dark); color: var(--text-on-dark); }
-    .community-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
-    .community-feed { display: flex; flex-direction: column; gap: 10px; }
-    .feed-item {
-      background: #fff; border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm); padding: 16px;
-      display: flex; align-items: flex-start; gap: 12px;
-      transition: all .3s; box-shadow: var(--shadow);
-    }
-    .feed-item:hover { border-color: var(--rose); box-shadow: var(--shadow-lg); }
-    .feed-avatar {
-      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 13px; color: #fff;
-    }
-    .feed-name { font-size: 13px; font-weight: 700; color: var(--text); }
-    .feed-time { font-size: 10px; color: var(--text-dim); }
-    .feed-tag { font-size: 11px; font-weight: 700; color: var(--primary); }
-    .feed-text { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-top: 3px; }
-    .feed-likes { margin-top: 6px; font-size: 11px; color: var(--text-dim); }
-    .community-proof { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
-    .proof-card {
-      background: #fff; border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm); padding: 18px; box-shadow: var(--shadow);
-    }
-    .proof-num {
-      font-size: 26px; font-weight: 900;
-      background: linear-gradient(135deg, var(--primary), var(--rose));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .proof-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-    /* 다크 섹션 배경 위 텍스트 대비 보정 — .section-label/.section-title/.section-desc는
-       기본적으로 라이트 배경 전제(다크 브라운 텍스트)라 커뮤니티 섹션(다크 배경)에서 별도 오버라이드 필요.
-       카드(.feed-item/.proof-card)는 배경이 흰색으로 고정돼 있어 내부 텍스트는 그대로 둬도 대비 문제 없음. */
-    .community .section-label {
-      background: none; -webkit-text-fill-color: var(--text-on-dark); color: var(--text-on-dark);
-      opacity: .82;
-    }
-    .community .section-title { color: var(--text-on-dark); }
-    .community .section-desc { color: var(--text-on-dark); opacity: .78; }
-
     /* ── CATEGORIES ── */
     .categories { padding: var(--section-y) 0; background: var(--bg); }
     .cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); margin-top: var(--space-5); }
@@ -867,146 +825,100 @@
     .cat-name { font-size: 14px; font-weight: 800; margin-bottom: 4px; color: var(--text); transition: color .2s; }
     .cat-count { font-size: 11px; color: var(--text-muted); }
 
-    /* ── TESTIMONIALS ── */
-    .testimonials { padding: var(--section-y) 0; background: var(--bg); }
-
-    /* 후기 캐러셀 — 한 번에 한 장씩 크게, 좌우로 넘김(스와이프·자동전환).
-       스크린샷이 긴 글 이미지라 여러 장을 작게 늘어놓으면 지저분해서, 한 장씩
-       크게 보여주고 넘기게 한다. 전체 원본은 이미지 클릭 시 라이트박스로. */
-    .testi-grid { margin-top: 44px; }
-    .testi-carousel { max-width: 500px; margin: 0 auto; }
-    .tc-stage { display: flex; align-items: center; gap: 8px; }
-    .tc-viewport { flex: 1; min-width: 0; overflow: hidden; border-radius: 18px; }
-    .tc-track { display: flex; transition: transform .35s ease; will-change: transform; }
-    .tc-slide { flex: 0 0 100%; }
-    .tc-card { background: #fff; border: 1.5px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
-    .tc-imgwrap { height: 500px; background: #fff; cursor: zoom-in; }
-    .tc-imgwrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-    .tc-tagrow { padding: 0 0 14px; display: flex; justify-content: center; }
-    .tc-arrow {
-      flex: 0 0 auto;
-      width: 40px; height: 40px; border-radius: 50%;
-      border: 1px solid var(--border); background: #fff; color: var(--text);
-      box-shadow: var(--shadow); cursor: pointer;
-      font-size: 24px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    /* ── COMMUNITY (사회적 증거) ──
+       집계 지표 카운트업 + '가장 좋았던 점' 롤링 배너 + 실제 후기 카드 + CTA.
+       아이보리-네이비-골드 절제 톤. 토큰(--mc-*)은 이 섹션 스코프로만 선언해
+       전역 오염 방지. 데이터·문구는 Supabase site_config에서 로드하며
+       관리자(admin.html) '홈 커뮤니티' 탭에서 수정 — 하단 JS 상수는 폴백. */
+    .mc-community {
+      --mc-ivory: #F5F1E8; --mc-ivory-card: #FFFFFF; --mc-navy: #1B2A4A;
+      --mc-gold: #B08A3E; --mc-line: #E3DCC9; --mc-text: #3A4252;
+      --mc-text-soft: #5A6373; --mc-green: #2E7D5B;
+      padding: var(--section-y) 0; background: var(--mc-ivory);
     }
-    .tc-arrow:hover { background: var(--action); color: var(--action-ink); border-color: var(--action); }
-    .tc-counter { text-align: center; margin-top: 16px; font-size: 14px; font-weight: 800; color: var(--text-muted); }
-    /* caption 라벨 칩(예: "승자각 · 최종합격") — 있을 때만 이미지 아래에 렌더 */
-    .testi-tag {
-      display: inline-flex; align-items: center; gap: 4px;
-      max-width: 90%; font-size: 13px; font-weight: 800; line-height: 1.2;
-      padding: 5px 12px; border-radius: 999px;
-      background: rgba(242, 121, 69, .14); color: var(--action-ink);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .mc-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .24em; color: var(--mc-gold); }
+    .mc-title { font-size: clamp(26px, 4.6vw, 38px); font-weight: 900; color: var(--mc-navy); letter-spacing: -.5px; margin-top: 10px; }
+    /* 집계 지표 — 3분할, 좁은 화면 2줄은 아래 미디어쿼리 */
+    .mc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 720px; margin: 40px auto 0; }
+    .mc-stat { background: var(--mc-ivory-card); border: 1px solid var(--mc-line); border-radius: 16px; padding: 26px 14px; text-align: center; }
+    .mc-stat-num { font-size: clamp(28px, 4vw, 36px); font-weight: 900; color: var(--mc-navy); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+    .mc-stat-num.mc-gold { color: var(--mc-gold); }
+    .mc-stat-label { font-size: 13px; font-weight: 600; color: var(--mc-text-soft); margin-top: 6px; }
+    /* '가장 좋았던 점' 롤링 배너 — 문구 전환은 JS가 클래스 토글로 처리 */
+    .mc-rolling { background: var(--mc-navy); border-radius: 18px; max-width: 720px; margin: 18px auto 0; padding: 28px 24px 32px; text-align: center; }
+    .mc-rolling-label { font-size: 12px; font-weight: 800; letter-spacing: .18em; color: rgba(255, 255, 255, .62); }
+    /* stage에 min-height 고정 — 문구 줄수가 달라도 아래 레이아웃이 안 튀게 */
+    .mc-rolling-stage { margin-top: 10px; min-height: 3.2em; display: flex; align-items: center; justify-content: center; font-size: clamp(19px, 2.8vw, 23px); }
+    .mc-rolling-text { font-size: inherit; font-weight: 800; line-height: 1.5; color: #fff; margin: 0; transition: opacity .4s ease, transform .4s ease; }
+    .mc-rolling-text.mc-out { opacity: 0; transform: translateY(-12px); }                     /* 위로 사라짐 */
+    .mc-rolling-text.mc-below { opacity: 0; transform: translateY(14px); transition: none; } /* 아래에서 대기 */
+    /* 후기 카드 그리드 — minmax 반응형(데스크톱 3열 → 좁아지면 자동 줄바꿈) */
+    .mc-reviews { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; max-width: 960px; margin: 40px auto 0; }
+    .mc-review { background: var(--mc-ivory-card); border: 1px solid var(--mc-line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
+    .mc-review-body { padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; text-align: left; }
+    .mc-review-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .mc-review-name { font-size: 14px; font-weight: 800; color: var(--mc-navy); }
+    .mc-review-tag { font-size: 11px; font-weight: 800; color: #2F5FA8; background: #E4EDFA; padding: 3px 10px; border-radius: 999px; }
+    .mc-review-quote { font-size: 15px; font-weight: 500; line-height: 1.7; color: var(--mc-text); flex: 1; margin: 0; }
+    .mc-review-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--mc-green); }
+    .mc-review-badge svg { width: 14px; height: 14px; flex-shrink: 0; }
+    /* '원문 캡처 보기' 행 — captureUrl 있는 후기에만 렌더 (JS renderCards 참고) */
+    .mc-review-capture {
+      appearance: none; border: 0; background: none; cursor: pointer;
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      margin-top: 2px; padding: 12px 0 2px; border-top: 1px solid var(--mc-line);
+      font: inherit; text-align: left; min-height: 56px;
     }
-    /* '후기 더 보기' 버튼 + 나머지 후기 아코디언 그리드 */
-    .testi-more-wrap { text-align: center; margin-top: 22px; }
-    .testi-more-btn {
-      appearance: none; cursor: pointer; background: #fff; color: var(--accent);
-      border: 1.5px solid var(--accent); border-radius: 999px;
-      padding: 11px 26px; font-size: 15px; font-weight: 800;
-      transition: background .2s, color .2s;
+    .mc-capture-thumb {
+      position: relative; width: 40px; height: 40px; border-radius: 10px; overflow: hidden; flex-shrink: 0;
+      background: #ECE9E0; display: flex; align-items: center; justify-content: center;
+      color: var(--mc-text-soft);
     }
-    .testi-more-btn:hover { background: var(--accent); color: #fff; }
-    .testi-restgrid {
-      margin-top: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-      opacity: 0; transform: translateY(-8px); transition: opacity .3s ease, transform .3s ease;
-    }
-    .testi-restgrid.open { opacity: 1; transform: none; }
-    .testi-restgrid[hidden] { display: none; }
-    .tr-card {
-      aspect-ratio: 3 / 4; background: #fff; border: 1px solid var(--border);
-      border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); cursor: zoom-in;
-    }
-    .tr-card img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
-    @media (max-width: 768px) {
-      .testi-grid { margin-top: 32px; }
-      .tc-stage { gap: 5px; }
-      .tc-imgwrap { height: 440px; }
-      .tc-arrow { width: 34px; height: 34px; font-size: 20px; }
-      .testi-restgrid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    }
-
-    /* 후기 원본 라이트박스 (그리드 카드 클릭 시 잘리지 않은 전체 이미지) */
-    .testi-lightbox {
+    .mc-capture-thumb svg { width: 18px; height: 18px; }
+    .mc-capture-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .mc-capture-label { flex: 1; font-size: 13px; font-weight: 700; color: var(--mc-text-soft); }
+    .mc-capture-arrow { width: 16px; height: 16px; flex-shrink: 0; color: var(--mc-gold); }
+    .mc-review-capture:hover .mc-capture-label { color: var(--mc-navy); }
+    .mc-review-capture:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: 3px; border-radius: 8px; }
+    /* 원문 캡처 라이트박스 — 섹션당 1개 재사용, 오버레이/ESC/X로 닫힘 */
+    .mc-lightbox {
       position: fixed; inset: 0; z-index: 300;
       display: flex; align-items: center; justify-content: center;
-      padding: 24px; background: rgba(20, 15, 10, .82);
-      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+      padding: 24px; background: rgba(0, 0, 0, .45);
     }
-    .testi-lightbox[hidden] { display: none; }
-    .testi-lightbox img {
-      max-width: min(92vw, 460px); max-height: 88vh;
-      object-fit: contain; border-radius: 14px;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, .5);
+    .mc-lightbox[hidden] { display: none; }
+    .mc-lightbox img {
+      max-width: min(92vw, 560px); max-height: 88vh;
+      object-fit: contain; border-radius: 14px; background: #fff;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
     }
-    .testi-lightbox-close {
+    .mc-lightbox-close {
       position: absolute; top: 14px; right: 16px;
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 0; background: rgba(255, 255, 255, .16); color: #fff;
+      width: 44px; height: 44px; border-radius: 50%; border: 0;
+      background: rgba(255, 255, 255, .18); color: #fff;
       font-size: 26px; line-height: 1; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
-    .testi-lightbox-close:hover { background: rgba(255, 255, 255, .28); }
-    .testi-summary {
-      font-size: 13px; font-weight: 700; line-height: 1.4;
-      color: var(--primary); margin-bottom: 10px;
-      display: -webkit-box; -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2; overflow: hidden;
+    .mc-lightbox-close:hover { background: rgba(255, 255, 255, .3); }
+    .mc-lightbox-close:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: 2px; }
+    /* 하단 CTA — 터치 44px+ 확보 */
+    .mc-cta {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 48px; padding: 13px 30px; border-radius: 999px;
+      background: var(--mc-navy); color: #fff; font-size: 15px; font-weight: 800;
+      text-decoration: none; transition: background .2s, transform .2s;
     }
-    .testi-text { font-size: 14px; line-height: 1.8; color: var(--text-muted); margin-bottom: 6px; }
-    .testi-text.clamped {
-      display: -webkit-box; -webkit-box-orient: vertical;
-      -webkit-line-clamp: 5; overflow: hidden;
+    .mc-cta:hover { background: #24365C; transform: translateY(-1px); }
+    .mc-cta:focus-visible { outline: 3px solid var(--mc-gold); outline-offset: 3px; }
+    @media (max-width: 640px) {
+      .mc-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .mc-stat:last-child { grid-column: 1 / -1; } /* 3번째 카드는 둘째 줄 전체 폭 */
+      .mc-rolling-stage { min-height: 3.4em; }
     }
-    .testi-text strong { color: var(--text); }
-    .testi-more-btn {
-      display: none; font-size: 12px; font-weight: 600;
-      color: var(--primary); background: none; border: none;
-      padding: 0; margin-bottom: 14px; cursor: pointer;
-      letter-spacing: -.2px;
+    @media (prefers-reduced-motion: reduce) {
+      .mc-rolling-text { transition: none; }
     }
-    .testi-more-btn.visible { display: inline-block; }
-    /* 스켈레톤 로딩 */
-    @keyframes shimmer {
-      0%   { background-position: -600px 0; }
-      100% { background-position:  600px 0; }
-    }
-    .skel-line {
-      border-radius: 4px;
-      background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
-      background-size: 600px 100%;
-      animation: shimmer 1.4s infinite linear;
-    }
-    .testi-skeleton {
-      background:#fff; border:1.5px solid var(--border);
-      border-radius:var(--radius); padding:24px; box-shadow:var(--shadow);
-    }
-    .testi-user { display: flex; align-items: center; gap: 10px; }
-    .testi-avatar {
-      height: 36px; border-radius: 10px;
-      padding: 0 16px; width: auto; min-width: 36px;
-      background: linear-gradient(135deg, var(--primary), var(--rose));
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 900; color: #fff;
-      flex-shrink: 0; white-space: nowrap; letter-spacing: -.3px;
-    }
-    .testi-name { font-size: 13px; font-weight: 700; color: var(--text); }
-    .testi-role { font-size: 11px; color: var(--text-muted); }
-    .testi-naver {
-      font-size: 10px; font-weight: 800; letter-spacing: -.2px;
-      background: #03C75A; color: #fff;
-      padding: 3px 8px; border-radius: 99px; white-space: nowrap;
-    }
-    .testi-source {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 12px; font-weight: 700; color: #03C75A;
-      text-decoration: none; margin-top: 12px;
-      transition: opacity .2s;
-    }
-    .testi-source:hover { opacity: .7; }
 
     /* ── CTA ── */
     .cta-section { padding: var(--section-y) 0; background: var(--action-tint); }
@@ -1475,16 +1387,11 @@
       .instructors { padding: var(--section-y-mobile) 0; }
 
       /* Community */
-      .community { padding: var(--section-y-mobile) 0; }
-      .community-inner { grid-template-columns: 1fr; gap: 40px; }
+      .mc-community { padding: var(--section-y-mobile) 0; }
 
       /* Categories */
       .categories { padding: var(--section-y-mobile) 0; }
       .cat-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
-
-      /* Testimonials */
-      .testimonials { padding: var(--section-y-mobile) 0; }
-      .testi-card { width: 260px; }
 
       /* CTA */
       .cta-section { padding: var(--section-y-mobile) 0; }
@@ -2143,54 +2050,46 @@
 </section>
 
 <!-- TESTIMONIALS -->
-<!-- COMMUNITY & REVIEWS ── (결합) 실제 후기 이미지가 '라이브 피드'처럼 좌우로 흐르고,
-     그 아래 커뮤니티 통계 + 카카오 오픈채팅 CTA. 구 #community(하드코딩된 가짜 실시간
-     피드 다크 섹션)는 삭제하고 여기로 통합했다. 후기 이미지는 원본 크기가 제각각이라
-     고정 비율 카드로 균일화(크롭)하고, 클릭 시 원본 전체를 라이트박스로 보여준다. -->
-<section class="testimonials" id="testimonials">
-  <!-- 구 nav '커뮤니티' 링크(#community) 앵커 — 섹션을 통합했으므로 여기로 착지 -->
-  <span id="community" aria-hidden="true"></span>
-  <!-- 후기 블록(헤더 + 그리드) — 후기가 없거나 로드 실패 시 loadReviews가 이 블록만
-       숨긴다. 아래 커뮤니티 통계·CTA·#community 앵커는 섹션에 남아 항상 노출된다.
-       (예전엔 섹션 전체를 숨겨서, 통합 후 후기가 없으면 커뮤니티 CTA까지 사라졌음) -->
-  <div id="reviewsBlock">
-    <div class="container">
-      <div class="reveal" style="text-align:center; max-width:520px; margin:0 auto;">
-        <div class="section-label">Live Feed · 실제 후기</div>
-        <h2 class="section-title">지금도 누군가 도전하고 있어요</h2>
-        <p id="testiCount" style="font-size:14px; color:var(--text-muted); margin-top:8px;"></p>
-      </div>
-    </div>
-
-    <!-- 실제 후기 이미지 — 한 장씩 크게 보는 캐러셀 (이미지 클릭 시 원본 라이트박스) -->
-    <div class="container">
-      <div class="testi-grid" id="testiGrid">
-        <!-- 스켈레톤 (JS 로딩 전) — 캐러셀 카드 형태 -->
-        <div class="testi-carousel"><div class="tc-viewport"><div class="skel-line" style="height:500px;border-radius:18px;"></div></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 커뮤니티: 함께해요 (구 #community의 통계 + CTA를 여기로 통합) -->
+<!-- COMMUNITY ── 사회적 증거 섹션: 집계 지표(카운트업) + '가장 좋았던 점' 롤링 배너 +
+     실제 후기 카드 + '후기 더 보기' CTA. 구 'LIVE FEED'(후기 캐러셀·라이트박스·카카오
+     CTA 통합 섹션)를 대체. 지표·문구·후기 데이터는 Supabase site_config에서 로드하며
+     ★ 관리자 페이지(admin.html) '홈 커뮤니티' 탭에서 수정 — 하단 JS 상수는 폴백.
+     ⚠️ 개인의 "몇 분 전" 실시간 활동을 꾸며내는 연출은 재도입 금지. -->
+<section class="mc-community" id="community">
+  <!-- nav '후기' 링크(#testimonials) 앵커 — 후기를 이 섹션에 통합했으므로 여기로 착지 -->
+  <span id="testimonials" aria-hidden="true"></span>
   <div class="container">
-    <div class="reveal" style="text-align:center; max-width:520px; margin:56px auto 0;">
-      <div class="section-label">Community</div>
-      <h2 class="section-title">혼자 하지 않아도 돼요</h2>
-      <p class="section-desc" style="max-width:460px; margin:8px auto 0;">같은 목표를 가진 사람들과 함께해요. 서로 응원하고 피드백 나누는 따뜻한 커뮤니티가 있어요.</p>
-      <div class="community-proof" style="max-width:440px; margin-left:auto; margin-right:auto;">
-        <div class="proof-card"><div class="proof-num" data-count-up="14.2" data-count-suffix="K">0.0K</div><div class="proof-label">함께하는 멤버</div></div>
-        <div class="proof-card"><div class="proof-num" data-count-up="98" data-count-suffix="K+">0K+</div><div class="proof-label">공유된 챌린지</div></div>
-        <div class="proof-card"><div class="proof-num" data-count-up="250" data-count-suffix="K+">0K+</div><div class="proof-label">남겨진 응원</div></div>
-        <div class="proof-card"><div class="proof-num" data-count-up="30" data-count-suffix="일">0일</div><div class="proof-label">최장 연속 달성</div></div>
-      </div>
-      <a class="btn btn-primary" href="https://open.kakao.com/o/gX6ap0ti" target="_blank" rel="noopener" style="margin-top:24px;">커뮤니티 참여하기 →</a>
+    <div class="reveal" style="text-align:center;">
+      <div class="mc-eyebrow">COMMUNITY</div>
+      <h2 class="mc-title">혼자 하지 않아도 돼요</h2>
+    </div>
+
+    <!-- 집계 지표 — 스크롤 진입 시 카운트업(최초 1회). 값은 관리자 '홈 커뮤니티' 탭에서 수정 -->
+    <div class="mc-stats reveal" id="mcStats">
+      <div class="mc-stat"><div class="mc-stat-num" data-stat="participants" data-suffix="명">0명</div><div class="mc-stat-label">챌린지 참여자</div></div>
+      <div class="mc-stat"><div class="mc-stat-num mc-gold" data-stat="completionRate" data-suffix="%">0%</div><div class="mc-stat-label">챌린지 수료율</div></div>
+      <div class="mc-stat"><div class="mc-stat-num" data-stat="verifications" data-suffix="개">0개</div><div class="mc-stat-label">누적 인증</div></div>
+    </div>
+
+    <!-- '가장 좋았던 점' 롤링 배너 — 문구는 관리자 '홈 커뮤니티' 탭에서 수정 -->
+    <div class="mc-rolling reveal">
+      <div class="mc-rolling-label">가장 좋았던 점</div>
+      <div class="mc-rolling-stage"><p class="mc-rolling-text" id="mcRollingText"></p></div>
+    </div>
+
+    <!-- 실제 후기 카드 — 데이터는 JS REVIEW_CARDS 배열 (이름은 김O연 마스킹 필수) -->
+    <div class="mc-reviews reveal" id="mcReviews"></div>
+
+    <!-- 커뮤니티(후기 모음) 페이지 링크 — href는 placeholder, 페이지 신설 시 교체 -->
+    <div class="reveal" style="text-align:center; margin-top:36px;">
+      <a class="mc-cta" href="#">후기 더 보기 →</a>
     </div>
   </div>
 
-  <!-- 후기 원본 라이트박스 (클릭 시 표시) -->
-  <div class="testi-lightbox" id="testiLightbox" hidden>
-    <button class="testi-lightbox-close" type="button" aria-label="닫기">&times;</button>
-    <img src="" alt="후기 원본 이미지">
+  <!-- 원문 캡처 라이트박스 — 섹션당 1개 재사용. '원문 캡처 보기' 클릭 시 JS가 src를 채워 표시 -->
+  <div class="mc-lightbox" id="mcLightbox" hidden role="dialog" aria-modal="true" aria-label="후기 원문 캡처">
+    <button class="mc-lightbox-close" type="button" aria-label="닫기">&times;</button>
+    <img src="" alt="">
   </div>
 </section>
 
@@ -2746,14 +2645,6 @@
 
 
 
-  /* ── 후기 더보기 토글 ── */
-  function toggleTesti(btn) {
-    const txt = btn.previousElementSibling;
-    const clamped = txt.classList.contains('clamped');
-    txt.classList.toggle('clamped', !clamped);
-    btn.textContent = clamped ? '접기 ↑' : '더보기 ↓';
-  }
-
   /* ── 챌린지 호버 슬라이드쇼 ── */
   (function() {
     const items  = [...document.querySelectorAll('.chx-item')];
@@ -2987,181 +2878,162 @@
   /* ── 모집 기간 (구글 시트 연동) ── */
   applyIndexRecruit().then(chxSyncStates);
 
-  /* ── 후기 (캐시 우선 로딩) ── */
-  const REVIEWS_CACHE_KEY = 'monc_reviews_v2';
-  const _avatarGrads = [
-    'linear-gradient(135deg,var(--primary),var(--rose))',
-    'linear-gradient(135deg,var(--rose),var(--coral))',
-    'linear-gradient(135deg,var(--lavender),var(--primary))',
-    'linear-gradient(135deg,var(--coral),var(--peach))',
-    'linear-gradient(135deg,var(--primary),var(--lavender))',
+  /* ── COMMUNITY 섹션 (사회적 증거) ──
+     지표·롤링 문구·후기 카드의 실제 값은 Supabase site_config 테이블에서 로드하며,
+     ★ 관리자 페이지(admin.html)의 '홈 커뮤니티' 탭에서 수정한다.
+     아래 상수들은 site_config 미적용(마이그레이션 전)·로드 실패 시에만 쓰는 폴백.
+     ⚠️ 개인의 "몇 분 전" 실시간 활동을 꾸며내는 연출은 재도입 금지. */
+
+  // 집계 지표 폴백
+  const COMMUNITY_STATS = { participants: 190, completionRate: 90, verifications: 165 };
+
+  // '가장 좋았던 점' 롤링 문구 폴백 — 개수가 몇 개든 루프 타이밍은 자동(한 문구당 3초).
+  const ROLLING_PHRASES = [
+    '매일 하니까 습관이 잡혔어요',
+    '피드백이 구체적이라 도움됐어요',
+    '혼자였으면 못 했을 거예요',
   ];
-  const _challengeColors = {
-    '보.신.각': 'linear-gradient(135deg,#241A12,#9A5B1E)',
-    '스.피.닝': 'linear-gradient(135deg,#C9471E,#241A12)',
-    '영.합.각': 'linear-gradient(135deg,#B87A3D,#9A5B1E)',
-    '승.자.각': 'linear-gradient(135deg,#FF8F4D,#9A5B1E)',
-  };
 
-  function renderReviews(carousel, rest, grid) {
-    carousel = carousel || []; rest = rest || [];
-    if (!carousel.length && !rest.length) { grid.innerHTML = ''; return; }
-    const total = carousel.length + rest.length;
-    const countEl = document.getElementById('testiCount');
-    if (countEl) countEl.textContent = `실제 참여자 후기 ${total}건`;
-    const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const slide = (r) => {
-      const label = (r.caption || '').trim();
-      const tag = label ? `<div class="tc-tagrow"><span class="testi-tag">${escHtml(label)}</span></div>` : '';
-      return `
-      <div class="tc-slide"><div class="tc-card">
-        <div class="tc-imgwrap js-lb"><img src="${escHtml(r.url)}" alt="${escHtml(label || '참여자 후기')}" loading="lazy"></div>
-        ${tag}
-      </div></div>`;
-    };
-    const tile = (r) => `<div class="tr-card js-lb"><img src="${escHtml(r.url)}" alt="${escHtml((r.caption || '참여자 후기'))}" loading="lazy"></div>`;
+  // 후기 카드 폴백 — captureUrl이 있으면 '원문 캡처 보기' 행 + 라이트박스, ''이면 행 미표시.
+  // ⚠️ 이름은 반드시 마스킹(김O연) — 전체 이름 노출 금지.
+  const REVIEW_CARDS = [
+    { name: '김O연', tag: '영합각', quote: '세 번 하고 나니까 카메라 앞에서 덜 떨려요.', captureUrl: '' },
+    { name: '이O수', tag: '보신각', quote: '말끝이 흔들리는 습관이 있었는데 잡혔어요.', captureUrl: '' },
+    { name: '최O진', tag: '스피닝', quote: '매일 하니까 말투가 확실히 달라졌어요.', captureUrl: '' },
+  ];
 
-    const many = carousel.length > 1;
-    const carouselHTML = `
-      <div class="testi-carousel">
-        <div class="tc-stage">
-          ${many ? '<button class="tc-arrow tc-prev" type="button" aria-label="이전 후기">‹</button>' : ''}
-          <div class="tc-viewport"><div class="tc-track">${carousel.map(slide).join('')}</div></div>
-          ${many ? '<button class="tc-arrow tc-next" type="button" aria-label="다음 후기">›</button>' : ''}
-        </div>
-        ${many ? `<div class="tc-counter"><span id="tcCur">1</span> / ${carousel.length}</div>` : ''}
-      </div>`;
-    const moreHTML = rest.length ? `
-      <div class="testi-more-wrap">
-        <button class="testi-more-btn" id="testiMoreBtn" type="button" aria-expanded="false">후기 더 보기 (${rest.length})</button>
-      </div>
-      <div class="testi-restgrid" id="testiRest" hidden>${rest.map(tile).join('')}</div>` : '';
-    grid.innerHTML = carouselHTML + moreHTML;
-    if (many) initCarousel(grid, carousel.length);
-
-    // '후기 더 보기' 아코디언 — 나머지 후기를 밑으로 펼침/접음
-    const moreBtn = document.getElementById('testiMoreBtn');
-    const restEl = document.getElementById('testiRest');
-    if (moreBtn && restEl) {
-      moreBtn.addEventListener('click', () => {
-        if (restEl.hasAttribute('hidden')) {
-          restEl.hidden = false;
-          requestAnimationFrame(() => restEl.classList.add('open'));
-          moreBtn.textContent = '접기';
-          moreBtn.setAttribute('aria-expanded', 'true');
-        } else {
-          restEl.classList.remove('open');
-          restEl.hidden = true;
-          moreBtn.textContent = `후기 더 보기 (${rest.length})`;
-          moreBtn.setAttribute('aria-expanded', 'false');
-        }
-      });
-    }
-  }
-
-  // 후기 캐러셀 컨트롤러 — 대표 후기(count개)를 좌우 버튼·스와이프·자동전환(6초)으로 순환.
-  // 사용자가 직접 넘기면 자동전환 종료. (prefers-reduced-motion·hover 시에도 정지)
-  function initCarousel(root, count) {
-    const carousel = root.querySelector('.testi-carousel');
-    if (!carousel) return;
-    const track = carousel.querySelector('.tc-track');
-    const curEl = carousel.querySelector('#tcCur');
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let idx = 0, timer = null, userDone = false;
-
-    function go(i) {
-      idx = (i + count) % count;
-      track.style.transform = `translateX(-${idx * 100}%)`;
-      if (curEl) curEl.textContent = idx + 1;
-    }
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function play() { if (reduce || userDone || count <= 1) return; stop(); timer = setInterval(() => go(idx + 1), 6000); }
-    function manual(d) { userDone = true; stop(); go(idx + d); }
-
-    carousel.querySelector('.tc-prev').addEventListener('click', () => manual(-1));
-    carousel.querySelector('.tc-next').addEventListener('click', () => manual(1));
-    carousel.addEventListener('mouseenter', stop);
-    carousel.addEventListener('mouseleave', play);
-
-    let sx = 0, sy = 0, lock = null;
-    carousel.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; lock = null; stop(); }, { passive: true });
-    carousel.addEventListener('touchmove', e => {
-      if (lock === null) lock = Math.abs(e.touches[0].clientX - sx) > Math.abs(e.touches[0].clientY - sy) ? 'h' : 'v';
-    }, { passive: true });
-    carousel.addEventListener('touchend', e => {
-      if (lock === 'h') { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) manual(dx < 0 ? 1 : -1); }
-    });
-
-    go(0); play();
-  }
-  (async function loadReviews() {
-    const grid = document.getElementById('testiGrid');
-    // 후기 없음/실패 시 후기 블록(헤더+그리드)만 숨긴다. 섹션 전체를 숨기면 통합된
-    // 커뮤니티 통계·카카오 CTA·#community 앵커까지 사라지므로 reviewsBlock만 대상.
-    const reviewsBlock = document.getElementById('reviewsBlock');
-    if (!grid) return;
-    if (!window.MONC || !window.MONC.sb) { if (reviewsBlock) reviewsBlock.style.display = 'none'; return; }
+  // site_config에서 3개 키를 한 번에 로드 — 테이블 미생성/네트워크 실패 시 {} 반환(폴백 사용)
+  async function loadCommunityConfig() {
+    if (!window.MONC || !window.MONC.sb) return {};
     try {
-      const { data, error } = await window.MONC.sb.from('reviews')
-        .select('image_path, caption, sort_order, created_at')
-        .eq('visible', true)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      const rows = (data || []).map(r => ({
-        url: window.MONC.sb.storage.from('reviews').getPublicUrl(r.image_path).data.publicUrl,
-        caption: r.caption,
-        rank: Number(r.sort_order) || 0,        // 대표 순위: 0=일반, 1↑=대표(작을수록 앞)
-        created: r.created_at || ''
-      }));
-      if (!rows.length) { if (reviewsBlock) reviewsBlock.style.display = 'none'; return; }  // 후기 없으면 후기 블록만 숨김
-      // 대표(rank≥1)는 캐러셀에(순위 오름차순), 일반(rank 0)은 '더 보기' 그리드에.
-      const featured = rows.filter(r => r.rank >= 1).sort((a, b) => a.rank - b.rank || a.created.localeCompare(b.created));
-      const regular = rows.filter(r => r.rank < 1); // 쿼리에서 이미 created_at 오름차순
-      // 대표가 없으면 앞 10개를 캐러셀에(폴백), 나머지는 더 보기로.
-      const carousel = featured.length ? featured : regular.slice(0, 10);
-      const rest = featured.length ? regular : regular.slice(10);
-      renderReviews(carousel, rest, grid);
-    } catch (e) {
-      console.warn('후기 로드 실패:', e);
-      if (reviewsBlock) reviewsBlock.style.display = 'none';
+      const { data, error } = await window.MONC.sb.from('site_config')
+        .select('key, value')
+        .in('key', ['community_stats', 'community_phrases', 'community_reviews']);
+      if (error || !data) return {};
+      return Object.fromEntries(data.map(r => [r.key, r.value]));
+    } catch (e) { return {}; }
+  }
+
+  (async function initCommunity() {
+    const cfg = await loadCommunityConfig();
+    const statsData = (cfg.community_stats && typeof cfg.community_stats === 'object') ? cfg.community_stats : COMMUNITY_STATS;
+    const phrases = (Array.isArray(cfg.community_phrases) && cfg.community_phrases.length) ? cfg.community_phrases : ROLLING_PHRASES;
+    const cards = (Array.isArray(cfg.community_reviews) && cfg.community_reviews.length) ? cfg.community_reviews : REVIEW_CARDS;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    /* 1) 집계 지표 카운트업 — 화면 진입 시 최초 1회, 1.4초 ease-out.
+       reduced-motion이면 애니메이션 없이 최종값 즉시 표시. */
+    const statsEl = document.getElementById('mcStats');
+    if (statsEl) {
+      const numEls = [...statsEl.querySelectorAll('.mc-stat-num')];
+      const setFinal = (stats) => numEls.forEach(el => {
+        el.textContent = (stats[el.dataset.stat] ?? 0) + (el.dataset.suffix || '');
+      });
+      const animate = (stats) => {
+        const D = 1400, t0 = performance.now();
+        (function tick(now) {
+          const t = Math.min(1, (now - t0) / D);
+          const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+          numEls.forEach(el => {
+            el.textContent = Math.round((stats[el.dataset.stat] ?? 0) * eased) + (el.dataset.suffix || '');
+          });
+          if (t < 1) requestAnimationFrame(tick);
+        })(t0);
+      };
+      const io = new IntersectionObserver((entries) => {
+        if (!entries.some(e => e.isIntersecting)) return;
+        io.disconnect(); // 섹션당 최초 1회만 실행
+        if (reduce) setFinal(statsData); else animate(statsData);
+      }, { threshold: 0.3 });
+      io.observe(statsEl);
+    }
+
+    /* 2) 롤링 배너 — 3초 머무름 → 위로 페이드아웃(0.4s) → 아래에서 페이드인.
+       문구 개수는 phrases.length 기준 자동. reduced-motion이면 첫 문구 고정. */
+    const rollEl = document.getElementById('mcRollingText');
+    if (rollEl && phrases.length) {
+      rollEl.textContent = phrases[0];
+      if (!reduce && phrases.length > 1) {
+        let idx = 0;
+        setInterval(() => {
+          rollEl.classList.add('mc-out');           // 위로 사라짐
+          setTimeout(() => {
+            idx = (idx + 1) % phrases.length;
+            rollEl.textContent = phrases[idx];
+            rollEl.classList.remove('mc-out');
+            rollEl.classList.add('mc-below');       // 아래 대기 위치로 점프(무전환)
+            void rollEl.offsetWidth;                // reflow 강제 → 다음 줄부터 transition 적용
+            rollEl.classList.remove('mc-below');    // 제자리로 페이드인
+          }, 400);
+        }, 3000);
+      }
+    }
+
+    /* 3) 후기 카드 렌더 — REVIEW_CARDS 배열 기반.
+       [Supabase 연동 지점] reviews 테이블에서 받아오려면 조회 결과를 같은 필드
+       ({ name, tag, quote, captureUrl })로 매핑해 renderCards에 넘기면 된다. */
+    const reviewsEl = document.getElementById('mcReviews');
+    function renderCards(cards) {
+      reviewsEl.innerHTML = cards.map(r => {
+        // '원문 캡처 보기' 행 — captureUrl 없으면 행 자체를 렌더링하지 않음
+        const captureRow = r.captureUrl ? `
+            <button class="mc-review-capture" type="button" aria-haspopup="dialog"
+                    data-capture="${escHtml(r.captureUrl)}" data-alt="${escHtml(r.name)} ${escHtml(r.tag)} 후기 원문 캡처">
+              <span class="mc-capture-thumb"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4h12a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 14h-5.5L7 16.8V14H4a1.5 1.5 0 0 1-1.5-1.5v-7A1.5 1.5 0 0 1 4 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><img src="${escHtml(r.captureUrl)}" alt="" loading="lazy" onerror="this.remove()"></span>
+              <span class="mc-capture-label">원문 캡처 보기</span>
+              <svg class="mc-capture-arrow" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>` : '';
+        return `
+        <article class="mc-review">
+          <div class="mc-review-body">
+            <div class="mc-review-head">
+              <span class="mc-review-name">${escHtml(r.name)}</span>
+              <span class="mc-review-tag">${escHtml(r.tag)}</span>
+            </div>
+            <p class="mc-review-quote">${escHtml(r.quote)}</p>
+            <span class="mc-review-badge"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 참여 인증</span>${captureRow}
+          </div>
+        </article>`;
+      }).join('');
+    }
+    if (reviewsEl) renderCards(cards);
+
+    /* 4) 원문 캡처 라이트박스 — 섹션당 1개(#mcLightbox) 재사용.
+       오버레이 클릭/ESC/X로 닫힘. 열릴 때 배경 스크롤 잠금,
+       닫힐 때 눌렀던 '원문 캡처 보기' 버튼으로 포커스 복귀. */
+    const lbEl = document.getElementById('mcLightbox');
+    if (reviewsEl && lbEl) {
+      const lbImg = lbEl.querySelector('img');
+      const lbClose = lbEl.querySelector('.mc-lightbox-close');
+      let lbTrigger = null; // 닫을 때 포커스 복귀할 버튼
+
+      function openLb(src, alt, trigger) {
+        lbTrigger = trigger || null;
+        lbImg.src = src;
+        lbImg.alt = alt || '후기 원문 캡처';
+        lbEl.hidden = false;
+        document.body.style.overflow = 'hidden'; // 배경 스크롤 잠금
+        lbClose.focus();
+      }
+      function closeLb() {
+        lbEl.hidden = true;
+        lbImg.removeAttribute('src');
+        document.body.style.overflow = '';
+        if (lbTrigger) { lbTrigger.focus(); lbTrigger = null; }
+      }
+
+      // 카드가 다시 렌더돼도 동작하도록 그리드에 이벤트 위임
+      reviewsEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.mc-review-capture');
+        if (btn && btn.dataset.capture) openLb(btn.dataset.capture, btn.dataset.alt, btn);
+      });
+      lbClose.addEventListener('click', closeLb);
+      lbEl.addEventListener('click', (e) => { if (e.target === lbEl) closeLb(); }); // 오버레이 클릭 닫기
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lbEl.hidden) closeLb(); });
     }
   })();
 
-  /* ── 후기 원본 라이트박스 ──
-     그리드 카드는 고정 비율로 크롭돼 있어(들쭉날쭉 방지), 잘리지 않은 원본 전체는
-     카드 클릭(탭) 시 라이트박스로 크게 보여준다. 그리드에 동적으로 추가되는 카드까지
-     커버하도록 grid에 이벤트 위임. */
-  (function initTestiLightbox() {
-    const grid = document.getElementById('testiGrid');
-    const box = document.getElementById('testiLightbox');
-    if (!grid || !box) return;
-    const lbImg = box.querySelector('img');
-    const closeBtn = box.querySelector('.testi-lightbox-close');
-
-    function open(src, alt) {
-      lbImg.src = src;
-      lbImg.alt = alt || '후기 원본 이미지';
-      box.hidden = false;
-      document.body.style.overflow = 'hidden'; // 라이트박스 열려 있는 동안 배경 스크롤 잠금
-    }
-    function close() {
-      box.hidden = true;
-      lbImg.removeAttribute('src');
-      document.body.style.overflow = '';
-    }
-
-    grid.addEventListener('click', (e) => {
-      const wrap = e.target.closest('.js-lb');
-      if (!wrap) return;
-      const im = wrap.querySelector('img');
-      const src = im && (im.currentSrc || im.src);
-      if (src) open(src, im.alt);
-    });
-    closeBtn.addEventListener('click', close);
-    box.addEventListener('click', (e) => { if (e.target === box) close(); }); // 배경 클릭 닫기
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) close(); });
-  })();
 
   /* ── 네비바 스크롤 ──
      스크롤마다 querySelector + getBoundingClientRect를 반복하던 구조가
