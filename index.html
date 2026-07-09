@@ -900,11 +900,32 @@
       background: rgba(242, 121, 69, .14); color: var(--action-ink);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* '후기 더 보기' 버튼 + 나머지 후기 아코디언 그리드 */
+    .testi-more-wrap { text-align: center; margin-top: 22px; }
+    .testi-more-btn {
+      appearance: none; cursor: pointer; background: #fff; color: var(--accent);
+      border: 1.5px solid var(--accent); border-radius: 999px;
+      padding: 11px 26px; font-size: 15px; font-weight: 800;
+      transition: background .2s, color .2s;
+    }
+    .testi-more-btn:hover { background: var(--accent); color: #fff; }
+    .testi-restgrid {
+      margin-top: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      opacity: 0; transform: translateY(-8px); transition: opacity .3s ease, transform .3s ease;
+    }
+    .testi-restgrid.open { opacity: 1; transform: none; }
+    .testi-restgrid[hidden] { display: none; }
+    .tr-card {
+      aspect-ratio: 3 / 4; background: #fff; border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); cursor: zoom-in;
+    }
+    .tr-card img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
     @media (max-width: 768px) {
       .testi-grid { margin-top: 32px; }
       .tc-stage { gap: 5px; }
       .tc-imgwrap { height: 440px; }
       .tc-arrow { width: 34px; height: 34px; font-size: 20px; }
+      .testi-restgrid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     }
 
     /* 후기 원본 라이트박스 (그리드 카드 클릭 시 잘리지 않은 전체 이미지) */
@@ -2982,60 +3003,86 @@
     '승.자.각': 'linear-gradient(135deg,#FF8F4D,#9A5B1E)',
   };
 
-  function renderReviews(items, grid, featuredCount) {
-    if (!Array.isArray(items) || items.length === 0) { grid.innerHTML = ''; return; }
+  function renderReviews(carousel, rest, grid) {
+    carousel = carousel || []; rest = rest || [];
+    if (!carousel.length && !rest.length) { grid.innerHTML = ''; return; }
+    const total = carousel.length + rest.length;
     const countEl = document.getElementById('testiCount');
-    if (countEl) countEl.textContent = `실제 참여자 후기 ${items.length}건`;
+    if (countEl) countEl.textContent = `실제 참여자 후기 ${total}건`;
     const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const slide = (r) => {
       const label = (r.caption || '').trim();
       const tag = label ? `<div class="tc-tagrow"><span class="testi-tag">${escHtml(label)}</span></div>` : '';
       return `
       <div class="tc-slide"><div class="tc-card">
-        <div class="tc-imgwrap"><img src="${escHtml(r.url)}" alt="${escHtml(label || '참여자 후기')}" loading="lazy"></div>
+        <div class="tc-imgwrap js-lb"><img src="${escHtml(r.url)}" alt="${escHtml(label || '참여자 후기')}" loading="lazy"></div>
         ${tag}
       </div></div>`;
     };
-    const many = items.length > 1;
-    grid.innerHTML = `
+    const tile = (r) => `<div class="tr-card js-lb"><img src="${escHtml(r.url)}" alt="${escHtml((r.caption || '참여자 후기'))}" loading="lazy"></div>`;
+
+    const many = carousel.length > 1;
+    const carouselHTML = `
       <div class="testi-carousel">
         <div class="tc-stage">
           ${many ? '<button class="tc-arrow tc-prev" type="button" aria-label="이전 후기">‹</button>' : ''}
-          <div class="tc-viewport"><div class="tc-track">${items.map(slide).join('')}</div></div>
+          <div class="tc-viewport"><div class="tc-track">${carousel.map(slide).join('')}</div></div>
           ${many ? '<button class="tc-arrow tc-next" type="button" aria-label="다음 후기">›</button>' : ''}
         </div>
-        ${many ? `<div class="tc-counter"><span id="tcCur">1</span> / ${items.length}</div>` : ''}
+        ${many ? `<div class="tc-counter"><span id="tcCur">1</span> / ${carousel.length}</div>` : ''}
       </div>`;
-    if (many) initCarousel(grid, items.length, featuredCount);
+    const moreHTML = rest.length ? `
+      <div class="testi-more-wrap">
+        <button class="testi-more-btn" id="testiMoreBtn" type="button" aria-expanded="false">후기 더 보기 (${rest.length})</button>
+      </div>
+      <div class="testi-restgrid" id="testiRest" hidden>${rest.map(tile).join('')}</div>` : '';
+    grid.innerHTML = carouselHTML + moreHTML;
+    if (many) initCarousel(grid, carousel.length);
+
+    // '후기 더 보기' 아코디언 — 나머지 후기를 밑으로 펼침/접음
+    const moreBtn = document.getElementById('testiMoreBtn');
+    const restEl = document.getElementById('testiRest');
+    if (moreBtn && restEl) {
+      moreBtn.addEventListener('click', () => {
+        if (restEl.hasAttribute('hidden')) {
+          restEl.hidden = false;
+          requestAnimationFrame(() => restEl.classList.add('open'));
+          moreBtn.textContent = '접기';
+          moreBtn.setAttribute('aria-expanded', 'true');
+        } else {
+          restEl.classList.remove('open');
+          restEl.hidden = true;
+          moreBtn.textContent = `후기 더 보기 (${rest.length})`;
+          moreBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
   }
 
-  // 후기 캐러셀 컨트롤러 — 좌우 버튼·스와이프로 전체(count) 탐색.
-  // 자동전환(6초)은 '대표'(앞쪽 autoN개)만 순환하고, 사용자가 직접 넘기면 자동전환은 멈춘다.
-  // (prefers-reduced-motion·hover 시에도 정지)
-  function initCarousel(root, count, featuredCount) {
+  // 후기 캐러셀 컨트롤러 — 대표 후기(count개)를 좌우 버튼·스와이프·자동전환(6초)으로 순환.
+  // 사용자가 직접 넘기면 자동전환 종료. (prefers-reduced-motion·hover 시에도 정지)
+  function initCarousel(root, count) {
     const carousel = root.querySelector('.testi-carousel');
     if (!carousel) return;
     const track = carousel.querySelector('.tc-track');
     const curEl = carousel.querySelector('#tcCur');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const autoN = featuredCount > 0 ? featuredCount : count; // 대표 없으면 전체 순환(폴백)
     let idx = 0, timer = null, userDone = false;
 
-    function go(i) { // 전체 범위 순환
+    function go(i) {
       idx = (i + count) % count;
       track.style.transform = `translateX(-${idx * 100}%)`;
       if (curEl) curEl.textContent = idx + 1;
     }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function play() { if (reduce || userDone || autoN <= 1) return; stop(); timer = setInterval(() => go((idx + 1) % autoN), 6000); }
-    function manual(d) { userDone = true; stop(); go(idx + d); } // 직접 넘기면 자동전환 종료
+    function play() { if (reduce || userDone || count <= 1) return; stop(); timer = setInterval(() => go(idx + 1), 6000); }
+    function manual(d) { userDone = true; stop(); go(idx + d); }
 
     carousel.querySelector('.tc-prev').addEventListener('click', () => manual(-1));
     carousel.querySelector('.tc-next').addEventListener('click', () => manual(1));
     carousel.addEventListener('mouseenter', stop);
-    carousel.addEventListener('mouseleave', play); // userDone이면 play()가 즉시 반환
+    carousel.addEventListener('mouseleave', play);
 
-    // 터치 스와이프 (가로 이동일 때만) — 스와이프도 직접 조작이므로 자동전환 종료
     let sx = 0, sy = 0, lock = null;
     carousel.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; lock = null; stop(); }, { passive: true });
     carousel.addEventListener('touchmove', e => {
@@ -3068,11 +3115,13 @@
         created: r.created_at || ''
       }));
       if (!rows.length) { if (reviewsBlock) reviewsBlock.style.display = 'none'; return; }  // 후기 없으면 후기 블록만 숨김
-      // 대표(rank≥1)를 앞으로(순위 오름차순), 일반(rank 0)은 뒤에 등록순으로.
+      // 대표(rank≥1)는 캐러셀에(순위 오름차순), 일반(rank 0)은 '더 보기' 그리드에.
       const featured = rows.filter(r => r.rank >= 1).sort((a, b) => a.rank - b.rank || a.created.localeCompare(b.created));
       const regular = rows.filter(r => r.rank < 1); // 쿼리에서 이미 created_at 오름차순
-      const items = featured.concat(regular);
-      renderReviews(items, grid, featured.length); // 자동전환은 대표 개수까지만 순환
+      // 대표가 없으면 앞 10개를 캐러셀에(폴백), 나머지는 더 보기로.
+      const carousel = featured.length ? featured : regular.slice(0, 10);
+      const rest = featured.length ? regular : regular.slice(10);
+      renderReviews(carousel, rest, grid);
     } catch (e) {
       console.warn('후기 로드 실패:', e);
       if (reviewsBlock) reviewsBlock.style.display = 'none';
@@ -3103,7 +3152,7 @@
     }
 
     grid.addEventListener('click', (e) => {
-      const wrap = e.target.closest('.tc-imgwrap');
+      const wrap = e.target.closest('.js-lb');
       if (!wrap) return;
       const im = wrap.querySelector('img');
       const src = im && (im.currentSrc || im.src);
