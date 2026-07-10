@@ -855,31 +855,47 @@
     /* 후기 카드 그리드 — minmax 반응형(데스크톱 3열 → 좁아지면 자동 줄바꿈) */
     .mc-reviews { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; max-width: 960px; margin: 40px auto 0; }
     .mc-review { background: var(--mc-ivory-card); border: 1px solid var(--mc-line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
-    .mc-review-body { padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; text-align: left; }
+    /* 원문 캡처 프리뷰 밴드 — 카드 최상단. 스크린샷 윗부분(작성자 실명·첫 문장)만 크롭 노출해
+       '진짜 카페 후기'임을 전면에 세운다(2026-07-10 재설계: 40px 하단 썸네일→상단 프리뷰 승격).
+       밴드 전체가 라이트박스 트리거 버튼(터치 128px). captureUrl 있는 후기에만 렌더. */
+    .mc-review-capture {
+      appearance: none; border: 0; padding: 0; margin: 0; cursor: pointer; font: inherit;
+      display: block; width: 100%; position: relative; height: 128px; overflow: hidden;
+      background: #fff; border-bottom: 1px solid var(--mc-line);
+    }
+    .mc-capture-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; transition: transform .3s ease; }
+    /* 잘린 아랫부분을 흰색으로 페이드아웃 → '더 있으니 탭하세요' 신호 */
+    .mc-capture-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), #fff); }
+    /* 하단(페이드 영역) 좌측 배치 — 스크린샷 상단의 제목·이름을 가리지 않게, 우하단 CTA와 균형 */
+    .mc-capture-badge {
+      position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; font-weight: 800; color: var(--mc-green);
+      background: rgba(255,255,255,.96); padding: 4px 9px; border-radius: 999px;
+      box-shadow: 0 1px 4px rgba(27,42,74,.12);
+    }
+    .mc-capture-badge svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .mc-capture-cta {
+      position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 800; color: #fff; background: var(--mc-navy);
+      padding: 7px 12px; border-radius: 999px;
+    }
+    .mc-capture-cta svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .mc-review-capture:hover .mc-capture-cta { background: #24365C; }
+    .mc-review-capture:hover .mc-capture-img { transform: scale(1.03); }
+    .mc-review-capture:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: -2px; }
+    .mc-review-body { padding: 16px 18px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; text-align: left; }
     .mc-review-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .mc-review-name { font-size: 14px; font-weight: 800; color: var(--mc-navy); }
-    .mc-review-tag { font-size: 11px; font-weight: 800; color: #2F5FA8; background: #E4EDFA; padding: 3px 10px; border-radius: 999px; }
-    .mc-review-quote { font-size: 15px; font-weight: 500; line-height: 1.7; color: var(--mc-text); flex: 1; margin: 0; }
+    .mc-review-tag { font-size: 12px; font-weight: 800; color: #2F5FA8; background: #E4EDFA; padding: 3px 10px; border-radius: 999px; }
+    /* 한줄평 = '읽자마자 꽂히는' 요약 훅: 크기·굵기·골드 좌측 라인으로 정적 강조(9대원칙 6 — 강조는 컬러·굵기·크기로).
+       펄스·타이핑은 스크린샷 히어로 위계를 뒤집고 가독성/실시간연출 문제라 배제. 2줄 클램프로 3장 높이 통일. */
+    .mc-review-quote { font-size: 15px; font-weight: 700; line-height: 1.55; color: #2B3340; letter-spacing: -.1px;
+      padding-left: 12px; border-left: 3px solid var(--mc-gold); margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    /* captureUrl 없는 후기 폴백(밴드 없이 텍스트만인 카드)용 인증 배지 */
     .mc-review-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--mc-green); }
     .mc-review-badge svg { width: 14px; height: 14px; flex-shrink: 0; }
-    /* '원문 캡처 보기' 행 — captureUrl 있는 후기에만 렌더 (JS renderCards 참고) */
-    .mc-review-capture {
-      appearance: none; border: 0; background: none; cursor: pointer;
-      display: flex; align-items: center; gap: 10px; width: 100%;
-      margin-top: 2px; padding: 12px 0 2px; border-top: 1px solid var(--mc-line);
-      font: inherit; text-align: left; min-height: 56px;
-    }
-    .mc-capture-thumb {
-      position: relative; width: 40px; height: 40px; border-radius: 10px; overflow: hidden; flex-shrink: 0;
-      background: #ECE9E0; display: flex; align-items: center; justify-content: center;
-      color: var(--mc-text-soft);
-    }
-    .mc-capture-thumb svg { width: 18px; height: 18px; }
-    .mc-capture-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-    .mc-capture-label { flex: 1; font-size: 13px; font-weight: 700; color: var(--mc-text-soft); }
-    .mc-capture-arrow { width: 16px; height: 16px; flex-shrink: 0; color: var(--mc-gold); }
-    .mc-review-capture:hover .mc-capture-label { color: var(--mc-navy); }
-    .mc-review-capture:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: 3px; border-radius: 8px; }
     /* 원문 캡처 라이트박스 — 섹션당 1개 재사용, 오버레이/ESC/X로 닫힘 */
     /* 세로로 긴 후기 스크린샷은 높이에 맞춰 줄이면 글씨가 작아지므로 폭 기준으로 크게
        띄우고(길면 세로 스크롤) 이미지 탭 시 더 확대한다. (reviews.html 라이트박스와 동일 방식) */
@@ -917,9 +933,18 @@
       .mc-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
       .mc-stat:last-child { grid-column: 1 / -1; } /* 3번째 카드는 둘째 줄 전체 폭 */
       .mc-rolling-stage { min-height: 3.4em; }
+      .mc-review-capture { height: 116px; }
     }
+    /* 한줄평 1회성 등장 — 카드가 화면에 들어올 때 딱 한 번 fade-up(무한 반복·커서·시간문구 없음).
+       기본은 항상 보이게(opacity 1) 두고 진입 시 .mc-q-in만 얹는다 → IO/애니메이션이 안 돌아도
+       한줄평은 정상 노출(우아한 강등). 동적 주입 카드라 renderCards의 전용 IntersectionObserver가 붙인다. */
+    @keyframes mcQuoteIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+    .mc-review-quote.mc-q-in { animation: mcQuoteIn .5s cubic-bezier(.2, .7, .2, 1) both; }
     @media (prefers-reduced-motion: reduce) {
       .mc-rolling-text { transition: none; }
+      .mc-capture-img { transition: none; }
+      .mc-review-capture:hover .mc-capture-img { transform: none; }
+      .mc-review-quote { animation: none !important; opacity: 1 !important; transform: none !important; }
     }
 
     /* ── CTA ── */
@@ -2992,26 +3017,43 @@
     const reviewsEl = document.getElementById('mcReviews');
     function renderCards(cards) {
       reviewsEl.innerHTML = cards.map(r => {
-        // '원문 캡처 보기' 행 — captureUrl 없으면 행 자체를 렌더링하지 않음
-        const captureRow = r.captureUrl ? `
+        // 원문 캡처 프리뷰 밴드 — captureUrl 있을 때만. 밴드 전체가 라이트박스 트리거 버튼.
+        const captureBand = r.captureUrl ? `
             <button class="mc-review-capture" type="button" aria-haspopup="dialog"
-                    data-capture="${escHtml(r.captureUrl)}" data-alt="${escHtml(r.name)} ${escHtml(r.tag)} 후기 원문 캡처">
-              <span class="mc-capture-thumb"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4h12a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 14h-5.5L7 16.8V14H4a1.5 1.5 0 0 1-1.5-1.5v-7A1.5 1.5 0 0 1 4 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><img src="${escHtml(r.captureUrl)}" alt="" loading="lazy" onerror="this.remove()"></span>
-              <span class="mc-capture-label">원문 캡처 보기</span>
-              <svg class="mc-capture-arrow" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    data-capture="${escHtml(r.captureUrl)}" data-alt="${escHtml(r.name)} ${escHtml(r.tag)} 후기 원문 캡처"
+                    aria-label="${escHtml(r.name)} ${escHtml(r.tag)} 원문 캡처 전체 보기">
+              <img class="mc-capture-img" src="${escHtml(r.captureUrl)}" alt="" loading="lazy" onerror="this.closest('.mc-review-capture').remove()">
+              <span class="mc-capture-fade" aria-hidden="true"></span>
+              <span class="mc-capture-badge"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 참여 인증</span>
+              <span class="mc-capture-cta"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>원문 전체 보기</span>
             </button>` : '';
+        // 캡처 없는 후기 폴백: 텍스트 카드에만 초록 인증 배지를 남긴다(캡처 있으면 배지는 밴드 위 오버레이).
+        const fallbackBadge = r.captureUrl ? '' :
+            `<span class="mc-review-badge"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 참여 인증</span>`;
         return `
-        <article class="mc-review">
+        <article class="mc-review">${captureBand}
           <div class="mc-review-body">
+            <p class="mc-review-quote">${escHtml(r.quote)}</p>
             <div class="mc-review-head">
               <span class="mc-review-name">${escHtml(r.name)}</span>
               <span class="mc-review-tag">${escHtml(r.tag)}</span>
-            </div>
-            <p class="mc-review-quote">${escHtml(r.quote)}</p>
-            <span class="mc-review-badge"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 참여 인증</span>${captureRow}
+            </div>${fallbackBadge}
           </div>
         </article>`;
       }).join('');
+      // 한줄평 1회성 등장 — 카드가 뷰포트에 들어올 때 딱 한 번 fade-up. reduced-motion이면 생략(정적 볼드 유지).
+      // 기본 opacity 1이라 IO가 안 떠도 항상 보임 → 스크롤 하단 섹션이라 사전 노출 깜빡임도 없음.
+      if (!reduce && 'IntersectionObserver' in window) {
+        const qio = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              e.target.classList.add('mc-q-in');
+              qio.unobserve(e.target);
+            }
+          });
+        }, { threshold: .4 });
+        reviewsEl.querySelectorAll('.mc-review-quote').forEach(q => qio.observe(q));
+      }
     }
     if (reviewsEl) { if (cards.length) renderCards(cards); else reviewsEl.innerHTML = ''; }
 
