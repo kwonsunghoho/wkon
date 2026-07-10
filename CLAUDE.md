@@ -72,6 +72,9 @@ Shared design tokens live in `tokens.css` (linked by `index.html` + the detail/l
 ### 면접관 체험 블라인드 퀴즈 (`index.html` #blind-quiz)
 사진 인트로(`images/bq-intro.jpg`) + 실루엣 영상 씬(`video/bq-candidate.mp4`, muted loop — 클립 재생 중일 때만 재생/배지 "지원자 X 답변 중" 전환, `syncScene()`) + 판정 콘솔 구조. 퀴즈 로직(5라운드, `audio/` 전/후 풀 랜덤)은 IIFE에 있고, 루트 셀렉터는 `.bq-stage`(구 `.bq-card`). `prefers-reduced-motion`이면 영상 자동재생·Ken Burns·EQ 애니메이션 정지.
 
+### 창문 인트로 태그라인 + MONC 조립 (`index.html` #heroTagline, 2026-07-10)
+`.hero-window-intro` 안, `.zoom-exit-pin` **밖**(형제)의 오버레이 `.hero-tagline` — 핀의 scale(3.2) 확대를 받지 않도록 분리, JS가 `position:fixed`로 승격(`.ht-fixed`). 창문 줌과 동일한 스크롤 진행률 계산식(`scroll-fx.js`는 무수정, 독립 IIFE가 파일 맨 끝 `<script>`에 있음)으로: "Moment Of New Career" 문장(M·O·N·C만 오렌지 800)이 0~30%에서 MONC 로고로 FLIP 조립 → 조립 완료 순간 transform 확대 글자를 네이티브 렌더 `.ht-target`로 교체(래스터 흐림 방지) → 52~78%에서 확대+페이드로 창 통과 연출. 서브라인("새로운 커리어가 밝아오는 순간")은 자간 락업이 문장 폭(g0)→로고 **잉크** 폭(g1, 캔버스 `measureText` 사이드베어링 보정)으로 동반 수축, 넘치면 scale 축소. 로고 크기는 `min(17vw, 18vh)` — 개구부가 뷰포트 높이에 비례해서 vh 제약이 창틀 침범을 막음. reduced-motion·무JS = 정적 풀 문장(absolute 폴백). 모바일에선 스크롤 화살표가 `.mobile-cta-bar`에 가리지 않게 `bottom:96px`. 스펙: [docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md](docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md)
+
 ### Hero scene carousel (`index.html`)
 The landing page hero section is a **4-slide full-screen carousel** (`.hero-scene` > `.hs-slide`), stacked with `position: absolute` and toggled via `opacity` + `pointer-events`. Controlled by `heroSwitchTo(idx)` in JS.
 

@@ -1428,6 +1428,78 @@
     }
 
     /* ═══════════════════════════════════════════════════
+       HERO TAGLINE — 창문 인트로 위 브랜드 태그라인 + MONC 조립
+       (2026-07-10, spec: docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md)
+       .zoom-exit-pin 밖(형제)에 두어 핀의 scale(3.2) 확대를 받지 않음.
+       기본은 absolute(무JS/reduced-motion 정적 폴백), JS가 .ht-fixed로 승격.
+    ═══════════════════════════════════════════════════ */
+    .hero-tagline {
+      position: absolute; top: 0; left: 0; width: 100%;
+      height: 100vh; height: 100svh;
+      z-index: 50; /* nav(100)·mobile-cta(95) 아래, 히어로 콘텐츠 위 */
+      pointer-events: none;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 0 16px;
+    }
+    .hero-tagline.ht-fixed { position: fixed; }
+    /* 중앙 원형 비네트 + 하단 그라데이션 — 밝은 노을 위 글자 가독성 확보 */
+    .ht-scrim {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 95% 72% at 50% 50%, rgba(28,18,10,.5) 0%, rgba(28,18,10,.26) 45%, rgba(28,18,10,0) 74%),
+        linear-gradient(to top, rgba(30,20,12,.35) 0%, transparent 30%);
+    }
+    .ht-inner {
+      position: relative; width: 100%;
+      display: flex; flex-direction: column; align-items: center;
+      will-change: transform, opacity;
+    }
+    .ht-stack { position: relative; width: 100%; }
+    .ht-phrase {
+      font-size: clamp(34px, 7.5vw, 96px); font-weight: 300;
+      letter-spacing: .02em; line-height: 1.16;
+      color: #F6F1E7; text-shadow: 0 2px 22px rgba(20,12,6,.6);
+    }
+    .ht-word { display: inline-block; white-space: nowrap; }
+    .ht-l { display: inline-block; will-change: transform, opacity; }
+    .ht-hl { color: #FFB27A; font-weight: 800; }
+    /* 조립 완료 시 교체되는 네이티브 렌더 로고 — transform 확대 래스터 흐림 방지.
+       개구부는 뷰포트 '높이'에 비례하므로 vh 제약(18vh)이 창틀 침범을 막는다 */
+    .ht-target {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      visibility: hidden;
+      font-size: clamp(72px, min(17vw, 18vh), 220px); font-weight: 800;
+      letter-spacing: .06em; line-height: 1.16;
+      color: #FFB27A; text-shadow: 0 4px 30px rgba(20,12,6,.45);
+    }
+    .ht-target span { display: inline-block; }
+    .ht-subko {
+      margin-top: 20px;
+      font-size: clamp(15px, 2.2vw, 22px); font-weight: 500;
+      letter-spacing: .06em; white-space: nowrap;
+      color: rgba(246,241,231,.95); text-shadow: 0 1px 12px rgba(20,12,6,.55);
+      will-change: transform;
+    }
+    .ht-cue {
+      position: absolute; bottom: 5%; left: 50%; margin-left: -12px;
+      width: 24px; height: 24px; opacity: .85;
+      animation: ht-bob 1.8s ease-in-out infinite;
+    }
+    /* 모바일: 하단 고정 CTA 바(.mobile-cta-bar, z-index 95)에 가려지지 않게 위로 */
+    @media (max-width: 768px) {
+      .ht-cue { bottom: 96px; }
+    }
+    @keyframes ht-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(6px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ht-cue { animation: none; }
+    }
+
+    /* ═══════════════════════════════════════════════════
        HERO SCENE — 밝은 크림톤 센터형 캐러셀 재설계
        (기존 풀스크린 opacity 크로스페이드 슬라이드 완전 대체)
        카드 4개가 가로로 놓이고 활성 카드가 중앙, 좌우 카드가
@@ -1623,7 +1695,7 @@
     <ul class="nav-links">
       <li><a class="nav-quiz-link" href="#blind-quiz">면접관 체험<span class="nav-quiz-dot" aria-hidden="true"></span></a></li>
       <li><a href="#challenges">챌린지</a></li>
-      <li><a href="#instructors">강사진</a></li>
+      <li><a href="#instructors">연구진</a></li>
       <li><a href="#community">커뮤니티</a></li>
       <li><a href="reviews.html">후기</a></li>
     </ul>
@@ -1642,7 +1714,7 @@
   <ul>
     <li><a href="#blind-quiz">면접관 체험<span class="mm-quiz-tag">1분 블라인드 테스트</span></a></li>
     <li><a href="#challenges">챌린지</a></li>
-    <li><a href="#instructors">강사진</a></li>
+    <li><a href="#instructors">연구진</a></li>
     <li><a href="#community">커뮤니티</a></li>
     <li><a href="reviews.html">후기</a></li>
   </ul>
@@ -1665,6 +1737,18 @@
       <img src="images/hero-window-desktop-wide.webp" alt="" class="hero-window-frame" width="2023" height="777">
     </picture>
     <div class="zoom-tone-bridge"></div>
+  </div>
+  <!-- 브랜드 태그라인 + MONC 조립 오버레이 (핀 밖 — 줌 확대 비대상) -->
+  <div class="hero-tagline" id="heroTagline">
+    <div class="ht-scrim" id="htScrim"></div>
+    <div class="ht-inner" id="htInner">
+      <div class="ht-stack">
+        <p class="ht-phrase" id="htPhrase" aria-label="MONC — Moment Of New Career"><span aria-hidden="true"><span class="ht-word"><span class="ht-l ht-hl">M</span><span class="ht-l">o</span><span class="ht-l">m</span><span class="ht-l">e</span><span class="ht-l">n</span><span class="ht-l">t</span></span> <span class="ht-word"><span class="ht-l ht-hl">O</span><span class="ht-l">f</span></span> <span class="ht-word"><span class="ht-l ht-hl">N</span><span class="ht-l">e</span><span class="ht-l">w</span></span> <span class="ht-word"><span class="ht-l ht-hl">C</span><span class="ht-l">a</span><span class="ht-l">r</span><span class="ht-l">e</span><span class="ht-l">e</span><span class="ht-l">r</span></span></span></p>
+        <div class="ht-target" id="htTarget" aria-hidden="true"><span>M</span><span>O</span><span>N</span><span>C</span></div>
+      </div>
+      <p class="ht-subko" id="htSubko">새로운 커리어가 밝아오는 순간</p>
+    </div>
+    <svg class="ht-cue" id="htCue" viewBox="0 0 24 24" fill="none" stroke="#F6F1E7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
   </div>
 </section>
 
@@ -3939,6 +4023,183 @@
   color: #333;
 }
 </style>
+
+<script>
+/* ═══ 히어로 태그라인 — MONC 조립 애니메이션 ═══
+   spec: docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md
+   창문 인트로(.hero-window-intro)의 스크롤 진행률(scroll-fx.js와 동일 계산식,
+   파일은 무수정)에 맞춰: 소문자 퇴장 → M·O·N·C FLIP 조립 → 네이티브 로고 교체
+   (선명도) → 창 통과 시 확대·페이드 퇴장. 역스크롤 시 전 과정 되감김. */
+(function () {
+  var wrap = document.querySelector('.hero-window-intro');
+  var root = document.getElementById('heroTagline');
+  if (!wrap || !root) return;
+
+  var reduce  = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var phrase  = document.getElementById('htPhrase');
+  var target  = document.getElementById('htTarget');
+  var inner   = document.getElementById('htInner');
+  var subko   = document.getElementById('htSubko');
+  var scrim   = document.getElementById('htScrim');
+  var cue     = document.getElementById('htCue');
+  var tgtEls  = Array.prototype.slice.call(target.children);
+  var hlEls   = Array.prototype.slice.call(phrase.querySelectorAll('.ht-hl'));
+  var others  = Array.prototype.slice.call(phrase.querySelectorAll('.ht-l:not(.ht-hl)'));
+
+  var deltas = [];
+  var subLock = null;
+  var lastAssembled = null;
+
+  function clamp(v){ return Math.min(1, Math.max(0, v)); }
+  function ease(p){ return p * p * (3 - 2 * p); } // scroll-fx와 동일 smoothstep
+
+  // 글리프 사이드베어링 측정 — advance 박스와 실제 잉크 사이의 좌우 여백.
+  // 첫 글자의 왼쪽, 마지막 글자의 오른쪽 베어링을 캔버스로 잰다.
+  var _mctx = document.createElement('canvas').getContext('2d');
+  function inkPad(el, text){
+    var cs = getComputedStyle(el);
+    _mctx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    var f = _mctx.measureText(text.charAt(0));
+    var l = _mctx.measureText(text.charAt(text.length - 1));
+    return {
+      l: Math.max(0, -(f.actualBoundingBoxLeft || 0)),
+      r: Math.max(0, l.width - (l.actualBoundingBoxRight || l.width))
+    };
+  }
+
+  function measure(){
+    hlEls.forEach(function(el){ el.style.transform = ''; });
+    subko.style.letterSpacing = '0px'; subko.style.marginRight = '0px'; subko.style.transform = '';
+    target.style.visibility = 'visible';
+    var d = [];
+    var tminL = Infinity, tmaxR = -Infinity, tmaxB = -Infinity;
+    hlEls.forEach(function(el, i){
+      var s = el.getBoundingClientRect();
+      var t = tgtEls[i].getBoundingClientRect();
+      if (t.left   < tminL) tminL = t.left;
+      if (t.right  > tmaxR) tmaxR = t.right;
+      if (t.bottom > tmaxB) tmaxB = t.bottom;
+      d.push({
+        dx: (t.left + t.width/2)  - (s.left + s.width/2),
+        dy: (t.top  + t.height/2) - (s.top  + s.height/2),
+        k:  t.height / s.height
+      });
+    });
+    target.style.visibility = 'hidden';
+    deltas = d;
+
+    // ── 서브라인 락업: 시작(g0)=문장 폭, 끝(g1/s1)=조립된 MONC 잉크 폭 ──
+    var minL = Infinity, maxR = -Infinity;
+    Array.prototype.forEach.call(phrase.querySelectorAll('.ht-l'), function(el){
+      var r = el.getBoundingClientRect();
+      if (r.width === 0) return;
+      if (r.left  < minL) minL = r.left;
+      if (r.right > maxR) maxR = r.right;
+    });
+    var phraseW = maxR - minL;
+    // 로고 잉크 폭 = advance 박스 − C 뒤 letter-spacing 팬텀 − M/C 사이드베어링
+    var tFS  = parseFloat(getComputedStyle(target).fontSize) || 0;
+    var mpad = inkPad(target, 'MC');
+    var moncInk = (tmaxR - tFS * 0.06 - mpad.r) - (tminL + mpad.l);
+    var natural = subko.getBoundingClientRect().width;
+    var n = subko.textContent.length;
+    if (!isFinite(phraseW) || phraseW <= 0 || natural <= 0) { subLock = null; return; }
+
+    var g0 = Math.max(0, (phraseW - natural) / (n - 1));
+    // 서브라인 잉크 양끝이 로고 잉크 양끝(M 왼쪽 획·C 오른쪽 끝)과 일치하도록
+    var spad = inkPad(subko, subko.textContent);
+    var desired = moncInk + spad.l + spad.r;
+    var g1, s1;
+    if (natural <= desired){ g1 = (desired - natural) / (n - 1); s1 = 1; }
+    else { g1 = 0; s1 = desired / natural; }
+    // 조립된 MONC가 서브라인 위를 침범하면 그만큼 아래로 밀어냄
+    var subT = subko.getBoundingClientRect().top;
+    var dy = Math.max(0, (tmaxB + 18) - subT);
+
+    subLock = { g0: g0, g1: g1, s1: s1, dy: dy };
+    subko.style.letterSpacing = g0 + 'px';
+    subko.style.marginRight   = (-g0) + 'px'; // 마지막 글자 뒤 잉여 자간 보정(중앙 유지)
+    lastAssembled = null; // 측정 중 visibility를 만졌으므로 다음 apply에서 재동기화
+  }
+
+  var ASSEMBLE_END = 0.30;
+
+  function apply(p){
+    var u = ease(clamp(p / ASSEMBLE_END));
+
+    others.forEach(function(el){
+      el.style.opacity = String(clamp(1 - u * 1.5));
+      el.style.transform = 'translateY(' + (u * 8) + 'px)';
+    });
+    hlEls.forEach(function(el, i){
+      var d = deltas[i]; if (!d) return;
+      el.style.transform = 'translate(' + (d.dx*u) + 'px,' + (d.dy*u) + 'px) scale(' + (1 + (d.k - 1) * u) + ')';
+    });
+
+    // 선명도: 조립 완료 순간, transform 확대 글자(래스터 흐림)를 네이티브
+    // 렌더 로고로 교체. FLIP 목표점과 픽셀 일치라 교체가 보이지 않는다.
+    var assembled = u >= 0.999;
+    if (assembled !== lastAssembled){
+      lastAssembled = assembled;
+      target.style.visibility = assembled ? 'visible' : 'hidden';
+      hlEls.forEach(function(el){ el.style.visibility = assembled ? 'hidden' : 'visible'; });
+    }
+
+    // 서브라인 동반 조립: 자간 g0→g1, 넘치면 scale(s1) 축소, dy만큼 하강
+    if (subLock){
+      var g = subLock.g0 + (subLock.g1 - subLock.g0) * u;
+      subko.style.letterSpacing = g + 'px';
+      subko.style.marginRight   = (-g) + 'px';
+      subko.style.transform = 'translateY(' + (subLock.dy * u) + 'px) scale(' + (1 + (subLock.s1 - 1) * u) + ')';
+    }
+
+    // 창 통과 구간: 스크림 걷힘 → 태그라인 그룹 확대+페이드(뚫고 지나가는 연출)
+    scrim.style.opacity = String(1 - clamp((p - 0.50) / 0.25));
+    var fly = clamp((p - 0.52) / 0.26);
+    inner.style.opacity   = String(1 - fly);
+    inner.style.transform = 'scale(' + (1 + ease(fly) * 0.9) + ')';
+    cue.style.opacity = String(0.85 * (1 - clamp(p / 0.06)));
+
+    root.style.visibility = p >= 0.99 ? 'hidden' : '';
+  }
+
+  var ticking = false;
+  function onScroll(){
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(function(){
+      ticking = false;
+      var rect = wrap.getBoundingClientRect();
+      var runway = rect.height - window.innerHeight;
+      var p = runway > 0 ? clamp((-rect.top) / runway) : 0;
+      apply(p);
+    });
+  }
+
+  function init(){
+    measure();
+    if (reduce){
+      apply(0); // 정적: 풀 문장 + 문장 폭 락업 서브라인 (absolute 유지)
+      return;
+    }
+    root.classList.add('ht-fixed');
+    window.addEventListener('scroll', onScroll, { passive: true });
+    var rT;
+    window.addEventListener('resize', function(){
+      clearTimeout(rT);
+      rT = setTimeout(function(){ measure(); onScroll(); }, 150);
+    });
+    onScroll();
+  }
+
+  init();
+  // 폰트 로드/지연 자원으로 메트릭이 바뀔 수 있어 로드 완료 후 재측정
+  window.addEventListener('load', function(){ measure(); onScroll(); });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function(){ measure(); onScroll(); });
+  }
+})();
+</script>
 
 </body>
 </html>
