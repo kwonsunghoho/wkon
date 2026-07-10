@@ -75,6 +75,14 @@ MONC = **M**oment **O**f **N**ew **C**areer 아크로님을 첫 화면에서 브
 - 로컬 프리뷰(`wkon-static`)에서 375px·데스크톱 각각 스크롤 구간별 스크린샷 확인
 - 배포: main 푸시(= GitHub Pages 배포)
 
+## 2026-07-10 추가 수정 (배포 후 오너 피드백 — 데모 완전 정합)
+
+1. **하늘/구름**: 세로 패닝(130vh + JS translateY) 제거, 이미지 전체 높이(구름 포함)를 100vh로 표시. 타일 주기 780vh→600vh.
+2. **정면 돌파 줌**: `data-zoom-start="0.5"`(scroll-fx.js에 attr 추가) — 전반 50%는 scale 1 정지, 후반 50%에 확대 집중. `data-zoom-scale` 3.2→2.2(최대 1+2.2=3.2배, 데모 동일). 창틀 페이드 30~55%→55~75%, 하늘 페이드 70~100%→80~100%.
+3. **서서히 조립**: `data-zoom-runway` 220→340(모바일 170→300) — 조립 구간이 데모와 같은 ~72vh 스크롤로 확장.
+4. **모바일 한 줄**: `fitPhrase()` — 문장이 줄바꿈되면 폰트 비율 축소(375px에서 34→30.95px). 로고 크기 `min(17vw,18vh)`→`min(16vw,18vh)`+floor 56px(375px에서 60px, 개구부 안쪽).
+5. **⚠️ sticky 버그 수정(치명)**: `body { overflow-x: hidden }`이 body를 스크롤 컨테이너로 만들어 `.zoom-exit-pin` sticky가 뷰포트에 고정되지 않던 문제 → `overflow-x: clip`(hidden은 구형 폴백)으로 교체. 이 버그로 라이브에서 창문 장면이 고정되지 않고 스크롤에 밀려 올라갔음("하단으로 빠지는" 체감의 실원인).
+
 ## 참고
 
 - 데모 아티팩트: https://claude.ai/code/artifact/3a7d128d-4ff7-4d0a-a1af-430fdf0e3dce (assemble-v7-ink-fit)

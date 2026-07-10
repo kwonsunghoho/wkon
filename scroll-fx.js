@@ -168,7 +168,16 @@
         var runway = rect.height - vh;
         var progress = runway > 0 ? (-rect.top) / runway : 0;
         progress = Math.min(1, Math.max(0, progress));
-        var eased = easeInOut(progress);
+        // data-zoom-start(0~1, 기본 0): 줌이 시작되는 진행률. 예: 0.5면 전반
+        // 50%는 scale 1로 정지(태그라인 조립·유지 구간), 후반 50%에 확대가
+        // 몰려 '정면으로 확 뚫고 들어가는' 연출이 된다. (2026-07-10)
+        var startAttr = attrFor(wrap, 'data-zoom-start');
+        var zoomStart = startAttr ? parseFloat(startAttr) : 0;
+        if (isNaN(zoomStart) || zoomStart < 0 || zoomStart >= 1) zoomStart = 0;
+        var zp = zoomStart > 0
+          ? Math.min(1, Math.max(0, (progress - zoomStart) / (1 - zoomStart)))
+          : progress;
+        var eased = easeInOut(zp);
         var scaleAttr = attrFor(wrap, 'data-zoom-scale');
         var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
         if (isNaN(scaleK)) scaleK = SCALE_K;
@@ -194,7 +203,8 @@
         // "프레임이 다시 보이는" 것을 원천 차단.
         var contentFadeEls = wrap.querySelectorAll('.zoom-content-fade');
         if (contentFadeEls.length) {
-          var contentOpacity = 1 - Math.max(0, (progress - 0.7) / 0.3);
+          // 80~100%: 줌 막바지에만 하늘을 지움 (데모 타이밍 정합, 2026-07-10)
+          var contentOpacity = 1 - Math.max(0, (progress - 0.80) / 0.20);
           contentFadeEls.forEach(function (el) {
             el.style.opacity = String(contentOpacity);
           });
@@ -206,7 +216,8 @@
         // "하늘만" 보이게 된다. (창이 개구부보다 커서 하단 창틀이 걸치던 문제 해결.)
         var bezelFadeEls = wrap.querySelectorAll('.zoom-bezel-fade');
         if (bezelFadeEls.length) {
-          var bezelOpacity = 1 - Math.max(0, (progress - 0.30) / 0.25);
+          // 55~75%: 줌 시작(50%) 직후 창틀이 사라지며 하늘만 남음 (데모 타이밍 정합)
+          var bezelOpacity = 1 - Math.max(0, (progress - 0.55) / 0.20);
           bezelFadeEls.forEach(function (el) {
             el.style.opacity = String(bezelOpacity);
           });
