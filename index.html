@@ -18,6 +18,10 @@
   <meta name="twitter:title"       content="MONC — 목소리로 시작하는 2주 챌린지" />
   <meta name="twitter:description" content="목소리 · 눈빛 · 말투 · 첫인상, 하나씩 꺼내봐요." />
   <meta name="twitter:image"       content="https://kwonsunghoho.github.io/wkon/images/og-image.png" />
+  <!-- Noto Serif KR — 연구원(강사) 섹션 디스플레이 세리프 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tokens.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -607,206 +611,89 @@
       .adv-ctas .btn { width: 100%; justify-content: center; text-align: center; }
     }
 
-    /* ── INSTRUCTORS ── */
-    .instructors { padding: var(--section-y) 0; background: var(--bg); }
+    /* ── INSTRUCTORS (리디자인 2026-07-10) — 탭 전환 · 아이보리·네이비·골드 톤 ──
+       구 .inst-* 캐러셀을 .mi-* 구조로 교체. 데이터는 하단 JS의 researchers 배열,
+       탭·패널은 런타임 주입. --mi-* 토큰은 .mi-section 스코프로만 선언(전역 오염 방지). */
+    .mi-section{
+      --mi-ivory:#F5F1E8; --mi-paper:#FCFBF6;
+      --mi-navy:#1A2743; --mi-navy-soft:#42506C;
+      --mi-text:#34312B; --mi-muted:#867E6F;
+      --mi-gold:#AD8A4C; --mi-gold-deep:#8C6E38;
+      --mi-line:#E7E0CF; --mi-line-soft:#EFE9DC;
+      --mi-serif:"Noto Serif KR","Nanum Myeongjo",serif;
+      background:var(--mi-ivory);
+    }
+    .mi-root{ max-width:1060px; margin:0 auto; padding:76px 24px 100px; }
 
-    .inst-container {
-      position: relative;
-      margin: 44px auto 0;
-      max-width: 640px;
-      /* 카드 3장을 같은 그리드 셀(1/1)에 겹쳐 쌓아, 컨테이너 높이를 항상 '가장 큰
-         카드' 기준으로 고정한다. 예전엔 display:none/block 토글이라 카드마다 높이가
-         달라, 5.5초 자동 전환 때마다 섹션 높이가 바뀌며 아래 내용 전체가 위아래로
-         튀었다(리플로우). start 정렬로 카드는 자기 높이 그대로 위에 붙는다. */
-      display: grid;
-      align-items: start;
-    }
+    .mi-head{ text-align:center; max-width:600px; margin:0 auto 46px; }
+    .mi-eyebrow{ font-size:.72rem; letter-spacing:.28em; text-transform:uppercase; color:var(--mi-gold-deep); font-weight:600; margin:0 0 14px; }
+    .mi-title{ font-family:var(--mi-serif); font-weight:600; color:var(--mi-navy); font-size:clamp(1.9rem,4.2vw,2.55rem); line-height:1.3; margin:0 0 14px; letter-spacing:-.01em; }
+    .mi-lead{ font-size:1rem; line-height:1.75; color:var(--mi-navy-soft); margin:0; }
 
-    /* 강사 탭 선택 버튼 */
-    .inst-tabs {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      margin: 28px 0;
-    }
-    .inst-tab {
-      padding: 10px 24px;
-      border: 2px solid var(--border);
-      background: #fff;
-      color: var(--text);
-      border-radius: 99px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s;
-      box-shadow: var(--shadow);
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-    .inst-tab:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-    .inst-tab.active {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-      box-shadow: var(--shadow-lg);
-    }
-    .inst-tab:active {
-      transform: scale(.97);
-    }
+    .mi-tabs{ display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:38px; border-bottom:1px solid var(--mi-line); }
+    .mi-tab{ appearance:none; background:transparent; border:0; cursor:pointer; padding:12px 22px 15px; font-family:inherit; color:var(--mi-muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .25s ease; text-align:center; line-height:1.3; -webkit-tap-highlight-color:transparent; }
+    .mi-tab .n{ display:block; font-family:var(--mi-serif); font-size:1.08rem; font-weight:600; letter-spacing:.01em; }
+    .mi-tab .r{ display:block; font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; margin-top:4px; opacity:.7; }
+    .mi-tab:hover{ color:var(--mi-navy-soft); }
+    .mi-tab[aria-selected="true"]{ color:var(--mi-navy); border-bottom-color:var(--mi-gold); }
+    .mi-tab:focus-visible{ outline:2px solid var(--mi-gold); outline-offset:3px; border-radius:4px; }
 
-    /* 강사 카드 */
-    .inst-card {
-      background: #fff;
-      border: 1.5px solid rgba(36, 26, 18,.18);
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: var(--shadow-lg);
-      /* 3장 모두 같은 셀에 겹침. 비활성 카드는 visibility:hidden으로 '안 보이되
-         레이아웃 박스는 유지' → 그리드 행 높이가 늘 최대 카드 기준으로 유지돼
-         전환 시 페이지가 튀지 않는다. (display:none으로 접으면 높이가 사라져 튐) */
-      grid-area: 1 / 1;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-    .inst-card.active {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-      animation: fadeIn .3s ease-in-out;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+    .mi-stage{ position:relative; }
+    .mi-panel{ display:none; }
+    .mi-panel.is-active{ display:grid; grid-template-columns:318px 1fr; gap:46px; align-items:start; }
+    @media(prefers-reduced-motion:no-preference){ .mi-panel.is-active{ animation:mi-fade .45s ease; } }
+    @keyframes mi-fade{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
 
-    /* 사진 플레이스홀더 */
-    .inst-photo-area {
-      width: 100%; aspect-ratio: 3/4;
-      position: relative; overflow: hidden;
-      background: #f5f5f5;
-      border-radius: var(--radius); border: 1px solid var(--border);
-    }
+    .mi-figure{ width:100%; }
+    .mi-photo{ position:relative; width:100%; aspect-ratio:4/5; border-radius:4px; overflow:hidden; background:var(--mi-navy); border:1px solid var(--mi-line); }
+    .mi-photo img{ width:100%; height:100%; object-fit:cover; object-position:center 18%; display:block; }
+    .mi-mono{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--mi-serif); font-size:3.6rem; font-weight:600; color:var(--mi-gold); background:var(--mi-navy); }
+    .mi-role{ font-size:.7rem; letter-spacing:.2em; text-transform:uppercase; color:var(--mi-gold-deep); font-weight:600; margin:24px 0 7px; }
+    .mi-name{ font-family:var(--mi-serif); font-weight:600; color:var(--mi-navy); font-size:clamp(1.55rem,3vw,1.95rem); margin:0 0 9px; letter-spacing:-.01em; }
+    .mi-position{ font-size:.97rem; color:var(--mi-navy-soft); font-weight:500; margin:0 0 17px; line-height:1.55; }
+    .mi-tags{ list-style:none; display:flex; flex-wrap:wrap; gap:6px; padding:0; margin:0; }
+    .mi-tags li{ font-size:.75rem; color:var(--mi-navy-soft); background:rgba(26,39,67,.045); border:1px solid var(--mi-line); border-radius:999px; padding:4px 11px; }
 
-    /* ── 재사용 미디어 슬롯 (UGC·수강생 전후 사진용 — 나중에 img 넣으면 바로 맞음) ── */
-    .media-slot {
-      position: relative; overflow: hidden;
-      border-radius: var(--radius); border: 1px solid var(--border);
-      background: linear-gradient(135deg, var(--bg2), var(--surface2));
-      aspect-ratio: 4/3;
-    }
-    .media-slot > img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .inst-photo-placeholder {
-      width: 100%; height: 100%;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-      border: 2.5px dashed rgba(36, 26, 18,.3);
-      background: linear-gradient(135deg, #FFF3E6 0%, #FFD9B8 50%, #F0D9BC 100%);
-      cursor: pointer; transition: all .2s;
-    }
-    .inst-card:nth-child(2) .inst-photo-placeholder {
-      background: linear-gradient(135deg, #FFF3E6 0%, #FFDCC2 50%, #FFE0B2 100%);
-    }
-    .inst-photo-placeholder:hover { border-color: var(--primary); }
-    .photo-icon {
-      width: 56px; height: 56px; border-radius: 50%;
-      background: rgba(255,255,255,.7); border: 2px dashed rgba(36, 26, 18,.4);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-    }
-    .photo-hint { font-size: 12px; font-weight: 600; color: var(--text-muted); text-align: center; line-height: 1.5; }
-    .photo-hint strong { color: var(--primary); display: block; font-size: 13px; margin-bottom: 2px; }
+    .mi-body{ padding-top:2px; }
+    .mi-bio{ font-size:1.02rem; line-height:1.78; color:var(--mi-text); margin:0 0 28px; }
+    .mi-bio strong{ color:var(--mi-navy); font-weight:600; }
 
-    /* 실제 사진 들어왔을 때 */
-    .inst-photo-area img {
-      width: 100%; height: 100%; object-fit: cover; object-position: top;
-    }
+    .mi-stats{ display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--mi-gold); border-bottom:1px solid var(--mi-line); }
+    .mi-stat{ padding:22px 8px 22px 0; }
+    .mi-stat + .mi-stat{ padding-left:24px; border-left:1px solid var(--mi-line-soft); }
+    .mi-stat-num{ display:block; font-family:var(--mi-serif); font-weight:600; color:var(--mi-navy); font-size:clamp(1.75rem,3.6vw,2.35rem); line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+    .mi-stat-label{ display:block; font-size:.76rem; letter-spacing:.05em; color:var(--mi-muted); margin-top:10px; }
 
-    /* 카드 탑 그라데이션 배지 */
-    .inst-card-accent {
-      position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    }
-    .inst-card:nth-child(1) .inst-card-accent {
-      background: linear-gradient(90deg, var(--primary), var(--rose));
-    }
-    .inst-card:nth-child(2) .inst-card-accent {
-      background: linear-gradient(90deg, var(--rose), #FF6B35);
-    }
-    .inst-card:nth-child(3) .inst-card-accent {
-      background: linear-gradient(90deg, #FF6B35, var(--primary));
-    }
+    .mi-creds{ margin-top:32px; }
+    .mi-creds-title{ font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; color:var(--mi-gold-deep); font-weight:600; margin:0 0 17px; }
+    .mi-cred-list{ list-style:none; padding:0; margin:0; }
+    .mi-cred-list li{ position:relative; padding-left:20px; margin-bottom:14px; font-size:.96rem; line-height:1.62; color:var(--mi-text); }
+    .mi-cred-list li:last-child{ margin-bottom:0; }
+    .mi-cred-list li::before{ content:""; position:absolute; left:1px; top:.6em; width:6px; height:6px; background:var(--mi-gold); border-radius:50%; }
+    .mi-cred-list strong, .mi-cred-list b{ color:var(--mi-navy); font-weight:600; }
+    .mi-extra{ margin-top:14px; }
+    .mi-extra[hidden]{ display:none; }
+    .mi-more{ appearance:none; background:transparent; border:0; border-bottom:1px solid var(--mi-line); color:var(--mi-navy-soft); font-family:inherit; font-size:.85rem; cursor:pointer; padding:8px 1px; margin-top:16px; letter-spacing:.02em; transition:color .2s,border-color .2s; }
+    .mi-more:hover{ color:var(--mi-navy); border-color:var(--mi-gold); }
+    .mi-more:focus-visible{ outline:2px solid var(--mi-gold); outline-offset:3px; border-radius:3px; }
 
-    /* 고은지 사진 자리 (실제 이미지 로드 전/실패 시 브랜디드 플레이스홀더) */
-    .inst-photo-koh .inst-photo-ph {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-      background: linear-gradient(135deg, var(--primary), #FF6B35);
-      color: #fff;
+    @media(max-width:820px){
+      .mi-panel.is-active{ grid-template-columns:1fr; gap:28px; }
+      .mi-figure{ max-width:330px; margin:0 auto; }
+      .mi-photo{ aspect-ratio:1/1; }
+      .mi-body{ padding-top:0; }
     }
-    .inst-photo-koh .inst-photo-ph span { font-size: 30px; font-weight: 900; letter-spacing: 3px; }
-    .inst-photo-koh .inst-photo-ph small { font-size: 12px; font-weight: 600; opacity: .85; }
-    .inst-photo-koh img { position: absolute; inset: 0; }
-
-    .inst-card-body { padding: 24px; }
-
-    .inst-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
-    .inst-name { font-size: var(--fs-h3); font-weight: 800; color: var(--text); }
-    .inst-role {
-      font-size: 12px; font-weight: 700; margin-bottom: 12px;
-      background: linear-gradient(135deg, var(--primary), var(--rose));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    @media(max-width:520px){
+      .mi-root{ padding:54px 16px 72px; }
+      .mi-tabs{ gap:2px; }
+      .mi-tab{ padding:12px 15px 14px; min-height:48px; }
+      .mi-stat{ padding:18px 4px; text-align:center; }
+      .mi-stat + .mi-stat{ padding-left:4px; }
+      .mi-stat-num{ font-size:clamp(1.45rem,7.4vw,1.9rem); }
+      .mi-stat-label{ letter-spacing:0; font-size:.72rem; line-height:1.35; margin-top:8px; }
+      .mi-more{ min-height:44px; padding:10px 2px; }
+      .mi-cred-list li{ font-size:.95rem; }
     }
-    .inst-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
-    .inst-tag {
-      padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 700;
-      background: var(--surface2); color: var(--primary);
-      border: 1px solid rgba(36, 26, 18,.18);
-    }
-    .inst-desc {
-      font-size: 13.5px; color: var(--text-muted); line-height: 1.8;
-      margin-bottom: 20px; padding-bottom: 18px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .inst-career-section { margin-bottom: 16px; }
-    .inst-career-title {
-      font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--primary); margin-bottom: 10px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .inst-career-title::before {
-      content: ""; width: 14px; height: 2px; border-radius: 2px;
-      background: var(--primary); flex-shrink: 0;
-    }
-    .inst-career-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-    .inst-career-list { display: flex; flex-direction: column; gap: 7px; }
-    .inst-career-item {
-      display: flex; align-items: flex-start; gap: 8px;
-      font-size: 13px; color: var(--text-muted); line-height: 1.6;
-    }
-    .inst-career-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--rose));
-      margin-top: 6px; flex-shrink: 0;
-    }
-    .inst-career-item strong { color: var(--text); font-weight: 700; }
-
-    .inst-stat-row {
-      display: flex; gap: 10px; margin-top: 18px;
-      padding-top: 18px; border-top: 1px solid var(--border-soft);
-    }
-    .inst-stat {
-      flex: 1; background: var(--surface2); border-radius: 10px;
-      padding: 12px 8px; text-align: center; border: 1px solid rgba(36, 26, 18,.1);
-    }
-    .inst-stat-num {
-      font-size: 17px; font-weight: 900;
-      background: linear-gradient(135deg, var(--primary), var(--rose));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .inst-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; }
 
     /* ── CATEGORIES ── */
     .categories { padding: var(--section-y) 0; background: var(--bg); }
@@ -1410,9 +1297,6 @@
       /* Challenges */
       .challenges { padding: var(--section-y-mobile) 0; }
 
-      /* Instructors */
-      .instructors { padding: var(--section-y-mobile) 0; }
-
       /* Community */
       .mc-community { padding: var(--section-y-mobile) 0; }
 
@@ -1441,9 +1325,6 @@
       .cat-grid { grid-template-columns: repeat(2, 1fr); }
       .cat-card { padding: 20px 10px; }
 
-
-      /* Instructor card */
-      .inst-card-body { padding: 18px; }
 
       /* How step */
       .step-card { flex-direction: column; text-align: center; }
@@ -2197,192 +2078,18 @@
   </div>
 </section>
 
-<!-- INSTRUCTORS — 가로 스크롤 캐러셀 -->
-<section class="instructors" id="instructors">
-  <div class="container">
-    <div class="reveal" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
-      <div>
-        <div class="section-label">Instructors</div>
-        <h2 class="section-title" style="margin-bottom:6px;">전문 연구원을 소개합니다</h2>
-        <p class="section-desc">현장 경험이 풍부한 전문 연구원들이 직접 챌린지를 설계하고 피드백을 드려요.</p>
-      </div>
+<!-- INSTRUCTORS — 연구원 소개 (탭 전환 · 2026-07-10 리디자인) -->
+<section class="mi-section" id="instructors">
+  <div class="mi-root">
+    <div class="mi-head">
+      <p class="mi-eyebrow">Instructors</p>
+      <h2 class="mi-title">전문 연구원을 소개합니다</h2>
+      <p class="mi-lead">현장 경험이 풍부한 전문 연구원들이 직접 챌린지를 설계하고 피드백을 드려요.</p>
     </div>
-  </div>
 
-  <!-- 강사 탭 선택 버튼 -->
-  <div class="container">
-    <div class="inst-tabs">
-      <button class="inst-tab active" data-instructor="kwon">권성호</button>
-      <button class="inst-tab" data-instructor="park">박새암</button>
-      <button class="inst-tab" data-instructor="koh">고은지</button>
-    </div>
-  </div>
-
-  <div class="reveal" style="transition-delay:.1s;">
-  <div class="inst-container">
-
-      <!-- 박새암 강사 -->
-      <div class="inst-card inst-card-park" data-instructor="park" data-reveal>
-        <div style="position:relative;">
-          <div class="inst-card-accent"></div>
-          <!-- 박새암 강사 사진 -->
-          <div class="inst-photo-area">
-            <img src="images/instructor-park.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="박새암 수석 연구원">
-          </div>
-        </div>
-        <div class="inst-card-body">
-          <div class="inst-name">박새암 수석 연구원</div>
-          <div class="inst-role">객실승무원 출신 · 면접 & 스피치 전문가</div>
-          <div class="inst-tags">
-            <span class="inst-tag">승무원 면접</span>
-            <span class="inst-tag">영상면접</span>
-            <span class="inst-tag">쇼호스트</span>
-            <span class="inst-tag">자기브랜딩</span>
-          </div>
-          <p class="inst-desc">
-            FSC·LCC 객실승무원 9년 경력. <strong>직접 겪은 합격 경험</strong>으로 누구보다 실전적인 면접 전략을 알려드려요.
-          </p>
-          <div class="inst-career-section">
-            <div class="inst-career-title">항공 승무원 경력</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>외항사 FSC & 국내 LCC <strong>객실승무원 9년차</strong></span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>동방항공</strong> 비즈니스 클래스 · <strong>에어서울</strong> 부사무장 · <strong>티웨이</strong> 경력직 최합</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>채널A <strong>《비행기 타고가요》 시즌1</strong> 출연</span></div>
-            </div>
-          </div>
-          <div class="inst-career-section">
-            <div class="inst-career-title">채용 & 면접 전문성</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>국토부 주관 2025 항공잡페어</strong> 취업컨설턴트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>NCS 기반 채용면접관 2급</strong> · 공사기업 외부 면접관</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>MONSTERCREW 대표강사 · 누적 수강생 <strong>1,000명+</strong></span></div>
-            </div>
-          </div>
-          <div class="inst-career-section">
-            <div class="inst-career-title">라이브커머스 & 방송</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>LFmall 전속 쇼호스트</strong> · 현) 프리랜서 쇼호스트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>누적 방송 <strong>1,000회+</strong> 진행</span></div>
-            </div>
-          </div>
-          <div class="inst-stat-row">
-            <div class="inst-stat"><div class="inst-stat-num">9년</div><div class="inst-stat-label">승무원 경력</div></div>
-            <div class="inst-stat"><div class="inst-stat-num">1,000+</div><div class="inst-stat-label">면접 컨설팅</div></div>
-            <div class="inst-stat"><div class="inst-stat-num">1,000회</div><div class="inst-stat-label">누적 방송</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 권성호 강사 -->
-      <div class="inst-card inst-card-kwon active" data-instructor="kwon" data-reveal>
-        <div style="position:relative;">
-          <div class="inst-card-accent"></div>
-          <!-- 권성호 강사 사진 -->
-          <div class="inst-photo-area">
-            <img src="images/instructor-kwon.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="권성호 수석 연구원">
-          </div>
-        </div>
-        <div class="inst-card-body">
-          <div class="inst-name">권성호 수석 연구원</div>
-          <div class="inst-role">보이스·스피치·표현력 전문가</div>
-          <div class="inst-tags">
-            <span class="inst-tag">발성 트레이닝</span>
-            <span class="inst-tag">보이스 코칭</span>
-            <span class="inst-tag">스피치 코칭</span>
-            <span class="inst-tag">항공과 특강</span>
-          </div>
-          <p class="inst-desc">
-            11년간 승무원 면접 전문 교육기관 <strong>MONSTERCREW & MONC(몬크)</strong>를 운영하며 다수의 합격생을 배출했습니다. 발성부터 스피치, 표현력까지 면접에서의 목소리 전반을 다룹니다.
-          </p>
-          <div class="inst-career-section">
-            <div class="inst-career-title">교육 & 코칭 (11년차)</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>승무원 면접 전문 교육기관 <strong>MONSTERCREW &amp; MONC(몬크) 11년 운영</strong></span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>취업·보이스 <strong>통합 코칭 프로그램</strong> 개발 및 운영</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>발성 트레이닝 <strong>자체 코칭북</strong> 개발·보급</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>누적 온라인 수강생 <strong>3,500명+</strong> 지도</span></div>
-            </div>
-          </div>
-          <div class="inst-career-section">
-            <div class="inst-career-title">항공 & 채용 자문</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>국토부 주관 2023·2025 항공잡페어</strong> 취업컨설턴트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>국내 항공과·대학 <strong>항공사 특강 프로그램 보이스 코칭</strong> 다수 진행</span></div>
-            </div>
-          </div>
-          <div class="inst-career-section">
-            <div class="inst-career-title">콘텐츠 & 미디어</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>보이스·커뮤니케이션 <strong>전문 칼럼</strong> 언론 기고 연재</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>유튜브·팟캐스트</strong> 출연</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>MONC(몬크) 챌린지</strong> 코칭</span></div>
-            </div>
-          </div>
-          <div class="inst-stat-row">
-            <div class="inst-stat"><div class="inst-stat-num">11년</div><div class="inst-stat-label">전문 교육 경력</div></div>
-            <div class="inst-stat"><div class="inst-stat-num">3,500+</div><div class="inst-stat-label">온라인 수강생</div></div>
-            <div class="inst-stat"><div class="inst-stat-num">다수</div><div class="inst-stat-label">대학·기관 특강</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 고은지 연구원 -->
-      <div class="inst-card inst-card-koh" data-instructor="koh" data-reveal>
-        <div style="position:relative;">
-          <div class="inst-card-accent"></div>
-          <!-- 고은지 연구원 사진 (images/instructor-koh.jpg 추가 시 자동 표시) -->
-          <div class="inst-photo-area inst-photo-koh">
-            <div class="inst-photo-ph" aria-hidden="true"><span>고은지</span><small>사진 준비중</small></div>
-            <img src="images/instructor-koh.jpg" alt="고은지 책임 연구원" onerror="this.remove()">
-          </div>
-        </div>
-        <div class="inst-card-body">
-          <div class="inst-name">고은지 책임 연구원</div>
-          <div class="inst-role">마케터 · 로컬크리에이터 · 라이브커머스 전문가</div>
-          <div class="inst-tags">
-            <span class="inst-tag">마케팅</span>
-            <span class="inst-tag">강의</span>
-            <span class="inst-tag">쇼호스트</span>
-            <span class="inst-tag">MC</span>
-          </div>
-          <p class="inst-desc">
-            10년차 마케터이자 <strong>전주 대표 로컬크리에이터</strong>. 브랜드 런칭부터 라이브커머스, 강의까지 현장에서 쌓은 경험을 전합니다.
-          </p>
-          <div class="inst-career-section">
-            <div class="inst-career-title">강의 & 교육 (3년차)</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>전주비빔밥축제 <strong>명인·명가 이야기 MC</strong></span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>진안군 우화지구 <strong>도시재생대학</strong> 기초·심화과정 교육 강의</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>기전대 소상공인 <strong>온라인 라이브커머스 판로지원</strong> 강의</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>군산시 <strong>농어촌종합지원센터</strong> 강사</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>전주 소담스퀘어 <strong>라이브커머스</strong> 강사</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span><strong>민주시민교육</strong> 강사</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>전라남도영암교육지원청 <strong>팀빌딩 강의</strong></span></div>
-            </div>
-          </div>
-          <div class="inst-career-section">
-            <div class="inst-career-title">라이브커머스 & 방송 (500회 이상)</div>
-            <div class="inst-career-list">
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>완주로컬푸드축제 쇼호스트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>대한민국 <strong>동행세일 그립</strong> 쇼호스트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>2시 팔도유람 무주특산물 천마니 쇼호스트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>전라북도 로컬마켓 쇼호스트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>가치고고 라이브 쇼호스트</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>동김제농협·커넥트·힘펠 <strong>전속 쇼호스트</strong> 외 다수</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>'위기를 기회로' <strong>동행세일 라이브커머스</strong> 방송 진행</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>완주 로컬 & 와일드 푸드 축제 <strong>특집 방송</strong> 진행</span></div>
-              <div class="inst-career-item"><div class="inst-career-dot"></div><span>농협 방송 다수 진행</span></div>
-            </div>
-          </div>
-          <div class="inst-stat-row">
-            <div class="inst-stat"><div class="inst-stat-num">10년</div><div class="inst-stat-label">마케터 경력</div></div>
-            <div class="inst-stat"><div class="inst-stat-num">500회+</div><div class="inst-stat-label">라이브커머스</div></div>
-            <div class="inst-stat"><div class="inst-stat-num">다수</div><div class="inst-stat-label">승무원 배출</div></div>
-          </div>
-        </div>
-      </div>
-
-  </div>
+    <!-- 탭·패널은 하단 JS(researchers 배열)에서 주입 -->
+    <div class="mi-tabs" role="tablist" aria-label="연구원 선택"></div>
+    <div class="mi-stage"></div>
   </div>
 </section>
 
@@ -3125,51 +2832,216 @@
   window.addEventListener('resize', onNavbarScroll, { passive: true });
   updateNavbarOnScroll(); // 페이지 로드 직후(스크롤 이벤트 발생 전)에도 초기 상태 반영
 
-  /* ── 강사 캐러셀 (슬라이드) ── */
-  /* 강사 탭 선택 */
-  const tabs = document.querySelectorAll('.inst-tab');
-  const cards = document.querySelectorAll('.inst-card');
+  /* ── 연구원(강사) 섹션 — 탭 전환 + 카운트업 (2026-07-10 리디자인) ──
+     구 카드 캐러셀(자동 5.5초 전환) 대체. 데이터는 researchers 배열, 탭·패널은 런타임 주입.
+     전역 스코프 오염/충돌(예: const obs 재선언) 방지를 위해 IIFE로 감쌈. */
+  (function(){
+    const researchers = [
+      {
+        id:'kwon',
+        role:'수석 연구원',
+        name:'권성호',
+        position:'보이스·스피치·표현력 전문가',
+        photo:'images/instructor-kwon.jpg',
+        tags:['발성 트레이닝','보이스 코칭','스피치 코칭','항공과 특강'],
+        bio:'11년간 승무원 면접 전문 교육기관 <strong>MONSTERCREW & MONC(몬크)</strong>를 운영하며 다수의 합격생을 배출했습니다. 발성부터 스피치, 표현력까지 면접에서의 목소리 전반을 다룹니다.',
+        stats:[
+          {num:11, suffix:'년', label:'전문 교육 경력'},
+          {num:3500, suffix:'+', label:'온라인 수강생'},
+          {num:'다수', suffix:'', label:'대학·기관 특강'}
+        ],
+        key:[
+          '승무원 면접 전문 교육기관 <strong>MONSTERCREW & MONC(몬크) 11년 운영</strong>',
+          '누적 온라인 수강생 <strong>3,500명+</strong> 지도',
+          '<strong>국토부 주관 2023·2025 항공잡페어</strong> 취업컨설턴트',
+          '발성 트레이닝 <strong>자체 코칭북</strong> 개발·보급'
+        ],
+        more:[
+          '취업·보이스 통합 코칭 프로그램 개발 및 운영',
+          '국내 항공과·대학 항공사 특강 프로그램 보이스 코칭 다수',
+          '보이스·커뮤니케이션 전문 칼럼 언론 기고 연재',
+          '유튜브·팟캐스트 출연'
+        ]
+      },
+      {
+        id:'park',
+        role:'수석 연구원',
+        name:'박새암',
+        position:'객실승무원 출신 · 면접 & 스피치 전문가',
+        photo:'images/instructor-park.jpg',
+        tags:['승무원 면접','영상면접','쇼호스트','자기브랜딩'],
+        bio:'FSC·LCC 객실승무원 9년 경력. <strong>직접 겪은 합격 경험</strong>으로 누구보다 실전적인 면접 전략을 알려드려요.',
+        stats:[
+          {num:9, suffix:'년', label:'승무원 경력'},
+          {num:1000, suffix:'+', label:'면접 컨설팅'},
+          {num:1000, suffix:'회', label:'누적 방송'}
+        ],
+        key:[
+          '외항사 FSC·국내 LCC <strong>객실승무원 9년차</strong> (동방항공 비즈니스 클래스 · 에어서울 부사무장 · 티웨이 경력직 최합)',
+          '<strong>국토부 주관 2025 항공잡페어</strong> 취업컨설턴트',
+          '<strong>NCS 기반 채용면접관 2급</strong> · 공사·기업 외부 면접관',
+          '채널A 《비행기 타고가요》 시즌1 출연'
+        ],
+        more:[
+          'MONSTERCREW 대표강사 · 누적 수강생 <strong>1,000명+</strong>',
+          'LFmall 전속 쇼호스트 · 현) 프리랜서 쇼호스트',
+          '누적 방송 1,000회+ 진행'
+        ]
+      },
+      {
+        id:'koh',
+        role:'책임 연구원',
+        name:'고은지',
+        position:'마케터 · 로컬크리에이터 · 라이브커머스 전문가',
+        photo:'images/instructor-koh.jpg',
+        tags:['마케팅 강의','쇼호스트','MC'],
+        bio:'10년차 마케터이자 <strong>전주 대표 로컬크리에이터</strong>. 브랜드 런칭부터 라이브커머스, 강의까지 현장에서 쌓은 경험을 전합니다.',
+        stats:[
+          {num:10, suffix:'년', label:'마케터 경력'},
+          {num:500, suffix:'회+', label:'라이브커머스'},
+          {num:'다수', suffix:'', label:'승무원 배출'}
+        ],
+        key:[
+          '<strong>10년차 마케터</strong> · 전주 대표 로컬크리에이터',
+          '진안군 우화지구 <strong>도시재생대학</strong> 기초·심화과정 교육 강의',
+          '기전대 소상공인 <strong>온라인 라이브커머스 판로지원</strong> 강의',
+          '동행세일 그립 · 전라북도 로컬마켓 등 <strong>라이브커머스 500회 이상</strong>'
+        ],
+        more:[
+          '전주비빔밥축제 명인·명가 이야기 MC',
+          '군산시 농어촌종합지원센터 · 전주 소담스퀘어 라이브커머스 강사',
+          '완주 로컬푸드축제 · 무주특산물 천마니 쇼호스트',
+          "'위기를 기회로' 동행세일 라이브커머스 방송 진행"
+        ]
+      }
+    ];
 
-  const instOrder = ['kwon', 'park', 'koh'];
-  let instTimer = null;
+    const miReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const miTabsEl  = document.querySelector('.mi-tabs');
+    const miStageEl = document.querySelector('.mi-stage');
+    if(miTabsEl && miStageEl){
+      const miInitial = (name) => name.trim().charAt(0);
 
-  function showInstructor(instructorId) {
-    tabs.forEach(tab => tab.classList.remove('active'));
-    cards.forEach(card => card.classList.remove('active'));
-    document.querySelector(`.inst-tab[data-instructor="${instructorId}"]`)?.classList.add('active');
-    document.querySelector(`.inst-card[data-instructor="${instructorId}"]`)?.classList.add('active');
-  }
+      miTabsEl.innerHTML = researchers.map((r,i)=>`
+        <button class="mi-tab" id="mi-tab-${r.id}" role="tab"
+                aria-controls="mi-panel-${r.id}"
+                aria-selected="${i===0?'true':'false'}"
+                tabindex="${i===0?'0':'-1'}">
+          <span class="n">${r.name}</span><span class="r">${r.role}</span>
+        </button>`).join('');
 
-  function nextInstructor() {
-    const activeTab = document.querySelector('.inst-tab.active');
-    const currentId = activeTab ? activeTab.dataset.instructor : instOrder[0];
-    const nextIdx = (instOrder.indexOf(currentId) + 1) % instOrder.length;
-    showInstructor(instOrder[nextIdx]);
-  }
+      miStageEl.innerHTML = researchers.map((r)=>{
+        const tags = r.tags.map(t=>`<li>${t}</li>`).join('');
+        const stats = r.stats.map(s=>{
+          const isNum = typeof s.num === 'number';
+          return `<div class="mi-stat">
+            <span class="mi-stat-num" data-num="${s.num}" data-suffix="${s.suffix||''}">${isNum?'0':s.num}</span>
+            <span class="mi-stat-label">${s.label}</span>
+          </div>`;
+        }).join('');
+        const key  = r.key.map(k=>`<li>${k}</li>`).join('');
+        const more = r.more.map(k=>`<li>${k}</li>`).join('');
+        return `
+        <article class="mi-panel" id="mi-panel-${r.id}" role="tabpanel" aria-labelledby="mi-tab-${r.id}" tabindex="0">
+          <aside class="mi-figure">
+            <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" data-initial="${miInitial(r.name)}"></div>
+            <p class="mi-role">${r.role}</p>
+            <h3 class="mi-name">${r.name}</h3>
+            <p class="mi-position">${r.position}</p>
+            <ul class="mi-tags">${tags}</ul>
+          </aside>
+          <div class="mi-body">
+            <p class="mi-bio">${r.bio}</p>
+            <div class="mi-stats">${stats}</div>
+            <div class="mi-creds">
+              <p class="mi-creds-title">핵심 이력</p>
+              <ul class="mi-cred-list">${key}</ul>
+              <ul class="mi-cred-list mi-extra" hidden>${more}</ul>
+              <button class="mi-more" type="button" aria-expanded="false">전체 이력 보기</button>
+            </div>
+          </div>
+        </article>`;
+      }).join('');
 
-  function startInstTimer() {
-    stopInstTimer();
-    instTimer = setInterval(nextInstructor, 5500);
-  }
+      // 사진 로드 실패 시 이니셜 모노그램으로 대체
+      miStageEl.querySelectorAll('.mi-photo').forEach(ph=>{
+        const img = ph.querySelector('img');
+        if(!img) return;
+        const swap = ()=>{ ph.innerHTML = `<div class="mi-mono">${img.dataset.initial}</div>`; };
+        img.addEventListener('error', swap);
+        if(img.complete && img.naturalWidth === 0) swap();
+      });
 
-  function stopInstTimer() {
-    if (instTimer) { clearInterval(instTimer); instTimer = null; }
-  }
+      const miTabEls   = [...miTabsEl.querySelectorAll('.mi-tab')];
+      const miPanelEls = [...miStageEl.querySelectorAll('.mi-panel')];
+      let miCurrentIdx = 0;
+      let miCounted = false;
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      showInstructor(tab.dataset.instructor);
-      startInstTimer();
-    });
-  });
+      function miAnimateStat(el){
+        const raw = el.dataset.num;
+        const suffix = el.dataset.suffix || '';
+        const n = Number(raw);
+        if(Number.isNaN(n)){ el.textContent = raw; return; }
+        if(miReduceMotion){ el.textContent = n.toLocaleString('ko-KR') + suffix; return; }
+        const dur = 900, start = performance.now();
+        function tick(now){
+          const p = Math.min(1,(now-start)/dur);
+          const eased = 1 - Math.pow(1-p,3);
+          el.textContent = Math.floor(n*eased).toLocaleString('ko-KR') + suffix;
+          if(p<1) requestAnimationFrame(tick);
+          else el.textContent = n.toLocaleString('ko-KR') + suffix;
+        }
+        requestAnimationFrame(tick);
+      }
+      function miRunCountUp(panel){ panel.querySelectorAll('.mi-stat-num').forEach(miAnimateStat); }
 
-  const instSection = document.getElementById('instructors');
-  if (instSection) {
-    instSection.addEventListener('mouseenter', stopInstTimer);
-    instSection.addEventListener('mouseleave', startInstTimer);
-  }
+      function miActivate(idx,{focus=false, animate=true}={}){
+        miCurrentIdx = idx;
+        miTabEls.forEach((t,i)=>{
+          const on = i===idx;
+          t.setAttribute('aria-selected', on?'true':'false');
+          t.tabIndex = on?0:-1;
+        });
+        miPanelEls.forEach((p,i)=>p.classList.toggle('is-active', i===idx));
+        if(focus) miTabEls[idx].focus();
+        if(animate){ miCounted = true; miRunCountUp(miPanelEls[idx]); }
+      }
 
-  startInstTimer();
+      miTabEls.forEach((t,i)=>{
+        t.addEventListener('click', ()=>miActivate(i));
+        t.addEventListener('keydown', e=>{
+          let ni=null;
+          if(e.key==='ArrowRight'||e.key==='ArrowDown') ni=(i+1)%miTabEls.length;
+          else if(e.key==='ArrowLeft'||e.key==='ArrowUp') ni=(i-1+miTabEls.length)%miTabEls.length;
+          else if(e.key==='Home') ni=0;
+          else if(e.key==='End') ni=miTabEls.length-1;
+          if(ni!==null){ e.preventDefault(); miActivate(ni,{focus:true}); }
+        });
+      });
+
+      miStageEl.querySelectorAll('.mi-more').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const extra = btn.parentElement.querySelector('.mi-extra');
+          const opening = extra.hasAttribute('hidden');
+          if(opening){ extra.removeAttribute('hidden'); btn.textContent='전체 이력 접기'; btn.setAttribute('aria-expanded','true'); }
+          else{ extra.setAttribute('hidden',''); btn.textContent='전체 이력 보기'; btn.setAttribute('aria-expanded','false'); }
+        });
+      });
+
+      // 첫 패널 노출, 카운트업은 뷰포트 진입 시 1회
+      miActivate(0,{animate:false});
+      if(miReduceMotion){
+        miRunCountUp(miPanelEls[0]);
+      } else {
+        const miObs = new IntersectionObserver((entries)=>{
+          entries.forEach(en=>{
+            if(en.isIntersecting && !miCounted){ miRunCountUp(miPanelEls[miCurrentIdx]); miCounted=true; miObs.disconnect(); }
+          });
+        },{threshold:.3});
+        miObs.observe(document.querySelector('.mi-root'));
+      }
+    }
+  })();
 
   /* ── 사진 업로드 (임시 미리보기) ── */
   function triggerUpload(n) {
