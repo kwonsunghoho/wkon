@@ -139,7 +139,6 @@
     }
 
     var SCALE_K = 0.32; // 기본 최대 scale = 1 + SCALE_K (data-zoom-scale 속성으로 섹션별 오버라이드 가능)
-    var ticking = false;
 
     // data-zoom-runway(vh 단위 숫자)가 있으면 기본 160vh 대신 해당 값을 min-height로 적용.
     // (CSS의 [data-zoom-exit][data-zoom-exit] { min-height: 160vh } 기본값을 인라인 스타일로 오버라이드)
@@ -157,91 +156,148 @@
       return p * p * (3 - 2 * p);
     }
 
-    function update() {
-      ticking = false;
-      wraps.forEach(function (wrap) {
-        var pin = wrap.querySelector('.zoom-exit-pin');
-        if (!pin) return;
-        var rect = wrap.getBoundingClientRect();
-        var vh = window.innerHeight;
-        // wrap 상단이 뷰포트 상단을 지나 wrap 하단(= 스크롤 runway 끝)에 도달할 때까지 0→1
-        var runway = rect.height - vh;
-        var progress = runway > 0 ? (-rect.top) / runway : 0;
-        progress = Math.min(1, Math.max(0, progress));
-        // data-zoom-start(0~1, 기본 0): 줌이 시작되는 진행률. 예: 0.5면 전반
-        // 50%는 scale 1로 정지(태그라인 조립·유지 구간), 후반 50%에 확대가
-        // 몰려 '정면으로 확 뚫고 들어가는' 연출이 된다. (2026-07-10)
-        var startAttr = attrFor(wrap, 'data-zoom-start');
-        var zoomStart = startAttr ? parseFloat(startAttr) : 0;
-        if (isNaN(zoomStart) || zoomStart < 0 || zoomStart >= 1) zoomStart = 0;
-        var zp = zoomStart > 0
-          ? Math.min(1, Math.max(0, (progress - zoomStart) / (1 - zoomStart)))
-          : progress;
-        var eased = easeInOut(zp);
-        var scaleAttr = attrFor(wrap, 'data-zoom-scale');
-        var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
-        if (isNaN(scaleK)) scaleK = SCALE_K;
-        pin.style.transform = 'scale(' + (1 + eased * scaleK) + ')';
-        // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지) —
-        // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 속성이 없으면 기존과 동일하게
-        // progress에 따라 선형으로 페이드아웃.
-        var fadeAttr = wrap.getAttribute('data-zoom-fade');
-        pin.style.opacity = fadeAttr === 'none' ? '1' : String(1 - eased);
+    // ── 스크롤 스무딩 (2026-07-11) ─────────────────────────────────────
+    // 이전에는 scroll 이벤트마다 진행률을 스타일에 1:1로 꽂았다. 마우스 휠은
+    // 한 칸에 수십~수백 px씩 점프하므로 줌·페이드가 계단식으로 뚝뚝 끊겼고,
+    // 모바일도 빠른 플릭 중엔 scroll 이벤트가 프레임마다 오지 않아 스텝이 보였다.
+    // 지금은 목표 진행률(target)을 향해 현재값(current)이 매 프레임 지수 감쇠로
+    // 따라붙는 rAF 루프를 돌려, 어떤 입력이든 프레임 단위 연속 보간이 된다.
+    // 루프는 목표에 수렴하면 스스로 멈춰(idle) 유휴 비용이 없다.
+    // TAU(ms) = 감쇠 시정수. 클수록 부드럽지만 지연감이 커짐 — 터치는 손가락
+    // 추종감을 위해 짧게, 휠/트랙패드는 점프 완충을 위해 길게.
+    var TAU = window.matchMedia('(pointer: coarse)').matches ? 80 : 150;
 
-        // 다음 섹션(주로 어두운 톤)으로 자연스럽게 이어지도록, wrap 안에
-        // .zoom-tone-bridge 요소가 있으면 진행률에 따라 어두운 그라디언트를
-        // 서서히 덧씌워 톤이 미리 어두워지기 시작하게 함 (급격한 톤 전환 방지).
-        var toneBridge = wrap.querySelector('.zoom-tone-bridge');
-        if (toneBridge) {
-          toneBridge.style.opacity = String(eased);
-        }
+    var items = [];
+    wraps.forEach(function (wrap) {
+      var pin = wrap.querySelector('.zoom-exit-pin');
+      if (!pin) return;
+      items.push({ wrap: wrap, pin: pin, current: 0, target: 0 });
+    });
+    if (!items.length) return;
 
-        // .zoom-content-fade가 붙은 요소(사진 레이어 등)는 확대 막바지(진행률
-        // 70~100%) 구간에서 완전히 페이드아웃시킴. pin이 sticky에서 풀려
-        // 일반 스크롤로 넘어간 뒤에는 확대된 이미지의 다른 부분(가장자리 등)이
-        // 뷰포트에 걸쳐 보일 수 있는데, 그 전에 이미지 자체를 미리 지워버려서
-        // "프레임이 다시 보이는" 것을 원천 차단.
-        var contentFadeEls = wrap.querySelectorAll('.zoom-content-fade');
-        if (contentFadeEls.length) {
-          // 80~100%: 줌 막바지에만 하늘을 지움 (데모 타이밍 정합, 2026-07-10)
-          var contentOpacity = 1 - Math.max(0, (progress - 0.80) / 0.20);
-          contentFadeEls.forEach(function (el) {
-            el.style.opacity = String(contentOpacity);
-          });
-        }
-
-        // .zoom-bezel-fade(창틀 + 벽 패널)는 하늘(.zoom-content-fade)보다 더 일찍
-        // (진행률 30%~55%) 사라진다. 뒤에는 풀뷰포트 하늘(sky-bg)이 깔려 있어,
-        // 창틀이 지워지면 하늘이 화면을 가득 채운다 → 확대 도중 "창틀"이 아니라
-        // "하늘만" 보이게 된다. (창이 개구부보다 커서 하단 창틀이 걸치던 문제 해결.)
-        var bezelFadeEls = wrap.querySelectorAll('.zoom-bezel-fade');
-        if (bezelFadeEls.length) {
-          // 55~75%: 줌 시작(50%) 직후 창틀이 사라지며 하늘만 남음 (데모 타이밍 정합)
-          var bezelOpacity = 1 - Math.max(0, (progress - 0.55) / 0.20);
-          bezelFadeEls.forEach(function (el) {
-            el.style.opacity = String(bezelOpacity);
-          });
-        }
-
-        // position은 CSS의 기본 sticky 그대로 둔다 — wrap의 runway를 다 소진하면
-        // sticky는 브라우저가 수학적으로 정확히 같은 지점에서(점프 없이) 자연스럽게
-        // 풀어주므로 JS가 수동으로 absolute로 전환할 필요가 없다. (이전에 수동
-        // 전환을 했을 때 그 순간 위치가 튀면서 확대된 하늘 대신 창문 프레임이
-        // 다시 보이는 버그가 있었음 — 원인은 top:0 기준점이 sticky의 "뷰포트
-        // 상단"에서 absolute의 "wrap 상단"으로 바뀌며 위치가 어긋났기 때문.)
-      });
+    function computeTarget(wrap) {
+      var rect = wrap.getBoundingClientRect();
+      var vh = window.innerHeight;
+      // wrap 상단이 뷰포트 상단을 지나 wrap 하단(= 스크롤 runway 끝)에 도달할 때까지 0→1
+      var runway = rect.height - vh;
+      var progress = runway > 0 ? (-rect.top) / runway : 0;
+      return Math.min(1, Math.max(0, progress));
     }
 
-    function onScroll() {
-      if (!ticking) {
-        window.requestAnimationFrame(update);
-        ticking = true;
+    function renderWrap(item) {
+      var wrap = item.wrap;
+      var pin = item.pin;
+      var progress = item.current;
+      // data-zoom-start(0~1, 기본 0): 줌이 시작되는 진행률. 예: 0.5면 전반
+      // 50%는 scale 1로 정지(태그라인 조립·유지 구간), 후반 50%에 확대가
+      // 몰려 '정면으로 확 뚫고 들어가는' 연출이 된다. (2026-07-10)
+      var startAttr = attrFor(wrap, 'data-zoom-start');
+      var zoomStart = startAttr ? parseFloat(startAttr) : 0;
+      if (isNaN(zoomStart) || zoomStart < 0 || zoomStart >= 1) zoomStart = 0;
+      var zp = zoomStart > 0
+        ? Math.min(1, Math.max(0, (progress - zoomStart) / (1 - zoomStart)))
+        : progress;
+      var eased = easeInOut(zp);
+      var scaleAttr = attrFor(wrap, 'data-zoom-scale');
+      var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
+      if (isNaN(scaleK)) scaleK = SCALE_K;
+      pin.style.transform = 'scale(' + (1 + eased * scaleK) + ')';
+      // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지) —
+      // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 속성이 없으면 기존과 동일하게
+      // progress에 따라 선형으로 페이드아웃.
+      var fadeAttr = wrap.getAttribute('data-zoom-fade');
+      pin.style.opacity = fadeAttr === 'none' ? '1' : String(1 - eased);
+
+      // 다음 섹션(주로 어두운 톤)으로 자연스럽게 이어지도록, wrap 안에
+      // .zoom-tone-bridge 요소가 있으면 진행률에 따라 어두운 그라디언트를
+      // 서서히 덧씌워 톤이 미리 어두워지기 시작하게 함 (급격한 톤 전환 방지).
+      var toneBridge = wrap.querySelector('.zoom-tone-bridge');
+      if (toneBridge) {
+        toneBridge.style.opacity = String(eased);
+      }
+
+      // .zoom-content-fade가 붙은 요소(사진 레이어 등)는 확대 막바지(진행률
+      // 70~100%) 구간에서 완전히 페이드아웃시킴. pin이 sticky에서 풀려
+      // 일반 스크롤로 넘어간 뒤에는 확대된 이미지의 다른 부분(가장자리 등)이
+      // 뷰포트에 걸쳐 보일 수 있는데, 그 전에 이미지 자체를 미리 지워버려서
+      // "프레임이 다시 보이는" 것을 원천 차단.
+      var contentFadeEls = wrap.querySelectorAll('.zoom-content-fade');
+      if (contentFadeEls.length) {
+        // 80~100%: 줌 막바지에만 하늘을 지움 (데모 타이밍 정합, 2026-07-10)
+        var contentOpacity = 1 - Math.max(0, (progress - 0.80) / 0.20);
+        contentFadeEls.forEach(function (el) {
+          el.style.opacity = String(contentOpacity);
+        });
+      }
+
+      // .zoom-bezel-fade(창틀 + 벽 패널)는 하늘(.zoom-content-fade)보다 더 일찍
+      // (진행률 30%~55%) 사라진다. 뒤에는 풀뷰포트 하늘(sky-bg)이 깔려 있어,
+      // 창틀이 지워지면 하늘이 화면을 가득 채운다 → 확대 도중 "창틀"이 아니라
+      // "하늘만" 보이게 된다. (창이 개구부보다 커서 하단 창틀이 걸치던 문제 해결.)
+      var bezelFadeEls = wrap.querySelectorAll('.zoom-bezel-fade');
+      if (bezelFadeEls.length) {
+        // 55~75%: 줌 시작(50%) 직후 창틀이 사라지며 하늘만 남음 (데모 타이밍 정합)
+        var bezelOpacity = 1 - Math.max(0, (progress - 0.55) / 0.20);
+        bezelFadeEls.forEach(function (el) {
+          el.style.opacity = String(bezelOpacity);
+        });
+      }
+
+      // position은 CSS의 기본 sticky 그대로 둔다 — wrap의 runway를 다 소진하면
+      // sticky는 브라우저가 수학적으로 정확히 같은 지점에서(점프 없이) 자연스럽게
+      // 풀어주므로 JS가 수동으로 absolute로 전환할 필요가 없다. (이전에 수동
+      // 전환을 했을 때 그 순간 위치가 튀면서 확대된 하늘 대신 창문 프레임이
+      // 다시 보이는 버그가 있었음 — 원인은 top:0 기준점이 sticky의 "뷰포트
+      // 상단"에서 absolute의 "wrap 상단"으로 바뀌며 위치가 어긋났기 때문.)
+
+      // 외부 스크립트(히어로 태그라인 등)가 줌과 '동일한 스무딩 진행률'로
+      // 프레임 단위 동기화할 수 있도록 진행률을 이벤트로 공유한다.
+      wrap.dispatchEvent(new CustomEvent('monc:zoomprogress', { detail: { progress: progress } }));
+    }
+
+    var rafId = null;
+    var lastTs = 0;
+    function frame(ts) {
+      // 프레임레이트 독립 지수 감쇠: k = 1 - e^(-dt/TAU). 탭 복귀 등으로 dt가
+      // 튀어도 한 번에 과하게 점프하지 않도록 64ms로 클램프.
+      var dt = lastTs ? Math.min(64, ts - lastTs) : 16.7;
+      lastTs = ts;
+      var k = 1 - Math.exp(-dt / TAU);
+      var busy = false;
+      items.forEach(function (item) {
+        item.target = computeTarget(item.wrap);
+        var diff = item.target - item.current;
+        if (Math.abs(diff) > 0.0004) {
+          item.current += diff * k;
+          busy = true;
+        } else {
+          item.current = item.target;
+        }
+        renderWrap(item);
+      });
+      if (busy) {
+        rafId = window.requestAnimationFrame(frame);
+      } else {
+        rafId = null;
+        lastTs = 0;
       }
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    update();
+    function kick() {
+      if (rafId === null) {
+        lastTs = 0;
+        rafId = window.requestAnimationFrame(frame);
+      }
+    }
+
+    window.addEventListener('scroll', kick, { passive: true });
+    window.addEventListener('resize', kick, { passive: true });
+
+    // 초기 상태: 현재 스크롤 위치의 진행률로 즉시 렌더 (로드 시 따라붙기 애니메이션 없음)
+    items.forEach(function (item) {
+      item.current = item.target = computeTarget(item.wrap);
+      renderWrap(item);
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {

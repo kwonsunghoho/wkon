@@ -4176,17 +4176,37 @@
     root.style.visibility = p >= 0.99 ? 'hidden' : '';
   }
 
+  // scroll-fx.js(initZoomExit)가 창문 줌에 쓰는 '스무딩된' 진행률을
+  // monc:zoomprogress 이벤트로 매 프레임 공유해 준다(2026-07-11).
+  // 같은 값을 쓰면 태그라인이 줌과 프레임 단위로 정확히 동기화되고,
+  // 휠 점프에도 계단식으로 끊기지 않는다. 이벤트가 안 오면(스크립트 로드
+  // 실패 등) 아래 onScroll의 기존 자체 계산(1:1 매핑)으로 폴백.
+  var gotFx = false, lastP = 0;
+  wrap.addEventListener('monc:zoomprogress', function (e) {
+    gotFx = true;
+    lastP = e.detail.progress;
+    apply(lastP);
+  });
+
   var ticking = false;
   function onScroll(){
-    if (ticking) return;
+    if (gotFx || ticking) return;
     ticking = true;
     window.requestAnimationFrame(function(){
       ticking = false;
+      if (gotFx) return;
       var rect = wrap.getBoundingClientRect();
       var runway = rect.height - window.innerHeight;
       var p = runway > 0 ? clamp((-rect.top) / runway) : 0;
+      lastP = p;
       apply(p);
     });
+  }
+
+  // measure() 직후 재렌더 — 스무딩 공급 중이면 마지막 진행률로 상태 재동기화
+  function refresh(){
+    if (gotFx) apply(lastP);
+    else onScroll();
   }
 
   function init(){
@@ -4200,16 +4220,16 @@
     var rT;
     window.addEventListener('resize', function(){
       clearTimeout(rT);
-      rT = setTimeout(function(){ measure(); onScroll(); }, 150);
+      rT = setTimeout(function(){ measure(); refresh(); }, 150);
     });
-    onScroll();
+    refresh();
   }
 
   init();
   // 폰트 로드/지연 자원으로 메트릭이 바뀔 수 있어 로드 완료 후 재측정
-  window.addEventListener('load', function(){ measure(); onScroll(); });
+  window.addEventListener('load', function(){ measure(); refresh(); });
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(function(){ measure(); onScroll(); });
+    document.fonts.ready.then(function(){ measure(); refresh(); });
   }
 })();
 </script>
