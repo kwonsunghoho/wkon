@@ -1661,6 +1661,24 @@
       .ht-cue { animation: none; }
     }
 
+    /* 인트로 건너뛰기 pill — 핀 밖(줌 확대 비대상). 진행률 0.85+면 숨김 */
+    .hero-skip {
+      position: fixed; z-index: 60;
+      right: 16px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 13px; font-weight: 700; letter-spacing: -.01em;
+      color: #F6F1E7; text-decoration: none;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(246,241,231,.45); border-radius: 999px;
+      padding: 8px 15px;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      transition: opacity .3s ease;
+    }
+    .hero-skip.is-gone { opacity: 0; pointer-events: none; }
+    @media (max-width: 768px) {
+      .hero-skip { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+    }
+
     /* ═══════════════════════════════════════════════════
        HERO SCENE — 밝은 크림톤 센터형 캐러셀 재설계
        (기존 풀스크린 opacity 크로스페이드 슬라이드 완전 대체)
@@ -1938,6 +1956,8 @@
     </div>
     <svg class="ht-cue" id="htCue" viewBox="0 0 24 24" fill="none" stroke="#F6F1E7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
   </div>
+  <!-- 인트로 건너뛰기 (핀 밖 · 줌 확대 비대상) -->
+  <a class="hero-skip" id="heroSkip" href="#home" aria-label="인트로 건너뛰고 바로 보기">건너뛰기 <span aria-hidden="true">↓</span></a>
 </section>
 
 <!-- HERO SCENE -->
@@ -4773,5 +4793,27 @@
 })();
 </script>
 
+<!-- 인트로 건너뛰기 버튼 제어 (monc:zoomprogress 구독 · 스크롤 폴백) -->
+<script>
+(function () {
+  var wrap = document.querySelector('.hero-window-intro');
+  var skip = document.getElementById('heroSkip');
+  if (!wrap || !skip) return;
+  wrap.addEventListener('monc:zoomprogress', function (e) {
+    skip.classList.toggle('is-gone', (e.detail && e.detail.progress) >= 0.85);
+  });
+  window.addEventListener('scroll', function () {
+    var r = wrap.getBoundingClientRect();
+    if (r.bottom < window.innerHeight * 0.5) skip.classList.add('is-gone');
+  }, { passive: true });
+  skip.addEventListener('click', function (ev) {
+    var home = document.getElementById('home');
+    if (!home) return;
+    ev.preventDefault();
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    home.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  });
+})();
+</script>
 </body>
 </html>
