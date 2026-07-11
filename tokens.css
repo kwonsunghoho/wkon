@@ -132,11 +132,16 @@ html {
 /* 줌 진행 중 scroll-fx.js가 매 프레임 opacity를 갱신하는 페이드 레이어들
    (창틀 사진·하늘·톤 브릿지). 자체 합성 레이어로 승격하지 않으면 opacity가
    pin 레이어 래스터에 구워져 매 프레임 풀스크린 리페인트가 발생 — 인트로
-   스크롤이 프레임 단위로 끊기는 주원인이었다(2026-07-11). 제거 금지. */
+   스크롤이 프레임 단위로 끊기는 주원인이었다(2026-07-11). 제거 금지.
+   transform 힌트도 함께: 이 레이어들은 pin의 줌 scale을 물려받아 화면상
+   크기가 매 프레임 변하는데, transform 힌트가 없으면 Chrome이 래스터
+   스케일을 계속 재평가해 풀스크린 사진을 반복 재래스터한다(스크립트 없는
+   50~76ms 프레임의 원인, 2026-07-12). 힌트가 있으면 최초 래스터를 GPU
+   업스케일만 하며 재사용(핀과 동일 정책). */
 [data-zoom-exit] .zoom-content-fade,
 [data-zoom-exit] .zoom-bezel-fade,
 [data-zoom-exit] .zoom-tone-bridge {
-  will-change: opacity;
+  will-change: transform, opacity;
 }
 @media (prefers-reduced-motion: reduce) {
   /* .hs-slide 자식들이 position:absolute라 height:auto인 부모에 높이를 전달하지 못해

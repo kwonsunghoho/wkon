@@ -230,8 +230,17 @@
       // 다음 섹션(주로 어두운 톤)으로 자연스럽게 이어지도록, wrap 안에
       // .zoom-tone-bridge 요소가 있으면 진행률에 따라 어두운 그라디언트를
       // 서서히 덧씌워 톤이 미리 어두워지기 시작하게 함 (급격한 톤 전환 방지).
+      // 단 톤 브릿지는 z-order상 하늘/창틀 '아래'라 하늘 페이드(80%~) 전엔
+      // 완전히 가려진다 — 가려진 동안에도 풀스크린 블렌딩 비용을 내므로
+      // visibility로 합성 자체를 끈다(Intel iGPU 등 fill-rate 병목 완화,
+      // 2026-07-12). 0.72부터 표시 — 이때도 아직 하늘 뒤라 시각 변화 없음.
       if (item.toneBridge) {
-        item.toneBridge.style.opacity = String(eased);
+        var toneHidden = progress < 0.72;
+        if (toneHidden !== item.toneHidden) {
+          item.toneHidden = toneHidden;
+          item.toneBridge.style.visibility = toneHidden ? 'hidden' : '';
+        }
+        if (!toneHidden) item.toneBridge.style.opacity = String(eased);
       }
 
       // .zoom-content-fade가 붙은 요소(사진 레이어 등)는 확대 막바지(진행률
@@ -300,6 +309,7 @@
     }
 
     function kick() {
+      if (window.__moncZoomFreeze) return; // 성능 진단용: 줌 파이프라인 일시 동결
       if (rafId === null) {
         lastTs = 0;
         rafId = window.requestAnimationFrame(frame);
