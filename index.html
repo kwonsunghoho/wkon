@@ -19,9 +19,32 @@
   <meta name="twitter:description" content="목소리 · 눈빛 · 말투 · 첫인상, 하나씩 꺼내봐요." />
   <meta name="twitter:image"       content="https://kwonsunghoho.github.io/wkon/images/og-image.png" />
   <link rel="stylesheet" href="tokens.css">
+  <!-- 세리프 포인트(Finder 결과 챌린지명 · 마지막 CTA '나도 해볼까?') — Noto Serif KR 600/700/italic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
+
+    /* 세리프 포인트 스택 — Finder 결과 챌린지명 · 마지막 CTA '나도 해볼까?' */
+    :root { --serif: 'Noto Serif KR', 'Nanum Myeongjo', serif; }
+
+    /* ── View Transitions API (reduced-motion 아닐 때만) ──
+       문서 간(index→상세) 이동 시 root 크로스페이드 + challenge-name morph.
+       문서 내(Finder 문항 전환)는 하단 스크립트가 startViewTransition으로 구동. */
+    @media (prefers-reduced-motion: no-preference) {
+      @view-transition { navigation: auto; }
+      ::view-transition-old(root) { animation: vt-fade-out .22s both; }
+      ::view-transition-new(root) { animation: vt-fade-in .34s both; }
+      @keyframes vt-fade-out { to { opacity: 0; } }
+      @keyframes vt-fade-in { from { opacity: 0; } }
+      /* Finder 문항 전환: 옛 문항은 위로 슬라이드아웃, 새 문항은 아래에서 슬라이드인 */
+      ::view-transition-old(finder) { animation: vt-fin-out .28s both; }
+      ::view-transition-new(finder) { animation: vt-fin-in .44s .05s both; }
+      @keyframes vt-fin-out { to { opacity: 0; transform: translateY(-16px); } }
+      @keyframes vt-fin-in { from { opacity: 0; transform: translateY(20px); } }
+    }
 
     body {
       font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -78,36 +101,89 @@
     .btn-ghost:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 
     /* ── 회원 혜택 어필 (마이페이지 미리보기) ── */
+    /* ═══ 성장 기록 — 날짜 도장 + 실제 음성 파형(Web Audio) 2026-07-11 리디자인 ═══ */
     .member-appeal { padding: var(--section-y-mobile) 0; background: var(--bg2); }
     .ma-head { text-align: center; max-width: 560px; margin: 0 auto 28px; }
-    .ma-title { font-size: var(--fs-h2); font-weight: 800; line-height: var(--lh-tight); letter-spacing: var(--ls-tight); color: var(--text); }
+    .ma-title { font-size: var(--fs-h2); font-weight: 800; line-height: var(--lh-tight); letter-spacing: var(--ls-tight); color: var(--text); word-break: keep-all; }
     .ma-title span { color: var(--action); }
     .ma-sub { margin-top: 12px; font-size: var(--fs-body); color: var(--text-muted); line-height: var(--lh-body); }
     .ma-preview {
-      max-width: 420px; margin: 0 auto; background: var(--surface);
-      border: 1px solid var(--border-soft); border-radius: var(--radius);
-      box-shadow: var(--shadow); padding: 18px;
+      max-width: 620px; margin: 0 auto; background: var(--surface);
+      border: 1.5px solid var(--border-soft); border-radius: 20px;
+      box-shadow: var(--shadow); padding: 22px;
+      transition: transform .25s, box-shadow .25s;
     }
-    .ma-mp-head { font-weight: 800; font-size: 16px; margin-bottom: 14px; color: var(--text); }
-    .ma-mp-head span { color: var(--action); }
-    .ma-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 16px; }
-    .ma-day { aspect-ratio: 1; border-radius: var(--radius-xs); display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; border: 1px solid var(--border-soft); color: var(--text-dim); }
-    .ma-day.ok { background: #eaf6ec; border-color: #bfe3c6; color: #1a7f37; }
-    .ma-day.no { background: var(--action-tint); border-color: #f2c9b8; color: var(--action-dark); }
-    .ma-ba { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .ma-slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; }
-    .ma-slot.after { outline: 2px solid var(--action); outline-offset: -2px; }
-    .ma-tag { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .ma-slot.after .ma-tag { color: var(--action); }
-    .ma-audio { height: 28px; background: #e9e4dc; border-radius: 999px; display: flex; align-items: center; padding: 0 10px; gap: 8px; }
-    .ma-play { width: 14px; height: 14px; border-radius: 50%; background: var(--action); flex: 0 0 auto; }
-    .ma-wave { flex: 1; height: 3px; background: #cbc2b6; border-radius: 2px; }
+    .ma-preview:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .ma-mp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .ma-mp-title { font-weight: 800; font-size: 15px; color: var(--text); }
+    .ma-mp-title span { color: var(--action); }
+    .ma-mp-count { font-size: 13px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    .ma-mp-count b { color: var(--action); font-size: 16px; font-variant-numeric: tabular-nums; }
+
+    /* 날짜 도장 (done/late/todo) */
+    .ma-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 18px; }
+    .ma-day {
+      aspect-ratio: 1; border-radius: 10px; display: grid; place-items: center;
+      font-size: 13px; font-weight: 800; border: 1.5px solid var(--border-soft);
+      color: var(--text-dim); background: transparent;
+    }
+    .ma-day.done { background: #eaf6ec; border-color: #bfe3c6; color: #1a7f37; }
+    .ma-day.late { background: var(--action-tint); border-color: #f2c9b8; color: var(--action-dark); }
+    .ma-day.stampable { opacity: 0; transform: scale(.55); }
+    .ma-day.stamp-in { animation: ma-stamp .34s cubic-bezier(.2,1.4,.4,1) forwards; }
+    @keyframes ma-stamp {
+      0%   { opacity: 0; transform: scale(.55); }
+      60%  { opacity: 1; transform: scale(1.08) rotate(1deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0); }
+    }
+
+    /* Before/After 실제 음성 파형 패널 */
+    .ma-wf { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .wf-panel { border: 1.5px solid var(--border-soft); border-radius: 14px; padding: 14px; background: var(--surface2); }
+    .wf-panel.after { border: 1.5px solid var(--action); background: var(--action-tint); }
+    .wf-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .wf-play {
+      width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--accent); color: #fff; display: grid; place-items: center;
+      -webkit-tap-highlight-color: transparent; transition: transform .15s;
+    }
+    .wf-play:active { transform: scale(.92); }
+    .wf-panel.after .wf-play { background: var(--action); color: var(--action-ink); }
+    .wf-play svg { width: 13px; height: 13px; }
+    .wf-label { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+    .wf-panel.after .wf-label { color: var(--action-dark); }
+    .wf-time { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    .wf-bars { height: 60px; display: flex; align-items: center; gap: 2px; }
+    .wf-bar { flex: 1; min-width: 0; height: 6px; border-radius: 2px; background: #cfc6b8; transform-origin: center; transition: transform .06s linear, background .12s; }
+    .wf-panel.after .wf-bar { background: #f0c3ac; }
+    .wf-bar.played { background: #7a6f5e; }
+    .wf-panel.after .wf-bar.played { background: var(--action); }
+    /* backwards: 딜레이 동안 from(.15) 유지, 종료 후엔 base로 복귀 → 재생 중 인라인 scaleY 펄스와 충돌 안 함 */
+    .wf-bar.rise { animation: wf-rise .5s cubic-bezier(.22,1,.36,1) backwards; }
+    @keyframes wf-rise { from { transform: scaleY(.15); } to { transform: scaleY(1); } }
+    .wf-foot { margin-top: 10px; text-align: center; }
+    .wf-load { font-size: 12px; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; -webkit-tap-highlight-color: transparent; }
+    .wf-panel.after .wf-load { color: var(--action-dark); }
+    .wf-hint { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
+    .wf-panel.drag-over { outline: 2px dashed var(--action); outline-offset: 2px; }
+    .wf-panel.nudge { animation: wf-nudge .3s ease; }
+    @keyframes wf-nudge { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
     .ma-cta { text-align: center; margin-top: 24px; }
     .ma-cta .btn-action { font-size: 16px; padding: 16px 28px; }
     .ma-note { margin-top: 12px; font-size: 13px; color: var(--text-dim); }
     .ma-note a { color: var(--action); font-weight: 700; }
     @media (min-width: 768px) { .member-appeal { padding: var(--section-y) 0; } }
+    @media (max-width: 560px) {
+      .ma-wf { grid-template-columns: 1fr; }
+      .ma-preview { padding: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ma-day.stampable { opacity: 1; transform: none; }
+      .ma-day.stamp-in { animation: none; }
+      .wf-bar.rise { animation: none; }
+      .ma-preview { transition: none; }
+    }
 
     /* ── 모바일 하단 플로팅 CTA 알약 ── */
     .mobile-cta-bar { display: none; }
@@ -497,119 +573,162 @@
     }
 
     /* ═══════════════════════════════════════════════════
-       CHALLENGE ADVISOR — 3문항 진단 위젯
-       세 질문에 답하면 즉시 결과 표시(버튼 없음), 답을 바꾸면 즉시 갱신.
-       질문 1·2는 1점, 질문 3은 2점 가중치 — 로직은 하단 스크립트 'adv' 블록.
+       CHALLENGE FINDER — 3문항 진단 (2026-07-11 리디자인)
+       스텝 pill + 진행바 → 한 문항씩 카드(A/B/C/D 배지 + 체크 드로우),
+       선택 시 680ms 뒤 자동 진행. 세 답이 모이면 복수 추천 결과(잉크 도장).
+       복수추천(3표/2표/1-1-1)·PAIR 궁합표·View Transitions는 하단 'adv' 블록.
     ═══════════════════════════════════════════════════ */
     .advisor { padding: var(--section-y) 0; background: var(--bg2); }
-    .adv { max-width: 880px; margin: 0 auto; }
+    .adv { max-width: 640px; margin: 0 auto; }
 
-    .adv-q { margin-bottom: 28px; }
-    .adv-q-title {
-      font-size: 16px; font-weight: 800; color: var(--text);
-      margin-bottom: 12px; word-break: keep-all;
+    /* ── 진행 표시: 스텝 pill + 가는 진행바 ── */
+    .adv-steps { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .adv-pills { display: flex; gap: 8px; flex: 0 0 auto; }
+    .adv-pill {
+      font-size: 12.5px; font-weight: 800; letter-spacing: .02em; line-height: 1;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1.5px solid var(--border); color: var(--text-dim); background: transparent;
+      transition: color .3s, border-color .3s, background .3s;
     }
-    .adv-q-title .adv-q-num { color: var(--action); margin-right: 6px; }
-    .adv-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .adv-pill.is-active { border-color: var(--action); color: var(--action); }
+    .adv-pill.is-done { border-color: var(--action); background: var(--action); color: var(--action-ink); }
+    .adv-track { flex: 1; height: 3px; border-radius: 3px; background: var(--border-soft); overflow: hidden; }
+    .adv-track-fill { height: 100%; width: 0; background: var(--action); border-radius: 3px; transition: width .5s cubic-bezier(.22,1,.36,1); }
+
+    /* ── 문항: 한 번에 하나만 (JS가 .is-current 토글) ── */
+    .adv-q { display: none; }
+    .adv-q.is-current { display: block; }
+    .adv-q-title { font-size: clamp(17px, 2.4vw, 21px); font-weight: 800; color: var(--text); margin-bottom: 18px; text-align: center; word-break: keep-all; }
+    .adv-q-num { display: none; }
+
+    /* ── 선택지 카드 (A/B/C/D 배지 + 체크 드로우) ── */
+    .adv-opts { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .adv-opt {
-      padding: 14px 16px; border-radius: 14px;
-      border: 1.5px solid var(--border);
-      background: var(--surface); color: var(--text-muted);
-      font-size: 14px; font-weight: 600; line-height: 1.5;
+      position: relative; display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px; border-radius: 16px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      color: var(--text); font-size: 15px; font-weight: 600; line-height: 1.5;
       text-align: left; cursor: pointer; word-break: keep-all;
-      transition: border-color .18s, background .18s, color .18s;
+      transition: border-color .18s, box-shadow .18s, transform .18s, background .18s, opacity .2s;
       -webkit-tap-highlight-color: transparent;
     }
-    .adv-opt:hover { border-color: rgba(201,71,30,.45); }
-    .adv-opt.is-on {
-      border-color: var(--action);
-      background: var(--action-tint);
-      color: var(--text);
-      box-shadow: 0 2px 12px rgba(201,71,30,.14);
+    .adv-opt-text { flex: 1; }
+    .adv-badge {
+      position: relative; flex: 0 0 auto;
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 1.5px solid var(--border); color: var(--text-muted);
+      display: grid; place-items: center; font-size: 13px; font-weight: 800;
+      transition: border-color .2s, background .2s, color .2s;
     }
+    .adv-badge-letter { transition: opacity .15s; }
+    .adv-check { position: absolute; inset: 0; margin: auto; width: 17px; height: 17px; }
+    .adv-check path {
+      fill: none; stroke: var(--action-ink); stroke-width: 2.6;
+      stroke-linecap: round; stroke-linejoin: round;
+      stroke-dasharray: 26; stroke-dashoffset: 26;
+    }
+    .adv-opt:hover { border-color: var(--action); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(242,121,69,.14); }
+    .adv-opt:hover .adv-badge { border-color: var(--action); color: var(--action); }
+    .adv-opt.is-on { border-color: var(--action); background: var(--action-tint); box-shadow: 0 4px 16px rgba(242,121,69,.16); }
+    .adv-opt.is-on .adv-badge { background: var(--action); border-color: var(--action); }
+    .adv-opt.is-on .adv-badge-letter { opacity: 0; }
+    .adv-opt.is-on .adv-check path { animation: adv-draw .35s ease forwards; }
+    @keyframes adv-draw { to { stroke-dashoffset: 0; } }
+    .adv-opt.is-dim { opacity: .4; pointer-events: none; }
 
-    /* ── 단계형 진행: 한 문항씩 카드로, 답 선택 시 다음으로 자동 이동 ── */
-    .adv-progress {
-      display: flex; align-items: center; justify-content: center; gap: 14px;
-      margin-bottom: 26px;
-    }
-    .adv-back {
-      border: none; background: none; cursor: pointer;
-      font-size: 14px; font-weight: 700; color: var(--text-muted);
-      padding: 6px 4px; -webkit-tap-highlight-color: transparent;
-    }
-    .adv-back:hover { color: var(--action); }
-    .adv-dots { display: flex; gap: 8px; }
-    .adv-dot {
-      width: 8px; height: 8px; border-radius: 99px;
-      background: var(--border); transition: transform .3s, background .3s;
-    }
-    .adv-dot.is-done { background: var(--action); }
-    .adv-dot.is-current { background: var(--action); transform: scale(1.4); }
-    .adv-step-label { font-size: 13px; font-weight: 800; color: var(--text-muted); min-width: 42px; }
+    /* View Transitions 미지원 시 문항 진입 stagger 폴백 */
+    .adv-opt.fx-rise { animation: adv-rise .4s cubic-bezier(.22,1,.36,1) both; }
+    @keyframes adv-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-    /* 한 번에 한 문항만 표시 (JS가 .is-current 토글) */
-    .adv-q { display: none; margin-bottom: 0; }
-    .adv-q.is-current { display: block; animation: adv-step-in .34s cubic-bezier(.22,.61,.36,1) both; }
-    @keyframes adv-step-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-    .adv-q-num { display: none; } /* 진행 점/라벨이 단계를 보여주므로 'Q1.' 숫자는 숨김 */
-    .adv-q-title { font-size: clamp(17px, 2.2vw, 20px); margin-bottom: 18px; text-align: center; }
-    /* 옵션을 한 열의 큰 카드로 (선택하기 쉽게) */
-    .adv-opts { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; gap: 12px; }
-    .adv-opt { padding: 18px 20px; font-size: 15px; }
+    /* ── 결과 ── */
+    .adv-result { margin-top: 24px; }
+    .adv-result:empty { display: none; }
+    .adv-res { position: relative; }
+    .adv-res > * { opacity: 0; }
+    .adv-main-card {
+      position: relative; background: var(--surface);
+      border: 1.5px solid var(--border-soft); border-radius: 20px;
+      box-shadow: var(--shadow-lg); padding: 30px 28px 26px; overflow: visible;
+      animation: adv-up .5s ease .05s forwards, adv-land .32s ease .72s;
+    }
+    .adv-chip {
+      display: inline-block; font-size: 12px; font-weight: 800;
+      color: var(--action-dark); background: var(--action-tint);
+      padding: 6px 12px; border-radius: 999px; margin-bottom: 14px;
+    }
+    .adv-eyebrow { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; color: var(--action); text-transform: uppercase; margin-bottom: 8px; }
+    .adv-name { font-family: var(--serif); font-size: clamp(30px, 7vw, 40px); font-weight: 700; color: var(--accent); line-height: 1.12; letter-spacing: -.01em; }
+    .adv-name-desc { margin-top: 10px; font-size: 14px; color: var(--text-muted); line-height: 1.6; word-break: keep-all; }
+    .adv-detail-link { display: inline-block; margin-top: 16px; font-size: 14px; font-weight: 800; color: var(--action); text-decoration: underline; text-underline-offset: 4px; }
+
+    .adv-plus { width: 30px; height: 30px; margin: 10px auto; border-radius: 50%; background: var(--bg3); color: var(--text-muted); display: grid; place-items: center; font-size: 18px; font-weight: 700; animation: adv-up .5s ease .85s forwards; }
+
+    .adv-sub-card {
+      display: flex; align-items: center; gap: 14px;
+      border: 1.5px dashed var(--border); border-radius: 16px;
+      padding: 16px 18px; background: transparent;
+      animation: adv-up .5s ease .95s forwards;
+    }
+    .adv-sub-left { flex: 1; min-width: 0; }
+    .adv-sub-label { font-size: 11.5px; font-weight: 800; color: var(--text-dim); letter-spacing: .04em; margin-bottom: 4px; }
+    .adv-sub-name { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1.2; }
+    .adv-sub-desc { font-size: 13px; color: var(--text-muted); margin-top: 2px; word-break: keep-all; }
+    .adv-sub-link { flex: 0 0 auto; font-size: 13.5px; font-weight: 800; color: var(--action); text-decoration: none; white-space: nowrap; }
+    .adv-sub-link:hover { text-decoration: underline; }
+
+    .adv-combo-cta {
+      display: block; width: 100%; text-align: center; margin-top: 16px;
+      padding: 17px 20px; border-radius: 14px;
+      background: var(--action); color: var(--action-ink);
+      font-size: 16px; font-weight: 800; text-decoration: none;
+      box-shadow: var(--shadow-action); transition: background .2s, transform .2s;
+      animation: adv-up .5s ease 1.1s forwards;
+    }
+    .adv-combo-cta:hover { background: var(--action-hover); transform: translateY(-2px); }
     .adv-restart {
-      border: none; background: none; cursor: pointer; display: block; margin: 22px auto 0;
+      display: block; margin: 18px auto 0; border: none; background: none; cursor: pointer;
       font-size: 13px; font-weight: 700; color: var(--text-dim);
+      text-decoration: underline; text-underline-offset: 3px;
       -webkit-tap-highlight-color: transparent;
+      animation: adv-up .5s ease 1.25s forwards;
     }
     .adv-restart:hover { color: var(--action); }
-    @media (prefers-reduced-motion: reduce) { .adv-q.is-current { animation: none; } }
+    @keyframes adv-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes adv-land { 0%,100% { translate: 0 0; } 25% { translate: 1px -1px; } 50% { translate: -1px 1px; } 75% { translate: 1px 0; } }
 
-    /* ── 결과 영역 ── */
-    .adv-result { margin-top: 8px; }
-    .adv-res-head {
-      font-size: clamp(19px, 2.6vw, 24px); font-weight: 800;
-      color: var(--text); margin: 26px 0 18px; text-align: center;
-      word-break: keep-all;
+    /* ── SVG 잉크 도장 (feTurbulence displacement) ── */
+    .adv-stamp-wrap { position: absolute; top: -14px; right: 14px; width: 96px; height: 43px; pointer-events: none; z-index: 2; }
+    .adv-stamp-svg { width: 100%; height: 100%; opacity: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.18)); animation: adv-stamp-press .55s cubic-bezier(.15,1.5,.4,1) .45s forwards; }
+    @keyframes adv-stamp-press {
+      0%   { opacity: 0; transform: rotate(-6deg) scale(2.4); }
+      60%  { opacity: 1; transform: rotate(9deg) scale(.9); }
+      80%  { opacity: 1; transform: rotate(9deg) scale(1.06); }
+      100% { opacity: 1; transform: rotate(9deg) scale(1); }
     }
-    .adv-card {
-      background: var(--surface); border-radius: 18px;
-      border: 1.5px solid var(--border-soft);
-      box-shadow: var(--shadow); overflow: hidden;
-    }
-    .adv-card-band { height: 10px; }
-    .adv-card-body { padding: 20px 22px; }
-    .adv-card-label {
-      font-size: 11.5px; font-weight: 800; letter-spacing: .06em;
-      color: var(--action); margin-bottom: 8px;
-    }
-    .adv-card-name { font-size: 22px; font-weight: 900; color: var(--text); letter-spacing: -.02em; margin-bottom: 8px; }
-    .adv-card-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; word-break: keep-all; }
-    .adv-card.adv-main .adv-card-body { padding: 26px 28px; }
-    .adv-card.adv-main .adv-card-name { font-size: 27px; }
-    .adv-card.adv-sub .adv-card-name { font-size: 18px; }
-    .adv-card.adv-sub .adv-card-desc { font-size: 13px; }
-    .adv-subs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-    .adv-subs.solo { grid-template-columns: 1fr; }
-
-    .adv-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
-    .adv-ctas .btn { font-size: 15px; }
-
-    /* 결과 등장 페이드인 */
-    @keyframes adv-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-    .adv-res-in { animation: adv-in .45s ease both; }
-    @media (prefers-reduced-motion: reduce) {
-      .adv-res-in { animation: none; }
-      .adv-opt { transition: none; }
+    .adv-splat { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; border-radius: 50%; background: var(--action); opacity: 0; animation: adv-splat .5s ease-out .72s forwards; }
+    @keyframes adv-splat {
+      0%   { opacity: 0; transform: translate(-50%,-50%) scale(.2); }
+      30%  { opacity: .9; }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(var(--s)); }
     }
 
     /* ── Mobile ── */
-    @media (max-width: 768px) {
-      .advisor { padding: var(--section-y-mobile) 0; }
-      .adv-opts { grid-template-columns: 1fr; }
-      .adv-subs { grid-template-columns: 1fr; }
-      .adv-ctas { flex-direction: column; }
-      .adv-ctas .btn { width: 100%; justify-content: center; text-align: center; }
+    @media (max-width: 768px) { .advisor { padding: var(--section-y-mobile) 0; } }
+    @media (max-width: 560px) {
+      .adv-steps { gap: 10px; }
+      .adv-pill { padding: 5px 10px; font-size: 11.5px; }
+      .adv-opt { padding: 14px 15px; font-size: 14.5px; }
+      .adv-main-card { padding: 26px 20px 22px; }
+      .adv-stamp-wrap { width: 82px; height: 37px; top: -12px; right: 10px; }
+      .adv-sub-card { flex-wrap: wrap; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .adv-opt, .adv-track-fill, .adv-pill, .adv-badge, .adv-combo-cta { transition: none; }
+      .adv-opt.is-on .adv-check path { animation: none; stroke-dashoffset: 0; }
+      .adv-opt.fx-rise { animation: none; }
+      .adv-res > * { opacity: 1; animation: none; }
+      .adv-stamp-svg { opacity: 1; animation: none; transform: rotate(9deg); }
+      .adv-splat { display: none; }
     }
 
     /* ── INSTRUCTORS (리디자인 2026-07-10, 브랜드 정합 2026-07-10) ──
@@ -840,29 +959,61 @@
     }
 
     /* ── CTA ── */
+    /* ═══ 마지막 CTA — 다크 네이비 + 그레인(인쇄 광고 프레임) 2026-07-11 리디자인 ═══ */
     .cta-section { padding: var(--section-y) 0; background: var(--action-tint); }
     .cta-box {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--rose) 55%, var(--coral) 100%);
-      border-radius: 24px; padding: 72px 40px; text-align: center;
+      --cta-ink: #141F3A; /* 다크 네이비(--ink-deep) — 브랜드 네이비 계열 최심도 */
       position: relative; overflow: hidden;
-      box-shadow: 0 24px 64px rgba(36, 26, 18,.45);
+      background: var(--cta-ink);
+      border-radius: 24px; padding: 72px 40px; text-align: center;
+      box-shadow: 0 24px 64px rgba(20,31,58,.42);
     }
+    /* 그레인 텍스처 (feTurbulence data URI, fractalNoise) */
     .cta-box::before {
-      content: ''; position: absolute; top: -80px; right: -80px;
-      width: 280px; height: 280px; border-radius: 50%; background: rgba(255,255,255,.08);
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+      opacity: .07; mix-blend-mode: screen;
     }
+    /* inset 16px 헤어라인 프레임 (인쇄 광고 느낌) */
     .cta-box::after {
-      content: ''; position: absolute; bottom: -100px; left: -60px;
-      width: 250px; height: 250px; border-radius: 50%; background: rgba(255,255,255,.06);
+      content: ''; position: absolute; inset: 16px; pointer-events: none;
+      border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
     }
-    .cta-title { font-size: var(--fs-h2); font-weight: 800; color: #fff; margin-bottom: 14px; position: relative; z-index: 1; line-height: var(--lh-tight); letter-spacing: var(--ls-tight); word-break: keep-all; }
-    .cta-desc { font-size: var(--fs-body); color: rgba(255,255,255,.88); margin-bottom: 36px; line-height: var(--lh-body); position: relative; z-index: 1; }
-    .cta-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; position: relative; z-index: 1; }
-    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 15px 32px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-    .btn-white:hover { transform: translateY(-2px); }
-    .btn-outline-white { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.55); font-size: 14px; }
-    .btn-outline-white:hover { background: rgba(255,255,255,.12); border-color: #fff; }
-    .cta-note { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 18px; position: relative; z-index: 1; }
+    .cta-inner { position: relative; z-index: 1; }
+    .cta-title { font-size: clamp(26px, 4.6vw, 36px); font-weight: 800; color: #fff; margin-bottom: 16px; line-height: var(--lh-tight); letter-spacing: var(--ls-tight); word-break: keep-all; }
+    .cta-title .cta-serif { font-family: var(--serif); font-style: italic; font-weight: 700; color: #F2854F; }
+    .cta-title .cta-ul { position: relative; white-space: nowrap; }
+    .cta-title .cta-ul::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 3px;
+      background: var(--action); border-radius: 3px; transform: scaleX(0); transform-origin: left;
+    }
+    .cta-desc { font-size: var(--fs-body); color: rgba(255,255,255,.86); margin-bottom: 34px; line-height: var(--lh-body); }
+    .cta-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .cta-note { font-size: 12.5px; color: rgba(255,255,255,.66); margin-top: 18px; }
+
+    /* 요소별 진입 fade-up (--d 딜레이) + '딱 좋아요' 밑줄 draw-on */
+    .cta-anim { opacity: 0; }
+    .cta-box.is-in .cta-anim { animation: cta-up .7s cubic-bezier(.22,1,.36,1) both; animation-delay: var(--d, 0s); }
+    @keyframes cta-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+    .cta-box.is-in .cta-ul::after { animation: cta-underline .8s cubic-bezier(.22,1,.36,1) 1.05s forwards; }
+    @keyframes cta-underline { to { transform: scaleX(1); } }
+
+    /* 하단 marquee (헤어라인 위 구분선 + 무한 흐름) */
+    .cta-marquee { position: relative; z-index: 1; margin-top: 30px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.14); overflow: hidden; }
+    .cta-marquee-track { display: inline-flex; white-space: nowrap; will-change: transform; animation: cta-marquee 38s linear infinite; }
+    .cta-marquee-track span { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.5); letter-spacing: .02em; }
+    @keyframes cta-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    /* CTA 버튼 — 고스트(후기) + 오렌지 solid(참여) */
+    .btn-ghost-white { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); font-size: 15px; padding: 15px 32px; transition: background .2s, border-color .2s; }
+    .btn-ghost-white:hover { background: rgba(255,255,255,.1); border-color: #fff; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cta-anim { opacity: 1; }
+      .cta-box.is-in .cta-anim { animation: none; }
+      .cta-box.is-in .cta-ul::after { animation: none; transform: scaleX(1); }
+      .cta-marquee-track { animation: none; }
+    }
 
     /* ── FOOTER ── */
     footer { border-top: 1px solid var(--border); padding: 40px 0; background: var(--bg2); }
@@ -2198,38 +2349,51 @@
     </div>
 
     <div class="adv reveal">
-      <div class="adv-q">
-        <div class="adv-q-title"><span class="adv-q-num">Q1.</span>면접 답변을 할 때, 가장 먼저 막히는 지점은?</div>
-        <div class="adv-opts" role="group" aria-label="질문 1. 면접 답변을 할 때, 가장 먼저 막히는 지점은?">
-          <button class="adv-opt" data-q="0" data-k="s" aria-pressed="false">뭐라고 답해야 할지 내용부터 안 떠오른다</button>
-          <button class="adv-opt" data-q="0" data-k="p" aria-pressed="false">내용은 있는데 말로 하면 밋밋해진다</button>
-          <button class="adv-opt" data-q="0" data-k="b" aria-pressed="false">말하다 보면 목소리가 떨리고 흔들린다</button>
-          <button class="adv-opt" data-q="0" data-k="y" aria-pressed="false">카메라 앞에만 서면 표정과 시선이 굳는다</button>
+      <!-- 진행: 스텝 pill(Q1/Q2/Q3) + 가는 진행바 -->
+      <div class="adv-steps" aria-hidden="true">
+        <div class="adv-pills">
+          <span class="adv-pill" data-step="0">Q1</span>
+          <span class="adv-pill" data-step="1">Q2</span>
+          <span class="adv-pill" data-step="2">Q3</span>
         </div>
+        <div class="adv-track"><div class="adv-track-fill" id="advFill"></div></div>
       </div>
 
-      <div class="adv-q">
-        <div class="adv-q-title"><span class="adv-q-num">Q2.</span>녹음·녹화된 내 모습을 다시 보면?</div>
-        <div class="adv-opts" role="group" aria-label="질문 2. 녹음, 녹화된 내 모습을 다시 보면?">
-          <button class="adv-opt" data-q="1" data-k="b" aria-pressed="false">목소리 톤이 어색하고 얇게 들린다</button>
-          <button class="adv-opt" data-q="1" data-k="y" aria-pressed="false">표정이 어색하고 시선이 불안하다</button>
-          <button class="adv-opt" data-q="1" data-k="p" aria-pressed="false">틀린 건 없는데 밋밋하고 지루하다</button>
-          <button class="adv-opt" data-q="1" data-k="s" aria-pressed="false">답변 내용이 뻔하고 남들이랑 똑같다</button>
+      <!-- View Transitions 대상 컨테이너(문항 전환 morph) -->
+      <div class="adv-stage" id="advStage">
+        <div class="adv-q" data-q="0">
+          <div class="adv-q-title">면접 답변을 할 때, 가장 먼저 막히는 지점은?</div>
+          <div class="adv-opts" role="group" aria-label="질문 1. 면접 답변을 할 때, 가장 먼저 막히는 지점은?">
+            <button class="adv-opt" data-q="0" data-k="s" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">A</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">뭐라고 답해야 할지 내용부터 안 떠오른다</span></button>
+            <button class="adv-opt" data-q="0" data-k="p" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">B</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">내용은 있는데 말로 하면 밋밋해진다</span></button>
+            <button class="adv-opt" data-q="0" data-k="b" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">C</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">말하다 보면 목소리가 떨리고 흔들린다</span></button>
+            <button class="adv-opt" data-q="0" data-k="y" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">D</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">카메라 앞에만 서면 표정과 시선이 굳는다</span></button>
+          </div>
         </div>
-      </div>
 
-      <div class="adv-q">
-        <div class="adv-q-title"><span class="adv-q-num">Q3.</span>딱 하나만 바꿀 수 있다면?</div>
-        <div class="adv-opts" role="group" aria-label="질문 3. 딱 하나만 바꿀 수 있다면?">
-          <button class="adv-opt" data-q="2" data-k="b" aria-pressed="false">떨리지 않는 안정적인 목소리</button>
-          <button class="adv-opt" data-q="2" data-k="y" aria-pressed="false">화면 속에서도 자연스러운 나</button>
-          <button class="adv-opt" data-q="2" data-k="p" aria-pressed="false">듣는 사람을 끌어당기는 말맛</button>
-          <button class="adv-opt" data-q="2" data-k="s" aria-pressed="false">면접관이 기억하는 나만의 답변</button>
+        <div class="adv-q" data-q="1">
+          <div class="adv-q-title">녹음·녹화된 내 모습을 다시 보면?</div>
+          <div class="adv-opts" role="group" aria-label="질문 2. 녹음, 녹화된 내 모습을 다시 보면?">
+            <button class="adv-opt" data-q="1" data-k="b" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">A</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">목소리 톤이 어색하고 얇게 들린다</span></button>
+            <button class="adv-opt" data-q="1" data-k="y" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">B</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">표정이 어색하고 시선이 불안하다</span></button>
+            <button class="adv-opt" data-q="1" data-k="p" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">C</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">틀린 건 없는데 밋밋하고 지루하다</span></button>
+            <button class="adv-opt" data-q="1" data-k="s" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">D</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">답변 내용이 뻔하고 남들이랑 똑같다</span></button>
+          </div>
         </div>
-      </div>
 
-      <!-- 결과 — 세 답변이 모두 선택되면 JS가 여기에 렌더 -->
-      <div class="adv-result" id="advResult" aria-live="polite"></div>
+        <div class="adv-q" data-q="2">
+          <div class="adv-q-title">딱 하나만 바꿀 수 있다면?</div>
+          <div class="adv-opts" role="group" aria-label="질문 3. 딱 하나만 바꿀 수 있다면?">
+            <button class="adv-opt" data-q="2" data-k="b" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">A</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">떨리지 않는 안정적인 목소리</span></button>
+            <button class="adv-opt" data-q="2" data-k="y" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">B</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">화면 속에서도 자연스러운 나</span></button>
+            <button class="adv-opt" data-q="2" data-k="p" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">C</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">듣는 사람을 끌어당기는 말맛</span></button>
+            <button class="adv-opt" data-q="2" data-k="s" aria-pressed="false"><span class="adv-badge"><span class="adv-badge-letter">D</span><svg class="adv-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="adv-opt-text">면접관이 기억하는 나만의 답변</span></button>
+          </div>
+        </div>
+
+        <!-- 결과 — 세 답변이 모이면 JS가 여기에 렌더(잉크 도장 + 복수 추천) -->
+        <div class="adv-result" id="advResult" aria-live="polite"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -2241,15 +2405,41 @@
       <h2 class="ma-title">참여하면 <span>나만의 성장 기록</span>이 생겨요</h2>
       <p class="ma-sub">2주 동안 매일 코치 피드백을 받고, 수료 후 달라진 내 목소리를 직접 비교해요.</p>
     </div>
-    <div class="ma-preview reveal">
-      <div class="ma-mp-head"><span>홍길동</span>님의 챌린지</div>
-      <div class="ma-days">
-        <div class="ma-day ok">1</div><div class="ma-day ok">2</div><div class="ma-day no">3</div><div class="ma-day ok">4</div><div class="ma-day ok">5</div><div class="ma-day ok">6</div><div class="ma-day ok">7</div>
-        <div class="ma-day ok">8</div><div class="ma-day ok">9</div><div class="ma-day ok">10</div><div class="ma-day no">11</div><div class="ma-day">12</div><div class="ma-day">13</div><div class="ma-day">14</div>
+    <div class="ma-preview reveal" id="maPreview">
+      <div class="ma-mp-head">
+        <div class="ma-mp-title"><span>홍길동</span>님의 챌린지</div>
+        <div class="ma-mp-count"><b id="maCount">0</b> / 14일 인증</div>
       </div>
-      <div class="ma-ba">
-        <div class="ma-slot"><div class="ma-tag">Before · 입과 전</div><div class="ma-audio"><span class="ma-play"></span><span class="ma-wave"></span></div></div>
-        <div class="ma-slot after"><div class="ma-tag">After · 수료 후</div><div class="ma-audio"><span class="ma-play"></span><span class="ma-wave"></span></div></div>
+      <!-- 14일 날짜 도장 (상태·도장 애니메이션·카운트업은 JS) -->
+      <div class="ma-days" id="maDays"></div>
+      <!-- Before / After 실제 음성 파형 (Web Audio API) -->
+      <div class="ma-wf" id="maWf">
+        <div class="wf-panel" data-role="before">
+          <div class="wf-head">
+            <button class="wf-play" type="button" aria-label="Before 음성 재생"></button>
+            <span class="wf-label">Before · 입과 전</span>
+            <span class="wf-time">0:00 / 0:00</span>
+          </div>
+          <div class="wf-bars"></div>
+          <div class="wf-foot">
+            <button class="wf-load" type="button">음성 파일 불러오기</button>
+            <div class="wf-hint">또는 파일을 여기로 드래그</div>
+          </div>
+          <input type="file" accept="audio/*" hidden>
+        </div>
+        <div class="wf-panel after" data-role="after">
+          <div class="wf-head">
+            <button class="wf-play" type="button" aria-label="After 음성 재생"></button>
+            <span class="wf-label">After · 수료 후</span>
+            <span class="wf-time">0:00 / 0:00</span>
+          </div>
+          <div class="wf-bars"></div>
+          <div class="wf-foot">
+            <button class="wf-load" type="button">음성 파일 불러오기</button>
+            <div class="wf-hint">또는 파일을 여기로 드래그</div>
+          </div>
+          <input type="file" accept="audio/*" hidden>
+        </div>
       </div>
     </div>
     <div class="ma-cta reveal">
@@ -2262,14 +2452,23 @@
 <!-- CTA -->
 <section class="cta-section">
   <div class="container">
-    <div class="cta-box reveal">
-      <h2 class="cta-title">"나도 해볼까?" 그 생각,<br>지금이 딱 좋아요</h2>
-      <p class="cta-desc">준비 없이도 괜찮아요. 완벽하지 않아도 괜찮아요.<br>그냥 시작하면, 이미 절반은 성공한 거예요.</p>
-      <div class="cta-actions">
-        <a class="btn btn-white" href="https://cafe.naver.com/f-e/cafes/28410364/menus/114?viewType=L" target="_blank">챌린지 후기보기</a>
-        <a class="btn btn-action" href="apply.html">챌린지 참여하기</a>
+    <div class="cta-box reveal" id="ctaBox">
+      <div class="cta-inner">
+        <h2 class="cta-title cta-anim" style="--d:0s"><span class="cta-serif">"나도 해볼까?"</span> 그 생각,<br>지금이 <span class="cta-ul">딱 좋아요</span></h2>
+        <p class="cta-desc cta-anim" style="--d:.12s">준비 없이도 괜찮아요. 완벽하지 않아도 괜찮아요.<br>그냥 시작하면, 이미 절반은 성공한 거예요.</p>
+        <div class="cta-actions cta-anim" style="--d:.24s">
+          <a class="btn btn-ghost-white" href="https://cafe.naver.com/f-e/cafes/28410364/menus/114?viewType=L" target="_blank">챌린지 후기보기</a>
+          <a class="btn btn-action" href="apply.html">챌린지 참여하기</a>
+        </div>
+        <p class="cta-note cta-anim" style="--d:.36s">2주 완주하면 보증금 전액 환급 · 부담 없이 시작해요</p>
       </div>
-      <p class="cta-note">2주 완주하면 보증금 전액 환급 · 부담 없이 시작해요</p>
+      <!-- 하단 marquee (2회 복제 → translateX(-50%) 무한 흐름) -->
+      <div class="cta-marquee" aria-hidden="true">
+        <div class="cta-marquee-track">
+          <span>보.신.각 목소리 ✦ 스.피.닝 말투 ✦ 영.합.각 표정 ✦ 승.자.각 답변 ✦ 2주 완주 시 보증금 전액 환급 ✦&nbsp;</span>
+          <span>보.신.각 목소리 ✦ 스.피.닝 말투 ✦ 영.합.각 표정 ✦ 승.자.각 답변 ✦ 2주 완주 시 보증금 전액 환급 ✦&nbsp;</span>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -2543,150 +2742,349 @@
     });
   }
 
-  /* ── 챌린지 어드바이저 (adv) — 3문항 진단 ──
-     질문 1·2는 1점, 질문 3은 2점(마지막 질문이 본인의 진짜 욕구라 동점을 깸).
-     세 답변이 모두 선택되면 즉시 결과 렌더, 답을 바꾸면 즉시 갱신. */
+  /* ── Challenge Finder (adv) — 3문항 진단 + 복수 추천 (2026-07-11 리디자인) ──
+     한 문항씩(스텝 pill + 진행바) 카드로 보여주고, 선택 시 680ms 뒤 자동 진행.
+     세 답이 모이면 잉크 도장 + 1·2순위 카드 + 조합 신청 CTA를 렌더.
+     문항 전환은 View Transitions(startViewTransition)로, 미지원/reduced-motion은
+     선택지 stagger 폴백으로 동작(USE_VT 분기). */
   (function() {
     const result = document.getElementById('advResult');
     if (!result) return;
 
-    const CH = {
-      b: { name: '보신각', area: '목소리', href: 'challenge-voice.html', media: 0,
-           desc: '떨리고 흔들리는 목소리를 안정적인 톤으로. 목소리의 기초 체력을 만들어요.',
-           syn: '소리가 안정되면 나머지 훈련 효과가 배가돼요.' },
-      y: { name: '영합각', area: '영상면접', href: 'challenge-expression.html', media: 1,
-           desc: '카메라 앞에서도 대면처럼. 화면 속 표정과 시선을 자연스럽게 만들어요.',
-           syn: '목소리·말맛 훈련을 화면 위 실전으로 연결해요.' },
-      p: { name: '스피닝', area: '말맛', href: 'challenge-spinning.html', media: 2,
-           desc: '밋밋한 전달을 살아있는 말맛으로. 같은 내용도 다르게 들리게 해요.',
-           syn: '안정된 소리에 전달력을 얹으면 완성도가 달라져요.' },
-      s: { name: '승자각', area: '답변 작성', href: 'challenge-answer.html', media: 3,
-           desc: '뻔한 답변 대신 면접관이 기억하는 답변. 내용 자체를 차별화해요.',
-           syn: '좋은 전달에 좋은 내용까지, 둘 다 잡는 조합이에요.' },
-    };
-    const WEIGHTS = [1, 1, 2];
-    const answers = [null, null, null];
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const USE_VT = typeof document.startViewTransition === 'function' && !reduce;
 
-    /* ── 단계형: 한 문항씩 카드로 보여주고, 답 선택 시 다음으로 자동 이동 ── */
-    const advEl = document.querySelector('.adv');
+    /* 카테고리(내부키 b/y/p/s = data-k) → 표시 데이터 + apply.html recruit id */
+    const CAT = {
+      b: { name: '보.신.각', desc: '목소리 챌린지 · 2주 만에 목소리가 달라져요', href: 'challenge-voice.html', rid: 'voice' },
+      y: { name: '영.합.각', desc: '영상면접 표현력 챌린지 · 카메라 앞에서도 자연스럽게', href: 'challenge-expression.html', rid: 'expression' },
+      p: { name: '스.피.닝', desc: '말 맛 챌린지 · 리듬을 타며 발음이 터진다', href: 'challenge-spinning.html', rid: 'spinning' },
+      s: { name: '승.자.각', desc: '답변 챌린지 · 2주에 답변 10개 완성', href: 'challenge-answer.html', rid: 'answer' },
+    };
+    /* 함께 들으면 좋은 궁합표 — ⚠️ 임시값(코칭 경험에 맞게 수정).
+       voice→speech · speech→voice · face→voice · answer→speech */
+    const PAIR = { b: 'p', p: 'b', y: 'b', s: 'p' };
+
+    const answers = [null, null, null];      // Q1·Q2·Q3 카테고리 키
     const questions = [...document.querySelectorAll('.adv-q')];
+    const pills = [...document.querySelectorAll('.adv-pill')];
+    const fill = document.getElementById('advFill');
+    const stage = document.getElementById('advStage');
     let step = 0;
 
-    // 진행 표시(이전 버튼 + 점 + n/총)를 첫 문항 앞에 삽입
-    const progress = document.createElement('div');
-    progress.className = 'adv-progress';
-    progress.innerHTML =
-      '<button class="adv-back" type="button" aria-label="이전 질문">‹ 이전</button>'
-      + '<div class="adv-dots">' + questions.map(() => '<span class="adv-dot"></span>').join('') + '</div>'
-      + '<span class="adv-step-label"></span>';
-    advEl.insertBefore(progress, questions[0]);
-    const backBtn = progress.querySelector('.adv-back');
-    const dots = [...progress.querySelectorAll('.adv-dot')];
-    const stepLabel = progress.querySelector('.adv-step-label');
+    /* 복수 추천 규칙 (스펙):
+       ① 3표 → 1순위, 2순위=PAIR, 칩 '3문항 모두 일치'
+       ② 2표 → 1순위, 2순위=남은 1표, 칩 '2문항 일치'
+       ③ 1·1·1 → 1순위=Q3(최종 목표), 2순위=Q1(첫 고민), 칩 '최종 목표 기준' */
+    function computeResult() {
+      const counts = {};
+      answers.forEach(k => { counts[k] = (counts[k] || 0) + 1; });
+      const uniq = Object.keys(counts);
+      const three = uniq.find(k => counts[k] === 3);
+      if (three) return { primary: three, secondary: PAIR[three], chip: '3문항 모두 일치' };
+      const two = uniq.find(k => counts[k] === 2);
+      if (two) return { primary: two, secondary: uniq.find(k => k !== two), chip: '2문항 일치' };
+      return { primary: answers[2], secondary: answers[0], chip: '최종 목표 기준' };
+    }
 
-    function showStep(i) {
-      step = i;
-      result.innerHTML = '';        // 재진입 시 이전 결과 제거
-      progress.style.display = '';
-      questions.forEach((q, idx) => q.classList.toggle('is-current', idx === i));
-      dots.forEach((d, idx) => {
-        d.classList.toggle('is-current', idx === i);
-        d.classList.toggle('is-done', idx < i);
+    /* SVG 잉크 도장 — feTurbulence + feDisplacementMap으로 번진 가장자리 */
+    const STAMP = '<span class="adv-stamp-wrap" aria-hidden="true">'
+      + '<svg class="adv-stamp-svg" viewBox="0 0 120 54" xmlns="http://www.w3.org/2000/svg">'
+      + '<defs><filter id="advInkRough" x="-20%" y="-20%" width="140%" height="140%">'
+      + '<feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" seed="7" result="n"/>'
+      + '<feDisplacementMap in="SourceGraphic" in2="n" scale="3.6"/></filter></defs>'
+      + '<g filter="url(#advInkRough)">'
+      + '<rect x="4" y="4" width="112" height="46" rx="9" fill="none" stroke="var(--action)" stroke-width="4"/>'
+      + '<text x="60" y="35" text-anchor="middle" font-family="\'Noto Serif KR\',serif" font-size="20" font-weight="900" letter-spacing="4" fill="var(--action)">MATCH</text>'
+      + '</g></svg>'
+      + [[-24,-14,.5],[22,-16,.6],[-18,16,.45],[20,14,.55],[0,-22,.5],[2,22,.4]]
+          .map(v => '<i class="adv-splat" style="--x:' + v[0] + 'px;--y:' + v[1] + 'px;--s:' + v[2] + '"></i>').join('')
+      + '</span>';
+
+    function updateSteps(answered) {
+      pills.forEach((p, i) => {
+        p.classList.toggle('is-done', i < answered);
+        p.classList.toggle('is-active', i === step && i >= answered);
       });
-      stepLabel.textContent = (i + 1) + ' / ' + questions.length;
-      backBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
+      if (fill) fill.style.width = (answered / questions.length * 100) + '%';
     }
-    function showResult() {
+
+    function staggerOpts(i) {
+      const opts = [...questions[i].querySelectorAll('.adv-opt')];
+      opts.forEach((o, k) => {
+        o.classList.remove('fx-rise'); void o.offsetWidth;
+        o.style.animationDelay = (k * 70) + 'ms';
+        o.classList.add('fx-rise');
+      });
+    }
+
+    function paintStep(i) {
+      step = i;
+      result.innerHTML = '';
+      questions.forEach((q, idx) => q.classList.toggle('is-current', idx === i));
+      updateSteps(answers.filter(a => a !== null).length);
+      if (!USE_VT) staggerOpts(i);
+    }
+
+    function renderResult() {
+      const { primary, secondary, chip } = computeResult();
+      const P = CAT[primary], S = CAT[secondary];
+      result.innerHTML =
+        '<div class="adv-res">'
+        + '<div class="adv-main-card">'
+        +   STAMP
+        +   '<span class="adv-chip">' + chip + '</span>'
+        +   '<div class="adv-eyebrow">지금 나에게 딱 맞는 챌린지</div>'
+        +   '<div class="adv-name" style="view-transition-name:challenge-name">' + P.name + '</div>'
+        +   '<div class="adv-name-desc">' + P.desc + '</div>'
+        +   '<a class="adv-detail-link" href="' + P.href + '">자세히 보기 →</a>'
+        + '</div>'
+        + '<div class="adv-plus" aria-hidden="true">+</div>'
+        + '<div class="adv-sub-card">'
+        +   '<div class="adv-sub-left">'
+        +     '<div class="adv-sub-label">함께 하면 좋은 챌린지</div>'
+        +     '<div class="adv-sub-name">' + S.name + '</div>'
+        +     '<div class="adv-sub-desc">' + S.desc + '</div>'
+        +   '</div>'
+        +   '<a class="adv-sub-link" href="' + S.href + '">자세히 →</a>'
+        + '</div>'
+        + '<a class="adv-combo-cta" href="apply.html?c=' + P.rid + ',' + S.rid + '">두 챌린지 함께 신청하기</a>'
+        + '<button class="adv-restart" type="button">처음부터 다시 해보기</button>'
+        + '</div>';
+    }
+
+    function paintResult() {
+      step = questions.length;
       questions.forEach(q => q.classList.remove('is-current'));
-      progress.style.display = 'none';
-      render();
-    }
-    backBtn.addEventListener('click', () => { if (step > 0) showStep(step - 1); });
-
-    function card(key, main) {
-      const c = CH[key];
-      const label = main ? ('핵심 챌린지 · ' + c.area) : ('함께 하면 시너지 · ' + c.area);
-      return '<div class="adv-card ' + (main ? 'adv-main' : 'adv-sub') + '">'
-        + '<div class="adv-card-band chx-media-' + c.media + '"></div>'
-        + '<div class="adv-card-body">'
-        + '<div class="adv-card-label">' + label + '</div>'
-        + '<div class="adv-card-name">' + c.name + '</div>'
-        + '<div class="adv-card-desc">' + (main ? c.desc : c.syn) + '</div>'
-        + '</div></div>';
+      updateSteps(questions.length);
+      renderResult();
     }
 
-    function render() {
-      if (answers.some(a => a === null)) return;
-
-      const score = {};
-      answers.forEach((k, i) => { score[k] = (score[k] || 0) + WEIGHTS[i]; });
-      /* 점수 내림차순, 동점이면 질문 3의 답(진짜 욕구)이 앞으로 */
-      const keys = Object.keys(score).sort((a, b) =>
-        (score[b] - score[a]) || (a === answers[2] ? -1 : b === answers[2] ? 1 : 0));
-
-      let html;
-      if (keys.length === 1) {
-        /* 케이스 A — 세 답변이 모두 같은 챌린지 (단일 추천) */
-        const k = keys[0];
-        html = '<div class="adv-res-in">'
-          + '<div class="adv-res-head">고민이 하나로 뚜렷해요. 이 챌린지에 집중하세요.</div>'
-          + card(k, true)
-          + '<div class="adv-ctas">'
-          /* CTA 목적지: 챌린지 상세 페이지 — 별도 신청 페이지가 생기면 URL 교체 */
-          + '<a class="btn btn-action" href="' + CH[k].href + '">' + CH[k].name + ' 시작하기</a>'
-          + '</div></div>';
-      } else {
-        /* 케이스 B — 2~3개 챌린지 조합 추천 */
-        const top = keys[0];
-        const rest = keys.slice(1);
-        const comboNames = keys.map(k => CH[k].name).join(' + ');
-        html = '<div class="adv-res-in">'
-          + '<div class="adv-res-head">당신에게 필요한 조합이에요.</div>'
-          + card(top, true)
-          + '<div class="adv-subs' + (rest.length === 1 ? ' solo' : '') + '">'
-          + rest.map(k => card(k, false)).join('')
-          + '</div>'
-          + '<div class="adv-ctas">'
-          /* CTA 목적지: 핵심 챌린지 상세 페이지 — 별도 신청 페이지가 생기면 URL 교체 */
-          + '<a class="btn btn-ghost" href="' + CH[top].href + '">' + CH[top].name + '만 시작하기</a>'
-          /* 조합 신청 — 추천 챌린지를 apply.html에서 자동 선택(?c=). CH 키(b/y/p/s)→recruit id 매핑 */
-          + '<a class="btn btn-action" href="apply.html?c=' + keys.map(k => ({ b: 'voice', y: 'expression', p: 'spinning', s: 'answer' }[k])).filter(Boolean).join(',') + '">조합으로 함께 시작하기 (' + comboNames + ')</a>'
-          + '</div></div>';
-      }
-      result.innerHTML = html;
-      const inner = result.querySelector('.adv-res-in');
-      if (inner) inner.insertAdjacentHTML('beforeend',
-        '<button class="adv-restart" type="button">↺ 다시 진단하기</button>');
+    /* 문항 컨테이너에 view-transition-name을 한시적으로 부여 → morph 후 해제
+       (상시 부여하면 문서 간 이동 시 challenge-name morph와 충돌하므로) */
+    function transition(fn) {
+      if (USE_VT && stage) {
+        stage.style.viewTransitionName = 'finder';
+        const t = document.startViewTransition(fn);
+        t.finished.finally(() => { stage.style.viewTransitionName = ''; });
+      } else fn();
     }
+    function goStep(i) { transition(() => paintStep(i)); }
+    function goResult() { transition(() => paintResult()); }
 
     document.querySelectorAll('.adv-opt').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (btn.classList.contains('is-dim')) return;
         const q = +btn.dataset.q;
         answers[q] = btn.dataset.k;
         document.querySelectorAll('.adv-opt[data-q="' + q + '"]').forEach(b => {
           const on = b === btn;
           b.classList.toggle('is-on', on);
+          b.classList.toggle('is-dim', !on);
           b.setAttribute('aria-pressed', String(on));
         });
-        // 선택 하이라이트를 잠깐 보여준 뒤 다음 문항(또는 결과)으로 자동 이동
+        updateSteps(answers.filter(a => a !== null).length);
+        // 체크 드로우를 보여준 뒤(680ms) 다음 문항 또는 결과로
         setTimeout(() => {
-          if (q + 1 < questions.length) showStep(q + 1);
-          else showResult();
-        }, 240);
+          if (q + 1 < questions.length) goStep(q + 1);
+          else goResult();
+        }, 680);
       });
     });
 
-    // 결과의 '다시 진단하기' → 초기화 후 첫 문항으로
+    // 결과의 '처음부터 다시 해보기' → 초기화 후 Q1로
     result.addEventListener('click', (e) => {
       if (!e.target.closest('.adv-restart')) return;
       answers[0] = answers[1] = answers[2] = null;
       document.querySelectorAll('.adv-opt').forEach(b => {
-        b.classList.remove('is-on'); b.setAttribute('aria-pressed', 'false');
+        b.classList.remove('is-on', 'is-dim'); b.setAttribute('aria-pressed', 'false');
       });
-      showStep(0);
+      goStep(0);
     });
 
-    showStep(0); // 첫 문항부터 시작
+    paintStep(0); // 첫 문항부터 시작(초기 페인트는 VT 없이)
+  })();
+
+  /* ── 성장 기록 — 날짜 도장(스탬프 등장 + 카운트업) + Before/After 실제 음성 파형(Web Audio) ── */
+  (function() {
+    const preview = document.getElementById('maPreview');
+    if (!preview) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const daysEl = document.getElementById('maDays');
+    const countEl = document.getElementById('maCount');
+
+    // 14일 상태: done(연녹) / late(연오렌지) / todo(회색 아웃라인)
+    const DAY_STATES = ['done','done','late','done','done','done','done','done','done','done','late','todo','todo','todo'];
+    DAY_STATES.forEach((st, i) => {
+      const d = document.createElement('div');
+      d.className = 'ma-day' + (st !== 'todo' ? ' ' + st : '') + ' stampable';
+      d.textContent = (i + 1);
+      daysEl.appendChild(d);
+    });
+
+    function runDays() {
+      const cells = [...daysEl.children];
+      if (reduce) {
+        cells.forEach(c => c.classList.remove('stampable'));
+        countEl.textContent = DAY_STATES.filter(s => s !== 'todo').length;
+        return;
+      }
+      let count = 0;
+      cells.forEach((c, i) => {
+        setTimeout(() => {
+          c.classList.remove('stampable'); c.classList.add('stamp-in');
+          if (DAY_STATES[i] !== 'todo') { count++; countEl.textContent = count; }
+        }, i * 80);
+      });
+    }
+
+    /* ── Web Audio 파형 ── AUDIO_SRC = 기존 Before & After 섹션의 실제 전/후 음성 */
+    const AUDIO_SRC = { before: 'audio/challenger-c-before.mp3', after: 'audio/challenger-c-after.mp3' };
+    const N = 48;
+    const PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+    const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor"/></svg>';
+    const panels = [...preview.querySelectorAll('.wf-panel')];
+    let ctx = null, current = null;
+    function getCtx() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; }
+
+    function fmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+    function setTime(panel, t, dur) { panel.querySelector('.wf-time').textContent = fmt(t) + ' / ' + fmt(dur); }
+    function setIcon(panel, playing) { panel.querySelector('.wf-play').innerHTML = playing ? PAUSE : PLAY; }
+    function nudge(panel) { panel.classList.remove('nudge'); void panel.offsetWidth; panel.classList.add('nudge'); }
+
+    function renderBars(panel, peaks, animate) {
+      const wrap = panel.querySelector('.wf-bars');
+      wrap.innerHTML = '';
+      peaks.forEach((p, i) => {
+        const b = document.createElement('div');
+        b.className = 'wf-bar';
+        b.style.height = (6 + Math.max(0, Math.min(1, p)) * 54).toFixed(1) + 'px'; // 6~60px
+        if (animate && !reduce) { b.classList.add('rise'); b.style.animationDelay = (i * 8) + 'ms'; }
+        wrap.appendChild(b);
+      });
+      panel._bars = [...wrap.children];
+    }
+
+    // 폴백 더미: before=낮고 불규칙 / after=높고 고름
+    function fallbackPeaks(role) {
+      const arr = [];
+      for (let i = 0; i < N; i++) {
+        if (role === 'after') arr.push(0.5 + 0.32 * Math.abs(Math.sin(i * 0.7)));
+        else arr.push(0.15 + 0.36 * Math.random());
+      }
+      return arr;
+    }
+
+    // arrayBuffer → 48구간 피크(0~1 정규화)
+    async function decode(arrbuf) {
+      const ac = getCtx();
+      const buf = await ac.decodeAudioData(arrbuf);
+      const data = buf.getChannelData(0);
+      const block = Math.max(1, Math.floor(data.length / N));
+      const peaks = []; let max = 0;
+      for (let i = 0; i < N; i++) {
+        let peak = 0;
+        for (let j = 0; j < block; j++) { const v = Math.abs(data[i * block + j] || 0); if (v > peak) peak = v; }
+        peaks.push(peak); if (peak > max) max = peak;
+      }
+      return { buf, peaks: peaks.map(p => max > 0 ? p / max : 0) };
+    }
+
+    function stopCurrent() {
+      if (!current) return;
+      cancelAnimationFrame(current.raf);
+      try { current.src.onended = null; current.src.stop(); } catch (e) {}
+      const p = current.panel;
+      setIcon(p, false);
+      (p._bars || []).forEach(b => { b.classList.remove('played'); b.style.transform = ''; });
+      setTime(p, 0, current.buf ? current.buf.duration : 0);
+      current = null;
+    }
+
+    function play(panel) {
+      if (current && current.panel === panel) { stopCurrent(); return; }
+      if (current) stopCurrent();
+      const buf = panel._buf;
+      if (!buf) { nudge(panel); return; }           // 버퍼 없이 재생 → 안내 흔들기
+      const ac = getCtx();
+      if (ac.state === 'suspended') ac.resume();
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const an = ac.createAnalyser(); an.fftSize = 256;
+      src.connect(an); an.connect(ac.destination);
+      const td = new Uint8Array(an.fftSize);
+      const bars = panel._bars || [];
+      const dur = buf.duration;
+      const start = ac.currentTime;
+      const state = { panel, src, buf, raf: 0 };
+      current = state;
+      src.onended = () => { if (current === state) stopCurrent(); };
+      src.start();
+      setIcon(panel, true);
+      (function loop() {
+        const t = ac.currentTime - start;
+        const idx = Math.floor(Math.min(1, t / dur) * bars.length);
+        bars.forEach((b, i) => b.classList.toggle('played', i < idx));
+        an.getByteTimeDomainData(td);
+        let sum = 0; for (let i = 0; i < td.length; i++) { const v = (td[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / td.length);
+        if (bars[idx - 1]) bars[idx - 1].style.transform = '';
+        if (bars[idx]) bars[idx].style.transform = 'scaleY(' + (1 + rms * 1.8) + ')';  // 현재 위치 막대 실시간 반응
+        setTime(panel, t, dur);
+        state.raf = requestAnimationFrame(loop);
+      })();
+    }
+
+    async function loadFile(panel, file) {
+      try {
+        const ab = await file.arrayBuffer();
+        const { buf, peaks } = await decode(ab);
+        if (current && current.panel === panel) stopCurrent();
+        panel._buf = buf; renderBars(panel, peaks, true); setTime(panel, 0, buf.duration);
+      } catch (e) { nudge(panel); }
+    }
+
+    panels.forEach(panel => {
+      renderBars(panel, fallbackPeaks(panel.dataset.role), false); // 폴백 막대 즉시 표시
+      setIcon(panel, false);
+      panel.querySelector('.wf-play').addEventListener('click', () => play(panel));
+      const input = panel.querySelector('input[type=file]');
+      panel.querySelector('.wf-load').addEventListener('click', () => input.click());
+      input.addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(panel, f); });
+      panel.addEventListener('dragover', e => { e.preventDefault(); panel.classList.add('drag-over'); });
+      panel.addEventListener('dragleave', () => panel.classList.remove('drag-over'));
+      panel.addEventListener('drop', e => {
+        e.preventDefault(); panel.classList.remove('drag-over');
+        const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) loadFile(panel, f);
+      });
+    });
+
+    async function loadReal() {
+      for (const panel of panels) {
+        try {
+          const res = await fetch(AUDIO_SRC[panel.dataset.role]);
+          if (!res.ok) continue;
+          const { buf, peaks } = await decode(await res.arrayBuffer());
+          panel._buf = buf; renderBars(panel, peaks, true); setTime(panel, 0, buf.duration);
+        } catch (e) { /* 실패 시 폴백 막대 유지 */ }
+      }
+    }
+
+    // 뷰포트 진입(threshold 0.35) 시 1회: 날짜 도장 + 실제 파형 로드
+    let started = false;
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting && !started) { started = true; runDays(); loadReal(); io.disconnect(); } });
+    }, { threshold: 0.35 });
+    io.observe(preview);
+  })();
+
+  /* ── 마지막 CTA — 뷰포트 진입(threshold 0.35) 시 요소별 fade-up + 밑줄 draw-on + marquee ── */
+  (function() {
+    const box = document.getElementById('ctaBox');
+    if (!box) return;
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { box.classList.add('is-in'); io.disconnect(); } });
+    }, { threshold: 0.35 });
+    io.observe(box);
   })();
 
   /* ── 모집 기간 (구글 시트 연동) ── */
