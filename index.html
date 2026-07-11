@@ -4518,6 +4518,17 @@
   }
 
   function measure(){
+    // 측정은 반드시 '정지(u=0)' 좌표계에서 해야 한다. apply()는 스크롤 도중
+    // inner(#htInner)에 최대 scale(1.9) 확대를, 소문자 글자에 translateY를 걸어
+    // 둔다. 무거운 히어로라 load·fonts.ready(또는 모바일 URL바 resize)가 스크롤
+    // '중간'(p>0.52, inner 확대 상태)에 늦게 도착해 measure를 부르면, 그 확대된
+    // 좌표로 잉크 폭을 재서 서브라인 자간(g0)·중심(dx0)이 배율만큼 부풀려진 채
+    // subLock에 굳는다 → 창을 내렸다 올리면 서브라인이 넓게 벌어지고 우측으로
+    // 밀리는 버그(2026-07-11). 그래서 apply가 건드리는 부모/형제 transform까지
+    // 모두 원점으로 되돌린 뒤 측정한다. 측정 직후엔 항상 refresh()가 apply(lastP)
+    // 로 올바른 상태를 다시 그리므로 리셋해도 잔상이 남지 않는다.
+    inner.style.transform = '';
+    others.forEach(function(el){ el.style.transform = ''; });
     hlEls.forEach(function(el){ el.style.transform = ''; });
     subko.style.letterSpacing = '0px'; subko.style.marginRight = ''; subko.style.transform = '';
     fitPhrase();
