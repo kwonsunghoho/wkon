@@ -1573,6 +1573,14 @@
       /* 타일 표시폭 = 100vh(높이) × (4344/724 = 6.0) = 600vh → 정확히 1주기 */
       to   { transform: translateX(-600vh); }
     }
+    /* ⚠️ 창틀 <picture>(.zoom-bezel-fade)는 반드시 실제 박스를 가져야 한다.
+       기본 인라인(0×0)인 채로 tokens.css의 will-change: opacity 승격을 받으면
+       Chrome이 0×0 레이어 경계로 컬링해 자식 img(창틀)가 통째로 안 그려진다
+       (2026-07-11 발견). display:block + inset:0으로 img와 동일 영역을 차지시킴. */
+    picture.zoom-bezel-fade {
+      display: block;
+      position: absolute; inset: 0; z-index: 2;
+    }
     .hero-window-frame {
       display: block;
       position: absolute; inset: 0; z-index: 2;
@@ -1615,11 +1623,18 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       text-align: center; padding: 0 16px;
+      /* 조립 구간(0~30%)에 서브라인 letter-spacing이 매 프레임 바뀌는데,
+         격리하지 않으면 그 리플로우가 문서 전체로 번져 프레임을 잡아먹는다.
+         내용물은 전부 뷰포트(오버레이) 안이라 클리핑 부작용 없음 (2026-07-11) */
+      contain: layout paint;
     }
     .hero-tagline.ht-fixed { position: fixed; }
-    /* 중앙 원형 비네트 + 하단 그라데이션 — 밝은 노을 위 글자 가독성 확보 */
+    /* 중앙 원형 비네트 + 하단 그라데이션 — 밝은 노을 위 글자 가독성 확보.
+       will-change: 창 통과 구간(50~75%)에 매 프레임 opacity가 바뀌는 풀스크린
+       그라디언트 — 승격 없인 매 프레임 전체 리페인트라 끊김 (2026-07-11) */
     .ht-scrim {
       position: absolute; inset: 0;
+      will-change: opacity;
       background:
         radial-gradient(ellipse 95% 72% at 50% 50%, rgba(28,18,10,.5) 0%, rgba(28,18,10,.26) 45%, rgba(28,18,10,0) 74%),
         linear-gradient(to top, rgba(30,20,12,.35) 0%, transparent 30%);
@@ -2658,9 +2673,22 @@
     });
   });
 
-  /* 초기 레이아웃 + 자동전환 시작 */
+  /* 초기 레이아웃 + 자동전환 시작.
+     자동전환은 캐러셀이 뷰포트에 있을 때만 — 페이지 첫 화면은 창문 인트로라,
+     인트로 스크롤 중 5초마다 화면 밖 카드 4장의 transition이 돌며 스크롤
+     프레임을 뺏는 것을 방지 (2026-07-11). IO 미지원 브라우저는 기존처럼 상시. */
   heroLayout();
-  _heroResetAuto();
+  (function(){
+    var scene = document.querySelector('.hero-scene');
+    if (!scene || !('IntersectionObserver' in window)) { _heroResetAuto(); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { _heroResetAuto(); }
+        else { clearInterval(_heroAutoTimer); _heroAutoTimer = null; }
+      });
+    }, { threshold: 0.15 });
+    io.observe(scene);
+  })();
 
   /* ── 스와이프 ── */
   (function() {
@@ -4715,39 +4743,45 @@
     subko.style.letterSpacing = g0 + 'px';
     subko.style.transform = 'translate(' + dx0 + 'px,0)';
     lastAssembled = null; // 측정 중 visibility를 만졌으므로 다음 apply에서 재동기화
+    lastU = -1;           // 측정이 인라인 스타일을 리셋했으므로 u 동일값 스킵 해제
   }
 
   var ASSEMBLE_END = 0.30;
+  var lastU = -1; // 조립 구간 스타일의 마지막 적용값 — 30% 이후엔 u가 1로 고정되어
+                  // 매 프레임 letter-spacing(레이아웃)·글자 transform 재기록을 건너뜀
 
   function apply(p){
     var u = ease(clamp(p / ASSEMBLE_END));
 
-    others.forEach(function(el){
-      el.style.opacity = String(clamp(1 - u * 1.5));
-      el.style.transform = 'translateY(' + (u * 8) + 'px)';
-    });
-    hlEls.forEach(function(el, i){
-      var d = deltas[i]; if (!d) return;
-      el.style.transform = 'translate(' + (d.dx*u) + 'px,' + (d.dy*u) + 'px) scale(' + (1 + (d.k - 1) * u) + ')';
-    });
+    if (u !== lastU){
+      lastU = u;
+      others.forEach(function(el){
+        el.style.opacity = String(clamp(1 - u * 1.5));
+        el.style.transform = 'translateY(' + (u * 8) + 'px)';
+      });
+      hlEls.forEach(function(el, i){
+        var d = deltas[i]; if (!d) return;
+        el.style.transform = 'translate(' + (d.dx*u) + 'px,' + (d.dy*u) + 'px) scale(' + (1 + (d.k - 1) * u) + ')';
+      });
 
-    // 선명도: 조립 완료 순간, transform 확대 글자(래스터 흐림)를 네이티브
-    // 렌더 로고로 교체. FLIP 목표점과 픽셀 일치라 교체가 보이지 않는다.
-    var assembled = u >= 0.999;
-    if (assembled !== lastAssembled){
-      lastAssembled = assembled;
-      target.style.visibility = assembled ? 'visible' : 'hidden';
-      hlEls.forEach(function(el){ el.style.visibility = assembled ? 'hidden' : 'visible'; });
-    }
+      // 선명도: 조립 완료 순간, transform 확대 글자(래스터 흐림)를 네이티브
+      // 렌더 로고로 교체. FLIP 목표점과 픽셀 일치라 교체가 보이지 않는다.
+      var assembled = u >= 0.999;
+      if (assembled !== lastAssembled){
+        lastAssembled = assembled;
+        target.style.visibility = assembled ? 'visible' : 'hidden';
+        hlEls.forEach(function(el){ el.style.visibility = assembled ? 'hidden' : 'visible'; });
+      }
 
-    // 서브라인 동반 조립: 자간 g0→g1, 넘치면 scale(s1) 축소, dy만큼 하강.
-    // translateX는 실측 잉크 중심 보정(dx0→dx1) — translate가 scale보다
-    // 먼저(왼쪽에) 와야 보정값이 스케일의 영향을 받지 않는다.
-    if (subLock){
-      var g = subLock.g0 + (subLock.g1 - subLock.g0) * u;
-      subko.style.letterSpacing = g + 'px';
-      var tx = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
-      subko.style.transform = 'translate(' + tx + 'px,' + (subLock.dy * u) + 'px) scale(' + (1 + (subLock.s1 - 1) * u) + ')';
+      // 서브라인 동반 조립: 자간 g0→g1, 넘치면 scale(s1) 축소, dy만큼 하강.
+      // translateX는 실측 잉크 중심 보정(dx0→dx1) — translate가 scale보다
+      // 먼저(왼쪽에) 와야 보정값이 스케일의 영향을 받지 않는다.
+      if (subLock){
+        var g = subLock.g0 + (subLock.g1 - subLock.g0) * u;
+        subko.style.letterSpacing = g + 'px';
+        var tx = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
+        subko.style.transform = 'translate(' + tx + 'px,' + (subLock.dy * u) + 'px) scale(' + (1 + (subLock.s1 - 1) * u) + ')';
+      }
     }
 
     // 창 통과 구간: 스크림 걷힘 → 태그라인 그룹 확대+페이드(뚫고 지나가는 연출)

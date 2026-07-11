@@ -169,11 +169,31 @@
     // 풀스크린 연출이라 손가락 추종 지연은 체감이 낮아 완충을 우선한다.
     var TAU = 150;
 
+    // 프레임 루프에서 매번 querySelector/getAttribute/parseFloat를 반복하지
+    // 않도록, 섹션별 설정과 페이드 대상 요소를 초기화 시점에 한 번만 수집한다.
+    // (속성·DOM 구조는 런타임에 바뀌지 않음 — 2026-07-11 프레임 비용 절감)
     var items = [];
     wraps.forEach(function (wrap) {
       var pin = wrap.querySelector('.zoom-exit-pin');
       if (!pin) return;
-      items.push({ wrap: wrap, pin: pin, current: 0, target: 0 });
+      // data-zoom-start(0~1, 기본 0): 줌이 시작되는 진행률. 예: 0.5면 전반
+      // 50%는 scale 1로 정지(태그라인 조립·유지 구간), 후반 50%에 확대가
+      // 몰려 '정면으로 확 뚫고 들어가는' 연출이 된다. (2026-07-10)
+      var startAttr = attrFor(wrap, 'data-zoom-start');
+      var zoomStart = startAttr ? parseFloat(startAttr) : 0;
+      if (isNaN(zoomStart) || zoomStart < 0 || zoomStart >= 1) zoomStart = 0;
+      var scaleAttr = attrFor(wrap, 'data-zoom-scale');
+      var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
+      if (isNaN(scaleK)) scaleK = SCALE_K;
+      items.push({
+        wrap: wrap, pin: pin, current: 0, target: 0,
+        zoomStart: zoomStart, scaleK: scaleK,
+        // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지)
+        fadeNone: wrap.getAttribute('data-zoom-fade') === 'none',
+        toneBridge: wrap.querySelector('.zoom-tone-bridge'),
+        contentFadeEls: wrap.querySelectorAll('.zoom-content-fade'),
+        bezelFadeEls: wrap.querySelectorAll('.zoom-bezel-fade')
+      });
     });
     if (!items.length) return;
 
@@ -190,38 +210,28 @@
       var wrap = item.wrap;
       var pin = item.pin;
       var progress = item.current;
-      // data-zoom-start(0~1, 기본 0): 줌이 시작되는 진행률. 예: 0.5면 전반
-      // 50%는 scale 1로 정지(태그라인 조립·유지 구간), 후반 50%에 확대가
-      // 몰려 '정면으로 확 뚫고 들어가는' 연출이 된다. (2026-07-10)
-      var startAttr = attrFor(wrap, 'data-zoom-start');
-      var zoomStart = startAttr ? parseFloat(startAttr) : 0;
-      if (isNaN(zoomStart) || zoomStart < 0 || zoomStart >= 1) zoomStart = 0;
+      var zoomStart = item.zoomStart;
       var zp = zoomStart > 0
         ? Math.min(1, Math.max(0, (progress - zoomStart) / (1 - zoomStart)))
         : progress;
       var eased = easeInOut(zp);
-      var scaleAttr = attrFor(wrap, 'data-zoom-scale');
-      var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
-      if (isNaN(scaleK)) scaleK = SCALE_K;
       // 스케일 커브(2026-07-11): 로그 공간 기하 보간 + 완만한 ease-in 멱지수.
       // 줌의 체감 속도는 scale의 '비율' 변화라서, 선형 보간(1 + eased×K)은
       // smoothstep과 겹치면 중반 급가속·종반 감속이 되어 '확 당겨졌다 멈추는'
       // 느낌을 줬다. (1+K)^(zp^1.35)는 체감 줌 속도가 거의 일정하게 서서히
       // 빨라지며 끝까지 감속 없이 '쭉' 빨려들어간다. (끝의 잔속도는 하늘
       // 페이드 80~100%가 덮는다.)
-      pin.style.transform = 'scale(' + Math.pow(1 + scaleK, Math.pow(zp, 1.35)) + ')';
-      // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지) —
-      // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 속성이 없으면 기존과 동일하게
-      // progress에 따라 선형으로 페이드아웃.
-      var fadeAttr = wrap.getAttribute('data-zoom-fade');
-      pin.style.opacity = fadeAttr === 'none' ? '1' : String(1 - eased);
+      pin.style.transform = 'scale(' + Math.pow(1 + item.scaleK, Math.pow(zp, 1.35)) + ')';
+      // fadeNone(data-zoom-fade="none")이면 페이드 없이 확대만 진행 —
+      // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 없으면 기존과 동일하게
+      // progress에 따라 선형으로 페이드아웃. (불변값 '1'은 CSS 기본이라 미기록)
+      if (!item.fadeNone) pin.style.opacity = String(1 - eased);
 
       // 다음 섹션(주로 어두운 톤)으로 자연스럽게 이어지도록, wrap 안에
       // .zoom-tone-bridge 요소가 있으면 진행률에 따라 어두운 그라디언트를
       // 서서히 덧씌워 톤이 미리 어두워지기 시작하게 함 (급격한 톤 전환 방지).
-      var toneBridge = wrap.querySelector('.zoom-tone-bridge');
-      if (toneBridge) {
-        toneBridge.style.opacity = String(eased);
+      if (item.toneBridge) {
+        item.toneBridge.style.opacity = String(eased);
       }
 
       // .zoom-content-fade가 붙은 요소(사진 레이어 등)는 확대 막바지(진행률
@@ -229,11 +239,10 @@
       // 일반 스크롤로 넘어간 뒤에는 확대된 이미지의 다른 부분(가장자리 등)이
       // 뷰포트에 걸쳐 보일 수 있는데, 그 전에 이미지 자체를 미리 지워버려서
       // "프레임이 다시 보이는" 것을 원천 차단.
-      var contentFadeEls = wrap.querySelectorAll('.zoom-content-fade');
-      if (contentFadeEls.length) {
+      if (item.contentFadeEls.length) {
         // 80~100%: 줌 막바지에만 하늘을 지움 (데모 타이밍 정합, 2026-07-10)
         var contentOpacity = 1 - Math.max(0, (progress - 0.80) / 0.20);
-        contentFadeEls.forEach(function (el) {
+        item.contentFadeEls.forEach(function (el) {
           el.style.opacity = String(contentOpacity);
         });
       }
@@ -242,11 +251,10 @@
       // (진행률 30%~55%) 사라진다. 뒤에는 풀뷰포트 하늘(sky-bg)이 깔려 있어,
       // 창틀이 지워지면 하늘이 화면을 가득 채운다 → 확대 도중 "창틀"이 아니라
       // "하늘만" 보이게 된다. (창이 개구부보다 커서 하단 창틀이 걸치던 문제 해결.)
-      var bezelFadeEls = wrap.querySelectorAll('.zoom-bezel-fade');
-      if (bezelFadeEls.length) {
+      if (item.bezelFadeEls.length) {
         // 55~75%: 줌 시작(50%) 직후 창틀이 사라지며 하늘만 남음 (데모 타이밍 정합)
         var bezelOpacity = 1 - Math.max(0, (progress - 0.55) / 0.20);
-        bezelFadeEls.forEach(function (el) {
+        item.bezelFadeEls.forEach(function (el) {
           el.style.opacity = String(bezelOpacity);
         });
       }

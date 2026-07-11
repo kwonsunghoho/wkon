@@ -129,6 +129,15 @@ html {
   overflow: hidden;
   will-change: transform, opacity;
 }
+/* 줌 진행 중 scroll-fx.js가 매 프레임 opacity를 갱신하는 페이드 레이어들
+   (창틀 사진·하늘·톤 브릿지). 자체 합성 레이어로 승격하지 않으면 opacity가
+   pin 레이어 래스터에 구워져 매 프레임 풀스크린 리페인트가 발생 — 인트로
+   스크롤이 프레임 단위로 끊기는 주원인이었다(2026-07-11). 제거 금지. */
+[data-zoom-exit] .zoom-content-fade,
+[data-zoom-exit] .zoom-bezel-fade,
+[data-zoom-exit] .zoom-tone-bridge {
+  will-change: opacity;
+}
 @media (prefers-reduced-motion: reduce) {
   /* .hs-slide 자식들이 position:absolute라 height:auto인 부모에 높이를 전달하지 못해
      0px로 붕괴하는 문제를 방지하기 위해 pin에 실제 높이(100vh)를 명시적으로 유지 */
