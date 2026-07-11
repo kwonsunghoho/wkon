@@ -167,7 +167,16 @@
     // 공통 150ms(2026-07-11): 터치만 80ms로 짧게 줬더니 플릭 중 성기게 오는
     // scroll 이벤트의 점프가 덜 걸러져 모바일이 데스크톱보다 뚝뚝 끊겨 보였다.
     // 풀스크린 연출이라 손가락 추종 지연은 체감이 낮아 완충을 우선한다.
+    //
+    // 적응형 추격(2026-07-12): 고정 150ms는 빠른 스크롤에서 줌이 진행률
+    // 0.15~0.2만큼 뒤처져, 클라이맥스(최대 확대·창 통과)가 핀이 화면을
+    // 벗어난 뒤 재생되는 '줌 희석'을 만들었다. 그래서 목표와의 격차가
+    // 클수록 시정수를 TAU_FAST까지 줄인다 — 휠 한 칸(격차 ≈0.03~0.06)은
+    // 여전히 TAU 근처로 부드럽고, 빠른 플릭(격차 0.25+)은 바짝 따라붙어
+    // 연출 전 구간이 화면 안에서 재생된다. 줌 효과 자체(배율·커브)의
+    // 문제가 아니므로 배율을 키우는 식으로 보상하지 말 것.
     var TAU = 150;
+    var TAU_FAST = 60;
 
     // 프레임 루프에서 매번 querySelector/getAttribute/parseFloat를 반복하지
     // 않도록, 섹션별 설정과 페이드 대상 요소를 초기화 시점에 한 번만 수집한다.
@@ -287,13 +296,15 @@
       // 튀어도 한 번에 과하게 점프하지 않도록 64ms로 클램프.
       var dt = lastTs ? Math.min(64, ts - lastTs) : 16.7;
       lastTs = ts;
-      var k = 1 - Math.exp(-dt / TAU);
       var busy = false;
       items.forEach(function (item) {
         item.target = computeTarget(item.wrap);
         var diff = item.target - item.current;
-        if (Math.abs(diff) > 0.0004) {
-          item.current += diff * k;
+        var ad = Math.abs(diff);
+        if (ad > 0.0004) {
+          // 격차 비례 적응형 시정수: 격차 0 → TAU(부드러움), 0.25 이상 → TAU_FAST(추격)
+          var tau = TAU - (TAU - TAU_FAST) * Math.min(1, ad / 0.25);
+          item.current += diff * (1 - Math.exp(-dt / tau));
           busy = true;
         } else {
           item.current = item.target;
