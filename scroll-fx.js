@@ -194,7 +194,7 @@
       var scaleAttr = attrFor(wrap, 'data-zoom-scale');
       var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
       if (isNaN(scaleK)) scaleK = SCALE_K;
-      items.push({
+      var item = {
         wrap: wrap, pin: pin, current: 0, target: 0,
         zoomStart: zoomStart, scaleK: scaleK,
         // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지)
@@ -202,7 +202,23 @@
         toneBridge: wrap.querySelector('.zoom-tone-bridge'),
         contentFadeEls: wrap.querySelectorAll('.zoom-content-fade'),
         bezelFadeEls: wrap.querySelectorAll('.zoom-bezel-fade')
-      });
+      };
+      items.push(item);
+      // 개구부 실측 캘리브레이션(2026-07-12, index 태그라인 IIFE가 dispatch):
+      // '창문 통과' 연출은 개구부가 뷰포트를 완전히 삼킬 만큼 확대돼야 성립한다.
+      // 프레임 이미지의 개구부 크기를 알파 스캔으로 실측해 필요한 최대 배율
+      // (1+scaleK)을 보정받는다 — data-zoom-scale 속성은 실측 실패 시 폴백.
+      (function (it) {
+        wrap.addEventListener('monc:zoomcalib', function (e) {
+          var k = e.detail && parseFloat(e.detail.scaleK);
+          if (!isNaN(k)) {
+            // 캡 6.5: 여운용 오버슛(need^1.25) 포함 상한 — 울트라와이드에서
+            // 넘치면 클램프되어 통과 완료가 약간 늦어질 뿐 연출은 유지된다.
+            it.scaleK = Math.min(6.5, Math.max(0.2, k));
+            renderWrap(it);
+          }
+        });
+      })(item);
     });
     if (!items.length) return;
 
@@ -239,12 +255,12 @@
       // 다음 섹션(주로 어두운 톤)으로 자연스럽게 이어지도록, wrap 안에
       // .zoom-tone-bridge 요소가 있으면 진행률에 따라 어두운 그라디언트를
       // 서서히 덧씌워 톤이 미리 어두워지기 시작하게 함 (급격한 톤 전환 방지).
-      // 단 톤 브릿지는 z-order상 하늘/창틀 '아래'라 하늘 페이드(80%~) 전엔
+      // 단 톤 브릿지는 z-order상 하늘/창틀 '아래'라 하늘 페이드(96%~) 전엔
       // 완전히 가려진다 — 가려진 동안에도 풀스크린 블렌딩 비용을 내므로
       // visibility로 합성 자체를 끈다(Intel iGPU 등 fill-rate 병목 완화,
-      // 2026-07-12). 0.72부터 표시 — 이때도 아직 하늘 뒤라 시각 변화 없음.
+      // 2026-07-12). 0.90부터 표시 — 이때도 아직 하늘 뒤라 시각 변화 없음.
       if (item.toneBridge) {
-        var toneHidden = progress < 0.72;
+        var toneHidden = progress < 0.90;
         if (toneHidden !== item.toneHidden) {
           item.toneHidden = toneHidden;
           item.toneBridge.style.visibility = toneHidden ? 'hidden' : '';
@@ -252,26 +268,28 @@
         if (!toneHidden) item.toneBridge.style.opacity = String(eased);
       }
 
-      // .zoom-content-fade가 붙은 요소(사진 레이어 등)는 확대 막바지(진행률
-      // 70~100%) 구간에서 완전히 페이드아웃시킴. pin이 sticky에서 풀려
-      // 일반 스크롤로 넘어간 뒤에는 확대된 이미지의 다른 부분(가장자리 등)이
-      // 뷰포트에 걸쳐 보일 수 있는데, 그 전에 이미지 자체를 미리 지워버려서
-      // "프레임이 다시 보이는" 것을 원천 차단.
+      // .zoom-content-fade(하늘)는 줌 마지막(96~100%)에만 지운다. pin이
+      // sticky에서 풀려 일반 스크롤로 넘어가는 순간(=100%) 확대된 이미지가
+      // 뷰포트에 걸쳐 보이지 않도록 정확히 그 직전에 0이 된다.
+      // (구 80~100%는 '창문 통과' 클라이맥스 도중 하늘이 절반쯤 사라져
+      // 통과감을 죽였다 — 2026-07-12 재조정. 96~은 통과(~89%) 후 하늘 위에
+      // 남는 MONC 브랜드 여운(태그라인 94~99.5% 페이드)의 배경을 확보.)
       if (item.contentFadeEls.length) {
-        // 80~100%: 줌 막바지에만 하늘을 지움 (데모 타이밍 정합, 2026-07-10)
-        var contentOpacity = 1 - Math.max(0, (progress - 0.80) / 0.20);
+        var contentOpacity = Math.max(0, 1 - Math.max(0, (progress - 0.96) / 0.04));
         item.contentFadeEls.forEach(function (el) {
           el.style.opacity = String(contentOpacity);
         });
       }
 
-      // .zoom-bezel-fade(창틀 + 벽 패널)는 하늘(.zoom-content-fade)보다 더 일찍
-      // (진행률 30%~55%) 사라진다. 뒤에는 풀뷰포트 하늘(sky-bg)이 깔려 있어,
-      // 창틀이 지워지면 하늘이 화면을 가득 채운다 → 확대 도중 "창틀"이 아니라
-      // "하늘만" 보이게 된다. (창이 개구부보다 커서 하단 창틀이 걸치던 문제 해결.)
+      // .zoom-bezel-fade(창틀): '창문 통과' 연출의 본체 — 확대에 밀려 화면
+      // 밖으로 빠르게 지나가는 것이 통과감이므로 페이드로 지우지 않고 통과
+      // 완료(~89%, calibrateZoom 오버슛) 직전 82~90%에만 짧게 지운다. 이
+      // 페이드는 개구부 둥근 모서리가 남기는 벽 잔여물 정리용 안전망일 뿐이다.
+      // ⚠️ 구 55~75% 페이드로 되돌리지 말 것 — 창틀이 일찍 사라지면 '창문을
+      // 뚫고 들어가는' 느낌이 '하늘 사진이 커지는' 느낌으로 퇴화한다(2026-07-12).
+      // (개구부가 뷰포트를 못 덮던 옛 문제는 monc:zoomcalib 실측 배율로 해결.)
       if (item.bezelFadeEls.length) {
-        // 55~75%: 줌 시작(50%) 직후 창틀이 사라지며 하늘만 남음 (데모 타이밍 정합)
-        var bezelOpacity = 1 - Math.max(0, (progress - 0.55) / 0.20);
+        var bezelOpacity = Math.max(0, 1 - Math.max(0, (progress - 0.82) / 0.08));
         item.bezelFadeEls.forEach(function (el) {
           el.style.opacity = String(bezelOpacity);
         });

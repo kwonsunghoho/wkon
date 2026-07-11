@@ -1530,11 +1530,12 @@
     }
     .hero-window-intro .zoom-exit-pin {
       background-color: var(--bg);
-      /* 줌 고정점은 모바일·데스크톱 공통 중앙(2026-07-11) — 현행 프레임 이미지는
-         두 버전 모두 개구부 세로 중심이 화면 중앙 부근(모바일 51%·데스크톱 53%)이고,
-         창틀은 진행률 55~75%에 페이드로 사라져 확대로 밀어낼 필요가 없다.
-         (구 모바일 50% 8%는 옛 레이아웃 보정값 — 확대할수록 장면이 위로
-         끌려 올라가 데스크톱과 다른 프레이밍이 되는 버그였음) */
+      /* 줌 고정점: 아래 50% 50%는 무JS 폴백일 뿐 — 실제로는 태그라인 IIFE의
+         calibrateZoom()이 프레임 이미지 개구부 중심을 알파 스캔 실측으로 구해
+         인라인 transform-origin으로 덮어쓴다(2026-07-12). '창문 통과' 연출은
+         개구부가 확대의 고정점이어야 창틀이 사방으로 밀려나며 뚫고 들어가는
+         느낌이 성립한다. 필요한 최대 배율도 같은 실측으로 scroll-fx에 전달
+         (monc:zoomcalib — data-zoom-scale 속성은 실측 실패 시 폴백). */
       transform-origin: 50% 50%;
     }
     /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러 실제 비행기
@@ -1966,7 +1967,7 @@
      zoom-start 0.35(2026-07-11): 조립(0~30%) 동안은 정지, 35%부터 기하 가속 커브로
      미세 드리프트→점점 빨라지며 끝까지 '쭉' 빨려들어감 — 0.5 시절 후반 압축 줌이
      '확 당겨지는' 느낌을 줘서 확대 구간을 앞으로 늘림(커브는 scroll-fx.js) -->
-<section class="hero-window-intro" data-zoom-exit data-zoom-scale="2.2" data-zoom-runway="340" data-zoom-runway-mobile="300" data-zoom-start="0.35" data-zoom-fade="none">
+<section class="hero-window-intro" data-zoom-exit data-zoom-scale="2.2" data-zoom-runway="390" data-zoom-runway-mobile="340" data-zoom-start="0.30" data-zoom-fade="none">
   <div class="zoom-exit-pin">
     <div class="hero-window-sky-bg zoom-content-fade">
       <div class="hero-window-sky-y"><div class="hero-window-sky-x"></div></div>
@@ -4586,7 +4587,7 @@
   // 알파 스캔으로 재서, 조립된 로고가 창틀을 침범하지 않게 폰트 상한을 보정.
   // CSS의 min(16vw,18vh) 캡은 프레임 이미지가 바뀌면(개구부 폭 변화) 못 따라간다.
   var frameImg = document.querySelector('.hero-window-frame');
-  var opening = null; // {x0,x1: 이미지 폭 대비 개구부 좌우 비율, nw,nh: 스캔 시점 원본 크기}
+  var opening = null; // {x0,x1,y0,y1: 이미지 대비 개구부 비율, nw,nh: 스캔 시점 원본 크기}
   var openingSrc = '';
   function scanOpening(){
     if (!frameImg || !frameImg.complete || !frameImg.naturalWidth) return;
@@ -4598,22 +4599,56 @@
       var ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(frameImg, 0, 0, W, H);
       var d = ctx.getImageData(0, 0, W, H).data;
-      var minX = W, maxX = -1;
+      var minX = W, maxX = -1, minY = H, maxY = -1;
       for (var i = 3; i < d.length; i += 4){
         if (d[i] < 128){
-          var x = (i >> 2) % W;
+          var px = i >> 2;
+          var x = px % W;
+          var y = (px / W) | 0;
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
         }
       }
       // 디코드 전 no-op draw면 전체가 투명으로 읽힘 — 개구부가 이미지 폭의
       // 90%를 넘으면 비정상으로 보고 버린다(다음 measure/load에서 재시도).
       if (maxX > minX && (maxX - minX + 1) / W < 0.9){
         opening = { x0: minX / W, x1: (maxX + 1) / W,
+                    y0: minY / H, y1: (maxY + 1) / H,
                     nw: frameImg.naturalWidth, nh: frameImg.naturalHeight };
         openingSrc = src;
       }
     } catch (e) { opening = null; } // 캔버스 사용 불가(file:// 등) — CSS 캡 폴백
+  }
+
+  // ── '창문 통과' 줌 캘리브레이션(2026-07-12): 개구부가 뷰포트를 완전히
+  // 삼킬 때까지 확대돼야 '뚫고 들어가는' 연출이 성립한다. 개구부 실측값으로
+  // ① 필요한 최대 배율(둥근 모서리 여유 1.15배)을 scroll-fx에 전달하고
+  // ② 줌 고정점(transform-origin)을 개구부 중심에 맞춘다 — 고정점이
+  // 중앙(50%)이면 고배율에서 개구부가 화면 밖으로 밀려나 통과가 어긋난다.
+  var pinEl = wrap.querySelector('.zoom-exit-pin');
+  function calibrateZoom(){
+    if (!opening || !pinEl) return;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    // object-fit:cover 매핑으로 개구부의 화면 표시 rect 계산
+    var s = Math.max(vw / opening.nw, vh / opening.nh);
+    var iw = opening.nw * s, ih = opening.nh * s;
+    var ox = (vw - iw) / 2, oy = (vh - ih) / 2;
+    var w = (opening.x1 - opening.x0) * iw;
+    var h = (opening.y1 - opening.y0) * ih;
+    if (w <= 0 || h <= 0) return;
+    var cx = ox + (opening.x0 + opening.x1) / 2 * iw;
+    var cy = oy + (opening.y0 + opening.y1) / 2 * ih;
+    var need = Math.max(vw / w, vh / h) * 1.15;
+    // 로그 공간 오버슛 ^1.25: 통과(개구부=뷰포트)가 진행률 100%가 아니라
+    // ~89%(zp^1.35=1/1.25 지점)에 완료되도록 최대 배율에 여유를 준다 —
+    // 남은 ~11% 구간이 '하늘 위 MONC 잔류 여운'이 되고, 그동안 줌은
+    // 감속 없이 은은하게 계속 흘러 정지화면이 되지 않는다(2026-07-12).
+    var maxScale = Math.pow(need, 1.25);
+    pinEl.style.transformOrigin =
+      (cx / vw * 100).toFixed(2) + '% ' + (cy / vh * 100).toFixed(2) + '%';
+    wrap.dispatchEvent(new CustomEvent('monc:zoomcalib', { detail: { scaleK: maxScale - 1 } }));
   }
   // object-fit:cover(뷰포트 채움) 기준 개구부의 화면 표시 폭
   function openingWidth(){
@@ -4657,6 +4692,7 @@
     // 조립 로고가 개구부 안쪽에 들어오도록 폰트 축소(확대는 하지 않음).
     // 서브라인은 로고 잉크 폭에 락업되므로 로고만 맞추면 함께 들어온다.
     scanOpening();
+    calibrateZoom(); // 개구부 실측 → 통과 배율·줌 고정점 보정 (이미지 로드·리사이즈마다 갱신)
     target.style.fontSize = ''; // CSS clamp 기본값으로 리셋 후 재계산
     var ow = openingWidth();
     if (ow > 0){
@@ -4787,14 +4823,17 @@
       }
     }
 
-    // 창 통과 구간: 스크림 걷힘 → 태그라인 그룹 확대+페이드(뚫고 지나가는 연출)
+    // 창 통과 구간: 스크림만 걷히고 로고 락업(MONC+서브라인)은 그대로 남는다.
+    // 창틀이 로고 주위로 밀려 지나간 뒤(통과 완료 ~89%, calibrateZoom 오버슛)
+    // 하늘 위에 뜬 MONC가 브랜드를 한 번 더 각인시키고 94~99.5%에서 서서히
+    // 페이드아웃 — 89~94%는 순수 하늘+로고만 남는 여운 구간(2026-07-12 오너
+    // 요청, 러웨이 390vh로 확장해 확보). 구 '확대+페이드 동반 퇴장(52~78%)'은
+    // 통과 전에 로고가 사라져 브랜드 잔류 여운이 없었음 — 재도입 금지.
     scrim.style.opacity = String(1 - clamp((p - 0.50) / 0.25));
-    var fly = clamp((p - 0.52) / 0.26);
-    inner.style.opacity   = String(1 - fly);
-    inner.style.transform = 'scale(' + (1 + ease(fly) * 0.9) + ')';
+    inner.style.opacity = String(1 - ease(clamp((p - 0.94) / 0.055)));
     cue.style.opacity = String(0.85 * (1 - clamp(p / 0.06)));
 
-    root.style.visibility = p >= 0.99 ? 'hidden' : '';
+    root.style.visibility = p >= 0.995 ? 'hidden' : '';
   }
 
   // scroll-fx.js(initZoomExit)가 창문 줌에 쓰는 '스무딩된' 진행률을
