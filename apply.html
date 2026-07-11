@@ -169,6 +169,14 @@
   .copy-btn { font-size: 11px; font-weight: 800; color: #fff; background: var(--action-dark); border: none; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
   .bank .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(217,83,31,.2); }
 
+  /* ── 개인정보 수집·이용 동의 (필수) ── */
+  .consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px 2px; cursor: pointer; user-select: none; }
+  .consent input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--action); cursor: pointer; }
+  .consent .txt { font-size: 13px; line-height: 1.6; }
+  .consent .txt b { font-weight: 800; color: var(--action-dark); }
+  .consent .detail { display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .consent .detail a { color: var(--accent); font-weight: 700; }
+
   .submit-btn {
     width: 100%; margin-top: 16px; padding: 16px; border: none; border-radius: 12px;
     background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900;
@@ -313,6 +321,14 @@
         </div>
         <div class="note">입금 후 신청 버튼을 눌러주세요. 확인 후 안내드리겠습니다.</div>
       </div>
+
+      <label class="consent" for="appConsent">
+        <input type="checkbox" id="appConsent">
+        <span class="txt">
+          <b>[필수]</b> 만 14세 이상이며, 개인정보 수집·이용에 동의합니다.
+          <span class="detail">수집 항목: 이름·휴대전화번호·환급 계좌 / 목적: 신청 접수·본인 확인·안내 연락·보증금 환급 / 보유 기간: 환급 완료 후 지체 없이 파기 · <a href="privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보처리방침</a></span>
+        </span>
+      </label>
 
       <button type="button" class="submit-btn" id="submitBtn" onclick="submitApplication()">신청하기</button>
     </div>
@@ -552,6 +568,7 @@ async function submitApplication() {
 
   if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
   if (!name || !phone || !account) { alert('이름, 전화번호, 보증금 환급 계좌를 모두 입력해주세요.'); return; }
+  if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
 
   _isSubmitting = true;
@@ -581,6 +598,7 @@ async function submitApplication() {
       ? '신청이 완료되었습니다! 확인 후 안내드리겠습니다.\n마이페이지에서 신청 내역을 확인할 수 있어요.'
       : '신청이 완료되었습니다! 확인 후 안내드리겠습니다.\n회원가입하시면 2주간의 성장을 매일 기록할 수 있어요.');
     document.getElementById('appAccount').value = '';
+    document.getElementById('appConsent').checked = false;
     if (!_memberId) { document.getElementById('appName').value = ''; document.getElementById('appPhone').value = ''; }
     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected', 'curr-open'));
     updateSummary();
