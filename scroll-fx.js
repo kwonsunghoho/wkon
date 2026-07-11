@@ -163,9 +163,11 @@
     // 지금은 목표 진행률(target)을 향해 현재값(current)이 매 프레임 지수 감쇠로
     // 따라붙는 rAF 루프를 돌려, 어떤 입력이든 프레임 단위 연속 보간이 된다.
     // 루프는 목표에 수렴하면 스스로 멈춰(idle) 유휴 비용이 없다.
-    // TAU(ms) = 감쇠 시정수. 클수록 부드럽지만 지연감이 커짐 — 터치는 손가락
-    // 추종감을 위해 짧게, 휠/트랙패드는 점프 완충을 위해 길게.
-    var TAU = window.matchMedia('(pointer: coarse)').matches ? 80 : 150;
+    // TAU(ms) = 감쇠 시정수. 클수록 부드럽지만 지연감이 커짐. 데스크톱·터치
+    // 공통 150ms(2026-07-11): 터치만 80ms로 짧게 줬더니 플릭 중 성기게 오는
+    // scroll 이벤트의 점프가 덜 걸러져 모바일이 데스크톱보다 뚝뚝 끊겨 보였다.
+    // 풀스크린 연출이라 손가락 추종 지연은 체감이 낮아 완충을 우선한다.
+    var TAU = 150;
 
     var items = [];
     wraps.forEach(function (wrap) {
@@ -201,7 +203,13 @@
       var scaleAttr = attrFor(wrap, 'data-zoom-scale');
       var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
       if (isNaN(scaleK)) scaleK = SCALE_K;
-      pin.style.transform = 'scale(' + (1 + eased * scaleK) + ')';
+      // 스케일 커브(2026-07-11): 로그 공간 기하 보간 + 완만한 ease-in 멱지수.
+      // 줌의 체감 속도는 scale의 '비율' 변화라서, 선형 보간(1 + eased×K)은
+      // smoothstep과 겹치면 중반 급가속·종반 감속이 되어 '확 당겨졌다 멈추는'
+      // 느낌을 줬다. (1+K)^(zp^1.35)는 체감 줌 속도가 거의 일정하게 서서히
+      // 빨라지며 끝까지 감속 없이 '쭉' 빨려들어간다. (끝의 잔속도는 하늘
+      // 페이드 80~100%가 덮는다.)
+      pin.style.transform = 'scale(' + Math.pow(1 + scaleK, Math.pow(zp, 1.35)) + ')';
       // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지) —
       // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 속성이 없으면 기존과 동일하게
       // progress에 따라 선형으로 페이드아웃.
