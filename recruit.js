@@ -45,10 +45,15 @@ async function loadRecruitDataFromCsv() {
   }
 }
 
+let _recruitDataPromise = null;
 async function loadRecruitData() {
-  const sb = await loadRecruitDataFromSupabase();
-  if (sb) return sb;
-  return await loadRecruitDataFromCsv();  // 전환 검증 기간 폴백
+  if (_recruitDataPromise) return _recruitDataPromise;
+  _recruitDataPromise = (async () => {
+    const sb = await loadRecruitDataFromSupabase();
+    if (sb) return sb;
+    return await loadRecruitDataFromCsv();  // 전환 검증 기간 폴백
+  })();
+  return _recruitDataPromise;
 }
 
 /* 날짜 문자열을 Date 객체로 변환 */
@@ -219,4 +224,31 @@ async function applyDetailRecruit(challengeId) {
   }
 
   window._recruitStatus = status;
+}
+
+/* ── 히어로/하단 CTA 긴급성 뱃지: 가장 임박한 모집 상태를 한 줄로 ──
+   open(마감 임박 우선) → upcoming(오픈 임박) 순. closed뿐이면 정적 문구 유지. */
+async function applyGlobalRecruitCta() {
+  const badges = document.querySelectorAll('[data-recruit-cta-badge]');
+  if (!badges.length) return;
+  let data = null;
+  try { data = await loadRecruitData(); } catch (e) {}
+  const sources = data || RECRUIT_FALLBACKS;
+  let best = null;
+  Object.values(sources).forEach(d => {
+    if (!d || !d.start || !d.end) return;
+    const st = getStatus(d.start, d.end);
+    const dd = getDday(d.start, d.end, st);
+    if (!dd) return;
+    const num = dd === 'D-Day' ? 0 : parseInt(dd.replace('D-', ''), 10);
+    const rank = st === 'open' ? 0 : (st === 'upcoming' ? 1 : 2);
+    if (!best || rank < best.rank || (rank === best.rank && num < best.num)) {
+      best = { rank, num, dday: dd, status: st };
+    }
+  });
+  if (!best || best.status === 'closed') return;
+  const label = best.status === 'open'
+    ? (best.dday === 'D-Day' ? '오늘 마감' : `모집 중 · ${best.dday} 마감`)
+    : (best.dday === 'D-Day' ? '오늘 오픈' : `다음 모집 ${best.dday}`);
+  badges.forEach(el => { el.textContent = label; el.hidden = false; });
 }
