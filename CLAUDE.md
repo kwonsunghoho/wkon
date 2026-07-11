@@ -80,21 +80,25 @@ Shared design tokens live in `tokens.css` (linked by `index.html` + the detail/l
 **렌더링 성능 계약(2026-07-11 인트로 끊김 수정 — 지키지 않으면 재발):** ① 줌 중 매 프레임 opacity가 바뀌는 페이드 레이어(`.zoom-content-fade`·`.zoom-bezel-fade`·`.zoom-tone-bridge` — tokens.css, `.ht-scrim` — index)는 `will-change: opacity`로 합성 승격 — 없으면 opacity가 pin 레이어 래스터에 구워져 **매 프레임 풀스크린 리페인트**가 되고 이것이 인트로 버벅임의 주원인이었다(제거 금지). ② ⚠️ 창틀 `<picture class="zoom-bezel-fade">`는 `display:block; position:absolute; inset:0` 박스 필수 — 기본 인라인(0×0)인 채 승격되면 Chrome이 레이어를 0×0 경계로 컬링해 **창틀 img가 통째로 안 그려진다**. ③ 태그라인 `apply()`는 조립 진행값 u가 직전과 같으면(30% 이후 전 구간이 u=1) letter-spacing(리플로우 유발)·글자 transform 재기록을 건너뛰고(`lastU` 가드, `measure()`가 -1로 리셋), `.hero-tagline`은 `contain: layout paint`로 그 리플로우를 오버레이 내부에 격리. ④ scroll-fx.js는 섹션 설정(zoomStart/scaleK/fadeNone)과 페이드 대상 요소를 init에서 items에 캐시 — 프레임 루프(renderWrap)에서 querySelector/getAttribute 금지.
 
 ### Hero scene carousel (`index.html`)
-The landing page hero section is a **4-slide full-screen carousel** (`.hero-scene` > `.hs-slide`), stacked with `position: absolute` and toggled via `opacity` + `pointer-events`. Controlled by `heroSwitchTo(idx)` in JS.
+히어로는 **카드 4장 coverflow형 센터 캐러셀** — 구조는 `.hero-scene#home` > `.zoom-exit-pin` > `.hs-carousel` > `.hs-stage#hs-stage` + `.hs-card`×4. 활성 카드가 중앙, 좌우 이웃이 살짝 기울어 걸쳐 보인다. (구 `.hs-slide` 풀스크린 크로스페이드 + 슬라이드1 YouTube Shorts YT IFrame API + 슬라이드3 키워드 bounce 구현은 **폐기** — `_heroMode`/`_ytPlaying`/`_ytPlayer` 전역은 더 이상 없음.)
 
-Slides (0-indexed):
-| idx | id | 이름 | 특이사항 |
-|---|---|---|---|
-| 0 | `hs-slide-0` | 보신각 | 전/후 오디오 (`challenger-c-before.mp3` / `challenger-c-after.mp3`), 웨이브폼 바 |
-| 1 | `hs-slide-1` | 영합각 | YouTube Shorts (`s1a0ozDYMMo`) 임베드, **YT IFrame API**로 재생 상태 추적 — 재생 중 스와이프/자동전환 차단 |
-| 2 | `hs-slide-2` | 스피닝 | 전/후 오디오 (`spinning-c-before.m4a` / `spinning-c-after.m4a`), 원형 버튼 UI |
-| 3 | `hs-slide-3` | 승자각 | light cream 배경, 20개 키워드 bounce 애니메이션 (`setInterval 16ms`), 5-node SVG 두괄식 다이어그램 |
+카드 (0-indexed, 모두 이미지 카드):
+| idx | id | 이름 | 이미지 (`.hs-img`) | 헤드라인 강조어 |
+|---|---|---|---|---|
+| 0 | `hs-card-0` | 보신각 | `images/hero-voice.webp` (`fetchpriority=high`) | 목소리 |
+| 1 | `hs-card-1` | 영합각 | `images/hero-expression.webp` (lazy) | 이미지 |
+| 2 | `hs-card-2` | 스피닝 | `images/hero-spinning.webp` (lazy) | 말투 |
+| 3 | `hs-card-3` | 승자각 | `images/hero-answer.webp` (lazy) | 답변 |
 
-Key JS globals: `_heroIdx`, `_heroMode`, `_heroAutoTimer` (5초 자동전환), `_ytPlaying` (YT 재생 상태 플래그), `_ytPlayer` (YT.Player 인스턴스).
+카드 내부 레이어: `.hs-media`(이미지, 로드 실패 시 카드별 웜톤 폴백 그라디언트) → `.hs-card-overlay`(크림 60% 반투명) → `.hs-card-content`(오렌지 `.hs-accent` 강조어가 든 `.hs-h1` — 크림 헤일로 text-shadow로 대비 확보, `.hs-sub`, 네이비 `.hs-name` 챌린지 이름 칩). 이미지는 `object-position: 50% 28%`(세로 3:4 사진을 카드에 cover — 얼굴이 상단이라 크롭 기준을 위로).
 
-자동전환(`_heroResetAuto`)은 IntersectionObserver로 `.hero-scene`이 뷰포트에 있을 때만 돈다(2026-07-11) — 페이지 첫 화면이 창문 인트로라, 인트로 스크롤 중 화면 밖 카드 transition이 프레임을 뺏는 것을 방지. 화면 밖이면 `_heroAutoTimer = null`.
+배치는 `heroLayout()`이 인라인 스타일로: 거리 `d = i - _heroIdx` 기준 활성=중앙 scale 1·0°, 이웃=`--card-w`×0.8 좌우 오프셋·±4°·scale .86, `|d|≥2`=opacity 0. **이웃 카드도 완전 불투명 유지**(반투명은 "캐러셀이 투명해진다"로 체감돼 제거 — 재도입 금지), 전환 애니메이션은 CSS transition(.62s, reduced-motion 시 none). 카드 폭 `--card-w` = min(560px, 62vw)(≤768px: min(420px, 78vw)), 스테이지 높이 min(72svh, 600px)(≤768px: min(56svh, 440px)).
 
-슬라이드 3(승자각)은 배경이 밝은 크림색이라 CTA 보조 텍스트 색을 별도로 오버라이드: `#hs-slide-3.active ~ .hs-cta-bar .hs-cta-sec`.
+전환 수단: `.hs-nav` 화살표(`heroPrev()`/`heroNext()`), 비활성 카드 클릭(→ 해당 카드로), `#hs-stage` 터치 스와이프(가로 40px 미만·세로 우세 제스처는 무시), 5초 자동전환(`_heroResetAuto`). Key JS globals: `_hsCards`, `_heroIdx`, `_heroAutoTimer` (`_heroReduce`는 선언만 있고 미사용).
+
+자동전환(`_heroResetAuto`)은 IntersectionObserver로 `.hero-scene`이 뷰포트에 있을 때만 돈다(2026-07-11, threshold 0.15) — 페이지 첫 화면이 창문 인트로라, 인트로 스크롤 중 화면 밖 카드 transition이 프레임을 뺏는 것을 방지. 화면 밖이면 `_heroAutoTimer = null`, IO 미지원 브라우저는 상시 동작.
+
+캐러셀 하단 `.hs-cta`는 4장 공통 신청 CTA(→`apply.html`) + `data-recruit-cta-badge` 긴급성 뱃지(recruit.js `applyGlobalRecruitCta()`가 가장 임박한 모집의 D-day로 채움 — `.mobile-cta-bar`에도 동일 attr 존재). ⚠️ `.hero-scene`에 `data-zoom-exit`를 다시 붙이지 말 것 — 스크롤 시 캐러셀 전체가 opacity 페이드되어 모바일에서 한 화면 분량의 빈 구간이 생겼던 원인(마크업 주석에도 경고 있음).
 
 ### Google Apps Script — 중복 신청 처리
 `학생현황` 시트에 **항상 새 행으로 추가** (전화번호 중복 여부 무관). 기존의 find-and-update 로직은 데이터 덮어쓰기 문제로 제거됨. Apps Script 편집은 Google 콘솔에서 수행 후 새 버전으로 재배포 필요.
