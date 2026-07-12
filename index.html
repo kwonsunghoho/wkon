@@ -4714,40 +4714,19 @@
       return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
     });
   }
-  // 대기(from)→조립(to) 글자별 FLIP 델타 + 스태거 시작점(a).
   // baseDx: 두 상태의 컨테이너 translate 차이 보정(모바일 oneDx−dx0, 데스크톱 0).
-  // 스태거는 각 글자 무리의 '진행 방향 선두'부터 출발시켜야 뒤 글자가 먼저
-  // 도킹한 이웃을 가로질러 겹치는 교차가 안 생긴다(x_j−x_i = (f_j−f_i)
-  // + lag_j·(d_j−d_i) + d_i·(lag_j−lag_i), 항별 부호 ≥0):
-  //   'fold'(모바일 두 줄 접힘) = 접점(행 경계)에서 바깥으로 — 첫 줄은 오른쪽
-  //     끝("가")부터 오른쪽으로, 둘째 줄은 "시"부터 왼쪽 아래로, 문장이
-  //     접점부터 꺾여 나가는 서사와도 일치.
-  //   'center'(데스크톱 자간 대칭 수축) = 중앙에서 바깥으로.
   // from: 대기 위치, to: 조립 도착 위치(정렬 반영), natural: 스팬의 DOM 자연 위치.
   // bx/by = to − natural = u=1에 상주하는 '정렬 잔여 오프셋'(모바일 라인 justify).
   // desktop은 to===natural(자간 g1 위치)이라 bx=by=0(u=1에 identity 복귀).
-  function buildSubChars(from, to, natural, baseDx, mode){
-    var m = subChars.length, i;
-    var ords = [];
-    if (m <= 1){ ords.push(0); }
-    else if (mode === 'fold'){
-      var ys = to.map(function(r){ return r.y; });
-      var midY = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
-      var k = m; // 둘째 줄 첫 글자 인덱스(전부 한 줄이면 m → 우→좌 스태거로 퇴화)
-      for (i = 0; i < m; i++){ if (ys[i] > midY){ k = i; break; } }
-      var span = Math.max(k - 1, m - 1 - k, 1);
-      for (i = 0; i < m; i++) ords.push((i < k ? k - 1 - i : i - k) / span);
-    } else {
-      var c = (m - 1) / 2;
-      for (i = 0; i < m; i++) ords.push(Math.abs(i - c) / c);
-    }
+  // 스태거 없음(2026-07-13 오너 "메인과 따로 놀면 안돼") — 타이밍은 apply()가
+  // 메인 M·O·N·C와 동일한 u 엔벨로프로 통일해 건다(글자별 경로만 다르고 리듬은 한 몸).
+  function buildSubChars(from, to, natural, baseDx){
     return subChars.map(function(el, idx){
       return { el: el,
                dx: from[idx].x - to[idx].x + baseDx,
                dy: from[idx].y - to[idx].y,
                bx: to[idx].x - natural[idx].x,
-               by: to[idx].y - natural[idx].y,
-               a: (1 - SUB_CHAR_W) * ords[idx] };
+               by: to[idx].y - natural[idx].y };
     });
   }
 
@@ -4903,7 +4882,7 @@
       });
       // FLIP: 한 줄 대기(+oneDx) → 두 줄 정렬 자리. baseDx = oneDx − dx0.
       // to=정렬 위치, natural=중앙 위치 → bx=정렬 잔여 오프셋(u=1에 상주해 둘째 줄 벌림).
-      var mChars = oneRects ? buildSubChars(oneRects, justified, natRects, oneDx - dx0m, 'fold') : [];
+      var mChars = oneRects ? buildSubChars(oneRects, justified, natRects, oneDx - dx0m) : [];
       subLock = { twoLine: true, br: subBr, oneDx: oneDx, chars: mChars,
                   s1: 1,                               // 폭 정합은 자간 justify가 담당 → 줌은 inner g만 추종(왜곡 0)
                   dy: (tmaxB - 3) - subR.top,
@@ -4941,9 +4920,8 @@
                   g0: g0, g1: g1,
                   // 글자별 FLIP 델타: 두 상태 모두 컨테이너 translate가 리셋된
                   // 같은 좌표계 실측이라 baseDx 0 (u→0⁺ 컨테이너는 양쪽 다 dx0).
-                  // 중앙→바깥 스태거(자간 대칭 수축은 좌→우면 글자 교차·겹침 발생).
                   // to===natural(g1 자간 위치)이라 bx=by=0 → u=1에 identity 복귀(기존 동작).
-                  chars: buildSubChars(g0Rects, g1Rects, g1Rects, 0, 'center'),
+                  chars: buildSubChars(g0Rects, g1Rects, g1Rects, 0),
                   cOff: (s1span.l + s1span.r) / 2 - s1span.boxC };
       subko.style.letterSpacing = g0 + 'px';
     }
@@ -4971,8 +4949,11 @@
   var lastG = -1;       // 전진 스케일 마지막 적용값 — 동일값이면 transform 재기록 스킵
   var lastU = -1; // 조립 구간 스타일의 마지막 적용값 — 30% 이후엔 u가 1로 고정되어
                   // 매 프레임 letter-spacing(레이아웃)·글자 transform 재기록을 건너뜀
-  var SUB_CHAR_W = 0.6; // 서브 글자별 조립 창(u 폭) — 시작점 a는 0~(1−W) 좌→우 스태거,
-                        // 글자마다 도착 시점이 어긋나 하나씩 자리를 잡는 리플이 생긴다
+  var SUB_Y_LEAD = 0.22; // 서브 세로 이동이 가로(메인과 통일된 1−u)보다 이만큼 앞서
+                        // 안착(arc) — 모바일 접힘에서 둘째 줄 글자가 첫 줄을 가로질러
+                        // 겹치는 것 방지(둘째 줄이 먼저 아래로 내려간 뒤 가로 슬라이드).
+                        // 실측 겹침: 1.0=21px·0.3=8px·0.22=3px(시각 임계 아래). 가로는
+                        // 메인과 100% 동기(1−u)라 통일감 유지 — 세로만 살짝 선행.
   var lastLS = -1;      // 서브 자간 마지막 적용값 — 조립 중 자간은 g1 고정(수축은 글자별
                         // FLIP이 담당)이라 경계(u=0↔u>0)에서만 기록, 리플로우 최소화
 
@@ -5040,16 +5021,16 @@
         // 페이드도 없다(대기 때 이미 보이는 글자) — 기존 금지사항 유지.
         var cs = subLock.chars;
         if (cs){
+          // 메인과 통일된 타이밍(2026-07-13 오너 "따로 놀면 안돼"): 가로 offset
+          // ∝ (1−u) — M·O·N·C가 u로 source→target 이동하는 것과 동일 엔벨로프라
+          // 서브가 메인과 한 몸으로 조립된다(글자별 dx/dy로 경로만 다름). 세로만
+          // SUB_Y_LEAD만큼 선행(arc)해 모바일 접힘에서 둘째 줄 글자가 첫 줄을
+          // 가로지르는 겹침을 막는다. lag는 글자 무관이라 루프 밖에서 한 번만.
+          var lagX = 1 - u;
+          var lagY = SUB_Y_LEAD >= 1 ? lagX : 1 - ease(clamp(u / SUB_Y_LEAD));
           for (var si = 0; si < cs.length; si++){
             var c = cs[si];
             if (u === 0){ c.el.style.transform = ''; continue; }
-            // 세로는 더 짧은 창(×0.4)으로 먼저 도착시켜 호를 그린다 — 모바일
-            // 접힘에서 둘째 줄 글자("시…")가 첫 줄 높이에 머문 채 가로로 길게
-            // 이동하면 먼저 도킹한 첫 줄 끝 글자("가")를 뚫고 지나가는 겹침이
-            // 생겼다(같은 행 34px 실측 → ×0.55에서 8px → ×0.4에서 해소).
-            // 먼저 제 행으로 떨어진 뒤 옆으로 미끄러져 자리를 잡는 2단 모션.
-            var lagX = 1 - ease(clamp((u - c.a) / SUB_CHAR_W));
-            var lagY = 1 - ease(clamp((u - c.a) / (SUB_CHAR_W * 0.4)));
             // bx/by = 정렬 잔여 오프셋(u=1에 상주 — 모바일 둘째 줄 자간 벌림).
             // FLIP 델타(dx/dy)는 lag로 감쇠, 정렬 오프셋은 항상 유지된다.
             var tx = c.bx + c.dx * lagX, ty = c.by + c.dy * lagY;
