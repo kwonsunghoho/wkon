@@ -246,7 +246,8 @@
       // 느낌을 줬다. (1+K)^(zp^1.35)는 체감 줌 속도가 거의 일정하게 서서히
       // 빨라지며 끝까지 감속 없이 '쭉' 빨려들어간다. (끝의 잔속도는 하늘
       // 페이드 80~100%가 덮는다.)
-      pin.style.transform = 'scale(' + Math.pow(1 + item.scaleK, Math.pow(zp, 1.35)) + ')';
+      var pinScale = Math.pow(1 + item.scaleK, Math.pow(zp, 1.35));
+      pin.style.transform = 'scale(' + pinScale + ')';
       // fadeNone(data-zoom-fade="none")이면 페이드 없이 확대만 진행 —
       // "사라짐" 없이 "뚫고 들어가는" 느낌을 위함. 없으면 기존과 동일하게
       // progress에 따라 선형으로 페이드아웃. (불변값 '1'은 CSS 기본이라 미기록)
@@ -304,7 +305,9 @@
 
       // 외부 스크립트(히어로 태그라인 등)가 줌과 '동일한 스무딩 진행률'로
       // 프레임 단위 동기화할 수 있도록 진행률을 이벤트로 공유한다.
-      wrap.dispatchEvent(new CustomEvent('monc:zoomprogress', { detail: { progress: progress } }));
+      // scale(현재 핀 배율)은 태그라인 '로고 전진'(핀 배율의 0.3승 동반 확대)이
+      // 소비 — 줌 커브·캘리브레이션·6.5캡의 단일 소스를 여기 하나로 유지(2026-07-12).
+      wrap.dispatchEvent(new CustomEvent('monc:zoomprogress', { detail: { progress: progress, scale: pinScale } }));
     }
 
     var rafId = null;
