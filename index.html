@@ -4690,6 +4690,10 @@
     others.forEach(function(el){ el.style.transform = ''; });
     hlEls.forEach(function(el){ el.style.transform = ''; });
     subko.style.letterSpacing = ''; subko.style.marginRight = ''; subko.style.transform = '';
+    // <br> 인라인 초기화 — 데스크톱은 CSS(.ht-subko br{display:none})가 다시
+    // 한 줄로, 모바일은 규칙이 없어 br이 작동(리셋 측정 시 두 줄). 뷰포트 전환 시
+    // 이전 뷰포트가 남긴 인라인 display가 굳지 않게 한다.
+    var _sbr = subko.querySelector('br'); if (_sbr) _sbr.style.display = '';
     fitPhrase();
 
     // 조립 로고가 개구부 안쪽에 들어오도록 폰트 축소(확대는 하지 않음).
@@ -4775,18 +4779,28 @@
     var phraseInkL = minL + ppadL, phraseInkR = maxR - ppadR;
 
     if (isMobileSub){
-      // 두 줄이라 박스 폭 ≈ 최장 줄 잉크 폭(한글 베어링 미미) — 폭 매칭은 스케일
-      // s1 하나로(두 줄에선 자간이 줄별로 걸려 자간 폭 수식이 성립하지 않음 —
-      // 모바일 자간 락업 재도입 금지). 스케일 중심=박스 중심이라 중앙 정렬은
-      // translate 상수로 충분(cOff 0).
+      // 모바일: 대기(u=0)엔 한 줄로 두다가 조립(u>0)될 때 두 줄로 접힌다
+      // (2026-07-12 오너: "한 줄로 가다가 조립을 두 줄로" — 처음부터 두 줄은
+      // 오답). 두 상태를 모두 실측: subR은 리셋 상태 두 줄(br 작동).
+      // 폭 매칭은 스케일 s1 하나(두 줄에선 자간 폭 수식 불성립 — 자간 락업 금지),
+      // 스케일 중심=박스 중심이라 중앙 정렬은 translate 상수(cOff 0).
       // 세로 GAP −3(박스 살짝 겹침): 잉크는 라인박스 여백(로고 ~0.28em + 서브
-      // ~0.2em)이 분리 — 여운 시점 잉크 행간 ~19px(구 한 줄 ~40px의 절반,
-      // 오너 "지금보다 40% 더 줄여" 반영). '아래로만 밀기' 회귀 금지.
-      var subC = (subR.left + subR.right) / 2;
-      subLock = { s1: (moncInkR - moncInkL) / natural,
+      // ~0.2em)이 분리 — 여운 시점 잉크 행간 ~19px(오너 "40% 더 줄여").
+      var subBr = subko.querySelector('br');
+      var mid = (phraseInkL + phraseInkR) / 2;
+      var subC = (subR.left + subR.right) / 2;      // 두 줄 박스 중심
+      var oneDx = mid - subC;                        // 폴백(br 없으면 두 줄 중심)
+      if (subBr){                                    // 한 줄 상태 폭·중심 실측
+        subBr.style.display = 'none';
+        var one = subko.getBoundingClientRect();
+        oneDx = mid - (one.left + one.right) / 2;
+        subBr.style.display = '';                     // 다시 두 줄로 복원
+      }
+      subLock = { twoLine: true, br: subBr, oneDx: oneDx,
+                  s1: (moncInkR - moncInkL) / natural,
                   dy: (tmaxB - 3) - subR.top,
-                  dx0: (phraseInkL + phraseInkR) / 2 - subC,
-                  dx1: (moncInkL + moncInkR) / 2 - subC,
+                  dx0: mid - subC,                     // 두 줄 조립 시작(문장 아래 중앙)
+                  dx1: (moncInkL + moncInkR) / 2 - subC, // 두 줄 조립 끝(로고 아래 중앙)
                   subH: subR.height, g0: null, g1: 0, cOff: 0 };
     } else {
       // 데스크톱 한 줄: 자간 락업 — 시작(g0)=문장 잉크 폭, 끝(g1/s1)=로고 잉크 폭.
@@ -4818,7 +4832,14 @@
                   cOff: (s1span.l + s1span.r) / 2 - s1span.boxC };
       subko.style.letterSpacing = g0 + 'px';
     }
-    subko.style.transform = 'translate(' + subLock.dx0 + 'px,0)';
+    // 초기 표시: 모바일 두 줄 모드는 대기(한 줄)로 — br 꺼서 한 줄 위치(oneDx).
+    // (직후 refresh→apply(lastP)가 u에 맞게 다시 그리지만 리셋 잔상 방지용)
+    if (subLock.twoLine){
+      if (subLock.br) subLock.br.style.display = 'none';
+      subko.style.transform = 'translate(' + subLock.oneDx + 'px,0)';
+    } else {
+      subko.style.transform = 'translate(' + subLock.dx0 + 'px,0)';
+    }
     lastAssembled = null; // 측정 중 visibility를 만졌으므로 다음 apply에서 재동기화
     lastU = -1;           // 측정이 인라인 스타일을 리셋했으므로 u 동일값 스킵 해제
     lastG = -1;           // inner transform도 리셋됨 — 로고 전진 스케일 재기록 필요
@@ -4866,11 +4887,25 @@
       // (2026-07-12 오너 "서브 타이틀이 조립될 때 작아진다"). s1은 아래 줌
       // 구간에서 자체 커브(ssub)로 서서히 — 조립 u에 재결합 금지.
       if (subLock){
-        if (subLock.g0 !== null){
-          subko.style.letterSpacing = (subLock.g0 + (subLock.g1 - subLock.g0) * u) + 'px';
+        if (subLock.twoLine){
+          // 모바일: 대기(u===0)엔 한 줄, 조립 시작(u>0)하면 두 줄로 접혀 로고
+          // 아래로. 한 줄↔두 줄은 본질적으로 이산 전환이지만 정지→움직임 경계라
+          // 조립 역동성에 묻힌다(오너 "한 줄로 가다가 조립을 두 줄로").
+          if (u === 0){
+            if (subLock.br) subLock.br.style.display = 'none';
+            subko.style.transform = 'translate(' + subLock.oneDx + 'px,0) scale(1)';
+          } else {
+            if (subLock.br) subLock.br.style.display = '';
+            var tx2 = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
+            subko.style.transform = 'translate(' + tx2 + 'px,' + (subLock.dy * u) + 'px)';
+          }
+        } else {
+          if (subLock.g0 !== null){
+            subko.style.letterSpacing = (subLock.g0 + (subLock.g1 - subLock.g0) * u) + 'px';
+          }
+          var tx = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
+          subko.style.transform = 'translate(' + tx + 'px,' + (subLock.dy * u) + 'px)';
         }
-        var tx = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
-        subko.style.transform = 'translate(' + tx + 'px,' + (subLock.dy * u) + 'px)';
       }
     }
 
