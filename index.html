@@ -1612,9 +1612,11 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       text-align: center; padding: 0 16px;
-      /* 조립 구간(0~30%)에 서브라인 letter-spacing이 매 프레임 바뀌는데,
-         격리하지 않으면 그 리플로우가 문서 전체로 번져 프레임을 잡아먹는다.
-         내용물은 전부 뷰포트(오버레이) 안이라 클리핑 부작용 없음 (2026-07-11) */
+      /* 조립 경계의 서브라인 자간 전환(g0↔g1)·모바일 <br> 토글이 리플로우를
+         유발하는데, 격리하지 않으면 문서 전체로 번져 프레임을 잡아먹는다.
+         (구 per-frame 자간 lerp는 2026-07-13 글자별 FLIP으로 대체 — 조립 중
+         리플로우는 경계 1회뿐이지만 격리는 유지.) 내용물은 전부 뷰포트
+         (오버레이) 안이라 클리핑 부작용 없음 (2026-07-11) */
       contain: layout paint;
     }
     .hero-tagline.ht-fixed { position: fixed; }
@@ -1671,6 +1673,10 @@
     @media (min-width: 769px) {
       .ht-subko br { display: none; }
     }
+    /* 서브라인 글자 스팬(JS가 감쌈, 2026-07-13) — 조립 시 글자별 FLIP 이동용.
+       transform이 걸리려면 inline-block이어야 한다. 공백·<br>은 감싸지 않아
+       두 줄 접힘·자간 메트릭이 그대로 유지된다. */
+    .ht-subko .ht-sl { display: inline-block; will-change: transform; }
     .ht-cue {
       position: absolute; bottom: 5%; left: 50%; margin-left: -12px;
       width: 24px; height: 24px; opacity: .85;
@@ -4567,6 +4573,33 @@
   var subLock = null;
   var lastAssembled = null;
 
+  // ── 서브라인 글자 래핑(2026-07-13): 메인 M·O·N·C만 FLIP으로 날고 서브가
+  // 통짜 블록으로 밀리면 "정적으로 바뀐다"(오너) — 서브 글자들도 각자 대기
+  // 위치→조립 자리로 개별 이동시키기 위해 공백 제외 글자를 .ht-sl로 감싼다.
+  // 공백·<br>은 그대로 둬 textContent·자간 계산·두 줄 접힘이 불변.
+  // reduced-motion은 정적 렌더라 래핑하지 않는다(원본 마크업 유지).
+  var subChars = [];
+  if (!reduce){
+    Array.prototype.slice.call(subko.childNodes).forEach(function(nd){
+      if (nd.nodeType !== 3) return;
+      var frag = document.createDocumentFragment();
+      var txt = nd.nodeValue;
+      for (var wi = 0; wi < txt.length; wi++){
+        var ch = txt.charAt(wi);
+        if (ch === ' '){
+          frag.appendChild(document.createTextNode(' '));
+        } else {
+          var sp = document.createElement('span');
+          sp.className = 'ht-sl';
+          sp.textContent = ch;
+          subChars.push(sp);
+          frag.appendChild(sp);
+        }
+      }
+      subko.replaceChild(frag, nd);
+    });
+  }
+
   function clamp(v){ return Math.min(1, Math.max(0, v)); }
   function ease(p){ return p * p * (3 - 2 * p); } // scroll-fx와 동일 smoothstep
 
@@ -4674,6 +4707,45 @@
     }
   }
 
+  // 서브 글자별 중심 좌표 스냅샷 — measure()가 대기/조립 두 DOM 상태를 오가며 실측
+  function subCharRects(){
+    return subChars.map(function(el){
+      var r = el.getBoundingClientRect();
+      return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
+    });
+  }
+  // 대기(from)→조립(to) 글자별 FLIP 델타 + 스태거 시작점(a).
+  // baseDx: 두 상태의 컨테이너 translate 차이 보정(모바일 oneDx−dx0, 데스크톱 0).
+  // 스태거는 각 글자 무리의 '진행 방향 선두'부터 출발시켜야 뒤 글자가 먼저
+  // 도킹한 이웃을 가로질러 겹치는 교차가 안 생긴다(x_j−x_i = (f_j−f_i)
+  // + lag_j·(d_j−d_i) + d_i·(lag_j−lag_i), 항별 부호 ≥0):
+  //   'fold'(모바일 두 줄 접힘) = 접점(행 경계)에서 바깥으로 — 첫 줄은 오른쪽
+  //     끝("가")부터 오른쪽으로, 둘째 줄은 "시"부터 왼쪽 아래로, 문장이
+  //     접점부터 꺾여 나가는 서사와도 일치.
+  //   'center'(데스크톱 자간 대칭 수축) = 중앙에서 바깥으로.
+  function buildSubChars(from, to, baseDx, mode){
+    var m = subChars.length, i;
+    var ords = [];
+    if (m <= 1){ ords.push(0); }
+    else if (mode === 'fold'){
+      var ys = to.map(function(r){ return r.y; });
+      var midY = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+      var k = m; // 둘째 줄 첫 글자 인덱스(전부 한 줄이면 m → 우→좌 스태거로 퇴화)
+      for (i = 0; i < m; i++){ if (ys[i] > midY){ k = i; break; } }
+      var span = Math.max(k - 1, m - 1 - k, 1);
+      for (i = 0; i < m; i++) ords.push((i < k ? k - 1 - i : i - k) / span);
+    } else {
+      var c = (m - 1) / 2;
+      for (i = 0; i < m; i++) ords.push(Math.abs(i - c) / c);
+    }
+    return subChars.map(function(el, idx){
+      return { el: el,
+               dx: from[idx].x - to[idx].x + baseDx,
+               dy: from[idx].y - to[idx].y,
+               a: (1 - SUB_CHAR_W) * ords[idx] };
+    });
+  }
+
   function measure(){
     // 측정은 반드시 '정지(u=0)' 좌표계에서 해야 한다. apply()는 스크롤 도중
     // inner(#htInner)에 로고 전진 확대(최대 GROW_END/s0 ≈ 2.4~3.6)를, 소문자
@@ -4690,6 +4762,9 @@
     others.forEach(function(el){ el.style.transform = ''; });
     hlEls.forEach(function(el){ el.style.transform = ''; });
     subko.style.letterSpacing = ''; subko.style.marginRight = ''; subko.style.transform = '';
+    // 글자별 FLIP 잔여 transform도 리셋 — getBoundingClientRect는 transform을
+    // 포함하므로 남아 있으면 아래 모든 실측(잉크 폭·글자 중심)이 오염된다.
+    subChars.forEach(function(el){ el.style.transform = ''; });
     // <br> 인라인 초기화 — 데스크톱은 CSS(.ht-subko br{display:none})가 다시
     // 한 줄로, 모바일은 규칙이 없어 br이 작동(리셋 측정 시 두 줄). 뷰포트 전환 시
     // 이전 뷰포트가 남긴 인라인 display가 굳지 않게 한다.
@@ -4790,16 +4865,22 @@
       var mid = (phraseInkL + phraseInkR) / 2;
       var subC = (subR.left + subR.right) / 2;      // 두 줄 박스 중심
       var oneDx = mid - subC;                        // 폴백(br 없으면 두 줄 중심)
+      var oneRects = null;
       if (subBr){                                    // 한 줄 상태 폭·중심 실측
         subBr.style.display = 'none';
         var one = subko.getBoundingClientRect();
         oneDx = mid - (one.left + one.right) / 2;
+        oneRects = subCharRects();                   // 한 줄(대기) 글자별 중심
         subBr.style.display = '';                     // 다시 두 줄로 복원
       }
-      subLock = { twoLine: true, br: subBr, oneDx: oneDx,
+      var dx0m = mid - subC;
+      // 글자별 FLIP 델타: 한 줄 시절 화면 위치(+oneDx) → 두 줄 자리(+dx0).
+      // u→0⁺에서 컨테이너는 translate(dx0,0)이므로 baseDx = oneDx − dx0.
+      var mChars = oneRects ? buildSubChars(oneRects, subCharRects(), oneDx - dx0m, 'fold') : [];
+      subLock = { twoLine: true, br: subBr, oneDx: oneDx, chars: mChars,
                   s1: (moncInkR - moncInkL) / natural,
                   dy: (tmaxB - 3) - subR.top,
-                  dx0: mid - subC,                     // 두 줄 조립 시작(문장 아래 중앙)
+                  dx0: dx0m,                           // 두 줄 조립 시작(문장 아래 중앙)
                   dx1: (moncInkL + moncInkR) / 2 - subC, // 두 줄 조립 끝(로고 아래 중앙)
                   subH: subR.height, g0: null, g1: 0, cOff: 0 };
     } else {
@@ -4820,7 +4901,9 @@
                  boxC: (r.left + r.right) / 2, top: r.top };
       };
       var s0span = inkSpanAt(g0);
+      var g0Rects = subCharRects();                  // 대기(자간 g0) 글자별 중심
       var s1span = inkSpanAt(g1);
+      var g1Rects = subCharRects();                  // 조립(자간 g1) 글자별 중심
       // 끝 상태는 scale(s1)이 박스 중심 기준으로 걸리므로 잉크 중심도 그만큼 수렴
       var c1 = s1span.boxC + s1d * ((s1span.l + s1span.r) / 2 - s1span.boxC);
       subLock = { s1: s1d,
@@ -4829,6 +4912,10 @@
                   dx1: (moncInkL + moncInkR) / 2 - c1,
                   subH: subko.getBoundingClientRect().height,
                   g0: g0, g1: g1,
+                  // 글자별 FLIP 델타: 두 상태 모두 컨테이너 translate가 리셋된
+                  // 같은 좌표계 실측이라 baseDx 0 (u→0⁺ 컨테이너는 양쪽 다 dx0).
+                  // 중앙→바깥 스태거(자간 대칭 수축은 좌→우면 글자 교차·겹침 발생)
+                  chars: buildSubChars(g0Rects, g1Rects, 0, 'center'),
                   cOff: (s1span.l + s1span.r) / 2 - s1span.boxC };
       subko.style.letterSpacing = g0 + 'px';
     }
@@ -4843,6 +4930,7 @@
     lastAssembled = null; // 측정 중 visibility를 만졌으므로 다음 apply에서 재동기화
     lastU = -1;           // 측정이 인라인 스타일을 리셋했으므로 u 동일값 스킵 해제
     lastG = -1;           // inner transform도 리셋됨 — 로고 전진 스케일 재기록 필요
+    lastLS = -1;          // 측정이 자간을 직접 썼으므로(데스크톱 g0) 자간 가드도 해제
   }
 
   var ASSEMBLE_END = 0.30;
@@ -4855,6 +4943,10 @@
   var lastG = -1;       // 전진 스케일 마지막 적용값 — 동일값이면 transform 재기록 스킵
   var lastU = -1; // 조립 구간 스타일의 마지막 적용값 — 30% 이후엔 u가 1로 고정되어
                   // 매 프레임 letter-spacing(레이아웃)·글자 transform 재기록을 건너뜀
+  var SUB_CHAR_W = 0.6; // 서브 글자별 조립 창(u 폭) — 시작점 a는 0~(1−W) 좌→우 스태거,
+                        // 글자마다 도착 시점이 어긋나 하나씩 자리를 잡는 리플이 생긴다
+  var lastLS = -1;      // 서브 자간 마지막 적용값 — 조립 중 자간은 g1 고정(수축은 글자별
+                        // FLIP이 담당)이라 경계(u=0↔u>0)에서만 기록, 리플로우 최소화
 
   function apply(p){
     var u = ease(clamp(p / ASSEMBLE_END));
@@ -4889,8 +4981,9 @@
       if (subLock){
         if (subLock.twoLine){
           // 모바일: 대기(u===0)엔 한 줄, 조립 시작(u>0)하면 두 줄로 접혀 로고
-          // 아래로. 한 줄↔두 줄은 본질적으로 이산 전환이지만 정지→움직임 경계라
-          // 조립 역동성에 묻힌다(오너 "한 줄로 가다가 조립을 두 줄로").
+          // 아래로. 한 줄↔두 줄은 DOM상 이산 전환이지만, 아래 글자별 FLIP이
+          // 각 글자를 '한 줄 시절 화면 위치'에서 두 줄 자리까지 개별 경로로
+          // 이어 붙여 시각적으로는 연속 모션이 된다(2026-07-13).
           if (u === 0){
             if (subLock.br) subLock.br.style.display = 'none';
             subko.style.transform = 'translate(' + subLock.oneDx + 'px,0) scale(1)';
@@ -4900,11 +4993,39 @@
             subko.style.transform = 'translate(' + tx2 + 'px,' + (subLock.dy * u) + 'px)';
           }
         } else {
+          // 데스크톱: 자간은 경계에서만 기록(대기 g0, 조립 중 g1 고정) — 자간
+          // 수축 모션은 글자별 FLIP이 대신 그리므로 구 per-frame 자간 lerp
+          // (매 프레임 리플로우)는 제거(2026-07-13). 시각 경로는 동일(글자
+          // 위치는 자간의 선형 함수)하고 스태거만 더해진다.
           if (subLock.g0 !== null){
-            subko.style.letterSpacing = (subLock.g0 + (subLock.g1 - subLock.g0) * u) + 'px';
+            var wantLS = u === 0 ? subLock.g0 : subLock.g1;
+            if (wantLS !== lastLS){ lastLS = wantLS; subko.style.letterSpacing = wantLS + 'px'; }
           }
           var tx = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
           subko.style.transform = 'translate(' + tx + 'px,' + (subLock.dy * u) + 'px)';
+        }
+        // ── 서브라인 글자별 동반 조립(2026-07-13, 오너 "서브도 조립되는
+        // 형태로") ── 메인 M·O·N·C가 FLIP으로 날아가는 동안 서브 글자들도
+        // 각자 대기 위치(한 줄/자간 g0)→조립 자리(두 줄/자간 g1)로 좌→우
+        // 스태거를 두고 이동, 하나씩 자리를 잡는다. u===0은 대기 DOM 그대로
+        // (원위치). ⚠️ 크기(scale)는 여전히 조립 중 불변(s1 재결합 금지)이고
+        // 페이드도 없다(대기 때 이미 보이는 글자) — 기존 금지사항 유지.
+        var cs = subLock.chars;
+        if (cs){
+          for (var si = 0; si < cs.length; si++){
+            var c = cs[si];
+            if (u === 0){ c.el.style.transform = ''; continue; }
+            // 세로는 더 짧은 창(×0.4)으로 먼저 도착시켜 호를 그린다 — 모바일
+            // 접힘에서 둘째 줄 글자("시…")가 첫 줄 높이에 머문 채 가로로 길게
+            // 이동하면 먼저 도킹한 첫 줄 끝 글자("가")를 뚫고 지나가는 겹침이
+            // 생겼다(같은 행 34px 실측 → ×0.55에서 8px → ×0.4에서 해소).
+            // 먼저 제 행으로 떨어진 뒤 옆으로 미끄러져 자리를 잡는 2단 모션.
+            var lagX = 1 - ease(clamp((u - c.a) / SUB_CHAR_W));
+            var lagY = 1 - ease(clamp((u - c.a) / (SUB_CHAR_W * 0.4)));
+            c.el.style.transform = (lagX > 0.0001 || lagY > 0.0001)
+              ? 'translate(' + (c.dx * lagX) + 'px,' + (c.dy * lagY) + 'px)'
+              : '';
+          }
         }
       }
     }
