@@ -4562,6 +4562,7 @@
   var phrase  = document.getElementById('htPhrase');
   var target  = document.getElementById('htTarget');
   var inner   = document.getElementById('htInner');
+  var stack   = root.querySelector('.ht-stack'); // 로고(문장+타깃) 컨테이너 — 두 줄 접힘 재중심 점프 흡수용
   var subko   = document.getElementById('htSubko');
   var scrim   = document.getElementById('htScrim');
   var cue     = document.getElementById('htCue');
@@ -4742,6 +4743,7 @@
     // (.ht-target의 s0 축소 표시는 아래에서 measure 자신이 재계산해 다시 건다.)
     // 측정 직후엔 항상 refresh()가 apply(lastP)로 올바른 상태를 다시 그린다.
     inner.style.transform = '';
+    stack.style.transform = ''; // 두 줄 접힘 재중심 보정 translate 리셋(측정은 정지 좌표계)
     target.style.transform = '';
     others.forEach(function(el){ el.style.transform = ''; });
     hlEls.forEach(function(el){ el.style.transform = ''; });
@@ -4850,11 +4852,18 @@
       var subC = (subR.left + subR.right) / 2;      // 두 줄 박스 중심
       var oneDx = mid - subC;                        // 폴백(br 없으면 두 줄 중심)
       var oneRects = null;
+      // 로고(ht-stack) top을 두 줄(HIGH)·한 줄(LOW) 두 상태에서 실측 — 서브가 한 줄→
+      // 두 줄로 접히며 ht-inner가 커지면 .hero-tagline의 flex 재중심이 로고를 위로
+      // '툭' 올린다. 이 점프량(jump)을 apply가 조립 u로 감쇠 흡수해 부드럽게 올린다
+      // (2026-07-13 오너: "메인 타이틀이 툭 끊기며 올라간다 — 부드럽게").
+      var stackTopTwo = stack.getBoundingClientRect().top;
+      var jump = 0;
       if (subBr){                                    // 한 줄 상태 폭·중심 실측
         subBr.style.display = 'none';
         var one = subko.getBoundingClientRect();
         oneDx = mid - (one.left + one.right) / 2;
         oneRects = subCharRects();                   // 한 줄(대기) 글자별 중심
+        jump = stack.getBoundingClientRect().top - stackTopTwo; // 한 줄(LOW) − 두 줄(HIGH) ≥ 0
         subBr.style.display = '';                     // 다시 두 줄로 복원
       }
       var dx0m = mid - subC;
@@ -4888,6 +4897,7 @@
                   dy: (tmaxB - 3) - subR.top,
                   dx0: dx0m,                           // 두 줄 조립 시작(문장 아래 중앙)
                   dx1: (moncInkL + moncInkR) / 2 - subC, // 두 줄 조립 끝(로고 아래 중앙)
+                  jump: jump,                          // 두 줄 접힘 재중심 점프량(apply가 u로 감쇠 흡수)
                   subH: subR.height, g0: null, g1: 0, cOff: 0 };
     } else {
       // 데스크톱 한 줄: 자간 락업 — 시작(g0)=문장 잉크 폭, 끝(g1/s1)=로고 잉크 폭.
@@ -4996,10 +5006,18 @@
           if (u === 0){
             if (subLock.br) subLock.br.style.display = 'none';
             subko.style.transform = 'translate(' + subLock.oneDx + 'px,0) scale(1)';
+            stack.style.transform = '';                // 대기(한 줄) — 로고 원위치, 보정 없음
           } else {
             if (subLock.br) subLock.br.style.display = '';
             var tx2 = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
             subko.style.transform = 'translate(' + tx2 + 'px,' + (subLock.dy * u) + 'px)';
+            // 두 줄 접힘 재중심이 로고를 위로 올리는 '툭' 점프를 조립 u로 감쇠 흡수:
+            // u=0⁺엔 보정=jump(대기 LOW 위치), u=1엔 보정=0(조립 HIGH 위치)로 부드럽게
+            // 상승한다. 메인 글자와 동일한 u 엔벨로프라 로고 4글자와 한 몸으로 움직인다.
+            // (보정은 조립 구간 0<p<0.30에서만 non-zero — 줌 scale(g)은 p≥0.30이라 무간섭.
+            //  u=1에선 '' 로 접어 줌 구간에 잔여 레이어를 남기지 않음.)
+            var jcomp = subLock.jump * (1 - u);
+            stack.style.transform = jcomp > 0.01 ? 'translateY(' + jcomp + 'px)' : '';
           }
         } else {
           // 데스크톱: 자간은 경계에서만 기록(대기 g0, 조립 중 g1 고정) — 자간
