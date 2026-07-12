@@ -4539,8 +4539,8 @@
    spec: docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md
    창문 인트로(.hero-window-intro)의 스크롤 진행률(scroll-fx.js가 monc:zoomprogress
    이벤트로 공급, 미수신 시 자체 계산 폴백)에 맞춰: 소문자 퇴장 → M·O·N·C FLIP 조립
-   → 네이티브 로고 교체(선명도) → 줌 동반 '로고 전진' 확대(핀 배율^0.3) → 통과 후
-   여운 → 94~99.5% 페이드아웃. 역스크롤 시 전 과정 되감김. */
+   → 네이티브 로고 교체(선명도) → 줌 동반 '로고 전진' 확대(자체 커브, 종점 ×1.7)
+   → 통과 후 여운 → 94~99.5% 페이드아웃. 역스크롤 시 전 과정 되감김. */
 (function () {
   var wrap = document.querySelector('.hero-window-intro');
   var root = document.getElementById('heroTagline');
@@ -4670,7 +4670,7 @@
 
   function measure(){
     // 측정은 반드시 '정지(u=0)' 좌표계에서 해야 한다. apply()는 스크롤 도중
-    // inner(#htInner)에 로고 전진 확대(최대 ~1.8)를, 소문자 글자에 translateY를
+    // inner(#htInner)에 로고 전진 확대(최대 1.7)를, 소문자 글자에 translateY를
     // 걸어둔다. 무거운 히어로라 load·fonts.ready(또는 모바일 URL바 resize)가 스크
     // 롤 '중간'(p>0.30, inner 확대 상태)에 늦게 도착해 measure를 부르면, 그 확대된
     // 좌표로 잉크 폭을 재서 서브라인 자간(g0)·중심(dx0)이 배율만큼 부풀려진 채
@@ -4782,9 +4782,9 @@
   }
 
   var ASSEMBLE_END = 0.30;
-  var GROW_ALPHA = 0.30; // 로고 전진: 핀 줌 배율의 0.3승으로 락업 동반 확대(최종 ~1.5-1.8×)
-  var lastScale = 1;     // scroll-fx가 monc:zoomprogress detail.scale로 실어주는 현재 핀 배율
-  var lastG = -1;        // 전진 스케일 마지막 적용값 — 동일값이면 transform 재기록 스킵
+  var GROW_END = 1.7;   // 로고 전진: 줌 종점의 락업 확대 배율 — 기기(캘리브레이션 K) 무관 고정
+  var GROW_SHAPE = 0.7; // 전진 커브 지수 — 1 미만이라 초중반이 두터움 (apply 내 주석 참고)
+  var lastG = -1;       // 전진 스케일 마지막 적용값 — 동일값이면 transform 재기록 스킵
   var lastU = -1; // 조립 구간 스타일의 마지막 적용값 — 30% 이후엔 u가 1로 고정되어
                   // 매 프레임 letter-spacing(레이아웃)·글자 transform 재기록을 건너뜀
 
@@ -4829,13 +4829,20 @@
     // 요청, 러웨이 390vh로 확장해 확보). 구 '확대+페이드 동반 퇴장(52~78%)'은
     // 통과 전에 로고가 '사라진' 게 문제라 폐기 — 조기 페이드 재도입 금지.
 
-    // 로고 전진(2026-07-12 오너 요청): 줌 구간 동안 락업(inner)이 핀 배율
-    // (scroll-fx가 detail.scale로 동봉)의 GROW_ALPHA승으로 동반 확대 — 창틀은
-    // 가까워 빠르게 지나가고 MONC는 멀리서 천천히 다가오는 원근 시차를 만든다.
-    // 위 금지 항목과 달리 페이드(94~99.5%)는 그대로다. 개구부는 (1+K)^(zp^1.35)
-    // 로 로고보다 항상 빨리 커지므로 조립 시 fit(개구부 88%)이 전 구간 유지된다.
-    // 이벤트 미수신 폴백(lastScale=1 고정)·reduced-motion에선 전진 없이 동작.
-    var g = Math.pow(lastScale, GROW_ALPHA);
+    // 로고 전진(2026-07-12 오너 요청): 줌 구간(30%~) 동안 락업(inner)이 자체
+    // 지수 커브 GROW_END^(zp^GROW_SHAPE)로 확대 — MONC는 조립 직후부터 꾸준히
+    // 다가오고 창틀은 뒤늦게 가속하며 지나쳐 원근 시차가 생긴다. 페이드
+    // (94~99.5%)는 그대로라 위 금지 항목(조기 페이드 퇴장)과는 다르다.
+    // ⚠️ v1(핀 배율^0.3 커플링)은 핀 커브(zp^1.35)의 후반 몰림을 물려받아 중반
+    // (p=0.5)까지 +9%뿐 — "크기 그대로"라는 오너 피드백으로 당일 폐기. 자체
+    // 커브는 p=0.5에 +25%로 초중반부터 체감되고, 종점이 K 무관 고정이라 모바일
+    // 여운 fit(로고 ~330px<375px)이 보장된다. 핀 배율 재커플링 금지.
+    // 개구부 대비 로고의 일시 초과는 최대 +6%(<fit 여유 13.6%)로 창틀 침범 없음.
+    // zp는 data-zoom-start(0.30)=ASSEMBLE_END 페어 전제. p만으로 결정되므로
+    // 이벤트 미수신 폴백에서도 동작하고, measure() 중 재진입 apply(같은 p)가
+    // lastG 가드에 걸려 새 transform을 쓰지 않아 측정 좌표계를 오염시키지 않는다.
+    var zp = clamp((p - ASSEMBLE_END) / (1 - ASSEMBLE_END));
+    var g = Math.pow(GROW_END, Math.pow(zp, GROW_SHAPE));
     if (Math.abs(g - lastG) > 0.001) {
       lastG = g;
       inner.style.transform = g > 1.001 ? 'scale(' + g + ')' : '';
@@ -4857,7 +4864,6 @@
   wrap.addEventListener('monc:zoomprogress', function (e) {
     gotFx = true;
     lastP = e.detail.progress;
-    lastScale = e.detail.scale || 1; // 로고 전진용 핀 배율 (구버전 캐시 등 미동봉 시 1 = 전진 없음)
     apply(lastP);
   });
 
