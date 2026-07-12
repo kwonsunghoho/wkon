@@ -5132,7 +5132,19 @@
     root.classList.add('ht-fixed');
     window.addEventListener('scroll', onScroll, { passive: true });
     var rT;
+    var lastW = window.innerWidth;
     window.addEventListener('resize', function(){
+      // 모바일 주소창(툴바) 접힘/펼침은 뷰포트 '높이'만 바꾸고 폭은 그대로다.
+      // 스크롤을 멈추는 순간 툴바가 정착하며 발생하는 이 resize에 매번 무거운
+      // 동기 measure()(리플로우 다발 — fitPhrase·글자별 getBoundingClientRect·
+      // letter-spacing 쓰기)를 물리면 '멈출 때 튀는' 프레임 하나가 떨어진다.
+      // 게다가 리스너에 오프스크린 가드가 없어 인트로를 지난 뒤에도 페이지
+      // 어디서나 툴바 토글마다 돈다(제보의 '중간중간'). measure의 지속 메트릭은
+      // 전부 폭/개구부 기반이고 vh를 쓰는 건 calibrateZoom뿐인데 줌은 large
+      // viewport 기준이라, 폭 불변이면 재측정을 건너뛰는 게 안전할 뿐 아니라
+      // 정지 시 줌 배율 재보정 팝까지 없앤다. 회전(폭 변화)은 그대로 통과한다.
+      if (window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
       clearTimeout(rT);
       rT = setTimeout(function(){ measure(); refresh(); }, 150);
     });

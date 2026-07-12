@@ -196,6 +196,13 @@
       if (isNaN(scaleK)) scaleK = SCALE_K;
       var item = {
         wrap: wrap, pin: pin, current: 0, target: 0,
+        // 진행률 분모로 쓸 '주소창(툴바)에 안정적인' 뷰포트 높이. 핀은
+        // height:100svh(tokens.css)라 pin.offsetHeight = 작은 뷰포트(툴바 표시)
+        // 높이 → 툴바 접힘/펼침에 불변. live innerHeight를 분모로 쓰면 스크롤을
+        // 멈춰 툴바가 정착하는 순간 innerHeight가 줄며 progress가 뒤로 튀어
+        // (스무딩 lerp가 줌·로고 조립을 뒤로 드리프트 = '멈출 때 튀는' 원인),
+        // vhRef=100svh면 progress=1이 sticky 릴리즈 지점과 정확히 일치한다.
+        vhRef: pin.offsetHeight || window.innerHeight,
         zoomStart: zoomStart, scaleK: scaleK,
         // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지)
         fadeNone: wrap.getAttribute('data-zoom-fade') === 'none',
@@ -222,11 +229,14 @@
     });
     if (!items.length) return;
 
-    function computeTarget(wrap) {
-      var rect = wrap.getBoundingClientRect();
-      var vh = window.innerHeight;
+    function computeTarget(item) {
+      var rect = item.wrap.getBoundingClientRect();
+      // 분모를 live innerHeight(주소창 따라 변동) 대신 svh 핀 높이(vhRef)로 고정한다.
+      // 스크롤 오프셋(-rect.top)만 진행률을 움직이므로 순수 툴바 토글은 목표를
+      // 흔들지 않는다 → 멈출 때 줌·로고 되돌림 팝 제거. vhRef=100svh라 progress=1이
+      // sticky 릴리즈 지점(-rect.top = rect.height - 100svh)과 정확히 일치 → 데드존 0.
       // wrap 상단이 뷰포트 상단을 지나 wrap 하단(= 스크롤 runway 끝)에 도달할 때까지 0→1
-      var runway = rect.height - vh;
+      var runway = rect.height - item.vhRef;
       var progress = runway > 0 ? (-rect.top) / runway : 0;
       return Math.min(1, Math.max(0, progress));
     }
@@ -318,7 +328,7 @@
       lastTs = ts;
       var busy = false;
       items.forEach(function (item) {
-        item.target = computeTarget(item.wrap);
+        item.target = computeTarget(item);
         var diff = item.target - item.current;
         var ad = Math.abs(diff);
         if (ad > 0.0004) {
@@ -350,9 +360,21 @@
     window.addEventListener('scroll', kick, { passive: true });
     window.addEventListener('resize', kick, { passive: true });
 
+    // vhRef(진행률 분모)는 폭/회전 변화에만 갱신한다. 모바일 주소창 토글은
+    // 높이만 바꾸므로 폭이 그대로면 vhRef를 유지해야 목표가 안 튄다(computeTarget
+    // 주석 참고). 위 kick(resize)은 새 지오메트리로 재렌더만 하고 — 이제 목표가
+    // 안정적이라 툴바 토글에도 안 튄다. ⚠️ 프레임 루프엔 절대 넣지 말 것
+    // (성능 계약 ④ — 지오메트리 수집은 init/이 리스너에서만).
+    var lastVw = window.innerWidth;
+    window.addEventListener('resize', function () {
+      if (window.innerWidth === lastVw) return; // 툴바 높이 변동만 → vhRef 유지
+      lastVw = window.innerWidth;
+      items.forEach(function (it) { it.vhRef = it.pin.offsetHeight || window.innerHeight; });
+    }, { passive: true });
+
     // 초기 상태: 현재 스크롤 위치의 진행률로 즉시 렌더 (로드 시 따라붙기 애니메이션 없음)
     items.forEach(function (item) {
-      item.current = item.target = computeTarget(item.wrap);
+      item.current = item.target = computeTarget(item);
       renderWrap(item);
     });
   }
