@@ -4990,41 +4990,80 @@
                   jump: jump,                          // 두 줄 접힘 재중심 점프량(apply가 u로 감쇠 흡수)
                   gOne: gOne,                          // 대기 한 줄 justify 자간(조립 시작하면 '' natural)
                   subH: subR.height, g0: null, g1: 0, cOff: 0 };
-    } else {
-      // 데스크톱 한 줄: 자간 락업 — 시작(g0)=문장 잉크 폭, 끝(g1/s1)=로고 잉크 폭.
-      // 마지막 글자 뒤 팬텀 자간의 박스 포함 여부가 엔진마다 달라, 자간 적용 후
-      // '실측'한 잉크 스팬을 translateX로 정렬한다(2026-07-11 방식 그대로).
-      var spad = inkPad(subko, subko.textContent);
-      var g0 = Math.max(0, ((phraseInkR - phraseInkL) + spad.l + spad.r - natural) / (n - 1));
-      var desired = (moncInkR - moncInkL) + spad.l + spad.r;
-      var g1, s1d;
-      if (natural <= desired){ g1 = (desired - natural) / (n - 1); s1d = 1; }
-      else { g1 = 0; s1d = desired / natural; }
-      var inkSpanAt = function(g){
+    } else if (subChars.length >= 2){
+      // ── 데스크톱 한 줄 서브라인 락업 (2026-07-14 재작성 — 모바일 gOne과 통일) ──
+      // 시작(g0)=문장 잉크 폭에 정렬, 끝(g1/s1)=조립된 MONC 잉크 폭. 구 방식은
+      // ① g0을 advance·팬텀 자간 추정 수식으로 구하고 ② FLIP 글자 중심을
+      // subCharRects()(getBoundingClientRect)로 쟀는데, Chrome이 inline-block
+      // .ht-sl 박스에 trailing letter-spacing을 포함해 ls≠0에서 글자 중심이 우로
+      // ls/2 부푼다 → (1) 대기 정렬이 문장 잉크에서 어긋나 첫/끝 글자가 삐뚤,
+      // (2) 조립 시작(u=0⁺, ls=g0→0)에 서브 잉크가 통째로 +g0/2(~22px) 우로 '툭'
+      // 튄다. 모바일이 쓰는 '실측 잉크 스팬 2점 보간 + 참 중심(박스 left+natHalf)'
+      // 으로 바꿔 두 증상을 함께 제거한다. ⚠️ subCharRects()(박스 중심)로 회귀 금지.
+      var nD = subChars.length;
+      var lastElD = subChars[nD - 1];
+      subko.style.letterSpacing = '0px';
+      var natHalfD = subChars.map(function(el){ return el.getBoundingClientRect().width / 2; });
+      // 자간 g에서 서브 첫~끝 글자 '잉크' 스팬·박스중심·top 실측. 끝 글자 잉크 우 =
+      // box.left + 참폭 − 오른 베어링 (rect.right는 trailing 자간 포함이라 못 씀).
+      var subInkSpanD = function(g){
         subko.style.letterSpacing = g + 'px';
-        var r = subko.getBoundingClientRect();
-        var trail = Math.max(0, (r.width - natural) - (n - 1) * g);
-        return { l: r.left + spad.l, r: r.right - trail - spad.r,
-                 boxC: (r.left + r.right) / 2, top: r.top };
+        var box = subko.getBoundingClientRect();
+        var fr = subChars[0].getBoundingClientRect(), lr = lastElD.getBoundingClientRect();
+        var il = fr.left + inkPad(subChars[0], subChars[0].textContent).l;
+        var ir = lr.left + natHalfD[nD - 1] * 2 - inkPad(lastElD, lastElD.textContent).r;
+        return { l: il, r: ir, span: ir - il, boxC: (box.left + box.right) / 2, top: box.top };
       };
-      var s0span = inkSpanAt(g0);
-      var g0Rects = subCharRects();                  // 대기(자간 g0) 글자별 중심
-      var s1span = inkSpanAt(g1);
-      var g1Rects = subCharRects();                  // 조립(자간 g1) 글자별 중심
-      // 끝 상태는 scale(s1)이 박스 중심 기준으로 걸리므로 잉크 중심도 그만큼 수렴
-      var c1 = s1span.boxC + s1d * ((s1span.l + s1span.r) / 2 - s1span.boxC);
+      // 참 중심(박스 left + natHalf) — trailing 자간 박스 부풀림 무시. 현재 자간에서 측정.
+      var trueCentersD = function(){
+        return subChars.map(function(el, i){
+          var r = el.getBoundingClientRect();
+          return { x: r.left + natHalfD[i], y: (r.top + r.bottom) / 2 };
+        });
+      };
+      var sp0D = subInkSpanD(0).span, sp10D = subInkSpanD(10).span;
+      var slopeD = sp10D - sp0D;                            // 잉크 스팬은 자간의 1차 함수
+      var solveG = function(span){ return slopeD > 0 ? Math.max(0, 10 * (span - sp0D) / slopeD) : 0; };
+      // g0: 서브 잉크 스팬 == 문장 잉크 스팬 되는 자간 (2점 보간)
+      var g0 = solveG(phraseInkR - phraseInkL);
+      var s0ink = subInkSpanD(g0);
+      var g0Rects = trueCentersD();                        // 대기(자간 g0) 글자별 참 중심
+      // 끝 상태: 조립 MONC 잉크 폭에 맞춤. 자간0 잉크 폭이 더 넓으면 스케일 축소.
+      var desired = moncInkR - moncInkL;
+      var natInkSpan = sp0D;
+      var g1, s1d;
+      if (natInkSpan <= desired){ g1 = solveG(desired); s1d = 1; }
+      else { g1 = 0; s1d = desired / natInkSpan; }
+      var s1ink = subInkSpanD(g1);
+      var g1Rects = trueCentersD();                        // 조립(자간 g1) 글자별 참 중심
+      var s1inkC = (s1ink.l + s1ink.r) / 2;
+      var c1 = s1ink.boxC + s1d * (s1inkC - s1ink.boxC);   // 스케일 s1d 후 잉크 중심 수렴
+      subko.style.letterSpacing = g0 + 'px';               // 대기(자간 g0) 상태로 원복
       subLock = { s1: s1d,
-                  dy: (tmaxB + 10) - s0span.top,
-                  dx0: (phraseInkL + phraseInkR) / 2 - (s0span.l + s0span.r) / 2,
+                  dy: (tmaxB + 10) - s0ink.top,
+                  dx0: (phraseInkL + phraseInkR) / 2 - (s0ink.l + s0ink.r) / 2,
                   dx1: (moncInkL + moncInkR) / 2 - c1,
                   subH: subko.getBoundingClientRect().height,
                   g0: g0, g1: g1,
-                  // 글자별 FLIP 델타: 두 상태 모두 컨테이너 translate가 리셋된
-                  // 같은 좌표계 실측이라 baseDx 0 (u→0⁺ 컨테이너는 양쪽 다 dx0).
-                  // to===natural(g1 자간 위치)이라 bx=by=0 → u=1에 identity 복귀(기존 동작).
+                  // 글자별 FLIP 델타: 참 중심 실측이라 박스 부풀림 오염 없음.
+                  // to===natural(g1 참 중심)이라 bx=by=0 → u=1에 identity 복귀.
                   chars: buildSubChars(g0Rects, g1Rects, g1Rects, 0),
-                  cOff: (s1span.l + s1span.r) / 2 - s1span.boxC };
+                  cOff: s1inkC - s1ink.boxC };
+    } else {
+      // reduced-motion 등 글자 미래핑(subChars 없음) — 실측 불가, advance 기반
+      // 근사 자간 정렬(정적 렌더 폴백, apply(0)만 실행되므로 g0·dx0만 유효하면 됨).
+      var spad = inkPad(subko, subko.textContent);
+      var g0 = Math.max(0, ((phraseInkR - phraseInkL) + spad.l + spad.r - natural) / (n - 1));
+      var desiredF = (moncInkR - moncInkL) + spad.l + spad.r;
+      var g1F, s1F;
+      if (natural <= desiredF){ g1F = (desiredF - natural) / (n - 1); s1F = 1; }
+      else { g1F = 0; s1F = desiredF / natural; }
       subko.style.letterSpacing = g0 + 'px';
+      var rrF = subko.getBoundingClientRect();
+      subLock = { s1: s1F, dy: (tmaxB + 10) - rrF.top,
+                  dx0: (phraseInkL + phraseInkR) / 2 - ((rrF.left + spad.l) + (rrF.right - spad.r)) / 2,
+                  dx1: (moncInkL + moncInkR) / 2 - (rrF.left + rrF.right) / 2,
+                  subH: rrF.height, g0: g0, g1: g1F, chars: [], cOff: 0 };
     }
     // 초기 표시: 모바일 두 줄 모드는 대기(한 줄)로 — br 꺼서 한 줄 위치(oneDx)·자간 gOne.
     // (직후 refresh→apply(lastP)가 u에 맞게 다시 그리지만 리셋 잔상 방지용)
