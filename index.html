@@ -4546,6 +4546,37 @@
 </style>
 
 <script>
+/* 인앱 브라우저(WebView) 대응 — 히어로 캐러셀 svh 높이 px 동결 (2026-07-13)
+   인스타그램 등 인앱 브라우저는 자체 UI 바가 접힐 때 WebView를 리사이즈해
+   svh가 스크롤 중 재해석된다 — .hero-scene(100svh)·.hs-stage(56svh)가 늘었다
+   줄며 아래 문서 전체가 밀려 '스크롤 중 튐'이 된다. 초기값을 px로 동결하고
+   폭/회전 변화 시에만 재해석한다(scroll-fx.js freezeGeometry와 동일 원리 —
+   일반 브라우저는 svh가 원래 불변이라 동작 차이 없음). */
+(function () {
+  var scene = document.querySelector('.hero-scene');
+  if (!scene) return;
+  var stage = document.getElementById('hs-stage');
+  function freeze() {
+    scene.style.minHeight = '';
+    var mh = parseFloat(getComputedStyle(scene).minHeight);
+    if (mh > 0) scene.style.minHeight = mh + 'px';
+    if (stage) {
+      stage.style.height = '';
+      var h = parseFloat(getComputedStyle(stage).height);
+      if (h > 0) stage.style.height = h + 'px';
+    }
+  }
+  var lastW = window.innerWidth;
+  window.addEventListener('resize', function () {
+    if (window.innerWidth === lastW) return; // 인앱 바 높이 변동만 → 동결 유지
+    lastW = window.innerWidth;
+    freeze();
+  }, { passive: true });
+  freeze();
+})();
+</script>
+
+<script>
 /* ═══ 히어로 태그라인 — MONC 조립 애니메이션 ═══
    spec: docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md
    창문 인트로(.hero-window-intro)의 스크롤 진행률(scroll-fx.js가 monc:zoomprogress
@@ -4755,6 +4786,14 @@
     // 한 줄로, 모바일은 규칙이 없어 br이 작동(리셋 측정 시 두 줄). 뷰포트 전환 시
     // 이전 뷰포트가 남긴 인라인 display가 굳지 않게 한다.
     var _sbr = subko.querySelector('br'); if (_sbr) _sbr.style.display = '';
+    // 오버레이 높이(100svh) px 동결(2026-07-13 인앱 대응): 인스타그램 등 인앱
+    // 브라우저는 자체 UI 바가 접힐 때 WebView를 리사이즈해 svh가 스크롤 중
+    // 재해석된다 — justify-content:center가 조립 중인 로고를 세로로 재중심해
+    // 위아래로 튄다. 측정 좌표계와 같은 높이로 굳혀 두고, 재해석은 measure()
+    // 재실행(폭/회전 변화·로드)에서만 한다. 일반 브라우저는 svh 불변이라 무영향.
+    root.style.height = '';
+    var _rootH = root.getBoundingClientRect().height;
+    if (_rootH > 0) root.style.height = _rootH + 'px';
     fitPhrase();
 
     // 조립 로고가 개구부 안쪽에 들어오도록 폰트 축소(확대는 하지 않음).
@@ -5161,6 +5200,9 @@
   // 휠 점프에도 계단식으로 끊기지 않는다. 이벤트가 안 오면(스크립트 로드
   // 실패 등) 아래 onScroll의 기존 자체 계산(1:1 매핑)으로 폴백.
   var gotFx = false, lastP = 0;
+  // 폴백 진행률 분모 — live innerHeight는 주소창·인앱 바 토글에 흔들리므로
+  // 초기값을 캐시하고 폭 변화(회전) 시에만 갱신한다(scroll-fx vhRef와 동일 원리).
+  var vhFall = window.innerHeight;
   wrap.addEventListener('monc:zoomprogress', function (e) {
     gotFx = true;
     lastP = e.detail.progress;
@@ -5175,7 +5217,7 @@
       ticking = false;
       if (gotFx) return;
       var rect = wrap.getBoundingClientRect();
-      var runway = rect.height - window.innerHeight;
+      var runway = rect.height - vhFall;
       var p = runway > 0 ? clamp((-rect.top) / runway) : 0;
       lastP = p;
       apply(p);
@@ -5210,6 +5252,7 @@
       // 정지 시 줌 배율 재보정 팝까지 없앤다. 회전(폭 변화)은 그대로 통과한다.
       if (window.innerWidth === lastW) return;
       lastW = window.innerWidth;
+      vhFall = window.innerHeight; // 폴백 분모도 폭 변화 시에만 갱신
       clearTimeout(rT);
       rT = setTimeout(function(){ measure(); refresh(); }, 150);
     });

@@ -178,6 +178,34 @@
     var TAU = 150;
     var TAU_FAST = 60;
 
+    // ── 인앱 브라우저(WebView) 지오메트리 px 동결 (2026-07-13) ─────────────
+    // 일반 브라우저는 vh(large)·svh(small viewport)가 주소창 토글에 불변이라
+    // vh 러웨이·100svh 핀이 스크롤 중 흔들리지 않지만, 인스타그램·페이스북 등
+    // 인앱 브라우저는 자체 UI 바가 접힐 때 WebView 자체를 리사이즈해 vh·svh가
+    // 스크롤 도중 함께 재해석된다 — 340~390vh 러웨이가 수백 px씩 늘었다 줄며
+    // 문서 전체가 밀리고, 폭 게이트로 낡은 vhRef와도 어긋나 progress가 크게
+    // 팝(줌·조립이 뒤로 튐 = 인앱 유입에서만 '엄청 튀던' 원인). 러웨이
+    // min-height와 핀 height를 초기화 시점에 px로 동결해 '스크롤 중 지오메트리
+    // 불변'을 브라우저 종류와 무관하게 보장한다. 재해석은 폭/회전 resize에서만
+    // — vh가 원래 불변인 일반 브라우저에선 동작 차이가 없다.
+    // ⚠️ px 동결을 vh/svh로 되돌리면 인앱 유입 튐이 재발한다.
+    function freezeGeometry(item) {
+      // 러웨이: vh로 되돌려 현재 뷰포트 기준 px로 재해석한 뒤 동결.
+      // (runwayVh가 없으면 CSS 기본 min-height: 160vh를 같은 방식으로 동결)
+      item.wrap.style.minHeight = isNaN(item.runwayVh) ? '' : item.runwayVh + 'vh';
+      var runwayPx = parseFloat(window.getComputedStyle(item.wrap).minHeight);
+      if (runwayPx > 0) item.wrap.style.minHeight = runwayPx + 'px';
+      // 핀: CSS 100svh를 현재 값으로 재해석한 뒤 동결. 진행률 분모(vhRef)도
+      // 같은 값이라 progress=1이 sticky 릴리즈 지점과 계속 정확히 일치한다.
+      // ⚠️ offsetHeight(레이아웃 높이)를 쓸 것 — getBoundingClientRect는 줌
+      // transform(scale)을 포함해, 스크롤 중 재동결(회전) 시 확대 배율만큼
+      // 부풀려진 높이가 굳는다.
+      item.pin.style.height = '';
+      var pinPx = item.pin.offsetHeight;
+      if (pinPx > 0) item.pin.style.height = pinPx + 'px';
+      item.vhRef = pinPx || window.innerHeight;
+    }
+
     // 프레임 루프에서 매번 querySelector/getAttribute/parseFloat를 반복하지
     // 않도록, 섹션별 설정과 페이드 대상 요소를 초기화 시점에 한 번만 수집한다.
     // (속성·DOM 구조는 런타임에 바뀌지 않음 — 2026-07-11 프레임 비용 절감)
@@ -194,15 +222,18 @@
       var scaleAttr = attrFor(wrap, 'data-zoom-scale');
       var scaleK = scaleAttr ? parseFloat(scaleAttr) : SCALE_K;
       if (isNaN(scaleK)) scaleK = SCALE_K;
+      var runwayAttr = attrFor(wrap, 'data-zoom-runway');
       var item = {
         wrap: wrap, pin: pin, current: 0, target: 0,
-        // 진행률 분모로 쓸 '주소창(툴바)에 안정적인' 뷰포트 높이. 핀은
-        // height:100svh(tokens.css)라 pin.offsetHeight = 작은 뷰포트(툴바 표시)
-        // 높이 → 툴바 접힘/펼침에 불변. live innerHeight를 분모로 쓰면 스크롤을
-        // 멈춰 툴바가 정착하는 순간 innerHeight가 줄며 progress가 뒤로 튀어
-        // (스무딩 lerp가 줌·로고 조립을 뒤로 드리프트 = '멈출 때 튀는' 원인),
-        // vhRef=100svh면 progress=1이 sticky 릴리즈 지점과 정확히 일치한다.
-        vhRef: pin.offsetHeight || window.innerHeight,
+        // 러웨이 vh 값 — freezeGeometry()의 px 동결·재해석에 사용
+        runwayVh: runwayAttr ? parseFloat(runwayAttr) : NaN,
+        // 진행률 분모로 쓸 '주소창(툴바)에 안정적인' 뷰포트 높이 — 아래
+        // freezeGeometry()가 핀(100svh) 실측 px로 채운다. live innerHeight를
+        // 분모로 쓰면 스크롤을 멈춰 툴바가 정착하는 순간 innerHeight가 줄며
+        // progress가 뒤로 튀어(스무딩 lerp가 줌·로고 조립을 뒤로 드리프트 =
+        // '멈출 때 튀는' 원인), vhRef=핀 높이면 progress=1이 sticky 릴리즈
+        // 지점과 정확히 일치한다.
+        vhRef: 0,
         zoomStart: zoomStart, scaleK: scaleK,
         // data-zoom-fade="none"이면 페이드 없이 확대만 진행 (완전 불투명 유지)
         fadeNone: wrap.getAttribute('data-zoom-fade') === 'none',
@@ -211,6 +242,7 @@
         bezelFadeEls: wrap.querySelectorAll('.zoom-bezel-fade')
       };
       items.push(item);
+      freezeGeometry(item);
       // 개구부 실측 캘리브레이션(2026-07-12, index 태그라인 IIFE가 dispatch):
       // '창문 통과' 연출은 개구부가 뷰포트를 완전히 삼킬 만큼 확대돼야 성립한다.
       // 프레임 이미지의 개구부 크기를 알파 스캔으로 실측해 필요한 최대 배율
@@ -231,10 +263,12 @@
 
     function computeTarget(item) {
       var rect = item.wrap.getBoundingClientRect();
-      // 분모를 live innerHeight(주소창 따라 변동) 대신 svh 핀 높이(vhRef)로 고정한다.
-      // 스크롤 오프셋(-rect.top)만 진행률을 움직이므로 순수 툴바 토글은 목표를
-      // 흔들지 않는다 → 멈출 때 줌·로고 되돌림 팝 제거. vhRef=100svh라 progress=1이
-      // sticky 릴리즈 지점(-rect.top = rect.height - 100svh)과 정확히 일치 → 데드존 0.
+      // 분모를 live innerHeight(주소창 따라 변동) 대신 동결된 핀 높이(vhRef)로
+      // 고정한다. 러웨이(rect.height)·핀이 둘 다 px 동결이라(freezeGeometry)
+      // 스크롤 오프셋(-rect.top)만 진행률을 움직인다 — 순수 툴바/인앱 바 토글은
+      // 목표를 흔들지 않는다 → 멈출 때 줌·로고 되돌림 팝 제거. vhRef=핀 높이라
+      // progress=1이 sticky 릴리즈 지점(-rect.top = rect.height - 핀)과 정확히
+      // 일치 → 데드존 0.
       // wrap 상단이 뷰포트 상단을 지나 wrap 하단(= 스크롤 runway 끝)에 도달할 때까지 0→1
       var runway = rect.height - item.vhRef;
       var progress = runway > 0 ? (-rect.top) / runway : 0;
@@ -360,16 +394,16 @@
     window.addEventListener('scroll', kick, { passive: true });
     window.addEventListener('resize', kick, { passive: true });
 
-    // vhRef(진행률 분모)는 폭/회전 변화에만 갱신한다. 모바일 주소창 토글은
-    // 높이만 바꾸므로 폭이 그대로면 vhRef를 유지해야 목표가 안 튄다(computeTarget
-    // 주석 참고). 위 kick(resize)은 새 지오메트리로 재렌더만 하고 — 이제 목표가
-    // 안정적이라 툴바 토글에도 안 튄다. ⚠️ 프레임 루프엔 절대 넣지 말 것
-    // (성능 계약 ④ — 지오메트리 수집은 init/이 리스너에서만).
+    // 동결 지오메트리(러웨이·핀·vhRef)의 재해석은 폭/회전 변화에만 한다.
+    // 모바일 주소창·인앱 UI 바 토글은 높이만 바꾸므로 폭이 그대로면 동결을
+    // 유지해야 목표가 안 튄다(freezeGeometry·computeTarget 주석 참고). 위
+    // kick(resize)은 새 지오메트리로 재렌더만 한다. ⚠️ 프레임 루프엔 절대
+    // 넣지 말 것(성능 계약 ④ — 지오메트리 수집은 init/이 리스너에서만).
     var lastVw = window.innerWidth;
     window.addEventListener('resize', function () {
-      if (window.innerWidth === lastVw) return; // 툴바 높이 변동만 → vhRef 유지
+      if (window.innerWidth === lastVw) return; // 툴바/인앱 바 높이 변동만 → 동결 유지
       lastVw = window.innerWidth;
-      items.forEach(function (it) { it.vhRef = it.pin.offsetHeight || window.innerHeight; });
+      items.forEach(function (it) { freezeGeometry(it); });
     }, { passive: true });
 
     // 초기 상태: 현재 스크롤 위치의 진행률로 즉시 렌더 (로드 시 따라붙기 애니메이션 없음)
