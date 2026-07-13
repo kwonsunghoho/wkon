@@ -4852,6 +4852,7 @@
       var subC = (subR.left + subR.right) / 2;      // 두 줄 박스 중심
       var oneDx = mid - subC;                        // 폴백(br 없으면 두 줄 중심)
       var oneRects = null;
+      var gOne = 0;                                  // 대기(한 줄) justify 자간 — 아래에서 실측
       // 로고(ht-stack) top을 두 줄(HIGH)·한 줄(LOW) 두 상태에서 실측 — 서브가 한 줄→
       // 두 줄로 접히며 ht-inner가 커지면 .hero-tagline의 flex 재중심이 로고를 위로
       // '툭' 올린다. 이 점프량(jump)을 apply가 조립 u로 감쇠 흡수해 부드럽게 올린다
@@ -4860,9 +4861,47 @@
       var jump = 0;
       if (subBr){                                    // 한 줄 상태 폭·중심 실측
         subBr.style.display = 'none';
-        var one = subko.getBoundingClientRect();
-        oneDx = mid - (one.left + one.right) / 2;
-        oneRects = subCharRects();                   // 한 줄(대기) 글자별 중심
+        // ── 대기 한 줄 자간 justify(2026-07-13 오너 "입장했을 때 M 밑에 새, r 밑에 간이
+        // 있어야 — 자간은 너무 인위적이지 않게, 모바일만") ── 한 줄 서브의 첫/끝 글자
+        // 잉크를 문장 잉크(phraseInkL~R = M·r) 아래로 정렬하는 상수 자간 gOne을, 공식이
+        // 아니라 실측 2점 보간으로 구한다(잉크 스팬은 자간의 1차 함수 — 기본 0.06em·
+        // 팬텀 자간·사이드베어링을 완벽 모델링하기 어려워 공식은 ~5px 잔차가 남았음).
+        // 모바일은 문장(≈336px)·서브 자연폭(≈195px) 격차가 작아 gOne≈9.4px(0.63em)로
+        // 자연스럽다(데스크톱 96px 문장의 45px 과대 스트레치와 다름 — 그래서 모바일
+        // 한 줄에만, 두 줄 접힘 후엔 라인별 justify가 담당).
+        // natHalf: ls=0 글자 참 반폭 — inline-block .ht-sl의 rect는 trailing letter-spacing을
+        // 박스에 포함해(Chrome) ls≠0에서 글자 중심이 우로 부푼다. FLIP from(oneRects)을
+        // 그 부푼 중심으로 잡으면 조립 시작(u=0⁺, ls='')에 글자가 gOne/2 우로 '툭' 튀므로
+        // (uniform +4.3px 실측), 참 중심 = 박스 left + natHalf 로 잡아 오염을 제거한다.
+        var nOne = subChars.length;
+        if (nOne > 1){
+          subko.style.letterSpacing = '0px';
+          var natHalf = subChars.map(function(el){ return el.getBoundingClientRect().width / 2; });
+          var lastEl = subChars[nOne - 1];
+          // 자간 g에서 서브 첫~끝 글자 '잉크' 스팬 실측(끝 글자 오른쪽 잉크 = left+참폭−오른 베어링:
+          // rect.right는 trailing 자간 포함이라 못 씀)
+          var subInkSpanAt = function(g){
+            subko.style.letterSpacing = g + 'px';
+            var fr = subChars[0].getBoundingClientRect(), lr = lastEl.getBoundingClientRect();
+            var il = fr.left + inkPad(subChars[0], subChars[0].textContent).l;
+            var ir = lr.left + natHalf[nOne - 1] * 2 - inkPad(lastEl, lastEl.textContent).r;
+            return { l: il, r: ir, span: ir - il };
+          };
+          var tgtSpan = phraseInkR - phraseInkL;
+          var sp0 = subInkSpanAt(0).span, sp10 = subInkSpanAt(10).span;
+          gOne = (sp10 > sp0) ? Math.max(0, 10 * (tgtSpan - sp0) / (sp10 - sp0)) : 0;
+          var fin = subInkSpanAt(gOne);                        // gOne 적용 상태에서 잉크 중심 정렬
+          oneDx = mid - (fin.l + fin.r) / 2;
+          oneRects = subChars.map(function(el, i){     // 참 중심(left+natHalf) — 박스 부풀림 무시
+            var r = el.getBoundingClientRect();
+            return { x: r.left + natHalf[i], y: (r.top + r.bottom) / 2 };
+          });
+          subko.style.letterSpacing = '';            // 두 줄은 natural(라인별 glyph justify 담당) — 원복
+        } else {
+          // reduced-motion 등 글자 스팬 미래핑 — justify 불가, 박스 중앙 정렬 폴백(gOne=0 유지)
+          var oneBox = subko.getBoundingClientRect();
+          oneDx = mid - (oneBox.left + oneBox.right) / 2;
+        }
         jump = stack.getBoundingClientRect().top - stackTopTwo; // 한 줄(LOW) − 두 줄(HIGH) ≥ 0
         subBr.style.display = '';                     // 다시 두 줄로 복원
       }
@@ -4898,6 +4937,7 @@
                   dx0: dx0m,                           // 두 줄 조립 시작(문장 아래 중앙)
                   dx1: (moncInkL + moncInkR) / 2 - subC, // 두 줄 조립 끝(로고 아래 중앙)
                   jump: jump,                          // 두 줄 접힘 재중심 점프량(apply가 u로 감쇠 흡수)
+                  gOne: gOne,                          // 대기 한 줄 justify 자간(조립 시작하면 '' natural)
                   subH: subR.height, g0: null, g1: 0, cOff: 0 };
     } else {
       // 데스크톱 한 줄: 자간 락업 — 시작(g0)=문장 잉크 폭, 끝(g1/s1)=로고 잉크 폭.
@@ -4935,10 +4975,11 @@
                   cOff: (s1span.l + s1span.r) / 2 - s1span.boxC };
       subko.style.letterSpacing = g0 + 'px';
     }
-    // 초기 표시: 모바일 두 줄 모드는 대기(한 줄)로 — br 꺼서 한 줄 위치(oneDx).
+    // 초기 표시: 모바일 두 줄 모드는 대기(한 줄)로 — br 꺼서 한 줄 위치(oneDx)·자간 gOne.
     // (직후 refresh→apply(lastP)가 u에 맞게 다시 그리지만 리셋 잔상 방지용)
     if (subLock.twoLine){
       if (subLock.br) subLock.br.style.display = 'none';
+      subko.style.letterSpacing = subLock.gOne + 'px';
       subko.style.transform = 'translate(' + subLock.oneDx + 'px,0)';
     } else {
       subko.style.transform = 'translate(' + subLock.dx0 + 'px,0)';
@@ -5005,10 +5046,16 @@
           // 이어 붙여 시각적으로는 연속 모션이 된다(2026-07-13).
           if (u === 0){
             if (subLock.br) subLock.br.style.display = 'none';
+            // 대기 한 줄: justify 자간 gOne으로 새=M·간=r 아래 정렬(오너 요청). 자간은
+            // 리플로우라 경계 1회만 기록(lastLS 가드) — 조립 시작하면 '' natural로 되돌려
+            // 두 줄 라인별 glyph justify가 담당(둘이 겹쳐 이중 벌림 되지 않게).
+            var wantLS0 = subLock.gOne + 'px';
+            if (wantLS0 !== lastLS){ lastLS = wantLS0; subko.style.letterSpacing = wantLS0; }
             subko.style.transform = 'translate(' + subLock.oneDx + 'px,0) scale(1)';
             stack.style.transform = '';                // 대기(한 줄) — 로고 원위치, 보정 없음
           } else {
             if (subLock.br) subLock.br.style.display = '';
+            if (lastLS !== ''){ lastLS = ''; subko.style.letterSpacing = ''; } // 두 줄은 natural
             var tx2 = subLock.dx0 + (subLock.dx1 - subLock.dx0) * u;
             subko.style.transform = 'translate(' + tx2 + 'px,' + (subLock.dy * u) + 'px)';
             // 두 줄 접힘 재중심이 로고를 위로 올리는 '툭' 점프를 조립 u로 감쇠 흡수:
