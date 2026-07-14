@@ -30,7 +30,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - The old inline modal in `index.html` (its markup + CSS + `openApplicationModal`/`submitApplication`/`copyAccount` + `?openModal=true`) was **removed 2026-07-14** in a dead-code cleanup.
 
 ### Pages
-- `index.html` — the landing page. Large, self-contained: design tokens, all sections, review loading, most JS.
+- `index.html` — the landing page. Large: all sections, review loading, most JS. **CSS는 `index.css`로 분리** — 구 인라인 `<style>` 2블록(메인 + `#member-appeal`/`.ts-*`/`.db-*`)을 `index.css` 한 파일로 추출해 `<head>`에서 `tokens.css` 다음에 링크(캐스케이드 `tokens.css`→`index.css` 순서 보존이 핵심 — 링크 순서 바꾸면 `!important` 싸움이 깨짐). ⚠️ index의 CSS는 이제 `index.css`에서 찾을 것(index.html 안엔 `<style>` 없음). JS는 여전히 index.html 인라인.
 - `apply.html` — **신청·결제 전용(모든 신청 CTA의 목적지).** 히어로 → 챌린지 카드 4개(클릭=선택+커리큘럼 아코디언, 다중선택 장바구니) → 회원가입 배너(→login.html) → 조합 추천 → FAQ → 계좌이체 폼 → 하단 고정 요약바. `?c=voice,answer`로 프리셀렉트. `supabase-config.js`+`recruit.js` 로드, `loadChallengeStatuses()`로 마감 카드 비활성, 제출 `MONC.sb.from('applications').insert(...)`. 챌린지·FAQ는 하단 인라인 `CHALLENGES`/`FAQ` 배열(FAQ #3·#6·#7 임시 문구). **회원 모드**: 로그인 시 `getMyProfile()`로 이름·전화 자동채움·insert에 `member_id` 포함(→마이페이지 연동)·전화 미보유 시 `members`에 저장. **⚠️ 법적 필수:** 신청 버튼 위 `#appConsent` 필수 동의 체크(만14세+개인정보 수집·이용) 미체크 시 `submitApplication()`이 차단 — **개인정보 보호법상 삭제·완화 금지.**
 - `onboarding.html` — 첫 로그인 후 `login.html`의 `routeByRole()`이 `!profile.phone && !localStorage.monc_onboard_done`이면 여기로. 이름·전화·전공(major) → `members`. ⚠️ `members.major`는 migration `20260708120000_member_major.sql`(owner 실행); 미적용 시 major만 방어적으로 무시. `getMyProfile()` 공용 셀렉트엔 major 미포함(컬럼 미생성 시 전체 조회가 깨지므로 별도 방어 조회).
 - `reviews.html` — **후기 모음(홈 '후기 더 보기' + nav '후기'의 목적지).** Supabase `reviews`(visible=true)를 매스너리 그리드 + 챌린지·기수 필터칩(데이터 존재값만 동적 생성). `select('*')`이라 분류 컬럼 미적용에도 무에러(필터바 숨김). 후기 스크린샷에 **실명 노출**(공개 카페 후기·오너 승인).
@@ -68,7 +68,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - **타이포 계약(2026-07-15):** 글꼴은 **사이트 것을 상속** — 명조는 `:root`의 `--serif`(Noto Serif KR), 산세는 body. ⚠️ 구 로컬 `--serif:'Nanum Myeongjo'`/`--sans:'Pretendard'` 선언은 **사이트가 로드하지도 않는 글꼴**이라 기기마다 다르게 떨어졌다("폰트가 제각각"의 진짜 원인) — **재선언 금지.** 크기는 `.db-root`의 8단 스케일 토큰(`--t-cap`~`--t-disp`)에서만 고른다(하드코딩 px 금지). 명조는 **이름·수치·제목**에만, 나머지는 산세. 숫자는 `tabular-nums`.
 - **⚠️ 그리드 넘침:** `.db-days`/`.db-stats`/`.db-badges`/`.db-ba-row`는 **`minmax(0,1fr)`** 필수 — `1fr`(=`minmax(auto,1fr)`)은 칸이 min-content 아래로 못 줄어들어 375px에서 **스탬프가 카드 밖으로 튀어나왔다**(오너 피드백). `repeat(N,1fr)`로 되돌리지 말 것.
 - **카드 순서·데이터(오너 확정):** 권성호(수석·승무원 교육 11년·3,500명+) → 박새암(수석·객실승무원 9년·면접관) → 고은지(책임·합격생 다수·브랜딩) → 최보민(선임·대한항공 국제선·부사무장) → 김유리(선임·대한항공 부사무장 10년·기내방송). 김유리 사진 `images/instructor-kim.webp`.
-- CSS `.ts-*`(index 인라인 `<style>`). 마크업은 인라인 static, **`.ts-cred` 하드코딩** — **`researchers.html`의 `researchers` 배열과 별도 소스라 이력 변경 시 양쪽 동기화 필요.**
+- CSS `.ts-*`(`index.css`). 마크업은 인라인 static, **`.ts-cred` 하드코딩** — **`researchers.html`의 `researchers` 배열과 별도 소스라 이력 변경 시 양쪽 동기화 필요.**
 
 ### COMMUNITY 섹션 (`#community`)
 집계 지표(카운트업, IntersectionObserver 1회) + '가장 좋았던 점' 롤링 배너 + 대표 후기 카드 3장 + '후기 더 보기' CTA(→reviews.html). `--mc-*` 서브테마는 2026-07-14부터 아이보리-**에스프레소-코랄**(구 네이비·골드 폐기). 지표 = 흰 카드 `border-right` 구분(≤640px 세로 `border-bottom`), 숫자 명조 900·단위는 카운트업 JS가 `<em class="mc-unit">`로 코랄 렌더. 롤링 = 에스프레소 배경 + 거대 명조 따옴표(`::before` `\201C`).
@@ -82,7 +82,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 ### Design system (`tokens.css`)
 Linked by index + detail/legal pages + member pages(login/mypage/admin).
 - **팔레트(웜 통일):** 배경 = 베이지 `--bg #E9E4D8`; 타이틀·전환 CTA = 오렌지 `--action #F27945`; 본문 = `--text #26221C`. **네이비 폐기.** 코랄 3단: `--accent #F27945`(장식 면·큰 디스플레이), `--accent-dark #D9531F`(큰 볼드 24px+·테두리·포커스링, 3:1+), **`--accent-ink #A33D14`(12~15px 소형 텍스트·링크·활성 칩 — 4.5:1)**. ⚠️ 코랄·`--accent-dark`를 소형 텍스트에 쓰지 말 것 → `--accent-ink`. ⚠️ 오렌지·코랄 배경 위 흰 글씨 금지(≈2.7:1) — 채움이 `--accent`면 글씨 `--action-ink #2A1206`, `--accent-ink`면 흰 글씨 가능. 섹션 타이틀 = 오렌지 + 명조, 에이브로우 = `--accent-ink`(`.section-label`, tokens 오버라이드 `!important`). 커뮤니티 `--mc-*` 서브테마(아이보리-에스프레소-코랄)는 유지.
-- **타이포:** 섹션 제목은 명조 — `h2.section-title/.ts-title/.mc-title/.ma-title`에 `var(--serif)`(Noto Serif KR) 700 + `--fs-h2 clamp(30px,4.2vw,46px)` (tokens.css 오버라이드, h2 접두 특이도로 인라인 규칙을 이김). **명조 쓰는 페이지(index·상세 4종·reviews)는 `<head>`에 Noto Serif KR `600;700;900` 링크 필수.**
+- **타이포:** 섹션 제목은 명조 — `h2.section-title/.ts-title/.mc-title/.ma-title`에 `var(--serif)`(Noto Serif KR) 700 + `--fs-h2 clamp(30px,4.2vw,46px)` (tokens.css 오버라이드, h2 접두 특이도로 `index.css`의 `.section-title` 규칙을 이김). **명조 쓰는 페이지(index·상세 4종·reviews)는 `<head>`에 Noto Serif KR `600;700;900` 링크 필수.**
 - **UI 9대 원칙**(docs/design-principles.md): 가독성 12pt+ / 터치 44px+ / 대비 4.5:1 / 아이콘 통일 / 라운드 / 계층 / 여백 / 그룹핑 / 큼직. **375px 우선 검증.**
 - Typography(`--fs-*`)·spacing(`--space-*`, 8px)·radius(8/14/20/24)·섹션 배경 리듬 전부 토큰화 — 하드코딩보다 토큰 우선.
 - 아이콘 = `<body>` 상단 `<symbol>` 스프라이트(`currentColor` 리컬러). 모바일 스티키 CTA바 `.mobile-cta-bar`(≤768px).
@@ -125,4 +125,4 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 
 ## Conventions
 - Commit messages and in-code comments in Korean (matching existing history).
-- **Dead code는 남기지 말고 제거.** 2026-07-14 index.html에서 휴면 인라인 모달·mi-section CSS·구 `researchers` 배열·탭 IIFE·`.mc-capture-*` CSS·`maPreview` 파형 IIFE·고아 modal-overlay CSS 등 ~1,130줄 정리. 타임스탬프 백업 파일은 커밋하지 말 것.
+- **Dead code는 남기지 말고 제거.** 타임스탬프 백업 파일은 커밋하지 말 것.
