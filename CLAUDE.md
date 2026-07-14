@@ -54,7 +54,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 
 ### 연구진 신뢰 스트립 (`#researchers-strip`)
 히어로 직후 티저("누가 가르치는지" 선공개). 에디토리얼 좌측정렬 헤더 + **세로 4:5 포트레이트 카드**(`.ts-card` > `.ts-port` img + `.ts-body` role·name·cred, 하드라인·이름 명조). **자동 흐름 마퀴**: `.ts-marquee`(overflow:hidden + 좌우 `mask` 페이드) > `.ts-grid#tsGrid`(flex nowrap·`animation:ts-flow 34s linear infinite`·translateX 0→-50%). **이음새 없는 루프의 핵심: `gap` 대신 카드마다 `margin-right:20px`.** 카드 폭 `min(220px,72vw)`. **JS(`#tsGrid` 직후 인라인)가 카드 1벌을 `cloneNode`(aria-hidden)** 해 5→10장; 호버/누름 시 `.is-paused`; `prefers-reduced-motion`이면 복제 스킵 + CSS 정적 `flex-wrap:wrap`. 마퀴 overflow가 가로 넘침 방지. ⚠️ 카드 이력 변경 시 마크업 원본만 고치면 복제는 런타임 자동 반영.
-- **카드 순서·데이터(오너 확정):** 권성호(수석·승무원 교육 11년·3,500명+) → 박새암(수석·객실승무원 9년·면접관) → 고은지(책임·합격생 다수·브랜딩) → 최보민(선임·대한항공 국제선·부사무장) → 김유리(선임·대한항공 부사무장 10년·기내방송). 김유리 사진 `images/instructor-kim.jpg`.
+- **카드 순서·데이터(오너 확정):** 권성호(수석·승무원 교육 11년·3,500명+) → 박새암(수석·객실승무원 9년·면접관) → 고은지(책임·합격생 다수·브랜딩) → 최보민(선임·대한항공 국제선·부사무장) → 김유리(선임·대한항공 부사무장 10년·기내방송). 김유리 사진 `images/instructor-kim.webp`.
 - CSS `.ts-*`(index 인라인 `<style>`). 마크업은 인라인 static, **`.ts-cred` 하드코딩** — **`researchers.html`의 `researchers` 배열과 별도 소스라 이력 변경 시 양쪽 동기화 필요.**
 
 ### COMMUNITY 섹션 (`#community`)
