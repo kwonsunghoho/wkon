@@ -52,6 +52,22 @@
     .k-btn:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
     .k-btn:disabled { opacity: .55; cursor: default; transform: none; }
     .k-btn svg { width: 20px; height: 20px; }
+    /* 로그인 버튼 아래 안내 — '간주 동의' 문구가 아니라, 동의 절차가 1회 있다는 사실 고지 */
+    .note { margin-top: 14px; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
+    .note b { font-weight: 800; color: var(--text); }
+    /* 최초 1회 동의 게이트 */
+    .gate-h { margin-top: 24px; font-size: 15px; font-weight: 800; color: var(--text); }
+    .a-btn {
+      margin-top: 18px; width: 100%; padding: 15px 20px; font-size: 16px; font-weight: 800; cursor: pointer;
+      border: 0; border-radius: var(--radius-sm); background: var(--action); color: var(--action-ink);
+      transition: box-shadow .2s, transform .1s;
+    }
+    .a-btn:hover:not(:disabled) { box-shadow: var(--shadow); transform: translateY(-1px); }
+    .a-btn:disabled { opacity: .5; cursor: default; transform: none; }
+    .x-btn {
+      margin-top: 10px; width: 100%; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+      border: 0; background: none; color: var(--text-muted); text-decoration: underline;
+    }
     .status { margin-top: 18px; font-size: 13px; color: var(--text-muted); min-height: 18px; }
     .status.err { color: var(--action-dark); }
     .foot { margin-top: 28px; font-size: 12px; color: var(--text-muted); line-height: 1.7; }
@@ -80,22 +96,33 @@
       </li>
     </ul>
 
-    <label class="consent" for="agreeChk">
-      <input type="checkbox" id="agreeChk">
-      <span class="txt">
-        <b>[필수]</b> 만 14세 이상이며, <a href="terms.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">이용약관</a> 및 <a href="privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보 수집·이용</a>에 동의합니다.
-      </span>
-    </label>
+    <!-- 로그인 뷰 — 버튼은 항상 활성. 명시 동의는 '최초 로그인 1회'에 아래 동의 게이트에서 받는다. -->
+    <div id="loginView">
+      <button class="g-btn" id="googleBtn">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <span id="btnLabel">구글로 로그인</span>
+      </button>
 
-    <button class="g-btn" id="googleBtn" disabled>
-      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      <span id="btnLabel">구글로 로그인</span>
-    </button>
+      <button class="k-btn" id="kakaoBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#191600" d="M12 3C6.48 3 2 6.52 2 10.86c0 2.79 1.86 5.24 4.66 6.62-.16.57-.86 3.02-.89 3.22 0 0-.02.15.08.21.1.06.22.01.22.01.28-.04 3.24-2.13 3.76-2.49.71.1 1.44.16 2.17.16 5.52 0 10-3.52 10-7.86S17.52 3 12 3z"/></svg>
+        <span>카카오로 로그인</span>
+      </button>
 
-    <button class="k-btn" id="kakaoBtn" disabled>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#191600" d="M12 3C6.48 3 2 6.52 2 10.86c0 2.79 1.86 5.24 4.66 6.62-.16.57-.86 3.02-.89 3.22 0 0-.02.15.08.21.1.06.22.01.22.01.28-.04 3.24-2.13 3.76-2.49.71.1 1.44.16 2.17.16 5.52 0 10-3.52 10-7.86S17.52 3 12 3z"/></svg>
-      <span>카카오로 로그인</span>
-    </button>
+      <p class="note">처음 로그인하면 약관 동의 절차가 <b>한 번</b> 진행됩니다. 이미 동의하셨다면 바로 들어갑니다.</p>
+    </div>
+
+    <!-- 최초 1회 동의 게이트 — 가입 완료 단계. 동의해야 회원 페이지로 넘어간다. -->
+    <div id="consentView" hidden>
+      <p class="gate-h">마지막 한 단계예요</p>
+      <label class="consent" for="agreeChk">
+        <input type="checkbox" id="agreeChk">
+        <span class="txt">
+          <b>[필수]</b> 만 14세 이상이며, <a href="terms.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">이용약관</a> 및 <a href="privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보 수집·이용</a>에 동의합니다.
+        </span>
+      </label>
+      <button class="a-btn" id="consentGo" disabled>동의하고 시작하기</button>
+      <button class="x-btn" id="consentNo">동의하지 않고 나가기</button>
+    </div>
 
     <div class="status" id="status"></div>
 
@@ -112,10 +139,52 @@
     const btn = document.getElementById('googleBtn');
     const kbtn = document.getElementById('kakaoBtn');
     const agree = document.getElementById('agreeChk');
+    const loginView = document.getElementById('loginView');
+    const consentView = document.getElementById('consentView');
+    const consentGo = document.getElementById('consentGo');
+    const consentNo = document.getElementById('consentNo');
     function setStatus(t, isErr) { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!isErr); }
 
-    // [필수] 동의 체크 전에는 로그인 버튼 비활성 (만 14세 이상 확인 + 약관·개인정보 명시 동의)
-    agree.addEventListener('change', () => { btn.disabled = kbtn.disabled = !agree.checked; });
+    /* 동의 게이트 (2026-07-15) — 구조가 바뀐 이유:
+       구 방식은 로그인 버튼을 체크박스에 묶어 '로그인할 때마다' 동의를 다시 받았다.
+       OAuth 는 로그인 전에 사용자를 식별할 수 없어 "이미 동의한 사람"을 가려낼 수 없기 때문.
+       이제는 최초 로그인 직후 여기서 명시 동의를 받아 members.agreed_at 에 기록하고,
+       기록이 있으면 어느 기기에서 로그인하든 이 화면을 건너뛴다.
+       ⚠️ 법적 필수: 동의는 여전히 명시적이어야 한다 — 사전 체크·간주 동의로 되돌리지 말 것.
+       (동의 없이는 consentGo 가 disabled 이고, 회원 페이지는 requireConsent() 로 막힌다.) */
+    function showConsentGate() {
+      loginView.hidden = true;
+      consentView.hidden = false;
+      const sub = document.querySelector('.sub');   // "…로그인하세요" — 이미 로그인한 상태라 맞지 않는 안내
+      if (sub) sub.hidden = true;
+      agree.checked = false;                        // ⚠️ 사전 체크 금지 — 매번 사용자가 직접 체크해야 명시 동의
+      consentGo.disabled = true;
+    }
+    agree.addEventListener('change', () => { consentGo.disabled = !agree.checked; });
+
+    consentGo.addEventListener('click', async () => {
+      if (!agree.checked) return;
+      consentGo.disabled = true;
+      setStatus('동의 내용을 저장하는 중…');
+      await MONC.recordConsent();   // 서버 저장 실패 시에도 로컬에 남아 재요구되지 않음
+      routeByRole();
+    });
+
+    /* ⚠️ 법적 필수: 거부 = 즉시 파기.
+       OAuth 로그인 시점에 트리거가 members(이름·이메일) 행을 이미 만들어 두기 때문에,
+       로그아웃만 하면 '동의를 거부한 사람'(만 14세 미만 포함)의 개인정보가 서버에 남는다.
+       deleteMyAccount() 로 계정을 지우고 나간다 — 이 호출을 빼지 말 것. */
+    consentNo.addEventListener('click', async () => {
+      consentNo.disabled = true; consentGo.disabled = true;
+      setStatus('동의를 거부하셨습니다. 방금 만들어진 계정 정보를 삭제하는 중…');
+      const r = await MONC.deleteMyAccount();
+      if (r === 'failed') {
+        setStatus('계정 정보 삭제에 실패했습니다. moveownnextcreate@gmail.com 으로 알려주시면 즉시 파기하겠습니다.', true);
+        consentNo.disabled = false;
+        return;                     // 파기 실패를 숨긴 채 내보내지 않는다
+      }
+      await MONC.signOut();         // 세션 종료 후 홈으로
+    });
 
     // 역할에 따라 알맞은 페이지로 보냄
     async function routeByRole() {
@@ -131,27 +200,31 @@
     const returnHere = () => window.location.origin + window.location.pathname;
 
     btn.addEventListener('click', async () => {
-      if (!agree.checked) { setStatus('약관·개인정보 동의에 체크해주세요.', true); return; }
       btn.disabled = true; kbtn.disabled = true;
       setStatus('구글 로그인 창으로 이동 중…');
-      // 로그인 후 이 페이지로 돌아와서 routeByRole() 이 분기 처리
+      // 로그인 후 이 페이지로 돌아오면 아래 부트스트랩이 동의 여부를 보고 분기
       const { error } = await MONC.signInWithGoogle(returnHere());
       if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = false; kbtn.disabled = false; }
     });
 
     kbtn.addEventListener('click', async () => {
-      if (!agree.checked) { setStatus('약관·개인정보 동의에 체크해주세요.', true); return; }
       btn.disabled = true; kbtn.disabled = true;
       setStatus('카카오 로그인 창으로 이동 중…');
       const { error } = await MONC.signInWithKakao(returnHere());
       if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = false; kbtn.disabled = false; }
     });
 
-    // 이미 로그인돼 있으면(또는 방금 로그인하고 돌아왔으면) 바로 분기
+    // 이미 로그인돼 있으면(또는 방금 로그인하고 돌아왔으면) 동의 여부에 따라 분기.
+    // 동의 기록 있음 → 바로 역할별 페이지 / 없음 → 동의 게이트(최초 1회).
+    // 회원 페이지의 requireConsent() 가 ?consent=1 로 되돌려보내는 경로도 여기로 들어온다.
     (async () => {
       if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
       const session = await MONC.getSession();
-      if (session) { setStatus('로그인 확인 중…'); routeByRole(); }
+      if (!session) return;                       // 미로그인 → 로그인 뷰 유지
+      setStatus('로그인 확인 중…');
+      if (await MONC.hasConsented()) { routeByRole(); return; }
+      setStatus('');
+      showConsentGate();
     })();
   </script>
 </body>

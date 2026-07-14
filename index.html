@@ -693,24 +693,31 @@
     .ts-desc strong{ color:var(--accent-ink); font-weight:700; }
 
     /* 자동 흐름 카루셀(마퀴) — 연구원 카드가 옆으로 계속 흐른다(2026-07-14 오너 "옆으로 흐르듯").
-       JS(tsGrid)가 카드 1벌을 복제해 translateX(-50%)로 이음새 없이 무한 루프.
-       카드마다 margin-right(=gap)를 줘 트랙폭=2N·(카드폭+margin)이 되므로 -50%가 정확히
-       한 벌 = 이음새 없음. 좌우 마스크 페이드로 흘러 들어오고 나감.
-       마우스 호버/터치(누름) 시 정지 → 카드 읽기 가능. reduced-motion은 정적 wrap. */
+       JS(tsGrid)가 카드 1벌을 복제해 -50%(한 벌 폭)에서 되감아 이음새 없이 무한 루프.
+       카드마다 margin-right(=gap)를 줘 트랙폭=2N·(카드폭+margin)이 되므로 되감기 지점이
+       정확히 한 벌 = 이음새 없음. 좌우 마스크 페이드로 흘러 들어오고 나감.
+       ⚠ 2026-07-15: 구 CSS keyframes + :hover 정지 폐기 — 손만 올려도 멈춰서(오너 피드백)
+       JS rAF 물리(자동 흐름 + 드래그/휠 관성)로 대체. 호버로는 절대 멈추지 않는다.
+       놓으면 관성으로 미끄러지다 자동 속도로 지수감쇠 복귀 = '다이얼' 감각.
+       reduced-motion은 JS가 조기 반환 → 정적 wrap 그리드. */
     .ts-marquee{ overflow:hidden; max-width:1120px; margin:0 auto 30px;
+      cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none;
+      -webkit-tap-highlight-color:transparent;
       -webkit-mask:linear-gradient(90deg,transparent 0,#000 6%,#000 94%,transparent 100%);
               mask:linear-gradient(90deg,transparent 0,#000 6%,#000 94%,transparent 100%); }
+    .ts-marquee.is-drag{ cursor:grabbing; }
     .ts-grid{ list-style:none; padding:0; margin:0; display:flex; flex-wrap:nowrap;
-      width:max-content; animation:ts-flow 34s linear infinite; }
-    .ts-marquee:hover .ts-grid, .ts-marquee.is-paused .ts-grid{ animation-play-state:paused; }
-    @keyframes ts-flow{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+      width:max-content; will-change:transform; }
+    /* 드래그 중엔 이미지 고스트 드래그·카드 리프트 전환이 끼어들지 않게 */
+    .ts-grid img{ -webkit-user-drag:none; user-select:none; pointer-events:none; }
+    .ts-marquee.is-drag .ts-card{ transition:none; }
     .ts-card{ flex:0 0 min(220px,72vw); margin-right:20px; display:flex; flex-direction:column;
       background:var(--surface); border:1px solid var(--border);
       border-radius:18px; overflow:hidden; transition:transform .22s ease, box-shadow .22s ease; }
     .ts-card:hover{ transform:translateY(-4px); box-shadow:0 16px 40px rgba(36,26,18,.14); }
     @media (prefers-reduced-motion: reduce){
-      .ts-marquee{ -webkit-mask:none; mask:none; }
-      .ts-grid{ animation:none; width:auto; flex-wrap:wrap; justify-content:center; gap:16px 20px; }
+      .ts-marquee{ -webkit-mask:none; mask:none; cursor:default; }
+      .ts-grid{ width:auto; flex-wrap:wrap; justify-content:center; gap:16px 20px; will-change:auto; }
       .ts-card{ margin-right:0; }
     }
     /* 세로 포트레이트 — 4:5, 통일 그레이딩 + 하단 그라디언트 */
@@ -1942,25 +1949,139 @@
   </div>
 </section>
 <script>
-/* 연구진 마퀴: 카드 1벌 복제(이음새 없는 -50% 루프) + 누름/호버 시 정지 */
+/* 연구진 마퀴: 카드 1벌 복제(이음새 없는 루프) + 자동 흐름 + 드래그/휠 관성('다이얼').
+   ⚠ 호버로는 멈추지 않는다 — 구 :hover/pointerdown 정지는 "손만 올려도 사진이 멈춘다"는
+   오너 피드백(2026-07-15)으로 제거. 잡아끌면 손끝을 따라오고, 놓으면 그 속도로 미끄러지다
+   자동 흐름 속도(AUTO_V)로 지수감쇠 복귀한다. */
 (function () {
   var grid = document.getElementById('tsGrid');
   if (!grid) return;
   var marquee = grid.closest('.ts-marquee');
   if (!marquee) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // 정적
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // 정적 wrap
+
+  // 한 벌 복제 → 되감기 지점(half)에서 순간이동해도 그림이 동일 = 이음새 없음
   Array.prototype.slice.call(grid.children).forEach(function (li) {
     var c = li.cloneNode(true);
     c.setAttribute('aria-hidden', 'true');
     grid.appendChild(c);
   });
-  var pause = function () { marquee.classList.add('is-paused'); };
-  var resume = function () { marquee.classList.remove('is-paused'); };
-  marquee.addEventListener('pointerdown', pause);
-  marquee.addEventListener('pointerup', resume);
-  marquee.addEventListener('pointercancel', resume);
-  marquee.addEventListener('touchstart', pause, { passive: true });
-  marquee.addEventListener('touchend', resume);
+  Array.prototype.forEach.call(grid.querySelectorAll('img'), function (im) { im.draggable = false; });
+
+  var AUTO_V = 36;    // 자동 흐름 속도(px/s, 양수=왼쪽). 구 CSS 34s/한 벌(≈1200px)과 같은 체감.
+  var TAU    = 0.5;   // 관성 → 자동 속도 복귀 시상수(s). 클수록 오래 미끄러진다.
+  var MAX_V  = 2800;  // 던지기 속도 상한(px/s)
+  var half = 1;       // 한 벌 폭(트랙의 절반)
+  var x = 0;          // 왼쪽으로 흘러간 누적 거리(px)
+  var v = AUTO_V;     // 현재 속도(px/s)
+  var IDLE_TAU = 0.12; // 손을 멈춘 채 놓았을 때 관성 소멸 시상수(s) — 묵은 속도로 급발진 방지
+  var AXIS_PX  = 6;    // 터치에서 '가로로 끌 의도'로 인정할 최소 이동(px)
+  var dragging = false, pressed = false, pid = null, touchLike = false;
+  var startX = 0, startY = 0, lastX = 0, lastT = 0, dragV = 0;
+  var inView = true, raf = 0, prevT = 0;
+
+  function measure() { half = (grid.scrollWidth / 2) || 1; }
+  measure();
+  // 이미지가 늦게 들어오면 트랙 폭이 바뀌므로 재측정
+  window.addEventListener('load', measure);
+  var wpx = window.innerWidth;
+  window.addEventListener('resize', function () {
+    if (window.innerWidth === wpx) return;   // 모바일 툴바 높이 토글은 무시(폭 변화만)
+    wpx = window.innerWidth; measure();
+  });
+
+  function draw() {
+    var m = x % half; if (m < 0) m += half;
+    grid.style.transform = 'translate3d(' + (-m) + 'px,0,0)';
+  }
+
+  function frame(t) {
+    raf = 0;
+    if (!prevT) prevT = t;
+    var dt = Math.min((t - prevT) / 1000, 0.05);  // 탭 복귀 시 큰 점프 방지
+    prevT = t;
+    if (!dragging) {
+      v += (AUTO_V - v) * (1 - Math.exp(-dt / TAU)); // 지수감쇠로 자동 속도에 수렴
+      x += v * dt;
+      draw();
+    }
+    if (inView) schedule();
+  }
+  function schedule() { if (!raf) raf = requestAnimationFrame(frame); }
+
+  function beginDrag(e) {
+    dragging = true;
+    marquee.classList.add('is-drag');
+    lastX = e.clientX; lastT = performance.now(); dragV = 0;
+    if (marquee.setPointerCapture) { try { marquee.setPointerCapture(pid); } catch (err) {} }
+  }
+
+  marquee.addEventListener('pointerdown', function (e) {
+    if (e.button) return;                              // 좌클릭·터치·펜만
+    pressed = true; pid = e.pointerId; dragV = 0;
+    startX = lastX = e.clientX; startY = e.clientY;
+    lastT = performance.now();
+    touchLike = (e.pointerType === 'touch' || e.pointerType === 'pen');
+    // ⚠ 터치는 여기서 바로 잡지 않는다 — 손가락이 닿자마자 dragging=true 로 두면
+    //    '세로로 페이지를 스크롤하려고 카드 위에 손을 얹은 것'만으로 마퀴가 멈춘다
+    //    (= 오너가 지적한 '손만 올려도 멈춤'의 터치판 재발). 가로 의도가 확인될 때만 잡는다.
+    //    마우스는 누름 = 명백한 '다이얼 붙잡기'이므로 즉시 잡는다.
+    if (!touchLike) beginDrag(e);
+  });
+
+  marquee.addEventListener('pointermove', function (e) {
+    if (!pressed || e.pointerId !== pid) return;
+
+    if (!dragging) {                                   // 터치: 아직 축 판정 전 — 자동 흐름은 계속 돈다
+      var tdx = e.clientX - startX, tdy = e.clientY - startY;
+      if (Math.abs(tdx) > AXIS_PX && Math.abs(tdx) > Math.abs(tdy)) {
+        beginDrag(e);                                  // 가로 의도 확정 → 지금부터 손끝 추종
+      } else if (Math.abs(tdy) > AXIS_PX) {
+        pressed = false;                               // 세로 스크롤 → 이 제스처는 페이지에 양보
+      }
+      return;
+    }
+
+    var now = performance.now();
+    var dt = Math.max((now - lastT) / 1000, 1 / 240);
+    var dx = e.clientX - lastX;
+    lastX = e.clientX; lastT = now;
+    x -= dx;                                           // 오른쪽으로 끌면 카드도 오른쪽으로
+    dragV = dragV * 0.7 + (-dx / dt) * 0.3;            // 최근 속도 저역통과 → 놓을 때의 관성
+    draw();
+  });
+
+  function endDrag(e) {
+    if (e && e.pointerId !== pid) return;
+    if (!dragging) { pressed = false; return; }        // 탭·세로 스크롤 — 흐름을 건드리지 않는다
+    dragging = false; pressed = false;
+    marquee.classList.remove('is-drag');
+    // 끌다가 손을 멈춘 채 놓으면 마지막 pointermove 속도가 그대로 남아 급발진한다
+    // (브라우저는 포인터가 멈추면 move 를 안 쏜다) → 멈춰 있던 시간만큼 관성을 죽인다.
+    var idle = (performance.now() - lastT) / 1000;
+    var carried = dragV * Math.exp(-idle / IDLE_TAU);
+    v = Math.max(-MAX_V, Math.min(MAX_V, carried));
+    prevT = 0; schedule();
+  }
+  marquee.addEventListener('pointerup', endDrag);
+  marquee.addEventListener('pointercancel', endDrag);
+
+  // 트랙패드 가로 스크롤 = 다이얼 튕기기(속도 임펄스). 세로 스크롤은 페이지에 그대로 넘긴다.
+  marquee.addEventListener('wheel', function (e) {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    v = Math.max(-MAX_V, Math.min(MAX_V, v + e.deltaX * 8));
+    schedule();
+  }, { passive: false });
+
+  // 화면 밖이면 rAF 정지(인트로 스크롤 중 프레임 뺏김 방지 — 히어로 캐러셀과 동일 규약)
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      inView = es[0].isIntersecting;
+      if (inView) { prevT = 0; schedule(); }
+    }, { rootMargin: '120px 0px' }).observe(marquee);
+  }
+  schedule();
 })();
 </script>
 
@@ -2349,17 +2470,37 @@
     <div class="reveal ma-report" data-reveal>
 <div class="db-root">
 <style>
+/* 타이포 계약 (2026-07-15 오너 "박스 안 폰트가 제각각" 피드백)
+   ① 글꼴은 사이트 것을 그대로 쓴다 — 명조는 :root 의 --serif(Noto Serif KR, <head> 에서 로드),
+      산세는 body 상속. 구 로컬 --serif 는 이 사이트가 로드하지도 않는 '나눔명조'를 1순위로 둬
+      기기마다 다른 글꼴로 떨어졌다(=제각각의 진짜 원인) → 삭제.
+      ⚠ --sans 는 body 와 '같은 스택'으로 남겨둔다: 명조 부모 안에서 단위·조사만 산세로 되돌릴 때
+      font-family:inherit 는 부모(명조)를 물려받아 무용지물이라 명시적 스택이 필요하다.
+   ② 명조는 '이름·수치·제목'에만 — 이름 / 링 퍼센트 / 지표 숫자 / 카드 제목 / 히어로 문장.
+      라벨·캡션·본문은 전부 산세.
+   ③ 크기는 아래 8단 스케일에서만 고른다(구 12/12.5/13/15.5/16/17/18/19/21/26/38 난립 정리).
+   ④ 숫자는 등폭(tabular-nums), 라벨은 800+자간, 본문은 500 — 굵기 사다리 500/700/800. */
 .db-root{
-  --bg:#E8E1D2; --surface:#FBF8F1; --surface-2:#F3EEE3; --ink:#26221C; --ink-soft:#6A6156; --muted:#6E6656;
+  --bg:#E8E1D2; --surface:#FBF8F1; --surface-2:#F3EEE3; --ink:#26221C; --ink-soft:#6A6156;
+  --muted:#6A6156;  /* 구 #6E6656 — ink-soft 와 육안 구분이 안 되는 색이라 2단(ink/ink-soft)으로 통합 */
   --line:#DED5C4; --coral:#F27945; --coral-dark:#D9531F; --coral-ink:#A33D14; --coral-soft:rgba(242,121,69,.12);
-  --serif:'Nanum Myeongjo','Noto Serif KR','Apple SD Gothic Neo',ui-serif,Georgia,serif;
-  --sans:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  --sans:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; /* = body 스택 */
+  --t-cap:11px;     /* 라벨·범례 */
+  --t-sm:12px;      /* 보조 텍스트 */
+  --t-md:13.5px;    /* 본문 */
+  --t-lg:15.5px;    /* 카드 제목 */
+  --t-quote:17.5px; /* 히어로 문장 */
+  --t-name:19px;    /* 이름 */
+  --t-num:26px;     /* 지표 숫자 */
+  --t-disp:38px;    /* 링 퍼센트 */
   --sh-1:0 1px 2px rgba(38,34,28,.05), 0 6px 14px rgba(38,34,28,.06), 0 18px 40px rgba(38,34,28,.05);
   --sh-2:0 1px 2px rgba(38,34,28,.06), 0 3px 8px rgba(38,34,28,.05);
-  font-family:var(--sans); color:var(--ink); box-sizing:border-box;
-  max-width:720px; margin:0 auto; padding:4px;
+  font-family:inherit; color:var(--ink); box-sizing:border-box;
+  max-width:720px; margin:0 auto; padding:4px; min-width:0;
 }
 .db-root *,.db-root *::before,.db-root *::after{box-sizing:border-box}
+/* 숫자가 들어가는 자리는 전부 등폭 숫자 — 값이 바뀌어도 칸이 흔들리지 않는다 */
+.db-pct,.db-frac,.db-snum,.db-bar-l,.db-ctitle em,.db-day,.db-wav .db-wl b{font-variant-numeric:tabular-nums}
 .db-shell{
   position:relative; border-radius:26px; padding:16px;
   background:
@@ -2376,7 +2517,7 @@
 /* mockup chrome ribbon */
 .db-ribbon{
   display:inline-flex; align-items:center; gap:7px; margin:2px 2px 14px;
-  font-size:12px; letter-spacing:.14em; font-weight:700; color:var(--coral-ink);
+  font-size:var(--t-cap); letter-spacing:.16em; font-weight:800; color:var(--coral-ink);
   text-transform:uppercase;
 }
 .db-ribbon i{width:6px;height:6px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
@@ -2394,13 +2535,14 @@
   background:var(--surface); border:2px solid var(--surface); display:flex;align-items:center;justify-content:center}
 .db-ava span svg{width:20px;height:20px}
 .db-htxt{min-width:0; flex:1}
-.db-name{font-family:var(--serif); font-size:21px; font-weight:700; line-height:1.15; letter-spacing:-.01em}
-.db-name em{font-style:normal; color:var(--ink-soft); font-family:var(--sans); font-size:14px; font-weight:500}
-.db-sub{display:flex; align-items:center; gap:6px; margin-top:4px; font-size:12.5px; color:var(--ink-soft)}
+.db-name{font-family:var(--serif); font-size:var(--t-name); font-weight:700; line-height:1.15;
+  letter-spacing:-.02em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.db-name em{font-style:normal; color:var(--ink-soft); font-family:var(--sans); font-size:var(--t-sm); font-weight:500}
+.db-sub{display:flex; align-items:center; gap:6px; margin-top:4px; font-size:var(--t-sm); font-weight:500; color:var(--ink-soft)}
 .db-chal{color:var(--coral-ink); font-weight:700}
 .db-pill{
   align-self:flex-start; flex:none; display:inline-flex; align-items:center; gap:6px;
-  padding:7px 12px; border-radius:999px; font-size:12px; font-weight:700;
+  padding:7px 12px; border-radius:999px; font-size:var(--t-cap); font-weight:800; letter-spacing:.01em;
   color:var(--coral-ink); background:var(--surface);
   border:1px solid rgba(242,121,69,.35);
   box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.6);
@@ -2426,21 +2568,25 @@
 @media(prefers-reduced-motion:no-preference){.db-ring .db-prog{animation:db-fill 1.3s cubic-bezier(.3,.9,.3,1) both}}
 @keyframes db-fill{from{stroke-dashoffset:326.73}to{stroke-dashoffset:70}}
 .db-ringc{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1}
-.db-pct{font-family:var(--serif); font-size:38px; font-weight:700; letter-spacing:-.02em; color:var(--ink)}
-.db-pct small{font-size:17px; color:var(--coral-dark); vertical-align:6px; margin-left:1px}
-.db-frac{margin-top:5px; font-size:12px; color:var(--ink-soft); font-weight:600; letter-spacing:.02em}
-.db-frac b{font-family:var(--serif); color:var(--coral-ink); font-size:13px}
+.db-pct{font-family:var(--serif); font-size:var(--t-disp); font-weight:700; letter-spacing:-.02em; color:var(--ink)}
+/* 15.5px 볼드는 WCAG '큰 텍스트' 면제선(볼드 18.66px) 미만 → coral-dark(#D9531F)는 흰 배경에서 4.03:1 로 미달.
+   소형 텍스트용 coral-ink(#A33D14, 4.5:1+)로 내린다 — tokens.css 의 --accent-ink 규칙과 동일. */
+.db-pct small{font-family:var(--sans); font-size:var(--t-lg); font-weight:800; color:var(--coral-ink); vertical-align:6px; margin-left:1px}
+.db-frac{margin-top:5px; font-size:var(--t-sm); color:var(--ink-soft); font-weight:500; letter-spacing:.02em}
+.db-frac b{font-family:var(--serif); color:var(--coral-ink); font-weight:700}
 .db-hero-txt{min-width:0}
-.db-hero-lead{font-size:12px; font-weight:700; letter-spacing:.02em; color:var(--coral-ink); margin-bottom:5px}
-.db-hero-h{font-family:var(--serif); font-size:18px; font-weight:700; line-height:1.35; letter-spacing:-.01em; margin-bottom:9px}
+/* 에이브로우 — 랜딩 .section-label 과 같은 문법(소형·800·자간 넓게·코랄 잉크) */
+.db-hero-lead{font-size:var(--t-cap); font-weight:800; letter-spacing:.1em; color:var(--coral-ink); margin-bottom:6px}
+.db-hero-h{font-family:var(--serif); font-size:var(--t-quote); font-weight:700; line-height:1.42; letter-spacing:-.01em; margin-bottom:10px; word-break:keep-all}
 .db-hero-h b{color:var(--coral-dark)}
 .db-bar{height:9px; border-radius:999px; background:var(--surface-2); overflow:hidden; box-shadow:inset 0 1px 2px rgba(38,34,28,.09)}
 .db-bar i{display:block; height:100%; width:79%; border-radius:999px;
   background:linear-gradient(90deg,var(--coral),var(--coral-dark)); box-shadow:0 1px 3px rgba(217,83,31,.4)}
-.db-bar-l{display:flex; justify-content:space-between; margin-top:6px; font-size:11px; color:var(--muted); font-weight:600}
+.db-bar-l{display:flex; justify-content:space-between; margin-top:6px; font-size:var(--t-cap); color:var(--muted); font-weight:700; letter-spacing:.04em}
 
 /* ===== stat tiles ===== */
-.db-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px}
+/* minmax(0,1fr): 1fr 은 min-content 아래로 못 줄어들어 375px 에서 칸이 박스를 뚫는다 */
+.db-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:12px}
 .db-stat{
   position:relative; padding:13px 12px 12px; border-radius:16px; overflow:hidden;
   background:linear-gradient(160deg,#fff, var(--surface));
@@ -2450,9 +2596,10 @@
 .db-stat i.db-ic{position:relative; z-index:1; display:flex; width:26px; height:26px; align-items:center; justify-content:center;
   border-radius:9px; background:var(--surface-2); color:var(--coral-dark); margin-bottom:9px}
 .db-stat i.db-ic svg{width:16px;height:16px}
-.db-snum{font-family:var(--serif); font-size:26px; font-weight:700; line-height:1; letter-spacing:-.01em}
-.db-snum span{font-family:var(--sans); font-size:12px; font-weight:700; color:var(--ink-soft); margin-left:2px}
-.db-slabel{margin-top:5px; font-size:12px; color:var(--ink-soft); font-weight:600; letter-spacing:.01em}
+.db-snum{font-family:var(--serif); font-size:var(--t-num); font-weight:700; line-height:1; letter-spacing:-.01em}
+/* 단위는 산세 소형 코랄 — 커뮤니티 섹션 지표(.mc-unit)와 같은 규칙 */
+.db-snum span{font-family:var(--sans); font-size:var(--t-sm); font-weight:800; color:var(--coral-ink); margin-left:2px}
+.db-slabel{margin-top:5px; font-size:var(--t-sm); color:var(--ink-soft); font-weight:500; letter-spacing:.01em; word-break:keep-all}
 
 /* ===== card base ===== */
 .db-card{
@@ -2461,17 +2608,20 @@
   border:1px solid var(--line); box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.6);
 }
 .db-ctitle{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:13px}
-.db-ctitle h3{font-family:var(--serif); font-size:15.5px; font-weight:700; letter-spacing:-.01em}
-.db-ctitle em{font-style:normal; font-size:12px; color:var(--muted); font-weight:600}
+.db-ctitle h3{font-family:var(--serif); font-size:var(--t-lg); font-weight:700; letter-spacing:-.01em}
+.db-ctitle em{font-style:normal; font-size:var(--t-sm); color:var(--muted); font-weight:500; white-space:nowrap}
 
-/* ===== stamp grid ===== */
-.db-days{display:grid; grid-template-columns:repeat(7,1fr); gap:8px}
+/* ===== stamp grid =====
+   ⚠ 구 repeat(7,1fr) 은 375px 에서 칸이 박스 밖으로 튀어나왔다(오너 피드백 2026-07-15).
+   1fr = minmax(auto,1fr) 이라 칸이 min-content('예정'·숫자 폭) 아래로 못 줄어들기 때문.
+   minmax(0,1fr) + min-width:0 으로 어떤 폭에서도 카드 안에 갇히게 한다 — 되돌리지 말 것. */
+.db-days{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px}
 .db-day{
-  position:relative; aspect-ratio:1; border-radius:13px; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:2px; font-size:12px; font-weight:700;
+  position:relative; aspect-ratio:1; min-width:0; border-radius:13px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px; font-size:var(--t-sm); font-weight:700;
   background:var(--surface-2); color:var(--muted); border:1px solid var(--line);
 }
-.db-day .db-dn{font-size:12px; opacity:1; letter-spacing:.02em}
+.db-day .db-dn{font-size:var(--t-cap); font-weight:700; opacity:1; letter-spacing:.02em}
 .db-day.done{
   background:linear-gradient(160deg,#F9A67F,var(--coral) 60%,var(--coral-dark)); color:#fff; border-color:transparent;
   box-shadow:0 3px 7px rgba(217,83,31,.28), inset 0 1px 0 rgba(255,255,255,.35);
@@ -2483,15 +2633,15 @@
   box-shadow:0 0 0 4px var(--coral-soft), 0 4px 9px rgba(217,83,31,.18);
 }
 .db-day.today .db-dn{color:var(--coral-ink)}
-.db-day.today b{font-family:var(--serif); font-size:16px; line-height:1}
+.db-day.today b{font-family:var(--serif); font-size:var(--t-md); line-height:1}
 .db-day.soon{background:var(--surface); border-style:dashed; color:var(--muted)}
-.db-day.soon b{font-family:var(--serif); font-size:15px; color:var(--ink-soft); line-height:1}
-.db-legend{display:flex; flex-wrap:wrap; gap:12px; margin-top:13px; font-size:12px; color:var(--ink-soft); font-weight:600}
+.db-day.soon b{font-family:var(--serif); font-size:var(--t-md); color:var(--ink-soft); line-height:1}
+.db-legend{display:flex; flex-wrap:wrap; gap:12px; margin-top:13px; font-size:var(--t-sm); color:var(--ink-soft); font-weight:500}
 .db-legend span{display:inline-flex; align-items:center; gap:6px}
 .db-lk{width:11px;height:11px;border-radius:4px}
 
 /* ===== badges ===== */
-.db-badges{display:grid; grid-template-columns:repeat(4,1fr); gap:9px}
+.db-badges{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px}
 .db-badge{display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center}
 .db-bmed{
   position:relative; width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center;
@@ -2503,8 +2653,8 @@
 .db-badge.locked .db-bmed{background:var(--surface-2); box-shadow:inset 0 1px 3px rgba(38,34,28,.08); border:1px solid var(--line)}
 .db-badge.locked .db-bmed svg{color:var(--muted)}
 .db-badge.locked{opacity:.72}
-.db-blab{font-size:12px; font-weight:700; line-height:1.25; color:var(--ink)}
-.db-badge.locked .db-blab{color:var(--ink-soft); font-weight:600}
+.db-blab{font-size:var(--t-sm); font-weight:700; line-height:1.25; color:var(--ink); word-break:keep-all}
+.db-badge.locked .db-blab{color:var(--ink-soft); font-weight:500}
 .db-bchk{position:absolute; right:-4px; bottom:-4px; width:19px;height:19px; border-radius:50%; background:var(--surface);
   display:flex; align-items:center; justify-content:center; box-shadow:var(--sh-2)}
 .db-bchk svg{width:13px;height:13px; color:var(--coral-dark)}
@@ -2514,14 +2664,14 @@
   padding:14px 16px; border-radius:18px;
   background:var(--surface-2); border:1px dashed var(--line);
 }
-.db-ba-h{display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:11px; letter-spacing:.01em}
-.db-ba-h svg{width:15px;height:15px; color:var(--coral-dark)}
-.db-ba-h em{font-style:normal; margin-left:auto; font-size:12px; color:var(--coral-ink); font-weight:700;
-  background:var(--coral-soft); padding:3px 8px; border-radius:999px}
-.db-ba-row{display:grid; grid-template-columns:1fr auto 1fr; gap:11px; align-items:center}
-.db-wav{padding:10px 11px; border-radius:12px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-2)}
-.db-wav .db-wl{display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; font-size:12px; font-weight:700; color:var(--ink-soft)}
-.db-wav .db-wl b{font-size:12px; color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.db-ba-h{display:flex; align-items:center; gap:7px; font-size:var(--t-sm); font-weight:700; color:var(--ink-soft); margin-bottom:11px; letter-spacing:.01em}
+.db-ba-h svg{width:15px;height:15px; color:var(--coral-dark); flex:none}
+.db-ba-h em{font-style:normal; margin-left:auto; font-size:var(--t-cap); color:var(--coral-ink); font-weight:800;
+  background:var(--coral-soft); padding:3px 8px; border-radius:999px; white-space:nowrap}
+.db-ba-row{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:11px; align-items:center}
+.db-wav{min-width:0; padding:10px 11px; border-radius:12px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-2)}
+.db-wav .db-wl{display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:7px; font-size:var(--t-sm); font-weight:700; color:var(--ink-soft)}
+.db-wav .db-wl b{font-size:var(--t-cap); color:var(--muted); font-weight:500}
 .db-wav svg{display:block; width:100%; height:26px}
 .db-wav.after .db-wl{color:var(--coral-ink)}
 .db-arrow{display:flex; align-items:center; justify-content:center; width:26px;height:26px; border-radius:50%;
@@ -2532,10 +2682,10 @@
 .db-foot{margin-top:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:space-between;
   padding:14px 16px; border-radius:18px;
   background:linear-gradient(150deg,#2E2820,#26221C); box-shadow:var(--sh-2)}
-.db-foot p{font-size:12.5px; color:#E8E1D2; line-height:1.45}
-.db-foot p b{font-family:var(--serif); color:#fff; font-weight:700; display:block; font-size:15px; margin-bottom:2px}
-.db-cta{flex:none; display:inline-flex; align-items:center; gap:7px; padding:11px 17px; border-radius:12px;
-  font-size:13px; font-weight:800; color:#2A1206; text-decoration:none; white-space:nowrap;
+.db-foot p{font-size:var(--t-md); font-weight:500; color:#E8E1D2; line-height:1.5; word-break:keep-all}
+.db-foot p b{font-family:var(--serif); color:#fff; font-weight:700; display:block; font-size:var(--t-lg); margin-bottom:3px}
+.db-cta{flex:none; display:inline-flex; align-items:center; gap:7px; padding:12px 18px; border-radius:12px;
+  font-size:var(--t-md); font-weight:800; color:#2A1206; text-decoration:none; white-space:nowrap;
   background:linear-gradient(150deg,#F9A67F,var(--coral) 55%,var(--coral-dark));
   box-shadow:0 5px 13px rgba(217,83,31,.4), inset 0 1px 0 rgba(255,255,255,.4)}
 .db-cta svg{width:15px;height:15px}
@@ -2544,10 +2694,21 @@
   .db-hero{grid-template-columns:1fr; justify-items:center; text-align:center}
   .db-hero-txt{width:100%}
   .db-bar-l{text-align:left}
+  /* 스탬프 14칸이 7열로 들어가야 하므로 칸 안 간격을 한 단 줄인다(넘침 방지).
+     ⚠ 활자는 --t-cap(11px) 아래로 내리지 않는다 — 10px 는 '오늘·예정' 한글이 뭉개진다. */
+  .db-days{gap:5px}
+  .db-day{border-radius:11px; gap:1px}
+  .db-day.today b,.db-day.soon b{font-size:var(--t-sm)}
+  .db-day.done svg{width:13px;height:13px}
+  .db-legend{gap:9px}
 }
 @media(max-width:420px){
-  .db-badges{grid-template-columns:repeat(2,1fr); gap:14px 9px}
-  .db-name{font-size:19px}
+  .db-shell{padding:14px}
+  .db-card{padding:14px}
+  .db-badges{grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 9px}
+  .db-pill{padding:6px 10px}
+  .db-foot{padding:14px}
+  .db-cta{width:100%; justify-content:center}
 }
 @media(min-width:600px){
   .db-ba-row{gap:16px}
@@ -2696,7 +2857,7 @@
 
   <div class="db-foot">
     <p><b>이 리포트, 나만의 것으로.</b>회원가입하면 홍길동 님처럼 매일의 성장이 기록됩니다.</p>
-    <a class="db-cta" href="#">지금 시작하기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <a class="db-cta" href="login.html">지금 시작하기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
 </div>
 </div>

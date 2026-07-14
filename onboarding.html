@@ -79,6 +79,8 @@
       if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
       const session = await MONC.requireSession(); // 미로그인 시 login.html 로 보냄
       if (!session) return;
+      // 약관 동의(가입 시 1회)가 없으면 로그인 페이지의 동의 게이트로 — 온보딩보다 동의가 먼저
+      if (!(await MONC.requireConsent())) return;
       const me = session.user.id;
 
       const profile = await MONC.getMyProfile();

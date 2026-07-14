@@ -67,6 +67,94 @@
     return data;
   }
 
+  // ── 약관·개인정보 동의 (가입 시 1회) ───────────────────────────────────────
+  // 로그인마다 체크를 다시 받지 않는다(2026-07-15). 최초 로그인 직후 login.html 의
+  // 동의 게이트에서 명시 동의를 받아 members.agreed_at 에 남기고, 이후엔 어떤 기기에서
+  // 로그인해도 서버 기록을 보고 통과시킨다. ⚠️ 사전 체크·간주 동의로 바꾸지 말 것.
+  const TERMS_VERSION = '2026-07-15';   // 약관 개정 시 올리면 전원 재동의(게이트 재노출)
+
+  // ⚠️ 동의 캐시는 반드시 '계정별' 키다. 기기 전역 키(구 monc_consent_v1)로 두면
+  //    공용·가족 기기에서 A가 남긴 흔적 때문에 신규 회원 B가 동의 게이트를 건너뛰고,
+  //    심지어 B 명의의 동의 기록이 서버에 위조 저장된다. 무기명 키로 되돌리지 말 것.
+  const consentKey = (uid) => 'monc_consent_v1:' + uid;
+
+  function localConsent(uid) {
+    try {
+      const raw = localStorage.getItem(consentKey(uid));
+      return !!raw && raw.split('|')[1] === TERMS_VERSION;  // 버전 불일치 = 약관 개정 → 재동의
+    } catch (e) { return false; }
+  }
+  function setLocalConsent(uid) {
+    try { localStorage.setItem(consentKey(uid), new Date().toISOString() + '|' + TERMS_VERSION); } catch (e) {}
+  }
+
+  // 내 동의 기록. { agreed_at, terms_version } | null(미동의) | undefined(컬럼 미생성 등 조회 불가)
+  // ⚠️ getMyProfile() 공용 select 에 넣지 않는다 — 마이그레이션(20260715120000) 미적용 환경에서
+  //    프로필 조회 전체가 깨지므로(major 와 동일한 방어) 별도 조회한다.
+  async function getConsent() {
+    const session = await getSession();
+    if (!session) return null;
+    const { data, error } = await sb
+      .from('members').select('agreed_at, terms_version').eq('id', session.user.id).single();
+    if (error) return undefined;                 // 컬럼 미생성 → 호출부가 계정별 로컬 기록으로 폴백
+    return data && data.agreed_at ? data : null;
+  }
+
+  // 동의 기록 저장. 서버 저장이 실패해도(컬럼 미생성 등) 이 계정의 로컬 기록은 남겨 재요구를 막는다.
+  async function recordConsent() {
+    const session = await getSession();
+    if (!session) return false;
+    setLocalConsent(session.user.id);
+    const { error } = await sb.from('members')
+      .update({ agreed_at: new Date().toISOString(), terms_version: TERMS_VERSION })
+      .eq('id', session.user.id);
+    if (error) { console.warn('동의 기록 저장 실패 — 계정별 로컬 기억으로 폴백', error.message); return false; }
+    return true;
+  }
+
+  // 동의 완료 여부. 서버 기록이 진실이고, 조회 불가일 때만 '이 계정의' 기기 기억으로 폴백한다.
+  async function hasConsented() {
+    const session = await getSession();
+    if (!session) return false;
+    const uid = session.user.id;
+    const c = await getConsent();
+    if (c === undefined) return localConsent(uid);              // 컬럼 미생성 → 계정별 기기 기억
+    if (c) {
+      if (c.terms_version === TERMS_VERSION) { setLocalConsent(uid); return true; }
+      return false;                                             // 구 약관에 동의 → 재동의 필요
+    }
+    // 서버엔 기록이 없고 '이 계정'의 로컬 기록만 있는 경우(마이그레이션 이전 동의) → 서버로 백필.
+    // 계정별 키라서 남의 동의가 여기로 흘러들어올 수 없다.
+    if (localConsent(uid)) { await recordConsent(); return true; }
+    return false;
+  }
+
+  // 동의 거부 시 즉시 파기. OAuth 로 로그인하는 순간 트리거가 members(이름·이메일) 행을 만들기 때문에,
+  // 게이트에서 '동의하지 않고 나가기'를 누르면 그 개인정보를 서버에서 지워야 한다(미동의자·만14세 미만).
+  // delete_my_account() RPC 는 20260715120000_member_consent.sql 에 있다(owner 실행).
+  // 반환: 'deleted'(계정까지 삭제) | 'redacted'(RPC 미적용 → 이름·이메일만 즉시 비움) | 'failed'
+  async function deleteMyAccount() {
+    const session = await getSession();
+    if (!session) return 'failed';
+    const uid = session.user.id;
+    const { error } = await sb.rpc('delete_my_account');
+    if (!error) {
+      try { localStorage.removeItem(consentKey(uid)); } catch (e) {}
+      return 'deleted';
+    }
+    console.warn('delete_my_account RPC 실패(마이그레이션 미적용?) — 프로필 개인정보만 비웁니다', error.message);
+    const { error: e2 } = await sb.from('members').update({ name: null, email: null }).eq('id', uid);
+    try { localStorage.removeItem(consentKey(uid)); } catch (e) {}
+    return e2 ? 'failed' : 'redacted';
+  }
+
+  // 동의 미완료 회원을 로그인 페이지의 동의 게이트로 보낸다(회원 전용 페이지 가드).
+  async function requireConsent() {
+    if (await hasConsented()) return true;
+    window.location.replace(LOGIN_PAGE + '?consent=1');
+    return false;
+  }
+
   // 소재 발굴 접근 가능 여부. 권한 플래그(sojae_enabled) 또는 관리자면 true.
   // getMyProfile() 로 얻은 프로필을 넘긴다. mypage·sojae 가 동일 기준으로 판정.
   function hasSojaeAccess(profile) {
@@ -98,9 +186,10 @@
 
   // 전역 노출
   window.MONC = {
-    sb, TOTAL_DAYS, LOGIN_PAGE,
+    sb, TOTAL_DAYS, LOGIN_PAGE, TERMS_VERSION,
     signInWithProvider, signInWithGoogle, signInWithKakao,
     signOut, getSession, requireSession,
     getMyProfile, hasSojaeAccess, requireAdmin, getSignedUrl,
+    getConsent, recordConsent, hasConsented, requireConsent, deleteMyAccount,
   };
 })();

@@ -349,6 +349,8 @@
     (async () => {
       const session = await MONC.requireSession();
       if (!session) return;
+      // 약관 동의(가입 시 1회)가 없으면 로그인 페이지의 동의 게이트로 — 동의 전엔 회원 기능 사용 불가
+      if (!(await MONC.requireConsent())) return;
       loadTodayQuestion();
 
       const me = session.user.id;

@@ -37,7 +37,12 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - `researchers.html` — **연구진 소개 전용(2026-07-14 신설).** 구 `#instructors`(mi-section)를 분리. `tokens.css` + 인라인 `.mi-*` CSS·`researchers` 배열·탭 IIFE로 완전 동작. 진입: `#researchers-strip` 티저 + nav '연구진'. **연구원 이력의 소스오브트루스** — ⚠️ index의 `.ts-cred` 스트립 카드와 **별도 소스라 이력 변경 시 양쪽 동기화 필요**(아래 스트립 항목).
 - Active detail pages (index 카드에서 링크, `application-modal.js` 로드하나 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각).
 - `challenge-express.html`, `challenge-speech.html` — **legacy/unused**, index 미링크. 라이브 아니니 편집 금지.
-- `login.html` — 구글·카카오 OAuth. **⚠️ 법적 필수:** `#agreeChk`(만14세+약관·개인정보) 전엔 두 로그인 버튼 `disabled` — 명시 동의, 구 "간주 동의"로 되돌리기 금지.
+- `login.html` — 구글·카카오 OAuth. **두 뷰**: `#loginView`(로그인 버튼 — 항상 활성) / `#consentView`(최초 1회 동의 게이트). **⚠️ 법적 필수(2026-07-15 개편):** 약관·개인정보 동의는 **가입 시 딱 한 번** 받는다 — OAuth는 로그인 전 사용자를 식별할 수 없어 구 방식은 "로그인할 때마다" 체크를 강요했다(오너 피드백). 이제 OAuth 복귀 후 `hasConsented()`가 false면 게이트를 띄우고, `#agreeChk`(만14세+약관·개인정보)를 **사용자가 직접 체크해야** `#consentGo`가 열린다. 동의 시 `MONC.recordConsent()`가 `members.agreed_at`·`terms_version`에 기록 → 이후 **어떤 기기에서도 다시 묻지 않음**. 거부 시 `signOut()`. **금지:** 체크박스 사전 체크·"간주 동의"·게이트 삭제. 회원 페이지(`mypage`·`onboarding`)는 `MONC.requireConsent()`로 가드 — 동의 없이 우회 불가. 약관 개정 시 `supabase-config.js`의 `TERMS_VERSION`을 올리면 전원 재동의.
+- **동의 마이그레이션** (`20260715120000_member_consent.sql`, owner 실행): `members.agreed_at`·`terms_version` + **`delete_my_account()` RPC**. **미적용이어도 동작** — `getConsent()`가 조회 실패를 감지해 계정별 로컬 기록으로 폴백하고, 나중에 컬럼이 생기면 `hasConsented()`가 서버로 백필한다. ⚠️ `getMyProfile()` 공용 select엔 넣지 말 것(컬럼 미생성 시 프로필 조회 전체가 깨짐 — `major`와 동일 방어).
+- **⚠️ 동의 3대 함정(리뷰에서 실제로 터진 것 — 되돌리면 법적 리스크):**
+  1. **로컬 동의 캐시는 계정별 키** `monc_consent_v1:<uid>`. 무기명 기기 키로 되돌리면 **공용·가족 기기에서 A의 동의 흔적으로 신규 회원 B가 게이트를 건너뛰고, B 명의의 허위 동의 기록이 서버에 저장**된다.
+  2. **거부 = 즉시 파기.** OAuth가 끝나는 순간 `handle_new_user()` 트리거가 `members`(이름·이메일) 행을 만든다 → 게이트에서 '동의하지 않고 나가기'는 `MONC.deleteMyAccount()`로 **계정을 삭제**한 뒤 로그아웃한다(RPC 미적용 시 이름·이메일만 즉시 null로 비우는 폴백). 로그아웃만 시키면 미동의자·만14세 미만의 개인정보가 잔존한다. privacy.html §2가 이 흐름을 고지한다.
+  3. **동의 가드는 회원 페이지 전체에.** `mypage`·`onboarding`·`sojae`·`admin` 모두 `MONC.requireConsent()`를 호출한다 — 한 곳이라도 빠지면 주소창으로 게이트를 우회할 수 있다.
 - `terms.html`, `privacy.html` — footer 법적 페이지. privacy는 실제 스택 기준(수탁자 Supabase 서울/Google/Kakao, 국외이전 고지, CPO 권성호, 14세 미만 조항). 수집 항목·수탁자 변경 시 갱신.
 - **`applications` RLS** (`20260711120000_applications_rls.sql`, owner 실행): INSERT 공개(비회원 신청), SELECT 관리자+본인, UPDATE/DELETE 관리자만.
 
@@ -53,7 +58,15 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - **④ 최종 CTA (`.cta-box`)**: `--cta-ink:#26221C`(구 네이비 폐기) + 상단 코랄 방사형 글로우 + `.cta-title` 명조 900.
 
 ### 연구진 신뢰 스트립 (`#researchers-strip`)
-히어로 직후 티저("누가 가르치는지" 선공개). 에디토리얼 좌측정렬 헤더 + **세로 4:5 포트레이트 카드**(`.ts-card` > `.ts-port` img + `.ts-body` role·name·cred, 하드라인·이름 명조). **자동 흐름 마퀴**: `.ts-marquee`(overflow:hidden + 좌우 `mask` 페이드) > `.ts-grid#tsGrid`(flex nowrap·`animation:ts-flow 34s linear infinite`·translateX 0→-50%). **이음새 없는 루프의 핵심: `gap` 대신 카드마다 `margin-right:20px`.** 카드 폭 `min(220px,72vw)`. **JS(`#tsGrid` 직후 인라인)가 카드 1벌을 `cloneNode`(aria-hidden)** 해 5→10장; 호버/누름 시 `.is-paused`; `prefers-reduced-motion`이면 복제 스킵 + CSS 정적 `flex-wrap:wrap`. 마퀴 overflow가 가로 넘침 방지. ⚠️ 카드 이력 변경 시 마크업 원본만 고치면 복제는 런타임 자동 반영.
+히어로 직후 티저("누가 가르치는지" 선공개). 에디토리얼 좌측정렬 헤더 + **세로 4:5 포트레이트 카드**(`.ts-card` > `.ts-port` img + `.ts-body` role·name·cred, 하드라인·이름 명조). **마퀴**: `.ts-marquee`(overflow:hidden + 좌우 `mask` 페이드) > `.ts-grid#tsGrid`(flex nowrap). **이음새 없는 루프의 핵심: `gap` 대신 카드마다 `margin-right:20px`** → 트랙폭 = 2×(카드+마진)이라 되감기 지점(`half = scrollWidth/2`)이 정확히 한 벌. 카드 폭 `min(220px,72vw)`. **JS(`#tsGrid` 직후 인라인)가 카드 1벌을 `cloneNode`(aria-hidden)** 해 5→10장. ⚠️ 카드 이력 변경 시 마크업 원본만 고치면 복제는 런타임 자동 반영.
+- **⚠️ 2026-07-15 물리 개편 — 되돌리기 금지:** 구 CSS `@keyframes ts-flow` + `.ts-marquee:hover .ts-grid{animation-play-state:paused}`는 **"손만 올려도 사진이 멈춘다"**는 오너 피드백으로 **폐기**. 지금은 rAF 물리 IIFE — 자동 흐름(`AUTO_V 36px/s`) + 포인터 드래그(손끝 1:1 추종) + 트랙패드 가로 휠 임펄스, 놓으면 마지막 속도로 미끄러지다 `TAU 0.5s` 지수감쇠로 자동 속도에 복귀(**"다이얼"**). **호버로는 절대 멈추지 않는다 — `:hover` 정지·`.is-paused` 재도입 금지.** IntersectionObserver로 화면 밖이면 rAF 정지(인트로 스크롤 중 프레임 뺏김 방지). `prefers-reduced-motion`이면 JS가 조기 반환 → 복제 없이 CSS 정적 `flex-wrap:wrap`.
+  - **⚠️ 터치는 축 판정 후에 잡는다(`AXIS_PX 6px`, `|dx|>|dy|`).** `pointerdown`에서 곧바로 `dragging=true`로 두면 **세로로 페이지를 스크롤하려고 카드에 손을 얹은 것만으로 마퀴가 얼어붙는다** — 오너 불만("손만 올려도 멈춘다")의 터치판 재발이고, 트래픽 99%가 모바일이라 사실상 항상 멈춘 것처럼 보인다. 마우스(`pointerType==='mouse'`)만 누름 즉시 잡는다.
+  - **⚠️ 놓을 때 관성은 유휴시간만큼 죽인다(`IDLE_TAU 0.12s`).** 브라우저는 포인터가 멈추면 `pointermove`를 안 쏘므로, '빠르게 끌다 → 멈춘 채 잠시 있다가 → 놓기'에서 묵은 `dragV`를 그대로 쓰면 급발진한다.
+
+### 성장 리포트 목업 (`#member-appeal` 안 `.db-root`)
+회원 마이페이지를 흉내낸 정적 목업(가짜 데이터 '홍길동'). 하단 `.db-cta` = **회원가입 유도 → `login.html`**(⚠️ 구 `href="#"`는 홈 최상단으로 튀던 버그, 2026-07-15 수정 — `#`로 되돌리지 말 것).
+- **타이포 계약(2026-07-15):** 글꼴은 **사이트 것을 상속** — 명조는 `:root`의 `--serif`(Noto Serif KR), 산세는 body. ⚠️ 구 로컬 `--serif:'Nanum Myeongjo'`/`--sans:'Pretendard'` 선언은 **사이트가 로드하지도 않는 글꼴**이라 기기마다 다르게 떨어졌다("폰트가 제각각"의 진짜 원인) — **재선언 금지.** 크기는 `.db-root`의 8단 스케일 토큰(`--t-cap`~`--t-disp`)에서만 고른다(하드코딩 px 금지). 명조는 **이름·수치·제목**에만, 나머지는 산세. 숫자는 `tabular-nums`.
+- **⚠️ 그리드 넘침:** `.db-days`/`.db-stats`/`.db-badges`/`.db-ba-row`는 **`minmax(0,1fr)`** 필수 — `1fr`(=`minmax(auto,1fr)`)은 칸이 min-content 아래로 못 줄어들어 375px에서 **스탬프가 카드 밖으로 튀어나왔다**(오너 피드백). `repeat(N,1fr)`로 되돌리지 말 것.
 - **카드 순서·데이터(오너 확정):** 권성호(수석·승무원 교육 11년·3,500명+) → 박새암(수석·객실승무원 9년·면접관) → 고은지(책임·합격생 다수·브랜딩) → 최보민(선임·대한항공 국제선·부사무장) → 김유리(선임·대한항공 부사무장 10년·기내방송). 김유리 사진 `images/instructor-kim.webp`.
 - CSS `.ts-*`(index 인라인 `<style>`). 마크업은 인라인 static, **`.ts-cred` 하드코딩** — **`researchers.html`의 `researchers` 배열과 별도 소스라 이력 변경 시 양쪽 동기화 필요.**
 
