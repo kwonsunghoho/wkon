@@ -152,3 +152,62 @@ html {
 /* 모바일에서도 줌 연출은 동작한다 (transform 기반이라 GPU 합성으로 충분).
    짧은 뷰포트에서 runway가 과하지 않도록 섹션별 data-zoom-runway-mobile /
    data-zoom-scale-mobile 속성으로 오버라이드 (scroll-fx.js: attrFor) */
+
+/* ═══════════════════════════════════════════════════════════════
+   2026-07-14 웜 리디자인 오버라이드 — '양산형 탈출' (오너 제작 monc-overrides.css 이식)
+   ① 파란 액센트(--accent/--rose #194192) → 브랜드 코랄 계열로 통일
+   ② 섹션 제목(h2) 명조(Noto Serif KR) + 스케일 확대(--fs-h2 30~46px)
+   ③ 라벨(에이브로우) 넓은 자간 + 딥 웜 톤
+   ⑤ 인물 사진 통일 그레이딩 (④ 카드 하드라인은 index.html에 직접 반영)
+
+   ⚠ 9대 원칙 4(명도대비 4.5:1) 보정 — 코랄 #F27945(≈2.2~2.7:1)·#D9531F(≈3.2~4.0:1)는
+   밝아서 12~15px 텍스트에 그대로 쓰면 미달. 그래서 --accent-ink(#A33D14,
+   같은 색상각 hue17°의 딥 번트 오렌지)를 신설: 전 배경(베이지·bg2·bg3·틴트·
+   아이보리) 4.5:1+, 위에 얹는 흰 글씨 6.5:1. 소형 텍스트·링크·강조 볼드·활성
+   칩 배경은 반드시 --accent-ink를 쓰고, --accent-dark는 큰 볼드(24px+/굵은
+   18.66px+, 3:1)·테두리·포커스링까지만 허용. --accent(코랄)는 장식 면 전용.
+   ⚠ 명조 로드 — 이 블록의 --serif를 쓰는 페이지(index·상세 4종·reviews)는
+   <head>에 Noto Serif KR(600;700;900) 링크가 있어야 한다(없으면 나눔명조 폴백).
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --accent: #F27945;       /* was #194192 (네이비) — 장식 면·큰 디스플레이 전용 */
+  --accent-dark: #D9531F;  /* was #12306B — 큰 볼드 텍스트·테두리·포커스링 */
+  --accent-tint: #FDE9DE;  /* was #E4E8F2 */
+  --accent-ink: #A33D14;   /* 신설 — 소형 텍스트/활성 칩(전 배경 4.5:1 검증값) */
+  /* 이름만 다르게 정의돼 있던 같은 파랑(--rose)도 함께 전환 */
+  --rose: #F27945;         /* was #194192 */
+  --rose-light: #F68A5C;   /* was #3B5DA6 */
+  /* 제목 명조 — index 밖(상세·reviews)에서도 쓰도록 전역 승격 */
+  --serif: 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  --fs-h2: clamp(30px, 4.2vw, 46px);  /* was clamp(26px,4vw,32px) — 제목 위계 확대 */
+}
+
+/* ② 섹션 제목 전부 명조 + 스케일 확대.
+   h2. 접두로 특이도를 올려, tokens.css보다 나중에 로드되는 각 페이지
+   인라인 <style>의 .section-title 단일 클래스 규칙을 이긴다. */
+h2.section-title, h2.ts-title, h2.mc-title, h2.ma-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: var(--fs-h2);
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+}
+
+/* ③ 라벨(에이브로우) — 히어로의 넓은 자간 감각 + 딥 웜 단색.
+   !important는 페이지 인라인 규칙(캐스케이드상 뒤) 대응.
+   상세페이지 라벨은 그라디언트 텍스트(background-clip)라 fill-color와
+   background까지 함께 해제해야 단색이 칠해진다. */
+.section-label, .mc-eyebrow {
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-ink) !important;
+  -webkit-text-fill-color: var(--accent-ink) !important;
+  background: none !important;
+}
+
+/* ⑤ 인물 원형/포트레이트 사진 — 통일 그레이딩('양산형 스톡' 인상 제거) */
+.ts-photo img, .mi-photo img {
+  filter: grayscale(0.14) contrast(1.05) brightness(1.02) sepia(0.05);
+}
