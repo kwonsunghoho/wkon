@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>연구진 소개 — MONC 몬크</title>
+  <meta name="description" content="현장 경험이 풍부한 MONC 전문 연구원들이 직접 챌린지를 설계하고 피드백을 드립니다." />
+  <!-- 파비콘 -->
+  <link rel="icon" type="image/svg+xml" href="images/몬크 로고/assets/MONC-favicon.svg">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/몬크 로고/assets/favicon/MONC-favicon-16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/몬크 로고/assets/favicon/MONC-favicon-32.png">
+  <link rel="apple-touch-icon" href="images/몬크 로고/assets/favicon/MONC-favicon-180.png">
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 제목 명조 포인트 — Noto Serif KR 600/700/900 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root { --serif: 'Noto Serif KR', 'Nanum Myeongjo', serif; }
+
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      overflow-x: hidden;
+      overflow-x: clip;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg3); }
+    ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 99px; }
+
+    /* ── UTILS ── */
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 28px; border-radius: 99px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      text-decoration: none; transition: all .25s ease; border: none; outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* ── Action 버튼 (코랄) — 신청 전환 CTA 전용 ── */
+    .btn-action {
+      background: var(--action); color: var(--action-ink);
+      border-radius: 14px; padding: 16px 28px; font-weight: 700;
+      box-shadow: var(--shadow-action);
+    }
+    .btn-action:hover { background: var(--action-hover); transform: translateY(-2px); box-shadow: var(--shadow-action-lg); }
+    .btn-action:active { transform: translateY(0) scale(.99); box-shadow: var(--shadow-action); }
+    .btn-action:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; }
+
+    /* 에이브로우 라벨 — 코랄 대시(—) 프리픽스 */
+    .section-label {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--accent-ink);
+      margin-bottom: 10px;
+    }
+    .section-label::before {
+      content: ''; width: 26px; height: 1.5px; background: var(--action); flex: none;
+    }
+    .section-title {
+      font-size: var(--fs-h2); font-weight: 700;
+      line-height: var(--lh-tight); letter-spacing: var(--ls-tight);
+      margin-bottom: 14px; color: var(--action); word-break: keep-all;
+    }
+    .section-desc { font-size: var(--fs-body); color: var(--text-muted); line-height: var(--lh-body); }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 14px 0;
+      background: rgba(255,250,243,.95);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(36, 26, 18,.1);
+      transition: background .3s, border-color .3s, box-shadow .3s;
+    }
+    /* 3컬럼 그리드(1fr auto 1fr): 로고/버튼 폭과 무관하게 메뉴를 화면 정중앙에 고정 */
+    .nav-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 16px; }
+    .logo {
+      display: flex; align-items: center;
+      text-decoration: none; flex-shrink: 0;
+      justify-self: start;
+    }
+    .logo img {
+      height: 22px; width: auto;
+      display: block;
+    }
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; justify-self: center; white-space: nowrap; }
+    .nav-links a {
+      font-size: 14px; font-weight: 600; color: var(--text-muted);
+      text-decoration: none; transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--primary); }
+    .nav-links a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
+    /* 블라인드 퀴즈 메뉴 — 오렌지 펄스 점으로 '살아있는 항목' 표시 */
+    .nav-quiz-link { display: inline-flex; align-items: center; gap: 5px; }
+    .nav-quiz-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+      background: var(--action);
+      animation: navQuizPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes navQuizPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+    @media (prefers-reduced-motion: reduce) { .nav-quiz-dot { animation: none; } }
+    @media (min-width: 769px) and (max-width: 980px) {
+      .nav-links { gap: 16px; }
+      .nav-links a { font-size: 13.5px; }
+    }
+    .nav-right { display: flex; align-items: center; gap: 8px; justify-self: end; white-space: nowrap; }
+    .nav-cta { padding: 12px 28px; font-size: 15px; font-weight: 700; }
+    /* 로그인/회원가입 아웃라인 버튼 (코랄) */
+    .btn-login-outline {
+      background: transparent; color: var(--action);
+      border: 1.5px solid var(--action); font-weight: 700;
+      padding: 10px 20px; font-size: 14px; border-radius: 999px;
+      text-decoration: none; transition: background .2s;
+    }
+    .btn-login-outline:hover { background: var(--action-tint); }
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 8px; background: none; border: none;
+      -webkit-tap-highlight-color: transparent;
+      grid-column: 3; justify-self: end;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--primary); border-radius: 2px; transition: all .3s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-menu {
+      display: none; position: fixed; top: 60px; left: 0; right: 0; bottom: 0;
+      background: rgba(255,250,243,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 28px 24px; z-index: 99; overflow-y: auto;
+    }
+    .mobile-menu.open { display: flex; flex-direction: column; gap: 0; }
+    .mobile-menu ul { list-style: none; display: flex; flex-direction: column; }
+    .mobile-menu li { border-bottom: 1px solid var(--border); }
+    .mobile-menu a {
+      display: block; padding: 18px 0;
+      font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
+    }
+    .mobile-menu-cta { margin-top: 28px; }
+
+    /* ── PAGE HERO (연구진 페이지 전용) ── */
+    .rs-hero {
+      padding: 128px 0 4px; text-align: center;
+      background: var(--bg);
+    }
+    .rs-hero-inner { max-width: 640px; margin: 0 auto; padding: 0 24px; }
+    .rs-hero .section-label { justify-content: center; }
+
+    /* ═══════════════════════════════════════════════════
+       연구원(강사) 섹션 — 탭 전환형 2단 그리드.
+       팔레트·라운드·타이포를 사이트 토큰으로 통일. index.html에서 이관.
+    ═══════════════════════════════════════════════════ */
+    .mi-section{ background:var(--bg); padding:0 0 var(--section-y); }
+    .mi-root{ max-width:1040px; margin:0 auto; padding:0 24px; }
+
+    .mi-head{ text-align:center; max-width:600px; margin:0 auto 40px; }
+
+    /* 탭 — 브랜드 pill(라운드) */
+    .mi-tabs{ display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-bottom:36px; }
+    .mi-tab{ appearance:none; cursor:pointer; font-family:inherit;
+      padding:11px 22px; min-height:44px; border-radius:999px;
+      border:1.5px solid var(--border); background:var(--surface); color:var(--text);
+      font-size:15px; font-weight:700; letter-spacing:-.01em;
+      transition:background .2s, color .2s, border-color .2s, box-shadow .2s;
+      box-shadow:var(--shadow); -webkit-tap-highlight-color:transparent; }
+    .mi-tab:hover{ border-color:var(--accent-dark); color:var(--accent-ink); }
+    .mi-tab[aria-selected="true"]{ background:var(--accent-ink); color:#fff; border-color:var(--accent-ink); box-shadow:var(--shadow-lg); }
+    .mi-tab:focus-visible{ outline:2px solid var(--accent-dark); outline-offset:3px; }
+
+    /* 패널 — 흰 카드(라운드·그룹핑) */
+    .mi-stage{ position:relative; }
+    .mi-panel{ display:none; }
+    .mi-panel.is-active{ display:grid; grid-template-columns:300px 1fr; gap:36px; align-items:start;
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+      padding:32px; }
+    @media(prefers-reduced-motion:no-preference){ .mi-panel.is-active{ animation:mi-fade .4s ease; } }
+    @keyframes mi-fade{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+
+    .mi-figure{ width:100%; }
+    .mi-photo{ position:relative; width:100%; aspect-ratio:4/5; border-radius:var(--radius); overflow:hidden; background:var(--accent); border:1px solid var(--border); }
+    .mi-photo img{ width:100%; height:100%; object-fit:cover; object-position:center 18%; display:block; }
+    /* 고은지 사진은 가로 구도 → 인물이 오른쪽 중앙, 가로 60% 지점으로 크롭 */
+    #mi-panel-koh .mi-photo img{ object-position:60% 50%; }
+    .mi-mono{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:3.4rem; font-weight:800; color:var(--action-ink); background:var(--accent); }
+    .mi-role{ font-size:15px; letter-spacing:.4px; color:var(--accent-ink); font-weight:800; margin:20px 0 6px; }
+    .mi-name{ font-family:var(--serif); font-size:24px; font-weight:700; color:var(--text); margin:0 0 8px; letter-spacing:-.01em; }
+    .mi-position{ font-size:15px; color:var(--text-muted); font-weight:500; margin:0 0 16px; line-height:1.55; }
+    .mi-tags{ list-style:none; display:flex; flex-wrap:wrap; gap:6px; padding:0; margin:0; }
+    .mi-tags li{ font-size:12.5px; font-weight:600; color:var(--accent-ink); background:var(--surface2); border:1px solid var(--border); border-radius:999px; padding:5px 12px; }
+
+    .mi-body{ min-width:0; }
+    .mi-bio{ font-size:16px; line-height:1.75; color:var(--text); margin:0 0 24px; }
+    .mi-bio strong{ color:var(--accent-ink); font-weight:700; }
+
+    /* 지표 — 라운드 미니 카드 */
+    .mi-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .mi-stat{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 10px; text-align:center; }
+    .mi-stat-num{ display:block; font-size:26px; font-weight:800; color:var(--accent-dark); line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+    .mi-stat-label{ display:block; font-size:12.5px; font-weight:600; color:var(--text-muted); margin-top:8px; line-height:1.3; }
+
+    .mi-creds{ margin-top:24px; }
+    .mi-creds-title{ font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent-ink); font-weight:800; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+    .mi-creds-title::after{ content:''; flex:1; height:1px; background:var(--border); }
+    .mi-cred-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:11px; }
+    .mi-cred-list li{ position:relative; padding-left:18px; font-size:14.5px; line-height:1.6; color:var(--text); }
+    .mi-cred-list li::before{ content:''; position:absolute; left:0; top:.55em; width:7px; height:7px; border-radius:50%; background:var(--action); }
+    .mi-cred-list strong, .mi-cred-list b{ color:var(--accent-ink); font-weight:700; }
+    .mi-extra{ margin-top:11px; }
+    .mi-extra[hidden]{ display:none; }
+    .mi-more{ appearance:none; background:transparent; border:0; cursor:pointer; font-family:inherit;
+      color:var(--accent-ink); font-size:14px; font-weight:700; padding:12px 2px; margin-top:6px; min-height:44px;
+      display:inline-flex; align-items:center; }
+    .mi-more:hover{ text-decoration:underline; }
+    .mi-more:focus-visible{ outline:2px solid var(--accent-dark); outline-offset:3px; border-radius:4px; }
+
+    @media(max-width:820px){
+      .mi-panel.is-active{ grid-template-columns:1fr; gap:24px; padding:24px; }
+      .mi-figure{ max-width:340px; margin:0 auto; }
+      .mi-photo{ aspect-ratio:1/1; }
+    }
+    @media(max-width:768px){
+      .mi-section{ padding:0 0 var(--section-y-mobile); }
+    }
+    @media(max-width:520px){
+      .mi-root{ padding:0 16px; }
+      .mi-panel.is-active{ padding:18px; border-radius:var(--radius); }
+      .mi-tabs{ gap:8px; }
+      .mi-tab{ padding:11px 18px; font-size:14px; }
+      .mi-name{ font-size:22px; }
+      .mi-stats{ gap:8px; }
+      .mi-stat{ padding:14px 6px; }
+      .mi-stat-num{ font-size:22px; }
+      .mi-stat-label{ font-size:12px; }
+      .mi-cred-list li{ font-size:14px; }
+    }
+
+    /* ── 홈으로 돌아가기 ── */
+    .rs-back { text-align:center; padding: 8px 0 56px; background: var(--bg); }
+    .rs-back a {
+      display:inline-flex; align-items:center; gap:8px;
+      font-size:15px; font-weight:700; color:var(--accent-ink); text-decoration:none;
+      padding:12px 8px; min-height:44px;
+    }
+    .rs-back a:hover { text-decoration:underline; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--border); padding: 40px 0; background: var(--bg2); }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-logo { display: flex; align-items: center; }
+    .footer-logo img { height: 22px; width: auto; display: block; }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-links a { font-size: 12px; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--primary); }
+    .footer-copy { font-size: 11px; color: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+      .nav-right { display: none; }
+      nav { padding: 12px 0; }
+      .rs-hero { padding-top: 104px; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .container { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav id="navbar">
+  <div class="container nav-inner">
+    <a class="logo" href="index.html"><img src="images/몬크 로고/assets/png/MONC-lockup-transparent.png" alt="MONC" /></a>
+    <ul class="nav-links">
+      <li><a class="nav-quiz-link" href="index.html#blind-quiz">면접관 체험<span class="nav-quiz-dot" aria-hidden="true"></span></a></li>
+      <li><a href="index.html#challenges">챌린지</a></li>
+      <li><a href="researchers.html" aria-current="page">연구진</a></li>
+      <li><a href="index.html#community">커뮤니티</a></li>
+      <li><a href="reviews.html">후기</a></li>
+    </ul>
+    <div class="nav-right">
+      <a class="btn btn-login-outline nav-login" href="login.html">로그인/회원가입</a>
+      <a class="btn btn-action nav-cta" href="apply.html">신청하기</a>
+    </div>
+    <button class="hamburger" id="hamburger" aria-label="메뉴">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- 모바일 메뉴 -->
+<div class="mobile-menu" id="mobileMenu">
+  <ul>
+    <li><a href="index.html#blind-quiz">면접관 체험</a></li>
+    <li><a href="index.html#challenges">챌린지</a></li>
+    <li><a href="researchers.html">연구진</a></li>
+    <li><a href="index.html#community">커뮤니티</a></li>
+    <li><a href="reviews.html">후기</a></li>
+  </ul>
+  <div class="mobile-menu-cta">
+    <a class="btn btn-login-outline mm-login" href="login.html" style="width:100%; justify-content:center; text-align:center; font-size:16px; padding:16px; margin-bottom:12px; display:block;">로그인 / 회원가입</a>
+    <a class="btn btn-action" href="apply.html" style="width:100%; justify-content:center; font-size:16px; padding:16px;">신청하기</a>
+  </div>
+</div>
+
+<!-- PAGE HERO -->
+<header class="rs-hero">
+  <div class="rs-hero-inner">
+    <div class="section-label">Instructors</div>
+    <h2 class="section-title">전문 연구원을 소개합니다</h2>
+    <p class="section-desc">현장 경험이 풍부한 전문 연구원들이 직접 챌린지를 설계하고 피드백을 드려요.</p>
+  </div>
+</header>
+
+<!-- 연구원 소개 — 탭·패널은 하단 JS(researchers 배열)에서 주입 -->
+<section class="mi-section" id="instructors">
+  <div class="mi-root">
+    <div class="mi-tabs" role="tablist" aria-label="연구원 선택"></div>
+    <div class="mi-stage"></div>
+  </div>
+</section>
+
+<!-- 홈으로 돌아가기 -->
+<div class="rs-back">
+  <a href="index.html">← 홈으로 돌아가기</a>
+</div>
+
+<footer>
+  <div class="container footer-inner">
+    <div class="footer-logo"><img src="images/몬크 로고/assets/png/MONC-lockup-transparent.png" alt="MONC" /></div>
+    <div class="footer-links">
+      <a href="index.html#challenges">서비스 소개</a>
+      <a href="terms.html">이용약관</a>
+      <a href="privacy.html">개인정보처리방침</a>
+      <a href="https://open.kakao.com/o/gX6ap0ti" target="_blank" rel="noopener">문의하기</a>
+    </div>
+    <div class="footer-copy">
+      상호: 몬크 | 대표: 권성호 박새암 | 사업자등록번호: 784-02-04020<br>
+      주소: 서울특별시 금천구 디지털로9길 99, 10층 13호 | 고객센터: 010-7456-5522<br>
+      © 2026 MONC. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ── 햄버거 ── */
+  (function(){
+    const hb = document.getElementById('hamburger');
+    const mm = document.getElementById('mobileMenu');
+    if(hb && mm){
+      hb.addEventListener('click', () => {
+        hb.classList.toggle('open');
+        mm.classList.toggle('open');
+        document.body.style.overflow = mm.classList.contains('open') ? 'hidden' : '';
+      });
+      mm.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+        hb.classList.remove('open');
+        mm.classList.remove('open');
+        document.body.style.overflow = '';
+      }));
+    }
+  })();
+
+  /* ── 연구원(강사) 섹션 — 탭 전환 + 카운트업 (index.html에서 이관) ──
+     데이터는 researchers 배열, 탭·패널은 런타임 주입.
+     전역 스코프 오염/충돌 방지를 위해 IIFE로 감쌈. */
+  (function(){
+    const researchers = [
+      {
+        id:'kwon',
+        role:'수석 연구원',
+        name:'권성호',
+        position:'보이스·스피치·표현력 전문가',
+        photo:'images/instructor-kwon.jpg',
+        tags:['발성 트레이닝','보이스 코칭','스피치 코칭','항공과 특강'],
+        bio:'11년간 승무원 면접 전문 교육기관 <strong>MONSTERCREW & MONC(몬크)</strong>를 운영하며 다수의 합격생을 배출했습니다. 발성부터 스피치, 표현력까지 면접에서의 목소리 전반을 다룹니다.',
+        stats:[
+          {num:11, suffix:'년', label:'전문 교육 경력'},
+          {num:3500, suffix:'+', label:'온라인 수강생'},
+          {num:'다수', suffix:'', label:'대학·기관 특강'}
+        ],
+        key:[
+          '승무원 면접 전문 교육기관 <strong>MONSTERCREW & MONC(몬크) 11년 운영</strong>',
+          '누적 온라인 수강생 <strong>3,500명+</strong> 지도',
+          '<strong>국토부 주관 2023·2025 항공잡페어</strong> 취업컨설턴트',
+          '발성 트레이닝 <strong>자체 코칭북</strong> 개발·보급'
+        ],
+        more:[
+          '취업·보이스 통합 코칭 프로그램 개발 및 운영',
+          '국내 항공과·대학 항공사 특강 프로그램 보이스 코칭 다수',
+          '보이스·커뮤니케이션 전문 칼럼 언론 기고 연재',
+          '유튜브·팟캐스트 출연'
+        ]
+      },
+      {
+        id:'park',
+        role:'수석 연구원',
+        name:'박새암',
+        position:'객실승무원 출신 · 면접 & 스피치 전문가',
+        photo:'images/instructor-park.jpg',
+        tags:['승무원 면접','영상면접','쇼호스트','자기브랜딩'],
+        bio:'FSC·LCC 객실승무원 9년, 공기업·대기업 면접관 활동까지. <strong>합격해본 입장과 평가하는 입장을 모두</strong> 아는 만큼 실전에 바로 쓰는 면접 전략을 알려드려요.',
+        stats:[
+          {num:9, suffix:'년', label:'승무원 경력'},
+          {num:1000, suffix:'+', label:'면접 컨설팅'},
+          {num:1000, suffix:'회', label:'누적 방송'}
+        ],
+        key:[
+          '외항사 FSC·국내 LCC <strong>객실승무원 9년차</strong> (동방항공 비즈니스 클래스 · 에어서울 부사무장 · 티웨이 경력직 최합)',
+          '<strong>국토부 주관 2025 항공잡페어</strong> 취업컨설턴트 · <strong>한국항공대 주관 2025 활주로 일자리박람회</strong> 취업컨설턴트',
+          '<strong>NCS 기반 채용면접관 2급</strong> · 공사·기업 외부 면접관 · 다수 기업 면접관 경력',
+          '채널A 《비행기 타고가요》 시즌1 출연'
+        ],
+        more:[
+          '전) <strong>몬스터크루 & 몬크 아카데미</strong> 대표강사 · 현) 몬크 수석연구원',
+          '전) LF 전속 쇼호스트 · 현) <strong>프리랜서 쇼호스트 5년차</strong> (누적 방송 1,000회+)'
+        ]
+      },
+      {
+        id:'koh',
+        role:'책임 연구원',
+        name:'고은지',
+        position:'브랜딩 · 스피치 · 라이브커머스 전문가',
+        photo:'images/instructor-koh.jpg',
+        tags:['쇼호스트','MC'],
+        bio:'<strong>차별화된 나만의 브랜딩</strong>부터 스피치까지 현장에서 쌓은 경험을 전합니다.',
+        stats:[
+          {num:10, suffix:'년', label:'현장 경력'},
+          {num:500, suffix:'회+', label:'라이브커머스'},
+          {num:'다수', suffix:'', label:'승무원 배출'}
+        ],
+        key:[
+          'FSC·LCC 객실승무원 <strong>다수 배출</strong>',
+          '진안군 우화지구 <strong>도시재생대학</strong> 기초·심화과정 교육 강의',
+          '기전대 소상공인 <strong>온라인 라이브커머스 판로지원</strong> 강의',
+          '동행세일 그립 · 전라북도 로컬마켓 등 <strong>라이브커머스 500회 이상</strong>'
+        ],
+        more:[
+          '전주비빔밥축제 명인·명가 이야기 MC',
+          '군산시 농어촌종합지원센터 · 전주 소담스퀘어 라이브커머스 강사',
+          '완주 로컬푸드축제 · 무주특산물 천마니 쇼호스트',
+          "'위기를 기회로' 동행세일 라이브커머스 방송 진행"
+        ]
+      },
+      {
+        id:'choi',
+        role:'선임 연구원',
+        name:'최보민',
+        position:'대한항공 출신 · 답변 & 면접 전문가',
+        photo:'images/instructor-choi.jpg',
+        tags:['차별화된 답변','대한항공 특화 구조화','LCC 면접 전략','이미지 메이킹'],
+        bio:'대한항공 국제선에서 <strong>First·Business Class</strong>를 담당하고 객실 부사무장까지 지낸 전직 승무원 취업 전문 강사입니다. <strong>대한항공·LCC 면접에 특화된</strong> 차별화된 답변 설계와 답변 구조화, 항공사별 이미지 메이킹을 지도합니다.',
+        stats:[
+          {num:'대한항공', suffix:'', label:'국제선 객실승무원'},
+          {num:'부사무장', suffix:'', label:'객실 부사무장 근무'},
+          {num:'제주항공', suffix:'', label:'객실승무원 · 사내 모델'}
+        ],
+        key:[
+          '<strong>대한항공 국제선 객실승무원</strong> · First·Business Class 담당',
+          '대한항공 <strong>객실 부사무장</strong> 근무',
+          '<strong>제주항공 객실승무원</strong> · 사내 모델 활동',
+          '대한항공·제주항공 <strong>기내 방송 자격</strong> 보유'
+        ],
+        more:[
+          '지원자별 강점이 드러나는 승무원 자기소개서 작성 및 첨삭',
+          '면접 답변 구조화 및 전략 설계',
+          'FSC·LCC 항공사별 이미지 메이킹',
+          '승무원 면접 스피치 및 표현력 지도'
+        ]
+      },
+      {
+        id:'kim',
+        role:'선임 연구원',
+        name:'김유리',
+        position:'대한항공 출신 · 기내방송 & 스피치 전문가',
+        photo:'images/instructor-kim.jpg',
+        tags:['기내방송','스피치 지도','일등석·프레스티지','VIP 서비스'],
+        bio:'대한항공 국제선에서 10년간 근무하며 <strong>일등석·프레스티지 클래스</strong>와 VIP 고객 서비스를 담당하고 객실 부사무장까지 지낸 전직 승무원입니다. <strong>기내방송 전문성과 스피치지도사 1급</strong> 자격을 바탕으로 정확한 발음·전달력을 지도합니다.',
+        stats:[
+          {num:10, suffix:'년', label:'대한항공 승무원'},
+          {num:9000, suffix:'시간', label:'국제선 비행'},
+          {num:'부사무장', suffix:'', label:'객실 부사무장'}
+        ],
+        key:[
+          '<strong>대한항공 국제선 객실승무원</strong> · 객실 부사무장 (10년)',
+          '국제선 비행 <strong>약 9,000시간</strong>',
+          '대한항공 <strong>일등석·프레스티지 클래스</strong> 근무',
+          '<strong>기내방송 전문</strong>'
+        ],
+        more:[
+          'VIP 고객 서비스 담당',
+          '스피치지도사 <strong>1급</strong>'
+        ]
+      }
+    ];
+
+    const miReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const miTabsEl  = document.querySelector('.mi-tabs');
+    const miStageEl = document.querySelector('.mi-stage');
+    if(miTabsEl && miStageEl){
+      const miInitial = (name) => name.trim().charAt(0);
+
+      miTabsEl.innerHTML = researchers.map((r,i)=>`
+        <button class="mi-tab" id="mi-tab-${r.id}" role="tab"
+                aria-controls="mi-panel-${r.id}"
+                aria-selected="${i===0?'true':'false'}"
+                tabindex="${i===0?'0':'-1'}">
+          <span class="n">${r.name}</span>
+        </button>`).join('');
+
+      miStageEl.innerHTML = researchers.map((r)=>{
+        const tags = r.tags.map(t=>`<li>${t}</li>`).join('');
+        const stats = r.stats.map(s=>{
+          const isNum = typeof s.num === 'number';
+          return `<div class="mi-stat">
+            <span class="mi-stat-num" data-num="${s.num}" data-suffix="${s.suffix||''}">${isNum?'0':s.num}</span>
+            <span class="mi-stat-label">${s.label}</span>
+          </div>`;
+        }).join('');
+        const key  = r.key.map(k=>`<li>${k}</li>`).join('');
+        const more = r.more.map(k=>`<li>${k}</li>`).join('');
+        return `
+        <article class="mi-panel" id="mi-panel-${r.id}" role="tabpanel" aria-labelledby="mi-tab-${r.id}" tabindex="0">
+          <aside class="mi-figure">
+            <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" loading="lazy" decoding="async" data-initial="${miInitial(r.name)}"></div>
+            <p class="mi-role">${r.role}</p>
+            <h3 class="mi-name">${r.name}</h3>
+            <p class="mi-position">${r.position}</p>
+            <ul class="mi-tags">${tags}</ul>
+          </aside>
+          <div class="mi-body">
+            <p class="mi-bio">${r.bio}</p>
+            <div class="mi-stats">${stats}</div>
+            <div class="mi-creds">
+              <p class="mi-creds-title">핵심 이력</p>
+              <ul class="mi-cred-list">${key}</ul>
+              <ul class="mi-cred-list mi-extra" hidden>${more}</ul>
+              <button class="mi-more" type="button" aria-expanded="false">전체 이력 보기</button>
+            </div>
+          </div>
+        </article>`;
+      }).join('');
+
+      // 사진 로드 실패 시 이니셜 모노그램으로 대체
+      miStageEl.querySelectorAll('.mi-photo').forEach(ph=>{
+        const img = ph.querySelector('img');
+        if(!img) return;
+        const swap = ()=>{ ph.innerHTML = `<div class="mi-mono">${img.dataset.initial}</div>`; };
+        img.addEventListener('error', swap);
+        if(img.complete && img.naturalWidth === 0) swap();
+      });
+
+      const miTabEls   = [...miTabsEl.querySelectorAll('.mi-tab')];
+      const miPanelEls = [...miStageEl.querySelectorAll('.mi-panel')];
+      let miCurrentIdx = 0;
+      let miCounted = false;
+
+      function miAnimateStat(el){
+        const raw = el.dataset.num;
+        const suffix = el.dataset.suffix || '';
+        const n = Number(raw);
+        if(Number.isNaN(n)){ el.textContent = raw; return; }
+        if(miReduceMotion){ el.textContent = n.toLocaleString('ko-KR') + suffix; return; }
+        const dur = 900, start = performance.now();
+        function tick(now){
+          const p = Math.min(1,(now-start)/dur);
+          const eased = 1 - Math.pow(1-p,3);
+          el.textContent = Math.floor(n*eased).toLocaleString('ko-KR') + suffix;
+          if(p<1) requestAnimationFrame(tick);
+          else el.textContent = n.toLocaleString('ko-KR') + suffix;
+        }
+        requestAnimationFrame(tick);
+      }
+      function miRunCountUp(panel){ panel.querySelectorAll('.mi-stat-num').forEach(miAnimateStat); }
+
+      function miActivate(idx,{focus=false, animate=true}={}){
+        miCurrentIdx = idx;
+        miTabEls.forEach((t,i)=>{
+          const on = i===idx;
+          t.setAttribute('aria-selected', on?'true':'false');
+          t.tabIndex = on?0:-1;
+        });
+        miPanelEls.forEach((p,i)=>p.classList.toggle('is-active', i===idx));
+        if(focus) miTabEls[idx].focus();
+        if(animate){ miCounted = true; miRunCountUp(miPanelEls[idx]); }
+      }
+
+      miTabEls.forEach((t,i)=>{
+        t.addEventListener('click', ()=>miActivate(i));
+        t.addEventListener('keydown', e=>{
+          let ni=null;
+          if(e.key==='ArrowRight'||e.key==='ArrowDown') ni=(i+1)%miTabEls.length;
+          else if(e.key==='ArrowLeft'||e.key==='ArrowUp') ni=(i-1+miTabEls.length)%miTabEls.length;
+          else if(e.key==='Home') ni=0;
+          else if(e.key==='End') ni=miTabEls.length-1;
+          if(ni!==null){ e.preventDefault(); miActivate(ni,{focus:true}); }
+        });
+      });
+
+      miStageEl.querySelectorAll('.mi-more').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const extra = btn.parentElement.querySelector('.mi-extra');
+          const opening = extra.hasAttribute('hidden');
+          if(opening){ extra.removeAttribute('hidden'); btn.textContent='전체 이력 접기'; btn.setAttribute('aria-expanded','true'); }
+          else{ extra.setAttribute('hidden',''); btn.textContent='전체 이력 보기'; btn.setAttribute('aria-expanded','false'); }
+        });
+      });
+
+      // 첫 패널 노출, 카운트업은 뷰포트 진입 시 1회
+      miActivate(0,{animate:false});
+      if(miReduceMotion){
+        miRunCountUp(miPanelEls[0]);
+      } else {
+        const miObs = new IntersectionObserver((entries)=>{
+          entries.forEach(en=>{
+            if(en.isIntersecting && !miCounted){ miRunCountUp(miPanelEls[miCurrentIdx]); miCounted=true; miObs.disconnect(); }
+          });
+        },{threshold:.3});
+        miObs.observe(document.querySelector('.mi-root'));
+      }
+    }
+  })();
+</script>
+
+</body>
+</html>
