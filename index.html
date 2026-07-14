@@ -853,13 +853,27 @@
     .ts-desc{ font-size:16px; color:var(--text-muted); line-height:1.7; margin:16px 0 0; word-break:keep-all; max-width:56ch; }
     .ts-desc strong{ color:var(--accent-ink); font-weight:700; }
 
-    /* 5장 라인업: flex 가운데 정렬 wrap(홀수 5장 고아 방지) — 세로 포트레이트 카드 */
-    .ts-grid{ list-style:none; padding:0; margin:0 auto 30px; max-width:1120px;
-      display:flex; flex-wrap:wrap; justify-content:center; gap:20px; }
-    .ts-card{ flex:0 0 calc(20% - 16px); display:flex; flex-direction:column;
+    /* 자동 흐름 카루셀(마퀴) — 연구원 카드가 옆으로 계속 흐른다(2026-07-14 오너 "옆으로 흐르듯").
+       JS(tsGrid)가 카드 1벌을 복제해 translateX(-50%)로 이음새 없이 무한 루프.
+       카드마다 margin-right(=gap)를 줘 트랙폭=2N·(카드폭+margin)이 되므로 -50%가 정확히
+       한 벌 = 이음새 없음. 좌우 마스크 페이드로 흘러 들어오고 나감.
+       마우스 호버/터치(누름) 시 정지 → 카드 읽기 가능. reduced-motion은 정적 wrap. */
+    .ts-marquee{ overflow:hidden; max-width:1120px; margin:0 auto 30px;
+      -webkit-mask:linear-gradient(90deg,transparent 0,#000 6%,#000 94%,transparent 100%);
+              mask:linear-gradient(90deg,transparent 0,#000 6%,#000 94%,transparent 100%); }
+    .ts-grid{ list-style:none; padding:0; margin:0; display:flex; flex-wrap:nowrap;
+      width:max-content; animation:ts-flow 34s linear infinite; }
+    .ts-marquee:hover .ts-grid, .ts-marquee.is-paused .ts-grid{ animation-play-state:paused; }
+    @keyframes ts-flow{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+    .ts-card{ flex:0 0 min(220px,72vw); margin-right:20px; display:flex; flex-direction:column;
       background:var(--surface); border:1px solid var(--border);
       border-radius:18px; overflow:hidden; transition:transform .22s ease, box-shadow .22s ease; }
     .ts-card:hover{ transform:translateY(-4px); box-shadow:0 16px 40px rgba(36,26,18,.14); }
+    @media (prefers-reduced-motion: reduce){
+      .ts-marquee{ -webkit-mask:none; mask:none; }
+      .ts-grid{ animation:none; width:auto; flex-wrap:wrap; justify-content:center; gap:16px 20px; }
+      .ts-card{ margin-right:0; }
+    }
     /* 세로 포트레이트 — 4:5, 통일 그레이딩 + 하단 그라디언트 */
     .ts-port{ position:relative; aspect-ratio:4/5; overflow:hidden; background:var(--bg-dark); }
     .ts-port img{ width:100%; height:100%; object-fit:cover; object-position:center 22%;
@@ -883,37 +897,19 @@
     .ts-more:hover{ background:var(--accent-ink); color:#fff; }
     .ts-more:focus-visible{ outline:2px solid var(--accent-dark); outline-offset:3px; }
 
-    @media(max-width:900px){          /* 태블릿: 3열 → 3+2 (아랫줄 가운데) */
-      .ts-grid{ gap:16px; }
-      .ts-card{ flex:0 0 calc(33.333% - 11px); }
-    }
     @media(max-width:768px){
       .trust-strip{ padding:44px 0 48px; }
       .ts-head{ margin-bottom:30px; }
       .ts-desc{ margin-top:12px; max-width:none; }
+      .ts-marquee{ margin-bottom:26px; }
     }
-    @media(max-width:520px){          /* 모바일: 가로 스와이프 카루셀 */
+    @media(max-width:520px){          /* 모바일: 헤더 압축(카드 흐름은 위 마퀴가 전 폭 공통) */
       .ts-root{ padding:0 16px; }
       /* 긴 제목이 모바일에서 4줄(154px)로 얼굴(신뢰 증거)을 밀어내므로
          제목·여백을 압축해 헤더 세로 점유를 줄임(2026-07-14 오너 "모바일 우선"). */
       .ts-title{ font-size:25px; line-height:1.24; }
-      .ts-head{ margin-bottom:24px; }
+      .ts-head{ margin-bottom:22px; }
       .ts-desc{ font-size:15px; margin-top:10px; }
-      /* 카루셀: 큰 카드 + 다음 카드 살짝 보이는 peek로 스와이프 힌트(2026-07-14 오너 요청).
-         margin:0 -16px로 루트 패딩 상쇄해 화면 끝까지 트랙을 넓히고, 자체 padding 16px로
-         첫/끝 카드 인셋. scroll-snap으로 카드 단위 정지. 트랙만 overflow-x → 페이지 가로 넘침 없음. */
-      .ts-grid{
-        flex-wrap:nowrap; justify-content:flex-start;
-        overflow-x:auto; -webkit-overflow-scrolling:touch;
-        scroll-snap-type:x mandatory; scroll-padding-left:16px;
-        gap:12px; margin:0 -16px 24px; padding:2px 16px 10px;
-        scrollbar-width:none;
-      }
-      .ts-grid::-webkit-scrollbar{ display:none; }
-      .ts-card{ flex:0 0 68%; max-width:260px; scroll-snap-align:start; border-radius:16px; }
-      .ts-body{ padding:14px 15px 16px; }
-      .ts-name{ font-size:18px; }
-      .ts-cred{ font-size:12.5px; }
     }
 
     /* ── CATEGORIES ── */
@@ -2220,7 +2216,8 @@
       <p class="ts-desc">목소리 · 표현력 · 말하기 · 답변 — <strong>각 분야를 전담 연구원이 설계</strong>합니다.</p>
     </div>
 
-    <ul class="ts-grid reveal" data-reveal>
+    <div class="ts-marquee reveal" data-reveal>
+    <ul class="ts-grid" id="tsGrid">
       <li class="ts-card">
         <div class="ts-port"><img src="images/instructor-kwon.jpg" alt="권성호 수석 연구원" loading="lazy" decoding="async"></div>
         <div class="ts-body">
@@ -2262,12 +2259,35 @@
         </div>
       </li>
     </ul>
+    </div><!-- /.ts-marquee -->
 
     <div class="ts-more-wrap reveal" data-reveal>
       <a class="ts-more" href="#instructors">연구진 프로필 자세히 보기 →</a>
     </div>
   </div>
 </section>
+<script>
+/* 연구진 마퀴: 카드 1벌 복제(이음새 없는 -50% 루프) + 누름/호버 시 정지 */
+(function () {
+  var grid = document.getElementById('tsGrid');
+  if (!grid) return;
+  var marquee = grid.closest('.ts-marquee');
+  if (!marquee) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // 정적
+  Array.prototype.slice.call(grid.children).forEach(function (li) {
+    var c = li.cloneNode(true);
+    c.setAttribute('aria-hidden', 'true');
+    grid.appendChild(c);
+  });
+  var pause = function () { marquee.classList.add('is-paused'); };
+  var resume = function () { marquee.classList.remove('is-paused'); };
+  marquee.addEventListener('pointerdown', pause);
+  marquee.addEventListener('pointerup', resume);
+  marquee.addEventListener('pointercancel', resume);
+  marquee.addEventListener('touchstart', pause, { passive: true });
+  marquee.addEventListener('touchend', resume);
+})();
+</script>
 
 
 <!-- BEFORE / AFTER -->
