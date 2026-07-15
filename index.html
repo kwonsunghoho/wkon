@@ -1546,6 +1546,31 @@
     if (rollEl && phrases.length) {
       rollEl.textContent = phrases[0];
       if (!reduce && phrases.length > 1) {
+        // ⚠️ 롤링 배너 높이 고정 — 문구마다 줄 수(높이)가 달라 3초 회전 시 배너가
+        //    출렁였고, 아래 콘텐츠가 그만큼 밀려 '스크롤 중 페이지가 위아래로 튀는'
+        //    원인이었다(오너 피드백). 가장 긴 문구 높이로 stage를 px 고정해 어떤
+        //    문구가 와도 리플로우가 없게 한다(클리핑 없이 최댓값 기준). min-height
+        //    만으로는 긴 문구에서 박스가 자라므로 부족 — 명시적 height가 필요.
+        const stage = rollEl.parentElement; // .mc-rolling-stage
+        const lockHeight = () => {
+          const cur = rollEl.textContent;
+          stage.style.height = '';   // ⚠️ 재측정 전 이전 고정 해제 필수 — 안 풀면
+                                     //    fonts.ready·resize 재실행이 클램프된 높이를
+                                     //    다시 재서 긴 문구가 잘린 채 굳는다.
+          let maxH = 0;
+          phrases.forEach(ph => { rollEl.textContent = ph; maxH = Math.max(maxH, stage.getBoundingClientRect().height); });
+          rollEl.textContent = cur;
+          stage.style.height = Math.ceil(maxH) + 'px';
+        };
+        lockHeight();
+        // 명조(Noto Serif KR) 스왑 후 글자 metrics가 바뀌므로 폰트 로드 완료 시 재측정
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(lockHeight);
+        // 폭이 바뀌면 줄바꿈이 달라져 재계산(모바일 툴바 높이 토글은 무시 — 폭 변화만)
+        let rw = window.innerWidth;
+        window.addEventListener('resize', () => {
+          if (window.innerWidth === rw) return;
+          rw = window.innerWidth; lockHeight();
+        });
         let idx = 0;
         setInterval(() => {
           rollEl.classList.add('mc-out');           // 위로 사라짐
