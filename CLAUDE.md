@@ -88,7 +88,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 - 아이콘 = `<body>` 상단 `<symbol>` 스프라이트(`currentColor` 리컬러). 모바일 스티키 CTA바 `.mobile-cta-bar`(≤768px).
 
 ### Audio (detail pages)
-`audio/`의 before/after 클립, 위치 기반 네이밍: `challenger-a-before.mp3`…(voice), `spinning-a-before.m4a`…(spinning). Windows에서 추가 시 이중 확장자 주의(`*.mp3.m4a`).
+`audio/`의 before/after 클립, 위치 기반 네이밍: `challenger-a-before.mp3`…(voice), `spinning-a-before.m4a`…(spinning). Windows에서 추가 시 이중 확장자 주의(`*.mp3.m4a`). **클립은 음성이라 mono ~80kbps로 최적화**(스테레오·128k+ 불필요) — 새 클립도 `-ac 1 -b:a 80k`로 맞출 것. 전·후는 동일 설정으로 인코딩해 대비를 왜곡하지 않는다.
 
 ### 블라인드 퀴즈 (`#blind-quiz`)
 사진 인트로(`images/bq-intro.jpg`) + 실루엣 영상(`video/bq-candidate.mp4`, 클립 재생 중일 때만 재생/배지 전환, `syncScene()`) + 판정 콘솔. 5라운드, `audio/` 전·후 풀 랜덤, 루트 셀렉터 `.bq-stage`. `prefers-reduced-motion`이면 영상 자동재생·Ken Burns·EQ 정지. (텍스트 다이어트로 '같은 사람' 반전은 1라운드 1회만.)
