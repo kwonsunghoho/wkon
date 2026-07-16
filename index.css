@@ -1758,10 +1758,21 @@
   border:1px solid var(--line);
   box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.7);
 }
-.db-ring{position:relative; width:132px; height:132px; flex:none}
-.db-ring svg{transform:rotate(-90deg); width:132px; height:132px; overflow:visible}
-.db-ring .db-track{fill:none; stroke:var(--surface-2); stroke-width:13}
-.db-ring .db-prog{fill:none; stroke:url(#dbGrad); stroke-width:13; stroke-linecap:round;
+/* ⚠ 링 크기는 '안에 들어가는 글자'가 정한다 — 132px 로 되돌리지 말 것 (2026-07-16 오너 "79% 밑에 또 튀어나온다").
+   링 안 텍스트(.db-pct/.db-frac)는 .db-ringc 가 position:absolute 로 얹는 **HTML** 이라 SVG 와 달리
+   링을 키워도 같이 커지지 않는다. 즉 링 크기 = 글자가 원 안에 내접할 수 있는 여유를 정하는 값이다.
+   구 132px 의 안쪽 반지름은 45.5px 였는데, 캡션 '11 / 14일 인증'(--t-sm)의 박스 모서리는 중심에서
+   50.73px → **획을 5.2px 파고들었다**('%' 도 46.18px 로 0.7px 초과). 캡션은 원의 아래쪽,
+   원이 좁아지는 구간에 놓여서 폭보다 **모서리 대각 거리**가 지배한다: √((83.9/2)² + 28.5²) = 50.73.
+   ⚠ 구 스케일(--t-sm 12px)에서도 여유가 1px 뿐이었다 — 즉 원래부터 아슬아슬했고 활자를 한 단 올리자 터졌다.
+   → 156px 로 키우고 stroke-width 는 13→11 로 낮춘다(뷰박스 132 가 156 으로 확대 렌더되므로
+     11 * 156/132 = 13px, **획 두께는 눈에 보이던 그대로**). 안쪽 반지름 45.5 → 54.95px, 여유 4.2px.
+   r=52 는 그대로라 stroke-dasharray:326.73(=2πr) 과 dashoffset:70(=78.6%) 은 손댈 필요 없다.
+   활자 스케일을 또 올리면 여기 여유부터 다시 계산할 것. */
+.db-ring{position:relative; width:156px; height:156px; flex:none}
+.db-ring svg{transform:rotate(-90deg); width:156px; height:156px; overflow:visible}
+.db-ring .db-track{fill:none; stroke:var(--surface-2); stroke-width:11}
+.db-ring .db-prog{fill:none; stroke:url(#dbGrad); stroke-width:11; stroke-linecap:round;
   stroke-dasharray:326.73; stroke-dashoffset:70;
   filter:drop-shadow(0 3px 5px rgba(217,83,31,.28))}
 @media(prefers-reduced-motion:no-preference){.db-ring .db-prog{animation:db-fill 1.3s cubic-bezier(.3,.9,.3,1) both}}
