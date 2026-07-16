@@ -1677,14 +1677,21 @@
   --muted:#6A6156;  /* 구 #6E6656 — ink-soft 와 육안 구분이 안 되는 색이라 2단(ink/ink-soft)으로 통합 */
   --line:#DED5C4; --coral:#F27945; --coral-dark:#D9531F; --coral-ink:#A33D14; --coral-soft:rgba(242,121,69,.12);
   --sans:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; /* = body 스택 */
-  --t-cap:11px;     /* 라벨·범례 */
-  --t-sm:12px;      /* 보조 텍스트 */
-  --t-md:13.5px;    /* 본문 */
-  --t-lg:15.5px;    /* 카드 제목 */
-  --t-quote:17.5px; /* 히어로 문장 */
-  --t-name:19px;    /* 이름 */
-  --t-num:24px;     /* 지표 숫자 (26→24: 사이트 톤에 맞춰 절제) */
-  --t-disp:33px;    /* 링 퍼센트 (38→33: 사이트 섹션 제목 30px과 어울리게) */
+  /* ⚠ 2026-07-16 오너 "텍스트가 너무 작지 않냐" — 전 단 상향. 되돌리지 말 것.
+     구 스케일(11/12/13.5/15.5/17.5/19/24/33)은 **최대 본문(--t-md 13.5px)이 사이트 캡션
+     (--fs-caption 14px)보다도 작아** 위젯이 페이지의 일부가 아니라 '축소한 스크린샷'처럼 읽혔다.
+     이제 사이트 본문(--fs-body 17px)·캡션(14px)을 기준선으로 다시 깐다:
+       --t-lg  = 17px = 사이트 본문   (카드 제목이 본문과 같은 급)
+       --t-sm  = 13px ≒ 사이트 캡션 한 단 아래 (목업은 실제 UI보다 한 단 작게가 자연스러움)
+     하한은 --t-cap 12px — 9대 원칙 ①(가독성) 상 이 아래로 다시 내리지 말 것. */
+  --t-cap:12px;     /* 라벨·범례 (11→12) */
+  --t-sm:13px;      /* 보조 텍스트 (12→13) */
+  --t-md:15px;      /* 본문 (13.5→15) */
+  --t-lg:17px;      /* 카드 제목 (15.5→17 = 사이트 본문) */
+  --t-quote:19px;   /* 히어로 문장 (17.5→19) */
+  --t-name:21px;    /* 이름 (19→21) */
+  --t-num:27px;     /* 지표 숫자 (24→27) */
+  --t-disp:38px;    /* 링 퍼센트 (33→38) */
   --sh-1:0 1px 2px rgba(38,34,28,.05), 0 6px 14px rgba(38,34,28,.06), 0 18px 40px rgba(38,34,28,.05);
   --sh-2:0 1px 2px rgba(38,34,28,.06), 0 3px 8px rgba(38,34,28,.05);
   font-family:inherit; color:var(--ink); box-sizing:border-box;
@@ -1760,12 +1767,24 @@
 @media(prefers-reduced-motion:no-preference){.db-ring .db-prog{animation:db-fill 1.3s cubic-bezier(.3,.9,.3,1) both}}
 @keyframes db-fill{from{stroke-dashoffset:326.73}to{stroke-dashoffset:70}}
 .db-ringc{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1}
-.db-pct{font-family:var(--serif); font-size:var(--t-disp); font-weight:700; letter-spacing:-.02em; color:var(--ink)}
-/* 15.5px 볼드는 WCAG '큰 텍스트' 면제선(볼드 18.66px) 미만 → coral-dark(#D9531F)는 흰 배경에서 4.03:1 로 미달.
-   소형 텍스트용 coral-ink(#A33D14, 4.5:1+)로 내린다 — tokens.css 의 --accent-ink 규칙과 동일. */
-.db-pct small{font-family:var(--sans); font-size:var(--t-lg); font-weight:800; color:var(--coral-ink); vertical-align:6px; margin-left:1px}
-.db-frac{margin-top:5px; font-size:var(--t-sm); color:var(--ink-soft); font-weight:500; letter-spacing:.02em}
-.db-frac b{font-family:var(--serif); color:var(--coral-ink); font-weight:700}
+.db-pct{position:relative; font-family:var(--serif); font-size:var(--t-disp); font-weight:700; letter-spacing:-.02em; color:var(--ink)}
+/* ⚠ 2026-07-16 오너 "79% 저것도 뭔가 정렬도 안 맞고" — 실측으로 확정된 두 결함을 함께 고친다. 되돌리지 말 것.
+   ① 정렬: 구 { vertical-align:6px } 는 '%' 가 흐름 안에 있어 그 폭까지 .db-pct 의 센터링에 포함됐다.
+      그래서 900px 실측에서 링 중심 x=193.0 인데 숫자 '79' 만의 시각 중심은 185.65 → **7.35px 왼쪽으로 밀림**.
+      바로 아래 .db-frac 은 정확히 193.0 중앙이라 두 줄이 어긋나 보였다.
+      → '%' 를 position:absolute 로 흐름에서 빼 .db-pct 의 폭 = 숫자 폭이 되게 한다. 그래야 숫자와
+        .db-frac 이 같은 축(링 중심)에 선다. vertical-align 방식으로 되돌리면 7.35px 어긋남이 재발한다.
+      (top 은 em 단위 — --t-disp 가 바뀌어도 '%' 가 숫자 캡라인에 계속 붙는다. 매직 px 금지.)
+   ② 글꼴: 132px 원 하나에 조합이 4종(명조700잉크 '79' / 산세800코랄 '%' / 명조700코랄 '11' /
+      산세500회색 '/14일 인증') 섞여 "폰트가 전혀 안 어울린다"는 지적을 받았다.
+      → 수치는 명조 1종, 캡션은 산세 1종으로 통일. '%' 는 font-family 를 안 주고 .db-pct(명조)를 상속받는다.
+   대비: --t-md(15px) 볼드는 WCAG '큰 텍스트' 면제선(볼드 18.66px) 미만이라 coral-dark(#D9531F, 4.03:1)는
+   미달 → 소형 텍스트용 coral-ink(#A33D14, 4.5:1+) 유지. tokens.css 의 --accent-ink 규칙과 동일. */
+.db-pct small{position:absolute; left:100%; top:.1em; margin-left:2px;
+  font-size:var(--t-md); font-weight:700; color:var(--coral-ink)}
+.db-frac{margin-top:6px; font-size:var(--t-sm); color:var(--ink-soft); font-weight:500; letter-spacing:.02em}
+/* 캡션 줄은 산세 1종 — 구 .db-frac b 는 '11' 만 명조 코랄이라 13px 한 줄 안에 두 글꼴이 섞였다 */
+.db-frac b{color:var(--coral-ink); font-weight:700}
 .db-hero-txt{min-width:0}
 /* 에이브로우 — 랜딩 .section-label 과 같은 문법(소형·800·자간 넓게·코랄 잉크) */
 .db-hero-lead{font-size:var(--t-cap); font-weight:800; letter-spacing:.1em; color:var(--coral-ink); margin-bottom:6px}
@@ -1807,27 +1826,38 @@
    ⚠ 구 repeat(7,1fr) 은 375px 에서 칸이 박스 밖으로 튀어나왔다(오너 피드백 2026-07-15).
    1fr = minmax(auto,1fr) 이라 칸이 min-content('예정'·숫자 폭) 아래로 못 줄어들기 때문.
    minmax(0,1fr) + min-width:0 으로 어떤 폭에서도 카드 안에 갇히게 한다 — 되돌리지 말 것. */
-.db-days{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px}
+/* ⚠ 2026-07-16 오너 "인증 스탬프 왜 이렇게 작게 한 거야?" — 칸이 아니라 **칸 안**이 원인이었다. 되돌리지 말 것.
+   375px 폭 예산: 375 - .container 32 - .db-root 0 - .db-shell 24 - .db-card 24 = 295px.
+   7열 유지 시 (295 - gap 30) / 7 = 37.9px/칸. 7*44 + 6*4 = 332 > 295 이므로
+   **7열에서 44px 칸은 수학적으로 불가능** — 그렇다고 5열로 쪼개면 '2주 = 7일 x 2행' 의미가 깨진다.
+   칸을 못 키우면 칸 안의 것을 줄여야 하는데, 구 마크업은 그 34px 칸에
+   [체크 15px] + [날짜숫자 11px] 을 gap:2px 로 세로로 **두 개** 쌓아 스스로 목을 졸랐다.
+   → 칸마다 글리프 1개만 둔다:
+     · done       = 체크만        (1~10 의 날짜 숫자는 세면 알 수 있어 정보량이 0이다)
+     · today/soon = 날짜 숫자만   ('오늘'·'예정'·'수료' 는 바로 아래 .db-legend 와 .db-ctitle em 이 이미 말한다)
+   그 결과 글리프가 11~15px → 17~20px 로 커졌다. 칸 안에 요소를 다시 쌓지 말 것. */
+.db-days{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px}
 .db-day{
-  position:relative; aspect-ratio:1; min-width:0; border-radius:13px; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:2px; font-size:var(--t-sm); font-weight:700;
+  position:relative; aspect-ratio:1; min-width:0; border-radius:13px; display:flex;
+  align-items:center; justify-content:center; font-weight:700;
   background:var(--surface-2); color:var(--muted); border:1px solid var(--line);
 }
-.db-day .db-dn{font-size:var(--t-cap); font-weight:700; opacity:1; letter-spacing:.02em}
 .db-day.done{
   background:linear-gradient(160deg,#F9A67F,var(--coral) 60%,var(--coral-dark)); color:#fff; border-color:transparent;
   box-shadow:0 3px 7px rgba(217,83,31,.28), inset 0 1px 0 rgba(255,255,255,.35);
 }
-.db-day.done .db-dn{color:#2A1206}
-.db-day.done svg{width:15px;height:15px}
+.db-day.done svg{width:20px;height:20px}
 .db-day.today{
-  background:var(--surface); color:var(--coral-dark); border:2px solid var(--coral);
+  background:var(--surface); border:2px solid var(--coral);
   box-shadow:0 0 0 4px var(--coral-soft), 0 4px 9px rgba(217,83,31,.18);
 }
-.db-day.today .db-dn{color:var(--coral-ink)}
-.db-day.today b{font-family:var(--serif); font-size:var(--t-md); line-height:1}
+/* ⚠ font-weight:700 을 명시하는 이유 — <b> 의 UA 기본값은 bolder(=상대값)이고 부모 .db-day 가 700 이라
+   700→900 으로 올라가 버린다. Noto Serif KR 은 900 이 실제로 로드돼 있어 조용히 900 으로 렌더됐다
+   (목업의 다른 명조는 전부 700 → 스탬프 숫자만 혼자 굵어짐). 상속에 맡기지 말 것.
+   17px 볼드는 WCAG '큰 텍스트' 면제선(볼드 18.66px) 미만 → coral-dark(4.03:1)가 아니라 coral-ink(4.5:1+). */
+.db-day.today b{font-family:var(--serif); font-size:var(--t-lg); font-weight:700; line-height:1; color:var(--coral-ink)}
 .db-day.soon{background:var(--surface); border-style:dashed; color:var(--muted)}
-.db-day.soon b{font-family:var(--serif); font-size:var(--t-md); color:var(--ink-soft); line-height:1}
+.db-day.soon b{font-family:var(--serif); font-size:var(--t-lg); font-weight:700; color:var(--ink-soft); line-height:1}
 .db-legend{display:flex; flex-wrap:wrap; gap:12px; margin-top:13px; font-size:var(--t-sm); color:var(--ink-soft); font-weight:500}
 .db-legend span{display:inline-flex; align-items:center; gap:6px}
 .db-lk{width:11px;height:11px;border-radius:4px}
@@ -1886,17 +1916,19 @@
   .db-hero{grid-template-columns:1fr; justify-items:center; text-align:center}
   .db-hero-txt{width:100%}
   .db-bar-l{text-align:left}
-  /* 스탬프 14칸이 7열로 들어가야 하므로 칸 안 간격을 한 단 줄인다(넘침 방지).
-     ⚠ 활자는 --t-cap(11px) 아래로 내리지 않는다 — 10px 는 '오늘·예정' 한글이 뭉개진다. */
+  /* ⚠ 스탬프는 모바일에서 '더 줄이지' 않는다. 구 규칙은 바로 여기서 숫자를 12px, 체크를 13px 로 내려
+     오너의 "왜 이렇게 작게 했냐"를 직접 만들어냈다(트래픽 99% 가 모바일이라 사실상 이게 기본값이었다).
+     폭이 모자라면 활자가 아니라 gap 과 껍데기 패딩을 줄인다(아래 420px 블록). */
   .db-days{gap:5px}
-  .db-day{border-radius:11px; gap:1px}
-  .db-day.today b,.db-day.soon b{font-size:var(--t-sm)}
-  .db-day.done svg{width:13px;height:13px}
+  .db-day{border-radius:11px}
   .db-legend{gap:9px}
 }
 @media(max-width:420px){
-  .db-shell{padding:14px}
-  .db-card{padding:14px}
+  /* 스탬프 칸 폭 확보용 패딩 다이어트 — 375px 기준 (343 - 24 - 24 - gap 30) / 7 = 37.9px/칸.
+     구 값(root 4 / shell 14 / card 14)에서는 35.6px 였다. 여기 패딩을 다시 키우면 칸이 도로 줄어든다. */
+  .db-root{padding:0}
+  .db-shell{padding:12px}
+  .db-card{padding:12px}
   .db-badges{grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 9px}
   .db-pill{padding:6px 10px}
   .db-foot{padding:14px}
