@@ -1536,12 +1536,17 @@
     @media (max-width: 768px) { .hs-cta-btn { padding: 13px 30px; } }
 
     /* 카드 무대 — 카드들이 절대배치되는 기준. --card-w로 카드 폭 제어 */
+    /* ⚠️ 세 번째 상한 필수: .hs-carousel은 position:absolute라 히어로 높이(max(100svh,680px))에
+       갇혀 못 자라고, 자식은 전부 flex:0 0 auto라 못 줄어든다. 무대만 svh 비례고 화살표·CTA는
+       고정(220px)이라, 상한이 없으면 창 높이 640~786px 구간에서 콘텐츠가 컨테이너를 넘겨
+       overflow:hidden에 CTA 문구가 잘린다(노트북 창 높이 대역이라 실제로 터짐 — 모집 중
+       D-day 뱃지가 뜨면 +36px라 더 넓어진다). 무대가 고정 요소 자리를 침범하지 못하게 막는다. */
     .hs-stage {
       position: relative;
       width: 100%;
       flex: 0 0 auto;
-      height: min(72vh, 600px);
-      height: min(72svh, 600px);
+      height: min(72vh, 600px, calc(max(100vh, 680px) - 240px));
+      height: min(72svh, 600px, calc(max(100svh, 680px) - 240px));
       --card-w: min(560px, 62vw);
     }
 
