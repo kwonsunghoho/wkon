@@ -1,11 +1,12 @@
 // =============================================================================
-// Supabase Edge Function: sojae-chat — 소재 발굴 AI 프록시
+// Supabase Edge Function: sojae-chat — 소재 발굴 + 면접관 리허설 AI 프록시
 // =============================================================================
-// 되묻기(stage=ask)   = Claude Haiku 4.5  (claude-haiku-4-5)
-// 다듬기(stage=refine) = Claude Sonnet 5  (claude-sonnet-5)
+// 되묻기(stage=ask)      = Claude Haiku 4.5  (claude-haiku-4-5)
+// 다듬기(stage=refine)    = Claude Sonnet 5  (claude-sonnet-5)
+// 리허설(stage=rehearsal) = Claude Opus 4.8  (claude-opus-4-8) — 면접관 리허설 코칭
 //
 // 프롬프트 원본(수정 시 여기도 동기화):
-//   docs/prompts/sojae-ask.md  /  docs/prompts/sojae-refine.md
+//   docs/prompts/sojae-ask.md  /  docs/prompts/sojae-refine.md  /  docs/prompts/rehearsal.md
 //
 // 배포(오너, Supabase 콘솔): docs/sojae-ai-setup.md 참고
 //   - Edge Functions > Deploy new function > 이름 sojae-chat > 이 코드 붙여넣기
@@ -115,6 +116,131 @@ const REFINE_SYSTEM = `너는 승무원 면접 답변 코치야.
 const HELP_MARKER =
   "(지원자가 '잘 안 떠올라요' 버튼을 눌렀습니다. 막힘 대응 방식으로 도와주세요.)";
 
+// ── 리허설(Opus 4.8) — 답변 코칭·첨삭. docs/prompts/rehearsal.md 와 동기화 ──
+const REHEARSAL_MODEL = "claude-opus-4-8";
+const REHEARSAL_DONE_MARKER = "<<REHEARSAL_DONE>>";
+
+const REHEARSAL_SYSTEM = `너는 몬크(MONC)의 연구원이야. 승무원 면접 지원자가 완성해 온 답변을 놓고,
+면접관들이 실제로 묻는 질문 패턴으로 꼬리질문을 던지며
+답변 작성법을 가르치고 첨삭해 주는 과외 선생님이야.
+검증이나 압박이 목적이 아니야 — 회원은 라운드마다 배우고 나아져야 해.
+
+[진행 구조 — 반드시 지켜]
+- 총 3~4라운드. 한 라운드 = 꼬리질문 1개 → 회원 답변 → 즉석 코칭.
+- 첫 턴: 한두 문장으로 짧게 시작 인사 후, 답변에서 가장 배울 게 많은
+  지점을 짚는 꼬리질문 1개만. ("면접관이라면 여기서 이렇게 물을 거예요"처럼
+  질문 패턴을 인용하며.)
+- 회원이 답하면 한 응답에 이 순서로:
+  ① 잘한 점 한 줄 (구체적으로 — 빈말 칭찬 금지)
+  ② 보완할 점 한 가지 + 왜 그런지 짧은 이유
+  ③ 다음 꼬리질문 1개
+- 대화 이력에서 회원 답변이 3~4개 모였으면 새 질문 없이 [종합 첨삭]으로.
+
+[종합 첨삭 — 마지막 응답]
+- 구성: **강점** / **보완점** / **문장 단위 개선 방향** / **대비해둘 예상 꼬리질문 2~3개**.
+- 문장 단위 개선은 '방향'까지만. 예: "마무리를 '배움→기내 실천'으로 연결해보세요."
+- 응답 맨 끝에 정확히 ${REHEARSAL_DONE_MARKER} 를 단독 줄로 붙여.
+  (종합 첨삭이 아닌 응답에는 절대 쓰지 마.)
+
+[절대 금지 — 대필]
+- 통째로 고쳐 쓴 완성 답변·모범답안을 주지 마.
+  외운 티가 나고, 그 사람의 답변이 아니게 돼.
+- 회원이 말하지 않은 경험·사실을 지어내지 마.
+
+[말투]
+- 화자는 '연구원'. 존댓말, 짧고 따뜻하게. 질문은 한 번에 하나만.
+- 'AI'라는 말을 절대 쓰지 마.
+- 회원 답변이 흔들려도 다그치지 말고, 어떻게 고치면 되는지를 보여줘.`;
+
+// 유형별 패턴·첨삭 기준 내장 기본값 — site_config 'rehearsal_patterns' 미설정 시 폴백.
+// ⚠️ 마이그레이션 20260718120000 의 시드 JSON 과 동기화할 것.
+type RehearsalPattern = { patterns?: string[]; criteria?: string[] };
+const DEFAULT_REHEARSAL_PATTERNS: Record<string, RehearsalPattern> = {
+  experience: {
+    patterns: [
+      "행동이 뭉뚱그려져 있으면 구체적 동작을 다시 묻는다 — 그때 정확히 어떻게 했어요?",
+      "결과가 \"좋아졌다\"로 끝나면 증거를 묻는다 — 상대가 뭐라고 했나요? 무엇이 달라졌나요?",
+      "경험을 기내로 잇는 다리를 묻는다 — 같은 일이 기내에서 벌어지면 어떻게 할래요?",
+      "주어가 \"우리\"로 흐리면 본인 몫을 묻는다 — 그중 지원자님이 직접 한 건 뭐예요?",
+    ],
+    criteria: [
+      "장면이 구체적인가(언제·어디서·누구와) — 뭉뚱그린 답변은 초반 30초에 신뢰를 잃는다",
+      "무게가 행동(A)에 있는가 — 상황 설명이 절반을 넘으면 구조를 뒤집어야 한다",
+      "마무리가 승무원 직무로 연결되는가 — \"배웠다\"로 끝나면 절반짜리",
+      "외운 문어체가 아닌가 — 자기 말이어야 꼬리질문에 무너지지 않는다",
+    ],
+  },
+  values: {
+    patterns: [
+      "그 가치와 충돌하는 상황을 던져 우선순위를 묻는다 — 두 가치가 부딪히면 뭘 지킬래요?",
+      "근거 경험이 하나뿐이면 다른 장면을 하나 더 묻는다 — 그 가치가 드러난 다른 순간은요?",
+      "가치를 직무와 잇는다 — 그 가치가 기내에서는 어떤 행동으로 나타날까요?",
+    ],
+    criteria: [
+      "사전적 정의가 아니라 자기 경험에 뿌리내린 가치인가",
+      "가치를 지키느라 치른 비용(손해·갈등)이 있는가 — 있어야 진짜로 들린다",
+      "직무 장면으로 번역되는가",
+    ],
+  },
+  judgment: {
+    patterns: [
+      "전제를 하나 바꿔 다시 묻는다 — 승객이 이미 화가 난 상태라면요?",
+      "안전과 서비스가 충돌하는 변형을 던진다 — 규정을 따르면 승객이 불쾌해질 때는요?",
+      "모르는 상황의 행동을 묻는다 — 규정을 모르는 상황이면 어떻게 할래요?",
+      "후속까지 묻는다 — 그 다음, 동료·선임에게는 뭘 공유할래요?",
+    ],
+    criteria: [
+      "판단 기준(안전·규정·승객 마음)을 먼저 말하는가",
+      "대처 순서가 현실적인가 — 말로만 이상적인 답은 변형 질문에 무너진다",
+      "혼자 끝내지 않는가 — 보고·공유·재확인이 붙어야 완성",
+    ],
+  },
+  company: {
+    patterns: [
+      "정보의 개인적 의미를 묻는다 — 그게 왜 지원자님에게 특별해요?",
+      "비교를 시킨다 — 다른 항공사가 아니라 왜 여기예요?",
+      "회사의 약점을 아는지 묻는다 — 이 회사가 아쉬운 점은 뭐라고 봐요?",
+    ],
+    criteria: [
+      "정보 나열이 아니라 자기 해석이 있는가",
+      "지원자 강점과 회사 방향의 접점이 구체적인가",
+      "정보가 최신인가 — 낡은 정보는 준비 부족으로 읽힌다",
+    ],
+  },
+};
+
+// 패턴집 → 프롬프트 텍스트. site_config 값이 이상해도(배열 아님 등) 조용히 기본값으로.
+function rehearsalPatternText(category: string, cfg: unknown): string {
+  let entry: RehearsalPattern | undefined;
+  if (cfg && typeof cfg === "object") {
+    entry = (cfg as Record<string, RehearsalPattern>)[category];
+  }
+  const base = DEFAULT_REHEARSAL_PATTERNS[category] || DEFAULT_REHEARSAL_PATTERNS.experience;
+  const patterns = (entry && Array.isArray(entry.patterns) && entry.patterns.length)
+    ? entry.patterns : (base.patterns || []);
+  const criteria = (entry && Array.isArray(entry.criteria) && entry.criteria.length)
+    ? entry.criteria : (base.criteria || []);
+  return "[이 유형의 면접관 꼬리질문 패턴 — 여기서 골라 변주해]\n"
+    + patterns.map((p) => "- " + String(p).slice(0, 300)).join("\n")
+    + "\n\n[연구진 첨삭 기준 — 잘한 점·보완점 판정의 잣대]\n"
+    + criteria.map((c) => "- " + String(c).slice(0, 300)).join("\n");
+}
+
+// 리허설 대화 이력 → messages. 첫 턴은 항상 합성 user(이력의 첫 interviewer 를 살리기 위해).
+function toRehearsalMessages(history: unknown): Array<{ role: string; content: string }> {
+  const msgs: Array<{ role: string; content: string }> = [
+    { role: "user", content: "(리허설을 시작합니다. 첫 꼬리질문을 해주세요.)" },
+  ];
+  const items = (Array.isArray(history) ? history : []).slice(-MAX_HISTORY_ITEMS);
+  for (const h of items) {
+    if (!h || typeof h.content !== "string" || !h.content.trim()) continue;
+    const content = h.content.slice(0, MAX_MSG_CHARS);
+    if (h.role === "user") msgs.push({ role: "user", content });
+    else if (h.role === "interviewer") msgs.push({ role: "assistant", content });
+  }
+  return msgs;
+}
+
 // ── 되묻기 대화 이력 → Anthropic messages 변환 ──────────────────────────────
 // 규칙: 첫 메시지는 user 여야 함(선행 인사말 assistant 는 생략 — 문제는 system 에 있음).
 //       연속 같은 role 은 API 가 한 턴으로 합쳐줌(허용).
@@ -176,8 +302,111 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supa.auth.getUser();
     if (!user) return json({ error: "로그인이 필요합니다" }, 401);
 
+    const body = await req.json();
+    const stage = body.stage === "refine" ? "refine"
+      : body.stage === "rehearsal" ? "rehearsal" : "ask";
+
+    // ── 리허설 — 소재 발굴 권한(sojae_enabled)과 별개 게이트. ─────────────────
+    //    본인 소유 active 세션 존재(=start_rehearsal 로 크레딧 차감 완료)가 유일한 관문.
+    //    canned 폴백 없음(스펙): 실패는 그대로 오류로 — 클라이언트가 재시도 안내.
+    if (stage === "rehearsal") {
+      const sessionId = typeof body.session_id === "string" ? body.session_id : "";
+      if (!sessionId) return json({ error: "session_id가 필요합니다" }, 400);
+      // RLS(select own) 하에서 조회 — 남의 세션이면 빈 결과 → 403 (크레딧 우회 불가)
+      const { data: sess } = await supa
+        .from("rehearsal_sessions")
+        .select("question_id, answer_snapshot, status")
+        .eq("id", sessionId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!sess) return json({ error: "진행 중인 리허설 세션이 없습니다" }, 403);
+
+      // 문제는 세션의 question_id 로 서버에서 조회(신뢰 원천)
+      let qContent = "";
+      let category = "experience";
+      const { data: q } = await supa
+        .from("questions")
+        .select("content, category")
+        .eq("id", sess.question_id)
+        .single();
+      if (q) {
+        qContent = q.content;
+        if (ASK_TYPES[q.category]) category = q.category;
+      }
+
+      // 패턴집: site_config 'rehearsal_patterns' → 없거나 깨졌으면 내장 기본값
+      let patternsCfg: unknown = null;
+      try {
+        const { data: pc } = await supa
+          .from("site_config").select("value")
+          .eq("key", "rehearsal_patterns").maybeSingle();
+        if (pc) patternsCfg = pc.value;
+      } catch (_) { /* site_config 미적용 등 — 기본값 사용 */ }
+
+      const snapshot = String(sess.answer_snapshot || "").slice(0, MAX_MATERIALS_CHARS);
+      const system = [
+        // 안정 프리픽스: 시스템 + 유형 패턴집까지 캐시(세션·문제와 무관하게 동일)
+        { type: "text", text: REHEARSAL_SYSTEM },
+        {
+          type: "text",
+          text: rehearsalPatternText(category, patternsCfg),
+          cache_control: { type: "ephemeral" },
+        },
+        {
+          type: "text",
+          text: `문제: ${qContent}\n문제 유형: ${CAT_LABEL[category]}\n` +
+            `회원이 완성해 온 답변(이걸 놓고 코칭한다):\n${snapshot}`,
+        },
+      ];
+      const messages = toRehearsalMessages(body.history);
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: REHEARSAL_MODEL, max_tokens: 8192, system, messages,
+        }),
+      });
+      if (!res.ok) {
+        console.error("anthropic error(rehearsal)", res.status, await res.text());
+        return json({ error: "코칭 응답을 받지 못했어요" }, 502);
+      }
+      const data = await res.json();
+
+      // 원가 실측 — usage 누적(캐시 생성·읽기 포함 총 입력 규모). 실패해도 대화는 계속.
+      try {
+        const u = data.usage || {};
+        await supa.rpc("add_rehearsal_usage", {
+          p_session_id: sessionId,
+          p_input: (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) +
+            (u.cache_read_input_tokens || 0),
+          p_output: u.output_tokens || 0,
+        });
+      } catch (e) { console.error("usage 누적 실패", e); }
+
+      let text = (data.content || [])
+        .filter((b: { type: string }) => b.type === "text")
+        .map((b: { text: string }) => b.text)
+        .join("\n")
+        .trim();
+      if (!text) return json({ error: "빈 응답" }, 502);
+
+      // 종합 첨삭 종료 마커 → done. 마커는 회원에게 보이지 않게 제거.
+      let done = false;
+      if (text.includes(REHEARSAL_DONE_MARKER)) {
+        done = true;
+        text = text.split(REHEARSAL_DONE_MARKER).join("").trim();
+      }
+      return json({ message: text, done }, 200);
+    }
+
     // 소재 발굴 권한 확인 (sojae_enabled 또는 관리자). RLS 하에서 본인 행만 읽힘.
     // AI 호출(=비용) 전에 막아야 하므로 RLS 와 별개로 여기서 명시적으로 검사한다.
+    // (rehearsal 은 위에서 이미 분기 — 이 검사는 ask/refine 전용)
     const { data: me } = await supa
       .from("members")
       .select("sojae_enabled, role")
@@ -186,9 +415,6 @@ Deno.serve(async (req) => {
     if (!me || (!me.sojae_enabled && me.role !== "admin")) {
       return json({ error: "소재 발굴 권한이 없습니다" }, 403);
     }
-
-    const body = await req.json();
-    const stage = body.stage === "refine" ? "refine" : "ask";
 
     // 문제는 서버에서 재조회(신뢰 원천). 실패 시 클라이언트가 보낸 category 만 사용.
     let qContent = "";
