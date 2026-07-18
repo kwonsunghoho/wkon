@@ -441,6 +441,24 @@
       clearTimeout(_draftT); _draftT = setTimeout(saveDraftAnswer, 800);
     });
 
+    // ── 저장(완료) 직후 리허설 CTA — 테이블 미적용이면 조용히 생략(graceful) ──
+    async function showRehearsalCta(){
+      if (!currentQuestion || document.getElementById('rehearsalCta')) return;
+      try {
+        const { error } = await MONC.sb.from('rehearsal_sessions')
+          .select('id', { count: 'exact', head: true });
+        if (error) return;                       // 마이그레이션 미적용 → CTA 숨김
+      } catch (_) { return; }
+      const a = document.createElement('a');
+      a.id = 'rehearsalCta';
+      a.href = 'rehearsal.html?q=' + encodeURIComponent(currentQuestion.id);
+      a.textContent = '이 답변, 면접관 리허설로 점검받기 →';
+      a.style.cssText = 'display:flex;align-items:center;justify-content:center;margin-top:10px;'
+        + 'min-height:44px;border:1.5px solid var(--accent-dark);border-radius:13px;'
+        + 'color:var(--accent-ink);font-size:14px;font-weight:700;text-decoration:none;background:var(--surface);';
+      document.getElementById('saveFoot').after(a);
+    }
+
     // ── 답변집 저장 (answers upsert — 문제당 1개, 재저장=수정) ──
     document.getElementById('saveBtn').addEventListener('click', async () => {
       const btn = document.getElementById('saveBtn');
@@ -461,6 +479,7 @@
           footEl.textContent = '답변집에 저장됐어요. (완료)';
           btn.textContent = '다시 저장';
           syncServer('done');   // 되묻기 대화도 서버에 마저 기록 + 세션 완료 표시
+          showRehearsalCta();   // 완료 답변에만 노출(스펙: status='final' 대상)
         }
       } catch (e) { footEl.textContent = '저장 실패: ' + e.message; }
       btn.disabled = false;
