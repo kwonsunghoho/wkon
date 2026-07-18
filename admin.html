@@ -201,6 +201,7 @@
     <button class="tabbtn" data-tab="community">홈 커뮤니티</button>
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
     <button class="tabbtn" data-tab="questions">기출문제</button>
+    <button class="tabbtn" data-tab="rehearsal">리허설권</button>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
@@ -326,6 +327,29 @@
         </div>
       </form>
       <div class="round-list" id="questionList"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-rehearsal">
+    <div class="cm-wrap">
+      <div class="rv-hint">회원별 <b>리허설권</b>(면접관 리허설 횟수권) 잔액을 보고 지급·회수합니다.
+        잔액은 원장(point_ledger)의 합계 — 지급·회수는 새 행을 추가하는 방식이라 이력이 전부 남아요.
+        아래 <b>세션 통계</b>는 충전 가격 책정용 실측 원가 데이터입니다(토큰 수 × 모델 단가).</div>
+      <div class="cm-block" id="rhStats"><div class="loading">불러오는 중…</div></div>
+      <div class="cm-block">
+        <div class="rv-section-title">일괄 지급 — 특정 기수 전원 +N (챌린지 신청 혜택)</div>
+        <div class="prow">
+          <div class="field"><label>기수</label><select id="rhBulkCohort"><option value="">기수 선택…</option></select></div>
+          <div class="field"><label>지급 개수</label><input id="rhBulkN" type="number" value="3" min="1" style="width:80px"></div>
+          <div class="field" style="flex:1;min-width:140px;"><label>사유</label><input id="rhBulkNote" placeholder="예: 3기 신청 혜택"></div>
+          <button class="btn btn-action" id="rhBulkGrant">기수 전원 지급</button>
+        </div>
+      </div>
+      <div class="cm-block">
+        <div class="rv-section-title">회원별 잔액 · 지급/회수</div>
+        <input class="search" id="rhSearch" placeholder="이름·이메일 검색">
+        <div class="round-list" id="rhList"><div class="loading">불러오는 중…</div></div>
+      </div>
     </div>
   </div>
 
@@ -1107,6 +1131,132 @@
       });
     }
 
+    // ── 리허설권(point_ledger) 관리 ──
+    // 마이그레이션(20260718120000) 미적용이면 탭 안에 안내만 표시(다른 탭은 무영향).
+    let _ledger = [];                       // 전체 원장(관리자 RLS)
+    function rhBalanceMap() {
+      const map = {};
+      _ledger.forEach(r => { map[r.member_id] = (map[r.member_id] || 0) + r.delta; });
+      return map;
+    }
+    async function loadRehearsalAdmin() {
+      const listEl = document.getElementById('rhList');
+      const { data, error } = await sb().from('point_ledger')
+        .select('member_id, delta, reason, ref, created_at')
+        .order('created_at', { ascending: false });
+      if (error) {
+        document.getElementById('rhStats').innerHTML = '';
+        listEl.innerHTML = `<div style="color:var(--text-muted);font-size:13px;line-height:1.7;padding:8px;">
+          불러오기 실패: ${esc(error.message)}<br><br>
+          <b>리허설 테이블이 아직 없다면</b> 저장소의
+          <b>supabase/migrations/20260718120000_rehearsal.sql</b> 을
+          SQL Editor에서 실행한 뒤 이 탭을 다시 열어주세요.</div>`;
+        return;
+      }
+      _ledger = data || [];
+      // 기수 셀렉트(일괄 지급)
+      const bulkSel = document.getElementById('rhBulkCohort');
+      const keep = bulkSel.value;
+      bulkSel.innerHTML = '<option value="">기수 선택…</option>' +
+        cohorts.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+      bulkSel.value = keep;
+      renderRhStats();
+      renderRhList();
+    }
+
+    async function renderRhStats() {
+      const el = document.getElementById('rhStats');
+      const { data, error } = await sb().from('rehearsal_sessions')
+        .select('status, input_tokens, output_tokens');
+      if (error) { el.innerHTML = ''; return; }
+      const all = data || [];
+      const done = all.filter(s => s.status === 'done');
+      const avg = (arr, f) => arr.length ? Math.round(arr.reduce((s, x) => s + (f(x) || 0), 0) / arr.length) : 0;
+      el.innerHTML = `<div class="rv-section-title">세션 통계 (원가 실측)</div>
+        <div style="font-size:14px;line-height:2;">
+          세션 <b>${all.length}</b>개 (완료 ${done.length} · 진행 중 ${all.length - done.length})<br>
+          완료 세션 평균 — 입력 <b>${avg(done, s => s.input_tokens).toLocaleString()}</b> 토큰 ·
+          출력 <b>${avg(done, s => s.output_tokens).toLocaleString()}</b> 토큰
+          <span style="font-size:12px;color:var(--text-muted);">(캐시 포함 총 입력 — 단가를 곱해 세션당 실원가 산출)</span>
+        </div>`;
+    }
+
+    function renderRhList() {
+      const listEl = document.getElementById('rhList');
+      const q = (document.getElementById('rhSearch').value || '').trim().toLowerCase();
+      const bal = rhBalanceMap();
+      const list = members.filter(m => !q
+        || (m.name && m.name.toLowerCase().includes(q))
+        || (m.email && m.email.toLowerCase().includes(q))).slice(0, 30);
+      if (!list.length) { listEl.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:8px;">일치하는 회원이 없습니다.</div>'; return; }
+      listEl.innerHTML = list.map(m => `
+        <div class="round-item" data-mid="${m.id}">
+          <div>
+            <div class="ri-main">${esc(m.name || '(이름 없음)')} · <b style="color:var(--action-dark)">${bal[m.id] || 0}개</b></div>
+            <div class="ri-sub">${esc(m.email || '이메일 없음')}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end;">
+            <input class="rh-n" type="number" value="1" min="1" style="width:56px;padding:6px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;">
+            <input class="rh-note" placeholder="사유" style="width:110px;padding:6px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;">
+            <button class="ri-del rh-give" style="color:#1a7f37;border-color:#1a7f37;">지급</button>
+            <button class="ri-del rh-take">회수</button>
+            <button class="ri-del rh-log">내역</button>
+          </div>
+        </div>
+        <div class="rh-ledger" data-for="${m.id}" style="display:none;font-size:12px;color:var(--text-muted);padding:4px 14px 10px;"></div>`).join('');
+
+      // 지급/회수 — reason 은 admin_grant 고정(회수=음수 delta), 자유 사유는 ref 에.
+      const grant = async (mid, delta, note) => {
+        const { error } = await sb().from('point_ledger').insert(
+          { member_id: mid, delta, reason: 'admin_grant', ref: note || null, created_by: myProfile.id });
+        if (error) { alert('실패: ' + error.message); return; }
+        toast((delta > 0 ? '+' : '') + delta + '개 반영됨');
+        loadRehearsalAdmin();
+      };
+      listEl.querySelectorAll('.rh-give').forEach(b => b.addEventListener('click', () => {
+        const row = b.closest('.round-item');
+        const n = Math.max(1, parseInt(row.querySelector('.rh-n').value, 10) || 1);
+        grant(row.dataset.mid, n, row.querySelector('.rh-note').value.trim());
+      }));
+      listEl.querySelectorAll('.rh-take').forEach(b => b.addEventListener('click', () => {
+        const row = b.closest('.round-item');
+        const n = Math.max(1, parseInt(row.querySelector('.rh-n').value, 10) || 1);
+        const m = members.find(x => x.id === row.dataset.mid);
+        if (!confirm(`${(m && m.name) || '이 회원'} 님에게서 ${n}개를 회수할까요? (잔액이 음수가 될 수 있어요)`)) return;
+        grant(row.dataset.mid, -n, row.querySelector('.rh-note').value.trim() || '관리자 회수');
+      }));
+      // 내역 토글
+      listEl.querySelectorAll('.rh-log').forEach(b => b.addEventListener('click', () => {
+        const mid = b.closest('.round-item').dataset.mid;
+        const box = listEl.querySelector(`.rh-ledger[data-for="${mid}"]`);
+        if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+        const rows = _ledger.filter(r => r.member_id === mid);
+        const RSN = { welcome: '무료 1회', admin_grant: '관리자', rehearsal: '리허설 사용', purchase: '구매', refund: '환불' };
+        box.innerHTML = rows.length ? rows.map(r =>
+          `${new Date(r.created_at).toLocaleDateString('ko-KR')} · ${r.delta > 0 ? '+' : ''}${r.delta} · ${RSN[r.reason] || r.reason}${r.ref ? ' · ' + esc(r.ref) : ''}`
+        ).join('<br>') : '내역 없음';
+        box.style.display = '';
+      }));
+    }
+
+    document.getElementById('rhSearch').addEventListener('input', renderRhList);
+    document.getElementById('rhBulkGrant').addEventListener('click', async () => {
+      const cohortId = document.getElementById('rhBulkCohort').value;
+      const n = Math.max(1, parseInt(document.getElementById('rhBulkN').value, 10) || 1);
+      const note = document.getElementById('rhBulkNote').value.trim();
+      if (!cohortId) { alert('기수를 선택하세요.'); return; }
+      const targets = members.filter(m => m.cohort_id === cohortId);
+      if (!targets.length) { alert('이 기수에 배정된 회원이 없습니다.'); return; }
+      const cohort = cohorts.find(c => c.id === cohortId);
+      if (!confirm(`「${(cohort && cohort.name) || ''}」 ${targets.length}명 전원에게 리허설권 ${n}개를 지급할까요?`)) return;
+      const rows = targets.map(m => (
+        { member_id: m.id, delta: n, reason: 'admin_grant', ref: note || '기수 일괄 지급', created_by: myProfile.id }));
+      const { error } = await sb().from('point_ledger').insert(rows);
+      if (error) { alert('지급 실패: ' + error.message); return; }
+      toast(targets.length + '명에게 ' + n + '개씩 지급됨');
+      loadRehearsalAdmin();
+    });
+
     // ── 기출문제(questions) CRUD ──
     const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
     const todayStr = window.SOJAE.todayStr; // KST 기준 — sojae/mypage와 동일
@@ -1234,6 +1384,7 @@
       loadCommunity();
       loadReviewsAdmin();
       loadQuestions();
+      loadRehearsalAdmin();
     })();
   </script>
 </body>
