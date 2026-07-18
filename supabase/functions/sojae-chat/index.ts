@@ -323,8 +323,16 @@ Deno.serve(async (req) => {
 
       // 세션당 지출 상한 — 정상 세션(4~5회 호출)의 수 배 여유. 마커가 안 나와도
       // 크레딧 1개로 무한 Opus 호출이 되는 것을 막는 마지막 방어선.
-      if ((sess.output_tokens || 0) > 120000) {
-        return json({ error: "이 리허설이 너무 길어졌어요. 종합 첨삭을 받았다면 새 리허설로 시작해 주세요." }, 403);
+      // (input 도 함께 본다 — 짧은 답만 유도하며 긴 history 로 입력 비용을 태우는 우회 차단)
+      if ((sess.output_tokens || 0) > 120000 || (sess.input_tokens || 0) > 2000000) {
+        // 세션을 서버가 닫아야 "새 리허설로 시작"이 실제로 가능해진다
+        // (active 로 남으면 start_rehearsal 이 이 세션을 재사용해 영구 잠금).
+        const { error: capErr } = await supa.rpc("finish_rehearsal", {
+          p_session_id: sessionId,
+          p_verdict: "(토큰 상한 초과로 자동 종료)",
+        });
+        if (capErr) console.error("상한 초과 세션 종료 실패", capErr.message);
+        return json({ error: "이 리허설이 너무 길어졌어요. 새 리허설로 다시 시작해 주세요." }, 403);
       }
 
       // 문제는 세션의 question_id 로 서버에서 조회(신뢰 원천)
