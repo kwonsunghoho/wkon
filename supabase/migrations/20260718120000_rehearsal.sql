@@ -3,7 +3,8 @@
 -- =============================================================================
 -- 스펙: docs/superpowers/specs/2026-07-18-interviewer-rehearsal-design.md
 -- 실행: Supabase 대시보드 > SQL Editor 에 붙여넣고 Run. idempotent — 재실행 안전.
--- 선행: 20260710120000_site_config.sql (site_config 테이블 — 패턴집 시드에 필요)
+-- 선행: 20260703120000(members·is_admin·set_updated_at) · 20260705120000(questions·answers)
+--       · 20260706120000(answers.status) · 20260710120000(site_config — 패턴집 시드에 필요)
 --
 -- 설계 원칙
 --   - 리허설은 소재 발굴 권한(sojae_enabled)과 **별개 게이트** — 크레딧으로만 제어.
@@ -43,9 +44,9 @@ create table if not exists public.rehearsal_sessions (
 comment on table public.rehearsal_sessions is
   '면접관 리허설 세션. status=active(진행)/done(종합 첨삭 완료). 재리허설마다 새 행.';
 
--- 회원×문제당 진행 중 세션은 하나만 — 동시 두 탭 시작 경쟁도 여기서 잡힌다
--- (start_rehearsal 이 세션 insert → 원장 insert 순서라, 두 번째 트랜잭션은
---  세션 insert 에서 unique 위반 → 전체 롤백 → 중복 차감 없음).
+-- 회원×문제당 진행 중 세션은 하나만. 동시 시작 직렬화의 1차 방어는
+-- start_rehearsal 의 회원 단위 advisory lock — 이 부분 유니크는 그 불변식을
+-- DB 레벨에서 못박는 백스톱(락을 우회하는 경로가 생겨도 중복 active 불가).
 create unique index if not exists rehearsal_sessions_active_uq
   on public.rehearsal_sessions (member_id, question_id) where status = 'active';
 
@@ -154,6 +155,11 @@ declare
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
 
+  -- 회원 단위 직렬화 — 서로 다른 문제를 동시에 시작해 잔액 검사(TOCTOU)를
+  -- 우회하는 이중 차감 차단. 같은 문제 동시 시작도 여기서 직렬화되어
+  -- 두 번째 호출은 active 재사용 경로로 들어간다(부분 유니크 인덱스는 백스톱).
+  perform pg_advisory_xact_lock(hashtext('rehearsal:' || v_uid::text));
+
   -- 이미 진행 중이면 그 세션 재사용(추가 차감 없음 — 이어하기)
   select id into v_sid from public.rehearsal_sessions
     where member_id = v_uid and question_id = p_question_id and status = 'active'
@@ -234,6 +240,16 @@ $$;
 
 comment on function public.add_rehearsal_usage(uuid, int, int) is
   '리허설 AI 호출 usage 누적(본인 세션만). Edge Function 전용.';
+
+-- 함수 실행 권한 — 로그인 회원만 (기존 관례: 20260715120000 delete_my_account 와 동일)
+revoke all on function public.start_rehearsal(uuid)                  from public, anon;
+revoke all on function public.grant_welcome_credit()                 from public, anon;
+revoke all on function public.finish_rehearsal(uuid, text)           from public, anon;
+revoke all on function public.add_rehearsal_usage(uuid, int, int)    from public, anon;
+grant execute on function public.start_rehearsal(uuid)               to authenticated;
+grant execute on function public.grant_welcome_credit()              to authenticated;
+grant execute on function public.finish_rehearsal(uuid, text)        to authenticated;
+grant execute on function public.add_rehearsal_usage(uuid, int, int) to authenticated;
 
 -- =============================================================================
 -- 6. 패턴집 시드 — site_config key 'rehearsal_patterns' (이미 있으면 덮지 않음)
