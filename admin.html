@@ -202,6 +202,7 @@
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
     <button class="tabbtn" data-tab="questions">기출문제</button>
     <button class="tabbtn" data-tab="rehearsal">리허설권</button>
+    <button class="tabbtn" data-tab="patterns">리허설 패턴집</button>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
@@ -349,6 +350,22 @@
         <div class="rv-section-title">회원별 잔액 · 지급/회수</div>
         <input class="search" id="rhSearch" placeholder="이름·이메일 검색">
         <div class="round-list" id="rhList"><div class="loading">불러오는 중…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-patterns">
+    <div class="cm-wrap">
+      <div class="rv-hint">면접관 리허설이 쓰는 <b>유형별 꼬리질문 패턴 + 연구진 첨삭 기준</b>입니다.
+        저장하면 다음 리허설부터 바로 반영돼요(재배포 불필요).
+        형식: <code>{"experience":{"patterns":["…"],"criteria":["…"]}, "values":…, "judgment":…, "company":…}</code>
+        — 유형 키 4개(experience/values/judgment/company)를 유지하세요.</div>
+      <div class="cm-block">
+        <textarea id="rhPatterns" rows="20" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;line-height:1.7;font-family:ui-monospace,Consolas,monospace;resize:vertical;"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+          <button class="btn btn-action" id="rhPatternsSave">패턴집 저장</button>
+          <span id="rhPatternsMsg" style="font-size:13px;color:var(--text-muted);"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -1257,6 +1274,32 @@
       loadRehearsalAdmin();
     });
 
+    // ── 리허설 패턴집(site_config.rehearsal_patterns) 편집 ──
+    async function loadRehearsalPatterns() {
+      const ta = document.getElementById('rhPatterns');
+      const msg = document.getElementById('rhPatternsMsg');
+      const { data, error } = await sb().from('site_config')
+        .select('value').eq('key', 'rehearsal_patterns').maybeSingle();
+      if (error) { msg.textContent = '불러오기 실패: ' + error.message + ' (site_config 마이그레이션 확인)'; return; }
+      if (!data) { msg.textContent = '아직 값이 없어요 — 마이그레이션 20260718120000 을 실행하면 초안이 들어갑니다.'; return; }
+      ta.value = JSON.stringify(data.value, null, 2);
+    }
+    document.getElementById('rhPatternsSave').addEventListener('click', async () => {
+      const ta = document.getElementById('rhPatterns');
+      const msg = document.getElementById('rhPatternsMsg');
+      let obj;
+      try { obj = JSON.parse(ta.value); }
+      catch (e) { msg.textContent = 'JSON 문법 오류: ' + e.message; return; }
+      const cats = ['experience', 'values', 'judgment', 'company'];
+      for (const c of cats) {
+        const v = obj[c];
+        if (!v || !Array.isArray(v.patterns) || !Array.isArray(v.criteria)) {
+          msg.textContent = `형식 오류: "${c}" 에 patterns/criteria 배열이 필요해요.`; return;
+        }
+      }
+      if (await cmSave('rehearsal_patterns', obj, '패턴집 저장됨')) msg.textContent = '저장됐어요. 다음 리허설부터 반영.';
+    });
+
     // ── 기출문제(questions) CRUD ──
     const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
     const todayStr = window.SOJAE.todayStr; // KST 기준 — sojae/mypage와 동일
@@ -1385,6 +1428,7 @@
       loadReviewsAdmin();
       loadQuestions();
       loadRehearsalAdmin();
+      loadRehearsalPatterns();
     })();
   </script>
 </body>
