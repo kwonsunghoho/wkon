@@ -393,13 +393,10 @@
         </span>
       </label>
 
-      <button type="button" class="submit-btn" id="submitBtn" onclick="submitApplication()">신청하기</button>
-
-      <!-- 🧪 [숨김] 포트원 카드 결제 테스트 — 주소에 ?paytest=1 을 붙였을 때만 노출. 서버 검증(2단계) 전이라 실제 접수는 되지 않음. -->
-      <div id="payTestWrap" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--border);">
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">🧪 포트원 카카오페이 결제 테스트 (숨김 · 테스트 채널 · 실제 청구 없음)</div>
-        <button type="button" class="submit-btn" id="payTestBtn" style="background:var(--accent-ink); color:#fff; margin-top:0;" onclick="payWithCardTest()">카카오페이로 테스트 결제하기</button>
-      </div>
+      <!-- 결제 방법: 카카오페이(즉시 결제·서버 검증) 또는 계좌이체(입금 후 수동 확인) -->
+      <button type="button" id="kakaoBtn" onclick="payWithKakao()" style="width:100%; margin-top:16px; padding:16px; border:none; border-radius:12px; background:#FEE500; color:#191600; font-size:16px; font-weight:900; font-family:inherit; cursor:pointer;">카카오페이로 결제하고 신청하기</button>
+      <div style="text-align:center; font-size:12px; color:var(--text-muted); margin:12px 0 2px;">— 또는 —</div>
+      <button type="button" class="submit-btn" id="submitBtn" onclick="submitApplication()" style="margin-top:4px;">계좌이체로 신청하기</button>
     </div>
   </section>
 
@@ -692,39 +689,79 @@ async function submitApplication() {
   }
 }
 
-/* ── [테스트] 카드 결제 연결 확인 (1단계) ──
-   ?paytest=1 에서만 노출. 결제창이 뜨고 성공/실패가 돌아오는지 확인용.
-   ⚠️ 서버 검증(2단계) 전이므로 실제 신청 접수·DB 저장은 하지 않는다. */
-async function payWithCardTest() {
-  if (!window.PortOne) { alert('결제 모듈(PortOne)을 아직 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+/* ── 카카오페이 결제 → 서버 검증(verify-payment) → 신청 접수 ──
+   결제 성공 후 Supabase Edge Function이 포트원에 실제 결제·금액을 재확인한 뒤에만 저장한다. */
+let _isPaying = false;
+async function payWithKakao() {
+  if (_isPaying) return;
+  const name = document.getElementById('appName').value.trim();
+  const phone = document.getElementById('appPhone').value.trim();
+  const account = document.getElementById('appAccount').value.trim();
   const ids = selectedIds();
-  const amount = ids.length > 0 ? ids.length * (PRICE + DEPOSIT) : 1000;
-  const orderName = ids.length > 0 ? ('MONC 챌린지 ' + ids.length + '개') : 'MONC 결제 연결 테스트';
-  const btn = document.getElementById('payTestBtn');
+
+  if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (!name || !phone || !account) { alert('이름, 전화번호, 보증금 환급 계좌를 모두 입력해주세요.'); return; }
+  if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
+  if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+  if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+
+  _isPaying = true;
+  const btn = document.getElementById('kakaoBtn');
   const orig = btn.textContent;
-  btn.disabled = true; btn.textContent = '결제창 여는 중...';
+  btn.disabled = true; btn.textContent = '결제 진행 중...'; btn.style.opacity = '.7';
+
   try {
+    try { await loadChallengeStatuses(); } catch (e) {}
+    const rounds = window._challengeRounds || {};
+    const challenges = ids.map(id => {
+      const c = CHALLENGES.find(x => x.id === id);
+      return { challenge: id, name: c.fullName, round: (rounds[id] != null ? rounds[id] : null), price: PRICE };
+    });
+    const total = ids.length * (PRICE + DEPOSIT);
+    const paymentId = 'monc-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+
     const res = await window.PortOne.requestPayment({
       storeId: PORTONE_STORE_ID,
       channelKey: PORTONE_CHANNEL_KEY,
-      paymentId: 'test-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
-      orderName: orderName,
-      totalAmount: amount,
+      paymentId: paymentId,
+      orderName: 'MONC 챌린지 ' + ids.length + '개',
+      totalAmount: total,
       currency: 'CURRENCY_KRW',
-      payMethod: 'EASY_PAY'   /* 카카오페이 = 간편결제 채널 */
+      payMethod: 'EASY_PAY',
+      customer: { fullName: name, phoneNumber: phone }
     });
-    if (res && res.code) {
-      alert('결제가 완료되지 않았어요.\n사유: ' + (res.message || res.code));
-    } else {
-      alert('✅ 테스트 결제 성공!\n결제ID: ' + (res && res.paymentId) +
-            '\n\n(아직 서버 검증 전이라 실제 신청 접수는 되지 않았어요 — 2단계에서 연결해요.)');
-      console.log('PortOne 결제 결과:', res);
+    if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
+
+    // 서버 검증 + 신청 저장
+    btn.textContent = '결제 확인 중...';
+    const applicant = { name: name, phone: phone, refund_account: account };
+    if (_memberId) applicant.member_id = _memberId;
+    const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
+      body: { paymentId: paymentId, challenges: challenges, applicant: applicant }
+    });
+    if (error || !data || !data.ok) {
+      console.error('결제 검증 실패:', error, data);
+      alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(010-7456-5522)로 연락 주시면 바로 처리해 드릴게요.');
+      return;
     }
+
+    if (_memberId && !_profileHadPhone && phone) {
+      try { await window.MONC.sb.from('members').update({ phone: phone }).eq('id', _memberId); _profileHadPhone = true; document.getElementById('rowPhone').style.display = 'none'; } catch (e) {}
+    }
+    alert('결제와 신청이 완료되었습니다! 🎉\n확인 후 안내드리겠습니다.' + (_memberId ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));
+    document.getElementById('appAccount').value = '';
+    document.getElementById('appConsent').checked = false;
+    if (!_memberId) { document.getElementById('appName').value = ''; document.getElementById('appPhone').value = ''; }
+    document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected', 'curr-open'));
+    updateSummary();
+    if (_memberId) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else document.querySelector('.signup-banner').scrollIntoView({ behavior: 'smooth' });
   } catch (e) {
     console.error('결제 오류:', e);
     alert('결제 중 오류가 발생했어요: ' + (e && e.message ? e.message : e));
   } finally {
-    btn.disabled = false; btn.textContent = orig;
+    _isPaying = false;
+    btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
   }
 }
 
@@ -749,12 +786,6 @@ document.getElementById('stickyGo').addEventListener('click', () => {
 });
 applyStatuses().then(preselectFromUrl);
 initMember();
-
-/* ?paytest=1 일 때만 카드 결제 테스트 버튼 노출 (일반 방문자에겐 숨김) */
-if (new URLSearchParams(location.search).get('paytest') === '1') {
-  const w = document.getElementById('payTestWrap');
-  if (w) w.style.display = 'block';
-}
 </script>
 </body>
 </html>
