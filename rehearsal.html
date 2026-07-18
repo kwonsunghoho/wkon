@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>MONC · 면접관 리허설</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    /* 다크모드 단말에서 입력칸이 브라우저 기본 다크로 렌더되는 것 차단 (sojae.html 과 동일) */
+    html { color-scheme: light; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      height: 100vh; height: 100svh; display: flex; flex-direction: column;
+      max-width: 480px; margin: 0 auto; line-height: 1.5;
+    }
+
+    .appbar { display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; gap: 10px; flex: 0 0 auto; }
+    .appbar .back { display: inline-flex; align-items: center; gap: 6px;
+      font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none;
+      min-height: 44px; }
+    .appbar .back svg { width: 18px; height: 18px; }
+    .badge { display: inline-flex; align-items: center; background: var(--accent-tint);
+      color: var(--accent-ink); font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; }
+
+    .stepbar { display: flex; align-items: center; gap: 6px; padding: 0 16px 10px;
+      font-size: 12px; color: var(--text-muted); flex: 0 0 auto; flex-wrap: wrap; }
+    .stepbar .on { color: var(--action); font-weight: 700; }
+    .stepbar .sep { opacity: .5; }
+
+    /* 검증 대상 답변(스냅샷) — 접이식. 회원이 뭘 방어 중인지 안 잊게 */
+    .snap { margin: 0 16px 10px; border: 1px solid var(--border-soft); border-radius: 12px;
+      background: var(--surface); flex: 0 0 auto; }
+    .snap summary { list-style: none; cursor: pointer; padding: 10px 14px; min-height: 44px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 700; color: var(--accent-ink); }
+    .snap summary::-webkit-details-marker { display: none; }
+    .snap summary .arr { transition: transform .2s; }
+    .snap[open] summary .arr { transform: rotate(180deg); }
+    .snap-body { padding: 0 14px 12px; font-size: 13px; line-height: 1.6;
+      color: var(--text-muted); white-space: pre-wrap; max-height: 180px; overflow-y: auto; }
+
+    .chat { flex: 1 1 auto; overflow-y: auto; padding: 4px 16px 8px;
+      display: flex; flex-direction: column; gap: 12px; }
+    .who { display: flex; align-items: center; gap: 6px; font-size: 12px;
+      color: var(--accent-ink); font-weight: 700; margin-bottom: 5px; }
+    .ava { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-ink);
+      color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+    .bub { max-width: 84%; font-size: 15px; line-height: 1.55; padding: 11px 13px; border-radius: 16px; }
+    .bub b { font-weight: 700; }
+    .ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border-soft);
+      border-bottom-left-radius: 6px; color: var(--text); }
+    .me { align-self: flex-end; background: var(--action); color: var(--action-ink);
+      border-bottom-right-radius: 6px; }
+
+    .composer { flex: 0 0 auto; padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
+      background: var(--bg); border-top: 1px solid var(--border-soft); }
+    .retry-row { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .retry-note { font-size: 12px; color: var(--text-muted); text-align: center; }
+    .pill { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700;
+      border-radius: 999px; padding: 10px 18px; min-height: 44px; cursor: pointer;
+      background: var(--surface); color: var(--accent-ink); border: 1.5px solid var(--accent-dark);
+      color-scheme: light; }
+    .field { display: flex; align-items: center; gap: 8px; background: var(--bg2);
+      border: 1px solid var(--border-soft); border-radius: 18px; padding: 8px 8px 8px 14px;
+      color-scheme: light; }
+    .field textarea { flex: 1; border: none; outline: none; background: var(--bg2); color: var(--text);
+      resize: none; overflow: hidden; font-family: inherit; font-size: 15px; line-height: 1.6;
+      min-height: 26px; max-height: 132px; padding: 3px 0; color-scheme: light; }
+    .field textarea::placeholder { color: var(--text-dim); }
+    .snd { width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-dim); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s, color .15s, transform .1s; color-scheme: light; }
+    .snd svg { width: 20px; height: 20px; }
+    .snd.on { background: var(--action); color: var(--action-ink); border-color: transparent; }
+    .snd:active { transform: scale(.94); }
+    .foot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+
+    /* 시작 확인 / 안내 게이트 */
+    .gate { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 32px 24px; gap: 13px; }
+    .gate h1 { font-size: 19px; font-weight: 800; line-height: 1.4; }
+    .gate p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+    .gate .gq { font-size: 14px; font-weight: 700; line-height: 1.5; background: var(--surface);
+      border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px 16px; max-width: 340px; }
+    .gate .credit { font-size: 13px; font-weight: 700; color: var(--accent-ink);
+      background: var(--accent-tint); border-radius: 999px; padding: 6px 14px; }
+    .gate .go { display: inline-flex; align-items: center; justify-content: center;
+      background: var(--action); color: var(--action-ink); font-weight: 700; font-size: 15px;
+      border: 0; border-radius: 14px; padding: 14px 24px; min-height: 48px; cursor: pointer; }
+    .gate .go:disabled { opacity: .6; cursor: default; }
+    .gate .sub { font-size: 12px; color: var(--text-dim); }
+    .gate .ghost { display: inline-flex; align-items: center; justify-content: center;
+      color: var(--accent-ink); font-weight: 700; font-size: 14px; text-decoration: none;
+      border: 1.5px solid var(--accent-dark); border-radius: 14px; padding: 12px 22px;
+      min-height: 44px; background: var(--surface); }
+
+    /* 완료(종합 첨삭) 하단 액션 */
+    .done-actions { flex: 0 0 auto; padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border-soft); background: var(--bg);
+      display: flex; flex-direction: column; gap: 8px; }
+    .done-actions a, .done-actions button { display: block; width: 100%; text-align: center;
+      border-radius: 13px; padding: 13px; font-size: 14px; font-weight: 700; min-height: 44px;
+      text-decoration: none; cursor: pointer; }
+    .da-fix { background: var(--action); color: var(--action-ink); border: 0; }
+    .da-retry { background: transparent; color: var(--action); border: 1.5px solid var(--action); }
+  </style>
+</head>
+<body>
+  <div class="appbar">
+    <a class="back" href="mypage.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      면접관 리허설
+    </a>
+    <span class="badge" id="catBadge">경험 발굴형</span>
+  </div>
+
+  <div class="stepbar" id="stepbar" style="display:none;">
+    <span class="on" id="rs1">코칭 1</span><span class="sep">›</span>
+    <span id="rs2">2</span><span class="sep">›</span>
+    <span id="rs3">3</span><span class="sep">›</span>
+    <span id="rs4">종합 첨삭</span>
+  </div>
+
+  <details class="snap" id="snapBox" style="display:none;">
+    <summary><span>리허설 중인 내 답변 보기</span><span class="arr">▾</span></summary>
+    <div class="snap-body" id="snapBody"></div>
+  </details>
+
+  <div class="gate" id="gate"><p>불러오는 중…</p></div>
+
+  <div class="chat" id="chat" style="display:none;"></div>
+
+  <div class="composer" id="composer" style="display:none;">
+    <div class="retry-row" id="retryRow" style="display:none;">
+      <span class="retry-note" id="retryNote"></span>
+      <button class="pill" id="retryBtn">코칭 다시 받기</button>
+    </div>
+    <div class="field">
+      <textarea id="ta" rows="1" placeholder="면접장이라고 생각하고 답해보세요"></textarea>
+      <button class="snd" id="snd" aria-label="전송">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
+    </div>
+    <div class="foot">Enter 전송 · Shift+Enter 줄바꿈</div>
+  </div>
+
+  <div class="done-actions" id="doneActions" style="display:none;">
+    <a class="da-fix" id="fixLink" href="#">답변 보완하러 가기</a>
+    <button class="da-retry" id="retryRehearsal">다시 리허설 (리허설권 1개)</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="sojae-common.js"></script>
+  <script>
+    const CAT_LABEL = window.SOJAE.CAT_LABEL;
+    let _uid = null, qid = null, question = null;
+    let sessionRow = null;         // rehearsal_sessions 현재 행
+    let transcript = [];           // [{role:'interviewer'|'user', content}]
+    let _busy = false, _done = false, _balance = 0;
+
+    const chat = document.getElementById('chat');
+    const gate = document.getElementById('gate');
+    function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function show(id, on){ document.getElementById(id).style.display = on ? '' : 'none'; }
+
+    // ── 렌더 (sojae.html 패턴) ──
+    function bubble(cls, html){
+      const d = document.createElement('div');
+      d.className = 'bub ' + cls; d.innerHTML = html;
+      chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+    function interviewer(html){
+      bubble('ai', '<div class="who"><span class="ava">R</span>연구원</div>' + html);
+    }
+    function me(text){ bubble('me', esc(text)); }
+    function aiPending(){
+      const d = document.createElement('div');
+      d.className = 'bub ai';
+      d.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div><span style="color:var(--text-muted);">생각 중…</span>';
+      chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+
+    // ── 스텝바: 회원 답변 수 기준. 0~1개=코칭1, 2개=2, 3개=3, done=종합 첨삭 ──
+    function updateSteps(){
+      const n = transcript.filter(t => t.role === 'user').length;
+      const ids = ['rs1','rs2','rs3','rs4'];
+      ids.forEach(i => document.getElementById(i).classList.remove('on'));
+      if (_done) { ids.forEach(i => document.getElementById(i).classList.add('on')); return; }
+      const step = Math.min(Math.max(n, 1), 3);   // 1~3
+      for (let i = 0; i < step; i++) document.getElementById(ids[i]).classList.add('on');
+    }
+
+    // ── 서버 저장 (메시지는 생길 때마다 즉시 insert — 복원은 그대로 읽기만) ──
+    async function saveMsg(role, content){
+      try {
+        await MONC.sb.from('rehearsal_messages').insert(
+          { session_id: sessionRow.id, member_id: _uid, role, content });
+      } catch (_) {}   // 저장 실패해도 대화는 계속(다음 메시지에서 다시 시도되는 구조는 아님 — 로그 성격)
+    }
+
+    async function callCoach(){
+      const { data, error } = await MONC.sb.functions.invoke('sojae-chat', {
+        body: { stage: 'rehearsal', session_id: sessionRow.id, history: transcript },
+      });
+      if (error || !data || !data.message) throw (error || new Error('빈 응답'));
+      return data;   // { message, done }
+    }
+
+    function showRetry(note){
+      document.getElementById('retryNote').textContent = note;
+      show('retryRow', true);
+    }
+    function hideRetry(){ show('retryRow', false); }
+
+    // ── 코칭 응답 받기(첫 질문·답변 후·재시도 공통). canned 폴백 없음(스펙) ──
+    async function requestCoach(){
+      if (_busy || _done) return;
+      _busy = true; hideRetry();
+      const p = aiPending();
+      try {
+        const data = await callCoach();
+        const html = esc(data.message).replace(/\n/g, '<br>');
+        p.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div>' + html;
+        chat.scrollTop = chat.scrollHeight;
+        transcript.push({ role: 'interviewer', content: data.message });
+        saveMsg('interviewer', data.message);
+        if (data.done) await finishSession(data.message);
+        updateSteps();
+      } catch (_) {
+        p.remove();
+        // 차감은 세션 시작 시 1회뿐 — 재시도에 추가 비용 없음(스펙 명시 문구)
+        showRetry('연구원 연결이 잠시 원활하지 않아요. 다시 받아도 리허설권이 더 들지 않아요.');
+      }
+      _busy = false;
+    }
+
+    // ── 종료: verdict 저장 + done UI ──
+    async function finishSession(report){
+      _done = true;
+      try { await MONC.sb.rpc('finish_rehearsal', { p_session_id: sessionRow.id, p_verdict: report }); }
+      catch (_) {}
+      enterDoneUI();
+    }
+    function enterDoneUI(){
+      show('composer', false);
+      show('doneActions', true);
+      document.getElementById('fixLink').href = 'sojae.html?q=' + encodeURIComponent(qid);
+      updateSteps();
+    }
+
+    // ── 입력/전송 ──
+    const ta = document.getElementById('ta'), snd = document.getElementById('snd');
+    function grow(){ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight,132)+'px'; }
+    function toggle(){ ta.value.trim() ? snd.classList.add('on') : snd.classList.remove('on'); }
+    function send(){
+      const v = ta.value.trim(); if(!v || _busy || _done) return;
+      me(v); ta.value=''; grow(); toggle();
+      transcript.push({ role: 'user', content: v });
+      saveMsg('user', v);
+      updateSteps();
+      requestCoach();
+    }
+    ta.addEventListener('input', ()=>{ grow(); toggle(); });
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+    snd.addEventListener('click', send);
+    document.getElementById('retryBtn').addEventListener('click', requestCoach);
+
+    // ── 게이트 화면들 ──
+    function showGate(html){ gate.innerHTML = html; show('gate', true); }
+    function hideGate(){ show('gate', false); }
+    function showNotReady(){
+      showGate('<h1>면접관 리허설이 아직 준비 중이에요</h1>'
+        + '<p>곧 만나요. 그동안 답변노트는 마이페이지에서 볼 수 있어요.</p>'
+        + '<a class="ghost" href="mypage.html">마이페이지로</a>');
+    }
+    function showNoAnswer(){
+      showGate('<h1>완성한 답변이 있어야 리허설할 수 있어요</h1>'
+        + '<p>소재 발굴에서 이 문제의 답변을 <b>답변집에 저장(완료)</b>한 뒤 다시 와주세요.</p>'
+        + '<a class="ghost" href="sojae.html?q=' + encodeURIComponent(qid) + '">답변 완성하러 가기</a>');
+    }
+    function showConfirmStart(){
+      _done = false;
+      show('doneActions', false); show('composer', false); show('chat', false);
+      show('stepbar', false); show('snapBox', false);
+      const qHtml = question ? '<div class="gq">' + esc(question.content) + '</div>' : '';
+      if (_balance < 1) {
+        showGate('<h1>리허설권이 없어요</h1>' + qHtml
+          + '<p>리허설권은 챌린지 수강생 혜택으로 지급돼요.<br>'
+          + '지급받지 못했다면 관리자에게 문의해 주세요.</p>'
+          + '<span class="credit">남은 리허설권 0개</span>'
+          + '<a class="ghost" href="mypage.html">마이페이지로</a>');
+        return;
+      }
+      showGate('<h1>면접관 리허설을 시작할까요?</h1>' + qHtml
+        + '<p>연구원이 면접관 질문 패턴으로 꼬리질문을 던지고,<br>'
+        + '라운드마다 코칭한 뒤 마지막에 종합 첨삭을 드려요.</p>'
+        + '<span class="credit">남은 리허설권 ' + _balance + '개</span>'
+        + '<button class="go" id="startBtn">리허설권 1개 사용하고 시작</button>'
+        + '<span class="sub">중간에 나가도 이어할 수 있어요 (추가 차감 없음)</span>');
+      document.getElementById('startBtn').addEventListener('click', startRehearsal);
+    }
+
+    async function startRehearsal(){
+      const btn = document.getElementById('startBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '시작하는 중…'; }
+      const { data: sid, error } = await MONC.sb.rpc('start_rehearsal', { p_question_id: qid });
+      if (error) {
+        const msg = String(error.message || '');
+        if (msg.includes('no_credit')) { _balance = 0; showConfirmStart(); return; }
+        if (msg.includes('no_final_answer')) { showNoAnswer(); return; }
+        showGate('<h1>시작하지 못했어요</h1><p>' + esc(msg) + '</p>'
+          + '<a class="ghost" href="mypage.html">마이페이지로</a>');
+        return;
+      }
+      const { data: s } = await MONC.sb.from('rehearsal_sessions')
+        .select('*').eq('id', sid).single();
+      sessionRow = s;
+      await enterSession();
+    }
+
+    // ── 세션 진입(active=이어하기 / done=읽기 전용 리플레이) ──
+    async function enterSession(){
+      hideGate();
+      transcript = []; chat.innerHTML = '';
+      _done = sessionRow.status === 'done';
+      show('stepbar', true); show('chat', true);
+      // 스냅샷(시작 시점 답변 원문 — answers 가 아니라 세션에서)
+      document.getElementById('snapBody').textContent = sessionRow.answer_snapshot || '';
+      show('snapBox', true);
+      // 저장된 대화 복원
+      const { data: msgs } = await MONC.sb.from('rehearsal_messages')
+        .select('role, content').eq('session_id', sessionRow.id)
+        .order('created_at', { ascending: true });
+      (msgs || []).forEach(m => {
+        transcript.push({ role: m.role, content: m.content });
+        if (m.role === 'user') me(m.content);
+        else interviewer(esc(m.content).replace(/\n/g, '<br>'));
+      });
+      updateSteps();
+      if (_done) { enterDoneUI(); return; }
+      show('composer', true);
+      if (!transcript.length) {
+        requestCoach();                                    // 새 세션 — 첫 꼬리질문 받기
+      } else if (transcript[transcript.length - 1].role === 'user') {
+        // 답변은 보냈는데 코칭 응답을 못 받고 나간 경우 — 재시도 버튼으로 복구
+        showRetry('받지 못한 코칭이 있어요. 다시 받아주세요 (리허설권 추가 차감 없음).');
+      }
+    }
+
+    // 다시 리허설 — 새 세션(새 리허설권). 확인 화면부터 다시.
+    document.getElementById('retryRehearsal').addEventListener('click', async () => {
+      try { const { data: bal } = await MONC.sb.rpc('grant_welcome_credit'); _balance = bal ?? 0; }
+      catch (_) {}
+      showConfirmStart();
+    });
+
+    // ── 진입: 로그인·동의 → 문제 확정 → 준비 확인(웰컴 크레딧 lazy) → 세션 라우팅 ──
+    (async () => {
+      const session = await MONC.requireSession();
+      if (!session) return;
+      if (!(await MONC.requireConsent())) return;
+      _uid = session.user.id;
+      qid = new URLSearchParams(location.search).get('q');
+      if (!qid) { location.replace('mypage.html'); return; }
+
+      try {
+        const { data: q } = await MONC.sb.from('questions').select('*').eq('id', qid).maybeSingle();
+        question = q || null;
+      } catch (_) {}
+      if (question && CAT_LABEL[question.category])
+        document.getElementById('catBadge').textContent = CAT_LABEL[question.category];
+
+      // 준비 확인 + 무료 1회 lazy 지급 — RPC 미존재(마이그레이션 미적용)면 준비 중 안내
+      const { data: bal, error: balErr } = await MONC.sb.rpc('grant_welcome_credit');
+      if (balErr) { showNotReady(); return; }
+      _balance = bal ?? 0;
+
+      // 이 문제의 세션들: active 우선, 없으면 최신 done 리플레이, 둘 다 없으면 시작 확인
+      const { data: sess } = await MONC.sb.from('rehearsal_sessions')
+        .select('*').eq('member_id', _uid).eq('question_id', qid)
+        .order('created_at', { ascending: false });
+      const active = (sess || []).find(s => s.status === 'active');
+      const latest = (sess || [])[0] || null;
+      if (active)      { sessionRow = active; await enterSession(); }   // 확인 화면 없이 즉시 복원(스펙)
+      else if (latest) { sessionRow = latest; await enterSession(); }   // done — 읽기 전용 리플레이
+      else showConfirmStart();
+    })();
+  </script>
+</body>
+</html>
