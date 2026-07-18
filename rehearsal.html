@@ -179,6 +179,10 @@
       bubble('ai', '<div class="who"><span class="ava">R</span>연구원</div>' + html);
     }
     function me(text){ bubble('me', esc(text)); }
+    // 연구원 응답 렌더 — 굵게(**…**)만 지원(종합 첨삭 헤더용). 이스케이프 후 변환이라 안전.
+    function coachHtml(s){
+      return esc(s).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+    }
     function aiPending(){
       const d = document.createElement('div');
       d.className = 'bub ai';
@@ -216,8 +220,13 @@
     function showRetry(note){
       document.getElementById('retryNote').textContent = note;
       show('retryRow', true);
+      // 재시도 대기 중엔 입력창을 숨긴다 — 연속 답변으로 흐름이 꼬이는 것 방지
+      const f = document.querySelector('.composer .field'); if (f) f.style.display = 'none';
     }
-    function hideRetry(){ show('retryRow', false); }
+    function hideRetry(){
+      show('retryRow', false);
+      const f = document.querySelector('.composer .field'); if (f) f.style.display = '';
+    }
 
     // ── 코칭 응답 받기(첫 질문·답변 후·재시도 공통). canned 폴백 없음(스펙) ──
     async function requestCoach(){
@@ -226,7 +235,7 @@
       const p = aiPending();
       try {
         const data = await callCoach();
-        const html = esc(data.message).replace(/\n/g, '<br>');
+        const html = coachHtml(data.message);
         p.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div>' + html;
         chat.scrollTop = chat.scrollHeight;
         transcript.push({ role: 'interviewer', content: data.message });
@@ -235,8 +244,9 @@
         updateSteps();
       } catch (_) {
         p.remove();
-        // 차감은 세션 시작 시 1회뿐 — 재시도에 추가 비용 없음(스펙 명시 문구)
-        showRetry('연구원 연결이 잠시 원활하지 않아요. 다시 받아도 리허설권이 더 들지 않아요.');
+        // 세션이 서버에서 이미 닫혔으면(토큰 상한 등) 재시도 루프 대신 완료 화면으로
+        const closed = await refreshIfClosed();
+        if (!closed) showRetry('연구원 연결이 잠시 원활하지 않아요. 다시 받아도 리허설권이 더 들지 않아요.');
       }
       _busy = false;
     }
@@ -253,6 +263,30 @@
       show('doneActions', true);
       document.getElementById('fixLink').href = 'sojae.html?q=' + encodeURIComponent(qid);
       updateSteps();
+    }
+
+    // 세션 verdict(서버가 저장한 종합 첨삭)가 대화에 안 보이면 렌더 — 메시지 저장 실패 대비.
+    function renderVerdictIfMissing(){
+      const v = sessionRow && sessionRow.verdict;
+      if (!v) return;
+      const last = transcript[transcript.length - 1];
+      if (last && last.role === 'interviewer' && last.content === v) return;
+      interviewer(coachHtml(v));
+      transcript.push({ role: 'interviewer', content: v });
+    }
+    // 코칭 호출 실패 시 세션이 서버에서 닫혔는지 확인(토큰 상한 자동 종료 등).
+    // 닫혔으면 종합 첨삭을 보여주고 완료 화면으로 — 영원한 재시도 루프 방지.
+    async function refreshIfClosed(){
+      try {
+        const { data: s } = await MONC.sb.from('rehearsal_sessions')
+          .select('status, verdict').eq('id', sessionRow.id).maybeSingle();
+        if (!s || s.status !== 'done') return false;
+        sessionRow.status = 'done'; sessionRow.verdict = s.verdict;
+        _done = true;
+        renderVerdictIfMissing();
+        enterDoneUI();
+        return true;
+      } catch (_) { return false; }
     }
 
     // ── 입력/전송 ──
@@ -337,14 +371,14 @@
       // 저장된 대화 복원
       const { data: msgs } = await MONC.sb.from('rehearsal_messages')
         .select('role, content').eq('session_id', sessionRow.id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }).order('id', { ascending: true });
       (msgs || []).forEach(m => {
         transcript.push({ role: m.role, content: m.content });
         if (m.role === 'user') me(m.content);
-        else interviewer(esc(m.content).replace(/\n/g, '<br>'));
+        else interviewer(coachHtml(m.content));
       });
       updateSteps();
-      if (_done) { enterDoneUI(); return; }
+      if (_done) { renderVerdictIfMissing(); enterDoneUI(); return; }
       show('composer', true);
       if (!transcript.length) {
         requestCoach();                                    // 새 세션 — 첫 꼬리질문 받기
@@ -374,8 +408,9 @@
         const { data: q } = await MONC.sb.from('questions').select('*').eq('id', qid).maybeSingle();
         question = q || null;
       } catch (_) {}
-      if (question && CAT_LABEL[question.category])
-        document.getElementById('catBadge').textContent = CAT_LABEL[question.category];
+      const badge = document.getElementById('catBadge');
+      if (question && CAT_LABEL[question.category]) badge.textContent = CAT_LABEL[question.category];
+      else badge.style.display = 'none';
 
       // 준비 확인 + 무료 1회 lazy 지급 — RPC 미존재(마이그레이션 미적용)면 준비 중 안내
       const { data: bal, error: balErr } = await MONC.sb.rpc('grant_welcome_credit');
