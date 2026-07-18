@@ -130,6 +130,13 @@
     .note-draft:hover { background: var(--surface); }
     .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
     .note-draft .note-more { display: inline-block; font-size: 12px; font-weight: 700; color: var(--action-dark); margin-top: 8px; }
+    /* 면접관 리허설 (완료 노트 전용) */
+    .note-rh-badge { display: inline-block; background: #eaf6ec; color: #1a7f37; font-size: 11px;
+      font-weight: 700; padding: 3px 9px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+    .note-rh-btn { display: inline-flex; align-items: center; justify-content: center; margin: 10px 14px 14px;
+      min-height: 44px; padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 700;
+      color: var(--accent-ink); background: var(--surface); border: 1.5px solid var(--accent-dark);
+      text-decoration: none; }
   </style>
 </head>
 <body>
@@ -262,6 +269,17 @@
         }
         const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
         const catOf = q => (window.SOJAE && window.SOJAE.CAT_LABEL[(q || {}).category]) || '소재 발굴';
+        // 리허설 세션 — 테이블 미적용(마이그레이션 전)이면 rhOk=false → 버튼·배지 전부 숨김
+        let rhOk = false; const rhDone = new Set(), rhActive = new Set();
+        try {
+          const { data: rh, error: rhErr } = await MONC.sb.from('rehearsal_sessions')
+            .select('question_id, status').eq('member_id', memberId);
+          if (!rhErr && rh) {
+            rhOk = true;
+            rh.forEach(s => (s.status === 'done' ? rhDone : rhActive).add(s.question_id));
+          }
+        } catch (_) {}
+
         const drafts = data.filter(a => (a.status || 'final') === 'draft');
         const finals = data.filter(a => (a.status || 'final') !== 'draft');
 
@@ -279,13 +297,19 @@
         };
         const finalCard = a => {
           const q = a.questions || {};
+          const badge = rhDone.has(a.question_id) ? '<span class="note-rh-badge">리허설 완료</span>' : '';
+          const rhLabel = rhActive.has(a.question_id) ? '리허설 이어하기 →'
+            : rhDone.has(a.question_id) ? '리허설 다시 보기 →' : '면접관 리허설 →';
+          const rhBtn = rhOk
+            ? `<a class="note-rh-btn" href="rehearsal.html?q=${encodeURIComponent(a.question_id)}">${rhLabel}</a>`
+            : '';
           return `<details class="note">
             <summary>
               <div class="note-top"><span class="note-cat">${esc(catOf(q))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
-              <div class="note-q">${esc(q.content || '(문제 정보 없음)')}</div>
+              <div class="note-q">${esc(q.content || '(문제 정보 없음)')}${badge}</div>
               <span class="note-more">답변 보기 ▾</span>
             </summary>
-            <div class="note-a">${esc(a.content)}</div>
+            <div class="note-a">${esc(a.content)}</div>${rhBtn}
           </details>`;
         };
 
