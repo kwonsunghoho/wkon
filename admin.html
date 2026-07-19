@@ -201,8 +201,8 @@
     <button class="tabbtn" data-tab="community">홈 커뮤니티</button>
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
     <button class="tabbtn" data-tab="questions">기출문제</button>
-    <button class="tabbtn" data-tab="rehearsal">리허설권</button>
-    <button class="tabbtn" data-tab="patterns">리허설 패턴집</button>
+    <button class="tabbtn" data-tab="rehearsal">응시권</button>
+    <button class="tabbtn" data-tab="patterns">모의면접 패턴집</button>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
@@ -333,7 +333,7 @@
 
   <div class="tab-panel" id="panel-rehearsal">
     <div class="cm-wrap">
-      <div class="rv-hint">회원별 <b>리허설권</b>(면접관 리허설 횟수권) 잔액을 보고 지급·회수합니다.
+      <div class="rv-hint">회원별 <b>응시권</b>(실전 모의면접 횟수권) 잔액을 보고 지급·회수합니다.
         잔액은 원장(point_ledger)의 합계 — 지급·회수는 새 행을 추가하는 방식이라 이력이 전부 남아요.
         아래 <b>세션 통계</b>는 충전 가격 책정용 실측 원가 데이터입니다(토큰 수 × 모델 단가).</div>
       <div class="cm-block" id="rhStats"><div class="loading">불러오는 중…</div></div>
@@ -356,8 +356,8 @@
 
   <div class="tab-panel" id="panel-patterns">
     <div class="cm-wrap">
-      <div class="rv-hint">면접관 리허설이 쓰는 <b>유형별 꼬리질문 패턴 + 연구진 첨삭 기준</b>입니다.
-        저장하면 다음 리허설부터 바로 반영돼요(재배포 불필요).
+      <div class="rv-hint">실전 모의면접이 쓰는 <b>유형별 꼬리질문 패턴 + 연구진 첨삭 기준</b>입니다.
+        저장하면 다음 모의면접부터 바로 반영돼요(재배포 불필요).
         형식: <code>{"experience":{"patterns":["…"],"criteria":["…"]}, "values":…, "judgment":…, "company":…}</code>
         — 유형 키 4개(experience/values/judgment/company)를 유지하세요.</div>
       <div class="cm-block">
@@ -1209,7 +1209,7 @@
       listEl.innerHTML = list.map(m => `
         <div class="round-item" data-mid="${m.id}">
           <div>
-            <div class="ri-main">${esc(m.name || '(이름 없음)')} · <b style="color:var(--action-dark)">${bal[m.id] || 0}개</b></div>
+            <div class="ri-main">${esc(m.name || '(이름 없음)')} · <b style="color:var(--action-dark)">${bal[m.id] || 0}장</b></div>
             <div class="ri-sub">${esc(m.email || '이메일 없음')}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end;">
@@ -1227,7 +1227,7 @@
         const { error } = await sb().from('point_ledger').insert(
           { member_id: mid, delta, reason: 'admin_grant', ref: note || null, created_by: myProfile.id });
         if (error) { alert('실패: ' + error.message); return; }
-        toast((delta > 0 ? '+' : '') + delta + '개 반영됨');
+        toast((delta > 0 ? '+' : '') + delta + '장 반영됨');
         loadRehearsalAdmin();
       };
       listEl.querySelectorAll('.rh-give').forEach(b => b.addEventListener('click', () => {
@@ -1239,7 +1239,7 @@
         const row = b.closest('.round-item');
         const n = Math.max(1, parseInt(row.querySelector('.rh-n').value, 10) || 1);
         const m = members.find(x => x.id === row.dataset.mid);
-        if (!confirm(`${(m && m.name) || '이 회원'} 님에게서 ${n}개를 회수할까요? (잔액이 음수가 될 수 있어요)`)) return;
+        if (!confirm(`${(m && m.name) || '이 회원'} 님에게서 ${n}장을 회수할까요? (잔액이 음수가 될 수 있어요)`)) return;
         grant(row.dataset.mid, -n, row.querySelector('.rh-note').value.trim() || '관리자 회수');
       }));
       // 내역 토글
@@ -1248,7 +1248,7 @@
         const box = listEl.querySelector(`.rh-ledger[data-for="${mid}"]`);
         if (box.style.display !== 'none') { box.style.display = 'none'; return; }
         const rows = _ledger.filter(r => r.member_id === mid);
-        const RSN = { welcome: '무료 1회', admin_grant: '관리자', rehearsal: '리허설 사용', purchase: '구매', refund: '환불' };
+        const RSN = { welcome: '무료 1회', admin_grant: '관리자', rehearsal: '모의면접 사용', purchase: '구매', refund: '환불' };
         box.innerHTML = rows.length ? rows.map(r =>
           `${new Date(r.created_at).toLocaleDateString('ko-KR')} · ${r.delta > 0 ? '+' : ''}${r.delta} · ${RSN[r.reason] || r.reason}${r.ref ? ' · ' + esc(r.ref) : ''}`
         ).join('<br>') : '내역 없음';
@@ -1265,12 +1265,12 @@
       const targets = members.filter(m => m.cohort_id === cohortId);
       if (!targets.length) { alert('이 기수에 배정된 회원이 없습니다.'); return; }
       const cohort = cohorts.find(c => c.id === cohortId);
-      if (!confirm(`「${(cohort && cohort.name) || ''}」 ${targets.length}명 전원에게 리허설권 ${n}개를 지급할까요?`)) return;
+      if (!confirm(`「${(cohort && cohort.name) || ''}」 ${targets.length}명 전원에게 응시권 ${n}장을 지급할까요?`)) return;
       const rows = targets.map(m => (
         { member_id: m.id, delta: n, reason: 'admin_grant', ref: note || '기수 일괄 지급', created_by: myProfile.id }));
       const { error } = await sb().from('point_ledger').insert(rows);
       if (error) { alert('지급 실패: ' + error.message); return; }
-      toast(targets.length + '명에게 ' + n + '개씩 지급됨');
+      toast(targets.length + '명에게 ' + n + '장씩 지급됨');
       loadRehearsalAdmin();
     });
 
@@ -1297,7 +1297,7 @@
           msg.textContent = `형식 오류: "${c}" 에 patterns/criteria 배열이 필요해요.`; return;
         }
       }
-      if (await cmSave('rehearsal_patterns', obj, '패턴집 저장됨')) msg.textContent = '저장됐어요. 다음 리허설부터 반영.';
+      if (await cmSave('rehearsal_patterns', obj, '패턴집 저장됨')) msg.textContent = '저장됐어요. 다음 모의면접부터 반영.';
     });
 
     // ── 기출문제(questions) CRUD ──

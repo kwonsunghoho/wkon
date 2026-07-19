@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="color-scheme" content="light" />
-  <title>MONC · 면접관 리허설</title>
+  <title>MONC · 실전 모의면접</title>
   <link rel="stylesheet" href="tokens.css">
   <style>
     /* 다크모드 단말에서 입력칸이 브라우저 기본 다크로 렌더되는 것 차단 (sojae.html 과 동일) */
@@ -85,9 +85,10 @@
     .gate h1 { font-size: 19px; font-weight: 800; line-height: 1.4; }
     .gate p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
     .gate .gq { font-size: 14px; font-weight: 700; line-height: 1.5; background: var(--surface);
-      border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px 16px; max-width: 340px; }
-    .gate .credit { font-size: 13px; font-weight: 700; color: var(--accent-ink);
-      background: var(--accent-tint); border-radius: 999px; padding: 6px 14px; }
+      border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px 16px; max-width: 340px;
+      text-align: left; }
+    /* 한국어 줄바뀜은 단어 단위로 — "어떻/게"처럼 단어 중간에서 잘리는 것 방지(오너 피드백) */
+    .gate h1, .gate p, .gate .gq, .bub { word-break: keep-all; overflow-wrap: break-word; }
     .gate .go { display: inline-flex; align-items: center; justify-content: center;
       background: var(--action); color: var(--action-ink); font-weight: 700; font-size: 15px;
       border: 0; border-radius: 14px; padding: 14px 24px; min-height: 48px; cursor: pointer; }
@@ -113,9 +114,10 @@
   <div class="appbar">
     <a class="back" href="mypage.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      면접관 리허설
+      실전 모의면접
     </a>
     <span class="badge" id="catBadge">경험 발굴형</span>
+    <span class="badge" id="creditBadge" style="display:none;"></span>
   </div>
 
   <div class="stepbar" id="stepbar" style="display:none;">
@@ -126,7 +128,7 @@
   </div>
 
   <details class="snap" id="snapBox" style="display:none;">
-    <summary><span>리허설 중인 내 답변 보기</span><span class="arr">▾</span></summary>
+    <summary><span>모의면접 중인 내 답변 보기</span><span class="arr">▾</span></summary>
     <div class="snap-body" id="snapBody"></div>
   </details>
 
@@ -150,7 +152,7 @@
 
   <div class="done-actions" id="doneActions" style="display:none;">
     <a class="da-fix" id="fixLink" href="#">답변 보완하러 가기</a>
-    <button class="da-retry" id="retryRehearsal">다시 리허설 (리허설권 1개)</button>
+    <button class="da-retry" id="retryRehearsal">다시 모의면접 보기 (응시권 1장)</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -165,6 +167,15 @@
 
     const chat = document.getElementById('chat');
     const gate = document.getElementById('gate');
+    // 우측 상단 배지: 시작 전 = 응시권 잔액, 세션 중 = 질문 유형 (같은 자리를 상황에 따라 스왑)
+    let _catLabel = null;
+    function setBadge(mode){
+      const cat = document.getElementById('catBadge'), cred = document.getElementById('creditBadge');
+      if (mode === 'credit') cred.textContent = '응시권 ' + _balance + '장';
+      cred.style.display = (mode === 'credit') ? '' : 'none';
+      if (_catLabel) cat.textContent = _catLabel;
+      cat.style.display = (mode === 'cat' && _catLabel) ? '' : 'none';
+    }
     function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
     function show(id, on){ document.getElementById(id).style.display = on ? '' : 'none'; }
 
@@ -246,7 +257,7 @@
         p.remove();
         // 세션이 서버에서 이미 닫혔으면(토큰 상한 등) 재시도 루프 대신 완료 화면으로
         const closed = await refreshIfClosed();
-        if (!closed) showRetry('연구원 연결이 잠시 원활하지 않아요. 다시 받아도 리허설권이 더 들지 않아요.');
+        if (!closed) showRetry('연구원 연결이 잠시 원활하지 않아요. 다시 받아도 응시권이 더 들지 않아요.');
       }
       _busy = false;
     }
@@ -310,12 +321,14 @@
     function showGate(html){ gate.innerHTML = html; show('gate', true); }
     function hideGate(){ show('gate', false); }
     function showNotReady(){
-      showGate('<h1>면접관 리허설이 아직 준비 중이에요</h1>'
+      setBadge('none');
+      showGate('<h1>실전 모의면접이 아직 준비 중이에요</h1>'
         + '<p>곧 만나요. 그동안 답변노트는 마이페이지에서 볼 수 있어요.</p>'
         + '<a class="ghost" href="mypage.html">마이페이지로</a>');
     }
     function showNoAnswer(){
-      showGate('<h1>완성한 답변이 있어야 리허설할 수 있어요</h1>'
+      setBadge('none');
+      showGate('<h1>완성한 답변이 있어야 모의면접을 볼 수 있어요</h1>'
         + '<p>소재 발굴에서 이 문제의 답변을 <b>답변집에 저장(완료)</b>한 뒤 다시 와주세요.</p>'
         + '<a class="ghost" href="sojae.html?q=' + encodeURIComponent(qid) + '">답변 완성하러 가기</a>');
     }
@@ -323,21 +336,18 @@
       _done = false;
       show('doneActions', false); show('composer', false); show('chat', false);
       show('stepbar', false); show('snapBox', false);
+      setBadge('credit');
       const qHtml = question ? '<div class="gq">' + esc(question.content) + '</div>' : '';
       if (_balance < 1) {
-        showGate('<h1>리허설권이 없어요</h1>' + qHtml
-          + '<p>리허설권은 챌린지 수강생 혜택으로 지급돼요.<br>'
+        showGate('<h1>응시권이 없어요</h1>' + qHtml
+          + '<p>응시권은 챌린지 수강생 혜택으로 지급돼요.<br>'
           + '지급받지 못했다면 관리자에게 문의해 주세요.</p>'
-          + '<span class="credit">남은 리허설권 0개</span>'
           + '<a class="ghost" href="mypage.html">마이페이지로</a>');
         return;
       }
-      showGate('<h1>면접관 리허설을 시작할까요?</h1>' + qHtml
-        + '<p>연구원이 면접관 질문 패턴으로 꼬리질문을 던지고,<br>'
-        + '라운드마다 코칭한 뒤 마지막에 종합 첨삭을 드려요.</p>'
-        + '<span class="credit">남은 리허설권 ' + _balance + '개</span>'
-        + '<button class="go" id="startBtn">리허설권 1개 사용하고 시작</button>'
-        + '<span class="sub">중간에 나가도 이어할 수 있어요 (추가 차감 없음)</span>');
+      showGate('<h1>내 답변으로<br>실전 모의면접을 볼까요?</h1>' + qHtml
+        + '<button class="go" id="startBtn">모의면접 시작하기</button>'
+        + '<span class="sub">응시권 1장 사용 · 중간에 나가도 이어서 볼 수 있어요</span>');
       document.getElementById('startBtn').addEventListener('click', startRehearsal);
     }
 
@@ -362,6 +372,7 @@
     // ── 세션 진입(active=이어하기 / done=읽기 전용 리플레이) ──
     async function enterSession(){
       hideGate();
+      setBadge('cat');
       transcript = []; chat.innerHTML = '';
       _done = sessionRow.status === 'done';
       show('stepbar', true); show('chat', true);
@@ -384,7 +395,7 @@
         requestCoach();                                    // 새 세션 — 첫 꼬리질문 받기
       } else if (transcript[transcript.length - 1].role === 'user') {
         // 답변은 보냈는데 코칭 응답을 못 받고 나간 경우 — 재시도 버튼으로 복구
-        showRetry('받지 못한 코칭이 있어요. 다시 받아주세요 (리허설권 추가 차감 없음).');
+        showRetry('받지 못한 코칭이 있어요. 다시 받아주세요 (응시권 추가 차감 없음).');
       }
     }
 
@@ -408,9 +419,7 @@
         const { data: q } = await MONC.sb.from('questions').select('*').eq('id', qid).maybeSingle();
         question = q || null;
       } catch (_) {}
-      const badge = document.getElementById('catBadge');
-      if (question && CAT_LABEL[question.category]) badge.textContent = CAT_LABEL[question.category];
-      else badge.style.display = 'none';
+      _catLabel = (question && CAT_LABEL[question.category]) || null;
 
       // 준비 확인 + 무료 1회 lazy 지급 — RPC 미존재(마이그레이션 미적용)면 준비 중 안내
       const { data: bal, error: balErr } = await MONC.sb.rpc('grant_welcome_credit');
