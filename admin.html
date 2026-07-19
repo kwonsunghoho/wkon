@@ -468,10 +468,15 @@
       // 신청 내역은 배지 판정과 '같은 소스·같은 기준'을 쓰려고 전역 _apps 를 재사용한다.
       // (예전엔 .or(phone.eq.<원문>) DB 쿼리라 하이픈 유무까지 정확히 같아야 매칭돼, 숫자정규화 배지와 어긋났다.)
       if (!_appsLoaded) await loadApplications();
-      const [{ data: records }, { data: recs }, answers] = await Promise.all([
+      const [{ data: records }, { data: recs }, answers, rhSess] = await Promise.all([
         sb().from('daily_records').select('day_number, status, comment').eq('member_id', id),
         sb().from('recordings').select('type, storage_path').eq('member_id', id),
         fetchAnswers(id),
+        // 모의면접 세션 — 테이블 미적용(마이그레이션 전)이면 null → 패널 자체 숨김
+        sb().from('rehearsal_sessions')
+          .select('id, status, created_at, questions(content, category)')
+          .eq('member_id', id).order('created_at', { ascending: false })
+          .then(r => (r.error ? null : (r.data || [])), () => null),
       ]);
       const byDay = {}; (records || []).forEach(r => byDay[r.day_number] = r);
       const recMap = {}; (recs || []).forEach(r => recMap[r.type] = r.storage_path);
@@ -525,6 +530,19 @@
         </details>`;
       }).join('') : '<div class="mini-empty">저장된 답변이 없습니다.</div>';
 
+      // 모의면접 기록 — 세션 목록. 대화는 펼칠 때 lazy 로드(세션당 1회).
+      const rhSessHtml = (rhSess || []).length ? rhSess.map(s => {
+        const q = s.questions || {};
+        const doneS = s.status === 'done';
+        return `<details class="note-adm" data-rhsess="${s.id}">
+          <summary>
+            <div class="na-top"><span class="na-cat">${esc(catOf(q))}</span><span>${fmtDay(s.created_at)}<span class="na-badge ${doneS ? 'final' : 'draft'}">${doneS ? '완료' : '진행 중'}</span></span></div>
+            <div class="na-q">${esc(q.content || '(문제 정보 없음)')}</div>
+          </summary>
+          <div class="na-body rh-conv">불러오는 중…</div>
+        </details>`;
+      }).join('') : '<div class="mini-empty">아직 모의면접 기록이 없습니다.</div>';
+
       const cohortOpts = ['<option value="">(미배정)</option>']
         .concat(cohorts.map(c => `<option value="${c.id}" ${m.cohort_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
 
@@ -576,6 +594,11 @@
           <div id="answersInDetail">${ansHtml}</div>
         </div>
 
+        ${rhSess === null ? '' : `<div class="panel">
+          <h3>모의면접 기록 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 펼치면 대화 전체</span></h3>
+          <div>${rhSessHtml}</div>
+        </div>`}
+
         <div class="panel">
           <h3>Before / After 음성</h3>
           <div class="ba">
@@ -583,6 +606,22 @@
             ${baSlot('after', recMap.after)}
           </div>
         </div>`;
+
+      // 모의면접 대화 lazy 로드 — 처음 펼칠 때 한 번만 조회
+      detail.querySelectorAll('details[data-rhsess]').forEach(d => {
+        d.addEventListener('toggle', async () => {
+          if (!d.open || d.dataset.loaded) return;
+          d.dataset.loaded = '1';
+          const box = d.querySelector('.rh-conv');
+          const { data: msgs, error } = await sb().from('rehearsal_messages')
+            .select('role, content').eq('session_id', d.dataset.rhsess)
+            .order('created_at', { ascending: true }).order('id', { ascending: true });
+          if (error) { box.textContent = '불러오기 실패: ' + error.message; return; }
+          box.innerHTML = (msgs || []).length ? msgs.map(mm =>
+            `<div style="margin:0 0 12px;"><b style="color:${mm.role === 'user' ? 'var(--action-dark)' : 'var(--accent-ink)'}">${mm.role === 'user' ? '회원' : '연구원'}</b><br>${esc(mm.content)}</div>`
+          ).join('') : '대화가 없습니다.';
+        });
+      });
 
       wireDetail(id, recMap);
     }
