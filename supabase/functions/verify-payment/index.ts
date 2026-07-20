@@ -8,7 +8,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const PRICE_PER_CHALLENGE = 60000 // 참가비 3만 + 보증금 3만
+const PRICE_PER_CHALLENGE = 30000 // 참가비 3만 (2026-07-20 보증금 제도 폐지 — PG 심사 요건)
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
