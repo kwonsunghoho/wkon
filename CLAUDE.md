@@ -25,7 +25,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 ## Architecture
 
 ### Application flow — `apply.html` is the source of truth
-All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Pricing, deposit, bank account, curriculum, and the submit schema live in apply.html** — edit there.
+All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Pricing, bank account, curriculum, and the submit schema live in apply.html** — edit there. **⚠️ 보증금·환급 제도는 2026-07-20 전면 폐지**(PG 간편결제 심사에서 '보증금 환급' 문구가 승인 거절 사유) — 참가비 3만원만 받는다. 보증금·환급 워딩을 공개 페이지에 재도입하지 말 것(admin·mypage의 '환급' UI는 기존 신청자 보증금 반환 관리용으로만 잔존).
 - `application-modal.js` (self-injecting modal on detail pages, button `.app-modal-btn`) is **dormant** — kept but unused; declares `APPLICATION_API_URL` independently.
 - The old inline modal in `index.html` (its markup + CSS + `openApplicationModal`/`submitApplication`/`copyAccount` + `?openModal=true`) was **removed 2026-07-14** in a dead-code cleanup.
 

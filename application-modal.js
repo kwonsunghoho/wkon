@@ -59,14 +59,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <input type="text"  id="appName"    placeholder="이름"                                          class="app-modal-input">
       <input type="tel"   id="appPhone"   placeholder="전화번호 (010-0000-0000)"                       class="app-modal-input">
-      <input type="text"  id="appAccount" placeholder="보증금 환급 계좌 (예: 신한 110-000-000000 홍길동)" class="app-modal-input">
 
       <div style="margin-top:16px; margin-bottom:4px;">
         <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">신청 챌린지 선택</h3>
 
         <!-- 보신각 -->
         <label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;">
-          <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000"
+          <input type="checkbox" class="challenge-checkbox" data-price="30000"
             data-name="보.신.각(보이스) - 목소리 챌린지" data-curriculum="currVoice" data-recruit-id="voice">
           <div style="flex:1;">
             <div style="font-size:14px;font-weight:600;">보.신.각(보이스)</div>
@@ -96,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- 스피닝 -->
         <label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;">
-          <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000"
+          <input type="checkbox" class="challenge-checkbox" data-price="30000"
             data-name="스.피.닝(스피치) - 말 맛 챌린지" data-curriculum="currSpinning" data-recruit-id="spinning">
           <div style="flex:1;">
             <div style="font-size:14px;font-weight:600;">스.피.닝(스피치)</div>
@@ -126,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- 영합각 -->
         <label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;">
-          <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000"
+          <input type="checkbox" class="challenge-checkbox" data-price="30000"
             data-name="영.합.각(표현력) - 영상면접 표현력 챌린지" data-curriculum="currExpression" data-recruit-id="expression">
           <div style="flex:1;">
             <div style="font-size:14px;font-weight:600;">영.합.각(표현력)</div>
@@ -156,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- 승자각 -->
         <label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;">
-          <input type="checkbox" class="challenge-checkbox" data-price="30000" data-deposit="30000"
+          <input type="checkbox" class="challenge-checkbox" data-price="30000"
             data-name="승.자.각(답변) - 답변 챌린지" data-curriculum="currAnswer" data-recruit-id="answer">
           <div style="flex:1;">
             <div style="font-size:14px;font-weight:600;">승.자.각(답변)</div>
@@ -193,10 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <div style="background:#fff;border-radius:10px;padding:12px;font-size:13px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#241A12;">
             <span>참가비</span><span><span id="participationFee">0</span>원</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;color:#6B5744;">
-            <span>보증금 <span style="font-size:11px;">(수료 시 전액 환급)</span></span>
-            <span><span id="depositFee">0</span>원</span>
           </div>
           <div style="border-top:1.5px solid rgba(36,26,18,.15);padding-top:10px;display:flex;justify-content:space-between;align-items:baseline;">
             <span style="font-size:14px;font-weight:800;color:#241A12;">지금 입금할 금액</span>
@@ -289,15 +284,11 @@ function toggleCurr(id) {
 
 function updateTotalPrice() {
   const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
-  let participation = 0, deposit = 0;
-  checkboxes.forEach(cb => {
-    participation += parseInt(cb.dataset.price);
-    deposit       += parseInt(cb.dataset.deposit);
-  });
+  let participation = 0;
+  checkboxes.forEach(cb => { participation += parseInt(cb.dataset.price); });
   document.getElementById('selectedCount').textContent     = checkboxes.length;
   document.getElementById('participationFee').textContent  = participation.toLocaleString();
-  document.getElementById('depositFee').textContent        = deposit.toLocaleString();
-  document.getElementById('totalPrice').textContent        = (participation + deposit).toLocaleString();
+  document.getElementById('totalPrice').textContent        = participation.toLocaleString();
 }
 
 /* 계좌번호 복사 */
@@ -331,10 +322,9 @@ async function submitApplication() {
 
   const name    = document.getElementById('appName').value.trim();
   const phone   = document.getElementById('appPhone').value.trim();
-  const account = document.getElementById('appAccount').value.trim();
 
-  if (!name || !phone || !account) {
-    alert('이름, 전화번호, 보증금 환급 계좌를 모두 입력해주세요.');
+  if (!name || !phone) {
+    alert('이름과 전화번호를 모두 입력해주세요.');
     return;
   }
   const checkboxes = document.querySelectorAll('.challenge-checkbox:checked');
@@ -364,11 +354,11 @@ async function submitApplication() {
     price: parseInt(cb.dataset.price)
   }));
   let totalPrice = 0;
-  checkboxes.forEach(cb => { totalPrice += parseInt(cb.dataset.price) + parseInt(cb.dataset.deposit); });
+  checkboxes.forEach(cb => { totalPrice += parseInt(cb.dataset.price); });
 
   try {
     const { error } = await window.MONC.sb.from('applications').insert({
-      name: name, phone: phone, refund_account: account,
+      name: name, phone: phone,
       challenges: challenges, total_price: totalPrice
     });
     if (error) throw error;
@@ -376,7 +366,6 @@ async function submitApplication() {
     closeApplicationModal();
     document.getElementById('appName').value    = '';
     document.getElementById('appPhone').value   = '';
-    document.getElementById('appAccount').value = '';
     document.querySelectorAll('.challenge-checkbox').forEach(cb => cb.checked = false);
     updateTotalPrice();
   } catch (error) {
