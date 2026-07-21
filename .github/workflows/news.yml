@@ -1,0 +1,27 @@
+# 항공 뉴스 자동 수집 — 3시간마다 scripts/fetch-news.mjs 실행
+# 오너 1회 설정: Settings → Secrets and variables → Actions → SUPABASE_SERVICE_ROLE_KEY 등록
+# ⚠️ 공개 리포는 60일간 커밋이 없으면 GitHub가 스케줄을 자동 중지(메일 통지 → 버튼으로 재활성)
+name: 항공 뉴스 수집
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'    # 3시간마다(UTC 기준 — KST로도 3시간 간격은 동일)
+  workflow_dispatch: {}       # Actions 탭 'Run workflow' 버튼으로 즉시 수집
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 뉴스 수집·저장
+        env:
+          SUPABASE_URL: https://apzwauiumhmsvrgffjis.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/fetch-news.mjs
