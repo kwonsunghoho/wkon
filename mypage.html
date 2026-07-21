@@ -130,6 +130,15 @@
     .note-draft:hover { background: var(--surface); }
     .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
     .note-draft .note-more { display: inline-block; font-size: 12px; font-weight: 700; color: var(--action-dark); margin-top: 8px; }
+    /* 내 뉴스 스크랩 */
+    .news-list { list-style: none; }
+    .news-list li { padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+    .news-list li:last-child { border-bottom: 0; }
+    .news-list a { text-decoration: none; display: block; }
+    .news-list a:hover .nl-title { color: var(--accent-dark); }
+    .nl-title { font-size: 14px; font-weight: 700; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    .nl-meta { display: flex; gap: 6px; align-items: center; margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+    .nl-air { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   </style>
 </head>
 <body>
@@ -154,6 +163,7 @@
         <a href="#sec-days" class="secnav-chip">날짜별 결과</a>
         <a href="#sec-comments" class="secnav-chip">코치 코멘트</a>
         <a href="#sec-apps" class="secnav-chip">신청 내역</a>
+        <a href="#sec-news" class="secnav-chip" id="newsChip" style="display:none;">뉴스 스크랩</a>
       </nav>
 
       <a class="card" id="todayCard" href="sojae.html"
@@ -206,6 +216,14 @@
         <h2>내 신청 내역</h2>
         <p class="hint">신청하신 챌린지예요. (신청 시 전화번호와 연락처가 같으면 자동으로 연결돼요.)</p>
         <ul class="apps-list" id="myApps"><li style="color:var(--text-dim);border:0;">불러오는 중…</li></ul>
+      </div>
+
+      <div class="card" id="sec-news" style="display:none;">
+        <h2>내 뉴스 스크랩</h2>
+        <p class="hint">스크랩한 항공 뉴스가 항공사별로 쌓여요 — 면접 답변 재료로 쓰세요.</p>
+        <ul class="news-list" id="newsScraps"></ul>
+        <div id="newsSummary" style="font-size:13px;color:var(--text-muted);margin-top:10px;"></div>
+        <a id="newsMore" href="news.html?tab=scraps" style="display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:14px;font-weight:700;color:var(--accent-ink);text-decoration:none;min-height:44px;">전체 보기 →</a>
       </div>
 
       <div class="card">
@@ -346,6 +364,41 @@
       setActive();
     }
 
+    // ── 내 뉴스 스크랩 카드 — 최근 3건 + 항공사별 개수(뉴스 스펙 §6) ──
+    //    news_scraps 테이블 미생성(마이그레이션 전)이면 카드·칩을 숨긴 채로 둔다.
+    async function loadNewsScraps() {
+      const AIRLINE_LABEL_MP = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
+      try {
+        const { data, error } = await MONC.sb.from('news_scraps')
+          .select('created_at, news_articles(title, url, airline)')
+          .order('created_at', { ascending: false });
+        if (error) return;                                   // 테이블 미생성 → 카드 숨김 유지
+        document.getElementById('sec-news').style.display = '';
+        document.getElementById('newsChip').style.display = '';
+        const rows = (data || []).filter(r => r.news_articles);
+        const listEl = document.getElementById('newsScraps');
+        if (!rows.length) {
+          listEl.innerHTML = '<li style="color:var(--text-muted);border:0;">항공 뉴스를 스크랩하면 여기에 쌓여요.</li>';
+          document.getElementById('newsMore').textContent = '뉴스 보러 가기 →';
+          document.getElementById('newsMore').href = 'news.html';
+          return;
+        }
+        listEl.innerHTML = rows.slice(0, 3).map(r => {
+          const a = r.news_articles;
+          const air = a.airline ? `<span class="nl-air">${esc(AIRLINE_LABEL_MP[a.airline] || a.airline)}</span>` : '';
+          return `<li><a href="${esc(a.url)}" target="_blank" rel="noopener">
+            <div class="nl-title">${esc(a.title)}</div><div class="nl-meta">${air}</div></a></li>`;
+        }).join('');
+        // 항공사별 개수 요약("대한항공 4 · 아시아나항공 2 · …")
+        const counts = {};
+        rows.forEach(r => { const k = r.news_articles.airline; if (k) counts[k] = (counts[k] || 0) + 1; });
+        const summary = Object.entries(counts).sort((x, y) => y[1] - x[1])
+          .map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
+        document.getElementById('newsSummary').textContent =
+          `총 ${rows.length}건` + (summary ? ` — ${summary}` : '');
+      } catch (_) { /* 카드 숨김 유지 */ }
+    }
+
     (async () => {
       const session = await MONC.requireSession();
       if (!session) return;
@@ -355,6 +408,7 @@
 
       const me = session.user.id;
       loadAnswerNotes(me);
+      loadNewsScraps();
       const profile = await MONC.getMyProfile();
 
       // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)
