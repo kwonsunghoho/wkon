@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>항공 뉴스 — MONC 몬크 챌린지</title>
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+  <meta name="description" content="항공산업·국내 항공사 최신 뉴스. 스크랩하면 마이페이지에 항공사별로 쌓여 면접 답변 재료가 돼요." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+    a { color: inherit; }
+
+    /* NAV — reviews.html과 동일 패턴 */
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(233,228,216,.92); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-soft); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    .logo { display: flex; align-items: center; text-decoration: none; }
+    .logo img { height: 22px; width: auto; display: block; }
+    .nav-back { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text); text-decoration: none; opacity: .8; transition: opacity .2s; min-height: 44px; }
+    .nav-back:hover { opacity: 1; }
+
+    /* HERO */
+    .nw-hero { padding: 104px 0 20px; text-align: center; }
+    .nw-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+    .nw-title { font-family: var(--serif); font-size: clamp(28px, 5vw, 42px); font-weight: 700; color: var(--accent); letter-spacing: -.6px; margin-top: 10px; }
+    .nw-sub { font-size: 15px; color: var(--text); opacity: .72; margin-top: 12px; }
+    .nw-sub b { color: var(--action); font-weight: 800; }
+
+    /* 탭 (전체 뉴스 / 내 스크랩) */
+    .nw-tabs { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+    .nw-tab { appearance: none; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 800; padding: 10px 22px; border-radius: 999px; min-height: 44px; -webkit-tap-highlight-color: transparent; }
+    .nw-tab.active { background: var(--action); color: var(--action-ink); border-color: transparent; }
+    .nw-tab:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+
+    /* 필터 바 — reviews.html 패턴 + 제목 검색(2026-07-22 스펙) */
+    .nw-filters { position: sticky; top: 58px; z-index: 50; background: rgba(233,228,216,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); padding: 14px 0 12px; margin-bottom: 8px; border-bottom: 1px solid var(--border-soft); }
+    .nw-search { display: flex; margin-bottom: 10px; }
+    .nw-search input { width: 100%; min-height: 44px; padding: 10px 16px; font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 999px; }
+    .nw-search input::placeholder { color: var(--text-muted); }
+    .nw-search input:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    /* 칩 줄은 모바일에서 한 줄 가로 스크롤 — 세로로 쌓으면 sticky 필터바가 375px 화면의 70%를
+       먹어 기사가 안 보인다(2026-07-22 실측). 데스크톱(≥640px)만 줄바꿈 허용. */
+    .nw-filter-row { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; align-items: center; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .nw-filter-row::-webkit-scrollbar { display: none; }
+    .nw-filter-row + .nw-filter-row { margin-top: 8px; }
+    .nw-chip { flex: 0 0 auto; }
+    .nw-filter-label { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: var(--text); opacity: .55; margin-right: 4px; min-width: 42px; }
+    @media (min-width: 640px) {
+      .nw-filter-row { flex-wrap: wrap; overflow-x: visible; }
+    }
+    .nw-chip { appearance: none; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; padding: 8px 15px; border-radius: 999px; min-height: 40px; transition: background .15s, color .15s, border-color .15s; -webkit-tap-highlight-color: transparent; }
+    .nw-chip:hover { border-color: var(--accent-dark); }
+    .nw-chip.active { background: var(--accent-ink); color: #fff; border-color: var(--accent-ink); }
+    .nw-chip:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+
+    /* 기사 리스트 */
+    .nw-list { list-style: none; padding: 8px 0 16px; display: flex; flex-direction: column; gap: 12px; }
+    .nw-card { position: relative; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); box-shadow: 0 2px 10px rgba(38,34,28,.06); transition: box-shadow .2s, transform .2s; }
+    .nw-card:hover { box-shadow: 0 10px 30px rgba(38,34,28,.14); transform: translateY(-2px); }
+    .nw-link { display: block; padding: 16px 60px 14px 16px; text-decoration: none; }
+    .nw-card-title { font-size: 15.5px; font-weight: 700; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .nw-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 12.5px; color: var(--text-muted); }
+    .nw-tag { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(217,83,31,.10); color: var(--accent-ink); }
+    .nw-tag-topic { background: rgba(242,121,69,.14); color: var(--action-ink); }
+    /* 스크랩 버튼 = 몬크 로고 창문(2026-07-22 스펙 — 리본 북마크 금지)
+       전: 무채색(grayscale)·저투명 / 후: 원색 로고 완성. 그림은 #moncWin 심볼 1벌. */
+    .nw-bm { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; background: none; cursor: pointer; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+    .nw-bm:hover { background: var(--surface2); }
+    .nw-bm svg { width: 20px; height: 28px; filter: grayscale(1); opacity: .38; transition: filter .25s, opacity .25s; }
+    .nw-bm.on svg { filter: none; opacity: 1; }
+    .nw-bm:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+
+    .nw-count { font-size: 13px; font-weight: 700; color: var(--text); opacity: .6; margin: 16px 2px 4px; }
+    .nw-empty { text-align: center; padding: 60px 20px; color: var(--text); opacity: .6; font-size: 15px; }
+    .nw-skeleton { height: 92px; border-radius: var(--radius-sm); background: var(--surface2); margin-bottom: 12px; }
+    .nw-more-wrap { text-align: center; padding: 8px 0 72px; }
+    .nw-more { appearance: none; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 800; padding: 13px 34px; border-radius: 999px; min-height: 48px; }
+    .nw-more:hover { border-color: var(--accent-dark); }
+
+    /* 내 스크랩 — 항공사별 그룹 + 활용 메모 + 자유 태그 */
+    .nw-scrap-lead { font-size: 14px; color: var(--text-muted); margin: 16px 2px 6px; }
+    .nw-scrap-lead b { color: var(--accent-ink); }
+    .nw-tagbar { margin: 10px 0 4px; }
+    .nw-group-h { display: flex; align-items: baseline; gap: 8px; margin: 22px 2px 10px; }
+    .nw-group-name { font-family: var(--serif); font-size: 19px; font-weight: 700; }
+    .nw-group-n { font-size: 13px; font-weight: 700; color: var(--accent-ink); }
+    .nw-extras { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 0 16px 14px; }
+    .nw-mytag { display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 800; color: var(--accent-ink); background: var(--accent-tint); border-radius: 999px; padding: 4px 12px; }
+    .nw-note { margin: 0 16px 14px; padding: 10px 12px; border-left: 3px solid var(--action); background: var(--surface2); border-radius: 0 var(--radius-xs) var(--radius-xs) 0; font-size: 13.5px; }
+    .nw-note-btn, .nw-tag-btn { appearance: none; cursor: pointer; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--accent-ink); padding: 0; min-height: 32px; }
+    .nw-note-btn { padding: 0 16px 14px; }
+    .nw-edit { margin: 0 16px 14px; }
+    .nw-edit textarea, .nw-edit input { width: 100%; padding: 10px 12px; font: inherit; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius-xs); background: var(--surface); color: var(--text); }
+    .nw-edit textarea { min-height: 64px; resize: vertical; }
+    .nw-edit .row { display: flex; gap: 8px; margin-top: 8px; }
+    .nw-edit .sug { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .nw-edit .sug button { appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--accent-ink); font: inherit; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; min-height: 34px; }
+    .nw-save { appearance: none; cursor: pointer; border: 0; background: var(--action); color: var(--action-ink); font: inherit; font-size: 13px; font-weight: 800; padding: 9px 18px; border-radius: 999px; min-height: 40px; }
+    .nw-cancel { appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 999px; min-height: 40px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .nw-card, .nw-bm svg { transition: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 몬크 로고 창문 심볼(images/몬크 로고/assets/MONC-symbol.svg 기반) — 스크랩 버튼이 <use>로 공유 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="moncWinG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E4E6E"/><stop offset=".36" stop-color="#7F7C9B"/><stop offset=".66" stop-color="#D6B389"/><stop offset="1" stop-color="#F2E3C8"/></linearGradient>
+      <clipPath id="moncWinC"><rect x="18" y="18" width="64" height="104" rx="29" ry="31"/></clipPath>
+      <symbol id="moncWin" viewBox="0 0 100 140">
+        <rect x="4" y="4" width="92" height="132" rx="44" ry="46" fill="#1B2A4A"/>
+        <rect x="11" y="11" width="78" height="118" rx="37" ry="39" fill="#F4F1EA"/>
+        <g clip-path="url(#moncWinC)"><rect x="18" y="18" width="64" height="104" fill="url(#moncWinG)"/><ellipse cx="50" cy="104" rx="46" ry="20" fill="#F8ECD4" opacity=".7"/></g>
+        <rect x="18" y="18" width="64" height="104" rx="29" ry="31" fill="none" stroke="#EDE7DB" stroke-width="2"/>
+        <rect x="41" y="24" width="18" height="7" rx="3.5" fill="#ECE5D7" stroke="#B7AB93" stroke-width=".6"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="logo"><img src="images/몬크 로고/assets/png/MONC-lockup-transparent.png" alt="MONC" /></a>
+      <a href="index.html" class="nav-back">← 홈으로</a>
+    </div>
+  </nav>
+
+  <header class="nw-hero">
+    <div class="container">
+      <div class="nw-eyebrow">AVIATION NEWS</div>
+      <h1 class="nw-title">항공 뉴스</h1>
+      <p class="nw-sub">스크랩하면 마이페이지에 <b>항공사별로</b> 쌓여요 — 면접 답변 재료가 됩니다.</p>
+      <div class="nw-tabs" role="tablist">
+        <button class="nw-tab active" type="button" data-tab="all" role="tab" aria-selected="true">전체 뉴스</button>
+        <button class="nw-tab" type="button" data-tab="scraps" id="nwScrapTab" role="tab" aria-selected="false" hidden>내 스크랩</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="nw-filters" id="nwFilters" hidden>
+    <div class="container">
+      <div class="nw-search"><input type="search" id="nwSearch" placeholder="제목 검색 — 예: 유니폼, 채용설명회, 인천공항" aria-label="기사 제목 검색" /></div>
+      <div class="nw-filter-row" id="nwAirlineRow">
+        <span class="nw-filter-label">항공사</span>
+      </div>
+      <div class="nw-filter-row" id="nwTopicRow">
+        <span class="nw-filter-label">주제</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="container">
+    <div id="nwScrapView" hidden>
+      <p class="nw-scrap-lead">스크랩한 기사에 <b>활용 메모</b>와 <b>태그</b>를 남겨보세요 — "이 기사를 어느 답변에 어떻게 쓸지" 한 줄이면 면접 준비가 빨라져요.</p>
+      <div class="nw-filter-row nw-tagbar" id="nwTagRow" hidden>
+        <span class="nw-filter-label">내 태그</span>
+      </div>
+      <div id="nwScrapGroups"></div>
+      <div class="nw-empty" id="nwScrapEmpty" hidden>아직 스크랩한 기사가 없어요. <br><button class="nw-more" type="button" style="margin-top:14px" onclick="document.querySelector('[data-tab=all]').click()">뉴스 보러 가기</button></div>
+    </div>
+    <div class="nw-count" id="nwCount"></div>
+    <div id="nwSkeleton">
+      <div class="nw-skeleton"></div><div class="nw-skeleton"></div><div class="nw-skeleton"></div>
+      <div class="nw-skeleton"></div><div class="nw-skeleton"></div>
+    </div>
+    <ul class="nw-list" id="nwList"></ul>
+    <div class="nw-empty" id="nwEmpty" hidden>표시할 뉴스가 없어요.</div>
+    <div class="nw-more-wrap"><button class="nw-more" id="nwMore" type="button" hidden>더 보기</button></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+  (function () {
+    // ⚠️ 슬러그 계약 — scripts/fetch-news.mjs·mypage.html과 동기화
+    const AIRLINE_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
+    const AIRLINE_ORDER = ['kal','asiana','jinair','jejuair','twayair','airbusan','airseoul','eastarjet','airpremia','aerok'];
+    const TOPIC_LABEL = { recruit:'채용·모집', route:'취항·노선', biz:'경영·실적', service:'서비스·기내', policy:'정책·공항·안전' };
+    const TOPIC_ORDER = ['recruit','route','biz','service','policy'];
+    const PAGE = 20;
+    const TAG_SUGGEST = ['지원동기 재료', '최근 이슈', '산업 동향', '서비스 아이디어'];
+
+    const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    // 스크랩 버튼 그림 = 몬크 로고 창문(상단 #moncWin 심볼) — 상태 전환은 CSS 필터가 담당
+    const BM_SVG = '<svg viewBox="0 0 100 140" aria-hidden="true"><use href="#moncWin"/></svg>';
+
+    // "3시간 전" 상대시각(하루 넘으면 날짜)
+    function relTime(iso) {
+      if (!iso) return '';
+      const d = new Date(iso), diff = (Date.now() - d.getTime()) / 1000;
+      if (diff < 3600) return Math.max(1, Math.floor(diff / 60)) + '분 전';
+      if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
+      if (diff < 86400 * 7) return Math.floor(diff / 86400) + '일 전';
+      return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+    }
+
+    const listEl = document.getElementById('nwList');
+    const emptyEl = document.getElementById('nwEmpty');
+    const countEl = document.getElementById('nwCount');
+    const moreBtn = document.getElementById('nwMore');
+    const skelEl = document.getElementById('nwSkeleton');
+    const filtersEl = document.getElementById('nwFilters');
+    const searchEl = document.getElementById('nwSearch');
+
+    let session = null;            // 로그인 세션(스크랩 기능 게이트)
+    let scrapByArticle = new Map();// article_id → scrap row(id, note, tag)
+    let fAirline = 'all', fTopic = 'all', fSearch = '';
+    let offset = 0, exhausted = false;
+
+    // ── 폴백: 테이블 미생성(마이그레이션 전) → 준비 중 안내 ──
+    function showNotReady() {
+      skelEl.hidden = true; filtersEl.hidden = true;
+      emptyEl.hidden = false; emptyEl.textContent = '뉴스 게시판을 준비 중이에요. 조금만 기다려주세요!';
+    }
+
+    // ── 필터 바: 기사가 있으면 검색창 노출, 칩은 데이터에 존재하는 값만(최근 1000건 기준) ──
+    async function buildFilters() {
+      const { data, error } = await MONC.sb.from('news_articles')
+        .select('airline, topic').order('created_at', { ascending: false }).limit(1000);
+      if (error || !data || !data.length) return;         // 실패·0건이면 필터바 숨김 유지
+      filtersEl.hidden = false;                            // 검색창은 기사만 있으면 쓸 수 있다
+      const airSet = new Set(data.map(r => r.airline).filter(Boolean));
+      const topSet = new Set(data.map(r => r.topic).filter(Boolean));
+
+      const mk = (label, val, kind) => {
+        const b = document.createElement('button');
+        b.className = 'nw-chip' + ((kind === 'air' ? fAirline : fTopic) === val ? ' active' : '');
+        b.type = 'button'; b.dataset.kind = kind; b.dataset.val = val;
+        b.textContent = label;
+        return b;
+      };
+      const airRow = document.getElementById('nwAirlineRow');
+      const topRow = document.getElementById('nwTopicRow');
+      airRow.querySelectorAll('.nw-chip').forEach(n => n.remove());
+      topRow.querySelectorAll('.nw-chip').forEach(n => n.remove());
+      airRow.hidden = !airSet.size;
+      topRow.hidden = !topSet.size;
+      airRow.appendChild(mk('전체', 'all', 'air'));
+      AIRLINE_ORDER.filter(a => airSet.has(a)).forEach(a => airRow.appendChild(mk(AIRLINE_LABEL[a], a, 'air')));
+      topRow.appendChild(mk('전체', 'all', 'top'));
+      TOPIC_ORDER.filter(t => topSet.has(t)).forEach(t => topRow.appendChild(mk(TOPIC_LABEL[t], t, 'top')));
+
+      filtersEl.querySelectorAll('.nw-chip').forEach(chip => chip.addEventListener('click', () => {
+        if (chip.dataset.kind === 'air') fAirline = chip.dataset.val; else fTopic = chip.dataset.val;
+        filtersEl.querySelectorAll('.nw-chip').forEach(c => {
+          const sel = c.dataset.kind === 'air' ? fAirline : fTopic;
+          c.classList.toggle('active', c.dataset.val === sel);
+        });
+        resetAndLoad();
+      }));
+    }
+
+    // ── 제목 검색(2026-07-22 스펙) — 디바운스 300ms, 칩 필터와 AND ──
+    let searchTimer = null;
+    searchEl.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const v = searchEl.value.trim();
+        if (v === fSearch) return;
+        fSearch = v;
+        resetAndLoad();
+      }, 300);
+    });
+
+    // ── 기사 목록(서버 필터 + range 페이지네이션) ──
+    async function fetchPage() {
+      let q = MONC.sb.from('news_articles')
+        .select('id, title, url, source, published_at, airline, topic')
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .range(offset, offset + PAGE - 1);
+      if (fAirline !== 'all') q = q.eq('airline', fAirline);
+      if (fTopic !== 'all') q = q.eq('topic', fTopic);
+      if (fSearch) q = q.ilike('title', '%' + fSearch.replace(/[%_]/g, '') + '%');
+      return q;
+    }
+
+    function cardHtml(a) {
+      const scrapped = scrapByArticle.has(a.id);
+      const chips =
+        (a.airline ? `<span class="nw-tag">${esc(AIRLINE_LABEL[a.airline] || a.airline)}</span>` : '') +
+        (a.topic ? `<span class="nw-tag nw-tag-topic">${esc(TOPIC_LABEL[a.topic] || a.topic)}</span>` : '');
+      return `<li class="nw-card" data-id="${esc(a.id)}">
+        <a class="nw-link" href="${esc(a.url)}" target="_blank" rel="noopener">
+          <div class="nw-card-title">${esc(a.title)}</div>
+          <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${relTime(a.published_at)}</span></div>
+        </a>
+        <button class="nw-bm${scrapped ? ' on' : ''}" type="button" data-id="${esc(a.id)}"
+          aria-label="${scrapped ? '스크랩 해제' : '스크랩'}" aria-pressed="${scrapped}">${BM_SVG}</button>
+      </li>`;
+    }
+
+    async function loadMore() {
+      moreBtn.disabled = true;
+      const { data, error } = await fetchPage();
+      skelEl.hidden = true;
+      if (error) { if (!offset) showNotReady(); moreBtn.disabled = false; return; }
+      const rows = data || [];
+      if (!offset && !rows.length) { emptyEl.hidden = false; listEl.innerHTML = ''; moreBtn.hidden = true; return; }
+      emptyEl.hidden = true;
+      listEl.insertAdjacentHTML('beforeend', rows.map(cardHtml).join(''));
+      offset += rows.length;
+      exhausted = rows.length < PAGE;
+      moreBtn.hidden = exhausted;
+      moreBtn.disabled = false;
+      countEl.textContent = offset ? `${offset}건${exhausted ? '' : '+'}` : '';
+    }
+
+    function resetAndLoad() {
+      offset = 0; exhausted = false; listEl.innerHTML = ''; countEl.textContent = '';
+      moreBtn.hidden = true; emptyEl.hidden = true;
+      loadMore();
+    }
+
+    // ── 스크랩 토글(낙관적 업데이트, 실패 시 롤백) ──
+    async function toggleScrap(btn) {
+      if (!session) {
+        if (confirm('스크랩은 로그인하면 쓸 수 있어요. 로그인 페이지로 이동할까요?'))
+          window.location.href = 'login.html';
+        return;
+      }
+      const id = btn.dataset.id;
+      const was = scrapByArticle.has(id);
+      btn.classList.toggle('on', !was);
+      btn.setAttribute('aria-pressed', String(!was));
+      btn.setAttribute('aria-label', was ? '스크랩' : '스크랩 해제');
+      if (was) {
+        const row = scrapByArticle.get(id);
+        scrapByArticle.delete(id);
+        const { error } = await MONC.sb.from('news_scraps').delete().eq('id', row.id);
+        if (error) { scrapByArticle.set(id, row); btn.classList.add('on'); }
+      } else {
+        scrapByArticle.set(id, { id: null, note: null, tag: null });
+        const { data, error } = await MONC.sb.from('news_scraps')
+          .insert({ member_id: session.user.id, article_id: id }).select('id, note, tag').single();
+        if (error) { scrapByArticle.delete(id); btn.classList.remove('on'); }
+        else scrapByArticle.set(id, data);
+      }
+    }
+
+    document.body.addEventListener('click', e => {
+      if (e.target.closest('#nwScrapView')) return;   // 스크랩 뷰는 자체 핸들러가 처리
+      const bm = e.target.closest('.nw-bm');
+      if (bm) toggleScrap(bm);
+    });
+    moreBtn.addEventListener('click', loadMore);
+
+    // ── 내 스크랩 로드(로그인 시) — 스크랩 버튼 상태 표시용 ──
+    async function loadMyScraps() {
+      const { data, error } = await MONC.sb.from('news_scraps').select('id, article_id, note, tag');
+      if (error) return;                               // 테이블 미생성 → 스크랩 기능만 조용히 비활성
+      scrapByArticle = new Map((data || []).map(r => [r.article_id, { id: r.id, note: r.note, tag: r.tag }]));
+      document.getElementById('nwScrapTab').hidden = false;
+      // 이미 렌더된 카드에 스크랩 상태 반영
+      listEl.querySelectorAll('.nw-bm').forEach(b => {
+        const on = scrapByArticle.has(b.dataset.id);
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+      });
+    }
+
+    // ── 탭 전환: 전체 뉴스 ↔ 내 스크랩 ──
+    const scrapView = document.getElementById('nwScrapView');
+    const allView = [filtersEl, countEl, listEl, emptyEl, moreBtn.parentElement, skelEl];
+    let filtersWereHidden = true;   // 필터바는 데이터 유무로 hidden이 결정되므로 상태 보존
+    function switchTab(tab) {
+      document.querySelectorAll('.nw-tab').forEach(b => {
+        const on = b.dataset.tab === tab;
+        b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on));
+      });
+      if (tab === 'scraps') {
+        filtersWereHidden = filtersEl.hidden;
+        allView.forEach(el => { el.hidden = true; });
+        scrapView.hidden = false;
+        renderScraps();
+      } else {
+        scrapView.hidden = true;
+        allView.forEach(el => { el.hidden = false; });
+        filtersEl.hidden = filtersWereHidden;
+        skelEl.hidden = true;
+        moreBtn.hidden = exhausted;
+        if (!offset) emptyEl.hidden = false; else emptyEl.hidden = true;
+        // 스크랩 탭에서 해제/추가한 상태를 전체 목록 버튼에 반영(안 하면 낡은 원색이 남는다)
+        listEl.querySelectorAll('.nw-bm').forEach(b => {
+          const on = scrapByArticle.has(b.dataset.id);
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-pressed', String(on));
+          b.setAttribute('aria-label', on ? '스크랩 해제' : '스크랩');
+        });
+      }
+    }
+    document.querySelectorAll('.nw-tab').forEach(b =>
+      b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+    // ── 내 스크랩 렌더 — 항공사별 그룹핑(스펙 §5) + 내 태그 필터(2026-07-22) ──
+    let scrapRows = [];   // 마지막 조회 결과(태그 필터 전환은 재조회 없이 이걸로 다시 그림)
+    let fTag = 'all';
+
+    async function renderScraps() {
+      const { data, error } = await MONC.sb.from('news_scraps')
+        .select('id, note, tag, created_at, news_articles(id, title, url, source, published_at, airline, topic)')
+        .order('created_at', { ascending: false });
+      if (error) { scrapRows = []; drawScraps(); return; }
+      scrapRows = (data || []).filter(r => r.news_articles);
+      drawScraps();
+    }
+
+    function drawScraps() {
+      const wrap = document.getElementById('nwScrapGroups');
+      const empty = document.getElementById('nwScrapEmpty');
+      const tagRow = document.getElementById('nwTagRow');
+
+      // 내 태그 필터칩 — 존재하는 태그만, 하나도 없으면 줄 자체를 숨김(빈 기능으로 안 보이게)
+      const tags = [...new Set(scrapRows.map(r => r.tag).filter(Boolean))];
+      if (!tags.includes(fTag) && fTag !== 'all') fTag = 'all';
+      tagRow.hidden = !tags.length;
+      tagRow.querySelectorAll('.nw-chip').forEach(n => n.remove());
+      if (tags.length) {
+        const mk = (label, val) => {
+          const b = document.createElement('button');
+          b.className = 'nw-chip' + (fTag === val ? ' active' : '');
+          b.type = 'button'; b.dataset.val = val; b.textContent = label;
+          b.addEventListener('click', () => { fTag = val; drawScraps(); });
+          return b;
+        };
+        tagRow.appendChild(mk('전체', 'all'));
+        tags.forEach(t => tagRow.appendChild(mk('#' + t, t)));
+      }
+
+      const rows = fTag === 'all' ? scrapRows : scrapRows.filter(r => r.tag === fTag);
+      if (!rows.length) {
+        wrap.innerHTML = ''; empty.hidden = false;
+        if (scrapRows.length) empty.firstChild.textContent = '이 태그로 스크랩한 기사가 없어요. ';
+        return;
+      }
+      empty.hidden = true;
+
+      // 항공사별 그룹(고정 순서), 미분류는 '기타'로 맨 뒤
+      const groups = new Map();
+      for (const r of rows) {
+        const key = r.news_articles.airline || '_etc';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      }
+      const order = [...AIRLINE_ORDER.filter(k => groups.has(k)), ...(groups.has('_etc') ? ['_etc'] : [])];
+
+      wrap.innerHTML = order.map(key => {
+        const list = groups.get(key);
+        const name = key === '_etc' ? '기타' : (AIRLINE_LABEL[key] || key);
+        const cards = list.map(r => {
+          const a = r.news_articles;
+          const chips = a.topic ? `<span class="nw-tag nw-tag-topic">${esc(TOPIC_LABEL[a.topic] || a.topic)}</span>` : '';
+          const tagBit = r.tag
+            ? `<span class="nw-mytag">#${esc(r.tag)}</span><button class="nw-tag-btn" type="button" data-scrap="${esc(r.id)}">태그 수정</button>`
+            : `<button class="nw-tag-btn" type="button" data-scrap="${esc(r.id)}">+ 태그 붙이기</button>`;
+          const note = r.note
+            ? `<div class="nw-note" data-scrap="${esc(r.id)}">${esc(r.note)}</div>
+               <button class="nw-note-btn" type="button" data-scrap="${esc(r.id)}">메모 수정</button>`
+            : `<button class="nw-note-btn" type="button" data-scrap="${esc(r.id)}">+ 활용 메모 남기기</button>`;
+          return `<li class="nw-card" data-id="${esc(a.id)}">
+            <a class="nw-link" href="${esc(a.url)}" target="_blank" rel="noopener">
+              <div class="nw-card-title">${esc(a.title)}</div>
+              <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${relTime(a.published_at)}</span></div>
+            </a>
+            <div class="nw-extras">${tagBit}</div>
+            ${note}
+            <button class="nw-bm on" type="button" data-id="${esc(a.id)}" aria-label="스크랩 해제" aria-pressed="true">${BM_SVG}</button>
+          </li>`;
+        }).join('');
+        return `<div class="nw-group-h"><span class="nw-group-name">${esc(name)}</span><span class="nw-group-n">${list.length}건</span></div>
+          <ul class="nw-list">${cards}</ul>`;
+      }).join('');
+    }
+
+    // ── 활용 메모·태그 인라인 편집 + 스크랩 해제 ──
+    function updateLocal(scrapId, patch) {
+      scrapRows = scrapRows.map(r => (r.id === scrapId ? { ...r, ...patch } : r));
+      for (const [aid, row] of scrapByArticle)
+        if (row.id === scrapId) scrapByArticle.set(aid, { ...row, ...patch });
+    }
+
+    scrapView.addEventListener('click', async e => {
+      // 메모 편집
+      const noteBtn = e.target.closest('.nw-note-btn');
+      if (noteBtn) {
+        const scrapId = noteBtn.dataset.scrap;
+        const noteEl = scrapView.querySelector(`.nw-note[data-scrap="${scrapId}"]`);
+        const current = noteEl ? noteEl.textContent : '';
+        const editor = document.createElement('div');
+        editor.className = 'nw-edit';
+        editor.innerHTML = `<textarea maxlength="500" placeholder="예: 신규 취항 소식 → 지원동기에 연결">${esc(current)}</textarea>
+          <div class="row"><button class="nw-save" type="button">저장</button><button class="nw-cancel" type="button">취소</button></div>`;
+        if (noteEl) noteEl.hidden = true;
+        noteBtn.hidden = true;
+        noteBtn.insertAdjacentElement('afterend', editor);
+        const ta = editor.querySelector('textarea'); ta.focus();
+        editor.querySelector('.nw-cancel').addEventListener('click', () => {
+          editor.remove(); noteBtn.hidden = false; if (noteEl) noteEl.hidden = false;
+        });
+        editor.querySelector('.nw-save').addEventListener('click', async () => {
+          const val = ta.value.trim() || null;
+          const { error } = await MONC.sb.from('news_scraps').update({ note: val }).eq('id', scrapId);
+          if (error) { alert('메모 저장에 실패했어요. 잠시 후 다시 시도해주세요.'); return; }
+          updateLocal(scrapId, { note: val });
+          drawScraps();
+        });
+        return;
+      }
+      // 태그 편집(자유 입력 + 추천 예시 + 내가 쓴 태그 재노출 — 표기 흔들림 방지)
+      const tagBtn = e.target.closest('.nw-tag-btn');
+      if (tagBtn) {
+        const scrapId = tagBtn.dataset.scrap;
+        const row = scrapRows.find(r => r.id === scrapId);
+        const current = (row && row.tag) || '';
+        const mine = [...new Set(scrapRows.map(r => r.tag).filter(Boolean))];
+        const sugs = [...new Set([...mine, ...TAG_SUGGEST])].filter(t => t !== current).slice(0, 8);
+        const holder = tagBtn.closest('.nw-extras');
+        const editor = document.createElement('div');
+        editor.className = 'nw-edit';
+        editor.innerHTML = `<input type="text" maxlength="20" placeholder="예: 지원동기 재료" value="${esc(current)}" />
+          <div class="sug">${sugs.map(t => `<button type="button" data-t="${esc(t)}">#${esc(t)}</button>`).join('')}</div>
+          <div class="row"><button class="nw-save" type="button">저장</button>${current ? '<button class="nw-del nw-cancel" type="button">태그 지우기</button>' : ''}<button class="nw-cancel nw-close" type="button">취소</button></div>`;
+        holder.hidden = true;
+        holder.insertAdjacentElement('afterend', editor);
+        const input = editor.querySelector('input'); input.focus();
+        editor.querySelector('.sug').addEventListener('click', ev => {
+          const s = ev.target.closest('button[data-t]');
+          if (s) input.value = s.dataset.t;
+        });
+        const saveTag = async val => {
+          const { error } = await MONC.sb.from('news_scraps').update({ tag: val }).eq('id', scrapId);
+          if (error) { alert('태그 저장에 실패했어요. 잠시 후 다시 시도해주세요.'); return; }
+          updateLocal(scrapId, { tag: val });
+          drawScraps();
+        };
+        editor.querySelector('.nw-close').addEventListener('click', () => { editor.remove(); holder.hidden = false; });
+        const del = editor.querySelector('.nw-del');
+        if (del) del.addEventListener('click', () => saveTag(null));
+        editor.querySelector('.nw-save').addEventListener('click', () => {
+          const val = input.value.trim();
+          if (!val) { input.focus(); return; }
+          saveTag(val);
+        });
+        return;
+      }
+      // 스크랩 해제 → 목록에서 제거(재조회)
+      const bm = e.target.closest('.nw-bm');
+      if (bm) { await toggleScrap(bm); renderScraps(); }
+    });
+
+    (async () => {
+      session = await MONC.getSession();
+      buildFilters();
+      resetAndLoad();
+      if (session) {
+        await loadMyScraps();
+        // mypage '전체 보기'에서 진입 시 스크랩 탭 바로 열기
+        if (new URLSearchParams(location.search).get('tab') === 'scraps'
+            && !document.getElementById('nwScrapTab').hidden) switchTab('scraps');
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>
