@@ -59,6 +59,11 @@
     <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/>
     </symbol>
+    <!-- 아래 방향 셰브런 — 히어로 캐러셀 화살표(.hs-nav)와 같은 라인 스타일(2.4/round)로
+         맞춰 사이트 전체 아이콘 톤을 통일한다. 하단 CTA 바의 인트로 상태에서 사용. -->
+    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9l6 6 6-6"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -72,7 +77,7 @@
       <li><a href="researchers.html">연구진</a></li>
       <li><a href="#community">커뮤니티</a></li>
       <li><a href="reviews.html">후기</a></li>
-      <li><a href="news.html">뉴스</a></li>
+      <li><a href="briefing.html">브리핑룸</a></li>
     </ul>
     <div class="nav-right">
       <a class="btn btn-login-outline nav-login" href="login.html">로그인/회원가입</a>
@@ -92,7 +97,7 @@
     <li><a href="researchers.html">연구진</a></li>
     <li><a href="#community">커뮤니티</a></li>
     <li><a href="reviews.html">후기</a></li>
-    <li><a href="news.html">뉴스</a></li>
+    <li><a href="briefing.html">브리핑룸</a></li>
   </ul>
   <div class="mobile-menu-cta">
     <a class="btn btn-login-outline mm-login" href="login.html" style="width:100%; font-size:16px; padding:16px; margin-bottom:12px;">로그인 / 회원가입</a>
@@ -107,7 +112,12 @@
      zoom-start 0.35(2026-07-11): 조립(0~30%) 동안은 정지, 35%부터 기하 가속 커브로
      미세 드리프트→점점 빨라지며 끝까지 '쭉' 빨려들어감 — 0.5 시절 후반 압축 줌이
      '확 당겨지는' 느낌을 줘서 확대 구간을 앞으로 늘림(커브는 scroll-fx.js) -->
-<section class="hero-window-intro" data-zoom-exit data-zoom-scale="2.2" data-zoom-runway="390" data-zoom-runway-mobile="340" data-zoom-start="0.30" data-zoom-fade="none">
+<!-- 2026-07-22 러웨이 반토막(390/340 → 200/180). 감이 아니라 계측 결과다:
+     page_events 집계에서 intro_view 338 대비 hero_reached 127 = 첫 화면 도달률 38%
+     (모바일 42% / 데스크톱 21%)로, 방문자의 3분의 2가 인트로에서 이탈하고 있었다.
+     200/180은 이미 재방문자에게 쓰던 검증된 값이라 안무가 깨지지 않는다(전부 % 기반).
+     재방문자는 아래 IIFE에서 140/120으로 한 단계 더 축소. -->
+<section class="hero-window-intro" data-zoom-exit data-zoom-scale="2.2" data-zoom-runway="200" data-zoom-runway-mobile="180" data-zoom-start="0.30" data-zoom-fade="none">
   <div class="zoom-exit-pin">
     <div class="hero-window-sky-bg zoom-content-fade">
       <div class="hero-window-sky-y"><div class="hero-window-sky-x"></div></div>
@@ -128,27 +138,28 @@
       </div>
       <p class="ht-subko" id="htSubko">새로운 커리어가 <br>시작되는 순간</p>
     </div>
-    <svg class="ht-cue" id="htCue" viewBox="0 0 24 24" fill="none" stroke="#F6F1E7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
   </div>
-  <!-- 인트로 건너뛰기 (핀 밖 · 줌 확대 비대상) -->
-  <a class="hero-skip" id="heroSkip" href="#home" aria-label="인트로 건너뛰고 바로 보기">건너뛰기 <span aria-hidden="true">↓</span></a>
+  <!-- 2026-07-22: 구 .ht-cue(화살표)·.hero-skip(건너뛰기)를 제거하고, 하단 CTA 바
+       (.mobile-cta-bar)가 인트로 구간에 '몬크 구경하기 ↓'로 바뀌어 두 역할을 겸한다.
+       근거: Clarity 계측상 인트로 구간 클릭이 사실상 전부 하단 바에 몰렸다 —
+       사람들이 이미 누르는 자리를 올바른 목적지로 바꾸는 편이 새 안내를 얹는 것보다 낫다. -->
 </section>
 
 <!-- 인트로 재방문 단축: 한 번 완주(또는 건너뛰기)한 방문자는 러웨이만 대폭 축소해
      연출은 그대로 두고 실콘텐츠 도달을 앞당긴다(플래그 기록은 하단 건너뛰기 IIFE).
      scroll-fx.js의 initZoomExit가 DOMContentLoaded에서 data-zoom-* 속성을 읽어 캐시하므로
      반드시 그 전(파스 타임)에 재작성해야 한다. 조립·줌·페이드는 전부 진행률 % 기반이라
-     러웨이 축소에도 안무는 동일. 기본값 390/340은 첫 방문 연출용 — 감으로 축소 금지. -->
+     러웨이 축소에도 안무는 동일. 기본값 200/180은 첫 방문 연출용 — 감으로 축소 금지. -->
 <script>
 (function () {
   var seen = false;
   try { seen = localStorage.getItem('monc_intro_seen') === '1'; } catch (e) {}
-  window.__moncIntroFirstVisit = !seen; // 계측 비콘(첫 방문 판별)용 스냅샷
+  window.__moncIntroFirstVisit = !seen; // 계측 비콘 + 하단 CTA 바 상태 판별용 스냅샷
   if (!seen) return;
   var wrap = document.querySelector('.hero-window-intro');
   if (!wrap) return;
-  wrap.setAttribute('data-zoom-runway', '200');
-  wrap.setAttribute('data-zoom-runway-mobile', '180');
+  wrap.setAttribute('data-zoom-runway', '140');
+  wrap.setAttribute('data-zoom-runway-mobile', '120');
 })();
 </script>
 
@@ -161,7 +172,7 @@
     <div class="hs-stage" id="hs-stage">
 
       <!-- ── 카드 0 : 보신각 ── -->
-      <div class="hs-card is-active" id="hs-card-0" data-idx="0">
+      <div class="hs-card is-active" id="hs-card-0" data-idx="0" data-detail="challenge-voice.html" data-detail-name="보신각">
         <div class="hs-media">
           <img class="hs-img" src="images/hero-voice.webp" alt="" fetchpriority="high" aria-hidden="true">
         </div>
@@ -172,7 +183,7 @@
       </div>
 
       <!-- ── 카드 1 : 영합각 ── -->
-      <div class="hs-card" id="hs-card-1" data-idx="1">
+      <div class="hs-card" id="hs-card-1" data-idx="1" data-detail="challenge-expression.html" data-detail-name="영합각">
         <div class="hs-media">
           <img class="hs-img" src="images/hero-expression.webp" alt="" loading="lazy" decoding="async" aria-hidden="true">
         </div>
@@ -183,7 +194,7 @@
       </div>
 
       <!-- ── 카드 2 : 스피닝 ── -->
-      <div class="hs-card" id="hs-card-2" data-idx="2">
+      <div class="hs-card" id="hs-card-2" data-idx="2" data-detail="challenge-spinning.html" data-detail-name="스피닝">
         <div class="hs-media">
           <img class="hs-img" src="images/hero-spinning.webp" alt="" loading="lazy" decoding="async" aria-hidden="true">
         </div>
@@ -194,7 +205,7 @@
       </div>
 
       <!-- ── 카드 3 : 승자각 ── -->
-      <div class="hs-card" id="hs-card-3" data-idx="3">
+      <div class="hs-card" id="hs-card-3" data-idx="3" data-detail="challenge-answer.html" data-detail-name="승자각">
         <div class="hs-media">
           <img class="hs-img" src="images/hero-answer.webp" alt="" loading="lazy" decoding="async" aria-hidden="true">
         </div>
@@ -218,9 +229,20 @@
 
     <!-- 히어로 신청 CTA (슬라이드 4개 공통 · 줌 스케일 비대상) -->
     <div class="hs-cta">
-      <span class="hs-cta-badge" data-recruit-cta-badge hidden></span>
-      <a class="btn btn-action hs-cta-btn" href="apply.html">신청하기 →</a>
-      <!-- 팩트 라인: 기간·미션 부담·피드백 USP를 첫 화면에 선공개 (2026-07-12 상품 선공개) -->
+      <!-- 증거 우선(2026-07-22): 우리 최강 재료인 전·후 녹음이 페이지 한참 아래에 있어
+           첫 화면에선 존재조차 몰랐다. 가격을 만나기 전에 실력을 먼저 듣게 한다.
+           목적지는 ③ Before&After 섹션 — 그 자리에 유튜브·설명이 함께 있어 맥락째 보여주고,
+           덤으로 방문자를 페이지 아래로 끌어내린다(그 자리에서 소리만 트는 것보다 낫다). -->
+      <a class="hs-cta-proof" href="#before-after">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        10초면 압니다 · 전·후 목소리 듣기
+      </a>
+      <!-- ⚠️ 히어로에는 '신청하기' 버튼도 D-day 뱃지도 두지 않는다(2026-07-22 오너 지적).
+           하단 CTA 바가 전 구간 상시 노출이라 히어로에 같은 버튼을 또 놓으면 100px 간격으로
+           '신청하기'가 두 번 뜬다 — 화면이 지저분해지는 진짜 원인이었고, 스크린리더에도
+           같은 링크가 중복으로 읽힌다. D-day·참가비도 바가 이미 말하므로 여기선 뺀다.
+           역할 분담: 히어로 = 무엇인지(카드) + 증거(듣기) + 상품 사실, 바 = 신청·모집 상태.
+           ⚠️ 아래 팩트 라인은 바와 겹치지 않는 정보만 남길 것(중복이 곧 지저분함). -->
       <p class="hs-cta-sub">2주 · 하루 한 번 미션 · 코치 1:1 피드백</p>
     </div>
 
@@ -955,10 +977,15 @@
 </footer>
 
 <!-- 모바일 하단 고정 CTA 바 -->
-<div class="mobile-cta-bar">
-  <a class="btn btn-action mobile-cta-btn" href="apply.html" aria-label="2주 챌린지 신청하기, 참가비 3만원">
-    <span class="mcta-main">신청하기</span>
-    <span class="mcta-sub"><span class="mcta-badge" data-recruit-cta-badge hidden></span>참가비 3만원 · 코치 1:1 피드백</span>
+<!-- 하단 고정 CTA 바 — 두 상태를 DOM에 모두 두고 .is-browse로 토글(CSS display).
+     기본(.mcta-apply): 신청하기 → apply.html
+     인트로 구간(.mcta-browse): 몬크 구경하기 → #home 스크롤. 하단 IIFE가 상태를 관리한다.
+     aria-label을 두지 않는 이유: 숨은 쪽은 접근성 이름 계산에서 제외되므로
+     버튼 텍스트 자체가 상태별로 정확한 이름이 된다(라벨을 JS로 갈아끼울 필요가 없다). -->
+<div class="mobile-cta-bar" id="stickyCta">
+  <a class="btn btn-action mobile-cta-btn" id="stickyCtaBtn" href="apply.html">
+    <span class="mcta-main"><span class="mcta-apply">신청하기</span><span class="mcta-browse">몬크 더 알아보기<svg class="mcta-arrow" aria-hidden="true"><use href="#i-chevron-down"/></svg></span></span>
+    <span class="mcta-sub"><span class="mcta-apply"><span class="mcta-badge" data-recruit-cta-badge hidden></span>참가비 3만원 · 코치 1:1 피드백</span><span class="mcta-browse">어떤 곳인지 먼저 둘러보세요</span></span>
   </a>
 </div>
 
@@ -1028,12 +1055,38 @@
   function heroNext() { heroSwitchTo(_heroIdx + 1); }
   function heroPrev() { heroSwitchTo(_heroIdx - 1); }
 
-  /* 비활성 카드 클릭 → 해당 슬라이드로 이동 */
+  /* 카드 클릭 — 비활성이면 그 슬라이드로 이동, 활성이면 해당 챌린지 상세로 이동.
+     ⚠️ 2026-07-22 이전엔 활성 카드가 그냥 return이라 아무 반응이 없었다. 첫 화면에서
+     제일 크고 사진까지 있는 요소라 사람들이 당연히 눌렀고, Clarity '배달 못 한 클릭'
+     11%(24세션)의 주범이었다. 활성 카드도 반드시 목적지를 가질 것 — 되돌리지 말 것. */
   _hsCards.forEach((card, i) => {
+    /* ⚠️ 스와이프를 클릭으로 오인하지 않도록 이동 거리를 잰다. 스와이프는 touchend가
+       passive라 preventDefault를 못 걸어 브라우저가 click을 이어 쏠 수 있고, 그러면
+       카드를 옆으로 넘기려던 손짓이 상세 페이지 이동으로 튄다. 10px 넘게 움직였으면 무시. */
+    let px = 0, py = 0;
+    card.addEventListener('pointerdown', e => { px = e.clientX; py = e.clientY; }, { passive: true });
     card.addEventListener('click', e => {
-      if (card.classList.contains('is-active')) return;
+      if (!card.classList.contains('is-active')) {
+        e.preventDefault();
+        heroSwitchTo(i);
+        return;
+      }
+      if (Math.abs(e.clientX - px) > 10 || Math.abs(e.clientY - py) > 10) return;
+      var href = card.getAttribute('data-detail');
+      if (href) location.href = href;
+    });
+  });
+  /* 활성 카드는 실제로 이동하므로 마우스에서도 누를 수 있게 보이고, 키보드로도 닿아야 한다. */
+  _hsCards.forEach((card) => {
+    card.style.cursor = 'pointer';
+    card.setAttribute('role', 'link');
+    card.setAttribute('tabindex', '0');
+    var nm = card.getAttribute('data-detail-name') || '';
+    card.setAttribute('aria-label', nm ? nm + ' 챌린지 자세히 보기' : '챌린지 자세히 보기');
+    card.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
       e.preventDefault();
-      heroSwitchTo(i);
+      card.click();
     });
   });
 
@@ -2091,7 +2144,6 @@
   var stack   = root.querySelector('.ht-stack'); // 로고(문장+타깃) 컨테이너 — 두 줄 접힘 재중심 점프 흡수용
   var subko   = document.getElementById('htSubko');
   var scrim   = document.getElementById('htScrim');
-  var cue     = document.getElementById('htCue');
   var tgtEls  = Array.prototype.slice.call(target.children);
   var hlEls   = Array.prototype.slice.call(phrase.querySelectorAll('.ht-hl'));
   var others  = Array.prototype.slice.call(phrase.querySelectorAll('.ht-l:not(.ht-hl)'));
@@ -2723,7 +2775,6 @@
 
     scrim.style.opacity = String(1 - clamp((p - 0.50) / 0.25));
     inner.style.opacity = String(1 - ease(clamp((p - 0.94) / 0.055)));
-    cue.style.opacity = String(0.85 * (1 - clamp(p / 0.06)));
 
     root.style.visibility = p >= 0.995 ? 'hidden' : '';
   }
@@ -2804,30 +2855,59 @@
 })();
 </script>
 
-<!-- 인트로 건너뛰기 버튼 제어 (monc:zoomprogress 구독 · 스크롤 폴백)
-     + 인트로 시청 완료 플래그(monc_intro_seen) 기록 — 재방문 러웨이 단축의 소스 -->
+<!-- 하단 CTA 바의 인트로 상태 제어 (monc:zoomprogress 구독 · 스크롤 폴백)
+     + 인트로 시청 완료 플래그(monc_intro_seen) 기록 — 재방문 러웨이 단축의 소스
+
+     왜 별도 안내 대신 이 바인가: Clarity 계측상 인트로 구간에서 사람들이 누르는 건
+     사실상 이 바뿐이었다. 화면에 보이는 유일한 버튼이라 '신청'할 마음이 없어도 눌렀고,
+     그 결과 후기·전후 목소리를 하나도 못 본 채 가격 페이지로 떨어졌다(빠른 뒤로가기 19%).
+     그래서 새 안내를 얹는 대신 이미 눌리는 자리의 목적지를 바꾼다.
+
+     ⚠️ 첫 방문·재방문을 가르지 않는다(2026-07-22 오너 결정 — "일관성 있게").
+     초안은 재방문자에게 곧바로 '신청하기'를 보여줬으나, 같은 화면에서 사람마다 다른
+     버튼이 뜨면 설명할 수 없는 UI가 된다. 재방문자는 러웨이가 140/120으로 더 짧아
+     인트로를 금방 벗어나고, 벗어나는 즉시 '신청하기'로 돌아오므로 손해가 없다. -->
 <script>
 (function () {
   var wrap = document.querySelector('.hero-window-intro');
-  var skip = document.getElementById('heroSkip');
-  if (!wrap || !skip) return;
+  var bar  = document.getElementById('stickyCta');
+  var btn  = document.getElementById('stickyCtaBtn');
+  if (!wrap) return;
   function markSeen() {
     try { localStorage.setItem('monc_intro_seen', '1'); } catch (e) {}
   }
+  if (!bar || !btn) {
+    // 바가 없는 경우에도 완주 플래그는 계속 갱신한다(재방문 러웨이 단축의 소스).
+    wrap.addEventListener('monc:zoomprogress', function (e) {
+      if (((e.detail && e.detail.progress) || 0) >= 0.98) markSeen();
+    });
+    return;
+  }
+  /* 인트로를 벗어나는 지점(0.85)에서 '신청하기'로 되돌린다 — 창을 통과할 무렵이라
+     화면이 이미 히어로로 넘어가 있어 라벨이 바뀌는 게 눈에 거슬리지 않는다. */
+  var browsing = null;
+  function setBrowse(on) {
+    if (browsing === on) return;   // 매 프레임 클래스 재기록 방지
+    browsing = on;
+    bar.classList.toggle('is-browse', on);
+  }
+  setBrowse(true);
   wrap.addEventListener('monc:zoomprogress', function (e) {
     var p = (e.detail && e.detail.progress) || 0;
-    skip.classList.toggle('is-gone', p >= 0.85);
+    setBrowse(p < 0.85);
     if (p >= 0.98) markSeen(); // 연출 끝까지 본 방문자 — 다음 방문부터 러웨이 단축
   });
   window.addEventListener('scroll', function () {
+    // monc:zoomprogress 미수신 환경(reduced-motion 등) 폴백
     var r = wrap.getBoundingClientRect();
-    if (r.bottom < window.innerHeight * 0.5) skip.classList.add('is-gone');
+    if (r.bottom < window.innerHeight * 0.5) setBrowse(false);
   }, { passive: true });
-  skip.addEventListener('click', function (ev) {
-    markSeen(); // 건너뛴 방문자도 재방문 시 러웨이 단축 대상
+  btn.addEventListener('click', function (ev) {
+    if (!browsing) return;         // '신청하기' 상태면 평소대로 apply.html로 이동
     var home = document.getElementById('home');
     if (!home) return;
     ev.preventDefault();
+    markSeen();                    // 구경하러 내려간 방문자도 재방문 시 러웨이 단축 대상
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     home.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   });
