@@ -26,7 +26,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 ### Application flow — `apply.html` is the source of truth
 All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Pricing, bank account, curriculum, and the submit schema live in apply.html** — edit there. **⚠️ 보증금·환급 제도는 2026-07-20 전면 폐지**(PG 간편결제 심사에서 '보증금 환급' 문구가 승인 거절 사유) — 참가비 3만원만 받는다. 보증금·환급 워딩을 공개 페이지에 재도입하지 말 것(admin·mypage의 '환급' UI는 기존 신청자 보증금 반환 관리용으로만 잔존).
-- `application-modal.js` (self-injecting modal on detail pages, button `.app-modal-btn`) is **dormant** — kept but unused; declares `APPLICATION_API_URL` independently.
+- `application-modal.js` (상세 페이지에 자기주입되던 신청 모달, button `.app-modal-btn`)은 **2026-07-22 dead-code 정리로 제거** — 모든 신청 CTA가 `apply.html`로 가면서 휴면 상태였고(`openApplicationModal()`이 어디서도 호출되지 않음), 4개 상세 페이지의 `<script>` 로드도 함께 삭제.
 - The old inline modal in `index.html` (its markup + CSS + `openApplicationModal`/`submitApplication`/`copyAccount` + `?openModal=true`) was **removed 2026-07-14** in a dead-code cleanup.
 
 ### Pages
@@ -35,7 +35,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - `onboarding.html` — 첫 로그인 후 `login.html`의 `routeByRole()`이 `!profile.phone && !localStorage.monc_onboard_done`이면 여기로. 이름·전화·전공(major) → `members`. ⚠️ `members.major`는 migration `20260708120000_member_major.sql`(owner 실행); 미적용 시 major만 방어적으로 무시. `getMyProfile()` 공용 셀렉트엔 major 미포함(컬럼 미생성 시 전체 조회가 깨지므로 별도 방어 조회).
 - `reviews.html` — **후기 모음(홈 '후기 더 보기' + nav '후기'의 목적지).** Supabase `reviews`(visible=true)를 매스너리 그리드 + 챌린지·기수 필터칩(데이터 존재값만 동적 생성). `select('*')`이라 분류 컬럼 미적용에도 무에러(필터바 숨김). 후기 스크린샷에 **실명 노출**(공개 카페 후기·오너 승인).
 - `researchers.html` — **연구진 소개 전용(2026-07-14 신설).** 구 `#instructors`(mi-section)를 분리. `tokens.css` + 인라인 `.mi-*` CSS·`researchers` 배열·탭 IIFE로 완전 동작. 진입: `#researchers-strip` 티저 + nav '연구진'. **연구원 이력의 소스오브트루스** — ⚠️ index의 `.ts-cred` 스트립 카드와 **별도 소스라 이력 변경 시 양쪽 동기화 필요**(아래 스트립 항목).
-- Active detail pages (index 카드에서 링크, `application-modal.js` 로드하나 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각).
+- Active detail pages (index 카드에서 링크, 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각).
 - `challenge-express.html`, `challenge-speech.html` — **legacy/unused**, index 미링크. 라이브 아니니 편집 금지.
 - `login.html` — 구글·카카오 OAuth. **두 뷰**: `#loginView`(로그인 버튼 — 항상 활성) / `#consentView`(최초 1회 동의 게이트). **⚠️ 법적 필수(2026-07-15 개편):** 약관·개인정보 동의는 **가입 시 딱 한 번** 받는다 — OAuth는 로그인 전 사용자를 식별할 수 없어 구 방식은 "로그인할 때마다" 체크를 강요했다(오너 피드백). 이제 OAuth 복귀 후 `hasConsented()`가 false면 게이트를 띄우고, `#agreeChk`(만14세+약관·개인정보)를 **사용자가 직접 체크해야** `#consentGo`가 열린다. 동의 시 `MONC.recordConsent()`가 `members.agreed_at`·`terms_version`에 기록 → 이후 **어떤 기기에서도 다시 묻지 않음**. 거부 시 `signOut()`. **금지:** 체크박스 사전 체크·"간주 동의"·게이트 삭제. 회원 페이지(`mypage`·`onboarding`)는 `MONC.requireConsent()`로 가드 — 동의 없이 우회 불가. 약관 개정 시 `supabase-config.js`의 `TERMS_VERSION`을 올리면 전원 재동의.
 - **동의 마이그레이션** (`20260715120000_member_consent.sql`, owner 실행): `members.agreed_at`·`terms_version` + **`delete_my_account()` RPC**. **미적용이어도 동작** — `getConsent()`가 조회 실패를 감지해 계정별 로컬 기록으로 폴백하고, 나중에 컬럼이 생기면 `hasConsented()`가 서버로 백필한다. ⚠️ `getMyProfile()` 공용 select엔 넣지 말 것(컬럼 미생성 시 프로필 조회 전체가 깨짐 — `major`와 동일 방어).

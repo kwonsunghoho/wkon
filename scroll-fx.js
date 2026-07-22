@@ -24,54 +24,6 @@
     els.forEach(function (el) { observer.observe(el); });
   }
 
-  function initStickyPanel() {
-    var panels = document.querySelectorAll('[data-sticky-panel]');
-    if (!panels.length) return;
-
-    if (prefersReducedMotion) {
-      panels.forEach(function (panel) {
-        panel.querySelectorAll('[data-sticky-to]').forEach(function (to) {
-          to.style.opacity = 1;
-        });
-        panel.querySelectorAll('[data-sticky-from]').forEach(function (from) {
-          from.style.opacity = 0;
-        });
-      });
-      return;
-    }
-
-    var ticking = false;
-
-    function update() {
-      ticking = false;
-      panels.forEach(function (panel) {
-        var rect = panel.getBoundingClientRect();
-        var vh = window.innerHeight;
-        var progress = Math.min(1, Math.max(0, (vh - rect.top) / (rect.height + vh)));
-        var from = panel.querySelector('[data-sticky-from]');
-        var to = panel.querySelector('[data-sticky-to]');
-        if (from) {
-          from.style.opacity = String(1 - progress);
-          from.style.transform = 'translateY(' + (-progress * 24) + 'px)';
-        }
-        if (to) {
-          to.style.opacity = String(progress);
-          to.style.transform = 'translateY(' + ((1 - progress) * 24) + 'px)';
-        }
-      });
-    }
-
-    function onScroll() {
-      if (!ticking) {
-        window.requestAnimationFrame(update);
-        ticking = true;
-      }
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    update();
-  }
-
   function initCountUp() {
     var els = document.querySelectorAll('[data-count-up]');
     if (!els.length) return;
@@ -415,14 +367,12 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     initReveal();
-    initStickyPanel();
     initCountUp();
     initZoomExit();
   });
 
   window.MoncScrollFx = window.MoncScrollFx || {};
   window.MoncScrollFx.initReveal = initReveal;
-  window.MoncScrollFx.initStickyPanel = initStickyPanel;
   window.MoncScrollFx.initCountUp = initCountUp;
   window.MoncScrollFx.initZoomExit = initZoomExit;
 })();
