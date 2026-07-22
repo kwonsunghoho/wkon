@@ -20,7 +20,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 1. **Applications & reviews (legacy Apps Script)** — `APPLICATION_API_URL`. `POST {action:"application"}` **always appends a new row** to the **학생현황** sheet (dup phone irrelevant; phone stored with a leading apostrophe to keep the `0`). `GET ?action=reviews` returns the **후기** sheet. **Owned/edited in Google's console, not this repo** — changes need the owner to redeploy a new version.
 2. **Recruitment dates** — `RECRUIT_CSV` in `recruit.js`, a published Sheet CSV. Drives 모집중/예정/마감 + D-day chips.
-3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`. **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
+3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`, `news_articles`, `news_scraps`. **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
+4. **뉴스 수집기 (GitHub Actions)** — 예외적으로 **브라우저 밖에서 도는 유일한 코드**. `scripts/fetch-news.mjs`가 3시간마다 구글뉴스 RSS를 긁어 `news_articles`에 쓴다(service role 키는 GitHub Secrets). 아래 '항공 뉴스 수집 파이프라인' 참조.
 
 ## Architecture
 
@@ -35,6 +36,8 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - `onboarding.html` — 첫 로그인 후 `login.html`의 `routeByRole()`이 `!profile.phone && !localStorage.monc_onboard_done`이면 여기로. 이름·전화·전공(major) → `members`. ⚠️ `members.major`는 migration `20260708120000_member_major.sql`(owner 실행); 미적용 시 major만 방어적으로 무시. `getMyProfile()` 공용 셀렉트엔 major 미포함(컬럼 미생성 시 전체 조회가 깨지므로 별도 방어 조회).
 - `reviews.html` — **후기 모음(홈 '후기 더 보기' + nav '후기'의 목적지).** Supabase `reviews`(visible=true)를 매스너리 그리드 + 챌린지·기수 필터칩(데이터 존재값만 동적 생성). `select('*')`이라 분류 컬럼 미적용에도 무에러(필터바 숨김). 후기 스크린샷에 **실명 노출**(공개 카페 후기·오너 승인).
 - `researchers.html` — **연구진 소개 전용(2026-07-14 신설).** 구 `#instructors`(mi-section)를 분리. `tokens.css` + 인라인 `.mi-*` CSS·`researchers` 배열·탭 IIFE로 완전 동작. 진입: `#researchers-strip` 티저 + nav '연구진'. **연구원 이력의 소스오브트루스** — ⚠️ index의 `.ts-cred` 스트립 카드와 **별도 소스라 이력 변경 시 양쪽 동기화 필요**(아래 스트립 항목).
+- `briefing.html` — **면접 준비 도구 허브(2026-07-22 배포).** nav '브리핑룸'의 목적지. 카드 3장(항공 뉴스→`news.html` / 소재 발굴→`sojae.html` / 답변노트→`mypage.html#sec-answers`) + 숨김 카드 1장(실전 모의면접 `rehearsal.html`, `display:none`으로 보류 중 — 열 때 `style` 한 줄만 제거). nav는 **허브 하나만** 노출한다(뉴스·소재발굴을 각각 메뉴에 올리지 말 것 — 메뉴 줄이 감당 못 한다). ⚠️ nav '브리핑룸'은 index·researchers 양쪽 하드코딩이라 **문구·아이콘 변경 시 두 파일 동기화**. 창문 아이콘은 `vertical-align:middle` 보정으로 다른 메뉴와 베이스라인을 맞춘다(실측 어긋남 0.41px) — 빼면 3px 뜬다.
+- `news.html` — **항공 뉴스 게시판(2026-07-22 배포).** 2탭(전체 뉴스 / 내 스크랩). 필터 = 제목 검색창 + 항공사 10개 칩 + 주제 5개 칩. ⚠️ 칩 줄은 모바일에서 **한 줄 가로 스크롤**(`flex-wrap:nowrap`+`overflow-x:auto`, ≥640px만 줄바꿈) — 세로로 쌓으면 sticky 필터바가 375px 화면의 70%를 먹어 기사가 안 보인다(실측). 스크랩 버튼은 **몬크 로고 창문 심볼**(인라인 `#moncWin`, 전=`grayscale(1)` 후=원색) — 리본 북마크로 되돌리지 말 것. 원본 SVG는 로고 교체(a5f1b85)로 삭제됐으므로 **인라인 심볼이 정본**이다.
 - Active detail pages (index 카드에서 링크, `application-modal.js` 로드하나 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각).
 - `challenge-express.html`, `challenge-speech.html` — **legacy/unused**, index 미링크. 라이브 아니니 편집 금지.
 - `login.html` — 구글·카카오 OAuth. **두 뷰**: `#loginView`(로그인 버튼 — 항상 활성) / `#consentView`(최초 1회 동의 게이트). **⚠️ 법적 필수(2026-07-15 개편):** 약관·개인정보 동의는 **가입 시 딱 한 번** 받는다 — OAuth는 로그인 전 사용자를 식별할 수 없어 구 방식은 "로그인할 때마다" 체크를 강요했다(오너 피드백). 이제 OAuth 복귀 후 `hasConsented()`가 false면 게이트를 띄우고, `#agreeChk`(만14세+약관·개인정보)를 **사용자가 직접 체크해야** `#consentGo`가 열린다. 동의 시 `MONC.recordConsent()`가 `members.agreed_at`·`terms_version`에 기록 → 이후 **어떤 기기에서도 다시 묻지 않음**. 거부 시 `signOut()`. **금지:** 체크박스 사전 체크·"간주 동의"·게이트 삭제. 회원 페이지(`mypage`·`onboarding`)는 `MONC.requireConsent()`로 가드 — 동의 없이 우회 불가. 약관 개정 시 `supabase-config.js`의 `TERMS_VERSION`을 올리면 전원 재동의.
@@ -88,6 +91,15 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 
 ### reviews 테이블 분류 컬럼
 `reviews`에 `challenge`(보신각/영합각/스피닝/승자각)·`cohort`(smallint, NULL=미상)·`reviewer_name`·`review_date`·`quote` 컬럼 (migration `20260710130000_reviews_classify.sql` + 기존 108건 백필, owner 실행). reviews.html 필터·커뮤니티 카드에 사용. admin '후기 관리'에서 수정. `quote`는 저장만(미표시).
+
+### 항공 뉴스 수집 파이프라인 (`scripts/fetch-news.mjs` + `.github/workflows/news.yml`)
+**이 레포에서 유일하게 서버처럼 도는 것.** 구글뉴스 RSS 12쿼리(항공사 10개사 + '항공사 채용'·'국내 항공업계') → 분류 → `news_articles` upsert. GitHub Actions가 **3시간마다** 실행하며 `SUPABASE_SERVICE_ROLE_KEY`는 **GitHub Secrets**에 있다(오너 등록 완료). 테이블은 migration `20260721120000_news_board.sql`(owner 실행 완료) — 읽기 공개, 쓰기는 service role만.
+- **로컬 검증**: `node scripts/fetch-news.mjs --dry-run` — DB 없이 파싱·분류·제외 결과와 미분류 비율을 찍는다. **규칙을 고치면 반드시 dry-run으로 실데이터에 대고 확인할 것**(정규식 한 줄이 수백 건을 좌우한다).
+- ⚠️ **분류는 저장 시점에 굳는다.** `AIRLINES`·`TOPICS`를 고쳐도 과거 기사엔 반영되지 않아 재분류 스텝(7)이 매 실행 소급 적용한다 — 이 스텝을 지우면 키워드를 확대해도 **DB 통계가 꿈쩍 않는다**(실제로 겪은 자리: 규칙상 36%인데 DB는 63%였다).
+- ⚠️ **참사 보도 제외**(2026-07-22 오너 결정, 승무원 지망생이 보는 화면이라): `EXCLUDE` 정규식. **`RESCUE` 예외를 지우지 말 것** — "승무원 신속 대응으로 참사 막았다"는 참사 보도가 아니라 승무원 대응 미담이고 준비생에겐 최상급 면접 소재다(첫 시험에서 실제로 오탐된 자리).
+- **주제 미분류 38%는 정상.** 남은 건 대부분 '폭염 현장점검'류 홍보성 보도자료라 억지로 분류하면 카테고리만 오염된다(전체 탭에선 어차피 보인다). 같은 사건 중복은 933건 중 4%뿐이라 **중복 묶기는 품값을 못 한다** — 최신순 정렬 탓에 도배처럼 보일 뿐이다.
+- 삭제는 `deleteIds()`로 **100개씩 청크**(uuid 36자를 URL에 나열하므로 500개면 18KB로 414를 맞는다). 90일 정리·참사 청소 **둘 다 스크랩된 기사는 남긴다** — cascade로 회원 재료함이 날아가므로.
+- ⚠️ 공개 리포는 **60일간 커밋이 없으면 GitHub가 스케줄을 자동 중지**한다(메일 통지 → 버튼으로 재활성).
 
 ### Design system (`tokens.css`)
 Linked by index + detail/legal pages + member pages(login/mypage/admin).
