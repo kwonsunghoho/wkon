@@ -82,18 +82,27 @@
     .nw-list { list-style: none; padding: 8px 0 16px; display: flex; flex-direction: column; gap: 12px; }
     .nw-card { position: relative; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); box-shadow: 0 2px 10px rgba(38,34,28,.06); transition: box-shadow .2s, transform .2s; }
     .nw-card:hover { box-shadow: 0 10px 30px rgba(38,34,28,.14); transform: translateY(-2px); }
-    .nw-link { display: block; padding: 16px 60px 14px 16px; text-decoration: none; }
+    /* 오른쪽 여백은 스크랩 알약(≈86px)이 제목 위로 겹치지 않을 만큼 — 알약이 absolute라 자동으로 안 밀린다 */
+    .nw-link { display: block; padding: 16px 98px 14px 16px; text-decoration: none; }
     .nw-card-title { font-size: 15.5px; font-weight: 700; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .nw-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 12.5px; color: var(--text-muted); }
     .nw-tag { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(217,83,31,.10); color: var(--accent-ink); }
     .nw-tag-topic { background: rgba(242,121,69,.14); color: var(--action-ink); }
-    /* 스크랩 버튼 = 몬크 로고 창문(2026-07-22 스펙 — 리본 북마크 금지)
-       전: 무채색(grayscale)·저투명 / 후: 원색 로고 완성. 그림은 #moncWin 심볼 1벌. */
-    .nw-bm { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; background: none; cursor: pointer; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
-    .nw-bm:hover { background: var(--surface2); }
-    .nw-bm svg { width: 20px; height: 28px; filter: grayscale(1); opacity: .38; transition: filter .25s, opacity .25s; }
+    /* 스크랩 버튼 = 몬크 로고 창문 + 글자 라벨(2026-07-22 스펙 — 리본 북마크 금지)
+       전: 무채색(grayscale) 창문 + '스크랩' / 후: 원색 창문 + '저장됨'. 그림은 #moncWin 심볼 1벌.
+       ⚠️ 라벨을 빼고 아이콘만 두지 말 것 — 창문은 브랜드 심볼이지 '저장'의 관습 기호가 아니라서
+       아이콘 단독으로는 무슨 버튼인지 읽히지 않는다(오너 피드백 2026-07-22). */
+    .nw-bm { position: absolute; top: 8px; right: 8px; height: 36px; padding: 0 12px 0 9px; display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--border); border-radius: 999px; background: var(--surface); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; transition: background .2s, border-color .2s; -webkit-tap-highlight-color: transparent; }
+    /* 시각 높이는 36px이되 터치 타겟은 44px(9대 원칙) — 카드 여백을 먹지 않고 히트영역만 넓힌다 */
+    .nw-bm::after { content: ''; position: absolute; inset: -4px; }
+    .nw-bm:hover { background: var(--surface2); border-color: var(--accent-dark); }
+    .nw-bm svg { width: 14px; height: 19.6px; filter: grayscale(1); opacity: .45; transition: filter .25s, opacity .25s; }
+    .nw-bm.on { background: var(--accent-tint); border-color: var(--accent-ink); }
     .nw-bm.on svg { filter: none; opacity: 1; }
     .nw-bm:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    /* 두 라벨을 DOM에 두고 CSS로 토글 — JS는 .on 클래스만 건드린다 */
+    .nw-bm .bm-on, .nw-bm.on .bm-off { display: none; }
+    .nw-bm.on .bm-on { display: inline; }
 
     .nw-count { font-size: 13px; font-weight: 700; color: var(--text); opacity: .6; margin: 16px 2px 4px; }
     .nw-empty { text-align: center; padding: 60px 20px; color: var(--text); opacity: .6; font-size: 15px; }
@@ -210,7 +219,8 @@
 
     const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     // 스크랩 버튼 그림 = 몬크 로고 창문(상단 #moncWin 심볼) — 상태 전환은 CSS 필터가 담당
-    const BM_SVG = '<svg viewBox="0 0 100 140" aria-hidden="true"><use href="#moncWin"/></svg>';
+    const BM_SVG = '<svg viewBox="0 0 100 140" aria-hidden="true"><use href="#moncWin"/></svg>'
+      + '<span class="bm-off">스크랩</span><span class="bm-on">저장됨</span>';
 
     // "3시간 전" 상대시각(하루 넘으면 날짜)
     function relTime(iso) {
