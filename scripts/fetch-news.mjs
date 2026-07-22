@@ -175,8 +175,36 @@ async function deleteIds(ids) {
   console.log(`정리 ${deletable.length}건 삭제 (90일 경과·스크랩 없음)`);
 
   // 6) 규칙이 생기기 전에 들어온 참사 보도 청소 — 스크랩된 건 여기서도 남긴다
-  const stored = await (await sbFetch('news_articles?select=id,title,news_scraps(id)&limit=2000')).json();
+  const stored = await (await sbFetch(
+    'news_articles?select=id,title,airline,topic,news_scraps(id)&limit=2000')).json();
   const purge = stored.filter(a => isExcluded(a.title) && !(a.news_scraps || []).length).map(a => a.id);
   await deleteIds(purge);
   console.log(`참사 보도 ${purge.length}건 삭제 (기존 저장분)`);
+
+  // 7) 저장분 재분류 — ⚠️ 분류는 저장 시점에 한 번 굳는다. 이 스텝이 없으면 AIRLINES·TOPICS를
+  //    고쳐도 과거 기사엔 영원히 반영되지 않는다(실제로 키워드 확대 후 미분류가 63% 그대로였다).
+  //    바뀐 행만 (airline, topic) 조합별로 묶어 PATCH하므로 평시 요청 수는 0이다.
+  const gone = new Set(purge);
+  const groups = new Map();                       // "airline|topic" → [id]
+  for (const a of stored) {
+    if (gone.has(a.id)) continue;
+    const want = classify(a.title);
+    if (want.airline === a.airline && want.topic === a.topic) continue;
+    const k = `${want.airline || ''}|${want.topic || ''}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(a.id);
+  }
+  let refixed = 0;
+  for (const [k, ids] of groups) {
+    const [airline, topic] = k.split('|');
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      await sbFetch(`news_articles?id=in.(${chunk.join(',')})`, {
+        method: 'PATCH',
+        body: JSON.stringify({ airline: airline || null, topic: topic || null }),
+      });
+      refixed += chunk.length;
+    }
+  }
+  console.log(`재분류 ${refixed}건 갱신`);
 })().catch(e => { console.error(e); process.exit(1); });
