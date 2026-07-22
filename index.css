@@ -82,18 +82,37 @@
        (몬크 챌린지)·#researchers-strip과 같은 에디토리얼 패턴 — 가운데로 되돌리지 말 것. */
     .ma-head { text-align: left; max-width: 620px; margin: 0 0 28px; }
     /* 크기·굵기·글꼴은 tokens.css의 h2.ma-title(명조)이 담당 — 여기선 색만. */
-    .ma-title { color: var(--text); word-break: keep-all; }
+    /* text-wrap:balance — 여러 줄일 때 각 줄 길이를 비슷하게 맞춰 '한 단어만 남는 줄'을 막는다(미지원 브라우저는 무시). */
+    .ma-title { color: var(--text); word-break: keep-all; text-wrap: balance; }
     .ma-title span { color: var(--action); }
-    .ma-sub { margin-top: 12px; font-size: var(--fs-body); color: var(--text-muted); line-height: var(--lh-body); }
+    /* word-break:keep-all — 없으면 폰 폭에서 "회원 페/이지에서"처럼 단어 중간이 찢긴다(2026-07-23 오너 실기기 스크린샷). */
+    .ma-sub { margin-top: 12px; font-size: var(--fs-body); color: var(--text-muted); line-height: var(--lh-body); word-break: keep-all; }
     
     
         
     
     .ma-cta { text-align: center; margin-top: 24px; }
     .ma-cta .btn-action { font-size: 16px; padding: 16px 28px; }
-    .ma-note { margin-top: 12px; font-size: 13px; color: var(--text-dim); }
+    .ma-note { margin-top: 12px; font-size: 13px; color: var(--text-dim); word-break: keep-all; }
     .ma-note a { color: var(--action); font-weight: 700; }
     @media (min-width: 768px) { .member-appeal { padding: var(--section-y) 0; } }
+    /* 데스크톱 2단(2026-07-23): 왼쪽 글(제목·설명·CTA) + 오른쪽 폰 폭 목업.
+       구 1단 세로 쌓기는 목업이 720px까지 늘어나 스탬프가 대형 블록이 됐다(오너 "투박").
+       마크업 순서(ma-head → ma-report → ma-cta)는 그대로 두고 grid-area로만 배치 —
+       모바일(트래픽 99%)은 이 블록 밖이라 기존 튜닝에 영향 없음.
+       빈 1fr 행 두 개(1fr auto auto 1fr)가 글 뭉치를 목업 세로 중앙에 맞춘다. */
+    @media (min-width: 960px) {
+      .member-appeal .container {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 440px;
+        grid-template-rows: 1fr auto auto 1fr;
+        grid-template-areas: ". report" "head report" "cta report" ". report";
+        column-gap: 72px;
+      }
+      .member-appeal .ma-head { grid-area: head; margin: 0; }
+      .member-appeal .ma-report { grid-area: report; }
+      .member-appeal .ma-cta { grid-area: cta; text-align: left; margin-top: 28px; }
+    }
     
     /* ── 하단 플로팅 CTA 알약 (2026-07-22: 모바일 전용 → 전 화면폭)
        데스크톱에도 띄우는 이유: 인트로 구간에서 이 바가 '아래로 내려가는 문' 역할을
@@ -132,6 +151,31 @@
     /* 아래 화살표는 텍스트 '↓'가 아니라 스프라이트 셰브런(#i-chevron-down) —
        글꼴마다 모양이 달라지는 문자 대신 사이트 공용 라인 아이콘으로 통일(2026-07-22 오너). */
     .mcta-arrow { width: 16px; height: 16px; vertical-align: -3px; margin-left: 6px; }
+    /* 인트로 구간 눈길 끌기(2026-07-23 오너 선택: 광 스윕 + 화살표 까딱).
+       Clarity상 인트로에서 사람들이 누르는 유일한 버튼인데 '여길 누르라'는 신호가 없었다.
+       — .is-browse(구경하기 상태)에서만 움직인다: 신청하기 상태까지 번쩍이면 광고 배너처럼 읽힌다.
+       — prefers-reduced-motion이면 통째로 꺼진다(멀미·배터리).
+       — 스윕은 ::after 하나로 transform만 움직여 리페인트 없음(인트로 스크롤 연출과 프레임 경쟁 안 함). */
+    @media (prefers-reduced-motion: no-preference) {
+      .mobile-cta-bar.is-browse .mobile-cta-btn { position: relative; overflow: hidden; }
+      .mobile-cta-bar.is-browse .mobile-cta-btn::after {
+        content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 46%;
+        background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.42) 50%, transparent 100%);
+        transform: translateX(-130%) skewX(-14deg);
+        animation: mcta-shine 3.4s ease-in-out infinite;
+        pointer-events: none;
+      }
+      .mobile-cta-bar.is-browse .mcta-arrow { animation: mcta-arrowbob 1.6s ease-in-out infinite; }
+    }
+    @keyframes mcta-shine {
+      0% { transform: translateX(-130%) skewX(-14deg); }
+      38% { transform: translateX(390%) skewX(-14deg); }
+      100% { transform: translateX(390%) skewX(-14deg); }
+    }
+    @keyframes mcta-arrowbob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(3px); }
+    }
     /* 플로팅 바가 콘텐츠를 가리지 않도록 여백 확보 */
     body { padding-bottom: 96px; }
     .btn-ghost {
@@ -1773,7 +1817,11 @@
   --sh-1:0 1px 2px rgba(38,34,28,.05), 0 6px 14px rgba(38,34,28,.06), 0 18px 40px rgba(38,34,28,.05);
   --sh-2:0 1px 2px rgba(38,34,28,.06), 0 3px 8px rgba(38,34,28,.05);
   font-family:inherit; color:var(--ink); box-sizing:border-box;
-  max-width:720px; margin:0 auto; padding:4px; min-width:0;
+  /* ⚠ 480px 상한(2026-07-23) — 이 목업은 '회원 폰 화면' 흉내라 폰 폭 기준으로 설계됐다.
+     구 720px에선 7칸 스탬프가 한 칸 86px짜리 대형 주황 블록이 되어(폰에선 38px)
+     데스크톱에서 "투박하고 엉망"(오너)으로 보였다. 다시 넓히지 말 것 — 넓은 화면 여백은
+     아래 @media(min-width:960px) 2단 배치(글 왼쪽 + 목업 오른쪽)가 채운다. */
+  max-width:480px; margin:0 auto; padding:4px; min-width:0;
 }
 .db-root *,.db-root *::before,.db-root *::after{box-sizing:border-box}
 /* 숫자가 들어가는 자리는 전부 등폭 숫자 — 값이 바뀌어도 칸이 흔들리지 않는다 */
