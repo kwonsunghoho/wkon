@@ -68,7 +68,8 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
   - **⚠️ 놓을 때 관성은 유휴시간만큼 죽인다(`IDLE_TAU 0.12s`).** 브라우저는 포인터가 멈추면 `pointermove`를 안 쏘므로, '빠르게 끌다 → 멈춘 채 잠시 있다가 → 놓기'에서 묵은 `dragV`를 그대로 쓰면 급발진한다.
 
 ### 성장 리포트 목업 (`#member-appeal` 안 `.db-root`)
-회원 마이페이지를 흉내낸 정적 목업(가짜 데이터 '박몬크'). 하단 `.db-cta` = **회원가입 유도 → `login.html`**(⚠️ 구 `href="#"`는 홈 최상단으로 튀던 버그, 2026-07-15 수정 — `#`로 되돌리지 말 것).
+회원 마이페이지를 흉내낸 정적 목업(가짜 데이터 '박몬크').
+- **⚠️ 폭 상한 480px + 데스크톱 2단(2026-07-23 오너 "투박하고 엉망"):** 이 목업은 '회원 폰 화면' 흉내라 폰 폭 기준 설계다. 구 `max-width:720px`에선 데스크톱에서 7칸 스탬프가 한 칸 86px 대형 주황 블록이 됐다(폰에선 38px). → `.db-root` 480px 상한 + ≥960px에서 `.member-appeal .container`를 grid 2단(왼쪽 ma-head·ma-cta / 오른쪽 440px 목업, 마크업 순서 불변·grid-area만)으로. **720px로 되넓히거나 2단을 풀지 말 것.** 제목 `성장&nbsp;기록`의 nbsp(오렌지 구절 두 줄 찢김 방지)·`.ma-title`의 `text-wrap:balance`·`.ma-sub/.ma-note`의 `keep-all`(실기기 "회원 페/이지" 단어 중간 찢김)도 같은 날 수정 — 일반 공백으로 되돌리지 말 것. 하단 `.db-cta` = **회원가입 유도 → `login.html`**(⚠️ 구 `href="#"`는 홈 최상단으로 튀던 버그, 2026-07-15 수정 — `#`로 되돌리지 말 것).
 - **⚠️ 부피 계약(2026-07-16 오너 "메인 대시보드가 쓸데없이 너무 크다"):** 구 목업은 375×812에서 섹션 **1,796px = 화면 2.21개**(페이지 전체의 13.6%)였다. 원인은 크기가 아니라 **같은 사실('11/14일 해냈다')을 네 번 반복**한 것 — 링 79% / 그 옆 프로그레스바 79% / 지표 3칸(`.db-stats`) / 스탬프 14칸. 여기에 `.db-ba`(목소리 미니 파형)는 ③ Before&After와 중복인데 **가짜 SVG 파형이라 진짜 오디오 옆에서 신뢰도만 깎았다.** → **바·지표3칸·`.db-ba`·`.db-legend` 삭제**, 링 캡션을 밖으로 빼 **링 156→112px + 모바일에서도 2열**, 배지 4칸 한 줄. 결과 **1,162px(1.43화면, −35%)**, 남은 블록 6개(ribbon/head/hero/스탬프/배지/foot). 지표가 말하던 건 남은 자리가 흡수한다: '11일 연속·누적'→`.db-frac`, '3일 수료까지'→`.db-hero-lead`.
   - **⚠️ 부피는 활자가 아니라 블록 개수로 줄인다.** 활자·`transform:scale`·`zoom`으로 줄이면 2026-07-16 "텍스트가 너무 작지 않냐"가 그대로 재발한다(아래 스케일 하한 참조).
   - **⚠️ 아코디언 검토했으나 기각.** 이 섹션의 일은 "가입하면 이런 게 쌓인다"를 **보여주는 것**이라 접으면 일을 못 한다. 게다가 접힘 상태에 남아야 할 것(헤더+링+스탬프+CTA)만 해도 1.6화면이라 다이어트와 이득이 같았다 — 인터랙션만 늘고 남는 게 없다.
@@ -136,6 +137,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
   - 화살표는 **문자 '↓'가 아니라 스프라이트 셰브런 `#i-chevron-down`**(`.mcta-arrow`) — 글꼴마다 모양이 달라지는 문자 대신 사이트 공용 라인 아이콘으로 통일(`.hs-nav`와 같은 2.4/round). 문자로 되돌리지 말 것.
   - 두 라벨을 **DOM에 모두 두고 `.mcta-apply`/`.mcta-browse`를 CSS `display`로 토글**한다(JS는 클래스 하나만 건드림). 숨은 쪽은 접근성 이름 계산에서 빠지므로 `aria-label`을 JS로 갈아끼울 필요가 없다 — **`aria-label`을 다시 달지 말 것**(상태와 어긋난다). JS가 죽으면 `.is-browse`가 안 붙어 기존 '신청하기'로 남는다.
   - 전환 지점은 진행률 **0.85**(창을 통과할 무렵이라 화면이 이미 히어로로 넘어가 라벨 변화가 안 거슬린다). `monc:zoomprogress` 구독 + `scroll` 폴백(`wrap.bottom < innerHeight*0.5`이면 해제) — 폴백은 rAF가 멈춘 상태(화면 밖·reduced-motion)에서 바가 '구경하기'로 굳는 걸 막는다.
+  - **눈길 끌기 = 광 스윕 + 화살표 까딱(2026-07-23 오너가 목업 5종 중 ①+④ 선택):** `.is-browse` **한정** — 신청하기 상태까지 번쩍이면 광고 배너로 읽힌다. 스윕은 `::after` transform만 움직여 리페인트 없음(인트로 스크롤 연출과 프레임 경쟁 금지), `prefers-reduced-motion`이면 통째로 꺼짐. 다른 후보(글로우·바운스·파동)는 검토 후 기각 — 재도입하려면 오너 확인부터.
 - **렌더링 성능 계약:** ① 페이드 레이어(`.zoom-content-fade`·`.zoom-bezel-fade`·`.zoom-tone-bridge`·`.ht-scrim`)는 `will-change:opacity`로 합성 승격 — 제거 금지(없으면 매 프레임 풀스크린 리페인트). ② 창틀 `<picture class="zoom-bezel-fade">`는 `display:block; position:absolute; inset:0` 필수(인라인 0×0이면 Chrome이 컬링해 창틀이 안 그려짐). ③ 태그라인 `apply()`는 조립값 u가 직전과 같으면 letter-spacing·transform 재기록 스킵(`lastU` 가드), `.hero-tagline`은 `contain:layout paint`. ④ scroll-fx.js는 섹션 설정·페이드 대상 요소를 init에 캐시(프레임 루프에서 querySelector/getAttribute 금지).
 
 ### Hero scene carousel (`#home`)
