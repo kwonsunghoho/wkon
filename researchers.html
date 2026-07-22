@@ -159,6 +159,34 @@
       display: block; padding: 18px 0;
       font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
     }
+    /* 모바일 메뉴 '챌린지' 아코디언(2026-07-22, index.css와 동일 계약).
+       ⚠️ 토글은 반드시 <button> — 하단 햄버거 IIFE가 `mm.querySelectorAll('a')`에
+       '클릭 시 메뉴 닫기'를 걸어서, <a>면 펼치는 순간 메뉴가 닫힌다. */
+    .mm-acc-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 18px 0; background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 17px; font-weight: 600; color: var(--text-muted);
+      text-align: left; -webkit-tap-highlight-color: transparent;
+    }
+    .mm-acc-chev { flex-shrink: 0; transition: transform .28s ease; }
+    .mm-acc.is-open .mm-acc-chev { transform: rotate(180deg); }
+    .mm-acc-panel {
+      max-height: 0; overflow: hidden; visibility: hidden;
+      transition: max-height .28s ease, visibility 0s linear .28s;
+    }
+    /* ⚠️ 상한은 실측 콘텐츠(375px에서 298px)보다 넉넉히 — 모자라면 마지막 칸이 잘린다 */
+    .mm-acc.is-open .mm-acc-panel {
+      max-height: 460px; visibility: visible;
+      transition: max-height .28s ease, visibility 0s;
+    }
+    .mobile-menu ul a.mm-sub {
+      padding: 11px 0 11px 14px; border-left: 2px solid var(--border);
+      font-size: 15px; color: var(--text);
+    }
+    .mobile-menu ul a.mm-sub:last-child { margin-bottom: 12px; }
+    .mm-sub b { display: block; font-weight: 700; }
+    .mm-sub span { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
+    @media (prefers-reduced-motion: reduce) { .mm-acc-chev, .mm-acc-panel { transition: none; } }
     .mobile-menu-cta { margin-top: 28px; }
 
     /* ── PAGE HERO (연구진 페이지 전용) ── */
@@ -316,7 +344,15 @@
 <div class="mobile-menu" id="mobileMenu">
   <ul>
     <li><a class="mm-briefing" href="briefing.html"><span class="nav-briefing">브리핑룸</span></a></li>
-    <li><a href="index.html#challenges">챌린지</a></li>
+    <li class="mm-acc">
+      <button class="mm-acc-btn" type="button" aria-expanded="false" aria-controls="mmChallenges">챌린지<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="mm-acc-panel" id="mmChallenges">
+        <a class="mm-sub" href="challenge-voice.html"><b>보.신.각</b><span>2주 만에 목소리가 달라져요</span></a>
+        <a class="mm-sub" href="challenge-expression.html"><b>영.합.각</b><span>카메라 앞에서도 자연스럽게</span></a>
+        <a class="mm-sub" href="challenge-spinning.html"><b>스.피.닝</b><span>리듬을 타며 발음이 터진다</span></a>
+        <a class="mm-sub" href="challenge-answer.html"><b>승.자.각</b><span>2주에 답변 10개 완성</span></a>
+      </div>
+    </li>
     <li><a href="researchers.html">연구진</a></li>
     <li><a href="index.html#community">커뮤니티</a></li>
     <li><a href="reviews.html">후기</a></li>
@@ -382,6 +418,13 @@
         mm.classList.remove('open');
         document.body.style.overflow = '';
       }));
+      /* '챌린지' 아코디언 — 토글은 button이라 위 닫기 핸들러(a 대상)에 안 걸린다 */
+      mm.querySelectorAll('.mm-acc-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const open = btn.closest('.mm-acc').classList.toggle('is-open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      });
     }
   })();
 

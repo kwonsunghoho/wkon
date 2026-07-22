@@ -299,6 +299,36 @@
       display: block; padding: 18px 0;
       font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
     }
+    /* 모바일 메뉴 '챌린지' 아코디언(2026-07-22) — 탭 한 번에 4개를 펼쳐 상세로 직행.
+       ⚠️ 토글은 반드시 <button> — 위 햄버거 IIFE가 `mm.querySelectorAll('a')` 전부에
+       '클릭 시 메뉴 닫기'를 걸어서, <a>로 만들면 펼치는 순간 메뉴가 통째로 닫힌다. */
+    .mm-acc-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 18px 0; background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 17px; font-weight: 600; color: var(--text-muted);
+      text-align: left; -webkit-tap-highlight-color: transparent;
+    }
+    .mm-acc-chev { flex-shrink: 0; transition: transform .28s ease; }
+    .mm-acc.is-open .mm-acc-chev { transform: rotate(180deg); }
+    /* max-height 전환 — grid 0fr→1fr은 구형 iOS 사파리에서 안 먹어 펼침이 통째로 죽는다.
+       ⚠️ 상한은 실측 콘텐츠(375px에서 4칸×72px+여백 = 298px)보다 넉넉해야 한다 —
+       모자라면 설명이 한 줄 늘어난 좁은 화면에서 마지막 칸이 잘린다. 항목 추가 시 같이 올릴 것. */
+    .mm-acc-panel {
+      max-height: 0; overflow: hidden; visibility: hidden;
+      transition: max-height .28s ease, visibility 0s linear .28s;
+    }
+    .mm-acc.is-open .mm-acc-panel {
+      max-height: 460px; visibility: visible;
+      transition: max-height .28s ease, visibility 0s;
+    }
+    .mobile-menu ul a.mm-sub {
+      padding: 11px 0 11px 14px; border-left: 2px solid var(--border);
+      font-size: 15px; color: var(--text);
+    }
+    .mobile-menu ul a.mm-sub:last-child { margin-bottom: 12px; }
+    .mm-sub b { display: block; font-weight: 700; }
+    .mm-sub span { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
+    @media (prefers-reduced-motion: reduce) { .mm-acc-chev, .mm-acc-panel { transition: none; } }
     .mobile-menu-cta { margin-top: 28px; }
     
     /* ═══════════════════════════════════════════════════
