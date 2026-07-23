@@ -50,8 +50,15 @@ async function loadRecruitData() {
   if (_recruitDataPromise) return _recruitDataPromise;
   _recruitDataPromise = (async () => {
     const sb = await loadRecruitDataFromSupabase();
-    if (sb) return sb;
-    return await loadRecruitDataFromCsv();  // 전환 검증 기간 폴백
+    if (!sb) return await loadRecruitDataFromCsv();  // 전환 검증 기간 폴백
+    // Supabase에 일부 챌린지만 있으면(기수 미등록) 빠진 챌린지를 CSV로 보충 —
+    // 안 그러면 페이지마다 제각각인 하드코딩 폴백으로 떨어져 메인·상세 날짜가 어긋난다.
+    const missing = Object.keys(RECRUIT_FALLBACKS).filter(id => !sb[id]);
+    if (missing.length) {
+      const csv = await loadRecruitDataFromCsv();
+      if (csv) missing.forEach(id => { if (csv[id]) sb[id] = csv[id]; });
+    }
+    return sb;
   })();
   return _recruitDataPromise;
 }
