@@ -517,7 +517,7 @@
       const CH_LABEL_MP = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
       const myAppsEl = document.getElementById('myApps');
       const { data: myApps } = await MONC.sb.from('applications')
-        .select('created_at, challenges, total_price, paid, refunded')
+        .select('created_at, challenges, total_price, paid, refunded, payment_status')
         .eq('member_id', me)
         .order('created_at', { ascending: false });
       if (!myApps || !myApps.length) {
@@ -526,8 +526,11 @@
         myAppsEl.innerHTML = myApps.map(a => {
           const chs = Array.isArray(a.challenges) ? a.challenges.map(c => `${CH_LABEL_MP[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ') : '';
           const d = new Date(a.created_at);
-          const badge = a.refunded ? '<span class="al-badge al-refund">환급완료</span>'
-            : (a.paid ? '<span class="al-badge al-paid">입금완료</span>' : '<span class="al-badge al-wait">입금대기</span>');
+          // 간편결제 건은 payment_status 가 소스(paid 불리언은 계좌이체 수동 확인용)
+          const badge = (a.refunded || a.payment_status === 'refunded') ? '<span class="al-badge al-refund">환불완료</span>'
+            : a.payment_status === 'partial_refunded' ? '<span class="al-badge al-refund">부분 환불</span>'
+            : (a.paid || a.payment_status === 'paid') ? '<span class="al-badge al-paid">결제완료</span>'
+            : '<span class="al-badge al-wait">입금대기</span>';
           return `<li>
             <div class="al-top"><span class="al-ch">${esc(chs)}</span><span class="al-date">${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</span></div>
             <div class="al-status">${badge}<span style="color:var(--text-muted)">${(a.total_price||0).toLocaleString()}원</span></div>
