@@ -194,6 +194,10 @@
   .bank .acct strong { font-size: 15px; }
   .copy-btn { font-size: 11px; font-weight: 800; color: #fff; background: var(--action-dark); border: none; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
   .bank .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(217,83,31,.2); }
+  /* 계좌 안내는 챌린지를 선택한 경우에만 노출 */
+  .bank-empty { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .bank.is-empty .bank-detail { display: none; }
+  .bank:not(.is-empty) .bank-empty { display: none; }
 
   /* ── 서비스 제공·환불 안내 (상품 정보 고지) ── */
   .svc-list { margin: 0; display: grid; gap: 0; }
@@ -382,14 +386,17 @@
         </div>
       </div>
 
-      <div class="bank">
+      <div class="bank is-empty" id="bankInfo">
         <div class="h">입금 정보</div>
-        <div class="line">
-          <div>은행: 신한</div>
-          <div class="acct"><span>계좌: <strong id="acctNum">110-254-022354</strong></span><button type="button" class="copy-btn" onclick="copyAccount(this)">복사</button></div>
-          <div>예금주: 권성호</div>
+        <div class="bank-empty">챌린지를 먼저 선택하면 입금 계좌가 안내됩니다.</div>
+        <div class="bank-detail">
+          <div class="line">
+            <div>은행: 신한</div>
+            <div class="acct"><span>계좌: <strong id="acctNum">110-254-022354</strong></span><button type="button" class="copy-btn" onclick="copyAccount(this)">복사</button></div>
+            <div>예금주: 권성호</div>
+          </div>
+          <div class="note">입금 후 신청 버튼을 눌러주세요. 확인 후 안내드리겠습니다.</div>
         </div>
-        <div class="note">입금 후 신청 버튼을 눌러주세요. 확인 후 안내드리겠습니다.</div>
       </div>
 
       <label class="consent" for="appConsent">
@@ -567,6 +574,9 @@ function updateSummary() {
   document.getElementById('stickyTotal').textContent = total.toLocaleString();
   document.getElementById('stickyCount').textContent = n === 0 ? '챌린지를 선택하세요' : ('선택 ' + n + '개');
   bar.classList.toggle('empty', n === 0);
+
+  // 계좌 안내는 챌린지를 선택한 사람에게만 노출
+  document.getElementById('bankInfo').classList.toggle('is-empty', n === 0);
 }
 
 /* ── 모집 상태 반영 (마감/모집예정 카드 비활성) ── */
