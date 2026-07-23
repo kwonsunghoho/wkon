@@ -733,6 +733,15 @@ async function payWithToss() {
     });
     const total = ids.length * PRICE;
     const paymentId = 'monc-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+    const applicant = { name: name, phone: phone };
+    if (_memberId) applicant.member_id = _memberId;
+
+    // ⚠️ 모바일(트래픽 99%)은 결제사 페이지로 이동했다가 redirectUrl 로 되돌아오는 '리다이렉트' 방식(포트원 V2 필수).
+    //    redirectUrl 이 없으면 모바일에선 결제창 자체가 안 열린다. 복귀 시 페이지가 새로 로드돼 폼 상태가 사라지므로
+    //    주문정보를 sessionStorage 에 보관했다가 handlePayReturn() 이 꺼내 검증한다. (PC는 팝업/프로미스라 아래 res 경로로 처리)
+    sessionStorage.setItem('monc_pending_pay', JSON.stringify({ paymentId: paymentId, challenges: challenges, applicant: applicant }));
+    const _rp = new URLSearchParams(location.search); _rp.set('payresult', '1');
+    const redirectUrl = location.origin + location.pathname + '?' + _rp.toString();
 
     const res = await window.PortOne.requestPayment({
       storeId: PORTONE_STORE_ID,
@@ -742,27 +751,18 @@ async function payWithToss() {
       totalAmount: total,
       currency: 'CURRENCY_KRW',
       payMethod: 'EASY_PAY',
-      customer: { fullName: name, phoneNumber: phone }
+      customer: { fullName: name, phoneNumber: phone },
+      redirectUrl: redirectUrl
     });
+    // ── 여기부터는 PC(팝업/프로미스) 경로. 모바일은 위에서 페이지가 떠나 도달하지 않는다. ──
+    sessionStorage.removeItem('monc_pending_pay');
     if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
 
-    // 서버 검증 + 신청 저장
     btn.textContent = '결제 확인 중...';
-    const applicant = { name: name, phone: phone };
-    if (_memberId) applicant.member_id = _memberId;
-    const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
-      body: { paymentId: paymentId, challenges: challenges, applicant: applicant }
-    });
-    if (error || !data || !data.ok) {
-      console.error('결제 검증 실패:', error, data);
-      alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
-      return;
-    }
-
-    if (_memberId && !_profileHadPhone && phone) {
-      try { await window.MONC.sb.from('members').update({ phone: phone }).eq('id', _memberId); _profileHadPhone = true; document.getElementById('rowPhone').style.display = 'none'; } catch (e) {}
-    }
-    alert('결제와 신청이 완료되었습니다! 🎉\n확인 후 안내드리겠습니다.' + (_memberId ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));
+    const ok = await completePayment(paymentId, challenges, applicant);
+    if (!ok) return;
+    // 인라인(PC) 성공 UI 리셋
+    if (_memberId && !_profileHadPhone && phone) { _profileHadPhone = true; const _rowP = document.getElementById('rowPhone'); if (_rowP) _rowP.style.display = 'none'; }
     document.getElementById('appConsent').checked = false;
     if (!_memberId) { document.getElementById('appName').value = ''; document.getElementById('appPhone').value = ''; }
     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected', 'curr-open'));
@@ -776,6 +776,43 @@ async function payWithToss() {
     _isPaying = false;
     btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
   }
+}
+
+/* 결제 검증(verify-payment) + 신청 저장 공통 처리. 성공 시 true. (PC 인라인·모바일 복귀 공용) */
+async function completePayment(paymentId, challenges, applicant) {
+  const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
+    body: { paymentId: paymentId, challenges: challenges, applicant: applicant }
+  });
+  if (error || !data || !data.ok) {
+    console.error('결제 검증 실패:', error, data);
+    alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
+    return false;
+  }
+  if (applicant.member_id && applicant.phone) {
+    try { await window.MONC.sb.from('members').update({ phone: applicant.phone }).eq('id', applicant.member_id); } catch (e) {}
+  }
+  alert('결제와 신청이 완료되었습니다! 🎉\n확인 후 안내드리겠습니다.' + (applicant.member_id ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));
+  return true;
+}
+
+/* 모바일 리다이렉트 복귀 처리 — ?payresult=1 로 돌아오면 sessionStorage 주문정보로 검증·저장 */
+async function handlePayReturn() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('payresult') !== '1') return;
+  const code = p.get('code');
+  const message = p.get('message');
+  const qPaymentId = p.get('paymentId');
+  // 결제 파라미터를 URL에서 제거(새로고침 시 재검증 방지). paytest 등 나머지는 보존.
+  ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId'].forEach(k => p.delete(k));
+  history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : ''));
+
+  const raw = sessionStorage.getItem('monc_pending_pay');
+  sessionStorage.removeItem('monc_pending_pay');
+  if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
+  if (!raw) return; // 주문정보 없음(직접 접근 등) → 무시
+  let pending; try { pending = JSON.parse(raw); } catch (e) { return; }
+  if (!window.MONC || !window.MONC.sb) return;
+  await completePayment(pending.paymentId || qPaymentId, pending.challenges, pending.applicant);
 }
 
 /* ── 초기화 ── */
@@ -799,6 +836,7 @@ document.getElementById('stickyGo').addEventListener('click', () => {
 });
 applyStatuses().then(preselectFromUrl);
 initMember();
+handlePayReturn();
 
 /* 토스페이 결제 버튼은 테스트 채널 동안 ?paytest=1 에서만 노출(방문자 오결제 방지). 라이브 전환 시 이 게이트 제거. */
 if (new URLSearchParams(location.search).get('paytest') === '1') {
