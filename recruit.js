@@ -1,8 +1,9 @@
-/* ── 구글 시트 모집 기간 연동 ── */
-const RECRUIT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSjh43-8SUZxM41_RnjiRuUgOxaUFicDmWFAT2EtthjHY5EjzQlA7X3vzYDTNUE0sUnVMfRUfCtomM3/pub?gid=0&single=true&output=csv';
+/* ── 모집 기간 연동 (Supabase challenge_rounds 단일 소스) ── */
 
 /* challenge_rounds(Supabase)에서 챌린지별 "현재 기수"를 읽어
-   {challenge: {start, end, round}} 형태로 반환. 실패 시 구글 시트로 폴백. */
+   {challenge: {start, end, round}} 형태로 반환.
+   조회 실패나 미등록 챌린지는 그 자리를 비워 두고 → 각 호출부가
+   data-recruit-* / RECRUIT_FALLBACKS 하드코딩으로 폴백한다. */
 async function loadRecruitDataFromSupabase() {
   if (!window.MONC || !window.MONC.sb) return null;
   const { data, error } = await window.MONC.sb
@@ -26,40 +27,13 @@ async function loadRecruitDataFromSupabase() {
   return out;
 }
 
-async function loadRecruitDataFromCsv() {
-  try {
-    const res = await fetch(RECRUIT_CSV + '&_=' + Date.now());
-    const text = await res.text();
-    const rows = text.trim().split('\n').slice(1);
-    const data = {};
-    rows.forEach(row => {
-      const cols = row.match(/(".*?"|[^,]+)(?=,|$)/g) || row.split(',');
-      const clean = cols.map(s => s.trim().replace(/^"|"$/g, '').trim());
-      if (clean[0]) data[clean[0]] = { start: clean[1], end: clean[2] };
-    });
-    console.log('[MONC 모집] 구글 시트 데이터(폴백):', data);
-    return data;
-  } catch (e) {
-    console.warn('모집 데이터 로드 실패 (하드코딩 값 사용):', e);
-    return null;
-  }
-}
-
 let _recruitDataPromise = null;
 async function loadRecruitData() {
   if (_recruitDataPromise) return _recruitDataPromise;
-  _recruitDataPromise = (async () => {
-    const sb = await loadRecruitDataFromSupabase();
-    if (!sb) return await loadRecruitDataFromCsv();  // 전환 검증 기간 폴백
-    // Supabase에 일부 챌린지만 있으면(기수 미등록) 빠진 챌린지를 CSV로 보충 —
-    // 안 그러면 페이지마다 제각각인 하드코딩 폴백으로 떨어져 메인·상세 날짜가 어긋난다.
-    const missing = Object.keys(RECRUIT_FALLBACKS).filter(id => !sb[id]);
-    if (missing.length) {
-      const csv = await loadRecruitDataFromCsv();
-      if (csv) missing.forEach(id => { if (csv[id]) sb[id] = csv[id]; });
-    }
-    return sb;
-  })();
+  // 단일 소스 = Supabase challenge_rounds. 조회 실패나 미등록 챌린지는
+  // null/누락으로 두고, 각 호출부가 data-recruit-* / RECRUIT_FALLBACKS
+  // 하드코딩으로 폴백한다(구 구글 시트 CSV 폴백은 2026-07-23 제거 — admin 단일 관리).
+  _recruitDataPromise = loadRecruitDataFromSupabase();
   return _recruitDataPromise;
 }
 
