@@ -148,6 +148,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 
 ### Hero scene carousel (`#home`)
 카드 4장 coverflow형 센터 캐러셀: `.hero-scene#home` > `.zoom-exit-pin` > `.hs-carousel` > `.hs-stage#hs-stage` + `.hs-card`×4. 활성 카드 중앙, 이웃이 살짝 기울어 걸침. (구 `.hs-slide` 크로스페이드·YT IFrame·키워드 bounce는 폐기.)
+- **⚠️ `.hs-head` 이름표는 다른 섹션과 헤더 3종을 공유(2026-07-23 오너 "타이틀이 다른 섹션과 다르다"):** 구 `.hs-head-title`은 혼자 오렌지(`--action`)·700이라 튀었다 → **`.section-label`('Challenges' 코랄 대시 에이브로우) 추가 + 제목을 `--text` 본문색·명조 400**으로 바꿔 브리핑룸·성장 리포트 등과 동일 톤. ⚠️ **크기(clamp 22~28px)는 유지** — 대제목 46px로 키우면 `.hs-head`가 `flex:0 0 auto`라 무대 높이(아래 279 계약)를 밀어 캐러셀이 깨진다. 오렌지·700으로 되돌리지 말 것.
 
 | idx | id | 이름 | 이미지 (`.hs-img`) | 강조어 |
 |---|---|---|---|---|
