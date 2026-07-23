@@ -290,12 +290,26 @@
         <button type="button" class="ri-cancel" id="lecEditCancel">취소하고 새로 추가</button>
       </div>
       <form class="round-form" id="lectureForm" style="grid-template-columns:1fr;">
-        <div class="field"><label>제목 *</label><input id="lfTitle" type="text" placeholder="예: 현직 면접관이 알려주는 이미지메이킹 특강"></div>
-        <div class="field"><label>한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드·상단에 뜨는 짧은 소개"></div>
+        <div class="field"><label>제목 *</label><input id="lfTitle" type="text" placeholder="예: 대한항공 대비 특강"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="field"><label>항공사</label>
+            <select id="lfAirline">
+              <option value="">일반(항공사 없음)</option>
+              <option value="ke">대한항공 (KOREAN AIR)</option>
+              <option value="lj">진에어 (JIN AIR)</option>
+              <option value="7c">제주항공 (JEJU AIR)</option>
+              <option value="tw">티웨이항공 (T'WAY AIR)</option>
+              <option value="ze">이스타항공 (EASTAR JET)</option>
+              <option value="yp">에어프레미아 (AIR PREMIA)</option>
+              <option value="rf">에어로케이 (AERO K)</option>
+            </select></div>
+          <div class="field"><label>한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드에 뜨는 짧은 소개"></div>
+        </div>
         <div class="field"><label>상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
         <div class="field"><label>핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-          <div class="field"><label>참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="예: 30000 (0=무료)"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+          <div class="field"><label>참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
+          <div class="field"><label>잔여석(선택)</label><input id="lfSeats" type="number" min="0" placeholder="예: 20"></div>
           <div class="field"><label>정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
           <div class="field"><label>정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
         </div>
@@ -938,6 +952,8 @@
 
     function fillLectureForm(l) {
       document.getElementById('lfTitle').value      = l.title || '';
+      document.getElementById('lfAirline').value    = l.airline || '';
+      document.getElementById('lfSeats').value      = (l.seats_left != null ? l.seats_left : '');
       document.getElementById('lfSubtitle').value   = l.subtitle || '';
       document.getElementById('lfDesc').value       = l.description || '';
       document.getElementById('lfHigh').value       = Array.isArray(l.highlights) ? l.highlights.join('\n') : '';
@@ -970,6 +986,8 @@
     }
     document.getElementById('lecEditCancel').addEventListener('click', exitLectureEdit);
 
+    const AIR_KO = { ke:'대한항공', lj:'진에어', '7c':'제주항공', tw:'티웨이', ze:'이스타', yp:'에어프레미아', rf:'에어로케이' };
+
     // 관리자 목록용 신청 상태 라벨(공개 페이지 lecture-common.js status와 동일 규칙)
     function lectureStatusLabel(l) {
       const today = new Date(); today.setHours(0,0,0,0);
@@ -989,8 +1007,8 @@
       listEl.innerHTML = data.map(l => `
         <div class="round-item">
           <div>
-            <div class="ri-main">${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
+            <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${l.seats_left != null ? ' · 잔여 ' + l.seats_left + '석' : ''}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
@@ -1017,12 +1035,15 @@
       const price = parseInt(priceRaw, 10);
       if (priceRaw === '' || isNaN(price) || price < 0) { alert('참가비를 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
       const highlights = lecVal('lfHigh').split('\n').map(s => s.trim()).filter(Boolean);
+      const seatsRaw = lecVal('lfSeats');
       const row = {
         title,
+        airline:       lecVal('lfAirline') || null,
         subtitle:      lecVal('lfSubtitle') || null,
         description:   lecVal('lfDesc') || null,
         highlights:    highlights.length ? highlights : null,
         price,
+        seats_left:    seatsRaw === '' ? null : parseInt(seatsRaw, 10),
         capacity:      lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null,
         sort_order:    lecVal('lfSort') ? parseInt(lecVal('lfSort'), 10) : 0,
         recruit_start: lecVal('lfRStart') || null,

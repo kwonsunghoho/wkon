@@ -1,7 +1,7 @@
-/* ── 특강(lectures.html · lecture.html) 공용 헬퍼 ──
-   날짜·상태·이스케이프 등 순수 유틸. Supabase 접근은 각 페이지가 MONC.sb 로 직접 한다. */
+/* ── 특강(lectures.html · lecture.html · index 홈 섹션) 공용 헬퍼 ──
+   날짜·상태·이스케이프 등 순수 유틸 + 항공사 매핑 + 카드 마크업 빌더.
+   카드 스타일은 lectures.css 한 곳에서 관리(세 페이지 공용). Supabase 접근은 각 페이지가 MONC.sb로 직접. */
 (function () {
-  // 안전한 HTML 이스케이프(관리자 입력이라도 방어적으로) — innerHTML 조립 전 항상 통과시킬 것.
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -16,8 +16,7 @@
     return isNaN(d) ? null : d;
   }
 
-  // 신청(모집) 상태: recruit_start~recruit_end 기준. 'open' | 'upcoming' | 'closed'.
-  // 날짜가 비면 상시 신청(open)으로 본다.
+  // 신청(모집) 상태: 'open' | 'upcoming' | 'closed'. 날짜 없으면 상시(open).
   function status(start, end) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const s = parseDate(start), e = parseDate(end);
@@ -27,7 +26,6 @@
     return 'open';
   }
 
-  // 마감까지 남은 일수(open 일 때만). 3일 이하면 " · D-2" 식 접미사, 아니면 ''.
   function ddaySuffix(end) {
     const e = parseDate(end);
     if (!e) return '';
@@ -41,19 +39,86 @@
   }
 
   const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-  // "8월 3일(일)" 형태. 날짜 없으면 ''.
   function fmtDate(str) {
     const d = parseDate(str);
     if (!d) return '';
     return (d.getMonth() + 1) + '월 ' + d.getDate() + '일(' + WEEK[d.getDay()] + ')';
   }
 
-  // "6/1 ~ 6/28" 형태(모집 기간).
   function fmtPeriod(start, end) {
     const f = x => { const d = parseDate(x); return d ? (d.getMonth() + 1) + '/' + d.getDate() : '?'; };
     if (!start && !end) return '';
     return f(start) + ' ~ ' + f(end);
   }
 
-  window.LEC = { esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod };
+  // 항공사 매핑 — 영문 사명(로고 대신 조판)만 여기 두고, 액센트색은 lectures.css의 --air-<code> 변수로.
+  const AIRLINES = {
+    ke:  { ko: '대한항공',   en: 'KOREAN AIR' },
+    lj:  { ko: '진에어',     en: 'JIN AIR' },
+    '7c':{ ko: '제주항공',   en: 'JEJU AIR' },
+    tw:  { ko: '티웨이항공', en: "T'WAY AIR" },
+    ze:  { ko: '이스타항공', en: 'EASTAR JET' },
+    yp:  { ko: '에어프레미아', en: 'AIR PREMIA' },
+    rf:  { ko: '에어로케이', en: 'AERO K' },
+  };
+  function airline(code) { return (code && AIRLINES[code]) || null; }
+
+  // 메타행 아이콘(최대 3개): 날짜·강사·잔여석
+  const IC = {
+    cal:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>',
+    who:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>',
+    seat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>',
+  };
+  function mi(icon, text, cls) { return '<span class="mi' + (cls ? ' ' + cls : '') + '">' + icon + text + '</span>'; }
+
+  // 특강 카드 마크업(스펙: 커버[영문명·제목·룰·뱃지] + 정보부[서브·메타]). 세 페이지 공용.
+  function cardHtml(l) {
+    const air = airline(l.airline);
+    const accentStyle = l.airline ? ' style="--lx-accent:var(--air-' + l.airline + ')"' : '';
+    const st = status(l.recruit_start, l.recruit_end);
+    const soldOut = l.seats_left === 0;
+    const isOut = soldOut || st === 'closed';
+    const free = !(l.price > 0);
+    const badge = free
+      ? '<span class="lx-badge free">무료</span>'
+      : '<span class="lx-badge paid">' + Number(l.price).toLocaleString() + '원</span>';
+
+    let third = '';
+    if (st === 'upcoming') third = mi(IC.seat, '신청 예정');
+    else if (isOut) third = mi(IC.seat, '신청 마감');
+    else if (l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
+
+    const dateStr = fmtDate(l.lecture_date);
+    const meta = [
+      dateStr ? mi(IC.cal, dateStr) : '',
+      l.instructor ? mi(IC.who, esc(l.instructor)) : '',
+      third,
+    ].filter(Boolean).join('');
+
+    return '<a class="lx-card' + (isOut ? ' is-out' : '') + '"' + accentStyle
+      + ' href="lecture.html?id=' + encodeURIComponent(l.id) + '">'
+      + '<div class="lx-cover">'
+      +   badge
+      +   (air ? '<div class="lx-en">' + esc(air.en) + '</div>' : '')
+      +   '<div class="lx-ko">' + esc(l.title) + '</div>'
+      +   '<hr class="lx-rule">'
+      + '</div>'
+      + '<div class="lx-info">'
+      +   (l.subtitle ? '<div class="lx-copy">' + esc(l.subtitle) + '</div>' : '')
+      +   (meta ? '<div class="lx-meta">' + meta + '</div>' : '')
+      + '</div>'
+      + '</a>';
+  }
+
+  // 로딩 스켈레톤 카드(은은한 펄스)
+  function skeletonHtml(n) {
+    let s = '';
+    for (let i = 0; i < (n || 3); i++) {
+      s += '<div class="lx-sk lx-sk-pulse"><div class="sk-cover"></div>'
+        + '<div class="sk-lines"><div class="sk-line"></div><div class="sk-line s2"></div></div></div>';
+    }
+    return s;
+  }
+
+  window.LEC = { esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, cardHtml, skeletonHtml };
 })();

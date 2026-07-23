@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   MONC 특강 카드 — 디자인 스펙(2026-07-24)
+   lectures.html · index.html(#lectures-home) · lecture.html 공용.
+   원칙: 일곱 카드가 한 가족. 커버 배경은 7개 전부 동일(아이보리 한 단계 진하게),
+   항공사별로 바뀌는 건 '영문 사명 색'과 '커버 하단 1px 룰 색' 두 가지뿐.
+   한글 제목은 항상 네이비. 굵기는 400·500만. 그림자·글로우·리프트·그라디언트 금지.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  /* 항공사별 액센트 — 스펙 시작값을 아이보리 커버(--lx-cover) 위 4.5:1 이상으로 미세조정
+     (7C·LJ·RF 소폭 하향). 실제 운영값은 각 항공사 공식 CI로 추후 조정 가능. */
+  --air-ke: #14375E;  /* 대한항공 */
+  --air-lj: #3A6440;  /* 진에어 */
+  --air-7c: #8C4318;  /* 제주항공 */
+  --air-tw: #9E3B34;  /* 티웨이 */
+  --air-ze: #97323A;  /* 이스타 */
+  --air-yp: #2E3D63;  /* 에어프레미아 */
+  --air-rf: #8E4064;  /* 에어로케이 */
+
+  --lx-cover:   #E4DDC9;        /* 커버 톤 — 7개 카드 전부 동일 */
+  --lx-info:    #FBF9F4;        /* 정보부 — 밝은 웜화이트 */
+  --lx-navy:    #1B2E4E;        /* 한글 제목 — 항공사 무관 항상 네이비 */
+  --lx-body:    #4A4640;        /* 서브 카피 본문색 */
+  --lx-metac:   #7A756C;        /* 메타 보조색 */
+  --lx-bd:      rgba(38, 34, 28, .12);
+  --lx-bd-h:    rgba(38, 34, 28, .30);
+}
+
+/* ── 그리드: 1024+ 3열 / 640~1023 2열 / 640- 1열 ── */
+.lx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 1023px) { .lx-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 639px)  { .lx-grid { grid-template-columns: 1fr; } }
+
+/* ── 카드 ── */
+.lx-card {
+  --lx-accent: var(--lx-navy);                 /* 항공사 미지정 시 기본 네이비 */
+  display: flex; flex-direction: column;
+  background: var(--lx-info);
+  border: 1px solid var(--lx-bd); border-radius: 14px; overflow: hidden;
+  text-decoration: none; color: var(--lx-body);
+  transition: border-color .18s ease;          /* 리프트·확대 금지, 테두리만 */
+}
+.lx-card:hover { border-color: var(--lx-bd-h); }
+.lx-card:focus-visible { outline: 2px solid var(--lx-accent); outline-offset: 2px; }
+.lx-card.is-out { opacity: .55; }              /* 마감·품절 — 카드는 계속 노출 */
+
+/* 커버부(톤 배경) */
+.lx-cover { position: relative; background: var(--lx-cover); padding: 28px 24px 24px; }
+.lx-en {
+  font-size: 12px; font-weight: 400; letter-spacing: .14em; line-height: 1.2;
+  color: var(--lx-accent); text-transform: uppercase;
+}
+.lx-ko {
+  margin-top: 12px;
+  font-size: 28px; font-weight: 500; line-height: 1.25; color: var(--lx-navy);
+  letter-spacing: -.01em;
+}
+.lx-en + .lx-ko { margin-top: 12px; }
+.lx-rule { margin: 20px 0 0; height: 1px; border: 0; background: var(--lx-accent); opacity: .6; }
+
+/* 뱃지(우상단) — 옅은 배경 + 진한 글자, 텍스트 항상 노출 */
+.lx-badge {
+  position: absolute; top: 16px; right: 16px;
+  font-size: 11px; font-weight: 400; line-height: 1.5;
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+}
+.lx-badge.free { background: rgba(46, 125, 70, .14); color: #2E6E42; }
+.lx-badge.paid { background: rgba(27, 46, 78, .10); color: var(--lx-navy); }
+
+/* 정보부(밝은 배경) */
+.lx-info { padding: 16px 24px 20px; }
+.lx-copy { font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--lx-body); }
+.lx-meta {
+  margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px 12px;
+  font-size: 13px; font-weight: 400; color: var(--lx-metac);
+}
+.lx-copy + .lx-meta { margin-top: 12px; }
+.lx-meta .mi { display: inline-flex; align-items: center; gap: 5px; }
+.lx-meta .mi svg { width: 14px; height: 14px; opacity: .7; flex: 0 0 auto; }
+.lx-meta .seats-low { color: var(--lx-accent); font-weight: 500; }   /* 잔여 5석 이하: 텍스트만 강조 */
+.lx-meta .seats-low svg { opacity: 1; }
+
+/* ── 로딩 스켈레톤 ── */
+.lx-sk { background: var(--lx-info); border: 1px solid var(--lx-bd); border-radius: 14px; overflow: hidden; }
+.lx-sk .sk-cover { background: var(--lx-cover); height: 128px; }
+.lx-sk .sk-lines { padding: 18px 24px 22px; }
+.lx-sk .sk-line { height: 12px; border-radius: 6px; background: rgba(38, 34, 28, .09); margin-bottom: 12px; }
+.lx-sk .sk-line.s2 { width: 58%; margin-bottom: 0; }
+.lx-sk-pulse { animation: lxpulse 1.7s ease-in-out infinite; }
+@keyframes lxpulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+/* ── 모바일(639-) ── */
+@media (max-width: 639px) {
+  .lx-ko { font-size: 24px; }
+  .lx-cover { padding: 24px 20px 20px; }
+  .lx-info { padding: 14px 20px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-card { transition: none; }
+  .lx-sk-pulse { animation: none; }
+}

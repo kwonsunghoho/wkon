@@ -44,6 +44,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&family=Song+Myung&display=swap">
   <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="lectures.css">
 </head>
 <body>
 
@@ -809,9 +810,7 @@
       <h2 class="section-title">몬크가 여는 <em class="bp-hl">특강</em></h2>
       <p class="section-desc">주기적으로 열리는 승무원 면접 특강. 신청 중인 특강을 골라 바로 신청하세요.</p>
     </div>
-    <div class="bp-grid reveal" id="lxHomeGrid">
-      <div class="bp-card" style="pointer-events:none; opacity:.6;">불러오는 중…</div>
-    </div>
+    <div class="lx-grid reveal" id="lxHomeGrid"></div>
     <div class="bp-foot reveal">
       <a class="btn btn-action" href="lectures.html">특강 전체 보기 →</a>
       <p class="bp-note">새로운 특강이 열리면 여기에서 가장 먼저 알려드려요.</p>
@@ -998,44 +997,32 @@
 <script src="scroll-fx.js"></script>
 <script src="recruit.js"></script>
 <script>
-  /* ── 홈 특강 섹션(#lectures-home) 카드 채우기 — special_lectures(visible) 상위 2개.
-        신청 중 → 예정 → 마감 순으로 정렬해 임박한 것을 앞에. 없으면 안내 문구만. ── */
+  /* ── 홈 특강 섹션(#lectures-home) 카드 채우기 — special_lectures(visible) 상위 3개.
+        카드 마크업은 lecture-common.js의 공용 LEC.cardHtml(특강 목록 페이지와 동일 디자인).
+        신청 중 → 예정 → 마감 순. 없으면 안내 문구만. ── */
   (async function loadHomeLectures() {
     const grid = document.getElementById('lxHomeGrid');
     if (!grid || !window.MONC || !window.MONC.sb || !window.LEC) return;
-    const CAL = '<span class="bp-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>';
+    grid.innerHTML = window.LEC.skeletonHtml(3);
     try {
+      // select('*') — airline·seats_left 마이그레이션 미적용에도 안 깨지게(컬럼 지정 시 미적용이면 조회 전체 400)
       const { data, error } = await window.MONC.sb
         .from('special_lectures')
-        .select('id, title, subtitle, recruit_start, recruit_end, lecture_date, schedule_text, price')
+        .select('*')
         .eq('visible', true)
         .order('sort_order', { ascending: true })
         .order('lecture_date', { ascending: true, nullsFirst: false });
       if (error) throw error;
       if (!data || !data.length) {
-        grid.innerHTML = '<div class="bp-card" style="pointer-events:none;"><div class="bp-txt"><span class="bp-name">곧 새로운 특강이 열려요</span><span class="bp-desc">준비 중인 특강 소식을 여기에서 가장 먼저 안내드릴게요.</span></div></div>';
+        grid.innerHTML = '<p style="grid-column:1/-1; color:var(--text-dim); font-size:14px; padding:8px 0;">곧 새로운 특강이 열려요. 준비 중인 소식을 여기에서 가장 먼저 안내드릴게요.</p>';
         return;
       }
-      const rank = l => { const s = window.LEC.status(l.recruit_start, l.recruit_end); return s === 'open' ? 0 : s === 'upcoming' ? 1 : 2; };
+      const rank = l => { const s = window.LEC.status(l.recruit_start, l.recruit_end); return (l.seats_left === 0 || s === 'closed') ? 2 : s === 'upcoming' ? 1 : 0; };
       data.sort((a, b) => rank(a) - rank(b));
-      grid.innerHTML = data.slice(0, 2).map(l => {
-        const st = window.LEC.status(l.recruit_start, l.recruit_end);
-        const badge = st === 'open'
-          ? '<span class="lx-hc-badge open">신청 중' + (window.LEC.ddaySuffix(l.recruit_end) || '') + '</span>'
-          : st === 'upcoming' ? '<span class="lx-hc-badge soon">신청 예정</span>'
-          : '<span class="lx-hc-badge closed">신청 마감</span>';
-        const when = [window.LEC.fmtDate(l.lecture_date), l.schedule_text].filter(Boolean).join(' · ');
-        const price = l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료';
-        return '<a class="bp-card" href="lecture.html?id=' + encodeURIComponent(l.id) + '">' + CAL
-          + '<div class="bp-txt">' + badge
-          + '<span class="bp-name">' + window.LEC.esc(l.title) + '</span>'
-          + (l.subtitle ? '<span class="bp-desc">' + window.LEC.esc(l.subtitle) + '</span>' : '')
-          + '<span class="lx-hc-meta">' + (when ? window.LEC.esc(when) + ' · ' : '') + price + '</span>'
-          + '</div></a>';
-      }).join('');
+      grid.innerHTML = data.slice(0, 3).map(window.LEC.cardHtml).join('');
     } catch (e) {
       console.warn('[홈 특강] 로드 실패', e);
-      grid.innerHTML = '<div class="bp-card" style="pointer-events:none;"><div class="bp-txt"><span class="bp-name">특강 보러가기</span><span class="bp-desc">아래 버튼으로 특강 목록을 확인해 주세요.</span></div></div>';
+      grid.innerHTML = '<p style="grid-column:1/-1; color:var(--text-dim); font-size:14px; padding:8px 0;">아래 버튼으로 특강 목록을 확인해 주세요.</p>';
     }
   })();
 

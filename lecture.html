@@ -26,6 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="lectures.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; padding-bottom: 88px; }
@@ -44,7 +45,9 @@
     .lc-badge.open { background: rgba(46,125,70,.14); color: #2E7D46; }
     .lc-badge.soon { background: var(--accent-tint); color: var(--accent-ink); }
     .lc-badge.closed { background: rgba(120,120,120,.14); color: #6b6b6b; }
-    .lc-title { font-family: var(--serif); font-size: clamp(26px, 5.4vw, 40px); font-weight: 700; color: var(--accent); letter-spacing: -.5px; line-height: 1.28; }
+    /* 항공사 영문 사명 eyebrow — 카드의 .lx-en 과 같은 계열(액센트색·자간). --lx-accent 는 render()가 지정. */
+    .lc-eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .14em; color: var(--lx-accent, var(--lx-navy)); text-transform: uppercase; margin-bottom: 10px; }
+    .lc-title { font-family: var(--serif); font-size: clamp(26px, 5.4vw, 40px); font-weight: 700; color: var(--lx-navy); letter-spacing: -.5px; line-height: 1.28; }
     .lc-sub { font-size: 16px; color: var(--text); opacity: .82; margin-top: 12px; }
     .lc-cover { width: 100%; max-height: 340px; object-fit: cover; border-radius: var(--radius-md); margin-top: 20px; display: block; }
 
@@ -176,11 +179,17 @@
     }
 
     function render(l) {
-      const st = LEC.status(l.recruit_start, l.recruit_end);
+      // 항공사 브랜드 액센트를 이 페이지 전체에 지정(카드의 --lx-accent와 동일 소스)
+      const air = LEC.airline(l.airline);
+      root.style.setProperty('--lx-accent', l.airline ? 'var(--air-' + l.airline + ')' : 'var(--lx-navy)');
+
+      const rawSt = LEC.status(l.recruit_start, l.recruit_end);
+      const soldOut = l.seats_left === 0;
+      const st = soldOut ? 'closed' : rawSt;          // 품절이면 마감으로 취급(신청 차단)
       const badge = st === 'open'
         ? '<span class="lc-badge open">신청 중' + (LEC.ddaySuffix(l.recruit_end) || '') + '</span>'
         : st === 'upcoming' ? '<span class="lc-badge soon">신청 예정</span>'
-        : '<span class="lc-badge closed">신청 마감</span>';
+        : '<span class="lc-badge closed">' + (soldOut ? '신청 마감 · 마감' : '신청 마감') + '</span>';
 
       const dateStr = LEC.fmtDate(l.lecture_date);
       const when = [dateStr, l.schedule_text].filter(Boolean).join(' · ') || '추후 안내';
@@ -191,7 +200,8 @@
       facts.push(fact('일시', when));
       if (l.instructor) facts.push(fact('강사', l.instructor));
       if (recruitPeriod) facts.push(fact('신청 기간', recruitPeriod));
-      if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
+      if (l.seats_left != null) facts.push(fact('잔여석', soldOut ? '마감' : l.seats_left + '석'));
+      else if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
       facts.push(fact('참가비', priceStr, true));
 
       const highlights = Array.isArray(l.highlights) ? l.highlights.filter(Boolean) : [];
@@ -199,6 +209,7 @@
       root.innerHTML =
         '<header class="lc-hero"><div class="container">'
         + badge
+        + (air ? '<div class="lc-eyebrow">' + LEC.esc(air.en) + '</div>' : '')
         + '<h1 class="lc-title">' + LEC.esc(l.title) + '</h1>'
         + (l.subtitle ? '<p class="lc-sub">' + LEC.esc(l.subtitle) + '</p>' : '')
         + (l.thumb_url ? '<img class="lc-cover" src="' + LEC.esc(l.thumb_url) + '" alt="">' : '')
