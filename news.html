@@ -63,6 +63,26 @@
     .nw-search input { width: 100%; min-height: 44px; padding: 10px 16px; font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 999px; }
     .nw-search input::placeholder { color: var(--text-muted); }
     .nw-search input:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    /* 필터 픽커(2026-07-23) — 칩 나열 대신 [항공사]·[주제] 버튼 → 바텀시트 선택(오너 지시).
+       선택된 상태는 버튼 라벨이 값으로 바뀌고 틴트(.set) — 현재 필터가 항상 보인다. */
+    .nw-pickrow { display: flex; gap: 8px; margin-top: 10px; }
+    .nw-pick { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); font: inherit; font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
+    .nw-pick:hover { border-color: var(--accent-dark); }
+    .nw-pick:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .nw-pick .pk-cv { font-size: 10px; opacity: .55; }
+    .nw-pick.set { background: var(--action-tint); border-color: var(--accent-dark); color: var(--accent-ink); font-weight: 800; }
+    .nw-scrim { position: fixed; inset: 0; z-index: 205; background: rgba(38,34,28,.45); opacity: 0; transition: opacity .22s; }
+    .nw-scrim.open { opacity: 1; }
+    .nw-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 210; width: min(100%, 560px); margin: 0 auto; background: var(--surface); border-radius: 22px 22px 0 0; padding: 8px 18px calc(22px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -14px 44px rgba(38,34,28,.24); max-height: 72vh; overflow-y: auto; transform: translateY(18px); opacity: 0; transition: transform .26s cubic-bezier(.22,1,.36,1), opacity .2s; }
+    .nw-sheet.open { transform: none; opacity: 1; }
+    .nw-sheet-handle { width: 38px; height: 4px; border-radius: 999px; background: var(--border); margin: 6px auto 14px; }
+    .nw-sheet-title { font-family: var(--serif); font-size: 18px; font-weight: 700; margin: 0 0 12px; color: var(--text); }
+    .nw-sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (min-width: 640px) { .nw-sheet-grid { grid-template-columns: 1fr 1fr 1fr; } }
+    .nw-opt { appearance: none; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 700; min-height: 46px; padding: 8px 10px; border-radius: 999px; -webkit-tap-highlight-color: transparent; }
+    .nw-opt:hover { border-color: var(--accent-dark); }
+    .nw-opt:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .nw-opt.on { background: var(--action); color: var(--action-ink); border-color: transparent; }
     /* 칩 줄은 모바일에서 한 줄 가로 스크롤 — 세로로 쌓으면 sticky 필터바가 375px 화면의 70%를
        먹어 기사가 안 보인다(2026-07-22 실측). 데스크톱(≥640px)만 줄바꿈 허용. */
     .nw-filter-row { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; align-items: center; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -133,7 +153,7 @@
     .nw-cancel { appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 999px; min-height: 40px; }
 
     @media (prefers-reduced-motion: reduce) {
-      .nw-card, .nw-bm svg { transition: none; }
+      .nw-card, .nw-bm svg, .nw-pick, .nw-sheet, .nw-scrim { transition: none; }
       html { scroll-behavior: auto; }
     }
   </style>
@@ -177,11 +197,10 @@
   <div class="nw-filters" id="nwFilters" hidden>
     <div class="container">
       <div class="nw-search"><input type="search" id="nwSearch" placeholder="제목 검색 — 예: 유니폼, 채용설명회, 인천공항" aria-label="기사 제목 검색" /></div>
-      <div class="nw-filter-row" id="nwAirlineRow">
-        <span class="nw-filter-label">항공사</span>
-      </div>
-      <div class="nw-filter-row" id="nwTopicRow">
-        <span class="nw-filter-label">주제</span>
+      <!-- 필터 픽커(2026-07-23 오너 지시) — 칩 나열 대신 버튼 2개 → 바텀시트에서 선택 -->
+      <div class="nw-pickrow">
+        <button class="nw-pick" type="button" id="nwAirBtn" hidden aria-haspopup="dialog" aria-expanded="false"><span class="pk-label">항공사</span><span class="pk-cv" aria-hidden="true">▾</span></button>
+        <button class="nw-pick" type="button" id="nwTopicBtn" hidden aria-haspopup="dialog" aria-expanded="false"><span class="pk-label">주제</span><span class="pk-cv" aria-hidden="true">▾</span></button>
       </div>
     </div>
   </div>
@@ -205,6 +224,14 @@
     <div class="nw-more-wrap"><button class="nw-more" id="nwMore" type="button" hidden>더 보기</button></div>
   </main>
 
+  <!-- 필터 선택 바텀시트 — [항공사]/[주제] 버튼이 연다. 옵션은 openSheet()가 동적 렌더 -->
+  <div class="nw-scrim" id="nwScrim" hidden></div>
+  <div class="nw-sheet" id="nwSheet" role="dialog" aria-modal="true" aria-labelledby="nwSheetTitle" hidden>
+    <div class="nw-sheet-handle" aria-hidden="true"></div>
+    <h2 class="nw-sheet-title" id="nwSheetTitle">항공사 선택</h2>
+    <div class="nw-sheet-grid" id="nwSheetGrid"></div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script>
@@ -222,14 +249,11 @@
     const BM_SVG = '<svg viewBox="0 0 100 140" aria-hidden="true"><use href="#moncWin"/></svg>'
       + '<span class="bm-off">스크랩</span><span class="bm-on">저장됨</span>';
 
-    // "3시간 전" 상대시각(하루 넘으면 날짜)
-    function relTime(iso) {
+    // 게시 날짜 (YYYY.MM.DD) — 상대시각 대신 날짜로 통일
+    function fmtDate(iso) {
       if (!iso) return '';
-      const d = new Date(iso), diff = (Date.now() - d.getTime()) / 1000;
-      if (diff < 3600) return Math.max(1, Math.floor(diff / 60)) + '분 전';
-      if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
-      if (diff < 86400 * 7) return Math.floor(diff / 86400) + '일 전';
-      return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+      const d = new Date(iso), p = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate());
     }
 
     const listEl = document.getElementById('nwList');
@@ -251,7 +275,17 @@
       emptyEl.hidden = false; emptyEl.textContent = '뉴스 게시판을 준비 중이에요. 조금만 기다려주세요!';
     }
 
-    // ── 필터 바: 기사가 있으면 검색창 노출, 칩은 데이터에 존재하는 값만(최근 1000건 기준) ──
+    // ── 필터 바: 기사가 있으면 검색창 노출. 항공사·주제는 픽커 버튼 → 바텀시트에서 선택
+    //    (2026-07-23 오너 지시 — 칩 나열 폐기). 옵션은 데이터에 존재하는 값만(최근 1000건 기준). ──
+    const airBtn = document.getElementById('nwAirBtn');
+    const topicBtn = document.getElementById('nwTopicBtn');
+    const scrimEl = document.getElementById('nwScrim');
+    const sheetEl = document.getElementById('nwSheet');
+    const sheetTitleEl = document.getElementById('nwSheetTitle');
+    const sheetGridEl = document.getElementById('nwSheetGrid');
+    let sheetKind = null;                                  // 'air' | 'top' | null(닫힘)
+    const sheetOpts = { air: [], top: [] };                // 데이터에 실존하는 슬러그만
+
     async function buildFilters() {
       const { data, error } = await MONC.sb.from('news_articles')
         .select('airline, topic').order('created_at', { ascending: false }).limit(1000);
@@ -259,34 +293,70 @@
       filtersEl.hidden = false;                            // 검색창은 기사만 있으면 쓸 수 있다
       const airSet = new Set(data.map(r => r.airline).filter(Boolean));
       const topSet = new Set(data.map(r => r.topic).filter(Boolean));
+      sheetOpts.air = AIRLINE_ORDER.filter(a => airSet.has(a));
+      sheetOpts.top = TOPIC_ORDER.filter(t => topSet.has(t));
+      airBtn.hidden = !sheetOpts.air.length;
+      topicBtn.hidden = !sheetOpts.top.length;
+      syncPickers();
+    }
 
-      const mk = (label, val, kind) => {
+    // 버튼 라벨 = 현재 선택(전체면 축 이름) — 지금 무엇으로 걸러진 상태인지 항상 보인다
+    function syncPickers() {
+      const a = fAirline === 'all' ? null : AIRLINE_LABEL[fAirline];
+      const t = fTopic === 'all' ? null : TOPIC_LABEL[fTopic];
+      airBtn.querySelector('.pk-label').textContent = a || '항공사';
+      topicBtn.querySelector('.pk-label').textContent = t || '주제';
+      airBtn.classList.toggle('set', !!a);
+      topicBtn.classList.toggle('set', !!t);
+    }
+
+    function openSheet(kind) {
+      sheetKind = kind;
+      const isAir = kind === 'air';
+      sheetTitleEl.textContent = isAir ? '항공사 선택' : '주제 선택';
+      const cur = isAir ? fAirline : fTopic;
+      const labels = isAir ? AIRLINE_LABEL : TOPIC_LABEL;
+      sheetGridEl.innerHTML = '';
+      const mk = (val, text) => {
         const b = document.createElement('button');
-        b.className = 'nw-chip' + ((kind === 'air' ? fAirline : fTopic) === val ? ' active' : '');
-        b.type = 'button'; b.dataset.kind = kind; b.dataset.val = val;
-        b.textContent = label;
+        b.type = 'button'; b.dataset.val = val;
+        b.className = 'nw-opt' + (cur === val ? ' on' : '');
+        b.textContent = text;
         return b;
       };
-      const airRow = document.getElementById('nwAirlineRow');
-      const topRow = document.getElementById('nwTopicRow');
-      airRow.querySelectorAll('.nw-chip').forEach(n => n.remove());
-      topRow.querySelectorAll('.nw-chip').forEach(n => n.remove());
-      airRow.hidden = !airSet.size;
-      topRow.hidden = !topSet.size;
-      airRow.appendChild(mk('전체', 'all', 'air'));
-      AIRLINE_ORDER.filter(a => airSet.has(a)).forEach(a => airRow.appendChild(mk(AIRLINE_LABEL[a], a, 'air')));
-      topRow.appendChild(mk('전체', 'all', 'top'));
-      TOPIC_ORDER.filter(t => topSet.has(t)).forEach(t => topRow.appendChild(mk(TOPIC_LABEL[t], t, 'top')));
-
-      filtersEl.querySelectorAll('.nw-chip').forEach(chip => chip.addEventListener('click', () => {
-        if (chip.dataset.kind === 'air') fAirline = chip.dataset.val; else fTopic = chip.dataset.val;
-        filtersEl.querySelectorAll('.nw-chip').forEach(c => {
-          const sel = c.dataset.kind === 'air' ? fAirline : fTopic;
-          c.classList.toggle('active', c.dataset.val === sel);
-        });
-        resetAndLoad();
-      }));
+      sheetGridEl.appendChild(mk('all', isAir ? '전체 항공사' : '전체 주제'));
+      (isAir ? sheetOpts.air : sheetOpts.top).forEach(v => sheetGridEl.appendChild(mk(v, labels[v])));
+      scrimEl.hidden = false; sheetEl.hidden = false;
+      void sheetEl.offsetWidth;                            // 강제 리플로 — hidden 해제를 먼저 커밋해 슬라이드업 전환이 걸린다(rAF는 백그라운드 탭에서 안 돎)
+      scrimEl.classList.add('open'); sheetEl.classList.add('open');
+      document.body.style.overflow = 'hidden';             // 시트 열린 동안 배경 스크롤 잠금
+      (isAir ? airBtn : topicBtn).setAttribute('aria-expanded', 'true');
+      (sheetGridEl.querySelector('.on') || sheetGridEl.firstChild).focus();
     }
+
+    function closeSheet() {
+      if (!sheetKind) return;
+      const wasAir = sheetKind === 'air';
+      sheetKind = null;
+      scrimEl.classList.remove('open'); sheetEl.classList.remove('open');
+      document.body.style.overflow = '';
+      airBtn.setAttribute('aria-expanded', 'false');
+      topicBtn.setAttribute('aria-expanded', 'false');
+      setTimeout(() => {                                   // 전환이 끝난 뒤 숨김(그새 재오픈이면 스킵)
+        if (!sheetEl.classList.contains('open')) { scrimEl.hidden = true; sheetEl.hidden = true; }
+      }, 240);
+      (wasAir ? airBtn : topicBtn).focus();
+    }
+
+    airBtn.addEventListener('click', () => openSheet('air'));
+    topicBtn.addEventListener('click', () => openSheet('top'));
+    scrimEl.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+    sheetGridEl.addEventListener('click', e => {
+      const b = e.target.closest('.nw-opt'); if (!b) return;
+      if (sheetKind === 'air') fAirline = b.dataset.val; else fTopic = b.dataset.val;
+      syncPickers(); closeSheet(); resetAndLoad();
+    });
 
     // ── 제목 검색(2026-07-22 스펙) — 디바운스 300ms, 칩 필터와 AND ──
     let searchTimer = null;
@@ -320,7 +390,7 @@
       return `<li class="nw-card" data-id="${esc(a.id)}">
         <a class="nw-link" href="${esc(a.url)}" target="_blank" rel="noopener">
           <div class="nw-card-title">${esc(a.title)}</div>
-          <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${relTime(a.published_at)}</span></div>
+          <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${fmtDate(a.published_at)}</span></div>
         </a>
         <button class="nw-bm${scrapped ? ' on' : ''}" type="button" data-id="${esc(a.id)}"
           aria-label="${scrapped ? '스크랩 해제' : '스크랩'}" aria-pressed="${scrapped}">${BM_SVG}</button>
@@ -496,7 +566,7 @@
           return `<li class="nw-card" data-id="${esc(a.id)}">
             <a class="nw-link" href="${esc(a.url)}" target="_blank" rel="noopener">
               <div class="nw-card-title">${esc(a.title)}</div>
-              <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${relTime(a.published_at)}</span></div>
+              <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${fmtDate(a.published_at)}</span></div>
             </a>
             <div class="nw-extras">${tagBit}</div>
             ${note}
