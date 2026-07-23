@@ -148,7 +148,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 
 ### Hero scene carousel (`#home`)
 카드 4장 coverflow형 센터 캐러셀: `.hero-scene#home` > `.zoom-exit-pin` > `.hs-carousel` > `.hs-stage#hs-stage` + `.hs-card`×4. 활성 카드 중앙, 이웃이 살짝 기울어 걸침. (구 `.hs-slide` 크로스페이드·YT IFrame·키워드 bounce는 폐기.)
-- **⚠️ `.hs-head` 이름표는 다른 섹션과 헤더 3종을 공유(2026-07-23 오너 "타이틀이 다른 섹션과 다르다"):** 구 `.hs-head-title`은 혼자 오렌지(`--action`)·700이라 튀었다 → **`.section-label`('Challenges' 코랄 대시 에이브로우) 추가 + 제목을 `--text` 본문색·명조 400**으로 바꿔 브리핑룸·성장 리포트 등과 동일 톤. ⚠️ **크기(clamp 22~28px)는 유지** — 대제목 46px로 키우면 `.hs-head`가 `flex:0 0 auto`라 무대 높이(아래 279 계약)를 밀어 캐러셀이 깨진다. 오렌지·700으로 되돌리지 말 것.
+- **⚠️ `.hs-head`는 에이브로우 + 오렌지 대헤드라인(2026-07-23 오너 지시 2회):** ① `.section-label`('Challenges' 코랄 대시 에이브로우) 추가로 헤더 3종 구조를 다른 섹션과 통일. ② 제목 `.hs-head-title`은 **명조 400 + `--accent-dark`(#D9531F) + 크기 `--fs-h2`(clamp 30~46px)** — 오너가 Before&After처럼 '오렌지·큰 타이틀'을 원했다. ⚠️ **밝은 베이지 배경이라 `--action`(#F27945)이 아니라 `--accent-dark`(#D9531F)** — `--action`은 다크 배경(Before&After)에서만 대비가 나오고 밝은 배경에선 2:1로 깨진다(큰 글씨 3:1 기준). 텍스트는 '승무원 준비 어렵게하지마세요' / 서브 '여러분의 꾸준함과 몬크의 노하우면 됩니다'. **`word-break:keep-all` 필수**(375px에서 단어 중간 찢김 방지). ⚠️ **무대 안전 실측(375px):** 제목이 2줄이 돼 `.hs-head` 141px지만 `.hs-carousel`(775px)에 head+stage(581px)가 194px 여유로 들어가 무대는 안 깨진다 — **단 텍스트를 더 길게/크게 하면 이 여유부터 재확인**(초과 시 `.hs-stage`가 밀린다). 구 본문색·28px나 오렌지 700으로 되돌리지 말 것.
 
 | idx | id | 이름 | 이미지 (`.hs-img`) | 강조어 |
 |---|---|---|---|---|
