@@ -368,79 +368,20 @@
   </div>
 </section>
 
-<!-- BLIND QUIZ: 당신이 면접관이라면? -->
-<section class="bq-section" id="blind-quiz">
+<!-- 특강 홍보(2026-07-24 신설): admin '특강' 탭에서 등록한 특강(special_lectures, visible)을
+     홈에서 미리 보여주고 lectures.html 허브로 유도한다. 카드는 아래 인라인 스크립트가 채운다
+     (supabase-config.js 로드 이후 실행돼야 해서 스크립트는 body 하단에 둠). 없으면 CTA만 노출. -->
+<section class="bp-section lx-home" id="lectures-home">
   <div class="container">
-    <div class="reveal" style="text-align:center; max-width:520px; margin:0 auto 40px;" data-reveal>
-      <div class="section-label">Blind Test</div>
-      <h2 class="section-title">당신이 면접관이라면?</h2>
-      <p class="section-desc">면접관의 귀로 직접 판정해 보세요.</p>
+    <div class="reveal">
+      <div class="section-label">Special Lecture</div>
+      <h2 class="section-title">몬크가 여는 <em class="bp-hl">특강</em></h2>
+      <p class="section-desc">주기적으로 열리는 승무원 면접 특강. 신청 중인 특강을 골라 바로 신청하세요.</p>
     </div>
-    <div class="bq-stage reveal" data-reveal>
-
-      <!-- 인트로: 면접장 입장 -->
-      <div class="bq-intro" id="bq-intro">
-        <div class="bq-intro-media">
-          <img src="images/bq-intro.jpg" alt="네 명의 면접관 앞에 앉은 승무원 지원자" loading="lazy" decoding="async">
-        </div>
-        <div class="bq-intro-overlay">
-          <h3 class="bq-intro-title">오늘, 당신이<br>면접관입니다</h3>
-          <div class="bq-intro-meta">🎧 약 1분 · 이어폰 권장</div>
-          <button class="btn btn-action bq-start-btn" id="bq-start" type="button">판정 시작하기</button>
-        </div>
-      </div>
-
-      <!-- 라운드: 실루엣 영상 씬 + 판정 콘솔 -->
-      <div class="bq-round" id="bq-round" hidden>
-        <div class="bq-scene">
-          <video id="bq-video" src="video/bq-candidate.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
-          <div class="bq-scene-top">
-            <span class="bq-scene-badge" id="bq-scene-badge">블라인드 심사 중</span>
-            <span class="bq-dots" id="bq-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-          </div>
-          <span class="bq-scene-tag" id="bq-round-tag">보신각 · 목소리</span>
-        </div>
-        <div class="bq-console">
-          <div class="bq-round-num" id="bq-round-num">ROUND 1/5</div>
-          <div class="bq-clips">
-            <button class="bq-clip" type="button" data-slot="0">
-              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
-              <span class="bq-clip-info">
-                <span class="bq-clip-name">지원자 A <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
-                <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
-              </span>
-            </button>
-            <button class="bq-clip" type="button" data-slot="1">
-              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
-              <span class="bq-clip-info">
-                <span class="bq-clip-name">지원자 B <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
-                <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
-              </span>
-            </button>
-          </div>
-          <div class="bq-question" id="bq-question">
-            <p class="bq-q-text" id="bq-q-text">두 목소리를 모두 들어보세요</p>
-            <div class="bq-answers">
-              <button class="bq-answer-btn" type="button" data-slot="0" disabled>지원자 A</button>
-              <button class="bq-answer-btn" type="button" data-slot="1" disabled>지원자 B</button>
-            </div>
-          </div>
-          <div class="bq-reveal" id="bq-reveal" hidden>
-            <div class="bq-verdict" id="bq-verdict"></div>
-            <p class="bq-explain" id="bq-explain"></p>
-            <button class="btn btn-action bq-next-btn" id="bq-next" type="button">다음 라운드 →</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 최종 결과 -->
-      <div class="bq-result" id="bq-result" hidden>
-        <div class="bq-score-big" id="bq-score-big"></div>
-        <p class="bq-result-msg" id="bq-result-msg"></p>
-        <button class="btn btn-action bq-cta" type="button" onclick="location.href='apply.html'">나도 2주 뒤, 통과되는 목소리 만들기</button>
-        <button class="bq-retry" id="bq-retry" type="button">다시 판정하기</button>
-      </div>
-
+    <div class="lx-grid reveal" id="lxHomeGrid"></div>
+    <div class="bp-foot reveal">
+      <a class="btn btn-action" href="lectures.html">특강 전체 보기 →</a>
+      <p class="bp-note">새로운 특강이 열리면 여기에서 가장 먼저 알려드려요.</p>
     </div>
   </div>
 </section>
@@ -800,20 +741,79 @@
   </div>
 </section>
 
-<!-- 특강 홍보(2026-07-24 신설): admin '특강' 탭에서 등록한 특강(special_lectures, visible)을
-     홈에서 미리 보여주고 lectures.html 허브로 유도한다. 카드는 아래 인라인 스크립트가 채운다
-     (supabase-config.js 로드 이후 실행돼야 해서 스크립트는 body 하단에 둠). 없으면 CTA만 노출. -->
-<section class="bp-section lx-home" id="lectures-home">
+<!-- BLIND QUIZ: 당신이 면접관이라면? -->
+<section class="bq-section" id="blind-quiz">
   <div class="container">
-    <div class="reveal">
-      <div class="section-label">Special Lecture</div>
-      <h2 class="section-title">몬크가 여는 <em class="bp-hl">특강</em></h2>
-      <p class="section-desc">주기적으로 열리는 승무원 면접 특강. 신청 중인 특강을 골라 바로 신청하세요.</p>
+    <div class="reveal" style="text-align:center; max-width:520px; margin:0 auto 40px;" data-reveal>
+      <div class="section-label">Blind Test</div>
+      <h2 class="section-title">당신이 면접관이라면?</h2>
+      <p class="section-desc">면접관의 귀로 직접 판정해 보세요.</p>
     </div>
-    <div class="lx-grid reveal" id="lxHomeGrid"></div>
-    <div class="bp-foot reveal">
-      <a class="btn btn-action" href="lectures.html">특강 전체 보기 →</a>
-      <p class="bp-note">새로운 특강이 열리면 여기에서 가장 먼저 알려드려요.</p>
+    <div class="bq-stage reveal" data-reveal>
+
+      <!-- 인트로: 면접장 입장 -->
+      <div class="bq-intro" id="bq-intro">
+        <div class="bq-intro-media">
+          <img src="images/bq-intro.jpg" alt="네 명의 면접관 앞에 앉은 승무원 지원자" loading="lazy" decoding="async">
+        </div>
+        <div class="bq-intro-overlay">
+          <h3 class="bq-intro-title">오늘, 당신이<br>면접관입니다</h3>
+          <div class="bq-intro-meta">🎧 약 1분 · 이어폰 권장</div>
+          <button class="btn btn-action bq-start-btn" id="bq-start" type="button">판정 시작하기</button>
+        </div>
+      </div>
+
+      <!-- 라운드: 실루엣 영상 씬 + 판정 콘솔 -->
+      <div class="bq-round" id="bq-round" hidden>
+        <div class="bq-scene">
+          <video id="bq-video" src="video/bq-candidate.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+          <div class="bq-scene-top">
+            <span class="bq-scene-badge" id="bq-scene-badge">블라인드 심사 중</span>
+            <span class="bq-dots" id="bq-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="bq-scene-tag" id="bq-round-tag">보신각 · 목소리</span>
+        </div>
+        <div class="bq-console">
+          <div class="bq-round-num" id="bq-round-num">ROUND 1/5</div>
+          <div class="bq-clips">
+            <button class="bq-clip" type="button" data-slot="0">
+              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="bq-clip-info">
+                <span class="bq-clip-name">지원자 A <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
+                <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
+              </span>
+            </button>
+            <button class="bq-clip" type="button" data-slot="1">
+              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="bq-clip-info">
+                <span class="bq-clip-name">지원자 B <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
+                <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
+              </span>
+            </button>
+          </div>
+          <div class="bq-question" id="bq-question">
+            <p class="bq-q-text" id="bq-q-text">두 목소리를 모두 들어보세요</p>
+            <div class="bq-answers">
+              <button class="bq-answer-btn" type="button" data-slot="0" disabled>지원자 A</button>
+              <button class="bq-answer-btn" type="button" data-slot="1" disabled>지원자 B</button>
+            </div>
+          </div>
+          <div class="bq-reveal" id="bq-reveal" hidden>
+            <div class="bq-verdict" id="bq-verdict"></div>
+            <p class="bq-explain" id="bq-explain"></p>
+            <button class="btn btn-action bq-next-btn" id="bq-next" type="button">다음 라운드 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 최종 결과 -->
+      <div class="bq-result" id="bq-result" hidden>
+        <div class="bq-score-big" id="bq-score-big"></div>
+        <p class="bq-result-msg" id="bq-result-msg"></p>
+        <button class="btn btn-action bq-cta" type="button" onclick="location.href='apply.html'">나도 2주 뒤, 통과되는 목소리 만들기</button>
+        <button class="bq-retry" id="bq-retry" type="button">다시 판정하기</button>
+      </div>
+
     </div>
   </div>
 </section>
