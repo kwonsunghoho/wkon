@@ -255,6 +255,15 @@
 
   <div class="tab-panel" id="panel-rounds">
     <div class="rounds-wrap">
+      <!-- 챌린지 공통 참가비 — site_config.challenge_price. 4개 챌린지 모두에 적용. -->
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
+        <div class="field" style="flex:1;min-width:150px;">
+          <label>챌린지 공통 참가비(원)</label>
+          <input id="chPrice" type="number" min="0" step="1000" placeholder="30000" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;">
+        </div>
+        <button class="btn btn-action" id="chPriceSave" type="button">참가비 저장</button>
+        <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">4개 챌린지 모두에 적용돼요. 저장하면 신청 페이지·결제 금액에 바로 반영됩니다(특강 가격은 아래 특강 탭에서 따로).</span>
+      </div>
       <div class="round-editing" id="roundEditing" hidden>
         <span id="roundEditingLabel"></span>
         <button type="button" class="ri-cancel" id="roundEditCancel">취소하고 새로 추가</button>
@@ -946,6 +955,21 @@
       loadRounds();
     });
 
+    // ── 챌린지 공통 참가비(site_config.challenge_price) ──
+    async function loadChallengePrice() {
+      const { data } = await MONC.sb.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle();
+      const v = data && data.value;
+      const n = typeof v === 'number' ? v : parseInt(v, 10);
+      document.getElementById('chPrice').value = Number.isFinite(n) ? n : 30000;
+    }
+    document.getElementById('chPriceSave').addEventListener('click', async () => {
+      const n = parseInt(document.getElementById('chPrice').value, 10);
+      if (!Number.isFinite(n) || n < 0) { alert('참가비를 0 이상 숫자로 입력하세요.'); return; }
+      const { error } = await MONC.sb.from('site_config').upsert({ key: 'challenge_price', value: n }, { onConflict: 'key' });
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast('참가비 저장됨 (' + n.toLocaleString() + '원)');
+    });
+
     // ── 특강(special_lectures) CRUD ──
     let editingLectureId = null;   // null=추가, 값=그 id 특강 수정 중
     const lecVal = id => document.getElementById(id).value.trim();
@@ -1519,6 +1543,7 @@
       document.getElementById('layout').style.display = 'grid';
       document.getElementById('tabs').style.display = 'flex';
       initTabs();
+      loadChallengePrice();
       loadRounds();
       loadLectures();
       loadApplications();

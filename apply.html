@@ -405,7 +405,7 @@
       <div class="summary">
         <div class="cnt">선택된 챌린지: <span id="selCount">0</span>개</div>
         <div class="box">
-          <div class="row"><span>참가비 (챌린지당 3만원)</span><span><span id="feePart">0</span>원</span></div>
+          <div class="row"><span id="feeLabel">참가비</span><span><span id="feePart">0</span>원</span></div>
           <div class="total"><span class="lbl">지금 입금할 금액</span><span class="amt"><span id="feeTotal">0</span>원</span></div>
         </div>
       </div>
@@ -525,7 +525,18 @@ const CHALLENGES = [
   }
 ];
 
-const PRICE = 30000;
+// 챌린지 공통 참가비 — admin에서 site_config.challenge_price 로 관리(미설정 시 3만원).
+// 초기화 때 loadChallengePrice()로 갱신한 뒤 카드·요약·FAQ·결제에 반영한다.
+let PRICE = 30000;
+function priceLabel() { return PRICE.toLocaleString() + '원'; }
+async function loadChallengePrice() {
+  try {
+    const { data } = await window.MONC.sb.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle();
+    const v = data && data.value;
+    const n = typeof v === 'number' ? v : parseInt(v, 10);
+    if (Number.isFinite(n) && n >= 0) PRICE = n;
+  } catch (e) { /* 조회 실패 시 기본 3만원 유지 */ }
+}
 
 /* ── 포트원(PortOne) V2 — 토스페이 간편결제 채널 (공개 가능 값) ── */
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
@@ -533,7 +544,7 @@ const PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59'; 
 
 /* ── FAQ 데이터 ── */
 const FAQ = [
-  { q: '참가비는 얼마예요?', a: '챌린지당 참가비 3만원이에요. 그 외 별도 비용은 없어요.' },
+  { q: '참가비는 얼마예요?', a: '챌린지당 참가비 {price}이에요. 그 외 별도 비용은 없어요.' },
   { q: '어떻게 진행되나요?', a: '100% 온라인·비대면 프로그램이에요. 카카오톡 오픈채팅 등 전용 채널에서 2주(14일) 동안 미션(총 10회차)을 안내받고, 음성 녹음 등 과제를 제출하면 담당 코치가 24시간 이내 1:1 피드백을 드려요.' },
   { q: '결제하면 언제 시작하나요?', a: '입금 확인 후, 신청하신 챌린지의 다음 기수 시작일에 다 함께 일괄 시작해요. 각 기수의 시작일은 챌린지 안내에 표시되며, 시작 전 채널로 안내드려요.' },
   { q: '여러 챌린지를 같이 해도 되나요?', a: '네, 원하는 만큼 골라 담을 수 있어요. 목소리와 답변을 함께 하는 분들이 많아요.' },
@@ -554,7 +565,7 @@ function renderCards() {
           <div class="card-sub">${c.sub}</div>
           <div class="card-bullets">${c.bullets.map(b => `<div>${b}</div>`).join('')}</div>
         </div>
-        <div class="card-price">3만원<small>참가비</small></div>
+        <div class="card-price">${priceLabel()}<small>참가비</small></div>
       </div>
       <div class="curr-toggle" data-role="curr"><span class="arw">▶</span> 2주 커리큘럼 보기</div>
       <div class="curr-body">
@@ -577,7 +588,7 @@ function renderFaq() {
   root.innerHTML = FAQ.map(f => `
     <div class="faq-item">
       <div class="faq-q">${f.q}<span class="pm">+</span></div>
-      <div class="faq-a">${f.a}</div>
+      <div class="faq-a">${f.a.replace('{price}', priceLabel())}</div>
     </div>
   `).join('');
   root.querySelectorAll('.faq-item').forEach(item => {
@@ -605,6 +616,8 @@ function updateSummary() {
   const n = selectedIds().length;
   const total = n * PRICE;
   document.getElementById('selCount').textContent = n;
+  const feeLabel = document.getElementById('feeLabel');
+  if (feeLabel) feeLabel.textContent = '참가비 (챌린지당 ' + priceLabel() + ')';
   document.getElementById('feePart').textContent = total.toLocaleString();
   document.getElementById('feeTotal').textContent = total.toLocaleString();
 
@@ -893,9 +906,16 @@ async function handlePayReturn() {
 }
 
 /* ── 초기화 ── */
-renderCards();
-renderFaq();
-updateSummary();
+// 챌린지 참가비를 먼저 읽어(site_config) 카드·요약·FAQ를 올바른 금액으로 그린다.
+// 카드에 의존하는 applyStatuses·preselectFromUrl은 renderCards 이후 이 안에서 실행(순서 보장).
+(async function initPriceThenRender() {
+  await loadChallengePrice();
+  renderCards();
+  renderFaq();
+  updateSummary();
+  await applyStatuses();
+  preselectFromUrl();
+})();
 document.getElementById('comboBtn').addEventListener('click', () => {
   ['voice', 'answer'].forEach(id => {
     const card = cardEl(id);
@@ -911,7 +931,6 @@ document.getElementById('stickyGo').addEventListener('click', () => {
   document.getElementById('applyForm').scrollIntoView({ behavior: 'smooth' });
   setTimeout(() => document.getElementById('appName').focus(), 400);
 });
-applyStatuses().then(preselectFromUrl);
 initMember();
 handlePayReturn();
 </script>

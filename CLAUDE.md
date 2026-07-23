@@ -26,7 +26,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 ## Architecture
 
 ### Application flow — `apply.html` is the source of truth
-All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Pricing, bank account, curriculum, and the submit schema live in apply.html** — edit there. **⚠️ 보증금·환급 제도는 2026-07-20 전면 폐지**(PG 간편결제 심사에서 '보증금 환급' 문구가 승인 거절 사유) — 참가비 3만원만 받는다. 보증금·환급 워딩을 공개 페이지에 재도입하지 말 것(admin·mypage의 '환급' UI는 기존 신청자 보증금 반환 관리용으로만 잔존).
+All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Bank account, curriculum, and the submit schema live in apply.html** — edit there. **⚠️ 챌린지 공통 참가비는 admin에서 관리(2026-07-24):** `site_config.challenge_price`(jsonb 숫자, admin '모집일정' 탭 상단 입력)가 단일 소스. apply.html은 `loadChallengePrice()`로 읽어 `let PRICE`에 넣고 **카드 가격·요약 라벨·FAQ·결제 금액 전부 이 값에서** 파생(하드코딩 "3만원" 금지 — 숫자 `toLocaleString()+'원'` 표기). **미설정 시 30000 폴백.** 4개 챌린지 공통 단일가(챌린지별 다른 가격 아님). **⚠️ verify-payment(서버)도 같은 `site_config.challenge_price`를 읽어 금액 검증** — 값을 바꾸면 함수 재배포가 돼 있어야 토스결제 금액이 맞는다(계좌이체는 apply.html 계산이라 무관). 특강 가격은 `special_lectures.price`(특강별). **⚠️ 보증금·환급 제도는 2026-07-20 전면 폐지**(PG 간편결제 심사에서 '보증금 환급' 문구가 승인 거절 사유). 보증금·환급 워딩을 공개 페이지에 재도입하지 말 것(admin·mypage의 '환급' UI는 기존 신청자 보증금 반환 관리용으로만 잔존).
 - `application-modal.js` (self-injecting modal on detail pages, button `.app-modal-btn`) is **dormant** — kept but unused; declares `APPLICATION_API_URL` independently.
 - The old inline modal in `index.html` (its markup + CSS + `openApplicationModal`/`submitApplication`/`copyAccount` + `?openModal=true`) was **removed 2026-07-14** in a dead-code cleanup.
 

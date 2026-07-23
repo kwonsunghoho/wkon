@@ -8,7 +8,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const PRICE_PER_CHALLENGE = 30000 // 참가비 3만 (2026-07-20 보증금 제도 폐지 — PG 심사 요건)
+const PRICE_PER_CHALLENGE_FALLBACK = 30000 // site_config.challenge_price 미설정 시 기본값
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +42,13 @@ Deno.serve(async (req) => {
       lectureIdCol = lec.id
     } else {
       list = Array.isArray(challenges) ? challenges : []
-      expected = list.length * PRICE_PER_CHALLENGE
+      // 챌린지 공통 참가비는 admin에서 site_config.challenge_price 로 관리(미설정 시 3만원).
+      // ⚠️ 브라우저가 보낸 금액이 아니라 서버가 DB에서 읽은 값으로 재계산한다.
+      let per = PRICE_PER_CHALLENGE_FALLBACK
+      const { data: cfg } = await supa.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle()
+      const n = typeof cfg?.value === 'number' ? cfg.value : parseInt(String(cfg?.value ?? ''), 10)
+      if (Number.isFinite(n) && n > 0) per = n
+      expected = list.length * per
     }
     if (!paymentId || expected <= 0 || !applicant?.name || !applicant?.phone) {
       return json({ ok: false, error: 'bad_request' }, 400)
