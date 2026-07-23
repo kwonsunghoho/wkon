@@ -226,31 +226,43 @@ async function loadChallengeStatuses() {
   });
 }
 
-/* ── 챌린지 상세 페이지: 버튼·칩 상태 적용 ── */
+/* ── 챌린지 상세 페이지: 버튼·칩 상태 적용 ──
+   원격(Supabase/CSV) 도착 전엔 HTML에 하드코딩된 날짜가 잠깐 보였다가 교체되는
+   플래시가 있었다 — 새로고침 타이밍마다 다른 날짜를 목격하는 원인(오너 지적 2026-07-23).
+   그래서 로딩 동안엔 날짜 대신 '확인 중'만 두고, 데이터가 온 뒤에만 실제 기간을 그린다.
+   ⚠️ 로딩 표시로 chip의 <strong>이 사라지므로, 도착 후엔 항상 innerHTML을 새로
+   조립한다(구 버전은 open·dday 조합에서만 재구성해 엣지에서 빈 chip이 됐다). */
 async function applyDetailRecruit(challengeId) {
-  const data = await loadRecruitData();
   const chip = document.getElementById('recruitChip');
+  if (chip) {
+    chip.textContent = '모집기간 확인 중…';
+    chip.style.opacity = '.55';
+    chip.style.background = '';
+  }
+
+  const data = await loadRecruitData();
   const d = data ? data[challengeId] : null;
   const start = (d && d.start) || (chip && chip.dataset.recruitStart);
   const end   = (d && d.end)   || (chip && chip.dataset.recruitEnd);
-  if (!start || !end) return;
-
-  const status = getStatus(start, end);
-  const dday   = getDday(start, end, status);
+  const status = (start && end) ? getStatus(start, end) : null;
+  const dday   = status ? getDday(start, end, status) : null;
 
   if (chip) {
-    const strongEl = chip.querySelector('strong');
-    if (strongEl) strongEl.textContent = fmtPeriod(start, end);
-    if (status === 'open' && dday) {
-      chip.innerHTML = `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`;
+    chip.style.opacity = '';
+    if (!status) {
+      chip.textContent = '모집기간 준비 중';           // 원격·하드코딩 다 실패 시(빈 chip 방지)
+    } else if (status === 'open') {
+      chip.innerHTML = dday
+        ? `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`
+        : `모집 <strong>${fmtPeriod(start, end)}</strong>`;
       chip.style.background = '';
-    } else if (status !== 'open') {
+    } else {
       chip.innerHTML = (status === 'upcoming' ? '모집 예정 ' : '모집 마감 ') + fmtPeriod(start, end);
       chip.style.background = status === 'closed' ? 'rgba(120,120,120,.1)' : 'rgba(214,51,132,.08)';
     }
   }
 
-  if (status !== 'open') {
+  if (status && status !== 'open') {
     document.querySelectorAll('.apply-btn').forEach(btn => {
       btn.style.opacity = '.55';
       btn.style.filter = 'grayscale(.4)';
