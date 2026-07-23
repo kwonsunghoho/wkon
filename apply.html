@@ -866,7 +866,9 @@ async function completePayment(paymentId, challenges, applicant) {
   if (applicant.member_id && applicant.phone) {
     try { await window.MONC.sb.from('members').update({ phone: applicant.phone }).eq('id', applicant.member_id); } catch (e) {}
   }
-  alert('결제와 신청이 완료되었습니다! 🎉\n확인 후 안내드리겠습니다.' + (applicant.member_id ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));
+  // ⚠️ 토스 결제는 verify-payment가 포트원에 이미 검증을 마친 뒤 저장하므로 결제·접수가 그 자리에서 완료된다.
+  //    계좌이체용 '확인 후 안내드리겠습니다'(입금 수동 확인 대기)를 쓰면 완료됐는데도 처리 중처럼 읽힌다.
+  alert('결제가 완료되어 신청이 정상 접수되었습니다! 🎉\n시작 안내를 곧 보내드릴게요.' + (applicant.member_id ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));
   return true;
 }
 
