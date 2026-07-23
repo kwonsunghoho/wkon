@@ -164,6 +164,35 @@ async function applyIndexRecruit() {
       if (badge) { badge.textContent = '모집 중'; badge.className = 'recruit-status status-recruiting'; }
     }
   });
+
+  /* 히어로 캐러셀 카드 모집 칩 — 구 #challenges 섹션 삭제(2026-07-23) 후
+     홈에서 챌린지별 모집 상태를 말하는 유일한 자리. 하단 CTA 바는 전체 상태 하나만 말한다. */
+  document.querySelectorAll('.hs-card[data-recruit-id]').forEach(card => {
+    const id = card.dataset.recruitId;
+    const d = data ? data[id] : null;
+    const start = (d && d.start) || card.dataset.recruitStart;
+    const end   = (d && d.end)   || card.dataset.recruitEnd;
+    if (!start || !end) return;
+
+    const status = getStatus(start, end);
+    window._challengeStatuses = window._challengeStatuses || {};
+    window._challengeStatuses[id] = status;
+
+    const chip = card.querySelector('.hs-status');
+    if (!chip) return;
+    if (status === 'upcoming') {
+      chip.textContent = '모집 예정';
+      chip.className = 'hs-status recruit-status status-upcoming';
+    } else if (status === 'closed') {
+      chip.textContent = '마감';
+      chip.className = 'hs-status recruit-status status-closed';
+    } else {
+      const dday = getDday(start, end, status); // 'D-3' | 'D-Day' | null
+      chip.textContent = dday ? ('모집 중 · ' + (dday === 'D-Day' ? '오늘 마감' : dday)) : '모집 중';
+      chip.className = 'hs-status recruit-status status-recruiting';
+    }
+    chip.hidden = false;
+  });
 }
 
 /* ── 카드 없이도 전체 챌린지 상태 로드 (모달 공용) ── */

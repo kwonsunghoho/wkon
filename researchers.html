@@ -102,6 +102,28 @@
     }
     .nav-links a:hover { color: var(--primary); }
     .nav-links a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
+    /* 챌린지 드롭다운 — index.css의 .nav-dd 규칙과 동기화(2026-07-23) */
+    .nav-dd { position: relative; }
+    .nav-dd-btn {
+      font-size: 14px; font-weight: 600; color: var(--text-muted);
+      background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 4px; transition: color .2s;
+    }
+    .nav-dd-btn:hover { color: var(--primary); }
+    .nav-dd-btn svg { width: 13px; height: 13px; }
+    .nav-dd-menu {
+      position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+      min-width: 250px; padding: 8px; border-radius: 16px;
+      background: var(--surface); border: 1px solid var(--border-soft);
+      box-shadow: 0 14px 40px rgba(36,26,18,.16);
+      opacity: 0; visibility: hidden; transition: opacity .18s ease, visibility .18s;
+    }
+    .nav-dd-menu::before { content: ""; position: absolute; top: -12px; left: 0; right: 0; height: 12px; }
+    .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu, .nav-dd.is-open .nav-dd-menu { opacity: 1; visibility: visible; }
+    .nav-dd-menu a { display: block; padding: 10px 12px; border-radius: 10px; }
+    .nav-dd-menu a:hover { background: var(--bg2); }
+    .nav-dd-menu a b { display: block; font-weight: 700; font-size: 15px; color: var(--text); }
+    .nav-dd-menu a span { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
     /* 브리핑룸 메뉴 — 주력 콘텐츠 조용한 강조(2026-07-22, index.css와 동일 계약).
        창문 아이콘 폐기(오너 "로고같지도 않다") → 펄스 점, 위치는 메뉴 맨 앞 */
     .nav-briefing {
@@ -325,7 +347,16 @@
     <a class="logo" href="index.html"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
     <ul class="nav-links">
       <li><a class="nav-briefing" href="briefing.html">브리핑룸</a></li>
-      <li><a href="index.html#challenges">챌린지</a></li>
+      <!-- 챌린지 드롭다운 — index.html nav와 동기화(2026-07-23, #challenges 섹션 삭제) -->
+      <li class="nav-dd">
+        <button class="nav-dd-btn" type="button" aria-expanded="false" aria-haspopup="true">챌린지<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="nav-dd-menu">
+          <a href="challenge-voice.html"><b>보.신.각</b><span>2주 만에 목소리가 달라져요</span></a>
+          <a href="challenge-expression.html"><b>영.합.각</b><span>카메라 앞에서도 자연스럽게</span></a>
+          <a href="challenge-spinning.html"><b>스.피.닝</b><span>리듬을 타며 발음이 터진다</span></a>
+          <a href="challenge-answer.html"><b>승.자.각</b><span>2주에 답변 10개 완성</span></a>
+        </div>
+      </li>
       <li><a href="researchers.html" aria-current="page">연구진</a></li>
       <li><a href="index.html#community">커뮤니티</a></li>
       <li><a href="reviews.html">후기</a></li>
@@ -389,7 +420,7 @@
   <div class="container footer-inner">
     <div class="footer-logo"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></div>
     <div class="footer-links">
-      <a href="index.html#challenges">서비스 소개</a>
+      <a href="index.html">서비스 소개</a>
       <a href="terms.html">이용약관</a>
       <a href="privacy.html">개인정보처리방침</a>
       <a href="https://open.kakao.com/o/gX6ap0ti" target="_blank" rel="noopener">문의하기</a>
@@ -403,6 +434,20 @@
 </footer>
 
 <script>
+  /* ── nav 챌린지 드롭다운 — index.html과 동기화(2026-07-23) ── */
+  (function () {
+    const dd = document.querySelector('.nav-dd');
+    if (!dd) return;
+    const btn = dd.querySelector('.nav-dd-btn');
+    function close() { dd.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); }
+    btn.addEventListener('click', () => {
+      const open = dd.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', (e) => { if (!dd.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  })();
+
   /* ── 햄버거 ── */
   (function(){
     const hb = document.getElementById('hamburger');
