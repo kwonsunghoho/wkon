@@ -268,7 +268,7 @@
 <div class="top-bar">
   <div class="wrap top-inner">
     <a href="index.html" class="brand"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
-    <a href="login.html" class="top-login">로그인 / 마이페이지</a>
+    <a href="login.html" class="top-login" id="topLogin">로그인 / 마이페이지</a>
   </div>
 </div>
 
@@ -628,15 +628,23 @@ let _memberId = null, _profileHadPhone = false;
 async function initMember() {
   let profile = null;
   try { profile = await window.MONC.getMyProfile(); } catch (e) {}
+  const topLogin = document.getElementById('topLogin');
   if (profile && profile.id) {
     _memberId = profile.id;
     _profileHadPhone = !!profile.phone;
+    // nav 우측: 로그인 상태면 '로그인 / 마이페이지' → 마이페이지(관리자면 관리자 페이지)로 정리
+    if (topLogin) {
+      const isAdmin = profile.role === 'admin';
+      topLogin.textContent = isAdmin ? '관리자 페이지' : '마이페이지';
+      topLogin.href = isAdmin ? 'admin.html' : 'mypage.html';
+    }
     const badge = document.getElementById('memberBadge');
     badge.querySelector('[data-name]').textContent = profile.name || '회원';
     badge.style.display = 'block';
     if (profile.name)  { document.getElementById('appName').value  = profile.name;  document.getElementById('rowName').style.display  = 'none'; }
     if (profile.phone) { document.getElementById('appPhone').value = profile.phone; document.getElementById('rowPhone').style.display = 'none'; }
   } else {
+    if (topLogin) topLogin.textContent = '로그인';   // 비회원: 무의미한 '마이페이지' 문구 제거
     document.getElementById('guestNudge').style.display = 'flex';
   }
 }
