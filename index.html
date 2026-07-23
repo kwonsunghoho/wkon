@@ -87,6 +87,7 @@
           <a href="challenge-answer.html"><b>승.자.각</b><span>2주에 답변 10개 완성</span></a>
         </div>
       </li>
+      <li><a href="lectures.html">특강</a></li>
       <li><a href="researchers.html">연구진</a></li>
       <li><a href="#community">커뮤니티</a></li>
       <li><a href="reviews.html">후기</a></li>
@@ -114,6 +115,7 @@
         <a class="mm-sub" href="challenge-answer.html"><b>승.자.각</b><span>2주에 답변 10개 완성</span></a>
       </div>
     </li>
+    <li><a href="lectures.html">특강</a></li>
     <li><a href="researchers.html">연구진</a></li>
     <li><a href="#community">커뮤니티</a></li>
     <li><a href="reviews.html">후기</a></li>
@@ -797,6 +799,26 @@
   </div>
 </section>
 
+<!-- 특강 홍보(2026-07-24 신설): admin '특강' 탭에서 등록한 특강(special_lectures, visible)을
+     홈에서 미리 보여주고 lectures.html 허브로 유도한다. 카드는 아래 인라인 스크립트가 채운다
+     (supabase-config.js 로드 이후 실행돼야 해서 스크립트는 body 하단에 둠). 없으면 CTA만 노출. -->
+<section class="bp-section lx-home" id="lectures-home">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Special Lecture</div>
+      <h2 class="section-title">몬크가 여는 <em class="bp-hl">특강</em></h2>
+      <p class="section-desc">주기적으로 열리는 승무원 면접 특강. 신청 중인 특강을 골라 바로 신청하세요.</p>
+    </div>
+    <div class="bp-grid reveal" id="lxHomeGrid">
+      <div class="bp-card" style="pointer-events:none; opacity:.6;">불러오는 중…</div>
+    </div>
+    <div class="bp-foot reveal">
+      <a class="btn btn-action" href="lectures.html">특강 전체 보기 →</a>
+      <p class="bp-note">새로운 특강이 열리면 여기에서 가장 먼저 알려드려요.</p>
+    </div>
+  </div>
+</section>
+
 <!-- INSTRUCTORS 섹션은 researchers.html로 분리됨(2026-07-14). 스트립(#researchers-strip) + nav 연구진에서 진입. 구 mi-* CSS/researchers 배열/탭 IIFE(no-op)는 2026-07-14 제거. -->
 
 <!-- COMMUNITY → 위 #testimonials(라이브 피드 · 실제 후기) 섹션으로 통합 이동됨.
@@ -972,9 +994,51 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<script src="lecture-common.js"></script>
 <script src="scroll-fx.js"></script>
 <script src="recruit.js"></script>
 <script>
+  /* ── 홈 특강 섹션(#lectures-home) 카드 채우기 — special_lectures(visible) 상위 2개.
+        신청 중 → 예정 → 마감 순으로 정렬해 임박한 것을 앞에. 없으면 안내 문구만. ── */
+  (async function loadHomeLectures() {
+    const grid = document.getElementById('lxHomeGrid');
+    if (!grid || !window.MONC || !window.MONC.sb || !window.LEC) return;
+    const CAL = '<span class="bp-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>';
+    try {
+      const { data, error } = await window.MONC.sb
+        .from('special_lectures')
+        .select('id, title, subtitle, recruit_start, recruit_end, lecture_date, schedule_text, price')
+        .eq('visible', true)
+        .order('sort_order', { ascending: true })
+        .order('lecture_date', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      if (!data || !data.length) {
+        grid.innerHTML = '<div class="bp-card" style="pointer-events:none;"><div class="bp-txt"><span class="bp-name">곧 새로운 특강이 열려요</span><span class="bp-desc">준비 중인 특강 소식을 여기에서 가장 먼저 안내드릴게요.</span></div></div>';
+        return;
+      }
+      const rank = l => { const s = window.LEC.status(l.recruit_start, l.recruit_end); return s === 'open' ? 0 : s === 'upcoming' ? 1 : 2; };
+      data.sort((a, b) => rank(a) - rank(b));
+      grid.innerHTML = data.slice(0, 2).map(l => {
+        const st = window.LEC.status(l.recruit_start, l.recruit_end);
+        const badge = st === 'open'
+          ? '<span class="lx-hc-badge open">신청 중' + (window.LEC.ddaySuffix(l.recruit_end) || '') + '</span>'
+          : st === 'upcoming' ? '<span class="lx-hc-badge soon">신청 예정</span>'
+          : '<span class="lx-hc-badge closed">신청 마감</span>';
+        const when = [window.LEC.fmtDate(l.lecture_date), l.schedule_text].filter(Boolean).join(' · ');
+        const price = l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료';
+        return '<a class="bp-card" href="lecture.html?id=' + encodeURIComponent(l.id) + '">' + CAL
+          + '<div class="bp-txt">' + badge
+          + '<span class="bp-name">' + window.LEC.esc(l.title) + '</span>'
+          + (l.subtitle ? '<span class="bp-desc">' + window.LEC.esc(l.subtitle) + '</span>' : '')
+          + '<span class="lx-hc-meta">' + (when ? window.LEC.esc(when) + ' · ' : '') + price + '</span>'
+          + '</div></a>';
+      }).join('');
+    } catch (e) {
+      console.warn('[홈 특강] 로드 실패', e);
+      grid.innerHTML = '<div class="bp-card" style="pointer-events:none;"><div class="bp-txt"><span class="bp-name">특강 보러가기</span><span class="bp-desc">아래 버튼으로 특강 목록을 확인해 주세요.</span></div></div>';
+    }
+  })();
+
   /* ── 구 Apps Script(APPLICATION_API_URL) 제거됨 — 신청은 applications, 후기는 reviews(Supabase)로 이전 ── */
 
   /* ── 웨이브폼 (전체 슬라이드) ── */

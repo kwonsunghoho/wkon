@@ -23,9 +23,27 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant } = await req.json()
-    const list = Array.isArray(challenges) ? challenges : []
-    const expected = list.length * PRICE_PER_CHALLENGE
+    const { paymentId, challenges, applicant, lectureId } = await req.json()
+
+    // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
+    const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    // 결제 대상 판별: lectureId 가 있으면 '특강 1건', 없으면 기존 '챌린지 N개'.
+    // ⚠️ 금액은 브라우저를 믿지 않고 서버가 DB(특강)·상수(챌린지)에서 다시 계산한다.
+    let expected: number
+    let list: unknown[]
+    let lectureIdCol: string | null = null
+    if (lectureId) {
+      const { data: lec, error: lecErr } = await supa
+        .from('special_lectures').select('id, title, price').eq('id', lectureId).single()
+      if (lecErr || !lec) return json({ ok: false, error: 'lecture_not_found' }, 400)
+      expected = lec.price
+      list = [{ type: 'lecture', lecture_id: lec.id, name: lec.title, price: lec.price }]
+      lectureIdCol = lec.id
+    } else {
+      list = Array.isArray(challenges) ? challenges : []
+      expected = list.length * PRICE_PER_CHALLENGE
+    }
     if (!paymentId || expected <= 0 || !applicant?.name || !applicant?.phone) {
       return json({ ok: false, error: 'bad_request' }, 400)
     }
@@ -44,18 +62,18 @@ Deno.serve(async (req) => {
     if (paid !== expected) return json({ ok: false, error: 'amount_mismatch', paid, expected }, 402)
 
     // 3) 검증 통과 → 신청 저장 (service role, RLS 우회)
-    const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const payload: Record<string, unknown> = {
       name: applicant.name,
       phone: applicant.phone,
       refund_account: applicant.refund_account || null,
       challenges: list,
       total_price: expected,
-      pay_method: 'kakaopay',
+      pay_method: lectureId ? 'tosspay' : 'kakaopay',
       payment_id: paymentId,
       payment_status: 'paid',
       paid_amount: paid,
     }
+    if (lectureIdCol) payload.lecture_id = lectureIdCol
     if (applicant.member_id) payload.member_id = applicant.member_id
 
     const { error } = await supa.from('applications').insert(payload)

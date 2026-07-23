@@ -37,7 +37,8 @@
     .rounds-wrap { padding: 24px; max-width: 900px; }
     .round-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
     .round-form .field label { font-size: 12px; color: var(--text-muted); }
-    .round-form input, .round-form select { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; }
+    .round-form input, .round-form select, .round-form textarea { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; font-family: inherit; }
+    .round-form textarea { resize: vertical; }
     .round-list { display: flex; flex-direction: column; gap: 8px; }
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
@@ -210,6 +211,7 @@
   <div class="tabs" id="tabs" style="display:none;">
     <button class="tabbtn active" data-tab="members">회원 관리</button>
     <button class="tabbtn" data-tab="rounds">모집일정</button>
+    <button class="tabbtn" data-tab="lectures">특강</button>
     <button class="tabbtn" data-tab="apps">신청자 현황</button>
     <button class="tabbtn" data-tab="community">홈 커뮤니티</button>
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
@@ -272,6 +274,43 @@
         <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
       <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- 특강(special_lectures) CRUD — 등록하면 lectures.html·홈 특강 섹션·상세페이지에 자동 반영 -->
+  <div class="tab-panel" id="panel-lectures">
+    <div class="rounds-wrap">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        여기서 등록한 특강은 <b>특강 목록(lectures.html)</b>·<b>홈 특강 섹션</b>에 자동으로 뜨고,
+        <b>상세페이지에서 방문자가 바로 토스결제·계좌이체로 신청</b>합니다. 신청 내역은 <b>신청자 현황</b> 탭에 함께 쌓여요.
+        <b>공개</b>를 끄면 목록에서 숨겨집니다.
+      </p>
+      <div class="round-editing" id="lecEditing" hidden>
+        <span id="lecEditingLabel"></span>
+        <button type="button" class="ri-cancel" id="lecEditCancel">취소하고 새로 추가</button>
+      </div>
+      <form class="round-form" id="lectureForm" style="grid-template-columns:1fr;">
+        <div class="field"><label>제목 *</label><input id="lfTitle" type="text" placeholder="예: 현직 면접관이 알려주는 이미지메이킹 특강"></div>
+        <div class="field"><label>한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드·상단에 뜨는 짧은 소개"></div>
+        <div class="field"><label>상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
+        <div class="field"><label>핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+          <div class="field"><label>참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="예: 30000 (0=무료)"></div>
+          <div class="field"><label>정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
+          <div class="field"><label>정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+          <div class="field"><label>신청 시작</label><input id="lfRStart" type="date"></div>
+          <div class="field"><label>신청 마감</label><input id="lfREnd" type="date"></div>
+          <div class="field"><label>특강 진행일</label><input id="lfDate" type="date"></div>
+        </div>
+        <div class="field"><label>시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
+        <div class="field"><label>강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
+        <div class="field"><label>카드 이미지 URL(선택)</label><input id="lfThumb" type="text" placeholder="https://..."></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked style="width:18px;height:18px;"> 공개(목록에 노출)</label>
+        <button class="btn btn-action" type="submit" id="lecSubmitBtn">추가</button>
+      </form>
+      <div class="round-list" id="lectureList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -893,12 +932,126 @@
       loadRounds();
     });
 
+    // ── 특강(special_lectures) CRUD ──
+    let editingLectureId = null;   // null=추가, 값=그 id 특강 수정 중
+    const lecVal = id => document.getElementById(id).value.trim();
+
+    function fillLectureForm(l) {
+      document.getElementById('lfTitle').value      = l.title || '';
+      document.getElementById('lfSubtitle').value   = l.subtitle || '';
+      document.getElementById('lfDesc').value       = l.description || '';
+      document.getElementById('lfHigh').value       = Array.isArray(l.highlights) ? l.highlights.join('\n') : '';
+      document.getElementById('lfPrice').value      = (l.price != null ? l.price : '');
+      document.getElementById('lfCapacity').value   = (l.capacity != null ? l.capacity : '');
+      document.getElementById('lfSort').value       = (l.sort_order != null ? l.sort_order : '');
+      document.getElementById('lfRStart').value     = l.recruit_start || '';
+      document.getElementById('lfREnd').value       = l.recruit_end || '';
+      document.getElementById('lfDate').value       = l.lecture_date || '';
+      document.getElementById('lfSchedule').value   = l.schedule_text || '';
+      document.getElementById('lfInstructor').value = l.instructor || '';
+      document.getElementById('lfThumb').value      = l.thumb_url || '';
+      document.getElementById('lfVisible').checked  = l.visible !== false;
+    }
+
+    function enterLectureEdit(l) {
+      editingLectureId = l.id;
+      fillLectureForm(l);
+      document.getElementById('lecEditingLabel').textContent = '「' + (l.title || '특강') + '」 수정 중 — 고치고 저장하세요';
+      document.getElementById('lecEditing').hidden = false;
+      document.getElementById('lecSubmitBtn').textContent = '수정 저장';
+      document.getElementById('lectureForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function exitLectureEdit() {
+      editingLectureId = null;
+      document.getElementById('lectureForm').reset();
+      document.getElementById('lfVisible').checked = true;
+      document.getElementById('lecEditing').hidden = true;
+      document.getElementById('lecSubmitBtn').textContent = '추가';
+    }
+    document.getElementById('lecEditCancel').addEventListener('click', exitLectureEdit);
+
+    // 관리자 목록용 신청 상태 라벨(공개 페이지 lecture-common.js status와 동일 규칙)
+    function lectureStatusLabel(l) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const p = s => { if (!s) return null; const m = String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
+      const s = p(l.recruit_start), e = p(l.recruit_end);
+      if (s && today < s) return '신청예정';
+      if (e) { const ee = new Date(e); ee.setHours(23,59,59,999); if (today > ee) return '마감'; }
+      return '신청중';
+    }
+
+    async function loadLectures() {
+      const listEl = document.getElementById('lectureList');
+      const { data, error } = await MONC.sb.from('special_lectures')
+        .select('*').order('sort_order').order('lecture_date', { nullsFirst: false });
+      if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 특강이 없습니다. 위 폼에서 추가하세요.</div>'; return; }
+      listEl.innerHTML = data.map(l => `
+        <div class="round-item">
+          <div>
+            <div class="ri-main">${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
+          </div>
+          <div class="ri-actions">
+            <button class="ri-edit" data-id="${l.id}">수정</button>
+            <button class="ri-del" data-id="${l.id}">삭제</button>
+          </div>
+        </div>`).join('');
+      listEl.querySelectorAll('.ri-edit').forEach(b => b.addEventListener('click', () => {
+        const l = data.find(x => String(x.id) === b.dataset.id); if (l) enterLectureEdit(l);
+      }));
+      listEl.querySelectorAll('.ri-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 특강을 삭제할까요? (이미 신청한 내역은 남습니다)')) return;
+        const { error } = await MONC.sb.from('special_lectures').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        if (String(editingLectureId) === b.dataset.id) exitLectureEdit();
+        toast('삭제됨'); loadLectures();
+      }));
+    }
+
+    document.getElementById('lectureForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const title = lecVal('lfTitle');
+      const priceRaw = lecVal('lfPrice');
+      if (!title) { alert('제목을 입력하세요.'); return; }
+      const price = parseInt(priceRaw, 10);
+      if (priceRaw === '' || isNaN(price) || price < 0) { alert('참가비를 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
+      const highlights = lecVal('lfHigh').split('\n').map(s => s.trim()).filter(Boolean);
+      const row = {
+        title,
+        subtitle:      lecVal('lfSubtitle') || null,
+        description:   lecVal('lfDesc') || null,
+        highlights:    highlights.length ? highlights : null,
+        price,
+        capacity:      lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null,
+        sort_order:    lecVal('lfSort') ? parseInt(lecVal('lfSort'), 10) : 0,
+        recruit_start: lecVal('lfRStart') || null,
+        recruit_end:   lecVal('lfREnd') || null,
+        lecture_date:  lecVal('lfDate') || null,
+        schedule_text: lecVal('lfSchedule') || null,
+        instructor:    lecVal('lfInstructor') || null,
+        thumb_url:     lecVal('lfThumb') || null,
+        visible:       document.getElementById('lfVisible').checked,
+      };
+      if (editingLectureId) {
+        const { error } = await MONC.sb.from('special_lectures').update(row).eq('id', editingLectureId);
+        if (error) { alert('수정 실패: ' + error.message); return; }
+        toast('수정됨'); exitLectureEdit(); loadLectures(); return;
+      }
+      const { error } = await MONC.sb.from('special_lectures').insert(row);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast('추가됨'); exitLectureEdit(); loadLectures();
+    });
+
     // ── 신청자 현황(applications) ──
     let _apps = [], _appsLoaded = false;
     function fmtDate(iso) { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
     function chSummary(challenges) {
       if (!Array.isArray(challenges)) return '';
-      return challenges.map(c => `${CH_LABEL[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ');
+      return challenges.map(c => {
+        if (c && (c.type === 'lecture' || c.lecture_id)) return '📚 ' + (c.name || '특강');  // 특강 신청
+        return `${CH_LABEL[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`;
+      }).join(', ');
     }
 
     // 간편결제(PG) 건 판별/표시 — payment_id 있으면 결제 자동 확인이라 입금 토글 대신 결제 상태를 보여준다.
@@ -1346,6 +1499,7 @@
       document.getElementById('tabs').style.display = 'flex';
       initTabs();
       loadRounds();
+      loadLectures();
       loadApplications();
       loadCommunity();
       loadReviewsAdmin();
