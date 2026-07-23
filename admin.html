@@ -43,6 +43,11 @@
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
     .round-item .ri-sub { font-size: 13px; color: var(--text-muted); }
     .round-item .ri-del { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+    .round-item .ri-actions { display: flex; gap: 6px; }
+    .round-item .ri-edit { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
+    .round-item .ri-edit:hover { background: var(--action-tint); }
+    .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
+    .round-editing .ri-cancel { font-size: 12px; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
 
     .apps-wrap { padding: 20px; max-width: 900px; }
     .apps-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
@@ -248,6 +253,10 @@
 
   <div class="tab-panel" id="panel-rounds">
     <div class="rounds-wrap">
+      <div class="round-editing" id="roundEditing" hidden>
+        <span id="roundEditingLabel"></span>
+        <button type="button" class="ri-cancel" id="roundEditCancel">취소하고 새로 추가</button>
+      </div>
       <form class="round-form" id="roundForm">
         <div class="field"><label>챌린지</label>
           <select id="rfChallenge">
@@ -260,7 +269,7 @@
         <div class="field"><label>모집 시작</label><input id="rfStart" type="date"></div>
         <div class="field"><label>모집 마감</label><input id="rfEnd" type="date"></div>
         <div class="field"><label>프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
-        <button class="btn btn-action" type="submit">추가/수정</button>
+        <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
       <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -786,6 +795,35 @@
 
     // ── 모집일정(challenge_rounds) CRUD ──
     const CH_LABEL = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
+    let editingRoundId = null;   // null=추가 모드, 값=그 id 기수를 수정 중
+
+    // 기존 기수를 폼에 불러와 수정 모드로. 챌린지·기수는 잠그고(바꾸면 다른 기수가 됨) 날짜만 고친다.
+    function enterRoundEdit(r) {
+      editingRoundId = r.id;
+      const ch = document.getElementById('rfChallenge');
+      const rn = document.getElementById('rfRound');
+      ch.value = r.challenge; ch.disabled = true;
+      rn.value = r.round;     rn.disabled = true;
+      document.getElementById('rfStart').value   = r.recruit_start || '';
+      document.getElementById('rfEnd').value     = r.recruit_end || '';
+      document.getElementById('rfProgram').value = r.program_start || '';
+      document.getElementById('roundEditingLabel').textContent =
+        (CH_LABEL[r.challenge] || r.challenge) + ' ' + r.round + '기 수정 중 — 날짜를 바꾸고 저장하세요';
+      document.getElementById('roundEditing').hidden = false;
+      document.getElementById('roundSubmitBtn').textContent = '수정 저장';
+      document.getElementById('roundForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function exitRoundEdit() {
+      editingRoundId = null;
+      document.getElementById('rfChallenge').disabled = false;
+      document.getElementById('rfRound').disabled = false;
+      document.getElementById('roundForm').reset();
+      document.getElementById('roundEditing').hidden = true;
+      document.getElementById('roundSubmitBtn').textContent = '추가/수정';
+    }
+
+    document.getElementById('roundEditCancel').addEventListener('click', exitRoundEdit);
 
     async function loadRounds() {
       const listEl = document.getElementById('roundList');
@@ -799,24 +837,48 @@
             <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
             <div class="ri-sub">모집 ${r.recruit_start} ~ ${r.recruit_end}${r.program_start ? ' · 시작 ' + r.program_start : ''}</div>
           </div>
-          <button class="ri-del" data-id="${r.id}">삭제</button>
+          <div class="ri-actions">
+            <button class="ri-edit" data-id="${r.id}">수정</button>
+            <button class="ri-del" data-id="${r.id}">삭제</button>
+          </div>
         </div>`).join('');
+      listEl.querySelectorAll('.ri-edit').forEach(b => b.addEventListener('click', () => {
+        const r = data.find(x => String(x.id) === b.dataset.id);
+        if (r) enterRoundEdit(r);
+      }));
       listEl.querySelectorAll('.ri-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('이 기수를 삭제할까요?')) return;
         const { error } = await MONC.sb.from('challenge_rounds').delete().eq('id', b.dataset.id);
         if (error) { alert('삭제 실패: ' + error.message); return; }
+        if (String(editingRoundId) === b.dataset.id) exitRoundEdit();   // 수정 중이던 항목을 지우면 폼도 리셋
         toast('삭제됨'); loadRounds();
       }));
     }
 
     document.getElementById('roundForm').addEventListener('submit', async e => {
       e.preventDefault();
+      const start   = document.getElementById('rfStart').value;
+      const end     = document.getElementById('rfEnd').value;
+      const program = document.getElementById('rfProgram').value || null;
+
+      // 수정 모드: 챌린지·기수는 잠겨 있고 날짜만 그 행(id)에 반영
+      if (editingRoundId) {
+        if (!start || !end) { alert('모집 시작·마감을 입력하세요.'); return; }
+        const { error } = await MONC.sb.from('challenge_rounds')
+          .update({ recruit_start: start, recruit_end: end, program_start: program })
+          .eq('id', editingRoundId);
+        if (error) { alert('수정 실패: ' + error.message); return; }
+        toast('수정됨'); exitRoundEdit(); loadRounds();
+        return;
+      }
+
+      // 추가 모드(같은 챌린지+기수면 upsert가 덮어씀)
       const row = {
         challenge: document.getElementById('rfChallenge').value,
         round: parseInt(document.getElementById('rfRound').value, 10),
-        recruit_start: document.getElementById('rfStart').value,
-        recruit_end: document.getElementById('rfEnd').value,
-        program_start: document.getElementById('rfProgram').value || null,
+        recruit_start: start,
+        recruit_end: end,
+        program_start: program,
       };
       if (!row.round || !row.recruit_start || !row.recruit_end) { alert('기수·모집 시작·마감을 입력하세요.'); return; }
       const { error } = await MONC.sb.from('challenge_rounds')
@@ -824,6 +886,9 @@
       if (error) { alert('저장 실패: ' + error.message); return; }
       toast('저장됨');
       document.getElementById('rfRound').value = '';
+      document.getElementById('rfStart').value = '';
+      document.getElementById('rfEnd').value = '';
+      document.getElementById('rfProgram').value = '';
       loadRounds();
     });
 
