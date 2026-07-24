@@ -62,7 +62,16 @@
     .round-editing .ri-cancel { font-size: 12px; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
 
     .apps-wrap { padding: 20px; max-width: 900px; }
-    .apps-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+    .apps-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    /* 신청자 종류 필터 — 1줄: 전체/챌린지/특강, 2줄: 그 안의 세부(실존하는 값만) */
+    .apps-filter { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .af-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .af-chip { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; min-height: 38px; }
+    .af-chip:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+    .af-chip.on { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
+    .af-sub { padding-left: 2px; }
+    .af-sub .af-chip { font-weight: 500; font-size: 12.5px; padding: 7px 12px; min-height: 34px; }
+    .af-sub .af-chip.on { font-weight: 700; }
     .apps-toolbar .search { flex: 1; min-width: 160px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; }
     .apps-count { font-size: 13px; color: var(--text-muted); }
     .app-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
@@ -371,6 +380,16 @@
         <span class="apps-count" id="appCount"></span>
         <button class="btn btn-ghost btn-sm" id="appRefresh">새로고침</button>
         <button class="btn btn-action btn-sm" id="appCsv">CSV</button>
+      </div>
+      <!-- 종류 필터(전체/챌린지/특강) + 선택한 종류 안에서 세부 필터.
+           세부 옵션은 실제 신청이 있는 것만 뜬다(신청자 0명인 특강은 안 뜸). -->
+      <div class="apps-filter">
+        <div class="af-row" id="afKind">
+          <button type="button" class="af-chip on" data-kind="all">전체</button>
+          <button type="button" class="af-chip" data-kind="challenge">챌린지</button>
+          <button type="button" class="af-chip" data-kind="lecture">특강</button>
+        </div>
+        <div class="af-row af-sub" id="afSub" hidden></div>
       </div>
       <div id="appsBody"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -1217,12 +1236,87 @@
       renderApps();
     }
 
-    function renderApps() {
+    /* ── 종류 필터(전체/챌린지/특강 + 세부) ──
+       특강 신청은 lecture.html 이 challenges jsonb 에 {type:'lecture', lecture_id, name} 을 넣고
+       행에도 lecture_id 를 남긴다. 둘 중 하나만 있어도 특강으로 친다(구 데이터 방어). */
+    let _appKind = 'all', _appSub = '';
+
+    function appIsLecture(a) {
+      if (a.lecture_id) return true;
+      return Array.isArray(a.challenges) && a.challenges.some(c => c && (c.type === 'lecture' || c.lecture_id));
+    }
+    function appLectureKey(a, c) { return (c && c.lecture_id) || a.lecture_id || (c && c.name) || ''; }
+
+    // 세부 옵션은 _apps 에 실제로 있는 값만 모은다(신청자 0명인 특강·챌린지는 안 뜬다).
+    function appSubOptions(kind) {
+      const map = new Map();
+      _apps.forEach(a => {
+        const isLec = appIsLecture(a);
+        const list = Array.isArray(a.challenges) ? a.challenges : [];
+        if (kind === 'lecture') {
+          if (!isLec) return;
+          let hit = false;
+          list.forEach(c => {
+            if (c && (c.type === 'lecture' || c.lecture_id)) {
+              const k = appLectureKey(a, c); if (k) { map.set(k, c.name || '특강'); hit = true; }
+            }
+          });
+          if (!hit && a.lecture_id) map.set(a.lecture_id, '특강');   // challenges 가 빈 구 데이터
+        } else if (kind === 'challenge') {
+          if (isLec) return;
+          list.forEach(c => { if (c && c.challenge) map.set(c.challenge, CH_LABEL[c.challenge] || c.challenge); });
+        }
+      });
+      return [...map.entries()];
+    }
+
+    function appMatchesFilter(a) {
+      if (_appKind === 'all') return true;
+      const isLec = appIsLecture(a);
+      if (_appKind === 'lecture' && !isLec) return false;
+      if (_appKind === 'challenge' && isLec) return false;
+      if (!_appSub) return true;
+      const list = Array.isArray(a.challenges) ? a.challenges : [];
+      if (_appKind === 'lecture') {
+        if (a.lecture_id === _appSub) return true;
+        return list.some(c => c && (c.type === 'lecture' || c.lecture_id) && appLectureKey(a, c) === _appSub);
+      }
+      return list.some(c => c && c.challenge === _appSub);
+    }
+
+    function renderSubFilter() {
+      const el = document.getElementById('afSub');
+      if (_appKind === 'all') { el.hidden = true; el.innerHTML = ''; return; }
+      const opts = appSubOptions(_appKind);
+      if (opts.length < 2) { el.hidden = true; el.innerHTML = ''; return; }  // 종류가 하나뿐이면 세부 필터가 의미 없다
+      el.hidden = false;
+      el.innerHTML = `<button type="button" class="af-chip${_appSub ? '' : ' on'}" data-sub="">전체</button>`
+        + opts.map(([k, label]) =>
+            `<button type="button" class="af-chip${_appSub === k ? ' on' : ''}" data-sub="${esc(k)}">${esc(label)}</button>`).join('');
+      el.querySelectorAll('.af-chip').forEach(b => b.addEventListener('click', () => {
+        _appSub = b.dataset.sub; renderApps();
+      }));
+    }
+
+    // 화면에 보이는 목록 = 종류 필터 + 검색어. CSV 도 이걸 쓴다(보이는 대로 내려받게).
+    function visibleApps() {
       const q = (document.getElementById('appSearch').value || '').trim().toLowerCase();
-      const list = _apps.filter(a => !q
+      return _apps.filter(a => appMatchesFilter(a)).filter(a => !q
         || (a.name && a.name.toLowerCase().includes(q))
         || (a.phone && a.phone.includes(q))
         || chSummary(a.challenges).toLowerCase().includes(q));
+    }
+
+    document.getElementById('afKind').addEventListener('click', e => {
+      const b = e.target.closest('.af-chip'); if (!b) return;
+      _appKind = b.dataset.kind; _appSub = '';
+      document.querySelectorAll('#afKind .af-chip').forEach(x => x.classList.toggle('on', x === b));
+      renderApps();
+    });
+
+    function renderApps() {
+      renderSubFilter();
+      const list = visibleApps();
       document.getElementById('appCount').textContent = `${list.length} / ${_apps.length}건`;
       const body = document.getElementById('appsBody');
       if (!list.length) { body.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'; return; }
@@ -1234,7 +1328,9 @@
             <span class="ac-date">${fmtDate(a.created_at)}</span>
           </div>
           <div class="ac-phone">${esc(a.phone)} ${membershipBadge(appMembership(a, phoneSet))}</div>
-          <div class="ac-refund">${a.payment_id ? payLine(a) : '환급계좌: ' + (a.refund_account ? '<b>' + esc(a.refund_account) + '</b>' : '<span style="color:var(--text-dim)">미입력</span>')}</div>
+          ${a.payment_id ? `<div class="ac-refund">${payLine(a)}</div>`
+            : appIsLecture(a) ? ''   /* 특강은 환급계좌를 받지 않아 늘 '미입력'만 떴다 — 정보가 없는 줄이라 숨긴다 */
+            : `<div class="ac-refund">환급계좌: ${a.refund_account ? '<b>' + esc(a.refund_account) + '</b>' : '<span style="color:var(--text-dim)">미입력</span>'}</div>`}
           <div class="ac-ch">${esc(chSummary(a.challenges))} · ${(a.total_price||0).toLocaleString()}원</div>
           <div class="ac-toggles">
             ${a.payment_id ? `
@@ -1291,10 +1387,11 @@
       }));
     }
 
+    // CSV 는 화면에 보이는 목록 그대로 내려받는다(특강 하나만 골라 놓고 받으면 그 특강만 나온다).
     function appsToCsv() {
       const phoneSet = memberPhoneSet();
       const head = ['신청일자','이름','전화','환급계좌','챌린지/기수','총액','입금','환급','회원여부','연결상태'];
-      const rows = _apps.map(a => {
+      const rows = visibleApps().map(a => {
         const ms = appMembership(a, phoneSet);
         return [
           new Date(a.created_at).toLocaleString('ko-KR'), a.name, a.phone, a.payment_id ? '간편결제' : (a.refund_account || ''),
@@ -1307,7 +1404,12 @@
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `신청자_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+      // 파일명에 현재 필터를 넣어, 여러 번 받아도 어느 목록인지 알 수 있게 한다
+      const subLabel = _appSub ? (appSubOptions(_appKind).find(([k]) => k === _appSub) || [, ''])[1] : '';
+      const tag = subLabel || (_appKind === 'lecture' ? '특강' : _appKind === 'challenge' ? '챌린지' : '');
+      a.href = url;
+      a.download = `신청자${tag ? '_' + tag.replace(/[\\/:*?"<>|]/g, '') : ''}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
       URL.revokeObjectURL(url);
     }
 

@@ -65,6 +65,10 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
   - `lecture.html` — **동적 상세 템플릿**(코드로 특강별 HTML 만들지 말 것). `?id=`로 한 행 조회 → 히어로·정보카드(일시·강사·신청기간·정원·참가비)·소개·핵심포인트 + **인라인 신청 폼**(이름·전화·**필수 동의**) + **토스결제 버튼 + 계좌이체 버튼**(price 0이면 '무료로 신청하기' 직접 접수). apply.html의 결제 로직을 그대로 옮김.
   - `lecture-common.js` — 두 페이지 공용 순수 유틸(`LEC.esc/status/ddaySuffix/fmtDate/fmtPeriod`). index.html도 홈 특강 섹션용으로 로드.
 - **신청 저장 = `applications` 재사용**(관리자 신청자 현황 한곳): `challenges` jsonb에 `[{type:'lecture', lecture_id, name, price}]`, `total_price=price`, `lecture_id` 컬럼. admin `chSummary()`가 `type==='lecture'`면 `📚 이름`으로 표시. 계좌이체·무료는 `applications`에 직접 insert(paid=false, 관리자 확인), 토스는 verify-payment 경유.
+  - **신청자 현황 종류 필터(2026-07-24 오너 요청 "챌린지·특강 나눠서, 특강은 특강별로")**: 툴바 아래 2줄 칩 — 1줄 `전체/챌린지/특강`(`_appKind`), 2줄 세부(`_appSub`, 챌린지는 보이스·표현력…, 특강은 특강별). **세부 옵션은 `_apps`에 실제 신청이 있는 값만** 뜬다(신청자 0명인 특강은 안 나옴) — `special_lectures`를 따로 조회하지 않는다. 종류가 하나뿐이면 2줄은 숨는다. 종류를 바꾸면 `_appSub`는 초기화.
+  - 특강 판별 `appIsLecture()`는 **행의 `lecture_id`와 `challenges[].type==='lecture'` 둘 중 하나만 있어도** 참(구 데이터 방어). 세부 키는 `lecture_id` 우선, 없으면 이름.
+  - **검색창·CSV는 필터 결과를 그대로 따른다** — `visibleApps()`가 종류 필터 + 검색어를 함께 적용하고 렌더·CSV가 같은 함수를 쓴다. CSV 파일명에 현재 필터명이 들어간다(`신청자_대한항공…특강_날짜.csv`).
+  - ⚠️ **특강 신청 카드에는 '환급계좌' 줄을 그리지 않는다** — `lecture.html`이 `refund_account`를 아예 안 받아 늘 '미입력'만 떴다(정보량 0). 챌린지 계좌이체 건은 그대로 표시.
 - **⚠️ 결제 금액 서버검증 = verify-payment가 특강 금액을 DB에서 재확인**: 특강마다 금액이 달라, `lecture.html`은 `functions.invoke('verify-payment', {lectureId, applicant})`로 호출하고 edge function이 `special_lectures`에서 `price`를 읽어 `expected`로 쓴다(브라우저가 보낸 금액 불신). **이 함수는 owner가 재배포해야 특강 결제가 동작**(`supabase functions deploy verify-payment`). 챌린지 경로(`challenges` 배열 → `list.length*30000`)는 그대로 유지.
 - **⚠️ 법적 필수**: 상세 신청 폼의 `#appConsent`(만14세+개인정보 수집·이용) 미체크 시 `readApplicant()`가 차단 — 삭제·완화 금지(apply.html과 동일 규정).
 - **입구(2026-07-24)**: nav '특강'(**index·researchers 양쪽 하드코딩 + 모바일 메뉴 — 변경 시 세 곳 동기화**, 챌린지 드롭다운 바로 뒤) + 홈 `#lectures-home` 섹션(브리핑룸 뒤, `.bp-*` 카드 재사용 + `.lx-hc-badge`/`.lx-hc-meta`, `special_lectures` 상위 2개를 인라인 스크립트가 채움 — 없으면 안내 문구, `.lx-home{background:var(--bg2)}`로 배경 리듬).
