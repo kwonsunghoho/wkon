@@ -157,6 +157,7 @@
     let LECTURE = null;
     let _memberId = null, _profileHadPhone = false;
     let _busy = false;
+    let _payRestore = null;   // 결제 중 '버튼 되돌리기'를 담아둔다 — 결제사 페이지에서 뒤로 왔을 때 쓴다(pageshow)
 
     /* ── 로드 & 렌더 ── */
     async function load() {
@@ -474,8 +475,10 @@
       _busy = true;
       const btn = document.getElementById('tossBtn'); const orig = btn.innerHTML;
       btn.disabled = true; btn.textContent = '결제 진행 중…';
+      _payRestore = () => { _busy = false; if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; } };
       // 결제창을 띄우기 전에 자리가 남아 있는지 확인 — 결제 후 마감돼 환불하는 상황을 줄인다
       if (!(await ensureSeatOpen())) {
+        _payRestore = null;
         _busy = false;
         if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; }
         return;
@@ -505,9 +508,20 @@
         console.error('결제 오류', e);
         alert('결제 중 오류가 발생했어요: ' + (e && e.message ? e.message : e));
       } finally {
+        _payRestore = null;
         _busy = false; btn.disabled = false; btn.innerHTML = orig;
       }
     }
+
+    /* ⚠️ 결제사 페이지에서 뒤로가기로 돌아오면(bfcache) 이 문서가 얼렸던 그대로 되살아난다.
+       모바일은 리다이렉트 방식이라 requestPayment 의 promise 가 끝나지 않아 위 finally 가 돌지 못한다
+       → 버튼이 '결제 진행 중' 인 채 비활성으로 굳어 새로고침 전까지 결제를 다시 못 한다.
+       입력해 둔 이름·전화는 살려야 하므로 reload 가 아니라 버튼만 되돌린다. */
+    window.addEventListener('pageshow', (e) => {
+      if (!e.persisted || !_payRestore) return;
+      const restore = _payRestore; _payRestore = null;   // 한 번 쓰고 버린다
+      restore();
+    });
 
     async function completePayment(paymentId, applicant) {
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {

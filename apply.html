@@ -795,6 +795,7 @@ async function confirmBankTransfer() {
 /* ── 토스페이 결제 → 서버 검증(verify-payment) → 신청 접수 ──
    결제 성공 후 Supabase Edge Function이 포트원에 실제 결제·금액을 재확인한 뒤에만 저장한다. */
 let _isPaying = false;
+let _payRestore = null;   // 결제 중 '버튼 되돌리기'를 담아둔다 — 결제사 페이지에서 뒤로 왔을 때 쓴다(아래 pageshow)
 async function payWithToss() {
   if (_isPaying) return;
   const name = document.getElementById('appName').value.trim();
@@ -809,8 +810,9 @@ async function payWithToss() {
 
   _isPaying = true;
   const btn = document.getElementById('tossBtn');
-  const orig = btn.textContent;
+  const orig = btn.innerHTML;   // 버튼 안에 토스페이 로고(img)가 있어 textContent 로 되돌리면 로고가 사라진다
   btn.disabled = true; btn.textContent = '결제 진행 중...'; btn.style.opacity = '.7';
+  _payRestore = () => { _isPaying = false; btn.disabled = false; btn.innerHTML = orig; btn.style.opacity = '1'; };
 
   try {
     try { await loadChallengeStatuses(); } catch (e) {}
@@ -861,10 +863,21 @@ async function payWithToss() {
     console.error('결제 오류:', e);
     alert('결제 중 오류가 발생했어요: ' + (e && e.message ? e.message : e));
   } finally {
+    _payRestore = null;
     _isPaying = false;
-    btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
+    btn.disabled = false; btn.innerHTML = orig; btn.style.opacity = '1';
   }
 }
+
+/* ⚠️ 결제사 페이지에서 뒤로가기로 돌아오면(bfcache) 이 문서가 얼렸던 그대로 되살아난다.
+   모바일(트래픽 99%)은 리다이렉트 방식이라 requestPayment 의 promise 가 끝나지 않아 위 finally 가
+   영영 돌지 못한다 → 버튼이 '결제 진행 중...' 인 채 비활성으로 굳어, 새로고침 전까지 결제를 다시 못 한다.
+   입력해 둔 이름·전화·선택한 챌린지는 살려야 하므로 login·mypage 처럼 reload 하지 않고 버튼만 되돌린다. */
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted || !_payRestore) return;
+  const restore = _payRestore; _payRestore = null;   // 한 번 쓰고 버린다
+  restore();
+});
 
 /* 결제 검증(verify-payment) + 신청 저장 공통 처리. 성공 시 true. (PC 인라인·모바일 복귀 공용) */
 async function completePayment(paymentId, challenges, applicant) {
