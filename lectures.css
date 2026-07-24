@@ -20,7 +20,9 @@
   --lx-info:    #FBF9F4;        /* 정보부 — 밝은 웜화이트 */
   --lx-navy:    #1B2E4E;        /* 한글 제목 — 항공사 무관 항상 네이비 */
   --lx-body:    #4A4640;        /* 서브 카피 본문색 */
-  --lx-metac:   #7A756C;        /* 메타 보조색 */
+  /* 메타 보조색 — ⚠️ 구 #7A756C 는 정보부(#FBF9F4) 위 4.35:1 로 4.5:1 미달이었다.
+     활자를 14px 로 올리면서 같이 낮췄다(원칙 4). 더 밝게 되돌리지 말 것. */
+  --lx-metac:   #736E64;
   --lx-bd:      rgba(38, 34, 28, .12);
   --lx-bd-h:    rgba(38, 34, 28, .30);
 }
@@ -46,7 +48,8 @@
 /* 커버부(톤 배경) — 사진이 없을 때의 기본 모습 */
 .lx-cover { position: relative; background: var(--lx-cover); padding: 28px 24px 24px; }
 .lx-en {
-  font-size: 12px; font-weight: 400; letter-spacing: .14em; line-height: 1.2;
+  /* 구 12px — 원칙 1(최소 12pt)의 바닥이라 13px 로. 색·굵기·자간은 스펙 그대로. */
+  font-size: 13px; font-weight: 400; letter-spacing: .14em; line-height: 1.2;
   color: var(--lx-accent); text-transform: uppercase;
 }
 /* ⚠️ 제목은 카드에서 2줄까지만(전체 제목은 상세페이지에 나온다).
@@ -93,33 +96,35 @@
     rgba(251,249,244, .94) 42px,
     rgba(251,249,244, 1)   54px);
 }
-/* 배지는 사진 위에 뜬다 — 옅은 반투명 배경으로는 안 읽혀서 불투명 알약 + 실선 테두리
-   (흰 배경 사진 위에서 흰 알약이 사라지는 것도 이 테두리가 막는다) */
-.lx-card.has-shot .lx-badge { z-index: 3; border: 1px solid rgba(38,34,28,.12); }
-.lx-card.has-shot .lx-badge.paid { background: rgba(255,255,255,.94); color: var(--lx-navy); }
-.lx-card.has-shot .lx-badge.free { background: rgba(202,242,214,.95); color: #14512C; }
-
-/* 뱃지(우상단) — 옅은 배경 + 진한 글자, 텍스트 항상 노출 */
-.lx-badge {
-  position: absolute; top: 16px; right: 16px;
-  font-size: 11px; font-weight: 400; line-height: 1.5;
-  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
-}
-.lx-badge.free { background: rgba(46, 125, 70, .14); color: #2E6E42; }
-.lx-badge.paid { background: rgba(27, 46, 78, .10); color: var(--lx-navy); }
+/* (구 .lx-badge — 커버 우상단 가격 알약. 2026-07-24 폐기하고 가격은 정보부 맨 아래
+   .lx-price 한 줄로 옮겼다. 사진 위 알약 대비를 맞추던 규칙들도 같이 제거.) */
 
 /* 정보부(밝은 배경) */
 .lx-info { padding: 16px 24px 20px; }
 .lx-copy { font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--lx-body); }
 .lx-meta {
   margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px 12px;
-  font-size: 13px; font-weight: 400; color: var(--lx-metac);
+  font-size: 14px; font-weight: 400; color: var(--lx-metac);
 }
 .lx-copy + .lx-meta { margin-top: 12px; }
 .lx-meta .mi { display: inline-flex; align-items: center; gap: 5px; }
 .lx-meta .mi svg { width: 14px; height: 14px; opacity: .7; flex: 0 0 auto; }
 .lx-meta .seats-low { color: var(--lx-accent); font-weight: 500; }   /* 잔여 5석 이하: 텍스트만 강조 */
 .lx-meta .seats-low svg { opacity: 1; }
+
+/* ── 가격: 카드를 닫는 마지막 줄 (2026-07-24 오너가 목업 3안 중 A안 선택) ──────
+   커머스 카드 표준 위치(무신사·29CM·클래스101). 정보를 다 읽고 가격에서 끝맺는다.
+   ⚠️ 커버 우상단 배지로 되돌리지 말 것 — 시선은 큰 제목부터 가는데 가격은 반대쪽
+      구석 11px 회색이라 끝까지 눈에 안 걸렸다(오너 지적). 배지 자체를 폐기했다.
+   ⚠️ 무료 특강도 이 줄 하나로만 말한다 — 구 버전은 우상단 '무료' 배지와 이 줄이
+      같은 말을 두 번 했다(오너 "무료를 굳이 두 개 둘 필요가 있을까"). */
+.lx-price {
+  margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--lx-bd);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+}
+.lx-price .l { font-size: 14px; font-weight: 400; color: var(--lx-metac); }
+.lx-price .v { font-size: 20px; font-weight: 500; color: var(--lx-navy); letter-spacing: -.01em; }
+.lx-price .v.free { color: #2E6E42; }   /* 아이보리 위 5.4:1 */
 
 /* ── 로딩 스켈레톤 ── */
 .lx-sk { background: var(--lx-info); border: 1px solid var(--lx-bd); border-radius: 14px; overflow: hidden; }

@@ -139,10 +139,12 @@
     const st = status(l.recruit_start, l.recruit_end);
     const soldOut = l.seats_left === 0;
     const isOut = soldOut || st === 'closed';
+    // 가격은 커버 배지가 아니라 정보부 맨 아래 한 줄로 말한다(2026-07-24 A안).
+    // 무료도 이 줄 하나로만 — 배지와 두 번 말하지 않는다.
     const free = !(l.price > 0);
-    const badge = free
-      ? '<span class="lx-badge free">무료</span>'
-      : '<span class="lx-badge paid">' + Number(l.price).toLocaleString() + '원</span>';
+    const priceLine = '<div class="lx-price"><span class="l">참가비</span>'
+      + '<span class="v' + (free ? ' free' : '') + '">'
+      + (free ? '무료' : Number(l.price).toLocaleString() + '원') + '</span></div>';
 
     let third = '';
     if (st === 'upcoming') third = mi(IC.seat, '신청 예정');
@@ -171,7 +173,6 @@
     return '<a class="lx-card' + (isOut ? ' is-out' : '') + (shot ? ' has-shot' : '') + '"' + accentStyle
       + ' href="lecture.html?id=' + encodeURIComponent(l.id) + '">'
       + '<div class="lx-cover">'
-      +   badge
       +   '<div class="lx-txt">'
       +     (air ? '<div class="lx-en">' + esc(air.en) + '</div>' : '')
       +     '<div class="lx-ko">' + esc(l.title) + '</div>'
@@ -181,6 +182,7 @@
       + '<div class="lx-info">'
       +   (l.subtitle ? '<div class="lx-copy">' + esc(l.subtitle) + '</div>' : '')
       +   (meta ? '<div class="lx-meta">' + meta + '</div>' : '')
+      +   priceLine
       + '</div>'
       + '</a>';
   }
