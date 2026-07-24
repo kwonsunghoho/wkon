@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONC 마이페이지 비주얼 4안 — ②위젯+④결제스트립 확정 구조</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9;
+    --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,.16); --border-soft:rgba(38,34,28,.09);
+    --action:#F27945; --action-dark:#D9531F; --action-tint:#FDE9DE; --action-ink:#2A1206;
+    --accent-ink:#A33D14;
+    --bg-dark:#26221C; --text-on-dark:#F5F1E8;
+    --serif:'Noto Serif KR',serif;
+    --shadow:0 4px 20px rgba(36,26,18,.10);
+    --shadow-action:0 8px 24px rgba(242,121,69,.30);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;padding:40px 20px 80px}
+  .intro{max-width:940px;margin:0 auto 14px}
+  .intro .eyebrow{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--accent-ink)}
+  .intro .eyebrow::before{content:'— ';color:var(--action)}
+  .intro h1{font-family:var(--serif);font-weight:700;font-size:clamp(26px,3.4vw,38px);color:var(--action-dark);margin:6px 0 10px}
+  .intro p{color:var(--text-muted);font-size:15px;max-width:660px}
+  .lineup{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;max-width:1800px;margin:34px auto 0;align-items:flex-start}
+  .variant{width:391px;flex:0 0 auto}
+  .v-head{padding:0 4px 14px}
+  .v-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--action);color:#fff;font-weight:800;font-size:14px;margin-right:8px}
+  .v-name{font-family:var(--serif);font-weight:700;font-size:21px}
+  .v-ref{font-size:12.5px;font-weight:700;color:var(--accent-ink);margin:6px 0 8px}
+  .v-desc{font-size:13.5px;color:var(--text-muted)}
+  .v-desc b{color:var(--text)}
+  .reco{display:inline-block;margin-left:8px;background:var(--action-tint);color:var(--accent-ink);font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;vertical-align:3px}
+
+  /* ── 폰 프레임 ── */
+  .phone{width:391px;height:720px;background:#1c1916;border-radius:38px;padding:8px;box-shadow:0 24px 64px rgba(36,26,18,.28)}
+  .screen{position:relative;width:100%;height:100%;background:var(--bg);border-radius:31px;overflow:hidden;display:flex;flex-direction:column}
+  .scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:18px 14px 28px}
+  .scroll::-webkit-scrollbar{width:4px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(38,34,28,.18);border-radius:4px}
+
+  /* ── 공용: 아이콘(사이트 방식 = 라인 스프라이트, currentColor) ── */
+  .ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+  .ic.sm{width:15px;height:15px}
+  .chev{width:14px;height:14px;stroke-width:2.4}
+
+  /* ── 공용 구조(모든 안 동일: topbar → hello → 결제스트립 → 오늘의발굴 → 위젯 → 리스트 → 상세카드) ── */
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .logo{font-family:var(--serif);font-weight:900;font-size:17px;letter-spacing:.02em}
+  .pill{font-size:12px;font-weight:700;color:var(--text-muted);border:1px solid var(--border);border-radius:999px;padding:8px 14px;background:none}
+  .hello{margin-bottom:14px}
+  .hello .h{font-size:22px;font-weight:800}
+  .hello .h b{color:var(--action-dark)}
+  .hello .sub{font-size:12.5px;color:var(--text-muted);margin-top:2px}
+
+  .paystrip{display:flex;background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;box-shadow:var(--shadow);padding:13px 0;margin-bottom:12px}
+  .ps-cell{flex:1;text-align:center;position:relative}
+  .ps-cell+.ps-cell::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:1px;background:var(--border-soft)}
+  .ps-num{font-family:var(--serif);font-weight:900;font-size:21px;font-variant-numeric:tabular-nums}
+  .ps-num.hot{color:var(--action-dark)}
+  .ps-lbl{font-size:11.5px;color:var(--text-muted);font-weight:700;margin-top:1px}
+
+  .wgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .w{position:relative;background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;box-shadow:var(--shadow);padding:15px;min-height:44px}
+  .w .lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-muted)}
+  .w .lbl .ic{width:15px;height:15px;color:var(--accent-ink)}
+  .w .val{font-family:var(--serif);font-weight:900;font-size:24px;margin-top:5px;font-variant-numeric:tabular-nums}
+  .w .val em{font-style:normal;font-size:13px;color:var(--accent-ink);font-weight:700}
+  .w .val.txt{font-size:15px;margin-top:10px}
+  .w .cap{font-size:11.5px;color:var(--text-dim);margin-top:2px}
+  .w .arrow{position:absolute;top:14px;right:12px;color:var(--text-dim)}
+  .w.wide{grid-column:1/-1;display:flex;align-items:center;gap:16px}
+  .ring{position:relative;width:74px;height:74px;flex:0 0 74px}
+  .ring svg{transform:rotate(-90deg);display:block}
+  .ring .rc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;font-size:17px}
+  .ring .rc em{font-style:normal;font-size:10px;color:var(--accent-ink)}
+  .dnum{font-family:var(--serif);font-weight:900;font-size:19px;margin:2px 0;font-variant-numeric:tabular-nums}
+  .dnum small{font-size:13px;color:var(--text-dim);font-weight:700}
+
+  .today{grid-column:1/-1;background:var(--action);border-radius:14px;box-shadow:var(--shadow-action);padding:16px;color:var(--action-ink)}
+  .today .t-lbl{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.05em}
+  .today .t-q{font-weight:800;font-size:15px;line-height:1.45;margin:9px 0 12px}
+  .today .t-go{display:inline-flex;align-items:center;gap:6px;background:var(--action-ink);color:#fff;font-size:13px;font-weight:800;border-radius:999px;padding:10px 16px}
+
+  .sect{margin:18px 4px 8px;font-size:12.5px;font-weight:800;color:var(--text-dim);letter-spacing:.03em}
+  .list{background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;box-shadow:var(--shadow)}
+  .list .row{display:flex;align-items:center;gap:12px;padding:14px 15px;border-bottom:1px solid var(--border-soft);font-weight:700;font-size:14px;color:var(--text)}
+  .list .row:last-child{border-bottom:0}
+  .list .ricon{width:34px;height:34px;border-radius:10px;background:var(--surface2);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+  .list .r{margin-left:auto;color:var(--text-dim);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:5px}
+
+  .dcard{background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-top:14px}
+  .dcard h3{font-size:15px;font-weight:800;margin-bottom:10px}
+  .note{border:1px solid var(--border-soft);border-radius:11px;background:var(--surface2);padding:12px;margin-bottom:9px}
+  .note:last-child{margin-bottom:0}
+  .note .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .note .cat{background:var(--action-tint);color:var(--accent-ink);font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .note .dt{font-size:11.5px;color:var(--text-muted)}
+  .note .q{font-size:13.5px;font-weight:700;line-height:1.45}
+  .note .more{font-size:12px;font-weight:700;color:var(--accent-ink);margin-top:7px;display:inline-block}
+
+  /* ════ ① 클린 카드형 — 지금 회원 페이지 톤 그대로 정돈 ════ */
+  /* (기본 공용 스타일이 곧 ①) */
+
+  /* ════ ② 에디토리얼형 — 홈 리디자인 시그니처(코랄 대시 + 명조) ════ */
+  .vB .screen{background:var(--bg)}
+  .vB .eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent-ink)}
+  .vB .eyebrow::before{content:'— ';color:var(--action)}
+  .vB .hello .h{font-family:var(--serif);font-weight:700;font-size:23px;color:var(--text);margin-top:3px}
+  .vB .hello .h b{color:var(--action-dark);font-weight:700}
+  .vB .paystrip,.vB .w,.vB .list,.vB .dcard{border:0;box-shadow:none;border:1px solid var(--border-soft)}
+  .vB .w,.vB .paystrip{background:var(--surface)}
+  .vB .sect{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--text);letter-spacing:0}
+  .vB .sect::before{content:'— ';color:var(--action);font-weight:900}
+  .vB .today{background:var(--surface);border:1px solid var(--border-soft);border-left:4px solid var(--action);box-shadow:none;color:var(--text)}
+  .vB .today .t-lbl{color:var(--accent-ink)}
+  .vB .today .t-q{font-family:var(--serif);font-weight:700;font-size:15.5px}
+  .vB .today .t-go{background:var(--action);color:#2A1206}
+  .vB .dcard h3{font-family:var(--serif)}
+
+  /* ════ ③ 다크 브리핑형 — 상단만 에스프레소 밴드(B&A 톤) ════ */
+  .vC .scroll{padding:0 0 28px}
+  .vC .band{background:var(--bg-dark);color:var(--text-on-dark);padding:18px 14px 18px;border-radius:0 0 22px 22px}
+  .vC .band .logo{color:var(--text-on-dark)}
+  .vC .band .pill{color:#CBBFA8;border-color:rgba(245,241,232,.25)}
+  .vC .band .hello .h b{color:var(--action)}
+  .vC .band .hello .sub{color:#CBBFA8}
+  .vC .band .paystrip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);box-shadow:none;margin-bottom:12px}
+  .vC .band .ps-num{color:var(--text-on-dark)}
+  .vC .band .ps-num.hot{color:var(--action)}
+  .vC .band .ps-lbl{color:#CBBFA8}
+  .vC .band .ps-cell+.ps-cell::before{background:rgba(255,255,255,.12)}
+  .vC .band .today{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);box-shadow:none;color:var(--text-on-dark);margin:0}
+  .vC .band .today .t-lbl{color:#F6A47E}
+  .vC .band .today .t-go{background:var(--action);color:#2A1206}
+  .vC .below{padding:14px 14px 0}
+
+  /* ════ ④ 콤팩트 타일형 — 홈 '성장 리포트' 목업과 같은 인상 ════ */
+  .vD .screen{background:var(--bg3)}
+  .vD .scroll{padding:14px 12px 24px}
+  .vD .shell{background:var(--surface);border-radius:22px;padding:14px;box-shadow:var(--shadow)}
+  .vD .ribbon{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--accent-ink);margin-bottom:10px}
+  .vD .ribbon::after{content:'';flex:1;height:1px;background:var(--border-soft)}
+  .vD .hello{margin-bottom:11px}
+  .vD .hello .h{font-size:19px}
+  .vD .paystrip{background:var(--surface2);border:0;box-shadow:none;padding:11px 0;margin-bottom:9px}
+  .vD .wgrid{gap:8px}
+  .vD .w{background:var(--surface2);border:0;box-shadow:none;border-radius:12px;padding:13px}
+  .vD .w .val{font-size:22px}
+  .vD .today{box-shadow:none;border-radius:12px;padding:14px}
+  .vD .sect{margin:14px 2px 7px}
+  .vD .list{background:var(--surface2);border:0;box-shadow:none;border-radius:12px}
+  .vD .list .ricon{background:var(--surface)}
+  .vD .dcard{background:var(--surface2);border:0;box-shadow:none;border-radius:12px;margin-top:9px}
+  .vD .note{background:var(--surface)}
+</style>
+</head>
+<body>
+
+<!-- 라인 아이콘 스프라이트 (사이트 방식: currentColor 리컬러) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 3.6 10.8c-.6.5-.6 1.2-.6 2.2h-6c0-1 0-1.7-.6-2.2A6 6 0 0 1 12 3z"/><path d="M9.5 19h5M10.5 21.5h3"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3.5"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 4H4v12h4v4l5-4h7z"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9.5h6M7 13h6M16.5 9.5v5"/></symbol>
+  <symbol id="i-audio" viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></symbol>
+  <symbol id="i-pay" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><path d="M4 6h2l2.2 9.5h9.6L20 8H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="16.5" cy="19" r="1.4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7.5" y="2.5" width="9" height="19" rx="2"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+</svg>
+
+<div class="intro">
+  <div class="eyebrow">MONC MYPAGE — VISUAL ROUND 2</div>
+  <h1>같은 구조, 비주얼 4안</h1>
+  <p>구조는 확정안(②위젯 그리드 + ④결제 스트립) 그대로 고정하고, <b>홈페이지 톤에 맞춘 비주얼만 4가지</b>로 입혔어요. 이모지는 전부 사이트 공용 방식(라인 SVG 스프라이트·currentColor)으로 교체했습니다. 고르시면 실제 마이페이지를 그 안과 1:1로 맞춥니다.</p>
+</div>
+
+<div class="lineup">
+
+  <!-- ════════ ① 클린 카드형 ════════ -->
+  <div class="variant vA">
+    <div class="v-head">
+      <span class="v-num">1</span><span class="v-name">클린 카드형</span>
+      <div class="v-ref">현행 회원 페이지 톤 유지 · 흰 카드 + 소프트 섀도</div>
+      <div class="v-desc">지금 로그인·마이페이지의 카드 문법을 그대로 정돈한 안. <b>가장 무난하고 변화 폭 최소.</b></div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="topbar"><span class="logo">MONC</span><span class="pill">로그아웃</span></div>
+        <div class="hello">
+          <div class="h"><b>박몬크</b>님의 챌린지</div>
+          <div class="sub">승자각 4기 · 7/14~7/27</div>
+        </div>
+        <div class="paystrip">
+          <span class="ps-cell"><span class="ps-num">1</span><span class="ps-lbl" style="display:block">결제완료</span></span>
+          <span class="ps-cell"><span class="ps-num hot">1</span><span class="ps-lbl" style="display:block">입금대기</span></span>
+          <span class="ps-cell"><span class="ps-num">0</span><span class="ps-lbl" style="display:block">환불</span></span>
+        </div>
+        <div class="wgrid">
+          <div class="today">
+            <span class="t-lbl"><svg class="ic sm"><use href="#i-spark"/></svg>오늘의 소재 발굴</span>
+            <div class="t-q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+            <span class="t-go">소재 발굴 시작 <svg class="ic sm"><use href="#i-chev"/></svg></span>
+          </div>
+          <div class="w wide">
+            <span class="ring"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="31" fill="none" stroke="#F4F0E8" stroke-width="8"/><circle cx="37" cy="37" r="31" fill="none" stroke="#F27945" stroke-width="8" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="41"/></svg><span class="rc">79<em>%</em></span></span>
+            <span>
+              <span class="lbl"><svg class="ic"><use href="#i-cal"/></svg>2주 미션 진행률</span>
+              <span class="dnum" style="display:block">11 <small>/ 14일 성공</small></span>
+              <span class="cap" style="display:block">아쉬움 1 · 남은 미션 2</span>
+            </span>
+            <span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span>
+          </div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-doc"/></svg>답변노트</span><span class="val" style="display:block">12<em>개</em></span><span class="cap" style="display:block">작성 중 2 · 완료 10</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-chat"/></svg>코치 코멘트</span><span class="val" style="display:block">5<em>개</em></span><span class="cap" style="display:block">코치가 남긴 피드백</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-news"/></svg>뉴스 스크랩</span><span class="val" style="display:block">7<em>건</em></span><span class="cap" style="display:block">대한항공 4 · 아시아나 2</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-audio"/></svg>Before / After</span><span class="val txt" style="display:block">수료 시 공개</span><span class="cap" style="display:block">목소리 비교</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="sect">신청 · 계정</div>
+        <div class="list">
+          <div class="row"><span class="ricon"><svg class="ic"><use href="#i-pay"/></svg></span>신청 · 결제 내역<span class="r">2건 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="row"><span class="ricon"><svg class="ic"><use href="#i-cart"/></svg></span>챌린지 더 신청하기<span class="r">3개 모집 중 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="row"><span class="ricon"><svg class="ic"><use href="#i-phone"/></svg></span>연락처 관리<span class="r">010-****-1234 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="dcard">
+          <h3>내 답변노트</h3>
+          <div class="note" style="border-left:3px solid var(--action)">
+            <div class="top"><span class="cat">경험 발굴형</span><span class="dt">7.23</span></div>
+            <div class="q">"실패를 극복했던 경험을 말해주세요"</div>
+            <span class="more">이어서 작성 →</span>
+          </div>
+          <div class="note">
+            <div class="top"><span class="cat">돌발 질문형</span><span class="dt">7.22</span></div>
+            <div class="q">"기내에서 승객이 무리한 요구를 한다면?"</div>
+            <span class="more">답변 보기 ▾</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ════════ ② 에디토리얼형 ════════ -->
+  <div class="variant vB">
+    <div class="v-head">
+      <span class="v-num">2</span><span class="v-name">에디토리얼형</span><span class="reco">Claude 추천</span>
+      <div class="v-ref">홈 리디자인 시그니처 — 코랄 대시(—) + 명조 제목</div>
+      <div class="v-desc">랜딩의 섹션 문법(— 에이브로우, 명조 헤드, 하드라인)을 마이페이지에 그대로. <b>홈에서 넘어와도 같은 사이트로 읽히는 안.</b> 오늘의 발굴은 코랄 왼줄 카드.</div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="topbar"><span class="logo">MONC</span><span class="pill">로그아웃</span></div>
+        <div class="hello">
+          <div class="eyebrow">MY CHALLENGE</div>
+          <div class="h"><b>박몬크</b>님의 챌린지</div>
+          <div class="sub">승자각 4기 · 7/14~7/27</div>
+        </div>
+        <div class="paystrip">
+          <span class="ps-cell"><span class="ps-num">1</span><span class="ps-lbl" style="display:block">결제완료</span></span>
+          <span class="ps-cell"><span class="ps-num hot">1</span><span class="ps-lbl" style="display:block">입금대기</span></span>
+          <span class="ps-cell"><span class="ps-num">0</span><span class="ps-lbl" style="display:block">환불</span></span>
+        </div>
+        <div class="wgrid">
+          <div class="today">
+            <span class="t-lbl"><svg class="ic sm"><use href="#i-spark"/></svg>오늘의 소재 발굴</span>
+            <div class="t-q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+            <span class="t-go">소재 발굴 시작 <svg class="ic sm"><use href="#i-chev"/></svg></span>
+          </div>
+          <div class="w wide">
+            <span class="ring"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="31" fill="none" stroke="#F4F0E8" stroke-width="8"/><circle cx="37" cy="37" r="31" fill="none" stroke="#F27945" stroke-width="8" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="41"/></svg><span class="rc">79<em>%</em></span></span>
+            <span>
+              <span class="lbl"><svg class="ic"><use href="#i-cal"/></svg>2주 미션 진행률</span>
+              <span class="dnum" style="display:block">11 <small>/ 14일 성공</small></span>
+              <span class="cap" style="display:block">아쉬움 1 · 남은 미션 2</span>
+            </span>
+            <span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span>
+          </div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-doc"/></svg>답변노트</span><span class="val" style="display:block">12<em>개</em></span><span class="cap" style="display:block">작성 중 2 · 완료 10</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-chat"/></svg>코치 코멘트</span><span class="val" style="display:block">5<em>개</em></span><span class="cap" style="display:block">코치가 남긴 피드백</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-news"/></svg>뉴스 스크랩</span><span class="val" style="display:block">7<em>건</em></span><span class="cap" style="display:block">대한항공 4 · 아시아나 2</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="w"><span class="lbl"><svg class="ic"><use href="#i-audio"/></svg>Before / After</span><span class="val txt" style="display:block">수료 시 공개</span><span class="cap" style="display:block">목소리 비교</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="sect">신청 · 계정</div>
+        <div class="list">
+          <div class="row"><span class="ricon"><svg class="ic"><use href="#i-pay"/></svg></span>신청 · 결제 내역<span class="r">2건 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="row"><span class="ricon"><svg class="ic"><use href="#i-cart"/></svg></span>챌린지 더 신청하기<span class="r">3개 모집 중 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          <div class="row"><span class="ricon"><svg class="ic"><use href="#i-phone"/></svg></span>연락처 관리<span class="r">010-****-1234 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+        </div>
+        <div class="dcard">
+          <h3>내 답변노트</h3>
+          <div class="note" style="border-left:3px solid var(--action)">
+            <div class="top"><span class="cat">경험 발굴형</span><span class="dt">7.23</span></div>
+            <div class="q">"실패를 극복했던 경험을 말해주세요"</div>
+            <span class="more">이어서 작성 →</span>
+          </div>
+          <div class="note">
+            <div class="top"><span class="cat">돌발 질문형</span><span class="dt">7.22</span></div>
+            <div class="q">"기내에서 승객이 무리한 요구를 한다면?"</div>
+            <span class="more">답변 보기 ▾</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ════════ ③ 다크 브리핑형 ════════ -->
+  <div class="variant vC">
+    <div class="v-head">
+      <span class="v-num">3</span><span class="v-name">다크 브리핑형</span>
+      <div class="v-ref">Before&amp;After 섹션의 에스프레소 톤을 상단 밴드로</div>
+      <div class="v-desc">인사·결제 스트립·오늘의 발굴까지만 다크 밴드, 나머지는 밝게. <b>프리미엄 인상 최대</b> — 유료 상품 페이지와 톤이 이어짐.</div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="band">
+          <div class="topbar" style="margin-bottom:14px"><span class="logo">MONC</span><span class="pill">로그아웃</span></div>
+          <div class="hello">
+            <div class="h" style="color:var(--text-on-dark)"><b>박몬크</b>님의 챌린지</div>
+            <div class="sub">승자각 4기 · 7/14~7/27</div>
+          </div>
+          <div class="paystrip">
+            <span class="ps-cell"><span class="ps-num">1</span><span class="ps-lbl" style="display:block">결제완료</span></span>
+            <span class="ps-cell"><span class="ps-num hot">1</span><span class="ps-lbl" style="display:block">입금대기</span></span>
+            <span class="ps-cell"><span class="ps-num">0</span><span class="ps-lbl" style="display:block">환불</span></span>
+          </div>
+          <div class="today">
+            <span class="t-lbl"><svg class="ic sm"><use href="#i-spark"/></svg>오늘의 소재 발굴</span>
+            <div class="t-q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+            <span class="t-go">소재 발굴 시작 <svg class="ic sm"><use href="#i-chev"/></svg></span>
+          </div>
+        </div>
+        <div class="below">
+          <div class="wgrid">
+            <div class="w wide">
+              <span class="ring"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="31" fill="none" stroke="#F4F0E8" stroke-width="8"/><circle cx="37" cy="37" r="31" fill="none" stroke="#F27945" stroke-width="8" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="41"/></svg><span class="rc">79<em>%</em></span></span>
+              <span>
+                <span class="lbl"><svg class="ic"><use href="#i-cal"/></svg>2주 미션 진행률</span>
+                <span class="dnum" style="display:block">11 <small>/ 14일 성공</small></span>
+                <span class="cap" style="display:block">아쉬움 1 · 남은 미션 2</span>
+              </span>
+              <span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span>
+            </div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-doc"/></svg>답변노트</span><span class="val" style="display:block">12<em>개</em></span><span class="cap" style="display:block">작성 중 2 · 완료 10</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-chat"/></svg>코치 코멘트</span><span class="val" style="display:block">5<em>개</em></span><span class="cap" style="display:block">코치가 남긴 피드백</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-news"/></svg>뉴스 스크랩</span><span class="val" style="display:block">7<em>건</em></span><span class="cap" style="display:block">대한항공 4 · 아시아나 2</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-audio"/></svg>Before / After</span><span class="val txt" style="display:block">수료 시 공개</span><span class="cap" style="display:block">목소리 비교</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          </div>
+          <div class="sect">신청 · 계정</div>
+          <div class="list">
+            <div class="row"><span class="ricon"><svg class="ic"><use href="#i-pay"/></svg></span>신청 · 결제 내역<span class="r">2건 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="row"><span class="ricon"><svg class="ic"><use href="#i-cart"/></svg></span>챌린지 더 신청하기<span class="r">3개 모집 중 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="row"><span class="ricon"><svg class="ic"><use href="#i-phone"/></svg></span>연락처 관리<span class="r">010-****-1234 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ════════ ④ 콤팩트 타일형 ════════ -->
+  <div class="variant vD">
+    <div class="v-head">
+      <span class="v-num">4</span><span class="v-name">콤팩트 타일형</span>
+      <div class="v-ref">홈 '성장 리포트' 목업(#member-appeal)과 같은 인상</div>
+      <div class="v-desc">흰 셸 안에 베이지 타일 — <b>"가입 전에 홈에서 본 리포트가 진짜가 됐다"</b>는 연결감. 밀도 가장 높고 스크롤 최단.</div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="topbar" style="padding:0 4px"><span class="logo">MONC</span><span class="pill">로그아웃</span></div>
+        <div class="shell">
+          <div class="ribbon">MONC GROWTH REPORT</div>
+          <div class="hello">
+            <div class="h"><b>박몬크</b>님의 챌린지</div>
+            <div class="sub">승자각 4기 · 7/14~7/27</div>
+          </div>
+          <div class="paystrip">
+            <span class="ps-cell"><span class="ps-num">1</span><span class="ps-lbl" style="display:block">결제완료</span></span>
+            <span class="ps-cell"><span class="ps-num hot">1</span><span class="ps-lbl" style="display:block">입금대기</span></span>
+            <span class="ps-cell"><span class="ps-num">0</span><span class="ps-lbl" style="display:block">환불</span></span>
+          </div>
+          <div class="wgrid">
+            <div class="today">
+              <span class="t-lbl"><svg class="ic sm"><use href="#i-spark"/></svg>오늘의 소재 발굴</span>
+              <div class="t-q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+              <span class="t-go">소재 발굴 시작 <svg class="ic sm"><use href="#i-chev"/></svg></span>
+            </div>
+            <div class="w wide">
+              <span class="ring"><svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="31" fill="none" stroke="#fff" stroke-width="8"/><circle cx="37" cy="37" r="31" fill="none" stroke="#F27945" stroke-width="8" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="41"/></svg><span class="rc">79<em>%</em></span></span>
+              <span>
+                <span class="lbl"><svg class="ic"><use href="#i-cal"/></svg>2주 미션 진행률</span>
+                <span class="dnum" style="display:block">11 <small>/ 14일 성공</small></span>
+                <span class="cap" style="display:block">아쉬움 1 · 남은 미션 2</span>
+              </span>
+              <span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span>
+            </div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-doc"/></svg>답변노트</span><span class="val" style="display:block">12<em>개</em></span><span class="cap" style="display:block">작성 중 2 · 완료 10</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-chat"/></svg>코치 코멘트</span><span class="val" style="display:block">5<em>개</em></span><span class="cap" style="display:block">코치가 남긴 피드백</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-news"/></svg>뉴스 스크랩</span><span class="val" style="display:block">7<em>건</em></span><span class="cap" style="display:block">대한항공 4 · 아시아나 2</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="w"><span class="lbl"><svg class="ic"><use href="#i-audio"/></svg>Before / After</span><span class="val txt" style="display:block">수료 시 공개</span><span class="cap" style="display:block">목소리 비교</span><span class="arrow"><svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          </div>
+          <div class="sect">신청 · 계정</div>
+          <div class="list">
+            <div class="row"><span class="ricon"><svg class="ic"><use href="#i-pay"/></svg></span>신청 · 결제 내역<span class="r">2건 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="row"><span class="ricon"><svg class="ic"><use href="#i-cart"/></svg></span>챌린지 더 신청하기<span class="r">3개 모집 중 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+            <div class="row"><span class="ricon"><svg class="ic"><use href="#i-phone"/></svg></span>연락처 관리<span class="r">010-****-1234 <svg class="chev ic"><use href="#i-chev"/></svg></span></div>
+          </div>
+          <div class="dcard">
+            <h3>내 답변노트</h3>
+            <div class="note" style="border-left:3px solid var(--action)">
+              <div class="top"><span class="cat">경험 발굴형</span><span class="dt">7.23</span></div>
+              <div class="q">"실패를 극복했던 경험을 말해주세요"</div>
+              <span class="more">이어서 작성 →</span>
+            </div>
+            <div class="note">
+              <div class="top"><span class="cat">돌발 질문형</span><span class="dt">7.22</span></div>
+              <div class="q">"기내에서 승객이 무리한 요구를 한다면?"</div>
+              <span class="more">답변 보기 ▾</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>
