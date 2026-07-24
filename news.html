@@ -295,9 +295,43 @@
       const topSet = new Set(data.map(r => r.topic).filter(Boolean));
       sheetOpts.air = AIRLINE_ORDER.filter(a => airSet.has(a));
       sheetOpts.top = TOPIC_ORDER.filter(t => topSet.has(t));
-      airBtn.hidden = !sheetOpts.air.length;
-      topicBtn.hidden = !sheetOpts.top.length;
       syncPickers();
+      syncPickerVisibility();
+    }
+
+    // ── 필터바는 두 탭이 공유한다(2026-07-24 오너 지시: "스크랩에서도 검색·항공사·주제") ──
+    // 옵션 목록만 탭에 따라 바꾼다. 스크랩 탭에서 내가 안 가진 항공사를 고를 수 있으면
+    // 눌러도 0건이라 혼란스럽다 → 스크랩 탭 옵션은 내 스크랩에 실제로 있는 값만.
+    const scrapOpts = { air: [], top: [] };
+    function curOpts() { return curTab === 'scraps' ? scrapOpts : sheetOpts; }
+
+    function computeScrapOpts() {
+      const airSet = new Set(), topSet = new Set();
+      scrapRows.forEach(r => {
+        const a = r.news_articles;
+        if (a.airline) airSet.add(a.airline);
+        if (a.topic) topSet.add(a.topic);
+      });
+      scrapOpts.air = AIRLINE_ORDER.filter(a => airSet.has(a));
+      scrapOpts.top = TOPIC_ORDER.filter(t => topSet.has(t));
+      // 지금 걸린 필터가 이 탭에 없는 값이면 풀어준다(고를 수 없는 값이 라벨에 남지 않게)
+      if (fAirline !== 'all' && !scrapOpts.air.includes(fAirline)) fAirline = 'all';
+      if (fTopic !== 'all' && !scrapOpts.top.includes(fTopic)) fTopic = 'all';
+      syncPickers();
+      syncPickerVisibility();
+    }
+
+    function syncPickerVisibility() {
+      const o = curOpts();
+      airBtn.hidden = !o.air.length;
+      topicBtn.hidden = !o.top.length;
+    }
+
+    // 필터가 바뀌었을 때 무엇을 다시 그릴지는 탭이 정한다
+    let filterDirty = false;             // 스크랩 탭에서 바꾼 필터를 전체 탭 복귀 시 반영
+    function applyFilter() {
+      if (curTab === 'scraps') { filterDirty = true; drawScraps(); }
+      else resetAndLoad();
     }
 
     // 버튼 라벨 = 현재 선택(전체면 축 이름) — 지금 무엇으로 걸러진 상태인지 항상 보인다
@@ -325,7 +359,8 @@
         return b;
       };
       sheetGridEl.appendChild(mk('all', isAir ? '전체 항공사' : '전체 주제'));
-      (isAir ? sheetOpts.air : sheetOpts.top).forEach(v => sheetGridEl.appendChild(mk(v, labels[v])));
+      const o = curOpts();
+      (isAir ? o.air : o.top).forEach(v => sheetGridEl.appendChild(mk(v, labels[v])));
       scrimEl.hidden = false; sheetEl.hidden = false;
       void sheetEl.offsetWidth;                            // 강제 리플로 — hidden 해제를 먼저 커밋해 슬라이드업 전환이 걸린다(rAF는 백그라운드 탭에서 안 돎)
       scrimEl.classList.add('open'); sheetEl.classList.add('open');
@@ -355,7 +390,7 @@
     sheetGridEl.addEventListener('click', e => {
       const b = e.target.closest('.nw-opt'); if (!b) return;
       if (sheetKind === 'air') fAirline = b.dataset.val; else fTopic = b.dataset.val;
-      syncPickers(); closeSheet(); resetAndLoad();
+      syncPickers(); closeSheet(); applyFilter();
     });
 
     // ── 제목 검색(2026-07-22 스펙) — 디바운스 300ms, 칩 필터와 AND ──
@@ -366,7 +401,7 @@
         const v = searchEl.value.trim();
         if (v === fSearch) return;
         fSearch = v;
-        resetAndLoad();
+        applyFilter();
       }, 300);
     });
 
@@ -496,25 +531,30 @@
 
     // ── 탭 전환: 전체 뉴스 ↔ 내 스크랩 ──
     const scrapView = document.getElementById('nwScrapView');
-    const allView = [filtersEl, countEl, listEl, emptyEl, moreBtn.parentElement, skelEl];
-    let filtersWereHidden = true;   // 필터바는 데이터 유무로 hidden이 결정되므로 상태 보존
+    // ⚠️ filtersEl 은 여기 없다 — 필터바는 두 탭이 공유하므로 탭 전환에 숨기지 않는다.
+    const allView = [countEl, listEl, emptyEl, moreBtn.parentElement, skelEl];
     function switchTab(tab) {
+      curTab = tab;
       document.querySelectorAll('.nw-tab').forEach(b => {
         const on = b.dataset.tab === tab;
         b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on));
       });
+      searchEl.placeholder = tab === 'scraps'
+        ? '내 스크랩 검색 — 제목·메모·태그'
+        : '제목 검색 — 예: 유니폼, 채용설명회, 인천공항';
       if (tab === 'scraps') {
-        filtersWereHidden = filtersEl.hidden;
         allView.forEach(el => { el.hidden = true; });
         scrapView.hidden = false;
         renderScraps();
       } else {
         scrapView.hidden = true;
         allView.forEach(el => { el.hidden = false; });
-        filtersEl.hidden = filtersWereHidden;
         skelEl.hidden = true;
         moreBtn.hidden = exhausted;
         if (!offset) emptyEl.hidden = false; else emptyEl.hidden = true;
+        syncPickerVisibility();
+        // 스크랩 탭에서 필터를 건드렸으면 전체 목록도 새 조건으로 다시 받는다
+        if (filterDirty) { filterDirty = false; resetAndLoad(); }
         // 스크랩 탭에서 해제/추가한 상태를 전체 목록 버튼에 반영(안 하면 낡은 원색이 남는다)
         listEl.querySelectorAll('.nw-bm').forEach(b => {
           const on = scrapByArticle.has(b.dataset.id);
@@ -528,15 +568,17 @@
       b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
     // ── 내 스크랩 렌더 — 항공사별 그룹핑(스펙 §5) + 내 태그 필터(2026-07-22) ──
-    let scrapRows = [];   // 마지막 조회 결과(태그 필터 전환은 재조회 없이 이걸로 다시 그림)
+    let scrapRows = [];   // 마지막 조회 결과(필터 전환은 재조회 없이 이걸로 다시 그림)
     let fTag = 'all';
+    let curTab = 'all';   // 현재 탭 — 필터 적용 대상을 가른다
 
     async function renderScraps() {
       const { data, error } = await MONC.sb.from('news_scraps')
         .select('id, note, tag, created_at, news_articles(id, title, url, source, published_at, airline, topic)')
         .order('created_at', { ascending: false });
-      if (error) { scrapRows = []; drawScraps(); return; }
+      if (error) { scrapRows = []; computeScrapOpts(); drawScraps(); return; }
       scrapRows = (data || []).filter(r => r.news_articles);
+      computeScrapOpts();
       drawScraps();
     }
 
@@ -562,10 +604,29 @@
         tags.forEach(t => tagRow.appendChild(mk('#' + t, t)));
       }
 
-      const rows = fTag === 'all' ? scrapRows : scrapRows.filter(r => r.tag === fTag);
+      // 태그 + 항공사 + 주제 + 검색(제목·메모·태그)을 AND 로 건다.
+      const term = fSearch.trim().toLowerCase();
+      const rows = scrapRows.filter(r => {
+        const a = r.news_articles;
+        if (fTag !== 'all' && r.tag !== fTag) return false;
+        if (fAirline !== 'all' && a.airline !== fAirline) return false;
+        if (fTopic !== 'all' && a.topic !== fTopic) return false;
+        if (!term) return true;
+        // 스크랩은 '내 재료함'이라 제목뿐 아니라 내가 남긴 메모·태그로도 찾을 수 있어야 한다
+        return (a.title || '').toLowerCase().indexOf(term) >= 0
+          || (r.note || '').toLowerCase().indexOf(term) >= 0
+          || (r.tag || '').toLowerCase().indexOf(term) >= 0;
+      });
+
+      // 건수 — 필터가 걸렸으면 '전체 중 몇 건'인지 같이 보여준다
+      countEl.hidden = !scrapRows.length;
+      countEl.textContent = !scrapRows.length ? ''
+        : (rows.length === scrapRows.length ? `${scrapRows.length}건`
+          : `${rows.length}건 / 전체 ${scrapRows.length}건`);
+
       if (!rows.length) {
         wrap.innerHTML = ''; empty.hidden = false;
-        if (scrapRows.length) empty.firstChild.textContent = '이 태그로 스크랩한 기사가 없어요. ';
+        if (scrapRows.length) empty.firstChild.textContent = '이 조건에 맞는 스크랩이 없어요. ';
         return;
       }
       empty.hidden = true;
