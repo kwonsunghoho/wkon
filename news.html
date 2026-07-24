@@ -134,6 +134,24 @@
     /* 내 스크랩 — 항공사별 그룹 + 활용 메모 + 자유 태그 */
     .nw-scrap-lead { font-size: 14px; color: var(--text-muted); margin: 16px 2px 6px; }
     .nw-scrap-lead b { color: var(--accent-ink); }
+    .nw-scrap-top { display: flex; align-items: flex-start; gap: 10px; }
+    .nw-scrap-top .nw-scrap-lead { flex: 1; min-width: 0; }
+    .nw-clear { flex: 0 0 auto; margin-top: 14px; min-height: 44px; padding: 8px 14px; font: inherit;
+      font-size: 12.5px; font-weight: 700; color: var(--text-muted); background: var(--surface);
+      border: 1px solid var(--border); border-radius: 999px; cursor: pointer; white-space: nowrap; }
+    .nw-clear:hover { border-color: var(--action-dark); color: var(--action-dark); }
+    /* 스크랩한 날짜 — '내가 언제 담았는지'가 보여야 잘못 눌린 것을 스스로 가려낼 수 있다 */
+    .nw-scrapped-at { color: var(--accent-ink); font-weight: 700; }
+    /* 토글 알림 + 되돌리기 */
+    .nw-toast { position: fixed; left: 50%; transform: translateX(-50%) translateY(8px); z-index: 240;
+      bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px;
+      max-width: min(92vw, 420px); padding: 12px 12px 12px 18px; border-radius: 999px;
+      background: var(--bg-dark); color: var(--text-on-dark); font-size: 14px; font-weight: 700;
+      box-shadow: 0 12px 32px rgba(36,26,18,.32); opacity: 0; transition: opacity .18s, transform .18s; }
+    .nw-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .nw-toast button { min-height: 40px; padding: 8px 16px; font: inherit; font-size: 13px; font-weight: 800;
+      color: var(--action-ink); background: var(--action); border: 0; border-radius: 999px; cursor: pointer; }
+    @media (prefers-reduced-motion: reduce) { .nw-toast { transition: none; } }
     .nw-tagbar { margin: 10px 0 4px; }
     .nw-group-h { display: flex; align-items: baseline; gap: 8px; margin: 22px 2px 10px; }
     .nw-group-name { font-family: var(--serif); font-size: 19px; font-weight: 700; }
@@ -207,7 +225,10 @@
 
   <main class="container">
     <div id="nwScrapView" hidden>
-      <p class="nw-scrap-lead">스크랩한 기사에 <b>활용 메모</b>와 <b>태그</b>를 남겨보세요 — "이 기사를 어느 답변에 어떻게 쓸지" 한 줄이면 면접 준비가 빨라져요.</p>
+      <div class="nw-scrap-top">
+        <p class="nw-scrap-lead">스크랩한 기사에 <b>활용 메모</b>와 <b>태그</b>를 남겨보세요 — "이 기사를 어느 답변에 어떻게 쓸지" 한 줄이면 면접 준비가 빨라져요.</p>
+        <button class="nw-clear" type="button" id="nwClearAll" hidden>전체 비우기</button>
+      </div>
       <div class="nw-filter-row nw-tagbar" id="nwTagRow" hidden>
         <span class="nw-filter-label">내 태그</span>
       </div>
@@ -223,6 +244,12 @@
     <div class="nw-empty" id="nwEmpty" hidden>표시할 뉴스가 없어요.</div>
     <div class="nw-more-wrap"><button class="nw-more" id="nwMore" type="button" hidden>더 보기</button></div>
   </main>
+
+  <!-- 스크랩 토글 알림 — 실수로 눌렀을 때 즉시 되돌릴 수 있게(피드백 없으면 눌린 줄도 모른다) -->
+  <div class="nw-toast" id="nwToast" role="status" aria-live="polite" hidden>
+    <span id="nwToastMsg"></span>
+    <button type="button" id="nwToastUndo">되돌리기</button>
+  </div>
 
   <!-- 필터 선택 바텀시트 — [항공사]/[주제] 버튼이 연다. 옵션은 openSheet()가 동적 렌더 -->
   <div class="nw-scrim" id="nwScrim" hidden></div>
@@ -491,11 +518,22 @@
           const { error } = await MONC.sb.from('news_scraps').delete()
             .eq('member_id', session.user.id).eq('article_id', id);
           if (error) setScrapBtn(btn, true);     // 실패 → 스크랩 유지 상태로 원복
-          else scrapByArticle.delete(id);
+          else {
+            scrapByArticle.delete(id);
+            // 되돌리기: 스크랩 탭이면 목록이 다시 그려져 btn 이 떨어져 나가므로 재조회까지 함께
+            showToast('스크랩에서 뺐어요', async () => {
+              await toggleScrap(btn);
+              if (curTab === 'scraps') renderScraps();
+            });
+          }
         } else {
           const { data, error } = await MONC.sb.from('news_scraps')
             .insert({ member_id: session.user.id, article_id: id }).select('id, note, tag').single();
-          if (!error) { scrapByArticle.set(id, data); return; }
+          if (!error) {
+            scrapByArticle.set(id, data);
+            showToast('내 스크랩에 담았어요', () => toggleScrap(btn));
+            return;
+          }
           // 23505 = unique(member_id, article_id) 위반 → 이미 스크랩된 기사였다.
           // 실패로 처리해 버튼을 끄면 DB 와 화면이 어긋나므로, 실제 행을 읽어 맞춘다.
           const { data: row } = await MONC.sb.from('news_scraps')
@@ -509,10 +547,46 @@
       }
     }
 
+    // ⚠️ 스크롤하다 손을 떼면 브라우저가 그 자리에 click 을 쏜다. 목록이 길고 스크랩 버튼이
+    //    카드마다 있어서, 스크롤을 멈추려고 화면을 짚은 것만으로 스크랩이 되곤 했다
+    //    (2026-07-24 오너: "스크랩 안 한 기사가 들어가 있다"). 눌렀다 뗀 지점이
+    //    10px 넘게 움직였으면 탭이 아니라 스크롤로 본다 — 히어로 캐러셀과 같은 가드.
+    let tapStart = null;
+    document.body.addEventListener('pointerdown', e => { tapStart = { x: e.clientX, y: e.clientY }; }, { passive: true });
+    function wasDrag(e) {
+      if (!tapStart) return false;
+      return Math.abs(e.clientX - tapStart.x) > 10 || Math.abs(e.clientY - tapStart.y) > 10;
+    }
+
     document.body.addEventListener('click', e => {
       if (e.target.closest('#nwScrapView')) return;   // 스크랩 뷰는 자체 핸들러가 처리
       const bm = e.target.closest('.nw-bm');
-      if (bm) toggleScrap(bm);
+      if (bm && !wasDrag(e)) toggleScrap(bm);
+    });
+
+    // ── 토글 알림 + 되돌리기 ──
+    const toastEl = document.getElementById('nwToast');
+    const toastMsgEl = document.getElementById('nwToastMsg');
+    const toastUndoEl = document.getElementById('nwToastUndo');
+    let toastTimer = null, undoAction = null;
+    function hideToast() {
+      clearTimeout(toastTimer); undoAction = null;
+      toastEl.classList.remove('show');
+      setTimeout(() => { if (!toastEl.classList.contains('show')) toastEl.hidden = true; }, 200);
+    }
+    function showToast(msg, undo) {
+      clearTimeout(toastTimer);
+      toastMsgEl.textContent = msg;
+      undoAction = undo || null;
+      toastUndoEl.hidden = !undo;
+      toastEl.hidden = false;
+      void toastEl.offsetWidth;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(hideToast, 4000);
+    }
+    toastUndoEl.addEventListener('click', async () => {
+      const fn = undoAction; hideToast();
+      if (fn) await fn();
     });
     moreBtn.addEventListener('click', loadMore);
 
@@ -618,6 +692,8 @@
           || (r.tag || '').toLowerCase().indexOf(term) >= 0;
       });
 
+      document.getElementById('nwClearAll').hidden = !scrapRows.length;
+
       // 건수 — 필터가 걸렸으면 '전체 중 몇 건'인지 같이 보여준다
       countEl.hidden = !scrapRows.length;
       countEl.textContent = !scrapRows.length ? ''
@@ -656,7 +732,8 @@
           return `<li class="nw-card" data-id="${esc(a.id)}">
             <a class="nw-link" href="${esc(a.url)}" target="_blank" rel="noopener">
               <div class="nw-card-title">${esc(a.title)}</div>
-              <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${fmtDate(a.published_at)}</span></div>
+              <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${fmtDate(a.published_at)}</span>
+                <span class="nw-scrapped-at">${fmtDate(r.created_at)} 담음</span></div>
             </a>
             <div class="nw-extras">${tagBit}</div>
             ${note}
@@ -667,6 +744,18 @@
           <ul class="nw-list">${cards}</ul>`;
       }).join('');
     }
+
+    // ── 전체 비우기 — 잘못 담긴 게 쌓였을 때 하나씩 지우지 않고 한 번에 정리 ──
+    document.getElementById('nwClearAll').addEventListener('click', async () => {
+      if (!session || !scrapRows.length) return;
+      if (!confirm('스크랩 ' + scrapRows.length + '건을 모두 지울까요?\n남긴 메모와 태그도 함께 사라지고, 되돌릴 수 없어요.')) return;
+      const { error } = await MONC.sb.from('news_scraps').delete().eq('member_id', session.user.id);
+      if (error) { alert('삭제에 실패했어요. 잠시 후 다시 시도해주세요.'); return; }
+      scrapByArticle.clear();
+      listEl.querySelectorAll('.nw-bm').forEach(b => setScrapBtn(b, false));   // 전체 목록 버튼도 끄기
+      await renderScraps();
+      showToast('스크랩을 모두 비웠어요');
+    });
 
     // ── 활용 메모·태그 인라인 편집 + 스크랩 해제 ──
     function updateLocal(scrapId, patch) {
@@ -739,9 +828,9 @@
         });
         return;
       }
-      // 스크랩 해제 → 목록에서 제거(재조회)
+      // 스크랩 해제 → 목록에서 제거(재조회). 스크롤 오터치는 여기서도 무시.
       const bm = e.target.closest('.nw-bm');
-      if (bm) { await toggleScrap(bm); renderScraps(); }
+      if (bm && !wasDrag(e)) { await toggleScrap(bm); renderScraps(); }
     });
 
     // 뒤로가기로 돌아오면(bfcache) 이 스크립트가 다시 돌지 않아 스크랩 상태가 낡은 채로 남는다.
