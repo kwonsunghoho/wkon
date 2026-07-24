@@ -41,6 +41,24 @@
             box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; scroll-margin-top: 12px; }
     .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
     .card .hint { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    /* 카드 헤더 — 제목 + 우측 '전체 보기' (카드 안엔 미리보기만, 전체는 전용 페이지) */
+    .card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .card-head h2 { margin-bottom: 0; }
+    .card-more { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding-left: 8px;
+      font-size: 13px; font-weight: 700; color: var(--accent-ink); text-decoration: none; white-space: nowrap; }
+    .card-more:hover { color: var(--action-dark); }
+
+    /* 내 특강 */
+    .lec-list { list-style: none; }
+    .lec-list li { padding: 12px 0; border-bottom: 1px solid var(--border-soft); display: flex;
+      align-items: center; gap: 10px; }
+    .lec-list li:last-child { border-bottom: 0; }
+    .lec-body { min-width: 0; flex: 1; }
+    .lec-title { font-size: 15px; font-weight: 700; line-height: 1.4; }
+    .lec-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+    .lec-badge { flex: 0 0 auto; font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 4px 10px;
+      background: var(--action-tint); color: var(--accent-ink); }
+    .lec-badge.past { background: var(--surface2); color: var(--text-muted); }
     @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
     /* ── 라인 아이콘(스프라이트, currentColor 리컬러) ── */
@@ -170,6 +188,8 @@
     .al-ch { font-weight: 700; font-size: 15px; }
     .al-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
     .al-status { margin-top: 4px; font-size: 12px; }
+    .al-kind { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 8px;
+      margin-right: 5px; background: var(--surface2); color: var(--text-muted); vertical-align: 1px; }
     .al-badge { display: inline-block; font-weight: 700; border-radius: 999px; padding: 2px 10px; margin-right: 6px; font-size: 12px; }
     .al-paid { background: #eaf6ec; color: #1a7f37; }
     .al-refund { background: var(--action-tint); color: var(--action-dark); }
@@ -236,7 +256,7 @@
       <!-- 멤버십 카드: 프로필 + 결제 스트립(누르면 신청 내역으로) -->
       <div class="mcard">
         <div class="m-top"><span class="m-logo">MONC</span><span class="m-role">CHALLENGER</span></div>
-        <h1 class="m-name"><span class="name" id="hName">회원</span>님의 챌린지</h1>
+        <h1 class="m-name"><span class="name" id="hName">회원</span><span id="hTitle">님</span></h1>
         <p class="m-sub" id="hMeta"></p>
         <a class="paystrip" href="#sec-apps" aria-label="신청·결제 내역 보기">
           <span class="ps-cell"><span class="ps-num" id="psPaid">0</span><span class="ps-lbl" style="display:block">결제완료</span></span>
@@ -255,7 +275,7 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </a>
 
-        <a class="w wide" href="#sec-days">
+        <a class="w wide" href="#sec-days" id="wProgress">
           <span class="ring" aria-hidden="true">
             <svg width="74" height="74" viewBox="0 0 74 74">
               <circle cx="37" cy="37" r="31" fill="none" stroke="var(--surface2)" stroke-width="8"/>
@@ -272,14 +292,14 @@
           <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
         </a>
 
-        <a class="w" href="#sec-answers">
+        <a class="w" href="answers.html" id="wAnswers">
           <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>답변노트</span>
           <span class="w-val" style="display:block;"><span id="wAnsVal">0</span><em>개</em></span>
           <span class="w-cap" style="display:block;" id="wAnsCap">소재 발굴로 모아요</span>
           <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
         </a>
 
-        <a class="w" href="#sec-comments">
+        <a class="w" href="#sec-comments" id="wComments">
           <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>코치 코멘트</span>
           <span class="w-val" style="display:block;"><span id="wCmVal">0</span><em>개</em></span>
           <span class="w-cap" style="display:block;">코치가 남긴 피드백</span>
@@ -293,7 +313,7 @@
           <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
         </a>
 
-        <a class="w" href="#sec-ba">
+        <a class="w" href="#sec-ba" id="wBa">
           <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-audio"/></svg>Before / After</span>
           <span class="w-val txt" style="display:block;" id="wBaVal">수료 시 공개</span>
           <span class="w-cap" style="display:block;">목소리 비교</span>
@@ -309,9 +329,15 @@
         <a class="row" href="#sec-contact"><span class="ricon"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></span>연락처 관리<span class="r"><span id="listPhone">미등록</span> <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span></a>
       </div>
 
+      <!-- 상세 섹션들. 순서·표시 여부는 회원 상태(applyLayout)가 런타임에 정한다. -->
+      <div id="flow">
+      <div class="card" id="sec-lecture" style="display:none;">
+        <div class="card-head"><h2>내 특강</h2><a class="card-more" href="lectures.html">특강 더 보기 →</a></div>
+        <ul class="lec-list" id="myLectures"></ul>
+      </div>
+
       <div class="card" id="sec-answers">
-        <h2>내 답변노트</h2>
-        <p class="hint">소재 발굴로 완성한 답변이 모여요. 눌러서 펼쳐보세요.</p>
+        <div class="card-head"><h2>내 답변노트</h2><a class="card-more" id="ansMore" href="answers.html">전체 보기 →</a></div>
         <div class="notes-list" id="answerNotes"><p class="nt-empty">불러오는 중…</p></div>
       </div>
 
@@ -326,28 +352,22 @@
 
       <div class="card" id="sec-days">
         <h2>날짜별 결과</h2>
-        <p class="hint">초록은 성공, 주황은 아쉬움, 회색은 아직이에요. 점(•)이 있으면 코멘트가 있어요.</p>
         <div class="days" id="daysGrid"></div>
       </div>
 
       <div class="card" id="sec-comments">
         <h2>코치 코멘트</h2>
-        <p class="hint">코치가 남긴 피드백이에요.</p>
         <ul class="comments" id="commentList"></ul>
       </div>
 
       <div class="card" id="sec-apps">
         <h2>내 신청 내역</h2>
-        <p class="hint">신청하신 챌린지예요. (신청 시 전화번호와 연락처가 같으면 자동으로 연결돼요.)</p>
         <ul class="apps-list" id="myApps"><li style="color:var(--text-dim);border:0;">불러오는 중…</li></ul>
       </div>
 
       <div class="card" id="sec-news" style="display:none;">
-        <h2>내 뉴스 스크랩</h2>
-        <p class="hint">스크랩한 항공 뉴스가 항공사별로 쌓여요 — 면접 답변 재료로 쓰세요.</p>
+        <div class="card-head"><h2>내 뉴스 스크랩</h2><a class="card-more" id="newsMore" href="news.html?tab=scraps">전체 보기 →</a></div>
         <ul class="news-list" id="newsScraps"></ul>
-        <div id="newsSummary" style="font-size:13px;color:var(--text-muted);margin-top:10px;"></div>
-        <a id="newsMore" href="news.html?tab=scraps" style="display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:14px;font-weight:700;color:var(--accent-ink);text-decoration:none;min-height:44px;">전체 보기 →</a>
       </div>
 
       <div class="card" id="sec-contact">
@@ -360,6 +380,7 @@
         </div>
         <div id="phoneMsg" style="font-size:13px; color:var(--text-muted); margin-top:8px; min-height:16px;"></div>
       </div>
+      </div><!-- /#flow -->
     </div>
 
     <div class="loading" id="loading">불러오는 중…</div>
@@ -401,6 +422,7 @@
         if (!data || !data.length) {
           el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
           document.getElementById('wAnsCap').textContent = '오늘의 발굴부터 시작해보세요';
+          document.getElementById('ansMore').style.display = 'none';
           return;
         }
         const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
@@ -436,10 +458,15 @@
           </details>`;
         };
 
+        // 카드엔 미리보기 3개만(작성 중 우선). 전체는 answers.html — 답변이 쌓여도 이 카드 길이는 고정.
+        const PREVIEW = 3;
+        const pickDrafts = drafts.slice(0, PREVIEW);
+        const pickFinals = finals.slice(0, Math.max(0, PREVIEW - pickDrafts.length));
         let html = '';
-        if (drafts.length) html += '<div class="notes-group"><p class="notes-grouplabel">작성 중 · ' + drafts.length + '</p>' + drafts.map(draftCard).join('') + '</div>';
-        if (finals.length) html += '<div class="notes-group"><p class="notes-grouplabel">완료 · ' + finals.length + '</p>' + finals.map(finalCard).join('') + '</div>';
+        if (pickDrafts.length) html += '<div class="notes-group"><p class="notes-grouplabel">작성 중 · ' + drafts.length + '</p>' + pickDrafts.map(draftCard).join('') + '</div>';
+        if (pickFinals.length) html += '<div class="notes-group"><p class="notes-grouplabel">완료 · ' + finals.length + '</p>' + pickFinals.map(finalCard).join('') + '</div>';
         el.innerHTML = html;
+        document.getElementById('ansMore').textContent = '전체 ' + data.length + '개 →';
       } catch (_) {
         el.innerHTML = '<p class="nt-empty">답변을 불러오지 못했어요.</p>';
       }
@@ -490,17 +517,115 @@
           return `<li><a href="${esc(a.url)}" target="_blank" rel="noopener">
             <div class="nl-title">${esc(a.title)}</div><div class="nl-meta">${air}</div></a></li>`;
         }).join('');
-        // 항공사별 개수 요약("대한항공 4 · 아시아나항공 2 · …")
+        // 항공사별 개수는 위젯 캡션에만(카드 안에 또 쓰면 같은 문장이 한 화면에 두 번).
         const counts = {};
         rows.forEach(r => { const k = r.news_articles.airline; if (k) counts[k] = (counts[k] || 0) + 1; });
-        const sorted = Object.entries(counts).sort((x, y) => y[1] - x[1]);
-        const summary = sorted.map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
-        document.getElementById('newsSummary').textContent =
-          `총 ${rows.length}건` + (summary ? ` — ${summary}` : '');
-        // 위젯 캡션은 상위 2개 항공사만
-        const top2 = sorted.slice(0, 2).map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
+        const top2 = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 2)
+          .map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
         if (top2) document.getElementById('wNewsCap').textContent = top2;
+        document.getElementById('newsMore').textContent = `전체 ${rows.length}건 →`;
       } catch (_) { /* 카드 숨김 유지 */ }
+    }
+
+    // ── 회원 상태별 화면 구성 ─────────────────────────────────────────────────
+    // 챌린지에 참여하지 않는 회원에게 빈 14칸 그리드·"코멘트 없어요"·"수료하면 비교"를
+    // 보여주면 껍데기만 700px 넘게 쌓인다. 상태는 DB가 이미 아는 값(cohort_id·기수 종료일·
+    // 특강 신청)으로 판정하므로 회원이 따로 설정할 게 없다.
+    const LAYOUT = {
+      // tools: 소재·뉴스·답변노트만 쓰는 회원 (챌린지 미참여)
+      tools:   { role: 'MEMBER',     title: '님의 준비',
+                 flow: ['answers', 'news', 'lecture', 'apps', 'contact'],
+                 widgets: ['todayCard', 'wAnswers', 'wNews'] },
+      // lecture: 특강 신청자 (챌린지 미참여) — 내 특강이 맨 위
+      lecture: { role: 'MEMBER',     title: '님의 준비',
+                 flow: ['lecture', 'answers', 'news', 'apps', 'contact'],
+                 widgets: ['todayCard', 'wAnswers', 'wNews'] },
+      // active: 챌린지 진행 중 — 진행률·오늘의 미션이 주인공
+      active:  { role: 'CHALLENGER', title: '님의 챌린지',
+                 flow: ['days', 'comments', 'answers', 'news', 'lecture', 'apps', 'contact'],
+                 widgets: ['todayCard', 'wProgress', 'wAnswers', 'wComments', 'wNews'] },
+      // done: 수료 — 이제야 오디오가 생기므로 Before/After 섹션이 맨 위.
+      //       ⚠️ 위젯에서는 wBa 를 wide 둘(todayCard·wProgress) 사이에 끼우지 말 것 —
+      //          반칸 위젯이 혼자 남아 오른쪽이 빈다. 반칸 4개를 붙여 2×2로 채운다.
+      done:    { role: 'GRADUATE',   title: '님의 기록',
+                 flow: ['ba', 'days', 'comments', 'answers', 'news', 'lecture', 'apps', 'contact'],
+                 widgets: ['todayCard', 'wProgress', 'wBa', 'wAnswers', 'wComments', 'wNews'] },
+    };
+    const ALL_SECTIONS = ['lecture', 'answers', 'ba', 'days', 'comments', 'apps', 'news', 'contact'];
+    const ALL_WIDGETS = ['todayCard', 'wProgress', 'wAnswers', 'wComments', 'wNews', 'wBa'];
+
+    // cohort_id(기수 배정)가 챌린지 참여의 정본. 기수 미배정인데 기록만 있는 경우도 방어.
+    function memberState(profile, hasRecords, hasLectures) {
+      const co = profile && profile.cohorts;
+      if (profile && profile.cohort_id) {
+        const today = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
+        if (co && co.end_date && String(co.end_date) < today) return 'done';
+        return 'active';
+      }
+      if (hasRecords) return 'active';
+      if (hasLectures) return 'lecture';
+      return 'tools';
+    }
+
+    // 표시 대상만 순서대로 재배치. ⚠️ 표시 여부는 각 로더(뉴스·특강)가 쥐고 있으므로
+    // 여기서는 '빼는 것'만 하고 display 를 강제로 켜지 않는다.
+    function applyLayout(state) {
+      const L = LAYOUT[state] || LAYOUT.tools;
+      const flow = document.getElementById('flow');
+      ALL_SECTIONS.forEach(k => {
+        const el = document.getElementById('sec-' + k);
+        if (el && L.flow.indexOf(k) < 0) el.style.display = 'none';
+      });
+      L.flow.forEach(k => { const el = document.getElementById('sec-' + k); if (el) flow.appendChild(el); });
+
+      const grid = document.querySelector('.wgrid');
+      ALL_WIDGETS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && L.widgets.indexOf(id) < 0) el.style.display = 'none';
+      });
+      L.widgets.forEach(id => { const el = document.getElementById(id); if (el) grid.appendChild(el); });
+
+      const role = document.querySelector('.m-role');
+      if (role) role.textContent = L.role;
+      const t = document.getElementById('hTitle');
+      if (t) t.textContent = L.title;
+    }
+
+    // ── 내 특강 (applications.challenges 안의 {type:'lecture', lecture_id, name}) ──
+    //    '8월 3일(토)'. lecture-common.js 는 카드 빌더까지 딸려와서 이 한 줄 때문에 안 싣는다.
+    const LEC_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+    function fmtLecDate(s) {
+      const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!m) return '';
+      return (+m[2]) + '월 ' + (+m[3]) + '일(' + LEC_WEEK[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ')';
+    }
+
+    async function loadMyLectures(lectureIds) {
+      if (!lectureIds.length) return [];
+      try {
+        const { data, error } = await MONC.sb.from('special_lectures')
+          .select('id, title, lecture_date, schedule, instructor').in('id', lectureIds);
+        if (error || !data || !data.length) return [];
+        const today = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
+        // 예정된 특강 먼저(가까운 순), 지난 것은 뒤로(최근 순)
+        const up = data.filter(l => l.lecture_date && String(l.lecture_date) >= today)
+          .sort((a, b) => String(a.lecture_date) < String(b.lecture_date) ? -1 : 1);
+        const past = data.filter(l => !l.lecture_date || String(l.lecture_date) < today)
+          .sort((a, b) => String(a.lecture_date) > String(b.lecture_date) ? -1 : 1);
+        const rows = up.concat(past);
+        document.getElementById('myLectures').innerHTML = rows.map(l => {
+          const meta = [fmtLecDate(l.lecture_date), l.schedule, l.instructor].filter(Boolean).join(' · ');
+          let badge = '<span class="lec-badge past">지난 특강</span>';
+          if (l.lecture_date && String(l.lecture_date) >= today) {
+            const d = Math.round((Date.parse(l.lecture_date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
+            badge = '<span class="lec-badge">' + (d === 0 ? '오늘' : 'D-' + d) + '</span>';
+          }
+          return `<li><span class="lec-body"><span class="lec-title">${esc(l.title || '특강')}</span>` +
+            (meta ? `<span class="lec-meta" style="display:block">${esc(meta)}</span>` : '') + `</span>${badge}</li>`;
+        }).join('');
+        document.getElementById('sec-lecture').style.display = '';
+        return rows;
+      } catch (_) { return []; }
     }
 
     (async () => {
@@ -627,6 +752,16 @@
 
       // 내 신청 내역 (RLS: member_id = 본인) + 결제 스트립 집계
       const CH_LABEL_MP = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
+      // ⚠️ challenges jsonb 에는 챌린지와 특강이 섞여 들어온다.
+      //    특강은 {type:'lecture', lecture_id, name} 이라 c.challenge 가 없다 —
+      //    예전엔 이걸 안 봐서 특강 신청 건의 상품명이 빈칸으로 나왔다.
+      const itemLabel = c => {
+        if (!c) return '';
+        if (c.type === 'lecture' || c.lecture_id) {
+          return '<span class="al-kind">특강</span>' + esc(c.name || '특강');
+        }
+        return esc((CH_LABEL_MP[c.challenge] || c.challenge || '') + (c.round ? ' ' + c.round + '기' : ''));
+      };
       const myAppsEl = document.getElementById('myApps');
       const { data: myApps } = await MONC.sb.from('applications')
         .select('created_at, challenges, total_price, paid, refunded, payment_status')
@@ -650,7 +785,7 @@
         if (nWait) psWait.classList.add('hot');   // 입금대기 있으면 강조
 
         myAppsEl.innerHTML = myApps.map(a => {
-          const chs = Array.isArray(a.challenges) ? a.challenges.map(c => `${CH_LABEL_MP[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ') : '';
+          const chs = Array.isArray(a.challenges) ? a.challenges.map(itemLabel).filter(Boolean).join(', ') : '';
           const d = new Date(a.created_at);
           // 간편결제 건은 payment_status 가 소스(paid 불리언은 계좌이체 수동 확인용)
           const badge = (a.refunded || a.payment_status === 'refunded') ? '<span class="al-badge al-refund">환불완료</span>'
@@ -658,11 +793,21 @@
             : (a.paid || a.payment_status === 'paid') ? '<span class="al-badge al-paid">결제완료</span>'
             : '<span class="al-badge al-wait">입금대기</span>';
           return `<li>
-            <div class="al-top"><span class="al-ch">${esc(chs)}</span><span class="al-date">${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</span></div>
+            <div class="al-top"><span class="al-ch">${chs}</span><span class="al-date">${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</span></div>
             <div class="al-status">${badge}<span style="color:var(--text-muted)">${(a.total_price||0).toLocaleString()}원</span></div>
           </li>`;
         }).join('');
       }
+
+      // 내가 신청한 특강 → 카드 렌더 + 상태 판정 재료
+      const lectureIds = [];
+      (myApps || []).forEach(a => (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+        if (c && c.lecture_id) lectureIds.push(c.lecture_id);
+      }));
+      const myLectures = await loadMyLectures(Array.from(new Set(lectureIds)));
+
+      // 회원 상태에 맞춰 섹션·위젯을 추리고 순서를 잡는다. content 를 보이기 전에 끝내야 깜빡이지 않는다.
+      applyLayout(memberState(profile, (records || []).length > 0, myLectures.length > 0));
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>내 답변노트 — MONC</title>
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <meta name="theme-color" content="#102B56">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 24px 20px 80px; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .brand-link { display: flex; align-items: center; text-decoration: none; }
+    .brand-link img { height: 22px; width: auto; display: block; }
+    .brand-link:hover { opacity: .7; }
+    .back { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 10px 16px;
+      font-size: 13px; font-weight: 700; color: var(--text-muted); background: none;
+      border: 1px solid var(--border); border-radius: 999px; text-decoration: none; }
+    .back:hover { border-color: var(--action); color: var(--action-dark); }
+
+    .head { margin-bottom: 18px; }
+    .eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--accent-ink); }
+    .eyebrow::before { content: '— '; color: var(--action); }
+    h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(26px, 5vw, 34px); margin-top: 4px; }
+    .head .sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+    /* 필터 — sticky 로 두지 않는다(작은 화면에서 필터바가 화면을 잡아먹는다) */
+    .filters { margin-bottom: 18px; }
+    .search { display: block; width: 100%; min-height: 48px; padding: 12px 18px; font: inherit; font-size: 15px;
+      color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 999px; }
+    .search::placeholder { color: var(--text-muted); }
+    .search:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    .chips { display: flex; gap: 7px; overflow-x: auto; margin-top: 10px; padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 8px 15px;
+      border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer;
+      color: var(--accent-ink); background: var(--surface); border: 1px solid var(--border-soft); }
+    .chip:hover { border-color: var(--accent-dark); }
+    .chip.on { color: var(--action-ink); background: var(--action); border-color: transparent; }
+
+    .count { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+
+    /* 노트 카드 — mypage 와 같은 문법 */
+    .notes { display: flex; flex-direction: column; gap: 10px; }
+    .note { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); }
+    .note > summary { list-style: none; cursor: pointer; padding: 15px; }
+    .note > summary::-webkit-details-marker { display: none; }
+    .note-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 7px; }
+    .note-cat { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 11px;
+      font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+    .note-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .note-q { font-size: 15px; font-weight: 700; line-height: 1.45; }
+    .note-more { display: inline-block; font-size: 12px; color: var(--accent-ink); margin-top: 8px; font-weight: 700; }
+    .note[open] .note-q { color: var(--action-dark); }
+    .note[open] .note-more { color: var(--text-muted); }
+    .note-a { font-size: 15px; color: var(--text); line-height: 1.7; white-space: pre-wrap;
+      border-top: 1px dashed var(--border-soft); margin: 0 15px; padding: 13px 0 16px; }
+    .note-draft { display: block; padding: 15px; text-decoration: none; color: inherit;
+      border-left: 3px solid var(--action); }
+    .note-draft:hover { background: var(--surface2); }
+    .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+    .note-draft .note-more { color: var(--action-dark); }
+    mark { background: var(--action-tint); color: var(--accent-ink); padding: 0 2px; border-radius: 3px; }
+
+    .empty { text-align: center; color: var(--text-muted); font-size: 15px; padding: 50px 20px; }
+    .empty a { color: var(--accent-ink); font-weight: 700; }
+    .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <a href="index.html" class="brand-link" title="홈으로"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
+      <a href="mypage.html" class="back">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>마이페이지</a>
+    </div>
+
+    <div id="content" style="display:none;">
+      <div class="head">
+        <div class="eyebrow">MY ANSWERS</div>
+        <h1>내 답변노트</h1>
+        <p class="sub" id="hSub"></p>
+      </div>
+
+      <div class="filters">
+        <input type="search" class="search" id="q" placeholder="질문·답변 내용 검색" aria-label="답변 검색" />
+        <div class="chips" id="chips" role="group" aria-label="답변 분류 필터"></div>
+      </div>
+
+      <p class="count" id="count"></p>
+      <div class="notes" id="list"></div>
+    </div>
+
+    <div class="loading" id="loading">불러오는 중…</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="sojae-common.js"></script>
+  <script>
+    function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    // 검색어를 결과에서 하이라이트. esc 를 거친 문자열에만 쓴다.
+    function hi(escaped, term) {
+      if (!term) return escaped;
+      const t = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return escaped.replace(new RegExp('(' + esc(t) + ')', 'gi'), '<mark>$1</mark>');
+    }
+    const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
+
+    let ROWS = [];              // 전체 답변(최신순)
+    let filter = { status: 'all', cat: 'all', q: '' };
+
+    function catOf(a) { return (a.questions || {}).category || ''; }
+    function catLabel(a) { return (window.SOJAE.CAT_LABEL[catOf(a)]) || '소재 발굴'; }
+    function isDraft(a) { return (a.status || 'final') === 'draft'; }
+
+    function render() {
+      const term = filter.q.trim().toLowerCase();
+      const rows = ROWS.filter(a => {
+        if (filter.status === 'draft' && !isDraft(a)) return false;
+        if (filter.status === 'final' && isDraft(a)) return false;
+        if (filter.cat !== 'all' && catOf(a) !== filter.cat) return false;
+        if (!term) return true;
+        const q = ((a.questions || {}).content || '').toLowerCase();
+        return q.indexOf(term) >= 0 || (a.content || '').toLowerCase().indexOf(term) >= 0;
+      });
+
+      const listEl = document.getElementById('list');
+      document.getElementById('count').textContent =
+        rows.length === ROWS.length ? (ROWS.length + '개') : (rows.length + '개 / 전체 ' + ROWS.length + '개');
+
+      if (!rows.length) {
+        listEl.innerHTML = '<p class="empty">' + (ROWS.length
+          ? '조건에 맞는 답변이 없어요.'
+          : '아직 저장한 답변이 없어요.<br><a href="sojae.html">오늘의 소재 발굴부터 시작하기 →</a>') + '</p>';
+        return;
+      }
+
+      const rawTerm = filter.q.trim();
+      listEl.innerHTML = rows.map(a => {
+        const q = a.questions || {};
+        const qText = hi(esc(q.content || '(문제 정보 없음)'), rawTerm);
+        const top = `<div class="note-top"><span class="note-cat">${esc(catLabel(a))}</span>` +
+          `<span class="note-date">${fmt(a.updated_at)}</span></div>`;
+        if (isDraft(a)) {
+          const body = (a.content || '').trim();
+          const preview = body ? hi(esc(body.slice(0, 70)), rawTerm) + (body.length > 70 ? '…' : '')
+            : '아직 작성 전 — 눌러서 이어쓰기';
+          return `<a class="note note-draft" href="sojae.html?q=${encodeURIComponent(a.question_id)}">
+            ${top}<div class="note-q">${qText}</div><div class="note-preview">${preview}</div>
+            <span class="note-more">이어서 작성 →</span></a>`;
+        }
+        return `<details class="note"><summary>${top}<div class="note-q">${qText}</div>
+          <span class="note-more">답변 보기 ▾</span></summary>
+          <div class="note-a">${hi(esc(a.content), rawTerm)}</div></details>`;
+      }).join('');
+    }
+
+    function buildChips() {
+      // 실제로 존재하는 분류만 칩으로 (없는 카테고리를 눌러 빈 화면을 보는 일이 없게)
+      const cats = [];
+      ROWS.forEach(a => { const c = catOf(a); if (c && cats.indexOf(c) < 0) cats.push(c); });
+      const nDraft = ROWS.filter(isDraft).length;
+      const defs = [{ k: 'status', v: 'all', label: '전체' }];
+      if (nDraft) defs.push({ k: 'status', v: 'draft', label: '작성 중 ' + nDraft });
+      if (nDraft && nDraft < ROWS.length) defs.push({ k: 'status', v: 'final', label: '완료 ' + (ROWS.length - nDraft) });
+      cats.forEach(c => defs.push({ k: 'cat', v: c, label: window.SOJAE.CAT_LABEL[c] || c }));
+
+      const box = document.getElementById('chips');
+      box.innerHTML = defs.map(d =>
+        `<button type="button" class="chip${(d.k === 'status' && d.v === 'all') ? ' on' : ''}" ` +
+        `data-k="${d.k}" data-v="${esc(d.v)}" aria-pressed="${(d.k === 'status' && d.v === 'all')}">${esc(d.label)}</button>`
+      ).join('');
+
+      box.addEventListener('click', e => {
+        const btn = e.target.closest('.chip');
+        if (!btn) return;
+        const k = btn.dataset.k, v = btn.dataset.v;
+        // 같은 칩을 다시 누르면 해제. 카테고리·상태는 서로 독립.
+        if (k === 'cat') filter.cat = (filter.cat === v) ? 'all' : v;
+        else filter.status = v;
+        box.querySelectorAll('.chip').forEach(c => {
+          const on = c.dataset.k === 'cat' ? (filter.cat === c.dataset.v)
+            : (filter.status === c.dataset.v);
+          c.classList.toggle('on', on);
+          c.setAttribute('aria-pressed', String(on));
+        });
+        render();
+      });
+    }
+
+    (async () => {
+      const session = await MONC.requireSession();
+      if (!session) return;
+      // 회원 페이지는 예외 없이 동의 게이트를 통과해야 한다(주소창 우회 차단)
+      if (!(await MONC.requireConsent())) return;
+
+      const me = session.user.id;
+      try {
+        // status 컬럼 미적용(마이그레이션 전)이면 전부 완료로 폴백 — mypage 와 같은 방어
+        let { data, error } = await MONC.sb.from('answers')
+          .select('content, status, updated_at, question_id, questions(content, category)')
+          .eq('member_id', me).order('updated_at', { ascending: false });
+        if (error) {
+          ({ data, error } = await MONC.sb.from('answers')
+            .select('content, updated_at, question_id, questions(content, category)')
+            .eq('member_id', me).order('updated_at', { ascending: false }));
+        }
+        if (error) throw error;
+        ROWS = data || [];
+      } catch (_) {
+        document.getElementById('loading').textContent = '답변을 불러오지 못했어요.';
+        return;
+      }
+
+      const nDraft = ROWS.filter(isDraft).length;
+      document.getElementById('hSub').textContent = ROWS.length
+        ? (ROWS.length + '개' + (nDraft ? ' · 작성 중 ' + nDraft : ''))
+        : '소재 발굴로 답변을 모아보세요';
+
+      buildChips();
+      render();
+
+      let t;
+      document.getElementById('q').addEventListener('input', e => {
+        clearTimeout(t);
+        t = setTimeout(() => { filter.q = e.target.value; render(); }, 160);
+      });
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+    })();
+  </script>
+</body>
+</html>
