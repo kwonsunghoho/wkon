@@ -1045,7 +1045,7 @@
       pick.disabled = true; thumbMsg('사진을 줄이고 올리는 중…', false);
       try {
         // 후기 업로드와 같은 압축 루틴(긴 변 1080px + WebP). 5MB 폰 사진도 100KB 안쪽이 된다.
-        const opt = await optimizeReviewImage(f);
+        const opt = await optimizeReviewImage(f, 1280);   // 특강: 카드 597px·상세 680px 표시 기준
         const path = `${crypto.randomUUID()}.${opt.ext}`;
         const up = await MONC.sb.storage.from('lecture-images')
           .upload(path, opt.blob, { upsert: false, contentType: opt.type });
@@ -1364,10 +1364,13 @@
         if (error) { alert('삭제 실패: ' + error.message); return; } toast('삭제됨'); loadReviewsAdmin();
       }));
     }
-    // 모바일 최적화 — 긴 변 1080px 축소 + WebP(미지원 시 JPEG) 0.82 압축.
+    // 모바일 최적화 — 긴 변 maxEdge(기본 1080px) 축소 + WebP(미지원 시 JPEG) 0.82 압축.
     // 압축본이 원본보다 크거나 디코드 실패하면 원본 그대로 올린다.
-    async function optimizeReviewImage(file) {
-      const MAX_EDGE = 1080, QUALITY = 0.82;
+    // maxEdge 기준(2026-07-24 실측): 후기는 세로 스크린샷이라 1080이면 충분하지만,
+    // 특강 사진은 카드 커버가 최대 597px(모바일 1열)·상세가 680×340으로 표시돼
+    // 고해상도 화면에서 1080이 모자란다 → 특강만 1280을 넘긴다.
+    async function optimizeReviewImage(file, maxEdge) {
+      const MAX_EDGE = maxEdge || 1080, QUALITY = 0.82;
       let bitmap;
       try { bitmap = await createImageBitmap(file); }
       catch (e) { throw new Error('이미지 디코드 실패(HEIC 등 미지원 형식일 수 있음)'); }
