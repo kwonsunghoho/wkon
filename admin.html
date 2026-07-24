@@ -56,8 +56,11 @@
     /* 시간대 편집기 — 행마다 날짜·시작·종료·정원·메모. 정원이 있으면 그 타임만 따로 마감된다. */
     .lf-slots { display: flex; flex-direction: column; gap: 8px; }
     .lf-slots:not(:empty) { margin-bottom: 8px; }
-    .lf-slot { display: grid; grid-template-columns: minmax(126px,1.1fr) 92px 92px 74px minmax(96px,1fr) auto; gap: 6px; align-items: center; }
+    .lf-slot { display: grid; grid-template-columns: minmax(148px,1.1fr) 104px 104px 82px minmax(104px,1fr) auto; gap: 6px; align-items: center; }
     .lf-slot input { padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; width: 100%; font-family: inherit; }
+    /* 시간은 브라우저 다이얼·오전/오후 UI가 쓰기 불편해서 텍스트로 직접 적는다(24시간). */
+    .lf-slot input.t { text-align: center; letter-spacing: .02em; }
+    .lf-slot input.t.bad { border-color: #A33D14; background: #FDF4F0; }
     .lf-slot-end { display: flex; align-items: center; gap: 8px; }
     .lf-slot-seat { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
     .lf-slot-del { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-xs);
@@ -371,7 +374,7 @@
           <label>시간대 (같은 특강을 여러 날·여러 타임으로 열 때)</label>
           <div class="lf-slots" id="lfSlots"></div>
           <button type="button" class="lf-slot-add" id="lfSlotAdd">+ 시간대 추가</button>
-          <div class="lf-thumb-spec">시간대를 하나라도 넣으면 <b>정원·진행일이 시간대에서 자동 계산</b>되고, 신청자는 상세페이지에서 시간대를 골라 신청합니다. 안 넣으면 지금처럼 특강 하나에 일정 하나예요.</div>
+          <div class="lf-thumb-spec">순서대로 <b>날짜 · 시작 · 종료 · 정원 · 메모</b>. 시간은 <b>24시간으로 직접 입력</b>(14:00 — 1400, 14 로 적어도 알아서 맞춰줍니다). 시간대를 하나라도 넣으면 <b>정원·진행일이 시간대에서 자동 계산</b>되고, 신청자는 상세페이지에서 시간대를 골라 신청합니다. 안 넣으면 지금처럼 특강 하나에 일정 하나예요.</div>
         </div>
         <div class="field"><label>시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
         <div class="field"><label>강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
@@ -1191,8 +1194,10 @@
         : (s.id ? '무제한' : '');
       return '<div class="lf-slot" data-id="' + esc(s.id || '') + '">'
         + '<input type="date" data-f="slot_date" value="' + esc(s.slot_date || '') + '">'
-        + '<input type="time" data-f="start_time" value="' + esc(String(s.start_time || '').slice(0, 5)) + '">'
-        + '<input type="time" data-f="end_time" value="' + esc(String(s.end_time || '').slice(0, 5)) + '">'
+        // ⚠️ type="time" 금지 — 브라우저 기본 다이얼·오전/오후 UI가 폭도 먹고 입력도 느려서
+        //    2026-07-24 오너 요청으로 손입력(24시간)으로 바꿨다. 되돌리지 말 것.
+        + '<input type="text" class="t" data-f="start_time" inputmode="numeric" maxlength="5" placeholder="09:00" value="' + esc(String(s.start_time || '').slice(0, 5)) + '">'
+        + '<input type="text" class="t" data-f="end_time" inputmode="numeric" maxlength="5" placeholder="10:30" value="' + esc(String(s.end_time || '').slice(0, 5)) + '">'
         + '<input type="number" min="1" data-f="capacity" placeholder="정원" value="' + (s.capacity != null ? s.capacity : '') + '">'
         + '<input type="text" data-f="label" placeholder="메모(선택)" value="' + esc(s.label || '') + '">'
         + '<div class="lf-slot-end"><span class="lf-slot-seat">' + esc(seat) + '</span>'
@@ -1226,6 +1231,39 @@
       syncCapacityLock();
     });
 
+    /* 손으로 적은 시간을 24시간 'HH:MM' 으로 맞춘다.
+       '9' '930' '1400' '9:5' '9시30분' 다 받고, 습관적으로 '오후 2시'라고 써도 14:00 으로 바꾼다.
+       빈 칸이면 ''(시간 미정 허용), 못 읽으면 null(저장 전에 걸러낸다). */
+    function normTime(raw) {
+      let s = String(raw == null ? '' : raw).trim();
+      if (!s) return '';
+      let pm = null;
+      if (/^오전/.test(s)) { pm = false; s = s.replace(/^오전/, '').trim(); }
+      else if (/^오후/.test(s)) { pm = true; s = s.replace(/^오후/, '').trim(); }
+
+      const cleaned = s.replace(/[시분\s]/g, ':').replace(/:+/g, ':').replace(/:$/, '');
+      // 붙여 쓴 숫자는 뒤 두 자리를 분으로 본다 — '930'=9:30, '1400'=14:00
+      const m = cleaned.match(/^(\d{1,2})(?::(\d{1,2}))?$/) || s.match(/^(\d{1,2})(\d{2})$/);
+      if (!m) return null;
+
+      let h = +m[1];
+      const mi = m[2] == null ? 0 : +m[2];
+      if (pm === true && h < 12) h += 12;
+      if (pm === false && h === 12) h = 0;
+      if (h > 23 || mi > 59) return null;
+      return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+    }
+
+    // 칸을 벗어나면 바로 정리해서 보여준다(잘못 적었으면 빨갛게).
+    // ⚠️ blur 는 버블링하지 않으므로 capture 로 받는다.
+    document.getElementById('lfSlots').addEventListener('blur', e => {
+      const el = e.target;
+      if (!el.matches || !el.matches('input.t')) return;
+      const v = normTime(el.value);
+      el.classList.toggle('bad', v === null);
+      if (v !== null) el.value = v;
+    }, true);
+
     // 폼 → 저장할 시간대 목록. 날짜가 빈 행은 무시(실수로 추가만 해둔 행).
     function readSlotRows() {
       return [...document.querySelectorAll('#lfSlots .lf-slot')].map((row, i) => {
@@ -1234,8 +1272,9 @@
         return {
           id:         row.dataset.id || null,
           slot_date:  v('slot_date') || null,
-          start_time: v('start_time') || null,
-          end_time:   v('end_time') || null,
+          // '' = 시간 미정(허용), null = 못 읽은 값 → 저장 직전에 막는다
+          start_time: normTime(v('start_time')),
+          end_time:   normTime(v('end_time')),
           label:      v('label').trim() || null,
           capacity:   cap === '' ? null : parseInt(cap, 10),
           sort_order: i,
@@ -1253,8 +1292,9 @@
       }
       for (const s of rows) {
         const body = {
-          lecture_id: lectureId, slot_date: s.slot_date, start_time: s.start_time,
-          end_time: s.end_time, label: s.label, capacity: s.capacity, sort_order: s.sort_order,
+          lecture_id: lectureId, slot_date: s.slot_date,
+          start_time: s.start_time || null, end_time: s.end_time || null,
+          label: s.label, capacity: s.capacity, sort_order: s.sort_order,
         };
         const q = s.id
           ? MONC.sb.from('lecture_slots').update(body).eq('id', s.id)
@@ -1322,6 +1362,10 @@
       if (priceRaw === '' || isNaN(price) || price < 0) { alert('참가비를 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
       const highlights = lecVal('lfHigh').split('\n').map(s => s.trim()).filter(Boolean);
       const slotRows = readSlotRows();
+      if (slotRows.some(s => s.start_time === null || s.end_time === null)) {
+        alert('시간을 24시간 형식으로 입력하세요.\n예: 14:00 (1400, 14 도 됩니다)');
+        return;
+      }
       // ⚠️ seats_left 는 보내지 않는다 — DB 트리거가 '정원 − 신청건수'로 계산하는 파생값이라
       //    여기서 덮으면 실제 신청 수와 어긋난다. (마이그레이션 미적용 환경에서도 기존
       //    수동값을 지우지 않도록, null 로 밀지 말고 아예 빼는 게 맞다.)
