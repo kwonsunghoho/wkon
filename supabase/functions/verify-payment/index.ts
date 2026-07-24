@@ -9,6 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const PRICE_PER_CHALLENGE_FALLBACK = 30000 // site_config.challenge_price 미설정 시 기본값
+const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,34 @@ const CORS = {
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+
+// 결제는 승인됐는데 신청을 저장할 수 없을 때(특강 정원 마감) 전액 자동 환불한다.
+// ⚠️ 돈만 나가고 신청은 실패하는 상태를 남기지 않기 위한 안전장치 — 실패해도 예외를
+//    던지지 않고 false 를 돌려준다(호출부가 사용자에게 고객센터 안내를 띄운다).
+async function refundAll(
+  supa: ReturnType<typeof createClient>, paymentId: string, amount: number, reason: string,
+): Promise<boolean> {
+  try {
+    const secret = Deno.env.get('PORTONE_API_SECRET')
+    if (!secret) return false
+    const res = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: `PortOne ${secret}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeId: PORTONE_STORE_ID, amount, reason }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) { console.error('auto refund failed', res.status, body); return false }
+    // 신청 행이 없으므로 application_id 는 null — 장부에는 남긴다(admin 이 대조 가능).
+    await supa.from('refunds').insert({
+      application_id: null, amount, reason,
+      portone_response: (body as Record<string, unknown>)?.cancellation || body || null,
+    })
+    return true
+  } catch (e) {
+    console.error('auto refund exception', e)
+    return false
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -87,6 +116,15 @@ Deno.serve(async (req) => {
       // 동일 결제ID 중복(이미 접수됨)이면 성공으로 간주
       if (error.code === '23505' || String(error.message).includes('duplicate')) {
         return json({ ok: true, duplicate: true })
+      }
+      // 정원 마감(DB 트리거 MC001) — 결제하는 사이에 마지막 자리가 나갔다.
+      // 결제는 이미 승인됐으므로 전액 자동 환불하고 실패로 답한다.
+      // ⚠️ 여기만 200 으로 답한다: supabase-js 의 functions.invoke 는 non-2xx 면 data 를
+      //    null 로 만들고 본문을 error.context 안에 숨겨, 브라우저가 'lecture_full' 인지
+      //    구분할 수 없다(= 환불됐다는 안내를 못 띄운다). 실패 여부는 ok:false 로 전한다.
+      if (error.code === 'MC001' || String(error.message).includes('lecture_full')) {
+        const refunded = await refundAll(supa, paymentId, paid, '특강 정원 마감 · 자동 환불')
+        return json({ ok: false, error: 'lecture_full', refunded })
       }
       return json({ ok: false, error: 'insert_failed', detail: error.message }, 500)
     }

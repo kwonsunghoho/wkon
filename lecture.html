@@ -166,8 +166,7 @@
         .from('special_lectures').select('*').eq('id', LECTURE_ID).eq('visible', true).single();
       if (error || !data) { renderNotFound(); return; }
       LECTURE = data;
-      render(data);
-      await initMember();
+      await rerender(data);
       handlePayReturn();
     }
 
@@ -189,7 +188,8 @@
       const badge = st === 'open'
         ? '<span class="lc-badge open">신청 중' + (LEC.ddaySuffix(l.recruit_end) || '') + '</span>'
         : st === 'upcoming' ? '<span class="lc-badge soon">신청 예정</span>'
-        : '<span class="lc-badge closed">' + (soldOut ? '신청 마감 · 마감' : '신청 마감') + '</span>';
+        // 자리가 다 찬 것과 기간이 끝난 것은 다른 사정이라 문구를 나눈다
+        : '<span class="lc-badge closed">' + (soldOut ? '정원 마감' : '신청 마감') + '</span>';
 
       const dateStr = LEC.fmtDate(l.lecture_date);
       const when = [dateStr, l.schedule_text].filter(Boolean).join(' · ') || '추후 안내';
@@ -200,8 +200,11 @@
       facts.push(fact('일시', when));
       if (l.instructor) facts.push(fact('강사', l.instructor));
       if (recruitPeriod) facts.push(fact('신청 기간', recruitPeriod));
-      if (l.seats_left != null) facts.push(fact('잔여석', soldOut ? '마감' : l.seats_left + '석'));
-      else if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
+      // 잔여석은 DB 트리거가 '정원 − 신청건수'로 자동 계산한 값(20260724150000 마이그레이션)
+      if (l.seats_left != null) {
+        facts.push(fact('잔여석', soldOut ? '마감'
+          : l.seats_left + '석' + (l.capacity ? ' / 정원 ' + l.capacity + '명' : '')));
+      } else if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
       facts.push(fact('참가비', priceStr, true));
 
       const highlights = Array.isArray(l.highlights) ? l.highlights.filter(Boolean) : [];
@@ -233,7 +236,9 @@
 
     function applyBoxHtml(l, st, priceStr) {
       if (st !== 'open') {
-        const msg = st === 'upcoming' ? '아직 신청 기간이 아니에요. 곧 열려요!' : '신청이 마감된 특강이에요.';
+        const msg = st === 'upcoming' ? '아직 신청 기간이 아니에요. 곧 열려요!'
+          : l.seats_left === 0 ? '정원이 모두 찼어요. 다음 특강을 기다려 주세요.'
+          : '신청이 마감된 특강이에요.';
         return '<section class="lc-apply" id="applyBox"><div class="lc-closednote">' + msg + '</div></section>';
       }
       const free = !(l.price > 0);
@@ -273,7 +278,9 @@
 
     function stickyHtml(l, st, priceStr) {
       const disabled = st !== 'open';
-      const label = st === 'upcoming' ? '신청 예정' : st === 'closed' ? '신청 마감' : '신청하기';
+      const label = st === 'upcoming' ? '신청 예정'
+        : st === 'closed' ? (l.seats_left === 0 ? '정원 마감' : '신청 마감')
+        : '신청하기';
       return '<div class="lc-sticky"><div class="lc-sticky-in">'
         + '<div class="info"><div class="p">' + LEC.esc(priceStr) + '</div><div class="s">' + LEC.esc(l.title) + '</div></div>'
         + '<button type="button" class="go" id="stickyGo"' + (disabled ? ' disabled' : '') + '>' + label + '</button>'
@@ -300,8 +307,11 @@
       modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeBankModal));
       document.getElementById('btConfirm').addEventListener('click', confirmBankTransfer);
       document.getElementById('copyBtn').addEventListener('click', copyAccount);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBankModal(); });
     }
+
+    // ⚠️ document 리스너는 render() 가 다시 돌 때마다 쌓이므로 여기서 딱 한 번만 건다
+    // (잔여석 갱신으로 재렌더가 잦아졌다). 나머지는 새로 만든 요소에 붙어 누적되지 않는다.
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBankModal(); });
 
     /* ── 회원 연동 ── */
     async function initMember() {
@@ -334,6 +344,51 @@
       return [{ type: 'lecture', lecture_id: LECTURE.id, name: LECTURE.title, price: LECTURE.price || 0 }];
     }
 
+    /* ── 잔여석 재확인 ──
+       잔여석은 신청이 들어올 때마다 DB 트리거가 다시 센다. 사용자가 페이지를 열어둔
+       사이에 남은 자리가 나갈 수 있으므로, 결제창을 띄우기 전에 최신값을 한 번 더 읽어
+       마감이면 결제 자체를 시작하지 않는다. 그래도 동시에 뚫린 신청은 DB 트리거가 막고,
+       결제까지 끝난 경우엔 verify-payment 가 전액 자동 환불한다. */
+    async function fetchLecture() {
+      try {
+        const { data, error } = await window.MONC.sb
+          .from('special_lectures').select('*').eq('id', LECTURE_ID).eq('visible', true).single();
+        return error ? null : data;
+      } catch (e) { return null; }
+    }
+
+    async function ensureSeatOpen() {
+      const fresh = await fetchLecture();
+      if (!fresh) return true;   // 조회 실패로 신청을 막지 않는다(최종 방어는 DB 트리거)
+      LECTURE = fresh;
+      const st = LEC.status(fresh.recruit_start, fresh.recruit_end);
+      if (fresh.seats_left !== 0 && st === 'open') return true;
+      hideBankModal();
+      alert(fresh.seats_left === 0
+        ? '아쉽게도 방금 정원이 모두 찼어요.\n다음 특강을 기다려 주세요.'
+        : '신청 기간이 종료되었어요.');
+      await rerender(fresh);
+      return false;
+    }
+
+    /* ⚠️ render() 는 신청 폼까지 통째로 다시 만들므로 회원 자동입력이 날아간다.
+       화면을 다시 그릴 땐 반드시 이 함수로(= initMember 재실행). */
+    async function rerender(l) {
+      render(l);
+      await initMember();
+    }
+
+    /* 최신 잔여석으로 화면을 다시 그린다(신청 접수·마감 후) */
+    async function refreshLecture() {
+      const fresh = await fetchLecture();
+      if (fresh) { LECTURE = fresh; await rerender(fresh); }
+    }
+
+    /* 정원 마감으로 DB 가 막은 신청인지 (마이그레이션 20260724150000 의 errcode) */
+    function isLectureFull(e) {
+      return !!e && (e.code === 'MC001' || String(e.message || '').includes('lecture_full'));
+    }
+
     /* ── 무료 신청(직접 접수) ── */
     async function submitFree() {
       if (_busy) return;
@@ -341,9 +396,16 @@
       _busy = true;
       const btn = document.getElementById('freeBtn'); const orig = btn.textContent;
       btn.disabled = true; btn.textContent = '신청 중…';
-      const ok = await insertApplication(applicant);
-      _busy = false; btn.disabled = false; btn.textContent = orig;
+      const ok = (await ensureSeatOpen()) && await insertApplication(applicant);
+      _busy = false;
+      restoreBtn(btn, orig);
       if (ok) afterApplied('무료 신청이 접수되었습니다! 확인 후 안내드릴게요.');
+    }
+
+    /* 마감으로 화면을 다시 그렸으면 버튼이 떨어져 나갔을 수 있다 */
+    function restoreBtn(btn, text) {
+      if (!btn || !document.body.contains(btn)) return;
+      btn.disabled = false; btn.textContent = text;
     }
 
     /* ── 계좌이체 ── */
@@ -352,10 +414,16 @@
       const m = document.getElementById('bankModal');
       m.classList.add('open'); m.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     }
+    // 실제 닫기 동작. closeBankModal 은 신청 처리 중(_busy) 사용자가 닫는 걸 막지만,
+    // 정원 마감처럼 코드가 강제로 닫아야 하는 경우엔 이쪽을 직접 부른다.
+    function hideBankModal() {
+      const m = document.getElementById('bankModal');
+      if (!m) return;
+      m.classList.remove('open'); m.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
+    }
     function closeBankModal() {
       if (_busy) return;
-      const m = document.getElementById('bankModal');
-      m.classList.remove('open'); m.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
+      hideBankModal();
     }
     async function confirmBankTransfer() {
       if (_busy) return;
@@ -363,9 +431,11 @@
       _busy = true;
       const btn = document.getElementById('btConfirm'); const orig = btn.textContent;
       btn.disabled = true; btn.textContent = '신청 중…'; btn.style.opacity = '.7';
-      const ok = await insertApplication(applicant);
-      _busy = false; btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
-      if (ok) { closeBankModal(); afterApplied('신청이 접수되었습니다! 입금 확인 후 안내드리겠습니다.'); }
+      const ok = (await ensureSeatOpen()) && await insertApplication(applicant);
+      _busy = false;
+      restoreBtn(btn, orig);
+      if (btn && document.body.contains(btn)) btn.style.opacity = '1';
+      if (ok) { hideBankModal(); afterApplied('신청이 접수되었습니다! 입금 확인 후 안내드리겠습니다.'); }
     }
 
     /* applications 직접 insert (무료·계좌이체 공통). paid=false(기본) → 관리자 확인. */
@@ -383,6 +453,13 @@
         await maybeSavePhone(applicant);
         return true;
       } catch (e) {
+        // 마지막 한 자리를 동시에 노린 경우 — DB 트리거가 막는다(결제 전이라 손해 없음)
+        if (isLectureFull(e)) {
+          hideBankModal();
+          alert('아쉽게도 방금 정원이 모두 찼어요.\n결제 전이라 빠져나간 금액은 없습니다.');
+          await refreshLecture();
+          return false;
+        }
         console.error('신청 저장 실패', e);
         alert('오류가 발생했어요. 다시 시도해주세요.');
         return false;
@@ -397,6 +474,12 @@
       _busy = true;
       const btn = document.getElementById('tossBtn'); const orig = btn.innerHTML;
       btn.disabled = true; btn.textContent = '결제 진행 중…';
+      // 결제창을 띄우기 전에 자리가 남아 있는지 확인 — 결제 후 마감돼 환불하는 상황을 줄인다
+      if (!(await ensureSeatOpen())) {
+        _busy = false;
+        if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; }
+        return;
+      }
       try {
         const total = LECTURE.price;
         const paymentId = 'monc-lec-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
@@ -430,6 +513,14 @@
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
         body: { paymentId, lectureId: LECTURE_ID, applicant },
       });
+      // 결제 승인과 신청 저장 사이에 마지막 자리가 나간 경우 — 서버가 전액 자동 환불한다
+      if (data && data.error === 'lecture_full') {
+        alert('아쉽게도 결제하시는 사이에 정원이 모두 찼어요.\n\n' + (data.refunded
+          ? '결제하신 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+          : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+        await refreshLecture();
+        return false;
+      }
       if (error || !data || !data.ok) {
         console.error('결제 검증 실패', error, data);
         alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
@@ -462,11 +553,15 @@
       }
     }
 
-    function afterApplied(msg, isPaid) {
+    async function afterApplied(msg, isPaid) {
       if (msg) alert(msg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // 방금 줄어든 잔여석을 바로 보여준다 — 화면을 다시 그리면서 폼도 초기화된다
+      const fresh = await fetchLecture();
+      if (fresh) { LECTURE = fresh; await rerender(fresh); return; }
+      // 조회 실패 시엔 폼만 손으로 정리(잔여석은 다음 방문에 맞춰진다)
       const c = document.getElementById('appConsent'); if (c) c.checked = false;
       if (!_memberId) { const n = document.getElementById('appName'), ph = document.getElementById('appPhone'); if (n) n.value = ''; if (ph) ph.value = ''; }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function copyAccount() {

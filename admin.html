@@ -49,6 +49,10 @@
     /* 권장 사이즈 고정 안내 — 상태 메시지(.lf-thumb-msg)와 달리 늘 같은 자리에 흐리게 남는다 */
     .lf-thumb-spec { margin-top: 8px; font-size: 12px; color: var(--text-dim); line-height: 1.6; }
     .lf-thumb-spec b { font-weight: 700; color: var(--text-muted); }
+    /* 잔여석 = 입력칸이 아니라 읽기 전용 표시. 신청이 들어올 때마다 DB가 자동으로 다시 센다. */
+    .lf-seats { padding: 10px; border: 1px dashed var(--border); border-radius: var(--radius-xs);
+                font-size: 13px; line-height: 1.4; color: var(--text-dim); background: var(--surface2); min-height: 41px; }
+    .lf-seats b { font-weight: 700; color: var(--text); font-size: 14px; }
 
     .round-list { display: flex; flex-direction: column; gap: 8px; }
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
@@ -338,8 +342,8 @@
         <div class="field"><label>핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
           <div class="field"><label>참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
-          <div class="field"><label>잔여석(선택)</label><input id="lfSeats" type="number" min="0" placeholder="예: 20"></div>
           <div class="field"><label>정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
+          <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
           <div class="field"><label>정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
@@ -1023,7 +1027,7 @@
     function fillLectureForm(l) {
       document.getElementById('lfTitle').value      = l.title || '';
       document.getElementById('lfAirline').value    = l.airline || '';
-      document.getElementById('lfSeats').value      = (l.seats_left != null ? l.seats_left : '');
+      renderSeatsInfo(l);
       document.getElementById('lfSubtitle').value   = l.subtitle || '';
       document.getElementById('lfDesc').value       = l.description || '';
       document.getElementById('lfHigh').value       = Array.isArray(l.highlights) ? l.highlights.join('\n') : '';
@@ -1102,12 +1106,38 @@
       document.getElementById('lfVisible').checked = true;
       document.getElementById('lecEditing').hidden = true;
       document.getElementById('lecSubmitBtn').textContent = '추가';
+      renderSeatsInfo(null); // 잔여석은 div 라 form.reset() 이 못 지운다
       syncThumbPreview();   // form.reset()으로 비워진 주소칸에 미리보기를 맞춘다
       thumbMsg(THUMB_HINT, false);
     }
     document.getElementById('lecEditCancel').addEventListener('click', exitLectureEdit);
 
     const AIR_KO = { ke:'대한항공', lj:'진에어', '7c':'제주항공', tw:'티웨이', ze:'이스타', yp:'에어프레미아', rf:'에어로케이' };
+
+    // 잔여석은 DB 트리거(마이그레이션 20260724150000)가 '정원 − 신청건수'로 자동 계산한다.
+    // 관리자가 손대는 값은 정원뿐이라, 이 칸은 현재 상태만 읽어서 보여준다.
+    function renderSeatsInfo(l) {
+      const el = document.getElementById('lfSeats');
+      if (!el) return;
+      if (!l || l.capacity == null) {
+        el.innerHTML = (l && l.seats_left != null)
+          ? '수동값 <b>' + l.seats_left + '석</b><br>정원을 넣으면 자동 계산으로 바뀝니다'
+          : '정원을 넣으면 자동 계산돼요';
+        return;
+      }
+      const left = (l.seats_left != null ? l.seats_left : l.capacity);
+      el.innerHTML = (left === 0 ? '<b>정원 마감</b>' : '<b>' + left + '석</b> 남음')
+        + '<br>신청 ' + Math.max(l.capacity - left, 0) + '명 / 정원 ' + l.capacity + '명';
+    }
+
+    // 목록 한 줄 요약용 잔여석 — 정원이 있으면 '잔여 7/20석'(자동), 없으면 구 수동값만
+    function seatsSummary(l) {
+      if (l.capacity != null) {
+        const left = (l.seats_left != null ? l.seats_left : l.capacity);
+        return ' · 잔여 ' + left + '/' + l.capacity + '석';
+      }
+      return l.seats_left != null ? ' · 잔여 ' + l.seats_left + '석' : '';
+    }
 
     // 관리자 목록용 신청 상태 라벨(공개 페이지 lecture-common.js status와 동일 규칙)
     function lectureStatusLabel(l) {
@@ -1129,7 +1159,7 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${l.seats_left != null ? ' · 잔여 ' + l.seats_left + '석' : ''}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${seatsSummary(l)}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
@@ -1156,7 +1186,9 @@
       const price = parseInt(priceRaw, 10);
       if (priceRaw === '' || isNaN(price) || price < 0) { alert('참가비를 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
       const highlights = lecVal('lfHigh').split('\n').map(s => s.trim()).filter(Boolean);
-      const seatsRaw = lecVal('lfSeats');
+      // ⚠️ seats_left 는 보내지 않는다 — DB 트리거가 '정원 − 신청건수'로 계산하는 파생값이라
+      //    여기서 덮으면 실제 신청 수와 어긋난다. (마이그레이션 미적용 환경에서도 기존
+      //    수동값을 지우지 않도록, null 로 밀지 말고 아예 빼는 게 맞다.)
       const row = {
         title,
         airline:       lecVal('lfAirline') || null,
@@ -1164,7 +1196,6 @@
         description:   lecVal('lfDesc') || null,
         highlights:    highlights.length ? highlights : null,
         price,
-        seats_left:    seatsRaw === '' ? null : parseInt(seatsRaw, 10),
         capacity:      lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null,
         sort_order:    lecVal('lfSort') ? parseInt(lecVal('lfSort'), 10) : 0,
         recruit_start: lecVal('lfRStart') || null,
@@ -1384,6 +1415,8 @@
         const { error } = await MONC.sb.from('applications').delete().eq('id', id);
         if (error) { alert('삭제 실패: ' + error.message); return; }
         _apps = _apps.filter(x => x.id !== id); renderApps(); toast('삭제됨');
+        // 특강 신청이었다면 DB 트리거가 자리를 되돌려놨다 — 특강 탭의 잔여석도 새로 읽는다
+        if (app && appIsLecture(app)) loadLectures();
       }));
     }
 

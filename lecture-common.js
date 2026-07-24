@@ -104,7 +104,8 @@
 
     let third = '';
     if (st === 'upcoming') third = mi(IC.seat, '신청 예정');
-    else if (isOut) third = mi(IC.seat, '신청 마감');
+    // 자리가 찬 것과 기간이 끝난 것은 다른 사정이라 문구를 나눈다(잔여석은 신청마다 자동 계산)
+    else if (isOut) third = mi(IC.seat, soldOut ? '정원 마감' : '신청 마감');
     else if (l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
 
     const dateStr = fmtDate(l.lecture_date);
