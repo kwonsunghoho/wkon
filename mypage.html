@@ -392,6 +392,10 @@
   <script>
     document.getElementById('logoutBtn').addEventListener('click', () => MONC.signOut());
 
+    // 뒤로가기로 돌아오면(bfcache) 아래 IIFE 가 다시 돌지 않아 화면이 통째로 낡는다.
+    // 뉴스에서 스크랩하고 돌아왔는데 그대로이던 문제(2026-07-24 오너 신고)가 이것.
+    window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
+
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
     // ── 오늘의 문제 (선정 로직은 공용 sojae-common.js: KST 기준, sojae.html과 100% 동일) ──

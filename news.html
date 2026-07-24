@@ -419,7 +419,25 @@
       loadMore();
     }
 
-    // ── 스크랩 토글(낙관적 업데이트, 실패 시 롤백) ──
+    // ── 스크랩 토글(낙관적 업데이트, 실패 시 실제 상태로 원복) ──
+    // ⚠️ 예전 구현엔 경쟁 조건이 세 겹 있었고, 전부 "해제했는데 그대로 남아 있다 /
+    //    안 누른 기사가 스크랩돼 있다"로 나타났다(2026-07-24 오너 신고). 되돌리지 말 것.
+    //    (a) 초기 로드 경쟁 — 목록이 스크랩 상태보다 먼저 도착하면 scrapByArticle 이 비어
+    //        있어 이미 스크랩한 기사를 눌러도 was=false → insert → unique 위반으로 실패.
+    //        UI 만 꺼지고 DB 행은 남았다.  → scrapsReady 를 기다린다.
+    //    (b) 연타 — insert 응답 전 재클릭 시 낙관적으로 넣어둔 {id:null} 때문에
+    //        delete().eq('id', null) 이 되어 아무것도 안 지워졌다.  → id 가 아니라
+    //        (member_id, article_id) 로 지우고, 진행 중인 기사는 잠근다.
+    //    (c) 응답 역전 — 늦게 도착한 insert 응답이 map 에 행을 되살렸다.  → 잠금으로 차단.
+    function setScrapBtn(btn, on) {
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', on ? '스크랩 해제' : '스크랩');
+    }
+
+    let scrapsReady = Promise.resolve();   // 내 스크랩 목록 로드 완료 시점
+    const scrapInFlight = new Set();       // 요청 진행 중인 article_id (연타 차단)
+
     async function toggleScrap(btn) {
       if (!session) {
         if (confirm('스크랩은 로그인하면 쓸 수 있어요. 로그인 페이지로 이동할까요?'))
@@ -427,21 +445,32 @@
         return;
       }
       const id = btn.dataset.id;
-      const was = scrapByArticle.has(id);
-      btn.classList.toggle('on', !was);
-      btn.setAttribute('aria-pressed', String(!was));
-      btn.setAttribute('aria-label', was ? '스크랩' : '스크랩 해제');
-      if (was) {
-        const row = scrapByArticle.get(id);
-        scrapByArticle.delete(id);
-        const { error } = await MONC.sb.from('news_scraps').delete().eq('id', row.id);
-        if (error) { scrapByArticle.set(id, row); btn.classList.add('on'); }
-      } else {
-        scrapByArticle.set(id, { id: null, note: null, tag: null });
-        const { data, error } = await MONC.sb.from('news_scraps')
-          .insert({ member_id: session.user.id, article_id: id }).select('id, note, tag').single();
-        if (error) { scrapByArticle.delete(id); btn.classList.remove('on'); }
-        else scrapByArticle.set(id, data);
+      if (scrapInFlight.has(id)) return;
+      scrapInFlight.add(id);
+      btn.disabled = true;
+      try {
+        await scrapsReady;                       // 상태를 모르는 채로 판정하지 않는다
+        const was = scrapByArticle.has(id);
+        setScrapBtn(btn, !was);                  // 낙관적 반영
+        if (was) {
+          const { error } = await MONC.sb.from('news_scraps').delete()
+            .eq('member_id', session.user.id).eq('article_id', id);
+          if (error) setScrapBtn(btn, true);     // 실패 → 스크랩 유지 상태로 원복
+          else scrapByArticle.delete(id);
+        } else {
+          const { data, error } = await MONC.sb.from('news_scraps')
+            .insert({ member_id: session.user.id, article_id: id }).select('id, note, tag').single();
+          if (!error) { scrapByArticle.set(id, data); return; }
+          // 23505 = unique(member_id, article_id) 위반 → 이미 스크랩된 기사였다.
+          // 실패로 처리해 버튼을 끄면 DB 와 화면이 어긋나므로, 실제 행을 읽어 맞춘다.
+          const { data: row } = await MONC.sb.from('news_scraps')
+            .select('id, note, tag').eq('member_id', session.user.id).eq('article_id', id).maybeSingle();
+          if (row) { scrapByArticle.set(id, row); setScrapBtn(btn, true); }
+          else setScrapBtn(btn, false);
+        }
+      } finally {
+        scrapInFlight.delete(id);
+        btn.disabled = false;
       }
     }
 
@@ -654,12 +683,23 @@
       if (bm) { await toggleScrap(bm); renderScraps(); }
     });
 
+    // 뒤로가기로 돌아오면(bfcache) 이 스크립트가 다시 돌지 않아 스크랩 상태가 낡은 채로 남는다.
+    // 다른 탭·기기에서 바뀐 것도 못 따라가므로 복원 시에는 다시 읽는다.
+    window.addEventListener('pageshow', e => {
+      if (!e.persisted || !session) return;
+      scrapsReady = loadMyScraps();
+      if (!document.getElementById('nwScrapView').hidden) scrapsReady.then(renderScraps);
+    });
+
     (async () => {
       session = await MONC.getSession();
       buildFilters();
+      // 스크랩 상태 조회를 목록보다 먼저 띄운다(둘은 병렬). toggleScrap 은 scrapsReady 를
+      // 기다리므로, 목록이 먼저 그려져도 상태를 모르는 채 판정하는 일이 없다.
+      if (session) scrapsReady = loadMyScraps();
       resetAndLoad();
       if (session) {
-        await loadMyScraps();
+        await scrapsReady;
         // mypage '전체 보기'에서 진입 시 스크랩 탭 바로 열기
         if (new URLSearchParams(location.search).get('tab') === 'scraps'
             && !document.getElementById('nwScrapTab').hidden) switchTab('scraps');
