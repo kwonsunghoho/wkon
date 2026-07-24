@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONC 마이페이지 리디자인 — 4안 목업</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9;
+    --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,.16); --border-soft:rgba(38,34,28,.09);
+    --action:#F27945; --action-dark:#D9531F; --action-tint:#FDE9DE; --action-ink:#2A1206;
+    --accent-ink:#A33D14;
+    --serif:'Noto Serif KR',serif;
+    --shadow:0 4px 20px rgba(36,26,18,.10);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;padding:40px 20px 80px}
+  .intro{max-width:900px;margin:0 auto 14px}
+  .intro .eyebrow{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--accent-ink)}
+  .intro .eyebrow::before{content:'— ';color:var(--action)}
+  .intro h1{font-family:var(--serif);font-weight:700;font-size:clamp(26px,3.4vw,38px);color:var(--action-dark);margin:6px 0 10px}
+  .intro p{color:var(--text-muted);font-size:15px;max-width:640px}
+  .lineup{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;max-width:1800px;margin:34px auto 0;align-items:flex-start}
+  .variant{width:391px;flex:0 0 auto}
+  .v-head{padding:0 4px 14px}
+  .v-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--action);color:#fff;font-weight:800;font-size:14px;margin-right:8px}
+  .v-name{font-family:var(--serif);font-weight:700;font-size:21px}
+  .v-ref{font-size:12.5px;font-weight:700;color:var(--accent-ink);margin:6px 0 8px}
+  .v-desc{font-size:13.5px;color:var(--text-muted)}
+  .v-desc b{color:var(--text)}
+  .v-pro{margin-top:8px;font-size:12.5px;color:var(--text-dim)}
+  .v-pro b{color:#1a7f37;font-weight:800}
+  .v-pro .con{color:var(--action-dark);font-weight:800}
+  .reco{display:inline-block;margin-left:8px;background:var(--action-tint);color:var(--accent-ink);font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;vertical-align:3px}
+
+  /* ── 폰 프레임 ── */
+  .phone{width:391px;height:700px;background:#1c1916;border-radius:38px;padding:8px;box-shadow:0 24px 64px rgba(36,26,18,.28)}
+  .screen{position:relative;width:100%;height:100%;background:var(--bg);border-radius:31px;overflow:hidden;display:flex;flex-direction:column}
+  .scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  .scroll::-webkit-scrollbar{width:4px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(38,34,28,.18);border-radius:4px}
+
+  /* 공용 컴포넌트 */
+  .card{background:var(--surface);border:1px solid var(--border-soft);border-radius:20px;box-shadow:var(--shadow);padding:18px}
+  .chip{display:inline-block;background:var(--action-tint);color:var(--accent-ink);font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--action);color:#fff;font-weight:800;font-size:14px;border-radius:12px;padding:12px 16px;min-height:44px;text-decoration:none;border:0}
+  .muted{color:var(--text-muted)}
+  .serif{font-family:var(--serif)}
+  .bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--action),var(--action-dark));border-radius:99px}
+  .badge-n{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:var(--action);color:#fff;border-radius:999px;font-size:11px;font-weight:800}
+
+  /* ════ A. 클래스형 (인프런·클래스101) ════ */
+  .vA .topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 10px}
+  .vA .logo{font-family:var(--serif);font-weight:900;font-size:17px;letter-spacing:.02em}
+  .vA .avatar{width:34px;height:34px;border-radius:50%;background:var(--action-tint);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+  .vA .seg{display:flex;gap:4px;margin:6px 14px 14px;background:var(--bg3);border-radius:14px;padding:4px}
+  .vA .seg button{flex:1;border:0;background:transparent;border-radius:11px;padding:10px 0;font-size:13.5px;font-weight:700;color:var(--text-muted);cursor:pointer}
+  .vA .seg button.on{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(36,26,18,.12);font-weight:800}
+  .vA .body{padding:0 14px 24px;display:flex;flex-direction:column;gap:14px}
+  .vA .cont-card{background:linear-gradient(135deg,#2E2822,#4a3a2c);color:#F5F1E8;border-radius:20px;padding:20px;position:relative;overflow:hidden}
+  .vA .cont-card::after{content:'';position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:rgba(242,121,69,.22)}
+  .vA .cont-label{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#F6A47E;margin-bottom:8px}
+  .vA .cont-q{font-family:var(--serif);font-size:17px;font-weight:700;line-height:1.5;margin-bottom:16px;position:relative;z-index:1}
+  .vA .course{display:flex;gap:14px;align-items:center}
+  .vA .course .thumb{flex:0 0 64px;height:64px;border-radius:14px;background:var(--action-tint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;color:var(--action-dark);font-size:15px}
+  .vA .course .info{flex:1;min-width:0}
+  .vA .course .t{font-weight:800;font-size:15px}
+  .vA .course .s{font-size:12px;color:var(--text-muted);margin:2px 0 8px}
+  .vA .course .pct{font-size:12px;font-weight:800;color:var(--accent-ink);margin-top:5px}
+  .vA .rowlink{display:flex;justify-content:space-between;align-items:center;padding:14px 2px;border-bottom:1px solid var(--border-soft);font-size:14.5px;font-weight:700;text-decoration:none;color:var(--text)}
+  .vA .rowlink:last-child{border-bottom:0}
+  .vA .rowlink .r{color:var(--text-dim);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .vA .store{border:1.5px dashed var(--action);background:var(--action-tint);border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+  .vA .store .t{font-weight:800;font-size:14px;color:var(--accent-ink)}
+  .vA .store .s{font-size:12px;color:var(--text-muted)}
+
+  /* ════ B. 위젯형 (토스) ════ */
+  .vB .scroll{padding:16px 14px 24px}
+  .vB .hello{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 4px}
+  .vB .hello .h{font-size:19px;font-weight:800}
+  .vB .hello .h b{color:var(--action-dark)}
+  .vB .hello .sub{font-size:12.5px;color:var(--text-muted)}
+  .vB .gear{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;color:var(--text-dim)}
+  .vB .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .vB .w{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;padding:15px;box-shadow:var(--shadow);position:relative}
+  .vB .w .lbl{font-size:12px;font-weight:700;color:var(--text-muted)}
+  .vB .w .val{font-family:var(--serif);font-size:25px;font-weight:900;margin-top:4px}
+  .vB .w .val em{font-style:normal;font-size:13px;color:var(--accent-ink);font-weight:700}
+  .vB .w .cap{font-size:11.5px;color:var(--text-dim);margin-top:2px}
+  .vB .w.wide{grid-column:1/-1;display:flex;align-items:center;gap:16px}
+  .vB .ring{position:relative;width:74px;height:74px;flex:0 0 74px}
+  .vB .ring svg{transform:rotate(-90deg)}
+  .vB .ring .c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;font-size:17px}
+  .vB .ring .c em{font-style:normal;font-size:10px;color:var(--accent-ink)}
+  .vB .w .arrow{position:absolute;top:14px;right:14px;color:var(--text-dim);font-size:13px}
+  .vB .today{grid-column:1/-1;background:var(--action);border-radius:18px;padding:16px;color:#fff}
+  .vB .today .lbl{font-size:11.5px;font-weight:800;letter-spacing:.05em;color:#FFE3D4}
+  .vB .today .q{font-weight:800;font-size:15px;line-height:1.45;margin:6px 0 10px;color:#2A1206}
+  .vB .today .go{display:inline-block;background:#2A1206;color:#fff;font-size:12.5px;font-weight:800;border-radius:999px;padding:8px 14px}
+  .vB .sect{margin-top:16px;font-size:12.5px;font-weight:800;color:var(--text-dim);letter-spacing:.03em;padding:0 4px}
+  .vB .list{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;margin-top:8px;box-shadow:var(--shadow)}
+  .vB .list a{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-soft);text-decoration:none;color:var(--text);font-weight:700;font-size:14px}
+  .vB .list a:last-child{border-bottom:0}
+  .vB .ico{width:34px;height:34px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .vB .list .r{margin-left:auto;color:var(--text-dim);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+
+  /* ════ C. 앱형 (OTT·구독 앱) ════ */
+  .vC .screen{background:var(--bg)}
+  .vC .scroll{padding:0 0 8px}
+  .vC .hero{background:linear-gradient(160deg,#26221C 0%,#3E3125 70%,#5a4227 100%);color:#F5F1E8;padding:22px 18px 24px;border-radius:0 0 26px 26px}
+  .vC .hero .hi{font-size:13px;color:#CBBFA8}
+  .vC .hero .day{font-family:var(--serif);font-size:24px;font-weight:900;margin:4px 0 2px}
+  .vC .hero .day em{font-style:normal;color:#F6A47E}
+  .vC .hero .streak{font-size:12.5px;color:#CBBFA8;margin-bottom:14px}
+  .vC .hero .mission{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:14px}
+  .vC .hero .mission .t{font-size:11.5px;font-weight:800;color:#F6A47E;letter-spacing:.05em}
+  .vC .hero .mission .q{font-size:14.5px;font-weight:700;line-height:1.5;margin:6px 0 12px}
+  .vC .hero .mission .btn{width:100%;font-size:14px}
+  .vC .sect{display:flex;justify-content:space-between;align-items:baseline;padding:18px 18px 10px}
+  .vC .sect .t{font-family:var(--serif);font-weight:700;font-size:16px}
+  .vC .sect .more{font-size:12.5px;font-weight:700;color:var(--accent-ink);text-decoration:none}
+  .vC .rail{display:flex;gap:10px;overflow-x:auto;padding:0 18px 6px;scrollbar-width:none}
+  .vC .rail::-webkit-scrollbar{display:none}
+  .vC .rc{flex:0 0 200px;background:var(--surface);border:1px solid var(--border-soft);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+  .vC .rc .q{font-size:13px;font-weight:700;line-height:1.45;margin:8px 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px}
+  .vC .rc .d{font-size:11.5px;color:var(--text-dim)}
+  .vC .tabbar{flex:0 0 auto;display:flex;background:var(--surface);border-top:1px solid var(--border-soft);padding:8px 6px calc(8px + 6px)}
+  .vC .tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:700;color:var(--text-dim);text-decoration:none}
+  .vC .tabbar a.on{color:var(--action-dark)}
+  .vC .tabbar .i{font-size:19px;line-height:1}
+  .vC .banner{margin:8px 18px 0;background:var(--action-tint);border-radius:16px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center}
+  .vC .banner .t{font-size:13px;font-weight:800;color:var(--accent-ink)}
+  .vC .banner .s{font-size:11.5px;color:var(--text-muted)}
+
+  /* ════ D. 쇼핑몰 MY형 (쿠팡·무신사) ════ */
+  .vD .scroll{padding:0 0 24px}
+  .vD .prof{background:var(--surface);padding:20px 18px 16px;border-bottom:8px solid var(--surface2)}
+  .vD .prof .row{display:flex;align-items:center;gap:13px}
+  .vD .prof .avatar{width:52px;height:52px;border-radius:50%;background:var(--action-tint);color:var(--action-dark);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;font-size:20px}
+  .vD .prof .n{font-size:17px;font-weight:800}
+  .vD .prof .n small{font-weight:700;font-size:11px;color:var(--accent-ink);background:var(--action-tint);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+  .vD .prof .m{font-size:12.5px;color:var(--text-muted)}
+  .vD .prof .edit{margin-left:auto;font-size:12px;font-weight:700;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:7px 12px;text-decoration:none}
+  .vD .orderstrip{display:flex;margin-top:16px;background:var(--surface2);border-radius:14px;padding:13px 0}
+  .vD .orderstrip .o{flex:1;text-align:center;position:relative}
+  .vD .orderstrip .o+.o::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:1px;background:var(--border-soft)}
+  .vD .orderstrip .num{font-family:var(--serif);font-weight:900;font-size:19px}
+  .vD .orderstrip .num.hot{color:var(--action-dark)}
+  .vD .orderstrip .lbl{font-size:11px;color:var(--text-muted);font-weight:700;margin-top:1px}
+  .vD .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface);padding:14px 10px;border-bottom:8px solid var(--surface2)}
+  .vD .quick a{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:var(--text);font-size:11px;font-weight:700;padding:8px 0;position:relative}
+  .vD .quick .i{width:44px;height:44px;border-radius:14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px}
+  .vD .quick .bn{position:absolute;top:2px;right:16%;}
+  .vD .menu{background:var(--surface)}
+  .vD .menu .h{font-size:12px;font-weight:800;color:var(--text-dim);letter-spacing:.04em;padding:16px 18px 6px}
+  .vD .menu a{display:flex;align-items:center;padding:13px 18px;font-size:14.5px;font-weight:700;color:var(--text);text-decoration:none;border-bottom:1px solid var(--border-soft)}
+  .vD .menu a .r{margin-left:auto;font-size:12.5px;color:var(--text-dim);font-weight:600;display:flex;align-items:center;gap:6px}
+  .vD .menu .grp:last-child a:last-child{border-bottom:0}
+  .vD .promo{margin:14px 14px 0;background:linear-gradient(135deg,#2E2822,#4a3a2c);border-radius:16px;padding:16px;color:#F5F1E8;display:flex;justify-content:space-between;align-items:center}
+  .vD .promo .t{font-family:var(--serif);font-weight:700;font-size:14.5px}
+  .vD .promo .s{font-size:11.5px;color:#CBBFA8;margin-top:2px}
+  .vD .promo .go{background:var(--action);color:#fff;font-size:12px;font-weight:800;border-radius:999px;padding:8px 13px;white-space:nowrap}
+
+  .chev{width:14px;height:14px;flex:0 0 auto}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">MONC MYPAGE REDESIGN</div>
+  <h1>마이페이지 리디자인 — 4안</h1>
+  <p>유명 서비스들의 마이페이지 패턴 4가지를 몬크 실데이터로 입혀봤어요. 각 폰 화면은 <b>실제로 스크롤</b>됩니다. 마음에 드는 안 번호를 골라주세요 — 섞는 것(예: ②의 위젯 + ④의 신청내역 스트립)도 가능해요.</p>
+</div>
+
+<div class="lineup">
+
+  <!-- ════════ A안: 클래스형 ════════ -->
+  <div class="variant vA">
+    <div class="v-head">
+      <span class="v-num">1</span><span class="v-name">클래스형 · 이어서 하기</span>
+      <div class="v-ref">참고: 인프런 · 클래스101 · Udemy</div>
+      <div class="v-desc"><b>"오늘 할 일 하나"</b>를 맨 위에 크게, 수강 중인 챌린지를 강의 카드처럼. 기록·계정은 상단 탭으로 분리해 첫 화면이 짧아져요.</div>
+      <div class="v-pro"><b>장점</b> 유료 강의 상품이 늘어날수록 자연스럽게 확장 · <span class="con">단점</span> 탭 전환이 한 번 더 필요</div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="topbar">
+          <span class="logo">MONC</span>
+          <span class="avatar">박</span>
+        </div>
+        <div class="seg">
+          <button class="on">내 학습</button>
+          <button>내 기록</button>
+          <button>계정</button>
+        </div>
+        <div class="body">
+          <div class="cont-card">
+            <div class="cont-label">오늘의 소재 발굴 · DAY 11</div>
+            <div class="cont-q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+            <a class="btn" style="position:relative;z-index:1">이어서 하기 →</a>
+          </div>
+          <div class="card course">
+            <div class="thumb">승자각</div>
+            <div class="info">
+              <div class="t">승자각 4기 <span class="chip">진행 중</span></div>
+              <div class="s">7/14 ~ 7/27 · 코치 피드백 2 새 글</div>
+              <div class="bar"><i style="width:79%"></i></div>
+              <div class="pct">11 / 14일 완료 · 79%</div>
+            </div>
+          </div>
+          <div class="store">
+            <div>
+              <div class="t">다른 챌린지 둘러보기</div>
+              <div class="s">보신각 · 영합각 · 스피닝 모집 중</div>
+            </div>
+            <a class="btn" style="padding:9px 13px;min-height:38px;font-size:12.5px">보기</a>
+          </div>
+          <div class="card" style="padding:6px 16px">
+            <a class="rowlink">📝 답변노트 <span class="r"><span class="badge-n">2</span> 작성 중 · 완료 10 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+            <a class="rowlink">🎧 Before / After <span class="r">수료 시 공개 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+            <a class="rowlink">📰 뉴스 스크랩 <span class="r">7건 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+            <a class="rowlink">🧾 신청 · 결제 내역 <span class="r">1건 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ════════ B안: 위젯형 ════════ -->
+  <div class="variant vB">
+    <div class="v-head">
+      <span class="v-num">2</span><span class="v-name">위젯형 · 한눈 요약</span><span class="reco">Claude 추천</span>
+      <div class="v-ref">참고: 토스 · 뱅크샐러드</div>
+      <div class="v-desc">모든 현황을 <b>위젯 그리드 한 화면</b>에 요약하고, 누르면 상세로. 스크롤이 가장 짧고 "내 상태"가 3초 안에 읽혀요. 홈의 성장 리포트 목업과 인상도 이어져요.</div>
+      <div class="v-pro"><b>장점</b> 정보 밀도 최고 + 현 페이지에서 개조 비용 최소 · <span class="con">단점</span> 위젯이 늘면 우선순위 정리 필요</div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="hello">
+          <div>
+            <div class="h"><b>박몬크</b>님의 챌린지</div>
+            <div class="sub">승자각 4기 · 7/14~7/27</div>
+          </div>
+          <span class="gear">⚙</span>
+        </div>
+        <div class="grid">
+          <div class="today">
+            <div class="lbl">오늘의 소재 발굴</div>
+            <div class="q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+            <span class="go">시작하기 →</span>
+          </div>
+          <div class="w wide">
+            <div class="ring">
+              <svg width="74" height="74" viewBox="0 0 74 74">
+                <circle cx="37" cy="37" r="31" fill="none" stroke="#F4F0E8" stroke-width="8"/>
+                <circle cx="37" cy="37" r="31" fill="none" stroke="#F27945" stroke-width="8" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="41"/>
+              </svg>
+              <div class="c">79<em>%</em></div>
+            </div>
+            <div>
+              <div class="lbl">2주 미션 진행률</div>
+              <div style="font-family:var(--serif);font-weight:900;font-size:19px;margin:2px 0">11 <span style="font-size:13px;color:var(--text-dim);font-weight:700">/ 14일 성공</span></div>
+              <div class="cap">3일 연속 인증 중 🔥 수료까지 3일</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="w">
+            <div class="lbl">답변노트</div>
+            <div class="val">12<em>개</em></div>
+            <div class="cap">작성 중 2 · 완료 10</div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="w">
+            <div class="lbl">코치 코멘트</div>
+            <div class="val">5<em>개</em></div>
+            <div class="cap"><span class="badge-n" style="vertical-align:1px">2</span> 새 피드백</div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="w">
+            <div class="lbl">뉴스 스크랩</div>
+            <div class="val">7<em>건</em></div>
+            <div class="cap">대한항공 4 · 아시아나 2</div>
+            <span class="arrow">›</span>
+          </div>
+          <div class="w">
+            <div class="lbl">Before / After</div>
+            <div class="val" style="font-size:17px;margin-top:8px">🎧 수료 시</div>
+            <div class="cap">목소리 비교 공개</div>
+            <span class="arrow">›</span>
+          </div>
+        </div>
+        <div class="sect">신청 · 계정</div>
+        <div class="list">
+          <a><span class="ico">🧾</span>신청 · 결제 내역 <span class="r">결제완료 1건 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+          <a><span class="ico">🛍️</span>챌린지 더 신청하기 <span class="r">3개 모집 중 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+          <a><span class="ico">📱</span>연락처 관리 <span class="r">010-****-1234 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ════════ C안: 앱형 ════════ -->
+  <div class="variant vC">
+    <div class="v-head">
+      <span class="v-num">3</span><span class="v-name">앱형 · 하단 탭바</span>
+      <div class="v-ref">참고: 넷플릭스 · 듀오링고 · 밀리의서재</div>
+      <div class="v-desc">홈은 <b>"오늘 할 일" 하나</b>에 집중, 나머지는 하단 탭 4개(홈·발굴·기록·MY)로 분산. 매일 들어오는 습관 서비스처럼 느껴져요.</div>
+      <div class="v-pro"><b>장점</b> 앱 같은 몰입감, 매일 방문 유도 · <span class="con">단점</span> 페이지 분리 작업 커서 구현 비용 최대</div>
+    </div>
+    <div class="phone"><div class="screen vC-screen">
+      <div class="scroll">
+        <div class="hero">
+          <div class="hi">박몬크님, 오늘도 오셨네요</div>
+          <div class="day">DAY 11 <em>/ 14</em></div>
+          <div class="streak">🔥 3일 연속 인증 중 · 수료까지 3일</div>
+          <div class="mission">
+            <div class="t">오늘의 소재 발굴</div>
+            <div class="q">"팀에서 갈등을 겪었지만 결국 함께 해결했던 경험이 있나요?"</div>
+            <a class="btn">지금 시작하기</a>
+          </div>
+        </div>
+        <div class="banner">
+          <div>
+            <div class="t">코치 피드백 2개 도착</div>
+            <div class="s">10일차 · 9일차 미션에 코멘트가 달렸어요</div>
+          </div>
+          <span style="font-weight:800;color:var(--accent-ink)">›</span>
+        </div>
+        <div class="sect"><span class="t">내 답변노트</span><a class="more">전체 12개 →</a></div>
+        <div class="rail">
+          <div class="rc"><span class="chip">경험 발굴형</span><div class="q">"승무원이 되고 싶은 진짜 이유는 무엇인가요?"</div><div class="d">7.23 완료</div></div>
+          <div class="rc"><span class="chip">돌발 질문형</span><div class="q">"기내에서 승객이 무리한 요구를 한다면?"</div><div class="d">7.22 완료</div></div>
+          <div class="rc"><span class="chip">경험 발굴형</span><div class="q">"실패를 극복했던 경험을 말해주세요"</div><div class="d">작성 중</div></div>
+        </div>
+        <div class="sect"><span class="t">뉴스 스크랩</span><a class="more">전체 7건 →</a></div>
+        <div class="rail" style="padding-bottom:16px">
+          <div class="rc"><span class="chip">대한항공</span><div class="q">대한항공, 하반기 신입 객실승무원 채용 공고</div><div class="d">7.23</div></div>
+          <div class="rc"><span class="chip">아시아나</span><div class="q">아시아나 통합 이후 서비스 교육 개편</div><div class="d">7.21</div></div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <a class="on"><span class="i">🏠</span>홈</a>
+        <a><span class="i">⛏️</span>발굴</a>
+        <a><span class="i">📈</span>기록</a>
+        <a><span class="i">👤</span>MY</a>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ════════ D안: 쇼핑몰 MY형 ════════ -->
+  <div class="variant vD">
+    <div class="v-head">
+      <span class="v-num">4</span><span class="v-name">쇼핑몰 MY형 · 계정 허브</span>
+      <div class="v-ref">참고: 쿠팡 · 무신사 · 올리브영</div>
+      <div class="v-desc">프로필 + <b>신청·결제 요약 스트립</b> + 아이콘 퀵메뉴 + 리스트 메뉴. 거래(결제·환불·쿠폰) 관리가 제일 명확한 구조예요.</div>
+      <div class="v-pro"><b>장점</b> 유료 상품·쿠폰·결제수단 확장에 최적 · <span class="con">단점</span> "오늘 뭘 하지"라는 학습 동기 부여는 약함</div>
+    </div>
+    <div class="phone"><div class="screen">
+      <div class="scroll">
+        <div class="prof">
+          <div class="row">
+            <span class="avatar">박</span>
+            <div>
+              <div class="n">박몬크 <small>승자각 4기</small></div>
+              <div class="m">monc@gmail.com · 7/14~7/27</div>
+            </div>
+            <a class="edit">프로필 수정</a>
+          </div>
+          <div class="orderstrip">
+            <div class="o"><div class="num">1</div><div class="lbl">결제완료</div></div>
+            <div class="o"><div class="num hot">0</div><div class="lbl">입금대기</div></div>
+            <div class="o"><div class="num">0</div><div class="lbl">환불</div></div>
+            <div class="o"><div class="num hot">2</div><div class="lbl">쿠폰</div></div>
+          </div>
+        </div>
+        <div class="quick">
+          <a><span class="i">⛏️</span>오늘의 발굴<span class="bn badge-n">!</span></a>
+          <a><span class="i">📝</span>답변노트</a>
+          <a><span class="i">💬</span>코치 코멘트<span class="bn badge-n">2</span></a>
+          <a><span class="i">📰</span>뉴스 스크랩</a>
+        </div>
+        <div class="promo">
+          <div>
+            <div class="t">보신각 5기 모집 중</div>
+            <div class="s">목소리 트레이닝 · D-3 마감</div>
+          </div>
+          <span class="go">신청하기</span>
+        </div>
+        <div class="menu">
+          <div class="grp">
+            <div class="h">내 챌린지</div>
+            <a>진행 요약 · 날짜별 결과 <span class="r">11/14일 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+            <a>Before / After 듣기 <span class="r">수료 시 공개 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+          </div>
+          <div class="grp">
+            <div class="h">결제</div>
+            <a>신청 · 결제 내역 <span class="r">승자각 4기 30,000원 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+            <a>환불 안내 <span class="r"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+          </div>
+          <div class="grp">
+            <div class="h">계정</div>
+            <a>연락처 관리 <span class="r">010-****-1234 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+            <a>로그아웃 <span class="r"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

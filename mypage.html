@@ -12,6 +12,10 @@
   <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
   <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
   <meta name="theme-color" content="#102B56">
+  <!-- 위젯 수치는 명조(사이트 --serif = Noto Serif KR) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tokens.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,21 +39,63 @@
 
     .hello { margin: 20px 0 6px; font-size: 30px; font-weight: 800; }
     .hello .name { color: var(--action); }
-    .meta { color: var(--text-muted); font-size: 15px; margin-bottom: 24px; }
+    .meta { color: var(--text-muted); font-size: 15px; margin-bottom: 16px; }
 
     .card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
-            box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; }
+            box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; scroll-margin-top: 12px; }
     .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
     .card .hint { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
-    /* 진행률 요약 */
-    .summary { display: flex; gap: 12px; flex-wrap: wrap; }
-    .stat { flex: 1; min-width: 90px; background: var(--surface2); border-radius: var(--radius-sm);
-            padding: 14px; text-align: center; }
-    .stat .num { font-size: 28px; font-weight: 700; }
-    .stat .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .stat.ok .num { color: #1a7f37; }
-    .stat.no .num { color: var(--action-dark); }
+    /* ── 결제 스트립 (쇼핑몰 MY형: 신청·결제 현황 요약 → 신청 내역으로 이동) ── */
+    .paystrip { display: flex; background: var(--surface); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); box-shadow: var(--shadow); padding: 14px 0; margin-bottom: 14px;
+      text-decoration: none; color: inherit; }
+    .paystrip .ps-cell { flex: 1; text-align: center; position: relative; }
+    .paystrip .ps-cell + .ps-cell::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
+      width: 1px; background: var(--border-soft); }
+    .ps-num { font-family: var(--serif); font-weight: 900; font-size: 21px; font-variant-numeric: tabular-nums; }
+    .ps-num.hot { color: var(--action-dark); }
+    .ps-lbl { font-size: 11.5px; color: var(--text-muted); font-weight: 700; margin-top: 1px; }
+
+    /* ── 위젯 그리드 (토스형: 한눈 요약, 누르면 상세 섹션으로) ── */
+    .wgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 26px; }
+    .w { position: relative; display: block; background: var(--surface); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); box-shadow: var(--shadow); padding: 16px; text-decoration: none;
+      color: inherit; min-height: 44px; }
+    a.w:hover { border-color: var(--accent-dark); }
+    .w .w-lbl { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    .w .w-val { font-family: var(--serif); font-weight: 900; font-size: 25px; margin-top: 4px;
+      font-variant-numeric: tabular-nums; }
+    .w .w-val em { font-style: normal; font-size: 13px; color: var(--accent-ink); font-weight: 700; }
+    .w .w-val.txt { font-size: 16px; margin-top: 9px; }
+    .w .w-cap { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+    .w .w-arrow { position: absolute; top: 14px; right: 14px; color: var(--text-dim); font-size: 14px; }
+    .w.wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+
+    /* 진행률 링 */
+    .ring { position: relative; width: 74px; height: 74px; flex: 0 0 74px; }
+    .ring svg { transform: rotate(-90deg); display: block; }
+    .ring .ring-txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-family: var(--serif); font-weight: 900; font-size: 17px; font-variant-numeric: tabular-nums; }
+    .ring .ring-txt em { font-style: normal; font-size: 10px; color: var(--accent-ink); }
+    .w-days-num { font-family: var(--serif); font-weight: 900; font-size: 19px; margin: 2px 0;
+      font-variant-numeric: tabular-nums; }
+    .w-days-num small { font-size: 13px; color: var(--text-dim); font-weight: 700; }
+
+    /* 오늘의 발굴 (오렌지 위젯 — 채움 --accent 위 글씨는 --action-ink, 흰 글씨 금지) */
+    .today { grid-column: 1 / -1; display: block; background: var(--action); border: 0;
+      border-radius: var(--radius-sm); box-shadow: var(--shadow-action); padding: 16px;
+      text-decoration: none; color: var(--action-ink); }
+    .today .t-lbl { font-size: 11.5px; font-weight: 800; letter-spacing: .05em; }
+    .today .t-chip { display: inline-block; background: rgba(42,18,6,.14); color: var(--action-ink);
+      font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; margin-top: 8px; }
+    .today .t-q { font-weight: 800; font-size: 15.5px; line-height: 1.45; margin: 8px 0 12px; }
+    .today .t-go { display: inline-flex; align-items: center; gap: 6px; background: var(--action-ink); color: #fff;
+      font-size: 13px; font-weight: 800; border-radius: 999px; padding: 10px 16px; min-height: 40px; }
+    .today.locked { background: var(--surface2); border: 1px solid var(--border-soft); box-shadow: var(--shadow);
+      color: var(--text-muted); cursor: default; }
+    .today.locked .t-chip { background: var(--bg3); color: var(--text-muted); }
 
     /* 14일 그리드 */
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
@@ -100,21 +146,6 @@
     .al-refund { background: var(--action-tint); color: var(--action-dark); }
     .al-wait { background: var(--surface2); color: var(--text-muted); }
 
-    /* 상단 섹션 바로가기 네비 (스티키) */
-    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-    .secnav { position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto;
-      margin: 0 -20px 18px; padding: 10px 20px; background: var(--bg);
-      -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .secnav::-webkit-scrollbar { display: none; }
-    .secnav-chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px;
-      padding: 8px 15px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap;
-      color: var(--accent-ink); background: var(--surface); border: 1px solid var(--border-soft);
-      text-decoration: none; transition: background .15s, color .15s, border-color .15s; }
-    .secnav-chip:hover { border-color: var(--accent-dark); }
-    .secnav-chip.active { color: var(--action-ink); background: var(--action); border-color: transparent; }
-    /* 스티키 네비에 가리지 않도록 앵커 오프셋 */
-    .card, #todayCard { scroll-margin-top: 70px; }
-
     /* 내 답변노트 */
     .notes-list { display: flex; flex-direction: column; gap: 10px; }
     .note { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface2); }
@@ -163,40 +194,73 @@
       <h1 class="hello"><span class="name" id="hName">회원</span>님의 챌린지</h1>
       <p class="meta" id="hMeta"></p>
 
-      <nav class="secnav" id="secnav" aria-label="대시보드 바로가기">
-        <a href="#todayCard" class="secnav-chip">오늘의 발굴</a>
-        <a href="#sec-answers" class="secnav-chip">답변노트</a>
-        <a href="#sec-summary" class="secnav-chip">진행 요약</a>
-        <a href="#sec-ba" class="secnav-chip">Before/After</a>
-        <a href="#sec-days" class="secnav-chip">날짜별 결과</a>
-        <a href="#sec-comments" class="secnav-chip">코치 코멘트</a>
-        <a href="#sec-apps" class="secnav-chip">신청 내역</a>
-        <a href="#sec-news" class="secnav-chip" id="newsChip" style="display:none;">뉴스 스크랩</a>
-      </nav>
-
-      <a class="card" id="todayCard" href="sojae.html"
-         style="display:block;text-decoration:none;color:inherit;border-left:4px solid var(--action);">
-        <div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent-ink);margin-bottom:8px;">오늘의 소재 발굴</div>
-        <span id="todayCat" style="display:inline-block;background:var(--accent-tint);color:var(--accent-ink);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;">경험 발굴형</span>
-        <div id="todayQ" style="font-size:17px;font-weight:700;line-height:1.45;margin:10px 0 16px;">불러오는 중…</div>
-        <span id="todayCta" style="display:inline-flex;align-items:center;gap:6px;background:var(--action);color:var(--action-ink);font-weight:700;font-size:15px;border-radius:var(--radius-xs);padding:12px 18px;min-height:44px;">소재 발굴 시작
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      <!-- 결제 스트립: 신청·결제 현황 한 줄 요약 (누르면 신청 내역으로) -->
+      <a class="paystrip" href="#sec-apps" aria-label="신청·결제 내역 보기">
+        <span class="ps-cell"><span class="ps-num" id="psPaid">0</span><span class="ps-lbl" style="display:block">결제완료</span></span>
+        <span class="ps-cell"><span class="ps-num" id="psWait">0</span><span class="ps-lbl" style="display:block">입금대기</span></span>
+        <span class="ps-cell"><span class="ps-num" id="psRefund">0</span><span class="ps-lbl" style="display:block">환불</span></span>
       </a>
+
+      <!-- 위젯 그리드: 현황 요약, 누르면 아래 상세 섹션으로 -->
+      <div class="wgrid">
+        <a class="today" id="todayCard" href="sojae.html">
+          <span class="t-lbl">오늘의 소재 발굴</span>
+          <span class="t-chip" id="todayCat" style="display:block;width:fit-content;">경험 발굴형</span>
+          <span class="t-q" id="todayQ" style="display:block;">불러오는 중…</span>
+          <span class="t-go" id="todayCta">소재 발굴 시작
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+
+        <a class="w wide" href="#sec-days">
+          <span class="ring" aria-hidden="true">
+            <svg width="74" height="74" viewBox="0 0 74 74">
+              <circle cx="37" cy="37" r="31" fill="none" stroke="var(--surface2)" stroke-width="8"/>
+              <circle id="ringFg" cx="37" cy="37" r="31" fill="none" stroke="var(--action)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="194.8"/>
+            </svg>
+            <span class="ring-txt"><span id="ringPct">0</span><em>%</em></span>
+          </span>
+          <span style="min-width:0;">
+            <span class="w-lbl" style="display:block;">2주 미션 진행률</span>
+            <span class="w-days-num" style="display:block;"><span id="wDaysOk">0</span> <small>/ 14일 성공</small></span>
+            <span class="w-cap" style="display:block;" id="wDaysCap">아직 기록이 없어요</span>
+          </span>
+          <span class="w-arrow">›</span>
+        </a>
+
+        <a class="w" href="#sec-answers">
+          <span class="w-lbl" style="display:block;">답변노트</span>
+          <span class="w-val" style="display:block;"><span id="wAnsVal">0</span><em>개</em></span>
+          <span class="w-cap" style="display:block;" id="wAnsCap">소재 발굴로 모아요</span>
+          <span class="w-arrow">›</span>
+        </a>
+
+        <a class="w" href="#sec-comments">
+          <span class="w-lbl" style="display:block;">코치 코멘트</span>
+          <span class="w-val" style="display:block;"><span id="wCmVal">0</span><em>개</em></span>
+          <span class="w-cap" style="display:block;">코치가 남긴 피드백</span>
+          <span class="w-arrow">›</span>
+        </a>
+
+        <a class="w" href="#sec-news" id="wNews" style="display:none;">
+          <span class="w-lbl" style="display:block;">뉴스 스크랩</span>
+          <span class="w-val" style="display:block;"><span id="wNewsVal">0</span><em>건</em></span>
+          <span class="w-cap" style="display:block;" id="wNewsCap">면접 답변 재료</span>
+          <span class="w-arrow">›</span>
+        </a>
+
+        <a class="w" href="#sec-ba">
+          <span class="w-lbl" style="display:block;">Before / After</span>
+          <span class="w-val txt" style="display:block;" id="wBaVal">수료 시 공개</span>
+          <span class="w-cap" style="display:block;">목소리 비교</span>
+          <span class="w-arrow">›</span>
+        </a>
+      </div>
 
       <div class="card" id="sec-answers">
         <h2>내 답변노트</h2>
         <p class="hint">소재 발굴로 완성한 답변이 모여요. 눌러서 펼쳐보세요.</p>
         <div class="notes-list" id="answerNotes"><p class="nt-empty">불러오는 중…</p></div>
-      </div>
-
-      <div class="card" id="sec-summary">
-        <h2>진행 요약</h2>
-        <p class="hint">2주(14일) 미션 결과예요.</p>
-        <div class="summary">
-          <div class="stat ok"><div class="num" id="sOk">0</div><div class="lbl">성공</div></div>
-          <div class="stat no"><div class="num" id="sNo">0</div><div class="lbl">아쉬움</div></div>
-          <div class="stat"><div class="num" id="sLeft">14</div><div class="lbl">남은 미션</div></div>
-        </div>
       </div>
 
       <div class="card" id="sec-ba">
@@ -284,12 +348,17 @@
         if (error) throw error;
         if (!data || !data.length) {
           el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
+          document.getElementById('wAnsCap').textContent = '오늘의 발굴부터 시작해보세요';
           return;
         }
         const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
         const catOf = q => (window.SOJAE && window.SOJAE.CAT_LABEL[(q || {}).category]) || '소재 발굴';
         const drafts = data.filter(a => (a.status || 'final') === 'draft');
         const finals = data.filter(a => (a.status || 'final') !== 'draft');
+
+        // 답변노트 위젯 수치
+        document.getElementById('wAnsVal').textContent = data.length;
+        document.getElementById('wAnsCap').textContent = '작성 중 ' + drafts.length + ' · 완료 ' + finals.length;
 
         const draftCard = a => {
           const q = a.questions || {};
@@ -330,10 +399,10 @@
       if (!card) return;
       card.removeAttribute('href');        // <a> 에서 href 제거 → 클릭해도 이동 안 함
       card.style.cursor = 'default';
-      card.style.opacity = '.78';
+      card.classList.add('locked');        // 오렌지 위젯 → 회색 잠금 톤
       const cta = document.getElementById('todayCta');
       if (cta) {
-        cta.style.background = 'var(--bg2)';
+        cta.style.background = 'var(--bg3)';
         cta.style.color = 'var(--text-muted)';
         cta.innerHTML =
           '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" '
@@ -343,37 +412,8 @@
       }
     }
 
-    // ── 상단 섹션 네비 활성 표시(스크롤 스파이) ──
-    // 스크롤 때마다 '기준선(네비 아래)을 지난 마지막 섹션'을 다시 계산 → 즉시 점프에도 정체 없음.
-    function initSecNav() {
-      const chips = Array.from(document.querySelectorAll('.secnav-chip'));
-      if (!chips.length) return;
-      const sections = [], chipFor = {};
-      chips.forEach(c => {
-        const id = c.getAttribute('href').slice(1), el = document.getElementById(id);
-        if (el) { sections.push(el); chipFor[id] = c; }
-      });
-      if (!sections.length) return;
-      function setActive() {
-        const line = 90;                 // 스티키 네비 바로 아래 기준선
-        let cur = sections[0];
-        for (const el of sections) { if (el.getBoundingClientRect().top - line <= 0) cur = el; else break; }
-        // 문서 끝에 닿으면 마지막 섹션 활성(하단 섹션은 기준선까지 못 올라옴)
-        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) cur = sections[sections.length - 1];
-        chips.forEach(c => c.classList.remove('active'));
-        if (chipFor[cur.id]) chipFor[cur.id].classList.add('active');
-      }
-      let ticking = false;
-      window.addEventListener('scroll', () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => { setActive(); ticking = false; });
-      }, { passive: true });
-      setActive();
-    }
-
     // ── 내 뉴스 스크랩 카드 — 최근 3건 + 항공사별 개수(뉴스 스펙 §6) ──
-    //    news_scraps 테이블 미생성(마이그레이션 전)이면 카드·칩을 숨긴 채로 둔다.
+    //    news_scraps 테이블 미생성(마이그레이션 전)이면 카드·위젯을 숨긴 채로 둔다.
     async function loadNewsScraps() {
       const AIRLINE_LABEL_MP = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
       try {
@@ -382,9 +422,10 @@
           .order('created_at', { ascending: false });
         if (error) return;                                   // 테이블 미생성 → 카드 숨김 유지
         document.getElementById('sec-news').style.display = '';
-        document.getElementById('newsChip').style.display = '';
+        document.getElementById('wNews').style.display = '';
         const rows = (data || []).filter(r => r.news_articles);
         const listEl = document.getElementById('newsScraps');
+        document.getElementById('wNewsVal').textContent = rows.length;
         if (!rows.length) {
           listEl.innerHTML = '<li style="color:var(--text-muted);border:0;">항공 뉴스를 스크랩하면 여기에 쌓여요.</li>';
           document.getElementById('newsMore').textContent = '뉴스 보러 가기 →';
@@ -400,10 +441,13 @@
         // 항공사별 개수 요약("대한항공 4 · 아시아나항공 2 · …")
         const counts = {};
         rows.forEach(r => { const k = r.news_articles.airline; if (k) counts[k] = (counts[k] || 0) + 1; });
-        const summary = Object.entries(counts).sort((x, y) => y[1] - x[1])
-          .map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
+        const sorted = Object.entries(counts).sort((x, y) => y[1] - x[1]);
+        const summary = sorted.map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
         document.getElementById('newsSummary').textContent =
           `총 ${rows.length}건` + (summary ? ` — ${summary}` : '');
+        // 위젯 캡션은 상위 2개 항공사만
+        const top2 = sorted.slice(0, 2).map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
+        if (top2) document.getElementById('wNewsCap').textContent = top2;
       } catch (_) { /* 카드 숨김 유지 */ }
     }
 
@@ -475,13 +519,19 @@
       }
       gridEl.innerHTML = gridHtml;
 
-      document.getElementById('sOk').textContent = ok;
-      document.getElementById('sNo').textContent = no;
-      document.getElementById('sLeft').textContent = MONC.TOTAL_DAYS - ok - no;
+      // 진행률 링 위젯 (dasharray 194.8 = 2π×31)
+      const left = MONC.TOTAL_DAYS - ok - no;
+      const RING_C = 194.8;
+      document.getElementById('ringFg').style.strokeDashoffset = (RING_C * (1 - ok / MONC.TOTAL_DAYS)).toFixed(1);
+      document.getElementById('ringPct').textContent = Math.round(ok / MONC.TOTAL_DAYS * 100);
+      document.getElementById('wDaysOk').textContent = ok;
+      document.getElementById('wDaysCap').textContent =
+        (ok || no) ? ('아쉬움 ' + no + ' · 남은 미션 ' + left) : '오늘부터 시작해보세요';
 
-      // 코멘트 목록
+      // 코멘트 목록 + 위젯 수치
       const cmEl = document.getElementById('commentList');
       const withComments = (records || []).filter(r => r.comment && r.comment.trim());
+      document.getElementById('wCmVal').textContent = withComments.length;
       if (!withComments.length) {
         cmEl.innerHTML = '<li><span class="cm-body" style="color:var(--text-muted)">아직 코멘트가 없어요.</span></li>';
       } else {
@@ -501,6 +551,10 @@
       const recMap = {};
       (recs || []).forEach(x => { recMap[x.type] = x.storage_path; });
 
+      // B/A 위젯 상태
+      document.getElementById('wBaVal').textContent =
+        (recMap.before && recMap.after) ? '듣기 가능' : (recMap.before ? 'Before 등록됨' : '수료 시 공개');
+
       for (const type of ['before', 'after']) {
         const slot = document.getElementById(type + 'Slot');
         if (recMap[type]) {
@@ -513,7 +567,7 @@
         }
       }
 
-      // 내 신청 내역 (RLS: member_id = 본인)
+      // 내 신청 내역 (RLS: member_id = 본인) + 결제 스트립 집계
       const CH_LABEL_MP = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
       const myAppsEl = document.getElementById('myApps');
       const { data: myApps } = await MONC.sb.from('applications')
@@ -523,6 +577,19 @@
       if (!myApps || !myApps.length) {
         myAppsEl.innerHTML = '<li style="color:var(--text-muted);border:0;">아직 신청 내역이 없어요. 전화번호를 입력해두면 신청과 자동으로 연결돼요.</li>';
       } else {
+        // 결제 스트립: 환불 > 결제완료 > 입금대기 순으로 한 건당 하나의 상태
+        let nPaid = 0, nWait = 0, nRefund = 0;
+        myApps.forEach(a => {
+          if (a.refunded || a.payment_status === 'refunded' || a.payment_status === 'partial_refunded') nRefund++;
+          else if (a.paid || a.payment_status === 'paid') nPaid++;
+          else nWait++;
+        });
+        document.getElementById('psPaid').textContent = nPaid;
+        document.getElementById('psRefund').textContent = nRefund;
+        const psWait = document.getElementById('psWait');
+        psWait.textContent = nWait;
+        if (nWait) psWait.classList.add('hot');   // 입금대기 있으면 강조
+
         myAppsEl.innerHTML = myApps.map(a => {
           const chs = Array.isArray(a.challenges) ? a.challenges.map(c => `${CH_LABEL_MP[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`).join(', ') : '';
           const d = new Date(a.created_at);
@@ -540,7 +607,6 @@
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
-      initSecNav();   // 콘텐츠가 보인 뒤에 스크롤 스파이 시작
     })();
   </script>
 </body>
