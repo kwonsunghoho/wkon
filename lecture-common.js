@@ -71,10 +71,29 @@
   };
   function mi(icon, text, cls) { return '<span class="mi' + (cls ? ' ' + cls : '') + '">' + icon + text + '</span>'; }
 
+  // 카드 커버에 깔 사진 주소. 허용 스킴만 통과시키고(그 외는 사진 없음 취급),
+  // CSS url("...") 안에 넣을 수 있게 역슬래시·따옴표를 이스케이프한다.
+  // (반환값은 호출부에서 esc()로 한 번 더 감싸 HTML 속성에 안전하게 들어간다)
+  function shotUrl(u) {
+    if (!u) return '';
+    const s = String(u).trim();
+    // 스킴이 붙어 있으면 http(s)·data:image 만 통과시킨다(javascript: 등 차단).
+    // 스킴이 없으면 'images/foo.webp' 같은 사이트 안 경로라 그대로 쓴다.
+    if (/^[a-z][a-z0-9+.\-]*:/i.test(s) && !/^https?:\/\//i.test(s) && !/^data:image\//i.test(s)) return '';
+    return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
   // 특강 카드 마크업(스펙: 커버[영문명·제목·룰·뱃지] + 정보부[서브·메타]). 세 페이지 공용.
   function cardHtml(l) {
     const air = airline(l.airline);
-    const accentStyle = l.airline ? ' style="--lx-accent:var(--air-' + l.airline + ')"' : '';
+    // 사진이 있으면 커버가 '사진 + 아이보리로 녹아드는 그라디언트'가 된다(lectures.css .has-shot).
+    // 없으면 지금까지의 아이보리 커버 그대로 — 사진을 준비 못 한 특강도 카드가 안 깨진다.
+    const shot = shotUrl(l.thumb_url);
+    const vars = [
+      l.airline ? '--lx-accent:var(--air-' + l.airline + ')' : '',
+      shot ? '--lx-shot:url(&quot;' + esc(shot) + '&quot;)' : '',
+    ].filter(Boolean).join(';');
+    const accentStyle = vars ? ' style="' + vars + '"' : '';
     const st = status(l.recruit_start, l.recruit_end);
     const soldOut = l.seats_left === 0;
     const isOut = soldOut || st === 'closed';
@@ -95,13 +114,15 @@
       third,
     ].filter(Boolean).join('');
 
-    return '<a class="lx-card' + (isOut ? ' is-out' : '') + '"' + accentStyle
+    return '<a class="lx-card' + (isOut ? ' is-out' : '') + (shot ? ' has-shot' : '') + '"' + accentStyle
       + ' href="lecture.html?id=' + encodeURIComponent(l.id) + '">'
       + '<div class="lx-cover">'
       +   badge
-      +   (air ? '<div class="lx-en">' + esc(air.en) + '</div>' : '')
-      +   '<div class="lx-ko">' + esc(l.title) + '</div>'
-      +   '<hr class="lx-rule">'
+      +   '<div class="lx-txt">'
+      +     (air ? '<div class="lx-en">' + esc(air.en) + '</div>' : '')
+      +     '<div class="lx-ko">' + esc(l.title) + '</div>'
+      +     '<hr class="lx-rule">'
+      +   '</div>'
       + '</div>'
       + '<div class="lx-info">'
       +   (l.subtitle ? '<div class="lx-copy">' + esc(l.subtitle) + '</div>' : '')
@@ -120,5 +141,5 @@
     return s;
   }
 
-  window.LEC = { esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, cardHtml, skeletonHtml };
+  window.LEC = { esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl, cardHtml, skeletonHtml };
 })();

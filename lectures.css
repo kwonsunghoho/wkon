@@ -43,19 +43,61 @@
 .lx-card:focus-visible { outline: 2px solid var(--lx-accent); outline-offset: 2px; }
 .lx-card.is-out { opacity: .55; }              /* 마감·품절 — 카드는 계속 노출 */
 
-/* 커버부(톤 배경) */
+/* 커버부(톤 배경) — 사진이 없을 때의 기본 모습 */
 .lx-cover { position: relative; background: var(--lx-cover); padding: 28px 24px 24px; }
 .lx-en {
   font-size: 12px; font-weight: 400; letter-spacing: .14em; line-height: 1.2;
   color: var(--lx-accent); text-transform: uppercase;
 }
+/* ⚠️ 제목은 카드에서 2줄까지만(전체 제목은 상세페이지에 나온다).
+   3줄이 되면 사진 커버에서 글자 블록이 220px까지 자라 사진이 32px만 남는다 — 사진을 넣은 의미가 사라진다. */
 .lx-ko {
   margin-top: 12px;
   font-size: 28px; font-weight: 500; line-height: 1.25; color: var(--lx-navy);
   letter-spacing: -.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .lx-en + .lx-ko { margin-top: 12px; }
 .lx-rule { margin: 20px 0 0; height: 1px; border: 0; background: var(--lx-accent); opacity: .6; }
+
+/* ── 사진 커버(2026-07-24 오너가 목업 4종 중 ③ 선택) ──────────────────────────
+   thumb_url 이 있으면 커버가 '사진 + 아래로 갈수록 아이보리에 녹아드는 그라디언트'가 된다.
+   글자는 그라디언트가 거의 불투명해지는 아래쪽에 앉으므로 사진이 밝든 어둡든 읽힌다.
+   ⚠️ 사진과 글자를 선으로 자르지 말 것 — 잘라 놓으면 흔한 썸네일 카드(목업 ④안)가 되고,
+      ③안을 고른 이유(사진과 카드가 한 덩어리로 보이는 것)가 사라진다.
+   ⚠️ backdrop-filter 로 글자 뒤만 흐리는 방식은 검토 후 버렸다 — 블러가 뒤 사진을 완전히
+      뭉개 ④안과 똑같아 보였고, 구형 아이폰 지원이 불안정한 데다 카드 수만큼 블러 레이어가 생긴다.
+   사진이 없으면 위의 기본 아이보리 커버가 그대로 나온다(폴백). */
+/* padding-top 88px = '사진이 최소 이만큼은 보인다'는 약속.
+   min-height 만으로는 제목이 길어질 때 글자 블록이 커버를 다 먹어 사진이 사라진다. */
+.lx-card.has-shot .lx-cover {
+  min-height: 252px; padding: 88px 0 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.lx-card.has-shot .lx-cover::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background-image: var(--lx-shot); background-size: cover;
+  background-position: center 34%;   /* 인물 눈높이가 대충 맞는 지점 — 카드마다 통일 */
+}
+/* ⚠️ 페이드는 커버 높이의 %가 아니라 **글자 블록 자체**에 px로 건다.
+   %로 걸면 제목 줄 수에 따라 글자가 앉는 높이가 달라져(2줄 45% · 3줄 35%) 어떤 카드는
+   반투명 구간에 글자가 얹힌다 — 실제로 항공사 영문명이 이 때문에 흐렸다.
+   글자 블록 기준이면 줄 수가 몇이든 위 46px에서 페이드가 끝나고 글자는 늘 불투명 위에 앉는다.
+   ⚠️ `.lx-cover > *` 로 뭉뚱그리지 말 것 — 배지가 absolute 인데 relative 로 덮여 자리가 무너진다. */
+.lx-card.has-shot .lx-txt {
+  position: relative; z-index: 2;
+  padding: 46px 24px 22px;
+  background: linear-gradient(180deg,
+    rgba(251,249,244, 0)    0,
+    rgba(251,249,244, .55) 22px,
+    rgba(251,249,244, .94) 42px,
+    rgba(251,249,244, 1)   54px);
+}
+/* 배지는 사진 위에 뜬다 — 옅은 반투명 배경으로는 안 읽혀서 불투명 알약 + 실선 테두리
+   (흰 배경 사진 위에서 흰 알약이 사라지는 것도 이 테두리가 막는다) */
+.lx-card.has-shot .lx-badge { z-index: 3; border: 1px solid rgba(38,34,28,.12); }
+.lx-card.has-shot .lx-badge.paid { background: rgba(255,255,255,.94); color: var(--lx-navy); }
+.lx-card.has-shot .lx-badge.free { background: rgba(202,242,214,.95); color: #14512C; }
 
 /* 뱃지(우상단) — 옅은 배경 + 진한 글자, 텍스트 항상 노출 */
 .lx-badge {
@@ -81,7 +123,8 @@
 
 /* ── 로딩 스켈레톤 ── */
 .lx-sk { background: var(--lx-info); border: 1px solid var(--lx-bd); border-radius: 14px; overflow: hidden; }
-.lx-sk .sk-cover { background: var(--lx-cover); height: 128px; }
+/* 사진 커버(252px)와 기본 커버(약 130px)의 중간 — 로딩이 끝나며 카드가 확 튀는 걸 줄인다 */
+.lx-sk .sk-cover { background: var(--lx-cover); height: 190px; }
 .lx-sk .sk-lines { padding: 18px 24px 22px; }
 .lx-sk .sk-line { height: 12px; border-radius: 6px; background: rgba(38, 34, 28, .09); margin-bottom: 12px; }
 .lx-sk .sk-line.s2 { width: 58%; margin-bottom: 0; }
@@ -93,6 +136,9 @@
   .lx-ko { font-size: 24px; }
   .lx-cover { padding: 24px 20px 20px; }
   .lx-info { padding: 14px 20px 18px; }
+  /* 사진 커버: 1열이라 카드가 넓어진 만큼 사진도 조금 더 보여준다 */
+  .lx-card.has-shot .lx-cover { padding: 96px 0 0; min-height: 264px; }
+  .lx-card.has-shot .lx-txt { padding: 46px 20px 20px; }   /* 위 46px = 페이드 구간, 줄이지 말 것 */
 }
 @media (prefers-reduced-motion: reduce) {
   .lx-card { transition: none; }

@@ -39,6 +39,14 @@
     .round-form .field label { font-size: 12px; color: var(--text-muted); }
     .round-form input, .round-form select, .round-form textarea { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; font-family: inherit; }
     .round-form textarea { resize: vertical; }
+    /* 특강 카드 사진 첨부 — 고르면 즉시 압축·업로드되고 미리보기가 뜬다 */
+    .lf-thumb { display: flex; gap: 12px; align-items: flex-start; }
+    .lf-thumb-prev { flex: 0 0 auto; width: 132px; height: 92px; border-radius: var(--radius-xs); overflow: hidden; border: 1px solid var(--border); background: var(--surface2); }
+    .lf-thumb-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .lf-thumb-act { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 auto; min-width: 0; }
+    .lf-thumb-msg { flex-basis: 100%; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .lf-thumb-msg.err { color: #A33D14; font-weight: 700; }
+
     .round-list { display: flex; flex-direction: column; gap: 8px; }
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
@@ -329,7 +337,19 @@
         </div>
         <div class="field"><label>시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
         <div class="field"><label>강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
-        <div class="field"><label>카드 이미지 URL(선택)</label><input id="lfThumb" type="text" placeholder="https://..."></div>
+        <div class="field">
+          <label>카드 사진(선택)</label>
+          <div class="lf-thumb">
+            <div class="lf-thumb-prev" id="lfThumbPrev" hidden><img id="lfThumbImg" alt="카드 사진 미리보기"></div>
+            <div class="lf-thumb-act">
+              <input type="file" id="lfThumbFile" accept="image/*" style="display:none;">
+              <button type="button" class="btn btn-ghost btn-sm" id="lfThumbPick">사진 고르기</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="lfThumbClear" hidden>사진 빼기</button>
+              <span class="lf-thumb-msg" id="lfThumbMsg">고르면 바로 올라가고 크기·용량은 자동으로 줄입니다. 안 넣으면 지금까지의 아이보리 카드로 나가요.</span>
+            </div>
+          </div>
+          <input id="lfThumb" type="text" placeholder="또는 사진 주소(https://...) 직접 붙여넣기" style="margin-top:8px;">
+        </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked style="width:18px;height:18px;"> 공개(목록에 노출)</label>
         <button class="btn btn-action" type="submit" id="lecSubmitBtn">추가</button>
       </form>
@@ -991,7 +1011,56 @@
       document.getElementById('lfInstructor').value = l.instructor || '';
       document.getElementById('lfThumb').value      = l.thumb_url || '';
       document.getElementById('lfVisible').checked  = l.visible !== false;
+      syncThumbPreview();
     }
+
+    // ── 카드 사진 첨부(Storage 'lecture-images' 버킷) ──
+    // thumb_url 에는 공개 URL 전체를 넣는다 — 그래야 외부 주소 붙여넣기도 계속 통한다.
+    const lfThumb     = document.getElementById('lfThumb');
+    const lfThumbFile = document.getElementById('lfThumbFile');
+    const lfThumbMsg  = document.getElementById('lfThumbMsg');
+    const THUMB_HINT  = lfThumbMsg.textContent;
+
+    function thumbMsg(text, isErr) {
+      lfThumbMsg.textContent = text;
+      lfThumbMsg.classList.toggle('err', !!isErr);
+    }
+    function syncThumbPreview() {
+      const url = lfThumb.value.trim();
+      document.getElementById('lfThumbPrev').hidden = !url;
+      document.getElementById('lfThumbClear').hidden = !url;
+      if (url) document.getElementById('lfThumbImg').src = url;
+    }
+    lfThumb.addEventListener('input', syncThumbPreview);
+
+    document.getElementById('lfThumbPick').addEventListener('click', () => lfThumbFile.click());
+    document.getElementById('lfThumbClear').addEventListener('click', () => {
+      lfThumb.value = ''; lfThumbFile.value = ''; syncThumbPreview(); thumbMsg(THUMB_HINT, false);
+    });
+
+    lfThumbFile.addEventListener('change', async () => {
+      const f = lfThumbFile.files[0];
+      if (!f) return;
+      const pick = document.getElementById('lfThumbPick');
+      pick.disabled = true; thumbMsg('사진을 줄이고 올리는 중…', false);
+      try {
+        // 후기 업로드와 같은 압축 루틴(긴 변 1080px + WebP). 5MB 폰 사진도 100KB 안쪽이 된다.
+        const opt = await optimizeReviewImage(f);
+        const path = `${crypto.randomUUID()}.${opt.ext}`;
+        const up = await MONC.sb.storage.from('lecture-images')
+          .upload(path, opt.blob, { upsert: false, contentType: opt.type });
+        if (up.error) throw up.error;
+        lfThumb.value = MONC.sb.storage.from('lecture-images').getPublicUrl(path).data.publicUrl;
+        syncThumbPreview();
+        thumbMsg(`올렸습니다 (${Math.round(opt.blob.size / 1024)}KB). 아래 저장 버튼을 눌러야 특강에 반영돼요.`, false);
+      } catch (e) {
+        const m = String(e && e.message || e);
+        thumbMsg(/bucket|not found|404/i.test(m)
+          ? '사진 보관함이 아직 없어요. 마이그레이션 20260724140000_lecture_images_bucket.sql 을 SQL Editor에서 실행해 주세요.'
+          : '업로드 실패: ' + m, true);
+      }
+      pick.disabled = false; lfThumbFile.value = '';
+    });
 
     function enterLectureEdit(l) {
       editingLectureId = l.id;
@@ -1007,6 +1076,8 @@
       document.getElementById('lfVisible').checked = true;
       document.getElementById('lecEditing').hidden = true;
       document.getElementById('lecSubmitBtn').textContent = '추가';
+      syncThumbPreview();   // form.reset()으로 비워진 주소칸에 미리보기를 맞춘다
+      thumbMsg(THUMB_HINT, false);
     }
     document.getElementById('lecEditCancel').addEventListener('click', exitLectureEdit);
 
