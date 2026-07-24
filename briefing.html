@@ -55,10 +55,10 @@
     .bf-card { position: relative; display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 22px 20px; box-shadow: 0 2px 10px rgba(38,34,28,.06); transition: box-shadow .2s, transform .2s; }
     .bf-card:hover { box-shadow: 0 12px 32px rgba(38,34,28,.14); transform: translateY(-2px); }
     .bf-card:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
-    .bf-head { display: flex; align-items: center; gap: 12px; }
-    .bf-ico { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px; background: var(--surface2); display: flex; align-items: center; justify-content: center; color: var(--accent-dark); }
-    .bf-ico svg { width: 24px; height: 24px; }
-    .bf-ico .win { width: 20px; height: 28px; }
+    .bf-head { display: flex; align-items: center; gap: 15px; }
+    /* 창문이 곧 아이콘 — 회색 타일을 두지 않는다(타일이 있으면 창문이 그만큼 작아져 창 안이 뭉갠다) */
+    .bf-win { flex: 0 0 auto; width: 37px; height: 52px; display: block;
+      filter: drop-shadow(0 3px 7px rgba(14,46,105,.22)); }
     .bf-name { font-family: var(--serif); font-size: 19px; font-weight: 700; }
     .bf-badge { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; margin-left: 8px; vertical-align: 2px; }
     .bf-badge.open { background: rgba(46,125,70,.12); color: #2E7D46; }
@@ -71,18 +71,53 @@
   </style>
 </head>
 <body>
-  <!-- 몬크 로고 창문 심볼 — 뉴스 카드 아이콘 -->
+  <!-- ══ 몬크 창문 아이콘 (2026-07-24) ══
+       파비콘 원본(android-chrome-512)을 픽셀 실측해 옮긴 기하 — 눈대중으로 다시 그리지 말 것.
+         외곽 199×276 → 비율 0.7210 / 테두리 21px = 폭의 10.55%
+         모서리 rx 70(폭 35.2%)·ry 80(높이 29.0%) / 슬롯 폭 81px(폭 40.7%)·높이 13px, 상단에서 8.0%
+       viewBox 는 창문에 딱 맞는 15.14×21 — 회색 타일 없이 창문 자체가 아이콘이라 여백을 두지 않는다.
+       ⚠️ 창 안 내용물은 흰색 + 비네트(mwVig)가 한 쌍이다. 로고 하늘은 가운데가 밝은 노을이라
+          비네트를 빼면 흰 형태가 배경에 묻힌다(오너 검토에서 크림안이 이 이유로 탈락).
+       ⚠️ 작게 쓰지 말 것 — 26px 아래로 내려가면 슬롯·내용물이 1px 미만이 되어 뭉갠다. 최소 36px. -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
-      <linearGradient id="moncWinG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E4E6E"/><stop offset=".36" stop-color="#7F7C9B"/><stop offset=".66" stop-color="#D6B389"/><stop offset="1" stop-color="#F2E3C8"/></linearGradient>
-      <clipPath id="moncWinC"><rect x="18" y="18" width="64" height="104" rx="29" ry="31"/></clipPath>
-      <symbol id="moncWin" viewBox="0 0 100 140">
-        <rect x="4" y="4" width="92" height="132" rx="44" ry="46" fill="#1B2A4A"/>
-        <rect x="11" y="11" width="78" height="118" rx="37" ry="39" fill="#F4F1EA"/>
-        <g clip-path="url(#moncWinC)"><rect x="18" y="18" width="64" height="104" fill="url(#moncWinG)"/><ellipse cx="50" cy="104" rx="46" ry="20" fill="#F8ECD4" opacity=".7"/></g>
-        <rect x="18" y="18" width="64" height="104" rx="29" ry="31" fill="none" stroke="#EDE7DB" stroke-width="2"/>
-        <rect x="41" y="24" width="18" height="7" rx="3.5" fill="#ECE5D7" stroke="#B7AB93" stroke-width=".6"/>
-      </symbol>
+      <linearGradient id="mwSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0F3171"/><stop offset=".20" stop-color="#B3B5D0"/>
+        <stop offset=".35" stop-color="#D2C1C7"/><stop offset=".50" stop-color="#F9D4BD"/>
+        <stop offset=".65" stop-color="#FED5AF"/><stop offset=".82" stop-color="#988CA1"/>
+        <stop offset="1" stop-color="#102F67"/>
+      </linearGradient>
+      <linearGradient id="mwVig" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0E2E69" stop-opacity=".55"/>
+        <stop offset=".45" stop-color="#0E2E69" stop-opacity=".12"/>
+        <stop offset="1" stop-color="#0E2E69" stop-opacity=".62"/>
+      </linearGradient>
+      <clipPath id="mwOp"><rect x="1.60" y="1.60" width="11.94" height="17.80" rx="3.73" ry="4.49"/></clipPath>
+      <g id="mwShell">
+        <rect x="0" y="0" width="15.14" height="21" rx="5.33" ry="6.09" fill="#0E2E69"/>
+        <g clip-path="url(#mwOp)">
+          <rect x="1.6" y="1.6" width="11.94" height="17.8" fill="url(#mwSky)"/>
+          <rect x="1.6" y="1.6" width="11.94" height="17.8" fill="url(#mwVig)"/>
+        </g>
+      </g>
+      <g id="mwSlot"><rect x="4.49" y="1.67" width="6.16" height="1" rx=".5" fill="#F1E9D9" opacity=".92"/></g>
+
+      <symbol id="mw-news" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+        <g clip-path="url(#mwOp)">
+          <circle cx="9.6" cy="8.6" r="2.05" fill="#FFF6E4"/>
+          <path d="M1.6 15.1c1.9-2.1 3.4-2.1 5.1 0 1.5-2.6 3.2-2.6 4.6-.5 1-.9 2-.9 3.24.1v4.7H1.6Z" fill="#FFFFFF" opacity=".93"/>
+        </g><use href="#mwSlot"/></symbol>
+      <symbol id="mw-dig" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+        <path d="M7.57 6.1 9.33 9.34 12.57 11.1 9.33 12.86 7.57 16.1 5.81 12.86 2.57 11.1 5.81 9.34Z" fill="#FFFFFF"/>
+        <use href="#mwSlot"/></symbol>
+      <symbol id="mw-note" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+        <g stroke="#FFFFFF" stroke-width="1.35" stroke-linecap="round"><path d="M4.3 8.2h6.5M4.3 11.4h6.5M4.3 14.6h3.9"/></g>
+        <use href="#mwSlot"/></symbol>
+      <symbol id="mw-mic" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+        <rect x="6.17" y="6.5" width="2.8" height="5.5" rx="1.4" fill="#FFFFFF"/>
+        <path d="M4.75 11.4a2.82 2.82 0 0 0 5.64 0M7.57 14.4v2.2" fill="none" stroke="#FFFFFF"
+          stroke-width="1.25" stroke-linecap="round"/>
+        <use href="#mwSlot"/></symbol>
     </defs>
   </svg>
 
@@ -106,7 +141,7 @@
 
       <a class="bf-card" href="news.html">
         <div class="bf-head">
-          <span class="bf-ico"><svg class="win" viewBox="0 0 100 140" aria-hidden="true"><use href="#moncWin"/></svg></span>
+          <svg class="bf-win" viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-news"/></svg>
           <span class="bf-name">항공 뉴스<span class="bf-badge open">누구나</span></span>
         </div>
         <p class="bf-desc">국내 10개 항공사 소식을 한곳에서. 스크랩하면 항공사별로 쌓여 면접 답변 재료가 돼요.</p>
@@ -115,7 +150,7 @@
 
       <a class="bf-card" href="sojae.html">
         <div class="bf-head">
-          <span class="bf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg></span>
+          <svg class="bf-win" viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-dig"/></svg>
           <span class="bf-name">소재 발굴<span class="bf-badge member">수강생 전용</span></span>
         </div>
         <p class="bf-desc">매일 한 질문씩, 내 경험에서 답변 소재를 캐요. AI 코치가 파고드는 질문으로 도와줘요.</p>
@@ -124,7 +159,7 @@
 
       <a class="bf-card" href="mypage.html#sec-answers">
         <div class="bf-head">
-          <span class="bf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg></span>
+          <svg class="bf-win" viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-note"/></svg>
           <span class="bf-name">답변노트<span class="bf-badge member">회원 전용</span></span>
         </div>
         <p class="bf-desc">발굴한 소재가 나만의 면접 답변으로 쌓여요. 마이페이지에서 언제든 다시 봐요.</p>
@@ -134,7 +169,7 @@
       <!-- 실전 모의면접 — 기능 배포 보류 중(2026-07-20). 열 때 display:none만 제거 -->
       <a class="bf-card" href="rehearsal.html" style="display:none;" id="bfRehearsal">
         <div class="bf-head">
-          <span class="bf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M12 17v3M8 21h8"/></svg></span>
+          <svg class="bf-win" viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-mic"/></svg>
           <span class="bf-name">실전 모의면접<span class="bf-badge member">응시권 필요</span></span>
         </div>
         <p class="bf-desc">진짜 면접처럼 묻고, 끝나면 종합 첨삭을 받아요.</p>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>브리핑룸 아이콘 — 실제 로고 기하 적용</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E9E4D8; --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,.16); --border-soft:rgba(38,34,28,.09);
+    --action:#F27945; --action-dark:#D9531F; --action-tint:#FDE9DE; --action-ink:#2A1206;
+    --accent:#F27945; --accent-dark:#D9531F; --accent-tint:#FDE9DE; --accent-ink:#A33D14;
+    --navy:#0E2E69;
+    --serif:'Noto Serif KR',serif; --radius-md:18px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;padding:40px 20px 80px}
+  .intro{max-width:980px;margin:0 auto}
+  .intro .eyebrow{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--accent-ink)}
+  .intro .eyebrow::before{content:'— ';color:var(--action)}
+  .intro h1{font-family:var(--serif);font-weight:700;font-size:clamp(26px,3.4vw,38px);color:var(--action-dark);margin:6px 0 10px}
+  .intro p{color:var(--text-muted);font-size:15px;max-width:700px}
+  .intro b{color:var(--text)}
+
+  /* 원본 대조 */
+  .proof{max-width:980px;margin:22px auto 0;background:var(--surface);border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px}
+  .proof h2{font-family:var(--serif);font-size:17px;font-weight:700;margin-bottom:4px}
+  .proof p{font-size:13px;color:var(--text-muted);margin-bottom:14px}
+  .proof-row{display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap}
+  .pf{display:flex;flex-direction:column;align-items:center;gap:7px}
+  .pf img{width:76px;height:76px;display:block;border-radius:12px}
+  .pf .cap{font-size:11.5px;color:var(--text-dim);font-weight:700}
+  .pf .cap b{color:var(--accent-ink)}
+
+  .row{max-width:1500px;margin:26px auto 0;display:flex;flex-wrap:wrap;gap:26px;justify-content:center;align-items:flex-start}
+  .col{width:336px;flex:0 0 auto}
+  .col-head{padding:0 4px 12px}
+  .num{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:50%;background:var(--action);color:#fff;font-weight:800;font-size:13.5px;margin-right:7px}
+  .nm{font-family:var(--serif);font-weight:700;font-size:19px}
+  .ds{font-size:13px;color:var(--text-muted);margin-top:7px}
+  .ds b{color:var(--text)}
+  .reco{display:inline-block;margin-left:6px;background:var(--action-tint);color:var(--accent-ink);font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:2px}
+
+  .card{position:relative;display:block;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:16px;box-shadow:0 2px 10px rgba(38,34,28,.06);margin-bottom:11px}
+  .head{display:flex;align-items:center;gap:12px}
+  .ico{flex:0 0 auto;width:46px;height:46px;border-radius:14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--accent-dark)}
+  .ico svg{width:26px;height:26px}
+  .name{font-family:var(--serif);font-size:17px;font-weight:700}
+  .badge{display:inline-block;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;margin-left:7px;vertical-align:2px}
+  .badge.open{background:rgba(46,125,70,.12);color:#2E7D46}
+  .badge.member{background:var(--accent-tint);color:var(--accent-ink)}
+  .desc{font-size:13px;color:var(--text-muted);margin-top:8px}
+
+  .v2 .ico{position:relative;overflow:hidden}
+  .v2 .ico .bgwin{position:absolute;width:38px;height:38px;color:var(--accent);opacity:.15;right:-5px;bottom:-7px}
+  .v2 .ico .fg{position:relative;z-index:1;width:23px;height:23px}
+  .v3 .ico{background:var(--action);color:#fff;box-shadow:0 6px 16px rgba(242,121,69,.28)}
+  .v4 .ico{background:var(--surface2)}
+
+  .sizes{display:flex;align-items:flex-end;gap:14px;margin-top:12px;padding:11px 14px;background:var(--surface2);border-radius:12px}
+  .sizes .s{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--accent-dark)}
+  .sizes .s span{font-size:10.5px;color:var(--text-dim);font-weight:700}
+  .lab{font-size:11.5px;font-weight:800;color:var(--text-dim);letter-spacing:.04em;margin:14px 4px 6px}
+</style>
+</head>
+<body>
+
+<!--
+  ══ 실측 기반 창문 기하 (android-chrome-512.png 픽셀 분석) ══
+  외곽 199×276 → 비율 0.7210 | 테두리 21px = 폭의 10.55%
+  모서리 rx 70(폭 35.2%) · ry 80(높이 29.0%) | 슬롯 폭 81px(폭 40.7%)·높이 13px, 상단에서 8.0%
+  네이비 #0E2E69 · 하늘 노을 그라디언트(위아래 어둡고 가운데 밝음)
+
+  24 뷰박스 환산: 창문 15.14 × 21, x=4.43 y=1.5 / rx 5.33 ry 6.09 / 테두리 1.60
+  → 선(stroke) 중심선 기준으로 0.8 안쪽: x 5.23 y 2.3 w 13.54 h 19.4 rx 4.53 ry 5.29
+-->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- 실제 로고 노을 (512px 세로 샘플에서 추출) -->
+    <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"    stop-color="#0F3171"/>
+      <stop offset=".20"  stop-color="#B3B5D0"/>
+      <stop offset=".35"  stop-color="#D2C1C7"/>
+      <stop offset=".50"  stop-color="#F9D4BD"/>
+      <stop offset=".65"  stop-color="#FED5AF"/>
+      <stop offset=".82"  stop-color="#988CA1"/>
+      <stop offset="1"    stop-color="#102F67"/>
+    </linearGradient>
+    <clipPath id="skyC"><rect x="6.03" y="3.1" width="11.94" height="17.8" rx="3.73" ry="4.49"/></clipPath>
+
+    <!-- ── ① 라인 창문 + 창 너머 내용 ── -->
+    <symbol id="l-news" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5.23" y="2.3" width="13.54" height="19.4" rx="4.53" ry="5.29"/>
+        <path d="M8.92 5.1h6.16" stroke-width="1.5"/>
+        <circle cx="14.4" cy="10.6" r="1.9"/>
+        <path d="M7.9 16.2h8.2M7.9 13.4c1.5-1.6 2.9-1.6 4.2 0"/>
+      </g>
+    </symbol>
+    <symbol id="l-dig" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5.23" y="2.3" width="13.54" height="19.4" rx="4.53" ry="5.29"/>
+        <path d="M8.92 5.1h6.16" stroke-width="1.5"/>
+        <path d="M12 8.4l1.5 3.2 3.2 1.5-3.2 1.5L12 17.8l-1.5-3.2-3.2-1.5 3.2-1.5z"/>
+      </g>
+    </symbol>
+    <symbol id="l-note" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5.23" y="2.3" width="13.54" height="19.4" rx="4.53" ry="5.29"/>
+        <path d="M8.92 5.1h6.16" stroke-width="1.5"/>
+        <path d="M8.5 10.4h7M8.5 13.6h7M8.5 16.8h4.3"/>
+      </g>
+    </symbol>
+    <symbol id="l-mic" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5.23" y="2.3" width="13.54" height="19.4" rx="4.53" ry="5.29"/>
+        <path d="M8.92 5.1h6.16" stroke-width="1.5"/>
+        <rect x="10.4" y="8.2" width="3.2" height="6" rx="1.6"/>
+        <path d="M9 13.3a3 3 0 0 0 6 0M12 16.3v2"/>
+      </g>
+    </symbol>
+
+    <!-- ② 배경 실루엣용 창문(면) -->
+    <symbol id="winSolid" viewBox="0 0 24 24">
+      <rect x="4.43" y="1.5" width="15.14" height="21" rx="5.33" ry="6.09" fill="currentColor"/>
+    </symbol>
+    <symbol id="p-news" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 5h13v14H6a2 2 0 0 1-2-2V5Z"/><path d="M17 8h3v9a2 2 0 0 1-2 2h-1"/>
+        <path d="M7 9h7M7 12.5h7M7 16h4"/></g>
+    </symbol>
+    <symbol id="p-dig" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></g>
+    </symbol>
+    <symbol id="p-note" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></g>
+    </symbol>
+    <symbol id="p-mic" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 12a6 6 0 0 0 12 0M12 18v3"/></g>
+    </symbol>
+
+    <!-- ── ④ 실제 로고 컬러 창문 + 창 너머 내용 ── -->
+    <symbol id="c-news" viewBox="0 0 24 24">
+      <rect x="4.43" y="1.5" width="15.14" height="21" rx="5.33" ry="6.09" fill="var(--navy)"/>
+      <g clip-path="url(#skyC)"><rect x="6.03" y="3.1" width="11.94" height="17.8" fill="url(#skyG)"/>
+        <ellipse cx="12" cy="17.4" rx="9" ry="3.4" fill="#FBEFD8" opacity=".55"/></g>
+      <rect x="8.92" y="3.9" width="6.16" height="1.15" rx=".58" fill="#F1E9D9"/>
+    </symbol>
+    <symbol id="c-dig" viewBox="0 0 24 24">
+      <rect x="4.43" y="1.5" width="15.14" height="21" rx="5.33" ry="6.09" fill="var(--navy)"/>
+      <g clip-path="url(#skyC)"><rect x="6.03" y="3.1" width="11.94" height="17.8" fill="url(#skyG)"/>
+        <path d="M12 8.6l1.45 3.1 3.1 1.45-3.1 1.45L12 17.7l-1.45-3.1-3.1-1.45 3.1-1.45z" fill="#FDF6E6"/></g>
+      <rect x="8.92" y="3.9" width="6.16" height="1.15" rx=".58" fill="#F1E9D9"/>
+    </symbol>
+    <symbol id="c-note" viewBox="0 0 24 24">
+      <rect x="4.43" y="1.5" width="15.14" height="21" rx="5.33" ry="6.09" fill="var(--navy)"/>
+      <g clip-path="url(#skyC)"><rect x="6.03" y="3.1" width="11.94" height="17.8" fill="url(#skyG)"/>
+        <g stroke="#FDF6E6" stroke-width="1.5" stroke-linecap="round"><path d="M8.6 10.6h6.8M8.6 13.6h6.8M8.6 16.6h4.2"/></g></g>
+      <rect x="8.92" y="3.9" width="6.16" height="1.15" rx=".58" fill="#F1E9D9"/>
+    </symbol>
+    <symbol id="c-mic" viewBox="0 0 24 24">
+      <rect x="4.43" y="1.5" width="15.14" height="21" rx="5.33" ry="6.09" fill="var(--navy)"/>
+      <g clip-path="url(#skyC)"><rect x="6.03" y="3.1" width="11.94" height="17.8" fill="url(#skyG)"/>
+        <rect x="10.5" y="8.4" width="3" height="5.6" rx="1.5" fill="#FDF6E6"/>
+        <path d="M9.1 13.2a2.9 2.9 0 0 0 5.8 0M12 16.1v2" fill="none" stroke="#FDF6E6" stroke-width="1.5" stroke-linecap="round"/></g>
+      <rect x="8.92" y="3.9" width="6.16" height="1.15" rx=".58" fill="#F1E9D9"/>
+    </symbol>
+
+    <!-- ③ 코랄 타일용(라인과 동일 기하, 흰 선) -->
+  </defs>
+</svg>
+
+<div class="intro">
+  <div class="eyebrow">BRIEFING ROOM ICONS · ROUND 2</div>
+  <h1>실제 로고 기하로 다시</h1>
+  <p>지난 시안의 창문은 눈대중이라 <b>실제 로고와 비율·모서리·슬롯이 달랐습니다.</b> 파비콘 원본(512px)을 픽셀 단위로 재서 다시 그렸어요 — 비율 0.721, 테두리 10.6%, 모서리 rx 35%·ry 29%, 환기구 슬롯은 창 폭의 41%(지난 시안은 절반 크기였습니다).</p>
+</div>
+
+<div class="proof">
+  <h2>원본과 나란히</h2>
+  <p>왼쪽이 실제 파비콘, 오른쪽이 새로 그린 벡터입니다. 같은 크기로 놓고 보세요.</p>
+  <div class="proof-row">
+    <div class="pf">
+      <img src="../images/MONC_Logo_Full_Package/assets/favicon/android-chrome-512x512.png" alt="실제 파비콘">
+      <span class="cap">실제 파비콘 <b>(원본)</b></span>
+    </div>
+    <div class="pf">
+      <svg viewBox="0 0 24 24" style="width:76px;height:76px"><use href="#c-news"/></svg>
+      <span class="cap">새 벡터 <b>(컬러)</b></span>
+    </div>
+    <div class="pf">
+      <svg viewBox="0 0 24 24" style="width:76px;height:76px;color:var(--accent-dark)"><use href="#l-news"/></svg>
+      <span class="cap">새 벡터 <b>(라인)</b></span>
+    </div>
+    <div class="pf">
+      <svg viewBox="0 0 24 24" style="width:76px;height:76px;color:var(--navy)"><use href="#winSolid"/></svg>
+      <span class="cap">실루엣</span>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+
+  <!-- ① 라인 창문 -->
+  <div class="col v1">
+    <div class="col-head">
+      <span class="num">1</span><span class="nm">창문 너머 (라인)</span><span class="reco">Claude 추천</span>
+      <div class="ds">로고 창문을 <b>선으로 옮기고 환기구 슬롯까지</b> 살렸어요. 창 너머로 기능이 보입니다. 코랄로 물들고 작아도 또렷해요.</div>
+    </div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-news"/></svg></span>
+      <span class="name">항공 뉴스<span class="badge open">누구나</span></span></div>
+      <p class="desc">창 너머 하늘 — 지평선과 해.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-dig"/></svg></span>
+      <span class="name">소재 발굴<span class="badge member">수강생</span></span></div>
+      <p class="desc">창 너머 반짝임 — 캐낸 소재.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-note"/></svg></span>
+      <span class="name">답변노트<span class="badge member">회원</span></span></div>
+      <p class="desc">창 너머 글줄 — 쌓인 답변.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-mic"/></svg></span>
+      <span class="name">실전 모의면접<span class="badge member">응시권</span></span></div>
+      <p class="desc">창 너머 마이크 — 말하는 자리.</p></div>
+    <div class="lab">작은 크기</div>
+    <div class="sizes">
+      <div class="s"><svg viewBox="0 0 24 24" style="width:16px;height:16px"><use href="#l-dig"/></svg><span>16</span></div>
+      <div class="s"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><use href="#l-dig"/></svg><span>20</span></div>
+      <div class="s"><svg viewBox="0 0 24 24" style="width:26px;height:26px"><use href="#l-dig"/></svg><span>26</span></div>
+      <div class="s"><svg viewBox="0 0 24 24" style="width:36px;height:36px"><use href="#l-dig"/></svg><span>36</span></div>
+    </div>
+  </div>
+
+  <!-- ② 워터마크 -->
+  <div class="col v2">
+    <div class="col-head">
+      <span class="num">2</span><span class="nm">창문 워터마크</span>
+      <div class="ds">기존 아이콘은 그대로, 타일 배경에 <b>실제 로고 실루엣</b>을 은은히 깔아요. 변화 폭이 가장 작습니다.</div>
+    </div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg class="bgwin" viewBox="0 0 24 24"><use href="#winSolid"/></svg><svg class="fg" viewBox="0 0 24 24"><use href="#p-news"/></svg></span>
+      <span class="name">항공 뉴스<span class="badge open">누구나</span></span></div>
+      <p class="desc">국내 10개 항공사 소식을 한곳에서.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg class="bgwin" viewBox="0 0 24 24"><use href="#winSolid"/></svg><svg class="fg" viewBox="0 0 24 24"><use href="#p-dig"/></svg></span>
+      <span class="name">소재 발굴<span class="badge member">수강생</span></span></div>
+      <p class="desc">매일 한 질문씩, 내 경험에서 소재를.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg class="bgwin" viewBox="0 0 24 24"><use href="#winSolid"/></svg><svg class="fg" viewBox="0 0 24 24"><use href="#p-note"/></svg></span>
+      <span class="name">답변노트<span class="badge member">회원</span></span></div>
+      <p class="desc">발굴한 소재가 나만의 답변으로.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg class="bgwin" viewBox="0 0 24 24"><use href="#winSolid"/></svg><svg class="fg" viewBox="0 0 24 24"><use href="#p-mic"/></svg></span>
+      <span class="name">실전 모의면접<span class="badge member">응시권</span></span></div>
+      <p class="desc">진짜 면접처럼 묻고, 끝나면 첨삭.</p></div>
+  </div>
+
+  <!-- ③ 코랄 타일 -->
+  <div class="col v3">
+    <div class="col-head">
+      <span class="num">3</span><span class="nm">코랄 타일</span>
+      <div class="ds">①의 창문을 <b>코랄 타일 위 흰 선</b>으로. 카드에서 가장 세게 튀어 밋밋함이 확실히 사라져요.</div>
+    </div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-news"/></svg></span>
+      <span class="name">항공 뉴스<span class="badge open">누구나</span></span></div>
+      <p class="desc">국내 10개 항공사 소식을 한곳에서.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-dig"/></svg></span>
+      <span class="name">소재 발굴<span class="badge member">수강생</span></span></div>
+      <p class="desc">매일 한 질문씩, 내 경험에서 소재를.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-note"/></svg></span>
+      <span class="name">답변노트<span class="badge member">회원</span></span></div>
+      <p class="desc">발굴한 소재가 나만의 답변으로.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#l-mic"/></svg></span>
+      <span class="name">실전 모의면접<span class="badge member">응시권</span></span></div>
+      <p class="desc">진짜 면접처럼 묻고, 끝나면 첨삭.</p></div>
+  </div>
+
+  <!-- ④ 로고 컬러 -->
+  <div class="col v4">
+    <div class="col-head">
+      <span class="num">4</span><span class="nm">로고 컬러 창문</span>
+      <div class="ds"><b>실제 로고 그대로</b> — 네이비 테두리 + 노을 하늘 + 슬롯. 창 안 풍경만 기능별로 바꿔요. 브랜드가 가장 진하지만 작아지면 뭉개집니다.</div>
+    </div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#c-news"/></svg></span>
+      <span class="name">항공 뉴스<span class="badge open">누구나</span></span></div>
+      <p class="desc">창 너머 노을 — 로고 원본.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#c-dig"/></svg></span>
+      <span class="name">소재 발굴<span class="badge member">수강생</span></span></div>
+      <p class="desc">창 너머 반짝임.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#c-note"/></svg></span>
+      <span class="name">답변노트<span class="badge member">회원</span></span></div>
+      <p class="desc">창 너머 글줄.</p></div>
+    <div class="card"><div class="head">
+      <span class="ico"><svg viewBox="0 0 24 24"><use href="#c-mic"/></svg></span>
+      <span class="name">실전 모의면접<span class="badge member">응시권</span></span></div>
+      <p class="desc">창 너머 마이크.</p></div>
+    <div class="lab">작은 크기 — 전에 지적하신 지점</div>
+    <div class="sizes">
+      <div class="s"><svg viewBox="0 0 24 24" style="width:16px;height:16px"><use href="#c-dig"/></svg><span>16</span></div>
+      <div class="s"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><use href="#c-dig"/></svg><span>20</span></div>
+      <div class="s"><svg viewBox="0 0 24 24" style="width:26px;height:26px"><use href="#c-dig"/></svg><span>26</span></div>
+      <div class="s"><svg viewBox="0 0 24 24" style="width:36px;height:36px"><use href="#c-dig"/></svg><span>36</span></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
