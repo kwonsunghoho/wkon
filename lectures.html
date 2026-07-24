@@ -115,6 +115,7 @@
       // 신청 중 → 예정 → 마감 순
       const rank = l => { const s = LEC.status(l.recruit_start, l.recruit_end); return (l.seats_left === 0 || s === 'closed') ? 2 : s === 'upcoming' ? 1 : 0; };
       data.sort((a, b) => rank(a) - rank(b));
+      await LEC.attachSlots(window.MONC.sb, data);   // 카드의 'N개 타임' 표기용(실패해도 그냥 넘어감)
       stateEl.innerHTML = '';
       grid.innerHTML = data.map(LEC.cardHtml).join('');
     }

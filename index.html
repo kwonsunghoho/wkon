@@ -1028,7 +1028,9 @@
       }
       const rank = l => { const s = window.LEC.status(l.recruit_start, l.recruit_end); return (l.seats_left === 0 || s === 'closed') ? 2 : s === 'upcoming' ? 1 : 0; };
       data.sort((a, b) => rank(a) - rank(b));
-      grid.innerHTML = data.slice(0, 3).map(window.LEC.cardHtml).join('');
+      const top = data.slice(0, 3);
+      await window.LEC.attachSlots(window.MONC.sb, top);   // 카드의 'N개 타임' 표기용
+      grid.innerHTML = top.map(window.LEC.cardHtml).join('');
     } catch (e) {
       console.warn('[홈 특강] 로드 실패', e);
       grid.innerHTML = '<p style="grid-column:1/-1; color:var(--text-dim); font-size:14px; padding:8px 0;">아래 버튼으로 특강 목록을 확인해 주세요.</p>';

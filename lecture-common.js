@@ -51,6 +51,48 @@
     return f(start) + ' ~ ' + f(end);
   }
 
+  /* ── 시간대(lecture_slots) ──
+     한 특강을 여러 날·여러 타임으로 열 때 쓴다. 정원·잔여석은 타임마다 따로.
+     특강의 capacity/lecture_date 는 DB 트리거가 슬롯에서 롤업하므로 카드 코드는 그대로다. */
+
+  // '14:00:00' → '오후 2시', '09:30' → '오전 9시 30분'. 못 읽으면 원문 그대로.
+  function fmtTime(t) {
+    if (!t) return '';
+    const m = String(t).match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return String(t);
+    const h = +m[1], min = +m[2];
+    const ampm = h < 12 ? '오전' : '오후';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return ampm + ' ' + h12 + '시' + (min ? ' ' + min + '분' : '');
+  }
+
+  // 시간대 한 줄 표기: '7월 24일(금) · 오후 2시 ~ 오후 3시 30분 · 오전반'
+  function slotWhen(s) {
+    if (!s) return '';
+    const time = [fmtTime(s.start_time), fmtTime(s.end_time)].filter(Boolean).join(' ~ ');
+    return [fmtDate(s.slot_date), time, s.label].filter(Boolean).join(' · ');
+  }
+
+  // 짧은 표기(신청 내역·관리자 목록용): '7/24 14:00'
+  function slotShort(s) {
+    if (!s) return '';
+    const d = parseDate(s.slot_date);
+    const day = d ? (d.getMonth() + 1) + '/' + d.getDate() : '';
+    const hm = s.start_time ? String(s.start_time).slice(0, 5) : '';
+    return [day, hm].filter(Boolean).join(' ') || (s.label || '');
+  }
+
+  // 이 타임이 꽉 찼는가 (정원 미설정이면 무제한)
+  function slotFull(s) { return !!s && s.seats_left === 0; }
+
+  // 날짜 → 시각 → sort_order 순. DB 정렬과 같은 규칙을 클라이언트에서도 보장한다.
+  function sortSlots(list) {
+    return (list || []).slice().sort((a, b) =>
+      String(a.slot_date).localeCompare(String(b.slot_date))
+      || String(a.start_time || '').localeCompare(String(b.start_time || ''))
+      || (a.sort_order || 0) - (b.sort_order || 0));
+  }
+
   // 항공사 매핑 — 영문 사명(로고 대신 조판)만 여기 두고, 액센트색은 lectures.css의 --air-<code> 변수로.
   const AIRLINES = {
     ke:  { ko: '대한항공',   en: 'KOREAN AIR' },
@@ -108,7 +150,18 @@
     else if (isOut) third = mi(IC.seat, soldOut ? '정원 마감' : '신청 마감');
     else if (l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
 
-    const dateStr = fmtDate(l.lecture_date);
+    // 시간대가 여럿이면 '7월 24일(금) · 3개 타임'(날짜가 갈리면 '… 외 · N개 타임').
+    // 호출부가 l._slots 를 붙여줬을 때만 — 없으면 지금까지처럼 진행일 한 줄이다.
+    // (특강의 lecture_date 는 트리거가 최초 슬롯 날짜로 롤업해두므로 폴백도 어긋나지 않는다)
+    const slots = sortSlots(l._slots);
+    let dateStr = fmtDate(l.lecture_date);
+    if (slots.length) {
+      const first = fmtDate(slots[0].slot_date) || dateStr;
+      const oneDay = slots.every(s => String(s.slot_date) === String(slots[0].slot_date));
+      dateStr = slots.length > 1
+        ? first + (oneDay ? '' : ' 외') + ' · ' + slots.length + '개 타임'
+        : first;
+    }
     const meta = [
       dateStr ? mi(IC.cal, dateStr) : '',
       l.instructor ? mi(IC.who, esc(l.instructor)) : '',
@@ -142,5 +195,27 @@
     return s;
   }
 
-  window.LEC = { esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl, cardHtml, skeletonHtml };
+  /* 특강 목록에 시간대를 붙여 온다(`l._slots`). 카드가 'N개 타임'을 그릴 때 쓴다.
+     ⚠️ 별도 조회인 이유: `select('*,lecture_slots(*)')` 로 조인하면 lecture_slots
+     마이그레이션(20260724160000) 미적용 환경에서 목록 조회 전체가 400 난다.
+     여기서 실패하면 조용히 넘어가고 카드는 진행일 한 줄로 그려진다. */
+  async function attachSlots(sb, lectures) {
+    const list = lectures || [];
+    if (!sb || !list.length) return list;
+    try {
+      const { data, error } = await sb.from('lecture_slots')
+        .select('*').in('lecture_id', list.map(l => l.id));
+      if (error || !data) return list;
+      const byLecture = {};
+      data.forEach(s => { (byLecture[s.lecture_id] = byLecture[s.lecture_id] || []).push(s); });
+      list.forEach(l => { l._slots = byLecture[l.id] || []; });
+    } catch (e) { /* 미적용 환경 — 시간대 없이 그린다 */ }
+    return list;
+  }
+
+  window.LEC = {
+    esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl,
+    cardHtml, skeletonHtml,
+    fmtTime, slotWhen, slotShort, slotFull, sortSlots, attachSlots,
+  };
 })();

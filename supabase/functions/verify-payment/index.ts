@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -62,12 +62,28 @@ Deno.serve(async (req) => {
     let expected: number
     let list: unknown[]
     let lectureIdCol: string | null = null
+    let slotIdCol: string | null = null
     if (lectureId) {
       const { data: lec, error: lecErr } = await supa
         .from('special_lectures').select('id, title, price').eq('id', lectureId).single()
       if (lecErr || !lec) return json({ ok: false, error: 'lecture_not_found' }, 400)
       expected = lec.price
-      list = [{ type: 'lecture', lecture_id: lec.id, name: lec.title, price: lec.price }]
+      const entry: Record<string, unknown> =
+        { type: 'lecture', lecture_id: lec.id, name: lec.title, price: lec.price }
+
+      // 시간대 — ⚠️ 브라우저가 보낸 slotId 가 정말 이 특강의 것인지 서버가 확인한다.
+      // (다른 특강의 시간대를 밀어넣어 남의 자리를 잡는 걸 막는다)
+      if (slotId) {
+        const { data: slot } = await supa
+          .from('lecture_slots').select('id, lecture_id, slot_date, start_time, label')
+          .eq('id', slotId).eq('lecture_id', lec.id).maybeSingle()
+        if (!slot) return json({ ok: false, error: 'slot_not_found' }, 400)
+        slotIdCol = slot.id
+        entry.slot_id = slot.id
+        entry.slot = [slot.slot_date, String(slot.start_time || '').slice(0, 5)]
+          .filter(Boolean).join(' ') || (slot.label || '')
+      }
+      list = [entry]
       lectureIdCol = lec.id
     } else {
       list = Array.isArray(challenges) ? challenges : []
@@ -109,6 +125,7 @@ Deno.serve(async (req) => {
       paid_amount: paid,
     }
     if (lectureIdCol) payload.lecture_id = lectureIdCol
+    if (slotIdCol) payload.slot_id = slotIdCol
     if (applicant.member_id) payload.member_id = applicant.member_id
 
     const { error } = await supa.from('applications').insert(payload)

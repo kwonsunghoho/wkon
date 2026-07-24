@@ -77,6 +77,25 @@
     .guest-nudge a { color: var(--accent-ink); font-weight: 700; }
     .lc-field { margin-bottom: 12px; }
     .lc-field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    /* 시간대 선택 — 정원·잔여석이 타임마다 따로라 신청 전에 반드시 하나를 고른다.
+       라디오는 시각적으로 숨기고 라벨 전체를 44px+ 터치 타깃으로 쓴다(키보드 포커스는 :focus-visible 링으로). */
+    .lc-slots { margin-bottom: 14px; }
+    .lc-slots > .cap { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+    .lc-slot { display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-bottom: 8px; cursor: pointer;
+               border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg); }
+    .lc-slot:last-child { margin-bottom: 0; }
+    .lc-slot input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .lc-slot .dot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); position: relative; }
+    .lc-slot .txt { flex: 1 1 auto; min-width: 0; }
+    .lc-slot .when { display: block; font-size: 15px; font-weight: 800; line-height: 1.35; word-break: keep-all; }
+    .lc-slot .seat { display: block; font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .lc-slot.is-on { border-color: var(--accent-dark); background: var(--accent-tint); }
+    .lc-slot.is-on .dot { border-color: var(--accent-dark); }
+    .lc-slot.is-on .dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-dark); }
+    .lc-slot.is-full { opacity: .55; cursor: not-allowed; }
+    .lc-slot.is-full .seat { color: var(--accent-ink); font-weight: 700; }
+    .lc-slot:has(input:focus-visible) { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+    .lc-slot .low { color: var(--accent-ink); font-weight: 700; }
     .inp { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: 11px; font-size: 16px; font-family: inherit; background: var(--bg); color: var(--text); }
     .inp:focus { outline: 2px solid var(--accent-dark); outline-offset: 1px; border-color: var(--accent-dark); }
     .consent { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--text); margin: 14px 0 4px; cursor: pointer; line-height: 1.5; }
@@ -155,6 +174,8 @@
     const root = document.getElementById('lcRoot');
 
     let LECTURE = null;
+    let SLOTS = [];        // 시간대(lecture_slots). 없으면 빈 배열 = 단일 일정 특강
+    let _slotId = null;    // 사용자가 고른 시간대
     let _memberId = null, _profileHadPhone = false;
     let _busy = false;
     let _payRestore = null;   // 결제 중 '버튼 되돌리기'를 담아둔다 — 결제사 페이지에서 뒤로 왔을 때 쓴다(pageshow)
@@ -167,8 +188,20 @@
         .from('special_lectures').select('*').eq('id', LECTURE_ID).eq('visible', true).single();
       if (error || !data) { renderNotFound(); return; }
       LECTURE = data;
+      SLOTS = await fetchSlots();
       await rerender(data);
       handlePayReturn();
+    }
+
+    /* 시간대 조회. lecture_slots 마이그레이션(20260724160000) 미적용이면 조용히 빈 배열
+       → 지금까지처럼 '일정 하나짜리 특강'으로 그려진다(graceful degrade). */
+    async function fetchSlots() {
+      try {
+        const { data, error } = await window.MONC.sb
+          .from('lecture_slots').select('*').eq('lecture_id', LECTURE_ID);
+        if (error || !data) return [];
+        return LEC.sortSlots(data);
+      } catch (e) { return []; }
     }
 
     function descHtml(text) {
@@ -184,7 +217,8 @@
       root.style.setProperty('--lx-accent', l.airline ? 'var(--air-' + l.airline + ')' : 'var(--lx-navy)');
 
       const rawSt = LEC.status(l.recruit_start, l.recruit_end);
-      const soldOut = l.seats_left === 0;
+      // 시간대가 있으면 '모든 타임이 찼을 때'가 품절이다(한 타임만 차면 그 타임만 막힌다)
+      const soldOut = SLOTS.length ? SLOTS.every(LEC.slotFull) : l.seats_left === 0;
       const st = soldOut ? 'closed' : rawSt;          // 품절이면 마감으로 취급(신청 차단)
       const badge = st === 'open'
         ? '<span class="lc-badge open">신청 중' + (LEC.ddaySuffix(l.recruit_end) || '') + '</span>'
@@ -192,8 +226,18 @@
         // 자리가 다 찬 것과 기간이 끝난 것은 다른 사정이라 문구를 나눈다
         : '<span class="lc-badge closed">' + (soldOut ? '정원 마감' : '신청 마감') + '</span>';
 
+      // 일시 — 시간대가 하나면 그 타임을 그대로, 여럿이면 요약(자세한 건 아래 선택 목록에서)
       const dateStr = LEC.fmtDate(l.lecture_date);
-      const when = [dateStr, l.schedule_text].filter(Boolean).join(' · ') || '추후 안내';
+      let when;
+      if (SLOTS.length === 1) {
+        when = [LEC.slotWhen(SLOTS[0]), l.schedule_text].filter(Boolean).join(' · ');
+      } else if (SLOTS.length > 1) {
+        const oneDay = SLOTS.every(s => String(s.slot_date) === String(SLOTS[0].slot_date));
+        when = LEC.fmtDate(SLOTS[0].slot_date) + (oneDay ? '' : ' 외') + ' · ' + SLOTS.length + '개 타임';
+      } else {
+        when = [dateStr, l.schedule_text].filter(Boolean).join(' · ');
+      }
+      when = when || '추후 안내';
       const recruitPeriod = LEC.fmtPeriod(l.recruit_start, l.recruit_end);
       const priceStr = l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료';
 
@@ -201,9 +245,10 @@
       facts.push(fact('일시', when));
       if (l.instructor) facts.push(fact('강사', l.instructor));
       if (recruitPeriod) facts.push(fact('신청 기간', recruitPeriod));
-      // 잔여석은 DB 트리거가 '정원 − 신청건수'로 자동 계산한 값(20260724150000 마이그레이션)
+      // 잔여석은 DB 트리거가 '정원 − 신청건수'로 자동 계산한 값(20260724150000 마이그레이션).
+      // 시간대가 있으면 이 값은 모든 타임의 합계다(타임별 잔여석은 아래 선택 목록에 나온다).
       if (l.seats_left != null) {
-        facts.push(fact('잔여석', soldOut ? '마감'
+        facts.push(fact(SLOTS.length > 1 ? '전체 잔여석' : '잔여석', soldOut ? '마감'
           : l.seats_left + '석' + (l.capacity ? ' / 정원 ' + l.capacity + '명' : '')));
       } else if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
       facts.push(fact('참가비', priceStr, true));
@@ -223,6 +268,10 @@
         + (l.description ? '<section class="lc-sec lc-desc"><h2>특강 소개</h2>' + descHtml(l.description) + '</section>' : '')
         + (highlights.length ? '<section class="lc-sec"><h2>이런 걸 얻어가요</h2><ul class="lc-high">'
             + highlights.map(h => '<li>' + LEC.esc(h) + '</li>').join('') + '</ul></section>' : '')
+        // 신청이 열려 있으면 시간대는 아래 신청 폼에서 고른다. 닫혀 있을 땐(예정·마감)
+        // 폼이 없어 시간대를 볼 데가 사라지므로 여기서 안내만 한다.
+        + (st !== 'open' && SLOTS.length ? '<section class="lc-sec"><h2>시간대</h2>'
+            + '<div class="lc-slots">' + SLOTS.map(s => slotRowHtml(s, true)).join('') + '</div></section>' : '')
         + applyBoxHtml(l, st, priceStr)
         + '</div>'
         + bankModalHtml(priceStr)
@@ -233,6 +282,20 @@
 
     function fact(k, v, isPrice) {
       return '<div class="lc-fact"><div class="k">' + LEC.esc(k) + '</div><div class="v' + (isPrice ? ' price' : '') + '">' + LEC.esc(v) + '</div></div>';
+    }
+
+    /* 시간대 한 줄. readOnly면 라디오 없이 안내용으로만 그린다(신청 예정·마감 상태). */
+    function slotRowHtml(s, readOnly) {
+      const full = LEC.slotFull(s);
+      const seat = full ? '정원 마감' : (s.seats_left != null ? '잔여 ' + s.seats_left + '석' : '');
+      const low = !full && s.seats_left != null && s.seats_left <= 5;
+      const body = '<span class="txt"><span class="when">' + LEC.esc(LEC.slotWhen(s)) + '</span>'
+        + (seat ? '<span class="seat' + (low || full ? ' low' : '') + '">' + LEC.esc(seat) + '</span>' : '')
+        + '</span>';
+      if (readOnly) return '<div class="lc-slot' + (full ? ' is-full' : '') + '">' + body + '</div>';
+      return '<label class="lc-slot' + (full ? ' is-full' : '') + '">'
+        + '<input type="radio" name="lcSlot" value="' + LEC.esc(s.id) + '"' + (full ? ' disabled' : '') + '>'
+        + '<span class="dot"></span>' + body + '</label>';
     }
 
     function applyBoxHtml(l, st, priceStr) {
@@ -247,11 +310,17 @@
         ? '<button type="button" class="btn-free" id="freeBtn">무료로 신청하기</button>'
         : '<button type="button" class="btn-toss" id="tossBtn"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px;width:auto;display:block;"><span>로 결제하고 신청하기</span></button>'
           + '<button type="button" class="btn-bank" id="bankBtn">계좌이체로 신청하기</button>';
+      // 시간대는 정원·마감이 타임마다 따로라, 이름·연락처보다 먼저 고르게 둔다
+      const slotPicker = SLOTS.length
+        ? '<div class="lc-slots" id="slotPicker"><span class="cap">시간대 선택</span>'
+          + SLOTS.map(s => slotRowHtml(s, false)).join('') + '</div>'
+        : '';
       return '<section class="lc-apply" id="applyBox">'
         + '<h2>신청하기</h2>'
-        + '<p class="hint">이름·연락처를 남기면 신청이 접수돼요.</p>'
+        + '<p class="hint">' + (SLOTS.length ? '원하는 시간대를 고르고 ' : '') + '이름·연락처를 남기면 신청이 접수돼요.</p>'
         + '<div class="member-badge" id="memberBadge"><span data-name></span>님, 회원으로 신청해요. (마이페이지에서 내역 확인)</div>'
         + '<div class="guest-nudge" id="guestNudge"><a href="login.html">회원가입</a>하면 신청 내역과 성장 기록이 계정에 남아요.</div>'
+        + slotPicker
         + '<div class="lc-field" id="rowName"><label>이름</label><input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name"></div>'
         + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel"></div>'
         + '<label class="consent" for="appConsent"><input type="checkbox" id="appConsent"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다.</span></label>'
@@ -296,6 +365,7 @@
         setTimeout(() => { const n = document.getElementById('appName'); if (n) n.focus(); }, 400);
       });
       if (st !== 'open') return;
+      wireSlots();
 
       const toss = document.getElementById('tossBtn');
       const bank = document.getElementById('bankBtn');
@@ -313,6 +383,38 @@
     // ⚠️ document 리스너는 render() 가 다시 돌 때마다 쌓이므로 여기서 딱 한 번만 건다
     // (잔여석 갱신으로 재렌더가 잦아졌다). 나머지는 새로 만든 요소에 붙어 누적되지 않는다.
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBankModal(); });
+
+    /* ── 시간대 선택 ── */
+    function wireSlots() {
+      const box = document.getElementById('slotPicker');
+      if (!box) { _slotId = null; return; }
+
+      // 고를 게 하나뿐이면 미리 골라둔다(선택이랄 게 없다). 여럿이면 직접 고르게 —
+      // 시간대는 되돌리기 어려운 선택이라 임의로 찍어두지 않는다.
+      const open = SLOTS.filter(s => !LEC.slotFull(s));
+      if (!open.some(s => s.id === _slotId)) _slotId = (open.length === 1 ? open[0].id : null);
+
+      box.querySelectorAll('input[name="lcSlot"]').forEach(input => {
+        input.checked = (input.value === _slotId);
+        input.addEventListener('change', () => {
+          if (!input.checked) return;
+          _slotId = input.value;
+          paintSlots();
+        });
+      });
+      paintSlots();
+    }
+
+    function paintSlots() {
+      const box = document.getElementById('slotPicker');
+      if (!box) return;
+      box.querySelectorAll('.lc-slot').forEach(row => {
+        const input = row.querySelector('input');
+        row.classList.toggle('is-on', !!input && input.value === _slotId);
+      });
+    }
+
+    function currentSlot() { return SLOTS.find(s => s.id === _slotId) || null; }
 
     /* ── 회원 연동 ── */
     async function initMember() {
@@ -332,6 +434,13 @@
 
     /* ── 입력 검증(공통) ── */
     function readApplicant() {
+      // 시간대가 있는 특강은 반드시 하나를 골라야 한다(정원·마감이 타임마다 따로라서)
+      if (SLOTS.length && !_slotId) {
+        alert('신청할 시간대를 선택해주세요.');
+        const box = document.getElementById('slotPicker');
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return null;
+      }
       const name = (document.getElementById('appName') || {}).value?.trim() || '';
       const phone = (document.getElementById('appPhone') || {}).value?.trim() || '';
       if (!name || !phone) { alert('이름과 연락처를 모두 입력해주세요.'); return null; }
@@ -342,7 +451,11 @@
     }
 
     function lectureChallengeEntry() {
-      return [{ type: 'lecture', lecture_id: LECTURE.id, name: LECTURE.title, price: LECTURE.price || 0 }];
+      const entry = { type: 'lecture', lecture_id: LECTURE.id, name: LECTURE.title, price: LECTURE.price || 0 };
+      // 관리자 신청자 현황이 challenges 만 보고도 어느 타임인지 알 수 있게 같이 담는다
+      const s = currentSlot();
+      if (s) { entry.slot_id = s.id; entry.slot = LEC.slotShort(s); }
+      return [entry];
     }
 
     /* ── 잔여석 재확인 ──
@@ -362,12 +475,24 @@
       const fresh = await fetchLecture();
       if (!fresh) return true;   // 조회 실패로 신청을 막지 않는다(최종 방어는 DB 트리거)
       LECTURE = fresh;
+      if (SLOTS.length) SLOTS = await fetchSlots();
+
       const st = LEC.status(fresh.recruit_start, fresh.recruit_end);
-      if (fresh.seats_left !== 0 && st === 'open') return true;
+      const soldOut = SLOTS.length ? SLOTS.every(LEC.slotFull) : fresh.seats_left === 0;
+      const picked = currentSlot();
+
+      let msg = null;
+      if (st !== 'open') msg = '신청 기간이 종료되었어요.';
+      else if (soldOut) msg = '아쉽게도 방금 정원이 모두 찼어요.\n다음 특강을 기다려 주세요.';
+      else if (SLOTS.length && (!picked || LEC.slotFull(picked))) {
+        // 특강 전체는 자리가 남았지만 '고른 타임'만 찬 경우 — 다른 타임을 고르면 된다
+        msg = '아쉽게도 방금 이 시간대의 정원이 모두 찼어요.\n남은 시간대를 확인해 주세요.';
+        _slotId = null;
+      }
+      if (!msg) return true;
+
       hideBankModal();
-      alert(fresh.seats_left === 0
-        ? '아쉽게도 방금 정원이 모두 찼어요.\n다음 특강을 기다려 주세요.'
-        : '신청 기간이 종료되었어요.');
+      alert(msg);
       await rerender(fresh);
       return false;
     }
@@ -382,7 +507,10 @@
     /* 최신 잔여석으로 화면을 다시 그린다(신청 접수·마감 후) */
     async function refreshLecture() {
       const fresh = await fetchLecture();
-      if (fresh) { LECTURE = fresh; await rerender(fresh); }
+      if (!fresh) return;
+      LECTURE = fresh;
+      if (SLOTS.length) SLOTS = await fetchSlots();
+      await rerender(fresh);
     }
 
     /* 정원 마감으로 DB 가 막은 신청인지 (마이그레이션 20260724150000 의 errcode) */
@@ -447,6 +575,7 @@
         total_price: LECTURE.price || 0,
         lecture_id: LECTURE.id,
       };
+      if (_slotId) payload.slot_id = _slotId;
       if (applicant.member_id) payload.member_id = applicant.member_id;
       try {
         const { error } = await window.MONC.sb.from('applications').insert(payload);
@@ -487,7 +616,7 @@
         const total = LECTURE.price;
         const paymentId = 'monc-lec-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
         // 모바일은 결제사 페이지로 이동했다가 redirectUrl로 복귀 → sessionStorage에 주문 보관.
-        sessionStorage.setItem('monc_pending_lecture_pay', JSON.stringify({ paymentId, applicant, lectureId: LECTURE.id }));
+        sessionStorage.setItem('monc_pending_lecture_pay', JSON.stringify({ paymentId, applicant, lectureId: LECTURE.id, slotId: _slotId }));
         const rp = new URLSearchParams(location.search); rp.set('payresult', '1');
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
 
@@ -502,7 +631,7 @@
         sessionStorage.removeItem('monc_pending_lecture_pay');
         if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
         btn.textContent = '결제 확인 중…';
-        const ok = await completePayment(paymentId, applicant);
+        const ok = await completePayment(paymentId, applicant, _slotId);
         if (ok) afterApplied(null, true);
       } catch (e) {
         console.error('결제 오류', e);
@@ -523,9 +652,9 @@
       restore();
     });
 
-    async function completePayment(paymentId, applicant) {
+    async function completePayment(paymentId, applicant, slotId) {
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
-        body: { paymentId, lectureId: LECTURE_ID, applicant },
+        body: { paymentId, lectureId: LECTURE_ID, slotId: slotId || null, applicant },
       });
       // 결제 승인과 신청 저장 사이에 마지막 자리가 나간 경우 — 서버가 전액 자동 환불한다
       if (data && data.error === 'lecture_full') {
@@ -557,7 +686,8 @@
       if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
       if (!raw) return;
       let pending; try { pending = JSON.parse(raw); } catch (e) { return; }
-      const ok = await completePayment(pending.paymentId, pending.applicant);
+      // 모바일은 결제사 페이지를 다녀오며 페이지가 새로 뜨므로 시간대도 보관해둔 값을 쓴다
+      const ok = await completePayment(pending.paymentId, pending.applicant, pending.slotId);
       if (ok) afterApplied(null, true);
     }
 
@@ -572,7 +702,13 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // 방금 줄어든 잔여석을 바로 보여준다 — 화면을 다시 그리면서 폼도 초기화된다
       const fresh = await fetchLecture();
-      if (fresh) { LECTURE = fresh; await rerender(fresh); return; }
+      if (fresh) {
+        LECTURE = fresh;
+        if (SLOTS.length) SLOTS = await fetchSlots();
+        _slotId = null;               // 접수 끝 — 시간대 선택도 처음 상태로
+        await rerender(fresh);
+        return;
+      }
       // 조회 실패 시엔 폼만 손으로 정리(잔여석은 다음 방문에 맞춰진다)
       const c = document.getElementById('appConsent'); if (c) c.checked = false;
       if (!_memberId) { const n = document.getElementById('appName'), ph = document.getElementById('appPhone'); if (n) n.value = ''; if (ph) ph.value = ''; }

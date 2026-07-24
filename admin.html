@@ -53,6 +53,22 @@
     .lf-seats { padding: 10px; border: 1px dashed var(--border); border-radius: var(--radius-xs);
                 font-size: 13px; line-height: 1.4; color: var(--text-dim); background: var(--surface2); min-height: 41px; }
     .lf-seats b { font-weight: 700; color: var(--text); font-size: 14px; }
+    /* 시간대 편집기 — 행마다 날짜·시작·종료·정원·메모. 정원이 있으면 그 타임만 따로 마감된다. */
+    .lf-slots { display: flex; flex-direction: column; gap: 8px; }
+    .lf-slots:not(:empty) { margin-bottom: 8px; }
+    .lf-slot { display: grid; grid-template-columns: minmax(126px,1.1fr) 92px 92px 74px minmax(96px,1fr) auto; gap: 6px; align-items: center; }
+    .lf-slot input { padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; width: 100%; font-family: inherit; }
+    .lf-slot-end { display: flex; align-items: center; gap: 8px; }
+    .lf-slot-seat { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+    .lf-slot-del { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-xs);
+                   padding: 8px 10px; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+    .lf-slot-del:hover { border-color: #A33D14; color: #A33D14; }
+    .lf-slot-add { border: 1px dashed var(--border); background: none; border-radius: var(--radius-xs);
+                   padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--accent-ink); cursor: pointer; }
+    @media (max-width: 760px) {
+      .lf-slot { grid-template-columns: 1fr 1fr; }
+      .lf-slot-end { grid-column: 1 / -1; justify-content: space-between; }
+    }
 
     .round-list { display: flex; flex-direction: column; gap: 8px; }
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
@@ -351,6 +367,12 @@
           <div class="field"><label>신청 마감</label><input id="lfREnd" type="date"></div>
           <div class="field"><label>특강 진행일</label><input id="lfDate" type="date"></div>
         </div>
+        <div class="field">
+          <label>시간대 (같은 특강을 여러 날·여러 타임으로 열 때)</label>
+          <div class="lf-slots" id="lfSlots"></div>
+          <button type="button" class="lf-slot-add" id="lfSlotAdd">+ 시간대 추가</button>
+          <div class="lf-thumb-spec">시간대를 하나라도 넣으면 <b>정원·진행일이 시간대에서 자동 계산</b>되고, 신청자는 상세페이지에서 시간대를 골라 신청합니다. 안 넣으면 지금처럼 특강 하나에 일정 하나예요.</div>
+        </div>
         <div class="field"><label>시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
         <div class="field"><label>강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
         <div class="field">
@@ -463,6 +485,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="sojae-common.js"></script>
+  <script src="lecture-common.js"></script>
   <script>
     const sb = () => MONC.sb;
     let members = [], cohorts = [], currentId = null, myProfile = null;
@@ -1095,6 +1118,7 @@
     function enterLectureEdit(l) {
       editingLectureId = l.id;
       fillLectureForm(l);
+      loadSlotRows(l.id);            // 시간대는 별도 테이블이라 따로 읽어온다
       document.getElementById('lecEditingLabel').textContent = '「' + (l.title || '특강') + '」 수정 중 — 고치고 저장하세요';
       document.getElementById('lecEditing').hidden = false;
       document.getElementById('lecSubmitBtn').textContent = '수정 저장';
@@ -1107,6 +1131,10 @@
       document.getElementById('lecEditing').hidden = true;
       document.getElementById('lecSubmitBtn').textContent = '추가';
       renderSeatsInfo(null); // 잔여석은 div 라 form.reset() 이 못 지운다
+      renderSlotRows([]);   // 시간대 행도 마찬가지
+      // ⚠️ 삭제 예약도 반드시 비운다 — 안 비우면 '수정 중 시간대 삭제 → 취소 → 새 특강 추가'
+      //    에서 남아 있던 id 로 남의 시간대를 지운다.
+      _slotRemoved = [];
       syncThumbPreview();   // form.reset()으로 비워진 주소칸에 미리보기를 맞춘다
       thumbMsg(THUMB_HINT, false);
     }
@@ -1128,6 +1156,112 @@
       const left = (l.seats_left != null ? l.seats_left : l.capacity);
       el.innerHTML = (left === 0 ? '<b>정원 마감</b>' : '<b>' + left + '석</b> 남음')
         + '<br>신청 ' + Math.max(l.capacity - left, 0) + '명 / 정원 ' + l.capacity + '명';
+    }
+
+    /* ── 시간대(lecture_slots) 편집기 ──
+       같은 특강을 여러 날·여러 타임으로 열 때 쓴다. 정원·잔여석은 타임마다 따로 세고,
+       특강의 정원·진행일은 DB 트리거가 시간대에서 롤업한다(그래서 시간대가 있으면
+       위 '정원' 칸은 잠긴다 — 손으로 넣어봐야 합계가 덮어쓴다).
+       마이그레이션 20260724160000 미적용이면 조회가 실패해 편집기가 그냥 안 뜬다. */
+    let _slotRemoved = [];   // 저장 시 삭제할 기존 시간대 id
+
+    async function loadSlotRows(lectureId) {
+      _slotRemoved = [];
+      renderSlotRows([]);
+      if (!lectureId) return;
+      try {
+        const { data, error } = await MONC.sb.from('lecture_slots')
+          .select('*').eq('lecture_id', lectureId);
+        if (error || !data) return;
+        renderSlotRows(LEC.sortSlots(data));
+      } catch (e) { /* 미적용 환경 — 편집기 없이 종전대로 */ }
+    }
+
+    function renderSlotRows(list) {
+      const box = document.getElementById('lfSlots');
+      if (!box) return;
+      box.innerHTML = (list || []).map(slotRowHtml).join('');
+      syncCapacityLock();
+    }
+
+    function slotRowHtml(s) {
+      s = s || {};
+      const seat = (s.capacity != null)
+        ? '잔여 ' + (s.seats_left != null ? s.seats_left : s.capacity) + '/' + s.capacity
+        : (s.id ? '무제한' : '');
+      return '<div class="lf-slot" data-id="' + esc(s.id || '') + '">'
+        + '<input type="date" data-f="slot_date" value="' + esc(s.slot_date || '') + '">'
+        + '<input type="time" data-f="start_time" value="' + esc(String(s.start_time || '').slice(0, 5)) + '">'
+        + '<input type="time" data-f="end_time" value="' + esc(String(s.end_time || '').slice(0, 5)) + '">'
+        + '<input type="number" min="1" data-f="capacity" placeholder="정원" value="' + (s.capacity != null ? s.capacity : '') + '">'
+        + '<input type="text" data-f="label" placeholder="메모(선택)" value="' + esc(s.label || '') + '">'
+        + '<div class="lf-slot-end"><span class="lf-slot-seat">' + esc(seat) + '</span>'
+        + '<button type="button" class="lf-slot-del">삭제</button></div>'
+        + '</div>';
+    }
+
+    // 시간대가 하나라도 있으면 정원은 합계 자동 — 입력칸을 잠가 혼선을 막는다
+    function syncCapacityLock() {
+      const rows = document.querySelectorAll('#lfSlots .lf-slot');
+      const cap = document.getElementById('lfCapacity');
+      if (!cap) return;
+      cap.disabled = rows.length > 0;
+      cap.placeholder = rows.length > 0 ? '시간대 합계로 자동' : '예: 20';
+      if (rows.length > 0) cap.value = '';
+    }
+
+    document.getElementById('lfSlotAdd').addEventListener('click', () => {
+      document.getElementById('lfSlots').insertAdjacentHTML('beforeend', slotRowHtml(null));
+      syncCapacityLock();
+    });
+
+    document.getElementById('lfSlots').addEventListener('click', e => {
+      const btn = e.target.closest('.lf-slot-del');
+      if (!btn) return;
+      const row = btn.closest('.lf-slot');
+      const id = row.dataset.id;
+      if (id && !confirm('이 시간대를 삭제할까요?\n이미 이 시간대로 신청한 사람이 있으면 신청 내역은 남고 시간대만 비워집니다.')) return;
+      if (id) _slotRemoved.push(id);
+      row.remove();
+      syncCapacityLock();
+    });
+
+    // 폼 → 저장할 시간대 목록. 날짜가 빈 행은 무시(실수로 추가만 해둔 행).
+    function readSlotRows() {
+      return [...document.querySelectorAll('#lfSlots .lf-slot')].map((row, i) => {
+        const v = f => (row.querySelector('[data-f="' + f + '"]') || {}).value || '';
+        const cap = v('capacity');
+        return {
+          id:         row.dataset.id || null,
+          slot_date:  v('slot_date') || null,
+          start_time: v('start_time') || null,
+          end_time:   v('end_time') || null,
+          label:      v('label').trim() || null,
+          capacity:   cap === '' ? null : parseInt(cap, 10),
+          sort_order: i,
+        };
+      }).filter(s => s.slot_date);
+    }
+
+    /* 특강 저장 뒤 시간대를 맞춘다(삭제 → 수정 → 추가). 트리거가 알아서 특강 정원·진행일을
+       롤업하므로 여기서 정원을 계산해 보내지 않는다. */
+    async function saveSlotRows(lectureId, rows) {
+      if (_slotRemoved.length) {
+        const { error } = await MONC.sb.from('lecture_slots').delete().in('id', _slotRemoved);
+        if (error) throw error;
+        _slotRemoved = [];
+      }
+      for (const s of rows) {
+        const body = {
+          lecture_id: lectureId, slot_date: s.slot_date, start_time: s.start_time,
+          end_time: s.end_time, label: s.label, capacity: s.capacity, sort_order: s.sort_order,
+        };
+        const q = s.id
+          ? MONC.sb.from('lecture_slots').update(body).eq('id', s.id)
+          : MONC.sb.from('lecture_slots').insert(body);
+        const { error } = await q;
+        if (error) throw error;
+      }
     }
 
     // 목록 한 줄 요약용 잔여석 — 정원이 있으면 '잔여 7/20석'(자동), 없으면 구 수동값만
@@ -1155,11 +1289,12 @@
         .select('*').order('sort_order').order('lecture_date', { nullsFirst: false });
       if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 특강이 없습니다. 위 폼에서 추가하세요.</div>'; return; }
+      await LEC.attachSlots(MONC.sb, data);   // 목록에 'N개 타임' 표시용(미적용 환경이면 조용히 생략)
       listEl.innerHTML = data.map(l => `
         <div class="round-item">
           <div>
             <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${seatsSummary(l)}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
@@ -1186,6 +1321,7 @@
       const price = parseInt(priceRaw, 10);
       if (priceRaw === '' || isNaN(price) || price < 0) { alert('참가비를 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
       const highlights = lecVal('lfHigh').split('\n').map(s => s.trim()).filter(Boolean);
+      const slotRows = readSlotRows();
       // ⚠️ seats_left 는 보내지 않는다 — DB 트리거가 '정원 − 신청건수'로 계산하는 파생값이라
       //    여기서 덮으면 실제 신청 수와 어긋난다. (마이그레이션 미적용 환경에서도 기존
       //    수동값을 지우지 않도록, null 로 밀지 말고 아예 빼는 게 맞다.)
@@ -1196,7 +1332,6 @@
         description:   lecVal('lfDesc') || null,
         highlights:    highlights.length ? highlights : null,
         price,
-        capacity:      lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null,
         sort_order:    lecVal('lfSort') ? parseInt(lecVal('lfSort'), 10) : 0,
         recruit_start: lecVal('lfRStart') || null,
         recruit_end:   lecVal('lfREnd') || null,
@@ -1206,14 +1341,29 @@
         thumb_url:     lecVal('lfThumb') || null,
         visible:       document.getElementById('lfVisible').checked,
       };
-      if (editingLectureId) {
-        const { error } = await MONC.sb.from('special_lectures').update(row).eq('id', editingLectureId);
+      // ⚠️ 시간대가 있으면 정원을 보내지 않는다 — 트리거가 시간대 합계로 롤업해둔 값을
+      //    여기서 null 로 밀면 특강 전체 잔여석이 사라진다(다음 시간대 변경 전까지 복구 안 됨).
+      if (!slotRows.length) row.capacity = lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null;
+      let lectureId = editingLectureId;
+      if (lectureId) {
+        const { error } = await MONC.sb.from('special_lectures').update(row).eq('id', lectureId);
         if (error) { alert('수정 실패: ' + error.message); return; }
-        toast('수정됨'); exitLectureEdit(); loadLectures(); return;
+      } else {
+        // 시간대를 붙이려면 새 특강의 id 가 필요하다 → insert 결과를 돌려받는다
+        const { data, error } = await MONC.sb.from('special_lectures').insert(row).select('id').single();
+        if (error) { alert('저장 실패: ' + error.message); return; }
+        lectureId = data && data.id;
       }
-      const { error } = await MONC.sb.from('special_lectures').insert(row);
-      if (error) { alert('저장 실패: ' + error.message); return; }
-      toast('추가됨'); exitLectureEdit(); loadLectures();
+      // 특강을 저장한 뒤 시간대를 맞춘다. 여기서 실패해도 특강 자체는 이미 저장됐으므로
+      // 그 사실을 분명히 알려 같은 폼을 다시 제출하지 않게 한다.
+      try {
+        await saveSlotRows(lectureId, slotRows);
+      } catch (err) {
+        alert('특강은 저장됐지만 시간대 저장에 실패했어요.\n' + (err && err.message ? err.message : err)
+          + '\n\n목록에서 이 특강을 다시 열어 시간대를 확인해 주세요.');
+        exitLectureEdit(); loadLectures(); return;
+      }
+      toast(editingLectureId ? '수정됨' : '추가됨'); exitLectureEdit(); loadLectures();
     });
 
     // ── 신청자 현황(applications) ──
@@ -1222,7 +1372,8 @@
     function chSummary(challenges) {
       if (!Array.isArray(challenges)) return '';
       return challenges.map(c => {
-        if (c && (c.type === 'lecture' || c.lecture_id)) return '📚 ' + (c.name || '특강');  // 특강 신청
+        // 특강 신청 — 시간대를 골라 신청했으면 어느 타임인지까지 보여준다
+        if (c && (c.type === 'lecture' || c.lecture_id)) return '📚 ' + (c.name || '특강') + (c.slot ? ' (' + c.slot + ')' : '');
         return `${CH_LABEL[c.challenge] || c.challenge || ''}${c.round ? ' ' + c.round + '기' : ''}`;
       }).join(', ');
     }
