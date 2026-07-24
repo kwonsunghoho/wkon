@@ -63,14 +63,17 @@
     .lf-slot input.t.bad { border-color: #A33D14; background: #FDF4F0; }
     .lf-slot-end { display: flex; align-items: center; gap: 8px; }
     .lf-slot-seat { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
-    .lf-slot-del { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-xs);
-                   padding: 8px 10px; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+    .lf-slot-del, .lf-slot-copy { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-xs);
+                   padding: 8px 10px; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; }
     .lf-slot-del:hover { border-color: #A33D14; color: #A33D14; }
+    .lf-slot-copy:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
     .lf-slot-add { border: 1px dashed var(--border); background: none; border-radius: var(--radius-xs);
                    padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--accent-ink); cursor: pointer; }
     @media (max-width: 760px) {
       .lf-slot { grid-template-columns: 1fr 1fr; }
       .lf-slot-end { grid-column: 1 / -1; justify-content: space-between; }
+      /* 좁은 화면에선 복제·삭제가 나란히 서므로 터치 44px 을 지킨다(9대 원칙) */
+      .lf-slot-del, .lf-slot-copy { min-height: 44px; padding: 10px 18px; }
     }
 
     .round-list { display: flex; flex-direction: column; gap: 8px; }
@@ -1189,9 +1192,10 @@
 
     function slotRowHtml(s) {
       s = s || {};
-      const seat = (s.capacity != null)
-        ? '잔여 ' + (s.seats_left != null ? s.seats_left : s.capacity) + '/' + s.capacity
-        : (s.id ? '무제한' : '');
+      // 아직 저장 전인 행(복제·새 행)은 잔여석을 말할 수 없다 — 빈칸으로 둔다
+      const seat = !s.id ? ''
+        : s.capacity != null ? '잔여 ' + (s.seats_left != null ? s.seats_left : s.capacity) + '/' + s.capacity
+        : '무제한';
       return '<div class="lf-slot" data-id="' + esc(s.id || '') + '">'
         + '<input type="date" data-f="slot_date" value="' + esc(s.slot_date || '') + '">'
         // ⚠️ type="time" 금지 — 브라우저 기본 다이얼·오전/오후 UI가 폭도 먹고 입력도 느려서
@@ -1201,6 +1205,7 @@
         + '<input type="number" min="1" data-f="capacity" placeholder="정원" value="' + (s.capacity != null ? s.capacity : '') + '">'
         + '<input type="text" data-f="label" placeholder="메모(선택)" value="' + esc(s.label || '') + '">'
         + '<div class="lf-slot-end"><span class="lf-slot-seat">' + esc(seat) + '</span>'
+        + '<button type="button" class="lf-slot-copy" title="이 줄을 복사해 시간만 바꿔 쓰기">복제</button>'
         + '<button type="button" class="lf-slot-del">삭제</button></div>'
         + '</div>';
     }
@@ -1221,6 +1226,26 @@
     });
 
     document.getElementById('lfSlots').addEventListener('click', e => {
+      // 복제 — 같은 날 다른 타임을 넣을 때 날짜·정원·메모를 다시 치지 않게 한다.
+      // ⚠️ id 는 물려주지 않는다(slotRowHtml 에 넣지 않음) — 물려주면 저장 시 새 행이 아니라
+      //    원본을 수정해버려 시간대가 안 늘고 원래 타임만 바뀐다.
+      const copyBtn = e.target.closest('.lf-slot-copy');
+      if (copyBtn) {
+        const src = copyBtn.closest('.lf-slot');
+        const v = f => (src.querySelector('[data-f="' + f + '"]') || {}).value || '';
+        const capRaw = v('capacity');
+        src.insertAdjacentHTML('afterend', slotRowHtml({
+          slot_date: v('slot_date'),
+          capacity:  capRaw === '' ? null : parseInt(capRaw, 10),
+          label:     v('label'),
+          // 시간은 비워둔다 — 바로 여기만 채우면 되고, 실수로 같은 타임이 두 번 저장되는 것도 막는다
+        }));
+        const t = src.nextElementSibling.querySelector('[data-f="start_time"]');
+        if (t) t.focus();
+        syncCapacityLock();
+        return;
+      }
+
       const btn = e.target.closest('.lf-slot-del');
       if (!btn) return;
       const row = btn.closest('.lf-slot');

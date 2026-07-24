@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>특강 카드 가격 표시 — 3안 비교</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── 실제 lectures.css 에서 그대로 가져온 카드 스펙 ── */
+  :root{
+    --air-ke:#14375E; --air-lj:#3A6440; --air-7c:#8C4318;
+    --lx-cover:#E4DDC9; --lx-info:#FBF9F4; --lx-navy:#1B2E4E;
+    --lx-body:#4A4640; --lx-metac:#7A756C;
+    --lx-bd:rgba(38,34,28,.12); --lx-bd-h:rgba(38,34,28,.30);
+    --bg:#E9E4D8; --text:#26221C; --serif:'Noto Serif KR',serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+       background:var(--bg);color:var(--text);line-height:1.6;padding:32px 20px 80px;word-break:keep-all}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  h1{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--lx-navy);line-height:1.3}
+  .lede{margin-top:10px;font-size:15px;color:var(--lx-body);max-width:640px}
+  .ctrl{margin:22px 0 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .ctrl button{border:1px solid var(--lx-bd);background:var(--lx-info);border-radius:999px;
+               padding:9px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;color:var(--lx-body)}
+  .ctrl button.on{background:var(--lx-navy);color:#fff;border-color:var(--lx-navy)}
+
+  section{margin-top:44px;padding-top:28px;border-top:1px solid var(--lx-bd)}
+  section:first-of-type{border-top:0}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;
+       color:#8C4318;background:rgba(140,67,24,.10);padding:4px 10px;border-radius:999px}
+  h2{font-family:var(--serif);font-size:23px;font-weight:700;color:var(--lx-navy);margin-top:10px}
+  .who{margin-top:6px;font-size:13.5px;color:var(--lx-metac)}
+  .why{margin-top:12px;font-size:14.5px;color:var(--lx-body);max-width:660px}
+  .why b{color:var(--lx-navy);font-weight:700}
+  .cons{margin-top:8px;font-size:13.5px;color:#8C4318;max-width:660px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:22px}
+  body.narrow .grid{grid-template-columns:375px;justify-content:start}
+  body.narrow .lx-ko{font-size:24px}
+
+  /* ── 카드 본체(실제 스펙) ── */
+  .lx-card{--lx-accent:var(--lx-navy);display:flex;flex-direction:column;background:var(--lx-info);
+           border:1px solid var(--lx-bd);border-radius:14px;overflow:hidden;text-decoration:none;color:var(--lx-body)}
+  .lx-cover{position:relative;background:var(--lx-cover);padding:28px 24px 24px}
+  .lx-en{font-size:12px;font-weight:400;letter-spacing:.14em;line-height:1.2;color:var(--lx-accent);text-transform:uppercase}
+  .lx-ko{margin-top:12px;font-size:28px;font-weight:500;line-height:1.25;color:var(--lx-navy);letter-spacing:-.01em;
+         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .lx-rule{margin:20px 0 0;height:1px;border:0;background:var(--lx-accent);opacity:.6}
+  .lx-badge{position:absolute;top:16px;right:16px;font-size:11px;font-weight:400;line-height:1.5;
+            padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .lx-badge.free{background:rgba(46,125,70,.14);color:#2E6E42}
+  .lx-badge.paid{background:rgba(27,46,78,.10);color:var(--lx-navy)}
+  .lx-info{padding:16px 24px 20px}
+  .lx-copy{font-size:14px;font-weight:400;line-height:1.6;color:var(--lx-body)}
+  .lx-meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px 12px;font-size:13px;font-weight:400;color:var(--lx-metac)}
+  .lx-copy + .lx-meta{margin-top:12px}
+  .mi{display:inline-flex;align-items:center;gap:5px}
+  .mi svg{width:14px;height:14px;opacity:.7;flex:0 0 auto}
+
+  /* ═══ A안 — 하단 가격 줄 ═══ */
+  .a .lx-price{margin-top:14px;padding-top:13px;border-top:1px solid var(--lx-bd);
+               display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .a .lx-price .l{font-size:12.5px;font-weight:400;color:var(--lx-metac)}
+  .a .lx-price .v{font-size:20px;font-weight:500;color:var(--lx-navy);letter-spacing:-.01em}
+  .a .lx-price .v.free{color:#2E6E42}
+
+  /* ═══ B안 — 하단 띠 ═══ */
+  .b .lx-info{padding-bottom:16px}
+  .b .lx-band{background:var(--lx-cover);border-top:1px solid var(--lx-bd);
+              padding:12px 24px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .b .lx-band .l{font-size:12.5px;font-weight:400;color:var(--lx-body);opacity:.8}
+  .b .lx-band .v{font-size:19px;font-weight:500;color:var(--lx-navy);letter-spacing:-.01em}
+  .b .lx-band .v.free{color:#2E6E42}
+
+  /* ═══ C안 — 메타행 인라인 ═══ */
+  .c .lx-meta{justify-content:flex-start}
+  .c .lx-meta .price{margin-left:auto;font-size:15px;font-weight:500;color:var(--lx-navy)}
+  .c .lx-meta .price.free{color:#2E6E42}
+
+  .note{margin-top:16px;font-size:13px;color:var(--lx-metac);background:var(--lx-info);
+        border:1px solid var(--lx-bd);border-radius:10px;padding:12px 14px;max-width:660px}
+  @media(max-width:900px){ .grid{grid-template-columns:1fr} h1{font-size:25px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>특강 카드, 가격을 어디에 둘까</h1>
+  <p class="lede">지금은 커버 우상단 회색 알약 하나가 가격입니다. 작고 옅어서 눈에 안 걸립니다.
+    아래 3안은 각각 실제로 쓰이는 방식이고, 모두 <b>지금 카드 규칙(그림자 금지 · 굵기 400·500 · 네이비 제목)</b>을 지킵니다.</p>
+
+  <div class="ctrl">
+    <button id="w3" class="on">데스크톱 3열</button>
+    <button id="w1">모바일 375px</button>
+    <span style="font-size:13px;color:var(--lx-metac)">← 트래픽 99%가 모바일이니 375px를 기준으로 봐주세요</span>
+  </div>
+
+  <!-- ═══════════ 현재 ═══════════ -->
+  <section>
+    <span class="tag">현재</span>
+    <h2>우상단 알약</h2>
+    <p class="why">가격이 <b>제목보다 위, 구석에, 11px 회색</b>으로 있습니다. 시선은 큰 제목부터 가는데
+      가격은 반대쪽 구석이라 마지막까지 못 찾습니다.</p>
+    <div class="grid" id="g0"></div>
+  </section>
+
+  <!-- ═══════════ A ═══════════ -->
+  <section class="a">
+    <span class="tag">A안</span>
+    <h2>하단 가격 줄</h2>
+    <p class="who">커머스 표준 — 무신사 · 29CM · 쿠팡 · 클래스101이 쓰는 구조</p>
+    <p class="why">정보를 다 읽고 <b>맨 아래에서 가격으로 끝맺는</b> 방식. 온라인 쇼핑 카드의 사실상 표준이라
+      사람들이 “가격은 카드 밑에 있다”를 이미 알고 찾습니다. 얇은 구분선 하나만 더 그으면 되고,
+      가격을 20px로 키워도 카드가 요란해지지 않습니다.</p>
+    <p class="cons">약점: 배경색이 없어 B안보다는 한 뼘 덜 튑니다.</p>
+    <div class="grid" id="gA"></div>
+  </section>
+
+  <!-- ═══════════ B ═══════════ -->
+  <section class="b">
+    <span class="tag">B안</span>
+    <h2>하단 띠</h2>
+    <p class="who">예약·배달 앱 — 배달의민족 · 야놀자 · 네이버 예약이 쓰는 구조</p>
+    <p class="why">카드 맨 밑을 <b>커버와 같은 톤의 띠</b>로 깔고 그 안에 가격을 둡니다. 배경이 깔려 있어
+      셋 중 가장 확실히 걸리고, <b>커버(위)와 띠(아래)가 정보부를 감싸</b> 카드가 한 덩어리로 닫힙니다.
+      새 색을 만들지 않고 이미 있는 커버 톤을 재사용하는 것이 포인트입니다.</p>
+    <p class="cons">약점: 카드가 세로로 12px쯤 길어집니다. 목록에 카드가 많으면 누적됩니다.</p>
+    <div class="grid" id="gB"></div>
+  </section>
+
+  <!-- ═══════════ C ═══════════ -->
+  <section class="c">
+    <span class="tag">C안</span>
+    <h2>메타행 오른쪽 끝</h2>
+    <p class="who">여행·숙소 — 에어비앤비 · 마이리얼트립이 쓰는 구조</p>
+    <p class="why">날짜·잔여석이 있는 줄 <b>오른쪽 끝에 가격만</b> 얹습니다. 줄이 늘지 않아
+      <b>카드 높이가 그대로</b>고, 가장 절제된 모습입니다.</p>
+    <p class="cons">약점: 같은 줄의 회색 메타들과 섞여, 셋 중 가장 덜 튑니다. 375px에서 메타가 길면 줄바꿈돼 오른쪽 끝 정렬이 흐트러집니다.</p>
+    <div class="grid" id="gC"></div>
+  </section>
+
+  <p class="note">세 안 모두 <b>무료 특강은 초록 ‘무료’ 배지를 우상단에 그대로</b> 둡니다 — 무료는 그 자체가
+    끌어당기는 문구라 맨 위에 있는 편이 낫고, 유료 가격만 아래로 내려갑니다.</p>
+</div>
+
+<script>
+  const IC = {
+    cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>',
+    seat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>'
+  };
+  const SAMPLES = [
+    { air:'ke', en:'KOREAN AIR', ko:'대한항공 영상면접 특강', copy:'합격자들의 공통점 분석',
+      meta:'7월 31일(금) · 2개 타임', seat:'잔여 20석', price:10000 },
+    { air:'lj', en:'JIN AIR', ko:'진에어 자기소개 클리닉', copy:'30초 안에 각인시키는 법',
+      meta:'8월 5일(수)', seat:'잔여 4석', low:true, price:35000 },
+    { air:'7c', en:'JEJU AIR', ko:'제주항공 채용 설명회', copy:'올해 채용 흐름 짚어드립니다',
+      meta:'8월 12일(수)', seat:'잔여 50석', price:0 }
+  ];
+  const won = n => Number(n).toLocaleString() + '원';
+  const mi = (icon, text, low) => '<span class="mi' + (low ? ' seats-low' : '') + '">' + icon + text + '</span>';
+
+  function card(s, mode) {
+    const free = !(s.price > 0);
+    // 무료는 세 안 모두 우상단 초록 배지 유지. 유료 배지는 A·B·C 에서 아래로 내려간다.
+    const badge = free ? '<span class="lx-badge free">무료</span>'
+                 : (mode === 'now' ? '<span class="lx-badge paid">' + won(s.price) + '</span>' : '');
+    const metaItems = mi(IC.cal, s.meta) + mi(IC.seat, s.seat, s.low)
+      + (mode === 'c' ? '<span class="price' + (free ? ' free' : '') + '">' + (free ? '무료' : won(s.price)) + '</span>' : '');
+
+    let tail = '';
+    if (mode === 'a') tail = '<div class="lx-price"><span class="l">참가비</span>'
+      + '<span class="v' + (free ? ' free' : '') + '">' + (free ? '무료' : won(s.price)) + '</span></div>';
+
+    const band = (mode === 'b') ? '<div class="lx-band"><span class="l">참가비</span>'
+      + '<span class="v' + (free ? ' free' : '') + '">' + (free ? '무료' : won(s.price)) + '</span></div>' : '';
+
+    return '<div class="lx-card" style="--lx-accent:var(--air-' + s.air + ')">'
+      + '<div class="lx-cover">' + badge
+      +   '<div class="lx-en">' + s.en + '</div>'
+      +   '<div class="lx-ko">' + s.ko + '</div>'
+      +   '<hr class="lx-rule">'
+      + '</div>'
+      + '<div class="lx-info">'
+      +   '<div class="lx-copy">' + s.copy + '</div>'
+      +   '<div class="lx-meta">' + metaItems + '</div>'
+      +   tail
+      + '</div>' + band
+      + '</div>';
+  }
+
+  const fill = (id, mode) => document.getElementById(id).innerHTML = SAMPLES.map(s => card(s, mode)).join('');
+  fill('g0','now'); fill('gA','a'); fill('gB','b'); fill('gC','c');
+
+  const w3 = document.getElementById('w3'), w1 = document.getElementById('w1');
+  w3.onclick = () => { document.body.classList.remove('narrow'); w3.classList.add('on'); w1.classList.remove('on'); };
+  w1.onclick = () => { document.body.classList.add('narrow'); w1.classList.add('on'); w3.classList.remove('on'); };
+</script>
+</body>
+</html>
