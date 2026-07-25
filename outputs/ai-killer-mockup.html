@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI킬러 화면 — 3안 비교</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     AI킬러(ai-killer.html) 화면 시안 — 2026-07-25
+     설계 확정본: docs/superpowers/specs/2026-07-24-ai-killer-design.md ①단계
+
+     세 안이 갈리는 지점은 딱 하나 —
+     "375px 폰에서 원문과 지적을 어떻게 같이 보여줄 것인가".
+     입력 화면·등급 배지·밑줄 색·카드 칸 형식은 세 안 공통이다.
+     ══════════════════════════════════════════════════════════════ */
+
+  /* 사이트 토큰(tokens.css)에서 그대로 가져옴 */
+  :root{
+    --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9; --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,.16); --border-soft:rgba(38,34,28,.09);
+    --action:#F27945; --action-dark:#D9531F; --action-ink:#A33D14;
+    --action-tint:#FDE9DE; --action-ink-on:#2A1206;
+    --serif:'Song Myung','Noto Serif KR','Nanum Myeongjo',serif;
+    --radius-xs:8px; --radius-sm:14px; --radius:20px;
+
+    /* ── 지적 4종의 색 ──
+       ⚠️ 색만으로 구분하지 않는다(9대 원칙 4 + 색각 이상 대응):
+       밑줄 모양(실선/이중선/점선)과 번호칩이 색과 함께 종류를 말한다. */
+    --k-cliche:#A33D14;  --k-cliche-bg:rgba(242,121,69,.20);   /* 상투어   — 실선 */
+    --k-struct:#1F5F6B;  --k-struct-bg:rgba(31,95,107,.15);    /* 정형구조 — 이중선 */
+    --k-vague:#6E4B8F;   --k-vague-bg:rgba(110,75,143,.10);    /* 구체성   — 문단 좌측 바 */
+    --k-ctx:#5F574B;     --k-ctx-bg:rgba(95,87,75,.10);        /* 문맥     — 점선 */
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+       background:var(--bg2);color:var(--text);line-height:1.6;
+       padding:34px 20px 90px;word-break:keep-all;overflow-wrap:break-word;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1300px;margin:0 auto}
+
+  /* ── 문서 머리 ── */
+  .doc-tag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.16em;
+           color:var(--action-ink);background:var(--action-tint);padding:5px 11px;border-radius:999px}
+  h1{font-family:var(--serif);font-size:clamp(28px,4vw,38px);font-weight:700;
+     line-height:1.28;margin-top:12px;letter-spacing:-.01em}
+  .lede{margin-top:12px;font-size:15.5px;color:var(--text-muted);max-width:680px}
+  .lede b{color:var(--text);font-weight:800}
+  .howto{margin-top:18px;padding:16px 18px;background:var(--surface);border:1px solid var(--border-soft);
+         border-left:4px solid var(--action);border-radius:var(--radius-xs);max-width:680px;font-size:14.5px}
+  .howto h4{font-size:14.5px;font-weight:800;margin-bottom:6px}
+  .howto p{color:var(--text-muted)}
+
+  .ctrl{margin:26px 0 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .ctrl button{border:1px solid var(--border);background:var(--surface);border-radius:999px;
+               padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit;
+               cursor:pointer;color:var(--text-muted);min-height:44px}
+  .ctrl button.on{background:var(--text);color:#fff;border-color:var(--text)}
+  .ctrl .hint{font-size:13.5px;color:var(--text-dim)}
+
+  /* ── 섹션(각 안) ── */
+  section{margin-top:46px;padding-top:30px;border-top:1px solid var(--border)}
+  .stag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;
+        color:var(--action-ink);background:rgba(163,61,20,.10);padding:4px 10px;border-radius:999px}
+  h2{font-family:var(--serif);font-size:26px;font-weight:700;margin-top:11px;line-height:1.3}
+  .who{margin-top:7px;font-size:14px;color:var(--text-dim)}
+  .why{margin-top:14px;font-size:14.5px;color:var(--text-muted);max-width:700px}
+  .why b{color:var(--text);font-weight:800}
+  .cons{margin-top:8px;font-size:14px;color:var(--k-cliche);max-width:700px}
+
+  /* ── 폰 프레임 ── */
+  .frames{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px}
+  .phone{flex:0 0 auto;width:375px}
+  .phone-cap{font-size:13px;font-weight:800;color:var(--text-dim);margin-bottom:8px;letter-spacing:.02em}
+  .screen{width:375px;height:700px;overflow-y:auto;overflow-x:hidden;background:var(--bg);
+          border:1px solid var(--border);border-radius:22px;
+          box-shadow:0 10px 34px rgba(38,34,28,.13);position:relative;
+          scrollbar-width:thin}
+  .screen::-webkit-scrollbar{width:6px}
+  .screen::-webkit-scrollbar-thumb{background:rgba(38,34,28,.22);border-radius:3px}
+
+  /* 화면 안 공통 — 실제 페이지 스펙 */
+  .sc-nav{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;
+          padding:12px 16px;background:rgba(233,228,216,.94);backdrop-filter:blur(16px);
+          -webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border-soft)}
+  .sc-nav .b{font-size:14px;font-weight:700;color:var(--text);opacity:.85}
+  .sc-nav .t{font-family:var(--serif);font-size:16px;font-weight:700}
+  .sc-body{padding:18px 16px 40px}
+
+  /* 입력 화면 */
+  .in-head{font-family:var(--serif);font-size:24px;font-weight:700;line-height:1.3}
+  .in-sub{margin-top:8px;font-size:14px;color:var(--text-muted)}
+  .in-box{margin-top:16px;background:var(--surface);border:1px solid var(--border);
+          border-radius:var(--radius-sm);padding:14px}
+  .in-tabs{display:flex;gap:6px;margin-bottom:12px}
+  .in-tab{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;
+          font-size:14px;font-weight:700;border:1px solid var(--border);background:var(--bg2);
+          border-radius:var(--radius-xs);color:var(--text-muted);cursor:pointer;font-family:inherit}
+  .in-tab.on{background:var(--text);color:#fff;border-color:var(--text)}
+  .in-ta{width:100%;min-height:150px;border:0;resize:none;font:inherit;font-size:15px;
+         line-height:1.75;color:var(--text);background:transparent}
+  .in-ta:focus{outline:none}
+  /* ⚠️ 활자는 14px 하한 — 2026-07-24 특강 카드에서 오너가 "9대 원칙 위배"로 지적한 자리다
+     (구 메타 13px·라벨 12.5px·배지 11px). 라벨·메타·칩 전부 --fs-caption(14px)로 맞춘다. */
+  .in-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;
+           margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);
+           font-size:14px;color:var(--text-dim)}
+  .in-foot b{color:var(--text-muted);font-weight:700;font-variant-numeric:tabular-nums}
+  /* ⚠️ 무료 조건 안내 — 스펙 화면 1번. 붙여넣기 상태에서 안 보이면
+     '무료 2회'가 유입 장치가 아니라 그냥 불친절이 된다 */
+  .in-free{margin-top:12px;display:flex;gap:10px;align-items:flex-start;
+           background:rgba(46,110,66,.09);border:1px solid rgba(46,110,66,.22);
+           border-radius:var(--radius-xs);padding:12px 13px;font-size:14px;color:#265C3B}
+  .in-free b{font-weight:800}
+  .in-free .ic{flex:0 0 auto;width:18px;height:18px;margin-top:1px}
+  .in-cta{margin-top:16px;width:100%;min-height:54px;border:0;border-radius:999px;
+          background:var(--action);color:var(--action-ink-on);font:inherit;font-size:17px;
+          font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .in-left{margin-top:10px;text-align:center;font-size:14px;color:var(--text-dim)}
+  .in-left b{color:var(--action-ink);font-weight:800}
+
+  /* ── 결과 상단(3안 공통) ── */
+  .rs-top{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+          padding:16px;margin-bottom:16px}
+  .rs-grade{display:flex;align-items:center;gap:11px}
+  .rs-dial{flex:0 0 auto;width:46px;height:46px}
+  .rs-gt{font-family:var(--serif);font-size:21px;font-weight:700;line-height:1.2}
+  .rs-gs{font-size:14px;color:var(--text-dim);margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.45}
+  .rs-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px;padding-top:12px;
+             border-top:1px solid var(--border-soft)}
+  .lg{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:700;
+      padding:5px 10px;border-radius:999px;background:var(--bg2)}
+  .lg i{width:14px;height:3px;border-radius:2px;display:block}
+  .lg.c{color:var(--k-cliche)} .lg.c i{background:var(--k-cliche)}
+  .lg.s{color:var(--k-struct)} .lg.s i{background:var(--k-struct)}
+  .lg.v{color:var(--k-vague)}  .lg.v i{background:var(--k-vague)}
+  .lg.x{color:var(--k-ctx)}    .lg.x i{background:var(--k-ctx);height:0;border-top:3px dotted var(--k-ctx)}
+
+  /* ── 원문 표시(밑줄) ── */
+  .orig{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+        padding:16px;font-size:15px;line-height:2.0}
+  .orig p+p{margin-top:14px}
+  .mk{cursor:pointer;border:0;background:transparent;font:inherit;padding:0 1px;
+      color:inherit;border-radius:3px;position:relative}
+  .mk.c{background:var(--k-cliche-bg);border-bottom:2px solid var(--k-cliche)}
+  .mk.s{background:var(--k-struct-bg);border-bottom:3px double var(--k-struct)}
+  .mk.x{border-bottom:2px dotted var(--k-ctx)}
+  .mk .n{display:inline-flex;align-items:center;justify-content:center;
+         min-width:18px;height:18px;margin-left:4px;border-radius:5px;
+         font-size:12px;font-weight:800;color:#fff;vertical-align:1px;
+         font-variant-numeric:tabular-nums;padding:0 3px}
+  .mk.c .n{background:var(--k-cliche)} .mk.s .n{background:var(--k-struct)} .mk.x .n{background:var(--k-ctx)}
+  .mk.hit{outline:3px solid var(--action);outline-offset:2px}
+  /* 구체성 = 문단 단위 지적(밑줄 아님) */
+  .pv{border-left:3px solid var(--k-vague);background:var(--k-vague-bg);
+      padding:8px 10px 8px 12px;border-radius:0 var(--radius-xs) var(--radius-xs) 0;
+      margin-left:-2px;cursor:pointer}
+  .pv.hit{outline:3px solid var(--action);outline-offset:2px}
+  .pv-tag{display:block;font-size:14px;font-weight:800;color:var(--k-vague);
+          letter-spacing:.02em;margin-bottom:3px;line-height:1.4}
+
+  /* ── 지적 카드(고정 칸 형식) ── */
+  .cards{display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+        padding:13px 14px;border-left:4px solid var(--k-cliche);cursor:pointer;text-align:left;
+        font:inherit;width:100%;display:block}
+  .card.s{border-left-color:var(--k-struct)} .card.v{border-left-color:var(--k-vague)}
+  .card.x{border-left-color:var(--k-ctx)}
+  .card.hit{outline:3px solid var(--action);outline-offset:2px}
+  .cd-h{display:flex;align-items:center;gap:7px}
+  .cd-n{flex:0 0 auto;min-width:22px;height:22px;border-radius:6px;background:var(--k-cliche);
+        color:#fff;font-size:13px;font-weight:800;display:inline-flex;align-items:center;
+        justify-content:center;padding:0 5px;font-variant-numeric:tabular-nums}
+  .card.s .cd-n{background:var(--k-struct)} .card.v .cd-n{background:var(--k-vague)}
+  .card.x .cd-n{background:var(--k-ctx)}
+  .cd-k{font-size:14px;font-weight:800;color:var(--k-cliche);letter-spacing:.02em}
+  .card.s .cd-k{color:var(--k-struct)} .card.v .cd-k{color:var(--k-vague)} .card.x .cd-k{color:var(--k-ctx)}
+  .cd-q{margin-top:8px;font-size:15px;font-weight:800;line-height:1.45}
+  .cd-q em{font-style:normal;background:var(--k-cliche-bg);padding:1px 3px;border-radius:3px}
+  .card.s .cd-q em{background:var(--k-struct-bg)} .card.v .cd-q em{background:var(--k-vague-bg)}
+  .cd-r{margin-top:8px;font-size:14px;line-height:1.65;color:var(--text-muted)}
+  .cd-f{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border-soft);
+        font-size:14px;line-height:1.65;color:var(--text)}
+  .cd-f b{color:var(--action-ink);font-weight:800}
+
+  /* ── 하단 고정 저장 바 ── */
+  .sc-bar{position:sticky;bottom:0;z-index:8;display:flex;gap:8px;padding:11px 16px 14px;
+          background:linear-gradient(180deg,rgba(233,228,216,0) 0%,rgba(233,228,216,.96) 34%);
+          margin-top:auto}
+  .sc-bar button{flex:1;min-height:48px;border-radius:999px;font:inherit;font-size:15px;
+                 font-weight:800;cursor:pointer;border:1px solid var(--border);background:var(--surface);
+                 color:var(--text)}
+  .sc-bar button.pri{background:var(--action);color:var(--action-ink-on);border-color:var(--action)}
+
+  /* ── B안: 접힌 원문 ── */
+  .fold{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+        overflow:hidden;margin-bottom:14px}
+  .fold summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;
+                justify-content:space-between;padding:0 15px;font-size:14px;font-weight:700}
+  .fold summary::-webkit-details-marker{display:none}
+  .fold summary .cue{font-size:14px;color:var(--text-dim);font-weight:700}
+  .fold[open] summary{border-bottom:1px solid var(--border-soft)}
+  .fold .orig{border:0;border-radius:0;padding:14px 15px 16px}
+
+  /* ── C안: 인터리브 ── */
+  .il-para{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+           overflow:hidden;margin-bottom:14px}
+  .il-txt{padding:15px 15px 14px;font-size:15px;line-height:2.0}
+  .il-notes{border-top:1px solid var(--border-soft);background:var(--surface2);padding:10px}
+  .il-notes .card{border:1px solid var(--border-soft);border-left-width:4px;background:var(--surface)}
+  .il-notes .cards{gap:8px}
+  .il-clean{border-top:1px solid var(--border-soft);background:rgba(46,110,66,.07);
+            padding:11px 14px;font-size:14px;font-weight:700;color:#265C3B;
+            display:flex;align-items:center;gap:7px}
+  .il-cnt{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--bg3);
+          font-size:14px;font-weight:800;color:var(--text-muted);letter-spacing:.02em}
+
+  /* ── 하단 정리 ── */
+  .close{margin-top:48px;padding-top:30px;border-top:2px solid var(--text)}
+  .close h3{font-family:var(--serif);font-size:22px;font-weight:700}
+  .cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:18px}
+  .cbox{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:16px 17px}
+  .cbox h4{font-size:15px;font-weight:800;margin-bottom:9px}
+  .cbox ul{margin:0;padding-left:18px;font-size:14px;color:var(--text-muted)}
+  .cbox li{margin-bottom:7px}
+  .cbox li b{color:var(--text);font-weight:800}
+  .warn{margin-top:18px;background:rgba(163,61,20,.07);border:1px solid rgba(163,61,20,.24);
+        border-left:4px solid var(--k-cliche);border-radius:var(--radius-xs);padding:15px 17px;font-size:14.5px}
+  .warn h4{font-size:15px;font-weight:800;color:var(--k-cliche);margin-bottom:7px}
+  .warn p{color:var(--text-muted)} .warn p+p{margin-top:8px}
+  .warn b{color:var(--text);font-weight:800}
+
+  /* 좁은 화면 — 프레임 한 줄에 하나 */
+  @media (max-width:860px){
+    body{padding:24px 14px 70px}
+    .phone,.screen{width:100%;max-width:375px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="doc-tag">AI킬러 · ①단계 시안</span>
+  <h1>AI킬러 화면 — 세 가지 안</h1>
+  <p class="lede">
+    설계 확정본(<code>2026-07-24-ai-killer-design.md</code>)의 화면 스펙을 그대로 담되,
+    <b>375px 폰에서 원문과 지적을 어떻게 같이 보여줄지</b>만 세 갈래로 갈랐습니다.
+    입력 화면·등급 배지·밑줄 색·카드 칸 형식은 세 안이 전부 같습니다.
+  </p>
+
+  <div class="howto">
+    <h4>보는 법</h4>
+    <p>각 폰 화면은 <b>실제로 스크롤됩니다.</b> 밑줄이나 카드를 눌러 보세요 — 스펙의 양방향 점프가 그대로 동작합니다.
+       샘플 글은 실제 자소서에서 자주 나오는 유형으로 썼습니다(367자 · 7곳 걸림 · 100자당 1.9곳 = 조금 티남).
+       두 번째 문단만 일부러 <b>잘 쓴 글</b>로 넣었습니다 — 안 걸리는 문단이 어떻게 보이는지 같이 보시라고요.</p>
+  </div>
+
+  <div class="ctrl">
+    <button class="on" onclick="setBg(this,'#E9E4D8')">베이지 배경</button>
+    <button onclick="setBg(this,'#F1ECE2')">밝은 배경</button>
+    <span class="hint">↑ 화면 배경만 바꿔 봅니다(본문 색은 그대로)</span>
+  </div>
+
+  <!-- ══════════ 공통: 입력 화면 ══════════ -->
+  <section>
+    <span class="stag">세 안 공통</span>
+    <h2>①  입력 화면</h2>
+    <p class="who">검사 전. 세 안이 완전히 같습니다.</p>
+    <p class="why">
+      <b>붙여넣기 상태에서 무료 조건을 먼저 말합니다.</b> 결정 8(답변노트에 올린 글만 무료)은
+      화면에서 알 수 없으면 유입 장치가 아니라 그냥 불친절이 되기 때문입니다.
+      탭을 <b>답변노트에서 불러오기</b>로 바꾸면 이 안내가 <b>"무료 1회가 적용됩니다"</b>로 바뀝니다.
+    </p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">붙여넣기 — 무료 조건 안내</div>
+        <div class="screen">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span style="width:56px"></span></div>
+          <div class="sc-body">
+            <div class="in-head">AI 티, 검사해 드려요</div>
+            <p class="in-sub">자소서 한 문항이나 면접 답변을 넣으면 어디가 AI 같은지 짚어 드려요.</p>
+
+            <div class="in-box">
+              <div class="in-tabs">
+                <button class="in-tab on">붙여넣기</button>
+                <button class="in-tab">답변노트에서</button>
+              </div>
+              <textarea class="in-ta" readonly>저는 다양한 경험을 통해 서비스 마인드를 키워왔습니다. 대학 시절 카페에서 아르바이트를 하며 많은 손님을 응대하였고, 이를 통해 고객의 니즈를 파악하는 능력을 기를 수 있었습니다…</textarea>
+              <div class="in-foot"><span>자소서 1문항 · 답변 1개</span><b>367 / 1,500자</b></div>
+            </div>
+
+            <div class="in-free">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+              <div><b>답변노트에 올리면 무료로 검사할 수 있어요.</b><br>
+              올린 글 2개까지 무료입니다. 붙여넣기는 1회가 차감돼요.</div>
+            </div>
+
+            <button class="in-cta">AI 티 검사하기</button>
+            <p class="in-left">남은 횟수 <b>3회</b> · 10회 9,900원 충전</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">답변노트에서 불러옴 — 무료 적용</div>
+        <div class="screen">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span style="width:56px"></span></div>
+          <div class="sc-body">
+            <div class="in-head">AI 티, 검사해 드려요</div>
+            <p class="in-sub">자소서 한 문항이나 면접 답변을 넣으면 어디가 AI 같은지 짚어 드려요.</p>
+
+            <div class="in-box">
+              <div class="in-tabs">
+                <button class="in-tab">붙여넣기</button>
+                <button class="in-tab on">답변노트에서</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+                          background:var(--bg2);border:1px solid var(--border-soft);border-radius:8px;
+                          padding:10px 12px;margin-bottom:11px">
+                <div style="min-width:0">
+                  <div style="font-size:14px;font-weight:800;color:var(--text-dim);letter-spacing:.02em;line-height:1.4">자소서 문항</div>
+                  <div style="font-size:15px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">지원 동기를 기술하시오</div>
+                </div>
+                <span style="flex:0 0 auto;font-size:14px;font-weight:700;color:var(--action-ink)">바꾸기</span>
+              </div>
+              <textarea class="in-ta" readonly>저는 다양한 경험을 통해 서비스 마인드를 키워왔습니다. 대학 시절 카페에서 아르바이트를 하며 많은 손님을 응대하였고, 이를 통해 고객의 니즈를 파악하는 능력을 기를 수 있었습니다…</textarea>
+              <div class="in-foot"><span>답변노트에서 불러온 글</span><b>367 / 1,500자</b></div>
+            </div>
+
+            <div class="in-free">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>이 글은 무료로 검사할 수 있어요.</b><br>
+              남은 무료 2회 중 1회가 쓰여요. 같은 글은 한 번만 무료예요.</div>
+            </div>
+
+            <button class="in-cta">무료로 검사하기</button>
+            <p class="in-left">무료 <b>2회</b> 남음 · 이후 10회 9,900원</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ A안 ══════════ -->
+  <section>
+    <span class="stag">A안</span>
+    <h2>원문 먼저 — 교정지</h2>
+    <p class="who">부산대 맞춤법 검사기 · 워드 교정 화면과 같은 감각</p>
+    <p class="why">
+      원문 전체가 위에 밑줄 그어진 채로 있고, 아래로 지적 카드가 쭉 이어집니다.
+      <b>내 글이 통째로 보인다</b>는 게 이 안의 전부입니다 — 어디가 얼마나 걸렸는지가
+      한눈에 잡히고, 밑줄과 카드를 눌러 서로 오갈 수 있습니다(스펙의 양방향 점프).
+    </p>
+    <p class="cons">단점 — 1,500자를 다 넣으면 원문만 두 화면이라, 카드까지 한참 스크롤해야 합니다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">밑줄 ↔ 카드를 눌러 보세요</div>
+        <div class="screen" id="scA">
+          <div class="sc-nav"><span class="b">← 다시 검사</span><span class="t">검사 결과</span><span style="width:56px"></span></div>
+          <div class="sc-body">
+
+            <div class="rs-top">
+              <div class="rs-grade">
+                <svg class="rs-dial" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(38,34,28,.12)" stroke-width="4"/>
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#D9531F" stroke-width="4"
+                          stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="43"
+                          transform="rotate(-90 18 18)"/>
+                  <text x="18" y="21.6" text-anchor="middle" font-size="11" font-weight="800" fill="#26221C">7</text>
+                </svg>
+                <div>
+                  <div class="rs-gt">조금 티남</div>
+                  <div class="rs-gs">AI 티 나는 표현 7곳 · 367자 기준 100자당 1.9곳</div>
+                </div>
+              </div>
+              <div class="rs-legend">
+                <span class="lg c"><i></i>상투어 3</span>
+                <span class="lg s"><i></i>정형 구조 2</span>
+                <span class="lg v"><i></i>구체성 1</span>
+                <span class="lg x"><i></i>문맥 1</span>
+              </div>
+            </div>
+
+            <div class="orig" id="origA"></div>
+
+            <div style="display:flex;align-items:center;gap:8px;margin:18px 0 10px">
+              <div style="height:1px;flex:1;background:var(--border)"></div>
+              <span style="font-size:14px;font-weight:800;color:var(--text-dim);letter-spacing:.04em">고칠 곳 7</span>
+              <div style="height:1px;flex:1;background:var(--border)"></div>
+            </div>
+
+            <div class="cards" id="cardsA"></div>
+          </div>
+          <div class="sc-bar">
+            <button>결과 복사</button>
+            <button class="pri">답변노트에 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ B안 ══════════ -->
+  <section>
+    <span class="stag">B안</span>
+    <h2>지적 먼저 — 첨삭 노트</h2>
+    <p class="who">연구진이 손으로 써 준 첨삭지를 받아 보는 감각</p>
+    <p class="why">
+      등급 다음에 <b>고칠 곳부터</b> 나옵니다. 각 카드가 문제 문장을 직접 물고 있어서
+      원문을 다시 안 봐도 됩니다. 원문 전체는 접혀 있고 필요할 때만 폅니다.
+      <b>스크롤이 가장 짧고, "무엇을 고칠지"에 100% 집중</b>합니다.
+    </p>
+    <p class="cons">단점 — 글 전체의 흐름·분포가 안 보입니다. 어느 문단에 몰려 있는지는 원문을 펴야 압니다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">원문은 접혀 있음 — 눌러서 펴기</div>
+        <div class="screen" id="scB">
+          <div class="sc-nav"><span class="b">← 다시 검사</span><span class="t">검사 결과</span><span style="width:56px"></span></div>
+          <div class="sc-body">
+
+            <div class="rs-top">
+              <div class="rs-grade">
+                <svg class="rs-dial" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(38,34,28,.12)" stroke-width="4"/>
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#D9531F" stroke-width="4"
+                          stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="43"
+                          transform="rotate(-90 18 18)"/>
+                  <text x="18" y="21.6" text-anchor="middle" font-size="11" font-weight="800" fill="#26221C">7</text>
+                </svg>
+                <div>
+                  <div class="rs-gt">조금 티남</div>
+                  <div class="rs-gs">AI 티 나는 표현 7곳 · 367자 기준 100자당 1.9곳</div>
+                </div>
+              </div>
+              <div class="rs-legend">
+                <span class="lg c"><i></i>상투어 3</span>
+                <span class="lg s"><i></i>정형 구조 2</span>
+                <span class="lg v"><i></i>구체성 1</span>
+                <span class="lg x"><i></i>문맥 1</span>
+              </div>
+            </div>
+
+            <details class="fold" id="foldB">
+              <summary><span>내가 넣은 글 보기</span><span class="cue">367자 · 밑줄 7곳 ⌄</span></summary>
+              <div class="orig" id="origB"></div>
+            </details>
+
+            <div class="cards" id="cardsB"></div>
+          </div>
+          <div class="sc-bar">
+            <button>결과 복사</button>
+            <button class="pri">답변노트에 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ C안 ══════════ -->
+  <section>
+    <span class="stag">C안</span>
+    <h2>문단마다 붙임 — 읽어 내려가기</h2>
+    <p class="who">원고에 빨간 펜으로 메모를 달아 돌려준 감각</p>
+    <p class="why">
+      원문을 문단으로 쪼개고, <b>그 문단의 지적을 바로 아래에 붙입니다.</b>
+      위아래로 점프할 일이 아예 없어져서 — 스펙의 양방향 스크롤이 필요 없습니다 —
+      읽어 내려가기만 하면 순서대로 교정이 끝납니다. <b>375px에서 손이 가장 덜 갑니다.</b>
+      걸린 게 없는 문단은 초록 줄로 "여긴 좋아요"를 말해 줍니다.
+    </p>
+    <p class="cons">단점 — 원문의 읽는 흐름이 계속 끊깁니다. 고친 뒤 전체를 다시 읽어 보기가 어렵습니다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">문단 → 그 문단의 지적 → 다음 문단</div>
+        <div class="screen" id="scC">
+          <div class="sc-nav"><span class="b">← 다시 검사</span><span class="t">검사 결과</span><span style="width:56px"></span></div>
+          <div class="sc-body">
+
+            <div class="rs-top">
+              <div class="rs-grade">
+                <svg class="rs-dial" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(38,34,28,.12)" stroke-width="4"/>
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#D9531F" stroke-width="4"
+                          stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="43"
+                          transform="rotate(-90 18 18)"/>
+                  <text x="18" y="21.6" text-anchor="middle" font-size="11" font-weight="800" fill="#26221C">7</text>
+                </svg>
+                <div>
+                  <div class="rs-gt">조금 티남</div>
+                  <div class="rs-gs">AI 티 나는 표현 7곳 · 367자 기준 100자당 1.9곳</div>
+                </div>
+              </div>
+              <div class="rs-legend">
+                <span class="lg c"><i></i>상투어 3</span>
+                <span class="lg s"><i></i>정형 구조 2</span>
+                <span class="lg v"><i></i>구체성 1</span>
+                <span class="lg x"><i></i>문맥 1</span>
+              </div>
+            </div>
+
+            <div id="ilC"></div>
+          </div>
+          <div class="sc-bar">
+            <button>결과 복사</button>
+            <button class="pri">답변노트에 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 마무리 ══════════ -->
+  <div class="close">
+    <h3>결정하실 것</h3>
+
+    <div class="cgrid">
+      <div class="cbox">
+        <h4>1) 세 안 중 하나</h4>
+        <ul>
+          <li><b>A안</b> — 내 글이 통째로 보이는 게 중요하면</li>
+          <li><b>B안</b> — 고칠 것만 빠르게 보는 게 중요하면</li>
+          <li><b>C안</b> — 폰에서 손이 덜 가는 게 중요하면</li>
+        </ul>
+      </div>
+      <div class="cbox">
+        <h4>2) 섞어도 됩니다</h4>
+        <ul>
+          <li>기본 <b>C안</b> + 상단에 "원문 통째로 보기" 토글로 <b>A안</b> 전환</li>
+          <li>기본 <b>B안</b> + 카드 누르면 원문이 펴지며 그 자리로 이동</li>
+          <li>말씀하시면 고른 조합으로 한 번 더 만들겠습니다</li>
+        </ul>
+      </div>
+      <div class="cbox">
+        <h4>3) 세 안 공통(이미 확정 반영)</h4>
+        <ul>
+          <li>등급은 <b>개수 + 3단계</b>(100점 지수 아님 — 결정 5)</li>
+          <li>카드는 <b>[표현 / 왜 / 고치기]</b> 고정 칸(4겹 고삐 ②)</li>
+          <li>붙여넣기 화면에 <b>무료 조건 안내</b>(결정 8)</li>
+          <li>하단 <b>답변노트에 저장</b>(결정 4)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="warn">
+      <h4>⚠️ 만들면서 걸린 것 3개</h4>
+      <p><b>① 밑줄이 3종이 아니라 4종이 필요합니다.</b>
+      확정본 화면 스펙은 "색 3종 밑줄(상투어 / 구조 / 구체성)"인데, 판정 엔진은 <b>4종</b>(+문맥)입니다.
+      게다가 구체성은 밑줄이 아니라 <b>문단 단위</b> 지적이라 밑줄을 쓰지 않습니다.
+      그래서 실제로는 <b>밑줄 3종(상투어 실선 · 구조 이중선 · 문맥 점선) + 문단 표시 1종(구체성)</b>이 맞습니다 —
+      이 목업은 그렇게 그렸습니다. 확정본 문구도 같이 고쳐 두겠습니다.</p>
+      <p><b>② 색만으로 종류를 구분하면 원칙 4에 걸립니다.</b>
+      색약인 분에게 코랄 밑줄과 청록 밑줄은 같은 회색입니다. 그래서 <b>밑줄 모양</b>(실선/이중선/점선)과
+      <b>번호칩</b>을 색과 함께 넣었습니다. 번호칩은 밑줄↔카드 점프의 손잡이 역할도 겸합니다.</p>
+      <p><b>③ 밑줄은 원칙 2(터치 44px)를 지킬 수 없습니다 — A·B안만.</b>
+      글 속에 박힌 밑줄은 실측 <b>32~33px</b>입니다. 44px로 키우면 위아래 줄과 겹쳐서,
+      본문에 있는 한 물리적으로 불가능합니다(행간을 2.0까지 이미 벌린 상태). 그래서 번호칩을
+      손잡이로 크게 잡았습니다. <b>C안은 이 문제가 아예 없습니다</b> — 지적이 바로 아래 붙어 있어
+      밑줄을 누를 일이 없고, 누르는 건 48px짜리 카드뿐입니다. 폰에서 안 눌리는 밑줄을
+      계속 헛치는 게 싫으시면 C안이 답입니다.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══ 샘플 데이터 ══
+   실제 자소서에서 자주 나오는 유형으로 구성. 312자 · 7곳 · 100자당 2.2곳 = 조금 티남.
+   말투는 4겹 고삐 ①(연구진 첨삭 흉내) 감각으로 썼다 — 최종 문장은 자료 2번 반영 후 조련. */
+const F = [
+  {n:1, k:'c', kind:'상투어', q:'다양한 경험',
+   why:'무엇을 했는지가 하나도 안 남는 말이라, 면접관이 이어서 물어볼 게 없어요.',
+   fix:'"카페 2년, 하루 200명 응대"처럼 <b>숫자와 기간</b>으로 바꿔 보세요.'},
+  {n:2, k:'c', kind:'상투어', q:'이를 통해',
+   why:'원인과 결과를 뭉개는 연결어라, 정확히 무엇 덕분에 늘었는지가 사라져요.',
+   fix:'"응대하다 보니 알게 된 건" 처럼 <b>겪은 순서대로</b> 풀어 쓰세요.'},
+  {n:3, k:'x', kind:'문맥', q:'고객의 니즈를 파악하는 능력',
+   why:'자소서 예시집에 그대로 실려 있는 문장이라 본인 목소리로 안 들려요.',
+   fix:'손님이 말하기 전에 알아챈 <b>그 순간 한 장면</b>으로 바꿔 쓰세요.'},
+  {n:4, k:'v', kind:'구체성', q:'첫 문단 전체',
+   why:'숫자·시기·장소가 하나도 없어서 누구 이야기여도 말이 되는 문단이에요.',
+   fix:'어느 카페에서 언제, 하루 몇 명이었는지 <b>딱 하나만</b> 넣어도 장면이 살아나요.'},
+  {n:5, k:'s', kind:'정형 구조', q:'첫째 · 둘째 · 셋째',
+   why:'말할 때 이렇게 세는 사람은 없어서, 읽는 순간 외운 원고로 들려요.',
+   fix:'셋 중 <b>가장 강한 하나만</b> 남기고 그 장면을 길게 말하세요.'},
+  {n:6, k:'s', kind:'정형 구조', q:"어미 '~하였습니다' 5회 연속",
+   why:'모든 문장이 같은 소리로 끝나서 듣는 내내 단조롭게 들려요.',
+   fix:'한두 문장은 <b>짧게 끊어</b> 리듬을 바꿔 보세요.'},
+  {n:7, k:'c', kind:'상투어', q:'최선을 다하겠습니다',
+   why:'지원자 대부분이 쓰는 맺음말이라 마지막 인상이 남지 않아요.',
+   fix:'입사 후 하고 싶은 일 <b>하나를 적어</b> 끝내세요.'}
+];
+
+/* 원문 — 문단 3개. mk(밑줄) 자리는 규칙이 찍고, 카드 번호와 1:1로 묶인다. */
+const P = [
+  {v:4, /* 문단 전체가 구체성 지적 */
+   html:'저는 <button class="mk c" data-n="1">다양한 경험<span class="n">1</span></button>을 통해 서비스 마인드를 키워왔습니다. '+
+        '대학 시절 카페에서 아르바이트를 하며 많은 손님을 응대하였고, '+
+        '<button class="mk c" data-n="2">이를 통해<span class="n">2</span></button> '+
+        '<button class="mk x" data-n="3">고객의 니즈를 파악하는 능력<span class="n">3</span></button>을 기를 수 있었습니다. '+
+        '또한 교내 봉사 동아리 활동을 하며 팀워크의 중요성을 깨달았습니다.',
+   ns:[1,2,3,4]},
+  /* ⚠️ 이 문단은 일부러 '잘 쓴 글'이다 — 숫자·시기·장면이 다 들어 있어 아무 규칙에도 안 걸린다.
+     C안의 "여긴 좋아요" 초록 줄이 실제로 나오는 걸 보려면 걸리지 않는 문단이 하나는 있어야 한다. */
+  {html:'작년 여름 성수기에는 하루 300잔 넘게 만들었는데, 그때 단골 손님 이름을 스무 명쯤 외웠습니다.',
+   ns:[]},
+  {html:'제가 승무원에 적합한 이유는 다음과 같습니다. '+
+        '<button class="mk s" data-n="5">첫째<span class="n">5</span></button>, 저는 항상 밝은 미소로 손님을 '+
+        '<button class="mk s" data-n="6">맞이하였습니다<span class="n">6</span></button>. '+
+        '<button class="mk s" data-n="5">둘째</button>, 고객의 불편사항을 신속하게 해결하고자 '+
+        '<button class="mk s" data-n="6">노력하였습니다</button>. '+
+        '<button class="mk s" data-n="5">셋째</button>, 동료들과의 원활한 소통을 통해 업무 효율을 높일 수 있었습니다.',
+   ns:[5,6]},
+  {html:'이러한 소중한 경험을 바탕으로 대한항공의 객실승무원으로서 '+
+        '<button class="mk c" data-n="7">최선을 다하겠습니다<span class="n">7</span></button>.',
+   ns:[7]}
+];
+
+const KCLS = {c:'', s:'s', v:'v', x:'x'};
+
+function cardHtml(f){
+  return '<button class="card '+KCLS[f.k]+'" data-n="'+f.n+'">'+
+    '<div class="cd-h"><span class="cd-n">'+f.n+'</span><span class="cd-k">'+f.kind+'</span></div>'+
+    '<div class="cd-q"><em>'+f.q+'</em></div>'+
+    '<div class="cd-r">'+f.why+'</div>'+
+    '<div class="cd-f">'+f.fix+'</div></button>';
+}
+
+/* 원문 렌더 — 구체성 문단은 밑줄이 아니라 좌측 바로 감싼다 */
+function origHtml(){
+  return P.map(function(p){
+    if(p.v) return '<div class="pv" data-n="'+p.v+'"><span class="pv-tag">구체성 · 문단 전체</span><p>'+p.html+'</p></div>';
+    return '<p>'+p.html+'</p>';
+  }).join('');
+}
+
+document.getElementById('origA').innerHTML = origHtml();
+document.getElementById('origB').innerHTML = origHtml();
+document.getElementById('cardsA').innerHTML = F.map(cardHtml).join('');
+document.getElementById('cardsB').innerHTML = F.map(cardHtml).join('');
+
+/* C안 — 문단 + 그 문단의 지적 */
+document.getElementById('ilC').innerHTML = P.map(function(p,i){
+  var inner = p.v
+    ? '<div class="pv" style="cursor:default"><span class="pv-tag">구체성 · 문단 전체</span><p>'+p.html+'</p></div>'
+    : '<p>'+p.html+'</p>';
+  var mine = F.filter(function(f){ return p.ns.indexOf(f.n) >= 0; });
+  var notes = mine.length
+    ? '<div class="il-notes"><div class="cards">'+mine.map(cardHtml).join('')+'</div></div>'
+    : '<div class="il-clean">✓ 이 문단은 걸린 데가 없어요</div>';
+  return '<div class="il-para">'+
+    '<div class="il-cnt">'+(i+1)+'번째 문단 · 고칠 곳 '+mine.length+'</div>'+
+    '<div class="il-txt">'+inner+'</div>'+ notes +'</div>';
+}).join('');
+
+/* ══ 양방향 점프(스펙) — 밑줄 ↔ 카드 ══
+   같은 번호를 가진 모든 요소를 잠깐 강조하고, 상대편으로 스크롤한다. */
+function jump(screen, n, fromCard){
+  screen.querySelectorAll('.hit').forEach(function(el){ el.classList.remove('hit'); });
+  var all = screen.querySelectorAll('[data-n="'+n+'"]');
+  var target = null;
+  all.forEach(function(el){
+    el.classList.add('hit');
+    var isCard = el.classList.contains('card');
+    if(!target && (fromCard ? !isCard : isCard)) target = el;
+  });
+  if(target){
+    var f = screen.querySelector('#foldB');
+    if(f && !f.open && f.contains(target)) f.open = true;
+    var top = target.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
+    screen.scrollTo({ top: top - 110, behavior:'smooth' });
+  }
+  setTimeout(function(){ all.forEach(function(el){ el.classList.remove('hit'); }); }, 2200);
+}
+
+['scA','scB','scC'].forEach(function(id){
+  var screen = document.getElementById(id);
+  screen.addEventListener('click', function(e){
+    var el = e.target.closest('[data-n]');
+    if(!el) return;
+    /* C안은 지적이 바로 아래 붙어 있어 점프가 필요 없다 — 강조만 */
+    if(id === 'scC'){
+      screen.querySelectorAll('.hit').forEach(function(x){ x.classList.remove('hit'); });
+      screen.querySelectorAll('[data-n="'+el.dataset.n+'"]').forEach(function(x){ x.classList.add('hit'); });
+      setTimeout(function(){ screen.querySelectorAll('.hit').forEach(function(x){ x.classList.remove('hit'); }); }, 2200);
+      return;
+    }
+    jump(screen, el.dataset.n, el.classList.contains('card'));
+  });
+});
+
+function setBg(btn, c){
+  document.querySelectorAll('.ctrl button').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  document.querySelectorAll('.screen').forEach(function(s){ s.style.background = c; });
+}
+</script>
+</body>
+</html>
