@@ -147,6 +147,9 @@ comment on function public.applications_duplicate_guard() is
 
 -- 트리거 이름은 정원 가드(applications_lecture_capacity)보다 알파벳 순서가 앞이라
 -- 중복 판정이 먼저 돈다(중복이면 자리 계산까지 갈 필요가 없다).
+-- ⚠️ 회원 연결 트리거(trg_link_application_member)는 순서상 이 가드보다 뒤에 돈다 →
+--    비회원 신청은 가드 시점에 new.member_id 가 아직 비어 있다. 전화번호로도 판정하므로
+--    문제되지 않지만, 계정 기준만 보도록 바꾸면 비회원 중복이 통과한다.
 drop trigger if exists applications_duplicate on public.applications;
 create trigger applications_duplicate
   before insert on public.applications
@@ -164,3 +167,11 @@ create trigger applications_duplicate
 --    where public.monc_app_live(a.refunded, a.payment_status)
 --      and ae->>'challenge' is not null
 --    group by 1, 2, 3 having count(*) > 1;
+
+-- ── 적용 확인 ────────────────────────────────────────────────────────────────
+-- 마지막 문장이라 SQL Editor 결과창에 그대로 뜬다.
+-- ⚠️ applications_duplicate 가 목록에 있어야 적용된 것이다(없으면 위에서 에러가 난 것).
+select tgname as "트리거", tgenabled as "활성"
+  from pg_trigger
+ where tgrelid = 'public.applications'::regclass and not tgisinternal
+ order by tgname;
