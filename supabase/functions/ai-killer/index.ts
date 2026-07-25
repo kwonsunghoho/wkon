@@ -43,6 +43,18 @@ const MAX_CHARS = 1500
 // ⚠️ 넘으면 막지 말고 자른다 — 선택 입력이라 여기서 400 을 내면 검사 자체가 죽는다.
 const MAX_QUESTION_CHARS = 200
 
+// ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
+//    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
+const FN_VERSION = '2026-07-25d'
+const FN_FEATURES = [
+  'context',          // 문항·종류 맥락
+  'airline',          // 지망 항공사
+  'airline_profiles', // 항공사별 합격 패턴 참조
+  'question_match',   // 문항이 바뀌었는지 판정 → 옛 주의사항 차단
+  'autosave',         // 붙여넣은 글을 답변 저장소에 자동 저장
+  'credit_tiers',     // 도구별 단가(소재2/킬러3/첨삭10) + 답변 단위 차감
+]
+
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
 // 저장소의 다른 함수도 이미 Claude 5 계열(sojae-chat: sonnet-5 / haiku-4-5).
 const MODEL = 'claude-opus-5'
@@ -504,6 +516,37 @@ async function saveCheck(admin: ReturnType<typeof createClient>, row: Record<str
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
+  // ⚠️ req.json() 은 **한 번만** 읽을 수 있다. 프로브가 먼저 읽어야 하므로 여기서 한 번 읽고
+  //    아래 본 흐름은 이 값을 재사용한다(try 안에서 다시 읽으면 빈 객체가 된다).
+  // deno-lint-ignore no-explicit-any
+  const reqBody: any = await req.json().catch(() => ({}))
+
+  // ── 배포 확인용 프로브 — 로그인 없이 '지금 무엇이 올라가 있는지'만 알려준다 ────────
+  // ⚠️ 이게 없으면 밖에서는 함수 버전을 알 방법이 전혀 없다(로그인 게이트라 늘 401,
+  //    airline_profiles 는 RLS 로 막혀 개수도 안 보인다). 실제로 배포 여부를 확인하지 못해
+  //    관리자에게 SQL 을 여러 번 돌리게 한 자리다.
+  // 노출하는 것은 **버전·기능 이름·개수**뿐이다 — 사전도 프로필 내용도 나가지 않는다.
+  if ((reqBody as { probe?: unknown }).probe === true) {
+    let airlines: number | null = null
+    let terms: number | null = null
+    try {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      const a = await admin.from('airline_profiles').select('code', { count: 'exact', head: true })
+      airlines = a.count ?? null
+      const t = await admin.from('ai_killer_terms').select('id', { count: 'exact', head: true }).eq('active', true)
+      terms = t.count ?? null
+    } catch (_) { /* 표가 아직 없으면 null 로 둔다 */ }
+    return json({
+      fn: 'ai-killer',
+      version: FN_VERSION,
+      features: FN_FEATURES,
+      airline_profiles: airlines,   // 4면 제주·에프·이스타·티웨이가 다 들어간 것
+      terms: terms,
+      model: MODEL,
+      has_api_key: !!Deno.env.get('ANTHROPIC_API_KEY'),
+    })
+  }
+
   let charged: { tool: string; ref: string } | null = null
   let supa: ReturnType<typeof createClient> | null = null
 
@@ -525,7 +568,9 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
     // ── 2. 입력 검증 ──────────────────────────────────────────────────────
-    const reqBody = await req.json().catch(() => ({}))
+    // ⚠️ reqBody 는 **위에서 이미 읽었다**(프로브가 먼저 읽어야 하므로).
+    //    여기서 req.json() 을 다시 부르면 본문이 소진돼 빈 객체가 되고 — text 가 ''  가 되어
+    //    모든 검사가 "100자 이상 넣어 주세요"로 죽는다. 다시 읽지 말 것.
     const text: string = typeof reqBody.text === 'string' ? reqBody.text.trim() : ''
     const source: 'paste' | 'answer' = reqBody.source === 'answer' ? 'answer' : 'paste'
     const answerId: string | null = typeof reqBody.answerId === 'string' ? reqBody.answerId : null
