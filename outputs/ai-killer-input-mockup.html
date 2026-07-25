@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI킬러 입력 화면 — 3안 비교 (재설계)</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     AI킬러 **입력 화면** 재설계 — 3안
+     2026-07-25 오너 지적에서 출발한다.
+
+     지적 5개
+       ① "붙여넣기" 탭이 헷갈린다
+       ② "답변노트에서"(탭)와 "답변노트에 올리면 무료"(안내)가 같은 말로 읽힌다
+       ③ 그 무료 안내 박스는 **눌러도 아무 일이 없다** — 기능이 없다
+       ④ 붙여넣기는 사실상 유료인데, 유·무료를 입력 방식으로 가르니 헷갈린다
+       ⑤ 항공사마다 자소서 흐름도 면접이 보는 결도 다른데 고를 데가 없다
+
+     진단: 셋(탭·안내·저장버튼)이 **"글을 어디서 가져오나"라는 한 질문을
+           세 번 다르게 묻고 있다.** 세 안은 그 질문을 각각 다르게 처리한다.
+       A — 안 묻는다 (입력칸 하나 + 불러오기 버튼)
+       B — 처음에 묻는다 (두 갈래 카드)
+       C — 늘 보여준다 (내 답변 목록이 곧 첫 화면)
+
+     세 안 공통(비교 대상이 아님): 종류 2칸 · 항공사 픽커 · 문항 한 줄 ·
+                                  과금 한 줄 · 검사 버튼.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  :root{
+    --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9; --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,.16); --border-soft:rgba(38,34,28,.09);
+    --action:#F27945; --action-dark:#D9531F; --action-ink:#A33D14;
+    --action-tint:#FDE9DE; --action-ink-on:#2A1206;
+    --serif:'Song Myung','Noto Serif KR','Nanum Myeongjo',serif;
+    --radius-xs:8px; --radius-sm:14px; --radius:20px;
+    --free:#2E6E42; --free-bg:rgba(46,110,66,.09); --free-bd:rgba(46,110,66,.24);
+
+    /* 항공사 액센트 — lectures.css 의 --air-* 그대로(같은 집안으로 보이게) */
+    --air-ke:#14375E; --air-lj:#3A6440; --air-7c:#8C4318; --air-tw:#9E3B34;
+    --air-ze:#97323A; --air-yp:#2E3D63; --air-rf:#8E4064;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+       background:var(--bg2);color:var(--text);line-height:1.6;
+       padding:34px 20px 90px;word-break:keep-all;overflow-wrap:break-word;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1340px;margin:0 auto}
+
+  /* ── 문서 머리 ── */
+  .doc-tag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.16em;
+           color:var(--action-ink);background:var(--action-tint);padding:5px 11px;border-radius:999px}
+  h1{font-family:var(--serif);font-size:clamp(28px,4vw,38px);font-weight:700;
+     line-height:1.28;margin-top:12px;letter-spacing:-.01em}
+  .lede{margin-top:12px;font-size:15.5px;color:var(--text-muted);max-width:720px}
+  .lede b{color:var(--text);font-weight:800}
+  .prob{margin-top:20px;max-width:720px;background:var(--surface);border:1px solid var(--border-soft);
+        border-left:4px solid var(--action);border-radius:var(--radius-xs);padding:16px 18px}
+  .prob h4{font-size:14.5px;font-weight:800;margin-bottom:8px}
+  .prob ol{margin:0 0 0 18px;font-size:14.5px;color:var(--text-muted)}
+  .prob li{margin-top:5px}
+  .prob b{color:var(--text);font-weight:800}
+  .diag{margin-top:14px;font-size:14.5px;color:var(--text-muted);max-width:720px}
+  .diag b{color:var(--text);font-weight:800}
+
+  /* ── 섹션(각 안) ── */
+  section{margin-top:52px;padding-top:30px;border-top:1px solid var(--border)}
+  .stag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;
+        color:var(--action-ink);background:rgba(163,61,20,.10);padding:4px 10px;border-radius:999px}
+  h2{font-family:var(--serif);font-size:26px;font-weight:700;margin-top:11px;line-height:1.3}
+  .who{margin-top:7px;font-size:14px;color:var(--text-dim)}
+  .why{margin-top:14px;font-size:14.5px;color:var(--text-muted);max-width:740px}
+  .why b{color:var(--text);font-weight:800}
+  .cons{margin-top:8px;font-size:14px;color:#9E3B34;max-width:740px}
+  .solved{margin-top:10px;font-size:13.5px;color:var(--free);font-weight:700}
+
+  /* ── 폰 프레임 ── */
+  .frames{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px}
+  .phone{flex:0 0 auto;width:375px}
+  .phone-cap{font-size:13px;font-weight:800;color:var(--text-dim);margin-bottom:8px;letter-spacing:.02em}
+  .screen{width:375px;height:720px;overflow-y:auto;overflow-x:hidden;background:var(--bg);
+          border:1px solid var(--border);border-radius:22px;position:relative;
+          box-shadow:0 10px 34px rgba(38,34,28,.13);scrollbar-width:thin}
+  .screen::-webkit-scrollbar{width:6px}
+  .screen::-webkit-scrollbar-thumb{background:rgba(38,34,28,.22);border-radius:3px}
+
+  /* ══ 화면 안 — 실제 페이지 스펙 그대로 ══ */
+  .sc-nav{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;
+          padding:12px 16px;background:rgba(233,228,216,.94);backdrop-filter:blur(16px);
+          -webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border-soft)}
+  .sc-nav .b{font-size:14px;font-weight:700;opacity:.85}
+  .sc-nav .t{font-family:var(--serif);font-size:16px;font-weight:700}
+  .sc-nav .r{font-size:14px;font-weight:700;color:var(--action-ink)}
+  .sc-body{padding:20px 16px 40px}
+
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;
+           letter-spacing:.12em;color:var(--action-ink)}
+  .eyebrow::before{content:'';width:16px;height:1.5px;background:var(--action);flex:0 0 auto}
+  .h-title{font-family:var(--serif);font-size:25px;font-weight:700;line-height:1.32;margin-top:10px}
+  .h-sub{margin-top:8px;font-size:14px;color:var(--text-muted)}
+
+  /* 입력 카드 */
+  .card{margin-top:16px;background:var(--surface);border:1px solid var(--border);
+        border-radius:var(--radius-sm);padding:14px}
+  .lbl{font-size:14px;font-weight:800;color:var(--text-dim);letter-spacing:.02em;margin-bottom:7px}
+
+  /* 종류 세그먼트 */
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;min-height:44px;font:inherit;font-size:14px;font-weight:700;
+              border:1px solid var(--border);background:var(--bg2);border-radius:var(--radius-xs);
+              color:var(--text-muted);cursor:pointer}
+  .seg button.on{background:var(--text);color:#fff;border-color:var(--text)}
+
+  /* 항공사 픽커 — news.html 관습(버튼 → 바텀시트) */
+  .pickbtn{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;
+           gap:8px;padding:0 13px;border:1px solid var(--border);background:var(--bg2);
+           border-radius:var(--radius-xs);font:inherit;font-size:14px;font-weight:700;
+           color:var(--text-dim);cursor:pointer;text-align:left}
+  .pickbtn.set{background:var(--surface);color:var(--text);border-color:var(--text)}
+  .pickbtn .en{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--air);margin-left:auto;
+               margin-right:4px}
+  .pickbtn svg{flex:0 0 auto;width:16px;height:16px;opacity:.5}
+
+  .qin{width:100%;min-height:44px;border:0;border-bottom:1px solid var(--border-soft);
+       font:inherit;font-size:15px;font-weight:700;color:var(--text);background:transparent;
+       padding:0 0 10px}
+  .qin::placeholder{font-weight:400;color:var(--text-dim)}
+  .ta{width:100%;min-height:150px;border:0;resize:vertical;font:inherit;font-size:15px;
+      line-height:1.75;color:var(--text);background:transparent}
+  .ta:focus,.qin:focus{outline:none}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;
+        padding-top:10px;border-top:1px solid var(--border-soft);font-size:14px;color:var(--text-dim)}
+  .foot b{color:var(--text-muted);font-weight:700;font-variant-numeric:tabular-nums}
+
+  .hr{height:1px;background:var(--border-soft);margin:12px 0}
+
+  /* 본문 위 도구줄 */
+  .tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .link-btn{min-height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 2px;
+            border:0;background:none;font:inherit;font-size:14px;font-weight:800;
+            color:var(--action-ink);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .link-btn svg{width:15px;height:15px}
+
+  /* 과금 줄 — ⚠️ 상태에 따라 문장이 바뀌고, **누를 수 있다**(지적 ③) */
+  .pay{margin-top:12px;width:100%;display:flex;gap:11px;align-items:flex-start;text-align:left;
+       border-radius:var(--radius-xs);padding:12px 13px;font-size:14px;cursor:pointer;
+       font-family:inherit;border:1px solid var(--free-bd);background:var(--free-bg);color:#265C3B}
+  .pay.plain{border-color:var(--border);background:var(--bg2);color:var(--text-muted);cursor:default}
+  .pay b{font-weight:800}
+  .pay .ic{flex:0 0 auto;width:18px;height:18px;margin-top:2px}
+  .pay .go{margin-left:auto;flex:0 0 auto;font-weight:800;font-size:14px;opacity:.8}
+
+  .cta{margin-top:14px;width:100%;min-height:54px;border:0;border-radius:999px;background:var(--action);
+       color:var(--action-ink-on);font:inherit;font-size:17px;font-weight:800;cursor:pointer}
+  .cta:disabled{opacity:.45;cursor:default}
+  .left{margin-top:10px;text-align:center;font-size:14px;color:var(--text-dim)}
+  .left b{color:var(--action-ink);font-weight:800}
+
+  /* B안 — 두 갈래 카드 */
+  .route{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);
+         border-radius:var(--radius-sm);padding:16px;margin-top:12px;font-family:inherit;cursor:pointer}
+  .route+.route{margin-top:10px}
+  .route-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .route-t{font-size:17px;font-weight:800}
+  .route-badge{flex:0 0 auto;font-size:14px;font-weight:700;padding:4px 10px;border-radius:999px;
+               background:var(--free-bg);color:var(--free);border:1px solid var(--free-bd)}
+  .route-badge.paid{background:var(--bg3);color:var(--text-muted);border-color:var(--border)}
+  .route-d{margin-top:6px;font-size:14px;color:var(--text-muted)}
+  .route-m{margin-top:9px;padding-top:9px;border-top:1px solid var(--border-soft);
+           display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--text-dim)}
+  .route-m b{color:var(--text);font-weight:800}
+  .route-none{margin-top:16px;font-size:14px;color:var(--text-muted);text-align:center}
+  .route-none a{color:var(--action-ink);font-weight:800;text-underline-offset:3px}
+
+  /* C안 — 내 답변 목록이 첫 화면 */
+  .ans{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);
+       border-radius:var(--radius-xs);padding:13px 14px;margin-top:8px;font-family:inherit;cursor:pointer}
+  .ans-t{font-size:15px;font-weight:800;line-height:1.4}
+  .ans-p{margin-top:4px;font-size:14px;color:var(--text-dim);
+         display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .ans-m{margin-top:8px;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-dim)}
+  .tag{font-size:14px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg3);
+       color:var(--text-muted)}
+  .tag.free{background:var(--free-bg);color:var(--free);border:1px solid var(--free-bd)}
+  .tag.air{background:transparent;border:1px solid var(--border);color:var(--air);letter-spacing:.06em;
+           font-size:13px}
+  .ans-empty{margin-top:12px;background:var(--surface);border:1px dashed var(--border);
+             border-radius:var(--radius-sm);padding:20px 16px;text-align:center}
+  .ans-empty p{font-size:14px;color:var(--text-muted)}
+  .ans-empty .cta{margin-top:14px;min-height:48px;font-size:15px}
+  .or{margin:16px 0 0;text-align:center;font-size:14px;color:var(--text-dim)}
+  .or button{border:0;background:none;font:inherit;font-size:14px;font-weight:800;
+             color:var(--action-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer;
+             min-height:44px;padding:0 4px}
+
+  /* 바텀시트 */
+  .sheet-mask{position:absolute;inset:0;background:rgba(38,34,28,.42);opacity:0;pointer-events:none;
+              transition:opacity .18s;z-index:20;border-radius:22px}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--surface);
+         border-radius:18px 18px 0 0;padding:8px 16px 20px;transform:translateY(102%);
+         transition:transform .24s cubic-bezier(.22,.61,.36,1);max-height:78%;overflow-y:auto}
+  .screen.sheet-on .sheet-mask{opacity:1;pointer-events:auto}
+  .screen.sheet-on .sheet{transform:translateY(0)}
+  .sheet-grip{width:38px;height:4px;border-radius:2px;background:var(--border);margin:6px auto 12px}
+  .sheet-h{font-size:16px;font-weight:800;margin-bottom:4px}
+  .sheet-s{font-size:14px;color:var(--text-dim);margin-bottom:12px}
+  .opt{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 4px;
+       border:0;border-bottom:1px solid var(--border-soft);background:none;font:inherit;
+       font-size:15px;font-weight:700;color:var(--text);cursor:pointer;text-align:left}
+  .opt:last-child{border-bottom:0}
+  .opt .en{margin-left:auto;font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--air)}
+  .opt .ko{color:var(--text)}
+  .opt.on{color:var(--action-ink)}
+  .opt-none .ko{color:var(--text-dim);font-weight:700}
+
+  /* 안내 문구 */
+  .note{margin-top:12px;font-size:14px;color:var(--text-dim);line-height:1.6}
+
+  /* ── 비교표 ── */
+  table{border-collapse:collapse;width:100%;max-width:960px;margin-top:18px;font-size:14px;
+        background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);
+        overflow:hidden}
+  th,td{padding:11px 13px;border-bottom:1px solid var(--border-soft);text-align:left;vertical-align:top}
+  th{background:var(--bg3);font-weight:800;font-size:13px;letter-spacing:.02em}
+  tr:last-child td{border-bottom:0}
+  td b{font-weight:800}
+  .ok{color:var(--free);font-weight:800}
+  .no{color:#9E3B34;font-weight:800}
+
+  .ask{margin-top:22px;max-width:840px;background:var(--surface);border:1px solid var(--border);
+       border-left:4px solid var(--action);border-radius:var(--radius-xs);padding:18px}
+  .ask h4{font-size:15px;font-weight:800}
+  .ask p{margin-top:8px;font-size:14.5px;color:var(--text-muted)}
+  .ask ul{margin:8px 0 0 18px;font-size:14.5px;color:var(--text-muted)}
+  .ask li{margin-top:6px}
+  .ask b{color:var(--text);font-weight:800}
+  @media (max-width:820px){ .phone,.screen{width:100%;max-width:375px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="doc-tag">AI킬러 · 입력 화면 재설계</span>
+  <h1>글을 어디서 가져오나 — 한 번만 묻기</h1>
+  <p class="lede">
+    지금 화면은 같은 질문을 <b>세 군데서 세 가지 말로</b> 묻는다. 탭이 묻고("붙여넣기 / 답변노트에서"),
+    초록 박스가 또 묻고("답변노트에 올리면 무료"), 결과 화면의 저장 버튼이 다시 묻는다.
+    게다가 초록 박스는 <b>눌러도 아무 일이 없다.</b>
+  </p>
+
+  <div class="prob">
+    <h4>고쳐야 하는 것</h4>
+    <ol>
+      <li>"붙여넣기" 탭이 <b>무엇을 고르는 건지</b> 읽히지 않는다</li>
+      <li>탭 "답변노트에서"와 아래 "답변노트에 올리면"이 <b>같은 말로 읽힌다</b></li>
+      <li>그 초록 박스에 <b>기능이 없다</b> — 답변이 없는 사람이 누를 자리인데 아무 데도 못 간다</li>
+      <li>유·무료를 <b>입력 방식으로 가르니</b> 헷갈린다(붙여넣기 = 사실상 유료)</li>
+      <li>항공사를 고를 데가 없다 — <b>자소서 흐름도, 면접이 보는 결도 항공사마다 다르다</b></li>
+    </ol>
+  </div>
+
+  <p class="diag">
+    <b>그래서 세 안은 그 질문을 각각 다르게 처리한다.</b>
+    A는 안 묻고(입력칸 하나 + 불러오기 버튼), B는 처음에 한 번 묻고(두 갈래),
+    C는 아예 <b>내 답변 목록을 첫 화면으로</b> 둔다. 종류·항공사·문항·과금 줄은 세 안 공통이라
+    비교 대상이 아니다. <b>항공사 버튼과 불러오기는 실제로 눌러 볼 수 있다.</b>
+  </p>
+
+  <!-- ══════════════════ A안 ══════════════════ -->
+  <section>
+    <span class="stag">A안</span>
+    <h2>한 장 폼 — 탭을 없앤다</h2>
+    <p class="who">글이 어디서 왔든 검사는 똑같다. 다른 건 과금뿐이니, <b>입력은 하나로 두고 과금은 결과로 표시</b>한다.</p>
+    <p class="why">
+      본문 칸 위에 <b>저장한 답변 불러오기</b> 버튼 하나. 누르면 시트에서 고른다.
+      과금 줄은 상태에 따라 문장이 바뀌고 <b>누르면 실제로 움직인다</b> —
+      붙여넣기 상태에서 누르면 불러오기 시트가 열리고, 저장된 답변이 없으면 소재 발굴로 보낸다.
+    </p>
+    <p class="solved">지적 ①②③④ 해결 · 화면이 가장 짧다</p>
+    <p class="cons">약점: 무료를 받는 길이 <b>버튼 하나에 걸려 있다</b> — 못 보고 지나치면 유료로 쓴다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">기본 — 붙여넣기 상태 (무료 안내가 눌린다)</div>
+        <div class="screen" id="scA1">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span class="r">3회</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AI KILLER</div>
+            <div class="h-title">AI 티, 검사해 드려요</div>
+            <p class="h-sub">어디가 왜 AI 같은지 짚고, 어떻게 고칠지까지 알려 드려요.</p>
+
+            <div class="card">
+              <div class="lbl">무엇을 검사할까요</div>
+              <div class="seg" data-seg>
+                <button class="on" data-k="interview">면접 답변</button>
+                <button data-k="essay">자소서</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">어느 항공사인가요</div>
+              <button class="pickbtn" data-air-open>
+                <span data-air-label>항공사 선택 (선택)</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              <div class="hr"></div>
+              <input class="qin" placeholder="어떤 질문을 받았나요? (선택)">
+
+              <div class="hr"></div>
+              <div class="tools">
+                <div class="lbl" style="margin:0">답변</div>
+                <button class="link-btn" data-load-open>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                       stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h10M4 10h16M4 15h7"/><path d="M14 19l3 3 5-6"/></svg>
+                  저장한 답변 불러오기
+                </button>
+              </div>
+              <textarea class="ta" placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
+              <div class="foot"><span>100자 이상</span><b>0 / 1,500자</b></div>
+            </div>
+
+            <button class="pay" data-load-open>
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+              <span><b>저장한 답변으로 검사하면 무료예요.</b><br>남은 무료 2회 · 붙여넣은 글은 1회가 차감돼요.</span>
+              <span class="go">고르기 →</span>
+            </button>
+
+            <button class="cta">AI 티 검사하기</button>
+            <p class="left">남은 횟수 <b>3회</b></p>
+          </div>
+
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">저장한 답변을 불러온 뒤 — 무료가 적용된 상태</div>
+        <div class="screen" id="scA2">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span class="r">3회</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AI KILLER</div>
+            <div class="h-title">AI 티, 검사해 드려요</div>
+            <p class="h-sub">어디가 왜 AI 같은지 짚고, 어떻게 고칠지까지 알려 드려요.</p>
+
+            <div class="card">
+              <div class="lbl">무엇을 검사할까요</div>
+              <div class="seg" data-seg>
+                <button class="on" data-k="interview">면접 답변</button>
+                <button data-k="essay">자소서</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">어느 항공사인가요</div>
+              <button class="pickbtn set" style="--air:var(--air-ke)" data-air-open>
+                <span data-air-label>대한항공</span>
+                <span class="en">KOREAN AIR</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              <div class="hr"></div>
+              <input class="qin" value="자신의 강점을 말해 보세요">
+
+              <div class="hr"></div>
+              <div class="tools">
+                <div class="lbl" style="margin:0">답변 · 답변노트에서 불러옴</div>
+                <button class="link-btn" data-load-open>바꾸기</button>
+              </div>
+              <textarea class="ta">저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서 아르바이트를 하며 다양한 손님을 응대했고, 그 과정에서 서비스 마인드를 기를 수 있었습니다.</textarea>
+              <div class="foot"><span>답변노트 · 7월 21일 저장</span><b>82 / 1,500자</b></div>
+            </div>
+
+            <div class="pay">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span><b>이 글은 무료로 검사돼요.</b><br>남은 무료 2회 중 1회가 쓰여요. 같은 글은 한 번만 무료예요.</span>
+            </div>
+
+            <button class="cta">무료로 검사하기</button>
+            <p class="left">무료 <b>2회</b> 남음 · 검사 횟수 3회</p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ B안 ══════════════════ -->
+  <section>
+    <span class="stag">B안</span>
+    <h2>두 갈래 — 처음에 한 번만 묻는다</h2>
+    <p class="who">과금을 <b>숨기지 않고 앞에 내놓는다.</b> 무료로 가는 길이 화면의 절반이라 못 보고 지나칠 수 없다.</p>
+    <p class="why">
+      첫 화면은 갈림길 둘. <b>저장한 답변으로 검사</b>(무료 · 몇 개 있는지 숫자로) /
+      <b>새 글 붙여넣기</b>(1회 차감). 답변이 하나도 없으면 첫 카드가
+      <b>"소재 발굴로 답변 만들기"</b>로 바뀐다 — 지적 ③이 말한 "답변 없는 사람이 갈 곳"이 여기다.
+      고르면 폼으로 넘어가고, 폼 맨 위에 <b>어느 길로 왔는지가 남는다</b>.
+    </p>
+    <p class="solved">지적 ①②③④ 해결 · 과금이 가장 명확</p>
+    <p class="cons">약점: <b>탭이 한 단계로 승격</b>됐을 뿐이라는 반론이 가능하다. 화면이 하나 늘어난다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">첫 화면 — 저장한 답변이 3개 있을 때</div>
+        <div class="screen" id="scB1">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span class="r">3회</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AI KILLER</div>
+            <div class="h-title">어떤 글을<br>검사할까요</div>
+            <p class="h-sub">답변노트에 올린 글은 무료로 검사할 수 있어요.</p>
+
+            <button class="route">
+              <div class="route-top">
+                <span class="route-t">저장한 답변으로</span>
+                <span class="route-badge">무료 2회</span>
+              </div>
+              <p class="route-d">답변노트에 있는 글을 불러와서 검사해요.</p>
+              <div class="route-m"><span>저장된 답변 <b>3개</b></span><span>고르기 →</span></div>
+            </button>
+
+            <button class="route">
+              <div class="route-top">
+                <span class="route-t">새 글 붙여넣기</span>
+                <span class="route-badge paid">1회 차감</span>
+              </div>
+              <p class="route-d">다른 곳에 써 둔 자소서·답변을 그대로 넣어요.</p>
+              <div class="route-m"><span>남은 횟수 <b>3회</b></span><span>넣기 →</span></div>
+            </button>
+
+            <p class="note" style="text-align:center">
+              붙여넣은 글도 검사 뒤 답변노트에 저장하면 다음부터 무료예요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">첫 화면 — 저장한 답변이 하나도 없을 때</div>
+        <div class="screen" id="scB2">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span class="r">0회</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AI KILLER</div>
+            <div class="h-title">어떤 글을<br>검사할까요</div>
+            <p class="h-sub">답변노트에 올린 글은 무료로 검사할 수 있어요.</p>
+
+            <button class="route" style="border-color:var(--free-bd);background:var(--free-bg)">
+              <div class="route-top">
+                <span class="route-t">답변부터 만들기</span>
+                <span class="route-badge">무료 2회 대기 중</span>
+              </div>
+              <p class="route-d">소재 발굴에서 질문에 답하면 답변노트에 쌓여요.
+                 그 글은 <b>무료로</b> 검사할 수 있어요.</p>
+              <div class="route-m"><span>저장된 답변 <b>0개</b></span><span>소재 발굴로 →</span></div>
+            </button>
+
+            <button class="route">
+              <div class="route-top">
+                <span class="route-t">새 글 붙여넣기</span>
+                <span class="route-badge paid">1회 차감</span>
+              </div>
+              <p class="route-d">이미 써 둔 자소서가 있다면 그대로 넣어도 돼요.</p>
+              <div class="route-m"><span>남은 횟수 <b>0회</b> · 충전 필요</span><span>넣기 →</span></div>
+            </button>
+
+            <p class="note" style="text-align:center">
+              지금은 검사 횟수가 없어요. 답변을 만들면 <b>2회까지 무료</b>로 쓸 수 있어요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">고른 뒤 — 폼 (어느 길로 왔는지 남는다)</div>
+        <div class="screen" id="scB3">
+          <div class="sc-nav"><span class="b">← 뒤로</span><span class="t">AI킬러</span><span class="r">3회</span></div>
+          <div class="sc-body">
+            <div class="pay" style="margin-top:4px">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span><b>저장한 답변 · 무료 검사</b><br>“자신의 강점을 말해 보세요” · 7월 21일 저장</span>
+            </div>
+
+            <div class="card">
+              <div class="lbl">무엇을 검사할까요</div>
+              <div class="seg" data-seg>
+                <button class="on" data-k="interview">면접 답변</button>
+                <button data-k="essay">자소서</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">어느 항공사인가요</div>
+              <button class="pickbtn set" style="--air:var(--air-7c)" data-air-open>
+                <span data-air-label>제주항공</span>
+                <span class="en">JEJU AIR</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              <div class="hr"></div>
+              <textarea class="ta">저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서 아르바이트를 하며 다양한 손님을 응대했고, 그 과정에서 서비스 마인드를 기를 수 있었습니다.</textarea>
+              <div class="foot"><span>불러온 글</span><b>82 / 1,500자</b></div>
+            </div>
+
+            <button class="cta">무료로 검사하기</button>
+            <p class="left">무료 <b>2회</b> 남음</p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ C안 ══════════════════ -->
+  <section>
+    <span class="stag">C안</span>
+    <h2>내 답변이 첫 화면 — 고르는 게 기본, 붙여넣기가 예외</h2>
+    <p class="who">묻지 않고 <b>보여준다.</b> 답변노트와 가장 강하게 묶이는 안.</p>
+    <p class="why">
+      들어오면 내가 쓴 답변이 바로 목록으로 깔린다. 누르면 그게 검사 대상이 되고 <b>무료</b>다.
+      붙여넣기는 목록 아래 <b>작은 링크</b>로 내려간다 — 실제로 붙여넣기는 예외 경로다.
+      항공사·종류는 답변에 이미 붙어 있으면 <b>자동으로 채워진다</b>(칩으로 보인다).
+    </p>
+    <p class="solved">지적 ①②③④ 해결 · 답변노트 사용률이 같이 오른다(결정 8의 원래 의도)</p>
+    <p class="cons">약점: <b>붙여넣기가 불편해진다.</b> 급히 자소서를 검사하려는 사람에게 한 단계가 더 든다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">기본 — 내 답변 목록</div>
+        <div class="screen" id="scC1">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span class="r">3회</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AI KILLER</div>
+            <div class="h-title">어떤 답변을<br>검사할까요</div>
+            <p class="h-sub">답변노트에 있는 글이에요. 고르면 <b>무료 2회</b> 안에서 검사돼요.</p>
+
+            <button class="ans">
+              <div class="ans-t">자신의 강점을 말해 보세요</div>
+              <p class="ans-p">저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서…</p>
+              <div class="ans-m">
+                <span class="tag free">무료</span>
+                <span class="tag air" style="--air:var(--air-ke)">KOREAN AIR</span>
+                <span class="tag">면접 답변</span>
+                <span style="margin-left:auto">7월 21일</span>
+              </div>
+            </button>
+
+            <button class="ans">
+              <div class="ans-t">지원 동기를 기술하시오</div>
+              <p class="ans-p">어릴 적부터 하늘을 동경해왔습니다. 다양한 경험을 통해 서비스…</p>
+              <div class="ans-m">
+                <span class="tag free">무료</span>
+                <span class="tag air" style="--air:var(--air-7c)">JEJU AIR</span>
+                <span class="tag">자소서</span>
+                <span style="margin-left:auto">7월 19일</span>
+              </div>
+            </button>
+
+            <button class="ans">
+              <div class="ans-t">갈등을 해결한 경험</div>
+              <p class="ans-p">동아리 활동 중 의견 차이가 있었습니다. 저는 먼저 상대의…</p>
+              <div class="ans-m">
+                <span class="tag">검사함 · 조금 티남</span>
+                <span class="tag air" style="--air:var(--air-tw)">T'WAY AIR</span>
+                <span style="margin-left:auto">7월 14일</span>
+              </div>
+            </button>
+
+            <p class="or">여기 없는 글인가요? <button data-load-open>직접 붙여넣기 (1회 차감)</button></p>
+            <p class="note" style="text-align:center">
+              소재 발굴에서 답변을 만들면 여기에 쌓여요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">답변이 없을 때 — 만들러 보낸다</div>
+        <div class="screen" id="scC2">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI킬러</span><span class="r">0회</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AI KILLER</div>
+            <div class="h-title">어떤 답변을<br>검사할까요</div>
+            <p class="h-sub">답변노트에 올린 글은 무료로 검사할 수 있어요.</p>
+
+            <div class="ans-empty">
+              <p>아직 저장한 답변이 없어요.<br>
+                 소재 발굴에서 질문에 답하면 여기에 쌓이고,<br>그 글은 <b>2회까지 무료</b>로 검사할 수 있어요.</p>
+              <button class="cta">소재 발굴로 답변 만들기</button>
+            </div>
+
+            <p class="or">이미 써 둔 글이 있나요? <button data-load-open>직접 붙여넣기 (1회 차감)</button></p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ 공통 ══════════════════ -->
+  <section>
+    <span class="stag">세 안 공통</span>
+    <h2>항공사 · 용어 · 과금 문구</h2>
+
+    <p class="why">
+      <b>항공사(지적 ⑤)</b> — `news.html`이 이미 쓰는 관습대로 <b>버튼 → 바텀시트</b>로 고른다
+      (칩을 가로로 나열하지 않는다. 375px에서 필터바가 화면의 70%를 먹던 실측 문제로 돌아간다).
+      목록·색·영문 사명은 <b>특강 카드와 같은 소스</b>(`LEC.AIRLINES` + `--air-*`)를 쓴다 —
+      새로 만들면 같은 사이트에서 항공사 표기가 두 벌이 된다.
+    </p>
+    <p class="why" style="margin-top:10px">
+      ⚠️ <b>항공사는 '선택'이다.</b> 아직 지망사를 안 정한 학생이 많고, 필수로 만들면
+      그 사람들이 첫 화면에서 막힌다. 시트 맨 아래 <b>"아직 안 정했어요"</b>가 항상 있다.
+    </p>
+
+    <table>
+      <tr><th style="width:130px">용어</th><th>지금</th><th>바꿀 말</th><th>이유</th></tr>
+      <tr>
+        <td><b>탭 이름</b></td>
+        <td class="no">답변노트에서</td>
+        <td class="ok">저장한 답변 불러오기</td>
+        <td>'답변노트'는 저장소 이름(고유명사)이라 <b>동작</b>을 말하지 못한다</td>
+      </tr>
+      <tr>
+        <td><b>무료 안내</b></td>
+        <td class="no">답변노트에 올리면 무료로 검사할 수 있습니다 <i>(안 눌림)</i></td>
+        <td class="ok">저장한 답변으로 검사하면 무료예요 → <b>누르면 목록/소재 발굴</b></td>
+        <td>답변이 없는 사람이 누를 자리다. 갈 곳이 없으면 안내가 아니라 불친절</td>
+      </tr>
+      <tr>
+        <td><b>붙여넣기</b></td>
+        <td class="no">붙여넣기 <i>(탭)</i></td>
+        <td class="ok">새 글 붙여넣기 · 1회 차감</td>
+        <td>과금을 라벨에 붙이면 유·무료를 따로 설명할 필요가 없다</td>
+      </tr>
+      <tr>
+        <td><b>빈 상태 목적지</b></td>
+        <td class="no">없음</td>
+        <td class="ok">소재 발굴(`sojae.html`)</td>
+        <td>`answers.html`은 빈 목록만 보여주고 다시 소재 발굴로 보낸다 — 한 단계 줄인다</td>
+      </tr>
+    </table>
+
+    <div class="ask">
+      <h4>⚠️ 정해 주셔야 하는 것 하나 — 무료 2회를 얻는 길</h4>
+      <p>
+        지금 규칙(확정본 결정 8)은 <b>"답변노트에 올린 글을 검사하면 무료"</b>다.
+        그런데 붙여넣기로 들어온 사람은 <b>검사한 뒤에야</b> 저장할 수 있어서,
+        무료를 받으려면 <b>유료로 한 번 검사하고 → 저장하고 → 다시 검사</b>해야 한다. 말이 안 된다.
+      </p>
+      <ul>
+        <li><b>그대로 둔다</b> — 무료는 소재 발굴로 답변을 만든 사람만. 답변노트 사용률이 목적이라면 이게 맞다</li>
+        <li><b>붙여넣기에도 길을 연다</b> — "이 글을 답변노트에 저장하고 무료로 검사" 버튼 하나.
+            결정 8의 목적이 '글을 올리게 하는 것'이라면 목적은 그대로 달성되고,
+            유·무료 혼란도 사라진다 <b>(권장)</b></li>
+      </ul>
+      <p style="margin-top:10px">
+        고르시는 안(A/B/C)과 이 규칙을 정해 주시면 그대로 구현합니다.
+        <b>항공사가 판정에 어떻게 쓰이는지</b>도 짚어 둡니다 — 지금은 <b>AI가 쓰는 why/fix 문장</b>에만
+        반영됩니다(맥락 3종째). 항공사별 감점 표현 사전은 ⑧단계에서 연구진 자료가 와야 만들 수 있습니다.
+      </p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // 항공사 — 특강(LEC.AIRLINES)과 같은 목록·같은 색. 새로 만들지 않는다.
+  const AIR = [
+    ['ke','대한항공','KOREAN AIR'], ['lj','진에어','JIN AIR'], ['7c','제주항공','JEJU AIR'],
+    ['tw','티웨이항공',"T'WAY AIR"], ['ze','이스타항공','EASTAR JET'],
+    ['yp','에어프레미아','AIR PREMIA'], ['rf','에어로케이','AERO K'],
+  ];
+  const NOTES = [
+    ['자신의 강점을 말해 보세요','저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서…','7월 21일'],
+    ['지원 동기를 기술하시오','어릴 적부터 하늘을 동경해왔습니다. 다양한 경험을 통해 서비스…','7월 19일'],
+    ['갈등을 해결한 경험','동아리 활동 중 의견 차이가 있었습니다. 저는 먼저 상대의…','7월 14일'],
+  ];
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function openSheet(screen, html) {
+    screen.querySelector('[data-sheet]').innerHTML = '<div class="sheet-grip"></div>' + html;
+    screen.classList.add('sheet-on');
+  }
+  const closeSheet = (screen) => screen.classList.remove('sheet-on');
+
+  function airSheet(screen) {
+    openSheet(screen,
+      '<div class="sheet-h">어느 항공사인가요</div>'
+      + '<div class="sheet-s">항공사마다 자소서 흐름도, 면접이 보는 결도 달라요.</div>'
+      + AIR.map(([c, ko, en]) =>
+          '<button class="opt" data-air="' + c + '" data-ko="' + esc(ko) + '" data-en="' + esc(en) + '" '
+          + 'style="--air:var(--air-' + c + ')"><span class="ko">' + esc(ko) + '</span>'
+          + '<span class="en">' + esc(en) + '</span></button>').join('')
+      + '<button class="opt opt-none" data-air=""><span class="ko">아직 안 정했어요</span></button>');
+  }
+
+  function loadSheet(screen) {
+    openSheet(screen,
+      '<div class="sheet-h">저장한 답변에서 고르기</div>'
+      + '<div class="sheet-s">답변노트에 있는 글이에요. 고르면 무료 1회로 검사돼요.</div>'
+      + NOTES.map(([t, p, d]) =>
+          '<button class="opt" style="display:block;padding:12px 4px">'
+          + '<div style="font-size:15px;font-weight:800">' + esc(t) + '</div>'
+          + '<div style="margin-top:3px;font-size:14px;font-weight:400;color:var(--text-dim);'
+          + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(p) + '</div>'
+          + '<div style="margin-top:6px;font-size:14px;font-weight:700;color:var(--free)">무료 · ' + esc(d) + ' 저장</div>'
+          + '</button>').join('')
+      + '<div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border-soft);'
+      + 'font-size:14px;color:var(--text-dim);text-align:center">여기 없는 글이면 그냥 붙여넣어도 돼요 (1회 차감)</div>');
+  }
+
+  document.addEventListener('click', (e) => {
+    const screen = e.target.closest('.screen');
+    if (!screen) return;
+
+    if (e.target.closest('[data-sheet-close]')) { closeSheet(screen); return; }
+    if (e.target.closest('[data-air-open]')) { airSheet(screen); return; }
+    if (e.target.closest('[data-load-open]')) { loadSheet(screen); return; }
+
+    // 종류 세그먼트
+    const segBtn = e.target.closest('[data-seg] button');
+    if (segBtn) {
+      segBtn.parentElement.querySelectorAll('button').forEach((b) => b.classList.remove('on'));
+      segBtn.classList.add('on');
+      const ta = screen.querySelector('.ta'), q = screen.querySelector('.qin');
+      const iv = segBtn.dataset.k === 'interview';
+      if (ta && !ta.value) ta.placeholder = iv
+        ? '면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요.'
+        : '자소서 한 문항을 넣어 주세요. 여러 문항을 섞으면 정확도가 떨어져요.';
+      if (q && !q.value) q.placeholder = iv ? '어떤 질문을 받았나요? (선택)' : '어떤 문항인가요? (선택)';
+      return;
+    }
+
+    // 항공사 고르기
+    const opt = e.target.closest('.opt[data-air]');
+    if (opt) {
+      const btn = screen.querySelector('[data-air-open]');
+      const label = btn.querySelector('[data-air-label]');
+      const code = opt.dataset.air;
+      btn.querySelector('.en')?.remove();
+      if (code) {
+        label.textContent = opt.dataset.ko;
+        btn.classList.add('set');
+        btn.style.setProperty('--air', 'var(--air-' + code + ')');
+        const en = document.createElement('span');
+        en.className = 'en'; en.textContent = opt.dataset.en;
+        btn.insertBefore(en, btn.lastElementChild);
+      } else {
+        label.textContent = '항공사 선택 (선택)';
+        btn.classList.remove('set');
+      }
+      closeSheet(screen);
+      return;
+    }
+
+    // 시트에서 답변 고르기 — 데모라 닫기만
+    if (e.target.closest('[data-sheet] .opt')) { closeSheet(screen); return; }
+  });
+})();
+</script>
+</body>
+</html>
