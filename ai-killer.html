@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI킬러 — MONC 몬크 챌린지</title>
+  <meta name="description" content="자소서·면접 답변에서 AI 같은 표현을 찾아 드려요. 어디가 왜 별로인지, 어떻게 고칠지까지." />
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       AI킬러 화면 — D안(원문 + 하단 바텀시트) + 목록 토글
+       스펙: docs/superpowers/specs/2026-07-24-ai-killer-design.md
+       시안: outputs/ai-killer-mockup.html (A·B·C안은 결정 기록으로 보존)
+
+       ⚠️ 이 화면을 고칠 때 지켜야 하는 것
+        1. 필수 조작은 전부 44px 이상. 글 속 밑줄은 실측 32~33px 이라 원칙 2를
+           지킬 수 없고, **그래서 D안을 골랐다** — 밑줄을 안 눌러도 화살표로 전부 볼 수 있다.
+           화살표·토글·저장이 44px 아래로 내려가면 이 안을 고른 근거가 무너진다.
+        2. 원문 모드와 목록 모드는 **배타적**(.show-list). 한 화면에 둘 다 띄우지 말 것.
+        3. 종류를 색으로만 구분하지 말 것(원칙 4 · 색약) — 밑줄 모양과 번호칩이 함께 말한다.
+        4. 활자 하한 14px.
+       ══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.6;
+           -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+           padding-bottom: 180px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    a { color: inherit; }
+
+    /* 지적 4종 — 밑줄 모양이 색과 함께 종류를 말한다 */
+    :root {
+      --k-cliche: #A33D14;  --k-cliche-bg: rgba(242,121,69,.20);
+      --k-struct: #1F5F6B;  --k-struct-bg: rgba(31,95,107,.15);
+      --k-vague:  #6E4B8F;  --k-vague-bg:  rgba(110,75,143,.10);
+      --k-ctx:    #5F574B;  --k-ctx-bg:    rgba(95,87,75,.10);
+    }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 60; padding: 12px 0;
+          background: rgba(233,228,216,.94); -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-soft); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between;
+                 max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    .nav-back { display: inline-flex; align-items: center; min-height: 44px;
+                font-size: 14px; font-weight: 700; text-decoration: none; opacity: .85; }
+    .nav-t { font-family: var(--serif); font-size: 17px; font-weight: 700; }
+    .nav-bal { font-size: 14px; font-weight: 700; color: var(--action-ink); min-width: 56px; text-align: right; }
+
+    /* ── 입력 ── */
+    .in-head { font-family: var(--serif); font-size: clamp(24px,5vw,30px); font-weight: 700;
+               line-height: 1.3; margin-top: 22px; }
+    .in-sub { margin-top: 8px; font-size: 15px; color: var(--text-muted); }
+    .in-box { margin-top: 18px; background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--radius-sm); padding: 14px; }
+    .in-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .in-tab { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center;
+              font: inherit; font-size: 14px; font-weight: 700; border: 1px solid var(--border);
+              background: var(--bg2); border-radius: var(--radius-xs); color: var(--text-muted); cursor: pointer; }
+    .in-tab.on { background: var(--text); color: #fff; border-color: var(--text); }
+    .in-ta { width: 100%; min-height: 190px; border: 0; resize: vertical; font: inherit;
+             font-size: 15px; line-height: 1.75; color: var(--text); background: transparent; }
+    .in-ta:focus { outline: none; }
+    .in-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+               gap: 4px 10px; margin-top: 10px; padding-top: 10px;
+               border-top: 1px solid var(--border-soft); font-size: 14px; color: var(--text-dim); }
+    .in-foot b { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .in-foot b.over { color: var(--k-cliche); }
+    /* ⚠️ 무료 조건 안내 — 없으면 '무료 2회'가 유입 장치가 아니라 그냥 불친절이 된다(결정 8) */
+    .in-free { margin-top: 12px; display: flex; gap: 10px; align-items: flex-start;
+               background: rgba(46,110,66,.09); border: 1px solid rgba(46,110,66,.22);
+               border-radius: var(--radius-xs); padding: 12px 13px; font-size: 14px; color: #265C3B; }
+    .in-free b { font-weight: 800; }
+    .in-free svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; }
+    .in-cta { margin-top: 16px; width: 100%; min-height: 54px; border: 0; border-radius: 999px;
+              background: var(--action); color: var(--action-ink); font: inherit; font-size: 17px;
+              font-weight: 800; cursor: pointer; }
+    .in-cta:disabled { opacity: .45; cursor: default; }
+    .in-left { margin-top: 10px; text-align: center; font-size: 14px; color: var(--text-dim); }
+    .in-left b { color: var(--action-ink); font-weight: 800; }
+
+    /* 답변노트에서 불러오기 */
+    .pick { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            background: var(--bg2); border: 1px solid var(--border-soft); border-radius: var(--radius-xs);
+            padding: 10px 12px; margin-bottom: 11px; min-height: 44px; }
+    .pick-k { font-size: 14px; font-weight: 800; color: var(--text-dim); line-height: 1.4; }
+    .pick-t { font-size: 15px; font-weight: 700; margin-top: 2px;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pick-btn { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 0; background: none;
+                font: inherit; font-size: 14px; font-weight: 700; color: var(--action-ink); cursor: pointer; }
+    .note-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 11px; }
+    .note-item { text-align: left; width: 100%; min-height: 44px; padding: 11px 12px; font: inherit;
+                 background: var(--bg2); border: 1px solid var(--border-soft);
+                 border-radius: var(--radius-xs); cursor: pointer; }
+    .note-item .t { font-size: 15px; font-weight: 700; }
+    .note-item .m { font-size: 14px; color: var(--text-dim); margin-top: 2px; }
+    .note-empty { font-size: 14px; color: var(--text-muted); padding: 12px 2px; }
+
+    /* ── 결과 상단 ── */
+    .rs-top { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+              padding: 16px; margin-bottom: 16px; }
+    .rs-grade { display: flex; align-items: center; gap: 12px; }
+    .rs-dial { flex: 0 0 auto; width: 52px; height: 52px; }
+    .rs-gt { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.2; }
+    .rs-gs { font-size: 14px; color: var(--text-dim); margin-top: 3px; line-height: 1.45;
+             font-variant-numeric: tabular-nums; }
+    .rs-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; padding-top: 12px;
+                 border-top: 1px solid var(--border-soft); }
+    .lg { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700;
+          padding: 5px 10px; border-radius: 999px; background: var(--bg2); }
+    .lg i { width: 14px; height: 3px; border-radius: 2px; display: block; }
+    .lg.c { color: var(--k-cliche); } .lg.c i { background: var(--k-cliche); }
+    .lg.s { color: var(--k-struct); } .lg.s i { background: var(--k-struct); }
+    .lg.v { color: var(--k-vague); }  .lg.v i { background: var(--k-vague); }
+    .lg.x { color: var(--k-ctx); }    .lg.x i { background: none; border-top: 3px dotted var(--k-ctx); height: 0; }
+
+    /* ── 원문 + 밑줄 ── */
+    .orig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            padding: 16px; font-size: 15px; line-height: 2.0; }
+    .orig p + p { margin-top: 14px; }
+    .mk { cursor: pointer; border: 0; background: transparent; font: inherit; padding: 0 1px;
+          color: inherit; border-radius: 3px; }
+    .mk.c { background: var(--k-cliche-bg); border-bottom: 2px solid var(--k-cliche); }
+    .mk.s { background: var(--k-struct-bg); border-bottom: 3px double var(--k-struct); }
+    .mk.x { border-bottom: 2px dotted var(--k-ctx); }
+    .mk .n { display: inline-flex; align-items: center; justify-content: center;
+             min-width: 18px; height: 18px; margin-left: 4px; border-radius: 5px;
+             font-size: 12px; font-weight: 800; color: #fff; vertical-align: 1px;
+             font-variant-numeric: tabular-nums; padding: 0 3px; }
+    .mk.c .n { background: var(--k-cliche); } .mk.s .n { background: var(--k-struct); }
+    .mk.x .n { background: var(--k-ctx); }
+    .mk.hit { outline: 3px solid var(--action); outline-offset: 2px; }
+    /* 구체성 = 문단 단위(밑줄 아님) */
+    .pv { border-left: 3px solid var(--k-vague); background: var(--k-vague-bg);
+          padding: 8px 10px 8px 12px; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; }
+    .pv.hit { outline: 3px solid var(--action); outline-offset: 2px; }
+    .pv-tag { display: block; font-size: 14px; font-weight: 800; color: var(--k-vague);
+              margin-bottom: 3px; line-height: 1.4; }
+
+    /* ── 지적 카드 ── */
+    .cards { display: none; flex-direction: column; gap: 10px; }
+    .show-list .cards { display: flex; }
+    .show-list #origWrap { display: none; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            padding: 13px 14px; border-left: 4px solid var(--k-cliche); cursor: pointer;
+            text-align: left; font: inherit; width: 100%; display: block; }
+    .card.s { border-left-color: var(--k-struct); } .card.v { border-left-color: var(--k-vague); }
+    .card.x { border-left-color: var(--k-ctx); }
+    .cd-h { display: flex; align-items: center; gap: 7px; }
+    .cd-n { flex: 0 0 auto; min-width: 22px; height: 22px; border-radius: 6px; background: var(--k-cliche);
+            color: #fff; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center;
+            justify-content: center; padding: 0 5px; font-variant-numeric: tabular-nums; }
+    .card.s .cd-n { background: var(--k-struct); } .card.v .cd-n { background: var(--k-vague); }
+    .card.x .cd-n { background: var(--k-ctx); }
+    .cd-k { font-size: 14px; font-weight: 800; color: var(--k-cliche); }
+    .card.s .cd-k { color: var(--k-struct); } .card.v .cd-k { color: var(--k-vague); }
+    .card.x .cd-k { color: var(--k-ctx); }
+    .cd-q { margin-top: 8px; font-size: 15px; font-weight: 800; line-height: 1.45; }
+    .cd-q em { font-style: normal; background: var(--k-cliche-bg); padding: 1px 3px; border-radius: 3px; }
+    .card.s .cd-q em { background: var(--k-struct-bg); } .card.v .cd-q em { background: var(--k-vague-bg); }
+    .cd-r { margin-top: 8px; font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+    .cd-f { margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--border-soft);
+            font-size: 14px; line-height: 1.65; }
+    .cd-f b { color: var(--action-ink); font-weight: 800; }
+
+    /* ── 하단 dock (D안의 핵심) ── */
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; background: var(--surface);
+            border-top: 1px solid var(--border); box-shadow: 0 -6px 20px rgba(38,34,28,.10); }
+    .dock-in { max-width: 720px; margin: 0 auto; }
+    .dock-sheet { padding: 14px 16px 4px; border-bottom: 1px solid var(--border-soft); }
+    .dock-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border); margin: 9px auto 0; }
+    .dock-list { width: 100%; min-height: 44px; border: 0; border-top: 1px solid var(--border-soft);
+                 background: transparent; font: inherit; font-size: 14px; font-weight: 700;
+                 color: var(--action-ink); cursor: pointer; padding: 11px; }
+    .show-list .dock-sheet, .show-list .dock-nav { display: none; }
+    .show-list .dock-list { border-top: 0; }
+    .dock-nav { display: flex; align-items: center; gap: 10px; padding: 10px 12px 12px; }
+    .dock-arrow { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+                  border: 1px solid var(--border); background: var(--bg2); font: inherit;
+                  font-size: 19px; font-weight: 800; color: var(--text); cursor: pointer;
+                  display: flex; align-items: center; justify-content: center; }
+    .dock-arrow:disabled { opacity: .35; cursor: default; }
+    .dock-mid { flex: 1; min-width: 0; text-align: center; }
+    .dock-cnt { font-size: 14px; font-weight: 800; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    .dock-kind { font-size: 14px; font-weight: 800; margin-top: 1px; }
+
+    /* 저장 줄 — dock 이 하단을 차지하므로 sticky 가 아니라 본문 끝에 둔다 */
+    .d-save { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .d-save button, .d-save a { flex: 1 1 140px; min-height: 48px; border-radius: 999px; font: inherit;
+                   font-size: 15px; font-weight: 800; cursor: pointer; border: 1px solid var(--border);
+                   background: var(--surface); color: var(--text); display: flex;
+                   align-items: center; justify-content: center; text-decoration: none; }
+    .d-save button.pri { background: var(--action); color: var(--action-ink); border-color: var(--action); }
+
+    .notice { margin-top: 14px; padding: 13px 14px; border-radius: var(--radius-xs);
+              font-size: 14px; line-height: 1.6; }
+    .notice.warn { background: var(--action-tint); border: 1px solid rgba(163,61,20,.25); color: var(--k-cliche); }
+    .notice.info { background: var(--bg2); border: 1px solid var(--border-soft); color: var(--text-muted); }
+    .hidden { display: none !important; }
+    .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(42,18,6,.25);
+            border-top-color: var(--action-ink); border-radius: 50%; animation: sp .7s linear infinite;
+            vertical-align: -2px; margin-right: 7px; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="briefing.html" class="nav-back">← 브리핑룸</a>
+      <span class="nav-t">AI킬러</span>
+      <span class="nav-bal" id="balBadge"></span>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- ══ 입력 ══ -->
+    <section id="inputView">
+      <h1 class="in-head">AI 티, 검사해 드려요</h1>
+      <p class="in-sub">자소서 한 문항이나 면접 답변을 넣으면 어디가 AI 같은지 짚어 드려요.</p>
+
+      <div class="in-box">
+        <div class="in-tabs">
+          <button class="in-tab on" id="tabPaste" type="button">붙여넣기</button>
+          <button class="in-tab" id="tabNote" type="button">답변노트에서</button>
+        </div>
+
+        <div id="pickWrap" class="hidden"></div>
+
+        <textarea class="in-ta" id="ta" maxlength="1500"
+          placeholder="검사할 글을 넣어 주세요. 자소서는 한 문항씩 넣는 편이 정확해요."></textarea>
+        <div class="in-foot">
+          <span id="srcLabel">자소서 1문항 · 답변 1개</span>
+          <b id="cnt">0 / 1,500자</b>
+        </div>
+      </div>
+
+      <div class="in-free" id="freeBox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M2 12h20"/></svg>
+        <div id="freeMsg"></div>
+      </div>
+
+      <button class="in-cta" id="goBtn" type="button" disabled>AI 티 검사하기</button>
+      <p class="in-left" id="leftMsg"></p>
+      <div id="inNotice"></div>
+    </section>
+
+    <!-- ══ 결과 ══ -->
+    <section id="resultView" class="hidden">
+      <div class="rs-top">
+        <div class="rs-grade">
+          <svg class="rs-dial" viewBox="0 0 36 36" aria-hidden="true">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(38,34,28,.12)" stroke-width="4"/>
+            <circle id="dialArc" cx="18" cy="18" r="15.5" fill="none" stroke="#D9531F" stroke-width="4"
+                    stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="97.4"
+                    transform="rotate(-90 18 18)"/>
+            <text id="dialNum" x="18" y="21.6" text-anchor="middle" font-size="11"
+                  font-weight="800" fill="#26221C">0</text>
+          </svg>
+          <div>
+            <div class="rs-gt" id="gradeText"></div>
+            <div class="rs-gs" id="gradeSub"></div>
+          </div>
+        </div>
+        <div class="rs-legend" id="legend"></div>
+      </div>
+
+      <div id="origWrap"><div class="orig" id="orig"></div></div>
+      <div class="cards" id="cardList"></div>
+
+      <div id="resNotice"></div>
+
+      <div class="d-save">
+        <button type="button" id="againBtn">다른 글 검사하기</button>
+        <button type="button" class="pri" id="saveBtn">답변노트에 저장</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- 하단 dock — 결과가 있을 때만 -->
+  <div class="dock hidden" id="dock">
+    <div class="dock-in">
+      <div class="dock-sheet" id="dockSheet"></div>
+      <button class="dock-list" id="dToggle" type="button">전체 목록으로 보기</button>
+      <div class="dock-nav">
+        <button class="dock-arrow" id="dPrev" type="button" aria-label="이전 지적">‹</button>
+        <div class="dock-mid">
+          <div class="dock-cnt" id="dCnt">1 / 1</div>
+          <div class="dock-kind" id="dKind"></div>
+        </div>
+        <button class="dock-arrow" id="dNext" type="button" aria-label="다음 지적">›</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const MIN = 100, MAX = 1500;                       // ⚠️ 중계 함수와 같은 값
+    const KCLS = { cliche: '', structure: 's', vague: 'v', context: 'x' };
+    const KLABEL = { cliche: '상투어', structure: '정형 구조', vague: '구체성', context: '문맥' };
+    const GRADE = {
+      human:  { t: '사람 같음',       arc: .18 },
+      slight: { t: '조금 티남',       arc: .55 },
+      heavy:  { t: 'AI 티 많이 남',   arc: .92 },
+    };
+
+    let _source = 'paste';      // paste | answer
+    let _answerId = null;       // 답변노트에서 불러온 글
+    let _answerTitle = '';
+    let _notes = [];            // 내 답변노트 목록
+    let _res = null;            // 검사 결과
+    let _i = 0;                 // dock 이 물고 있는 지적 번호
+    let _busy = false;
+
+    // ── 잔여 횟수 ─────────────────────────────────────────────────────
+    async function loadBalance() {
+      let bal = 0, freeLeft = 0;
+      try {
+        const [{ data: b }, { data: used }, { data: lim }] = await Promise.all([
+          MONC.sb.rpc('credit_balance'),
+          MONC.sb.rpc('credit_free_used', { p_tool: 'ai_killer' }),
+          MONC.sb.rpc('credit_free_limit', { p_tool: 'ai_killer' }),
+        ]);
+        bal = Number(b) || 0;
+        freeLeft = Math.max((Number(lim) || 0) - (Number(used) || 0), 0);
+      } catch (_) { /* 마이그레이션 미적용 등 — 0으로 두고 검사 시 서버가 막는다 */ }
+      $('balBadge').textContent = bal > 0 ? bal + '회' : '';
+      $('leftMsg').innerHTML = bal > 0
+        ? '남은 횟수 <b>' + bal + '회</b> · 10회 9,900원 충전'
+        : (freeLeft > 0 ? '유료 횟수 없음 · 10회 9,900원 충전' : '검사 횟수가 없어요 · 10회 9,900원 충전');
+      return { bal, freeLeft };
+    }
+
+    // ── 무료 조건 안내 — 결정 8. 화면에서 알 수 없으면 유입 장치가 아니라 불친절이 된다 ──
+    function paintFree(freeLeft) {
+      const box = $('freeBox'), msg = $('freeMsg');
+      if (freeLeft <= 0) { box.classList.add('hidden'); return; }
+      box.classList.remove('hidden');
+      msg.innerHTML = _source === 'answer' && _answerId
+        ? '<b>이 글은 무료로 검사할 수 있어요.</b><br>남은 무료 ' + freeLeft + '회 중 1회가 쓰여요. 같은 글은 한 번만 무료예요.'
+        : '<b>답변노트에 올리면 무료로 검사할 수 있어요.</b><br>올린 글 ' + freeLeft + '개까지 무료입니다. 붙여넣기는 1회가 차감돼요.';
+    }
+
+    // ── 입력 상태 ─────────────────────────────────────────────────────
+    function onInput() {
+      const n = $('ta').value.trim().length;
+      const c = $('cnt');
+      c.textContent = n.toLocaleString() + ' / 1,500자';
+      c.classList.toggle('over', n > MAX);
+      $('goBtn').disabled = _busy || n < MIN || n > MAX;
+      $('goBtn').textContent = _busy ? '검사 중…'
+        : (n > 0 && n < MIN ? (MIN - n) + '자 더 필요해요' : 'AI 티 검사하기');
+    }
+
+    // ── 답변노트 ──────────────────────────────────────────────────────
+    async function loadNotes() {
+      // ⚠️ select('*') — title 컬럼 미적용 환경에서도 조회가 통째로 깨지지 않게
+      const { data } = await MONC.sb.from('answers').select('*')
+        .order('updated_at', { ascending: false }).limit(30);
+      _notes = data || [];
+      // 문제 제목은 questions 에 있고 자유 글은 title 에 있다 — 두 경우를 같이 그린다
+      const qids = [...new Set(_notes.map((a) => a.question_id).filter(Boolean))];
+      if (qids.length) {
+        const { data: qs } = await MONC.sb.from('questions').select('id, content').in('id', qids);
+        const m = new Map((qs || []).map((q) => [q.id, q.content]));
+        _notes.forEach((a) => { a._title = a.title || m.get(a.question_id) || '제목 없는 글'; });
+      } else {
+        _notes.forEach((a) => { a._title = a.title || '제목 없는 글'; });
+      }
+    }
+
+    function paintPicker() {
+      const wrap = $('pickWrap');
+      if (_source !== 'answer') { wrap.classList.add('hidden'); return; }
+      wrap.classList.remove('hidden');
+      if (_answerId) {
+        const t = _answerTitle || '불러온 글';
+        wrap.innerHTML = '<div class="pick"><div style="min-width:0">'
+          + '<div class="pick-k">답변노트</div><div class="pick-t">' + esc(t) + '</div></div>'
+          + '<button class="pick-btn" type="button" id="reBtn">바꾸기</button></div>';
+        $('reBtn').onclick = () => { _answerId = null; _answerTitle = ''; $('ta').value = ''; onInput(); refresh(); };
+        return;
+      }
+      if (!_notes.length) {
+        wrap.innerHTML = '<p class="note-empty">답변노트에 저장된 글이 아직 없어요. '
+          + '붙여넣기로 검사한 뒤 <b>답변노트에 저장</b>을 누르면 여기에 쌓여요.</p>';
+        return;
+      }
+      wrap.innerHTML = '<div class="note-list">' + _notes.map((a, i) =>
+        '<button class="note-item" type="button" data-i="' + i + '">'
+        + '<div class="t">' + esc(a._title) + '</div>'
+        + '<div class="m">' + (a.content || '').trim().slice(0, 40) + '…</div></button>').join('') + '</div>';
+      wrap.querySelectorAll('.note-item').forEach((b) => {
+        b.onclick = () => {
+          const a = _notes[Number(b.dataset.i)];
+          _answerId = a.id; _answerTitle = a._title;
+          $('ta').value = a.content || '';
+          onInput(); refresh();
+        };
+      });
+    }
+
+    async function refresh() {
+      const { freeLeft } = await loadBalance();
+      paintFree(freeLeft);
+      paintPicker();
+      $('srcLabel').textContent = _source === 'answer' && _answerId ? '답변노트에서 불러온 글' : '자소서 1문항 · 답변 1개';
+    }
+
+    // ── 결과 그리기 ───────────────────────────────────────────────────
+    function origHtml(text, hits) {
+      // 문단으로 쪼갠 뒤, 각 문단 안에서 밑줄 span 을 심는다.
+      // ⚠️ 위치(start/end)는 서버가 계산한 값이다 — 화면이 다시 찾지 않는다.
+      const marks = hits.filter((h) => h.start >= 0 && h.kind !== 'vague')
+                        .sort((a, b) => a.start - b.start);
+      const paras = hits.filter((h) => h.kind === 'vague' && h.start >= 0);
+      let out = '', cur = 0;
+      const seg = (from, to) => {
+        let s = '';
+        for (const m of marks) {
+          if (m.start < from || m.end > to) continue;
+          s += esc(text.slice(cur, m.start));
+          s += '<button class="mk ' + KCLS[m.kind] + '" data-n="' + m.n + '" type="button">'
+            + esc(text.slice(m.start, m.end))
+            + '<span class="n">' + m.n + '</span></button>';
+          cur = m.end;
+        }
+        s += esc(text.slice(cur, to));
+        cur = to;
+        return s;
+      };
+      // 문단 경계 = 빈 줄
+      let idx = 0;
+      for (const raw of text.split(/\n{1,}/)) {
+        const start = text.indexOf(raw, idx); idx = start + raw.length;
+        if (!raw.trim()) continue;
+        cur = start;
+        const inner = seg(start, start + raw.length).replace(/\n/g, '<br>');
+        const v = paras.find((p) => p.start === start);
+        out += v
+          ? '<div class="pv" data-n="' + v.n + '"><span class="pv-tag">구체성 · 문단 전체</span><p>' + inner + '</p></div>'
+          : '<p>' + inner + '</p>';
+      }
+      return out;
+    }
+
+    function cardHtml(h) {
+      return '<button class="card ' + KCLS[h.kind] + '" data-n="' + h.n + '" type="button">'
+        + '<div class="cd-h"><span class="cd-n">' + h.n + '</span>'
+        + '<span class="cd-k">' + KLABEL[h.kind] + '</span></div>'
+        + '<div class="cd-q"><em>' + esc(h.quote) + '</em></div>'
+        + '<div class="cd-r">' + esc(h.why) + '</div>'
+        + '<div class="cd-f">' + esc(h.fix) + '</div></button>';
+    }
+
+    function showResult(r) {
+      _res = r; _i = 0;
+      $('inputView').classList.add('hidden');
+      $('resultView').classList.remove('hidden');
+
+      const g = GRADE[r.grade] || GRADE.human;
+      $('gradeText').textContent = g.t;
+      // ⚠️ 화면에는 **한 개의 수**만 보여준다 — 다이얼·부제·dock 이 전부 같은 수(고칠 곳)여야 한다.
+      //    등급의 분자인 occurrences(같은 표현이 몇 번 나왔나)는 서버·DB 의 측정값이라
+      //    화면에 같이 띄우면 "6곳인데 왜 7번?"이 된다. 밀도만 등급 근거로 덧붙인다.
+      const density = r.char_count ? (r.occurrences / r.char_count * 100).toFixed(1) : '0.0';
+      $('gradeSub').textContent = '고칠 곳 ' + r.spot_count + '곳 · '
+        + r.char_count.toLocaleString() + '자 기준 100자당 ' + density + '번';
+      $('dialNum').textContent = String(r.spot_count);
+      $('dialArc').setAttribute('stroke-dashoffset', String(Math.round(97.4 * (1 - g.arc))));
+
+      const by = {};
+      (r.hits || []).forEach((h) => { by[h.kind] = (by[h.kind] || 0) + 1; });
+      $('legend').innerHTML = ['cliche', 'structure', 'vague', 'context']
+        .filter((k) => by[k])
+        .map((k) => '<span class="lg ' + (KCLS[k] || 'c') + '"><i></i>' + KLABEL[k] + ' ' + by[k] + '</span>')
+        .join('');
+
+      if (!r.hits || !r.hits.length) {
+        $('orig').innerHTML = '<p>' + esc(r._text).replace(/\n/g, '<br>') + '</p>';
+        $('cardList').innerHTML = '';
+        $('dock').classList.add('hidden');
+        $('resNotice').innerHTML = '<div class="notice info">걸린 표현이 없어요. 이대로 좋아요.</div>';
+      } else {
+        $('orig').innerHTML = origHtml(r._text, r.hits);
+        $('cardList').innerHTML = r.hits.map(cardHtml).join('');
+        $('dock').classList.remove('hidden');
+        $('resNotice').innerHTML = r.truncated > 0
+          ? '<div class="notice info">지적이 많아 앞의 ' + r.spot_count + '곳만 표시했어요(' + r.truncated + '곳 더 있어요).</div>'
+          : '';
+        dock(0, false);
+      }
+
+      // 저장 버튼 — 불러온 글은 이미 이어져 있으므로 답변노트로 보내기만 한다
+      $('saveBtn').textContent = _source === 'answer' && _answerId ? '답변노트에서 보기' : '답변노트에 저장';
+      document.documentElement.scrollTop = 0;
+    }
+
+    // ── dock — D안의 핵심. 밑줄을 안 눌러도 여기서 전부 볼 수 있다 ──
+    function dock(k, scroll) {
+      const hits = _res.hits;
+      _i = Math.max(0, Math.min(hits.length - 1, k));
+      const h = hits[_i];
+      const cls = KCLS[h.kind] || '';
+      $('dockSheet').innerHTML =
+        '<div class="cd-h"><span class="cd-n" style="background:var(--k-'
+          + ({ cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx' })[h.kind] + ')">'
+          + h.n + '</span><span class="cd-k" style="color:var(--k-'
+          + ({ cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx' })[h.kind] + ')">'
+          + KLABEL[h.kind] + '</span></div>'
+        + '<div class="cd-q ' + cls + '"><em>' + esc(h.quote) + '</em></div>'
+        + '<div class="cd-r">' + esc(h.why) + '</div>'
+        + '<div class="cd-f">' + esc(h.fix) + '</div><div class="dock-grip"></div>';
+      $('dCnt').textContent = (_i + 1) + ' / ' + hits.length;
+      $('dKind').textContent = KLABEL[h.kind];
+      $('dPrev').disabled = _i === 0;
+      $('dNext').disabled = _i === hits.length - 1;
+
+      document.querySelectorAll('.hit').forEach((el) => el.classList.remove('hit'));
+      const t = document.querySelector('#origWrap [data-n="' + h.n + '"]');
+      if (t) {
+        t.classList.add('hit');
+        if (scroll) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+
+    // ── 검사 실행 ─────────────────────────────────────────────────────
+    async function run() {
+      if (_busy) return;
+      const text = $('ta').value.trim();
+      if (text.length < MIN || text.length > MAX) return;
+      _busy = true; onInput();
+      $('goBtn').innerHTML = '<span class="spin"></span>검사 중…';
+      $('inNotice').innerHTML = '';
+
+      try {
+        const { data, error } = await MONC.sb.functions.invoke('ai-killer', {
+          body: { source: _source, text, answerId: _source === 'answer' ? _answerId : null },
+        });
+        // ⚠️ supabase-js 는 non-2xx 면 data 를 null 로 만들고 본문을 error.context 에 숨긴다.
+        //    중계 함수는 사용자에게 보여줄 사유(no_credit·refused 등)를 200 으로 돌려주므로
+        //    여기 걸리는 건 진짜 장애다.
+        if (error || !data) throw new Error('invoke_failed');
+        if (!data.ok) {
+          $('inNotice').innerHTML = '<div class="notice warn">' + esc(data.error || '검사에 실패했어요.')
+            + (data.code === 'no_credit' ? '<br>충전은 준비 중이에요. 잠시만 기다려 주세요.' : '') + '</div>';
+          await refresh();
+          return;
+        }
+        data._text = text;
+        showResult(data);
+      } catch (_) {
+        $('inNotice').innerHTML = '<div class="notice warn">검사에 실패했어요. 잠시 뒤 다시 시도해 주세요. '
+          + '횟수가 차감됐다면 자동으로 돌려드립니다.</div>';
+      } finally {
+        _busy = false; onInput();
+        await loadBalance();
+      }
+    }
+
+    // ── 답변노트에 저장 — 붙여넣기로 검사한 글을 올리면 다음부터 무료가 된다(결정 8) ──
+    async function saveToNote() {
+      if (_source === 'answer' && _answerId) { location.href = 'mypage.html#sec-answers'; return; }
+      const title = (prompt('어떤 문항인가요? (예: 지원 동기를 기술하시오)') || '').trim();
+      if (!title) return;
+      const { data: { user } } = await MONC.sb.auth.getUser();
+      const { error } = await MONC.sb.from('answers')
+        .insert({ member_id: user.id, title, content: _res._text, status: 'final' });
+      $('resNotice').innerHTML = error
+        ? '<div class="notice warn">저장하지 못했어요. 답변노트 확장이 아직 적용되지 않았을 수 있어요.</div>'
+        : '<div class="notice info">답변노트에 저장했어요. 이 글은 다음에 <b>무료로</b> 검사할 수 있어요.</div>';
+      if (!error) { $('saveBtn').disabled = true; $('saveBtn').textContent = '저장됨'; await loadNotes(); }
+    }
+
+    // ── 배선 ──────────────────────────────────────────────────────────
+    $('ta').addEventListener('input', onInput);
+    $('goBtn').addEventListener('click', run);
+    $('againBtn').addEventListener('click', () => {
+      $('resultView').classList.add('hidden');
+      $('dock').classList.add('hidden');
+      document.body.classList.remove('show-list');
+      $('inputView').classList.remove('hidden');
+      $('ta').value = ''; onInput(); refresh();
+      document.documentElement.scrollTop = 0;
+    });
+    $('saveBtn').addEventListener('click', saveToNote);
+    $('tabPaste').addEventListener('click', () => {
+      _source = 'paste'; _answerId = null; _answerTitle = '';
+      $('tabPaste').classList.add('on'); $('tabNote').classList.remove('on');
+      refresh();
+    });
+    $('tabNote').addEventListener('click', async () => {
+      _source = 'answer';
+      $('tabNote').classList.add('on'); $('tabPaste').classList.remove('on');
+      if (!_notes.length) await loadNotes();
+      refresh();
+    });
+    $('dPrev').addEventListener('click', () => dock(_i - 1, true));
+    $('dNext').addEventListener('click', () => dock(_i + 1, true));
+    $('dToggle').addEventListener('click', () => {
+      // ⚠️ 원문 모드와 목록 모드는 배타적이다. 한 화면에 둘 다 띄우지 말 것.
+      const list = document.body.classList.toggle('show-list');
+      $('dToggle').textContent = list ? '원문에서 하나씩 보기' : '전체 목록으로 보기';
+      document.documentElement.scrollTop = 0;
+    });
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('#cardList .card');
+      if (card) {  // 목록에서 카드를 누르면 원문으로 돌아가 그 자리를 편다
+        document.body.classList.remove('show-list');
+        $('dToggle').textContent = '전체 목록으로 보기';
+        const k = _res.hits.findIndex((h) => String(h.n) === card.dataset.n);
+        if (k >= 0) dock(k, true);
+        return;
+      }
+      const mk = e.target.closest('#origWrap [data-n]');   // 밑줄 탭은 보조 수단
+      if (mk && _res) {
+        const k = _res.hits.findIndex((h) => String(h.n) === mk.dataset.n);
+        if (k >= 0) dock(k, false);
+      }
+    });
+
+    // ── 진입 ──────────────────────────────────────────────────────────
+    (async () => {
+      const session = await MONC.requireSession();              // 미로그인 → login 으로
+      if (!session) return;
+      if (!(await MONC.requireConsent())) return;               // ⚠️ 동의 게이트 — 빼면 주소창으로 우회된다
+      await loadNotes();
+      await refresh();
+      onInput();
+    })();
+  })();
+  </script>
+</body>
+</html>
