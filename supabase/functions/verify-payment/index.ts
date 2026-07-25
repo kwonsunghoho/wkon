@@ -130,26 +130,30 @@ Deno.serve(async (req) => {
 
     const { error } = await supa.from('applications').insert(payload)
     if (error) {
-      // 동일 결제ID 중복(이미 접수됨)이면 성공으로 간주
-      if (error.code === '23505' || String(error.message).includes('duplicate')) {
-        return json({ ok: true, duplicate: true })
-      }
-      // 정원 마감(DB 트리거 MC001) — 결제하는 사이에 마지막 자리가 나갔다.
-      // 결제는 이미 승인됐으므로 전액 자동 환불하고 실패로 답한다.
-      // ⚠️ 여기만 200 으로 답한다: supabase-js 의 functions.invoke 는 non-2xx 면 data 를
-      //    null 로 만들고 본문을 error.context 안에 숨겨, 브라우저가 'lecture_full' 인지
-      //    구분할 수 없다(= 환불됐다는 안내를 못 띄운다). 실패 여부는 ok:false 로 전한다.
+      // ⚠️ 트리거 코드(MC001/MC002)를 '동일 결제ID' 판정보다 먼저 본다.
+      //    아래 판정이 메시지에 'duplicate key' 가 들어있는지도 보기 때문에, 순서가 뒤바뀌면
+      //    중복 신청(message = duplicate_application)이 '이미 접수됨(ok:true)'으로 삼켜져
+      //    돈만 나가고 환불이 안 된다.
+      // ⚠️ 환불 분기는 200 으로 답한다: supabase-js 의 functions.invoke 는 non-2xx 면 data 를
+      //    null 로 만들고 본문을 error.context 안에 숨겨, 브라우저가 사유를 구분할 수 없다
+      //    (= 환불됐다는 안내를 못 띄운다). 실패 여부는 ok:false 로 전한다.
+
+      // 특강 정원 마감(MC001) — 결제하는 사이에 마지막 자리가 나갔다 → 전액 자동 환불.
       if (error.code === 'MC001' || String(error.message).includes('lecture_full')) {
         const refunded = await refundAll(supa, paymentId, paid, '특강 정원 마감 · 자동 환불')
         return json({ ok: false, error: 'lecture_full', refunded })
       }
-      // 같은 프로그램 중복 신청(DB 트리거 MC002) — 이미 신청한 챌린지·특강을 또 결제한 경우.
-      // 브라우저 사전 검사로 못 잡는 경우(비회원·두 탭 동시 결제)가 여기로 온다.
-      // 결제는 이미 승인됐으므로 전액 자동 환불하고 실패로 답한다(위 lecture_full 과 같은 이유로 200).
+      // 같은 프로그램 중복 신청(MC002) — 이미 신청한 챌린지·특강을 또 결제한 경우.
+      // 브라우저 사전 검사로 못 잡는 경우(비회원·두 탭 동시 결제)가 여기로 온다 → 전액 자동 환불.
       if (error.code === 'MC002' || String(error.message).includes('duplicate_application')) {
         const refunded = await refundAll(supa, paymentId, paid, '중복 신청 · 자동 환불')
         // hint 에 트리거가 담아준 프로그램 이름이 온다(예: '표현력 4기') — 사용자 안내에 쓴다.
         return json({ ok: false, error: 'duplicate_application', refunded, program: error.hint || null })
+      }
+      // 동일 결제ID(같은 결제를 두 번 검증 — 이미 접수됨)면 성공으로 간주.
+      // ⚠️ 'duplicate' 가 아니라 'duplicate key' 로 좁힌다 — 위 MC002 메시지를 삼키지 않게.
+      if (error.code === '23505' || String(error.message).includes('duplicate key')) {
+        return json({ ok: true, duplicate: true })
       }
       return json({ ok: false, error: 'insert_failed', detail: error.message }, 500)
     }
