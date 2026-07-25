@@ -231,7 +231,22 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
   - **⚠️ 디버깅 함정:** `#hs-stage`엔 index.html 하단 freeze IIFE(2026-07-13 인앱 WebView 대응)가 **인라인 `height:NNNpx`를 박아둔다** — `stage.style.height=''` → `getComputedStyle` → px 재기록. 그래서 **index.css의 `.hs-stage{height}`를 고쳐도 이미 로드된 페이지에선 안 먹는 것처럼 보인다**(인라인이 `!important` 없는 규칙을 이김). CSS가 소스오브트루스는 맞고 freeze가 그 값을 읽으므로 **새로고침하면 반영된다.** DevTools/주입 실험에서 `!important` 없이 안 먹거든 이걸 의심할 것. freeze는 **폭 변화에만** 재실행 → 폭 그대로 높이만 바꾸면(F11 등) 옛 동결값이 남아 재클립될 수 있으나, 창 모서리 드래그는 폭도 바뀌어 재동결된다.
 
 ### Google Apps Script — 중복 신청
-`학생현황` 시트에 **항상 새 행 추가**(전화 중복 무관; 구 find-and-update는 덮어쓰기 문제로 제거). 편집은 Google 콘솔에서 후 새 버전 재배포 필요.
+`학생현황` 시트에 **항상 새 행 추가**(전화 중복 무관; 구 find-and-update는 덮어쓰기 문제로 제거). 편집은 Google 콘솔에서 후 새 버전 재배포 필요. ⚠️ 이건 **구 레거시 시트 경로**이고, 현재 신청은 아래 Supabase 중복 가드가 막는다 — 시트 쪽 '항상 append'와 혼동하지 말 것.
+
+### 같은 프로그램 중복 신청 차단 (2026-07-25 신설 · migration `20260725120000_duplicate_application_guard.sql`, **owner 실행 필요**)
+같은 사람이 같은 프로그램을 두 번 신청하는 것을 막는다(오너 지시 — admin 신청자 현황에 같은 이름·전화가 같은 챌린지·기수를 6분 간격으로 두 번 신청한 행이 쌓였다).
+- **⚠️ 원장은 DB 트리거 하나(`applications_duplicate` → errcode `MC002`, message `duplicate_application`).** 신청이 들어오는 길이 **다섯**(챌린지 계좌이체·토스 / 특강 무료·계좌이체·토스)인데 전부 `applications` insert 로 수렴하므로 여기서 한 번 막는 것이 유일하게 새지 않는 방법이다. **브라우저 검사만으로 대체하지 말 것** — 비회원은 RLS 때문에 사전 조회가 아예 불가능하고(아래), 검사와 저장 사이의 틈은 늘 남는다.
+- **판정 규칙**: 챌린지는 `challenge` + `round`(기수가 다르면 정상 재신청 → 허용), 특강은 `lecture_id`. **⚠️ 특강은 시간대(slot)가 달라도 차단** — 시간대는 '같은 내용을 여는 다른 타임'이라 두 번 들을 이유가 없다. '같은 사람' = 전화번호(숫자만) 일치 **또는** `member_id` 일치(비회원으로 한 번, 로그인해서 또 한 번을 잡는다). **환불·취소된 건(`refunded` / `payment_status` refunded·partial_refunded·cancelled·failed)은 세지 않아** 환불 뒤 재신청은 정상 동작.
+- **⚠️ `pg_advisory_xact_lock`(전화·계정 키) 필수** — 두 번 연속 탭·두 탭 동시 신청은 서로 아직 커밋 전이라 `select` 에 안 잡혀 **둘 다 통과한다**(정원 가드의 `for update`와 같은 이유). 실측: 락 없으면 2건 저장, 락 있으면 뒤엣것이 MC002.
+- **⚠️ 트리거 이름이 `applications_duplicate`인 이유**: 같은 BEFORE INSERT 인 정원 가드(`applications_lecture_capacity`)보다 알파벳 순서가 앞이라 **중복 판정이 먼저 돈다**(중복이면 자리 계산까지 갈 필요가 없다). 이름을 바꾸면 순서가 뒤집혀 중복 신청이 MC001(정원 마감)로 보고될 수 있다.
+- **클라이언트(트리거 미적용이어도 회원은 동작)**: 공용 헬퍼는 `supabase-config.js`의 `MONC.isDuplicateError / isLiveApplication / programKey / myAppliedPrograms`.
+  - `apply.html` — 회원은 **이미 신청한 기수 카드가 `.disabled` + '신청완료'(`.status-applied`) 로 잠긴다**(`markAppliedCards()`). 호출은 `applyStatuses()` 끝과 `initMember()` 끝 **두 곳** — 기수(round)는 recruit 조회 후에, `_memberId` 는 프로필 조회 후에 정해지므로 **어느 쪽이 늦게 끝나도 잠기게** 양쪽에서 부른다(한 곳으로 줄이지 말 것). 마감·모집예정 배지가 이미 있으면 그대로 두고(그쪽이 더 중요한 사실) 잠금만 건다.
+  - `lecture.html` — 회원이 이미 신청했으면 **신청 폼이 '이미 신청하신 특강' 안내로 교체**되고 하단바가 '신청 완료'로 비활성(`markAlreadyApplied()`).
+  - **계좌 안내 모달을 열기 전에** `dupBlocked()` 를 통과해야 한다 — 접수될 수 없는 신청에 입금 계좌를 먼저 보여주면 **입금부터 하고 막히는 사고**가 난다.
+- **⚠️ 비회원은 사전 검사가 불가능하다(설계상 옳다).** 전화번호로 남의 신청을 조회하게 열어주면 번호만 넣어 '이 사람이 몬크에 신청했는지'를 캐낼 수 있다(현재 RLS SELECT 는 관리자·본인만). 그래서 비회원 중복은 트리거가 막고, 결제까지 끝난 건은 **verify-payment 가 전액 자동 환불**한다(`{ok:false, error:'duplicate_application', refunded, program}` · MC001 과 같은 이유로 **HTTP 200**). **⚠️ 이 응답은 owner 가 verify-payment 를 재배포해야 동작**(콘솔에서 배포 — CLI 안내 금지).
+- **admin '신청자 현황'** — 이미 쌓인 중복 행에 **'중복' 배지 + 코랄 테두리**(`.ac-dup`/`.is-dup`, `dupIdSet()`). 트리거는 앞으로 들어올 것만 막으므로 과거 행은 관리자가 골라 지운다. **가장 오래된 1건(원본)에는 배지를 붙이지 않는다.** ⚠️ `appProgramKeys()`는 **Set 으로 묶어야 한다** — 특강 행은 `lecture_id` 컬럼과 `challenges` 항목에 같은 키가 둘 다 들어 있어, 배열로 두면 **자기 자신을 중복으로 세어 원본에까지 배지가 붙는다**(실제로 겪은 자리).
+- **예외 접수(오너가 한 사람 이름으로 두 자리를 대신 넣어야 할 때)**: service role·콘솔 insert 도 트리거를 통과하지 못한다 → `alter table public.applications disable trigger applications_duplicate;` 로 잠깐 끄고 넣은 뒤 **반드시 다시 켠다**(마이그레이션 파일 하단에 명령 그대로 적혀 있음).
+- 미적용 시 degrade: 회원 사전 검사만 남아 비회원 중복이 통과한다(챌린지·특강 신청 자체는 정상).
 
 ## Conventions
 - Commit messages and in-code comments in Korean (matching existing history).

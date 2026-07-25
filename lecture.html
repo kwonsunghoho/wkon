@@ -430,6 +430,61 @@
       } else {
         const g = document.getElementById('guestNudge'); if (g) g.style.display = 'block';
       }
+      await markAlreadyApplied();
+    }
+
+    /* ── 중복 신청 차단 ──
+       최종 방어는 DB 트리거(마이그레이션 20260725120000)다. ⚠️ 시간대가 달라도 같은 특강은
+       한 번만 신청할 수 있다(시간대는 '같은 내용을 여는 다른 타임'이라 두 번 들을 이유가 없다).
+       ⚠️ 비회원은 RLS 로 사전 조회가 불가능하다(전화번호로 신청 여부를 캐낼 수 있게 열 수 없다)
+          → 비회원 중복은 트리거가 막고, 결제까지 끝난 건은 verify-payment 가 전액 환불한다. */
+    let _appliedKeys = null, _appliedReq = null;
+
+    function loadAppliedKeys() {
+      if (_appliedKeys) return Promise.resolve(_appliedKeys);
+      // ⚠️ 비회원 결과(null)는 캐시하지 않는다 — initMember 가 늦게 끝나는 순서가 있어서,
+      //    캐시하면 회원인데도 영영 검사를 안 하게 된다.
+      if (!_memberId || !window.MONC.myAppliedPrograms) return Promise.resolve(null);
+      if (!_appliedReq) _appliedReq = window.MONC.myAppliedPrograms(_memberId);
+      return _appliedReq;
+    }
+
+    async function alreadyApplied() {
+      const keys = await loadAppliedKeys();
+      return !!keys && keys.has('lecture:' + LECTURE_ID);
+    }
+
+    /* 이미 신청한 특강이면 신청 폼을 안내문으로 바꾼다(결제까지 가서 막히지 않게). */
+    async function markAlreadyApplied() {
+      if (!(await alreadyApplied())) return;
+      const box = document.getElementById('applyBox');
+      if (box) {
+        box.innerHTML = '<div class="lc-closednote">이미 신청하신 특강이에요.'
+          + ' 같은 특강을 두 번 신청할 수는 없어요.<br>신청 내역은 '
+          + '<a href="mypage.html">마이페이지</a>에서 확인할 수 있어요.</div>';
+      }
+      const sticky = document.getElementById('stickyGo');
+      if (sticky) { sticky.disabled = true; sticky.textContent = '신청 완료'; }
+    }
+
+    /* 접수 성공·트리거 차단 후 — 이 특강을 '신청함'으로 기억한다(비회원도 이 세션 동안) */
+    function noteApplied() {
+      if (!_appliedKeys) _appliedKeys = new Set();
+      _appliedKeys.add('lecture:' + LECTURE_ID);
+    }
+    async function rememberApplied() { noteApplied(); await markAlreadyApplied(); }
+
+    /* DB 트리거가 막은 중복인지 (마이그레이션 20260725120000 의 errcode MC002) */
+    function isDuplicate(e) { return window.MONC.isDuplicateError(e); }
+
+    /* 신청 직전 마지막 확인. 중복이면 안내하고 true. */
+    async function dupBlocked() {
+      if (!(await alreadyApplied())) return false;
+      hideBankModal();
+      alert('이미 신청하신 특강이에요.\n같은 특강을 두 번 신청할 수는 없어요.'
+        + '\n신청 내역은 마이페이지에서 확인할 수 있어요.');
+      await markAlreadyApplied();
+      return true;
     }
 
     /* ── 입력 검증(공통) ── */
@@ -525,7 +580,7 @@
       _busy = true;
       const btn = document.getElementById('freeBtn'); const orig = btn.textContent;
       btn.disabled = true; btn.textContent = '신청 중…';
-      const ok = (await ensureSeatOpen()) && await insertApplication(applicant);
+      const ok = !(await dupBlocked()) && (await ensureSeatOpen()) && await insertApplication(applicant);
       _busy = false;
       restoreBtn(btn, orig);
       if (ok) afterApplied('무료 신청이 접수되었습니다! 확인 후 안내드릴게요.');
@@ -538,8 +593,10 @@
     }
 
     /* ── 계좌이체 ── */
-    function openBankModal() {
+    async function openBankModal() {
       if (!readApplicant()) return;
+      // 접수될 수 없는 신청에 입금 계좌를 먼저 보여주면 안 된다(입금부터 하고 막히는 사고)
+      if (await dupBlocked()) return;
       const m = document.getElementById('bankModal');
       m.classList.add('open'); m.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     }
@@ -560,7 +617,7 @@
       _busy = true;
       const btn = document.getElementById('btConfirm'); const orig = btn.textContent;
       btn.disabled = true; btn.textContent = '신청 중…'; btn.style.opacity = '.7';
-      const ok = (await ensureSeatOpen()) && await insertApplication(applicant);
+      const ok = !(await dupBlocked()) && (await ensureSeatOpen()) && await insertApplication(applicant);
       _busy = false;
       restoreBtn(btn, orig);
       if (btn && document.body.contains(btn)) btn.style.opacity = '1';
@@ -581,6 +638,7 @@
         const { error } = await window.MONC.sb.from('applications').insert(payload);
         if (error) throw error;
         await maybeSavePhone(applicant);
+        await rememberApplied();   // 같은 특강을 또 넣지 못하게 화면 잠금
         return true;
       } catch (e) {
         // 마지막 한 자리를 동시에 노린 경우 — DB 트리거가 막는다(결제 전이라 손해 없음)
@@ -588,6 +646,15 @@
           hideBankModal();
           alert('아쉽게도 방금 정원이 모두 찼어요.\n결제 전이라 빠져나간 금액은 없습니다.');
           await refreshLecture();
+          return false;
+        }
+        // 같은 특강 중복 — 사전 검사로 못 잡은 경우(비회원·동시 신청)를 트리거가 막았다.
+        // 무료·계좌이체는 결제 전이라 돈이 나가지 않았으므로 안내만 한다.
+        if (isDuplicate(e)) {
+          hideBankModal();
+          alert('이미 신청하신 특강이에요.\n같은 특강을 두 번 신청할 수는 없어요.'
+            + '\n문의는 고객센터(070-4032-0015)로 연락 주세요.');
+          await rememberApplied();
           return false;
         }
         console.error('신청 저장 실패', e);
@@ -605,8 +672,8 @@
       const btn = document.getElementById('tossBtn'); const orig = btn.innerHTML;
       btn.disabled = true; btn.textContent = '결제 진행 중…';
       _payRestore = () => { _busy = false; if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; } };
-      // 결제창을 띄우기 전에 자리가 남아 있는지 확인 — 결제 후 마감돼 환불하는 상황을 줄인다
-      if (!(await ensureSeatOpen())) {
+      // 결제창을 띄우기 전에 중복·잔여석을 확인 — 결제 후 막혀 환불하는 상황을 줄인다
+      if ((await dupBlocked()) || !(await ensureSeatOpen())) {
         _payRestore = null;
         _busy = false;
         if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; }
@@ -656,6 +723,14 @@
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
         body: { paymentId, lectureId: LECTURE_ID, slotId: slotId || null, applicant },
       });
+      // 결제 승인과 신청 저장 사이에 중복이 확인된 경우 — 서버가 전액 자동 환불한다
+      if (data && data.error === 'duplicate_application') {
+        alert('이미 신청하신 특강이에요.\n\n' + (data.refunded
+          ? '중복 접수가 되지 않아 결제 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+          : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+        await rememberApplied();
+        return false;
+      }
       // 결제 승인과 신청 저장 사이에 마지막 자리가 나간 경우 — 서버가 전액 자동 환불한다
       if (data && data.error === 'lecture_full') {
         alert('아쉽게도 결제하시는 사이에 정원이 모두 찼어요.\n\n' + (data.refunded
@@ -699,6 +774,7 @@
 
     async function afterApplied(msg, isPaid) {
       if (msg) alert(msg);
+      noteApplied();   // 방금 신청한 특강 → 아래 재렌더에서 신청 폼이 '이미 신청' 안내로 바뀐다
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // 방금 줄어든 잔여석을 바로 보여준다 — 화면을 다시 그리면서 폼도 초기화된다
       const fresh = await fetchLecture();
@@ -712,6 +788,7 @@
       // 조회 실패 시엔 폼만 손으로 정리(잔여석은 다음 방문에 맞춰진다)
       const c = document.getElementById('appConsent'); if (c) c.checked = false;
       if (!_memberId) { const n = document.getElementById('appName'), ph = document.getElementById('appPhone'); if (n) n.value = ''; if (ph) ph.value = ''; }
+      await markAlreadyApplied();   // 재렌더를 못 했으니 여기서 폼을 잠근다
     }
 
     function copyAccount() {

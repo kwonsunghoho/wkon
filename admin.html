@@ -112,6 +112,9 @@
     .app-card .ac-unlinked { font-size: 12px; color: var(--text-muted); }
     .app-card .ac-guest { font-size: 12px; font-weight: 700; color: var(--action-dark); }
     .app-card .ac-sub { font-weight: 400; color: var(--text-muted); }
+    /* 같은 사람이 같은 프로그램을 두 번 신청한 행 — 지울 수 있게 눈에 띄게 */
+    .app-card.is-dup { border-color: var(--action); background: var(--action-tint); }
+    .app-card .ac-dup { font-size: 11px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
     .app-card .ac-toggles { display: flex; gap: 8px; margin-top: 8px; }
     .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .app-card .ac-tg.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
@@ -1498,6 +1501,39 @@
     }
     function appLectureKey(a, c) { return (c && c.lecture_id) || a.lecture_id || (c && c.name) || ''; }
 
+    /* ── 중복 신청 표시 ──
+       2026-07-25 부터 DB 트리거가 같은 프로그램 재신청을 막지만(마이그레이션
+       20260725120000), 그 전에 쌓인 행은 그대로 남아 있다. 같은 사람이 같은 프로그램을
+       두 번 신청한 행에 배지를 붙여 관리자가 골라 지울 수 있게 한다.
+       ⚠️ 같은 사람 판정은 전화번호(숫자만)만 본다 — 트리거는 member_id 도 함께 보지만,
+          여기선 '지울 후보를 눈에 띄게' 하는 게 목적이라 단순한 기준으로 충분하다.
+       ⚠️ 원본(가장 먼저 들어온 1건)에는 배지를 붙이지 않는다 — 지울 대상만 표시. */
+    // ⚠️ 한 행 안에서 같은 키가 두 번 나오면(특강은 행의 lecture_id 와 challenges 항목에
+    //    같은 값이 둘 다 들어 있다) 자기 자신을 중복으로 세어 원본까지 배지가 붙는다 → Set 으로 묶는다.
+    function appProgramKeys(a) {
+      const keys = new Set();
+      if (a.lecture_id) keys.add('lecture:' + a.lecture_id);
+      (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+        const k = MONC.programKey(c);
+        if (k) keys.add(k);
+      });
+      return [...keys];
+    }
+    function dupIdSet() {
+      const seen = new Set(), dups = new Set();
+      // _apps 는 최신순이라 뒤에서부터(= 오래된 것부터) 봐야 원본이 먼저 잡힌다
+      [..._apps].reverse().forEach(a => {
+        if (!MONC.isLiveApplication(a)) return;   // 환불·취소 건은 중복이 아니다(재신청 정상)
+        const who = (a.phone || '').replace(/\D/g, '');
+        if (!who) return;
+        appProgramKeys(a).forEach(k => {
+          const key = who + '|' + k;
+          if (seen.has(key)) dups.add(a.id); else seen.add(key);
+        });
+      });
+      return dups;
+    }
+
     // 세부 옵션은 _apps 에 실제로 있는 값만 모은다(신청자 0명인 특강·챌린지는 안 뜬다).
     function appSubOptions(kind) {
       const map = new Map();
@@ -1572,10 +1608,11 @@
       const body = document.getElementById('appsBody');
       if (!list.length) { body.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'; return; }
       const phoneSet = memberPhoneSet();
+      const dups = dupIdSet();
       body.innerHTML = list.map(a => `
-        <div class="app-card" data-id="${a.id}">
+        <div class="app-card${dups.has(a.id) ? ' is-dup' : ''}" data-id="${a.id}">
           <div class="ac-top">
-            <span class="ac-name">${esc(a.name)}</span>
+            <span class="ac-name">${esc(a.name)}${dups.has(a.id) ? '<span class="ac-dup">중복</span>' : ''}</span>
             <span class="ac-date">${fmtDate(a.created_at)}</span>
           </div>
           <div class="ac-phone">${esc(a.phone)} ${membershipBadge(appMembership(a, phoneSet))}</div>
