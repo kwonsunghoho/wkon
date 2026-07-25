@@ -234,6 +234,19 @@
   .dock-list{width:100%;min-height:44px;border:0;border-top:1px solid var(--border-soft);
              background:transparent;font:inherit;font-size:14px;font-weight:700;
              color:var(--action-ink);cursor:pointer;padding:11px}
+  /* 저장 줄 — D안은 dock 이 하단을 차지하므로 sticky 가 아니라 본문 끝에 둔다 */
+  .d-save{display:flex;gap:8px;margin-top:18px}
+  .d-save button{flex:1;min-height:48px;border-radius:999px;font:inherit;font-size:15px;
+                 font-weight:800;cursor:pointer;border:1px solid var(--border);
+                 background:var(--surface);color:var(--text)}
+  .d-save button.pri{background:var(--action);color:var(--action-ink-on);border-color:var(--action)}
+  /* ⚠️ 원문 모드 / 목록 모드는 배타적이다 — 한 화면에 두 방식이 동시에 살아 있으면
+     사용자가 멘탈 모델을 못 만든다(2026-07-25 조사에서 나온 경고). 토글로만 갈아탄다. */
+  #dList{display:none}
+  .show-list #origD{display:none}
+  .show-list #dList{display:flex}
+  .show-list .dock-sheet,.show-list .dock-nav{display:none}
+  .show-list .dock-list{border-top:0}
 
   /* ── 레퍼런스 표 ── */
   .reftbl{width:100%;border-collapse:collapse;margin-top:16px;font-size:14.5px}
@@ -282,6 +295,13 @@
     입력 화면·등급 배지·밑줄 색·카드 칸 형식은 네 안이 전부 같습니다.
     <b>D안은 아래 레퍼런스 조사 뒤에 추가</b>한 것입니다.
   </p>
+
+  <div class="howto" style="border-left-color:#2E6E42;background:rgba(46,110,66,.07)">
+    <h4 style="color:#265C3B">✓ 2026-07-25 — 오너가 <b>D안</b> 확정</h4>
+    <p style="color:#265C3B">구현은 <b>D안(원문 + 하단 바텀시트)</b> + <b>'전체 목록으로 보기'를 누르면 B안 화면</b>으로 갑니다.
+       A·B·C안은 지우지 않고 <b>결정 기록</b>으로 남깁니다(왜 D안인지가 여기 있습니다).
+       아래 D안 화면에서 토글이 실제로 동작합니다.</p>
+  </div>
 
   <div class="howto">
     <h4>보는 법</h4>
@@ -620,7 +640,7 @@
 
   <!-- ══════════ D안 ══════════ -->
   <section>
-    <span class="stag" style="background:rgba(46,110,66,.12);color:#2E6E42">D안 · 조사 후 추가</span>
+    <span class="stag" style="background:rgba(46,110,66,.12);color:#2E6E42">✓ D안 · 확정</span>
     <h2>원문 + 하단 바텀시트 — 하나씩</h2>
     <p class="who">Grammarly가 좁은 화면에서 쓰는 방식 + 우리 news.html 필터에서 이미 쓰는 관습</p>
     <p class="why">
@@ -666,11 +686,18 @@
             </div>
 
             <div class="orig" id="origD"></div>
+            <!-- 전체 목록 모드 — 원문과 '동시에' 뜨지 않는다(조사에서 나온 경고: 두 방식 공존 금지) -->
+            <div class="cards" id="dList"></div>
+
+            <div class="d-save">
+              <button>결과 복사</button>
+              <button class="pri">답변노트에 저장</button>
+            </div>
           </div>
 
           <div class="dock">
             <div class="dock-sheet" id="dockSheet"></div>
-            <button class="dock-list">전체 목록으로 보기</button>
+            <button class="dock-list" id="dToggle">전체 목록으로 보기</button>
             <div class="dock-nav">
               <button class="dock-arrow" id="dPrev" aria-label="이전">‹</button>
               <div class="dock-mid">
@@ -687,27 +714,29 @@
 
   <!-- ══════════ 마무리 ══════════ -->
   <div class="close">
-    <h3>결정하실 것</h3>
+    <h3>결정 기록</h3>
+    <p class="lede" style="margin-top:8px"><b>2026-07-25 D안 확정.</b> 아래는 왜 그렇게 됐는지 —
+       나중에 "왜 이 화면이지?"가 나올 때 여기를 보면 됩니다.</p>
 
     <div class="cgrid">
-      <div class="cbox">
-        <h4>1) 네 안 중 하나</h4>
+      <div class="cbox" style="border-color:rgba(46,110,66,.3);background:rgba(46,110,66,.05)">
+        <h4>✓ 확정 — D안 + 목록 토글</h4>
         <ul>
-          <li><b>A안</b> — 내 글이 통째로 보이는 게 중요하면</li>
-          <li><b>B안</b> — 고칠 것만 빠르게 보는 게 중요하면</li>
-          <li><b>C안</b> — 폰에서 손이 덜 가는 게 중요하면</li>
-          <li><b>D안</b> — 조사에서 나온 안. A+C의 장점을 둘 다 가져가고,
-              <b>44px 문제도 유일하게 해결</b>합니다</li>
+          <li>기본은 <b>원문 + 하단 바텀시트</b>(하나씩 순회)</li>
+          <li>'전체 목록으로 보기' → <b>B안 화면</b>. 카드를 누르면 원문으로 돌아와 그 자리를 편다</li>
+          <li>⚠️ 두 모드는 <b>배타적</b>이다 — 한 화면에 동시에 띄우지 말 것
+              (조사에서 나온 경고: 방식이 섞이면 멘탈 모델이 안 생긴다)</li>
         </ul>
       </div>
       <div class="cbox">
-        <h4>2) 섞어도 됩니다</h4>
+        <h4>왜 D안이었나</h4>
         <ul>
-          <li>기본 <b>D안</b> + '전체 목록으로 보기'를 누르면 <b>B안</b> 화면</li>
-          <li>기본 <b>C안</b> + 상단에 "원문 통째로 보기" 토글로 <b>A안</b> 전환</li>
-          <li>⚠️ 단, 조사에서 나온 경고대로 <b>한 화면에 두 방식이 동시에 살아 있으면 안 됩니다</b> —
-              토글로 갈아타는 건 괜찮습니다</li>
-          <li>말씀하시면 고른 조합으로 한 번 더 만들겠습니다</li>
+          <li><b>A안</b>(글이 통째로 보임)과 <b>C안</b>(점프 불필요)의 장점을 둘 다 가진다</li>
+          <li><b>원칙 2(터치 44px)를 지키는 유일한 안</b> — 필수 조작이 44px 화살표라
+              32~33px 밑줄을 안 눌러도 된다</li>
+          <li>화면이 가장 짧다 — D 1,249px / B 1,844 / A 2,488 / C 2,773</li>
+          <li>Grammarly가 좁은 화면에서 쓰는 방식과 같고, news.html 필터에서
+              <b>이미 쓰는 관습</b>이라 학생이 처음 보는 동작이 아니다</li>
         </ul>
       </div>
       <div class="cbox">
@@ -908,8 +937,27 @@ document.getElementById('origD').innerHTML = origHtml();
 
   prev.addEventListener('click', function(){ show(i-1, true); });
   next.addEventListener('click', function(){ show(i+1, true); });
-  /* 밑줄 탭은 보조 수단 — 눌러도 되지만 안 눌러도 된다 */
+
+  /* 전체 목록 모드 — B안 화면을 그대로 빌려 온다. 원문과 동시에 뜨지 않는다. */
+  document.getElementById('dList').innerHTML = F.map(cardHtml).join('');
+  const toggle = document.getElementById('dToggle');
+  toggle.addEventListener('click', function(){
+    const listMode = screen.classList.toggle('show-list');
+    toggle.textContent = listMode ? '원문에서 하나씩 보기' : '전체 목록으로 보기';
+    screen.scrollTo({ top: 0, behavior:'smooth' });
+  });
+
   screen.addEventListener('click', function(e){
+    /* 목록에서 카드를 누르면 원문 모드로 돌아가 그 지적을 편다 */
+    const card = e.target.closest('#dList .card');
+    if(card){
+      const k = F.findIndex(function(f){ return String(f.n) === card.dataset.n; });
+      screen.classList.remove('show-list');
+      toggle.textContent = '전체 목록으로 보기';
+      if(k >= 0) show(k, true);
+      return;
+    }
+    /* 밑줄 탭은 보조 수단 — 눌러도 되지만 안 눌러도 된다 */
     const el = e.target.closest('#origD [data-n]');
     if(!el) return;
     const idx = F.findIndex(function(f){ return String(f.n) === el.dataset.n; });
