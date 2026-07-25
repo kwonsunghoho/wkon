@@ -303,16 +303,51 @@ const VOICE = `너는 승무원 면접을 10년 넘게 가르친 코치다. 학�
 [지망 항공사가 주어졌을 때]
 - 그 항공사에 맞춰 **fix 의 방향만** 잡아라. 항공사 이름을 굳이 문장에 넣지 마라.
 - **없는 사실을 지어내지 마라** — "이 항공사는 이런 인재를 원한다"는 식의 단정은 금지다.
-  네가 아는 건 학생이 쓴 글뿐이다.`
+  네가 아는 건 학생이 쓴 글과 아래 '합격 글에서 확인된 것'뿐이다.
+- '합격 글에서 확인된 것'이 함께 주어지면 그것만 근거로 삼아라.
+  ⚠️ **합격자 문장을 흉내 내라고 하지 마라.** 그러면 지원자들의 글이 전부 같아진다 —
+  우리가 잡으려는 AI스러움을 우리가 만드는 꼴이다. 형식(소제목 유무·전개 순서)과
+  "이 회사 소재가 하나도 없다" 같은 **빠진 것**을 짚는 데만 쓴다.`
+
+/**
+ * 항공사 프로필 — airline_profiles 에서 뽑은 그 항공사만의 패턴.
+ *
+ * ⚠️ **이 표가 이 도구의 자산이다.** 실제 합격 자소서에서 뽑았고, 항공사마다 문항도 문체도
+ *    완전히 다르다(제주항공은 대괄호 소제목을 쓰고 에어프레미아는 안 쓴다 — 정반대다).
+ * ⚠️ 그래도 **합격자 문장을 예시로 주지는 않는다**(확정본 결정 10). 여기 실리는 건
+ *    '무엇을 쓸까'가 아니라 '무엇을 보고 판단하나'다 — 문항 구성·형식 관습·회사 고유 소재.
+ * ⚠️ 조회가 실패하면(마이그레이션 미적용) 조용히 넘어간다. 항공사 맥락만 빠진다.
+ */
+async function airlineBrief(
+  admin: ReturnType<typeof createClient>, code: string,
+): Promise<string> {
+  if (!code || code === 'all' || !AIRLINES[code]) return ''
+  try {
+    const { data } = await admin.from('airline_profiles')
+      .select('name, style, keywords, notes').eq('code', code).eq('active', true).maybeSingle()
+    if (!data) return ''
+    const p = data as { name: string; style?: Record<string, string>; keywords?: Record<string, unknown>; notes?: string }
+    const bits: string[] = []
+    if (p.style?.subhead) bits.push(`형식: ${p.style.subhead}`)
+    if (p.style?.structure) bits.push(`전개: ${p.style.structure}`)
+    // 회사 고유 소재 — 학생이 회사를 조사했는지가 여기서 갈린다
+    const kw = Object.values(p.keywords ?? {}).flat().filter((v) => typeof v === 'string')
+    if (kw.length) bits.push(`이 회사 고유 소재: ${kw.slice(0, 12).join(' · ')}`)
+    if (p.notes) bits.push(p.notes)
+    return bits.length ? `\n\n[${p.name} 합격 글에서 확인된 것]\n${bits.join('\n')}` : ''
+  } catch (_) {
+    return ''
+  }
+}
 
 async function fillSlots(
   apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
-  airline: string, hits: Hit[], regenNote: string,
+  airline: string, airBrief: string, hits: Hit[], regenNote: string,
 ) {
   // 항공사 — 'all'(만능)은 특정 항공사가 아니라 "어디에나 통해야 한다"는 제약이다.
   const airLine = airline === 'all'
     ? '특정 항공사를 정하지 않았다(만능) — 어느 항공사에도 통할 답변이어야 한다'
-    : (AIRLINES[airline] ? `${AIRLINES[airline]} 지망` : '')
+    : (AIRLINES[airline] ? `${AIRLINES[airline]} 지망${airBrief}` : '')
   // 종류에 따라 '전형적인 문구'의 기준이 다르다 — 면접 답변에서 걸리는 건 외운 티다.
   const kindLine = docKind === 'interview'
     ? '면접 답변 — 소리 내어 말하는 말이다'
@@ -565,11 +600,14 @@ Deno.serve(async (req) => {
       return clicheOnly.filter((t) => t.length >= 3 && mine.includes(t))
     }
 
-    let filled = await fillSlots(apiKey, text, question, docKind, airline, hits, '')
+    // 항공사 프로필 — 그 항공사만의 문항·형식·고유 소재(비공개 표, service role 로만 읽힌다)
+    const airBrief = await airlineBrief(admin, airline)
+
+    let filled = await fillSlots(apiKey, text, question, docKind, airline, airBrief, hits, '')
     const bad = selfCheck(filled)
     if (bad.length > 0) {
       console.log('self-check hit, regenerating:', bad.join(', '))
-      filled = await fillSlots(apiKey, text, question, docKind, airline, hits,
+      filled = await fillSlots(apiKey, text, question, docKind, airline, airBrief, hits,
         `\n\n[다시 쓰는 이유]\n방금 네 답변에 ${bad.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
         `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
     }
