@@ -13,6 +13,7 @@
 // 선행 마이그레이션(전부 2026-07-25 오너 실행 완료):
 //   20260725130000_credits.sql / 20260725140000_answers_free_form.sql
 //   20260725150000_ai_killer.sql
+//   20260725160000_ai_killer_context.sql ← 문항·종류 컬럼(오너 실행 대기, 미적용이어도 동작)
 //
 // 처리 순서(확정본 '서버' 절 그대로)
 //   1 로그인 확인 → 2 길이 검증 → 3 무료분 판정+차감 → 4 규칙 검사
@@ -34,6 +35,12 @@ const json = (body: unknown, status = 200) =>
 //    브라우저만 막으면 이 함수를 직접 때려 원가 상한이 뚫린다.
 const MIN_CHARS = 100
 const MAX_CHARS = 1500
+
+// 문항(질문) — **선택 입력**. 비어 있으면 예전과 똑같이 동작한다.
+// ⚠️ 본문 상한(MAX_CHARS)과 **별개로** 센다. 문항을 본문 예산에서 빼면 "문항을 넣었더니
+//    답변이 안 들어간다"가 되어, 넣을수록 손해인 칸이 된다.
+// ⚠️ 넘으면 막지 말고 자른다 — 선택 입력이라 여기서 400 을 내면 검사 자체가 죽는다.
+const MAX_QUESTION_CHARS = 200
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
 // 저장소의 다른 함수도 이미 Claude 5 계열(sojae-chat: sonnet-5 / haiku-4-5).
@@ -262,9 +269,33 @@ const VOICE = `너는 승무원 면접을 10년 넘게 가르친 코치다. 학�
 - 학생을 나무라지 마라. 문제는 표현이지 사람이 아니다.
 - "다양한", "첫째/둘째", "~하시길 바랍니다", "~을 통해", "매우", "중요합니다" 같은 말을
   **네 문장에도 쓰지 마라.** 학생 글을 재는 잣대로 네 말도 잰다.
-- 모범답안을 대신 써 주지 마라. 학생이 스스로 고칠 방향만 준다.`
+- 모범답안을 대신 써 주지 마라. 학생이 스스로 고칠 방향만 준다.
 
-async function fillSlots(apiKey: string, text: string, hits: Hit[], regenNote: string) {
+[문항이 주어졌을 때]
+- 문항은 **맥락일 뿐이다.** fix 를 그 문항에 맞게 쓰는 데만 써라.
+  (예: 지원동기 문항이면 "왜 하필 이 항공사인지 한 줄", 갈등 경험 문항이면 "그때 실제로 한 말")
+- **답변이 문항에 맞는지는 판정하지 마라.** 동문서답·분량·구성은 네 일이 아니다.
+  네 일은 AI 같은 표현을 짚는 것 하나뿐이다.
+
+[글 종류가 주어졌을 때]
+- **면접 답변**이면 소리 내어 하는 '말'이다. '첫째/둘째' 나열과 '또한·더불어' 같은 문어체
+  접속부사는 외운 원고로 들리니 그 점을 짚어라. fix 는 **어떻게 말할지**로 준다.
+- **자소서**면 눈으로 읽는 '글'이다. 문단을 정리하는 나열까지 나무라지 마라 —
+  글에서는 어색하지 않다. fix 는 **어떤 사실을 문장에 넣을지**로 준다.
+- 종류 칸이 없으면 둘 다에서 어색한 것만 짚어라. "말할 때는", "글에서는" 같은
+  **한쪽을 전제한 표현을 쓰지 마라.**`
+
+async function fillSlots(
+  apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
+  hits: Hit[], regenNote: string,
+) {
+  // 종류에 따라 '전형적인 문구'의 기준이 다르다 — 면접 답변에서 걸리는 건 외운 티다.
+  const kindLine = docKind === 'interview'
+    ? '면접 답변 — 소리 내어 말하는 말이다'
+    : docKind === 'essay' ? '자소서 문항 — 눈으로 읽는 글이다' : ''
+  // ⚠️ 미지정일 때 '자소서'라고 말하지 않는다 — 면접 답변이었으면 기준이 어긋난 채 지목한다.
+  const extraWord = docKind === 'interview' ? '외운 원고처럼 들리는 문구'
+    : docKind === 'essay' ? '전형적인 자소서 문구' : '전형적인 지원자 문구'
   const listed = hits
     .map((h) => `${h.n}. [${h.kind}] "${h.quote}"${h.why ? ` (규칙 메모: ${h.why})` : ''}`)
     .join('\n')
@@ -277,9 +308,13 @@ async function fillSlots(apiKey: string, text: string, hits: Hit[], regenNote: s
     messages: [{
       role: 'user',
       content:
+        // ⚠️ 맥락 칸은 값이 있을 때만 넣는다 — 빈 라벨을 주면 AI 가 문항·종류를 지어내고,
+        //    지어낸 전제에 맞춰 fix 를 쓰면 학생이 받은 것과 어긋난다.
+        (kindLine ? `[글 종류]\n${kindLine}\n\n` : '') +
+        (question ? `[학생이 받은 문항]\n${question}\n\n` : '') +
         `[학생이 쓴 글]\n${text}\n\n` +
         `[규칙이 이미 찍은 자리 — 이 번호들의 why/fix 칸을 채워라]\n${listed}\n\n` +
-        `[추가로 지목할 수 있는 것]\ncontext_extra 에 전형적인 자소서 문구를 최대 ${MAX_CONTEXT_EXTRA}곳까지 넣어라. ` +
+        `[추가로 지목할 수 있는 것]\ncontext_extra 에 ${extraWord}를 최대 ${MAX_CONTEXT_EXTRA}곳까지 넣어라. ` +
         `quote 는 위 글에 **있는 그대로** 등장하는 문자열이어야 한다(한 글자도 바꾸지 마라). 없으면 빈 배열.`,
     }],
   }
@@ -309,6 +344,24 @@ async function fillSlots(apiKey: string, text: string, hits: Hit[], regenNote: s
     extra: (parsed.context_extra ?? []).slice(0, MAX_CONTEXT_EXTRA),
     usage: data.usage ?? {},
   }
+}
+
+/**
+ * 검사 기록 저장 — 맥락 컬럼 미적용 환경 방어.
+ *
+ * ⚠️ `question`·`doc_kind` 는 마이그레이션 `20260725160000_ai_killer_context.sql` 이 있어야
+ *    존재한다. 미적용이면 PostgREST 가 **insert 를 통째로 거절**해 검사 기록이 전부 유실된다 —
+ *    맥락 두 칸 때문에 본체를 잃는 셈이라, 실패하면 그 두 칸을 빼고 한 번 더 넣는다.
+ *    (CLAUDE.md 의 '새 컬럼을 공용 select 에 넣지 말 것'과 같은 방어. 여기선 insert 쪽이다.)
+ */
+async function saveCheck(admin: ReturnType<typeof createClient>, row: Record<string, unknown>) {
+  const { error } = await admin.from('ai_killer_checks').insert(row)
+  if (!error) return null
+  if (row.question == null && row.doc_kind == null) return error   // 맥락이 없으면 그 문제가 아니다
+  const { question: _q, doc_kind: _k, ...bare } = row
+  const { error: retryErr } = await admin.from('ai_killer_checks').insert(bare)
+  if (!retryErr) console.error('맥락 컬럼 없음(20260725160000 미적용) — 문항·종류를 빼고 저장했다:', error.message)
+  return retryErr
 }
 
 // =============================================================================
@@ -342,6 +395,16 @@ Deno.serve(async (req) => {
     const text: string = typeof reqBody.text === 'string' ? reqBody.text.trim() : ''
     const source: 'paste' | 'answer' = reqBody.source === 'answer' ? 'answer' : 'paste'
     const answerId: string | null = typeof reqBody.answerId === 'string' ? reqBody.answerId : null
+    // ── 맥락 2종(둘 다 선택 입력) — 비면 예전과 똑같이 동작한다 ──────────────
+    // ⚠️ **판정에는 쓰지 않는다.** 규칙 4종은 글 자체만 보므로 밑줄 자리·개수·등급은
+    //    맥락이 있든 없든 같다. 바뀌는 건 AI 가 채우는 why/fix 문장뿐이다(결정 11·12).
+    // 문항 — 답변노트에서 불러온 글은 화면이 questions.content / answers.title 을 실어 보낸다.
+    const question: string = typeof reqBody.question === 'string'
+      ? reqBody.question.trim().slice(0, MAX_QUESTION_CHARS) : ''
+    // 글 종류 — 모르면 지적하는 **말이 반대로 나간다**("말할 때 이렇게 세는 사람은 없어서"를
+    // 자소서에 그대로 쓰면 어긋난다). 아는 두 값만 받고 그 외에는 미지정으로 둔다.
+    const docKind: 'essay' | 'interview' | null =
+      reqBody.docKind === 'essay' || reqBody.docKind === 'interview' ? reqBody.docKind : null
     const len = text.length
     if (len < MIN_CHARS) return json({ error: `${MIN_CHARS}자 이상 넣어 주세요`, code: 'too_short' }, 400)
     if (len > MAX_CHARS) return json({ error: `${MAX_CHARS}자까지 검사할 수 있어요`, code: 'too_long' }, 400)
@@ -400,8 +463,9 @@ Deno.serve(async (req) => {
 
     // 걸린 게 하나도 없으면 AI 를 부르지 않는다 — 원가를 아끼고 결과도 정확하다
     if (hits.length === 0) {
-      await admin.from('ai_killer_checks').insert({
+      await saveCheck(admin, {
         id: checkId, member_id: user.id, source, answer_id: answerId, content: text,
+        question: question || null, doc_kind: docKind,
         result: [], grade: 'human', hit_count: 0, char_count: len,
       })
       return json({
@@ -419,23 +483,32 @@ Deno.serve(async (req) => {
       return clicheOnly.filter((t) => t.length >= 3 && mine.includes(t))
     }
 
-    let filled = await fillSlots(apiKey, text, hits, '')
+    let filled = await fillSlots(apiKey, text, question, docKind, hits, '')
     const bad = selfCheck(filled)
     if (bad.length > 0) {
       console.log('self-check hit, regenerating:', bad.join(', '))
-      filled = await fillSlots(apiKey, text, hits,
+      filled = await fillSlots(apiKey, text, question, docKind, hits,
         `\n\n[다시 쓰는 이유]\n방금 네 답변에 ${bad.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
         `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
     }
 
     // 규칙이 찍은 자리에 AI 의 칸을 얹는다. AI 가 빠뜨린 칸은 규칙 메모로 메운다.
+    // ⚠️ 메우는 문구도 종류를 따른다 — 면접 답변에 "자소서에서 흔히 보이는"이라고 하면
+    //    학생이 "이건 말인데?" 하고 신뢰를 잃는다. 미지정이면 한쪽을 전제하지 않는 말로 둔다.
+    const fbWhy = docKind === 'interview'
+      ? '지원자들이 자주 쓰는 표현이라 면접관 귀에 남지 않아요.'
+      : docKind === 'essay' ? '자소서에서 흔히 보이는 표현이라 눈에 남지 않아요.'
+      : '너무 자주 쓰이는 표현이라 인상에 남지 않아요.'
+    const fbFix = docKind === 'interview'
+      ? '이 표현을 빼고 그때 겪은 장면을 그대로 말해 보세요.'
+      : '이 표현을 빼고 겪은 장면을 그대로 써 보세요.'
     const byN = new Map(filled.slots.map((s) => [s.n, s]))
     for (const h of hits) {
       const s = byN.get(h.n)
       if (s?.why) h.why = s.why
       if (s?.fix) h.fix = s.fix
-      if (!h.fix) h.fix = '이 표현을 빼고 겪은 장면을 그대로 써 보세요.'
-      if (!h.why) h.why = '자소서에서 흔히 보이는 표현이라 눈에 남지 않아요.'
+      if (!h.fix) h.fix = fbFix
+      if (!h.why) h.why = fbWhy
     }
 
     // ⚠️ '문맥' 추가 지목은 **원문에 실제로 있는 문자열일 때만** 받는다.
@@ -460,8 +533,9 @@ Deno.serve(async (req) => {
     const total = occurrences + added
     const g = grade(total, len)
     const u = filled.usage as { input_tokens?: number; output_tokens?: number }
-    const { error: saveErr } = await admin.from('ai_killer_checks').insert({
+    const saveErr = await saveCheck(admin, {
       id: checkId, member_id: user.id, source, answer_id: answerId, content: text,
+      question: question || null, doc_kind: docKind,
       result: hits, grade: g, hit_count: total, char_count: len,
       input_tokens: u.input_tokens ?? 0, output_tokens: u.output_tokens ?? 0,
     })
