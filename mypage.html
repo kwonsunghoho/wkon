@@ -413,24 +413,31 @@
     async function loadAnswerNotes(memberId) {
       const el = document.getElementById('answerNotes');
       try {
-        // status 컬럼이 있으면 draft/final 분리, 없으면(마이그레이션 전) 전부 완료로 폴백.
+        // ⚠️ select('*') — 분류 3종(20260725170000)·title 미적용 환경에서도 조회가 깨지지 않게.
+        //    컬럼을 나열하면 없는 컬럼 하나에 카드 전체가 400 이 된다(answers.html 과 같은 방어).
         let { data, error } = await MONC.sb.from('answers')
-          .select('content, status, updated_at, question_id, questions(content, category)')
+          .select('*, questions(content, category)')
           .eq('member_id', memberId).order('updated_at', { ascending: false });
         if (error) {
           ({ data, error } = await MONC.sb.from('answers')
-            .select('content, updated_at, question_id, questions(content, category)')
-            .eq('member_id', memberId).order('updated_at', { ascending: false }));
+            .select('*').eq('member_id', memberId).order('updated_at', { ascending: false }));
         }
         if (error) throw error;
         if (!data || !data.length) {
-          el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
+          // ⚠️ 소재 발굴로만 보내지 않는다 — 바로 답변만 쓰고 싶은 학생의 길을 막으면 안 된다.
+          el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. '
+            + '<a href="answers.html#new">답변을 바로 쓰거나</a> 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
           document.getElementById('wAnsCap').textContent = '오늘의 발굴부터 시작해보세요';
           document.getElementById('ansMore').style.display = 'none';
           return;
         }
         const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
-        const catOf = q => (window.SOJAE && window.SOJAE.CAT_LABEL[(q || {}).category]) || '소재 발굴';
+        // ⚠️ 유형·제목은 두 곳에서 온다 — 소재 발굴 답변은 questions, 직접 쓴 답변은 answers 자신.
+        //    answers 쪽을 먼저 본다(학생이 직접 고친 값이 문제 원본보다 우선).
+        //    answers.html 과 **같은 규칙**이어야 한다 — 한쪽만 고치면 자유 글이 제목 없이 뜬다.
+        const catOf = a => (window.SOJAE
+          && window.SOJAE.CAT_LABEL[a.category || (a.questions || {}).category]) || '소재 발굴';
+        const titleOf = a => (a.questions || {}).content || a.title || '(제목 없음)';
         const drafts = data.filter(a => (a.status || 'final') === 'draft');
         const finals = data.filter(a => (a.status || 'final') !== 'draft');
 
@@ -439,28 +446,28 @@
         document.getElementById('wAnsCap').textContent = '작성 중 ' + drafts.length + ' · 완료 ' + finals.length;
 
         const draftCard = a => {
-          const q = a.questions || {};
           const preview = a.content && a.content.trim()
             ? esc(a.content.trim().slice(0, 60)) + (a.content.trim().length > 60 ? '…' : '')
             : '아직 작성 전 — 눌러서 이어쓰기';
-          return `<a class="note note-draft" href="sojae.html?q=${encodeURIComponent(a.question_id)}">
-            <div class="note-top"><span class="note-cat">${esc(catOf(q))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
-            <div class="note-q">${esc(q.content || '(문제 정보 없음)')}</div>
-            <div class="note-preview">${preview}</div>
-            <span class="note-more">이어서 작성 →</span>
-          </a>`;
+          const top = `<div class="note-top"><span class="note-cat">${esc(catOf(a))}</span>`
+            + `<span class="note-date">${fmt(a.updated_at)}</span></div>`;
+          const inner = `${top}<div class="note-q">${esc(titleOf(a))}</div>`
+            + `<div class="note-preview">${preview}</div>`;
+          // 소재 발굴에서 온 초안만 이어쓰기 화면이 있다. 직접 쓴 글은 저장소에서 고친다.
+          return a.question_id
+            ? `<a class="note note-draft" href="sojae.html?q=${encodeURIComponent(a.question_id)}">
+                 ${inner}<span class="note-more">이어서 작성 →</span></a>`
+            : `<a class="note note-draft" href="answers.html">${inner}
+                 <span class="note-more">저장소에서 이어쓰기 →</span></a>`;
         };
-        const finalCard = a => {
-          const q = a.questions || {};
-          return `<details class="note">
+        const finalCard = a => `<details class="note">
             <summary>
-              <div class="note-top"><span class="note-cat">${esc(catOf(q))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
-              <div class="note-q">${esc(q.content || '(문제 정보 없음)')}</div>
+              <div class="note-top"><span class="note-cat">${esc(catOf(a))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
+              <div class="note-q">${esc(titleOf(a))}</div>
               <span class="note-more">답변 보기 ▾</span>
             </summary>
             <div class="note-a">${esc(a.content)}</div>
           </details>`;
-        };
 
         // 카드엔 미리보기 3개만(작성 중 우선). 전체는 answers.html — 답변이 쌓여도 이 카드 길이는 고정.
         const PREVIEW = 3;

@@ -12,8 +12,9 @@
 //
 // 선행 마이그레이션(전부 2026-07-25 오너 실행 완료):
 //   20260725130000_credits.sql / 20260725140000_answers_free_form.sql
-//   20260725150000_ai_killer.sql
-//   20260725160000_ai_killer_context.sql ← 문항·종류 컬럼(오너 실행 대기, 미적용이어도 동작)
+//   20260725150000_ai_killer.sql / 20260725160000_ai_killer_context.sql
+//   20260725170000_answers_meta.sql   ← 답변 분류 3종
+//   20260725180000_credit_costs.sql   ← 도구별 단가 + 하루 무료 리셋
 //
 // 처리 순서(확정본 '서버' 절 그대로)
 //   1 로그인 확인 → 2 길이 검증 → 3 무료분 판정+차감 → 4 규칙 검사
@@ -54,6 +55,20 @@ const EFFORT = 'medium'
 
 // AI 가 추가로 지목할 수 있는 '문맥' 자리 상한(확정본: 최대 3곳)
 const MAX_CONTEXT_EXTRA = 3
+
+// ⚠️ 한 답변을 몇 번까지 **추가 차감 없이** 다시 검사할 수 있나(2026-07-25 오너: 한시적 2회,
+//    나중에 1회로). 고치고 다시 확인하는 게 이 도구의 핵심 루프라 재검사에 매번 받으면
+//    학생이 확인을 안 하고, 그러면 도구가 반쪽이 된다.
+//    구현: 차감 키(ref)를 '<answer_id>#<묶음번호>' 로 만든다. 같은 묶음이면 spend_credit 이
+//    used='already' 로 통과시키므로 자연히 무차감이 된다.
+const MAX_RECHECK = 2
+
+// 항공사 — lecture-common.js 의 LEC.AIRLINES 와 같은 목록(사이트에서 항공사는 한 벌이어야 한다).
+// 'all' = 만능(어느 항공사에도 쓰는 답변)은 이 표에 없고 따로 다룬다.
+const AIRLINES: Record<string, string> = {
+  ke: '대한항공', lj: '진에어', '7c': '제주항공', tw: '티웨이항공',
+  ze: '이스타항공', yp: '에어프레미아', rf: '에어로케이',
+}
 
 // ⚠️ 화면에 그릴 지적 상한. 371자 실측에서 15곳이 나왔으므로 1,500자면 60곳까지 가능하다 —
 //    밑줄 60개는 원문이 안 읽히고, AI 에게 채우라고 할 칸도 60개가 되어 원가가 튄다.
@@ -283,12 +298,21 @@ const VOICE = `너는 승무원 면접을 10년 넘게 가르친 코치다. 학�
 - **자소서**면 눈으로 읽는 '글'이다. 문단을 정리하는 나열까지 나무라지 마라 —
   글에서는 어색하지 않다. fix 는 **어떤 사실을 문장에 넣을지**로 준다.
 - 종류 칸이 없으면 둘 다에서 어색한 것만 짚어라. "말할 때는", "글에서는" 같은
-  **한쪽을 전제한 표현을 쓰지 마라.**`
+  **한쪽을 전제한 표현을 쓰지 마라.**
+
+[지망 항공사가 주어졌을 때]
+- 그 항공사에 맞춰 **fix 의 방향만** 잡아라. 항공사 이름을 굳이 문장에 넣지 마라.
+- **없는 사실을 지어내지 마라** — "이 항공사는 이런 인재를 원한다"는 식의 단정은 금지다.
+  네가 아는 건 학생이 쓴 글뿐이다.`
 
 async function fillSlots(
   apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
-  hits: Hit[], regenNote: string,
+  airline: string, hits: Hit[], regenNote: string,
 ) {
+  // 항공사 — 'all'(만능)은 특정 항공사가 아니라 "어디에나 통해야 한다"는 제약이다.
+  const airLine = airline === 'all'
+    ? '특정 항공사를 정하지 않았다(만능) — 어느 항공사에도 통할 답변이어야 한다'
+    : (AIRLINES[airline] ? `${AIRLINES[airline]} 지망` : '')
   // 종류에 따라 '전형적인 문구'의 기준이 다르다 — 면접 답변에서 걸리는 건 외운 티다.
   const kindLine = docKind === 'interview'
     ? '면접 답변 — 소리 내어 말하는 말이다'
@@ -311,6 +335,7 @@ async function fillSlots(
         // ⚠️ 맥락 칸은 값이 있을 때만 넣는다 — 빈 라벨을 주면 AI 가 문항·종류를 지어내고,
         //    지어낸 전제에 맞춰 fix 를 쓰면 학생이 받은 것과 어긋난다.
         (kindLine ? `[글 종류]\n${kindLine}\n\n` : '') +
+        (airLine ? `[지망 항공사]\n${airLine}\n\n` : '') +
         (question ? `[학생이 받은 문항]\n${question}\n\n` : '') +
         `[학생이 쓴 글]\n${text}\n\n` +
         `[규칙이 이미 찍은 자리 — 이 번호들의 why/fix 칸을 채워라]\n${listed}\n\n` +
@@ -405,6 +430,10 @@ Deno.serve(async (req) => {
     // 자소서에 그대로 쓰면 어긋난다). 아는 두 값만 받고 그 외에는 미지정으로 둔다.
     const docKind: 'essay' | 'interview' | null =
       reqBody.docKind === 'essay' || reqBody.docKind === 'interview' ? reqBody.docKind : null
+    // 지망 항공사 — 자소서 흐름도, 면접이 보는 결도 항공사마다 다르다.
+    // ⚠️ 'all'(만능)은 빈 값과 다르다: 만능은 "어디에나 통하게" 쪽으로 조언이 갈린다.
+    const airline: string = typeof reqBody.airline === 'string'
+      ? (AIRLINES[reqBody.airline] ? reqBody.airline : (reqBody.airline === 'all' ? 'all' : '')) : ''
     const len = text.length
     if (len < MIN_CHARS) return json({ error: `${MIN_CHARS}자 이상 넣어 주세요`, code: 'too_short' }, 400)
     if (len > MAX_CHARS) return json({ error: `${MAX_CHARS}자까지 검사할 수 있어요`, code: 'too_long' }, 400)
@@ -412,21 +441,72 @@ Deno.serve(async (req) => {
     // 사용처 id 를 **먼저** 만든다 — 차감(3)이 저장(7)보다 앞서므로 그때 이미 ref 가 있어야 한다
     const checkId = crypto.randomUUID()
 
-    // ── 3. 무료분 판정 + 차감 (지급·차감이 한 트랜잭션·같은 lock 안) ──────
-    const freeRef = source === 'answer' && answerId ? answerId : null
+    // ── 2-2. 붙여넣은 글은 저장소에 넣는다 ────────────────────────────────
+    // ⚠️ 검사한 글은 **어디서 왔든 답변 저장소에 모인다**(2026-07-25 재설계).
+    //    그래야 이력이 답변에 붙어 쌓이고, "고쳐서 다시 검사"가 성립한다.
+    //    차감 **전에** 저장한다 — 저장이 실패하면 차감도 하지 않는다(돈만 나가는 상황 방지).
+    // ⚠️ 브라우저가 보낸 answerId 를 그대로 믿지 않는다 — 아래 저장·수정은 service role 이라
+    //    RLS 를 통과한다. 남의 답변 id 를 넣으면 그 사람의 글이 덮이고 이력이 오염된다.
+    //    **본인 것이 아니면 없는 셈 치고 새로 저장한다**(에러로 막으면 정상 사용도 죽는다 —
+    //    답변을 지운 뒤 뒤로가기로 돌아온 경우가 그렇다).
+    let targetAnswer: string | null = null
+    if (answerId) {
+      const { data: own } = await admin.from('answers')
+        .select('id').eq('id', answerId).eq('member_id', user.id).maybeSingle()
+      if (own) targetAnswer = answerId
+      else console.warn('answerId not owned or missing — 새 답변으로 저장한다')
+    }
+    let autoSaved = false
+    if (!targetAnswer) {
+      const row: Record<string, unknown> = {
+        member_id: user.id, status: 'final',
+        title: (question || text.slice(0, 40).replace(/\s+/g, ' ').trim() + '…').slice(0, 200),
+        content: text, doc_kind: docKind, airline: airline || null,
+      }
+      let ins = await admin.from('answers').insert(row).select('id').single()
+      if (ins.error) {
+        // 분류 3종(20260725170000) 미적용이면 그 칸을 빼고 한 번 더 — 본체는 남긴다
+        const { doc_kind: _k, airline: _a, ...bare } = row
+        ins = await admin.from('answers').insert(bare).select('id').single()
+      }
+      if (ins.error) {
+        console.error('auto-save failed', ins.error.message)
+        return json({ error: '답변을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.', code: 'save_failed' }, 200)
+      }
+      targetAnswer = (ins.data as { id: string }).id
+      autoSaved = true
+    }
+
+    // ── 3. 차감 (무료 판정·차감이 한 트랜잭션·같은 lock 안) ────────────────
+    // ⚠️ 차감 키가 **검사 id 가 아니라 답변 id 묶음**이다. 같은 답변을 MAX_RECHECK 번까지는
+    //    같은 키로 부르므로 spend_credit 이 used='already' 로 통과시켜 추가 차감이 없다.
+    //    3번째부터 묶음 번호가 올라가 새로 차감된다.
+    let prevChecks = 0
+    {
+      const { count } = await admin.from('ai_killer_checks')
+        .select('id', { count: 'exact', head: true })
+        .eq('member_id', user.id).eq('answer_id', targetAnswer)
+      prevChecks = count ?? 0
+    }
+    const payRef = `${targetAnswer}#${Math.floor(prevChecks / MAX_RECHECK)}`
+
     const { data: spentRaw, error: spendErr } = await supa.rpc('spend_credit', {
-      p_tool: 'ai_killer', p_ref: checkId, p_free_ref: freeRef,
+      p_tool: 'ai_killer', p_ref: payRef, p_free_ref: null,
     })
-    const spent = spentRaw as { used?: string; balance?: number; free_left?: number } | null
+    const spent = spentRaw as
+      { used?: string; cost?: number; balance?: number; daily_left?: number } | null
     if (spendErr) {
       const msg = String(spendErr.message || '')
       if (msg.includes('no_credit')) {
-        return json({ error: '검사 횟수가 없어요. 충전하고 이어서 해요.', code: 'no_credit' }, 200)
+        return json({
+          error: '크레딧이 모자라요. 충전하면 바로 이어서 검사할 수 있어요.',
+          code: 'no_credit', answerId: targetAnswer, autoSaved,
+        }, 200)
       }
       console.error('spend_credit failed', msg)
       return json({ error: '검사를 시작하지 못했어요', code: 'spend_failed' }, 500)
     }
-    charged = { tool: 'ai_killer', ref: checkId }
+    charged = { tool: 'ai_killer', ref: payRef }
 
     // ── 4. 규칙 검사 ──────────────────────────────────────────────────────
     // 사전은 비공개 테이블이라 service role 로만 읽힌다(이게 규칙을 서버에 둔 이유).
@@ -464,14 +544,16 @@ Deno.serve(async (req) => {
     // 걸린 게 하나도 없으면 AI 를 부르지 않는다 — 원가를 아끼고 결과도 정확하다
     if (hits.length === 0) {
       await saveCheck(admin, {
-        id: checkId, member_id: user.id, source, answer_id: answerId, content: text,
+        id: checkId, member_id: user.id, source, answer_id: targetAnswer, content: text,
         question: question || null, doc_kind: docKind,
         result: [], grade: 'human', hit_count: 0, char_count: len,
       })
       return json({
         ok: true, id: checkId, grade: 'human', hits: [],
         spot_count: 0, occurrences: 0, char_count: len, truncated: 0,
-        used: spent?.used, balance: spent?.balance, free_left: spent?.free_left,
+        answerId: targetAnswer, autoSaved,
+        recheck_left: Math.max(MAX_RECHECK - (prevChecks % MAX_RECHECK) - 1, 0),
+        used: spent?.used, cost: spent?.cost, balance: spent?.balance, daily_left: spent?.daily_left,
       })
     }
 
@@ -483,11 +565,11 @@ Deno.serve(async (req) => {
       return clicheOnly.filter((t) => t.length >= 3 && mine.includes(t))
     }
 
-    let filled = await fillSlots(apiKey, text, question, docKind, hits, '')
+    let filled = await fillSlots(apiKey, text, question, docKind, airline, hits, '')
     const bad = selfCheck(filled)
     if (bad.length > 0) {
       console.log('self-check hit, regenerating:', bad.join(', '))
-      filled = await fillSlots(apiKey, text, question, docKind, hits,
+      filled = await fillSlots(apiKey, text, question, docKind, airline, hits,
         `\n\n[다시 쓰는 이유]\n방금 네 답변에 ${bad.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
         `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
     }
@@ -534,7 +616,7 @@ Deno.serve(async (req) => {
     const g = grade(total, len)
     const u = filled.usage as { input_tokens?: number; output_tokens?: number }
     const saveErr = await saveCheck(admin, {
-      id: checkId, member_id: user.id, source, answer_id: answerId, content: text,
+      id: checkId, member_id: user.id, source, answer_id: targetAnswer, content: text,
       question: question || null, doc_kind: docKind,
       result: hits, grade: g, hit_count: total, char_count: len,
       input_tokens: u.input_tokens ?? 0, output_tokens: u.output_tokens ?? 0,
@@ -543,13 +625,31 @@ Deno.serve(async (req) => {
     // (사용자는 답을 받았으므로. 기록만 유실되며 로그로 추적한다).
     if (saveErr) console.error('save failed', saveErr.message)
 
+    // ⚠️ 저장소의 그 답변도 방금 검사한 글로 맞춰 둔다. 학생이 고친 글을 붙여 넣고
+    //    "다시 검사"를 눌렀는데 저장소가 옛 글을 들고 있으면, 다음 검사가 옛 글로 돌아간다.
+    if (targetAnswer && !autoSaved) {
+      const stamp = new Date().toISOString()
+      const patch: Record<string, unknown> = { content: text, updated_at: stamp }
+      if (docKind) patch.doc_kind = docKind
+      if (airline) patch.airline = airline
+      const up = await admin.from('answers').update(patch)
+        .eq('id', targetAnswer).eq('member_id', user.id)
+      if (up.error) {
+        // 분류 컬럼(20260725170000) 미적용 — 본문만이라도 맞춰 둔다
+        await admin.from('answers').update({ content: text, updated_at: stamp })
+          .eq('id', targetAnswer).eq('member_id', user.id)
+      }
+    }
+
     return json({
       ok: true, id: checkId, grade: g, hits,
       // 화면이 "고칠 곳 N"으로 쓸 값(= hits.length). occurrences 는 등급 근거라 따로 준다.
       spot_count: hits.length, occurrences: total, char_count: len,
       // 자리가 상한에 걸려 잘렸으면 알린다 — 조용히 자르지 않는다
-      truncated,
-      used: spent?.used, balance: spent?.balance, free_left: spent?.free_left,
+      truncated, answerId: targetAnswer, autoSaved,
+      // 이 답변에 남은 무차감 재검사 횟수(화면이 "마지막 무차감 검사예요"를 말할 근거)
+      recheck_left: Math.max(MAX_RECHECK - (prevChecks % MAX_RECHECK) - 1, 0),
+      used: spent?.used, cost: spent?.cost, balance: spent?.balance, daily_left: spent?.daily_left,
     })
   } catch (e) {
     // ⚠️ 차감했는데 결과를 못 준 경우 반드시 되돌린다.
