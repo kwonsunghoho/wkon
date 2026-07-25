@@ -52,10 +52,72 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId, slotId } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId, creditPack } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 크레딧 충전 (2026-07-25) — 신청 저장이 아니라 원장에 크레딧을 넣는다.
+    // 아래 챌린지·특강 경로와 완전히 다른 일이라 여기서 갈라져 끝낸다.
+    // ═══════════════════════════════════════════════════════════════════
+    if (creditPack) {
+      // ⚠️ 누구에게 넣을지는 **브라우저가 아니라 JWT 로 정한다.**
+      //    body 의 memberId 를 믿으면 남의 계정에 넣거나 남의 결제를 가로챌 수 있다.
+      const auth = req.headers.get('Authorization') || ''
+      const asUser = createClient(
+        Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: auth } } },
+      )
+      const { data: { user } } = await asUser.auth.getUser()
+      if (!user) return json({ ok: false, error: 'not_authenticated' }, 401)
+
+      // 상품·금액은 DB 가 신뢰 소스(브라우저가 보낸 금액 불신). admin 에서 바꾸면 즉시 반영.
+      const { data: cfg } = await supa.from('site_config').select('value').eq('key', 'credit_packs').maybeSingle()
+      const packs = Array.isArray(cfg?.value) ? cfg!.value as Array<Record<string, unknown>> : []
+      const pack = packs.find((p) => String(p.id) === String(creditPack))
+      if (!pack) return json({ ok: false, error: 'pack_not_found' }, 400)
+      const count = Number(pack.count) || 0
+      const price = Number(pack.price) || 0
+      const tool = String(pack.tool || 'ai_killer')
+      if (!paymentId || count <= 0 || price <= 0) return json({ ok: false, error: 'bad_request' }, 400)
+
+      // 이미 이 결제로 충전했으면 그대로 통과시킨다(재시도·복귀 중복 호출 방어).
+      // ⚠️ 최종 방어는 DB 의 credit_ledger_purchase_uq 다 — 조회와 insert 사이엔 틈이 있다.
+      const { data: dup } = await supa.from('credit_ledger')
+        .select('id').eq('tool', tool).eq('ref', paymentId).eq('reason', 'purchase').maybeSingle()
+      if (dup) {
+        const { data: rows } = await supa.from('credit_ledger').select('delta').eq('member_id', user.id)
+        const bal = (rows || []).reduce((a, r) => a + (Number(r.delta) || 0), 0)
+        return json({ ok: true, already: true, added: count, balance: bal })
+      }
+
+      const secret = Deno.env.get('PORTONE_API_SECRET')
+      const res = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
+        headers: { Authorization: `PortOne ${secret}` },
+      })
+      if (!res.ok) return json({ ok: false, error: 'lookup_failed' }, 502)
+      const pay = await res.json()
+      if (pay.status !== 'PAID') return json({ ok: false, error: 'not_paid', status: pay.status }, 402)
+      if (pay?.amount?.total !== price) {
+        return json({ ok: false, error: 'amount_mismatch', paid: pay?.amount?.total, expected: price }, 402)
+      }
+
+      // 검증 통과 → 원장에 넣는다. reason='purchase', ref=결제 id (멱등성 키).
+      const { error: insErr } = await supa.from('credit_ledger').insert({
+        member_id: user.id, tool, delta: count, reason: 'purchase', ref: paymentId,
+      })
+      if (insErr) {
+        // 유니크 위반 = 방금 다른 요청이 먼저 넣었다. 사용자에겐 성공이 맞다.
+        if (!String(insErr.message || '').includes('duplicate')) {
+          console.error('credit insert failed', insErr.message)
+          return json({ ok: false, error: 'grant_failed' }, 500)
+        }
+      }
+      const { data: rows } = await supa.from('credit_ledger').select('delta').eq('member_id', user.id)
+      const balance = (rows || []).reduce((a, r) => a + (Number(r.delta) || 0), 0)
+      return json({ ok: true, added: count, balance })
+    }
 
     // 결제 대상 판별: lectureId 가 있으면 '특강 1건', 없으면 기존 '챌린지 N개'.
     // ⚠️ 금액은 브라우저를 믿지 않고 서버가 DB(특강)·상수(챌린지)에서 다시 계산한다.
