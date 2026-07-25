@@ -76,6 +76,19 @@
               font: inherit; font-size: 14px; font-weight: 700; border: 1px solid var(--border);
               background: var(--bg2); border-radius: var(--radius-xs); color: var(--text-muted); cursor: pointer; }
     .in-tab.on { background: var(--text); color: #fff; border-color: var(--text); }
+    /* ⚠️ 맥락 2종(종류·문항) — 결정 11·12. 판정에는 안 쓰이고 지적하는 '말'을 바꾼다.
+       종류를 모르면 말이 반대로 나간다("말할 때 이렇게 세는 사람은 없어서"를 자소서에 쓰면 어긋난다). */
+    .in-kind { display: flex; gap: 6px; margin-bottom: 10px; }
+    .in-kind button { flex: 1; min-height: 44px; font: inherit; font-size: 14px; font-weight: 700;
+                      border: 1px solid var(--border); background: var(--bg2);
+                      border-radius: var(--radius-xs); color: var(--text-muted); cursor: pointer; }
+    .in-kind button.on { background: var(--surface); color: var(--text);
+                         border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+    .in-q { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--border-soft);
+            font: inherit; font-size: 15px; font-weight: 700; color: var(--text);
+            background: transparent; padding: 0 0 10px; margin-bottom: 10px; }
+    .in-q:focus { outline: none; border-bottom-color: var(--text); }
+    .in-q::placeholder { font-weight: 400; color: var(--text-dim); }
     .in-ta { width: 100%; min-height: 190px; border: 0; resize: vertical; font: inherit;
              font-size: 15px; line-height: 1.75; color: var(--text); background: transparent; }
     .in-ta:focus { outline: none; }
@@ -262,6 +275,16 @@
 
         <div id="pickWrap" class="hidden"></div>
 
+        <!-- 글 종류 — 지적하는 말이 갈린다(결정 12). 면접 답변은 '말', 자소서는 '글' -->
+        <div class="in-kind" role="group" aria-label="글 종류">
+          <button type="button" class="on" id="kindInterview" aria-pressed="true">면접 답변</button>
+          <button type="button" id="kindEssay" aria-pressed="false">자소서</button>
+        </div>
+
+        <!-- 문항 — 선택 입력(결정 11). 비워도 검사된다 -->
+        <input class="in-q" id="qIn" maxlength="200" autocomplete="off"
+          placeholder="어떤 질문에 대한 답인가요? (선택)">
+
         <textarea class="in-ta" id="ta" maxlength="1500"
           placeholder="검사할 글을 넣어 주세요. 자소서는 한 문항씩 넣는 편이 정확해요."></textarea>
         <div class="in-foot">
@@ -360,6 +383,9 @@
     let _source = 'paste';      // paste | answer
     let _answerId = null;       // 답변노트에서 불러온 글
     let _answerTitle = '';
+    // 맥락 2종(결정 11·12) — 판정에는 안 들어간다. 서버가 AI 의 why/fix 문장을 여기에 맞춘다.
+    // ⚠️ 기본값 'interview' — 브리핑룸이 면접 준비 도구 허브이고 무료분이 답변노트에 붙어 있다.
+    let _kind = 'interview';    // interview | essay
     let _notes = [];            // 내 답변노트 목록
     let _res = null;            // 검사 결과
     let _i = 0;                 // dock 이 물고 있는 지적 번호
@@ -394,6 +420,23 @@
       msg.innerHTML = _source === 'answer' && _answerId
         ? '<b>이 글은 무료로 검사할 수 있어요.</b><br>남은 무료 ' + freeLeft + '회 중 1회가 쓰여요. 같은 글은 한 번만 무료예요.'
         : '<b>답변노트에 올리면 무료로 검사할 수 있어요.</b><br>올린 글 ' + freeLeft + '개까지 무료입니다. 붙여넣기는 1회가 차감돼요.';
+    }
+
+    // ── 글 종류(결정 12) ──────────────────────────────────────────────
+    // ⚠️ 항상 둘 중 하나가 선택돼 있다. 미선택을 허용하면 "말할 때는"처럼 한쪽을 전제한
+    //    지적이 반대 종류의 글에 나가는데, 그걸 피하려고 서버가 문구를 중립으로 낮추면
+    //    정작 종류별로 갈라지는 이득이 사라진다.
+    function setKind(k) {
+      _kind = k === 'essay' ? 'essay' : 'interview';
+      const bi = $('kindInterview'), be = $('kindEssay');
+      const on = _kind === 'interview' ? bi : be, off = _kind === 'interview' ? be : bi;
+      on.classList.add('on'); on.setAttribute('aria-pressed', 'true');
+      off.classList.remove('on'); off.setAttribute('aria-pressed', 'false');
+      $('qIn').placeholder = _kind === 'interview'
+        ? '어떤 질문을 받았나요? (선택)' : '어떤 문항인가요? (선택)';
+      $('ta').placeholder = _kind === 'interview'
+        ? '면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요.'
+        : '검사할 글을 넣어 주세요. 자소서는 한 문항씩 넣는 편이 정확해요.';
     }
 
     // ── 입력 상태 ─────────────────────────────────────────────────────
@@ -433,7 +476,11 @@
         wrap.innerHTML = '<div class="pick"><div style="min-width:0">'
           + '<div class="pick-k">답변노트</div><div class="pick-t">' + esc(t) + '</div></div>'
           + '<button class="pick-btn" type="button" id="reBtn">바꾸기</button></div>';
-        $('reBtn').onclick = () => { _answerId = null; _answerTitle = ''; $('ta').value = ''; onInput(); refresh(); };
+        $('reBtn').onclick = () => {
+          _answerId = null; _answerTitle = '';
+          $('ta').value = ''; $('qIn').value = '';   // 불러온 글의 문항도 같이 비운다
+          onInput(); refresh();
+        };
         return;
       }
       if (!_notes.length) {
@@ -450,6 +497,13 @@
           const a = _notes[Number(b.dataset.i)];
           _answerId = a.id; _answerTitle = a._title;
           $('ta').value = a.content || '';
+          // 문항은 그대로 따라온다 — 손으로 다시 칠 이유가 없다(결정 11)
+          $('qIn').value = (a._title && a._title !== '제목 없는 글') ? a._title.slice(0, 200) : '';
+          // ⚠️ 종류는 **question_id 가 있을 때만** 자동으로 정한다. 우리가 낸 문제에 답한 글
+          //    (소재발굴 → 답변노트)은 면접 답변이 확실하지만, 자유 글은 자소서인지 면접
+          //    답변인지 알 방법이 없다 — 그때는 사용자가 고른 값을 건드리지 않는다.
+          //    (③단계에서 답변노트에 종류 택1 이 생기면 그 값을 그대로 쓸 것.)
+          if (a.question_id) setKind('interview');
           onInput(); refresh();
         };
       });
@@ -590,7 +644,12 @@
 
       try {
         const { data, error } = await MONC.sb.functions.invoke('ai-killer', {
-          body: { source: _source, text, answerId: _source === 'answer' ? _answerId : null },
+          body: {
+            source: _source, text, answerId: _source === 'answer' ? _answerId : null,
+            // 맥락 2종 — 서버가 판정이 아니라 why/fix 문장에만 쓴다(결정 11·12).
+            // 문항은 비어 있어도 되고, 200자 상한은 서버가 한 번 더 자른다.
+            question: $('qIn').value.trim(), docKind: _kind,
+          },
         });
         // ⚠️ supabase-js 는 non-2xx 면 data 를 null 로 만들고 본문을 error.context 에 숨긴다.
         //    중계 함수는 사용자에게 보여줄 사유(no_credit·refused 등)를 200 으로 돌려주므로
@@ -617,7 +676,8 @@
     // ── 답변노트에 저장 — 붙여넣기로 검사한 글을 올리면 다음부터 무료가 된다(결정 8) ──
     async function saveToNote() {
       if (_source === 'answer' && _answerId) { location.href = 'mypage.html#sec-answers'; return; }
-      const title = (prompt('어떤 문항인가요? (예: 지원 동기를 기술하시오)') || '').trim();
+      // 입력 화면에서 문항을 이미 적었으면 그걸 기본값으로 — 같은 걸 두 번 치게 하지 않는다
+      const title = (prompt('어떤 문항인가요? (예: 지원 동기를 기술하시오)', $('qIn').value.trim()) || '').trim();
       if (!title) return;
       const { data: { user } } = await MONC.sb.auth.getUser();
       const { error } = await MONC.sb.from('answers')
@@ -741,12 +801,15 @@
     });
     $('ta').addEventListener('input', onInput);
     $('goBtn').addEventListener('click', run);
+    $('kindInterview').addEventListener('click', () => setKind('interview'));
+    $('kindEssay').addEventListener('click', () => setKind('essay'));
     $('againBtn').addEventListener('click', () => {
       $('resultView').classList.add('hidden');
       $('dock').classList.add('hidden');
       document.body.classList.remove('show-list');
       $('inputView').classList.remove('hidden');
-      $('ta').value = ''; onInput(); refresh();
+      // ⚠️ 종류(_kind)는 그대로 둔다 — 다음 글도 같은 종류일 확률이 훨씬 높다.
+      $('ta').value = ''; $('qIn').value = ''; onInput(); refresh();
       document.documentElement.scrollTop = 0;
     });
     $('saveBtn').addEventListener('click', saveToNote);
@@ -793,6 +856,7 @@
       await loadPacks();
       await loadNotes();
       await refresh();
+      setKind(_kind);   // 종류에 맞는 placeholder 를 처음부터 맞춘다
       onInput();
       // ⚠️ 모바일은 결제사 페이지를 다녀오며 이 페이지가 **새로 뜬다** — 잔액을 불러온 뒤에 처리한다
       await handlePayReturn();
