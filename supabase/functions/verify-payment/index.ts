@@ -143,6 +143,14 @@ Deno.serve(async (req) => {
         const refunded = await refundAll(supa, paymentId, paid, '특강 정원 마감 · 자동 환불')
         return json({ ok: false, error: 'lecture_full', refunded })
       }
+      // 같은 프로그램 중복 신청(DB 트리거 MC002) — 이미 신청한 챌린지·특강을 또 결제한 경우.
+      // 브라우저 사전 검사로 못 잡는 경우(비회원·두 탭 동시 결제)가 여기로 온다.
+      // 결제는 이미 승인됐으므로 전액 자동 환불하고 실패로 답한다(위 lecture_full 과 같은 이유로 200).
+      if (error.code === 'MC002' || String(error.message).includes('duplicate_application')) {
+        const refunded = await refundAll(supa, paymentId, paid, '중복 신청 · 자동 환불')
+        // hint 에 트리거가 담아준 프로그램 이름이 온다(예: '표현력 4기') — 사용자 안내에 쓴다.
+        return json({ ok: false, error: 'duplicate_application', refunded, program: error.hint || null })
+      }
       return json({ ok: false, error: 'insert_failed', detail: error.message }, 500)
     }
     return json({ ok: true })
