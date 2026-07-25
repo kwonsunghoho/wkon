@@ -233,6 +233,15 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 ### Google Apps Script — 중복 신청
 `학생현황` 시트에 **항상 새 행 추가**(전화 중복 무관; 구 find-and-update는 덮어쓰기 문제로 제거). 편집은 Google 콘솔에서 후 새 버전 재배포 필요. ⚠️ 이건 **구 레거시 시트 경로**이고, 현재 신청은 아래 Supabase 중복 가드가 막는다 — 시트 쪽 '항상 append'와 혼동하지 말 것.
 
+### 결제·환불 (포트원 V2 · admin 원클릭) — 2026-07-23 신설, **적용 실측 확인 2026-07-25**
+- **결제 = 포트원(PortOne) V2 단일 경로**(PG 무관 — 카드·간편결제). 신청 저장은 **반드시 `verify-payment` Edge Function 경유** — 브라우저가 보낸 금액을 믿지 않고 서버가 DB(`site_config.challenge_price` / `special_lectures.price`)에서 금액을 재확인한 뒤 service role 로 insert 한다. 결제 컬럼은 `pay_method·payment_id·payment_status·paid_amount`(migration `20260717120000_applications_payment.sql`).
+- **환불 = admin '신청자 현황'의 [환불] 버튼 → `cancel-payment` Edge Function → 포트원 취소 API.** 원결제수단으로 자동 환불되므로 **환불계좌를 받지 않는다.** 금액 프롬프트 기본값이 전액이고 **금액을 고쳐 넣으면 그만큼만 부분취소**된다(별도 '부분환불' 버튼 없음). 누계는 `applications.refunded_amount`, 이력은 `refunds` 테이블(migration `20260723120000_payment_refunds.sql` — **owner 실행 완료, 다시 실행 안내 금지**).
+- **⚠️ [환불] 버튼은 `payment_id` 가 있는 간편결제 건에만 뜬다.** 계좌이체 건은 취소할 PG 결제가 없어 기존 **[입금]/[환급] 수동 토글** 그대로다 — **버튼이 안 보이는 것은 기능 누락이 아니라 그 목록에 간편결제 건이 없다는 뜻**(2026-07-25 '적용 안 됨'으로 오인해 배포본·컬럼·함수를 전수 점검한 자리). 구분법: 카드에 `간편결제 N원 결제완료` 줄이 있으면 PG 건. 추가 조건은 `paid_amount − refunded_amount > 0` — **전액 환불된 건은 버튼이 사라진다**(정상).
+- **⚠️ 포트원 취소는 성공했는데 DB 기록이 실패하면 함수가 `ok:true + warning` 을 돌려준다 — 실패(`ok:false`)로 바꾸지 말 것.** 관리자가 실패로 읽고 다시 누르면 **이중 환불**이 난다.
+- **⚠️ `refunded_amount` 를 공용 select 에 넣지 말 것**(`major`·`agreed_at` 과 같은 방어 — 마이그레이션 미적용 환경에서 조회 전체가 깨진다). mypage 는 `payment_status` 만 보고 결제완료/부분 환불/환불완료를 판정한다.
+- 결제 **후** 자동 환불 경로 2종은 `verify-payment` 담당 — 특강 정원 마감(MC001)·중복 신청(MC002). 둘 다 `refundAll()` + **HTTP 200**(위 각 항목 참조).
+- **배포·확인**: 두 함수 모두 **Supabase 콘솔에서 코드 교체 → Deploy**(CLI 안내 금지). 배포 여부는 anon key 프로브로 판별 — `POST /functions/v1/cancel-payment` 에 `{applicationId:'probe',amount:1}` → **`unauthorized`(401)=배포됨**, 404=미배포. **결제 생성·DB 쓰기가 없어 안전하다.**
+
 ### 같은 프로그램 중복 신청 차단 (2026-07-25 신설 · migration `20260725120000_duplicate_application_guard.sql`, **owner 실행 필요**)
 같은 사람이 같은 프로그램을 두 번 신청하는 것을 막는다(오너 지시 — admin 신청자 현황에 같은 이름·전화가 같은 챌린지·기수를 6분 간격으로 두 번 신청한 행이 쌓였다).
 - **⚠️ 원장은 DB 트리거 하나(`applications_duplicate` → errcode `MC002`, message `duplicate_application`).** 신청이 들어오는 길이 **다섯**(챌린지 계좌이체·토스 / 특강 무료·계좌이체·토스)인데 전부 `applications` insert 로 수렴하므로 여기서 한 번 막는 것이 유일하게 새지 않는 방법이다. **브라우저 검사만으로 대체하지 말 것** — 비회원은 RLS 때문에 사전 조회가 아예 불가능하고(아래), 검사와 저장 사이의 틈은 늘 남는다.
