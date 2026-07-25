@@ -303,11 +303,45 @@ const VOICE = `너는 승무원 면접을 10년 넘게 가르친 코치다. 학�
 [지망 항공사가 주어졌을 때]
 - 그 항공사에 맞춰 **fix 의 방향만** 잡아라. 항공사 이름을 굳이 문장에 넣지 마라.
 - **없는 사실을 지어내지 마라** — "이 항공사는 이런 인재를 원한다"는 식의 단정은 금지다.
-  네가 아는 건 학생이 쓴 글과 아래 '합격 글에서 확인된 것'뿐이다.
-- '합격 글에서 확인된 것'이 함께 주어지면 그것만 근거로 삼아라.
-  ⚠️ **합격자 문장을 흉내 내라고 하지 마라.** 그러면 지원자들의 글이 전부 같아진다 —
-  우리가 잡으려는 AI스러움을 우리가 만드는 꼴이다. 형식(소제목 유무·전개 순서)과
-  "이 회사 소재가 하나도 없다" 같은 **빠진 것**을 짚는 데만 쓴다.`
+
+[⚠️ 참고자료를 다루는 법 — 가장 중요하다]
+- 아래 '지난 채용 합격 글에서 관찰한 것'은 **참고지 정답이 아니다.**
+  **자소서 문항은 채용마다 바뀐다.** 지난 채용 기준으로 이번 글을 재면 학생을 틀린 방향으로
+  끌고 간다.
+- **학생 글이 자료와 다르면 학생 글이 옳다.** "이 항공사는 이렇게 쓰지 않는다",
+  "이 문항은 이렇게 답해야 한다" 같은 단정을 하지 마라. 자료에 없는 형식이라는 이유로
+  지적하지 마라.
+- 자료는 **빠진 것을 묻는 데만** 쓴다. 예: "이 회사 이야기가 한 줄도 없어요."
+  형식을 강요하는 데 쓰지 마라.
+- 자료에 "문항에 대한 판단은 하지 마라"는 줄이 있으면 **그 지시가 우선한다.**
+- ⚠️ **합격자 문장을 흉내 내라고 하지 마라.** 그러면 지원자들의 글이 전부 같아진다 —
+  우리가 잡으려는 AI스러움을 우리가 만드는 꼴이다.`
+
+/**
+ * 문항이 우리가 아는 그 문항인가 — 학생이 넣은 문항과 프로필의 문항을 견준다.
+ *
+ * ⚠️ **자소서 문항은 채용마다 바뀐다**(2026-07-25 오너). 바뀐 문항에 옛 주의사항을 들이대면
+ *    학생을 틀린 방향으로 끌고 간다. 그래서 문항별 조언은 **같은 문항일 때만** 쓴다.
+ *
+ * 학생은 문항을 줄여 쓴다("지원동기", "강점"). 그래서 자카드가 아니라 **학생 입력이 원문에
+ * 얼마나 담겨 있나**(포함 비율)로 본다 — 짧게 써도 맞고, 전혀 다른 문항이면 낮게 나온다.
+ * ⚠️ 애매하면 **매칭 실패 쪽으로 기운다.** 틀린 조언보다 조언을 덜 하는 편이 낫다.
+ */
+function qSimilarity(studentQ: string, profileQ: string): number {
+  const norm = (s: string) => s.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase()
+  const a = norm(studentQ), b = norm(profileQ)
+  if (a.length < 6 || b.length < 6) return 0   // 너무 짧으면 우연히 겹친다
+  const bi = (s: string) => {
+    const g = new Set<string>()
+    for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i + 2))
+    return g
+  }
+  const ga = bi(a), gb = bi(b)
+  let hit = 0
+  for (const g of ga) if (gb.has(g)) hit++
+  return hit / ga.size
+}
+const Q_MATCH_MIN = 0.62   // 이 아래면 '다른 문항'으로 본다(보수적으로 잡았다)
 
 /**
  * 항공사 프로필 — airline_profiles 에서 뽑은 그 항공사만의 패턴.
@@ -315,28 +349,68 @@ const VOICE = `너는 승무원 면접을 10년 넘게 가르친 코치다. 학�
  * ⚠️ **이 표가 이 도구의 자산이다.** 실제 합격 자소서에서 뽑았고, 항공사마다 문항도 문체도
  *    완전히 다르다(제주항공은 대괄호 소제목을 쓰고 에어프레미아는 안 쓴다 — 정반대다).
  * ⚠️ 그래도 **합격자 문장을 예시로 주지는 않는다**(확정본 결정 10). 여기 실리는 건
- *    '무엇을 쓸까'가 아니라 '무엇을 보고 판단하나'다 — 문항 구성·형식 관습·회사 고유 소재.
+ *    '무엇을 쓸까'가 아니라 '무엇을 보고 판단하나'다 — 형식 관습·회사 고유 소재.
+ * ⚠️ **레퍼런스는 참고지 정답이 아니다**(오너). 그래서 두 겹으로 나눠 싣는다:
+ *      · 잘 안 바뀌는 것(회사 소재·문체·분량) — 늘 싣는다
+ *      · 채용마다 바뀌는 것(문항별 주의사항) — **문항이 일치할 때만** 싣는다
  * ⚠️ 조회가 실패하면(마이그레이션 미적용) 조용히 넘어간다. 항공사 맥락만 빠진다.
  */
 async function airlineBrief(
-  admin: ReturnType<typeof createClient>, code: string,
-): Promise<string> {
-  if (!code || code === 'all' || !AIRLINES[code]) return ''
+  admin: ReturnType<typeof createClient>, code: string, studentQ: string,
+): Promise<{ brief: string; qMatched: boolean | null }> {
+  if (!code || code === 'all' || !AIRLINES[code]) return { brief: '', qMatched: null }
   try {
     const { data } = await admin.from('airline_profiles')
-      .select('name, style, keywords, notes').eq('code', code).eq('active', true).maybeSingle()
-    if (!data) return ''
-    const p = data as { name: string; style?: Record<string, string>; keywords?: Record<string, unknown>; notes?: string }
+      .select('name, questions, style, keywords, notes')
+      .eq('code', code).eq('active', true).maybeSingle()
+    if (!data) return { brief: '', qMatched: null }
+    const p = data as {
+      name: string
+      questions?: Array<{ n?: number; q?: string; chars?: string; note?: string }>
+      style?: Record<string, string>
+      keywords?: Record<string, unknown>
+      notes?: string
+    }
+
+    // ── ① 잘 안 바뀌는 것 — 늘 싣는다 ────────────────────────────────────
     const bits: string[] = []
     if (p.style?.subhead) bits.push(`형식: ${p.style.subhead}`)
     if (p.style?.structure) bits.push(`전개: ${p.style.structure}`)
+    if (p.style?.length) bits.push(`분량: ${p.style.length}`)
     // 회사 고유 소재 — 학생이 회사를 조사했는지가 여기서 갈린다
     const kw = Object.values(p.keywords ?? {}).flat().filter((v) => typeof v === 'string')
     if (kw.length) bits.push(`이 회사 고유 소재: ${kw.slice(0, 12).join(' · ')}`)
-    if (p.notes) bits.push(p.notes)
-    return bits.length ? `\n\n[${p.name} 합격 글에서 확인된 것]\n${bits.join('\n')}` : ''
+
+    // ── ② 채용마다 바뀌는 것 — 문항이 일치할 때만 ────────────────────────
+    let qMatched: boolean | null = null
+    const qs = Array.isArray(p.questions) ? p.questions : []
+    if (studentQ && qs.length) {
+      let best: { note?: string; chars?: string; score: number } = { score: 0 }
+      for (const q of qs) {
+        const s = qSimilarity(studentQ, String(q.q ?? ''))
+        if (s > best.score) best = { note: q.note, chars: q.chars, score: s }
+      }
+      qMatched = best.score >= Q_MATCH_MIN
+      if (qMatched) {
+        if (best.chars) bits.push(`이 문항의 합격 글 분량: ${best.chars}자`)
+        if (best.note) bits.push(`이 문항 주의: ${best.note}`)
+      } else {
+        // ⚠️ 이 한 줄이 핵심이다. 문항이 바뀌었는데 옛 문항 기준으로 지적하면 사고다.
+        bits.push('⚠️ 학생이 받은 문항은 우리 자료에 없는 문항이다(채용이 바뀌었을 수 있다). '
+          + '문항에 대한 판단은 하지 말고, 위의 회사 소재·형식만 참고하라.')
+      }
+    } else if (qs.length) {
+      bits.push('⚠️ 학생이 문항을 적지 않았다. 문항에 대한 판단은 하지 마라.')
+    }
+
+    if (!bits.length) return { brief: '', qMatched }
+    return {
+      brief: `\n\n[${p.name} — 지난 채용 합격 글에서 관찰한 것 · 참고자료]\n${bits.join('\n')}`
+        + (p.notes && qMatched !== false ? `\n${p.notes}` : ''),
+      qMatched,
+    }
   } catch (_) {
-    return ''
+    return { brief: '', qMatched: null }
   }
 }
 
@@ -600,8 +674,12 @@ Deno.serve(async (req) => {
       return clicheOnly.filter((t) => t.length >= 3 && mine.includes(t))
     }
 
-    // 항공사 프로필 — 그 항공사만의 문항·형식·고유 소재(비공개 표, service role 로만 읽힌다)
-    const airBrief = await airlineBrief(admin, airline)
+    // 항공사 프로필 — 그 항공사만의 형식·고유 소재(비공개 표, service role 로만 읽힌다).
+    // ⚠️ 학생이 넣은 문항을 함께 넘겨 **이번 채용 문항이 우리 자료와 같은지** 서버가 판정한다.
+    //    다르면 문항별 조언은 빠지고 잘 안 바뀌는 것(회사 소재·형식)만 남는다.
+    const { brief: airBrief, qMatched } = await airlineBrief(admin, airline, question)
+    // 불일치가 쌓이면 그 항공사 문항이 바뀌었다는 신호다 — 오너가 프로필을 갱신할 근거.
+    if (qMatched === false) console.log('airline question mismatch:', airline, '|', question.slice(0, 60))
 
     let filled = await fillSlots(apiKey, text, question, docKind, airline, airBrief, hits, '')
     const bad = selfCheck(filled)

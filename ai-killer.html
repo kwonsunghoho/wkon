@@ -330,9 +330,11 @@
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
 
-        <!-- 문항 — 선택 입력(결정 11). 비워도 검사된다 -->
+        <!-- 문항 — 선택 입력(결정 11). 비워도 검사된다.
+             ⚠️ 그대로 붙여넣을수록 좋다 — 서버가 항공사 프로필의 문항과 견주어 이번 채용
+             문항인지 판정하는데, 줄여 쓰면 같은 문항도 못 알아본다(setKind 주석 참조). -->
         <input class="in-q" id="qIn" maxlength="200" autocomplete="off"
-          placeholder="어떤 질문을 받았나요? (선택)">
+          placeholder="받은 질문을 그대로 넣어 주세요 (선택)">
 
         <textarea class="in-ta" id="ta" maxlength="1500"
           placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
@@ -528,8 +530,11 @@
       const on = _kind === 'interview' ? bi : be, off = _kind === 'interview' ? be : bi;
       on.classList.add('on'); on.setAttribute('aria-pressed', 'true');
       off.classList.remove('on'); off.setAttribute('aria-pressed', 'false');
+      // ⚠️ 문항은 **그대로 붙여넣는 편이 정확하다.** 서버가 이 문항을 항공사 프로필의 문항과
+      //    견주어 "이번 채용 문항이 우리가 아는 그 문항인가"를 판정하는데, 학생이 너무 짧게
+      //    줄여 쓰면 같은 문항인데도 못 알아본다(안전하게 조언을 덜 하는 쪽으로 기운다).
       $('qIn').placeholder = _kind === 'interview'
-        ? '어떤 질문을 받았나요? (선택)' : '어떤 문항인가요? (선택)';
+        ? '받은 질문을 그대로 넣어 주세요 (선택)' : '자소서 문항을 그대로 붙여넣어 주세요 (선택)';
       $('ta').placeholder = _kind === 'interview'
         ? '면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요.'
         : '자소서 한 문항을 넣어 주세요. 여러 문항을 섞으면 정확도가 떨어져요.';
