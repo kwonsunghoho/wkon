@@ -264,6 +264,7 @@
     <button class="tabbtn" data-tab="apps">신청자 현황</button>
     <button class="tabbtn" data-tab="community">홈 커뮤니티</button>
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
+    <button class="tabbtn" data-tab="credits">크레딧</button>
     <button class="tabbtn" data-tab="questions">기출문제</button>
   </div>
 
@@ -457,6 +458,41 @@
       <div class="rv-section-title">올린 후기 · 대표 선정</div>
       <div class="rv-hint">각 후기의 <b>대표</b> 칸에 숫자를 넣으면 <b>홈 '커뮤니티' 섹션의 대표 후기 카드</b>로 노출됩니다. <b>0=일반</b>, <b>1 이상=대표</b>(작은 번호부터 앞에). 보통 <b>3개</b>에 1·2·3을 매기면 그 순서로 홈에 뜨고, 대표를 하나도 안 매기면 최근 후기 3개가 자동 노출돼요. 홈 카드엔 <b>이름·챌린지·한줄평</b>이 함께 나오니 아래 칸을 채워두세요.</div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- 크레딧(credit_ledger) — AI킬러 등 유료 도구가 쓰는 공용 지갑.
+       ⚠️ 잔액은 원장 합계(sum(delta))라 따로 저장하는 컬럼이 없다. 여기서 지급/회수하면
+          그만큼 원장에 행이 쌓이고 잔액은 다시 계산된다. -->
+  <div class="tab-panel" id="panel-credits">
+    <div class="rounds-wrap">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        AI킬러가 쓰는 <b>공용 크레딧</b>이에요. 1회 = 검사 1번. 무료 2회는 회원이
+        <b>답변노트에 올린 글</b>을 검사할 때 서버가 자동으로 주므로 여기서 넣지 않아도 됩니다.
+        여기서 넣는 건 <b>유료분</b>이에요(테스트·보상·환불 대응).
+      </p>
+
+      <!-- 기수 일괄 지급 -->
+      <form class="round-form" id="creditBulkForm">
+        <div class="field"><label>기수 일괄 지급</label>
+          <select id="cbCohort"><option value="">기수 선택…</option></select></div>
+        <div class="field"><label>지급 횟수</label>
+          <input id="cbAmount" type="number" min="1" step="1" placeholder="예: 3"></div>
+        <div class="field"><label>사유(기록에 남아요)</label>
+          <input id="cbNote" placeholder="예: 3기 오픈 기념"></div>
+        <button class="btn btn-action" type="submit" id="cbSubmit">기수 전원에게 지급</button>
+      </form>
+
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 10px;">
+        <input class="search" id="credSearch" placeholder="이름·이메일 검색"
+               style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <label style="font-size:13px;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="credHasOnly"> 잔액 있는 회원만</label>
+      </div>
+      <div class="round-list" id="credList"><div class="loading">불러오는 중…</div></div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:22px 0 8px;">최근 원장 (50건)</h3>
+      <div class="round-list" id="credLog"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -2004,6 +2040,133 @@
     });
     document.getElementById('qfCancel').addEventListener('click', resetQForm);
 
+    // ── 크레딧(credit_ledger) — AI킬러 등 유료 도구가 쓰는 공용 지갑 ──
+    // ⚠️ 잔액은 저장된 컬럼이 아니라 **원장 합계(sum(delta))**다. 그래서 여기서도
+    //    잔액 컬럼을 읽지 않고 원장을 긁어 회원별로 더한다. 지급/회수는 반드시
+    //    grant_credit RPC 로 한다 — 원장에 직접 insert 하면 음수 잔액 가드를 우회한다.
+    let _credBal = new Map(), _credFree = new Map(), _credRows = [];
+
+    async function loadCredits() {
+      const { data, error } = await sb().from('credit_ledger')
+        .select('member_id, tool, delta, reason, ref, created_at')
+        .order('created_at', { ascending: false });
+      if (error) {
+        // 마이그레이션 미적용 — 조용히 죽지 말고 무엇을 실행해야 하는지 알려준다
+        document.getElementById('credList').innerHTML =
+          '<div class="loading">크레딧 원장이 아직 없어요. Supabase SQL Editor 에서 '
+          + '<b>20260725130000_credits.sql</b> 을 실행해 주세요.</div>';
+        document.getElementById('credLog').innerHTML = '';
+        return;
+      }
+      _credRows = data || [];
+      _credBal = new Map(); _credFree = new Map();
+      for (const r of _credRows) {
+        _credBal.set(r.member_id, (_credBal.get(r.member_id) || 0) + (r.delta || 0));
+        if (r.reason === 'free_use') _credFree.set(r.member_id, (_credFree.get(r.member_id) || 0) + 1);
+      }
+      // 기수 선택지 채우기
+      const sel = document.getElementById('cbCohort');
+      sel.innerHTML = '<option value="">기수 선택…</option>'
+        + cohorts.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+      renderCredList(); renderCredLog();
+    }
+
+    function renderCredList() {
+      const q = document.getElementById('credSearch').value.trim().toLowerCase();
+      const hasOnly = document.getElementById('credHasOnly').checked;
+      const list = members.filter(m => {
+        const bal = _credBal.get(m.id) || 0;
+        if (hasOnly && bal <= 0) return false;
+        if (!q) return true;
+        return (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q);
+      });
+      const el = document.getElementById('credList');
+      if (!list.length) { el.innerHTML = '<div class="loading">해당하는 회원이 없어요.</div>'; return; }
+      el.innerHTML = list.map(m => {
+        const bal = _credBal.get(m.id) || 0, free = _credFree.get(m.id) || 0;
+        return '<div class="round-item" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
+          + '<div style="flex:1;min-width:170px;">'
+          +   '<b>' + esc(m.name || '이름 없음') + '</b>'
+          +   '<span style="color:var(--text-muted);font-size:13px;"> · ' + esc(m.email || '') + '</span>'
+          +   '<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">'
+          +     '잔액 <b style="color:var(--action-ink);">' + bal + '회</b> · 무료 사용 ' + free + '회</div>'
+          + '</div>'
+          + '<input type="number" min="1" step="1" value="1" data-amt="' + m.id + '" '
+          +   'style="width:64px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">'
+          + '<button class="btn btn-action btn-sm" data-grant="' + m.id + '" type="button">지급</button>'
+          + '<button class="btn btn-ghost btn-sm" data-revoke="' + m.id + '" type="button">회수</button>'
+          + '</div>';
+      }).join('');
+    }
+
+    const CRED_REASON = { purchase:'충전', admin_grant:'관리자', use:'사용', free_use:'무료 사용', refund:'환급' };
+    function renderCredLog() {
+      const byId = new Map(members.map(m => [m.id, m.name || m.email || '(알 수 없음)']));
+      const el = document.getElementById('credLog');
+      if (!_credRows.length) { el.innerHTML = '<div class="loading">아직 기록이 없어요.</div>'; return; }
+      el.innerHTML = _credRows.slice(0, 50).map(r => {
+        const d = new Date(r.created_at);
+        const when = (d.getMonth() + 1) + '/' + d.getDate() + ' '
+          + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        const sign = r.delta > 0 ? '+' + r.delta : String(r.delta);
+        const color = r.delta > 0 ? 'var(--action-ink)' : (r.delta < 0 ? 'var(--text-muted)' : 'var(--text-dim)');
+        return '<div class="round-item" style="font-size:13px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;">'
+          + '<span style="color:var(--text-dim);min-width:64px;">' + when + '</span>'
+          + '<b style="min-width:100px;">' + esc(byId.get(r.member_id) || '알 수 없음') + '</b>'
+          + '<span style="color:var(--text-muted);">' + (CRED_REASON[r.reason] || r.reason) + '</span>'
+          + '<b style="color:' + color + ';">' + sign + '</b>'
+          + (r.ref ? '<span style="color:var(--text-dim);">' + esc(String(r.ref).slice(0, 28)) + '</span>' : '')
+          + '</div>';
+      }).join('');
+    }
+
+    async function giveCredit(memberId, amount, note) {
+      const { error } = await sb().rpc('grant_credit', {
+        p_member_id: memberId, p_tool: 'ai_killer', p_amount: amount, p_note: note || null,
+      });
+      if (error) {
+        const m = String(error.message || '');
+        // would_go_negative = 회수하면 잔액이 음수가 되는 경우. 음수 잔액은 다음 충전분을 조용히 먹는다.
+        toast(m.includes('would_go_negative') ? '회수할 만큼 잔액이 없어요'
+            : m.includes('not_admin') ? '관리자 권한이 없어요' : '실패: ' + m);
+        return false;
+      }
+      return true;
+    }
+
+    document.getElementById('credSearch').addEventListener('input', renderCredList);
+    document.getElementById('credHasOnly').addEventListener('change', renderCredList);
+    document.getElementById('credList').addEventListener('click', async (e) => {
+      const g = e.target.closest('[data-grant]'), v = e.target.closest('[data-revoke]');
+      const id = g ? g.dataset.grant : (v ? v.dataset.revoke : null);
+      if (!id) return;
+      const input = document.querySelector('[data-amt="' + id + '"]');
+      const n = Math.floor(Number(input && input.value) || 0);
+      if (n < 1) { toast('1 이상을 넣어 주세요'); return; }
+      const ok = await giveCredit(id, g ? n : -n, g ? '관리자 지급' : '관리자 회수');
+      if (ok) { toast(g ? n + '회 지급' : n + '회 회수'); await loadCredits(); }
+    });
+
+    document.getElementById('creditBulkForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cid = document.getElementById('cbCohort').value;
+      const n = Math.floor(Number(document.getElementById('cbAmount').value) || 0);
+      const note = document.getElementById('cbNote').value.trim();
+      if (!cid) { toast('기수를 골라 주세요'); return; }
+      if (n < 1) { toast('지급 횟수를 넣어 주세요'); return; }
+      const targets = members.filter(m => m.cohort_id === cid);
+      if (!targets.length) { toast('그 기수에 회원이 없어요'); return; }
+      if (!confirm(targets.length + '명에게 ' + n + '회씩 지급할까요?')) return;
+      const btn = document.getElementById('cbSubmit');
+      btn.disabled = true; btn.textContent = '지급 중…';
+      let done = 0;
+      for (const m of targets) { if (await giveCredit(m.id, n, note || '기수 일괄 지급')) done++; }
+      btn.disabled = false; btn.textContent = '기수 전원에게 지급';
+      toast(done + '명에게 지급했어요');
+      document.getElementById('cbAmount').value = ''; document.getElementById('cbNote').value = '';
+      await loadCredits();
+    });
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();
@@ -2023,6 +2186,7 @@
       loadCommunity();
       loadReviewsAdmin();
       loadQuestions();
+      loadCredits();
     })();
   </script>
 </body>
