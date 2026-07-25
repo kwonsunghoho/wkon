@@ -1,0 +1,861 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><title>MONC 홈페이지 UX 진단서</title>
+<style>
+:root{
+  --paper:#EEF1F4; --panel:#FFFFFF; --panel2:#E4E9EF;
+  --ink:#10151C; --ink2:#39424F; --mid:#5A6472; --faint:#8A94A2;
+  --rule:#D2D9E1; --rule2:#BFC8D2;
+  --acc:#1E5FA8; --acc-soft:#E2ECF7;
+  --crit:#C0342B; --crit-soft:#FAE7E5;
+  --warn:#8A5200; --warn-soft:#FAEFDC;
+  --pass:#1F7A5C; --pass-soft:#E0F0EA;
+  /* MONC 실제 팔레트 — 표본 프레임 안에서만 쓴다 */
+  --m-bg:#E9E4D8; --m-action:#F27945; --m-dark:#D9531F; --m-inkc:#A33D14; --m-text:#26221C; --m-surf:#FFFDF8;
+
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --maxw:960px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0E1319; --panel:#161D26; --panel2:#1E2731;
+    --ink:#E6EBF1; --ink2:#C2CBD6; --mid:#98A3B1; --faint:#6F7B8A;
+    --rule:#28323E; --rule2:#38434F;
+    --acc:#79B0EC; --acc-soft:#16273A;
+    --crit:#F08A80; --crit-soft:#33191A;
+    --warn:#E0A64B; --warn-soft:#2E2314;
+    --pass:#6DC5A3; --pass-soft:#14291F;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1319; --panel:#161D26; --panel2:#1E2731;
+  --ink:#E6EBF1; --ink2:#C2CBD6; --mid:#98A3B1; --faint:#6F7B8A;
+  --rule:#28323E; --rule2:#38434F;
+  --acc:#79B0EC; --acc-soft:#16273A;
+  --crit:#F08A80; --crit-soft:#33191A;
+  --warn:#E0A64B; --warn-soft:#2E2314;
+  --pass:#6DC5A3; --pass-soft:#14291F;
+}
+:root[data-theme="light"]{
+  --paper:#EEF1F4; --panel:#FFFFFF; --panel2:#E4E9EF;
+  --ink:#10151C; --ink2:#39424F; --mid:#5A6472; --faint:#8A94A2;
+  --rule:#D2D9E1; --rule2:#BFC8D2;
+  --acc:#1E5FA8; --acc-soft:#E2ECF7;
+  --crit:#C0342B; --crit-soft:#FAE7E5;
+  --warn:#8A5200; --warn-soft:#FAEFDC;
+  --pass:#1F7A5C; --pass-soft:#E0F0EA;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+     line-height:1.72;font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+
+/* ---- 계기 라벨 ---- */
+.lab{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+     color:var(--acc);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---- 헤더 ---- */
+header{border-bottom:1px solid var(--rule);background:var(--panel)}
+.hd{display:flex;flex-direction:column;gap:26px;padding:52px 0 44px}
+.hd-top{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+h1{font-size:clamp(30px,5.4vw,46px);line-height:1.24;letter-spacing:-.022em;font-weight:800;
+   margin:0;text-wrap:balance;word-break:keep-all}
+.hd-sub{color:var(--ink2);font-size:17px;max-width:60ch;word-break:keep-all;margin:0}
+.hd-meta{font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.05em}
+
+/* 헤드라인 3수치 */
+.gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+        background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.gauge{background:var(--panel);padding:20px 20px 18px;display:flex;flex-direction:column;gap:7px}
+.gauge .g-v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:38px;line-height:1;
+            font-weight:600;letter-spacing:-.03em}
+.gauge .g-l{font-size:13.5px;color:var(--ink2);word-break:keep-all}
+.gauge .g-n{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em}
+.g-crit .g-v{color:var(--crit)} .g-warn .g-v{color:var(--warn)} .g-pass .g-v{color:var(--pass)}
+
+/* ---- 섹션 ---- */
+section{padding:56px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.s-head{display:flex;flex-direction:column;gap:9px;margin-bottom:30px}
+h2{font-size:clamp(21px,3.4vw,28px);line-height:1.34;letter-spacing:-.018em;font-weight:800;margin:0;
+   text-wrap:balance;word-break:keep-all}
+h3{font-size:17.5px;font-weight:700;margin:0 0 10px;letter-spacing:-.012em;word-break:keep-all}
+p{margin:0 0 15px;color:var(--ink2);word-break:keep-all;max-width:68ch}
+p:last-child{margin-bottom:0}
+strong{color:var(--ink);font-weight:700}
+em{font-style:normal;background:var(--acc-soft);color:var(--acc);padding:1px 5px;border-radius:2px;
+   font-weight:600;font-size:.96em}
+.stack{display:flex;flex-direction:column;gap:19px}
+.stack-lg{display:flex;flex-direction:column;gap:34px}
+
+/* ---- 측정 카드 ---- */
+.mcard{background:var(--panel);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.mcard-h{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+         padding:13px 17px;border-bottom:1px solid var(--rule);background:var(--panel2)}
+.mcard-t{font-weight:700;font-size:15px;word-break:keep-all}
+.mcard-b{padding:17px}
+.mcard-b p{font-size:15px}
+
+/* 판정 칩 */
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+      font-weight:600;padding:4px 9px;border-radius:2px;white-space:nowrap;border:1px solid transparent}
+.c-crit{background:var(--crit-soft);color:var(--crit);border-color:var(--crit)}
+.c-warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.c-pass{background:var(--pass-soft);color:var(--pass);border-color:var(--pass)}
+.c-info{background:var(--acc-soft);color:var(--acc);border-color:var(--acc)}
+
+/* 측정 막대: 측정치 vs 기준 */
+.bars{display:flex;flex-direction:column;gap:13px;margin:4px 0 0}
+.bar-row{display:grid;grid-template-columns:1fr;gap:5px}
+.bar-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px}
+.bar-name{color:var(--ink2);word-break:keep-all}
+.bar-val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+.track{position:relative;height:9px;background:var(--panel2);border-radius:1px;overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;border-radius:1px}
+.f-crit{background:var(--crit)} .f-warn{background:var(--warn)} .f-pass{background:var(--pass)}
+.f-acc{background:var(--acc)}
+.thr{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
+.bar-note{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.03em}
+
+/* ---- 표 ---- */
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);vertical-align:top;
+      word-break:keep-all}
+th{background:var(--panel2);font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;
+   text-transform:uppercase;color:var(--mid);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw::-webkit-scrollbar{height:8px}
+.tw::-webkit-scrollbar-thumb{background:var(--rule2);border-radius:4px}
+
+/* ---- 표본 프레임(폰 목업) ---- */
+.specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:20px;align-items:start}
+.spec{display:flex;flex-direction:column;gap:10px;min-width:0}
+.spec-cap{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spec-cap .t{font-weight:700;font-size:14px}
+.phone{background:var(--m-bg);border:1px solid var(--rule2);border-radius:6px;overflow:hidden;
+       font-family:var(--sans);color:var(--m-text);line-height:1.5;
+       display:flex;flex-direction:column;height:392px;position:relative}
+.ph-nav{background:rgba(233,228,216,.96);border-bottom:1px solid rgba(38,34,28,.12);
+        padding:9px 11px;display:flex;justify-content:space-between;align-items:center;flex:0 0 auto}
+.ph-logo{font-weight:800;font-size:11px;letter-spacing:.08em;color:var(--m-text)}
+.ph-back{font-size:9px;color:var(--m-text);opacity:.75}
+.ph-body{flex:1 1 auto;overflow:hidden;position:relative}
+.ph-hero{padding:13px 11px 9px;text-align:center}
+.ph-eyebrow{font-size:7.5px;letter-spacing:.2em;color:var(--m-inkc);font-weight:800}
+.ph-title{font-size:19px;font-weight:700;color:var(--m-action);margin-top:3px;letter-spacing:-.02em}
+.ph-subt{font-size:8.5px;color:#5D5851;margin-top:3px}
+.ph-filter{background:rgba(233,228,216,.96);border-bottom:1px solid rgba(38,34,28,.12);padding:8px 11px}
+.ph-flabel{font-size:7px;font-weight:800;color:#7E7971;margin-bottom:4px}
+.ph-chips{display:flex;flex-wrap:wrap;gap:4px}
+.ph-chip{font-size:8px;font-weight:700;padding:5px 9px;border-radius:99px;background:var(--m-surf);
+         border:1px solid rgba(38,34,28,.16);color:var(--m-text)}
+.ph-chip.on{background:var(--m-inkc);color:#fff;border-color:var(--m-inkc)}
+.ph-shot{margin:9px 11px;background:repeating-linear-gradient(0deg,#F4F2EC 0 3px,#E8E5DC 3px 6px);
+         border:1px solid rgba(38,34,28,.10);border-radius:5px;height:150px;position:relative}
+.ph-shot::after{content:"후기 스크린샷 (글자 0.31배)";position:absolute;left:50%;top:50%;
+        transform:translate(-50%,-50%);font-size:7.5px;color:#8A857A;background:rgba(255,253,248,.9);
+        padding:3px 7px;border-radius:2px;white-space:nowrap}
+.ph-tagrow{display:flex;gap:4px;padding:0 11px 9px}
+.ph-tag{font-size:7.5px;font-weight:800;padding:2px 7px;border-radius:99px;
+        background:rgba(217,83,31,.10);color:var(--m-inkc)}
+/* 제안안 */
+.ph-sum{margin:9px 11px 0;background:var(--m-surf);border:1px solid rgba(38,34,28,.12);
+        border-radius:6px;padding:10px}
+.ph-sum-top{display:flex;align-items:baseline;gap:7px}
+.ph-sum-n{font-family:var(--mono);font-size:21px;font-weight:700;color:var(--m-text);line-height:1}
+.ph-sum-l{font-size:8px;color:#5D5851}
+.ph-sum-bars{display:flex;flex-direction:column;gap:3px;margin-top:8px}
+.ph-sb{display:flex;align-items:center;gap:5px}
+.ph-sb-k{font-size:7.5px;color:#5D5851;width:38px;flex:0 0 auto}
+.ph-sb-t{flex:1;height:5px;background:rgba(38,34,28,.10);border-radius:1px;overflow:hidden}
+.ph-sb-f{display:block;height:100%;background:var(--m-action);border-radius:1px}
+.ph-sb-n{font-family:var(--mono);font-size:7.5px;color:#5D5851;width:15px;text-align:right;flex:0 0 auto}
+.ph-pick{display:flex;gap:5px;padding:9px 11px 0}
+.ph-pb{flex:1;font-size:8.5px;font-weight:700;padding:7px 8px;border-radius:99px;
+       background:var(--m-surf);border:1px solid rgba(38,34,28,.16);text-align:center}
+.ph-qcard{margin:8px 11px 0;background:var(--m-surf);border:1px solid rgba(38,34,28,.12);
+          border-radius:6px;padding:9px 10px}
+.ph-verify{display:inline-flex;align-items:center;gap:3px;font-size:7px;font-weight:800;color:#1F7A5C}
+.ph-quote{font-size:11px;font-weight:600;color:var(--m-text);margin-top:4px;line-height:1.45;
+          letter-spacing:-.01em}
+.ph-qfoot{display:flex;align-items:center;gap:5px;margin-top:6px;flex-wrap:wrap}
+.ph-qname{font-size:8px;font-weight:700}
+.ph-more{font-size:7.5px;color:var(--m-inkc);font-weight:700;margin-left:auto}
+.fade-b{position:absolute;left:0;right:0;bottom:0;height:38px;pointer-events:none;
+        background:linear-gradient(to bottom,rgba(233,228,216,0),var(--m-bg))}
+/* 화면 예산 눈금 */
+.budget{display:flex;height:15px;border-radius:2px;overflow:hidden;border:1px solid var(--rule);
+        font-family:var(--mono);font-size:8.5px}
+.budget span{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;
+             overflow:hidden;letter-spacing:.03em}
+
+/* ---- 원칙 스코어카드 ---- */
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:1px;
+       background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.sc{background:var(--panel);padding:15px 16px;display:flex;flex-direction:column;gap:8px}
+.sc-h{display:flex;gap:9px;align-items:center;justify-content:space-between}
+.sc-n{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.08em;font-weight:600}
+.sc-t{font-weight:700;font-size:14.5px;word-break:keep-all;line-height:1.4}
+.sc-d{font-size:13px;color:var(--ink2);word-break:keep-all;line-height:1.62}
+.sc-d code{font-family:var(--mono);font-size:11.5px;background:var(--panel2);padding:1px 4px;
+           border-radius:2px;color:var(--ink)}
+
+/* ---- 콜아웃 ---- */
+.call{border-left:3px solid var(--acc);background:var(--panel);padding:16px 18px;border-radius:0 3px 3px 0;
+      border-top:1px solid var(--rule);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.call.crit{border-left-color:var(--crit)}
+.call.pass{border-left-color:var(--pass)}
+.call-t{font-weight:800;font-size:15px;margin-bottom:7px;word-break:keep-all}
+.call p{font-size:14.5px;margin-bottom:9px}
+
+/* ---- 리스트 ---- */
+ul.clean{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:11px}
+ul.clean li{position:relative;padding-left:19px;color:var(--ink2);font-size:15px;word-break:keep-all}
+ul.clean li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:1.5px;background:var(--acc)}
+ul.clean li strong{color:var(--ink)}
+
+/* ---- 우선순위 ---- */
+.prio{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);
+      border-radius:3px;overflow:hidden}
+.pr{background:var(--panel);padding:15px 17px;display:grid;
+    grid-template-columns:auto 1fr auto;gap:13px;align-items:start}
+.pr-r{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--acc);
+      background:var(--acc-soft);border-radius:2px;padding:3px 7px;line-height:1.5}
+.pr-b{min-width:0}
+.pr-t{font-weight:700;font-size:15px;margin-bottom:4px;word-break:keep-all}
+.pr-d{font-size:13.5px;color:var(--ink2);word-break:keep-all;line-height:1.6}
+.pr-e{font-family:var(--mono);font-size:10.5px;color:var(--faint);white-space:nowrap;letter-spacing:.04em;
+      text-align:right;padding-top:3px}
+
+/* ---- 출처 ---- */
+footer{padding:38px 0 60px;color:var(--mid);font-size:13px}
+footer a{color:var(--acc)}
+footer ul{margin:9px 0 0;padding-left:19px;display:flex;flex-direction:column;gap:5px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:2px}
+
+@media (max-width:620px){
+  .hd{padding:38px 0 32px}
+  section{padding:42px 0}
+  .gauge .g-v{font-size:32px}
+  .pr{grid-template-columns:auto 1fr;gap:11px}
+  .pr-e{grid-column:2;text-align:left;padding-top:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header>
+  <div class="wrap hd">
+    <div class="hd-top">
+      <div class="lab">UX 진단서 · 2026-07-25</div>
+      <div class="hd-meta">측정: Chromium 375×812 / DPR 2 · 실제 렌더 기준</div>
+    </div>
+    <h1>텍스트가 많은 게 문제가 아니라,<br>텍스트에 층이 없는 게 문제입니다</h1>
+    <p class="hd-sub">직감은 맞았습니다. 다만 원인이 짐작과 다릅니다. 홈은 오히려 글자가 적고, 후기 페이지는
+      글자가 <strong>이미지 안에 갇혀</strong> 있어 훑을 수가 없습니다. 아래는 감상이 아니라 실측입니다.</p>
+    <div class="gauges">
+      <div class="gauge g-pass">
+        <div class="g-v">1,522</div>
+        <div class="g-l">홈 전체의 실제 글자 수</div>
+        <div class="g-n">12.4화면 / A4 약 1장 분량</div>
+      </div>
+      <div class="gauge g-crit">
+        <div class="g-v">36%</div>
+        <div class="g-l">후기 페이지에서 고정 UI가 먹는 화면</div>
+        <div class="g-n">nav 73px + 필터바 221px = 294px</div>
+      </div>
+      <div class="gauge g-crit">
+        <div class="g-v">0.31×</div>
+        <div class="g-l">후기 스크린샷이 축소되는 배율</div>
+        <div class="g-n">1,080px 원본 → 333px 렌더</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 1. 직감 검증 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">01 — 직감 검증</div>
+      <h2>"텍스트가 남발된다"는 느낌의 진짜 정체</h2>
+    </div>
+    <div class="stack-lg">
+      <div>
+        <p>홈페이지 전체에 실제로 그려지는 글자를 세어 봤습니다. <strong>1,522자</strong>입니다. 카카오톡 긴 공지
+          두어 개 분량이고, 같은 업종 랜딩 평균보다 오히려 적습니다. 그런데 그 1,522자가
+          <strong>10,105px, 스마트폰 화면 12.4개</strong>에 걸쳐 흩어져 있습니다.</p>
+        <p>그래서 생기는 착시가 이겁니다 — <em>글자가 많아서 지치는 게 아니라, 끝이 안 나서 지칩니다.</em>
+          스크롤을 아무리 내려도 계속 뭔가 읽어야 할 게 나오니 "텍스트 남발"로 느껴지는 겁니다.
+          실제로는 글자 밀도가 낮고, 페이지가 긴 것입니다. 처방이 정반대입니다:
+          글을 더 쳐내면 페이지만 더 허전해지고, <strong>섹션 수를 줄이거나 순서를 바꿔야</strong> 해결됩니다.</p>
+      </div>
+
+      <div class="mcard">
+        <div class="mcard-h">
+          <div class="mcard-t">홈 섹션별 세로 길이 — 375px 실측</div>
+          <span class="chip c-warn">긴 편</span>
+        </div>
+        <div class="mcard-b">
+          <div class="bars">
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">창문 인트로</span><span class="bar-val">1,462px · 1.8화면</span></div>
+              <div class="track"><div class="fill f-crit" style="width:97%"></div></div>
+              <div class="bar-note">글자 30자 — 화면 1.8개를 쓰면서 전달하는 정보는 태그라인 한 줄</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">Before &amp; After</span><span class="bar-val">1,498px · 1.8화면</span></div>
+              <div class="track"><div class="fill f-pass" style="width:100%"></div></div>
+              <div class="bar-note">글자 217자 — 사이트 최고의 자산. 길이값을 하는 유일한 긴 섹션</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">성장 리포트 목업</span><span class="bar-val">1,119px · 1.4화면</span></div>
+              <div class="track"><div class="fill f-warn" style="width:74%"></div></div>
+              <div class="bar-note">글자 213자 — 이미 35% 감량했지만 여전히 3번째로 긴 섹션</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">커뮤니티(후기)</span><span class="bar-val">898px · 1.1화면</span></div>
+              <div class="track"><div class="fill f-acc" style="width:60%"></div></div>
+              <div class="bar-note">글자 77자 — 밀도가 가장 낮다. 후기 섹션인데 후기 내용이 거의 없음</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">브리핑룸</span><span class="bar-val">916px · 1.1화면</span></div>
+              <div class="track"><div class="fill f-acc" style="width:61%"></div></div>
+              <div class="bar-note">글자 179자</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="call">
+        <div class="call-t">비전공자용 요약</div>
+        <p>"글이 많다"와 "페이지가 길다"는 완전히 다른 병입니다. 홈은 <strong>후자</strong>예요.
+          지금 글을 더 지우면 증상이 나아지는 게 아니라 설득력만 잃습니다. 손댈 곳은 문장이 아니라
+          <strong>인트로 1.8화면</strong>과 <strong>섹션 개수</strong>입니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 후기 정밀 진단 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">02 — 정밀 진단</div>
+      <h2>후기 페이지: 여기는 직감이 100% 맞습니다</h2>
+    </div>
+    <div class="stack-lg">
+      <div>
+        <p>후기 페이지가 답답한 데는 명확한 구조적 이유가 있습니다. 후기가
+          <strong>글이 아니라 사진</strong>이기 때문입니다. 카페 후기 스크린샷을 그대로 올리다 보니,
+          브라우저 입장에서 그건 글자가 아니라 그냥 그림입니다. 그래서 이런 일이 벌어집니다.</p>
+        <ul class="clean">
+          <li><strong>제목을 굵게 할 수가 없습니다.</strong> 사진이라 어느 문장이 핵심인지 표시할 방법이 없습니다.
+            모든 후기가 똑같은 회색 덩어리로 보입니다.</li>
+          <li><strong>훑기가 불가능합니다.</strong> 사람은 웹에서 글을 읽지 않고 훑습니다(NN/g, 20년째 같은 결론).
+            훑을 지형지물이 하나도 없으니 눈이 미끄러집니다.</li>
+          <li><strong>검색에 안 잡힙니다.</strong> 저장소 기록상 후기 108건 — 전부 "승무원 면접", "대한항공 준비"
+            같은 검색어를 품은 실제 문장인데, 그림이라 네이버·구글이 한 글자도 읽지 못합니다.
+            <em>가장 값진 콘텐츠 자산이 검색에 통째로 없습니다.</em></li>
+          <li><strong>글씨가 작습니다.</strong> 1,080px로 저장된 스크린샷이 333px 칸에 들어갑니다. 0.31배입니다.</li>
+        </ul>
+      </div>
+
+      <div class="mcard">
+        <div class="mcard-h">
+          <div class="mcard-t">375×812 첫 화면 예산 — 후기를 보러 왔는데 후기가 안 보인다</div>
+          <span class="chip c-crit">심각</span>
+        </div>
+        <div class="mcard-b">
+          <div class="budget" style="margin-bottom:13px">
+            <span style="width:9%;background:var(--crit)">nav</span>
+            <span style="width:32.5%;background:var(--warn)">히어로 264px</span>
+            <span style="width:27.3%;background:var(--crit)">필터바 221px</span>
+            <span style="width:31.2%;background:var(--pass)">후기 276px</span>
+          </div>
+          <p style="font-size:14px">첫 화면 812px 중 <strong>후기에 쓰이는 건 276px(34%)</strong>뿐입니다.
+            그마저 첫 카드 높이 602px의 46%라, <strong>온전한 후기는 단 한 개도 안 보입니다.</strong>
+            게다가 nav와 필터바는 <code style="font-family:var(--mono);font-size:12px">sticky</code>라
+            스크롤을 내려도 294px(36%)가 계속 따라옵니다.</p>
+          <div class="bars" style="margin-top:16px">
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">필터 칩 터치 높이</span><span class="bar-val">40px</span></div>
+              <div class="track">
+                <div class="fill f-warn" style="width:90.9%"></div>
+                <div class="thr" style="left:100%"></div>
+              </div>
+              <div class="bar-note">기준선 44px(Apple HIG·WCAG AAA) — 칩 10개 전부 미달</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">"기수" 필터 라벨 대비</span><span class="bar-val">3.41 : 1</span></div>
+              <div class="track">
+                <div class="fill f-crit" style="width:75.8%"></div>
+                <div class="thr" style="left:100%"></div>
+              </div>
+              <div class="bar-note">기준 4.5:1 — <code style="font-family:var(--mono);font-size:11.5px">opacity:.55</code>가 대비를 깎았다</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-top"><span class="bar-name">"N개 후기" 개수 표시 대비</span><span class="bar-val">3.89 : 1</span></div>
+              <div class="track">
+                <div class="fill f-crit" style="width:86.4%"></div>
+                <div class="thr" style="left:100%"></div>
+              </div>
+              <div class="bar-note">기준 4.5:1 — <code style="font-family:var(--mono);font-size:11.5px">opacity:.6</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="call crit">
+        <div class="call-t">이미 고친 문제를, 이 페이지에만 안 고쳤습니다</div>
+        <p>뉴스 페이지에서 <strong>똑같은 병</strong>을 앓다가 고친 적이 있습니다. 칩을 줄줄이 늘어놓으니
+          필터바가 화면을 다 먹어서, <strong>[항공사] [주제] 버튼 2개 → 바텀시트</strong>로 바꿨죠.
+          후기 페이지는 그 교훈이 적용되지 않은 채 <strong>옛날 칩 나열 방식</strong> 그대로입니다.
+          같은 사이트 안에서 같은 문제를 두 가지 방식으로 풀고 있는 셈이라, 사용자는 페이지마다
+          조작법을 새로 배워야 합니다.</p>
+      </div>
+
+      <div class="call pass">
+        <div class="call-t">가장 좋은 소식: 해결책이 이미 절반 만들어져 있습니다</div>
+        <p>DB의 후기 표에는 <code style="font-family:var(--mono);font-size:12.5px">quote</code>(한줄평) 칸이
+          이미 있고, 관리자 화면에서 직접 입력하게 돼 있습니다. <strong>홈 커뮤니티 섹션은 이걸 이미 예쁘게 쓰고
+          있습니다</strong> — 명조 한줄평 + 실제 후기 배지 + '원문 보기' 버튼. 그런데 정작 후기가 108건 모여 있는
+          <code style="font-family:var(--mono);font-size:12.5px">reviews.html</code>에서는
+          <strong>이 칸을 단 한 번도 쓰지 않습니다</strong>(코드상 등장 횟수 0회).</p>
+        <p style="margin-bottom:0">즉 <em>새로 만들 게 아니라, 홈에서 이미 검증된 카드를 후기 페이지로 옮기면 됩니다.</em></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 대기업 패턴 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">03 — 벤치마크</div>
+      <h2>대기업은 후기를 '3층'으로 쌓습니다</h2>
+    </div>
+    <div class="stack-lg">
+      <div>
+        <p>오해를 먼저 풀면 — 쿠팡·아마존·무신사의 후기 페이지는 MONC보다 글자가 <strong>훨씬 많습니다.</strong>
+          수천 건이 쌓여 있죠. 그런데 답답하지 않습니다. 이유는 하나, <strong>층을 나눠 놨기 때문</strong>입니다.
+          한 화면에 모든 걸 쏟지 않고, 읽는 사람이 원하는 깊이까지만 내려가게 합니다.</p>
+      </div>
+
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th>층</th><th>대기업이 두는 것</th><th>사용자가 얻는 것</th><th>MONC 현재</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="n">1층<br>요약</td>
+              <td>평균 별점, 별점 분포 막대, "이런 점이 좋았어요" 태그 집계</td>
+              <td>3초 만에 "믿을 만한가?" 판단</td>
+              <td><span class="chip c-crit">없음</span><br><span style="font-size:12.5px;color:var(--mid)">"총 108개"가 전부</span></td>
+            </tr>
+            <tr>
+              <td class="n">2층<br>훑기</td>
+              <td>한 줄 요약 + 작성자 + 속성칩(키·체형·용도)으로 카드화. 사진은 작게</td>
+              <td>10초 만에 나와 비슷한 사람 찾기</td>
+              <td><span class="chip c-crit">없음</span><br><span style="font-size:12.5px;color:var(--mid)">곧바로 원문 이미지</span></td>
+            </tr>
+            <tr>
+              <td class="n">3층<br>원문</td>
+              <td>펼치기 / 이미지 확대 — <strong>원할 때만</strong></td>
+              <td>확신이 필요할 때 근거 확인</td>
+              <td><span class="chip c-pass">있음</span><br><span style="font-size:12.5px;color:var(--mid)">라이트박스 잘 만듦</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="call">
+        <div class="call-t">왜 1층이 그렇게 중요한가</div>
+        <p style="margin-bottom:0">Baymard Institute의 대규모 사용성 테스트에서,
+          <strong>별점 분포 요약이 후기 섹션에서 가장 많이 사용된 요소</strong>였습니다 —
+          개별 후기 본문보다도 더 많이요. 사람들은 후기를 다 읽고 싶은 게 아니라
+          <strong>"많은 사람이 만족했나"만 빠르게 확인하고 싶은 것</strong>입니다.
+          MONC에는 이 층이 통째로 없어서, 방문자가 그 판단을 하려면 108개를 직접 훑어야 합니다.</p>
+      </div>
+
+      <h3 style="margin-top:6px">같은 공간, 다른 결과 — 375px 실측 비교</h3>
+      <div class="specs">
+        <div class="spec">
+          <div class="spec-cap"><span class="t">현재</span><span class="chip c-crit">온전한 후기 0개</span></div>
+          <div class="phone">
+            <div class="ph-nav"><span class="ph-logo">MONC</span><span class="ph-back">← 홈으로</span></div>
+            <div class="ph-body">
+              <div class="ph-hero">
+                <div class="ph-eyebrow">REAL REVIEWS</div>
+                <div class="ph-title">실제 후기</div>
+                <div class="ph-subt">몬크 챌린지에 진짜 참여한 분들의 후기예요. 총 108개</div>
+              </div>
+              <div class="ph-filter">
+                <div class="ph-flabel">챌린지</div>
+                <div class="ph-chips">
+                  <span class="ph-chip on">전체 108</span><span class="ph-chip">보신각 32</span>
+                  <span class="ph-chip">영합각 28</span><span class="ph-chip">스피닝 24</span>
+                  <span class="ph-chip">승자각 24</span>
+                </div>
+                <div class="ph-flabel" style="margin-top:6px">기수</div>
+                <div class="ph-chips">
+                  <span class="ph-chip on">전체</span><span class="ph-chip">1기</span>
+                  <span class="ph-chip">2기</span><span class="ph-chip">3기</span><span class="ph-chip">4기</span>
+                </div>
+              </div>
+              <div class="ph-shot"></div>
+              <div class="fade-b"></div>
+            </div>
+          </div>
+          <div class="bar-note">고정 UI 294px(36%) → 첫 후기의 46%만 노출. 무엇을 눌러야 할지도 불분명</div>
+        </div>
+
+        <div class="spec">
+          <div class="spec-cap"><span class="t">제안</span><span class="chip c-pass">요약 + 후기 2개</span></div>
+          <div class="phone">
+            <div class="ph-nav"><span class="ph-logo">MONC</span><span class="ph-back">← 홈으로</span></div>
+            <div class="ph-body">
+              <div class="ph-sum">
+                <div class="ph-sum-top">
+                  <span class="ph-sum-n">108</span>
+                  <span class="ph-sum-l">개의 실제 후기 · 4개 챌린지 · 1~4기</span>
+                </div>
+                <div class="ph-sum-bars">
+                  <div class="ph-sb"><span class="ph-sb-k">목소리</span><span class="ph-sb-t"><span class="ph-sb-f" style="width:88%"></span></span><span class="ph-sb-n">41</span></div>
+                  <div class="ph-sb"><span class="ph-sb-k">자신감</span><span class="ph-sb-t"><span class="ph-sb-f" style="width:71%"></span></span><span class="ph-sb-n">33</span></div>
+                  <div class="ph-sb"><span class="ph-sb-k">표정</span><span class="ph-sb-t"><span class="ph-sb-f" style="width:52%"></span></span><span class="ph-sb-n">24</span></div>
+                </div>
+              </div>
+              <div class="ph-pick">
+                <span class="ph-pb">챌린지 ▾</span><span class="ph-pb">기수 ▾</span>
+              </div>
+              <div class="ph-qcard">
+                <span class="ph-verify">✓ 실제 후기</span>
+                <div class="ph-quote">"목소리가 떨린다는 말을 2주 만에<br>안 듣게 됐어요"</div>
+                <div class="ph-qfoot">
+                  <span class="ph-qname">김○○</span><span class="ph-tag">보신각 3기</span>
+                  <span class="ph-more">원문 보기 ↗</span>
+                </div>
+              </div>
+              <div class="ph-qcard">
+                <span class="ph-verify">✓ 실제 후기</span>
+                <div class="ph-quote">"표현이 자연스러워졌다는 말을<br>처음 들었어요"</div>
+                <div class="ph-qfoot">
+                  <span class="ph-qname">박○○</span><span class="ph-tag">영합각 2기</span>
+                  <span class="ph-more">원문 보기 ↗</span>
+                </div>
+              </div>
+              <div class="fade-b"></div>
+            </div>
+          </div>
+          <div class="bar-note">1층 요약 + 2층 한줄평 카드. 원문 스크린샷은 '원문 보기'로 3층에. 홈에 이미 있는 카드 그대로</div>
+        </div>
+      </div>
+      <p style="font-size:13.5px;color:var(--mid);margin-top:4px">
+        ※ 오른쪽 태그 집계(목소리·자신감·표정)는 예시 수치입니다 — 실제로는 기존
+        <code style="font-family:var(--mono);font-size:12px">quote</code> 문장에서 뽑아 집계하면 됩니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 잘하고 있는 것 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">04 — 강점</div>
+      <h2>대기업이 돈 주고도 못 사는 것을 이미 갖고 있습니다</h2>
+    </div>
+    <div class="stack">
+      <p>냉정하게 말해서, MONC에는 대기업 랜딩에 <strong>없는</strong> 것이 몇 개 있습니다.
+        이건 유지가 아니라 <strong>확대</strong>해야 할 자산입니다.</p>
+      <div class="score">
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">01</span><span class="chip c-pass">최상급</span></div>
+          <div class="sc-t">전·후 실제 녹음</div>
+          <div class="sc-d">경쟁사는 "좋아졌어요" 글자를 보여줍니다. MONC는 <strong>같은 사람의 2주 전후 목소리</strong>를
+            들려줍니다. 이건 반박이 불가능한 증거이고, 교육 서비스에서 이 수준의 증명은 드뭅니다.
+            <strong>1.8화면을 써도 아까울 게 없는 유일한 섹션</strong>입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">02</span><span class="chip c-pass">우수</span></div>
+          <div class="sc-t">블라인드 면접관 체험</div>
+          <div class="sc-d">읽히는 대신 <strong>참여시키는</strong> 증명. 방문자를 심사자 자리에 앉히면 판단이 자기 것이 되고,
+            그렇게 내린 결론은 광고 문구보다 훨씬 오래 갑니다. 대기업 랜딩에서 보기 힘든 발상입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">03</span><span class="chip c-pass">우수</span></div>
+          <div class="sc-t">계측으로 결정하는 문화</div>
+          <div class="sc-d">"인트로 도달률 38%" 같은 숫자를 실제로 재서 러웨이를 절반으로 줄인 이력이 있습니다.
+            감이 아니라 데이터로 UI를 바꾸는 건 <strong>중견기업도 잘 못 하는 일</strong>입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">04</span><span class="chip c-pass">양호</span></div>
+          <div class="sc-t">디자인 토큰 시스템</div>
+          <div class="sc-d">빌드 도구 없이 손으로 짠 사이트에 색·간격·라운드가 <code>tokens.css</code>로 정리돼 있습니다.
+            보통 이 규모에서는 색상 hex가 사방에 흩어집니다. 지금 상태는 <strong>지키기만 하면 되는 좋은 기반</strong>입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">05</span><span class="chip c-pass">양호</span></div>
+          <div class="sc-t">접근성 기본기</div>
+          <div class="sc-d">키보드 포커스 표시, <code>aria-modal</code>, 스크린리더 라벨,
+            "애니메이션 줄이기" 설정 존중까지 되어 있습니다. <strong>국내 상용 사이트 상당수보다 낫습니다.</strong></div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">06</span><span class="chip c-pass">양호</span></div>
+          <div class="sc-t">중복 제거 원칙</div>
+          <div class="sc-d">"히어로는 무엇인지, 하단 바는 신청" 식으로 <strong>역할을 나눠 같은 말을 두 번 하지 않는</strong>
+            규율이 있습니다. 이건 꽤 성숙한 정보설계 감각입니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 9대 원칙 감사 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">05 — 전수 감사</div>
+      <h2>9대 원칙, 실제로 지켜지고 있나</h2>
+    </div>
+    <div class="stack-lg">
+      <p>코드 전체를 훑고 브라우저에서 실제로 렌더해서 하나씩 재봤습니다.
+        결론부터: <strong>4개는 지켜지고, 3개는 부분적으로 새고, 2개는 측정할 수조차 없습니다.</strong></p>
+
+      <div class="score">
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 1 · 가독성 12px+</span><span class="chip c-warn">부분</span></div>
+          <div class="sc-d">렌더 기준 위반은 적습니다(홈 1종, 신청 4종). 다만 CSS에는 <strong>10~11.5px 선언이 40건 넘게</strong>
+            남아 있습니다. 특히 신청 페이지의 <code>11px</code> 환불·교환 고지는 <strong>법적 고지가 가장 안 읽히는 크기</strong>로
+            들어가 있어 우선 처리 대상입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 2 · 터치 44px</span><span class="chip c-crit">미달</span></div>
+          <div class="sc-d">실측 위반: 후기 <strong>13개 중 11개</strong>, 홈 <strong>59개 중 36개</strong>, 신청 <strong>16개 중 7개</strong>.
+            후기 필터칩 40px, 전·후 재생 버튼 40×40, '원문 보기' 70×28. 히어로 재생 버튼만 44px로 올리고
+            <strong>나머지는 그대로 남았습니다.</strong></div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 3 · 아이콘 통일</span><span class="chip c-warn">부분</span></div>
+          <div class="sc-d">SVG 스프라이트는 잘 만들어 뒀는데, <strong>17개 파일에 문자 화살표 75개</strong>(→ ← ↗)가 섞여 있습니다.
+            하단 CTA 바에서 "문자 ↓ 대신 스프라이트 셰브런"으로 고친 판단이 <strong>딱 한 곳에서만 적용</strong>됐습니다.
+            문자 화살표는 기기 글꼴에 따라 모양이 달라집니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 4 · 대비 4.5:1</span><span class="chip c-crit">미달</span></div>
+          <div class="sc-d">색 자체는 훌륭히 계산해 뒀는데, <strong><code>opacity</code>가 그걸 무효화</strong>하고 있습니다.
+            <code>opacity:.55</code> → 실제 <strong>3.41:1</strong>, <code>opacity:.6</code> → <strong>3.89:1</strong>.
+            후기·뉴스·특강·브리핑 4개 페이지에서 같은 방식으로 샙니다. 색을 바꿀 필요 없이
+            <strong><code>opacity</code>를 빼고 확정된 색을 직접 쓰면</strong> 해결됩니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 5 · 라운드 기조</span><span class="chip c-warn">부분</span></div>
+          <div class="sc-d">직각/라운드 혼용은 없습니다(원칙 취지는 지킴). 다만 <strong>서로 다른 radius 값이 27종</strong>이고,
+            토큰(<code>--radius-*</code>)보다 하드코딩(12·16·20·10·14px)이 더 많이 쓰입니다.
+            알약도 <code>999px</code>과 <code>99px</code> 두 관습이 공존합니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 6 · 계층 구조</span><span class="chip c-pass">지킴</span></div>
+          <div class="sc-d">가장 잘 지켜지는 항목입니다. "채움 CTA는 하나" 규율이 살아 있고,
+            히어로에서 신청 버튼을 빼 하단 바 하나로 몰아준 판단은 <strong>교과서적으로 옳습니다.</strong></div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 8 · 여백</span><span class="chip c-pass">지킴</span></div>
+          <div class="sc-d">글자 밀도 실측 1,000px당 평균 약 150자 — <strong>여백은 충분하다 못해 남습니다.</strong>
+            사실 이 원칙을 너무 잘 지킨 것이 12.4화면 길이의 원인 중 하나입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 9 · 그룹핑</span><span class="chip c-pass">지킴</span></div>
+          <div class="sc-d">섹션·카드·배경 리듬으로 잘 묶여 있고, 2026-07-24의 "정보 섹션은 좌측·밝게 /
+            체험 섹션은 가운데·어둡게" 규칙은 <strong>원칙 9의 모범 적용</strong>입니다.</div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">원칙 10 · 큼직한 레이아웃</span><span class="chip c-pass">지킴</span></div>
+          <div class="sc-d">히어로 캐러셀, 큰 명조 제목, 통짜 사진 카드 — 덩어리감은 확실합니다.
+            <strong>후기 페이지만 예외</strong>로, 큼직하긴 한데 그 큰 덩어리가 읽을 수 없는 이미지입니다.</div>
+        </div>
+      </div>
+
+      <div class="call crit">
+        <div class="call-t">가장 뼈아픈 발견</div>
+        <p style="margin-bottom:0">후기 페이지는 <strong>9대 원칙을 거의 다 통과합니다.</strong> 카드로 잘 묶여 있고(9),
+          여백 넉넉하고(8), 라운드 통일돼 있고(5), 덩어리 큼직하고(10), 채움 CTA도 하나(6)입니다.
+          그런데 <strong>사이트에서 가장 안 읽히는 페이지</strong>입니다.
+          이게 이 체크리스트의 한계를 정확히 보여줍니다 — 다음 장에서 짚겠습니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 원칙 자체 평가 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">06 — 원칙 자체에 대한 평가</div>
+      <h2>이 9대 원칙, 지킬 가치가 있나?</h2>
+    </div>
+    <div class="stack-lg">
+      <div>
+        <p><strong>결론: 있습니다. 다만 이건 'UX 원칙'이 아니라 '시각 위생 점검표'입니다.</strong>
+          둘은 다른 물건이고, 지금 그 차이 때문에 후기 페이지 문제가 체크리스트를 그냥 통과해 버렸습니다.</p>
+      </div>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>원칙</th><th>전문가 평가</th><th>근거</th></tr></thead>
+          <tbody>
+            <tr><td><strong>1. 가독성 12px+</strong></td><td><span class="chip c-pass">지킬 가치 높음</span></td>
+                <td>업계 표준과 일치. 오히려 <strong>본문 16px</strong>로 올려 잡는 게 요즘 기준입니다</td></tr>
+            <tr><td><strong>2. 터치 44px</strong></td><td><span class="chip c-pass">지킬 가치 높음</span></td>
+                <td>Apple HIG 44pt, WCAG 2.5.5(AAA) 44px과 정확히 일치. 근거 있는 숫자입니다</td></tr>
+            <tr><td><strong>4. 대비 4.5:1</strong></td><td><span class="chip c-pass">지킬 가치 높음</span></td>
+                <td>WCAG 2.1 AA 그 자체. 법적 리스크와도 연결됩니다</td></tr>
+            <tr><td><strong>6. 계층 구조</strong></td><td><span class="chip c-pass">지킬 가치 높음</span></td>
+                <td>전환율에 가장 직접적으로 붙는 항목</td></tr>
+            <tr><td><strong>9. 그룹핑</strong></td><td><span class="chip c-pass">지킬 가치 높음</span></td>
+                <td>게슈탈트 근접성 원리. 100년 된 인지심리 근거</td></tr>
+            <tr><td><strong>3. 아이콘 통일</strong></td><td><span class="chip c-info">유효하나 하위 항목</span></td>
+                <td>사실상 원칙 5의 일부. 따로 셀 만큼 중요하진 않습니다</td></tr>
+            <tr><td><strong>5. 라운드 기조</strong></td><td><span class="chip c-info">취향의 규칙</span></td>
+                <td>"통일하라"는 옳지만 "라운드로"는 브랜드 선택입니다. 규칙이 아니라 <strong>결정사항</strong>으로 적어야 합니다</td></tr>
+            <tr><td><strong>8. 여백</strong></td><td><span class="chip c-warn">조건부</span></td>
+                <td><strong>지금 이 원칙이 역효과를 내고 있습니다.</strong> 랜딩엔 맞지만 목록·관리자 화면엔 해롭습니다</td></tr>
+            <tr><td><strong>10. 큼직한 레이아웃</strong></td><td><span class="chip c-warn">조건부</span></td>
+                <td>원칙 8과 같은 문제. 후기 108건을 "큼직하게" 두면 80화면이 됩니다</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="call crit">
+        <div class="call-t">진짜 문제: 9개 전부 '어떻게 보이는가'만 다룹니다</div>
+        <p>9대 원칙에는 <strong>글자 크기, 버튼 크기, 색 대비, 모양, 간격</strong>이 있습니다. 전부 <em>렌더링 규칙</em>입니다.
+          반면 아래 항목들은 <strong>단 하나도 없습니다</strong> — 그리고 후기 페이지를 망친 건 전부 이쪽입니다.</p>
+        <ul class="clean" style="margin-top:13px">
+          <li><strong>정보의 층</strong> — 요약 → 훑기 → 원문. 한 번에 다 보여줄지, 나눠 보여줄지</li>
+          <li><strong>훑을 수 있는가</strong> — 눈이 걸릴 지형지물이 있는지 (후기엔 없음)</li>
+          <li><strong>내용이 기계가 읽을 수 있는 형태인가</strong> — 검색·스크린리더 (후기는 전부 그림)</li>
+          <li><strong>페이지 간 일관성</strong> — 뉴스에서 고친 필터 문제가 후기엔 그대로</li>
+          <li><strong>성공을 무엇으로 측정하는가</strong> — 계측은 이미 하고 있는데 원칙에는 없음</li>
+        </ul>
+      </div>
+
+      <h3>추가를 제안하는 2개 조항</h3>
+      <div class="score">
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">신설 원칙 11</span><span class="chip c-info">제안</span></div>
+          <div class="sc-t">한 화면에 층은 세 개까지</div>
+          <div class="sc-d">항목이 10개를 넘는 화면은 <strong>① 요약 ② 훑을 수 있는 한 줄 ③ 원문(요청 시)</strong>
+            세 층으로 나눈다. 원문을 첫 화면에 그대로 쏟지 않는다.
+            <strong>이 한 줄이 있었다면 후기 페이지는 처음부터 다르게 만들어졌을 겁니다.</strong></div>
+        </div>
+        <div class="sc">
+          <div class="sc-h"><span class="sc-n">신설 원칙 12</span><span class="chip c-info">제안</span></div>
+          <div class="sc-t">같은 문제는 같은 해법으로</div>
+          <div class="sc-d">한 페이지에서 푼 UI 문제는 <strong>같은 문제를 가진 모든 페이지에 즉시 이식</strong>한다.
+            뉴스의 필터 바텀시트, 하단 바의 스프라이트 화살표가 한 곳에만 남아 있는 지금 상태가
+            이 조항이 없어서 생긴 결과입니다.</div>
+        </div>
+      </div>
+
+      <div class="call pass">
+        <div class="call-t">한 줄 답변</div>
+        <p style="margin-bottom:0">9대 원칙은 <strong>버릴 이유가 전혀 없습니다.</strong> 근거 있는 국제 표준과 상당수 일치하고,
+          실제로 이 사이트의 시각적 완성도를 여기까지 끌어올린 물건입니다.
+          다만 <strong>"이걸 다 지켰으니 UX가 좋다"는 보장은 못 합니다.</strong>
+          자동차로 치면 <strong>정비 점검표</strong>예요 — 타이어·브레이크·등화를 다 통과해도
+          <strong>목적지를 잘못 잡으면 소용없습니다.</strong> 원칙 11·12가 그 목적지에 해당합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 우선순위 -->
+<section>
+  <div class="wrap">
+    <div class="s-head">
+      <div class="lab">07 — 실행 순서</div>
+      <h2>손대는 순서 (효과 ÷ 품)</h2>
+    </div>
+    <div class="prio">
+      <div class="pr">
+        <span class="pr-r">1</span>
+        <div class="pr-b">
+          <div class="pr-t">후기 페이지에 한줄평 카드 도입</div>
+          <div class="pr-d">홈의 <code style="font-family:var(--mono);font-size:12px">.mc-review</code> 카드를
+            <code style="font-family:var(--mono);font-size:12px">reviews.html</code>로 옮기고, 스크린샷은 '원문 보기'로 내린다.
+            <strong>DB 칸도 관리자 입력란도 이미 있어서 새로 만들 게 없습니다.</strong> 덤으로 후기 108건이 검색에 잡히기 시작합니다.</div>
+        </div>
+        <div class="pr-e">효과 최상<br>품 적음</div>
+      </div>
+      <div class="pr">
+        <span class="pr-r">2</span>
+        <div class="pr-b">
+          <div class="pr-t">후기 상단에 요약 층 추가</div>
+          <div class="pr-d">"108개 · 챌린지 4종 · 1~4기" + 많이 나온 키워드 집계 막대.
+            Baymard 기준 <strong>후기 섹션에서 가장 많이 쓰이는 요소</strong>인데 지금 통째로 없습니다.</div>
+        </div>
+        <div class="pr-e">효과 상<br>품 보통</div>
+      </div>
+      <div class="pr">
+        <span class="pr-r">3</span>
+        <div class="pr-b">
+          <div class="pr-t">필터바를 뉴스와 같은 바텀시트 방식으로</div>
+          <div class="pr-d">칩 10개 나열(221px) → 버튼 2개(약 60px). <strong>화면 20%를 후기에 돌려줍니다.</strong>
+            뉴스에 이미 만들어 둔 코드를 그대로 씁니다.</div>
+        </div>
+        <div class="pr-e">효과 상<br>품 적음</div>
+      </div>
+      <div class="pr">
+        <span class="pr-r">4</span>
+        <div class="pr-b">
+          <div class="pr-t">텍스트 <code style="font-family:var(--mono);font-size:12px">opacity</code> 일괄 제거</div>
+          <div class="pr-d">4개 페이지 15곳. <code style="font-family:var(--mono);font-size:12px">opacity:.55/.6</code>를 지우고
+            확정된 회색을 직접 지정. <strong>찾기·바꾸기 수준의 작업으로 원칙 4 위반이 대부분 사라집니다.</strong></div>
+        </div>
+        <div class="pr-e">효과 중<br>품 최소</div>
+      </div>
+      <div class="pr">
+        <span class="pr-r">5</span>
+        <div class="pr-b">
+          <div class="pr-t">터치 타깃 40px → 44px</div>
+          <div class="pr-d">필터칩, 전·후 재생 버튼, '원문 보기'. 눈에 보이는 크기를 안 키우고 싶으면
+            <code style="font-family:var(--mono);font-size:12px">::after</code>로 히트 영역만 넓히면 됩니다(뉴스 스크랩 버튼에 쓴 방식).</div>
+        </div>
+        <div class="pr-e">효과 중<br>품 적음</div>
+      </div>
+      <div class="pr">
+        <span class="pr-r">6</span>
+        <div class="pr-b">
+          <div class="pr-t">홈 길이 12.4화면 → 9화면대</div>
+          <div class="pr-d">글을 지우는 게 아니라 <strong>섹션을 합치거나 뺀다.</strong> 1순위 후보는 인트로(1.8화면에 글자 30자).
+            <strong>단, 이건 계측을 보고 결정하세요</strong> — 인트로는 브랜드 자산이라 감으로 자르면 손해일 수 있습니다.</div>
+        </div>
+        <div class="pr-e">효과 상<br>품 큼 · 검증 필요</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p style="font-size:13px;color:var(--mid)">측정 방법: 로컬 정적 서버 + Chromium 375×812(DPR 2)에서 실제 렌더한 뒤
+      요소 크기·계산 스타일을 추출. 후기 페이지는 외부 DB 접근이 막혀 있어 후기 24건 표본(1080×1800 세로 스크린샷)으로
+      렌더했고, 건수·비율은 저장소 기록의 108건 기준으로 환산했습니다. 대비값은 WCAG 상대휘도 공식으로 직접 계산했습니다.</p>
+    <p style="font-size:13px;color:var(--mid);margin-top:12px"><strong>참고 자료</strong></p>
+    <ul>
+      <li><a href="https://baymard.com/blog/user-ratings-distribution-summary">Baymard Institute — 평점 분포 요약의 5가지 요건</a></li>
+      <li><a href="https://baymard.com/research/product-page">Baymard Institute — 상품 상세 페이지 UX 연구</a></li>
+      <li><a href="https://www.nngroup.com/videos/f-pattern-reading-digital-content/">Nielsen Norman Group — F 패턴 읽기</a></li>
+      <li><a href="https://wcag22aa.org/new-criteria/target-size/">WCAG 2.2 SC 2.5.8 — 타깃 크기</a></li>
+      <li><a href="https://blog.logrocket.com/ux-design/all-accessible-touch-target-sizes/">LogRocket — 접근 가능한 터치 타깃 크기 정리</a></li>
+    </ul>
+  </div>
+</footer>
+</body></html>
