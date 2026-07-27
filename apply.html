@@ -104,6 +104,8 @@
   }
   .status-upcoming { background: var(--accent-tint); color: var(--accent-ink); }
   .status-closed { background: rgba(120,120,120,.16); color: #7a7a7a; }
+  /* 이미 신청한 기수 — 중복 신청 차단(마감과 달리 '내 상태'라 초록) */
+  .status-applied { background: rgba(46,110,66,.14); color: #2E6E42; }
 
   .curr-toggle {
     display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 800;
@@ -646,6 +648,79 @@ async function applyStatuses() {
     }
   });
   updateSummary();
+  markAppliedCards();   // 기수(round)를 알게 된 뒤라야 '이미 신청한 기수'를 판정할 수 있다
+}
+
+/* ── 이미 신청한 기수 잠금 (중복 신청 차단) ──
+   최종 방어는 DB 트리거(마이그레이션 20260725120000)지만, 카드를 골라 결제 직전까지 간 뒤
+   거절당하는 건 나쁜 경험이라 로그인 회원은 '이미 신청한 기수'를 아예 못 고르게 잠근다.
+   ⚠️ 비회원은 RLS 로 사전 조회가 불가능하다(전화번호로 신청 여부를 캐낼 수 있게 열 수 없다)
+      → 비회원 중복은 DB 트리거가 막고, 결제까지 끝난 건은 verify-payment 가 전액 환불한다. */
+let _appliedKeys = null, _appliedReq = null;
+
+function loadAppliedKeys() {
+  if (_appliedKeys) return Promise.resolve(_appliedKeys);
+  // ⚠️ 비회원 결과(null)는 캐시하지 않는다 — initMember 가 늦게 끝나 _memberId 가 나중에
+  //    채워지는 순서가 실제로 있어서, 캐시하면 회원인데도 영영 검사를 안 하게 된다.
+  if (!_memberId || !window.MONC || !window.MONC.myAppliedPrograms) return Promise.resolve(null);
+  if (!_appliedReq) _appliedReq = window.MONC.myAppliedPrograms(_memberId);
+  return _appliedReq;
+}
+
+function currentRound(id) {
+  const rounds = window._challengeRounds || {};
+  return rounds[id] != null ? rounds[id] : null;
+}
+function challengeKey(id) {
+  return window.MONC.programKey({ challenge: id, round: currentRound(id) });
+}
+function roundLabel(id) {
+  const c = CHALLENGES.find(x => x.id === id);
+  const r = currentRound(id);
+  return (c ? c.tag : id) + (r ? ' ' + r + '기' : '');
+}
+
+async function markAppliedCards() {
+  const keys = await loadAppliedKeys();
+  if (!keys || !keys.size) return;
+  _appliedKeys = keys;
+  CHALLENGES.forEach(c => {
+    if (!keys.has(challengeKey(c.id))) return;
+    const card = cardEl(c.id);
+    if (!card) return;
+    card.classList.add('disabled');
+    card.classList.remove('selected', 'curr-open');
+    // 마감·모집예정 표시가 이미 있으면 그대로 둔다(그쪽이 더 중요한 사실)
+    const tag = card.querySelector('[data-status]');
+    if (tag && !tag.textContent) { tag.textContent = '신청완료'; tag.className = 'status-tag status-applied'; }
+  });
+  updateSummary();
+}
+
+/* 선택한 챌린지 중 이미 신청한 게 있으면 알리고 true. 결제·계좌 안내 직전의 마지막 확인. */
+async function dupBlocked(ids) {
+  const keys = await loadAppliedKeys();
+  if (!keys || !keys.size) return false;
+  const hit = ids.filter(id => keys.has(challengeKey(id)));
+  if (!hit.length) return false;
+  await markAppliedCards();
+  alert('이미 신청하신 챌린지예요: ' + hit.map(roundLabel).join(', ')
+    + '\n같은 기수를 두 번 신청할 수는 없어요. 신청 내역은 마이페이지에서 확인할 수 있어요.');
+  return true;
+}
+
+/* 접수 성공 → 이번에 신청한 프로그램을 기억해 바로 다시 못 넣게 한다(비회원도 이 세션 동안). */
+function rememberApplied(challenges) {
+  if (!_appliedKeys) _appliedKeys = new Set();
+  challenges.forEach(c => { const k = window.MONC.programKey(c); if (k) _appliedKeys.add(k); });
+  markAppliedCards();
+}
+
+/* DB 트리거가 막은 중복 신청 안내 (errcode MC002) */
+function alertDuplicate(program) {
+  alert('이미 신청하신 프로그램이에요' + (program ? ' (' + program + ')' : '') + '.'
+    + '\n같은 프로그램을 두 번 신청할 수는 없어요.'
+    + '\n다른 챌린지를 고르시거나, 문의는 070-4032-0015 로 연락 주세요.');
 }
 
 /* ── URL ?c= 프리셀렉트 (상세페이지에서 넘어올 때) ── */
@@ -705,10 +780,13 @@ async function initMember() {
     if (topLogin) topLogin.textContent = '로그인';   // 비회원: 무의미한 '마이페이지' 문구 제거
     document.getElementById('guestNudge').style.display = 'flex';
   }
+  // 회원 판별이 끝난 뒤에야 '이미 신청한 기수'를 조회할 수 있다.
+  // (applyStatuses 쪽에서도 부른다 — 둘 중 어느 쪽이 늦게 끝나도 카드가 잠기게)
+  await markAppliedCards();
 }
 
 /* ── 계좌이체: 버튼 클릭 → 검증 후 계좌 안내 모달 오픈(토스 결제창처럼) ── */
-function openBankModal() {
+async function openBankModal() {
   const name = document.getElementById('appName').value.trim();
   const phone = document.getElementById('appPhone').value.trim();
   const ids = selectedIds();
@@ -718,6 +796,8 @@ function openBankModal() {
   if (!name || !phone) { alert('이름과 전화번호를 모두 입력해주세요.'); return; }
   if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+  // 접수될 수 없는 신청에 입금 계좌를 먼저 보여주면 안 된다(입금부터 하고 막히는 사고)
+  if (await dupBlocked(ids)) return;
 
   document.getElementById('btAmount').textContent = (ids.length * PRICE).toLocaleString();
   const modal = document.getElementById('bankModal');
@@ -725,12 +805,18 @@ function openBankModal() {
   modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
-function closeBankModal() {
-  if (_isSubmitting) return; // 신청 진행 중엔 닫지 않음
+// 실제 닫기 동작. closeBankModal 은 신청 처리 중(_isSubmitting) 사용자가 닫는 걸 막으므로,
+// 코드가 강제로 닫아야 하는 경우(접수 완료·중복 차단)엔 이쪽을 직접 부른다.
+function hideBankModal() {
   const modal = document.getElementById('bankModal');
+  if (!modal) return;
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
+}
+function closeBankModal() {
+  if (_isSubmitting) return; // 신청 진행 중엔 닫지 않음
+  hideBankModal();
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBankModal(); });
 
@@ -754,6 +840,14 @@ async function confirmBankTransfer() {
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '신청 중...'; btn.style.opacity = '.7';
 
+  // 모달을 열어둔 사이 다른 탭에서 신청했을 수도 있다(최종 방어는 DB 트리거)
+  if (await dupBlocked(ids)) {
+    _isSubmitting = false;
+    btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
+    hideBankModal();
+    return;
+  }
+
   try { await loadChallengeStatuses(); } catch (e) {}
   const rounds = window._challengeRounds || {};
   const challenges = ids.map(id => {
@@ -768,6 +862,7 @@ async function confirmBankTransfer() {
   try {
     const { error } = await window.MONC.sb.from('applications').insert(payload);
     if (error) throw error;
+    rememberApplied(challenges);   // 이 세션에서 같은 걸 또 넣지 못하게 카드 잠금
     // 회원이 전화를 새로 입력했으면 프로필에도 저장(다음 신청부터 자동 채움 + 연동)
     if (_memberId && !_profileHadPhone && phone) {
       try { await window.MONC.sb.from('members').update({ phone: phone }).eq('id', _memberId); _profileHadPhone = true; document.getElementById('rowPhone').style.display = 'none'; } catch (e) {}
@@ -779,13 +874,20 @@ async function confirmBankTransfer() {
     if (!_memberId) { document.getElementById('appName').value = ''; document.getElementById('appPhone').value = ''; }
     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected', 'curr-open'));
     updateSummary();
-    // 접수 완료 → 계좌 안내 모달 닫기
-    const _m = document.getElementById('bankModal'); _m.classList.remove('open'); _m.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '';
+    hideBankModal();   // 접수 완료 → 계좌 안내 모달 닫기
     if (_memberId) window.scrollTo({ top: 0, behavior: 'smooth' });
     else document.querySelector('.signup-banner').scrollIntoView({ behavior: 'smooth' }); // 비회원 회원가입 유도
   } catch (e) {
-    console.error('신청 오류:', e);
-    alert('오류가 발생했습니다. 다시 시도해주세요.');
+    // 같은 프로그램 중복 — DB 트리거가 막았다(비회원·동시 신청 등 사전 검사로 못 잡은 경우).
+    // 계좌이체는 결제 전이라 돈이 나가지 않았으므로 안내만 한다.
+    if (window.MONC.isDuplicateError(e)) {
+      hideBankModal();
+      alertDuplicate(e.hint);
+      await markAppliedCards();
+    } else {
+      console.error('신청 오류:', e);
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
+    }
   } finally {
     _isSubmitting = false;
     btn.disabled = false; btn.textContent = orig; btn.style.opacity = '1';
@@ -807,6 +909,8 @@ async function payWithToss() {
   if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
   if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+  // 결제창을 띄우기 전에 중복을 걸러낸다 — 결제 후 막히면 환불(verify-payment)까지 가야 한다
+  if (await dupBlocked(ids)) return;
 
   _isPaying = true;
   const btn = document.getElementById('tossBtn');
@@ -884,6 +988,15 @@ async function completePayment(paymentId, challenges, applicant) {
   const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
     body: { paymentId: paymentId, challenges: challenges, applicant: applicant }
   });
+  // 결제 승인과 신청 저장 사이에 중복이 확인된 경우 — 서버가 전액 자동 환불한다
+  if (data && data.error === 'duplicate_application') {
+    alert('이미 신청하신 프로그램이에요' + (data.program ? ' (' + data.program + ')' : '') + '.\n\n'
+      + (data.refunded
+        ? '중복 접수가 되지 않아 결제 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+        : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+    await markAppliedCards();
+    return false;
+  }
   if (error || !data || !data.ok) {
     console.error('결제 검증 실패:', error, data);
     alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
@@ -892,6 +1005,7 @@ async function completePayment(paymentId, challenges, applicant) {
   if (applicant.member_id && applicant.phone) {
     try { await window.MONC.sb.from('members').update({ phone: applicant.phone }).eq('id', applicant.member_id); } catch (e) {}
   }
+  rememberApplied(challenges);   // 접수 완료 → 같은 걸 또 넣지 못하게 카드 잠금
   // ⚠️ 토스 결제는 verify-payment가 포트원에 이미 검증을 마친 뒤 저장하므로 결제·접수가 그 자리에서 완료된다.
   //    계좌이체용 '확인 후 안내드리겠습니다'(입금 수동 확인 대기)를 쓰면 완료됐는데도 처리 중처럼 읽힌다.
   alert('결제가 완료되어 신청이 정상 접수되었습니다.\n시작 안내를 곧 보내드릴게요.' + (applicant.member_id ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));

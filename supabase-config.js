@@ -174,6 +174,58 @@
     return profile;
   }
 
+  // ── 중복 신청 판정 (apply.html · lecture.html 공용) ─────────────────────────
+  // 최종 방어는 DB 트리거(20260725120000_duplicate_application_guard.sql)다. 여기 헬퍼는
+  // ① 결제·접수 전에 미리 알려주고 ② 트리거가 막았을 때 친절한 문구로 바꿔주는 역할.
+  // ⚠️ 비회원은 사전 검사가 불가능하다 — 전화번호로 남의 신청을 조회하게 열어주면
+  //    번호만 넣어 '이 사람이 몬크에 신청했는지'를 캐낼 수 있다(RLS 로 막혀 있는 게 맞다).
+  //    비회원 중복은 트리거가 막고, 결제까지 끝난 건은 verify-payment 가 전액 환불한다.
+  const DUP_ERRCODE = 'MC002';
+  function isDuplicateError(e) {
+    return !!e && (e.code === DUP_ERRCODE
+      || String((e && e.message) || '').includes('duplicate_application'));
+  }
+
+  // 환불·취소된 신청은 자리를 비운 것 → 다시 신청할 수 있어야 한다(트리거와 같은 기준).
+  function isLiveApplication(a) {
+    if (!a) return false;
+    if (a.refunded) return false;
+    return ['refunded', 'partial_refunded', 'cancelled', 'canceled', 'failed']
+      .indexOf(a.payment_status) === -1;
+  }
+
+  // 프로그램 식별 키 — 챌린지는 '챌린지+기수'(기수가 다르면 다른 프로그램),
+  // 특강은 lecture_id(시간대가 달라도 같은 특강). 트리거의 판정과 같은 기준.
+  function programKey(entry) {
+    if (!entry) return null;
+    if (entry.type === 'lecture' || entry.lecture_id) {
+      return entry.lecture_id ? 'lecture:' + entry.lecture_id : null;
+    }
+    if (!entry.challenge) return null;
+    const r = (entry.round == null || entry.round === '') ? '' : entry.round;
+    return 'ch:' + entry.challenge + '#' + r;
+  }
+
+  // 로그인 회원이 이미 신청한 프로그램 키 Set. 비회원·조회 실패는 null(= 사전 검사 불가).
+  // ⚠️ select('*') 인 이유: lecture_id·payment_status 는 나중에 추가된 컬럼이라
+  //    컬럼을 지정하면 마이그레이션 미적용 환경에서 조회 전체가 400 이 된다(본인 행이므로 안전).
+  async function myAppliedPrograms(memberId) {
+    if (!memberId) return null;
+    try {
+      const { data, error } = await sb.from('applications').select('*').eq('member_id', memberId);
+      if (error || !data) return null;
+      const keys = new Set();
+      data.filter(isLiveApplication).forEach(a => {
+        if (a.lecture_id) keys.add('lecture:' + a.lecture_id);
+        (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+          const k = programKey(c);
+          if (k) keys.add(k);
+        });
+      });
+      return keys;
+    } catch (e) { return null; }
+  }
+
   // private 버킷 파일의 재생용 signed URL (기본 1시간)
   async function getSignedUrl(storagePath, expiresIn) {
     if (!storagePath) return null;
@@ -191,5 +243,6 @@
     signOut, getSession, requireSession,
     getMyProfile, hasSojaeAccess, requireAdmin, getSignedUrl,
     getConsent, recordConsent, hasConsented, requireConsent, deleteMyAccount,
+    isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
   };
 })();

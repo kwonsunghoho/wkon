@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>답변 저장소 + AI킬러 — 재설계 목업</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     답변 저장소(answers) 중심 재설계 — 2026-07-25 오너 지시
+
+     ⚠️ 앞 목업(ai-killer-input-mockup.html)의 전제가 틀렸다.
+        거기선 "답변이 없으면 소재 발굴로 보낸다"고 했는데, 오너 지적:
+        **소재 발굴은 소재를 발굴하는 곳이지 답변을 넣는 관문이 아니다.**
+        바로 답변만 넣고 싶은 학생이 있고, 그 길을 막으면 안 된다.
+
+     새 원장(이 문서가 그 기록)
+       1. 답변 저장소에 글을 넣는 것은 **언제나 무료·무제한**. 횟수와 무관하다.
+       2. 과금 단위는 '검사 횟수'가 아니라 **답변 1개 = 크레딧 1개**.
+          한 답변은 **2회까지** 검사한다(고치고 다시 확인하는 루프를 살리기 위해).
+          ⚠️ 2026-07-25 오너: "한시적으로 2회, 나중에 1회로 바꾼다" — 상수 하나로 두고 조절한다.
+       3. 유료 사용자 = 아무 글이나 검사하고, **검사한 글은 저장소에 자동으로 들어간다.**
+       4. 검사 이력은 답변마다 쌓이고 **언제든 다시 꺼내 볼 수 있다**(1:N).
+       5. 저장소에는 **검색창 + 질문 유형 구분**이 있어야 한다.
+       6. **무료는 방향만, 유료는 실제 첨삭**(2026-07-25 오너 확정 — 아래 '첨삭' 절).
+
+     ⇒ 그래서 AI킬러는 독립된 도구가 아니라 **저장소 위에서 도는 기능**이 된다.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  :root{
+    --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9; --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,.16); --border-soft:rgba(38,34,28,.09);
+    --action:#F27945; --action-dark:#D9531F; --action-ink:#A33D14;
+    --action-tint:#FDE9DE; --action-ink-on:#2A1206;
+    --serif:'Song Myung','Noto Serif KR','Nanum Myeongjo',serif;
+    --radius-xs:8px; --radius-sm:14px; --radius:20px;
+    --free:#2E6E42; --free-bg:rgba(46,110,66,.09); --free-bd:rgba(46,110,66,.24);
+    --air-ke:#14375E; --air-lj:#3A6440; --air-7c:#8C4318; --air-tw:#9E3B34;
+    --air-ze:#97323A; --air-yp:#2E3D63; --air-rf:#8E4064;
+    /* 등급 3단 */
+    --g-human:#2E6E42; --g-slight:#8C4318; --g-heavy:#9E3B34;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+       background:var(--bg2);color:var(--text);line-height:1.6;
+       padding:34px 20px 90px;word-break:keep-all;overflow-wrap:break-word;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1340px;margin:0 auto}
+
+  .doc-tag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.16em;
+           color:var(--action-ink);background:var(--action-tint);padding:5px 11px;border-radius:999px}
+  h1{font-family:var(--serif);font-size:clamp(28px,4vw,38px);font-weight:700;
+     line-height:1.28;margin-top:12px;letter-spacing:-.01em}
+  .lede{margin-top:12px;font-size:15.5px;color:var(--text-muted);max-width:740px}
+  .lede b{color:var(--text);font-weight:800}
+  .fix{margin-top:20px;max-width:740px;background:var(--surface);border:1px solid var(--border-soft);
+       border-left:4px solid var(--action);border-radius:var(--radius-xs);padding:16px 18px}
+  .fix h4{font-size:14.5px;font-weight:800;margin-bottom:8px}
+  .fix ol{margin:0 0 0 18px;font-size:14.5px;color:var(--text-muted)}
+  .fix li{margin-top:6px}
+  .fix b{color:var(--text);font-weight:800}
+
+  /* 흐름도 */
+  .flow{margin-top:22px;max-width:900px;background:var(--surface);border:1px solid var(--border);
+        border-radius:var(--radius-sm);padding:18px}
+  .flow h4{font-size:14.5px;font-weight:800;margin-bottom:12px}
+  .flow-row{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
+  .fbox{flex:1 1 190px;border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px 13px;
+        background:var(--bg2);font-size:14px}
+  .fbox.free{background:var(--free-bg);border-color:var(--free-bd)}
+  .fbox .ft{font-weight:800;margin-bottom:4px}
+  .fbox .fd{color:var(--text-muted);font-size:14px}
+  .farrow{display:flex;align-items:center;font-weight:800;color:var(--text-dim);font-size:15px}
+  .flow-note{margin-top:12px;font-size:14px;color:var(--text-muted)}
+  .flow-note b{color:var(--text);font-weight:800}
+
+  section{margin-top:52px;padding-top:30px;border-top:1px solid var(--border)}
+  .stag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;
+        color:var(--action-ink);background:rgba(163,61,20,.10);padding:4px 10px;border-radius:999px}
+  h2{font-family:var(--serif);font-size:26px;font-weight:700;margin-top:11px;line-height:1.3}
+  .who{margin-top:7px;font-size:14px;color:var(--text-dim)}
+  .why{margin-top:14px;font-size:14.5px;color:var(--text-muted);max-width:760px}
+  .why b{color:var(--text);font-weight:800}
+  .warn{margin-top:10px;font-size:14px;color:#9E3B34;max-width:760px}
+
+  .frames{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px}
+  .phone{flex:0 0 auto;width:375px}
+  .phone-cap{font-size:13px;font-weight:800;color:var(--text-dim);margin-bottom:8px;letter-spacing:.02em}
+  .screen{width:375px;height:720px;overflow-y:auto;overflow-x:hidden;background:var(--bg);
+          border:1px solid var(--border);border-radius:22px;position:relative;
+          box-shadow:0 10px 34px rgba(38,34,28,.13);scrollbar-width:thin}
+  .screen::-webkit-scrollbar{width:6px}
+  .screen::-webkit-scrollbar-thumb{background:rgba(38,34,28,.22);border-radius:3px}
+
+  /* ══ 화면 안 ══ */
+  .sc-nav{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;
+          padding:12px 16px;background:rgba(233,228,216,.94);backdrop-filter:blur(16px);
+          -webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border-soft)}
+  .sc-nav .b{font-size:14px;font-weight:700;opacity:.85}
+  .sc-nav .t{font-family:var(--serif);font-size:16px;font-weight:700}
+  .sc-nav .r{font-size:14px;font-weight:700;color:var(--action-ink)}
+  .sc-body{padding:18px 16px 40px}
+
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+           letter-spacing:.2em;color:var(--action-ink)}
+  .eyebrow::before{content:'';width:16px;height:1.5px;background:var(--action);flex:0 0 auto}
+  .h-title{font-family:var(--serif);font-size:25px;font-weight:700;line-height:1.32;margin-top:9px}
+  .h-sub{margin-top:7px;font-size:14px;color:var(--text-muted)}
+
+  /* 검색 + 필터 */
+  .search{margin-top:14px;position:relative}
+  .search input{width:100%;min-height:46px;border:1px solid var(--border);background:var(--surface);
+                border-radius:999px;padding:0 16px 0 42px;font:inherit;font-size:15px;color:var(--text)}
+  .search input::placeholder{color:var(--text-dim)}
+  .search input:focus{outline:none;border-color:var(--text)}
+  .search svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:17px;height:17px;
+              opacity:.45;pointer-events:none}
+  .filt{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .filt::-webkit-scrollbar{display:none}
+  .filt button{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid var(--border);
+               background:var(--surface);border-radius:999px;font:inherit;font-size:14px;font-weight:700;
+               color:var(--text-muted);cursor:pointer}
+  .filt button.on{background:var(--text);color:#fff;border-color:var(--text)}
+  .cnt{margin-top:12px;font-size:14px;color:var(--text-dim)}
+  .cnt b{color:var(--text);font-weight:800}
+
+  /* 답변 카드 */
+  .ans{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);
+       border-radius:var(--radius-xs);padding:13px 14px;margin-top:9px;font-family:inherit;cursor:pointer}
+  .ans-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .ans-t{font-size:15.5px;font-weight:800;line-height:1.4}
+  .ans-p{margin-top:5px;font-size:14px;color:var(--text-dim);line-height:1.5;
+         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ans-m{margin-top:9px;padding-top:9px;border-top:1px solid var(--border-soft);
+         display:flex;align-items:center;gap:7px;font-size:14px;color:var(--text-dim);flex-wrap:wrap}
+  .tag{font-size:14px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--bg3);
+       color:var(--text-muted)}
+  .tag.air{background:transparent;border:1px solid var(--border);color:var(--air);
+           letter-spacing:.06em;font-size:13px;font-weight:800}
+  .tag.draft{background:var(--action-tint);color:var(--action-ink)}
+  .grade{font-size:14px;font-weight:800;color:var(--g)}
+  .grade i{font-style:normal;opacity:.6;font-weight:700}
+  .ans-none{font-size:14px;color:var(--text-dim);margin-left:auto}
+
+  /* 답변 추가 버튼 — 저장소의 주인공. 무료·무제한 */
+  .addbar{position:sticky;bottom:0;margin:0 -16px;padding:12px 16px 16px;
+          background:linear-gradient(to top,var(--bg) 68%,rgba(233,228,216,0));z-index:8}
+  .add{width:100%;min-height:52px;border:0;border-radius:999px;background:var(--text);color:#fff;
+       font:inherit;font-size:16px;font-weight:800;cursor:pointer;
+       display:flex;align-items:center;justify-content:center;gap:8px}
+  .add svg{width:18px;height:18px}
+  .add-note{margin-top:8px;text-align:center;font-size:14px;color:var(--text-dim)}
+
+  /* 폼(답변 추가/수정) */
+  .card{margin-top:14px;background:var(--surface);border:1px solid var(--border);
+        border-radius:var(--radius-sm);padding:14px}
+  .lbl{font-size:14px;font-weight:800;color:var(--text-dim);margin-bottom:7px}
+  .hr{height:1px;background:var(--border-soft);margin:13px 0}
+  .qin{width:100%;min-height:44px;border:0;border-bottom:1px solid var(--border-soft);
+       font:inherit;font-size:15.5px;font-weight:700;color:var(--text);background:transparent;padding:0 0 9px}
+  .qin::placeholder{font-weight:400;color:var(--text-dim)}
+  .ta{width:100%;min-height:130px;border:0;resize:vertical;font:inherit;font-size:15px;
+      line-height:1.75;color:var(--text);background:transparent}
+  .ta:focus,.qin:focus{outline:none}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;min-height:44px;font:inherit;font-size:14px;font-weight:700;
+              border:1px solid var(--border);background:var(--bg2);border-radius:var(--radius-xs);
+              color:var(--text-muted);cursor:pointer}
+  .seg button.on{background:var(--text);color:#fff;border-color:var(--text)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .grid2 button{min-height:44px;font:inherit;font-size:14px;font-weight:700;border:1px solid var(--border);
+                background:var(--bg2);border-radius:var(--radius-xs);color:var(--text-muted);cursor:pointer}
+  .grid2 button.on{background:var(--surface);color:var(--text);border-color:var(--text);
+                   box-shadow:inset 0 0 0 1px var(--text)}
+  .pickbtn{width:100%;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 13px;
+           border:1px solid var(--border);background:var(--bg2);border-radius:var(--radius-xs);
+           font:inherit;font-size:14px;font-weight:700;color:var(--text-dim);cursor:pointer;text-align:left}
+  .pickbtn.set{background:var(--surface);color:var(--text);border-color:var(--text)}
+  .pickbtn .en{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--air);margin-left:auto}
+  .pickbtn svg{flex:0 0 auto;width:16px;height:16px;opacity:.5;margin-left:auto}
+  .pickbtn.set svg{margin-left:6px}
+  .foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;
+        border-top:1px solid var(--border-soft);font-size:14px;color:var(--text-dim)}
+  .foot b{color:var(--text-muted);font-weight:700;font-variant-numeric:tabular-nums}
+  .cta{margin-top:14px;width:100%;min-height:54px;border:0;border-radius:999px;background:var(--action);
+       color:var(--action-ink-on);font:inherit;font-size:17px;font-weight:800;cursor:pointer}
+  .cta.ghost{background:transparent;border:1.5px solid var(--text);color:var(--text)}
+  .cta:disabled{opacity:.45}
+  .left{margin-top:10px;text-align:center;font-size:14px;color:var(--text-dim)}
+  .left b{color:var(--action-ink);font-weight:800}
+
+  /* 과금 줄 */
+  .pay{margin-top:12px;width:100%;display:flex;gap:11px;align-items:flex-start;text-align:left;
+       border-radius:var(--radius-xs);padding:12px 13px;font-size:14px;font-family:inherit;
+       border:1px solid var(--free-bd);background:var(--free-bg);color:#265C3B;cursor:pointer}
+  .pay.plain{border-color:var(--border);background:var(--bg2);color:var(--text-muted);cursor:default}
+  .pay b{font-weight:800}
+  .pay .ic{flex:0 0 auto;width:18px;height:18px;margin-top:2px}
+  .pay .go{margin-left:auto;flex:0 0 auto;font-weight:800;font-size:14px;opacity:.8}
+
+  /* 답변 상세 — 검사 이력 */
+  .det-q{font-family:var(--serif);font-size:20px;font-weight:700;line-height:1.4;margin-top:12px}
+  .det-m{margin-top:8px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:14px;
+         color:var(--text-dim)}
+  .det-body{margin-top:14px;background:var(--surface);border:1px solid var(--border);
+            border-radius:var(--radius-sm);padding:14px;font-size:15px;line-height:1.8}
+  .hist{margin-top:20px}
+  .hist-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .hist-t{font-size:16px;font-weight:800}
+  .hist-n{font-size:14px;color:var(--text-dim)}
+  .hrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface);
+        border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px 13px;margin-top:8px;
+        font-family:inherit;cursor:pointer;min-height:56px}
+  .hrow-d{font-size:14px;color:var(--text-dim);flex:0 0 auto}
+  .hrow-g{font-size:15px;font-weight:800;color:var(--g)}
+  .hrow-c{font-size:14px;color:var(--text-muted)}
+  .hrow-go{margin-left:auto;font-size:14px;font-weight:800;color:var(--action-ink)}
+  .hist-empty{margin-top:10px;background:var(--surface);border:1px dashed var(--border);
+              border-radius:var(--radius-xs);padding:16px;text-align:center;font-size:14px;
+              color:var(--text-muted)}
+
+  /* 바텀시트 */
+  .sheet-mask{position:absolute;inset:0;background:rgba(38,34,28,.42);opacity:0;pointer-events:none;
+              transition:opacity .18s;z-index:20;border-radius:22px}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--surface);
+         border-radius:18px 18px 0 0;padding:8px 16px 20px;transform:translateY(102%);
+         transition:transform .24s cubic-bezier(.22,.61,.36,1);max-height:80%;overflow-y:auto}
+  .screen.sheet-on .sheet-mask{opacity:1;pointer-events:auto}
+  .screen.sheet-on .sheet{transform:translateY(0)}
+  .sheet-grip{width:38px;height:4px;border-radius:2px;background:var(--border);margin:6px auto 12px}
+  .sheet-h{font-size:16px;font-weight:800;margin-bottom:4px}
+  .sheet-s{font-size:14px;color:var(--text-dim);margin-bottom:12px}
+  .opt{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 4px;border:0;
+       border-bottom:1px solid var(--border-soft);background:none;font:inherit;font-size:15px;
+       font-weight:700;color:var(--text);cursor:pointer;text-align:left}
+  .opt:last-child{border-bottom:0}
+  .opt .en{margin-left:auto;font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--air)}
+
+  .note{margin-top:12px;font-size:14px;color:var(--text-dim);line-height:1.6}
+  .note b{color:var(--text-muted);font-weight:800}
+
+  table{border-collapse:collapse;width:100%;max-width:980px;margin-top:18px;font-size:14px;
+        background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs);overflow:hidden}
+  th,td{padding:11px 13px;border-bottom:1px solid var(--border-soft);text-align:left;vertical-align:top}
+  th{background:var(--bg3);font-weight:800;font-size:13px}
+  tr:last-child td{border-bottom:0}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--bg3);
+       padding:1px 5px;border-radius:4px}
+  .ok{color:var(--free);font-weight:800}
+  .no{color:#9E3B34;font-weight:800}
+  .ask{margin-top:22px;max-width:880px;background:var(--surface);border:1px solid var(--border);
+       border-left:4px solid var(--action);border-radius:var(--radius-xs);padding:18px}
+  .ask h4{font-size:15px;font-weight:800}
+  .ask p{margin-top:8px;font-size:14.5px;color:var(--text-muted)}
+  .ask ul{margin:8px 0 0 18px;font-size:14.5px;color:var(--text-muted)}
+  .ask li{margin-top:6px}
+  .ask b{color:var(--text);font-weight:800}
+  @media (max-width:820px){ .phone,.screen{width:100%;max-width:375px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="doc-tag">답변 저장소 · AI킬러 재설계 v2</span>
+  <h1>저장소가 중심, AI킬러는<br>그 위에서 도는 기능</h1>
+  <p class="lede" style="margin-top:14px">
+    <b>화면 10개 · 4단계.</b> 저장소(목록·추가) → 답변 상세(검사 이력) → KILL AI 입력 →
+    <b>첨삭·충전(유료)</b>. 항공사 버튼과 '고르기'는 실제로 눌러 볼 수 있다.
+  </p>
+  <p class="lede">
+    앞 목업은 <b>"답변이 없으면 소재 발굴로 보낸다"</b>고 했는데 그게 틀렸다.
+    소재 발굴은 <b>소재를 발굴하는 곳</b>이지 답변을 넣는 관문이 아니다.
+    바로 답변만 쓰고 싶은 학생의 길을 막으면 안 된다.
+  </p>
+
+  <div class="fix">
+    <h4>새로 잡은 규칙</h4>
+    <ol>
+      <li>저장소에 글을 넣는 것은 <b>언제나 무료·무제한</b>. 검사 횟수와 무관하다</li>
+      <li>과금 단위는 횟수가 아니라 <b>답변 1개 = 크레딧 1개</b>. 한 답변은 <b>2회까지</b> 검사한다 —
+          고치고 다시 확인하는 게 이 도구의 핵심 루프라 재검사에 매번 돈을 받으면 도구가 반쪽이 된다
+          <span style="color:var(--text-dim)">(오너: 한시적으로 2회, 나중에 1회. 상수 하나로 조절)</span></li>
+      <li><b>유료 사용자</b> = 아무 글이나 검사하고, <b>검사한 글은 저장소에 자동으로 들어간다</b></li>
+      <li>검사 이력은 답변마다 쌓이고 <b>언제든 다시 꺼내 본다</b>(한 답변에 여러 번)</li>
+      <li>저장소에 <b>검색창 + 질문 유형 구분</b>. 지금은 자유 글에 유형이 없어 분류가 안 된다</li>
+      <li><b>무료는 방향만, 유료는 실제 첨삭</b> — 아래 마지막 절</li>
+    </ol>
+  </div>
+
+  <div class="flow">
+    <h4>글이 저장소로 들어오는 세 갈래 — 셋 다 열려 있다</h4>
+    <div class="flow-row">
+      <div class="fbox free"><div class="ft">직접 쓰기</div>
+        <div class="fd">저장소에서 바로 추가. 소재 발굴을 거치지 않는다. <b>무료·무제한</b></div></div>
+      <div class="fbox free"><div class="ft">소재 발굴에서</div>
+        <div class="fd">되묻기로 소재를 캐낸 뒤 답변으로 저장. 지금도 되는 길</div></div>
+      <div class="fbox"><div class="ft">AI킬러에 붙여넣기</div>
+        <div class="fd">검사하면 <b>그 글이 저장소에 자동 저장</b>된다(1회 차감)</div></div>
+    </div>
+    <p class="flow-note">
+      → 어느 길로 들어왔든 저장소에 모이고, <b>검사 이력은 그 답변에 붙어 쌓인다.</b>
+      "다시 검사"는 고친 글이 얼마나 나아졌는지 보는 일이라, 이력이 남아야 의미가 있다.
+    </p>
+  </div>
+
+  <div class="flow" style="margin-top:18px">
+    <h4>크레딧 — 도구마다 무게가 다른 한 지갑 (2026-07-25 오너 확정)</h4>
+    <div class="flow-row">
+      <div class="fbox"><div class="ft">소재 발굴 · 2크레딧</div>
+        <div class="fd">대화형이라 한 세션에 5~10왕복이 쌓인다. 1크레딧이면 <b>파는 값이 원가에 붙는다</b></div></div>
+      <div class="fbox"><div class="ft">KILL AI · 3크레딧</div>
+        <div class="fd">그 답변은 <b>2회까지</b> 검사. 고치고 다시 보는 게 핵심 루프라 재검사는 무차감</div></div>
+      <div class="fbox"><div class="ft">첨삭 · 10크레딧</div>
+        <div class="fd"><b>이게 상품이다.</b> 진단은 미끼로 싸게 두고 처방에서 받는다</div></div>
+    </div>
+
+    <p class="flow-note">
+      <b>⚠️ 가격은 원가가 아니라 가치를 따른다.</b> 첨삭 원가는 킬러의 두 배쯤이지만 크레딧은 세 배다 —
+      학생이 돈을 내는 이유가 진단이 아니라 처방이기 때문이다. 진단이 싸야 자주 쓰고,
+      자주 써야 처방이 팔린다.
+    </p>
+
+    <table style="max-width:820px;margin-top:14px">
+      <tr><th>도구</th><th>크레딧</th><th>실질 단가<br><span style="font-weight:400">(만원=30 기준)</span></th><th>원가</th><th>마진</th></tr>
+      <tr><td>소재 발굴</td><td>2</td><td>644원</td><td>125원</td><td>81%</td></tr>
+      <tr><td>KILL AI</td><td>3</td><td>966원</td><td>225원</td><td>77%</td></tr>
+      <tr><td><b>첨삭</b></td><td><b>10</b></td><td><b>3,220원</b></td><td>400원</td><td><b>88%</b></td></tr>
+      <tr><td colspan="5" style="background:var(--bg2)">
+        <b>자소서 1문항 완성 = 18크레딧</b>(소재 2 + 킬러 2회 6 + 첨삭 10) = <b>약 6,000원</b>.
+        학원 첨삭이 문항당 2~5만 원이니 <b>1/4~1/8</b>이다.
+        PG 수수료 3.3% 반영(실수령 9,670원 ÷ 30 = 322원/크레딧).
+      </td></tr>
+    </table>
+
+    <p class="flow-note" style="margin-top:14px">
+      <b>충전 팩</b> — 집중 팩을 챌린지 참가비와 같은 3만 원에 두면 결제 저항이 낮다(이미 그 값을 내 본 사람들이다).
+    </p>
+    <div class="flow-row" style="margin-top:8px">
+      <div class="fbox"><div class="ft">체험 · 5,000원</div><div class="fd">14크레딧 — 자소서 <b>반 문항</b> 맛보기</div></div>
+      <div class="fbox"><div class="ft">기본 · 10,000원</div><div class="fd">30크레딧 — 자소서 <b>1문항 완성</b> + 킬러 4회 여유</div></div>
+      <div class="fbox"><div class="ft">집중 · 30,000원</div><div class="fd">100크레딧 — 자소서 <b>5문항</b> = 한 회사 지원서 전체</div></div>
+    </div>
+
+    <p class="flow-note" style="margin-top:14px">
+      <b>무료 = 하루 5크레딧</b>(킬러 1회 + 소재 1회). ⚠️ <b>안 쓰면 사라진다 — 쌓이지 않는다.</b>
+      적립을 허용하면 한 달을 모아 한 번에 쏟아붓는 사용이 생겨 상한이 없어진다.
+    </p>
+    <p class="flow-note" style="margin-top:8px">
+      <b>⚠️ 무료 크레딧으로는 첨삭을 살 수 없다 — 첨삭은 충전한 크레딧으로만.</b>
+      이 잠금이 없으면 하루 5크레딧으로 <b>매일 첨삭이 공짜</b>가 되어(첨삭 10이면 이틀치) 아무도 충전하지 않는다.
+      원장에 <code>free</code>/<code>paid</code> 구분만 넣으면 된다.
+      한 달 뒤 <code>ai_killer_checks</code>의 토큰 기록으로 실제 평균을 보고 하루 5를 조절한다.
+    </p>
+  </div>
+
+  <!-- ══════════════ 1. 저장소 목록 ══════════════ -->
+  <section>
+    <span class="stag">화면 1</span>
+    <h2>답변 저장소 — 검색 · 유형 · 검사 이력</h2>
+    <p class="who">`answers.html` 개편. 검색창과 칩은 이미 있지만 <b>자유 글은 유형이 없어 분류에서 빠진다.</b></p>
+    <p class="why">
+      유형은 새로 만들지 않는다 — 소재 발굴이 이미 쓰는 <code>questions.category</code> 4종
+      (<b>경험 · 가치관 · 상황판단 · 회사·직무</b>)을 그대로 쓴다. 직접 쓴 답변도 저장할 때 같은 4종에서 고른다.
+      그래야 소재 발굴로 만든 답변과 직접 쓴 답변이 <b>한 목록에서 같이 걸린다.</b>
+    </p>
+    <p class="why" style="margin-top:8px">
+      카드마다 <b>마지막 검사 등급</b>이 보인다. 검사한 적 없으면 조용히 비운다 —
+      "아직 안 함"을 굳이 쓰면 목록이 잔소리가 된다.
+    </p>
+    <p class="warn">⚠️ 지금 `answers.html`은 조회에서 <code>title</code>을 안 읽는다 — 직접 쓴 답변은 제목이 안 뜬다.</p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">목록 — 검색 · 유형 칩 · 마지막 등급</div>
+        <div class="screen" id="s1">
+          <div class="sc-nav"><span class="b">← 마이페이지</span><span class="t">답변 저장소</span><span class="r"></span></div>
+          <div class="sc-body">
+            <div class="eyebrow">MY ANSWERS</div>
+            <div class="h-title">내 답변 저장소</div>
+            <p class="h-sub">써 둔 답변을 모아 두고, 언제든 다시 검사해요.</p>
+
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="search" placeholder="질문·답변 내용 검색">
+            </div>
+
+            <div class="filt" data-filt>
+              <button class="on">전체 12</button>
+              <button>경험 5</button>
+              <button>가치관 3</button>
+              <button>상황판단 2</button>
+              <button>회사·직무 2</button>
+            </div>
+            <p class="cnt"><b>12개</b> · 최근 수정순</p>
+
+            <button class="ans">
+              <div class="ans-t">자신의 강점을 말해 보세요</div>
+              <p class="ans-p">저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서 아르바이트를 하며 다양한 손님을 응대했고…</p>
+              <div class="ans-m">
+                <span class="tag">경험</span>
+                <span class="tag air" style="--air:var(--air-ke)">KOREAN AIR</span>
+                <span class="grade" style="--g:var(--g-slight)">조금 티남 <i>· 2회 검사</i></span>
+              </div>
+            </button>
+
+            <button class="ans">
+              <div class="ans-t">지원 동기를 기술하시오</div>
+              <p class="ans-p">어릴 적부터 하늘을 동경해왔습니다. 다양한 경험을 통해 서비스 마인드를 기를 수 있었고…</p>
+              <div class="ans-m">
+                <span class="tag">회사·직무</span>
+                <span class="tag">자소서</span>
+                <span class="grade" style="--g:var(--g-heavy)">AI 티 많이 남</span>
+              </div>
+            </button>
+
+            <button class="ans">
+              <div class="ans-t">갈등을 해결한 경험</div>
+              <p class="ans-p">동아리에서 공연 순서를 두고 의견이 갈렸습니다. 저는 먼저 상대의 이유를 물었고, 연습 일정을 두 주…</p>
+              <div class="ans-m">
+                <span class="tag">상황판단</span>
+                <span class="tag air" style="--air:var(--air-tw)">T'WAY AIR</span>
+                <span class="grade" style="--g:var(--g-human)">사람 같음</span>
+              </div>
+            </button>
+
+            <button class="ans">
+              <div class="ans-t">10년 뒤 나의 모습</div>
+              <p class="ans-p">아직 정리 중이에요. 후배들에게 기내 방송을 가르치는 선배가 되고 싶다는 생각까지는 했는데…</p>
+              <div class="ans-m">
+                <span class="tag">가치관</span>
+                <span class="tag draft">작성 중</span>
+                <span class="ans-none">검사 전</span>
+              </div>
+            </button>
+
+            <div class="addbar">
+              <button class="add" data-add>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                답변 추가하기
+              </button>
+              <p class="add-note">저장은 <b>무제한 무료</b>예요. 검사 횟수와 상관없어요.</p>
+            </div>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">답변 추가 — 소재 발굴을 거치지 않는 길</div>
+        <div class="screen" id="s2">
+          <div class="sc-nav"><span class="b">← 취소</span><span class="t">답변 추가</span><span class="r"></span></div>
+          <div class="sc-body">
+            <div class="card">
+              <div class="lbl">어떤 질문인가요</div>
+              <input class="qin" placeholder="예) 자신의 강점을 말해 보세요">
+
+              <div class="hr"></div>
+              <div class="lbl">질문 유형</div>
+              <div class="grid2" data-pick>
+                <button class="on">경험</button>
+                <button>가치관</button>
+                <button>상황판단</button>
+                <button>회사·직무</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">종류</div>
+              <div class="seg" data-seg>
+                <button class="on">면접 답변</button>
+                <button>자소서</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">지망 항공사 <span style="font-weight:700;color:var(--text-dim)">(선택)</span></div>
+              <button class="pickbtn" data-air-open>
+                <span data-air-label>아직 안 정했어요</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              <div class="hr"></div>
+              <div class="lbl">답변</div>
+              <textarea class="ta" placeholder="지금 생각나는 대로 써도 괜찮아요. 나중에 고칠 수 있어요."></textarea>
+              <div class="foot"><span>나중에 이어서 써도 돼요</span><b>0 / 1,500자</b></div>
+            </div>
+
+            <button class="cta">저장하기</button>
+            <p class="left">저장은 <b>무료</b>예요 · 검사는 저장 후에 골라서 해요</p>
+            <p class="note" style="text-align:center">
+              소재가 잘 안 떠오르면 <b>소재 발굴</b>에서 되묻기로 캐낼 수도 있어요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ 2. 답변 상세 + 검사 이력 ══════════════ -->
+  <section>
+    <span class="stag">화면 2</span>
+    <h2>답변 상세 — 검사 이력이 쌓이는 자리</h2>
+    <p class="who">"계속 꺼내서 볼 수 있게" 하려면 이 화면이 있어야 한다. 지금은 없다.</p>
+    <p class="why">
+      한 답변을 고쳐 가며 여러 번 검사하는 게 정상 사용이라, 검사는 답변에 <b>1:N</b>으로 붙는다
+      (<code>ai_killer_checks.answer_id</code> — 이미 그렇게 설계돼 있다).
+      이력을 누르면 <b>그때 그 결과 화면이 그대로</b> 열린다. 원문·밑줄·지적이 전부 저장돼 있다.
+    </p>
+    <p class="why" style="margin-top:8px">
+      <b>등급이 나아지는 게 눈에 보이는 것</b>이 이 도구의 값어치다 — 한 번 쓰고 끝나는 검사기와 갈리는 지점.
+    </p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">답변 상세 — 검사 2회 이력</div>
+        <div class="screen" id="s3">
+          <div class="sc-nav"><span class="b">← 저장소</span><span class="t">답변</span><span class="r">수정</span></div>
+          <div class="sc-body">
+            <div class="det-m" style="margin-top:2px">
+              <span class="tag">경험</span>
+              <span class="tag air" style="--air:var(--air-ke)">KOREAN AIR</span>
+              <span class="tag">면접 답변</span>
+            </div>
+            <div class="det-q">자신의 강점을 말해 보세요</div>
+            <div class="det-m"><span>7월 21일 저장 · 7월 24일 수정</span></div>
+
+            <div class="det-body">
+              저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서 아르바이트를 하며
+              다양한 손님을 응대했고, 그 과정에서 서비스 마인드를 기를 수 있었습니다.
+            </div>
+
+            <div class="hist">
+              <div class="hist-h">
+                <span class="hist-t">검사 이력</span>
+                <span class="hist-n">2회</span>
+              </div>
+
+              <button class="hrow">
+                <span class="hrow-d">7월 24일</span>
+                <span class="hrow-g" style="--g:var(--g-slight)">조금 티남</span>
+                <span class="hrow-c">고칠 곳 4</span>
+                <span class="hrow-go">보기 →</span>
+              </button>
+              <button class="hrow">
+                <span class="hrow-d">7월 21일</span>
+                <span class="hrow-g" style="--g:var(--g-heavy)">AI 티 많이 남</span>
+                <span class="hrow-c">고칠 곳 9</span>
+                <span class="hrow-go">보기 →</span>
+              </button>
+
+              <p class="note">고친 뒤 다시 검사하면 <b>얼마나 나아졌는지</b> 여기에 남아요.</p>
+            </div>
+
+            <button class="cta" style="margin-top:18px">고쳐서 다시 KILL AI</button>
+            <p class="left">이 답변의 <b>2회를 다 썼어요</b> · 다시 검사하면 크레딧 <b>3개</b>가 더 들어요</p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">아직 검사 전 — 무료분이 남아 있을 때</div>
+        <div class="screen" id="s4">
+          <div class="sc-nav"><span class="b">← 저장소</span><span class="t">답변</span><span class="r">수정</span></div>
+          <div class="sc-body">
+            <div class="det-m" style="margin-top:2px">
+              <span class="tag">가치관</span>
+              <span class="tag">면접 답변</span>
+            </div>
+            <div class="det-q">10년 뒤 나의 모습</div>
+            <div class="det-m"><span>7월 25일 저장</span></div>
+
+            <div class="det-body">
+              아직 정리 중이에요. 후배들에게 기내 방송을 가르치는 선배가 되고 싶다는 생각까지는
+              했는데, 왜 그런지를 아직 못 적었습니다.
+            </div>
+
+            <div class="hist">
+              <div class="hist-h"><span class="hist-t">검사 이력</span><span class="hist-n">0회</span></div>
+              <div class="hist-empty">아직 검사하지 않은 답변이에요.</div>
+            </div>
+
+            <div class="pay" style="margin-top:16px">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span><b>오늘의 무료 크레딧으로 검사돼요.</b><br>고쳐서 <b>2번까지</b> 추가 차감 없이 다시 검사할 수 있어요.</span>
+            </div>
+
+            <button class="cta">KILL AI</button>
+            <p class="left">무료 크레딧 <b>3개</b> 사용 · 오늘 <b>5개</b> 중 2개 남아요</p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ 3. AI킬러 입력 ══════════════ -->
+  <section>
+    <span class="stag">화면 3</span>
+    <h2>AI킬러 입력 — 탭 없이 한 장</h2>
+    <p class="who">붙여넣기를 막지 않는다. 다만 <b>검사한 글은 저장소에 자동으로 들어간다.</b></p>
+    <p class="why">
+      "붙여넣기 / 답변노트에서" 탭은 없앤다. 글이 어디서 왔든 검사는 같고,
+      다른 건 <b>과금과 저장 여부뿐</b>이라 그건 결과로 표시하면 된다.
+      저장소에서 고른 글이면 <b>유형·종류·항공사가 자동으로 채워지고</b> 무료가 붙는다.
+    </p>
+    <p class="why" style="margin-top:8px">
+      ⚠️ 자동 저장은 <b>미리 알린다.</b> 검사하고 나서야 "저장됐습니다"가 뜨면
+      남의 글을 대신 넣어 본 사람에게는 사고다. 버튼 아래 한 줄로 미리 말한다.
+    </p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">붙여넣기 — 1회 차감 + 자동 저장 고지</div>
+        <div class="screen" id="s5">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI KILLER</span><span class="r">크레딧 24</span></div>
+          <div class="sc-body">
+            <div class="h-title">어디가 AI처럼<br>읽히는지</div>
+            <p class="h-sub">문장을 하나씩 짚어요. 왜 그렇게 읽히는지, 어떻게 고칠지까지.</p>
+
+            <div class="card">
+              <div class="lbl">종류</div>
+              <div class="seg" data-seg>
+                <button class="on">면접 답변</button>
+                <button>자소서</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">지망 항공사 <span style="font-weight:700;color:var(--text-dim)">(선택)</span></div>
+              <button class="pickbtn" data-air-open>
+                <span data-air-label>아직 안 정했어요</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              <div class="hr"></div>
+              <input class="qin" placeholder="어떤 질문을 받았나요? (선택)">
+
+              <div class="hr"></div>
+              <textarea class="ta" placeholder="검사할 답변을 넣어 주세요."></textarea>
+              <div class="foot"><span>100자 이상</span><b>0 / 1,500자</b></div>
+            </div>
+
+            <button class="pay" data-load-open>
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h10M4 10h16M4 15h7"/><path d="M14 19l3 3 5-6"/></svg>
+              <span><b>저장소에 있는 답변은 무료 크레딧으로 검사돼요.</b><br>오늘 5개 남음 · 12개 저장돼 있어요.</span>
+              <span class="go">고르기 →</span>
+            </button>
+
+            <button class="cta">KILL AI</button>
+            <p class="left">크레딧 <b>3개</b>가 쓰여요 · 남은 <b>24개</b> (이 답변은 2회까지 검사)</p>
+            <p class="note" style="text-align:center">
+              검사한 글은 <b>답변 저장소에 자동으로 저장</b>돼요. 이력이 남아 다시 볼 수 있어요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">저장소에서 고른 뒤 — 맥락 자동 채움 + 무료</div>
+        <div class="screen" id="s6">
+          <div class="sc-nav"><span class="b">← 브리핑룸</span><span class="t">AI KILLER</span><span class="r">크레딧 24</span></div>
+          <div class="sc-body">
+            <div class="h-title">어디가 AI처럼<br>읽히는지</div>
+            <p class="h-sub">문장을 하나씩 짚어요. 왜 그렇게 읽히는지, 어떻게 고칠지까지.</p>
+
+            <div class="card">
+              <div class="lbl">종류</div>
+              <div class="seg" data-seg>
+                <button class="on">면접 답변</button>
+                <button>자소서</button>
+              </div>
+
+              <div class="hr"></div>
+              <div class="lbl">지망 항공사</div>
+              <button class="pickbtn set" style="--air:var(--air-ke)" data-air-open>
+                <span data-air-label>대한항공</span>
+                <span class="en">KOREAN AIR</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+
+              <div class="hr"></div>
+              <input class="qin" value="자신의 강점을 말해 보세요">
+
+              <div class="hr"></div>
+              <textarea class="ta">저는 어떤 상황에서도 웃음을 잃지 않는 사람입니다. 카페에서 아르바이트를 하며 다양한 손님을 응대했고, 그 과정에서 서비스 마인드를 기를 수 있었습니다.</textarea>
+              <div class="foot"><span>저장소에서 불러옴 · 7월 21일</span><b>82 / 1,500자</b></div>
+            </div>
+
+            <div class="pay">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span><b>이 답변의 2번째 검사예요.</b><br>같은 답변이라 <b>추가 차감 없이</b> 검사돼요 · 결과는 이력에 쌓여요.</span>
+            </div>
+
+            <button class="cta">KILL AI</button>
+            <p class="left">이 답변의 <b>마지막 무차감 검사</b>예요 (한 답변당 2회)</p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ 4. 첨삭(유료) ══════════════ -->
+  <section>
+    <span class="stag">화면 4 · 유료</span>
+    <h2>첨삭 — 검사가 진단이면 이건 처방</h2>
+    <p class="who">2026-07-25 오너 확정. <b>무료는 방향만, 유료는 실제로 고쳐 준다.</b></p>
+    <p class="why">
+      <b>왜 이게 'AI 공장'이 아닌가(오너 논거):</b> 학생들은 이미 AI로 답변을 쓴다 —
+      그래서 AI킬러가 필요한 것이다. 첨삭이 하는 일은 그 반대 방향이다.
+      AI가 쓴 밋밋한 글을 <b>합격자 자료를 기준 삼아</b>, <b>그 학생의 개인 소재를 최대한 살려서</b>
+      사람이 쓴 글로 되돌린다. 내용은 학생 것에서 나오고 레퍼런스는 <b>문체·구조의 잣대</b>로만 쓰인다.
+      그래서 결과가 서로 비슷해지지 않는다.
+    </p>
+    <p class="why" style="margin-top:10px">
+      <b>⚠️ 화면에서는 '합격자 자료'가 아니라 '연구진이 보는 기준'으로 말한다</b>(2026-07-25 오너 확정).
+      값이 읽히려면 <b>무엇과 비교되느냐</b>가 먼저 정해져야 한다 —
+      'AI 검사 도구'로 읽히면 ChatGPT(월 3만 원 무제한)와 비교돼 만 원도 비싸 보이고,
+      '연구진 기준의 첨삭'으로 읽히면 학원 첨삭(문항당 2~5만 원)과 비교돼 파격이 된다.
+      몬크의 자산이 연구진과 합격자 자료인 이상 <b>후자로 서야 한다.</b>
+    </p>
+    <p class="warn">
+      ⚠️ 대신 <b>코드에서 반드시 막아야 하는 것 하나</b> — 원문에 개인 소재가 없으면
+      AI는 <b>없는 경험을 지어낸다.</b> 그건 첨삭이 아니라 허위 자소서고, 면접장에서 학생이 무너진다.
+      그래서 <b>소재가 부족하면 첨삭을 시작하지 않고 되묻는다</b>(오른쪽 화면).
+    </p>
+
+    <div class="frames">
+      <div class="phone">
+        <div class="phone-cap">검사 결과 끝 — 첨삭으로 넘어가는 자리</div>
+        <div class="screen" id="s7">
+          <div class="sc-nav"><span class="b">← 저장소</span><span class="t">검사 결과</span><span class="r">저장됨</span></div>
+          <div class="sc-body">
+            <div class="det-m" style="margin-top:2px">
+              <span class="tag">경험</span>
+              <span class="tag air" style="--air:var(--air-ke)">KOREAN AIR</span>
+            </div>
+            <div class="det-q" style="font-size:18px">자신의 강점을 말해 보세요</div>
+            <div class="det-m">
+              <span class="grade" style="--g:var(--g-slight)">조금 티남</span>
+              <span>· 고칠 곳 4</span>
+            </div>
+
+            <div class="det-body" style="font-size:14.5px">
+              저는 어떤 상황에서도 <u style="text-decoration-color:var(--action);text-underline-offset:3px">웃음을 잃지 않는</u> 사람입니다.
+              카페에서 아르바이트를 하며 <u style="text-decoration-color:var(--action);text-underline-offset:3px">다양한 손님</u>을 응대했고,
+              그 과정에서 <u style="text-decoration-color:var(--action);text-underline-offset:3px">서비스 마인드</u>를 기를 수 있었습니다.
+            </div>
+            <p class="note">지적 4곳은 아래 화살표로 하나씩 볼 수 있어요.</p>
+
+            <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+              <div class="hist-t" style="font-size:17px">고칠 방향은 알겠는데<br>어떻게 쓸지 막막하다면</div>
+              <p class="note" style="margin-top:8px">
+                <b>연구진이 보는 기준</b>으로, <b>당신이 쓴 소재 그대로</b> 다시 써요.
+                없는 경험을 만들어 넣지 않아요.
+              </p>
+              <button class="cta" style="margin-top:14px">첨삭받기 · 크레딧 10개</button>
+              <p class="left">남은 크레딧 <b>21개</b> · 학원 첨삭 한 번 값으로 <b>여러 번</b> 고쳐 써요</p>
+            </div>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">⚠️ 소재가 없으면 — 고치기 전에 되묻는다</div>
+        <div class="screen" id="s8">
+          <div class="sc-nav"><span class="b">← 결과</span><span class="t">첨삭</span><span class="r"></span></div>
+          <div class="sc-body">
+            <div class="eyebrow">BEFORE WE START</div>
+            <div class="h-title">고쳐 쓸 재료가<br>아직 부족해요</div>
+            <p class="h-sub">
+              지금 답변에는 <b>겪은 장면이 하나도 없어요.</b> 이대로 고치면 저희가
+              없는 경험을 지어내게 되고, 면접장에서는 그게 다 드러나요.
+            </p>
+
+            <div class="card">
+              <div class="lbl">세 가지만 알려 주세요</div>
+              <input class="qin" placeholder="언제, 어디서 있었던 일인가요?">
+              <div style="height:12px"></div>
+              <input class="qin" placeholder="그때 당신이 실제로 한 말이나 행동은?">
+              <div style="height:12px"></div>
+              <input class="qin" placeholder="숫자로 말할 수 있는 게 있나요? (인원·기간·횟수)">
+            </div>
+
+            <button class="cta" style="margin-top:16px">이걸로 첨삭받기</button>
+            <p class="left">크레딧 <b>10개</b>가 쓰여요 · <b>아직 차감되지 않았어요</b></p>
+            <p class="note" style="text-align:center">
+              소재가 잘 안 떠오르면 <b>소재 발굴</b>에서 되묻기로 캐낸 다음 오세요. 그건 무료예요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">충전 — 비교 기준이 있어야 값이 읽힌다</div>
+        <div class="screen" id="s10">
+          <div class="sc-nav"><span class="b">← 뒤로</span><span class="t">크레딧 충전</span><span class="r">크레딧 4</span></div>
+          <div class="sc-body">
+            <div class="h-title" style="font-size:23px">크레딧이<br>부족해요</div>
+            <p class="h-sub">첨삭에는 크레딧 10개가 필요해요. 지금 4개 남았어요.</p>
+
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="padding:14px;border-bottom:1px solid var(--border-soft)">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:16px;font-weight:800">체험</span>
+                  <span style="font-size:18px;font-weight:800">5,000원</span>
+                </div>
+                <div style="margin-top:4px;font-size:14px;color:var(--text-dim)">14크레딧 · 자소서 반 문항</div>
+              </div>
+
+              <div style="padding:14px;border-bottom:1px solid var(--border-soft);background:var(--action-tint)">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:16px;font-weight:800">기본</span>
+                  <span style="font-size:18px;font-weight:800">10,000원</span>
+                </div>
+                <div style="margin-top:4px;font-size:14px;color:var(--action-ink);font-weight:700">
+                  30크레딧 · <b>자소서 1문항 완성</b> + 검사 4회</div>
+              </div>
+
+              <div style="padding:14px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:16px;font-weight:800">집중</span>
+                  <span style="font-size:18px;font-weight:800">30,000원</span>
+                </div>
+                <div style="margin-top:4px;font-size:14px;color:var(--text-dim)">
+                  100크레딧 · 자소서 <b>5문항</b> = 한 회사 지원서 전체</div>
+              </div>
+            </div>
+
+            <div class="pay plain" style="margin-top:14px">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg>
+              <span><b>학원 자소서 첨삭은 한 문항에 2~5만 원.</b><br>
+                여기서는 만 원으로 <b>한 문항을 끝까지</b> — 소재 찾고, 검사하고, 고쳐 쓰기까지 해요.</span>
+            </div>
+
+            <button class="cta">10,000원 충전하기</button>
+            <p class="left">카드·간편결제로 <b>바로 충전</b>돼요</p>
+            <p class="note" style="text-align:center">
+              무료 크레딧은 매일 5개씩 들어와요. 검사는 무료로도 되지만
+              <b>첨삭은 충전한 크레딧으로만</b> 할 수 있어요.
+            </p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-cap">첨삭 결과 — 무엇이 왜 바뀌었는지</div>
+        <div class="screen" id="s9">
+          <div class="sc-nav"><span class="b">← 결과</span><span class="t">첨삭본</span><span class="r">저장됨</span></div>
+          <div class="sc-body">
+            <div class="eyebrow">AFTER</div>
+            <div class="h-title" style="font-size:22px">고쳐 쓴 답변</div>
+            <p class="h-sub"><b>연구진이 보는 기준</b>으로 흐름을 잡았고, 내용은 <b>당신이 쓴 소재</b> 그대로예요.</p>
+
+            <div class="det-body" style="font-size:15px;border-color:var(--free-bd);background:#FBFDFB">
+              카페에서 일한 <b style="color:var(--free)">여덟 달 동안</b> 하루 <b style="color:var(--free)">200잔</b> 넘게 만들었습니다.
+              <b style="color:var(--free)">주문이 밀린 아침</b>, 음료가 늦다며 화를 내신 손님께
+              <b style="color:var(--free)">“두 잔이 남았어요, 3분만요”</b>라고 남은 시간을 먼저 말씀드렸습니다.
+              그 뒤로 저는 기다리는 분께 <b style="color:var(--free)">먼저 상황을 알려 드리는 습관</b>이 생겼습니다.
+            </div>
+
+            <div class="hist" style="margin-top:18px">
+              <div class="hist-h"><span class="hist-t">무엇을 바꿨나</span><span class="hist-n">3곳</span></div>
+
+              <div class="hrow" style="display:block;cursor:default">
+                <div style="font-size:14px;color:var(--text-dim)">웃음을 잃지 않는 사람입니다</div>
+                <div style="font-size:15px;font-weight:800;margin-top:3px">→ 주문이 밀린 아침의 장면</div>
+                <div style="font-size:14px;color:var(--text-muted);margin-top:5px">
+                  성격을 주장하면 면접관이 안 믿어요. 합격자 자료에서도 <b>성격어 대신 장면</b>이 먼저 나와요.</div>
+              </div>
+
+              <div class="hrow" style="display:block;cursor:default">
+                <div style="font-size:14px;color:var(--text-dim)">다양한 손님을 응대했고</div>
+                <div style="font-size:15px;font-weight:800;margin-top:3px">→ 하루 200잔, 여덟 달</div>
+                <div style="font-size:14px;color:var(--text-muted);margin-top:5px">
+                  숫자는 당신이 알려 준 것만 썼어요. <b>지어낸 수치는 없어요.</b></div>
+              </div>
+
+              <div class="hrow" style="display:block;cursor:default">
+                <div style="font-size:14px;color:var(--text-dim)">서비스 마인드를 기를 수 있었습니다</div>
+                <div style="font-size:15px;font-weight:800;margin-top:3px">→ 먼저 상황을 알려 드리는 습관</div>
+                <div style="font-size:14px;color:var(--text-muted);margin-top:5px">
+                  깨달음으로 끝내지 않고 <b>다음에 무엇을 다르게 하는지</b>로 닫았어요.</div>
+              </div>
+            </div>
+
+            <div class="pay plain" style="margin-top:18px">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+              <span><b>그대로 외우지 마세요.</b> 소리 내어 읽어 보고 어색한 말은 당신 말로 바꾸세요.
+                면접관은 외운 문장을 알아봅니다.</span>
+            </div>
+
+            <button class="cta ghost" style="margin-top:14px">저장소에 첨삭본으로 저장</button>
+            <p class="left">원본은 그대로 남아요 · 둘을 나란히 볼 수 있어요</p>
+          </div>
+          <div class="sheet-mask" data-sheet-close></div>
+          <div class="sheet" data-sheet></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="why" style="margin-top:20px">
+      <b>서버가 지켜야 할 규칙 4개</b> — 이게 '레퍼런스 베끼기'와 갈리는 지점이다.
+    </p>
+    <table style="max-width:900px">
+      <tr><th style="width:210px">규칙</th><th>이유</th></tr>
+      <tr><td><b>사실은 원문에서만</b></td>
+          <td>숫자·장소·시기·대사는 <b>학생이 쓴 것 또는 되물어 받은 것</b>만 쓴다. 새 사실을 만들면 허위 자소서가 된다</td></tr>
+      <tr><td><b>소재 없으면 되묻기</b></td>
+          <td>구체 사실이 하나도 없으면 첨삭을 시작하지 않는다(위 가운데 화면). <b>차감도 그때 하지 않는다</b></td></tr>
+      <tr><td><b>레퍼런스는 잣대로만</b></td>
+          <td>합격자 문장을 붙여 넣지 않는다. <b>흐름·순서·구체성 수준</b>만 가져온다</td></tr>
+      <tr><td><b>첨삭본도 자기검사</b></td>
+          <td>우리 상투어 사전을 <b>첨삭 결과에 다시 돌린다</b>(4겹 고삐 ③). 걸리면 다시 쓴다 —
+              AI 티를 빼 준다면서 AI 티 나는 문장을 주면 그 자리에서 끝이다</td></tr>
+    </table>
+  </section>
+
+  <!-- ══════════════ 데이터 ══════════════ -->
+  <section>
+    <span class="stag">무엇을 만들어야 하나</span>
+    <h2>데이터와 화면</h2>
+
+    <table>
+      <tr><th style="width:200px">할 일</th><th>내용</th><th style="width:120px">오너 작업</th></tr>
+      <tr>
+        <td><b>answers 확장</b></td>
+        <td><code>category</code>(경험·가치관·상황판단·회사직무) / <code>doc_kind</code>(면접·자소서) /
+            <code>airline</code>. 소재 발굴로 만든 답변은 <code>questions</code>에서 값을 물려받는다</td>
+        <td class="no">SQL 1건</td>
+      </tr>
+      <tr>
+        <td><b>답변 추가 화면</b></td>
+        <td>지금 없다. 저장소에서 바로 쓰는 길 — <b>이번 개편의 핵심</b></td>
+        <td class="ok">없음</td>
+      </tr>
+      <tr>
+        <td><b>답변 상세 + 이력</b></td>
+        <td>검사 이력 목록 + 지난 결과 다시 열기. 테이블은 이미 1:N으로 준비돼 있다</td>
+        <td class="ok">없음</td>
+      </tr>
+      <tr>
+        <td><b>검색 · 유형 필터</b></td>
+        <td>검색창·칩은 이미 있다. <b>자유 글이 분류에 잡히도록</b> 고치고 <code>title</code>을 조회에 넣는다</td>
+        <td class="ok">없음</td>
+      </tr>
+      <tr>
+        <td><b>AI킬러 자동 저장</b></td>
+        <td>붙여넣기 검사 시 <code>answers</code>에 저장하고 <code>answer_id</code>로 잇는다</td>
+        <td class="ok">없음</td>
+      </tr>
+      <tr>
+        <td><b>마이페이지 카드</b></td>
+        <td>답변노트 카드도 같은 규칙으로(<b>두 곳을 같이 고쳐야 한다</b> — 한쪽만 고치면 제목이 빈다)</td>
+        <td class="ok">없음</td>
+      </tr>
+      <tr>
+        <td><b>크레딧 차등 + 답변 단위</b></td>
+        <td>지금 원장은 '검사 1회 = 1차감'이다. <b>도구별 단가</b>(소재 1 / 킬러 3 / 첨삭 5)를 넣고,
+            <code>credit_ledger.ref</code>를 검사 id가 아니라 <b>answer id</b>로 잡는다 —
+            그러면 같은 답변 재검사가 자연히 무차감이 된다(2회 상한은 상수 <code>MAX_RECHECK</code>).
+            무료 한도는 <b>하루·주 단위 리셋</b>이라 원장에 지급 이력을 남기고 기간으로 센다</td>
+        <td class="no">SQL 1건</td>
+      </tr>
+      <tr>
+        <td><b>충전 팩 · 무료 잠금</b></td>
+        <td>체험 5,000/14 · <b>기본 10,000/30</b> · 집중 30,000/100.
+            원장에 <code>free</code>/<code>paid</code> 구분을 넣어 <b>첨삭은 유료 크레딧만</b> 쓰게 한다 —
+            이 잠금이 수익의 전부라 <b>빼면 아무도 충전하지 않는다</b></td>
+        <td class="no">SQL에 포함</td>
+      </tr>
+      <tr>
+        <td><b>첨삭(유료)</b></td>
+        <td>⑧단계 합격자 자료 이후. <b>소재 부족 시 되묻기 → 차감 보류</b>가 핵심 안전장치</td>
+        <td class="no">자료 3종</td>
+      </tr>
+      <tr>
+        <td><b>소재 발굴도 과금</b></td>
+        <td>⚠️ 지금은 <b>완전 무료</b>다(<code>sojae-chat</code>). 1크레딧으로 바꾸면 기존 사용자에게는
+            <b>있던 게 없어지는 변경</b>이라, 무료 한도 안에 소재 발굴도 포함할지 따로 정해야 한다</td>
+        <td class="no">정책 확정</td>
+      </tr>
+    </table>
+
+    <div class="ask">
+      <h4>확정된 것 — 그대로 구현</h4>
+      <ul>
+        <li><b>크레딧 차등</b>: 소재 발굴 2 / KILL AI 3 / 첨삭 10</li>
+        <li><b>가격</b>: 만원 30크레딧(체험 5천/14 · 집중 3만/100). 자소서 1문항 = 18크레딧</li>
+        <li><b>무료</b>: 하루 5크레딧, 쌓이지 않고 리셋. <b>첨삭은 충전 크레딧으로만</b></li>
+        <li><b>포지셔닝</b>: '연구진이 보는 기준' — 학원 첨삭과 비교되게 한다</li>
+        <li><b>한 답변은 2회까지</b> 무차감 재검사(나중에 1회로 — 상수 하나)</li>
+        <li>저장은 무제한 무료 · 붙여넣기 검사는 <b>자동으로 저장소에 저장</b></li>
+        <li><b>무료는 방향만, 유료는 실제 첨삭</b> — 사실은 원문에서만, 소재 없으면 되묻기</li>
+        <li>지망 항공사에 <b>'만능'</b> 추가(어디에나 쓰는 답변) — '아직 안 정했어요'와 다른 값</li>
+      </ul>
+      <p style="margin-top:12px"><b>아직 안 정한 것 둘</b></p>
+      <ul>
+        <li><b>소재 발굴을 1크레딧으로 돌릴지.</b> 지금은 완전 무료라 <b>있던 게 없어지는 변경</b>이다.
+            무료 한도(하루 1·주 5)를 킬러 전용으로 둘지, 소재 발굴까지 같은 지갑에서 쓰게 할지</li>
+        <li><b>붙여넣기 자동 저장분을 지울 수 있게</b> 할지. 남의 글·연습 글까지 쌓이면 저장소가
+            지저분해진다 — 기본 저장 + 원할 때 지우기를 권한다</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const AIR = [
+    ['ke','대한항공','KOREAN AIR'], ['lj','진에어','JIN AIR'], ['7c','제주항공','JEJU AIR'],
+    ['tw','티웨이항공',"T'WAY AIR"], ['ze','이스타항공','EASTAR JET'],
+    ['yp','에어프레미아','AIR PREMIA'], ['rf','에어로케이','AERO K'],
+  ];
+  const NOTES = [
+    ['자신의 강점을 말해 보세요','경험 · KOREAN AIR','7월 21일'],
+    ['지원 동기를 기술하시오','회사·직무 · 자소서','7월 19일'],
+    ['갈등을 해결한 경험','상황판단 · T\'WAY AIR','7월 14일'],
+    ['10년 뒤 나의 모습','가치관 · 작성 중','7월 25일'],
+  ];
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const open = (screen, html) => {
+    screen.querySelector('[data-sheet]').innerHTML = '<div class="sheet-grip"></div>' + html;
+    screen.classList.add('sheet-on');
+  };
+
+  document.addEventListener('click', (e) => {
+    const screen = e.target.closest('.screen');
+    if (!screen) return;
+
+    if (e.target.closest('[data-sheet-close]')) { screen.classList.remove('sheet-on'); return; }
+
+    if (e.target.closest('[data-air-open]')) {
+      open(screen, '<div class="sheet-h">지망 항공사</div>'
+        + '<div class="sheet-s">항공사마다 자소서 흐름도, 면접이 보는 결도 달라요. 안 정했으면 비워도 돼요.</div>'
+        // ⚠️ '만능'은 '아직 안 정했어요'와 다르다 — 전자는 **어느 항공사에도 쓰려고 만든 답변**,
+        //    후자는 지망사를 아직 못 정한 상태다. 첨삭 방향이 갈리므로 값도 따로 둔다(all / null).
+        + '<button class="opt" data-air="all" data-ko="만능 (항공사 공통)">만능'
+        + '<span style="margin-left:auto;font-size:14px;font-weight:700;color:var(--text-dim)">어디에나 쓰는 답변</span></button>'
+        + AIR.map(([c, ko, en]) => '<button class="opt" data-air="' + c + '" data-ko="' + esc(ko)
+            + '" data-en="' + esc(en) + '" style="--air:var(--air-' + c + ')">' + esc(ko)
+            + '<span class="en">' + esc(en) + '</span></button>').join('')
+        + '<button class="opt" data-air="">아직 안 정했어요</button>');
+      return;
+    }
+
+    if (e.target.closest('[data-load-open]')) {
+      open(screen, '<div class="sheet-h">저장소에서 고르기</div>'
+        + '<div class="sheet-s">넣어 둔 답변이에요. 고르면 무료 1회로 검사되고 이력이 쌓여요.</div>'
+        + NOTES.map(([t, m, d]) => '<button class="opt" style="display:block;padding:12px 4px">'
+            + '<div style="font-size:15px;font-weight:800">' + esc(t) + '</div>'
+            + '<div style="margin-top:4px;font-size:14px;font-weight:700;color:var(--free)">무료 · '
+            + esc(m) + ' · ' + esc(d) + '</div></button>').join(''));
+      return;
+    }
+
+    if (e.target.closest('[data-add]')) {
+      open(screen, '<div class="sheet-h">답변 추가</div>'
+        + '<div class="sheet-s">이 목업에서는 오른쪽 "답변 추가" 화면으로 이어집니다.</div>'
+        + '<button class="opt">직접 쓰기 — 무료·무제한</button>'
+        + '<button class="opt">소재 발굴에서 캐내기</button>');
+      return;
+    }
+
+    const air = e.target.closest('.opt[data-air]');
+    if (air) {
+      const btn = screen.querySelector('[data-air-open]');
+      const label = btn.querySelector('[data-air-label]');
+      btn.querySelector('.en')?.remove();
+      if (air.dataset.air === 'all') {
+        // 만능 — 영문 사명이 없다(특정 항공사가 아니므로). 색도 기본 잉크.
+        label.textContent = air.dataset.ko;
+        btn.classList.add('set');
+        btn.style.setProperty('--air', 'var(--text)');
+      } else if (air.dataset.air) {
+        label.textContent = air.dataset.ko;
+        btn.classList.add('set');
+        btn.style.setProperty('--air', 'var(--air-' + air.dataset.air + ')');
+        const en = document.createElement('span');
+        en.className = 'en'; en.textContent = air.dataset.en;
+        btn.insertBefore(en, btn.lastElementChild);
+      } else {
+        label.textContent = '아직 안 정했어요';
+        btn.classList.remove('set');
+      }
+      screen.classList.remove('sheet-on');
+      return;
+    }
+
+    if (e.target.closest('[data-sheet] .opt')) { screen.classList.remove('sheet-on'); return; }
+
+    const one = e.target.closest('[data-seg] button, [data-pick] button, [data-filt] button');
+    if (one) {
+      one.parentElement.querySelectorAll('button').forEach((b) => b.classList.remove('on'));
+      one.classList.add('on');
+    }
+  });
+})();
+</script>
+</body>
+</html>
