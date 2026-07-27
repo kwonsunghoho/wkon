@@ -134,7 +134,12 @@ async function applyIndexRecruit() {
       chip.textContent = '모집 예정';
       chip.className = 'ch-st is-upcoming';
     } else if (status === 'closed') {
-      chip.textContent = '마감 · 다음 기수 준비 중';
+      /* ⚠️ '마감 · ' 접두를 붙이지 말 것(2026-07-27 카드가 2열 격자가 되면서).
+         카드 안 텍스트 폭이 131px 이라 14px 활자로 9자가 한 줄인데, 구 문구
+         '마감 · 다음 기수 준비 중'(13자)은 두 줄이 되어 그 칸만 키워 격자를 어긋나게 했다.
+         사진이 이미 흑백이라 모집 중이 아님은 그림으로 전달되고, 남은 한 줄은
+         '마감'보다 '다음이 있다'를 말하는 편이 기다리는 사람에게 쓸모 있다. */
+      chip.textContent = '다음 기수 준비 중';
       chip.className = 'ch-st is-closed';
     } else {
       const dday = getDday(start, end, status); // 'D-3' | 'D-Day' | null
