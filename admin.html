@@ -2157,16 +2157,30 @@
       renderCreditHint();
     }
     // 숫자만 보면 후한지 아닌지 감이 안 온다 → '몇 번 할 수 있는지'로 바꿔 보여준다.
+    // ⚠️ 하루 무료는 **첨삭 단가보다 반드시 작아야 한다.** spend_credit 의 판정이
+    //    `쓴양 + 단가 <= 하루무료` 라서, 하루 무료가 첨삭 단가 이상이면 첨삭이 매일 공짜가
+    //    된다(만원짜리 상품이 무료가 됨). 하루 5 = '첨삭 10을 못 모은다'는 잠금 그 자체다.
+    //    후하게 풀고 싶으면 이 값이 아니라 관리자 지급(아래 기수 일괄 지급)으로 풀 것.
+    function creditWarn() {
+      const d = Number(document.getElementById('cfDaily').value) || 0;
+      const p = Number(document.getElementById('cfPolish').value) || 0;
+      return (p > 0 && d >= p)
+        ? '하루 무료(' + d + ')가 첨삭 단가(' + p + ') 이상이라 <b>첨삭이 매일 공짜</b>가 됩니다. '
+          + '하루 무료는 첨삭 단가보다 작아야 유료 상품이 지켜져요.'
+        : '';
+    }
     function renderCreditHint() {
       const d = Number(document.getElementById('cfDaily').value) || 0;
       const s = Number(document.getElementById('cfSojae').value) || 1;
       const k = Number(document.getElementById('cfKiller').value) || 1;
-      document.getElementById('cfHint').innerHTML = d > 0
+      const warn = creditWarn();
+      document.getElementById('cfHint').innerHTML = (d > 0
         ? '지금 설정이면 회원 한 명이 <b>매일</b> 소재 다듬기 <b>' + Math.floor(d / s)
           + '번</b> 또는 AI킬러 검사 <b>' + Math.floor(d / k) + '번</b>을 무료로 할 수 있어요.'
-        : '하루 무료가 0이면 충전한 회원만 쓸 수 있어요.';
+        : '하루 무료가 0이면 충전한 회원만 쓸 수 있어요.')
+        + (warn ? '<div style="margin-top:8px;color:var(--danger,#B3261E);font-weight:700;">⚠️ ' + warn + '</div>' : '');
     }
-    ['cfDaily', 'cfSojae', 'cfKiller'].forEach(id => {
+    ['cfDaily', 'cfSojae', 'cfKiller', 'cfPolish'].forEach(id => {
       document.getElementById(id).addEventListener('input', renderCreditHint);
     });
     document.getElementById('cfSave').addEventListener('click', async () => {
@@ -2178,6 +2192,11 @@
       const costs = Object.assign({}, _creditCosts || {}, {
         sojae: num('cfSojae'), ai_killer: num('cfKiller'), polish: num('cfPolish'),
       });
+      // ⚠️ 첨삭 잠금이 풀리는 설정이면 저장 전에 한 번 막는다 — 이 조합은 실수가 아니면
+      //    나올 이유가 없고, 조용히 저장되면 만원짜리 상품이 매일 공짜가 된 걸 아무도 모른다.
+      if (daily >= Math.max(1, Math.floor(Number(document.getElementById('cfPolish').value) || 0))) {
+        if (!confirm('하루 무료가 첨삭 단가 이상이에요.\n이대로 저장하면 첨삭이 매일 공짜가 됩니다.\n\n정말 저장할까요?')) return;
+      }
       btn.disabled = true;
       const { error } = await sb().from('site_config').upsert(
         [{ key: 'credit_daily_free', value: daily }, { key: 'credit_costs', value: costs }],
