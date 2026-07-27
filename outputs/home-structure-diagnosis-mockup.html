@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>홈 구조 진단 + 개선 목업 — MONC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
+
+:root{
+  --bg:#E9E4D8; --bg2:#F1ECE2; --surface:#fff; --surface2:#F4F0E8;
+  --ink:#26221C; --muted:#5F574B; --dim:#6C6454;
+  --action:#F27945; --action-dark:#D9531F; --action-ink:#2A1206; --action-tint:#FDE9DE;
+  --dark:#26221C; --on-dark:#F5F1E8;
+  --line:rgba(38,34,28,.16); --line-soft:rgba(38,34,28,.09);
+  --ok:#2E6E42; --bad:#B4341C; --warn:#9A6A12;
+  --serif:'Noto Serif KR',serif;
+  --r:20px; --r-sm:14px; --r-xs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif;
+  background:var(--bg); color:var(--ink);
+  font-size:16px; line-height:1.7; word-break:keep-all;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+h1,h2,h3{line-height:1.28;font-weight:700}
+
+/* ── 헤더 ── */
+.top{background:var(--dark);color:var(--on-dark);padding:48px 0 44px}
+.top .eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--action);font-weight:700;display:flex;align-items:center;gap:10px}
+.top .eyebrow::before{content:'';width:28px;height:1px;background:var(--action)}
+.top h1{font-family:var(--serif);font-size:clamp(28px,5vw,42px);font-weight:700;margin:14px 0 16px;color:#fff}
+.top p{font-size:17px;color:#D9D2C4;max-width:62ch}
+.top .verdict{margin-top:22px;padding:16px 18px;border-left:3px solid var(--action);background:rgba(242,121,69,.10);border-radius:0 var(--r-xs) var(--r-xs) 0}
+.top .verdict b{color:var(--action)}
+
+/* ── 섹션 공통 ── */
+section.blk{padding:52px 0}
+section.blk:nth-child(even){background:var(--bg2)}
+.label{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--action-dark);font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.label::before{content:'';width:26px;height:1px;background:var(--action-dark)}
+h2.sec{font-family:var(--serif);font-size:clamp(24px,3.6vw,34px);color:var(--action-dark);margin-bottom:10px}
+.lead{color:var(--muted);max-width:70ch;margin-bottom:30px}
+
+/* ── 진단 카드 ── */
+.diag{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.dcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.dcard .n{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--action-dark);letter-spacing:.08em}
+.dcard h3{font-size:18px;margin:8px 0 10px}
+.dcard p{font-size:15px;color:var(--muted);line-height:1.65}
+.tag{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;margin-top:14px}
+.tag.own{background:#FDECE6;color:var(--bad)}
+.tag.code{background:#E7F0E9;color:var(--ok)}
+.ev{margin-top:14px;padding-top:13px;border-top:1px dashed var(--line);font-size:13.5px;color:var(--dim);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.6}
+
+/* ── 스크롤 지도 ── */
+.maps{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+@media(max-width:720px){.maps{grid-template-columns:1fr}}
+.map h3{font-size:17px;margin-bottom:4px}
+.map .cap{font-size:13.5px;color:var(--dim);margin-bottom:14px}
+.track{position:relative;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.seg{position:relative;display:flex;align-items:center;padding:0 12px;font-size:12.5px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line-soft);overflow:hidden;white-space:nowrap}
+.seg:last-child{border-bottom:0}
+.seg.pillar{background:var(--action-tint);color:var(--action-ink);font-weight:800}
+.seg.brief{background:#DCE7DE;color:#1F4E30;font-weight:800}
+.seg.lect{background:#E6E0F0;color:#3D2F63;font-weight:800}
+.seg.chal{background:#FBDCCB;color:var(--action-ink);font-weight:800}
+.seg.intro{background:var(--surface2);color:var(--dim)}
+.seg.dead{background:repeating-linear-gradient(45deg,#EDE7DA,#EDE7DA 6px,#E3DCCC 6px,#E3DCCC 12px);color:var(--dim);font-style:italic}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed var(--bad);pointer-events:none;z-index:3}
+.fold span{position:absolute;right:6px;top:-9px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;letter-spacing:.02em}
+.mlegend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:16px;font-size:13px;color:var(--muted)}
+.mlegend i{display:inline-block;width:13px;height:13px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+
+.delta{margin-top:26px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.delta table{width:100%;border-collapse:collapse;font-size:15px}
+.delta th,.delta td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line-soft)}
+.delta th{background:var(--surface2);font-size:13.5px;color:var(--muted);font-weight:700}
+.delta tr:last-child td{border-bottom:0}
+.delta .was{color:var(--bad);font-weight:700;font-variant-numeric:tabular-nums}
+.delta .now{color:var(--ok);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ── 폰 목업 ── */
+.phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px;align-items:start}
+.pcol h3{font-size:16px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.pcol .badge{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px}
+.badge.b-now{background:#F1DEDA;color:var(--bad)}
+.badge.b-new{background:#DFEFE4;color:var(--ok)}
+.pcol .cap{font-size:13.5px;color:var(--dim);margin-bottom:14px;min-height:42px}
+.phone{width:100%;max-width:340px;margin:0 auto;border:9px solid #2B2620;border-radius:34px;overflow:hidden;background:var(--bg);box-shadow:0 14px 40px rgba(36,26,18,.20)}
+.pbar{height:26px;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:10.5px;color:var(--dim);font-weight:600}
+.pnav{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--line-soft)}
+.plogo{font-family:var(--serif);font-weight:900;font-size:17px;letter-spacing:.04em}
+.plogo em{color:var(--action);font-style:normal}
+.pham{width:22px;height:14px;display:flex;flex-direction:column;justify-content:space-between}
+.pham i{display:block;height:2px;background:var(--ink);border-radius:2px}
+.pbody{padding:16px 14px 14px}
+.peyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--action-dark);font-weight:700;text-align:center;margin-bottom:8px}
+.phead{font-family:var(--serif);font-size:23px;color:var(--action-dark);text-align:center;line-height:1.26;margin-bottom:10px}
+.psub{font-size:12.5px;color:var(--muted);text-align:center;margin-bottom:14px}
+.pcard{position:relative;border-radius:16px;overflow:hidden;height:196px;background:linear-gradient(150deg,#C9BFAE,#A79B88);display:flex;flex-direction:column;justify-content:flex-end;padding:14px}
+.pcard::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(249,246,239,.94) 0%,rgba(249,246,239,.72) 34%,rgba(249,246,239,.12) 62%)}
+.pcard .in{position:relative;z-index:2}
+.pcard .h{font-size:15px;font-weight:800;line-height:1.35;margin-bottom:8px}
+.pcard .h em{color:var(--action-dark);font-style:normal}
+.pchip{position:absolute;top:11px;right:11px;z-index:3;font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:999px}
+.pchip.closed{background:#8D8577;color:#fff}
+.pchip.open{background:var(--action);color:var(--action-ink)}
+.pname{display:inline-block;border:1.5px solid var(--action-dark);color:var(--action-dark);font-size:12.5px;font-weight:800;padding:5px 13px;border-radius:999px;letter-spacing:.06em}
+.pfact{display:flex;align-items:center;gap:9px;justify-content:center;margin-top:13px}
+.pplay{width:34px;height:34px;border-radius:50%;background:var(--action);display:grid;place-items:center;flex:0 0 auto}
+.pplay svg{width:15px;height:15px;fill:var(--action-ink);margin-left:2px}
+.pfact .t{text-align:left}
+.pfact .t b{display:block;font-size:13px;font-weight:800;line-height:1.3}
+.pfact .t span{display:block;font-size:11px;color:var(--dim)}
+.pfactline{text-align:center;font-size:11.5px;color:var(--dim);margin-top:9px;font-weight:600}
+.pbottom{margin-top:12px;background:var(--action);border-radius:999px;padding:9px 14px;text-align:center}
+.pbottom b{display:block;font-size:14px;font-weight:800;color:var(--action-ink)}
+.pbottom span{display:block;font-size:10.5px;color:var(--action-ink);opacity:.85}
+.miss{margin-top:12px;border:1.5px dashed var(--bad);border-radius:12px;padding:11px;text-align:center;color:var(--bad);font-size:11.5px;font-weight:700;background:rgba(180,52,28,.05)}
+
+/* ── 세 개의 문 ── */
+.doors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+@media(max-width:520px){.doors{grid-template-columns:1fr}}
+.door{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 12px;position:relative;overflow:hidden}
+.door::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dc,var(--action))}
+.door .k{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dc,var(--action-dark))}
+.door .nm{font-size:14.5px;font-weight:800;margin:5px 0 5px}
+.door .ds{font-size:11.5px;color:var(--dim);line-height:1.5;min-height:34px}
+.door .mt{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:11.5px;font-weight:700;color:var(--ink);display:flex;justify-content:space-between;align-items:center}
+.door .mt .arw{color:var(--dc,var(--action-dark))}
+
+/* 큰 버전(설명용) */
+.doorsbig{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px}
+@media(max-width:760px){.doorsbig{grid-template-columns:1fr}}
+.doorsbig .door{padding:20px 18px;border-radius:var(--r)}
+.doorsbig .door .k{font-size:11.5px}
+.doorsbig .door .nm{font-size:20px;margin:8px 0 7px}
+.doorsbig .door .ds{font-size:14px;min-height:auto}
+.doorsbig .door .mt{font-size:13.5px;margin-top:14px;padding-top:12px}
+
+/* ── 표/리스트 ── */
+.note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--action);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:18px 20px;margin-top:22px}
+.note b{color:var(--action-dark)}
+ul.todo{list-style:none;display:grid;gap:10px;margin-top:14px}
+ul.todo li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px;display:flex;gap:12px;align-items:flex-start;font-size:15px}
+ul.todo li .num{flex:0 0 auto;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:800;background:var(--action);color:var(--action-ink)}
+ul.todo.own li .num{background:var(--bad);color:#fff}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media(max-width:760px){.split{grid-template-columns:1fr}}
+.split h3{font-size:17px;margin-bottom:2px}
+.split .cap{font-size:13.5px;color:var(--dim)}
+.foot{background:var(--dark);color:#C9C2B4;padding:30px 0;font-size:13.5px}
+.foot b{color:var(--on-dark)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <div class="eyebrow">Home Structure · Diagnosis</div>
+    <h1>홈이 안 팔리는 이유와<br>플랫폼으로 가는 구조</h1>
+    <p>2026년 7월 26일 · monc.ai.kr 라이브 사이트 실측(375&times;812) + 데이터베이스 직접 조회 기준</p>
+    <div class="verdict">
+      결론부터 — <b>디자인 문제가 아닙니다.</b> 특강은 사이트에 <b>한 개도 안 올라가 있었고</b>,
+      챌린지는 첫 화면 대표 카드가 <b>“마감”</b>이라고 말하고 있습니다.
+      브리핑룸만 진짜 구조 문제입니다 &mdash; <b>화면 8.6개 아래</b>에 있습니다.
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 1. 진단 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Diagnosis</div>
+    <h2 class="sec">무엇이 문제였나</h2>
+    <p class="lead">네 가지입니다. 앞의 두 개는 지금 당장 고칠 수 있고, 코드를 건드릴 필요도 없습니다.</p>
+
+    <div class="diag">
+      <div class="dcard">
+        <div class="n">문제 01</div>
+        <h3>특강이 비공개 상태입니다</h3>
+        <p>3일 동안 <b>아무도 볼 수 없었습니다.</b> 신청이 0인 게 아니라, 신청할 화면 자체가 없었습니다.
+           기능(정원·시간대·결제)은 전부 정상 작동 상태입니다.</p>
+        <div class="ev">공개 특강 수 = 0건<br>lectures.html → “준비 중인 특강이 곧 열려요”</div>
+        <div class="tag own">오너가 admin에서 ‘공개’ 체크</div>
+      </div>
+
+      <div class="dcard">
+        <div class="n">문제 02</div>
+        <h3>첫 카드가 “마감”이라고 말합니다</h3>
+        <p>보신각·스피닝은 모집일정이 등록돼 있지 않아 <b>6월 날짜</b>가 그대로 뜹니다.
+           신청 페이지에서도 이 둘은 <b>눌리지도 않습니다.</b>
+           그런데 화면 아래 바는 “모집 중 D-7”이라 말해 신호가 서로 어긋납니다.</p>
+        <div class="ev">보신각 마감 · 영합각 D-7<br>스피닝 마감 · 승자각 D-7</div>
+        <div class="tag own">오너가 admin에서 4기 등록</div>
+      </div>
+
+      <div class="dcard">
+        <div class="n">문제 03</div>
+        <h3>첫 화면에 상품 설명이 없습니다</h3>
+        <p>“2주 · 하루 한 번 미션 · 전·후 목소리 듣기” 줄이 <b>코드에서 통째로 사라져 있습니다.</b>
+           브리핑룸 만들던 커밋에 휩쓸려 나갔고 디자인만 죽은 채 남아 있습니다.
+           그래서 첫 화면 글자가 161자로 전 섹션 중 최소입니다.</p>
+        <div class="ev">.hs-cta 블록 → 라이브 DOM에 없음<br>(index.css에 CSS만 잔존)</div>
+        <div class="tag code">코드 복구</div>
+      </div>
+
+      <div class="dcard">
+        <div class="n">문제 04</div>
+        <h3>브리핑룸이 화면 8.6개 아래입니다</h3>
+        <p>첫 화면 도달률이 이미 <b>38%</b>인데, 브리핑룸은 거기서 <b>7화면을 더</b> 내려가야 나옵니다.
+           콘텐츠는 멀쩡합니다 &mdash; 오늘 기사가 20건 넘게 쌓여 있고 비회원도 그냥 읽힙니다.
+           <b>품질이 아니라 발견의 문제입니다.</b></p>
+        <div class="ev">briefing-home 시작 = 7,001px<br>페이지 전체 = 10,654px (13.1화면)</div>
+        <div class="tag code">순서 개편</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>그리고 지금은 확인할 방법이 없습니다.</b> 계측에 남는 건 인트로·첫 화면 도달과 챌린지 파인더뿐입니다.
+      특강·브리핑룸·챌린지 카드를 눌렀는지는 <b>아무 기록도 안 남습니다.</b>
+      “유입이 안 되는 것 같다”를 숫자로 확인할 수가 없다는 뜻입니다.
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 2. 스크롤 지도 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Scroll Map</div>
+    <h2 class="sec">지금 홈은 13화면짜리 두루마리입니다</h2>
+    <p class="lead">
+      아래는 실제 픽셀을 그대로 줄인 지도입니다(375&times;812 기준). 빨간 점선은 <b>사람들이 실제로 내려오는 한계</b>예요.
+      주력 셋 중 <b>둘이 그 선 아래</b>에 있습니다.
+    </p>
+
+    <div class="maps">
+      <!-- 현재 -->
+      <div class="map">
+        <h3>현재</h3>
+        <p class="cap">브리핑룸 8.6화면 · 특강 4.5화면</p>
+        <div class="track" id="trackNow"></div>
+      </div>
+      <!-- 제안 -->
+      <div class="map">
+        <h3>제안</h3>
+        <p class="cap">세 개의 문 2.8화면 · 브리핑룸 5.2화면</p>
+        <div class="track" id="trackNew"></div>
+      </div>
+    </div>
+
+    <div class="mlegend">
+      <span><i style="background:#FBDCCB"></i>챌린지</span>
+      <span><i style="background:#E6E0F0"></i>특강</span>
+      <span><i style="background:#DCE7DE"></i>브리핑룸</span>
+      <span><i style="background:#FDE9DE"></i>세 개의 문(신설)</span>
+      <span><i style="background:#F4F0E8"></i>인트로</span>
+      <span><i style="background:#fff;border:1px solid var(--line)"></i>그 밖의 섹션</span>
+    </div>
+
+    <div class="delta">
+      <table>
+        <tr><th>무엇이</th><th>지금</th><th>제안 후</th><th>효과</th></tr>
+        <tr>
+          <td><b>브리핑룸</b> 처음 눈에 띄는 지점</td>
+          <td class="was">8.6화면</td>
+          <td class="now">2.8화면</td>
+          <td>사실상 도달 불가 → 첫 스크롤 안</td>
+        </tr>
+        <tr>
+          <td><b>특강</b> 처음 눈에 띄는 지점</td>
+          <td class="was">4.5화면</td>
+          <td class="now">2.8화면</td>
+          <td>증거 섹션보다 먼저 보임</td>
+        </tr>
+        <tr>
+          <td><b>챌린지</b>가 무슨 상품인지</td>
+          <td class="was">설명 없음</td>
+          <td class="now">첫 화면</td>
+          <td>2주·미션·가격을 첫 화면에서 말함</td>
+        </tr>
+        <tr>
+          <td>빈 특강 섹션이 먹는 자리</td>
+          <td class="was">506px</td>
+          <td class="now">0px</td>
+          <td>특강 없으면 섹션째 숨김</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 3. 개선 ① 히어로 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Fix 01</div>
+    <h2 class="sec">첫 화면 &mdash; 잃어버린 한 줄을 되찾기</h2>
+    <p class="lead">
+      “챌린지가 눈에 안 들어온다”의 정체입니다. 챌린지는 이미 맨 위예요. <b>순서 문제가 아닙니다.</b>
+      처음 온 사람에게 <b>‘보신각’은 아무 뜻이 없는 조어</b>인데, 그게 뭔지 알려주는 문장이 화면에 없습니다.
+    </p>
+
+    <div class="phones">
+      <!-- 현재 -->
+      <div class="pcol">
+        <h3>현재 <span class="badge b-now">지금 라이브</span></h3>
+        <p class="cap">대표 카드가 “마감”. 상품이 뭔지 알려주는 문장 0개.</p>
+        <div class="phone">
+          <div class="pbar"><span>9:41</span><span>▮▮▮</span></div>
+          <div class="pnav"><span class="plogo">M<em>O</em>NC</span><span class="pham"><i></i><i></i><i></i></span></div>
+          <div class="pbody">
+            <div class="peyebrow">Challenges</div>
+            <div class="phead">승무원 준비<br>어렵게하지마세요</div>
+            <div class="psub">여러분의 꾸준함과 몬크의 노하우면 됩니다</div>
+            <div class="pcard">
+              <span class="pchip closed">마감</span>
+              <div class="in">
+                <div class="h"><em>목소리</em>가 첫인상을 바꿉니다</div>
+                <span class="pname">보.신.각</span>
+              </div>
+            </div>
+            <div class="miss">여기에 있던 설명 줄이 사라짐<br>(2주 · 하루 한 번 미션 · 전·후 듣기)</div>
+            <div class="pbottom"><b>신청하기</b><span>모집 중 · D-7 마감 · 참가비 3만원</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 제안 -->
+      <div class="pcol">
+        <h3>제안 <span class="badge b-new">개선안</span></h3>
+        <p class="cap">모집 중인 카드를 먼저. 설명 줄 복구. 아래에 세 개의 문 예고.</p>
+        <div class="phone">
+          <div class="pbar"><span>9:41</span><span>▮▮▮</span></div>
+          <div class="pnav"><span class="plogo">M<em>O</em>NC</span><span class="pham"><i></i><i></i><i></i></span></div>
+          <div class="pbody">
+            <div class="peyebrow">Challenges</div>
+            <div class="phead">2주면<br>목소리가 달라져요</div>
+            <div class="psub">코치가 매일 봐주는 2주 집중 훈련</div>
+            <div class="pcard">
+              <span class="pchip open">모집 중 · D-7</span>
+              <div class="in">
+                <div class="h"><em>이미지</em>에 자신감이 생깁니다</div>
+                <span class="pname">영.합.각</span>
+              </div>
+            </div>
+            <div class="pfact">
+              <span class="pplay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="t"><b>전·후 목소리 듣기</b><span>10초면 압니다</span></span>
+            </div>
+            <div class="pfactline">2주 · 하루 한 번 미션 · 참가비 3만원</div>
+            <div class="pbottom"><b>신청하기</b><span>모집 중 · D-7 마감</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>왜 카드 순서를 바꾸나?</b> 지금은 첫 카드가 보신각인데 그게 “마감”입니다.
+      모집일정만 등록하면 이 문제는 사라지지만, 앞으로도 <b>모집 중인 챌린지가 항상 먼저 보이게</b> 해두면
+      같은 일이 다시 안 생깁니다. 마감된 챌린지는 뒤로 밀고요.
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 4. 개선 ② 세 개의 문 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Fix 02 · 핵심</div>
+    <h2 class="sec">첫 스크롤 안에 “세 개의 문”을 놓기</h2>
+    <p class="lead">
+      지금 홈은 <b>상품 하나(챌린지)를 파는 랜딩</b>으로 설계돼 있는데, 실제로는 성격이 다른 셋을 담고 있습니다.
+      그런데 셋이 <b>같은 무게로 놓여 있지 않습니다</b> &mdash; 챌린지는 맨 위, 특강은 4번째, 브리핑룸은 7번째.
+      방문자가 자기 자리를 못 찾습니다.
+    </p>
+
+    <div class="doorsbig">
+      <div class="door" style="--dc:#D9531F">
+        <div class="k">Challenge</div>
+        <div class="nm">챌린지</div>
+        <div class="ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받습니다.</div>
+        <div class="mt"><span>2주 · 3만원</span><span class="arw">→</span></div>
+      </div>
+      <div class="door" style="--dc:#5B4A94">
+        <div class="k">Special</div>
+        <div class="nm">특강</div>
+        <div class="ds">필요한 주제만 골라 하루. 항공사별·주제별로 열립니다.</div>
+        <div class="mt"><span>하루 · 특강별</span><span class="arw">→</span></div>
+      </div>
+      <div class="door" style="--dc:#2E6E42">
+        <div class="k">Briefing Room</div>
+        <div class="nm">브리핑룸</div>
+        <div class="ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구입니다.</div>
+        <div class="mt"><span>무료 · 지금 바로</span><span class="arw">→</span></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>이 한 덩어리가 브리핑룸 문제를 통째로 해결합니다.</b>
+      브리핑룸 섹션 자체를 위로 올리는 것도 하지만, 그보다 <b>2.8화면 지점에서 “무료 도구가 있다”를 한 번 말해주는 것</b>이
+      훨씬 큽니다. 8.6화면까지 내려올 사람은 어차피 거의 없으니까요.
+    </div>
+
+    <h3 style="margin-top:34px;font-size:19px">폰에서는 이렇게 보입니다</h3>
+    <p class="cap" style="font-size:13.5px;color:var(--dim);margin-bottom:14px">첫 화면 바로 아래 &mdash; 스크롤 한 번이면 닿습니다.</p>
+    <div class="phone" style="max-width:340px;margin:0">
+      <div class="pbody" style="padding-top:20px">
+        <div class="peyebrow" style="text-align:left">몬크에서 할 수 있는 것</div>
+        <div style="font-family:var(--serif);font-size:20px;color:var(--action-dark);margin:6px 0 14px">셋 중에 골라보세요</div>
+        <div class="doors">
+          <div class="door" style="--dc:#D9531F">
+            <div class="k">Challenge</div><div class="nm">챌린지</div>
+            <div class="ds">코치와 2주. 하루 한 번 미션.</div>
+            <div class="mt"><span>2주 · 3만원</span><span class="arw">→</span></div>
+          </div>
+          <div class="door" style="--dc:#5B4A94">
+            <div class="k">Special</div><div class="nm">특강</div>
+            <div class="ds">필요한 주제만 하루에.</div>
+            <div class="mt"><span>하루</span><span class="arw">→</span></div>
+          </div>
+          <div class="door" style="--dc:#2E6E42">
+            <div class="k">Briefing Room</div><div class="nm">브리핑룸</div>
+            <div class="ds">뉴스·소재·답변노트. 매일 쓰는 도구.</div>
+            <div class="mt"><span>무료 · 지금 바로</span><span class="arw">→</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 5. 개선 ③ 빈 섹션 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Fix 03</div>
+    <h2 class="sec">비어 있을 땐 자리를 비우지 않기</h2>
+    <div class="split">
+      <div>
+        <h3>지금</h3>
+        <p class="cap">특강이 없어도 506px을 차지하고, 브리핑룸을 더 아래로 밀어냅니다.</p>
+        <div style="margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:26px 20px;text-align:center">
+          <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--action-dark);font-weight:700">Special Lecture</div>
+          <div style="font-family:var(--serif);font-size:22px;color:var(--action-dark);margin:8px 0 10px">몬크가 여는 특강</div>
+          <div style="font-size:14px;color:var(--dim);padding:22px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);margin:12px 0">
+            곧 새로운 특강이 열려요.<br>준비 중인 소식을 여기에서 가장 먼저 안내드릴게요.
+          </div>
+          <div style="font-size:13px;color:var(--bad);font-weight:700;margin-top:10px">↑ 아무 일도 안 하는 506px</div>
+        </div>
+      </div>
+      <div>
+        <h3>제안</h3>
+        <p class="cap">공개된 특강이 없으면 섹션째 숨깁니다. 대신 브리핑룸이 그만큼 위로 올라옵니다.</p>
+        <div style="margin-top:14px;background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:34px 20px;text-align:center;color:var(--dim)">
+          <div style="font-size:14px">— 섹션 없음 —</div>
+          <div style="font-size:13px;margin-top:8px">특강을 공개하면 자동으로 다시 나타납니다.</div>
+        </div>
+        <div class="note" style="margin-top:16px">
+          <b>덤:</b> 이러면 “특강 열었는데 홈에 안 뜬다”를 <b>오너가 바로 알아챌 수 있습니다.</b>
+          지금은 빈 섹션이 “곧 열려요”라고 말해서 정상처럼 보였습니다.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 6. 플랫폼 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Platform</div>
+    <h2 class="sec">플랫폼으로 갈 거라면, 브리핑룸이 제일 중요합니다</h2>
+    <p class="lead">
+      첫 화면 도달률 38%가 말해주는 건 하나입니다 &mdash; <b>방문자 대부분은 아직 살 마음이 없습니다.</b>
+      그런데 지금 홈은 “신청하거나, 나가거나” 두 갈래뿐이에요.
+    </p>
+
+    <div class="split" style="margin-top:8px">
+      <div>
+        <h3 style="color:var(--bad)">지금의 흐름</h3>
+        <p class="cap">한 번에 지갑을 열어야 합니다. 안 열면 그냥 떠납니다.</p>
+        <div style="margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;font-size:15px;line-height:2.1">
+          방문 → <b>신청하기</b> → 결제<br>
+          <span style="color:var(--bad);font-weight:700">↑ 여기서 안 되면 끝. 남는 게 없음.</span>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--ok)">플랫폼의 흐름</h3>
+        <p class="cap">무료 도구로 계정을 만들고, 그 계정에 챌린지·특강을 팝니다.</p>
+        <div style="margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;font-size:15px;line-height:2.1">
+          방문 → <b>브리핑룸(무료)</b> → 스크랩·답변노트<br>
+          → <b>회원가입</b>(안 잃어버리려고)<br>
+          → 매일 들어옴 → <b>챌린지·특강 구매</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>브리핑룸은 이미 그 일을 할 준비가 돼 있습니다.</b>
+      3시간마다 기사가 자동으로 쌓이고, 비회원도 읽히고, 스크랩하려면 가입해야 합니다.
+      <b>딱 하나 빠진 게 “거기가 있다는 걸 아는 것”</b>입니다. 그래서 8.6화면 → 2.8화면이 이 문서에서 제일 중요한 숫자입니다.
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── 7. 실행 ─────────── -->
+<section class="blk">
+  <div class="wrap">
+    <div class="label">Next</div>
+    <h2 class="sec">무엇부터 하면 되나</h2>
+
+    <div class="split">
+      <div>
+        <h3 style="color:var(--bad)">오너가 지금 (5분)</h3>
+        <p class="cap">코드 없이, 관리자 화면에서 끝납니다. <b>이것만으로 특강·챌린지 문제는 풀립니다.</b></p>
+        <ul class="todo own">
+          <li><span class="num">1</span><span>admin → <b>특강</b> 탭에서 그 특강의 <b>‘공개’ 체크</b> 켜기</span></li>
+          <li><span class="num">2</span><span>admin → <b>모집일정</b> 탭에서 <b>보신각·스피닝 4기</b> 등록</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color:var(--ok)">제가 코드로</h3>
+        <p class="cap">위 두 개가 끝나면 순서대로 진행합니다.</p>
+        <ul class="todo">
+          <li><span class="num">3</span><span>첫 화면 <b>설명 줄 복구</b> + 모집 중 카드 먼저 보이게</span></li>
+          <li><span class="num">4</span><span><b>세 개의 문</b> 섹션 신설 (첫 스크롤 안)</span></li>
+          <li><span class="num">5</span><span>브리핑룸 섹션 <b>위로 이동</b> · 빈 특강 섹션 <b>숨김</b></span></li>
+          <li><span class="num">6</span><span><b>클릭 계측</b> 추가 &mdash; 다음엔 감이 아니라 숫자로 판단</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <div class="wrap">
+    <b>측정 방법</b> &mdash; monc.ai.kr 라이브 페이지를 375&times;812로 직접 렌더해 섹션 위치를 픽셀로 재고,
+    특강·모집일정은 데이터베이스를 직접 조회했습니다. 도달률 38%는 기존 page_events 집계값입니다.
+  </div>
+</div>
+
+<script>
+/* 실측 픽셀을 그대로 줄여 스크롤 지도를 그린다. 1px = SCALE px. */
+const SCALE = 0.055, VH = 812, FOLD = 7001; // FOLD: 사실상 도달 한계 표시 지점
+
+const NOW = [
+  ['인트로', 1296, 'intro'], ['히어로 · 챌린지', 896, 'chal'],
+  ['Before &amp; After', 1498, ''], ['특강', 506, 'lect'],
+  ['연구진', 705, ''], ['커뮤니티', 1618, ''], ['챌린지 파인더', 481, ''],
+  ['브리핑룸', 882, 'brief'], ['블라인드 퀴즈', 687, ''],
+  ['성장기록', 1104, ''], ['최종 CTA', 980, '']
+];
+const NEW = [
+  ['인트로', 1296, 'intro'], ['히어로 · 챌린지 <b>+설명</b>', 976, 'chal'],
+  ['세 개의 문', 420, 'pillar'], ['Before &amp; After', 1498, ''],
+  ['브리핑룸', 882, 'brief'], ['특강 <i>(없으면 숨김)</i>', 506, 'lect'],
+  ['연구진', 705, ''], ['커뮤니티', 1618, ''], ['블라인드 퀴즈', 687, ''],
+  ['챌린지 파인더', 481, ''], ['성장기록', 1104, ''], ['최종 CTA', 980, '']
+];
+
+function draw(el, rows){
+  let top = 0, html = '';
+  rows.forEach(([name, h, cls]) => {
+    const px = Math.max(h * SCALE, 15);
+    const screens = (top / VH).toFixed(1);
+    html += `<div class="seg ${cls}" style="height:${px}px">
+      <span>${name}</span>
+      <span style="margin-left:auto;font-size:11px;opacity:.72;font-variant-numeric:tabular-nums">${screens}화면</span>
+    </div>`;
+    top += h;
+  });
+  el.innerHTML = html;
+  // 도달 한계선
+  const f = document.createElement('div');
+  f.className = 'fold';
+  f.style.top = (FOLD * SCALE) + 'px';
+  f.innerHTML = '<span>여기까지 오는 사람 거의 없음</span>';
+  el.appendChild(f);
+}
+draw(document.getElementById('trackNow'), NOW);
+draw(document.getElementById('trackNew'), NEW);
+</script>
+</body>
+</html>

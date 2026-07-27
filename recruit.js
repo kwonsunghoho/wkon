@@ -174,6 +174,12 @@ async function applyIndexRecruit() {
     }
     chip.hidden = false;
   });
+
+  /* 상태가 확정됐음을 알린다 — index.html의 히어로 캐러셀이 이걸 받아 카드를
+     '모집 중 → 예정 → 마감' 순으로 재정렬한다(2026-07-27 오너 확정).
+     ⚠️ 여기서 직접 DOM을 옮기지 않는 이유: 캐러셀의 활성 인덱스·클릭 핸들러는
+     index.html이 들고 있어서, 순서만 바꾸면 그쪽 상태와 어긋난다. */
+  document.dispatchEvent(new CustomEvent('monc:recruitready'));
 }
 
 /* ── 카드 없이도 전체 챌린지 상태 로드 (모달 공용) ── */

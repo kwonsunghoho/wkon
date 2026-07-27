@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 킬러 — 초기 시안(v0, 복구본)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<!--
+  ⚠️ 이 파일은 2026-07-24 설계 확정본이 "어디에도 없다"고 적어둔 그 시안의 복구본이다.
+     대화창에서 만들어 스크래치패드에만 있었고, 스크래치패드가 비워지며 사라졌던 것.
+
+  ⚠️ 확정본과 어긋나는 부분이 있다 — 그대로 구현하지 말 것. 목업 2~3안의 출발점으로만 쓴다.
+     · 100점 만점 'AI스러움 지수' 링 → 확정본 결정 5에서 기각(걸린 개수 + 3단계 등급)
+     · "상위 18%" 비교 통계        → 확정본에 근거 없음(재논의 필요)
+     · 무료 2회 조건 미반영        → 확정본 결정 8: 답변노트에 올린 글에만 무료
+     · 답변노트 불러오기 버튼 없음  → 확정본 화면 1번 항목
+-->
+<style>
+  :root{
+    --bg:#E9E4D8; --card:#F7F3EA; --text:#26221C; --dim:#6E6459;
+    --action:#F27945; --ink:#A33D14; --dark:#D9531F; --espresso:#332E27;
+    --line:#D9D2C2; --serif:'Noto Serif KR', serif;
+    --ok:#3E7C4F;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard',sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:0 16px 80px}
+
+  .warn{background:#332E27; color:#EDE7DA; border-radius:14px; padding:14px 16px; margin:16px 0 0; font-size:13.5px; word-break:keep-all}
+  .warn b{color:#E8B79F}
+
+  /* ── 상단 바 ── */
+  .topbar{display:flex; justify-content:space-between; align-items:center; padding:16px 2px}
+  .topbar .back{font-size:14px; font-weight:700; color:var(--ink); text-decoration:none}
+  .topbar .chip{font-size:12px; font-weight:700; color:var(--ink); border:1.5px solid var(--ink); border-radius:999px; padding:3px 10px}
+
+  /* ── 히어로 ── */
+  .hero{padding:18px 2px 26px}
+  .eyebrow{font-size:13px; font-weight:800; letter-spacing:.14em; color:var(--ink)}
+  .eyebrow::before{content:"— "; color:var(--action)}
+  h1{font-family:var(--serif); font-weight:900; font-size:38px; color:var(--action); margin:6px 0 10px}
+  .hero p{font-size:16px; color:var(--dim); word-break:keep-all}
+  .hero p b{color:var(--text)}
+
+  /* ── 카드 공통 ── */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px 20px; margin-bottom:16px}
+  .card-label{font-size:13px; font-weight:800; letter-spacing:.08em; color:var(--ink); margin-bottom:10px}
+
+  /* ── 입력 ── */
+  textarea{
+    width:100%; min-height:190px; resize:vertical;
+    background:#FFFDF7; border:1.5px solid var(--line); border-radius:14px;
+    padding:14px; font:inherit; font-size:15px; line-height:1.7; color:var(--text);
+  }
+  textarea:focus{outline:2px solid var(--dark); border-color:transparent}
+  .meta-row{display:flex; justify-content:space-between; margin-top:8px; font-size:12.5px; color:var(--dim)}
+  .consent{display:flex; gap:10px; align-items:flex-start; margin:16px 0 14px; font-size:13.5px; color:var(--dim); word-break:keep-all}
+  .consent input{width:18px; height:18px; margin-top:2px; accent-color:var(--dark); flex:none}
+  .consent b{color:var(--text)}
+  .go-btn{
+    display:block; width:100%; min-height:54px; border:0; border-radius:16px; cursor:pointer;
+    background:var(--action); color:#2A1206; font-size:18px; font-weight:800; font-family:inherit;
+    transition:transform .12s ease, opacity .2s;
+  }
+  .go-btn:active{transform:scale(.98)}
+  .go-btn[disabled]{opacity:.75; cursor:wait}
+
+  /* ── 결과: 점수 (⚠️ 확정본에서 기각된 표현 — 참고용으로만 남김) ── */
+  .score-card{display:flex; align-items:center; gap:20px}
+  .ring{flex:none; width:104px; height:104px; position:relative}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .track{stroke:#DFD8C8}
+  .ring .bar{stroke:var(--action); stroke-linecap:round}
+  .ring .num{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-weight:900; font-size:27px; color:var(--text);
+    font-variant-numeric:tabular-nums;
+  }
+  .ring .num small{font-size:15px; font-weight:700; color:var(--ink)}
+  .score-txt .t1{font-size:13px; font-weight:800; letter-spacing:.06em; color:var(--ink)}
+  .score-txt .t2{font-family:var(--serif); font-weight:700; font-size:19px; margin:2px 0 6px; word-break:keep-all}
+  .score-txt .t3{font-size:13.5px; color:var(--dim); word-break:keep-all}
+  .score-txt .t3 b{color:var(--ink)}
+
+  /* ── 면접관 한마디 ── */
+  .judge{background:var(--espresso); border-color:var(--espresso); color:#EDE7DA}
+  .judge .card-label{color:#E8B79F}
+  .judge blockquote{
+    font-family:var(--serif); font-weight:700; font-size:18.5px; line-height:1.65; word-break:keep-all;
+  }
+  .judge blockquote::before{content:"\201C"; color:var(--action); font-size:34px; line-height:0; vertical-align:-10px; margin-right:4px}
+  .judge .who{margin-top:10px; font-size:13px; color:#B5AC9D}
+
+  /* ── 하이라이트 본문 ── */
+  .legend{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
+  .legend span{font-size:12.5px; font-weight:700; border-radius:999px; padding:3px 10px}
+  .lg-cliche{background:rgba(242,121,69,.16); color:var(--ink)}
+  .lg-struct{background:rgba(110,86,60,.15); color:#5D4A33}
+  .hl-text{font-size:15.5px; line-height:1.9; word-break:keep-all}
+  mark{border-radius:4px; padding:1px 3px; font-weight:700}
+  mark.cliche{background:rgba(242,121,69,.22); color:var(--ink); text-decoration:underline wavy var(--action) 1.5px; text-underline-offset:3px}
+  mark.struct{background:rgba(110,86,60,.16); color:#5D4A33; text-decoration:underline wavy #8A6D4E 1.5px; text-underline-offset:3px}
+
+  /* ── 빠진 것 ── */
+  .missing{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px}
+  .missing div{background:#FFFDF7; border:1.5px dashed var(--line); border-radius:12px; text-align:center; padding:10px 4px}
+  .missing .n{font-family:var(--serif); font-weight:900; font-size:21px; color:var(--dark)}
+  .missing .l{font-size:12px; color:var(--dim); font-weight:700}
+  .missing-note{margin-top:10px; font-size:13.5px; color:var(--dim); word-break:keep-all}
+  .missing-note b{color:var(--ink)}
+
+  /* ── 지적 카드 ── */
+  .finding{border-left:4px solid var(--action); border-radius:16px; padding:16px 18px}
+  .finding.grave{border-left-color:var(--dark)}
+  .f-head{display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap}
+  .f-tag{font-size:11.5px; font-weight:800; letter-spacing:.04em; border-radius:6px; padding:2px 8px; background:rgba(242,121,69,.16); color:var(--ink)}
+  .f-tag.struct{background:rgba(110,86,60,.15); color:#5D4A33}
+  .f-tag.grave{background:var(--dark); color:#fff}
+  .f-quote{font-family:var(--serif); font-weight:700; font-size:16.5px}
+  .f-why{font-size:14px; color:var(--dim); margin:4px 0 8px; word-break:keep-all}
+  .f-why b{color:var(--ink)}
+  .f-fix{font-size:14px; word-break:keep-all; background:#FFFDF7; border:1px solid var(--line); border-radius:10px; padding:9px 12px}
+  .f-fix::before{content:"고치기 "; font-weight:800; color:var(--ok)}
+  .f-stat{margin-top:8px; font-size:12.5px; color:var(--ink); font-weight:700}
+  .f-stat::before{content:"📊 "}
+
+  /* ── 저장 안내 + 푸터 ── */
+  .save-note{display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:var(--dim); padding:0 6px; word-break:keep-all}
+  .save-note b{color:var(--text)}
+  .foot{margin-top:28px; text-align:center; font-size:12.5px; color:#9A9082}
+
+  .section-gap{margin-top:30px}
+  .result-title{font-family:var(--serif); font-weight:700; font-size:22px; margin:0 2px 14px}
+  .result-title em{font-style:normal; color:var(--action)}
+
+  @keyframes pop{from{opacity:.25; transform:translateY(8px)} to{opacity:1; transform:none}}
+  .replay .card{animation:pop .5s ease both}
+  .replay .card:nth-child(2){animation-delay:.08s}
+  .replay .card:nth-child(3){animation-delay:.16s}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="warn">
+    <b>복구본 안내</b> — 2026-07-24 설계 확정본이 "찾을 수 없다"고 기록한 초기 시안입니다.
+    확정본과 어긋나는 부분(100점 지수 링·상위 % 통계·무료 조건·답변노트 불러오기 누락)이 있으니
+    <b>그대로 구현하지 말고</b> 목업 2~3안의 출발점으로만 쓰세요.
+  </div>
+
+  <div class="topbar">
+    <a class="back" href="#">← 브리핑룸</a>
+    <span class="chip">회원 전용</span>
+  </div>
+
+  <div class="hero">
+    <div class="eyebrow">BRIEFING ROOM</div>
+    <h1>AI 킬러</h1>
+    <p>AI 티 나는 답변, 면접관은 <b>10초 만에</b> 알아봅니다.<br>내 답변에서 AI 냄새를 빼드릴게요.</p>
+  </div>
+
+  <!-- ══ 입력 ══ -->
+  <div class="card">
+    <div class="card-label">내 답변 붙여넣기</div>
+    <textarea id="ans">저는 어릴 적부터 다양한 사람들과 소통하는 것을 좋아했습니다. 대학 시절 다양한 대외활동을 통해 소통 능력과 배려심을 기를 수 있었고, 이러한 경험들은 저에게 소중한 밑거름이 되었습니다. 첫째, 저는 뛰어난 소통 능력을 갖추고 있습니다. 둘째, 어떤 상황에서도 침착하게 대처할 수 있습니다. 이러한 역량을 바탕으로 귀사의 발전에 기여하는 승무원이 되고 싶습니다.</textarea>
+    <div class="meta-row"><span>지원동기 · 자기소개 · 기출 답변 무엇이든</span><span>214자</span></div>
+    <label class="consent">
+      <input type="checkbox" checked>
+      <span>검사한 답변은 <b>내 몬크 계정에 저장</b>되고, 서비스 품질 개선과 통계 분석에 활용됩니다. 저장된 답변은 마이페이지 <b>답변노트</b>에서 다시 볼 수 있어요. <b>(필수)</b></span>
+    </label>
+    <button class="go-btn" id="go">AI 킬러 돌리기</button>
+  </div>
+
+  <!-- ══ 결과 ══ -->
+  <div id="result" class="section-gap">
+    <div class="result-title">검사 결과 <em>· DAY 특훈 3분 전</em></div>
+
+    <!-- ⚠️ 확정본 결정 5에서 기각된 표현 (100점 지수 + 상위 %) -->
+    <div class="card score-card">
+      <div class="ring">
+        <svg width="104" height="104" viewBox="0 0 104 104">
+          <circle class="track" cx="52" cy="52" r="45" fill="none" stroke-width="10"/>
+          <circle class="bar" cx="52" cy="52" r="45" fill="none" stroke-width="10"
+                  stroke-dasharray="282.7" stroke-dashoffset="50.9"/>
+        </svg>
+        <div class="num">82<small>%</small></div>
+      </div>
+      <div class="score-txt">
+        <div class="t1">AI스러움 지수</div>
+        <div class="t2">면접관이 하품하는 답변</div>
+        <div class="t3">이번 달 검사된 답변 1,204건 중 <b>상위 18%</b>로 AI 티가 나는 편이에요.</div>
+      </div>
+    </div>
+
+    <!-- 면접관 한마디 -->
+    <div class="card judge">
+      <div class="card-label">면접관 한마디</div>
+      <blockquote>10초 만에 다음 지원자가 궁금해졌습니다. 이 글엔 '당신'이 없어요.</blockquote>
+      <div class="who">몬크 연구진 채점 기준 기반 · AI 분석</div>
+    </div>
+
+    <!-- 하이라이트 -->
+    <div class="card">
+      <div class="card-label">어디서 티가 났을까</div>
+      <div class="legend">
+        <span class="lg-cliche">AI 상투어</span>
+        <span class="lg-struct">AI 정형 구조</span>
+      </div>
+      <p class="hl-text">저는 어릴 적부터 <mark class="cliche">다양한</mark> 사람들과 소통하는 것을 좋아했습니다. 대학 시절 <mark class="cliche">다양한</mark> 대외활동을 통해 소통 능력과 배려심을 기를 수 있었고, 이러한 경험들은 저에게 <mark class="cliche">소중한 밑거름</mark>이 되었습니다. <mark class="struct">첫째,</mark> 저는 뛰어난 소통 능력을 갖추고 있습니다. <mark class="struct">둘째,</mark> 어떤 상황에서도 침착하게 대처할 수 있습니다. 이러한 역량을 바탕으로 <mark class="cliche">귀사의 발전에 기여</mark>하는 승무원이 되고 싶습니다.</p>
+      <div class="missing">
+        <div><div class="n">0</div><div class="l">숫자</div></div>
+        <div><div class="n">0</div><div class="l">이름·장소</div></div>
+        <div><div class="n">0</div><div class="l">구체적 일화</div></div>
+      </div>
+      <p class="missing-note">진짜 겪은 일에는 반드시 <b>숫자·이름·장소</b>가 등장해요. 하나도 없다는 건, AI가 쓴 글의 가장 큰 특징입니다.</p>
+    </div>
+
+    <!-- 지적 카드들 -->
+    <div class="card finding grave">
+      <div class="f-head"><span class="f-tag grave">가장 큰 감점</span><span class="f-quote">일화가 없어요</span></div>
+      <p class="f-why">언제, 어디서, 누구와 있었던 일인지 단서가 하나도 없습니다. 면접관은 <b>겪은 사람만 말할 수 있는 디테일</b>로 진짜를 가려냅니다.</p>
+      <div class="f-fix">"작년 여름, 카페 마감 조에서 손님 항의를 받았을 때…"처럼 시간·장소가 있는 한 장면으로 시작해 보세요.</div>
+    </div>
+
+    <div class="card finding">
+      <div class="f-head"><span class="f-tag">AI 상투어</span><span class="f-quote">"다양한" ×2</span></div>
+      <p class="f-why">AI가 가장 사랑하는 단어. 아무 정보도 담지 않으면서 문장만 채웁니다.</p>
+      <div class="f-fix">'다양한 대외활동' → '학교 축제 부스 운영 2번, 승무원 스터디 6개월'처럼 개수와 이름으로 바꾸세요.</div>
+      <div class="f-stat">이번 달 승준생 답변 10건 중 9건에 등장한 표현</div>
+    </div>
+
+    <div class="card finding">
+      <div class="f-head"><span class="f-tag">AI 상투어</span><span class="f-quote">"소중한 밑거름"</span></div>
+      <p class="f-why">뭉뚱그린 마무리 표현. 그 경험이 <b>무엇에 어떻게</b> 도움이 됐는지 정보가 없습니다.</p>
+      <div class="f-fix">그 경험 '때문에' 달라진 행동 하나를 쓰세요. "그 뒤로는 항의를 받으면 먼저 상황부터 확인합니다."</div>
+    </div>
+
+    <div class="card finding">
+      <div class="f-head"><span class="f-tag struct">AI 정형 구조</span><span class="f-quote">"첫째, … 둘째, …"</span></div>
+      <p class="f-why">AI가 즐겨 쓰는 나열 구조. 입으로 말하면 발표문처럼 들려 <b>외운 티</b>가 납니다.</p>
+      <div class="f-fix">강점은 하나만 골라, 그 강점이 드러난 장면 하나로 보여주세요.</div>
+    </div>
+
+    <div class="card finding">
+      <div class="f-head"><span class="f-tag">AI 상투어</span><span class="f-quote">"귀사의 발전에 기여"</span></div>
+      <p class="f-why">입으로는 아무도 안 쓰는 문어체. 게다가 <b>항공사 이름이 없어</b> 어느 회사에 내도 되는 답이 됩니다.</p>
+      <div class="f-fix">지원하는 항공사 이름과, 그 항공사여야만 하는 이유 한 가지를 넣으세요.</div>
+    </div>
+
+    <div class="save-note">
+      <span>💾</span>
+      <span>이 검사 기록은 <b>마이페이지 답변노트</b>에 저장됐어요. 고쳐 쓴 답변으로 다시 검사하면 <b>점수 변화</b>를 이어서 볼 수 있어요.</span>
+    </div>
+  </div>
+
+  <div class="foot">화면 시안입니다 — 점수·통계·지적 내용은 예시 데이터예요.</div>
+</div>
+
+<script>
+  (function(){
+    var btn = document.getElementById('go');
+    var result = document.getElementById('result');
+    btn.addEventListener('click', function(){
+      btn.disabled = true;
+      var old = btn.textContent;
+      btn.textContent = '면접관의 눈으로 읽는 중…';
+      result.classList.remove('replay');
+      setTimeout(function(){
+        btn.disabled = false;
+        btn.textContent = old;
+        result.classList.add('replay');
+        result.scrollIntoView({behavior:'smooth', block:'start'});
+      }, 1300);
+    });
+  })();
+</script>
+</body>
+</html>

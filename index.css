@@ -1476,13 +1476,101 @@
          바 회피는 이제 아래 .hs-stage 높이 상한(-240px)이 센터링 수식으로 처리한다. */
     }
 
-    /* 구 .hs-cta(신청 버튼·D-day 뱃지·전·후 듣기 링크·팩트 라인)는 2026-07-22 전부 삭제.
-       ① 신청 버튼·뱃지·팩트는 하단 CTA 바가 이미 상시 노출로 말하고 있어 중복이었고,
-       ② 남은 '전·후 목소리 듣기'는 캐러셀 화살표 바로 아래 빈 공간에 테두리도 배경도 없이
-          떠 있어 '맥락 없는 부스러기'로 읽혔다(오너 지적). 자리를 다듬어 될 문제가 아니라
-          자리 자체가 틀렸다 → 대신 ③ Before&After 섹션을 히어로 바로 다음으로 올려
-          증거를 링크 없이 만나게 했다. 히어로는 사진 카드 + 좌우 화살표만 남긴다.
-       ⚠️ 여기에 버튼을 다시 쌓지 말 것 — 하단 바와 중복되거나 또 부스러기가 된다. */
+    /* ── .hs-cta — 전·후 미니 플레이어 + 상품 사실 (2026-07-27 복구, A안) ──
+       역사: 구 .hs-cta(신청 버튼·D-day 뱃지·전·후 듣기 링크·팩트 라인)는 2026-07-22 전부
+       삭제됐다. 신청 버튼·뱃지는 하단 CTA 바와 중복이라 삭제가 옳았지만, 그때 '2주 ·
+       하루 한 번 미션' 팩트 라인까지 같이 사라져 첫 화면에 상품 설명이 0이 됐다.
+       ⚠️ 신청 버튼·D-day 뱃지를 다시 쌓지 말 것 — 하단 바가 상시로 이미 말한다.
+       ⚠️ 구 '전·후 듣기'가 '부스러기'로 읽힌 진짜 이유는 테두리도 배경도 없이 빈 공간에
+          떠 있었기 때문이다. 그래서 지금은 다크 패널(--bg-dark)로 묶어 하나의 물건으로
+          만든다 — 여백에 텍스트만 띄우는 형태로 되돌리지 말 것.
+       ⚠️ 링크가 아니라 플레이어인 이유: 전·후 섹션이 어차피 한 화면 아래라 '아래를 보세요'
+          약속은 무의미했다(오너). 첫 화면에서 소리가 나야 증거가 된다. */
+    .hs-cta {
+      flex: 0 0 auto;
+      display: flex; flex-direction: column; align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+      width: min(360px, 86vw);
+    }
+    .hs-ab {
+      width: 100%;
+      background: var(--bg-dark);
+      border-radius: var(--radius-sm);
+      padding: 14px 14px 12px;
+    }
+    .hs-ab-lbl {
+      font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--action); text-align: center; margin-bottom: 10px;
+    }
+    .hs-ab-row { display: flex; gap: 8px; }
+    /* 터치 44px(원칙 2) · 활자 14px(원칙 1). 두 버튼은 '전/후'라는 한 쌍이라 폭을 반씩 나눈다. */
+    .hs-ab-btn {
+      flex: 1 1 0; min-height: 44px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border: 0; border-radius: 99px; cursor: pointer;
+      font-family: inherit; font-size: var(--fs-caption); font-weight: 800;
+      background: rgba(245,241,232,.16); color: var(--text-on-dark);
+      transition: filter .18s ease, transform .12s ease;
+    }
+    /* '지금'만 오렌지 채움 — 결과 쪽에 시선이 가야 한다. 오렌지 위 글씨는 --action-ink(원칙 4) */
+    .hs-ab-btn.is-after { background: var(--action); color: var(--action-ink); }
+    .hs-ab-btn:hover  { filter: brightness(1.08); }
+    .hs-ab-btn:active { transform: scale(.97); }
+    .hs-ab-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+    .hs-ab-ico { width: 13px; height: 13px; fill: currentColor; flex: 0 0 auto; }
+    .hs-ab-bar { height: 3px; border-radius: 2px; background: rgba(245,241,232,.18); margin-top: 10px; overflow: hidden; }
+    .hs-ab-fill { height: 100%; width: 0; background: var(--action); border-radius: 2px; }
+    .hs-ab-who { font-size: 12px; color: #A79E8C; text-align: center; margin-top: 8px; }
+    .hs-cta-sub { font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); text-align: center; }
+    @media (prefers-reduced-motion: reduce) {
+      .hs-ab-btn { transition: none; }
+    }
+
+    /* ── 세 개의 문 (#pillars) — 인트로 직후 (2026-07-27 신설) ──
+       무대 리듬 규칙상 '정보·카드 섹션'이므로 헤더는 좌측 + 밝은 배경(--bg2).
+       인트로 끝(--bg)과 히어로 시작(--lavender) 사이에 밝은 띠가 생겨 세 문이
+       자기 선반을 갖는다.
+       ⚠️ --pl-c 는 3px 레일뿐 아니라 12~16px 소형 텍스트에도 쓰이므로 반드시
+          흰 카드 위 4.5:1 이상인 값만 넣을 것(원칙 4). 챌린지는 --accent-dark가
+          3.9:1로 미달이라 --accent-ink(#A33D14)를 쓴다 — --action/--accent-dark로
+          되돌리지 말 것. */
+    .pillars { background: var(--bg2); padding: var(--space-6) 0 var(--space-8); }
+    .pl-head { margin-bottom: var(--space-4); }
+    .pl-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+    @media (min-width: 720px) {
+      .pl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      /* 특강이 없어 문이 숨겨졌을 땐 2칸 — 3칸으로 두면 오른쪽 한 칸이 빈 채로 남는다.
+         :has() 미지원 구형 브라우저는 3칸 유지(빈 칸이 생길 뿐 깨지지는 않는다). */
+      .pl-grid:has(> .pl-door[hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .pl-door {
+      position: relative; display: flex; flex-direction: column;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 16px 14px 19px;
+      text-decoration: none; color: var(--text); overflow: hidden;
+      transition: border-color .18s ease, transform .12s ease;
+    }
+    /* ⚠️ 필수 — display:flex가 브라우저 기본 [hidden]{display:none}을 이긴다(작성자 스타일이
+       UA 스타일보다 우선). 이 한 줄이 없으면 특강이 없어도 특강 문이 그대로 보인다. */
+    .pl-door[hidden] { display: none; }
+    .pl-door::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--pl-c); }
+    .pl-door:hover { border-color: var(--pl-c); }
+    .pl-door:active { transform: scale(.995); }
+    .pl-door:focus-visible { outline: 2px solid var(--pl-c); outline-offset: 2px; }
+    .pl-k  { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--pl-c); }
+    .pl-nm { font-size: 20px; font-weight: 800; margin: 6px 0 5px; letter-spacing: var(--ls-tight); }
+    .pl-ds { font-size: var(--fs-caption); color: var(--text-dim); line-height: 1.6; word-break: keep-all; }
+    .pl-mt {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border-soft);
+    }
+    .pl-meta { font-size: var(--fs-caption); font-weight: 700; }
+    .pl-go   { font-size: 16px; font-weight: 800; color: var(--pl-c); }
+    @media (prefers-reduced-motion: reduce) { .pl-door { transition: none; } }
+    /* 챌린지 문이 #home으로 착지할 때 고정 nav(56px)에 제목이 가리지 않게 */
+    #home { scroll-margin-top: 60px; }
 
     /* 캐러셀 이름표(2026-07-23) — 구 #challenges 섹션의 메인·서브 타이틀 이관(오너 요청).
        상단 88px 패딩(.hs-carousel)이 고정 nav를 이미 피해주므로 별도 여백 불필요. */
