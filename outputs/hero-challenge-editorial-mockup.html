@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>히어로 챌린지 목록 — 하이엔드 레퍼런스 기반 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Song+Myung&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════════════════════
+     실제 사이트 토큰(tokens.css)을 그대로 가져옴 — 목업이 실물과 같은 색·글꼴로 뜨게.
+     ═══════════════════════════════════════════════════════════════════ */
+  :root{
+    --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9; --lavender:#DED8C9;
+    --surface:#FFFFFF; --surface2:#F4F0E8;
+    --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+    --border:rgba(38,34,28,0.16); --border-soft:rgba(38,34,28,0.09);
+    --hair:rgba(38,34,28,0.13);
+    --action:#F27945; --accent-dark:#D9531F; --accent-ink:#A33D14;
+    --serif:'Song Myung','Noto Serif KR',serif;
+    --serif2:'Noto Serif KR',serif;
+    --sans:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,sans-serif;
+    --hero-bg:linear-gradient(180deg,#DED8C9 0%,#DED8C9 62%,#E9E4D8 100%);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:#EFEBE1;color:var(--text);
+       line-height:1.62;word-break:keep-all;padding:36px 20px 120px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto}
+
+  /* ── 문서 골격 ── */
+  .doc-eyebrow{font-size:11px;font-weight:800;letter-spacing:.24em;color:var(--accent-ink);text-transform:uppercase}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4.6vw,46px);line-height:1.28;
+     letter-spacing:-.01em;margin-top:12px;max-width:20ch}
+  .lede{margin-top:16px;font-size:16px;color:var(--text-muted);max-width:70ch}
+  .lede b{color:var(--text);font-weight:700}
+
+  section{margin-top:64px;padding-top:34px;border-top:1px solid var(--hair)}
+  h2{font-family:var(--serif);font-weight:400;font-size:30px;line-height:1.3;letter-spacing:-.01em}
+  h2 .n{font-family:var(--sans);font-size:12px;font-weight:800;letter-spacing:.22em;
+        color:var(--text-dim);display:block;margin-bottom:10px}
+  h3{font-size:16px;font-weight:800;margin-top:26px}
+  p+p{margin-top:10px}
+  .note{font-size:15px;color:var(--text-muted);max-width:74ch;margin-top:12px}
+  .note b{color:var(--text)}
+  .note code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+             background:rgba(38,34,28,.06);padding:1px 5px;border-radius:4px}
+
+  /* ── 진단 리스트 ── */
+  .flaws{margin-top:22px;display:grid;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+  .flaw{background:#FBF9F4;padding:16px 18px;display:grid;grid-template-columns:26px 1fr;gap:14px;align-items:start}
+  .flaw .no{font-size:12px;font-weight:800;color:var(--accent-ink);letter-spacing:.06em;padding-top:2px}
+  .flaw h4{font-size:15.5px;font-weight:800;line-height:1.5}
+  .flaw p{font-size:14.5px;color:var(--text-muted);margin-top:5px}
+  .flaw code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+             background:rgba(38,34,28,.06);padding:1px 5px;border-radius:4px}
+
+  /* ── 레퍼런스 카드 ── */
+  .refs{margin-top:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+  .ref{background:#FBF9F4;border:1px solid var(--hair);border-radius:12px;padding:20px}
+  .ref .brand{font-family:var(--serif2);font-weight:600;font-size:19px;letter-spacing:.01em}
+  .ref .kind{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--text-dim);
+             text-transform:uppercase;margin-top:6px}
+  .ref .q{font-size:14.5px;color:var(--text-muted);margin-top:12px;line-height:1.65}
+  .ref .take{font-size:14.5px;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);font-weight:700}
+  .ref .take span{color:var(--accent-ink)}
+
+  /* ── 툴바 ── */
+  .bar{position:sticky;top:0;z-index:40;margin-top:26px;padding:12px 0;background:#EFEBE1;
+       display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--hair)}
+  .bar button{font-family:inherit;font-size:13.5px;font-weight:700;color:var(--text-muted);cursor:pointer;
+              background:#FBF9F4;border:1px solid var(--border);border-radius:999px;padding:8px 16px}
+  .bar button.on{background:var(--text);color:#F5F1E8;border-color:var(--text)}
+  .bar .sep{width:1px;height:22px;background:var(--hair);margin:0 4px}
+  .bar .hint{font-size:13px;color:var(--text-dim)}
+
+  /* ── 안 배치 ── */
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:34px;margin-top:30px;align-items:start}
+  body.solo .plans{grid-template-columns:1fr;max-width:820px}
+  .plan{background:#FBF9F4;border:1px solid var(--hair);border-radius:16px;padding:22px 22px 26px}
+  .plan-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .plan-tag{font-size:11px;font-weight:800;letter-spacing:.18em;color:#FBF9F4;background:var(--text);
+            padding:4px 10px;border-radius:999px}
+  .plan-name{font-family:var(--serif2);font-weight:600;font-size:21px}
+  .plan-ref{font-size:12.5px;font-weight:700;color:var(--accent-ink);letter-spacing:.02em}
+  .plan-why{font-size:14.5px;color:var(--text-muted);margin-top:12px;line-height:1.68}
+  .plan-why b{color:var(--text);font-weight:700}
+  .plan-meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px 10px}
+  .chip{font-size:12.5px;font-weight:700;color:var(--text-muted);background:rgba(38,34,28,.055);
+        border-radius:6px;padding:4px 9px}
+  .chip b{color:var(--text)}
+  .plan-risk{margin-top:12px;font-size:13.5px;color:#8C4318;line-height:1.6}
+
+  /* ═══════════════════════════════════════════════════════════════════
+     폰 프레임 — 375px 실측. 안쪽은 실제 히어로와 같은 배경·nav·하단바.
+     ═══════════════════════════════════════════════════════════════════ */
+  .stagewrap{margin-top:20px;display:flex;justify-content:center}
+  .phone{width:375px;flex:0 0 375px;border:1px solid rgba(38,34,28,.2);border-radius:24px;overflow:hidden;
+         box-shadow:0 14px 44px rgba(36,26,18,.16);background:var(--hero-bg)}
+  .ph-nav{height:56px;background:#F6F2E9;border-bottom:1px solid rgba(38,34,28,.07);
+          display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+  .ph-logo{font-weight:900;font-size:19px;letter-spacing:.06em;color:#194192}
+  .ph-logo i{font-style:normal;color:var(--action)}
+  .ph-burger{width:24px;display:grid;gap:5px}
+  .ph-burger i{height:2px;background:#26221C;border-radius:2px}
+  .stage{padding:40px 0 34px}          /* 실제 .hs-carousel 은 88px 0 — 목업은 위 인트로가 없어 축소 */
+  .ph-cta{padding:12px 16px 16px;background:linear-gradient(180deg,rgba(233,228,216,0) 0%,#E9E4D8 40%)}
+  .ph-cta .pill{background:var(--accent-dark);border-radius:999px;padding:11px 16px;text-align:center;color:#fff}
+  .ph-cta .pill b{display:block;font-size:17px;font-weight:800}
+  .ph-cta .pill span{display:block;font-size:12px;opacity:.92;margin-top:2px}
+  .ph-caption{text-align:center;font-size:12.5px;color:var(--text-dim);margin-top:10px}
+  .h-out{font-variant-numeric:tabular-nums;font-weight:800;color:var(--text)}
+
+  /* ── 공통 헤더(4안 공용 수리분) ── */
+  .hd{padding:0 24px;margin-bottom:26px}
+  .hd.mid{text-align:center}
+  .hd-label{font-size:11px;font-weight:800;letter-spacing:.24em;color:var(--text-dim);text-transform:uppercase;
+            display:flex;align-items:center;gap:9px}
+  .hd.mid .hd-label{justify-content:center}
+  .hd-label::before{content:"";width:22px;height:1px;background:currentColor;flex:0 0 auto}
+  /* ⚠️ max-width 에 ch 단위를 쓰지 말 것 — 명조의 '0' 글리프 폭(≈.5em) 기준이라
+     11ch 가 170px 로 계산돼 '마세요'가 셋째 줄로 떨어졌다(1차 렌더에서 실제로 밟음).
+     줄바꿈은 <br> 로 지정하고, 폭은 거터를 뺀 실폭(327px)만 상한으로 둔다. */
+  .hd-title{font-family:var(--serif);font-weight:400;font-size:31px;line-height:1.34;letter-spacing:-.012em;
+            color:var(--text);margin-top:13px;max-width:327px}
+  .hd.mid .hd-title{margin-left:auto;margin-right:auto}
+  .hd-sub{font-size:13.5px;font-weight:600;color:var(--text-dim);margin-top:11px;letter-spacing:.01em}
+
+  /* ── 사진 톤 통일 (토글) ── */
+  .shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 26%}
+  body.tone .shot img{filter:saturate(.86) contrast(1.03) sepia(.13)}
+  .is-dim .shot img{filter:grayscale(1) contrast(1.02) !important;opacity:.92}
+  .shot{display:block;overflow:hidden;background:var(--bg3)}
+
+  /* 상태 활자 — 오렌지는 화면에서 '여기 한 곳'만 쓴다 */
+  .st{font-size:11.5px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
+  .st.open{color:var(--accent-ink)}
+  .st.closed{color:var(--text-dim);font-weight:700}
+
+  /* ═══ A안 — INDEX ═══ */
+  .A .row{display:grid;grid-template-columns:1fr 76px;gap:18px;align-items:start;
+          padding:20px 24px;border-bottom:1px solid var(--hair);text-decoration:none;color:inherit}
+  .A .row:first-child{border-top:1px solid var(--hair)}
+  .A .row:last-child{border-bottom:1px solid var(--hair)}
+  .A .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .A .idx{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--text-dim);text-transform:uppercase}
+  .A .nm{font-family:var(--serif);font-weight:400;font-size:26px;line-height:1.2;letter-spacing:.06em;
+         margin-top:9px;color:var(--text)}
+  .A .ln{font-size:13.5px;line-height:1.6;color:var(--text-dim);margin-top:7px}
+  .A .ln em{font-style:normal;font-weight:700;color:var(--text)}
+  .A .shot{width:76px;height:76px;border-radius:2px;margin-top:4px}
+  .A .is-dim .nm{color:var(--text-muted)}
+
+  /* ═══ B안 — PLATE ═══ */
+  .B .item{display:block;padding:0 24px;margin-bottom:38px;text-decoration:none;color:inherit}
+  .B .item:last-child{margin-bottom:0}
+  .B .shot{aspect-ratio:3/2;width:100%;border-radius:2px}
+  .B .cap{padding-top:14px}
+  .B .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .B .idx{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--text-dim);text-transform:uppercase}
+  .B .nm{font-family:var(--serif);font-weight:400;font-size:29px;line-height:1.2;letter-spacing:.06em;margin-top:11px}
+  .B .ln{font-size:14.5px;line-height:1.6;color:var(--text-dim);margin-top:9px}
+  .B .ln em{font-style:normal;font-weight:700;color:var(--text)}
+  .B .is-dim .nm{color:var(--text-muted)}
+
+  /* ═══ C안 — COLLECTION ═══ */
+  .C .grid{display:grid;grid-template-columns:1fr 1fr;gap:26px 14px;padding:0 24px}
+  .C .item{display:block;text-decoration:none;color:inherit}
+  .C .shot{aspect-ratio:4/5;width:100%;border-radius:2px}
+  .C .cap{padding-top:11px}
+  .C .idx{font-size:10.5px;font-weight:800;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase}
+  .C .nm{font-family:var(--serif2);font-weight:600;font-size:18px;line-height:1.25;letter-spacing:.05em;margin-top:7px}
+  /* ⚠️ min-height 로 2줄을 확보한다 — 없으면 설명이 1줄인 칸과 2줄인 칸의 '모집 중' 줄이
+     서로 다른 높이에 앉아 격자의 가로 기준선이 어긋난다(1차 렌더에서 01↔02가 어긋났다).
+     격자형은 칸끼리 줄이 맞아야 '한 세트'로 읽힌다. */
+  .C .ln{font-size:13px;line-height:1.5;color:var(--text-dim);margin-top:6px;min-height:39px;
+         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .C .ln em{font-style:normal;font-weight:700;color:var(--text)}
+  .C .st{display:block;margin-top:6px}
+  .C .is-dim .nm{color:var(--text-muted)}
+
+  /* ═══ D안 — LEAD + INDEX ═══ */
+  .D .lead{display:block;padding:0 24px;text-decoration:none;color:inherit;margin-bottom:30px}
+  .D .lead .shot{aspect-ratio:3/2;width:100%;border-radius:2px}
+  .D .lead .rule{width:26px;height:2px;background:var(--action);margin-top:16px}
+  .D .lead .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:12px}
+  .D .lead .idx{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--text-dim);text-transform:uppercase}
+  .D .lead .nm{font-family:var(--serif);font-weight:400;font-size:31px;line-height:1.18;letter-spacing:.06em;margin-top:10px}
+  .D .lead .ln{font-size:14.5px;line-height:1.6;color:var(--text-dim);margin-top:9px}
+  .D .lead .ln em{font-style:normal;font-weight:700;color:var(--text)}
+  .D .rest-label{padding:0 24px;font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--text-dim);
+                 text-transform:uppercase;margin-bottom:4px}
+  .D .row{display:grid;grid-template-columns:1fr 56px;gap:14px;align-items:center;
+          padding:15px 24px;border-top:1px solid var(--hair);text-decoration:none;color:inherit}
+  .D .row:last-child{border-bottom:1px solid var(--hair)}
+  .D .row .idx{font-size:10.5px;font-weight:800;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase}
+  .D .row .nm{font-family:var(--serif2);font-weight:600;font-size:17px;letter-spacing:.05em;margin-top:5px;
+              color:var(--text-muted)}
+  .D .row .shot{width:56px;height:56px;border-radius:2px}
+  .D .row .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+
+  /* ── 현재(AS-IS) 재현 ── */
+  .cur .hs-head{text-align:center;margin-bottom:48px}
+  .cur .hs-label{font-size:11px;font-weight:800;letter-spacing:.24em;color:var(--accent-ink);text-transform:uppercase}
+  .cur .hs-label::before{content:"— "}
+  .cur .hs-title{font-family:var(--serif);font-weight:400;font-size:30px;line-height:1.28;letter-spacing:-.02em;
+                 color:var(--accent-dark);margin-top:10px;white-space:nowrap}  /* 넘침 재현 */
+  .cur .hs-sub{font-size:14px;font-weight:600;color:var(--text-muted);margin-top:14px}
+  .cur .list{display:grid;gap:12px}
+  .cur .card{display:block;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;
+             text-decoration:none;color:inherit}
+  .cur .card.hovered{border-color:var(--accent-dark)}
+  .cur .shot{height:104px}
+  .cur .body{padding:10px 14px 13px}
+  .cur .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px}
+  .cur .no{font-size:12px;font-weight:800;letter-spacing:.18em;color:var(--text-dim);text-transform:uppercase}
+  .cur .nm{font-family:var(--serif);font-weight:700;font-size:20px;line-height:1.25;letter-spacing:.08em;
+           display:block;margin-bottom:4px}   /* Song Myung 에 700 없음 → 합성 볼드 재현 */
+  .cur .ln{font-size:14px;line-height:1.55;color:var(--text-dim)}
+  .cur .ln em{font-style:normal;font-weight:700;color:var(--accent-dark)}
+  .pin{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:#B4351B;
+       border-radius:999px;padding:2px 8px;vertical-align:2px;margin-left:6px}
+
+  /* ── 비교표 ── */
+  table{width:100%;border-collapse:collapse;margin-top:22px;font-size:14.5px;background:#FBF9F4;
+        border:1px solid var(--hair);border-radius:12px;overflow:hidden}
+  th,td{padding:13px 14px;text-align:left;border-bottom:1px solid var(--hair);vertical-align:top}
+  th{font-size:12.5px;font-weight:800;letter-spacing:.06em;color:var(--text-dim);text-transform:uppercase;
+     background:rgba(38,34,28,.04)}
+  tr:last-child td{border-bottom:0}
+  td b{font-weight:800}
+  .good{color:#2E6E42;font-weight:800}
+  .mid{color:#8C4318;font-weight:800}
+
+  .verdict{margin-top:26px;background:#26221C;color:#F5F1E8;border-radius:16px;padding:26px 24px}
+  .verdict h3{margin-top:0;font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--action);text-transform:uppercase}
+  .verdict p{font-size:15.5px;line-height:1.7;margin-top:12px;color:rgba(245,241,232,.9);max-width:76ch}
+  .verdict p b{color:#F5F1E8}
+  .verdict .k{font-family:var(--serif2);font-weight:600;font-size:22px;color:#F5F1E8;margin-top:14px}
+
+  @media (max-width:820px){
+    .plans{grid-template-columns:1fr}
+    .phone{width:100%;flex:1 1 auto;max-width:375px}
+  }
+</style>
+</head>
+<body class="tone">
+<div class="wrap">
+
+  <div class="doc-eyebrow">Hero / Challenges · 재설계 목업</div>
+  <h1>사진이 없어서가 아니라, 사진을 다루는 방식이 싸 보인다</h1>
+  <p class="lede">
+    섹션 구조(캐러셀 → 목록)는 그대로 둔다. 문제는 <b>마감</b>이다.
+    지금 화면이 광고 배너처럼 읽히는 이유를 코드에서 실측으로 찾아 정리했고,
+    하이엔드 커머스·에디토리얼 사이트가 공통으로 지키는 규칙에 맞춰 <b>구조가 서로 다른 4안</b>을 실제 375px로 그렸다.
+    네 안 모두 아래 진단 7가지를 전부 해소한 상태다.
+  </p>
+
+  <!-- ═══════════════ 1. 진단 ═══════════════ -->
+  <section>
+    <h2><span class="n">01 · Diagnosis</span>지금 화면에서 실제로 벌어지는 일</h2>
+    <p class="note">감상이 아니라 코드에서 나온 값이다. 아래 왼쪽 프레임이 현재 화면 재현(375px)이고, 붉은 표식이 문제 지점이다.</p>
+
+    <div class="plans" style="margin-top:24px">
+      <div>
+        <div class="stagewrap" style="justify-content:flex-start">
+          <div class="phone">
+            <div class="ph-nav"><div class="ph-logo">M<i>O</i>NC</div><div class="ph-burger"><i></i><i></i><i></i></div></div>
+            <div class="stage cur">
+              <div class="hs-head">
+                <div class="hs-label">Challenges</div>
+                <div class="hs-title">승무원 준비 어렵게하지마세요</div>
+                <div class="hs-sub">2주 · 하루 한 번 미션</div>
+              </div>
+              <div class="list">
+                <a class="card" href="#">
+                  <span class="shot" style="display:block"><img src="../images/hero-expression.webp" alt=""></span>
+                  <span class="body">
+                    <span class="top"><span class="no">01 · Image</span><span class="st open">모집 중 · D-6</span></span>
+                    <span class="nm">영.합.각</span>
+                    <span class="ln">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span>
+                  </span>
+                </a>
+                <a class="card hovered" href="#">
+                  <span class="shot" style="display:block"><img src="../images/hero-answer.webp" alt=""></span>
+                  <span class="body">
+                    <span class="top"><span class="no">02 · Answer</span><span class="st open">모집 중 · D-6</span></span>
+                    <span class="nm">승.자.각</span>
+                    <span class="ln">뻔한 답변 → <em>나만 할 수 있는 답변</em></span>
+                  </span>
+                </a>
+                <a class="card is-dim" href="#">
+                  <span class="shot" style="display:block"><img src="../images/hero-voice.webp" alt=""></span>
+                  <span class="body">
+                    <span class="top"><span class="no">03 · Voice</span><span class="st closed">마감 · 다음 기수 준비 중</span></span>
+                    <span class="nm">보.신.각</span>
+                    <span class="ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span>
+                  </span>
+                </a>
+              </div>
+            </div>
+            <div class="ph-cta"><div class="pill"><b>신청하기</b><span>모집 중 · D-6 마감 · 참가비 3만원 · 코치 1:1 피드백</span></div></div>
+          </div>
+        </div>
+        <div class="ph-caption">현재 화면 재현 · 실측 그대로<br>하단 주황 알약(고정 CTA 바)은 <b>이번 범위 밖</b> — 네 안 모두 같은 조건으로 두고 비교했다</div>
+      </div>
+
+      <div class="flaws">
+        <div class="flaw"><div class="no">01</div><div>
+          <h4>제목이 화면 밖으로 잘린다 <span class="pin">스크린샷의 '요'</span></h4>
+          <p><code>.hs-head</code>에 폭 제한이 없는데 부모가 <code>align-items:center</code> flex라 제목이 <b>max-content(실측 396px)</b>로 부풀어 375px 화면을 <b>21px 넘는다.</b> <code>word-break:keep-all</code>이 있어도 줄바꿈이 안 일어난다 — 넘칠 폭이 애초에 허용되기 때문이다. 덤으로 <b>'어렵게하지마세요'는 띄어쓰기가 틀렸다</b>(어렵게 하지 마세요).</p>
+        </div></div>
+        <div class="flaw"><div class="no">02</div><div>
+          <h4>좌우 여백이 0원어치다</h4>
+          <p><code>.hs-carousel{padding:88px 0}</code> · <code>.ch-list{width:100%}</code> → 카드가 화면 끝에 그대로 닿는다. 8px 라운드가 반쪽만 보이고, 사진이 액자 없이 잘린 인쇄물처럼 읽힌다. <b>고급이 가장 먼저 사는 게 여백인데 여기엔 한 푼도 없다.</b></p>
+        </div></div>
+        <div class="flaw"><div class="no">03</div><div>
+          <h4>한 화면에 오렌지가 네 곳</h4>
+          <p>라벨 대시 · 제목 전체 · 문장 강조(<code>.ch-line em</code>) · 하단 CTA. <b>강조가 넷이면 강조가 없는 것과 같다.</b> 채도 높은 주황이 면적을 먹는 순간 화면은 배너가 된다.</p>
+        </div></div>
+        <div class="flaw"><div class="no">04</div><div>
+          <h4>헤드라인을 브랜드 컬러로 칠했다</h4>
+          <p>30px 명조 제목을 통째로 <code>--accent-dark</code>로. 아래 레퍼런스 네 곳 중 <b>헤드라인을 브랜드 컬러로 칠하는 곳은 한 군데도 없다.</b> 무게는 색이 아니라 크기·여백·서체가 만든다.</p>
+        </div></div>
+        <div class="flaw"><div class="no">05</div><div>
+          <h4>이름이 '가짜 굵게'로 찍히고 있다</h4>
+          <p><code>.ch-name{font-weight:700}</code>인데 <code>--serif</code> 1순위 <b>Song Myung에는 700이 없다</b> → 브라우저가 획을 부풀린 <b>합성 볼드</b>가 나온다. '영.합.각'이 뭉툭한 이유가 이것. 제목(400·Song Myung)과 이름(합성 700)은 사실상 서로 다른 서체다.</p>
+        </div></div>
+        <div class="flaw"><div class="no">06</div><div>
+          <h4>02 카드만 주황 테두리인 건 디자인이 아니다 <span class="pin">버그</span></h4>
+          <p><code>.ch-card:hover</code>가 모바일에서 탭 후 잔류한 것. 의도한 강조로 보이지만 <b>손가락이 마지막에 닿은 카드가 표시되는 결함</b>이다.</p>
+        </div></div>
+        <div class="flaw"><div class="no">07</div><div>
+          <h4>사진 넉 장이 한 세트로 안 보인다</h4>
+          <p>형광등 실내 / 청색 유니폼 / 흑백이 색온도 보정 없이 나란히 놓였다. 여기에 '사진 밴드 + 흰 상자'는 블로그 카드의 관용구다 — <b>그 조합이 "AI가 만든 랜딩"의 시각적 지문</b>이다.</p>
+        </div></div>
+        <div class="flaw"><div class="no">08</div><div>
+          <h4>사진 안에 남의 글씨가 찍혀 있다</h4>
+          <p>영합각 사진 왼쪽 아래에 <b>'2025 JOB FAIR · 취업 컨설팅'</b> 현수막이, 오른쪽엔 모니터 화면이 그대로 들어가 있다. 하이엔드가 쓰는 사진은 배경에 <b>읽히는 글자가 없다</b> — 크롭 위치를 올리거나(<code>object-position</code>) 배경이 정리된 컷으로 교체해야 한다. 이건 코드가 아니라 소재의 문제라 4안 어느 쪽을 골라도 따로 남는다.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 2. 레퍼런스 ═══════════════ -->
+  <section>
+    <h2><span class="n">02 · References</span>고급이 실제로 하는 일 — 그리고 안 하는 일</h2>
+    <p class="note">
+      값비싼 사이트의 공통점은 화려함이 아니라 <b>절제</b>다. 네 곳 모두 ① 헤드라인에 색을 안 쓰고 ② 카드 테두리·그림자를 안 쓰며
+      ③ 항목당 카피를 한 줄로 끊고 ④ 여백을 사치스럽게 쓴다. 아래 4안은 각각 이 중 다른 축을 극단까지 가져간 것이다.
+    </p>
+    <div class="refs">
+      <div class="ref">
+        <div class="brand">Aesop</div><div class="kind">Editorial commerce</div>
+        <p class="q">크림·올리브·브라운의 단색 팔레트, 넉넉한 패딩 위에 제품이 떠 있는 구성. 카탈로그가 아니라 <b>에디토리얼 스프레드</b>처럼 읽히고, 내비게이션조차 드롭다운이 아니라 작은 콜라주로 노출한다.</p>
+        <div class="take">우리 적용 <span>→</span> 목록을 '카드 나열'이 아니라 '지면'으로. 배경색 위에 바로 놓고 상자를 없앤다.</div>
+      </div>
+      <div class="ref">
+        <div class="brand">The Row</div><div class="kind">Silent luxury</div>
+        <p class="q">배너도 프로모션 소음도 없다. 타이포그래피가 장식이 아니라 <b>건축</b>이고, 매장이 아니라 갤러리처럼 느껴져 제품 가치가 즉시 올라간다.</p>
+        <div class="take">우리 적용 <span>→</span> 오렌지는 '모집 중' 한 곳에만. 제목은 잉크색으로 되돌린다.</div>
+      </div>
+      <div class="ref">
+        <div class="brand">Kinfolk</div><div class="kind">Print → web</div>
+        <p class="q">넉넉한 여백이 각 이야기를 <b>갤러리 작품처럼 액자에 넣고</b>, 우아한 타이포가 모든 헤드라인에 고전적인 가독성을 준다.</p>
+        <div class="take">우리 적용 <span>→</span> 사진을 크게 쓰되 글자를 절대 사진 위에 얹지 않는다(B안).</div>
+      </div>
+      <div class="ref">
+        <div class="brand">잡지 목차 · 전시 도록</div><div class="kind">Index typography</div>
+        <p class="q">번호 · 이름 · 한 줄 · 얇은 괘선. 항목 사이를 나누는 것은 상자가 아니라 <b>1px 선과 침묵</b>이다. 넷을 나란히 두면 비교가 목적임이 드러난다.</p>
+        <div class="take">우리 적용 <span>→</span> 카드 테두리를 지우고 hairline 하나로 대체(A·D안).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 3. 4안 ═══════════════ -->
+  <section>
+    <h2><span class="n">03 · Mockups</span>구조가 서로 다른 4안</h2>
+    <p class="note">
+      스킨 4종이 아니라 <b>축이 다른 4종</b>이다 — 사진을 얼마나 크게 쓰고, 정보를 얼마나 줄이고, 넷을 어떻게 비교시킬 것인가.
+      공통 수리(좌우 24px 거터 · 제목 잉크색 · 오렌지 1곳 · 합성 볼드 제거 · hover 잔류 제거 · 사진 톤 통일)는 네 안 모두 적용돼 있다.
+    </p>
+
+    <div class="bar">
+      <button id="btn-tone" class="on">사진 톤 통일 · ON</button>
+      <button id="btn-solo">한 안씩 크게 보기</button>
+      <div class="sep"></div>
+      <span class="hint">프레임은 실제 375px · 높이는 렌더 후 자동 실측</span>
+    </div>
+
+    <div class="plans">
+
+      <!-- ══ A안 ══ -->
+      <div class="plan" data-measure>
+        <div class="plan-head">
+          <span class="plan-tag">A안</span><span class="plan-name">색인 · Index</span>
+          <span class="plan-ref">Aesop / The Row</span>
+        </div>
+        <p class="plan-why">
+          사진을 <b>76px 정사각으로 낮추고 활자에 지면을 몰아준다.</b> 카드도 상자도 없다 — 항목을 나누는 건 1px 괘선뿐.
+          이름을 명조 26px로 키워 '보.신.각'이라는 조어가 <b>이름표가 아니라 작품 제목</b>처럼 읽힌다.
+          네 안 중 가장 조용하고, 스크롤이 가장 짧다.
+        </p>
+        <div class="plan-meta">
+          <span class="chip">사진 <b>76×76</b></span><span class="chip">이름 <b>명조 26px</b></span>
+          <span class="chip">부피 <b class="h-out">—</b></span><span class="chip">한 화면에 <b>4개 전부</b></span>
+        </div>
+        <p class="plan-risk">위험 — 사진이 작아 인물의 매력이 거의 안 팔린다. '사진이 있어야 고급져 보인다'는 판단과 정면으로 갈린다.</p>
+        <div class="stagewrap">
+          <div class="phone">
+            <div class="ph-nav"><div class="ph-logo">M<i>O</i>NC</div><div class="ph-burger"><i></i><i></i><i></i></div></div>
+            <div class="stage A">
+              <div class="hd">
+                <div class="hd-label">Challenges</div>
+                <div class="hd-title">승무원 준비<br>어렵게 하지 마세요</div>
+                <div class="hd-sub">2주 · 하루 한 번 미션</div>
+              </div>
+              <a class="row" href="#">
+                <span>
+                  <span class="top"><span class="idx">01 — Image</span><span class="st open">모집 중 D-6</span></span>
+                  <span class="nm" style="display:block">영.합.각</span>
+                  <span class="ln" style="display:block">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span>
+                </span>
+                <span class="shot"><img src="../images/hero-expression.webp" alt=""></span>
+              </a>
+              <a class="row" href="#">
+                <span>
+                  <span class="top"><span class="idx">02 — Answer</span><span class="st open">모집 중 D-6</span></span>
+                  <span class="nm" style="display:block">승.자.각</span>
+                  <span class="ln" style="display:block">뻔한 답변 → <em>나만 할 수 있는 답변</em></span>
+                </span>
+                <span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+              </a>
+              <a class="row is-dim" href="#">
+                <span>
+                  <span class="top"><span class="idx">03 — Voice</span><span class="st closed">다음 기수 준비 중</span></span>
+                  <span class="nm" style="display:block">보.신.각</span>
+                  <span class="ln" style="display:block">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span>
+                </span>
+                <span class="shot"><img src="../images/hero-voice.webp" alt=""></span>
+              </a>
+              <a class="row is-dim" href="#">
+                <span>
+                  <span class="top"><span class="idx">04 — Speech</span><span class="st closed">다음 기수 준비 중</span></span>
+                  <span class="nm" style="display:block">스.피.닝</span>
+                  <span class="ln" style="display:block">딱딱한 말투 → <em>귀에 감기는 말투</em></span>
+                </span>
+                <span class="shot"><img src="../images/hero-spinning.webp" alt=""></span>
+              </a>
+            </div>
+            <div class="ph-cta"><div class="pill"><b>신청하기</b><span>모집 중 · D-6 마감 · 참가비 3만원</span></div></div>
+          </div>
+        </div>
+        <div class="ph-caption">사진은 작지만 넷이 한 지면에 완전히 들어온다</div>
+      </div>
+
+      <!-- ══ B안 ══ -->
+      <div class="plan" data-measure>
+        <div class="plan-head">
+          <span class="plan-tag">B안</span><span class="plan-name">도판 · Plate</span>
+          <span class="plan-ref">Kinfolk / 전시 도록</span>
+        </div>
+        <p class="plan-why">
+          정반대 극단. 사진을 <b>3:2로 화면 폭 가득</b> 쓰고 캡션을 그 아래 조용히 놓는다.
+          상자·테두리·그림자 <b>전부 제거</b> — 사진이 곧 카드다. 지금과 결정적으로 다른 점은
+          <b>사진이 액자(24px 거터) 안에 놓인다</b>는 것. 같은 사진인데 잘린 인쇄물이 아니라 도판으로 보인다.
+        </p>
+        <div class="plan-meta">
+          <span class="chip">사진 <b>327×218</b></span><span class="chip">이름 <b>명조 29px</b></span>
+          <span class="chip">부피 <b class="h-out">—</b></span><span class="chip">한 화면에 <b>1.5개</b></span>
+        </div>
+        <p class="plan-risk">위험 — 네 안 중 가장 길다. '고르는 화면'인데 넷을 나란히 못 본다. 마감 2개까지 크게 실리는 것도 낭비다.</p>
+        <div class="stagewrap">
+          <div class="phone">
+            <div class="ph-nav"><div class="ph-logo">M<i>O</i>NC</div><div class="ph-burger"><i></i><i></i><i></i></div></div>
+            <div class="stage B">
+              <div class="hd">
+                <div class="hd-label">Challenges</div>
+                <div class="hd-title">승무원 준비<br>어렵게 하지 마세요</div>
+                <div class="hd-sub">2주 · 하루 한 번 미션</div>
+              </div>
+              <a class="item" href="#">
+                <span class="shot"><img src="../images/hero-expression.webp" alt=""></span>
+                <span class="cap">
+                  <span class="top"><span class="idx">01 — Image</span><span class="st open">모집 중 D-6</span></span>
+                  <span class="nm" style="display:block">영.합.각</span>
+                  <span class="ln" style="display:block">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span>
+                </span>
+              </a>
+              <a class="item" href="#">
+                <span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+                <span class="cap">
+                  <span class="top"><span class="idx">02 — Answer</span><span class="st open">모집 중 D-6</span></span>
+                  <span class="nm" style="display:block">승.자.각</span>
+                  <span class="ln" style="display:block">뻔한 답변 → <em>나만 할 수 있는 답변</em></span>
+                </span>
+              </a>
+              <a class="item is-dim" href="#">
+                <span class="shot"><img src="../images/hero-voice.webp" alt=""></span>
+                <span class="cap">
+                  <span class="top"><span class="idx">03 — Voice</span><span class="st closed">다음 기수 준비 중</span></span>
+                  <span class="nm" style="display:block">보.신.각</span>
+                  <span class="ln" style="display:block">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span>
+                </span>
+              </a>
+              <a class="item is-dim" href="#">
+                <span class="shot"><img src="../images/hero-spinning.webp" alt=""></span>
+                <span class="cap">
+                  <span class="top"><span class="idx">04 — Speech</span><span class="st closed">다음 기수 준비 중</span></span>
+                  <span class="nm" style="display:block">스.피.닝</span>
+                  <span class="ln" style="display:block">딱딱한 말투 → <em>귀에 감기는 말투</em></span>
+                </span>
+              </a>
+            </div>
+            <div class="ph-cta"><div class="pill"><b>신청하기</b><span>모집 중 · D-6 마감 · 참가비 3만원</span></div></div>
+          </div>
+        </div>
+        <div class="ph-caption">사진이 주인공 · 글자는 사진 밖에서만 말한다</div>
+      </div>
+
+      <!-- ══ C안 ══ -->
+      <div class="plan" data-measure>
+        <div class="plan-head">
+          <span class="plan-tag">C안</span><span class="plan-name">컬렉션 · Collection</span>
+          <span class="plan-ref">패션 하우스 룩북 / MUJI</span>
+        </div>
+        <p class="plan-why">
+          모바일에서도 <b>2×2</b>로 간다. 세로 4:5 사진은 인물 사진의 표준 비율이라 얼굴이 잘리지 않고,
+          넷이 <b>한 화면 안에서 동시에 비교</b>된다. 톤 통일을 켜면 넉 장이 <b>한 컬렉션</b>으로 묶여 보인다 —
+          지금 화면이 못 하는 바로 그 일이다. 헤더만 이 안에서 가운데 정렬(격자가 대칭이라).
+        </p>
+        <div class="plan-meta">
+          <span class="chip">사진 <b>156×195</b></span><span class="chip">이름 <b>명조 18px</b></span>
+          <span class="chip">부피 <b class="h-out">—</b></span><span class="chip">한 화면에 <b>4개 전부</b></span>
+        </div>
+        <p class="plan-risk">위험 — 칸이 좁아 설명이 2줄로 잘린다(클램프). 문장을 길게 못 쓰고, 사진이 좋지 않으면 약점이 4배로 보인다.</p>
+        <div class="stagewrap">
+          <div class="phone">
+            <div class="ph-nav"><div class="ph-logo">M<i>O</i>NC</div><div class="ph-burger"><i></i><i></i><i></i></div></div>
+            <div class="stage C">
+              <div class="hd mid">
+                <div class="hd-label">Challenges</div>
+                <div class="hd-title">승무원 준비<br>어렵게 하지 마세요</div>
+                <div class="hd-sub">2주 · 하루 한 번 미션</div>
+              </div>
+              <div class="grid">
+                <a class="item" href="#">
+                  <span class="shot"><img src="../images/hero-expression.webp" alt=""></span>
+                  <span class="cap">
+                    <span class="idx" style="display:block">01 — Image</span>
+                    <span class="nm" style="display:block">영.합.각</span>
+                    <span class="ln">굳은 표정 → <em>자연스러운 표정</em></span>
+                    <span class="st open">모집 중 D-6</span>
+                  </span>
+                </a>
+                <a class="item" href="#">
+                  <span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+                  <span class="cap">
+                    <span class="idx" style="display:block">02 — Answer</span>
+                    <span class="nm" style="display:block">승.자.각</span>
+                    <span class="ln">뻔한 답변 → <em>나만의 답변</em></span>
+                    <span class="st open">모집 중 D-6</span>
+                  </span>
+                </a>
+                <a class="item is-dim" href="#">
+                  <span class="shot"><img src="../images/hero-voice.webp" alt=""></span>
+                  <span class="cap">
+                    <span class="idx" style="display:block">03 — Voice</span>
+                    <span class="nm" style="display:block">보.신.각</span>
+                    <span class="ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span>
+                    <span class="st closed">다음 기수 준비 중</span>
+                  </span>
+                </a>
+                <a class="item is-dim" href="#">
+                  <span class="shot"><img src="../images/hero-spinning.webp" alt=""></span>
+                  <span class="cap">
+                    <span class="idx" style="display:block">04 — Speech</span>
+                    <span class="nm" style="display:block">스.피.닝</span>
+                    <span class="ln">딱딱한 말투 → <em>귀에 감기는 말투</em></span>
+                    <span class="st closed">다음 기수 준비 중</span>
+                  </span>
+                </a>
+              </div>
+            </div>
+            <div class="ph-cta"><div class="pill"><b>신청하기</b><span>모집 중 · D-6 마감 · 참가비 3만원</span></div></div>
+          </div>
+        </div>
+        <div class="ph-caption">넉 장이 한 컬렉션으로 묶인다 · 비교가 목적임이 드러남</div>
+      </div>
+
+      <!-- ══ D안 ══ -->
+      <div class="plan" data-measure>
+        <div class="plan-head">
+          <span class="plan-tag">D안</span><span class="plan-name">리드 + 색인 · Lead</span>
+          <span class="plan-ref">잡지 1면 / Aesop 기획면</span>
+        </div>
+        <p class="plan-why">
+          유일하게 <b>넷을 동등하게 대접하지 않는 안</b>이다. 지금 모집 중인 것 하나를 <b>도판 크기로 리드</b>에 세우고,
+          나머지는 아래 색인 줄로 조용히 정리한다. 이미 <code>heroReorder()</code>가 모집 상태로 재정렬하고 있으니
+          <b>데이터가 바뀌면 리드도 자동으로 바뀐다</b> — 별도 관리가 필요 없다.
+          지면에 위계가 생겨서, '고르는 화면'이 <b>'읽는 화면'</b>이 된다.
+        </p>
+        <div class="plan-meta">
+          <span class="chip">리드 <b>327×218</b></span><span class="chip">색인 <b>56×56</b></span>
+          <span class="chip">부피 <b class="h-out">—</b></span><span class="chip">한 화면에 <b>리드+2</b></span>
+        </div>
+        <p class="plan-risk">위험 — 모집 중이 2개 이상일 때 어느 하나만 리드가 된다(2번은 색인으로 내려감). 리드를 2개로 늘리면 이 안의 장점이 사라진다.</p>
+        <div class="stagewrap">
+          <div class="phone">
+            <div class="ph-nav"><div class="ph-logo">M<i>O</i>NC</div><div class="ph-burger"><i></i><i></i><i></i></div></div>
+            <div class="stage D">
+              <div class="hd">
+                <div class="hd-label">Challenges</div>
+                <div class="hd-title">승무원 준비<br>어렵게 하지 마세요</div>
+                <div class="hd-sub">2주 · 하루 한 번 미션</div>
+              </div>
+              <a class="lead" href="#">
+                <span class="shot"><img src="../images/hero-expression.webp" alt=""></span>
+                <span class="rule" style="display:block"></span>
+                <span class="top"><span class="idx">01 — Image</span><span class="st open">모집 중 D-6</span></span>
+                <span class="nm" style="display:block">영.합.각</span>
+                <span class="ln" style="display:block">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span>
+              </a>
+              <div class="rest-label">그 밖의 챌린지</div>
+              <a class="row" href="#">
+                <span>
+                  <span class="top"><span class="idx">02 — Answer</span><span class="st open">모집 중 D-6</span></span>
+                  <span class="nm" style="display:block">승.자.각</span>
+                </span>
+                <span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+              </a>
+              <a class="row is-dim" href="#">
+                <span>
+                  <span class="top"><span class="idx">03 — Voice</span><span class="st closed">다음 기수 준비 중</span></span>
+                  <span class="nm" style="display:block">보.신.각</span>
+                </span>
+                <span class="shot"><img src="../images/hero-voice.webp" alt=""></span>
+              </a>
+              <a class="row is-dim" href="#">
+                <span>
+                  <span class="top"><span class="idx">04 — Speech</span><span class="st closed">다음 기수 준비 중</span></span>
+                  <span class="nm" style="display:block">스.피.닝</span>
+                </span>
+                <span class="shot"><img src="../images/hero-spinning.webp" alt=""></span>
+              </a>
+            </div>
+            <div class="ph-cta"><div class="pill"><b>신청하기</b><span>모집 중 · D-6 마감 · 참가비 3만원</span></div></div>
+          </div>
+        </div>
+        <div class="ph-caption">지금 신청할 수 있는 것에 지면을 몰아준다</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ 4. 비교 ═══════════════ -->
+  <section>
+    <h2><span class="n">04 · Compare</span>네 안을 같은 자로 재면</h2>
+    <table>
+      <tr><th>축</th><th>A · 색인</th><th>B · 도판</th><th>C · 컬렉션</th><th>D · 리드</th></tr>
+      <tr><td><b>사진 크기</b></td><td>76px</td><td class="good">327×218</td><td>156×195</td><td class="good">리드만 327×218</td></tr>
+      <tr><td><b>넷을 한 화면에</b></td><td class="good">전부</td><td>1.5개</td><td class="good">전부</td><td>리드+2</td></tr>
+      <tr><td><b>부피(375px)</b></td><td class="good h-out" data-from="0">—</td><td class="h-out" data-from="1">—</td><td class="h-out" data-from="2">—</td><td class="h-out" data-from="3">—</td></tr>
+      <tr><td><b>설명 문장</b></td><td class="good">전문</td><td class="good">전문</td><td class="mid">2줄 클램프</td><td>리드만 전문</td></tr>
+      <tr><td><b>사진이 약할 때</b></td><td class="good">타격 작음</td><td class="mid">그대로 드러남</td><td class="mid">4배로 드러남</td><td>리드 1장만 신경 쓰면 됨</td></tr>
+      <tr><td><b>운영 부담</b></td><td class="good">없음</td><td class="good">없음</td><td>문장 짧게 다듬어야</td><td class="good">없음(자동 정렬 활용)</td></tr>
+      <tr><td><b>'고급' 체감</b></td><td class="good">가장 조용함</td><td class="good">가장 화보다움</td><td>가장 브랜드다움</td><td class="good">가장 잡지다움</td></tr>
+    </table>
+
+    <div class="verdict">
+      <h3>내 추천</h3>
+      <p>
+        <b>D안(리드 + 색인)</b>을 민다. 이유는 취향이 아니라 데이터 구조다 —
+        지금 모집 중이 2개, 마감이 2개인데 <b>넷을 동등하게 그리면 화면의 절반을 신청할 수 없는 것에 쓴다.</b>
+        D안은 지면을 신청 가능한 것에 몰아주면서도, <code>heroReorder()</code>가 이미 모집 상태로 정렬하고 있어
+        <b>추가 관리 없이 데이터가 바뀌면 리드도 따라 바뀐다.</b> 게다가 사진 한 장만 크게 실리므로 사진 품질 부담도 1/4이다.
+      </p>
+      <p>
+        사진을 크게 쓰는 쪽으로 가고 싶으면 <b>B안</b>, 브랜드를 한 세트로 보이게 하는 게 목적이면 <b>C안</b>이다.
+        <b>A안은 대조군</b>으로 넣었다 — 극단적으로 조용하게 가면 어디까지 되는지 보라는 뜻이고, 실제로 이 사이트에는 사진이 아깝다.
+      </p>
+      <p class="k">넷 중 무엇을 고르든, 진단 7가지는 어느 안으로 가도 같이 고쳐진다.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // 부피 실측 — 이미지 로드 후 .stage 실제 높이를 각 안과 비교표에 채운다
+  function measure(){
+    var plans = document.querySelectorAll('.plan[data-measure]');
+    var vals = [];
+    plans.forEach(function(p){
+      var h = Math.round(p.querySelector('.stage').getBoundingClientRect().height);
+      vals.push(h);
+      var out = p.querySelector('.plan-meta .h-out');
+      if (out) out.textContent = h + 'px';
+    });
+    document.querySelectorAll('td.h-out[data-from]').forEach(function(td){
+      var i = +td.getAttribute('data-from');
+      if (vals[i] != null) td.textContent = vals[i] + 'px';
+    });
+  }
+  window.addEventListener('load', measure);
+  window.addEventListener('resize', measure);
+
+  document.getElementById('btn-tone').addEventListener('click', function(){
+    var on = document.body.classList.toggle('tone');
+    this.classList.toggle('on', on);
+    this.textContent = '사진 톤 통일 · ' + (on ? 'ON' : 'OFF');
+  });
+  document.getElementById('btn-solo').addEventListener('click', function(){
+    var on = document.body.classList.toggle('solo');
+    this.classList.toggle('on', on);
+    setTimeout(measure, 60);
+  });
+</script>
+</body>
+</html>
