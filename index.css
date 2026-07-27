@@ -923,6 +923,36 @@
       padding: 4px 12px;
     }
     .ba-name { font-size: 13px; font-weight: 700; color: rgba(245,241,232,.55); }
+
+    /* ── 변화 문장 띠 (2026-07-27 신설) ──
+       히어로 챌린지 카드(.ch-line)와 '글자 그대로 같은' 문장이 여기 다시 나온다.
+       위에서 읽은 사람이 "아까 그거네" 하고 이어지게 만드는 장치 —
+       ⚠️ 한쪽 문구만 고치지 말 것(index.html 의 .ch-line ↔ .ba-arc 는 한 쌍).
+       덤: 구 구성은 후기 인용문으로 시작해 '무엇이 바뀌었는지'를 듣기 전엔 알 수 없었다.
+       이 줄이 앞에 오면 무엇을 들어야 할지 알고 듣게 되어 같은 녹음이 더 잘 들린다. */
+    .ba-arc {
+      font-size: var(--fs-caption); font-weight: 700; line-height: 1.55;
+      color: rgba(245,241,232,.92);
+      padding: 10px 12px;
+      border-left: 2px solid var(--action);
+      background: rgba(242,121,69,.10);
+      border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+      word-break: keep-all;
+    }
+    .ba-arc em { font-style: normal; color: var(--action); }
+
+    /* 영상 카드 전용 — 비어 있는 [전][후] 토글 자리를 메우는 안내.
+       다름을 감추는 대신 왜 다른지를 말한다(영상엔 전·후가 한 편에 들어 있다). */
+    .ba-medianote {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-size: 13px; font-weight: 700; color: rgba(245,241,232,.62);
+      padding: 9px 10px;
+      border: 1px dashed rgba(245,241,232,.22);
+      border-radius: 99px;
+      word-break: keep-all; text-align: center;
+    }
+    .ba-medianote svg { width: 15px; height: 15px; fill: var(--action); flex: 0 0 auto; }
+
     .ba-quote {
       font-family: var(--serif);
       font-size: 16px; color: var(--text-on-dark);
@@ -1463,70 +1493,16 @@
       background: linear-gradient(180deg, var(--lavender) 0%, var(--bg3) 62%, var(--bg) 100%);
     }
 
-    /* 캐러셀 컨테이너 — pin(100vh) 안을 채움 */
+    /* 히어로 콘텐츠 컨테이너 (클래스명은 구 캐러셀 시절 이름 유지 — 마크업 3곳이 참조) */
     .hs-carousel {
-      /* ⚠️ position:absolute + inset:0 으로 되돌리지 말 것 — 그러면 다시 히어로 높이에
-         갇혀 카드가 남는 공간을 채우려고 세로로 늘어난다. 일반 흐름이라야 카드가 높이를 정한다.
-         상하 88px: 위는 고정 nav(56px) 회피, 아래는 고정 CTA 바(72px) 회피. */
+      /* ⚠️ position:absolute + inset:0 으로 되돌리지 말 것 — 그러면 히어로 높이에 갇혀
+         목록이 남는 공간을 채우려 늘어난다. 일반 흐름이라야 콘텐츠가 높이를 정한다.
+         상하 88px: 위는 고정 nav(56px) 회피, 아래는 고정 CTA 바(알약 58 + 바닥 14 = 72px) 회피.
+         ⚠️ 이 아래 여백이 없으면 마지막 카드가 하단 고정 바에 깔린다 — 줄이지 말 것. */
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 88px 0;
-      /* ⚠️ padding-bottom을 다시 넣지 말 것(2026-07-22). 구 80px는 맨 아래 .hs-cta-sub가
-         하단 바에 깔리는 걸 막으려던 것인데, .hs-cta를 통째로 걷어낸 뒤에도 남아 있어
-         콘텐츠를 위로 밀어 화살표 아래에 화면 1/4짜리 빈 구간을 만들었다(오너 지적).
-         바 회피는 이제 아래 .hs-stage 높이 상한(-240px)이 센터링 수식으로 처리한다. */
-    }
-
-    /* ── .hs-cta — 전·후 미니 플레이어 + 상품 사실 (2026-07-27 복구, A안) ──
-       역사: 구 .hs-cta(신청 버튼·D-day 뱃지·전·후 듣기 링크·팩트 라인)는 2026-07-22 전부
-       삭제됐다. 신청 버튼·뱃지는 하단 CTA 바와 중복이라 삭제가 옳았지만, 그때 '2주 ·
-       하루 한 번 미션' 팩트 라인까지 같이 사라져 첫 화면에 상품 설명이 0이 됐다.
-       ⚠️ 신청 버튼·D-day 뱃지를 다시 쌓지 말 것 — 하단 바가 상시로 이미 말한다.
-       ⚠️ 구 '전·후 듣기'가 '부스러기'로 읽힌 진짜 이유는 테두리도 배경도 없이 빈 공간에
-          떠 있었기 때문이다. 그래서 지금은 다크 패널(--bg-dark)로 묶어 하나의 물건으로
-          만든다 — 여백에 텍스트만 띄우는 형태로 되돌리지 말 것.
-       ⚠️ 링크가 아니라 플레이어인 이유: 전·후 섹션이 어차피 한 화면 아래라 '아래를 보세요'
-          약속은 무의미했다(오너). 첫 화면에서 소리가 나야 증거가 된다. */
-    .hs-cta {
-      flex: 0 0 auto;
-      display: flex; flex-direction: column; align-items: center;
-      gap: var(--space-2);
-      margin-top: var(--space-3);
-      width: min(360px, 86vw);
-    }
-    .hs-ab {
-      width: 100%;
-      background: var(--bg-dark);
-      border-radius: var(--radius-sm);
-      padding: 14px 14px 12px;
-    }
-    .hs-ab-lbl {
-      font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
-      color: var(--action); text-align: center; margin-bottom: 10px;
-    }
-    .hs-ab-row { display: flex; gap: 8px; }
-    /* 터치 44px(원칙 2) · 활자 14px(원칙 1). 두 버튼은 '전/후'라는 한 쌍이라 폭을 반씩 나눈다. */
-    .hs-ab-btn {
-      flex: 1 1 0; min-height: 44px;
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      border: 0; border-radius: 99px; cursor: pointer;
-      font-family: inherit; font-size: var(--fs-caption); font-weight: 800;
-      background: rgba(245,241,232,.16); color: var(--text-on-dark);
-      transition: filter .18s ease, transform .12s ease;
-    }
-    /* '지금'만 오렌지 채움 — 결과 쪽에 시선이 가야 한다. 오렌지 위 글씨는 --action-ink(원칙 4) */
-    .hs-ab-btn.is-after { background: var(--action); color: var(--action-ink); }
-    .hs-ab-btn:hover  { filter: brightness(1.08); }
-    .hs-ab-btn:active { transform: scale(.97); }
-    .hs-ab-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
-    .hs-ab-ico { width: 13px; height: 13px; fill: currentColor; flex: 0 0 auto; }
-    .hs-ab-bar { height: 3px; border-radius: 2px; background: rgba(245,241,232,.18); margin-top: 10px; overflow: hidden; }
-    .hs-ab-fill { height: 100%; width: 0; background: var(--action); border-radius: 2px; }
-    .hs-ab-who { font-size: 12px; color: #A79E8C; text-align: center; margin-top: 8px; }
-    .hs-cta-sub { font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); text-align: center; }
-    @media (prefers-reduced-motion: reduce) {
-      .hs-ab-btn { transition: none; }
     }
 
     /* ── 세 개의 문 (#pillars) — 인트로 직후 (2026-07-27 신설) ──
@@ -1588,196 +1564,99 @@
     }
     .hs-head-sub { font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); }
 
-    /* 카드 모집 칩 — recruit.js(applyIndexRecruit)가 채운다.
-       .recruit-status/.status-* 는 구 CHALLENGES 블록에서 여기로 이사(2026-07-23 섹션 삭제 때
-       하마터면 같이 지워질 뻔한 공용 배지 — 상세 카드와 같은 시각 언어라 하나만 배워도 된다).
-       pointer-events:none — 칩 위를 눌러도 카드 클릭(상세 이동/슬라이드 전환)이 그대로 동작해야 한다. */
-    .recruit-status {
-      position: absolute; top: 14px; right: 14px;
-      padding: 5px 12px; border-radius: 99px;
-      font-size: 12px; font-weight: 800;
-      backdrop-filter: blur(8px); z-index: 3; letter-spacing: .2px;
-    }
-    @keyframes recruit-pulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.6), 0 3px 10px rgba(34,197,94,.4); }
-      60%     { box-shadow: 0 0 0 7px rgba(34,197,94,0), 0 3px 10px rgba(34,197,94,.4); }
-    }
-    .status-recruiting {
-      background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff;
-      box-shadow: 0 3px 10px rgba(34,197,94,.4);
-      animation: recruit-pulse 1.8s ease-out infinite;
-    }
-    @media (prefers-reduced-motion: reduce) { .status-recruiting { animation: none; } }
-    .status-upcoming { background: rgba(255,255,255,.92); color: var(--primary); border: 1.5px solid rgba(36, 26, 18,.4); }
-    .status-closed   { background: rgba(60,60,60,.75); color: #ddd; }
-    .hs-card .recruit-status { pointer-events: none; }
-
-    /* 카드 무대 — 카드들이 절대배치되는 기준. --card-w로 카드 폭 제어 */
-    /* ⚠️ 세 번째 상한 필수: .hs-carousel은 position:absolute라 히어로 높이(max(100svh,680px))에
-       갇혀 못 자라고, 자식은 전부 flex:0 0 auto라 못 줄어든다. 무대만 svh 비례고 화살표·CTA는
-       고정(220px)이라, 상한이 없으면 창 높이 640~786px 구간에서 콘텐츠가 컨테이너를 넘겨
-       overflow:hidden에 CTA 문구가 잘린다(노트북 창 높이 대역이라 실제로 터짐 — 모집 중
-       D-day 뱃지가 뜨면 +36px라 더 넓어진다). 무대가 고정 요소 자리를 침범하지 못하게 막는다.
-       ⚠️ 2026-07-22 값 = 240px. .hs-carousel의 padding-bottom을 없앤 뒤로 이 상한 하나가
-       '하단 고정 바 회피'까지 겸한다. 유도: 캐러셀이 콘텐츠를 세로 중앙에 놓으므로
-       콘텐츠 아래끝 = (H + 콘텐츠)/2. 이게 바 윗변(H-72)보다 위여야 하니
-       콘텐츠 ≤ H-160, 콘텐츠 = 무대 + 68(nav 44 + 갭 24) → 무대 ≤ H-228. 여유 12를 더해 240.
-       ⚠️ 캐러셀에 요소를 더하면 그 높이+갭만큼 240을 올릴 것 — 안 올리면 바에 깔린다.
-       ⚠️ 두 번째 항(절대 상한)을 600px로 되돌리지 말 것(2026-07-22 오너 "얘만 간격이 넓다").
-       히어로는 100svh인데 카드만 600px에서 멈추면 창이 커질수록 남는 높이가 전부 빈
-       공간이 된다 — 창 1100px에서 아래 여백 216px(다른 섹션 경계 대비 2배 이상).
-       현재 값이면 680~1100px 구간에서 아래 여백이 86~98px로 거의 일정하다. */
-    .hs-stage {
-      position: relative;
+    /* ── 챌린지 목록 (.ch-*) — 에디토리얼/잡지 목차 형식 (2026-07-27 전면 교체) ──
+       구 coverflow 캐러셀 CSS(.hs-stage/.hs-card/.hs-media/.hs-card-overlay/.hs-h1/.hs-nav,
+       공용 초록 알약 .recruit-status/.status-*)는 전부 삭제했다.
+       ⚠️ 되돌리기 금지 — 오너 지적 "가독성·집중도가 떨어진다"의 원인이 그 구조였다:
+          5초 자동전환(읽기 끊김) / 이웃 카드의 잘린 글자(소음) / 4개 중 1개만 보임(비교 불가).
+       ⚠️ 핵심 한 수: 글자를 사진 밖으로 뺐다. 구조상 사진 위에 글자를 얹으려면 크림 막
+          (구 .hs-card-overlay 60%)이 필요했고, 그 막이 사진의 색·공기를 죽여
+          "사진이 있는데도 안 고급져 보인다"를 만들었다. 지금은 사진이 원색 그대로다.
+          사진 위에 글자를 올리는 형태로 되돌리지 말 것. */
+    .ch-list {
       width: 100%;
+      max-width: 560px;          /* 읽기 폭 상한 — 데스크톱에서 한 줄이 너무 길어지지 않게 */
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: minmax(0, 1fr);
       flex: 0 0 auto;
-      /* ⚠️ svh 비율 상한(구 72~76svh)·600px 절대 상한을 쓰지 말 것(2026-07-22 오너
-         "185로 똑같이 맞춰달라"). 그 상한들이 걸리면 무대만 작아지고 남는 높이가
-         전부 아래 빈 공간으로 흘러, 창 크기마다 여백이 86~104px로 출렁였다.
-         지금은 -244px 항이 항상 이겨 아래 여백이 창 크기와 무관하게 88px 고정
-         (= 다른 섹션 경계와 같은 185px 총여백). 유도는 위 주석 참조.
-         1000px는 초대형 모니터에서 카드가 무한정 길어지는 것만 막는 안전판. */
-      height: min(72vh, 600px);
-      height: min(72svh, 600px);
-      --card-w: min(560px, 62vw);
+    }
+    /* 데스크톱 2×2 — 4장이 한 화면에 들어와 '비교'가 쉬워진다(목록의 목적) */
+    @media (min-width: 860px) {
+      .ch-list { max-width: 880px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     }
 
-    /* 개별 카드 — JS가 translateX/rotate/scale/opacity를 거리(distance)별로 지정.
-       transform+opacity를 하나의 easing으로 묶어 부드럽게 전환 */
-    .hs-card {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: var(--card-w);
-      height: 100%;
-      border-radius: 20px;
+    .ch-card {
+      display: flex; flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
       overflow: hidden;
-      background: #E8D9C4;
-      box-shadow: 0 14px 44px rgba(107,74,50,.22);
-      transform: translate(-50%, -50%);
-      transition: transform .62s cubic-bezier(.22,.61,.36,1),
-                  opacity   .62s cubic-bezier(.22,.61,.36,1);
-      will-change: transform, opacity;
+      text-decoration: none; color: var(--text);
+      transition: border-color .18s ease, transform .12s ease;
     }
-    .hs-card.is-active { cursor: default; }
-    .hs-card:not(.is-active) { cursor: pointer; }
+    .ch-card:hover { border-color: var(--accent-dark); }
+    .ch-card:active { transform: scale(.995); }
+    .ch-card:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 
-    /* 미디어(영상/플레이스홀더) 레이어 */
-    .hs-media { position: absolute; inset: 0; z-index: 0; }
-    /* 세로 사진(3:4)을 카드(약 1:1)에 cover로 채우면 상하가 잘림 —
-       인물 얼굴이 상단에 있으므로 크롭 기준점을 위쪽으로 올림 */
-    .hs-img {
-      width: 100%; height: 100%;
+    /* 사진 — 막 없음. 높이는 고정, 폭은 카드에 맞춰 cover 크롭.
+       object-position 50% 28%: 구 캐러셀과 같은 값(인물 얼굴이 위쪽에 오는 사진들이라). */
+    .ch-shot { display: block; height: 112px; overflow: hidden; background: var(--bg3); }
+    .ch-shot img {
+      display: block; width: 100%; height: 100%;
       object-fit: cover; object-position: 50% 28%;
+    }
+    /* 마감·모집예정은 사진을 흑백으로 — 배지로 소리치는 대신 사진이 상태를 말한다.
+       recruit.js 가 .is-dim 을 붙인다. brightness 보정 없이 순수 grayscale 만:
+       보정을 넣으면 사진마다 밝기가 달라 넷이 제각각으로 보였다. */
+    .ch-card.is-dim .ch-shot img { filter: grayscale(1); }
+
+    .ch-body { display: block; padding: 10px 14px 13px; }
+    .ch-top {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 8px; margin-bottom: 4px;
+    }
+    /* 넘버링 — 잡지 목차의 질서. 번호는 heroReorder()가 표시 순서대로 다시 매긴다. */
+    .ch-no {
+      font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--text-dim); white-space: nowrap;
+    }
+    .ch-num { font-style: normal; }
+    /* ⚠️ 상태는 활자로만 말한다 — 구 초록 그라디언트 알약을 다시 넣지 말 것(2026-07-27).
+       사이트가 베이지·오렌지·명조인데 그 초록만 기성품 색이라 고급감을 깎아먹었다.
+       모집 중은 --accent-ink(#A33D14, 흰 카드 위 4.5:1) — --action/--accent-dark 는
+       12px 소형 텍스트에서 대비 미달이므로 쓰지 말 것. */
+    .ch-st { font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .ch-st.is-open     { color: var(--accent-ink); }
+    .ch-st.is-upcoming { color: var(--text-dim); }
+    .ch-st.is-closed   { color: var(--text-dim); }
+
+    /* 이름 — 명조. 자간을 벌려 '보.신.각' 조어가 이름표처럼 읽히게. */
+    .ch-name {
       display: block;
+      font-family: var(--serif); font-weight: 700;
+      font-size: 20px; line-height: 1.25; letter-spacing: .08em;
+      color: var(--text); margin-bottom: 4px;
     }
-    /* 이미지 로드 전/실패 시 노출되는 카드별 웜톤 폴백 그라디언트 */
-    .hs-card[data-idx="0"] .hs-media { background: linear-gradient(160deg,#7a5c44,#4a3626 60%,#8a6a4a); }
-    .hs-card[data-idx="1"] .hs-media { background: linear-gradient(160deg,#6d6a58,#3e3a2e 60%,#8a7a5a); }
-    .hs-card[data-idx="2"] .hs-media { background: linear-gradient(160deg,#8a6a4a,#5a3e26 60%,#a07a4a); }
-    .hs-card[data-idx="3"] .hs-media { background: linear-gradient(160deg,#7a6a52,#4a3a2a 60%,#9a8258); }
+    .ch-card.is-dim .ch-name { color: var(--text-muted); }
 
-    /* 카드 전체를 균일하게 덮는 크림톤 반투명 오버레이(60%).
-       하단 그라디언트 없이 플랫하게 — 텍스트 가독성 우선 */
-    .hs-card-overlay {
-      position: absolute; inset: 0; z-index: 1; pointer-events: none;
-      background-color: rgba(255,243,230,.60);
+    /* 한 줄 설명 = '전 → 후' 변화 문장. 뒷부분(=결과)만 코랄로 강조.
+       ⚠️ 아래 .ba-arc(Before&After 카드)가 같은 문장을 받는다 — 한쪽만 고치지 말 것. */
+    .ch-line {
+      display: block;
+      font-size: var(--fs-caption); line-height: 1.55;
+      color: var(--text-dim); word-break: keep-all;
     }
+    .ch-line em { font-style: normal; font-weight: 700; color: var(--accent-dark); }
 
-    /* 챌린지 이름 칩 — 카드 아이덴티티.
-       (구 좌상단 알약 + 신청 CTA를 대체) 신청 오렌지 버튼과 구분되도록
-       딥 웜(--accent-ink) 톤으로 채워 "액션이 아닌 이름"임을 명확히 함 */
-    .hs-name {
-      display: inline-flex; align-items: center;
-      padding: 10px 22px; border-radius: 999px;
-      background: rgba(217,83,31,.12);
-      border: 1.5px solid rgba(217,83,31,.5);
-      color: var(--accent-ink);
-      font-size: 18px; font-weight: 800; letter-spacing: .12em; line-height: 1;
-      backdrop-filter: blur(3px);
-      box-shadow: 0 4px 14px rgba(217,83,31,.14);
-    }
-
-    /* 카드 하단 콘텐츠 */
-    .hs-card-content {
-      position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
-      padding: 26px 28px 28px;
-      text-align: left;
-    }
-    .hs-h1 {
-      font-size: clamp(21px, 2.6vw, 30px);
-      font-weight: var(--fw-bold);
-      letter-spacing: -.02em;
-      line-height: 1.28;
-      color: var(--text);
-      word-break: keep-all;
-      margin: 0 0 8px;
-      /* 오버레이를 40%대로 낮춘 대신, 글자 주변만 크림 헤일로를 깔아
-         우드 배경 위 오렌지 강조어의 대비를 확보 */
-      text-shadow: 0 0 14px rgba(255,246,235,.9), 0 0 4px rgba(255,246,235,.55);
-    }
-    .hs-accent { color: var(--action); }
-    
-    /* 비활성 카드의 내부 인터랙션 차단 (카드 자체 클릭 → 해당 슬라이드로 이동) */
-    .hs-card:not(.is-active) .hs-card-content { pointer-events: none; }
-
-    /* 좌우 네비게이션 화살표 */
-    /* 좌우 화살표 — 활성 카드 위에 겹쳐 세로 중앙(2026-07-22).
-       ⚠️ 좌·우를 다른 모양으로 만들지 말 것: 구 스타일은 prev만 연한 회색이라
-       '왼쪽은 비활성'처럼 읽혔다. 한 쌍의 컨트롤은 같은 모양이어야 한다.
-       사진 위에 얹히므로 하단 CTA 바와 같은 프로스티드 글래스 언어로 통일. */
-    .hs-nav {
-      position: absolute; inset: 0;
-      /* ⚠️ 카드보다 위여야 한다 — heroLayout()이 카드에 인라인 z-index를 최대 10까지
-         찍으므로(활성 카드 10) 그보다 낮으면 화살표가 사진 밑에 깔려 아예 안 보인다. */
-      z-index: 20;
-      pointer-events: none;              /* 빈 영역은 카드 클릭이 통과하도록 */
-    }
-    .hs-nav-btn {
-      position: absolute; top: 50%;
-      width: 44px; height: 44px; border-radius: 50%;   /* 터치 44px 원칙 */
-      border: 1px solid rgba(255,255,255,.55); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(246,241,231,.78); color: var(--text);
-      backdrop-filter: blur(10px) saturate(1.2);
-      -webkit-backdrop-filter: blur(10px) saturate(1.2);
-      box-shadow: 0 4px 16px rgba(36,26,18,.18);
-      pointer-events: auto;
-      transition: background .2s, transform .15s;
-      /* ⚠️ transform에 translateY(-50%)가 들어 있으므로 :active 등에서 재정의할 때
-         반드시 같이 써야 한다(빼면 버튼이 아래로 툭 떨어진다). */
-      transform: translateY(-50%);
-    }
-    /* 카드 안쪽 가장자리에 붙인다 — --card-w는 .hs-stage가 들고 있는 카드 폭 */
-    .hs-nav-btn.prev { left:  calc(50% - var(--card-w) / 2 + 10px); }
-    .hs-nav-btn.next { right: calc(50% - var(--card-w) / 2 + 10px); }
-    .hs-nav-btn svg { width: 18px; height: 18px; }
-    .hs-nav-btn:hover  { background: rgba(246,241,231,.94); }
-    .hs-nav-btn:active { transform: translateY(-50%) scale(.94); }
-
-    /* ── Reduced Motion ── */
-    @media (prefers-reduced-motion: reduce) {
-      .hs-card { transition: none; }
-    }
+    @media (prefers-reduced-motion: reduce) { .ch-card { transition: none; } }
 
     /* ── Mobile ── */
-    /* 카드를 화면 가득 채우면(86vw) 캐러셀 느낌이 죽고 위쪽 미디어 여백이
-       비어 보여, 너비·높이를 줄여 양옆 카드가 확실히 걸쳐 보이도록(C안) */
-    @media (max-width: 768px) {
-      /* ⚠️ 모바일에도 세 번째 상한 필수 — 데스크톱과 같은 이유(고정 요소 침범 방지).
-         구 규칙엔 상한이 없어 375×812에서 .hs-cta-sub가 하단 바에 깔렸다. */
-      /* 모바일은 카드 '폭'만 다르다 — 높이 규칙은 위 공통식을 그대로 쓴다.
-         (구 min(56svh,440px) 식은 상한이 걸려 아래 여백이 폰마다 달라졌다.) */
-      .hs-stage { height: min(56vh, 440px); height: min(56svh, 440px); --card-w: min(420px, 78vw); }
-      /* 좌우 패딩을 줄여 확보한 폭으로 헤드라인을 키움 —
-         "화면 작다고 폰트 줄이지 말 것"(원칙 1) + 한 줄 유지 양립 */
-      .hs-card-content { padding: 22px 16px 24px; }
-      .hs-h1 { font-size: clamp(17px, 5.6vw, 26px); letter-spacing: -.03em; }
-    }
+    /* 목록은 375px에서 1열. 폭이 좁아지면 활자를 줄이는 대신 사진 높이만 낮춘다
+       ("화면 작다고 폰트 줄이지 말 것" — 9대 원칙 1). */
     @media (max-width: 480px) {
-      /* 화살표가 카드 위로 올라가며 무대가 세로로 길어졌으므로 폭도 같이 넓혀 비율 보정.
-         (양옆 이웃 카드가 걸쳐 보이는 캐러셀 느낌은 82vw에서도 유지된다) */
-      .hs-stage { --card-w: 78vw; }
+      .ch-shot { height: 104px; }
     }
 
   

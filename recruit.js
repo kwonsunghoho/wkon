@@ -97,10 +97,20 @@ function makeDdayChip(dday, status) {
   return `<span class="dday-chip ${cls}">${label}</span>`;
 }
 
-/* ── 메인 페이지: 카드 상태 적용 ── */
+/* ── 메인 페이지: 챌린지 목록 상태 적용 ──
+   ⚠️ 구 `.challenge-card` 블록은 2026-07-27 삭제. #challenges 섹션이 2026-07-23에
+   사라진 뒤로 그 셀렉터는 아무것도 잡지 못하는 죽은 코드였다(기간 바·액션 라벨 처리 포함).
+   ⚠️ 히어로도 캐러셀(.hs-card/.hs-status)에서 에디토리얼 목록(.ch-card/.ch-st)으로
+   전면 교체됐다 — 캐러셀 셀렉터로 되돌리지 말 것. */
 async function applyIndexRecruit() {
   const data = await loadRecruitData();
-  document.querySelectorAll('.challenge-card[data-recruit-id]').forEach(card => {
+
+  /* 홈 챌린지 카드의 모집 상태. 챌린지별 상태를 말하는 유일한 자리다
+     (하단 고정 CTA 바는 '전체 중 가장 임박한 상태' 하나만 말한다).
+     ⚠️ 구 초록 그라디언트 알약(.recruit-status/.status-recruiting)을 다시 쓰지 말 것 —
+     사이트 전체가 베이지·오렌지·명조인데 그 초록만 어디서나 쓰는 기성품 색이라
+     고급감을 깎아먹었다(2026-07-27 오너 지적). 지금은 사이트 팔레트 안의 활자로만 말한다. */
+  document.querySelectorAll('.ch-card[data-recruit-id]').forEach(card => {
     const id = card.dataset.recruitId;
     const d = data ? data[id] : null;
     const start = (d && d.start) || card.dataset.recruitStart;
@@ -108,77 +118,36 @@ async function applyIndexRecruit() {
     if (!start || !end) return;
 
     const status = getStatus(start, end);
-
     window._challengeStatuses = window._challengeStatuses || {};
     window._challengeStatuses[id] = status;
 
     window._challengeRounds = window._challengeRounds || {};
     if (d && d.round != null) window._challengeRounds[id] = d.round;
 
-    const badge    = card.querySelector('.recruit-status');
-    const action   = card.querySelector('.challenge-action');
-    const periodEl = card.querySelector('.recruit-period');
-    const dday     = getDday(start, end, status);
+    /* 마감·예정 카드는 사진을 흑백으로 — 배지로 소리치는 대신 사진이 상태를 말한다.
+       (클릭은 그대로 열어 둔다: 다음 기수를 기다리는 사람에게 상세는 여전히 유효하다.) */
+    card.classList.toggle('is-dim', status !== 'open');
 
-    // 모집 기간 바 재구성
-    if (periodEl) {
-      const chipHtml = makeDdayChip(dday, status);
-      if (status === 'upcoming') {
-        periodEl.innerHTML = `<span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
-      } else if (status === 'closed') {
-        periodEl.innerHTML = `<span class="period-dates">${fmtPeriod(start, end)}</span><span class="dday-chip dday-closed">마감</span>`;
-      } else {
-        periodEl.innerHTML = `<span class="period-dates">${fmtPeriod(start, end)}</span>${chipHtml}`;
-      }
-      periodEl.className = `recruit-period rp-${status}`;
-    }
-
-    if (status === 'upcoming') {
-      if (badge) { badge.textContent = '모집 예정'; badge.className = 'recruit-status status-upcoming'; }
-      if (action) action.textContent = '모집 예정';
-      card.classList.add('is-disabled');
-    } else if (status === 'closed') {
-      if (badge)  { badge.textContent = '모집 마감'; badge.className = 'recruit-status status-closed'; }
-      if (action) action.textContent = '모집 마감';
-      card.classList.add('is-disabled');
-    } else {
-      if (badge) { badge.textContent = '모집 중'; badge.className = 'recruit-status status-recruiting'; }
-    }
-  });
-
-  /* 히어로 캐러셀 카드 모집 칩 — 구 #challenges 섹션 삭제(2026-07-23) 후
-     홈에서 챌린지별 모집 상태를 말하는 유일한 자리. 하단 CTA 바는 전체 상태 하나만 말한다. */
-  document.querySelectorAll('.hs-card[data-recruit-id]').forEach(card => {
-    const id = card.dataset.recruitId;
-    const d = data ? data[id] : null;
-    const start = (d && d.start) || card.dataset.recruitStart;
-    const end   = (d && d.end)   || card.dataset.recruitEnd;
-    if (!start || !end) return;
-
-    const status = getStatus(start, end);
-    window._challengeStatuses = window._challengeStatuses || {};
-    window._challengeStatuses[id] = status;
-
-    const chip = card.querySelector('.hs-status');
+    const chip = card.querySelector('.ch-st');
     if (!chip) return;
     if (status === 'upcoming') {
       chip.textContent = '모집 예정';
-      chip.className = 'hs-status recruit-status status-upcoming';
+      chip.className = 'ch-st is-upcoming';
     } else if (status === 'closed') {
-      chip.textContent = '마감';
-      chip.className = 'hs-status recruit-status status-closed';
+      chip.textContent = '마감 · 다음 기수 준비 중';
+      chip.className = 'ch-st is-closed';
     } else {
       const dday = getDday(start, end, status); // 'D-3' | 'D-Day' | null
       chip.textContent = dday ? ('모집 중 · ' + (dday === 'D-Day' ? '오늘 마감' : dday)) : '모집 중';
-      chip.className = 'hs-status recruit-status status-recruiting';
+      chip.className = 'ch-st is-open';
     }
     chip.hidden = false;
   });
 
-  /* 상태가 확정됐음을 알린다 — index.html의 히어로 캐러셀이 이걸 받아 카드를
-     '모집 중 → 예정 → 마감' 순으로 재정렬한다(2026-07-27 오너 확정).
-     ⚠️ 여기서 직접 DOM을 옮기지 않는 이유: 캐러셀의 활성 인덱스·클릭 핸들러는
-     index.html이 들고 있어서, 순서만 바꾸면 그쪽 상태와 어긋난다. */
+  /* 상태가 확정됐음을 알린다 — index.html의 heroReorder()가 이걸 받아 카드를
+     '모집 중 → 예정 → 마감' 순으로 재정렬하고 번호를 다시 매긴다(2026-07-27 오너 확정).
+     ⚠️ 여기서 직접 DOM을 옮기지 않는 이유: 번호 재부여는 index.html이 들고 있어서
+     순서만 바꾸면 번호와 어긋난다. */
   document.dispatchEvent(new CustomEvent('monc:recruitready'));
 }
 
