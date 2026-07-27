@@ -175,7 +175,6 @@
     .mitem .mn { font-weight: 600; font-size: 15px; }
     .mitem .me { font-size: 13px; color: var(--text-muted); }
     .mitem .madm { font-size: 12px; color: var(--action); font-weight: 700; }
-    .mitem .msj { font-size: 11px; color: var(--accent-ink); font-weight: 700; background: var(--accent-tint); padding: 1px 6px; border-radius: 999px; }
     .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
 
     .main { padding: 24px; }
@@ -280,8 +279,6 @@
         <label><input type="checkbox" id="unassignedOnly"> 미배정만</label>
         <select id="bulkCohort"><option value="">기수 선택…</option></select>
         <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
-        <button class="btn btn-ghost btn-sm" id="bulkSojaeOn" disabled>소재 발굴 켜기</button>
-        <button class="btn btn-ghost btn-sm" id="bulkSojaeOff" disabled>끄기</button>
         <span class="bulk-count" id="selCount"></span>
       </div>
       <ul class="mlist" id="mlist"></ul>
@@ -467,10 +464,34 @@
   <div class="tab-panel" id="panel-credits">
     <div class="rounds-wrap">
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        AI킬러가 쓰는 <b>공용 크레딧</b>이에요. 1회 = 검사 1번. 무료 2회는 회원이
-        <b>답변노트에 올린 글</b>을 검사할 때 서버가 자동으로 주므로 여기서 넣지 않아도 됩니다.
-        여기서 넣는 건 <b>유료분</b>이에요(테스트·보상·환불 대응).
+        AI킬러·소재 발굴 등이 함께 쓰는 <b>공용 크레딧</b>이에요. 도구마다 1회에 빠지는
+        크레딧이 다르고(아래에서 조절), <b>하루 무료분은 매일 자동으로 채워지므로</b>
+        여기서 넣지 않아도 됩니다. 여기서 넣는 건 <b>유료분</b>이에요(테스트·보상·환불 대응).
       </p>
+
+      <!-- 하루 무료 + 도구별 단가 — site_config.credit_daily_free / credit_costs.
+           ⚠️ 이 두 값이 '얼마나 후하게 풀지'의 손잡이다. 초반엔 하루 무료를 넉넉히 두고
+              나중에 줄이면 "이벤트 종료"로 설명되지만, 단가를 올리면 "요금 인상"이 된다.
+              → 인심은 하루 무료로 쓰고 단가는 웬만하면 건드리지 말 것(2026-07-27 확정). -->
+      <div style="background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
+        <div style="font-weight:800;font-size:14px;margin-bottom:4px;">무료 제공량 · 도구별 단가</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px;">
+          <b>하루 무료 크레딧</b>은 회원 모두에게 매일 새로 채워져요(쌓이지 않아요).
+          단가는 도구를 <b>1회 쓸 때 빠지는 크레딧</b>입니다. 저장하면 바로 반영돼요.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;">
+          <div class="field" style="flex:1;min-width:130px;"><label>하루 무료 크레딧</label>
+            <input id="cfDaily" type="number" min="0" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
+          <div class="field" style="flex:1;min-width:110px;"><label>소재 발굴(다듬기)</label>
+            <input id="cfSojae" type="number" min="1" step="1" placeholder="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
+          <div class="field" style="flex:1;min-width:110px;"><label>AI 킬러(검사)</label>
+            <input id="cfKiller" type="number" min="1" step="1" placeholder="3" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
+          <div class="field" style="flex:1;min-width:110px;"><label>첨삭</label>
+            <input id="cfPolish" type="number" min="1" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
+          <button class="btn btn-action" id="cfSave" type="button">저장</button>
+        </div>
+        <div id="cfHint" style="font-size:13px;color:var(--text-muted);margin-top:10px;line-height:1.6;"></div>
+      </div>
 
       <!-- 충전 상품 — site_config.credit_packs. ⚠️ verify-payment 가 결제 금액을 검증할 때
            같은 값을 읽는다. 여기서 바꾸면 즉시 반영(함수 재배포 불필요). -->
@@ -585,7 +606,7 @@
         <li class="mitem ${m.id === currentId ? 'active' : ''}" data-id="${m.id}">
           <input type="checkbox" class="mchk" data-id="${m.id}" ${selected.has(m.id) ? 'checked' : ''}>
           <div class="minfo" data-id="${m.id}">
-            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}${m.sojae_enabled ? ' <span class="msj">소재</span>' : ''}</div>
+            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}</div>
             <div class="me">${esc(m.email || '이메일 없음')}</div>
           </div>
         </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
@@ -602,8 +623,6 @@
       const n = selected.size;
       document.getElementById('selCount').textContent = n ? (n + '명 선택') : '';
       document.getElementById('bulkAssign').disabled = !n;
-      document.getElementById('bulkSojaeOn').disabled = !n;
-      document.getElementById('bulkSojaeOff').disabled = !n;
       document.getElementById('selAll').checked = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
     }
 
@@ -724,7 +743,6 @@
             <div class="field"><label>전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공(선택)"></div>
             <div class="field"><label>기수</label><select id="fCohort">${cohortOpts}</select></div>
             <div class="field"><label>권한</label>${roleField(m)}</div>
-            <div class="field"><label>소재 발굴</label>${sojaeField(m)}</div>
             <button class="btn btn-action" id="saveProfile">정보 저장</button>
           </div>
         </div>
@@ -771,17 +789,6 @@
         <button type="button" id="roleToggle" data-to="${makeAdmin ? 'admin' : 'member'}"
           class="btn btn-sm ${makeAdmin ? 'btn-action' : 'btn-ghost'}">
           ${makeAdmin ? '관리자로 지정' : '회원으로 강등'}</button>
-      </div>`;
-    }
-
-    // 소재 발굴 권한 필드: 모든 관리자가 켜고 끌 수 있다(오너 전용 아님).
-    function sojaeField(m) {
-      const on = !!m.sojae_enabled;
-      return `<div style="display:flex;align-items:center;gap:8px">
-        <span style="font-weight:600">${on ? '사용 가능' : '잠금'}</span>
-        <button type="button" id="sojaeToggle" data-to="${on ? 'off' : 'on'}"
-          class="btn btn-sm ${on ? 'btn-ghost' : 'btn-action'}">
-          ${on ? '권한 끄기' : '권한 켜기'}</button>
       </div>`;
     }
 
@@ -883,20 +890,6 @@
         selectMember(id); // 상세 다시 그려 버튼 라벨 갱신
       });
 
-      // 소재 발굴 권한 토글 (모든 관리자). RLS/can_sojae() 가 서버에서도 실제 접근 통제.
-      const sojaeToggle = document.getElementById('sojaeToggle');
-      if (sojaeToggle) sojaeToggle.addEventListener('click', async () => {
-        const to = sojaeToggle.dataset.to === 'on';   // 켤지 여부
-        const m = members.find(x => x.id === id);
-        sojaeToggle.disabled = true;
-        const { error } = await sb().from('members').update({ sojae_enabled: to }).eq('id', id);
-        if (error) { alert('변경 실패: ' + error.message); sojaeToggle.disabled = false; return; }
-        if (m) m.sojae_enabled = to;
-        renderMemberList();
-        toast('소재 발굴 ' + (to ? '권한 켜짐' : '권한 꺼짐'));
-        selectMember(id); // 상세 다시 그려 버튼 라벨 갱신
-      });
-
       // 음성 업로드
       document.querySelectorAll('[data-upload]').forEach(btn => btn.addEventListener('click', async () => {
         const type = btn.dataset.upload;
@@ -960,20 +953,9 @@
       toast(ids.length + '명 배정 완료');
     });
 
-    // 소재 발굴 권한 일괄 켜기/끄기 (선택된 회원 대상, 모든 관리자)
-    async function bulkSetSojae(enabled) {
-      const ids = [...selected];
-      if (!ids.length) { alert('회원을 선택하세요.'); return; }
-      const label = enabled ? '소재 발굴 권한을 켤까요' : '소재 발굴 권한을 끌까요';
-      if (!confirm(ids.length + '명의 ' + label + '?')) return;
-      const { error } = await sb().from('members').update({ sojae_enabled: enabled }).in('id', ids);
-      if (error) { alert('변경 실패: ' + error.message); return; }
-      selected.clear();
-      await loadMembers();
-      toast(ids.length + '명 소재 발굴 ' + (enabled ? '켜짐' : '꺼짐'));
-    }
-    document.getElementById('bulkSojaeOn').addEventListener('click', () => bulkSetSojae(true));
-    document.getElementById('bulkSojaeOff').addEventListener('click', () => bulkSetSojae(false));
+    // ⚠️ 구 소재 발굴 권한 UI(회원별 토글·일괄 켜기/끄기·목록 배지)는 2026-07-27 삭제 —
+    //    소재 발굴은 크레딧으로 통제한다(다듬기 1회 = 아래 '크레딧' 탭의 단가).
+    //    권한 스위치를 되살리지 말 것.
 
     // ── 탭 전환 ──
     function initTabs() {
@@ -2152,6 +2134,59 @@
       document.getElementById('cpCount').value = p ? p.count : '';
       document.getElementById('cpPrice').value = p ? p.price : '';
     }
+
+    // ── 하루 무료 + 도구별 단가 (site_config.credit_daily_free / credit_costs) ──
+    // ⚠️ 원가 상한이 여기서 정해진다: 무료 사용자 1인당 하루 최대 비용 = 하루 무료 크레딧이
+    //    허용하는 호출 수. 이 값을 올릴수록 후해지고 그만큼 AI 원가도 같이 오른다.
+    let _creditCosts = null;   // 화면에 없는 도구(rehearsal 등)를 저장 때 지우지 않으려고 보관
+    async function loadCreditConfig() {
+      let daily = 5;
+      try {
+        const { data } = await sb().from('site_config').select('key, value')
+          .in('key', ['credit_daily_free', 'credit_costs']);
+        for (const r of (data || [])) {
+          if (r.key === 'credit_daily_free') daily = Number(r.value) || daily;
+          if (r.key === 'credit_costs' && r.value && typeof r.value === 'object') _creditCosts = r.value;
+        }
+      } catch (_) { /* 마이그레이션 미적용 → 폴백값으로 그린다 */ }
+      const c = _creditCosts || {};
+      document.getElementById('cfDaily').value = daily;
+      document.getElementById('cfSojae').value = Number(c.sojae) || 2;
+      document.getElementById('cfKiller').value = Number(c.ai_killer) || 3;
+      document.getElementById('cfPolish').value = Number(c.polish) || 10;
+      renderCreditHint();
+    }
+    // 숫자만 보면 후한지 아닌지 감이 안 온다 → '몇 번 할 수 있는지'로 바꿔 보여준다.
+    function renderCreditHint() {
+      const d = Number(document.getElementById('cfDaily').value) || 0;
+      const s = Number(document.getElementById('cfSojae').value) || 1;
+      const k = Number(document.getElementById('cfKiller').value) || 1;
+      document.getElementById('cfHint').innerHTML = d > 0
+        ? '지금 설정이면 회원 한 명이 <b>매일</b> 소재 다듬기 <b>' + Math.floor(d / s)
+          + '번</b> 또는 AI킬러 검사 <b>' + Math.floor(d / k) + '번</b>을 무료로 할 수 있어요.'
+        : '하루 무료가 0이면 충전한 회원만 쓸 수 있어요.';
+    }
+    ['cfDaily', 'cfSojae', 'cfKiller'].forEach(id => {
+      document.getElementById(id).addEventListener('input', renderCreditHint);
+    });
+    document.getElementById('cfSave').addEventListener('click', async () => {
+      const btn = document.getElementById('cfSave');
+      const daily = Math.max(0, Math.floor(Number(document.getElementById('cfDaily').value) || 0));
+      const num = id => Math.max(1, Math.floor(Number(document.getElementById(id).value) || 1));
+      // ⚠️ 기존 객체에 덮어쓰기 — 화면에 칸이 없는 도구(rehearsal 등)를 지우면
+      //    그 도구가 폴백 단가로 조용히 돌아간다.
+      const costs = Object.assign({}, _creditCosts || {}, {
+        sojae: num('cfSojae'), ai_killer: num('cfKiller'), polish: num('cfPolish'),
+      });
+      btn.disabled = true;
+      const { error } = await sb().from('site_config').upsert(
+        [{ key: 'credit_daily_free', value: daily }, { key: 'credit_costs', value: costs }],
+        { onConflict: 'key' });
+      btn.disabled = false;
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      _creditCosts = costs;
+      toast('저장했어요 · 바로 반영됩니다');
+    });
     document.getElementById('cpSave').addEventListener('click', async () => {
       const count = Math.floor(Number(document.getElementById('cpCount').value) || 0);
       const price = Math.floor(Number(document.getElementById('cpPrice').value) || 0);
@@ -2216,6 +2251,7 @@
       loadQuestions();
       loadCredits();
       loadCreditPacks();
+      loadCreditConfig();
     })();
   </script>
 </body>

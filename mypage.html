@@ -126,9 +126,6 @@
     .today .t-q { font-weight: 800; font-size: 15.5px; line-height: 1.45; margin: 8px 0 12px; }
     .today .t-go { display: inline-flex; align-items: center; gap: 6px; background: var(--action-ink); color: #fff;
       font-size: 13px; font-weight: 800; border-radius: 999px; padding: 10px 16px; min-height: 40px; }
-    .today.locked { background: var(--surface2); border: 1px solid var(--border-soft); box-shadow: var(--shadow);
-      color: var(--text-muted); cursor: default; }
-    .today.locked .t-chip { background: var(--bg3); color: var(--text-muted); }
 
     /* ── 신청·계정 리스트 ── */
     .sect { margin: 18px 4px 8px; font-size: 12.5px; font-weight: 800; color: var(--text-dim); letter-spacing: .03em; }
@@ -483,24 +480,8 @@
       }
     }
 
-    // ── 소재 발굴 권한 없는 회원: 오늘의 발굴 카드를 잠금 표시(클릭 불가) ──
-    function lockSojaeCard() {
-      const card = document.getElementById('todayCard');
-      if (!card) return;
-      card.removeAttribute('href');        // <a> 에서 href 제거 → 클릭해도 이동 안 함
-      card.style.cursor = 'default';
-      card.classList.add('locked');        // 오렌지 위젯 → 회색 잠금 톤
-      const cta = document.getElementById('todayCta');
-      if (cta) {
-        cta.style.background = 'var(--bg3)';
-        cta.style.color = 'var(--text-muted)';
-        cta.innerHTML =
-          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" '
-          + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-          + '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
-          + '관리자 승인 후 이용 가능';
-      }
-    }
+    // ⚠️ 구 lockSojaeCard()(소재 발굴 권한 없는 회원의 카드 잠금)는 2026-07-27 삭제 —
+    //    권한 스위치를 없애고 크레딧으로 바꿨으므로 회원이면 누구나 들어갈 수 있다.
 
     // ── 내 뉴스 스크랩 카드 — 최근 3건 + 항공사별 개수(뉴스 스펙 §6) ──
     //    news_scraps 테이블 미생성(마이그레이션 전)이면 카드·위젯을 숨긴 채로 둔다.
@@ -656,9 +637,6 @@
         const al = document.getElementById('adminLink');
         if (al) al.style.display = '';
       }
-
-      // 소재 발굴 권한 없으면 오늘의 발굴 카드 잠금
-      if (!MONC.hasSojaeAccess(profile)) lockSojaeCard();
 
       // 이름/메타 (소속 기수 · 챌린지 기간 · 이메일 순. 없는 항목은 생략)
       document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';

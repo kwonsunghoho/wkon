@@ -59,8 +59,9 @@
     const { data, error } = await sb
       .from('members')
       // cohorts(...) 는 cohort_id FK 로 연결된 기수 정보(없으면 null). 마이페이지 기간 표시용.
-      // is_owner 는 오너 전용 관리자 임명 UI 판단용. sojae_enabled 는 소재 발굴 권한.
-      .select('id, name, email, role, cohort_id, phone, is_owner, sojae_enabled, cohorts(name, start_date, end_date)')
+      // is_owner 는 오너 전용 관리자 임명 UI 판단용.
+      // ⚠️ sojae_enabled(구 소재 발굴 권한)는 2026-07-27 제거 — 크레딧으로 통제한다.
+      .select('id, name, email, role, cohort_id, phone, is_owner, cohorts(name, start_date, end_date)')
       .eq('id', session.user.id)
       .single();
     if (error) { console.error('프로필 조회 실패', error); return null; }
@@ -155,11 +156,9 @@
     return false;
   }
 
-  // 소재 발굴 접근 가능 여부. 권한 플래그(sojae_enabled) 또는 관리자면 true.
-  // getMyProfile() 로 얻은 프로필을 넘긴다. mypage·sojae 가 동일 기준으로 판정.
-  function hasSojaeAccess(profile) {
-    return !!profile && (profile.sojae_enabled === true || profile.role === 'admin');
-  }
+  // ⚠️ 구 hasSojaeAccess()(members.sojae_enabled 기반 소재 발굴 권한 판정)는 2026-07-27
+  //    삭제 — 소재 발굴은 크레딧으로 통제한다(다듬기 1회 = credit_costs.sojae).
+  //    권한 플래그 방식으로 되돌리지 말 것.
 
   // 관리자 전용 페이지 가드. 관리자가 아니면 로그인/차단 처리.
   async function requireAdmin() {
@@ -241,7 +240,7 @@
     sb, TOTAL_DAYS, LOGIN_PAGE, TERMS_VERSION,
     signInWithProvider, signInWithGoogle, signInWithKakao,
     signOut, getSession, requireSession,
-    getMyProfile, hasSojaeAccess, requireAdmin, getSignedUrl,
+    getMyProfile, requireAdmin, getSignedUrl,
     getConsent, recordConsent, hasConsented, requireConsent, deleteMyAccount,
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
   };

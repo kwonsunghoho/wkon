@@ -121,7 +121,10 @@ const HELP_MARKER =
 // 비용 방어: 인증된 사용자라도 초대형 페이로드로 토큰 과금을 유발하지 못하게 캡
 const MAX_HISTORY_ITEMS = 40;      // 최근 40개 턴만
 const MAX_MSG_CHARS = 2000;        // 메시지당 2,000자
-const MAX_MATERIALS_CHARS = 8000;  // 다듬기 재료 최대 8,000자
+// ⚠️ 다듬기 재료 상한 4,000자(2026-07-27, 구 8,000자). 다듬기는 Sonnet 5 라 되묻기(Haiku)보다
+//    10배 비싸고, 입력 길이가 그대로 원가다. 실제 되묻기 대화가 4,000자를 넘는 일은 드문데
+//    상한만 8,000자로 열려 있어 최악 원가가 두 배였다. 줄여도 정상 사용은 잘리지 않는다.
+const MAX_MATERIALS_CHARS = 4000;  // 다듬기 재료 최대 4,000자
 const MAX_QUESTION_CHARS = 300;    // 폴백 문제 텍스트 최대 300자
 
 function toMessages(
@@ -163,6 +166,10 @@ function json(obj: unknown, status: number): Response {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // ⚠️ 차감해 놓고 결과를 못 주면 반드시 되돌려야 한다 → catch 에서도 보이도록 try 밖에 둔다.
+  let charged: { ref: string } | null = null;
+  // deno-lint-ignore no-explicit-any
+  let supaRef: any = null;
   try {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ error: "ANTHROPIC_API_KEY 미설정" }, 500);
@@ -173,19 +180,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: req.headers.get("Authorization")! } } },
     );
+    supaRef = supa;
     const { data: { user } } = await supa.auth.getUser();
     if (!user) return json({ error: "로그인이 필요합니다" }, 401);
 
-    // 소재 발굴 권한 확인 (sojae_enabled 또는 관리자). RLS 하에서 본인 행만 읽힘.
-    // AI 호출(=비용) 전에 막아야 하므로 RLS 와 별개로 여기서 명시적으로 검사한다.
-    const { data: me } = await supa
-      .from("members")
-      .select("sojae_enabled, role")
-      .eq("id", user.id)
-      .single();
-    if (!me || (!me.sojae_enabled && me.role !== "admin")) {
-      return json({ error: "소재 발굴 권한이 없습니다" }, 403);
-    }
+    // ⚠️ 구 members.sojae_enabled 권한 게이트는 2026-07-27 폐지 — 크레딧으로 통제한다.
+    //    회원이면 누구나 되묻기는 무료, 다듬기에서만 차감한다(아래 '다듬기에서만 차감' 블록).
 
     const body = await req.json();
     const stage = body.stage === "refine" ? "refine" : "ask";
@@ -214,6 +214,53 @@ Deno.serve(async (req) => {
     }
     const catLabel = CAT_LABEL[category];
 
+    // ── 다듬기에서만 차감 (되묻기 대화는 무료) ────────────────────────────
+    // ⚠️ 되묻기(Haiku)는 1회 약 5원, 다듬기(Sonnet 5)는 약 50~150원으로 10배 이상 차이난다.
+    //    그래서 "한 세션에 얼마"가 아니라 **비싼 호출 하나에 요금을 붙인다.** 대화는 무료라
+    //    말만 해보고 나가는 사람이 손해 보지 않고, 결과물을 받을 때만 낸다.
+    //    ⚠️ 세션 단위로 묶는 방식으로 되돌리지 말 것 — 다듬기를 몇 번 눌러도 같은 값이라
+    //       하루 무료 한도가 원가 상한 노릇을 못 하게 된다(2026-07-27 오너와 확정).
+    let spent:
+      | { used?: string; cost?: number; balance?: number; daily_left?: number }
+      | null = null;
+    if (stage === "refine") {
+      // 차감 키 = '<문제id>#<이전 차감 횟수>'. 같은 키로 다시 부르면 spend_credit 이
+      // used='already' 로 통과시켜 네트워크 재전송에 두 번 깎이지 않는다. 다음 다듬기는
+      // 번호가 하나 올라가 새로 차감된다(= 누를 때마다 과금). AI킬러와 같은 방식.
+      const keyBase = body.question_id ? String(body.question_id) : "noq";
+      const { count } = await supa
+        .from("credit_ledger")
+        .select("id", { count: "exact", head: true })
+        .eq("member_id", user.id)
+        .eq("tool", "sojae")
+        .in("reason", ["use", "free_use"])
+        .like("ref", `${keyBase}#%`);
+      const payRef = `${keyBase}#${count ?? 0}`;
+
+      const { data: spentRaw, error: spendErr } = await supa.rpc("spend_credit", {
+        p_tool: "sojae",
+        p_ref: payRef,
+        p_free_ref: null,
+      });
+      if (spendErr) {
+        const msg = String(spendErr.message || "");
+        // ⚠️ 여기서 나가는 두 응답 모두 반드시 200 이다. non-2xx 면 supabase-js 가 data 를
+        //    null 로 만들고 본문을 error.context 에 숨겨서, 화면이 사유를 못 띄운 채
+        //    폴백(가짜 뼈대)을 보여준다 — "안 깎였는데 결과가 나왔다"가 되는 자리.
+        if (msg.includes("no_credit")) {
+          return json({ error: "크레딧이 모자라요.", code: "no_credit" }, 200);
+        }
+        console.error("spend_credit failed", msg);
+        return json(
+          { error: "다듬기를 시작하지 못했어요. 잠시 뒤 다시 시도해 주세요.", code: "spend_failed" },
+          200,
+        );
+      }
+      spent = spentRaw as typeof spent;
+      // 'already' 는 이번 호출이 깎은 게 아니다 → 실패해도 환급하면 안 된다(남의 차감을 되돌린다).
+      if (spent?.used !== "already") charged = { ref: payRef };
+    }
+
     let model: string;
     let maxTokens: number;
     let system: unknown[];
@@ -235,7 +282,10 @@ Deno.serve(async (req) => {
       messages = toMessages(body.history, !!body.help);
     } else {
       model = "claude-sonnet-5";
-      maxTokens = 8192; // Sonnet 5 는 adaptive thinking 기본 ON → thinking 포함 여유
+      // ⚠️ max_tokens 는 '상한'이지 '청구액'이 아니다 — 여유를 줄여도 원가는 안 줄고 답만 잘린다.
+      //    Sonnet 5 는 adaptive thinking 이 기본 ON 이라 thinking 이 이 한도를 같이 쓴다.
+      //    원가를 줄이는 실제 손잡이는 아래 effort(생각 깊이)와 위의 재료 글자수 상한이다.
+      maxTokens = 8192;
       system = [
         { type: "text", text: REFINE_SYSTEM, cache_control: { type: "ephemeral" } },
       ];
@@ -256,11 +306,21 @@ Deno.serve(async (req) => {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
+      // ⚠️ 다듬기만 effort 를 medium 으로 낮춘다. Sonnet 5 는 기본 high 라 생각을 길게 하는데,
+      //    '재료를 뼈대로 정리한다'는 정해진 일에는 그만큼이 필요 없다. 출력 토큰이 곧 원가라
+      //    이게 원가를 줄이는 가장 직접적인 손잡이다(품질 저하가 보이면 high 로 되돌릴 것).
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system,
+        messages,
+        ...(stage === "refine" ? { output_config: { effort: "medium" } } : {}),
+      }),
     });
+    // ⚠️ 아래부터는 던져서 catch 가 환급까지 처리하게 한다(여기서 바로 return 하면 차감이 남는다).
     if (!res.ok) {
       console.error("anthropic error", res.status, await res.text());
-      return json({ error: "AI 호출 실패" }, 502);
+      throw new Error("ai_failed");
     }
     const data = await res.json();
     // Sonnet 5 는 thinking 블록이 섞여 올 수 있음 → text 블록만 추출
@@ -269,16 +329,38 @@ Deno.serve(async (req) => {
       .map((b: { text: string }) => b.text)
       .join("\n")
       .trim();
-    if (!text) return json({ error: "빈 응답" }, 502);
+    if (!text) throw new Error("ai_empty");
 
     const out: Record<string, unknown> = { message: text };
     if (stage === "ask") {
       // 프롬프트의 [멈춤] 신호 → 클라이언트가 다듬기 버튼 노출 트리거로 사용
       out.materials_sufficient = /재료가 충분/.test(text);
+    } else {
+      // 화면이 남은 크레딧을 바로 갱신할 수 있게 지갑 상태를 함께 돌려준다.
+      out.used = spent?.used;
+      out.cost = spent?.cost;
+      out.balance = spent?.balance;
+      out.daily_left = spent?.daily_left;
     }
     return json(out, 200);
   } catch (e) {
+    // ⚠️ 차감했는데 결과를 못 준 경우 반드시 되돌린다.
+    //    유료는 refund 행 추가, 무료는 free_use 행 삭제(한도 복구) — RPC 가 알아서 나눈다.
+    if (charged && supaRef) {
+      const { error } = await supaRef.rpc("refund_credit", {
+        p_tool: "sojae",
+        p_ref: charged.ref,
+      });
+      if (error) console.error("refund failed", error.message, charged.ref);
+    }
     console.error(e);
+    // 환급했다는 사실을 알려야 사용자가 '깎였는데 못 받았다'로 오해하지 않는다.
+    if (charged) {
+      return json(
+        { error: "다듬기에 실패했어요. 크레딧은 돌려드렸습니다.", code: "failed", refunded: true },
+        200,
+      );
+    }
     return json({ error: "서버 오류" }, 500);
   }
 });
