@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONC 절제 — 색을 빼고 위계로 만드는 3안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Song+Myung&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   MONC 절제 목업 — 2026-07-28
+   오너 지적: "전체 톤에 전부 색을 꼭 넣어야 하나. 조잡하다. 잘나가는 브랜드는
+   흰색·검정을 제일 많이 쓴다. 글자마다 색을 다 입히니 촌스럽고 유치하다."
+
+   맞는 지적이고, 직전 목업들의 실제 상태가 그랬다. 한 화면의 유채색 개수:
+     현재 라이브 : 4  (오렌지 / 코랄잉크 / 보라=특강 문 / 초록=브리핑룸 문)
+     동행 색 5안 : 3~4 (네이비 + 동행색 + 레일 2색)
+   '동행 색을 하나로 줄인다'면서 라벨색·화살표색·레일 3색을 그대로 뒀다.
+
+   ⚠️ 이 목업의 규칙 — 위계는 색이 아니라 다음 넷으로만 만든다.
+        ① 크기  ② 굵기  ③ 여백  ④ 괘선(hairline)
+      색은 세 봐서 화면당 0개 또는 1개다. 사진은 세지 않는다(사진이 유일한 색면).
+   ⚠️ 세 개의 문 레일 3색은 전부 삭제했다. 구분은 번호(01·02·03)가 한다.
+      색으로 갈래를 나누면 항목이 늘 때마다 색을 더 만들어야 한다 — 그게 조잡함의 구조적 원인이다.
+   ⚠️ 자바스크립트 없음(스크립트 막는 뷰어에서 빈 화면이 됐던 전례).
+      세 열의 마크업은 손으로 세 번 적었다 — 한 열을 고치면 세 열 모두 고칠 것.
+   ══════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; padding: 44px 24px 90px;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #EFEFEE; color: #1A1D24; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1300px; margin: 0 auto; }
+.doc-h1 { font-size: 30px; font-weight: 800; letter-spacing: -.025em; margin: 0 0 10px; }
+.doc-sub { font-size: 15px; line-height: 1.75; color: #4A4E57; margin: 0 0 26px; max-width: 740px; word-break: keep-all; }
+.doc-sub b { color: #1A1D24; }
+
+/* 색 개수 세기 — 주장을 눈으로 */
+.count { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid #D8D8D6; border-radius: 12px; overflow: hidden; background: #fff; margin: 0 0 34px; }
+.count-i { flex: 1 1 168px; padding: 15px 17px; border-right: 1px solid #E7E7E5; }
+.count-i:last-child { border-right: 0; }
+.count-l { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #83878F; margin: 0 0 8px; }
+.count-v { font-size: 25px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+.count-d { display: flex; gap: 4px; }
+.count-d i { width: 15px; height: 15px; border-radius: 4px; display: block; border: 1px solid rgba(0,0,0,.09); }
+.count-n { font-size: 12px; color: #6E727B; margin: 8px 0 0; line-height: 1.5; }
+
+.h2 { font-size: 19px; font-weight: 800; letter-spacing: -.015em; margin: 38px 0 6px; }
+.h2-sub { font-size: 13.5px; color: #5C6069; margin: 0 0 20px; line-height: 1.7; max-width: 760px; word-break: keep-all; }
+
+/* ═══ 열 ═══ */
+.cols { display: flex; gap: 22px; align-items: flex-start; overflow-x: auto; padding-bottom: 16px; }
+.col { flex: 0 0 auto; width: 375px; }
+.col-h { margin: 0 0 11px; padding-bottom: 11px; border-bottom: 1px solid #D8D8D6; }
+.col-ix { font-size: 11.5px; font-weight: 800; letter-spacing: .16em; color: #83878F; }
+.col-name { font-size: 18px; font-weight: 800; letter-spacing: -.015em; margin: 5px 0 5px; }
+.col-note { font-size: 12.5px; line-height: 1.65; color: #5C6069; margin: 0; word-break: keep-all; }
+.col-hue { display: inline-block; margin-top: 8px; font-size: 11.5px; font-weight: 700; color: #6E727B; }
+
+.phone {
+  position: relative; width: 375px; height: 812px; margin-top: 4px;
+  border-radius: 24px; overflow: hidden; border: 1px solid #D2D2D0;
+  box-shadow: 0 16px 40px -18px rgba(20,22,28,.30); background: var(--paper);
+}
+.scr { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+.scr::-webkit-scrollbar { width: 5px; }
+.scr::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 9px; }
+
+/* ── nav ── */
+.nv { position: sticky; top: 0; z-index: 20; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; background: var(--paper); border-bottom: 1px solid var(--line); }
+.nv img { height: 18px; width: auto; display: block; }
+.nv-menu { display: flex; gap: 15px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.nv-menu .on { color: var(--ink); font-weight: 700; }
+
+/* ── 공통 조판 ── */
+.container { padding: 0 22px; }
+/* 라벨 — 색 없음. 자간과 크기로만 라벨임을 알린다. */
+.lb { font-size: 11.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-3); }
+.ttl { font-family: 'Song Myung','Noto Serif KR',serif; font-weight: 400; color: var(--ink); letter-spacing: -.02em; line-height: 1.36; word-break: keep-all; margin: 12px 0 10px; }
+.sub { font-size: 14px; font-weight: 500; color: var(--ink-2); margin: 0; }
+
+/* ── 세 개의 문 — 레일 색 삭제, 번호로 구분 ── */
+.pillars { background: var(--paper-2); padding: 38px 0 42px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.pl-head { margin-bottom: 22px; }
+.pl-head .ttl { font-size: 26px; }
+.pl-list { display: flex; flex-direction: column; }
+.pl-door {
+  display: grid; grid-template-columns: 34px 1fr auto; align-items: baseline; column-gap: 12px;
+  padding: 17px 0 16px; border-top: 1px solid var(--line);
+  text-decoration: none; color: var(--ink);
+}
+.pl-door:first-child { border-top: 0; }
+.pl-ix { font-family: 'Noto Serif KR', serif; font-weight: 400; font-size: 15px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.pl-nm { font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+.pl-ds { grid-column: 2 / 4; font-size: 13.5px; color: var(--ink-3); line-height: 1.62; margin-top: 5px; word-break: keep-all; }
+.pl-go { font-size: 15px; color: var(--ink-3); }
+
+/* ── 히어로 챌린지 ── */
+.hs { padding: 42px 0 46px; background: var(--paper); }
+.hs-head { padding: 0 22px; margin-bottom: 30px; }
+.hs-head .ttl { font-size: 30px; }
+.ch-list { padding: 0 22px; display: grid; gap: var(--cgap); grid-template-columns: repeat(2, minmax(0,1fr)); grid-auto-rows: 1fr; }
+.ch-card { display: flex; flex-direction: column; text-decoration: none; color: var(--ink); background: var(--card-bg); border: var(--card-bd); border-radius: var(--card-r); box-shadow: var(--card-sh); padding: var(--card-p); }
+.ch-shot { display: block; position: relative; overflow: hidden; flex: 0 0 auto; aspect-ratio: 4/5; border-radius: var(--shot-r); background: #E4E1DC; }
+.ch-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 24%; }
+.ch-shot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: var(--shot-in); }
+.ch-card.is-dim .ch-shot img { filter: grayscale(1); }
+.ch-body { display: flex; flex-direction: column; flex: 1; padding: var(--body-p); }
+.ch-no { display: block; font-size: 12px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+.ch-name { display: block; font-family: 'Noto Serif KR', serif; font-weight: 600; font-size: 18px; line-height: 1.28; letter-spacing: .05em; color: var(--ink); margin-top: 6px; }
+.ch-line { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; font-size: 13.5px; line-height: 1.55; color: var(--ink-3); word-break: keep-all; }
+.ch-line em { font-style: normal; font-weight: 700; color: var(--ink); }
+.ch-card.is-dim .ch-name, .ch-card.is-dim .ch-line em { color: var(--ink-2); }
+/* 상태 — 색이 아니라 굵기로. 마감은 사진이 이미 흑백이라 그림이 말한다. */
+.ch-st { display: block; margin-top: auto; padding-top: 11px; font-size: 13px; line-height: 1.4; }
+.ch-st.is-open { font-weight: 800; color: var(--ink); }
+.ch-st.is-closed { font-weight: 500; color: var(--ink-3); }
+.ch-st .dot { display: none; }
+
+/* ── Before & After 무대 ── */
+.ba { background: var(--stage); padding: 40px 0 44px; }
+.ba .lb { color: var(--stage-3); display: block; text-align: center; }
+.ba .ttl { color: var(--stage-ink); text-align: center; font-size: 26px; margin-bottom: 24px; }
+.ba-card { background: var(--stage-card); border: 1px solid var(--stage-line); border-radius: var(--card-r); padding: 21px 19px 19px; display: flex; flex-direction: column; gap: 13px; }
+.ba-top { display: flex; align-items: center; justify-content: space-between; }
+.ba-tag { font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--stage-3); }
+.ba-name { font-size: 12.5px; font-weight: 600; color: var(--stage-3); }
+.ba-arc { font-size: 13.5px; font-weight: 600; line-height: 1.6; color: var(--stage-2); padding: 0 0 0 12px; border-left: 1px solid var(--stage-line-2); margin: 0; word-break: keep-all; }
+.ba-arc em { font-style: normal; font-weight: 800; color: var(--stage-ink); }
+.ba-quote { font-family: 'Song Myung','Noto Serif KR',serif; font-size: 16px; color: var(--stage-ink); line-height: 1.62; margin: 0; }
+.ba-btns { display: flex; gap: 9px; }
+.ba-btn { flex: 1; min-height: 44px; border-radius: 99px; font-size: 13.5px; font-weight: 700; cursor: default; font-family: inherit; border: 1px solid var(--stage-line-2); background: transparent; color: var(--stage-2); }
+.ba-btn.on { background: var(--stage-ink); border-color: var(--stage-ink); color: var(--stage); }
+
+/* ── CTA ── */
+.cta {
+  position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 40;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; border-radius: var(--cta-r); padding: 10px 20px;
+  background: var(--cta-bg); color: var(--cta-ink); text-decoration: none;
+  line-height: 1.25; white-space: nowrap; box-shadow: 0 8px 26px rgba(20,22,28,.22);
+}
+.cta .m { font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; }
+.cta .s { font-size: 11.5px; font-weight: 500; opacity: .82; }
+.spacer { height: 92px; }
+
+/* ══════════════ 1안 · 먹과 종이 — 유채색 0 ══════════════
+   네이비가 '강조색'이 아니라 이 사이트의 검정이다. 아이보리가 흰색이다.
+   7/27 레터프레스 종이 카드는 배경이 아이보리라 그대로 유효하다. */
+.col[data-v="ink"] {
+  --paper:#F6EEE8; --paper-2:#F1E8E1; --card-bg:linear-gradient(180deg,#FFFCFA 0%,#F3E9E2 100%);
+  --ink:#16233D; --ink-2:#454F63; --ink-3:#6B7284;
+  --line:rgba(22,35,61,.14);
+  --card-bd:1px solid rgba(22,35,61,.12); --card-r:13px; --card-p:8px 8px 0; --body-p:12px 4px 14px;
+  --card-sh:inset 0 1px 0 rgba(255,255,255,.9), 0 2px 3px rgba(22,35,61,.07), 0 16px 32px -14px rgba(22,35,61,.22);
+  --shot-r:8px; --shot-in:inset 0 2px 5px rgba(22,35,61,.26), inset 0 0 0 1px rgba(22,35,61,.14);
+  --cgap:16px;
+  --stage:#0F1F3A; --stage-card:#17294A; --stage-ink:#F6EEE8; --stage-2:rgba(246,238,232,.80); --stage-3:rgba(246,238,232,.55);
+  --stage-line:rgba(246,238,232,.13); --stage-line-2:rgba(246,238,232,.30);
+  --cta-bg:#102B56; --cta-ink:#F6EEE8; --cta-r:15px;
+}
+/* ══════════════ 2안 · 검정과 흰색 — 유채색 1(버튼) ══════════════
+   글자는 전부 먹. 네이비는 화면에서 딱 한 덩어리(버튼)에만 나온다.
+   ⚠️ 배경이 흰색이 되면 7/27 '흰 카드 금지' 규칙의 전제(배경이 베이지)가 사라진다.
+      그래서 카드는 흰 면 + 헤어라인이고, 그림자를 쓰지 않는다. */
+.col[data-v="bw"] {
+  --paper:#FFFFFF; --paper-2:#F7F7F5; --card-bg:#FFFFFF;
+  --ink:#16181D; --ink-2:#464A53; --ink-3:#74798A;
+  --line:rgba(20,22,28,.13);
+  --card-bd:1px solid rgba(20,22,28,.13); --card-r:10px; --card-p:0; --body-p:13px 2px 2px;
+  --card-sh:none;
+  --shot-r:9px 9px 0 0; --shot-in:inset 0 0 0 1px rgba(20,22,28,.05);
+  --cgap:18px;
+  --stage:#16181D; --stage-card:#1F2229; --stage-ink:#FFFFFF; --stage-2:rgba(255,255,255,.78); --stage-3:rgba(255,255,255,.52);
+  --stage-line:rgba(255,255,255,.12); --stage-line-2:rgba(255,255,255,.28);
+  --cta-bg:#102B56; --cta-ink:#FFFFFF; --cta-r:12px;
+}
+.col[data-v="bw"] .ch-card { overflow: hidden; }
+.col[data-v="bw"] .ch-body { padding: 13px 13px 15px; }
+
+/* ══════════════ 3안 · 편집 괘선 — 유채색 1(버튼) ══════════════
+   2안과 같은 무채 팔레트 위에, 잡지처럼 굵은 괘선·큰 번호·명조 대비로 구조를 세운다.
+   '색을 빼면 심심하다'에 대한 답은 색을 되돌리는 것이 아니라 조판을 세우는 것이다. */
+.col[data-v="ed"] {
+  --paper:#FBFAF8; --paper-2:#FFFFFF; --card-bg:transparent;
+  --ink:#101216; --ink-2:#3E424B; --ink-3:#6E7382;
+  --line:rgba(16,18,22,.14);
+  --card-bd:0; --card-r:0; --card-p:0; --body-p:12px 0 0;
+  --card-sh:none;
+  --shot-r:0; --shot-in:inset 0 0 0 1px rgba(16,18,22,.07);
+  --cgap:22px;
+  --stage:#101216; --stage-card:transparent; --stage-ink:#FFFFFF; --stage-2:rgba(255,255,255,.78); --stage-3:rgba(255,255,255,.50);
+  --stage-line:rgba(255,255,255,.16); --stage-line-2:rgba(255,255,255,.30);
+  --cta-bg:#102B56; --cta-ink:#FFFFFF; --cta-r:4px;
+}
+/* 편집 조판 — 굵은 괘선이 구역의 시작을 알린다 */
+.col[data-v="ed"] .hs-head, .col[data-v="ed"] .pl-head { border-top: 2px solid var(--ink); padding-top: 14px; }
+.col[data-v="ed"] .pl-head { margin-left: 22px; margin-right: 22px; }
+.col[data-v="ed"] .pl-ix { font-size: 19px; color: var(--ink); }
+.col[data-v="ed"] .ch-card { border-top: 1px solid var(--ink); padding-top: 11px; }
+.col[data-v="ed"] .ch-no { font-size: 11.5px; }
+.col[data-v="ed"] .ch-name { font-size: 19px; margin-top: 8px; }
+.col[data-v="ed"] .ba-card { border: 0; border-top: 2px solid var(--stage-ink); padding: 16px 0 0; }
+.col[data-v="ed"] .pillars { background: var(--paper-2); }
+
+/* ── 메모 ── */
+.notes { margin-top: 40px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); }
+.note { background: #fff; border: 1px solid #DEDEDC; border-radius: 12px; padding: 18px 20px; }
+.note h3 { margin: 0 0 9px; font-size: 15px; font-weight: 800; letter-spacing: -.015em; }
+.note ul { margin: 0; padding-left: 16px; }
+.note li { font-size: 13.5px; line-height: 1.72; color: #3C414B; margin-bottom: 6px; word-break: keep-all; }
+.note li b { color: #1A1D24; }
+table.cx { width: 100%; border-collapse: collapse; margin-top: 26px; background: #fff; border: 1px solid #DEDEDC; border-radius: 12px; overflow: hidden; }
+table.cx th, table.cx td { padding: 10px 14px; font-size: 13px; text-align: left; border-bottom: 1px solid #EBEBE9; }
+table.cx th { background: #F6F6F4; font-weight: 700; font-size: 12.5px; }
+table.cx tr:last-child td { border-bottom: 0; }
+table.cx td.was { color: #8A5A4A; }
+table.cx td.now { font-weight: 600; }
+.hint { margin: 14px 0 0; font-size: 12.5px; color: #5C6069; line-height: 1.7; max-width: 860px; word-break: keep-all; }
+.hint b { color: #1A1D24; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="doc-h1">색을 빼고, 위계로</h1>
+  <p class="doc-sub">
+    지적하신 게 맞습니다. 아래는 <b>한 화면에 쓰인 유채색 개수</b>입니다(사진 제외).
+    직전 안들은 '동행 색을 하나로 줄인다'면서 <b>라벨색·화살표색·레일 3색을 그대로 뒀습니다.</b>
+    이번 3안은 위계를 <b>크기·굵기·여백·괘선</b> 넷으로만 만듭니다.
+  </p>
+
+  <div class="count">
+    <div class="count-i">
+      <p class="count-l">현재 라이브</p>
+      <p class="count-v">4</p>
+      <div class="count-d"><i style="background:#F27945"></i><i style="background:#A33D14"></i><i style="background:#5B4A94"></i><i style="background:#2E6E42"></i></div>
+      <p class="count-n">오렌지 · 코랄잉크 · 보라(특강 문) · 초록(브리핑룸 문)</p>
+    </div>
+    <div class="count-i">
+      <p class="count-l">직전 5안</p>
+      <p class="count-v">3~4</p>
+      <div class="count-d"><i style="background:#102B56"></i><i style="background:#F8DEC8"></i><i style="background:#45456B"></i><i style="background:#6A4E5A"></i></div>
+      <p class="count-n">네이비 · 동행색 · 레일 2색. 줄인다면서 안 줄었습니다.</p>
+    </div>
+    <div class="count-i">
+      <p class="count-l">1안 먹과 종이</p>
+      <p class="count-v">0</p>
+      <div class="count-d"><i style="background:#16233D"></i></div>
+      <p class="count-n">네이비 잉크 하나. 나머지는 그 명도 단계일 뿐입니다.</p>
+    </div>
+    <div class="count-i">
+      <p class="count-l">2·3안</p>
+      <p class="count-v">1</p>
+      <div class="count-d"><i style="background:#16181D"></i><i style="background:#102B56"></i></div>
+      <p class="count-n">글자는 먹. 네이비는 <b>버튼 하나</b>에만 나옵니다.</p>
+    </div>
+  </div>
+
+  <h2 class="h2">무엇을 뺐나</h2>
+  <p class="h2-sub">전부 '색으로 하던 일'을 '조판으로 하는 일'로 옮긴 것입니다.</p>
+  <table class="cx">
+    <thead><tr><th>요소</th><th>직전 안 (색으로 해결)</th><th>이번 안 (조판으로 해결)</th></tr></thead>
+    <tbody>
+      <tr><td>세 개의 문 구분</td><td class="was">레일 3색 (네이비·라벤더·모브)</td><td class="now">번호 01·02·03 + 괘선</td></tr>
+      <tr><td>섹션 라벨</td><td class="was">액센트 컬러</td><td class="now">자간 .24em + 보조 잉크</td></tr>
+      <tr><td>→ 화살표</td><td class="was">레일 색</td><td class="now">본문과 같은 잉크</td></tr>
+      <tr><td>모집 중</td><td class="was">컬러 알약</td><td class="now">굵기 800</td></tr>
+      <tr><td>마감</td><td class="was">흐린 색 + 흑백 사진</td><td class="now">흑백 사진만 (색은 원래 불필요)</td></tr>
+      <tr><td>다크 섹션 강조선</td><td class="was">액센트 컬러 2px</td><td class="now">흰색 1px 헤어라인</td></tr>
+      <tr><td>Before/After 태그</td><td class="was">액센트 컬러</td><td class="now">보조 잉크 + 자간</td></tr>
+    </tbody>
+  </table>
+  <p class="hint">
+    <b>'마감' 줄이 핵심입니다.</b> 마감 카드는 이미 사진이 흑백이라 상태가 그림으로 전달되고 있었습니다.
+    거기에 색까지 얹은 건 같은 말을 두 번 한 것이었고, 그렇게 겹친 자리가 쌓여 조잡해졌습니다.
+  </p>
+
+  <h2 class="h2">3안</h2>
+  <p class="h2-sub">375px 실물 크기. 가로로 스크롤하면 세 열이 다 나오고, 폰 안은 세로로 스크롤됩니다.</p>
+
+  <div class="cols">
+
+    <!-- ══════════ 1안 · 먹과 종이 ══════════ -->
+    <section class="col" data-v="ink">
+      <div class="col-h">
+        <span class="col-ix">1안</span>
+        <p class="col-name">먹과 종이</p>
+        <p class="col-note">네이비가 강조색이 아니라 <b>이 사이트의 검정</b>입니다. 아이보리가 흰색이고요. 종이 카드는 그대로 삽니다.</p>
+        <span class="col-hue">네이비 외 0색 · 실측 확인</span>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="lb">Where to start</div><p class="ttl">어디부터 볼지<br>먼저 골라 보세요</p><p class="sub">세 가지 방법이 있어요</p></div>
+            <div class="pl-list">
+              <a class="pl-door" href="#"><span class="pl-ix">01</span><span class="pl-nm">챌린지</span><span class="pl-go">→</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span></a>
+              <a class="pl-door" href="#"><span class="pl-ix">02</span><span class="pl-nm">특강</span><span class="pl-go">→</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span></a>
+              <a class="pl-door" href="#"><span class="pl-ix">03</span><span class="pl-nm">브리핑룸</span><span class="pl-go">→</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="lb">Challenge</div><p class="ttl">승무원 준비<br>어렵게 하지 마세요</p><p class="sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="lb">Before &amp; After</div><p class="ttl">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+    <!-- ══════════ 2안 · 검정과 흰색 ══════════ -->
+    <section class="col" data-v="bw">
+      <div class="col-h">
+        <span class="col-ix">2안</span>
+        <p class="col-name">검정과 흰색</p>
+        <p class="col-note">말씀하신 그대로입니다. 글자는 전부 먹, 배경은 흰색. <b>네이비는 버튼 하나</b>에만 나와서, 희소해진 만큼 강해집니다.</p>
+        <span class="col-hue">유채색 1</span>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="lb">Where to start</div><p class="ttl">어디부터 볼지<br>먼저 골라 보세요</p><p class="sub">세 가지 방법이 있어요</p></div>
+            <div class="pl-list">
+              <a class="pl-door" href="#"><span class="pl-ix">01</span><span class="pl-nm">챌린지</span><span class="pl-go">→</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span></a>
+              <a class="pl-door" href="#"><span class="pl-ix">02</span><span class="pl-nm">특강</span><span class="pl-go">→</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span></a>
+              <a class="pl-door" href="#"><span class="pl-ix">03</span><span class="pl-nm">브리핑룸</span><span class="pl-go">→</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="lb">Challenge</div><p class="ttl">승무원 준비<br>어렵게 하지 마세요</p><p class="sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="lb">Before &amp; After</div><p class="ttl">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+    <!-- ══════════ 3안 · 편집 괘선 ══════════ -->
+    <section class="col" data-v="ed">
+      <div class="col-h">
+        <span class="col-ix">3안</span>
+        <p class="col-name">편집 괘선</p>
+        <p class="col-note">2안과 같은 무채 팔레트에 <b>굵은 괘선·큰 번호</b>로 구조를 세웠습니다. 색을 빼면 심심하다는 문제의 답입니다.</p>
+        <span class="col-hue">유채색 1</span>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="lb">Where to start</div><p class="ttl">어디부터 볼지<br>먼저 골라 보세요</p><p class="sub">세 가지 방법이 있어요</p></div>
+            <div class="pl-list">
+              <a class="pl-door" href="#"><span class="pl-ix">01</span><span class="pl-nm">챌린지</span><span class="pl-go">→</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span></a>
+              <a class="pl-door" href="#"><span class="pl-ix">02</span><span class="pl-nm">특강</span><span class="pl-go">→</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span></a>
+              <a class="pl-door" href="#"><span class="pl-ix">03</span><span class="pl-nm">브리핑룸</span><span class="pl-go">→</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="lb">Challenge</div><p class="ttl">승무원 준비<br>어렵게 하지 마세요</p><p class="sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="lb">Before &amp; After</div><p class="ttl">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>1안 · 먹과 종이</h3>
+      <ul>
+        <li><b>네이비를 강조색으로 쓰지 않습니다.</b> 이 사이트의 '검정'이 네이비이고 '흰색'이 아이보리라는 사고 전환입니다.</li>
+        <li>배경이 아이보리라 <b>7/27 레터프레스 종이 카드가 그대로 유효</b>합니다. 물성은 색이 아니라 그림자에서 나오니까요.</li>
+        <li>세 안 중 <b>가장 따뜻</b>합니다. 준비생이 불안한 마음으로 오는 사이트라는 점에서 유리합니다.</li>
+        <li>약점: 아이보리라 완전한 '흰 화면'의 상쾌함은 없습니다.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>2안 · 검정과 흰색</h3>
+      <ul>
+        <li>말씀하신 방향 그대로입니다. <b>네이비가 화면에 한 번만</b> 나와서, 희소해진 만큼 시그니처로 강해집니다.</li>
+        <li><b>주의:</b> 배경이 흰색이 되면 7/27 '흰 카드 금지' 규칙의 전제(배경이 베이지)가 사라집니다. 그래서 카드를 그림자 없는 <b>흰 면 + 헤어라인</b>으로 바꿨습니다 — 이건 그 결정을 뒤집는 것이라 따로 확인이 필요합니다.</li>
+        <li>약점: 흰 배경은 <b>사진의 완성도를 그대로 드러냅니다.</b> 인물 사진 6장이 톤이 안 맞으면 바로 보입니다.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>3안 · 편집 괘선</h3>
+      <ul>
+        <li>"색을 빼면 심심하지 않냐"에 대한 답입니다. 답은 색을 되돌리는 게 아니라 <b>조판을 세우는 것</b>입니다.</li>
+        <li>2px 괘선이 구역의 시작을 알리고, 큰 번호가 순서를 만듭니다. 카드 상자를 없애 <b>지면처럼</b> 읽힙니다.</li>
+        <li>세 안 중 <b>가장 개성이 뚜렷</b>하고, 가장 '직접 만든 것' 같습니다.</li>
+        <li>약점: 규칙이 강해서 <b>나중에 요소를 추가할 때 지켜야 할 게 많습니다.</b> 아무 데나 카드를 못 넣습니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="hint">
+    ※ 사진은 색 개수에서 뺐습니다. 세 안 모두 <b>화면에서 유일하게 색을 가진 것은 인물 사진</b>이고, 그게 의도입니다 —
+    주변이 무채일수록 사람 얼굴이 살아납니다. 지금은 사진 위에 오렌지·보라·초록이 같이 있어 얼굴이 경쟁하고 있습니다.
+  </p>
+</div>
+</body>
+</html>
