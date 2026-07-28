@@ -14,8 +14,12 @@
    로고 패키지(images/MONC_Logo_Full_Package/brand/colors.json)의 공식 5색만 사용.
      MONC Navy #102B56 / MONC Ivory #F6EEE8 / Sunset Peach #F8DEC8
      Sky Lavender #B7B5CE / Cloud Mauve #A99CA5
-   세 열의 마크업은 <template> 하나를 복제한 것이라 완전히 동일하다.
-   달라지는 것은 열마다 주입한 CSS 변수(토큰)뿐 — 실제 전환도 tokens.css 교체로 끝난다.
+
+   ⚠️ 이 파일에는 자바스크립트가 없다. 구 버전은 <template> 하나를 JS로 세 번
+      복제했는데, 스크립트를 막는 뷰어(에디터 미리보기 패널 등)에서 프레임이
+      통째로 비어 "목업이 안 보인다"가 됐다. 세 열의 마크업은 손으로 세 번 적은
+      것이며, 열마다 다른 것은 CSS 변수(테마 토큰)뿐이다.
+      → 한 열의 구조를 고치면 나머지 두 열도 같이 고칠 것.
    ══════════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -34,10 +38,7 @@ body {
 
 /* ── 브랜드 팔레트 스트립 ── */
 .pal { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 34px; }
-.pal-sw {
-  width: 148px; border-radius: 12px; overflow: hidden;
-  border: 1px solid rgba(27,33,48,.14); background: #fff;
-}
+.pal-sw { width: 148px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(27,33,48,.14); background: #fff; }
 .pal-c { height: 62px; }
 .pal-t { padding: 8px 10px 10px; }
 .pal-n { display: block; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
@@ -75,8 +76,7 @@ body {
 .nv {
   position: sticky; top: 0; z-index: 20; height: 56px;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-soft);
+  padding: 0 16px; background: var(--bg); border-bottom: 1px solid var(--line-soft);
 }
 .nv img { height: 19px; width: auto; display: block; }
 .nv-menu { display: flex; gap: 14px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
@@ -85,10 +85,7 @@ body {
 /* 세 개의 문 (#pillars) */
 .pillars { background: var(--bg2); padding: 34px 0 40px; }
 .container { padding: 0 24px; }
-.section-label {
-  font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
-  color: var(--label);
-}
+.section-label { font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--label); }
 .pl-head { margin-bottom: 20px; }
 .pl-head .t { font-family: 'Song Myung','Noto Serif KR',serif; font-weight: 400; font-size: 27px; line-height: 1.34; letter-spacing: -.02em; color: var(--title); margin: 10px 0 8px; word-break: keep-all; }
 .pl-head .s { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0; }
@@ -186,7 +183,7 @@ body {
 
 .spacer { height: 92px; }
 
-/* ══════════════════ 테마 토큰 ══════════════════ */
+/* ══════════════════ 테마 토큰 — 열마다 이것만 다르다 ══════════════════ */
 
 /* ── 현재(웜) — tokens.css 실값 ── */
 .col[data-theme="now"] {
@@ -230,7 +227,7 @@ body {
   --arc-c:#F8DEC8; --arc-em:#F8DEC8; --arc-bg:rgba(248,222,200,.10); --arc-btn-ink:#0C1D38;
   --cta-bg:#102B56; --cta-text:#F6EEE8; --cta-line:rgba(248,222,200,.30); --cta-sh:rgba(16,43,86,.34);
 }
-/* 세 개의 문 레일색 — 열마다 다르게 주입 */
+/* 세 개의 문 레일색 */
 .col[data-theme="now"] .d1 { --pl-c:#A33D14; }
 .col[data-theme="now"] .d2 { --pl-c:#5B4A94; }
 .col[data-theme="now"] .d3 { --pl-c:#2E6E42; }
@@ -263,10 +260,10 @@ table.cx tr:last-child td { border-bottom: 0; }
 
   <h1 class="doc-h1">톤 전환 목업 — 현재 / A안 / B안</h1>
   <p class="doc-sub">
-    세 열의 <b>마크업은 완전히 동일</b>합니다(같은 템플릿을 복제). 달라지는 건 열마다 주입한 CSS 변수뿐이라,
+    세 열의 <b>마크업은 완전히 동일</b>합니다. 달라지는 건 열마다 주입한 CSS 변수뿐이라,
     실제 전환도 <b>tokens.css의 토큰 교체</b>로 끝납니다. 색은 전부
-    로고 패키지가 정의한 공식 5색에서만 가져왔습니다 — <b>오렌지·브라운·골드는 한 톨도 쓰지 않았습니다.</b>
-    한 열을 스크롤하면 세 열이 같이 움직입니다.
+    로고 패키지가 정의한 공식 5색에서만 가져왔습니다 —
+    <b>오렌지·브라운·골드는 한 톨도 쓰지 않았습니다.</b>
   </p>
 
   <div class="pal">
@@ -277,141 +274,184 @@ table.cx tr:last-child td { border-bottom: 0; }
     <div class="pal-sw"><div class="pal-c" style="background:#A99CA5"></div><div class="pal-t"><span class="pal-n">Cloud Mauve</span><span class="pal-x">#A99CA5</span></div></div>
   </div>
 
-  <div class="cols" id="cols">
+  <div class="cols">
 
+    <!-- ══════════ 열 1 — 현재(웜) ══════════ -->
     <section class="col" data-theme="now">
       <div class="col-h">
         <span class="col-tag">지금 라이브</span>
         <p class="col-name">현재 — 웜(베이지·코랄)</p>
         <p class="col-note">배경 #E9E4D8. 로고 배경(#F6EEE8)보다 어둡고 누렇습니다.</p>
       </div>
-      <div class="phone"><div class="scr"></div></div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv">
+            <img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC">
+            <div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div>
+          </nav>
+          <section class="pillars">
+            <div class="container">
+              <div class="pl-head">
+                <div class="section-label">Where to start</div>
+                <p class="t">어디부터 볼지<br>먼저 골라 보세요</p>
+                <p class="s">세 가지 방법이 있어요</p>
+              </div>
+              <div class="pl-grid">
+                <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+                <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+                <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+              </div>
+            </div>
+          </section>
+          <section class="hs">
+            <div class="hs-head">
+              <div class="section-label">Challenge</div>
+              <div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div>
+              <p class="hs-head-sub">2주 · 하루 한 번 미션</p>
+            </div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba">
+            <div class="container">
+              <div class="section-label">Before &amp; After</div>
+              <p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+              <div class="ba-card">
+                <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+                <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+                <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+                <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+              </div>
+            </div>
+          </section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
     </section>
 
+    <!-- ══════════ 열 2 — A안 순정 ══════════ -->
     <section class="col" data-theme="a">
       <div class="col-h">
         <span class="col-tag">A안</span>
         <p class="col-name">순정 — 네이비 + 아이보리</p>
         <p class="col-note">2색만. 버튼은 색이 아니라 <b>제일 진한 덩어리</b>로 눈에 걸립니다.</p>
       </div>
-      <div class="phone"><div class="scr"></div></div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv">
+            <img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC">
+            <div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div>
+          </nav>
+          <section class="pillars">
+            <div class="container">
+              <div class="pl-head">
+                <div class="section-label">Where to start</div>
+                <p class="t">어디부터 볼지<br>먼저 골라 보세요</p>
+                <p class="s">세 가지 방법이 있어요</p>
+              </div>
+              <div class="pl-grid">
+                <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+                <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+                <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+              </div>
+            </div>
+          </section>
+          <section class="hs">
+            <div class="hs-head">
+              <div class="section-label">Challenge</div>
+              <div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div>
+              <p class="hs-head-sub">2주 · 하루 한 번 미션</p>
+            </div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba">
+            <div class="container">
+              <div class="section-label">Before &amp; After</div>
+              <p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+              <div class="ba-card">
+                <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+                <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+                <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+                <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+              </div>
+            </div>
+          </section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
     </section>
 
+    <!-- ══════════ 열 3 — B안 창문 톤 ══════════ -->
     <section class="col" data-theme="b">
       <div class="col-h">
         <span class="col-tag">B안</span>
         <p class="col-name">창문 톤 — A안 + 페일 3색</p>
         <p class="col-note">따뜻한 색을 <b>작은 구멍에만</b> 넣습니다. 로고의 창문과 같은 논리.</p>
       </div>
-      <div class="phone"><div class="scr"></div></div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv">
+            <img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC">
+            <div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div>
+          </nav>
+          <section class="pillars">
+            <div class="container">
+              <div class="pl-head">
+                <div class="section-label">Where to start</div>
+                <p class="t">어디부터 볼지<br>먼저 골라 보세요</p>
+                <p class="s">세 가지 방법이 있어요</p>
+              </div>
+              <div class="pl-grid">
+                <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+                <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+                <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+              </div>
+            </div>
+          </section>
+          <section class="hs">
+            <div class="hs-head">
+              <div class="section-label">Challenge</div>
+              <div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div>
+              <p class="hs-head-sub">2주 · 하루 한 번 미션</p>
+            </div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba">
+            <div class="container">
+              <div class="section-label">Before &amp; After</div>
+              <p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+              <div class="ba-card">
+                <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+                <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+                <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+                <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+              </div>
+            </div>
+          </section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
     </section>
 
   </div>
-  <p class="hint">※ 화면이 좁으면 가로로 스크롤해서 세 번째 열까지 보실 수 있습니다.</p>
-
-  <!-- 세 열에 복제되는 원본 마크업 (index.html 구조 이식) -->
-  <template id="tpl">
-    <nav class="nv">
-      <img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC">
-      <div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div>
-    </nav>
-
-    <section class="pillars">
-      <div class="container">
-        <div class="pl-head">
-          <div class="section-label">Where to start</div>
-          <p class="t">어디부터 볼지<br>먼저 골라 보세요</p>
-          <p class="s">세 가지 방법이 있어요</p>
-        </div>
-        <div class="pl-grid">
-          <a class="pl-door d1" href="#">
-            <span class="pl-k">Challenge</span>
-            <span class="pl-nm">챌린지</span>
-            <span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span>
-            <span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span>
-          </a>
-          <a class="pl-door d2" href="#">
-            <span class="pl-k">Special</span>
-            <span class="pl-nm">특강</span>
-            <span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span>
-            <span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span>
-          </a>
-          <a class="pl-door d3" href="#">
-            <span class="pl-k">Briefing Room</span>
-            <span class="pl-nm">브리핑룸</span>
-            <span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span>
-            <span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <section class="hs">
-      <div class="hs-head">
-        <div class="section-label">Challenge</div>
-        <div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div>
-        <p class="hs-head-sub">2주 · 하루 한 번 미션</p>
-      </div>
-      <div class="ch-list">
-        <a class="ch-card" href="#">
-          <span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span>
-          <span class="ch-body">
-            <span class="ch-no">01 · Image</span>
-            <span class="ch-name">영.합.각</span>
-            <span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span>
-            <span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span>
-          </span>
-        </a>
-        <a class="ch-card" href="#">
-          <span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span>
-          <span class="ch-body">
-            <span class="ch-no">02 · Answer</span>
-            <span class="ch-name">승.자.각</span>
-            <span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span>
-            <span class="ch-st is-open"><i class="mk"></i>모집 중 · D-5</span>
-          </span>
-        </a>
-        <a class="ch-card is-dim" href="#">
-          <span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span>
-          <span class="ch-body">
-            <span class="ch-no">03 · Voice</span>
-            <span class="ch-name">보.신.각</span>
-            <span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span>
-            <span class="ch-st is-closed">다음 기수 준비 중</span>
-          </span>
-        </a>
-        <a class="ch-card is-dim" href="#">
-          <span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span>
-          <span class="ch-body">
-            <span class="ch-no">04 · Speech</span>
-            <span class="ch-name">스.피.닝</span>
-            <span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span>
-            <span class="ch-st is-closed">다음 기수 준비 중</span>
-          </span>
-        </a>
-      </div>
-    </section>
-
-    <section class="ba">
-      <div class="container">
-        <div class="section-label">Before &amp; After</div>
-        <p class="t">2주 전과 후,<br>직접 들어 보세요</p>
-        <div class="ba-card">
-          <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
-          <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
-          <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
-          <div class="ba-btns">
-            <button class="ba-btn on" type="button">전</button>
-            <button class="ba-btn" type="button">후</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="spacer"></div>
-  </template>
-
-  <a class="cta" style="display:none"></a>
+  <p class="hint">※ 화면이 좁으면 가로로 스크롤해서 세 번째 열까지 보실 수 있습니다. 각 폰은 안에서 세로로 스크롤됩니다.</p>
 
   <!-- ── 판단 메모 ── -->
   <div class="notes">
@@ -462,33 +502,5 @@ table.cx tr:last-child td { border-bottom: 0; }
   <p class="hint">9대 원칙 4번(4.5:1) 전부 통과. 참고로 현재 오렌지 <code>--accent-dark #D9531F</code>는 종이 카드 위 3.5:1로 미달이라, 이미 강조를 색이 아닌 굵기로 우회하고 있었습니다.</p>
 
 </div>
-
-<script>
-/* 세 열에 같은 마크업을 복제 — 열마다 다른 것은 CSS 변수뿐임을 구조로 보장한다. */
-(function () {
-  const tpl = document.getElementById('tpl');
-  document.querySelectorAll('.phone').forEach(function (phone) {
-    const scr = phone.querySelector('.scr');
-    scr.appendChild(tpl.content.cloneNode(true));
-    const cta = document.createElement('a');
-    cta.className = 'cta';
-    cta.href = '#';
-    cta.innerHTML = '<span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span>';
-    phone.appendChild(cta);
-  });
-
-  /* 스크롤 동기화 — 세 화면을 같은 지점에서 비교해야 색 차이가 보인다. */
-  const scrs = [].slice.call(document.querySelectorAll('.scr'));
-  let lock = false;
-  scrs.forEach(function (el) {
-    el.addEventListener('scroll', function () {
-      if (lock) return;
-      lock = true;
-      scrs.forEach(function (o) { if (o !== el) o.scrollTop = el.scrollTop; });
-      requestAnimationFrame(function () { lock = false; });
-    });
-  });
-})();
-</script>
 </body>
 </html>
