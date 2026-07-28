@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONC 홈 리디자인 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Song+Myung&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" rel="stylesheet">
+<style>
+/* MONC 홈 리디자인 4안 — 2026-07-29
+   레퍼런스(나이키·룰루레몬·자라·메가스터디)의 장점을 각각 MONC 홈에 적용.
+   자바스크립트 없음. 네 열의 마크업은 손으로 네 번 적었다. */
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin:0; padding:40px 24px 80px; background:#E9E9E8; color:#1B1D22;
+  font-family:'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1720px; margin:0 auto; }
+h1 { font-size:27px; font-weight:800; letter-spacing:-.025em; margin:0 0 8px; }
+.lead { font-size:14.5px; line-height:1.7; color:#4B4F58; margin:0 0 30px; max-width:700px; word-break:keep-all; }
+
+.cols { display:flex; gap:22px; align-items:flex-start; overflow-x:auto; padding-bottom:14px; }
+.col { flex:0 0 auto; width:375px; }
+.ch { margin:0 0 12px; }
+.ch .ix { font-size:11px; font-weight:800; letter-spacing:.15em; color:#83878F; text-transform:uppercase; }
+.ch .nm { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:5px 0 4px; }
+.ch .ds { font-size:12.5px; line-height:1.6; color:#5A5E67; margin:0; word-break:keep-all; }
+.ch .ds b { color:#1B1D22; }
+
+.phone { position:relative; width:375px; height:812px; overflow:hidden; background:var(--paper);
+  border:1px solid #CDCDCB; border-radius:22px; box-shadow:0 14px 36px -16px rgba(20,22,28,.30); }
+.scr { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; }
+.scr::-webkit-scrollbar { display:none; }
+
+/* ── 공통 토큰 ── */
+.col { --paper:#F6EEE8; --ink:#1B1D22; --sub:#63676F; --navy:#102B56;
+       --line:rgba(27,29,34,.14); --soft:rgba(27,29,34,.07); --pad:22px; }
+
+.nv { position:sticky; top:0; z-index:30; height:54px; display:flex; align-items:center;
+  justify-content:space-between; padding:0 var(--pad); background:var(--paper); }
+.nv img { height:17px; display:block; }
+.nv .mn { display:flex; gap:14px; font-size:12.5px; font-weight:600; color:var(--sub); }
+.nv .mn .on { color:var(--ink); font-weight:700; }
+.pad { padding-left:var(--pad); padding-right:var(--pad); }
+.serif { font-family:'Song Myung','Noto Serif KR',serif; font-weight:400; }
+.eyebrow { font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--sub); }
+
+.pill { display:inline-flex; align-items:center; justify-content:center; min-height:50px; padding:0 30px;
+  border-radius:999px; background:var(--navy); color:#F6EEE8; text-decoration:none; font-size:15px; font-weight:700; }
+.pill.ghost { background:transparent; color:var(--ink); border:1px solid var(--ink); }
+.textlink { display:inline-flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:var(--ink);
+  text-decoration:none; border-bottom:1px solid var(--ink); padding-bottom:3px; }
+
+.bar { position:absolute; left:0; right:0; bottom:0; z-index:40; padding:10px 14px calc(14px);
+  background:linear-gradient(to top, var(--paper) 62%, rgba(246,238,232,0)); display:flex; gap:9px; align-items:center; }
+.bar .b { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  min-height:54px; border-radius:999px; background:var(--navy); color:#F6EEE8; text-decoration:none; }
+.bar .b .m { font-size:15px; font-weight:800; }
+.bar .b .s { font-size:11px; font-weight:500; opacity:.82; }
+.tail { height:92px; }
+
+/* 상태 표기 (색은 '지금 신청 가능'에만 쓴다) */
+.tag { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:800;
+  padding:5px 10px; border-radius:999px; background:var(--navy); color:#F6EEE8; letter-spacing:-.01em; }
+.tag.off { background:transparent; color:var(--sub); border:1px solid var(--line); font-weight:600; }
+.st { font-size:13px; font-weight:800; color:var(--navy); }
+.st.off { font-weight:500; color:var(--sub); }
+
+/* 챌린지 텍스트 */
+.c-no { display:block; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--sub); }
+.c-nm { display:block; font-family:'Noto Serif KR',serif; font-weight:600; letter-spacing:.04em; color:var(--ink); }
+.c-ln { display:block; font-size:13.5px; line-height:1.55; color:var(--sub); word-break:keep-all; }
+.c-ln em { font-style:normal; font-weight:700; color:var(--ink); }
+.dim img { filter:grayscale(1); }
+.dim .c-nm, .dim .c-ln em { color:var(--sub); }
+
+/* ══════════ 1안 · 나이키 — 큰 히어로 + 가로 레일 ══════════ */
+.n-hero { position:relative; }
+.n-hero .shot { display:block; width:100%; aspect-ratio:5/6; overflow:hidden; background:#E2DAD3; }
+.n-hero .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 26%; display:block; }
+.n-hero .ov { position:absolute; left:0; right:0; bottom:0; padding:0 var(--pad) 26px;
+  background:linear-gradient(to top, rgba(18,16,14,.78) 0%, rgba(18,16,14,.42) 45%, rgba(18,16,14,0) 100%); }
+.n-hero .t { font-size:36px; line-height:1.22; color:#fff; letter-spacing:-.03em; margin:0 0 8px; word-break:keep-all; }
+.n-hero .s { font-size:14px; color:rgba(255,255,255,.86); margin:0 0 18px; font-weight:500; }
+.n-hero .pill { background:#F6EEE8; color:#12100E; }
+.n-sec { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:34px var(--pad) 14px; }
+.n-sec .t { font-size:22px; letter-spacing:-.02em; margin:0; }
+.n-sec .m { font-size:12.5px; font-weight:700; color:var(--sub); white-space:nowrap; }
+.rail { display:flex; gap:11px; overflow-x:auto; padding:0 var(--pad) 4px; scroll-snap-type:x mandatory;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.rail::-webkit-scrollbar { display:none; }
+.rail > a { flex:0 0 78%; scroll-snap-align:start; text-decoration:none; color:var(--ink); }
+.rail .shot { position:relative; display:block; width:100%; aspect-ratio:3/2; overflow:hidden; background:#E2DAD3; }
+.rail .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 30%; display:block; }
+.rail .shot .tag { position:absolute; left:10px; top:10px; }
+.rail .c-nm { font-size:19px; margin-top:11px; }
+.rail .c-ln { margin-top:5px; }
+.rail .st { display:block; margin-top:9px; }
+.n-tools { margin-top:34px; background:#12100E; padding:32px 0 34px; }
+.n-tools .eyebrow { color:rgba(255,255,255,.55); }
+.n-tools .t { font-size:23px; color:#fff; margin:9px 0 18px; letter-spacing:-.02em; }
+.n-tools .row { display:grid; gap:1px; background:rgba(255,255,255,.16); }
+.n-tools .row a { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#12100E; padding:15px 0; text-decoration:none; color:#fff; font-size:15px; font-weight:600; }
+.n-tools .row a span.k { color:rgba(255,255,255,.5); font-size:12.5px; font-weight:600; }
+
+/* ══════════ 2안 · 룰루레몬 — 섹션마다 큰 이미지 + 큰 제목 ══════════ */
+.l-hero { padding:40px 0 30px; }
+.l-hero .t { font-size:34px; line-height:1.26; letter-spacing:-.03em; margin:12px 0 12px; word-break:keep-all; }
+.l-hero .s { font-size:15px; line-height:1.65; color:var(--sub); margin:0 0 22px; word-break:keep-all; }
+.l-shot { display:block; width:100%; aspect-ratio:3/2; overflow:hidden; background:#E2DAD3; }
+.l-shot img { width:100%; height:100%; object-fit:cover; object-position:50% 28%; display:block; }
+.l-block { padding:36px 0 0; }
+.l-block .t { font-size:25px; letter-spacing:-.02em; margin:14px 0 8px; }
+.l-block .d { font-size:14px; line-height:1.7; color:var(--sub); margin:0 0 16px; word-break:keep-all; }
+.l-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px 14px; margin-top:20px; }
+.l-grid a { text-decoration:none; color:var(--ink); }
+.l-grid .shot { display:block; width:100%; aspect-ratio:3/2; overflow:hidden; background:#E2DAD3; }
+.l-grid .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 30%; display:block; }
+.l-grid .c-nm { font-size:17px; margin-top:10px; }
+.l-grid .c-ln { margin-top:4px; font-size:13px; }
+.l-grid .st { display:block; margin-top:7px; font-size:12.5px; }
+.l-quote { margin-top:40px; background:#12100E; padding:34px 0 36px; }
+.l-quote .eyebrow { color:rgba(255,255,255,.55); }
+.l-quote .q { font-family:'Song Myung','Noto Serif KR',serif; font-weight:400; font-size:21px; line-height:1.55;
+  color:#fff; margin:12px 0 16px; word-break:keep-all; }
+.l-quote .who { font-size:12.5px; color:rgba(255,255,255,.6); margin:0 0 18px; }
+.l-quote .btns { display:flex; gap:9px; }
+.l-quote .btns button { flex:1; min-height:46px; border-radius:999px; font-family:inherit; font-size:13.5px;
+  font-weight:700; cursor:default; border:1px solid rgba(255,255,255,.34); background:transparent; color:rgba(255,255,255,.8); }
+.l-quote .btns button.on { background:#fff; border-color:#fff; color:#12100E; }
+
+/* ══════════ 3안 · 자라 — 사진 그리드, 텍스트 최소 ══════════ */
+.col[data-v="zara"] { --paper:#FFFFFF; --pad:0px; }
+.z-nv { padding:0 18px; }
+.z-hero { display:block; width:100%; aspect-ratio:4/5; overflow:hidden; background:#EFEFEF; position:relative; }
+.z-hero img { width:100%; height:100%; object-fit:cover; object-position:50% 24%; display:block; }
+.z-cap { padding:16px 18px 30px; }
+.z-cap .t { font-size:26px; line-height:1.3; letter-spacing:-.02em; margin:0 0 9px; }
+.z-cap .s { font-size:12.5px; color:var(--sub); margin:0 0 16px; letter-spacing:.02em; }
+.z-rule { font-size:10.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase;
+  padding:0 18px 10px; border-bottom:1px solid #000; color:#000; }
+.z-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+.z-grid a { display:block; text-decoration:none; color:#000; }
+.z-grid .shot { display:block; width:100%; aspect-ratio:3/4; overflow:hidden; background:#EFEFEF; }
+.z-grid .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 28%; display:block; }
+.z-grid .tx { padding:11px 12px 22px; }
+.z-grid .c-nm { font-size:15px; letter-spacing:.06em; }
+.z-grid .c-ln { font-size:11.5px; margin-top:4px; -webkit-line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+.z-grid .st { font-size:11px; display:block; margin-top:6px; letter-spacing:.04em; }
+.z-strip { padding:34px 18px 36px; }
+.z-strip a { display:flex; align-items:center; justify-content:space-between; padding:14px 0;
+  border-top:1px solid #000; text-decoration:none; color:#000; font-size:14px; font-weight:600; letter-spacing:.01em; }
+.z-strip a:last-child { border-bottom:1px solid #000; }
+
+/* ══════════ 4안 · 하이브리드 — 정보가 크고 명확 ══════════ */
+.h-hero { position:relative; }
+.h-hero .shot { display:block; width:100%; aspect-ratio:16/11; overflow:hidden; background:#E2DAD3; }
+.h-hero .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 24%; display:block; }
+.h-hero .card { margin:-38px var(--pad) 0; position:relative; background:var(--paper);
+  padding:22px 20px 22px; border-top:3px solid var(--navy); }
+.h-hero .t { font-size:27px; line-height:1.28; letter-spacing:-.025em; margin:12px 0 9px; word-break:keep-all; }
+.h-hero .s { font-size:14px; color:var(--sub); margin:0 0 18px; }
+.h-facts { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); margin-top:18px; }
+.h-facts div { padding:13px 0 0; }
+.h-facts .k { display:block; font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--sub); text-transform:uppercase; }
+.h-facts .v { display:block; font-size:16px; font-weight:800; margin-top:4px; letter-spacing:-.02em; }
+.h-sec { padding:36px var(--pad) 0; }
+.h-sec .t { font-size:23px; letter-spacing:-.02em; margin:9px 0 4px; }
+.h-sec .d { font-size:13.5px; color:var(--sub); margin:0 0 18px; }
+.h-list { display:flex; flex-direction:column; }
+.h-list a { display:grid; grid-template-columns:118px 1fr; column-gap:14px; align-items:center;
+  padding:14px 0; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); }
+.h-list a:last-child { border-bottom:1px solid var(--line); }
+.h-list .shot { display:block; width:100%; aspect-ratio:4/3; overflow:hidden; background:#E2DAD3; }
+.h-list .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 30%; display:block; }
+.h-list .c-nm { font-size:17px; }
+.h-list .c-ln { font-size:12.5px; margin-top:4px; -webkit-line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+.h-list .row { display:flex; align-items:center; gap:7px; margin-top:7px; }
+.h-price { margin-top:34px; background:var(--navy); color:#F6EEE8; padding:28px var(--pad) 30px; }
+.h-price .eyebrow { color:rgba(246,238,232,.6); }
+.h-price .t { font-size:23px; color:#fff; margin:9px 0 6px; letter-spacing:-.02em; }
+.h-price .n { font-size:40px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px; }
+.h-price .u { font-size:13.5px; color:rgba(246,238,232,.72); margin:0 0 18px; }
+.h-price .pill { background:#F6EEE8; color:var(--navy); }
+
+/* 메모 */
+.notes { margin-top:34px; display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+.note { background:#fff; border:1px solid #D9D9D7; border-radius:12px; padding:16px 18px; }
+.note h3 { margin:0 0 8px; font-size:14px; font-weight:800; letter-spacing:-.015em; }
+.note li { font-size:12.8px; line-height:1.7; color:#3D414A; margin-bottom:5px; word-break:keep-all; }
+.note ul { margin:0; padding-left:16px; }
+.note li b { color:#1B1D22; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>홈 리디자인 4안</h1>
+  <p class="lead">레퍼런스에서 좋았던 걸 하나씩 가져와 홈 화면을 다시 짰습니다. 375px 실물 크기이고, 1안의 챌린지는 <b>옆으로 밀립니다.</b></p>
+
+  <div class="cols">
+
+    <!-- ════════ 1안 · 나이키 ════════ -->
+    <section class="col" data-v="nike">
+      <div class="ch"><span class="ix">1안 · 나이키</span>
+        <p class="nm">큰 히어로 + 가로 레일</p>
+        <p class="ds">첫 화면이 <b>사진 한 장과 한 문장</b>. 챌린지는 옆으로 밀어서 봅니다.</p></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="mn"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+
+        <div class="n-hero">
+          <span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+          <div class="ov">
+            <p class="t serif">2주 뒤,<br>달라진 나를 듣는다</p>
+            <p class="s">하루 한 번 미션 · 코치 1:1 피드백</p>
+            <a class="pill" href="#">지금 신청하기</a>
+          </div>
+        </div>
+
+        <div class="n-sec"><p class="t serif">챌린지 4</p><span class="m">밀어서 보기 →</span></div>
+        <div class="rail">
+          <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""><span class="tag">모집 중 D-5</span></span>
+            <span class="c-no">01 Image</span><span class="c-nm">영.합.각</span>
+            <span class="c-ln">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="st">2주 · 3만원</span></a>
+          <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""><span class="tag">모집 중 D-5</span></span>
+            <span class="c-no">02 Answer</span><span class="c-nm">승.자.각</span>
+            <span class="c-ln">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="st">2주 · 3만원</span></a>
+          <a href="#" class="dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""><span class="tag off">다음 기수</span></span>
+            <span class="c-no">03 Voice</span><span class="c-nm">보.신.각</span>
+            <span class="c-ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="st off">준비 중</span></a>
+          <a href="#" class="dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""><span class="tag off">다음 기수</span></span>
+            <span class="c-no">04 Speech</span><span class="c-nm">스.피.닝</span>
+            <span class="c-ln">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="st off">준비 중</span></a>
+        </div>
+
+        <section class="n-tools"><div class="pad">
+          <div class="eyebrow">Free</div>
+          <p class="t serif">먼저 무료로 써 보세요</p>
+          <div class="row">
+            <a href="#">항공 뉴스 <span class="k">매일 업데이트 →</span></a>
+            <a href="#">소재 발굴 <span class="k">AI 대화 →</span></a>
+            <a href="#">답변 노트 <span class="k">무제한 저장 →</span></a>
+          </div>
+        </div></section>
+        <div class="tail"></div>
+      </div>
+      <div class="bar"><a class="b" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div></div>
+    </section>
+
+    <!-- ════════ 2안 · 룰루레몬 ════════ -->
+    <section class="col" data-v="lulu">
+      <div class="ch"><span class="ix">2안 · 룰루레몬</span>
+        <p class="nm">섹션마다 큰 제목 + 큰 사진</p>
+        <p class="ds">한 화면에 <b>메시지 하나</b>씩. 여백이 넓고 글이 큽니다.</p></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="mn"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+
+        <section class="l-hero pad">
+          <div class="eyebrow">2 Weeks</div>
+          <p class="t serif">승무원 준비,<br>혼자 하지 마세요</p>
+          <p class="s">하루 한 번 미션을 받고, 코치가 1:1로 답을 줍니다.</p>
+          <a class="pill" href="#">챌린지 신청하기</a>
+        </section>
+        <span class="l-shot"><img src="../images/hero-answer.webp" alt=""></span>
+
+        <section class="l-block pad">
+          <div class="eyebrow">Challenge</div>
+          <p class="t serif">네 가지 중에 고르세요</p>
+          <p class="d">목소리·표정·말투·답변. 지금 가장 급한 것 하나만 골라도 됩니다.</p>
+          <div class="l-grid">
+            <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""></span>
+              <span class="c-nm">영.합.각</span><span class="c-ln">굳은 표정 → <em>자연스럽게</em></span><span class="st">모집 중 · D-5</span></a>
+            <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+              <span class="c-nm">승.자.각</span><span class="c-ln">뻔한 답변 → <em>나만의 답변</em></span><span class="st">모집 중 · D-5</span></a>
+            <a href="#" class="dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""></span>
+              <span class="c-nm">보.신.각</span><span class="c-ln">떨리는 목소리 → <em>신뢰가 실리는</em></span><span class="st off">다음 기수</span></a>
+            <a href="#" class="dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""></span>
+              <span class="c-nm">스.피.닝</span><span class="c-ln">딱딱한 말투 → <em>귀에 감기는</em></span><span class="st off">다음 기수</span></a>
+          </div>
+        </section>
+
+        <section class="l-quote"><div class="pad">
+          <div class="eyebrow">Before &amp; After</div>
+          <p class="q">"2주 후에 녹음을 다시 들으니 정말 달라진 게 느껴졌어요."</p>
+          <p class="who">스.피.닝 · 챌린저 A</p>
+          <div class="btns"><button class="on" type="button">전</button><button type="button">후</button></div>
+        </div></section>
+
+        <section class="l-block pad" style="padding-bottom:8px">
+          <div class="eyebrow">Free</div>
+          <p class="t serif">아직 마음이 안 섰다면</p>
+          <p class="d">항공 뉴스·소재 발굴·답변 노트는 회원이면 무료입니다.</p>
+          <a class="textlink" href="#">브리핑룸 둘러보기 →</a>
+        </section>
+        <div class="tail"></div>
+      </div>
+      <div class="bar"><a class="b" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div></div>
+    </section>
+
+    <!-- ════════ 3안 · 자라 ════════ -->
+    <section class="col" data-v="zara">
+      <div class="ch"><span class="ix">3안 · 자라</span>
+        <p class="nm">사진 그리드, 글은 최소</p>
+        <p class="ds">사진이 <b>화면을 꽉 채우고 서로 맞닿습니다.</b> 설명을 거의 안 합니다.</p></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv z-nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="mn"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span></div></nav>
+
+        <span class="z-hero"><img src="../images/hero-answer.webp" alt=""></span>
+        <div class="z-cap">
+          <p class="t serif">2주 뒤, 달라진 나</p>
+          <p class="s">하루 한 번 미션 · 코치 1:1 피드백</p>
+          <a class="pill" href="#">신청하기</a>
+        </div>
+
+        <div class="z-rule">4 Challenges</div>
+        <div class="z-grid">
+          <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""></span><span class="tx">
+            <span class="c-nm">영.합.각</span><span class="c-ln">굳은 표정 → 자연스럽게</span><span class="st">모집 중 D-5</span></span></a>
+          <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""></span><span class="tx">
+            <span class="c-nm">승.자.각</span><span class="c-ln">뻔한 답변 → 나만의 답변</span><span class="st">모집 중 D-5</span></span></a>
+          <a href="#" class="dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""></span><span class="tx">
+            <span class="c-nm">보.신.각</span><span class="c-ln">떨리는 목소리 → 신뢰가 실리는</span><span class="st off">다음 기수</span></span></a>
+          <a href="#" class="dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="tx">
+            <span class="c-nm">스.피.닝</span><span class="c-ln">딱딱한 말투 → 귀에 감기는</span><span class="st off">다음 기수</span></span></a>
+        </div>
+
+        <div class="z-strip">
+          <a href="#">특강 <span>→</span></a>
+          <a href="#">브리핑룸 <span>→</span></a>
+          <a href="#">후기 <span>→</span></a>
+        </div>
+        <div class="tail"></div>
+      </div>
+      <div class="bar" style="--paper:#fff; background:linear-gradient(to top,#fff 62%,rgba(255,255,255,0))">
+        <a class="b" href="#" style="border-radius:0"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div></div>
+    </section>
+
+    <!-- ════════ 4안 · 하이브리드 ════════ -->
+    <section class="col" data-v="hybrid">
+      <div class="ch"><span class="ix">4안 · 하이브리드</span>
+        <p class="nm">조판은 글로벌, 정보는 한국</p>
+        <p class="ds">모집일·기간·가격이 <b>첫 화면에서 바로</b> 보입니다. 대신 조판은 깔끔하게.</p></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="mn"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+
+        <div class="h-hero">
+          <span class="shot"><img src="../images/hero-answer.webp" alt=""></span>
+          <div class="card">
+            <span class="tag">3기 모집 중 · D-5</span>
+            <p class="t serif">승무원 준비,<br>2주면 달라집니다</p>
+            <p class="s">하루 한 번 미션 · 코치 1:1 피드백</p>
+            <a class="pill" href="#">지금 신청하기</a>
+            <div class="h-facts">
+              <div><span class="k">기간</span><span class="v">2주</span></div>
+              <div><span class="k">참가비</span><span class="v">3만원</span></div>
+              <div><span class="k">시작</span><span class="v">8/3</span></div>
+            </div>
+          </div>
+        </div>
+
+        <section class="h-sec">
+          <div class="eyebrow">Challenge</div>
+          <p class="t serif">네 가지 중에 고르세요</p>
+          <p class="d">지금 가장 급한 것 하나만 골라도 됩니다.</p>
+          <div class="h-list">
+            <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""></span><span>
+              <span class="c-nm">영.합.각</span><span class="c-ln">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span>
+              <span class="row"><span class="tag">모집 중 D-5</span><span class="st">3만원</span></span></span></a>
+            <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""></span><span>
+              <span class="c-nm">승.자.각</span><span class="c-ln">뻔한 답변 → <em>나만 할 수 있는 답변</em></span>
+              <span class="row"><span class="tag">모집 중 D-5</span><span class="st">3만원</span></span></span></a>
+            <a href="#" class="dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""></span><span>
+              <span class="c-nm">보.신.각</span><span class="c-ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span>
+              <span class="row"><span class="tag off">다음 기수 준비 중</span></span></span></a>
+            <a href="#" class="dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""></span><span>
+              <span class="c-nm">스.피.닝</span><span class="c-ln">딱딱한 말투 → <em>귀에 감기는 말투</em></span>
+              <span class="row"><span class="tag off">다음 기수 준비 중</span></span></span></a>
+          </div>
+        </section>
+
+        <section class="h-price">
+          <div class="eyebrow">One Price</div>
+          <p class="t serif">챌린지 하나에</p>
+          <p class="n">30,000원</p>
+          <p class="u">2주 · 미션 14회 · 코치 1:1 피드백</p>
+          <a class="pill" href="#">신청하기</a>
+        </section>
+        <div class="tail"></div>
+      </div>
+      <div class="bar"><a class="b" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div></div>
+    </section>
+
+  </div>
+
+  <div class="notes">
+    <div class="note"><h3>1안 · 나이키</h3><ul>
+      <li>첫 화면이 <b>사진 한 장 + 한 문장 + 버튼</b>. 지금 인트로 애니메이션 자리를 대신합니다.</li>
+      <li>챌린지 사진이 가장 큽니다. 옆으로 밀어 봅니다.</li>
+      <li>무료 도구를 <b>검은 블록</b>으로 묶어 눈에 걸리게 했습니다.</li>
+    </ul></div>
+    <div class="note"><h3>2안 · 룰루레몬</h3><ul>
+      <li>섹션마다 <b>메시지 하나</b>. 글이 크고 여백이 넓습니다.</li>
+      <li>4개를 <b>한눈에</b> 볼 수 있습니다.</li>
+      <li>후기를 검은 블록으로 크게 인용합니다.</li>
+    </ul></div>
+    <div class="note"><h3>3안 · 자라</h3><ul>
+      <li>가장 미니멀. 사진이 <b>맞닿아</b> 한 덩어리로 읽힙니다.</li>
+      <li>설명이 거의 없어 <b>이미 아는 사람</b>에게 좋고, 처음 온 사람에겐 불친절할 수 있습니다.</li>
+      <li>흰 배경 + 각진 모서리.</li>
+    </ul></div>
+    <div class="note"><h3>4안 · 하이브리드</h3><ul>
+      <li>사진 위로 <b>정보 카드가 올라탑니다.</b> 모집·기간·가격이 첫 화면에서 끝납니다.</li>
+      <li>목록은 <b>가로형</b>이라 4개를 짧게 훑을 수 있습니다.</li>
+      <li>가격을 <b>네이비 블록</b>으로 크게 말합니다. 한국 사용자가 제일 궁금해하는 것을 숨기지 않습니다.</li>
+    </ul></div>
+  </div>
+</div>
+</body>
+</html>
