@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONC 네이비 시그니처 — 동행 색 5안 비교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Song+Myung&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   MONC 네이비 시그니처 — 동행 색 5안 — 2026-07-28
+   오너 지시: "네이비에 기준을 맞춰서 시그니처 컬러로" 색 조합 3~4안 추가.
+
+   ⚠️ 설계 규칙 — 이 목업의 전제
+     · 네이비 #102B56 = 시그니처. 5안 전부 고정이다(버튼·제목·본문·다크 배경).
+     · 배경 아이보리 #F6EEE8 = 로고 배경. 5안 전부 고정.
+     · 달라지는 것은 '동행 색' 하나뿐이며, 그 색이 나타나는 자리도 셋으로 고정한다:
+         ① 모집 중 알약  ② 다크 섹션 강조(강조선·태그·활성 버튼)  ③ 세 개의 문 레일
+       → 변수를 하나로 묶어야 비교가 성립한다. 안마다 노출 위치를 바꾸지 말 것.
+     · 아래 .col 의 베이스 토큰은 5안 공통이고, [data-theme] 블록은 액센트 변수만 덮는다.
+
+   ⚠️ 자바스크립트 없음 — 스크립트를 막는 뷰어에서 빈 화면이 됐던 전례(2026-07-28)를
+      따라 마크업을 다섯 번 손으로 적었다. 한 열의 구조를 고치면 다섯 열 모두 고칠 것.
+   ══════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 24px 80px;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #E8E9EC; color: #1B2130; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1400px; margin: 0 auto; }
+.doc-h1 { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px; }
+.doc-sub { font-size: 15px; line-height: 1.7; color: #4B5265; margin: 0 0 30px; max-width: 760px; word-break: keep-all; }
+.doc-sub b { color: #1B2130; }
+.h2 { font-size: 19px; font-weight: 800; letter-spacing: -.01em; margin: 40px 0 6px; }
+.h2-sub { font-size: 13.5px; color: #5D6478; margin: 0 0 18px; line-height: 1.65; }
+
+/* ═══ 한눈에 비교 스트립 ═══ */
+.strip { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); }
+.tile { background: #fff; border: 1px solid rgba(27,33,48,.13); border-radius: 14px; overflow: hidden; }
+.tile-h { padding: 13px 15px 11px; border-bottom: 1px solid rgba(27,33,48,.08); }
+.tile-n { font-size: 14.5px; font-weight: 800; letter-spacing: -.01em; margin: 0; }
+.tile-x { font-size: 11.5px; color: #5D6478; font-variant-numeric: tabular-nums; margin: 3px 0 0; }
+.tile-b { padding: 14px 15px 16px; background: var(--bg); }
+.tile-row { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+.tile-lb { font-size: 10.5px; font-weight: 800; letter-spacing: .1em; color: #8A90A0; width: 46px; flex: 0 0 auto; text-transform: uppercase; }
+.sw { width: 34px; height: 22px; border-radius: 6px; border: 1px solid rgba(27,33,48,.12); }
+.tile-pill { font-size: 13px; font-weight: 800; padding: 4px 9px; border-radius: 99px; background: var(--acc-pill-bg); color: var(--acc-pill-ink); }
+.tile-cta { flex: 1; text-align: center; font-size: 13px; font-weight: 800; padding: 9px 10px; border-radius: 11px; background: #102B56; color: #F6EEE8; }
+.tile-dark { flex: 1; background: #0C1D38; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 700; color: rgba(246,238,232,.9); border-left: 2px solid var(--acc-dark); }
+.tile-dark b { color: var(--acc-dark); }
+
+/* ═══ 폰 열 ═══ */
+.cols { display: flex; gap: 20px; align-items: flex-start; overflow-x: auto; padding-bottom: 16px; }
+.col { flex: 0 0 auto; width: 375px; }
+.col-h { margin: 0 0 10px; }
+.col-tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; padding: 4px 9px; border-radius: 99px; margin-bottom: 7px; background: #DCE3EF; color: #102B56; }
+.col[data-theme="peach"] .col-tag { background: #F5E2D3; }
+.col-name { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; }
+.col-note { font-size: 12.5px; line-height: 1.6; color: #5D6478; margin: 0; word-break: keep-all; }
+
+.phone {
+  position: relative; width: 375px; height: 812px; margin-top: 12px;
+  border-radius: 26px; overflow: hidden; border: 1px solid rgba(27,33,48,.20);
+  box-shadow: 0 18px 46px -18px rgba(20,26,40,.42); background: var(--bg);
+}
+.scr { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+.scr::-webkit-scrollbar { width: 5px; }
+.scr::-webkit-scrollbar-thumb { background: rgba(0,0,0,.16); border-radius: 9px; }
+
+/* ── 실제 사이트 CSS 이식 ── */
+.nv { position: sticky; top: 0; z-index: 20; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: var(--bg); border-bottom: 1px solid var(--line-soft); }
+.nv img { height: 19px; width: auto; display: block; }
+.nv-menu { display: flex; gap: 14px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.nv-menu .on { color: var(--text); }
+
+.pillars { background: var(--bg2); padding: 34px 0 40px; }
+.container { padding: 0 24px; }
+.section-label { font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--label); }
+.pl-head { margin-bottom: 20px; }
+.pl-head .t { font-family: 'Song Myung','Noto Serif KR',serif; font-weight: 400; font-size: 27px; line-height: 1.34; letter-spacing: -.02em; color: var(--title); margin: 10px 0 8px; word-break: keep-all; }
+.pl-head .s { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0; }
+.pl-grid { display: grid; gap: 12px; }
+.pl-door { position: relative; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 14px 19px; text-decoration: none; color: var(--text); overflow: hidden; }
+.pl-door::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--pl-c); }
+.pl-k { font-size: 11.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--pl-c); }
+.pl-nm { font-size: 20px; font-weight: 800; margin: 6px 0 5px; letter-spacing: -.02em; }
+.pl-ds { font-size: 14px; color: var(--dim); line-height: 1.6; word-break: keep-all; }
+.pl-mt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line-soft); }
+.pl-meta { font-size: 14px; font-weight: 700; }
+.pl-go { font-size: 16px; font-weight: 800; color: var(--pl-c); }
+.d1 { --pl-c: var(--rail1); }
+.d2 { --pl-c: var(--rail2); }
+.d3 { --pl-c: var(--rail3); }
+
+.hs { padding: 40px 0 44px; background: var(--bg); }
+.hs-head { padding: 0 24px; margin-bottom: 32px; }
+.hs-head-title { font-family: 'Song Myung','Noto Serif KR',serif; font-weight: 400; color: var(--title); font-size: 30px; letter-spacing: -.02em; line-height: 1.34; margin: 12px 0 11px; word-break: keep-all; }
+.hs-head-sub { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0; }
+
+.ch-list { padding: 0 24px; display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0,1fr)); grid-auto-rows: 1fr; }
+.ch-card {
+  display: flex; flex-direction: column; padding: 8px 8px 0; border-radius: 14px;
+  background: linear-gradient(180deg, var(--paper-a) 0%, var(--paper-b) 100%);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 3px rgba(16,43,86,.08), 0 18px 36px -14px rgba(16,43,86,.26);
+  text-decoration: none; color: var(--text);
+}
+.ch-shot { display: block; position: relative; overflow: hidden; flex: 0 0 auto; aspect-ratio: 4/5; border-radius: 8px; background: var(--bg3); }
+.ch-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 24%; }
+.ch-shot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 2px 5px rgba(16,43,86,.30), inset 0 0 0 1px rgba(16,43,86,.16); }
+.ch-card.is-dim .ch-shot img { filter: grayscale(1); }
+.ch-body { display: flex; flex-direction: column; flex: 1; padding: 12px 4px 14px; }
+.ch-no { display: block; font-size: 13px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+.ch-name { display: block; font-family: 'Noto Serif KR', serif; font-weight: 600; font-size: 18px; line-height: 1.28; letter-spacing: .06em; color: var(--text); margin-top: 6px; }
+.ch-card.is-dim .ch-name { color: var(--muted); }
+.ch-line { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; font-size: 14px; line-height: 1.5; color: var(--dim); word-break: keep-all; }
+.ch-line em { font-style: normal; font-weight: 700; color: var(--text); }
+.ch-card.is-dim .ch-line em { color: var(--muted); }
+.ch-st { display: block; margin-top: auto; padding-top: 10px; font-size: 14px; font-weight: 700; line-height: 1.4; }
+.ch-st.is-closed { color: var(--dim); }
+/* 모집 중 = 동행 색 알약 (5안 공통 자리, 색만 다름) */
+.ch-st.is-open {
+  display: inline-block; margin-top: auto; align-self: flex-start;
+  padding: 4px 9px; border-radius: 99px; font-weight: 800;
+  background: var(--acc-pill-bg); color: var(--acc-pill-ink);
+}
+
+.ba { background: var(--dark); padding: 40px 0 44px; }
+.ba .section-label { color: var(--acc-dark); display: block; text-align: center; }
+.ba .t { font-family: 'Song Myung','Noto Serif KR',serif; font-weight: 400; font-size: 27px; line-height: 1.32; color: var(--acc-dark); text-align: center; margin: 10px 0 26px; word-break: keep-all; }
+.ba-card { background: var(--dark-card); border: 1px solid rgba(246,238,232,.12); border-radius: 20px; padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+.ba-top { display: flex; align-items: center; justify-content: space-between; }
+.ba-tag { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--acc-dark); }
+.ba-name { font-size: 13px; font-weight: 700; color: rgba(246,238,232,.55); }
+.ba-arc { font-size: 14px; font-weight: 700; line-height: 1.55; color: rgba(246,238,232,.92); padding: 10px 12px; border-left: 2px solid var(--acc-dark); background: var(--acc-dark-bg); border-radius: 0 8px 8px 0; word-break: keep-all; margin: 0; }
+.ba-arc em { font-style: normal; color: var(--acc-dark); }
+.ba-quote { font-family: 'Song Myung','Noto Serif KR',serif; font-size: 16px; color: #F6EEE8; line-height: 1.6; margin: 0; }
+.ba-btns { display: flex; gap: 10px; }
+.ba-btn { flex: 1; min-height: 44px; border-radius: 99px; font-size: 14px; font-weight: 800; cursor: default; border: 1px solid rgba(246,238,232,.28); background: transparent; color: rgba(246,238,232,.78); font-family: inherit; }
+.ba-btn.on { background: var(--acc-dark); border-color: var(--acc-dark); color: var(--acc-dark-ink); }
+
+.cta {
+  position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 40;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-height: 56px; border-radius: 16px; padding: 10px 20px;
+  background: #102B56; border: 1px solid var(--cta-line);
+  box-shadow: 0 10px 34px rgba(16,43,86,.34), inset 0 1px 0 rgba(255,255,255,.20);
+  color: #F6EEE8; text-decoration: none; line-height: 1.25; white-space: nowrap;
+}
+.cta .m { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.cta .s { font-size: 11.5px; font-weight: 600; opacity: .92; }
+.spacer { height: 92px; }
+
+/* ══════════ 베이스 토큰 — 5안 공통(네이비 시그니처 + 아이보리) ══════════ */
+.col, .tile {
+  --bg:#F6EEE8; --bg3:#EADFD8; --surface:#FFFFFF;
+  --paper-a:#FFFCFA; --paper-b:#F3E9E2;
+  --text:#17223A; --muted:#46536B; --dim:#5A6780;
+  --line:rgba(16,43,86,.15); --line-soft:rgba(16,43,86,.08);
+  --label:#102B56; --title:#17223A;
+  --dark:#0C1D38; --dark-card:#152642;
+  --rail1:#102B56;                 /* 챌린지 문 = 항상 시그니처 네이비 */
+  --cta-line:rgba(246,238,232,.22);
+  --bg2:#FCF7F3;
+}
+
+/* ══════════ 안별 동행 색 — 이 몇 줄이 열 사이의 유일한 차이 ══════════ */
+
+/* B안 — 노을 (Sunset Peach #F8DEC8) · 로고 창문에서 그대로 */
+.col[data-theme="peach"], .tile[data-theme="peach"] {
+  --acc:#F8DEC8; --acc-pill-bg:#F8DEC8; --acc-pill-ink:#102B56;
+  --acc-dark:#F8DEC8; --acc-dark-bg:rgba(248,222,200,.10); --acc-dark-ink:#0C1D38;
+  --rail2:#45456B; --rail3:#6A4E5A; --bg2:#FBF1E9;
+}
+/* C안 — 톤온톤 (동행 색 없음 · 네이비 명도 4단) */
+.col[data-theme="mono"], .tile[data-theme="mono"] {
+  --acc:#2E4A7A; --acc-pill-bg:#DFE5F0; --acc-pill-ink:#102B56;
+  --acc-dark:#8FA9D4; --acc-dark-bg:rgba(143,169,212,.12); --acc-dark-ink:#0C1D38;
+  --rail2:#2E4A7A; --rail3:#52668F; --bg2:#F7F4F6;
+}
+/* D안 — 새벽 하늘 (Sky Lavender #B7B5CE) · 로고 창문 하늘에서 */
+.col[data-theme="lav"], .tile[data-theme="lav"] {
+  --acc:#B7B5CE; --acc-pill-bg:#DCDAE9; --acc-pill-ink:#102B56;
+  --acc-dark:#B7B5CE; --acc-dark-bg:rgba(183,181,206,.12); --acc-dark-ink:#0C1D38;
+  --rail2:#45456B; --rail3:#5B5A80; --bg2:#F7F3F5;
+}
+/* E안 — 와인 (Burgundy #7A2E3F) · 격식·헤리티지 */
+.col[data-theme="wine"], .tile[data-theme="wine"] {
+  --acc:#7A2E3F; --acc-pill-bg:#F2DCE1; --acc-pill-ink:#7A2E3F;
+  --acc-dark:#E8A9B8; --acc-dark-bg:rgba(232,169,184,.10); --acc-dark-ink:#0C1D38;
+  --rail2:#7A2E3F; --rail3:#4A4E7A; --bg2:#FBF2F1;
+}
+/* F안 — 브라스 (Brass #7A5E22) · 항공 유니폼의 금장 */
+.col[data-theme="brass"], .tile[data-theme="brass"] {
+  --acc:#7A5E22; --acc-pill-bg:#F0E3C8; --acc-pill-ink:#102B56;
+  --acc-dark:#C9A961; --acc-dark-bg:rgba(201,169,97,.11); --acc-dark-ink:#0C1D38;
+  --rail2:#7A5E22; --rail3:#4A4E7A; --bg2:#FBF5E9;
+}
+
+/* ── 메모 ── */
+.notes { margin-top: 40px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(292px,1fr)); }
+.note { background: #fff; border: 1px solid rgba(27,33,48,.13); border-radius: 14px; padding: 17px 19px; }
+.note h3 { margin: 0 0 4px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.note .swline { display: flex; gap: 5px; margin: 0 0 11px; }
+.note .swline i { width: 26px; height: 13px; border-radius: 4px; border: 1px solid rgba(27,33,48,.12); display: block; }
+.note ul { margin: 0; padding-left: 16px; }
+.note li { font-size: 13.5px; line-height: 1.7; color: #3C4356; margin-bottom: 5px; word-break: keep-all; }
+.note li b { color: #1B2130; }
+.pro::marker { color: #17603A; }
+.con::marker { color: #A63A2E; }
+table.cx { width: 100%; border-collapse: collapse; margin-top: 24px; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid rgba(27,33,48,.13); }
+table.cx th, table.cx td { padding: 9px 13px; font-size: 13px; text-align: left; border-bottom: 1px solid rgba(27,33,48,.08); }
+table.cx th { background: #F2F4F8; font-weight: 700; font-size: 12.5px; }
+table.cx td:last-child, table.cx th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+table.cx tr:last-child td { border-bottom: 0; }
+.ok { color: #17603A; font-weight: 700; }
+.hint { margin: 13px 0 0; font-size: 12.5px; color: #5D6478; line-height: 1.65; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="doc-h1">네이비 시그니처 — 동행 색 5안</h1>
+  <p class="doc-sub">
+    <b>네이비 #102B56 은 5안 전부 고정</b>입니다(버튼·제목·본문·다크 배경). 배경 아이보리 #F6EEE8 도 고정입니다.
+    달라지는 건 <b>동행 색 하나</b>이고, 그 색이 나오는 자리도 셋으로 묶어 뒀습니다 —
+    ① 모집 중 알약 ② 다크 섹션 강조 ③ 세 개의 문 레일.
+    그래야 "무엇 때문에 달라 보이는지"가 색 하나로 좁혀집니다.
+  </p>
+
+  <h2 class="h2">먼저 한눈에</h2>
+  <p class="h2-sub">폰을 다 스크롤하기 전에, 동행 색이 실제로 드러나는 세 자리만 뽑았습니다.</p>
+  <div class="strip">
+
+    <div class="tile" data-theme="peach">
+      <div class="tile-h"><p class="tile-n">B안 · 노을</p><p class="tile-x">Sunset Peach #F8DEC8</p></div>
+      <div class="tile-b">
+        <div class="tile-row"><span class="tile-lb">색</span><span class="sw" style="background:#102B56"></span><span class="sw" style="background:#F8DEC8"></span></div>
+        <div class="tile-row"><span class="tile-lb">알약</span><span class="tile-pill">모집 중 · D-5</span></div>
+        <div class="tile-row"><span class="tile-lb">버튼</span><span class="tile-cta">신청하기</span></div>
+        <div class="tile-row"><span class="tile-lb">다크</span><span class="tile-dark">떨리는 목소리 → <b>신뢰가 실리는</b></span></div>
+      </div>
+    </div>
+
+    <div class="tile" data-theme="mono">
+      <div class="tile-h"><p class="tile-n">C안 · 톤온톤</p><p class="tile-x">동행 색 없음 · 네이비 명도만</p></div>
+      <div class="tile-b">
+        <div class="tile-row"><span class="tile-lb">색</span><span class="sw" style="background:#102B56"></span><span class="sw" style="background:#2E4A7A"></span><span class="sw" style="background:#8FA9D4"></span></div>
+        <div class="tile-row"><span class="tile-lb">알약</span><span class="tile-pill">모집 중 · D-5</span></div>
+        <div class="tile-row"><span class="tile-lb">버튼</span><span class="tile-cta">신청하기</span></div>
+        <div class="tile-row"><span class="tile-lb">다크</span><span class="tile-dark">떨리는 목소리 → <b>신뢰가 실리는</b></span></div>
+      </div>
+    </div>
+
+    <div class="tile" data-theme="lav">
+      <div class="tile-h"><p class="tile-n">D안 · 새벽 하늘</p><p class="tile-x">Sky Lavender #B7B5CE</p></div>
+      <div class="tile-b">
+        <div class="tile-row"><span class="tile-lb">색</span><span class="sw" style="background:#102B56"></span><span class="sw" style="background:#B7B5CE"></span></div>
+        <div class="tile-row"><span class="tile-lb">알약</span><span class="tile-pill">모집 중 · D-5</span></div>
+        <div class="tile-row"><span class="tile-lb">버튼</span><span class="tile-cta">신청하기</span></div>
+        <div class="tile-row"><span class="tile-lb">다크</span><span class="tile-dark">떨리는 목소리 → <b>신뢰가 실리는</b></span></div>
+      </div>
+    </div>
+
+    <div class="tile" data-theme="wine">
+      <div class="tile-h"><p class="tile-n">E안 · 와인</p><p class="tile-x">Burgundy #7A2E3F</p></div>
+      <div class="tile-b">
+        <div class="tile-row"><span class="tile-lb">색</span><span class="sw" style="background:#102B56"></span><span class="sw" style="background:#7A2E3F"></span></div>
+        <div class="tile-row"><span class="tile-lb">알약</span><span class="tile-pill">모집 중 · D-5</span></div>
+        <div class="tile-row"><span class="tile-lb">버튼</span><span class="tile-cta">신청하기</span></div>
+        <div class="tile-row"><span class="tile-lb">다크</span><span class="tile-dark">떨리는 목소리 → <b>신뢰가 실리는</b></span></div>
+      </div>
+    </div>
+
+    <div class="tile" data-theme="brass">
+      <div class="tile-h"><p class="tile-n">F안 · 브라스</p><p class="tile-x">Brass #7A5E22</p></div>
+      <div class="tile-b">
+        <div class="tile-row"><span class="tile-lb">색</span><span class="sw" style="background:#102B56"></span><span class="sw" style="background:#7A5E22"></span></div>
+        <div class="tile-row"><span class="tile-lb">알약</span><span class="tile-pill">모집 중 · D-5</span></div>
+        <div class="tile-row"><span class="tile-lb">버튼</span><span class="tile-cta">신청하기</span></div>
+        <div class="tile-row"><span class="tile-lb">다크</span><span class="tile-dark">떨리는 목소리 → <b>신뢰가 실리는</b></span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="h2">전체 화면</h2>
+  <p class="h2-sub">375px 실물 크기. 가로로 스크롤하면 다섯 열이 다 나오고, 폰 안은 세로로 스크롤됩니다.</p>
+
+  <div class="cols">
+
+    <!-- ══════════ B안 · 노을 ══════════ -->
+    <section class="col" data-theme="peach">
+      <div class="col-h">
+        <span class="col-tag">B안 · 기준</span>
+        <p class="col-name">노을 — Sunset Peach</p>
+        <p class="col-note">로고 창문의 노을을 그대로. 지금 가장 마음에 두신 안.</p>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="section-label">Where to start</div><p class="t">어디부터 볼지<br>먼저 골라 보세요</p><p class="s">세 가지 방법이 있어요</p></div>
+            <div class="pl-grid">
+              <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="section-label">Challenge</div><div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div><p class="hs-head-sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="section-label">Before &amp; After</div><p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+    <!-- ══════════ C안 · 톤온톤 ══════════ -->
+    <section class="col" data-theme="mono">
+      <div class="col-h">
+        <span class="col-tag">C안</span>
+        <p class="col-name">톤온톤 — 네이비 하나로</p>
+        <p class="col-note">동행 색을 아예 두지 않고 네이비 명도만 4단. 가장 조용합니다.</p>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="section-label">Where to start</div><p class="t">어디부터 볼지<br>먼저 골라 보세요</p><p class="s">세 가지 방법이 있어요</p></div>
+            <div class="pl-grid">
+              <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="section-label">Challenge</div><div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div><p class="hs-head-sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="section-label">Before &amp; After</div><p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+    <!-- ══════════ D안 · 새벽 하늘 ══════════ -->
+    <section class="col" data-theme="lav">
+      <div class="col-h">
+        <span class="col-tag">D안</span>
+        <p class="col-name">새벽 하늘 — Sky Lavender</p>
+        <p class="col-note">로고 창문의 '하늘' 쪽 색. 노을보다 차갑고 더 조용합니다.</p>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="section-label">Where to start</div><p class="t">어디부터 볼지<br>먼저 골라 보세요</p><p class="s">세 가지 방법이 있어요</p></div>
+            <div class="pl-grid">
+              <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="section-label">Challenge</div><div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div><p class="hs-head-sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="section-label">Before &amp; After</div><p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+    <!-- ══════════ E안 · 와인 ══════════ -->
+    <section class="col" data-theme="wine">
+      <div class="col-h">
+        <span class="col-tag">E안</span>
+        <p class="col-name">와인 — Burgundy</p>
+        <p class="col-note">따뜻하지만 오렌지가 아닙니다. 가장 격식 있고 무게가 있습니다.</p>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="section-label">Where to start</div><p class="t">어디부터 볼지<br>먼저 골라 보세요</p><p class="s">세 가지 방법이 있어요</p></div>
+            <div class="pl-grid">
+              <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="section-label">Challenge</div><div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div><p class="hs-head-sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="section-label">Before &amp; After</div><p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+    <!-- ══════════ F안 · 브라스 ══════════ -->
+    <section class="col" data-theme="brass">
+      <div class="col-h">
+        <span class="col-tag">F안</span>
+        <p class="col-name">브라스 — 금장</p>
+        <p class="col-note">항공 유니폼의 금장. 아까 제가 말로만 뺐던 안을 눈으로 보시라고 넣었습니다.</p>
+      </div>
+      <div class="phone">
+        <div class="scr">
+          <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+          <section class="pillars"><div class="container">
+            <div class="pl-head"><div class="section-label">Where to start</div><p class="t">어디부터 볼지<br>먼저 골라 보세요</p><p class="s">세 가지 방법이 있어요</p></div>
+            <div class="pl-grid">
+              <a class="pl-door d1" href="#"><span class="pl-k">Challenge</span><span class="pl-nm">챌린지</span><span class="pl-ds">코치와 함께 2주. 하루 한 번 미션을 받고 피드백을 받아요.</span><span class="pl-mt"><span class="pl-meta">2주 · 코치 피드백</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d2" href="#"><span class="pl-k">Special</span><span class="pl-nm">특강</span><span class="pl-ds">필요한 주제만 골라 하루. 항공사별·주제별로 열려요.</span><span class="pl-mt"><span class="pl-meta">하루 · 주제별</span><span class="pl-go">→</span></span></a>
+              <a class="pl-door d3" href="#"><span class="pl-k">Briefing Room</span><span class="pl-nm">브리핑룸</span><span class="pl-ds">항공 뉴스·소재 발굴·답변노트. 매일 쓰는 도구예요.</span><span class="pl-mt"><span class="pl-meta">무료 · 지금 바로</span><span class="pl-go">→</span></span></a>
+            </div>
+          </div></section>
+          <section class="hs">
+            <div class="hs-head"><div class="section-label">Challenge</div><div class="hs-head-title">승무원 준비<br>어렵게 하지 마세요</div><p class="hs-head-sub">2주 · 하루 한 번 미션</p></div>
+            <div class="ch-list">
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-expression.webp" alt=""></span><span class="ch-body"><span class="ch-no">01 · Image</span><span class="ch-name">영.합.각</span><span class="ch-line">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card" href="#"><span class="ch-shot"><img src="../images/hero-answer.webp" alt=""></span><span class="ch-body"><span class="ch-no">02 · Answer</span><span class="ch-name">승.자.각</span><span class="ch-line">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="ch-st is-open">모집 중 · D-5</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-voice.webp" alt=""></span><span class="ch-body"><span class="ch-no">03 · Voice</span><span class="ch-name">보.신.각</span><span class="ch-line">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+              <a class="ch-card is-dim" href="#"><span class="ch-shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="ch-body"><span class="ch-no">04 · Speech</span><span class="ch-name">스.피.닝</span><span class="ch-line">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="ch-st is-closed">다음 기수 준비 중</span></span></a>
+            </div>
+          </section>
+          <section class="ba"><div class="container">
+            <div class="section-label">Before &amp; After</div><p class="t">2주 전과 후,<br>직접 들어 보세요</p>
+            <div class="ba-card">
+              <div class="ba-top"><span class="ba-tag">보.신.각</span><span class="ba-name">챌린저 D</span></div>
+              <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+              <p class="ba-quote">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+              <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+            </div>
+          </div></section>
+          <div class="spacer"></div>
+        </div>
+        <a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══ 메모 ══ -->
+  <div class="notes">
+
+    <div class="note">
+      <h3>B안 · 노을</h3>
+      <div class="swline"><i style="background:#102B56"></i><i style="background:#F8DEC8"></i></div>
+      <ul>
+        <li class="pro"><b>근거가 로고 안에 있습니다.</b> 설명이 필요 없는 유일한 안이에요.</li>
+        <li class="pro">따뜻함이 남아 승무원 지망생 대상으로 <b>차갑지 않습니다.</b></li>
+        <li class="con">피치가 아주 옅어 <b>큰 면적에서는 거의 흰색</b>으로 읽힙니다. 알약처럼 작은 자리에서만 힘을 씁니다.</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <h3>C안 · 톤온톤</h3>
+      <div class="swline"><i style="background:#102B56"></i><i style="background:#2E4A7A"></i><i style="background:#8FA9D4"></i></div>
+      <ul>
+        <li class="pro"><b>가장 고급스럽고 가장 조용합니다.</b> 색이 하나라 절대 촌스러워지지 않습니다.</li>
+        <li class="pro">운영이 제일 쉽습니다 — 새 기능을 만들 때 <b>색을 고민할 일이 없습니다.</b></li>
+        <li class="con">따뜻함이 0입니다. 준비생이 불안한 마음으로 오는 사이트인데 <b>차갑고 사무적</b>으로 읽힐 수 있습니다.</li>
+        <li class="con">'모집 중'이 파란 알약이라 <b>상태보다 링크처럼</b> 보입니다.</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <h3>D안 · 새벽 하늘</h3>
+      <div class="swline"><i style="background:#102B56"></i><i style="background:#B7B5CE"></i></div>
+      <ul>
+        <li class="pro">역시 <b>로고 안의 색</b>입니다(창문 하늘). B안과 같은 출신.</li>
+        <li class="pro">네이비와 같은 계열이라 <b>가장 자연스럽게 붙습니다.</b></li>
+        <li class="con">네이비와 너무 가까워 <b>동행 색인지 네이비가 흐려진 건지</b> 헷갈립니다. C안과 실질적 차이가 작습니다.</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <h3>E안 · 와인</h3>
+      <div class="swline"><i style="background:#102B56"></i><i style="background:#7A2E3F"></i></div>
+      <ul>
+        <li class="pro"><b>유일하게 진한 동행 색</b>입니다. 알약이 확실히 보이고 다크 섹션도 살아납니다.</li>
+        <li class="pro">네이비+와인은 <b>헤리티지·격식</b>의 정석 조합입니다(항공 상위 클래스).</li>
+        <li class="con">무겁습니다. <b>20대 초반 지망생에게 나이 들어 보일</b> 위험이 실재합니다.</li>
+        <li class="con">로고에 없는 색이라 <b>따로 설명해야</b> 합니다.</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <h3>F안 · 브라스</h3>
+      <div class="swline"><i style="background:#102B56"></i><i style="background:#7A5E22"></i></div>
+      <ul>
+        <li class="pro">항공 유니폼의 금장이라 <b>업종 적합도가 가장 높습니다.</b></li>
+        <li class="pro">따뜻하면서도 오렌지가 아닙니다.</li>
+        <li class="con"><b>대표님이 빼고 싶다고 하신 브라운과 이웃</b>입니다. 금장은 조금만 탁해져도 갈색으로 보입니다.</li>
+        <li class="con">금색은 <b>싸구려로 보이기 가장 쉬운 색</b>입니다. 면적·채도를 늘 눌러야 합니다.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <table class="cx">
+    <thead><tr><th>안</th><th>동행 색</th><th>알약(네이비 글씨)</th><th>다크 위 강조</th></tr></thead>
+    <tbody>
+      <tr><td>B · 노을</td><td>#F8DEC8</td><td class="ok">10.9:1</td><td class="ok">13.1:1</td></tr>
+      <tr><td>C · 톤온톤</td><td>#2E4A7A</td><td class="ok">11.1:1</td><td class="ok">7.0:1</td></tr>
+      <tr><td>D · 새벽 하늘</td><td>#B7B5CE</td><td class="ok">10.2:1</td><td class="ok">8.4:1</td></tr>
+      <tr><td>E · 와인</td><td>#7A2E3F</td><td class="ok">7.0:1</td><td class="ok">8.7:1</td></tr>
+      <tr><td>F · 브라스</td><td>#7A5E22</td><td class="ok">11.0:1</td><td class="ok">7.5:1</td></tr>
+    </tbody>
+  </table>
+  <p class="hint">
+    다섯 안 전부 9대 원칙 4번(4.5:1)을 넘습니다 — <b>대비로는 우열이 안 갈립니다.</b> 그러니 이건 접근성 문제가 아니라
+    <b>브랜드 성격을 무엇으로 정할지</b>의 문제입니다. 참고로 현재 오렌지 <code>#D9531F</code>는 종이 카드 위 3.5:1로 원래 미달이었습니다.
+  </p>
+  <p class="hint">
+    ※ 다섯 안 모두 <b>버튼은 네이비로 고정</b>했습니다. 비교 변수를 하나로 묶으려고요.
+    마음에 드는 동행 색이 정해지면, 그다음에 <b>"버튼도 그 색으로 갈지"</b>를 따로 한 번 더 보시는 게 순서입니다.
+  </p>
+
+</div>
+</body>
+</html>
