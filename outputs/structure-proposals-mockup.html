@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONC 구조 3안 — 레퍼런스의 틀을 우리 것으로</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Song+Myung&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   MONC 구조 3안 — 2026-07-29
+   오너 지시: 색 말고 '디자인 틀'도 레퍼런스와 너무 다르다. 장점만 뽑아 적용해 달라.
+
+   ⚠️ 색은 3안 모두 동일하게 고정했다(네이비 먹 #102B56 + 아이보리 종이 #F6EEE8,
+      라운드 0 · 버튼만 알약). 이번 비교 변수는 '구조' 하나다.
+
+   ⚠️ 이번에 발견한 것 — 사진 원본이 전부 가로 사진이다.
+        hero-expression 1400×759 (1.84)  hero-answer 1400×933 (1.5)
+        hero-spinning  1400×933 (1.5)    hero-voice   1112×1109 (1:1)
+      현재 .ch-shot 은 aspect-ratio 4/5(0.8)로 자르고 있어 가로폭의 절반 이상이
+      버려진다. CLAUDE.md 의 "4:5 는 인물 사진 표준이라 얼굴이 안 잘린다"는
+      원본이 세로 사진일 때 성립하는 말인데, 실제 원본은 가로다.
+      → 1·2안은 3:2(1.5)로 맞췄다. answer·spinning 은 무손실, expression 은 소폭.
+        3안은 좌우 배치라 1:1 이 균형이 맞아 정사각으로 썼다.
+
+   ⚠️ 레퍼런스에서 실제로 가져온 것(장점만):
+        자라   - 사진이 화면 폭을 꽉 채우고 서로 맞닿는 그리드, 라운드 0, 상자 0
+        나이키 - 가로 스크롤 레일, 글자 크기 2단, 알약 버튼
+        룰루레몬 - 큰 제목으로 위계를 만들고 색을 안 씀, 버튼만 알약
+      가져오지 않은 것: 자동 전환(구 캐러셀 폐기 이유), 카드 상자, 컬러 배지.
+
+   ⚠️ 자바스크립트 없음. 세 열의 마크업은 손으로 세 번 적었다.
+   ══════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin:0; padding:44px 24px 90px; background:#EDEDEC; color:#16181D;
+  font-family:'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1300px; margin:0 auto; }
+.doc-h1 { font-size:30px; font-weight:800; letter-spacing:-.025em; margin:0 0 10px; }
+.doc-sub { font-size:15px; line-height:1.75; color:#474B54; margin:0 0 26px; max-width:790px; word-break:keep-all; }
+.doc-sub b { color:#16181D; }
+.h2 { font-size:19px; font-weight:800; letter-spacing:-.015em; margin:38px 0 6px; }
+.h2-sub { font-size:13.5px; color:#575B64; margin:0 0 18px; line-height:1.7; max-width:820px; word-break:keep-all; }
+.h2-sub b { color:#16181D; }
+
+.take { display:grid; gap:13px; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); margin-bottom:8px; }
+.take-i { background:#fff; border:1px solid #DCDCDA; border-radius:12px; padding:15px 17px; }
+.take-i h4 { margin:0 0 7px; font-size:13.5px; font-weight:800; }
+.take-i p { margin:0; font-size:12.8px; line-height:1.7; color:#3D424B; word-break:keep-all; }
+.take-i b { color:#16181D; }
+
+table.px { width:100%; border-collapse:collapse; background:#fff; border:1px solid #DCDCDA; border-radius:12px; overflow:hidden; margin-top:16px; }
+table.px th, table.px td { padding:10px 13px; font-size:12.8px; text-align:left; border-bottom:1px solid #EBEBE9; }
+table.px th { background:#F5F5F3; font-weight:700; font-size:12px; }
+table.px tr:last-child td { border-bottom:0; }
+table.px td:last-child, table.px th:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+.bad { color:#A6432E; font-weight:700; } .good { color:#1B6340; font-weight:700; }
+
+.cols { display:flex; gap:22px; align-items:flex-start; overflow-x:auto; padding-bottom:16px; }
+.col { flex:0 0 auto; width:375px; }
+.col-h { margin:0 0 11px; padding-bottom:11px; border-bottom:1px solid #D6D6D4; }
+.col-ix { font-size:11px; font-weight:800; letter-spacing:.16em; color:#7E838C; text-transform:uppercase; }
+.col-name { font-size:17.5px; font-weight:800; letter-spacing:-.015em; margin:5px 0 5px; }
+.col-note { font-size:12.5px; line-height:1.65; color:#575B64; margin:0; word-break:keep-all; }
+.col-note b { color:#16181D; }
+.col-meta { display:block; margin-top:8px; font-size:11.5px; font-weight:700; color:#7E838C; }
+
+.phone { position:relative; width:375px; height:812px; margin-top:4px; overflow:hidden;
+  border:1px solid #CFCFCD; border-radius:22px; box-shadow:0 16px 40px -18px rgba(16,18,24,.28); background:var(--paper); }
+.scr { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; }
+.scr::-webkit-scrollbar { width:5px; }
+.scr::-webkit-scrollbar-thumb { background:rgba(0,0,0,.14); border-radius:9px; }
+
+/* ═══ 3안 공통 = 색 고정(네이비 먹 · 아이보리 종이 · 라운드 0 · 버튼만 알약) ═══ */
+.col {
+  --paper:#F6EEE8; --paper2:#EFE5DE; --shot-bg:#E4DBD4;
+  --ink:#102B56; --sub:#6B7284; --line:rgba(16,43,86,.16); --line2:rgba(16,43,86,.10);
+  --stage:#0F1F3A; --stage-ink:#F6EEE8; --stage-2:rgba(246,238,232,.80); --stage-sub:rgba(246,238,232,.56);
+  --stage-line:rgba(246,238,232,.28);
+  --btn:#102B56; --btn-ink:#F6EEE8;
+  --pad:22px;
+}
+/* 공통 조판 */
+.nv { position:sticky; top:0; z-index:20; height:54px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 var(--pad); background:var(--paper); border-bottom:1px solid var(--line2); }
+.nv img { height:17px; width:auto; display:block; }
+.nv-menu { display:flex; gap:14px; font-size:12.5px; font-weight:600; color:var(--sub); }
+.nv-menu .on { color:var(--ink); font-weight:700; }
+.pad { padding-left:var(--pad); padding-right:var(--pad); }
+.lb { font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--sub); }
+.serif { font-family:'Song Myung','Noto Serif KR',serif; font-weight:400; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 26px;
+  border-radius:999px; background:var(--btn); color:var(--btn-ink); text-decoration:none;
+  font-size:14.5px; font-weight:700; letter-spacing:-.01em; }
+.cta { position:absolute; left:14px; right:14px; bottom:14px; z-index:40; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px; min-height:54px; border-radius:999px; padding:9px 20px;
+  background:var(--btn); color:var(--btn-ink); text-decoration:none; line-height:1.24; white-space:nowrap; }
+.cta .m { font-size:15px; font-weight:800; letter-spacing:-.01em; }
+.cta .s { font-size:11px; font-weight:500; opacity:.8; }
+.spacer { height:88px; }
+
+/* 히어로(3안 공통 골격, 크기만 다름) */
+.hero { padding:38px 0 34px; }
+.hero .t { color:var(--ink); letter-spacing:-.025em; line-height:1.3; margin:12px 0 12px; word-break:keep-all; }
+.hero .s { font-size:14px; font-weight:500; color:var(--sub); margin:0 0 22px; }
+
+/* 세 개의 문 — 공통 리스트 */
+.doors { background:var(--paper2); padding:34px 0 36px; }
+.doors .hd { margin-bottom:16px; }
+.doors .hd .t { font-size:22px; color:var(--ink); letter-spacing:-.02em; margin:9px 0 0; }
+.dr { display:grid; grid-template-columns:28px 1fr auto; align-items:baseline; column-gap:10px;
+  padding:15px 0 14px; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); }
+.dr:first-child { border-top:0; }
+.dr-ix { font-size:12.5px; font-weight:700; color:var(--sub); font-variant-numeric:tabular-nums; }
+.dr-nm { font-size:17px; font-weight:700; letter-spacing:-.02em; }
+.dr-ds { grid-column:2/4; font-size:13px; color:var(--sub); line-height:1.6; margin-top:4px; word-break:keep-all; }
+.dr-go { font-size:14px; color:var(--sub); }
+
+/* Before & After — 공통 */
+.ba { background:var(--stage); padding:36px 0 38px; }
+.ba .lb { color:var(--stage-sub); }
+.ba .t { color:var(--stage-ink); font-size:23px; line-height:1.32; margin:9px 0 20px; word-break:keep-all; }
+.ba-arc { font-size:13.5px; font-weight:600; line-height:1.6; color:var(--stage-2); padding-left:11px;
+  border-left:1px solid var(--stage-line); margin:0 0 12px; word-break:keep-all; }
+.ba-arc em { font-style:normal; font-weight:800; color:var(--stage-ink); }
+.ba-q { font-family:'Song Myung','Noto Serif KR',serif; font-weight:400; font-size:16px; color:var(--stage-ink);
+  line-height:1.62; margin:0 0 14px; }
+.ba-btns { display:flex; gap:8px; }
+.ba-btn { flex:1; min-height:44px; border-radius:999px; font-size:13.5px; font-weight:700; cursor:default;
+  font-family:inherit; border:1px solid var(--stage-line); background:transparent; color:var(--stage-2); }
+.ba-btn.on { background:var(--stage-ink); border-color:var(--stage-ink); color:var(--stage); }
+.ba-who { display:flex; justify-content:space-between; font-size:11.5px; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--stage-sub); margin-bottom:12px; }
+
+/* 챌린지 카드 텍스트(공통) */
+.c-no { display:block; font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--sub); }
+.c-nm { display:block; font-family:'Noto Serif KR',serif; font-weight:600; font-size:18px; line-height:1.28;
+  letter-spacing:.05em; color:var(--ink); margin-top:6px; }
+.c-ln { font-size:13.5px; line-height:1.55; color:var(--sub); margin-top:5px; word-break:keep-all; }
+.c-ln em { font-style:normal; font-weight:700; color:var(--ink); }
+.c-st { display:block; margin-top:9px; font-size:13px; font-weight:800; color:var(--ink); }
+.c-st.off { font-weight:500; color:var(--sub); }
+.is-dim img { filter:grayscale(1); }
+.is-dim .c-nm, .is-dim .c-ln em { color:var(--sub); }
+
+/* ══════════ 1안 · 풀블리드 그리드 (자라) ══════════
+   사진이 화면 폭을 꽉 채우고 서로 맞닿는다. 상자·라운드·간격 0. */
+.col[data-s="bleed"] .hero .t { font-size:31px; }
+.g-bleed { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+.g-bleed a { display:block; text-decoration:none; color:var(--ink); border-top:1px solid var(--line2); }
+.g-bleed a:nth-child(2n) { border-left:1px solid var(--line2); }
+.g-bleed .shot { display:block; width:100%; aspect-ratio:3/2; overflow:hidden; background:var(--shot-bg); }
+.g-bleed .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 32%; display:block; }
+.g-bleed .tx { padding:12px 13px 18px; }
+/* 섹션 제목 줄 — 자라식 얇은 괘선 + 작은 라벨 */
+.sec-rule { display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:0 var(--pad) 11px; border-bottom:1px solid var(--ink); margin-bottom:0; }
+.sec-rule .n { font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--ink); }
+.sec-rule .m { font-size:11.5px; color:var(--sub); }
+
+/* ══════════ 2안 · 가로 레일 (나이키·룰루레몬) ══════════
+   ⚠️ 자동 전환 없음. 손으로 미는 레일이다 — 구 캐러셀 폐기 사유(5초 자동 전환)와 다르다. */
+.col[data-s="rail"] .hero .t { font-size:29px; }
+.rail { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory;
+  padding:0 var(--pad) 4px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.rail::-webkit-scrollbar { display:none; }
+.rail > a { flex:0 0 76%; scroll-snap-align:start; text-decoration:none; color:var(--ink); }
+.rail .shot { display:block; width:100%; aspect-ratio:3/2; overflow:hidden; background:var(--shot-bg); }
+.rail .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 32%; display:block; }
+.rail .tx { padding:11px 0 0; }
+.rail-hint { display:flex; gap:5px; padding:14px var(--pad) 0; }
+.rail-hint i { width:22px; height:2px; background:var(--line); display:block; }
+.rail-hint i:first-child { background:var(--ink); }
+
+/* ══════════ 3안 · 지면 (에디토리얼) ══════════
+   좌우 엇갈림 + 얇은 괘선 + 큰 명조. 사진은 정사각(좌우 배치 균형). */
+.col[data-s="page"] { --pad:24px; }
+.col[data-s="page"] .hero { padding:44px 0 40px; }
+.col[data-s="page"] .hero .t { font-size:34px; line-height:1.26; }
+.pg { display:flex; flex-direction:column; }
+.pg a { display:grid; grid-template-columns:44% 1fr; column-gap:14px; align-items:start;
+  padding:18px 0; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); }
+.pg a:nth-child(2n) { grid-template-columns:1fr 44%; }
+.pg a:nth-child(2n) .shot { order:2; }
+.pg a:nth-child(2n) .tx { order:1; text-align:right; }
+.pg .shot { display:block; width:100%; aspect-ratio:1/1; overflow:hidden; background:var(--shot-bg); }
+.pg .shot img { width:100%; height:100%; object-fit:cover; object-position:50% 30%; display:block; }
+.pg .tx { padding-top:2px; }
+
+/* 메모 */
+.notes { margin-top:38px; display:grid; gap:15px; grid-template-columns:repeat(auto-fit,minmax(292px,1fr)); }
+.note { background:#fff; border:1px solid #DCDCDA; border-radius:12px; padding:17px 19px; }
+.note h3 { margin:0 0 9px; font-size:14.5px; font-weight:800; letter-spacing:-.015em; }
+.note ul { margin:0; padding-left:16px; }
+.note li { font-size:13px; line-height:1.72; color:#3D424B; margin-bottom:5px; word-break:keep-all; }
+.note li b { color:#16181D; }
+.hint { margin:14px 0 0; font-size:12.5px; color:#575B64; line-height:1.72; max-width:880px; word-break:keep-all; }
+.hint b { color:#16181D; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="doc-h1">구조 3안 — 레퍼런스의 틀을 우리 것으로</h1>
+  <p class="doc-sub">
+    <b>색은 3안 모두 같습니다</b>(네이비 먹 + 아이보리 종이, 라운드 0, 버튼만 알약).
+    이번에 다른 건 <b>구조 하나</b>입니다. 레퍼런스에서 가져온 것과 일부러 안 가져온 것을 먼저 적어 둡니다.
+  </p>
+
+  <div class="take">
+    <div class="take-i"><h4>자라에서 — 맞닿는 사진 그리드</h4>
+      <p>사진이 화면 폭을 꽉 채우고 <b>서로 맞닿습니다.</b> 상자·라운드·간격이 0이라 사진이 곧 콘텐츠가 됩니다.</p></div>
+    <div class="take-i"><h4>나이키에서 — 가로 레일 + 크기 2단</h4>
+      <p>세로로 쌓는 대신 <b>옆으로 밉니다.</b> 사진을 크게 쓰면서 페이지가 안 길어지는 유일한 방법입니다.</p></div>
+    <div class="take-i"><h4>룰루레몬에서 — 큰 제목이 위계를 만든다</h4>
+      <p>색 없이 <b>제목 크기 하나로</b> 격을 만듭니다. 버튼만 완전 알약, 나머지 라운드 0.</p></div>
+    <div class="take-i"><h4>안 가져온 것</h4>
+      <p><b>자동 전환</b>(구 캐러셀 폐기 사유) · <b>카드 상자</b> · <b>컬러 배지</b> · 메가스터디식 이미지 조판(수정 불가능해집니다).</p></div>
+  </div>
+
+  <h2 class="h2">먼저 — 사진을 잘못 자르고 있었습니다</h2>
+  <p class="h2-sub">
+    이번에 원본을 재 보니 <b>챌린지 사진 4장이 전부 가로 사진</b>입니다. 그런데 현재 카드는 <code>aspect-ratio: 4/5</code>(세로)로 자르고 있어
+    <b>가로폭의 절반 이상이 버려집니다.</b> 사진을 크게 쓰는 안을 만들려면 이것부터 바로잡아야 합니다.
+  </p>
+  <table class="px">
+    <thead><tr><th>사진</th><th>원본</th><th>원본 비율</th><th>현재 4:5로 자를 때 남는 가로폭</th></tr></thead>
+    <tbody>
+      <tr><td>hero-expression</td><td>1400 × 759</td><td>1.84 (가로)</td><td class="bad">43%</td></tr>
+      <tr><td>hero-answer</td><td>1400 × 933</td><td>1.50 (가로)</td><td class="bad">53%</td></tr>
+      <tr><td>hero-spinning</td><td>1400 × 933</td><td>1.50 (가로)</td><td class="bad">53%</td></tr>
+      <tr><td>hero-voice</td><td>1112 × 1109</td><td>1.00 (정사각)</td><td>80%</td></tr>
+    </tbody>
+  </table>
+  <p class="hint">
+    CLAUDE.md 에 적힌 <b>"4:5 는 인물 사진의 표준 비율이라 얼굴이 안 잘린다"</b>는 원본이 세로 사진일 때 맞는 말입니다.
+    실제 원본은 가로라, 그 규칙이 오히려 사진을 깎고 있었습니다. 1·2안은 <b>3:2</b>로 맞췄고(answer·spinning 은 무손실),
+    3안은 좌우 배치라 <b>1:1</b>이 균형이 맞습니다.
+  </p>
+
+  <h2 class="h2">구조 3안</h2>
+  <p class="h2-sub">375px 실물 크기. <b>2안의 챌린지는 옆으로 밀어 보세요.</b> 가로 스크롤됩니다.</p>
+
+  <table class="px" style="margin-bottom:20px">
+    <thead><tr><th>안</th><th>챌린지 사진</th><th>지금 대비 면적</th><th>사진 잘림</th><th>4장 한눈에</th><th>세로 길이</th></tr></thead>
+    <tbody>
+      <tr><td>지금(라이브)</td><td>139 × 174 · 4:5</td><td>1.00</td><td class="bad">가로폭 47% 버림</td><td>○</td><td>—</td></tr>
+      <tr><td>1안 풀블리드</td><td>182 × 121 · 3:2</td><td>0.90</td><td class="good">잘림 없음</td><td class="good">○</td><td>1,686px</td></tr>
+      <tr><td><b>2안 레일</b></td><td><b>242 × 162 · 3:2</b></td><td class="good"><b>1.61</b></td><td class="good">잘림 없음</td><td class="bad">× (밀어야 함)</td><td class="good"><b>1,463px</b></td></tr>
+      <tr><td>3안 지면</td><td>139 × 139 · 1:1</td><td class="bad">0.79</td><td>가로폭 33% 버림</td><td>○</td><td class="bad">1,878px</td></tr>
+    </tbody>
+  </table>
+  <p class="hint" style="margin:-8px 0 22px">
+    브라우저에서 실제로 렌더된 크기를 잰 값입니다. <b>사진이 실제로 커지는 건 2안뿐</b>이고,
+    1·3안의 이득은 크기가 아니라 <b>'원본이 덜 잘린다'</b>는 쪽입니다.
+    (초안에 "1안은 사진이 2.4배"라고 썼다가 실측하고 고쳤습니다 — 폭만 1.3배 넓어지고 면적은 비슷합니다.)
+  </p>
+
+  <div class="cols">
+
+    <!-- ══════ 1안 · 풀블리드 그리드 ══════ -->
+    <section class="col" data-s="bleed">
+      <div class="col-h"><span class="col-ix">1안</span>
+        <p class="col-name">풀블리드 그리드 <span style="font-weight:600;color:#7E838C">· 자라</span></p>
+        <p class="col-note">사진 4장이 <b>화면 폭을 꽉 채우고 서로 맞닿습니다.</b> 상자·간격·라운드 0.</p>
+        <span class="col-meta">사진 3:2 · 2열 맞닿음 · 여백 0</span></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+
+        <section class="hero pad">
+          <div class="lb">Challenge</div>
+          <p class="t serif">승무원 준비<br>어렵게 하지 마세요</p>
+          <p class="s">2주 · 하루 한 번 미션 · 코치 피드백</p>
+          <a class="btn" href="#">신청하기</a>
+        </section>
+
+        <div class="sec-rule"><span class="n">4 Challenges</span><span class="m">2개 모집 중</span></div>
+        <div class="g-bleed">
+          <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""></span><span class="tx">
+            <span class="c-no">01 Image</span><span class="c-nm">영.합.각</span>
+            <span class="c-ln">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="c-st">모집 중 · D-5</span></span></a>
+          <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""></span><span class="tx">
+            <span class="c-no">02 Answer</span><span class="c-nm">승.자.각</span>
+            <span class="c-ln">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="c-st">모집 중 · D-5</span></span></a>
+          <a href="#" class="is-dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""></span><span class="tx">
+            <span class="c-no">03 Voice</span><span class="c-nm">보.신.각</span>
+            <span class="c-ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="c-st off">다음 기수 준비 중</span></span></a>
+          <a href="#" class="is-dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="tx">
+            <span class="c-no">04 Speech</span><span class="c-nm">스.피.닝</span>
+            <span class="c-ln">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="c-st off">다음 기수 준비 중</span></span></a>
+        </div>
+
+        <section class="doors"><div class="pad">
+          <div class="hd"><div class="lb">Where to start</div><p class="t serif">어디부터 볼지 골라 보세요</p></div>
+          <a class="dr" href="#"><span class="dr-ix">01</span><span class="dr-nm">챌린지</span><span class="dr-go">→</span><span class="dr-ds">코치와 함께 2주. 하루 한 번 미션과 피드백.</span></a>
+          <a class="dr" href="#"><span class="dr-ix">02</span><span class="dr-nm">특강</span><span class="dr-go">→</span><span class="dr-ds">필요한 주제만 골라 하루. 항공사별로 열려요.</span></a>
+          <a class="dr" href="#"><span class="dr-ix">03</span><span class="dr-nm">브리핑룸</span><span class="dr-go">→</span><span class="dr-ds">항공 뉴스·소재 발굴·답변노트. 무료.</span></a>
+        </div></section>
+
+        <section class="ba"><div class="pad">
+          <div class="lb">Before &amp; After</div><p class="t serif">2주 전과 후,<br>직접 들어 보세요</p>
+          <div class="ba-who"><span>보.신.각</span><span>챌린저 D</span></div>
+          <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+          <p class="ba-q">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+          <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+        </div></section>
+        <div class="spacer"></div>
+      </div><a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div>
+    </section>
+
+    <!-- ══════ 2안 · 가로 레일 ══════ -->
+    <section class="col" data-s="rail">
+      <div class="col-h"><span class="col-ix">2안 · 추천</span>
+        <p class="col-name">가로 레일 <span style="font-weight:600;color:#7E838C">· 나이키</span></p>
+        <p class="col-note">챌린지를 <b>옆으로 밉니다.</b> 사진을 크게 쓰면서 페이지가 안 길어집니다. 자동 전환은 없습니다.</p>
+        <span class="col-meta">사진 3:2 · 레일 76% · 세로 최단</span></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+
+        <section class="hero pad">
+          <div class="lb">Challenge</div>
+          <p class="t serif">승무원 준비<br>어렵게 하지 마세요</p>
+          <p class="s">2주 · 하루 한 번 미션 · 코치 피드백</p>
+          <a class="btn" href="#">신청하기</a>
+        </section>
+
+        <div class="sec-rule"><span class="n">4 Challenges</span><span class="m">옆으로 밀어 보세요 →</span></div>
+        <div class="rail" style="margin-top:16px">
+          <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""></span><span class="tx">
+            <span class="c-no">01 Image</span><span class="c-nm">영.합.각</span>
+            <span class="c-ln">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="c-st">모집 중 · D-5</span></span></a>
+          <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""></span><span class="tx">
+            <span class="c-no">02 Answer</span><span class="c-nm">승.자.각</span>
+            <span class="c-ln">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="c-st">모집 중 · D-5</span></span></a>
+          <a href="#" class="is-dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""></span><span class="tx">
+            <span class="c-no">03 Voice</span><span class="c-nm">보.신.각</span>
+            <span class="c-ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="c-st off">다음 기수 준비 중</span></span></a>
+          <a href="#" class="is-dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="tx">
+            <span class="c-no">04 Speech</span><span class="c-nm">스.피.닝</span>
+            <span class="c-ln">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="c-st off">다음 기수 준비 중</span></span></a>
+        </div>
+        <div class="rail-hint"><i></i><i></i><i></i><i></i></div>
+
+        <section class="doors" style="margin-top:34px"><div class="pad">
+          <div class="hd"><div class="lb">Where to start</div><p class="t serif">어디부터 볼지 골라 보세요</p></div>
+          <a class="dr" href="#"><span class="dr-ix">01</span><span class="dr-nm">챌린지</span><span class="dr-go">→</span><span class="dr-ds">코치와 함께 2주. 하루 한 번 미션과 피드백.</span></a>
+          <a class="dr" href="#"><span class="dr-ix">02</span><span class="dr-nm">특강</span><span class="dr-go">→</span><span class="dr-ds">필요한 주제만 골라 하루. 항공사별로 열려요.</span></a>
+          <a class="dr" href="#"><span class="dr-ix">03</span><span class="dr-nm">브리핑룸</span><span class="dr-go">→</span><span class="dr-ds">항공 뉴스·소재 발굴·답변노트. 무료.</span></a>
+        </div></section>
+
+        <section class="ba"><div class="pad">
+          <div class="lb">Before &amp; After</div><p class="t serif">2주 전과 후,<br>직접 들어 보세요</p>
+          <div class="ba-who"><span>보.신.각</span><span>챌린저 D</span></div>
+          <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+          <p class="ba-q">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+          <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+        </div></section>
+        <div class="spacer"></div>
+      </div><a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div>
+    </section>
+
+    <!-- ══════ 3안 · 지면 ══════ -->
+    <section class="col" data-s="page">
+      <div class="col-h"><span class="col-ix">3안</span>
+        <p class="col-name">지면 <span style="font-weight:600;color:#7E838C">· 룰루레몬 + 잡지</span></p>
+        <p class="col-note">사진과 글이 <b>좌우로 엇갈립니다.</b> 큰 명조 제목과 얇은 괘선. 가장 '직접 만든 것' 같습니다.</p>
+        <span class="col-meta">사진 1:1 · 좌우 엇갈림 · 제목 34px</span></div>
+      <div class="phone"><div class="scr">
+        <nav class="nv"><img src="../images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC"><div class="nv-menu"><span class="on">챌린지</span><span>특강</span><span>브리핑룸</span><span>후기</span></div></nav>
+
+        <section class="hero pad">
+          <div class="lb">Challenge</div>
+          <p class="t serif">승무원 준비<br>어렵게 하지 마세요</p>
+          <p class="s">2주 · 하루 한 번 미션 · 코치 피드백</p>
+          <a class="btn" href="#">신청하기</a>
+        </section>
+
+        <div class="pad">
+          <div class="pg">
+            <a href="#"><span class="shot"><img src="../images/hero-expression.webp" alt=""></span><span class="tx">
+              <span class="c-no">01 Image</span><span class="c-nm">영.합.각</span>
+              <span class="c-ln">굳은 표정 → <em>카메라 앞에서도 자연스럽게</em></span><span class="c-st">모집 중 · D-5</span></span></a>
+            <a href="#"><span class="shot"><img src="../images/hero-answer.webp" alt=""></span><span class="tx">
+              <span class="c-no">02 Answer</span><span class="c-nm">승.자.각</span>
+              <span class="c-ln">뻔한 답변 → <em>나만 할 수 있는 답변</em></span><span class="c-st">모집 중 · D-5</span></span></a>
+            <a href="#" class="is-dim"><span class="shot"><img src="../images/hero-voice.webp" alt=""></span><span class="tx">
+              <span class="c-no">03 Voice</span><span class="c-nm">보.신.각</span>
+              <span class="c-ln">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></span><span class="c-st off">다음 기수 준비 중</span></span></a>
+            <a href="#" class="is-dim"><span class="shot"><img src="../images/hero-spinning.webp" alt=""></span><span class="tx">
+              <span class="c-no">04 Speech</span><span class="c-nm">스.피.닝</span>
+              <span class="c-ln">딱딱한 말투 → <em>귀에 감기는 말투</em></span><span class="c-st off">다음 기수 준비 중</span></span></a>
+          </div>
+        </div>
+
+        <section class="doors" style="margin-top:34px"><div class="pad">
+          <div class="hd"><div class="lb">Where to start</div><p class="t serif">어디부터 볼지 골라 보세요</p></div>
+          <a class="dr" href="#"><span class="dr-ix">01</span><span class="dr-nm">챌린지</span><span class="dr-go">→</span><span class="dr-ds">코치와 함께 2주. 하루 한 번 미션과 피드백.</span></a>
+          <a class="dr" href="#"><span class="dr-ix">02</span><span class="dr-nm">특강</span><span class="dr-go">→</span><span class="dr-ds">필요한 주제만 골라 하루. 항공사별로 열려요.</span></a>
+          <a class="dr" href="#"><span class="dr-ix">03</span><span class="dr-nm">브리핑룸</span><span class="dr-go">→</span><span class="dr-ds">항공 뉴스·소재 발굴·답변노트. 무료.</span></a>
+        </div></section>
+
+        <section class="ba"><div class="pad">
+          <div class="lb">Before &amp; After</div><p class="t serif">2주 전과 후,<br>직접 들어 보세요</p>
+          <div class="ba-who"><span>보.신.각</span><span>챌린저 D</span></div>
+          <p class="ba-arc">떨리는 목소리 → <em>신뢰가 실리는 목소리</em></p>
+          <p class="ba-q">"신뢰감을 주는 올바른 발성법을 알게 돼서 정말 유익했어요!"</p>
+          <div class="ba-btns"><button class="ba-btn on" type="button">전</button><button class="ba-btn" type="button">후</button></div>
+        </div></section>
+        <div class="spacer"></div>
+      </div><a class="cta" href="#"><span class="m">신청하기</span><span class="s">참가비 3만원 · 코치 1:1 피드백</span></a></div>
+    </section>
+
+  </div>
+
+  <div class="notes">
+    <div class="note"><h3>1안 · 풀블리드 그리드</h3><ul>
+      <li>사진 폭이 <b>1.3배 넓어지고 잘림이 사라집니다</b>(182×121). 면적 자체는 지금과 비슷합니다 — 넓어진 만큼 낮아지니까요. <b>이득은 크기가 아니라 '원본이 다 보인다'</b>는 쪽입니다.</li>
+      <li>맞닿는 그리드는 자라·H&amp;M·COS가 전부 쓰는 문법입니다. <b>간격이 0이라 '상품 목록'이 아니라 '한 덩어리'</b>로 읽힙니다.</li>
+      <li>4장을 <b>한눈에 나란히</b> 볼 수 있습니다 — '고르는 화면'이라는 목적에 가장 맞습니다.</li>
+      <li>약점: 사진 4장의 <b>톤이 안 맞으면 붙어 있는 만큼 티</b>가 납니다.</li>
+    </ul></div>
+    <div class="note"><h3>2안 · 가로 레일 (추천)</h3><ul>
+      <li><b>사진이 실제로 커지는 유일한 안입니다 — 면적 1.61배, 폭 1.74배</b>(242×162). 그런데 페이지는 오히려 가장 짧습니다(1,463px). 2026-07-26 진단에서 브리핑룸이 화면 8.6개 아래라 아무도 못 닿던 문제에 직접 듣습니다.</li>
+      <li>다음 카드가 <b>24% 걸쳐 보여</b> 밀 수 있다는 걸 알려줍니다 — 화살표 버튼이 필요 없습니다.</li>
+      <li>⚠️ 구 캐러셀과 다릅니다: <b>자동 전환이 없고</b>, 잘린 글자가 아니라 <b>다음 사진이 살짝</b> 보이며, 스와이프로 4개를 다 비교할 수 있습니다. 폐기 사유 셋 중 어느 것에도 해당하지 않습니다.</li>
+      <li>약점: 4개를 <b>한눈에 나란히</b> 볼 수는 없습니다. '고르는 화면'이라는 목적과 상충할 수 있습니다.</li>
+    </ul></div>
+    <div class="note"><h3>3안 · 지면</h3><ul>
+      <li>좌우 엇갈림 + 큰 명조 제목(34px). 세 안 중 <b>유일하게 어디서도 본 적 없는 화면</b>이 됩니다.</li>
+      <li>사진이 정사각이라 <b>4장의 비율 차이가 가장 덜 드러납니다.</b></li>
+      <li>약점: <b>사진이 오히려 작아집니다</b>(139×139, 면적 0.79배). 세로 배치라 사진에 줄 수 있는 폭이 44%뿐입니다.</li>
+      <li>약점: 세로가 가장 깁니다(1,878px). 규칙도 강해 <b>항목을 추가할 때 좌우 순서까지</b> 지켜야 합니다.</li>
+    </ul></div>
+  </div>
+
+  <p class="hint">
+    <b>공통으로 바뀌는 것.</b> 세 안 모두 ① 카드 상자·그림자·라운드를 없애고 ② 사진 비율을 원본에 맞추고
+    ③ 섹션 라벨을 무채 11px 로 통일하고 ④ 버튼만 완전 알약으로 갑니다.
+    <b>7/27 레터프레스 종이 카드는 세 안 모두에서 빠집니다</b> — 상자가 없어야 사진이 커지기 때문입니다.
+    그때 근거("입체감이 없다")는 <b>사진이 작을 때</b>의 문제였고, 사진이 화면 폭을 채우면 물성은 사진이 만듭니다.
+  </p>
+</div>
+</body>
+</html>
