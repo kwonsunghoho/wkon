@@ -191,6 +191,10 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - **홈에서 삭제된 것(2026-07-29 오너 확정 "깔끔하게")**: 구 #pillars(세 개의 문 카드) · 히어로 챌린지 카드 목록(→challenges.html 이사) · Before&After(증거는 각 상세가 담당) · #briefing-home · #lectures-home · 연구진 스트립 · 커뮤니티(후기는 reviews.html) · **파인더(#advisor — 존치 계측 중이었으나 개편에 포함해 삭제, 오너 승인)** · 블라인드 퀴즈(→blind-quiz.js로 보신각·스피닝 상세 이사) · 성장기록 · 구 .cta-box. index.html 2979→1354줄, index.css 2006→673줄.
 - **계측**: `pillar_challenge/lecture/briefing`(문 3개, pointerdown)은 유지 — 구 pillars와 이벤트명이 같아 기준선이 이어진다. `briefing_go`/`lecture_go`/`advisor_*`/`hero_ab_*` 리스너는 대상 소멸로 제거. `hero_reached`는 이제 '미션 섹션 도달'을 뜻한다(앵커 동일 — 인트로 이탈률 지표로서 연속성 유지).
 - **nav(2026-07-29)**: '커뮤니티' 메뉴 삭제(섹션 소멸 — researchers.html의 `index.html#community` 링크도 함께 제거). '챌린지' 드롭다운·모바일 아코디언 첫 항목에 '챌린지 한눈에'(→challenges.html) 추가. ⚠️ nav 마크업은 **index·researchers·challenges 3파일 하드코딩 — 변경 시 셋 동기화.**
+- **⚠️ nav 활자 크기(2026-07-30 오너 "네비게이션 폰트가 너무 작다" → 약 50% 상향)**: 메뉴 14→**21px** · 신청하기 15→**21px** · 로그인 14→**20px** · 로고 22→**30px** · 드롭다운 15/13→18/15px. 자간 **-0.015em**(한글은 키울수록 자간이 벌어 보인다). 커진 만큼 간격도 다시 잡았다 — 메뉴 gap 28→34, 3컬럼 사이 16→28, 우측 두 버튼 사이 8→12. 세로 여백은 14→12px로 줄여 **바 높이 73px**(모바일은 57px 그대로). ⚠️ **CSS도 3파일(index.css·researchers.html·challenges.html) 동기화 대상**이다.
+  - ⚠️ **버튼에 `line-height: 1.15`를 명시한 것을 지우지 말 것** — `.btn`은 body의 `--lh-body`(1.7)를 물려받아, 21px로 키우자 버튼 하나가 60px이 되고 바 높이가 **85px까지 부풀었다**(실측). 두 알약은 `min-height: 48px`로 높이를 못 박는다(테두리 1.5px 때문에 계산상 1px이 어긋난다).
+  - ⚠️ **좁은 데스크톱 구간(769~1180px) 미디어 블록은 반드시 `.nav-cta`·`.btn-login-outline` 뒤에 둔다** — 특이도가 같아 앞에 두면 뒤따르는 기본 규칙이 이겨 **버튼만 큰 채로 남는다**(실제로 밟은 자리). 구 구간은 980px였는데, 21px 메뉴 + 두 버튼이 한 줄에 들어가려면 약 1,150px이 필요해 1180으로 넓혔다.
+  - ⚠️ nav 높이를 또 바꾸면 **`.msn`의 `scroll-margin-top`(모바일 60 / ≥769px 84)과 `.mobile-menu`의 `top: 60px`**도 같이 볼 것 — 착지점이 바 밑에 깔린다.
 
 ### 2026-07-14 목업 리디자인 (소스오브트루스: `outputs/monc-font-mockup.html`·`monc-mockup-2.html`)
 색·폰트 + **레이아웃까지** 풀 리디자인(웜 통일). `.section-label`/`.mc-eyebrow`에 코랄 대시(—) `::before` 시그니처, 연구원 이름 명조. **회귀 방지 핵심:**
