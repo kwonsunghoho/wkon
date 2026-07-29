@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>홈 스토리형 재구성 — 목업 (2026-07-29)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&family=Song+Myung&display=swap" rel="stylesheet">
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
+
+/* ── 목업 전용 스타일 — 사이트 tokens.css 값을 그대로 옮겨 씀 ── */
+:root{
+  --bg:#E9E4D8; --bg2:#F1ECE2; --bg3:#DED8C9;
+  --bg-dark:#26221C; --card-dark:#332E27;
+  --text:#26221C; --muted:#5F574B; --dim:#6C6454;
+  --on-dark:#F5F1E8; --on-dark-dim:#B9AFA0;
+  --action:#F27945; --accent-ink:#A33D14;
+  --serif:'Song Myung','Noto Serif KR',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:clip}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+  background:#CBC4B2; color:var(--text);
+  -webkit-font-smoothing:antialiased; word-break:keep-all;
+}
+
+/* 목업 페이지 헤더(백드롭 위) */
+.mk-head{max-width:400px;margin:0 auto;padding:36px 20px 18px;text-align:center}
+.mk-head h1{font-family:var(--serif);font-weight:400;font-size:21px;letter-spacing:-0.01em}
+.mk-head p{font-size:12.5px;color:#57503F;margin-top:8px;line-height:1.7}
+
+/* 폰 컬럼 */
+.col{max-width:400px;margin:0 auto 64px;box-shadow:0 24px 64px rgba(36,26,18,.30);overflow:clip}
+
+/* 주석 칩 — 실제 화면이 아니라 설계 메모 */
+.note{
+  background:#FFFDF7;border:1px dashed rgba(38,34,28,.4);border-left:3px solid var(--action);
+  font-size:12px;line-height:1.6;color:#57503F;padding:9px 12px;margin:0;
+}
+.note b{color:var(--accent-ink)}
+
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-ink)}
+
+/* ① 인트로 자리 표시 */
+.intro-ph{
+  background:#17140F;color:var(--on-dark);padding:52px 20px;text-align:center;
+}
+.intro-ph .logo{font-family:var(--serif);font-size:30px;letter-spacing:.34em;text-indent:.34em;color:var(--action)}
+.intro-ph p{font-size:12px;color:var(--on-dark-dim);margin-top:10px;letter-spacing:.06em}
+
+/* ② 미션 선언 — 다크 무대 */
+.mission{background:var(--bg-dark);color:var(--on-dark);padding:72px 20px 64px}
+.mission .eyebrow{color:var(--action)}
+.mission h2{
+  font-family:var(--serif);font-weight:400;font-size:26px;line-height:1.44;
+  letter-spacing:-0.01em;margin-top:16px;
+}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:36px}
+.stat{
+  background:var(--card-dark);border:1px solid rgba(245,241,232,.07);border-radius:14px;
+  padding:18px 8px 15px;text-align:center;
+}
+.stat strong{
+  display:block;font-family:var(--serif);font-weight:400;font-size:24px;color:var(--on-dark);
+  font-variant-numeric:tabular-nums;letter-spacing:-0.01em;
+}
+.stat strong em{font-style:normal;font-size:14px;margin-left:1px}
+.stat > span{display:block;font-size:12px;color:var(--on-dark-dim);margin-top:7px;letter-spacing:.02em}
+.stat.is-hot{border-color:rgba(242,121,69,.55)}
+.stat.is-hot strong{color:var(--action)}
+.stat-note{font-size:11px;color:#8A8171;margin-top:12px;line-height:1.6}
+.bridge{
+  font-family:var(--serif);font-weight:400;font-size:25px;line-height:1.5;
+  margin-top:56px;color:var(--on-dark);
+}
+.bridge em{font-style:normal;color:var(--action)}
+
+/* ③ 세 개의 문 — 언밸런스 카드 (레퍼런스 그대로)
+   글 옆에 '사진' 카드가 좌우로 번갈아 붙고, 사진은 화면 끝까지 나가 잘린다.
+   높이·시작점을 일부러 어긋나게 두어 리듬을 만든다. */
+.doors{background:var(--bg);padding:64px 0 76px;overflow:clip}
+.door{display:flex;gap:16px;align-items:flex-start;padding-left:20px}
+.door.rev{flex-direction:row-reverse;padding-left:0;padding-right:20px}
+.door + .door{margin-top:58px}
+.dtext{flex:1;min-width:0}
+.dtext h3{font-family:var(--serif);font-weight:400;font-size:21.5px;line-height:1.38;margin-top:10px;letter-spacing:-0.01em}
+.dtext .ds{font-size:13px;line-height:1.62;color:var(--muted);margin-top:10px}
+.dlink{display:inline-block;margin-top:14px;font-size:13.5px;font-weight:700;color:var(--accent-ink);text-decoration:none}
+/* 사진 카드 — 세 문 공통 */
+.dcard{
+  width:57%;flex:0 0 auto;position:relative;overflow:hidden;background:var(--bg3);
+  box-shadow:0 10px 28px rgba(58,42,26,.16);
+}
+.door:not(.rev) .dcard{border-radius:18px 0 0 18px}
+.door.rev .dcard{border-radius:0 18px 18px 0}
+.dcard img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block}
+.dcard .chip{
+  position:absolute;left:10px;bottom:10px;background:rgba(255,253,247,.94);
+  border-radius:999px;font-size:11px;font-weight:700;color:var(--text);padding:6px 11px;
+}
+.dcard .chip b{color:var(--accent-ink)}
+/* 어긋남: 사진 높이·글 시작 높이를 문마다 다르게 */
+.door-1 .dcard{height:252px}
+.door-2 .dcard{height:228px}
+.door-3 .dcard{height:206px}
+.door-1 .dtext{padding-top:28px}
+.door-2 .dtext{padding-top:46px}
+.door-3 .dtext{padding-top:22px}
+
+/* ④ 마무리 CTA — 미션과 수미상관 */
+.closing{background:var(--bg-dark);color:var(--on-dark);padding:72px 20px;text-align:center}
+.closing .bridge2{font-family:var(--serif);font-weight:400;font-size:24px;line-height:1.5}
+.closing .bridge2 em{font-style:normal;color:var(--action)}
+.btn-cta{
+  display:block;margin:32px auto 0;max-width:280px;padding:17px;border-radius:999px;
+  background:var(--action);color:#2A1206;font-size:16px;font-weight:700;text-decoration:none;text-align:center;
+}
+.closing small{display:block;font-size:12.5px;color:var(--on-dark-dim);margin-top:14px}
+
+/* 등장 애니메이션 */
+[data-rv]{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+[data-rv].in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){[data-rv]{transition:none;opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="mk-head">
+  <h1>홈 스토리형 재구성 목업 v4</h1>
+  <p>2026-07-29 · 오너 스케치 기반<br>인트로 → 왜 몬크인가(숫자) → 세 개의 문(좌우 사진 카드) → 마무리</p>
+</div>
+
+<div class="col">
+
+  <p class="note"><b>① 창문 인트로</b> — 그대로 유지. 아래는 자리 표시만.</p>
+  <div class="intro-ph">
+    <div class="logo">MONC</div>
+    <p>창문 인트로 (기존 그대로)</p>
+  </div>
+
+  <p class="note"><b>② 왜 몬크인가</b> — 미션 한 문장 + 숫자 3개 + 브릿지(레퍼런스 구도, 다크 무대).</p>
+  <section class="mission">
+    <p class="eyebrow" data-rv>Why MONC</p>
+    <h2 data-rv>어렵고 고민되는<br>승무원 준비를 돕기 위해<br>시작했습니다.</h2>
+    <div class="stats" data-rv>
+      <div class="stat">
+        <strong><span data-count="20">0</span>만<em>명</em></strong>
+        <span>승무원 준비생</span>
+      </div>
+      <div class="stat">
+        <strong><span data-count="500">0</span><em>명</em></strong>
+        <span>매년 최종 합격</span>
+      </div>
+      <div class="stat is-hot">
+        <strong><span data-count="0.25" data-dec="2">0</span><em>%</em></strong>
+        <span>가능성</span>
+      </div>
+    </div>
+    <p class="stat-note" data-rv>* 스케치 값 기준(500 ÷ 200,000) — 게시 전 출처 확정 필요</p>
+    <p class="bridge" data-rv>그 <em>가능성</em>을,<br>몬크에서 도전하세요.</p>
+  </section>
+
+  <p class="note"><b>③ 세 개의 문 — 언밸런스 사진 카드</b> — 글 옆에 사진이 좌우로 번갈아 붙고 화면 끝까지 나가 잘림. 사진은 전부 샘플(교체 예정).</p>
+  <section class="doors">
+
+    <div class="door door-1" data-rv>
+      <div class="dtext">
+        <p class="eyebrow">Challenge</p>
+        <h3>매일 습관을<br>만들 기회</h3>
+        <p class="ds">2주 동안 하루 한 번 —<br>목소리·표정·말투·답변</p>
+        <a class="dlink" href="#">챌린지 보러가기 →</a>
+      </div>
+      <a class="dcard" href="#">
+        <img src="../images/hero-expression.webp" alt="">
+        <span class="chip">하루 한 번 · <b>DAY 7/14</b></span>
+      </a>
+    </div>
+
+    <div class="door door-2 rev" data-rv>
+      <div class="dtext">
+        <p class="eyebrow">Briefing Room</p>
+        <h3>면접 준비<br>치트키</h3>
+        <p class="ds">항공 뉴스 · 소재 발굴<br>답변 노트</p>
+        <a class="dlink" href="#">브리핑룸 열기 →</a>
+      </div>
+      <a class="dcard" href="#">
+        <img src="../images/hero-sky-sunset.webp" alt="">
+        <span class="chip">오늘 뉴스 <b>12건</b></span>
+      </a>
+    </div>
+
+    <div class="door door-3" data-rv>
+      <div class="dtext">
+        <p class="eyebrow">Special Lecture</p>
+        <h3>면접 직전,<br>특강</h3>
+        <p class="ds">채용이 뜨면 그 항공사에<br>맞춰 엽니다</p>
+        <a class="dlink" href="#">예정 특강 보기 →</a>
+      </div>
+      <a class="dcard" href="#">
+        <img src="../images/instructor-kwon.webp" alt="">
+        <span class="chip">다음 특강 <b>D-7</b></span>
+      </a>
+    </div>
+
+  </section>
+
+  <p class="note"><b>④ 마무리 CTA</b> — 스케치엔 없는 제안. 미션의 문장을 받아 수미상관으로 닫음(빼도 됨).</p>
+  <section class="closing">
+    <p class="bridge2" data-rv>가능성은,<br>매일 준비한 사람에게 <em>옵니다</em>.</p>
+    <a class="btn-cta" href="#" data-rv>몬크 시작하기</a>
+    <small data-rv>이미 회원이라면 로그인</small>
+  </section>
+
+</div>
+
+<script>
+/* 등장 + 카운트업 — 목업용 최소 구현 */
+(function(){
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function countUp(el){
+    var target = parseFloat(el.getAttribute('data-count'));
+    var dec = parseInt(el.getAttribute('data-dec')||'0',10);
+    if(reduced){ el.textContent = target.toFixed(dec); return; }
+    var t0 = null, DUR = 1100;
+    function step(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min((ts-t0)/DUR, 1);
+      var e = 1 - Math.pow(1-p, 3); /* easeOutCubic */
+      el.textContent = (target*e).toFixed(dec);
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      en.target.classList.add('in');
+      en.target.querySelectorAll('[data-count]').forEach(countUp);
+      io.unobserve(en.target);
+    });
+  },{threshold:.25});
+
+  document.querySelectorAll('[data-rv]').forEach(function(el){
+    if(reduced){ el.classList.add('in'); el.querySelectorAll('[data-count]').forEach(countUp); }
+    else io.observe(el);
+  });
+})();
+</script>
+</body>
+</html>
