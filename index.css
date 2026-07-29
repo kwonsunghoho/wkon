@@ -433,11 +433,18 @@
        ⚠️ 높이를 고정하지 않으면 조립되며 글자가 커질 때 아래 한글 줄이 밀려 내려간다. */
     .hi-stack {
       position: relative; display: flex; align-items: center; justify-content: center;
-      height: clamp(40px, 12vw, 54px);
+      height: clamp(46px, 13vw, 60px);   /* 로고 기준 — 문장은 absolute 라 이 높이에 영향 없다 */
     }
+    /* ⚠️ 화면보다 넓은 문장을 **좌우 균등하게** 넘치게 하려면 left/right:0 + text-align:center
+       로는 안 된다 — 내용이 컨테이너보다 넓으면 왼쪽 기준이 되어 오른쪽으로만 삐져나간다(실측).
+       중앙 기준 배치(left:50% + translateX(-50%) + width:max-content)여야 양쪽으로 나간다. */
     .hi-phrase {
-      position: absolute; left: 0; right: 0; white-space: nowrap;
-      font-size: clamp(15px, 4.6vw, 19px); font-weight: 300; letter-spacing: 0;
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: max-content; white-space: nowrap;
+      /* ⚠️ 문장은 **화면 밖으로 넘칠 만큼** 크다(오너: "원래대로 화면 밖으로 나갈 만큼
+         크게 했다가 창문 안으로 쭉 들어오는 것"). 넘치는 건 .hero-intro 의 overflow:clip 이
+         잘라내므로 가로 스크롤은 생기지 않는다. 작게 줄이면 '들어오는' 연출이 사라진다. */
+      font-size: clamp(52px, 13vw, 150px); font-weight: 300; letter-spacing: 0;
       line-height: 1.15; color: var(--text);
     }
     .hi-w { display: inline-block; white-space: nowrap; }
@@ -450,8 +457,11 @@
           부풀려서 getBoundingClientRect 중심이 실제 글자 중심과 어긋난다(구 인트로에서 밟은 함정).
        ⚠️ visibility:hidden 이라 자리는 차지한다 — JS 가 이 좌표를 도착점으로 읽는다. 지우지 말 것. */
     .hi-target {
-      position: absolute; left: 0; right: 0; visibility: hidden;
-      font-size: clamp(34px, 10.5vw, 46px); font-weight: 800; letter-spacing: 0;
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: max-content; visibility: hidden;
+      /* 로고는 **창 개구부 안**에 들어갈 크기다(모바일 창 폭 54% / 웹 15.6% 기준 실측).
+         키우면 창틀을 넘어 '창 안으로 들어왔다'가 깨진다. */
+      font-size: clamp(40px, 11.5vw, 52px); font-weight: 800; letter-spacing: 0;
       line-height: 1.15; color: var(--accent);
     }
     .hi-target span { display: inline-block; margin: 0 .035em; }
