@@ -399,196 +399,59 @@
     }
 
     /* ═══════════════════════════════════════════════════
-       HERO WINDOW INTRO — 비행기 창문 줌인(빨려들어가는) 인트로
-       hero-scene 진입 전, 창문을 통과해 날아 들어가는 듯한 연출.
-       [data-zoom-exit] + .zoom-exit-pin 컴포넌트 CSS는 tokens.css 공용,
-       여기서는 index.html 전용 배경/이미지 스타일만 정의.
+       HERO — 창문 정적 배경 + 로고 흩날림 (2026-07-29 전면 교체)
+       구 창 통과 줌(.hero-window-intro / .zoom-exit-pin / .hero-window-sky-* /
+       .zoom-content-fade / .zoom-bezel-fade / .zoom-tone-bridge / .hero-tagline / .ht-*)은
+       통째로 삭제했다. 새 배경 이미지가 창+하늘 합본이라 '창을 통과'하는 연출이
+       구조적으로 불가능하고(확대하면 그림 전체가 커질 뿐), 오너가 정적 배경을 지정했다.
+
+       ⚠️ 스크롤 연동이 아니다 — 러웨이·핀·sticky가 없으므로 body의 overflow-x: clip을
+          hidden 으로 되돌려도 되지만, tokens.css html 규칙과 짝이라 그대로 둔다.
+       ⚠️ 되살리려면 하늘/창틀 2겹 이미지부터 필요하다(합본으로는 안 된다).
     ═══════════════════════════════════════════════════ */
 
-    .hero-window-intro {
-      background-color: var(--bg); /* 이미지 로딩 전 백색 플래시 방지 */
-      /* ⚠️ 2026-07-22 필수: 핀(.zoom-exit-pin)은 최대 3.4배까지 scale되는데 transform은
-         레이아웃을 바꾸지 않아, 확대된 그림이 이 섹션 밖(=다음 섹션 위)까지 그려진다.
-         구조상 늘 있던 스필인데 다음 섹션이 같은 베이지(#researchers-strip)라 안 보였다.
-         2026-07-22 Before&After(다크)를 히어로 바로 뒤로 올리자 '섹션 윗부분 145px가
-         베이지로 잘려 보이는' 현상으로 드러났다. clip은 hidden과 달리 스크롤 컨테이너를
-         만들지 않아 자식 sticky가 뷰포트에 계속 붙는다(body 규칙과 같은 패턴).
-         ⚠️ hidden으로 바꾸지 말 것 — 인트로 핀 고정이 풀린다. */
+    .hero-intro {
+      position: relative;
+      /* 화면 한 장. svh 라야 모바일 주소창 토글에 높이가 튀지 않는다(dvh 는 스크롤마다 재계산). */
+      height: 100svh; min-height: 520px;
       overflow: clip;
+      background: var(--bg);   /* 이미지 로딩 전 플래시 방지 */
     }
-    .hero-window-intro .zoom-exit-pin {
-      /* ⚠️ 배경을 다시 칠하지 말 것 — 위 스필의 실제 원인이었다. 섹션(.hero-window-intro)이
-         이미 --bg를 칠하고 body도 같은 색이라, 핀이 투명해도 인트로 화면은 동일하다. */
-      /* 줌 고정점: 아래 50% 50%는 무JS 폴백일 뿐 — 실제로는 태그라인 IIFE의
-         calibrateZoom()이 프레임 이미지 개구부 중심을 알파 스캔 실측으로 구해
-         인라인 transform-origin으로 덮어쓴다(2026-07-12). '창문 통과' 연출은
-         개구부가 확대의 고정점이어야 창틀이 사방으로 밀려나며 뚫고 들어가는
-         느낌이 성립한다. 필요한 최대 배율도 같은 실측으로 scroll-fx에 전달
-         (monc:zoomcalib — data-zoom-scale 속성은 실측 실패 시 폴백). */
-      transform-origin: 50% 50%;
+    .hero-shot {
+      position: absolute; inset: 0; display: block;
+      width: 100%; height: 100%; object-fit: cover; object-position: center;
     }
-    /* 창문 프레임(벽)은 고정, 그 안의 하늘만 옆으로 흘러 실제 비행기
-       창밖 느낌을 낸다. 노을 파노라마는 해가 고정이라 그대로는 무한 반복이
-       불가능하므로, [원본|좌우반전] 미러 타일(hero-sky-sunset.webp)로 만들어
-       repeat-x 경계가 완벽히 맞물리게 했다(seamless 무한 흐름 — 해도 은은히
-       흘러 지나감). 가로 흐름은 transform 기반(GPU 합성 → 모바일 리페인트 잼 방지).
-       (구 세로 스크롤 패닝(130vh + JS translateY)은 2026-07-10 제거 —
-       창 통과 시 장면이 아래로 흐르는 느낌을 줘 정면 돌파감을 해쳤고,
-       이미지 전체 높이를 창에 맞춰야 구름층이 첫 화면부터 보인다.) */
-    .hero-window-sky-bg {
-      position: absolute; inset: 0; z-index: 1;
-      overflow: hidden;
+    /* 정중앙 = 창 한가운데(실측 50.0% 모바일 / 52.6% 웹) */
+    .hero-mid {
+      position: absolute; left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      text-align: center; padding: 0 20px; pointer-events: none;
     }
-    .hero-window-sky-y {
-      position: absolute; left: 0; top: 0;
-      width: 100%;
-      /* 이미지 전체 높이(하늘~구름층)를 뷰포트에 맞춤 — 구름이 처음부터 보임.
-         svh가 아닌 vh 고정: 아래 타일 주기(600vh)와 단위를 일치시켜 seamless 유지 */
-      height: 100vh;
+    @media (min-aspect-ratio: 1/1) { .hero-mid { top: 51.5%; } }
+    .hi-logo {
+      font-weight: 800; letter-spacing: .07em; line-height: 1; white-space: nowrap;
+      font-size: clamp(34px, 10.5vw, 46px); color: var(--accent);
     }
-    .hero-window-sky-x {
-      position: absolute; left: 0; top: 0;
-      height: 100%;
-      /* 미러 타일(원본+반전)이 seamless라 repeat-x로 무한 흐름 가능.
-         1주기(=타일 표시폭 600vh)만큼 밀려도 뷰포트가 늘 차도록 여유 폭 확보 */
-      width: calc(600vh + 100vw);
-      /* 불투명 배경색(이미지 뒤라 보이진 않음): 레이어를 opaque로 만들어
-         컴포지터가 이 아래(핀 배경 등)를 그리지 않도록 컬링 힌트 (2026-07-12) */
-      background-color: #C9B8A6;
-      background-image: url('images/hero-sky-sunset.webp');
-      background-size: auto 100%;
-      background-repeat: repeat-x;
-      animation: hero-sky-pan 150s linear infinite; /* 하늘이 흐르는 속도 */
-      will-change: transform;
+    .hi-kor {
+      margin-top: 16px; white-space: nowrap;
+      font-size: clamp(13px, 3.6vw, 15px); font-weight: 600; letter-spacing: .05em;
+      color: var(--text-muted);
     }
-    @keyframes hero-sky-pan {
-      from { transform: translateX(0); }
-      /* 타일 표시폭 = 100vh(높이) × (4344/724 = 6.0) = 600vh → 정확히 1주기 */
-      to   { transform: translateX(-600vh); }
-    }
-    /* ⚠️ 창틀 <picture>(.zoom-bezel-fade)는 반드시 실제 박스를 가져야 한다.
-       기본 인라인(0×0)인 채로 tokens.css의 will-change: opacity 승격을 받으면
-       Chrome이 0×0 레이어 경계로 컬링해 자식 img(창틀)가 통째로 안 그려진다
-       (2026-07-11 발견). display:block + inset:0으로 img와 동일 영역을 차지시킴. */
-    picture.zoom-bezel-fade {
-      display: block;
-      position: absolute; inset: 0; z-index: 2;
-    }
-    .hero-window-frame {
-      display: block;
-      position: absolute; inset: 0; z-index: 2;
-      width: 100%; height: 100%;
-      object-fit: cover;
-    }
-    /* 데스크톱 히어로 프레임은 좌우 벽이 이미지에 직접 그려진 '와이드(2.6:1)'
-       이미지라, object-fit:cover만으로 화면을 꽉 채운다(좌우 여백 0). 이미지가
-       어떤 모니터보다 가로로 넓어 cover가 '높이 기준'으로 맞춰지므로, 창 크기는
-       뷰포트 높이에 비례해 항상 일정하고 남는 좌우는 벽이 넘쳐 채운다.
-       → 모바일·데스크톱 모두 기본 규칙(inset:0 + cover)만으로 동작, 별도 벽 패널 불필요. */
-    @media (prefers-reduced-motion: reduce) {
-      .hero-window-sky-x { animation: none; }
-    }
-    /* 창문 인트로 하단에 깔리는 톤 브릿지 — 스크롤 진행에 따라 아래쪽부터
-       히어로 캐러셀의 밝은 크림/베이지 톤으로 서서히 물들어, 밝은 하늘에서
-       히어로로 넘어갈 때 톤이 급격히 끊기지 않도록 함. */
-    .zoom-tone-bridge {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, transparent 42%, var(--lavender) 100%);
-      opacity: 0;
-      pointer-events: none;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .zoom-tone-bridge { display: none; }
-    }
+    /* ⚠️ 글자 하나하나가 따로 움직인다 — JS가 이 span 을 만들어 넣는다.
+       will-change 를 빼면 흩날림 구간에서 매 프레임 리페인트가 난다. */
+    .hi-ch { display: inline-block; will-change: transform, opacity, filter; }
 
-    /* ═══════════════════════════════════════════════════
-       HERO TAGLINE — 창문 인트로 위 브랜드 태그라인 + MONC 조립
-       (2026-07-10, spec: docs/superpowers/specs/2026-07-10-hero-monc-tagline-design.md)
-       .zoom-exit-pin 밖(형제)에 두어 핀의 scale(3.2) 확대를 받지 않음.
-       기본은 absolute(무JS/reduced-motion 정적 폴백), JS가 .ht-fixed로 승격.
-    ═══════════════════════════════════════════════════ */
-    .hero-tagline {
-      position: absolute; top: 0; left: 0; width: 100%;
-      height: 100vh; height: 100svh;
-      z-index: 50; /* nav(100)·mobile-cta(95) 아래, 히어로 콘텐츠 위 */
-      pointer-events: none;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center; padding: 0 16px;
-      /* 조립 경계의 서브라인 자간 전환(g0↔g1)·모바일 <br> 토글이 리플로우를
-         유발하는데, 격리하지 않으면 문서 전체로 번져 프레임을 잡아먹는다.
-         (구 per-frame 자간 lerp는 2026-07-13 글자별 FLIP으로 대체 — 조립 중
-         리플로우는 경계 1회뿐이지만 격리는 유지.) 내용물은 전부 뷰포트
-         (오버레이) 안이라 클리핑 부작용 없음 (2026-07-11) */
-      contain: layout paint;
+    /* 스크롤 안내 — 애니메이션이 끝난 뒤에만 뜬다.
+       ⚠️ bottom 값은 하단 고정 CTA 바(56px + 여백 14px)를 피한 자리다. 줄이면 겹친다. */
+    .hero-cue {
+      position: absolute; left: 0; right: 0; bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+      text-align: center; font-size: 11.5px; font-weight: 800; letter-spacing: .14em;
+      color: var(--text-dim); opacity: 0; will-change: opacity;
     }
-    .hero-tagline.ht-fixed { position: fixed; }
-    /* 중앙 원형 비네트 + 하단 그라데이션 — 밝은 노을 위 글자 가독성 확보.
-       will-change: 창 통과 구간(50~75%)에 매 프레임 opacity가 바뀌는 풀스크린
-       그라디언트 — 승격 없인 매 프레임 전체 리페인트라 끊김 (2026-07-11) */
-    .ht-scrim {
-      position: absolute; inset: 0;
-      will-change: opacity;
-      background:
-        radial-gradient(ellipse 95% 72% at 50% 50%, rgba(28,18,10,.5) 0%, rgba(28,18,10,.26) 45%, rgba(28,18,10,0) 74%),
-        linear-gradient(to top, rgba(30,20,12,.35) 0%, transparent 30%);
+    .hero-cue::after {
+      content: ''; display: block; width: 1px; height: 16px; margin: 7px auto 0;
+      background: linear-gradient(to bottom, var(--text-dim), transparent);
     }
-    .ht-inner {
-      position: relative; width: 100%;
-      display: flex; flex-direction: column; align-items: center;
-      will-change: transform, opacity;
-    }
-    .ht-stack { position: relative; width: 100%; }
-    .ht-phrase {
-      font-size: clamp(34px, 7.5vw, 96px); font-weight: 300;
-      letter-spacing: .02em; line-height: 1.16;
-      color: #F6F1E7; text-shadow: 0 2px 22px rgba(20,12,6,.6);
-    }
-    .ht-word { display: inline-block; white-space: nowrap; }
-    .ht-l { display: inline-block; will-change: transform, opacity; }
-    .ht-hl { color: var(--ht-mark); font-weight: 800; }
-    /* ⚠️ 인트로 M·O·N·C 강조색(2026-07-29 오렌지 탈피). 창밖이 **노을**이라 어두운 색은
-       못 쓴다 — 밝아야 하고, 노을의 주황과 보색이라 이 밝은 하늘 블루가 가장 또렷하다.
-       (구 #FFB27A 는 노을과 같은 색상각이라 배경에 녹는 편이었다.) */
-    :root { --ht-mark: #A8C7F0; }
-    /* 조립 완료 시 교체되는 네이티브 렌더 로고 — transform 확대 래스터 흐림 방지.
-       아래 clamp는 1차 캡(무JS 폴백)일 뿐 — 실제 창틀 침범 방지는 JS(measure)가
-       프레임 이미지의 개구부 폭을 알파 스캔으로 실측해 인라인 font-size로 줄인다.
-       (고정 vh 캡은 프레임 이미지가 바뀌어 개구부 폭이 변하면 못 따라간다 — 2026-07-11) */
-    .ht-target {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      visibility: hidden;
-      /* 16vw: 모바일(375px)에서 60px → 로고 폭 ~200px로 개구부(~230px) 안쪽 확보 */
-      font-size: clamp(56px, min(16vw, 18vh), 220px); font-weight: 800;
-      letter-spacing: .06em; line-height: 1.16;
-      color: var(--ht-mark); text-shadow: 0 4px 30px rgba(20,12,6,.45);
-    }
-    .ht-target span { display: inline-block; }
-    .ht-subko {
-      margin-top: 20px;
-      font-size: clamp(15px, 2.2vw, 22px); font-weight: 500;
-      letter-spacing: .06em; white-space: nowrap;
-      color: rgba(246,241,231,.95); text-shadow: 0 1px 12px rgba(20,12,6,.55);
-      will-change: transform;
-    }
-    /* 두 줄 서브는 모바일 전용(2026-07-12 오너 "이건 모바일에만") —
-       데스크톱은 <br> 무효화로 기존 한 줄 유지. 마크업은 공백 포함 공용. */
-    @media (max-width: 768px) {
-      .ht-subko { line-height: 1.3; text-align: center; }
-    }
-    @media (min-width: 769px) {
-      .ht-subko br { display: none; }
-    }
-    /* 서브라인 글자 스팬(JS가 감쌈, 2026-07-13) — 조립 시 글자별 FLIP 이동용.
-       transform이 걸리려면 inline-block이어야 한다. 공백·<br>은 감싸지 않아
-       두 줄 접힘·자간 메트릭이 그대로 유지된다. */
-    .ht-subko .ht-sl { display: inline-block; will-change: transform; }
-    /* 구 .ht-cue(작은 화살표)·.hero-skip(건너뛰기 pill)은 2026-07-22 삭제.
-       바닥 CTA 바가 인트로 구간에 '몬크 구경하기 ↓'로 바뀌며 두 역할을 모두 흡수했다 —
-       바로 위에 화살표가 하나 더 뜨면 같은 문이 두 개로 보여 오히려 망설이게 된다.
-       (계측: 하단 바가 인트로 구간 클릭의 대부분을 가져가고 있었음) */
 
     /* ═══════════════════════════════════════════════════
        왜 몬크인가(.msn #home) + 세 개의 문(.doors) + 마무리(.closing)
