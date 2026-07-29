@@ -308,16 +308,47 @@
        값이 무시된 것처럼 보인다(실제로 한 번 밟은 자리 — 13px 그대로였다). */
     .hi-kor.two { line-height: 1.28; }
 
-    /* 스크롤 안내 — 애니메이션이 끝난 뒤에만 뜬다.
+    /* 스크롤 안내 — 애니메이션이 끝난 뒤에만 뜨고, 스크롤이 시작되면 사라진다.
+       2026-07-30 오너가 목업 4안 중 D안 선택(`outputs/hero-scroll-cue-mockup.html` — 기각안 A·B·C 보존).
+       ⚠️ 구 안(11.5px 'SCROLL' + 1px×16px 세로선, --text-dim)은 **활자가 원칙 1번(12px) 미달,
+          대비 4.15:1 로 원칙 4번(4.5:1) 미달**이었고 결정적으로 등장 후 멈춰 있었다(전부 실측).
+          '내려라'는 신호는 크기가 아니라 **움직임**이 만든다 — 활자·대비만 올리고 애니메이션을
+          빼면 같은 문제로 돌아간다.
        ⚠️ bottom 값은 하단 고정 CTA 바(56px + 여백 14px)를 피한 자리다. 줄이면 겹친다. */
     .hero-cue {
       position: absolute; left: 0; right: 0; bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-      text-align: center; font-size: 11.5px; font-weight: 800; letter-spacing: .14em;
-      color: var(--text-dim); opacity: 0; will-change: opacity;
+      text-align: center; color: var(--ink); opacity: 0; will-change: opacity;
+      transition: opacity .35s ease;
     }
-    .hero-cue::after {
-      content: ''; display: block; width: 1px; height: 16px; margin: 7px auto 0;
-      background: linear-gradient(to bottom, var(--text-dim), transparent);
+    /* 12.5px — 원칙 1번의 하한(12px) 바로 위. 자간은 구 .14em 에서 줄였다(넓은 자간이
+       작은 글자를 더 흐리게 만든다). 잉크 네이비라 배경(#ECE4DB) 대비 10.4:1. */
+    .hc-label { display: block; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; }
+    /* 레일 — 흐릿한 트랙 위로 빛 한 줄기가 아래로 지나간다. 트랙을 깔아야 '길'로 읽힌다. */
+    .hc-rail {
+      display: block; width: 2px; height: 46px; margin: 10px auto 0; border-radius: 2px;
+      background: rgba(28, 42, 58, .16); position: relative; overflow: hidden;
+    }
+    .hc-rail::after {
+      content: ''; position: absolute; left: 0; right: 0; height: 18px; border-radius: 2px;
+      background: linear-gradient(to bottom, transparent, var(--ink));
+      animation: hcFlow 1.9s cubic-bezier(.45, 0, .25, 1) infinite;
+    }
+    @keyframes hcFlow { 0% { top: -20px; } 70% { top: 46px; } 100% { top: 46px; } }
+    /* 화살표는 빛이 레일 끝에 닿는 순간(70%) 밝아지며 따라 내려간다 — 둘의 주기가 같아야
+       '흘러내려 도착했다'로 읽힌다. 주기를 따로 두면 두 개가 각자 움직이는 것으로 보인다. */
+    .hc-arrow { display: block; margin: 4px auto 0; animation: hcNudge 1.9s cubic-bezier(.45, 0, .25, 1) infinite; }
+    @keyframes hcNudge {
+      0%, 55% { transform: translateY(0); opacity: .35; }
+      72% { transform: translateY(3px); opacity: 1; }
+      100% { transform: translateY(0); opacity: .35; }
+    }
+    /* ⚠️ 스크롤이 시작되면 숨긴다(오너 지시) — !important 인 이유는 타임라인 JS 가
+       인라인 style.opacity 를 쓰기 때문이다. 저자 !important 가 인라인을 이긴다. */
+    .hero-cue.is-gone { opacity: 0 !important; }
+    /* 움직임을 끈 사람에겐 흐름 대신 '도착한 상태'로 고정 — 크기·대비 개선은 그대로 남는다. */
+    @media (prefers-reduced-motion: reduce) {
+      .hc-rail::after { animation: none; top: 28px; }
+      .hc-arrow { animation: none; opacity: 1; }
     }
 
     /* ═══════════════════════════════════════════════════

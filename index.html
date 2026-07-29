@@ -99,7 +99,16 @@
          .hi-kl 두 덩어리로 나눠 둔 것이 그 줄바꿈 지점이다(<br>은 두 줄 모드에서만 산다). -->
     <div class="hi-kor" id="hiKor"><span class="hi-kl">새로운 커리어가</span> <br class="hi-kbr"> <span class="hi-kl">시작되는 순간</span></div>
   </div>
-  <div class="hero-cue" id="heroCue" aria-hidden="true">SCROLL</div>
+  <!-- 스크롤 신호 — 2026-07-30 오너가 목업 4안 중 D안 선택(`outputs/hero-scroll-cue-mockup.html`).
+       구 안(11.5px 'SCROLL' + 1px 세로선)은 활자가 원칙 1번(12px), 대비 4.15:1 이 원칙 4번(4.5:1)에
+       미달인 데다 **등장 후 멈춰 있어** '내리라'는 뜻으로 안 읽혔다(전부 실측).
+       ⚠️ 세 조각이 한 벌이다: 한글 라벨 → 레일(빛이 아래로 흐름) → 화살표(끝에서 따라 내려감).
+          레일만 두면 장식으로 보이고, 화살표만 두면 지금 디자인과 안 이어진다. -->
+  <div class="hero-cue" id="heroCue" aria-hidden="true">
+    <span class="hc-label">아래로 스크롤</span>
+    <span class="hc-rail"></span>
+    <svg class="hc-arrow" width="17" height="10" viewBox="0 0 22 13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 9 9-9"/></svg>
+  </div>
 </section>
 
 <script>
@@ -914,6 +923,27 @@
   }
 
   function markSeen() { try { localStorage.setItem('monc_intro_seen', '1'); } catch (e) {} }
+
+  /* 스크롤이 시작되면 안내를 숨긴다(2026-07-30 오너 지시) — 안 그러면 다음 섹션까지
+     화살표가 따라다니며 계속 "내려라"라고 말한다(이미 내리고 있는 사람에게).
+     ⚠️ 클래스로 토글하는 이유: 위 frame()이 인라인 style.opacity 를 매 프레임 덮어쓰므로
+        인라인으로 숨기면 재생 중엔 바로 되살아난다. CSS 의 !important 가 인라인을 이긴다.
+     ⚠️ 맨 위로 돌아오면 다시 보여준다 — 히어로를 다시 보고 있는데 신호만 없으면
+        처음 온 사람과 다른 화면이 된다. 24px 는 모바일 바운스에 안 걸리는 최소치. */
+  if (cue) {
+    var gone = null, cueTick = false;
+    var syncCue = function () {
+      cueTick = false;
+      var hide = (window.pageYOffset || document.documentElement.scrollTop || 0) > 24;
+      if (gone === hide) return;      // 매 프레임 클래스 재기록 방지
+      gone = hide;
+      cue.classList.toggle('is-gone', hide);
+    };
+    window.addEventListener('scroll', function () {
+      if (!cueTick) { cueTick = true; requestAnimationFrame(syncCue); }
+    }, { passive: true });
+    syncCue();   /* 새로고침 복원으로 이미 내려가 있는 상태에서 열릴 수 있다 */
+  }
 
   measure();
 
