@@ -1518,9 +1518,9 @@
           3.9:1로 미달이라 --accent-ink(#102B56)를 쓴다 — --action/--accent-dark로
           되돌리지 말 것. */
     .pillars { background: var(--bg2); padding: var(--space-6) 0 var(--space-8); }
-    /* ⚠️ 재방문자는 인트로가 통째로 숨겨져(2026-07-29) 이 섹션이 페이지 첫 요소가 된다.
-       nav 가 position:fixed 라 이 여백이 없으면 제목이 nav 밑으로 들어간다. */
-    html[data-intro-skipped] .pillars { padding-top: calc(var(--space-6) + 56px); }
+    /* ⚠️ 재방문자는 인트로 대신 .rehero(사진 히어로)가 첫 요소다 — 여기엔 여백이 필요 없다.
+       구 버전은 pillars 에 nav 회피 여백 56px 을 줬는데, .rehero 가 생기면서 불필요해졌다.
+       (사진 위로 nav 가 겹치는 건 의도된 것 — 글자 블록은 사진 아래쪽에 있다) */
     .pl-head { margin-bottom: var(--space-4); }
     .pl-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
     @media (min-width: 720px) {
@@ -2006,3 +2006,71 @@
   .db-badges{gap:9px 7px}
   .db-pill{padding:6px 10px}
 }
+
+    /* ═══════════════════════════════════════════════════════════════
+       다크 면 위 강조 색 보정 (2026-07-29)
+       ⚠️ 오너 지적: "포인트 글씨가 네이비니까 검정색 바탕에는 더 안 보인다."
+       맞는 지적이었고 실측으로 확인됐다 — Before&After(#12100E)와 커뮤니티
+       롤링 배너 위에서 --accent(#102B56)가 대비 1.0~1.36:1 이었다(20곳).
+       ⚠️ 규칙: 다크 섹션에서는 var(--accent)/var(--action)을 쓰지 않는다.
+          제목·본문은 --on-dark(흰색), 브랜드 강조는 --accent-on-dark(밝은 네이비 틴트).
+       ⚠️ .section-label 은 tokens.css 가 !important 로 색을 박으므로
+          여기서도 !important 로 이겨야 한다(구 웜 시절과 같은 구조).
+       ═══════════════════════════════════════════════════════════════ */
+    .ba-section .section-label,
+    .bq-section .section-label {
+      color: var(--on-dark) !important;
+      -webkit-text-fill-color: var(--on-dark) !important;
+    }
+    .ba-section .section-title,
+    .bq-section .section-title { color: var(--on-dark); }
+    .ba-section .section-desc { color: var(--on-dark-soft); }
+    .ba-challenge-tag { color: var(--accent-on-dark); border-color: rgba(255,255,255,.30); }
+    .ba-arc { border-left-color: var(--accent-on-dark); background: rgba(159,182,220,.10); }
+    .ba-arc em { color: var(--accent-on-dark); }
+    .ba-detail-link { color: var(--on-dark); }
+    .ba-medianote svg { fill: var(--accent-on-dark); }
+    .ba-toggle-btn.active.ba-btn-after { background: var(--on-dark); color: #12100E; border-color: var(--on-dark); }
+    .ba-play-btn { background: var(--on-dark); color: #12100E; }
+    /* 커뮤니티 롤링 배너(에스프레소 면) */
+    .mc-rolling-label { color: var(--accent-on-dark); }
+    /* 최종 CTA 박스 안 강조 */
+    .cta-title .cta-serif { color: var(--accent-on-dark); }
+
+    /* ═══ 재방문자 히어로 (.rehero) — 인트로를 대신하는 여는 화면 (2026-07-29) ═══
+       ⚠️ 첫 방문자에겐 [hidden] 이라 안 보인다. 인트로 스킵 스크립트가 hidden 을 푼다.
+       ⚠️ 사진 위에 글자를 얹는 유일한 자리다. 히어로 챌린지 카드(.ch-card)에서
+          '사진 위 글자'를 뺀 이유(크림 막이 사진을 죽인다)와 상충하지 않는다 —
+          여기는 카드가 아니라 전체 폭 히어로라 아래쪽 그라디언트만으로 충분하고,
+          나이키·룰루레몬이 히어로에서 쓰는 방식이 정확히 이것이다.
+       ⚠️ [hidden] 대응: display:block 이 UA 의 [hidden]{display:none} 을 이기므로
+          아래 [hidden] 규칙이 반드시 있어야 한다(.pl-door 에서 이미 밟은 함정). */
+    .rehero { position: relative; display: block; background: var(--bg3); }
+    .rehero[hidden] { display: none; }
+    .rh-shot { display: block; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; }
+    .rh-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 24%; }
+    .rh-ov {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 0 var(--space-3) 26px;
+      background: linear-gradient(to top, rgba(12,10,9,.82) 0%, rgba(12,10,9,.46) 46%, rgba(12,10,9,0) 100%);
+    }
+    .rh-t {
+      font-family: 'Noto Sans KR', system-ui, sans-serif; font-weight: 900;
+      font-size: clamp(28px, 8vw, 40px); line-height: 1.22; letter-spacing: -.035em;
+      color: #fff; margin: 0 0 8px; word-break: keep-all;
+    }
+    .rh-s { font-size: var(--fs-caption); font-weight: 500; color: rgba(255,255,255,.86); margin: 0 0 18px; }
+    /* 사진 위라 버튼은 밝은 면 + 네이비 글씨 — 네이비 채움은 어두운 사진에 묻힌다 */
+    .rh-go {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 50px; padding: 0 30px; border-radius: var(--radius-pill);
+      background: #fff; color: var(--accent-ink);
+      font-size: 15px; font-weight: 700; letter-spacing: -.01em; text-decoration: none;
+    }
+    @media (min-width: 860px) {
+      .rh-shot { aspect-ratio: 21 / 9; }
+      .rh-ov { padding-left: max(var(--space-3), calc((100vw - 940px) / 2)); }
+    }
+    /* 인트로가 숨겨지면 이 히어로가 페이지 첫 요소 — fixed nav 를 피한다.
+       (히어로는 사진이라 nav 가 겹쳐도 되지만, 글자 블록은 아래쪽이라 안전하다) */
+    html[data-intro-skipped] .rehero { padding-top: 0; }

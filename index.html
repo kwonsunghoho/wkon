@@ -206,6 +206,25 @@
        사람들이 이미 누르는 자리를 올바른 목적지로 바꾸는 편이 새 안내를 얹는 것보다 낫다. -->
 </section>
 
+<!-- ── 재방문자 히어로 (2026-07-29 신설) ──
+     ⚠️ 왜 필요한가: 인트로를 숨기니 화면이 허전하다는 오너 지적. 원인은 단순하다 —
+        **인트로가 곧 히어로였다.** 숨기면 페이지에 여는 화면이 없어지고,
+        바로 아래 '세 개의 문'은 인트로 *다음*에 오도록 만든 섹션이라 첫 화면이 못 된다.
+     ⚠️ 이 섹션은 인트로 '자리'를 대신할 뿐 섹션 순서를 바꾸지 않는다(1단계 원칙 유지).
+        인트로가 보이는 첫 방문자에겐 hidden 이라 아무 영향이 없다.
+     ⚠️ 인트로 축소(러웨이 140/120)로 되돌리는 방식과 다르다 — 재방문자에게
+        1.8화면짜리 애니메이션을 다시 태우지 않으면서 여는 화면은 준다.
+     ⚠️ 아래 스킵 스크립트보다 반드시 먼저 와야 한다(그 스크립트가 파스 타임에
+        querySelector 로 이 요소를 찾아 hidden 을 푼다). -->
+<section class="rehero" id="rehero" hidden>
+  <span class="rh-shot"><img src="images/hero-answer.webp" alt="" fetchpriority="high" decoding="async"></span>
+  <div class="rh-ov">
+    <p class="rh-t">2주 뒤,<br>달라진 나를 듣는다</p>
+    <p class="rh-s">하루 한 번 미션 · 코치 1:1 피드백</p>
+    <a class="rh-go" href="apply.html">신청하기</a>
+  </div>
+</section>
+
 <!-- ⚠️ 인트로는 '첫 방문만' 보여준다(2026-07-29 오너 확정).
      구 동작은 재방문자에게 러웨이만 140/120으로 줄여 연출을 계속 보여주는 것이었다.
      근거: 인트로가 375px 실측 1,462px(1.8화면)을 쓰는데 page_events 집계상
@@ -227,6 +246,9 @@
   wrap.style.display = 'none';
   wrap.setAttribute('aria-hidden', 'true');
   document.documentElement.setAttribute('data-intro-skipped', '1');
+  /* 인트로가 빠진 자리에 여는 화면을 세운다 — 없으면 페이지가 세 개의 문부터 시작해 허전하다. */
+  var rh = document.getElementById('rehero');
+  if (rh) rh.hidden = false;
 })();
 </script>
 
