@@ -20,25 +20,25 @@
 .bq-label {
   display: inline-flex; align-items: center; gap: 9px;
   font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
-  color: var(--action); margin-bottom: 10px;
+  color: var(--action-on-dark); margin-bottom: 10px;
 }
-.bq-label::before { content: ''; width: 26px; height: 1.5px; background: var(--action); flex: none; }
+.bq-label::before { content: ''; width: 26px; height: 1.5px; background: var(--action-on-dark); flex: none; }
 .bq-title {
   font-family: var(--serif); font-weight: 800;
   font-size: var(--fs-h2); line-height: 1.28; letter-spacing: -0.01em;
-  color: var(--action); margin-bottom: 14px; word-break: keep-all;
+  color: var(--action-on-dark); margin-bottom: 14px; word-break: keep-all;
 }
 .bq-desc { font-size: var(--fs-body, 17px); color: rgba(245,241,232,.6); line-height: 1.7; }
 .bq-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--action); color: var(--action-ink); border: none; cursor: pointer;
+  background: #FFFFFF; color: var(--accent-ink); border: none; cursor: pointer;
   border-radius: 14px; padding: 16px 28px; font-size: 15px; font-weight: 700;
   font-family: inherit; text-decoration: none; box-shadow: var(--shadow-action);
   transition: background .2s, transform .2s; -webkit-tap-highlight-color: transparent;
 }
 .bq-btn:hover { background: var(--action-hover); transform: translateY(-2px); }
 .bq-btn:active { transform: translateY(0) scale(.99); }
-.bq-btn:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; }
+.bq-btn:focus-visible { outline: 3px solid var(--action-on-dark); outline-offset: 3px; }
 .bq-stage {
   max-width: 520px; margin: 0 auto;
   background: var(--surface);
@@ -87,19 +87,19 @@
   padding: 4px 11px; border-radius: 99px;
   display: inline-flex; align-items: center; gap: 6px;
 }
-.bq-scene-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--action); }
+.bq-scene-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--action-on-dark); }
 .bq-scene-badge.is-live::before { animation: bq-blink 1.1s ease-in-out infinite; }
 @keyframes bq-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 .bq-dots { display: inline-flex; gap: 5px; flex: 0 0 auto; }
 .bq-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); }
-.bq-dots i.on { background: var(--action); }
+.bq-dots i.on { background: var(--action-on-dark); }
 .bq-scene-tag {
   position: absolute; z-index: 1; left: 14px; bottom: 12px;
   font-size: 11.5px; font-weight: 800; color: #F3EFE7;
   background: rgba(25,65,146,.72); padding: 4px 11px; border-radius: 99px;
 }
 .bq-console { padding: 18px 18px 22px; }
-.bq-round-num { font-size: 12px; font-weight: 800; color: var(--text-dim); letter-spacing: .04em; margin-bottom: 10px; }
+.bq-round-num { font-size: 12px; font-weight: 800; color: rgba(245,241,232,.72); letter-spacing: .04em; margin-bottom: 10px; }
 .bq-clips { display: flex; flex-direction: column; gap: 10px; }
 .bq-clip {
   display: flex; align-items: center; gap: 12px;

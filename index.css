@@ -8,39 +8,15 @@
        홈 팔레트 — 딥 네이비 on 웜 페이퍼 (2026-07-29 오너 확정, 목업 outputs/home-color-mockup.html B안)
        오너 지시: "폰트에 색을 너무 많이 추가한 것 같다 / 오렌지는 탈피 / 깔끔하고 단정하게".
 
-       ⚠️ 이 블록은 **홈 전용**이다 — index.css 는 index.html 만 로드하므로 tokens.css 의
-          전역 토큰을 여기서 재정의해도 다른 페이지에 번지지 않는다. 반대로 말하면
-          **챌린지·특강·브리핑룸·후기 페이지는 아직 오렌지**다(오너 요청 범위가 홈이었다).
-          전 사이트로 넓힐 땐 tokens.css 의 오버라이드 :root 를 같은 값으로 바꾸면 된다.
+       ⚠️ 팔레트 본체는 **tokens.css 에 있다**(2026-07-29 전 사이트 전환 완료 — 챌린지·특강·
+          브리핑룸·후기·마이페이지까지 같은 네이비다). 여기 남은 것은 **홈에만 필요한 값**뿐.
 
        ⚠️ 색 사용 규칙 — 액센트(#1B3A6B)는 **세 자리만**: 섹션 라벨 · 숫자 3개 중 '가능성' 하나 · 링크.
           제목은 잉크(--ink), 본문은 웜그레이. 개편 전엔 오렌지 하나가 홈 스토리 영역에만
           9자리(라벨 대시·라벨·숫자·"가능성"·문 링크 3개·칩·"옵니다"·버튼)에 쓰여
           강조가 너무 많아 아무것도 강조되지 않았다. 새 색을 자리마다 늘리지 말 것.
-
-       ⚠️ --action-ink 를 다크로 되돌리지 말 것 — 구 값(#2A1206)은 '오렌지 배경 위 다크 글씨'로
-          대비를 맞추려던 것이다. 네이비 배경엔 흰 글씨가 맞다(#1B3A6B 위 흰 글씨 10:1).
        ═══════════════════════════════════════════════════════════════ */
     :root {
-      /* 액센트 = 딥 네이비 한 계열. accent/accent-dark/accent-ink 를 한 값으로 모은 것은
-         의도다 — 세 단계로 나뉘어 있으면 자리마다 다른 채도가 섞여 다시 산만해진다. */
-      --action: #1B3A6B;
-      --action-dark: #142C52;
-      --action-hover: #24497F;
-      --action-tint: #E5E9F1;
-      --action-ink: #FFFFFF;
-      --accent: #1B3A6B;
-      --accent-dark: #1B3A6B;
-      --accent-ink: #1B3A6B;
-      --accent-tint: #E5E9F1;
-      --shadow-action: 0 8px 24px rgba(27,58,107,.22);
-      --shadow-action-lg: 0 12px 32px rgba(27,58,107,.30);
-
-      /* 종이 배경 — 구 #E9E4D8 보다 밝고 채도를 낮췄다(레퍼런스의 '단정함' + 기존 종이 질감 유지) */
-      --bg: #FBF9F5;
-      --bg2: #F4F1EA;
-      --bg3: #EDE8DC;
-      --surface2: #F7F4EE;
       --border: rgba(40,34,26,.14);
       --border-soft: rgba(40,34,26,.10);
 
@@ -571,7 +547,11 @@
     }
     .ht-word { display: inline-block; white-space: nowrap; }
     .ht-l { display: inline-block; will-change: transform, opacity; }
-    .ht-hl { color: #FFB27A; font-weight: 800; }
+    .ht-hl { color: var(--ht-mark); font-weight: 800; }
+    /* ⚠️ 인트로 M·O·N·C 강조색(2026-07-29 오렌지 탈피). 창밖이 **노을**이라 어두운 색은
+       못 쓴다 — 밝아야 하고, 노을의 주황과 보색이라 이 밝은 하늘 블루가 가장 또렷하다.
+       (구 #FFB27A 는 노을과 같은 색상각이라 배경에 녹는 편이었다.) */
+    :root { --ht-mark: #A8C7F0; }
     /* 조립 완료 시 교체되는 네이티브 렌더 로고 — transform 확대 래스터 흐림 방지.
        아래 clamp는 1차 캡(무JS 폴백)일 뿐 — 실제 창틀 침범 방지는 JS(measure)가
        프레임 이미지의 개구부 폭을 알파 스캔으로 실측해 인라인 font-size로 줄인다.
@@ -583,7 +563,7 @@
       /* 16vw: 모바일(375px)에서 60px → 로고 폭 ~200px로 개구부(~230px) 안쪽 확보 */
       font-size: clamp(56px, min(16vw, 18vh), 220px); font-weight: 800;
       letter-spacing: .06em; line-height: 1.16;
-      color: #FFB27A; text-shadow: 0 4px 30px rgba(20,12,6,.45);
+      color: var(--ht-mark); text-shadow: 0 4px 30px rgba(20,12,6,.45);
     }
     .ht-target span { display: inline-block; }
     .ht-subko {
@@ -630,7 +610,7 @@
        ⚠️ 2026-07-29 다크 무대에서 밝은 종이로 전환(오너 확정, 목업 B안). 되돌리지 말 것 —
           미션과 마무리가 둘 다 다크라 홈의 절반이 어두웠다. 다크는 마무리 CTA 한 곳만 남긴다. */
     .msn {
-      background: var(--bg); color: var(--text);
+      background: var(--bg2); color: var(--text);
       padding: 84px 0 72px;
       /* 하단 CTA 바 '몬크 더 알아보기' 착지점 — 고정 nav(56px)에 제목이 가리지 않게 */
       scroll-margin-top: 60px;
@@ -672,14 +652,19 @@
           카드 박스와 양립할 수 없어 함께 폐지 — 블리드로 되돌리지 말 것.
           세 개가 같은 급의 '문'으로 묶여 보이는 것이 이 요청의 목적이다.
        ⚠️ 카드 자리는 사진이다 — 텍스트 목록·미니 UI 덩어리로 되돌리지 말 것(오너 2회 기각). */
-    .doors { background: var(--bg2); padding: 64px 20px 76px; overflow: clip; }
+    .doors { background: var(--bg); padding: 64px 20px 76px; overflow: clip; }
     .door {
       display: flex; gap: 14px; align-items: stretch;
       max-width: 560px; margin: 0 auto; padding: 16px;
       background: var(--surface); border: 1px solid var(--border-soft);
       border-radius: var(--radius); box-shadow: 0 2px 10px rgba(40,34,26,.05);
     }
+    /* ⚠️ rev(브리핑룸)는 사진이 왼쪽·글이 오른쪽이므로 **글도 오른쪽 정렬**이다
+       (2026-07-29 오너 지적 "브리핑룸이 변칙인데 왜 텍스트는 왼쪽 정렬이냐").
+       왼쪽 정렬로 두면 글 블록 오른쪽에 빈 띠가 남아 카드가 한쪽으로 쏠려 보인다.
+       라벨 대시(::before)와 링크 화살표는 inline 요소라 자동으로 함께 따라간다. */
     .door.rev { flex-direction: row-reverse; }
+    .door.rev .dr-txt { text-align: right; }
     .door + .door { margin-top: 14px; }
     /* ⚠️ 필수 — display:flex가 UA [hidden]을 이긴다. 없으면 특강이 없어도 특강 문이 보인다. */
     .door[hidden] { display: none; }
