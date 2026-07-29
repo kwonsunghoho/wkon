@@ -460,11 +460,18 @@
   })();
 
   /* ── ② 열 가지 → 세 가지 (2026-07-30) ──
-     칩 10개를 하나씩 체크한 뒤(0.28초 간격), 같은 칩을 세 그룹으로 옮기고 FLIP으로 이동을 보여준다.
+     칩 10개를 하나씩 체크한 뒤(0.07초 간격), 같은 칩을 세 그룹으로 옮기고 FLIP으로 이동을 보여준다.
      ⚠️ 이 섹션의 요점은 '칩이 움직였다'가 아니라 **'열 개가 세 덩어리가 됐다'** 이다 —
         그래서 이동 애니메이션이 없어도(reduced-motion·구형) 결과 화면은 똑같이 성립해야 한다.
-     ⚠️ 한 번만 실행한다(io.disconnect) — 되감기를 넣으면 스크롤을 오르내릴 때마다 다시 정렬돼
-        읽던 사람의 눈앞에서 글이 계속 움직인다. */
+
+     ⚠️⚠️ 전체 길이 1.5초를 넘기지 말 것(2026-07-30 오너 "못 보고 지나칠 수 있다").
+        구 버전은 4.2초(칩 0.28초×10 + 대기 0.62 + 이동 0.62+지연)라 폰에서 한 번 튕기면
+        끝까지 못 보고 지나갔다. 스크롤로 트는 연출은 1.5초 안에 끝나야 도달한 사람이 다 본다.
+     ⚠️ 트리거는 0.35 그대로 — 화면에 걸치자마자 시작하도록 앞당기는 안은 오너 기각
+        ("보여주는 게 우선"). 미리 시작하면 절반이 화면 밖에서 지나간다.
+     ⚠️ 되감기는 **화면 밖으로 완전히 나갔을 때만**(replay). 조건 없이 되돌리면 스크롤을
+        조금씩 오르내릴 때마다 읽던 사람 눈앞에서 글이 계속 움직인다. 되돌리기(reset)도
+        완전히 안 보일 때만 해서, 정렬이 풀리는 장면 자체를 사용자가 볼 일이 없다. */
   (function () {
     var wrap = document.getElementById('sortWrap');
     var pool = document.getElementById('sortPool');
@@ -473,6 +480,18 @@
 
     var chips = Array.prototype.slice.call(pool.children);
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var STEP = 70;        // 칩 체크 간격
+    var HOLD = 240;       // 다 찼다는 걸 인지할 틈
+    var FLY = 450;        // 그룹으로 날아가는 시간
+    var FLY_STEP = 22;    // 칩마다 출발 지연
+
+    var timer = null, tmo = [], playing = false, played = false, armed = false;
+
+    function clearTimers() {
+      if (timer) { clearInterval(timer); timer = null; }
+      tmo.forEach(clearTimeout); tmo = [];
+    }
 
     function place() {
       // FLIP — 옮기기 전 위치를 재고(first), 옮긴 뒤 위치와의 차이만큼 되돌려 놓았다가 푼다.
@@ -485,7 +504,7 @@
       groups.hidden = false;
       pool.hidden = true;
       wrap.classList.add('is-sorted');
-      if (reduce) return;
+      if (reduce) { playing = false; return; }
 
       chips.forEach(function (c, i) {
         var last = c.getBoundingClientRect();
@@ -494,35 +513,58 @@
         c.style.transition = 'none';
         c.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
         requestAnimationFrame(function () {
-          c.style.transition = 'transform .62s cubic-bezier(.22,1,.36,1) ' + (i * 40) + 'ms';
+          c.style.transition = 'transform ' + FLY + 'ms cubic-bezier(.22,1,.36,1) ' + (i * FLY_STEP) + 'ms';
           c.style.transform = '';
         });
       });
       // 이동이 끝나면 인라인 transform 흔적을 지운다(창 크기가 바뀌어도 어긋나지 않게).
-      setTimeout(function () {
+      tmo.push(setTimeout(function () {
         chips.forEach(function (c) { c.style.transition = ''; c.style.transform = ''; });
-      }, 1200);
+        playing = false;
+      }, FLY + FLY_STEP * chips.length + 120));
+    }
+
+    // 처음 상태(칩 10개가 한 덩어리)로 되돌린다 — 화면 밖일 때만 부른다.
+    function reset() {
+      clearTimers();
+      playing = false;
+      chips.forEach(function (c) {
+        c.classList.remove('is-on');
+        c.style.transition = ''; c.style.transform = '';
+        pool.appendChild(c);            // chips 는 원래 순서라 그대로 다시 붙으면 복원된다
+      });
+      groups.hidden = true;
+      pool.hidden = false;
+      wrap.classList.remove('is-sorted');
     }
 
     function run() {
+      if (playing) return;
+      playing = true; played = true; armed = false;
       if (reduce) {
         chips.forEach(function (c) { c.classList.add('is-on'); });
         place();
         return;
       }
       var k = 0;
-      var timer = setInterval(function () {
+      timer = setInterval(function () {
         if (k < chips.length) { chips[k].classList.add('is-on'); k++; return; }
-        clearInterval(timer);
-        setTimeout(place, 620);   // 다 찼다는 걸 인지할 틈을 준 뒤 정리
-      }, 280);
+        clearInterval(timer); timer = null;
+        tmo.push(setTimeout(place, HOLD));
+      }, STEP);
     }
 
     var io = new IntersectionObserver(function (entries) {
-      if (!entries.some(function (e) { return e.isIntersecting; })) return;
-      io.disconnect();
-      run();
-    }, { threshold: 0.35 });
+      entries.forEach(function (e) {
+        if (e.intersectionRatio >= 0.35) {
+          if (!played || armed) run();
+          if (reduce) io.disconnect();   // 움직임을 끈 사람에겐 결과 화면만 남기고 끝낸다
+        } else if (!e.isIntersecting && played && !armed) {
+          armed = true;                  // 완전히 지나쳤다 → 되돌아오면 한 번 더 보여준다
+          reset();
+        }
+      });
+    }, { threshold: [0, 0.35] });
     io.observe(wrap);
   })();
 
