@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>히어로 스크롤 신호 4안 — MONC</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* ⚠️ --ink 는 tokens.css 가 아니라 index.css(홈 전용 :root)에 있다 — 목업은 tokens.css 만
+     링크하므로 여기서 같은 값을 다시 선언해야 한다. 빼면 var(--ink) 가 무효가 되어
+     알약·캡슐 색이 통째로 날아간다(실제로 한 번 밟은 자리). */
+  :root{ --ink:#1C2A3A; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+    background:var(--bg2); color:var(--text); line-height:1.7;
+    padding:32px 16px 80px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto}
+
+  h1{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.01em;line-height:1.4;color:var(--ink)}
+  .sub{margin-top:10px;font-size:15px;color:var(--text-muted);word-break:keep-all}
+
+  .diag{
+    margin:24px 0 40px;padding:18px 18px 16px;background:var(--surface);
+    border:1px solid var(--border-soft);border-radius:14px;
+  }
+  .diag h2{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:10px}
+  .diag ul{list-style:none;font-size:14.5px;color:var(--text-muted)}
+  .diag li{padding-left:16px;position:relative;margin-top:6px;word-break:keep-all}
+  .diag li::before{content:'';position:absolute;left:0;top:11px;width:5px;height:5px;border-radius:50%;background:var(--action)}
+  .diag b{color:var(--ink);font-weight:800}
+  .bad{color:#A33D14;font-weight:800}
+
+  .grid{display:grid;gap:26px}
+  @media(min-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:1080px){.grid{grid-template-columns:repeat(4,1fr);gap:18px}}
+
+  .card{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+  .card h3{font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+  /* 4열일 때 가장 긴 설명(C안)이 4줄 = 14px × 1.7 × 4 ≈ 96px. 이 값이 모자라면 카드마다
+     무대 시작 높이가 달라져 네 안을 나란히 비교할 수 없다(목업의 목적이 비교라 정렬이 곧 기능이다). */
+  .card .desc{font-size:14px;color:var(--text-muted);margin-top:6px;word-break:keep-all;min-height:96px}
+  .card-head{padding:18px 16px 14px}
+  .tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent-ink);margin-bottom:6px}
+
+  /* 무대 — 실제 히어로 배경 아래쪽을 잘라 같은 조건에서 본다 */
+  .stage{
+    position:relative;height:230px;
+    background-image:url('../images/hero-window-mob.webp');
+    background-size:cover;background-position:center 78%;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);
+  }
+  .stage-note{
+    position:absolute;top:8px;left:10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;
+    color:rgba(28,42,58,.42);
+  }
+  .cuebox{position:absolute;left:0;right:0;bottom:34px;text-align:center}
+
+  .facts{padding:14px 16px 16px;font-size:13px;color:var(--text-muted);border-top:1px dashed var(--border-soft)}
+  .facts div{margin-top:4px}
+  .facts b{color:var(--ink)}
+  .ok{color:#2E6E42;font-weight:800}
+
+  /* ══════ 공통 ══════ */
+  .cue-label{
+    font-size:12.5px;font-weight:800;letter-spacing:.08em;color:var(--ink);
+  }
+
+  /* ── A안: 캡슐 마우스 + 떨어지는 점 ── */
+  .a-mouse{
+    width:26px;height:42px;margin:0 auto 9px;border-radius:999px;
+    border:2px solid var(--ink);position:relative;background:rgba(255,255,255,.42);
+  }
+  .a-dot{
+    position:absolute;left:50%;top:7px;width:4px;height:4px;margin-left:-2px;border-radius:50%;
+    background:var(--ink);animation:aFall 1.8s cubic-bezier(.5,0,.3,1) infinite;
+  }
+  @keyframes aFall{
+    0%{transform:translateY(0);opacity:0}
+    18%{opacity:1}
+    62%{transform:translateY(18px);opacity:1}
+    82%,100%{transform:translateY(18px);opacity:0}
+  }
+
+  /* ── B안: 갈매기 3개 순차 점멸 ── */
+  .b-chevs{display:flex;flex-direction:column;align-items:center;gap:-2px;margin-bottom:8px}
+  .b-chevs svg{display:block;margin-top:-7px;opacity:0;animation:bBlink 1.6s ease-in-out infinite}
+  .b-chevs svg:nth-child(1){animation-delay:0s}
+  .b-chevs svg:nth-child(2){animation-delay:.16s}
+  .b-chevs svg:nth-child(3){animation-delay:.32s}
+  @keyframes bBlink{0%{opacity:0;transform:translateY(-3px)}30%{opacity:1;transform:translateY(0)}70%{opacity:.15;transform:translateY(3px)}100%{opacity:0;transform:translateY(3px)}}
+
+  /* ── C안: 알약 배지 + 화살표 통통 ── */
+  .c-pill{
+    display:inline-flex;align-items:center;gap:9px;
+    min-height:44px;padding:0 20px;border-radius:999px;
+    background:var(--ink);color:#fff;
+    font-size:13.5px;font-weight:800;letter-spacing:.02em;
+    box-shadow:0 6px 20px rgba(28,42,58,.22);
+  }
+  .c-pill svg{display:block;animation:cBob 1.5s ease-in-out infinite}
+  @keyframes cBob{0%,100%{transform:translateY(-2px)}50%{transform:translateY(3px)}}
+
+  /* ── D안: 빛이 흐르는 레일 (현재 안의 강화판) ── */
+  .d-rail{
+    width:2px;height:46px;margin:10px auto 0;border-radius:2px;
+    background:rgba(28,42,58,.16);position:relative;overflow:hidden;
+  }
+  .d-rail::after{
+    content:'';position:absolute;left:0;right:0;height:18px;border-radius:2px;
+    background:linear-gradient(to bottom,transparent,var(--ink));
+    animation:dFlow 1.9s cubic-bezier(.45,0,.25,1) infinite;
+  }
+  @keyframes dFlow{0%{top:-20px}70%{top:46px}100%{top:46px}}
+  .d-arrow{display:block;margin:4px auto 0;animation:dNudge 1.9s cubic-bezier(.45,0,.25,1) infinite}
+  @keyframes dNudge{0%,55%{transform:translateY(0);opacity:.35}72%{transform:translateY(3px);opacity:1}100%{transform:translateY(0);opacity:.35}}
+
+  .foot{margin-top:44px;padding:20px;background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;font-size:14.5px;color:var(--text-muted);word-break:keep-all}
+  .foot b{color:var(--ink);font-weight:800}
+  .foot p+p{margin-top:10px}
+
+  @media (prefers-reduced-motion: reduce){
+    .a-dot,.b-chevs svg,.c-pill svg,.d-rail::after,.d-arrow{animation:none!important;opacity:1!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>히어로 “아래로 내려라” 신호 — 4안</h1>
+  <p class="sub">실제 히어로 배경(창문 사진의 아래쪽)을 그대로 깔고 같은 자리에 올렸습니다. 움직임까지 실제 속도입니다.</p>
+
+  <div class="diag">
+    <h2>먼저, 지금 안이 왜 안 보이나 (실측)</h2>
+    <ul>
+      <li>글자가 <b>11.5px</b> — 우리 9대 원칙 1번(최소 12px)에 <span class="bad">미달</span>. 자간까지 넓어 더 흐리게 읽힙니다.</li>
+      <li>대비 <b>4.15 : 1</b> — 원칙 4번(4.5:1)에 <span class="bad">미달</span>. 흐린 회갈색 글씨가 밝은 베이지 사진 위에 앉아 있습니다.</li>
+      <li><b>움직임이 없습니다.</b> 3초 뒤 한 번 떠오르고 그대로 멈춰 있어, 눈에 걸려도 “내리라는 뜻”으로 안 읽힙니다.</li>
+      <li>세로선이 <b>1px · 16px</b>뿐이라 장식으로 보입니다.</li>
+    </ul>
+  </div>
+
+  <div class="grid">
+
+    <!-- A -->
+    <div class="card">
+      <div class="card-head">
+        <span class="tag">A안</span>
+        <h3>캡슐 + 떨어지는 점</h3>
+        <p class="desc">마우스 휠 모양 안에서 점이 아래로 굴러떨어집니다. 웹에서 가장 오래된 관습이라 설명이 필요 없습니다.</p>
+      </div>
+      <div class="stage">
+        <span class="stage-note">A</span>
+        <div class="cuebox">
+          <div class="a-mouse"><span class="a-dot"></span></div>
+          <div class="cue-label">아래로 스크롤</div>
+        </div>
+      </div>
+      <div class="facts">
+        <div>활자 <b>12.5px</b> · 대비 <b class="ok">10.4:1</b></div>
+        <div>움직임 1.8초 반복 · 세로 78px</div>
+        <div>느낌: 차분하고 정석</div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="card">
+      <div class="card-head">
+        <span class="tag">B안</span>
+        <h3>갈매기 셋이 흘러내림</h3>
+        <p class="desc">화살표 세 개가 위에서 아래로 차례로 켜졌다 꺼집니다. 방향이 가장 노골적입니다.</p>
+      </div>
+      <div class="stage">
+        <span class="stage-note">B</span>
+        <div class="cuebox">
+          <div class="b-chevs">
+            <svg width="22" height="13" viewBox="0 0 22 13" fill="none" stroke="#1C2A3A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 9 9-9"/></svg>
+            <svg width="22" height="13" viewBox="0 0 22 13" fill="none" stroke="#1C2A3A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 9 9-9"/></svg>
+            <svg width="22" height="13" viewBox="0 0 22 13" fill="none" stroke="#1C2A3A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 9 9-9"/></svg>
+          </div>
+          <div class="cue-label">SCROLL</div>
+        </div>
+      </div>
+      <div class="facts">
+        <div>활자 <b>12.5px</b> · 대비 <b class="ok">10.4:1</b></div>
+        <div>움직임 1.6초 반복 · 세로 52px</div>
+        <div>느낌: 가장 강한 지시</div>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="card">
+      <div class="card-head">
+        <span class="tag">C안</span>
+        <h3>알약 배지 (누를 수 있음)</h3>
+        <p class="desc">불투명 네이비 알약이라 어떤 사진 위에서도 안 묻힙니다. 높이 44px이라 <b>탭하면 아래로 내려가게</b> 만들 수 있습니다.</p>
+      </div>
+      <div class="stage">
+        <span class="stage-note">C</span>
+        <div class="cuebox">
+          <span class="c-pill">아래로 내려서 둘러보기
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M5 13l7 7 7-7"/></svg>
+          </span>
+        </div>
+      </div>
+      <div class="facts">
+        <div>활자 <b>13.5px</b> · 대비 <b class="ok">14.8:1</b></div>
+        <div>터치 <b class="ok">44px</b> · 세로 44px</div>
+        <div>느낌: 가장 확실 / 가장 무거움</div>
+      </div>
+    </div>
+
+    <!-- D -->
+    <div class="card">
+      <div class="card-head">
+        <span class="tag">D안</span>
+        <h3>빛이 흐르는 레일</h3>
+        <p class="desc">지금 안의 세로선을 살리되, 빛 한 줄기가 아래로 흘러내리고 끝에서 화살표가 따라 내려갑니다.</p>
+      </div>
+      <div class="stage">
+        <span class="stage-note">D</span>
+        <div class="cuebox">
+          <div class="cue-label">아래로 스크롤</div>
+          <div class="d-rail"></div>
+          <svg class="d-arrow" width="17" height="10" viewBox="0 0 22 13" fill="none" stroke="#1C2A3A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 9 9-9"/></svg>
+        </div>
+      </div>
+      <div class="facts">
+        <div>활자 <b>12.5px</b> · 대비 <b class="ok">10.4:1</b></div>
+        <div>움직임 1.9초 반복 · 세로 82px</div>
+        <div>느낌: 지금 디자인과 가장 이어짐</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <p><b>네 안에 공통으로 들어간 것</b> — 활자를 12.5px 이상으로 올리고 색을 잉크 네이비로 바꿔 대비를 10:1 위로 끌어올렸습니다(지금은 11.5px · 4.15:1). 그리고 넷 다 <b>멈춰 있지 않고 계속 반복해서 움직입니다</b> — “내려라”는 신호는 결국 움직임이 만듭니다.</p>
+    <p><b>같이 정할 것</b> — ① 글자를 한글(“아래로 스크롤”)로 갈지 영문(SCROLL) 유지할지 ② <b>첫 화면을 지나 스크롤이 시작되면 사라지게</b> 할지(권장 — 안 그러면 다음 섹션까지 화살표가 따라다닙니다) ③ 몇 초 뒤 등장시킬지(지금은 로고 조립이 끝나는 2.9초).</p>
+    <p><b>움직임을 끈 사용자</b>(iOS 손쉬운 사용 → 동작 줄이기)에겐 네 안 모두 애니메이션 없이 화살표가 고정으로 보입니다. 그 경우에도 크기·대비 개선은 그대로 남습니다.</p>
+  </div>
+
+</div>
+</body>
+</html>
