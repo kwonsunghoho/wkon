@@ -330,16 +330,18 @@
   </div>
 </footer>
 
-<!-- 모바일 하단 고정 CTA 바 -->
-<!-- 하단 고정 CTA 바 — 두 상태를 DOM에 모두 두고 .is-browse로 토글(CSS display).
-     기본(.mcta-apply): 신청하기 → apply.html
-     인트로 구간(.mcta-browse): 몬크 구경하기 → #home 스크롤. 하단 IIFE가 상태를 관리한다.
-     aria-label을 두지 않는 이유: 숨은 쪽은 접근성 이름 계산에서 제외되므로
-     버튼 텍스트 자체가 상태별로 정확한 이름이 된다(라벨을 JS로 갈아끼울 필요가 없다). -->
+<!-- 하단 고정 CTA 바 — 신청하기 전용. **히어로를 보는 동안엔 통째로 숨는다**(.is-intro).
+     ⚠️ 2026-07-30 오너 지시로 구 '몬크 더 알아보기' 상태를 폐기했다. 이유는 두 가지다:
+        ① 그 바가 자리를 차지해 스크롤 안내가 위로 밀려 **창문을 침범**했다(오너 신고).
+        ② 그 상태의 목적("인트로에서 사람들이 유일한 버튼을 눌러 아무것도 안 보고
+           가격 페이지로 떨어진다" — Clarity)은 이제 **스크롤 안내가 대신 한다.**
+           버튼을 아예 안 보여주면 잘못 누를 일 자체가 없어 원래 목적에 더 맞는다.
+     ⚠️ 되살릴 거면 스크롤 안내의 bottom 값(index.css .hero-cue)도 같이 올려야 한다 —
+        지금 34px 은 '아래에 바가 없다'는 전제로 잡은 값이다. -->
 <div class="mobile-cta-bar" id="stickyCta">
   <a class="btn btn-action mobile-cta-btn" id="stickyCtaBtn" href="apply.html">
-    <span class="mcta-main"><span class="mcta-apply">신청하기</span><span class="mcta-browse">몬크 더 알아보기<svg class="mcta-arrow" aria-hidden="true"><use href="#i-chevron-down"/></svg></span></span>
-    <span class="mcta-sub"><span class="mcta-apply"><span class="mcta-badge" data-recruit-cta-badge hidden></span>참가비 3만원 · 코치 1:1 피드백</span><span class="mcta-browse">어떤 곳인지 먼저 둘러보세요</span></span>
+    <span class="mcta-main">신청하기</span>
+    <span class="mcta-sub"><span class="mcta-badge" data-recruit-cta-badge hidden></span>참가비 3만원 · 코치 1:1 피드백</span>
   </a>
 </div>
 
@@ -987,54 +989,43 @@
 })();
 </script>
 
-<!-- 하단 CTA 바의 인트로 상태 제어 — 히어로를 보고 있는 동안 '몬크 더 알아보기'
+<!-- 하단 CTA 바 숨김 제어 — 히어로를 보고 있는 동안엔 바를 통째로 감춘다.
 
-     왜 별도 안내 대신 이 바인가: Clarity 계측상 인트로 구간에서 사람들이 누르는 건
-     사실상 이 바뿐이었다. 화면에 보이는 유일한 버튼이라 '신청'할 마음이 없어도 눌렀고,
-     그 결과 후기·전후 목소리를 하나도 못 본 채 가격 페이지로 떨어졌다(빠른 뒤로가기 19%).
-     그래서 새 안내를 얹는 대신 이미 눌리는 자리의 목적지를 바꾼다.
-
-     ⚠️ 2026-07-29 판정 기준이 바뀌었다 — 구 버전은 monc:zoomprogress(스크롤 진행률 0.85)를
-        구독했는데, 히어로가 스크롤 연출이 아니게 되면서 그 이벤트가 사라졌다.
-        지금은 히어로가 화면에 절반 넘게 남아 있는 동안만 '구경하기' 상태다.
-     ⚠️ 첫 방문·재방문을 가르지 않는다(2026-07-22 오너 결정 — "일관성 있게").
-        같은 화면에서 사람마다 다른 버튼이 뜨면 설명할 수 없는 UI가 된다. -->
+     ⚠️ 2026-07-30 오너 지시로 구 '몬크 더 알아보기' 상태를 폐기하고 **숨김**으로 바꿨다.
+        그 상태가 있던 이유는 Clarity 계측이었다: 인트로에서 사람들이 누르는 건 사실상 이
+        바뿐이라(화면에 보이는 유일한 버튼) '신청'할 마음이 없어도 눌렀고, 후기·전후 목소리를
+        하나도 못 본 채 가격 페이지로 떨어졌다(빠른 뒤로가기 19%). 그래서 목적지를 #home 으로
+        바꿔 뒀던 것인데 — **이제 그 안내는 스크롤 신호(#heroCue)가 한다.** 버튼을 아예 안
+        보여주면 잘못 누를 일 자체가 없어 원래 목적에 더 맞고, 바가 차지하던 자리가 비어
+        스크롤 안내가 창문을 침범하지 않는다(오너 신고 지점).
+     ⚠️ 판정 기준은 그대로다 — 히어로가 화면에 절반 넘게 남아 있는 동안이 '인트로 구간'.
+        첫 방문·재방문을 가르지 않는다(2026-07-22 오너 결정: 같은 화면에서 사람마다 다른
+        버튼이 뜨면 설명할 수 없는 UI가 된다).
+     ⚠️ 되살릴 거면 index.css 의 `.hero-cue { bottom }` 도 같이 올릴 것 — 34px 은
+        '아래에 바가 없다'는 전제로 잡은 값이라 그대로 두면 바와 겹친다. -->
 <script>
 (function () {
   var wrap = document.getElementById('heroIntro');
   var bar  = document.getElementById('stickyCta');
-  var btn  = document.getElementById('stickyCtaBtn');
-  if (!wrap || !bar || !btn) return;
+  if (!wrap || !bar) return;
 
-  var browsing = null, ticking = false;
-  function setBrowse(on) {
-    if (browsing === on) return;   // 매 프레임 클래스 재기록 방지
-    browsing = on;
-    bar.classList.toggle('is-browse', on);
-  }
+  var intro = null, ticking = false;
   function measure() {
     ticking = false;
     var r = wrap.getBoundingClientRect();
-    /* 히어로 아래쪽 절반이 아직 화면에 남아 있으면 '구경하기'. 창을 통과하던 시절의
-       0.85 지점과 체감이 비슷하다(연출이 끝날 무렵 화면이 다음 섹션으로 넘어간다). */
-    setBrowse(r.bottom > window.innerHeight * 0.5);
+    var on = r.bottom > window.innerHeight * 0.5;
+    if (intro === on) return;      // 매 프레임 클래스 재기록 방지
+    intro = on;
+    bar.classList.toggle('is-intro', on);
   }
   function onScroll() {
     if (!ticking) { ticking = true; requestAnimationFrame(measure); }
   }
-  setBrowse(true);
+  bar.classList.add('is-intro');   /* 첫 페인트부터 숨긴 상태로 시작(깜빡임 방지) */
+  intro = true;
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
   measure();
-
-  btn.addEventListener('click', function (ev) {
-    if (!browsing) return;         // '신청하기' 상태면 평소대로 apply.html로 이동
-    var home = document.getElementById('home');
-    if (!home) return;
-    ev.preventDefault();
-    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    home.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-  });
 })();
 </script>
 

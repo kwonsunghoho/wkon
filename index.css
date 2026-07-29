@@ -124,41 +124,22 @@
     .mcta-badge { font-weight: 800; }
     .mcta-badge[hidden] { display: none; }
     .mcta-badge::after { content: " · "; }
-    /* 인트로 구간 라벨 스왑 — 기본은 '신청하기', .is-browse면 '몬크 구경하기 ↓'.
-       두 벌을 DOM에 두고 display로 토글하므로 JS는 클래스 하나만 건드리면 되고,
-       접근성 이름(accname)도 숨은 쪽이 제외되어 상태별로 정확히 읽힌다.
-       JS가 꺼져 있으면 .is-browse가 안 붙어 기존 '신청하기'가 그대로 남는다. */
-    .mcta-browse { display: none; }
-    .mobile-cta-bar.is-browse .mcta-apply  { display: none; }
-    .mobile-cta-bar.is-browse .mcta-browse { display: inline; }
-    /* 아래 화살표는 텍스트 '↓'가 아니라 스프라이트 셰브런(#i-chevron-down) —
-       글꼴마다 모양이 달라지는 문자 대신 사이트 공용 라인 아이콘으로 통일(2026-07-22 오너). */
-    .mcta-arrow { width: 16px; height: 16px; vertical-align: -3px; margin-left: 6px; }
-    /* 인트로 구간 눈길 끌기(2026-07-23 오너 선택: 광 스윕 + 화살표 까딱).
-       Clarity상 인트로에서 사람들이 누르는 유일한 버튼인데 '여길 누르라'는 신호가 없었다.
-       — .is-browse(구경하기 상태)에서만 움직인다: 신청하기 상태까지 번쩍이면 광고 배너처럼 읽힌다.
-       — prefers-reduced-motion이면 통째로 꺼진다(멀미·배터리).
-       — 스윕은 ::after 하나로 transform만 움직여 리페인트 없음(인트로 스크롤 연출과 프레임 경쟁 안 함). */
-    @media (prefers-reduced-motion: no-preference) {
-      .mobile-cta-bar.is-browse .mobile-cta-btn { position: relative; overflow: hidden; }
-      .mobile-cta-bar.is-browse .mobile-cta-btn::after {
-        content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 46%;
-        background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.42) 50%, transparent 100%);
-        transform: translateX(-130%) skewX(-14deg);
-        animation: mcta-shine 3.4s ease-in-out infinite;
-        pointer-events: none;
-      }
-      .mobile-cta-bar.is-browse .mcta-arrow { animation: mcta-arrowbob 1.6s ease-in-out infinite; }
+    /* ⚠️⚠️ 히어로를 보는 동안엔 바를 통째로 숨긴다(2026-07-30 오너 지시).
+       구 버전은 인트로 구간에 '몬크 더 알아보기'로 라벨을 바꿔 달고 광 스윕까지 넣었는데,
+       그 바가 자리를 차지해 **스크롤 안내가 위로 밀려 창문을 침범했다**(오너 신고).
+       그 상태의 목적(인트로에서 유일한 버튼을 눌러 아무것도 안 보고 가격 페이지로 떨어지는 것을
+       막기)은 이제 스크롤 신호(#heroCue)가 대신한다 — 버튼을 안 보여주면 잘못 누를 일이 없다.
+       구 `.mcta-browse`/`.mcta-apply`/`.mcta-arrow`/광 스윕·화살표 까딱 애니메이션은 전부 삭제.
+       ⚠️ visibility 까지 끄는 이유: opacity 만 0으로 두면 **투명한 버튼이 그대로 눌린다**
+          (그리고 키보드 포커스도 그 자리에 멈춘다). */
+    .mobile-cta-bar {
+      transition: opacity .3s ease, transform .3s ease, visibility 0s linear 0s;
     }
-    @keyframes mcta-shine {
-      0% { transform: translateX(-130%) skewX(-14deg); }
-      38% { transform: translateX(390%) skewX(-14deg); }
-      100% { transform: translateX(390%) skewX(-14deg); }
+    .mobile-cta-bar.is-intro {
+      opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(12px);
+      transition: opacity .3s ease, transform .3s ease, visibility 0s linear .3s;
     }
-    @keyframes mcta-arrowbob {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(3px); }
-    }
+    @media (prefers-reduced-motion: reduce) { .mobile-cta-bar { transition: none; } }
     /* 플로팅 바가 콘텐츠를 가리지 않도록 여백 확보 */
     body { padding-bottom: 96px; }
     .btn-ghost {
@@ -314,9 +295,12 @@
           대비 4.15:1 로 원칙 4번(4.5:1) 미달**이었고 결정적으로 등장 후 멈춰 있었다(전부 실측).
           '내려라'는 신호는 크기가 아니라 **움직임**이 만든다 — 활자·대비만 올리고 애니메이션을
           빼면 같은 문제로 돌아간다.
-       ⚠️ bottom 값은 하단 고정 CTA 바(56px + 여백 14px)를 피한 자리다. 줄이면 겹친다. */
+       ⚠️⚠️ bottom 34px 은 **'아래에 하단 CTA 바가 없다'는 전제**로 잡은 값이다(2026-07-30).
+          구 96px 은 인트로용 '몬크 더 알아보기' 바(56px + 여백 14px)를 피한 자리였는데,
+          그만큼 안내가 위로 밀려 **창문을 침범했다**(오너 신고). 그 바를 히어로 구간에서
+          숨기면서 이 값을 내렸다 — **바를 되살리면 이 값도 같이 올릴 것.** */
     .hero-cue {
-      position: absolute; left: 0; right: 0; bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+      position: absolute; left: 0; right: 0; bottom: calc(34px + env(safe-area-inset-bottom, 0px));
       text-align: center; color: var(--ink); opacity: 0; will-change: opacity;
       transition: opacity .35s ease;
     }
