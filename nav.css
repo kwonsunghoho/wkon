@@ -1,0 +1,297 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   MONC 공용 상단 메뉴 (2026-07-30 신설)
+
+   오너 지시: "다른 페이지나 허브로 이동할 때 상단 네비게이션은 무조건 다 보이게".
+   그 전까지 풀 메뉴는 index·researchers·challenges 세 곳뿐이었고 나머지 열 몇 페이지는
+   '로고 + ← 홈으로'만 있어서, 한 번 들어가면 다른 데로 갈 길이 홈밖에 없었다.
+
+   ⚠️⚠️ 마크업은 nav.js 가 심는다 — **페이지에 nav 를 복사해 넣지 말 것.**
+      복사하면 지금까지 겪은 '세 파일 동기화' 문제가 파일 수만큼 늘어난다.
+      페이지가 할 일은 <link nav.css> + <script nav.js defer> 두 줄뿐이다.
+
+   ⚠️⚠️ 모든 선택자를 #navbar / #mobileMenu 로 감싼 것은 취향이 아니라 필수다.
+      페이지마다 자기 .container(720~1140px)·.logo img{height:22px}·.btn 을 인라인
+      <style> 로 들고 있는데, 그 <style> 은 이 파일 링크보다 뒤에 온다. 클래스만으로
+      쓰면 특이도가 같아 페이지 규칙이 이겨서 페이지마다 메뉴가 다르게 보인다.
+      id 선택자는 클래스보다 세서 어느 페이지에서든 같은 모양이 나온다.
+      같은 이유로 **바 안에서는 페이지의 .container 를 쓰지 않는다**(폭이 제각각이라
+      ai-killer 에선 720px 짜리 바가 된다). 아래 #navbar .nav-inner 가 폭을 직접 잡는다.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+#navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 11px 0;
+  background: rgba(255,250,243,.95);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(36, 26, 18,.1);
+  transition: background .3s, border-color .3s, box-shadow .3s;
+}
+
+/* ⚠️⚠️ 메뉴는 **화면 정중앙**(2026-07-30 오너, 나이키 헤더를 예시로 지시).
+   앞선 두 시도(`1fr auto 1fr`, `auto 1fr auto`)는 둘 다 그리드 분배로 가운데를 잡으려다
+   실패했다 — 오른쪽 버튼 덩어리(248px)가 제 트랙의 1fr 몫보다 넓어 트랙을 밀어내는 순간
+   가운데가 그만큼 왼쪽으로 밀린다. 즉 **양옆 무게가 다르면 그리드 분배로는 정중앙이 안 나온다.**
+   지금은 메뉴를 흐름에서 빼(absolute) 컨테이너 정중앙에 못 박는다.
+   ⚠️ 대신 겹칠 수 있다. 좌우로 (컨테이너 − 메뉴)/2 씩 남는데 이 값이 오른쪽 버튼
+   덩어리보다 좁아지면 포개진다 → **1000px 부터만 정중앙**, 769~999px 은 로고 옆 폴백.
+   ⚠️ min-height 44px 은 '페이지마다 바 높이가 달라지지 않게' 하는 못이다 — 각 페이지 히어로가
+   상단 여백(대개 104px)으로 이 바를 피하고 있어서, 바가 페이지마다 들쭉날쭉하면 안 된다. */
+#navbar .nav-inner {
+  position: relative;
+  max-width: 1140px; margin: 0 auto; padding: 0 20px;
+  display: flex; align-items: center; column-gap: 40px;
+  min-height: 44px;
+}
+
+#navbar .logo { display: flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+#navbar .logo img { height: 26px; width: auto; display: block; }
+
+/* ⚠️ 항목 간격은 활자의 1.4배 안팎(17px → 24px). '특강'·'후기'는 글자 폭이 30px 뿐이라
+   틈이 그보다 넓어지면 메뉴가 다섯 덩어리로 흩어져 보이고, 반대로 좁으면 한 단어처럼 붙는다.
+   ⚠️ li 를 flex 로 세우고 링크 행간을 1로 고정하는 것이 **세로 줄 맞춤의 핵심**이다 —
+   그러지 않으면 링크는 본문 행간(1.7)을 물려받아 높이가 29px, 드롭다운 <button> 은 21px 이
+   되어 '승준노트'만 2px 처진다(실측). 다섯 항목의 글자 상자 높이가 전부 17px 로 같아야 한다.
+   ⚠️ 활자 크기는 건드리지 말 것(2026-07-30 오너 "크기는 절대 건드리지 마라").
+      17px = 본문과 같은 급이고 12pt(16px) 하한도 넘는다. 14px 로 내리지도, 20px 위로 올리지도 말 것. */
+#navbar .nav-links {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 24px; list-style: none; white-space: nowrap;
+  margin: 0; padding: 0;
+}
+#navbar .nav-links > li { display: flex; align-items: center; }
+#navbar .nav-links a {
+  font-size: 17px; font-weight: 600; color: var(--text-muted); letter-spacing: -0.015em;
+  line-height: 1; text-decoration: none; transition: color .2s;
+}
+#navbar .nav-links a:hover { color: var(--primary); }
+/* 현재 위치 표시 — 하위 페이지(뉴스·상세 등)에 있어도 상위 메뉴에 표시가 남는다 */
+#navbar .nav-links a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
+#navbar .nav-dd-btn[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
+
+/* 드롭다운(승준노트·챌린지) — 호버·포커스는 CSS, 클릭 토글은 nav.js */
+#navbar .nav-dd { position: relative; }
+#navbar .nav-dd-btn {
+  font-size: 17px; font-weight: 600; color: var(--text-muted); letter-spacing: -0.015em;
+  background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit;
+  line-height: 1;
+  display: inline-flex; align-items: center; gap: 6px; transition: color .2s;
+}
+#navbar .nav-dd-btn:hover { color: var(--primary); }
+#navbar .nav-dd-btn svg { width: 15px; height: 15px; }
+#navbar .nav-dd-menu {
+  position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+  min-width: 272px; padding: 8px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  box-shadow: 0 14px 40px rgba(36,26,18,.16);
+  opacity: 0; visibility: hidden; transition: opacity .18s ease, visibility .18s;
+}
+/* 버튼과 메뉴 사이 12px 틈을 호버 다리(::before)로 메움 — 없으면 내려가는 길에 닫힌다 */
+#navbar .nav-dd-menu::before { content: ""; position: absolute; top: -12px; left: 0; right: 0; height: 12px; }
+#navbar .nav-dd:hover .nav-dd-menu,
+#navbar .nav-dd:focus-within .nav-dd-menu,
+#navbar .nav-dd.is-open .nav-dd-menu { opacity: 1; visibility: visible; }
+#navbar .nav-dd-menu a { display: block; padding: 12px 14px; border-radius: 10px; }
+#navbar .nav-dd-menu a:hover { background: var(--bg2); }
+#navbar .nav-dd-menu a b { display: block; font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.015em; }
+#navbar .nav-dd-menu a span { display: block; margin-top: 3px; font-size: 14px; font-weight: 500; color: var(--text-dim); }
+
+/* 승준노트 — 주력 콘텐츠 조용한 강조(2026-07-22).
+   ⚠️ 코랄 알약·광택 스윕(오너 "혼자 튀어서 조화 안 맞음")과 창문 아이콘(오너 "로고같지도
+   않다" — 10px 에선 정체불명 캡슐 테두리)은 폐기됐다. 지금 표식은 펄스 점 하나뿐이다. */
+#navbar .nav-briefing, #mobileMenu .nav-briefing {
+  display: inline-flex; align-items: center; gap: 8px;
+  vertical-align: middle;   /* 점이 첫 요소면 기준선이 점 하단으로 잡혀 3px 뜬다 — middle로 보정 */
+}
+#navbar .nav-links a.nav-briefing { color: var(--accent-ink); font-weight: 700; }
+#navbar .nav-links a.nav-briefing:hover { color: var(--accent-dark); }
+/* ⚠️ gap 7px 은 .nav-briefing(8px, 점↔글자)과 .nav-dd-btn(6px, 글자↔화살표)의 절충값 */
+#navbar .nav-dd-btn.nav-briefing { color: var(--accent-ink); font-weight: 700; gap: 7px; }
+#navbar .nav-dd-btn.nav-briefing:hover { color: var(--accent-dark); }
+/* 펄스 점 — '새 것·살아있음' 관습 기호. 글자는 --accent-ink(4.5:1)지만 점은 장식이라 밝은 --action */
+#navbar .nav-briefing::before, #mobileMenu .nav-briefing::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--action); flex-shrink: 0;
+  animation: bfPulse 2.6s ease-in-out infinite;
+}
+@keyframes bfPulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  #navbar .nav-briefing::before, #mobileMenu .nav-briefing::before { animation: none; }
+}
+
+/* 오른쪽 버튼 묶음 — margin-left:auto 가 오른쪽 끝으로 민다(메뉴가 absolute 라 흐름엔
+   로고와 이 덩어리뿐이고, 좁은 화면 폴백에서도 같은 규칙으로 오른쪽에 붙는다). */
+#navbar .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; white-space: nowrap; }
+
+/* ⚠️ 버튼은 페이지의 .btn 을 쓰지 않는다 — 페이지마다 .btn 정의가 달라(있는 곳도, 없는 곳도)
+   같은 메뉴가 페이지마다 다른 버튼으로 보인다. 여기서 처음부터 끝까지 다 그린다.
+   ⚠️ line-height 를 명시한다 — 본문 행간(1.7)을 물려받으면 활자만큼 버튼이 부푼다.
+   높이는 활자가 아니라 min-height 44px(9대 원칙 2번 터치 최소치)로 잡는다. */
+#navbar .nav-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 24px; border: 1.5px solid transparent; border-radius: 999px;
+  background: var(--action); color: var(--action-ink);
+  font-size: 16px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15;
+  min-height: 44px; text-decoration: none; transition: background .2s, filter .2s;
+}
+#navbar .nav-cta:hover { filter: brightness(1.08); }
+/* ⚠️ 보조 버튼은 주 버튼(신청하기 16px)보다 한 단계 작다 — 같은 크기면 오른쪽 끝에 비슷한
+   알약 두 개가 나란히 서서 어느 쪽이 본 행동인지 안 읽힌다(9대 원칙 6번: 채움 CTA는 하나).
+   테두리 1.5px 때문에 계산상 1px 이 어긋나므로 두 알약 모두 높이를 못 박는다. */
+#navbar .nav-login {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--action);
+  border: 1.5px solid var(--action); border-radius: 999px;
+  padding: 10px 18px; font-size: 15px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15;
+  min-height: 44px; text-decoration: none; transition: background .2s;
+}
+#navbar .nav-login:hover { background: var(--action-tint); }
+
+/* ⚠️ 이 블록은 반드시 .nav-cta / .nav-login **뒤에** 둘 것 — 특이도가 같아 앞에 두면
+   뒤따르는 기본 규칙이 이겨서 조용히 무시된다(구 index.css 에서 실제로 죽어 있던 자리).
+   769~999px = 가운데 정렬 폴백 구간: 정중앙이면 좌우 여백이 버튼 덩어리보다 좁아져 겹친다.
+   position:static 으로 되돌리면 메뉴가 흐름에 들어와 로고 옆에 붙는다.
+   ⚠️ 여기서 활자는 안 건드린다 — 간격만 좁혀도 한 줄이 유지된다. */
+@media (min-width: 769px) and (max-width: 999px) {
+  #navbar .nav-inner { column-gap: 28px; }
+  #navbar .nav-links { position: static; transform: none; gap: 18px; }
+}
+
+/* 로그인 상태의 오른쪽 알약 — 로그아웃 상태의 '로그인/회원가입'과 같은 급으로 맞춘다
+   (한쪽만 작으면 로그인 전후로 nav 무게가 달라 보인다). */
+#navbar .mypage-pill {
+  display: inline-flex; align-items: center; gap: 10px;
+  border: 1.5px solid var(--border); border-radius: 999px;
+  padding: 6px 16px 6px 6px; font-size: 15px; font-weight: 700; letter-spacing: -0.015em;
+  color: var(--text); text-decoration: none; transition: border-color .2s;
+}
+#navbar .mypage-pill:hover { border-color: var(--action); }
+#navbar .nav-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--action); color: #fff; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+/* ⚠️ 좁은 화면 축소는 **기본 선언 뒤**에 둔다 — 위 nav 미디어 블록 안에 적으면 특이도가 같은
+   기본 규칙이 뒤에 와서 이기고 조용히 무시된다(구 1180px 블록에서 실제로 죽어 있던 규칙). */
+@media (min-width: 769px) and (max-width: 860px) {
+  #navbar .mypage-pill { font-size: 14px; padding: 5px 14px 5px 5px; }
+  #navbar .nav-avatar { width: 28px; height: 28px; font-size: 13px; }
+}
+
+/* 햄버거 — 보이는 크기는 38×32px, 터치 영역만 투명 ::after 로 44×44 로 넓힌다.
+   ⚠️ 보이는 크기를 키우면 모바일 바가 57→68px 로 부푼다(실측). 지우면 9대 원칙 2번 위반. */
+#navbar .hamburger {
+  display: none; flex-direction: column; gap: 5px;
+  cursor: pointer; padding: 8px; background: none; border: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative; margin-left: auto;
+}
+#navbar .hamburger::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+#navbar .hamburger span {
+  display: block; width: 22px; height: 2px;
+  background: var(--primary); border-radius: 2px; transition: all .3s;
+}
+#navbar .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+#navbar .hamburger.open span:nth-child(2) { opacity: 0; }
+#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── 모바일 메뉴 ───────────────────────────────────────────────────────── */
+#mobileMenu {
+  display: none; position: fixed; top: 57px; left: 0; right: 0; bottom: 0;
+  background: rgba(255,250,243,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  padding: 28px 24px; z-index: 99; overflow-y: auto;
+}
+#mobileMenu.open { display: flex; flex-direction: column; gap: 0; }
+#mobileMenu ul { list-style: none; display: flex; flex-direction: column; margin: 0; padding: 0; }
+#mobileMenu li { border-bottom: 1px solid var(--border); }
+/* 목록 링크에만 — 아래 CTA 버튼까지 덮치면 버튼 정렬·글자색이 깨진다 */
+#mobileMenu ul a {
+  display: block; padding: 18px 0;
+  font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
+}
+#mobileMenu ul a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
+#mobileMenu .mm-acc-btn .nav-briefing { color: var(--accent-ink); font-weight: 700; }
+
+/* 아코디언(승준노트·챌린지) — 탭 한 번에 하위 항목을 펼쳐 바로 이동.
+   ⚠️ 토글은 반드시 <button> — 햄버거 로직이 메뉴 안 <a> 전부에 '클릭 시 메뉴 닫기'를
+   걸어놔서, <a> 로 만들면 펼치는 순간 메뉴가 통째로 닫힌다. */
+#mobileMenu .mm-acc-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 18px 0; background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 17px; font-weight: 600; color: var(--text-muted);
+  text-align: left; -webkit-tap-highlight-color: transparent;
+}
+#mobileMenu .mm-acc-chev { flex-shrink: 0; transition: transform .28s ease; }
+#mobileMenu .mm-acc.is-open .mm-acc-chev { transform: rotate(180deg); }
+/* max-height 전환 — grid 0fr→1fr 은 구형 iOS 사파리에서 안 먹어 펼침이 통째로 죽는다.
+   ⚠️ 상한은 실측 콘텐츠(375px에서 5칸 370px)보다 넉넉해야 한다 — 모자라면 설명이 한 줄
+   늘어난 좁은 화면에서 마지막 칸이 잘린다. 항목을 추가하면 같이 올릴 것. */
+#mobileMenu .mm-acc-panel {
+  max-height: 0; overflow: hidden; visibility: hidden;
+  transition: max-height .28s ease, visibility 0s linear .28s;
+}
+#mobileMenu .mm-acc.is-open .mm-acc-panel {
+  max-height: 460px; visibility: visible;
+  transition: max-height .28s ease, visibility 0s;
+}
+#mobileMenu ul a.mm-sub {
+  padding: 11px 0 11px 14px; border-left: 2px solid var(--border);
+  font-size: 15px; color: var(--text);
+}
+#mobileMenu ul a.mm-sub:last-child { margin-bottom: 12px; }
+#mobileMenu .mm-sub b { display: block; font-weight: 700; }
+#mobileMenu .mm-sub span { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
+@media (prefers-reduced-motion: reduce) {
+  #mobileMenu .mm-acc-chev, #mobileMenu .mm-acc-panel { transition: none; }
+}
+
+#mobileMenu .mobile-menu-cta { margin-top: 28px; }
+#mobileMenu .mobile-menu-cta a {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 16px; border-radius: 999px;
+  font-size: 16px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15;
+  text-decoration: none; border: 1.5px solid transparent;
+}
+/* ⚠️ 선택자에 a 를 붙여 위 `.mobile-menu-cta a` 와 특이도를 맞춘다 — `#mobileMenu .mm-login`
+   만으로는 위 규칙(id+class+element)이 더 세서 border 가 transparent 로 덮이고,
+   '로그인 / 회원가입'이 테두리 없는 맨 글씨로 보인다(실측으로 밟은 자리). */
+#mobileMenu .mobile-menu-cta a.mm-login { background: transparent; color: var(--action); border-color: var(--action); margin-bottom: 12px; }
+#mobileMenu .mobile-menu-cta a.mm-apply { background: var(--action); color: var(--action-ink); }
+
+/* 회원 카드(로그인 상태에서 nav.js 가 맨 위에 끼워 넣는다) */
+#mobileMenu .mm-member-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px; margin-bottom: 16px;
+  background: var(--surface2); border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+#mobileMenu .mm-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--action); color: #fff; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700;
+}
+#mobileMenu .mm-member-text { font-size: 15px; color: var(--text); line-height: 1.4; }
+#mobileMenu .mm-member-text b { font-weight: 800; }
+#mobileMenu .mm-go { display: block; font-size: 13px; color: var(--action); font-weight: 700; margin-top: 2px; }
+
+/* ⚠️ 고정 바라 본문 맨 위가 바 밑에 깔린다. 히어로에 상단 여백(대개 104px)이 이미 있는
+   페이지는 그대로 두고, 여백이 없는 페이지(신청·약관·마이페이지 등)만 <body data-nav-offset>
+   을 달아 밀어 준다 — 둘 다 하면 두 번 밀려 위가 휑해진다. */
+body[data-nav-offset] { padding-top: 67px; }
+
+@media (max-width: 768px) {
+  body[data-nav-offset] { padding-top: 57px; }
+  #navbar { padding: 12px 0; }
+  /* ⚠️ min-height 를 푼다 — 모바일 바에는 44px 짜리 버튼이 없고 햄버거(32px)만 남는데,
+     44px 을 그대로 두면 바가 57→69px 로 부푼다(실측). 그러면 #mobileMenu 의 top(57px)·
+     body[data-nav-offset] 의 여백과도 어긋나 메뉴가 바를 12px 덮는다.
+     터치 44px 은 햄버거의 투명 ::after 히트영역이 이미 책임진다. */
+  #navbar .nav-inner { padding: 0 16px; min-height: 0; }
+  #navbar .nav-links { display: none; }
+  #navbar .nav-right { display: none; }   /* 모바일 상단은 로고+햄버거만 — CTA는 햄버거 메뉴로 일원화 */
+  #navbar .hamburger { display: flex; }
+}

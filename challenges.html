@@ -23,6 +23,9 @@
   <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
   <meta name="theme-color" content="#102B56">
   <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴(2026-07-30) — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
   <!-- 글꼴은 tokens.css 의 @import(SUIT) 하나가 책임진다 — 페이지별 폰트 링크 없음(2026-07-29) -->
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -75,166 +78,7 @@
       content: ''; width: 26px; height: 1.5px; background: var(--action); flex: none;
     }
 
-    /* ── NAV (index·researchers와 동기화) ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      padding: 11px 0;   /* 바 높이 66px — index.css와 동일 */
-      background: rgba(255,250,243,.95);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(36, 26, 18,.1);
-      transition: background .3s, border-color .3s, box-shadow .3s;
-    }
-    /* ⚠️ 메뉴는 가운데 정렬을 포기하고 **로고 옆에 붙인다**(2026-07-30, index.css와 동일 계약).
-       왼쪽 로고(87px)와 오른쪽 버튼(245px)의 무게가 3배 차이라 무엇을 기준으로 가운데를 잡든
-       메뉴가 양옆 150px 씩 빈 채 떠 보인다. 빈칸을 가운데 한 군데로 모으는 게 결론이다. */
-    /* ⚠️⚠️ 메뉴는 **화면 정중앙**(2026-07-30 오너, 나이키 헤더 예시). 앞선 두 시도
-       (`1fr auto 1fr`, `auto 1fr auto`)는 둘 다 그리드 분배로 가운데를 잡으려다 실패했다 —
-       오른쪽 버튼 덩어리(248px)가 제 트랙의 1fr 몫보다 넓어 트랙을 밀면 가운데도 그만큼 밀린다.
-       지금은 메뉴를 흐름에서 빼(absolute) 컨테이너 정중앙에 못 박는다. 1000px 부터 적용이고
-       769~999px 은 겹침 때문에 구 방식(로고 옆)으로 떨어진다. index.css 와 동기화. */
-    .nav-inner { position: relative; display: flex; align-items: center; column-gap: 40px; }
-    .logo { display: flex; align-items: center; text-decoration: none; flex-shrink: 0; justify-self: start; }
-    .logo img { height: 26px; width: auto; display: block; }
-    /* ⚠️ 간격 24px·행간 1 은 실측 결과다 — 활자의 1.4배를 넘으면 글자 폭 30px 인 '특강'·'후기'
-       보다 틈이 넓어 메뉴가 흩어져 보이고, 행간을 안 잡으면 링크(1.7 상속)와 드롭다운 버튼의
-       높이가 29 vs 21 로 달라 '승준노트'만 2px 처진다(세로 줄 맞춤의 핵심). */
-    .nav-links {
-      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-      display: flex; align-items: center; gap: 24px; list-style: none; white-space: nowrap;
-    }
-    .nav-links > li { display: flex; align-items: center; }
-    .nav-links a {
-      font-size: 17px; font-weight: 600; color: var(--text-muted); letter-spacing: -0.015em;
-      line-height: 1; text-decoration: none; transition: color .2s;
-    }
-    .nav-links a:hover { color: var(--primary); }
-    .nav-links a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
-    .nav-dd { position: relative; }
-    .nav-dd-btn {
-      font-size: 17px; font-weight: 600; color: var(--text-muted); letter-spacing: -0.015em;
-      background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit;
-      line-height: 1;
-      display: inline-flex; align-items: center; gap: 6px; transition: color .2s;
-    }
-    .nav-dd-btn:hover { color: var(--primary); }
-    .nav-dd-btn svg { width: 15px; height: 15px; }
-    .nav-dd-menu {
-      position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%);
-      min-width: 272px; padding: 8px; border-radius: 16px;
-      background: var(--surface); border: 1px solid var(--border-soft);
-      box-shadow: 0 14px 40px rgba(36,26,18,.16);
-      opacity: 0; visibility: hidden; transition: opacity .18s ease, visibility .18s;
-    }
-    .nav-dd-menu::before { content: ""; position: absolute; top: -12px; left: 0; right: 0; height: 12px; }
-    .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu, .nav-dd.is-open .nav-dd-menu { opacity: 1; visibility: visible; }
-    .nav-dd-menu a { display: block; padding: 12px 14px; border-radius: 10px; }
-    .nav-dd-menu a:hover { background: var(--bg2); }
-    .nav-dd-menu a b { display: block; font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.015em; }
-    .nav-dd-menu a span { display: block; margin-top: 3px; font-size: 14px; font-weight: 500; color: var(--text-dim); }
-    .nav-briefing { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
-    .nav-links a.nav-briefing { color: var(--accent-ink); font-weight: 700; }
-    .nav-links a.nav-briefing:hover { color: var(--accent-dark); }
-    /* 승준노트 드롭다운(2026-07-30) — 버튼이라 위 a 선택자에 안 걸린다. gap 7px 은 점↔글자(8)와 글자↔화살표(6)의 절충 */
-    .nav-dd-btn.nav-briefing { color: var(--accent-ink); font-weight: 700; gap: 7px; }
-    .nav-dd-btn.nav-briefing:hover { color: var(--accent-dark); }
-    .nav-briefing::before {
-      content: ''; width: 7px; height: 7px; border-radius: 50%;
-      background: var(--action); flex-shrink: 0;
-      animation: bfPulse 2.6s ease-in-out infinite;
-    }
-    .mobile-menu .nav-briefing::before { width: 7px; height: 7px; }
-    @keyframes bfPulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
-    @media (prefers-reduced-motion: reduce) { .nav-briefing::before { animation: none; } }
-    .mobile-menu a.mm-briefing .nav-briefing { color: var(--accent-ink); font-weight: 700; }
-    .mobile-menu .mm-acc-btn .nav-briefing { color: var(--accent-ink); font-weight: 700; }
-    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; white-space: nowrap; }
-    /* ⚠️ line-height 를 명시한다 — .btn 은 body 의 --lh-body(1.7)를 물려받아 그대로 두면
-       활자만큼 버튼이 부푼다(21px 시절 실측: 버튼 60px, 바 85px). 높이는 활자가 아니라
-       min-height 44px(9대 원칙 2번 터치 최소치)로 잡는다. */
-    .nav-cta { padding: 11px 24px; font-size: 16px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; min-height: 44px; }
-    .btn-login-outline {
-      background: transparent; color: var(--action);
-      border: 1.5px solid var(--action); font-weight: 700;
-      /* ⚠️ 보조 버튼은 주 버튼(신청하기 16px)보다 한 단계 작다 — 같으면 오른쪽에 비슷한 알약이
-         둘 서서 본 행동이 안 읽히고(9대 원칙 6번), 7자라 폭이 벌어져 오른쪽이 무거워진다. */
-      padding: 10px 18px; font-size: 15px; border-radius: 999px; letter-spacing: -0.015em; line-height: 1.15;
-      /* 두 알약의 높이를 못 박는다 — 테두리 1.5px 때문에 계산상 1px 이 어긋나 나란히 두면 눈에 띈다. */
-      min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
-      text-decoration: none; transition: background .2s;
-    }
-    .btn-login-outline:hover { background: var(--action-tint); }
-    /* ⚠️ 이 블록은 반드시 .nav-cta / .btn-login-outline **뒤에** 있어야 한다 — 특이도가 같아
-       앞에 두면 뒤따르는 기본 규칙이 이겨서 버튼만 큰 채로 남는다(실측으로 밟은 자리).
-       ⚠️ 상한 1180→820px(2026-07-30). 활자를 줄이자 한 줄에 필요한 폭이 약 1,150 → 759px 로
-       내려갔다 — 상한을 그대로 뒀으면 1180px 이하 노트북에서 **줄일 이유가 없는데도** 한 단계
-       더 작은 nav 가 떴다. 그리고 여기서는 **활자를 건드리지 않는다** — 769px 까지 간격만
-       좁혀도 한 줄이 유지되고, 활자를 또 줄이면 9대 원칙 1번(가독성)만 깎인다. */
-    /* ⚠️ 769~999px = 가운데 정렬 폴백 구간(index.css 와 동기화). 메뉴를 정중앙에 두면
-       좌우 여백이 오른쪽 버튼 덩어리(248px)보다 좁아져 겹친다. 활자는 안 건드린다. */
-    @media (min-width: 769px) and (max-width: 999px) {
-      .nav-inner { column-gap: 28px; }
-      .nav-links { position: static; transform: none; gap: 18px; }
-    }
-    .hamburger {
-      display: none; flex-direction: column; gap: 5px;
-      cursor: pointer; padding: 8px; background: none; border: none;
-      -webkit-tap-highlight-color: transparent;
-      /* ⚠️ 실제 크기는 38×32px 이라 9대 원칙 2번(터치 44×44)에 미달했다(2026-07-30 실측).
-         보이는 크기를 키우면 모바일 바가 57→68px 로 부풀어, news.html 스크랩 알약과 같은
-         방식으로 **투명 히트영역만** 44×44 로 넓힌다 — 눈에 보이는 건 그대로다. */
-      position: relative;
-      margin-left: auto; /* 모바일: nav-links/nav-right 숨김 시에도 오른쪽 끝 유지 */
-    }
-    .hamburger::after {
-      content: ''; position: absolute; top: 50%; left: 50%;
-      width: 44px; height: 44px; transform: translate(-50%, -50%);
-    }
-    .hamburger span {
-      display: block; width: 22px; height: 2px;
-      background: var(--primary); border-radius: 2px; transition: all .3s;
-    }
-    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-    .hamburger.open span:nth-child(2) { opacity: 0; }
-    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-    .mobile-menu {
-      display: none; position: fixed; top: 60px; left: 0; right: 0; bottom: 0;
-      background: rgba(255,250,243,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      padding: 28px 24px; z-index: 99; overflow-y: auto;
-    }
-    .mobile-menu.open { display: flex; flex-direction: column; gap: 0; }
-    .mobile-menu ul { list-style: none; display: flex; flex-direction: column; }
-    .mobile-menu li { border-bottom: 1px solid var(--border); }
-    .mobile-menu a {
-      display: block; padding: 18px 0;
-      font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
-    }
-    .mm-acc-btn {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      width: 100%; padding: 18px 0; background: none; border: none; cursor: pointer;
-      font-family: inherit; font-size: 17px; font-weight: 600; color: var(--text-muted);
-      text-align: left; -webkit-tap-highlight-color: transparent;
-    }
-    .mm-acc-chev { flex-shrink: 0; transition: transform .28s ease; }
-    .mm-acc.is-open .mm-acc-chev { transform: rotate(180deg); }
-    .mm-acc-panel {
-      max-height: 0; overflow: hidden; visibility: hidden;
-      transition: max-height .28s ease, visibility 0s linear .28s;
-    }
-    /* ⚠️ 상한은 실측 콘텐츠보다 넉넉히 — '전체 보기' 항목 추가로 5칸(약 370px) */
-    .mm-acc.is-open .mm-acc-panel {
-      max-height: 460px; visibility: visible;
-      transition: max-height .28s ease, visibility 0s;
-    }
-    .mobile-menu ul a.mm-sub {
-      padding: 11px 0 11px 14px; border-left: 2px solid var(--border);
-      font-size: 15px; color: var(--text);
-    }
-    .mobile-menu ul a.mm-sub:last-child { margin-bottom: 12px; }
-    .mm-sub b { display: block; font-weight: 700; }
-    .mm-sub span { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
-    @media (prefers-reduced-motion: reduce) { .mm-acc-chev, .mm-acc-panel { transition: none; } }
-    .mobile-menu-cta { margin-top: 28px; }
+    /* ⚠️ NAV 스타일은 nav.css 로 옮겼다(2026-07-30) — 전 페이지 공용. 여기에 다시 적지 말 것. */
 
     /* ── PAGE HERO — 홈 '챌린지 문'에서 이어받는 같은 문장. 무대 리듬상 정보 섹션 = 좌측 정렬 ── */
     .chb-hero {
@@ -381,10 +225,6 @@
     .footer-copy { font-size: 11px; color: var(--text-dim); }
 
     @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .hamburger { display: flex; }
-      .nav-right { display: none; }
-      nav { padding: 12px 0; }
       .chb-hero { padding-top: 96px; }
       .footer-inner { flex-direction: column; text-align: center; }
       .footer-links { justify-content: center; }
@@ -396,78 +236,8 @@
 </head>
 <body>
 
-<nav id="navbar">
-  <div class="container nav-inner">
-    <a class="logo" href="index.html"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
-    <ul class="nav-links">
-      <!-- 승준노트 드롭다운(2026-07-30 오너 "챌린지처럼 하위탭"): briefing.html 카드 4장과 같은 목록.
-           ⚠️ 실전 모의면접(rehearsal)은 배포 보류라 briefing.html 에서도 숨겨져 있다 — 넣지 말 것. -->
-      <li class="nav-dd">
-        <button class="nav-dd-btn nav-briefing" type="button" aria-expanded="false" aria-haspopup="true">승준노트<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-        <div class="nav-dd-menu">
-          <a href="briefing.html"><b>승준노트 한눈에</b><span>도구 전체 보기</span></a>
-          <a href="news.html"><b>항공 뉴스</b><span>10개 항공사 소식 · 스크랩</span></a>
-          <a href="sojae.html"><b>답변 기초 쌓기</b><span>자기객관화부터 차근차근</span></a>
-          <a href="mypage.html#sec-answers"><b>답변노트</b><span>쓴 답변 한곳에 모아 보기</span></a>
-          <a href="ai-killer.html"><b>AI킬러</b><span>AI 같은 표현 찾아 고치기</span></a>
-        </div>
-      </li>
-      <li class="nav-dd">
-        <button class="nav-dd-btn" type="button" aria-expanded="false" aria-haspopup="true">챌린지<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-        <div class="nav-dd-menu">
-          <a href="challenges.html"><b>챌린지 한눈에</b><span>모집 현황 · 전체 보기</span></a>
-          <a href="challenge-voice.html"><b>보.신.각</b><span>2주 만에 목소리가 달라져요</span></a>
-          <a href="challenge-expression.html"><b>영.합.각</b><span>카메라 앞에서도 자연스럽게</span></a>
-          <a href="challenge-spinning.html"><b>스.피.닝</b><span>리듬을 타며 발음이 터진다</span></a>
-          <a href="challenge-answer.html"><b>승.자.각</b><span>2주에 답변 10개 완성</span></a>
-        </div>
-      </li>
-      <li><a href="lectures.html">특강</a></li>
-      <li><a href="researchers.html">연구진</a></li>
-      <li><a href="reviews.html">후기</a></li>
-    </ul>
-    <div class="nav-right">
-      <a class="btn btn-login-outline nav-login" href="login.html">로그인/회원가입</a>
-      <a class="btn btn-action nav-cta" href="apply.html">신청하기</a>
-    </div>
-    <button class="hamburger" id="hamburger" aria-label="메뉴">
-      <span></span><span></span><span></span>
-    </button>
-  </div>
-</nav>
-
-<!-- 모바일 메뉴 -->
-<div class="mobile-menu" id="mobileMenu">
-  <ul>
-    <li class="mm-acc">
-      <button class="mm-acc-btn" type="button" aria-expanded="false" aria-controls="mmBriefing"><span class="nav-briefing">승준노트</span><svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="mm-acc-panel" id="mmBriefing">
-        <a class="mm-sub" href="briefing.html"><b>승준노트 한눈에</b><span>도구 전체 보기</span></a>
-        <a class="mm-sub" href="news.html"><b>항공 뉴스</b><span>10개 항공사 소식 · 스크랩</span></a>
-        <a class="mm-sub" href="sojae.html"><b>답변 기초 쌓기</b><span>자기객관화부터 차근차근</span></a>
-        <a class="mm-sub" href="mypage.html#sec-answers"><b>답변노트</b><span>쓴 답변 한곳에 모아 보기</span></a>
-        <a class="mm-sub" href="ai-killer.html"><b>AI킬러</b><span>AI 같은 표현 찾아 고치기</span></a>
-      </div>
-    </li>
-    <li class="mm-acc">
-      <button class="mm-acc-btn" type="button" aria-expanded="false" aria-controls="mmChallenges">챌린지<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="mm-acc-panel" id="mmChallenges">
-        <a class="mm-sub" href="challenges.html"><b>챌린지 한눈에</b><span>모집 현황 · 전체 보기</span></a>
-        <a class="mm-sub" href="challenge-voice.html"><b>보.신.각</b><span>2주 만에 목소리가 달라져요</span></a>
-        <a class="mm-sub" href="challenge-expression.html"><b>영.합.각</b><span>카메라 앞에서도 자연스럽게</span></a>
-        <a class="mm-sub" href="challenge-spinning.html"><b>스.피.닝</b><span>리듬을 타며 발음이 터진다</span></a>
-        <a class="mm-sub" href="challenge-answer.html"><b>승.자.각</b><span>2주에 답변 10개 완성</span></a>
-      </div>
-    </li>
-    <li><a href="lectures.html">특강</a></li>
-    <li><a href="researchers.html">연구진</a></li>
-    <li><a href="reviews.html">후기</a></li>
-  </ul>
-  <div class="mobile-menu-cta">
-    <a class="btn btn-login-outline mm-login" href="login.html" style="width:100%; justify-content:center; text-align:center; font-size:16px; padding:16px; margin-bottom:12px; display:block;">로그인 / 회원가입</a>
-    <a class="btn btn-action" href="apply.html" style="width:100%; justify-content:center; font-size:16px; padding:16px;">신청하기</a>
-  </div>
-</div>
+<!-- 상단 메뉴·모바일 메뉴는 nav.js 가 심는다(2026-07-30). 여기에 다시 적지 말 것 —
+     같은 메뉴가 세 파일에 복사돼 있어서 문구 하나 고칠 때마다 셋을 맞춰야 했다. -->
 
 <!-- PAGE HERO — 홈 '챌린지 문'과 같은 문장으로 이어받는다 -->
 <header class="chb-hero">
@@ -567,54 +337,7 @@
 <script src="supabase-config.js"></script>
 <script src="recruit.js"></script>
 <script>
-  /* ── nav 챌린지 드롭다운 — index.html과 동기화 ── */
-  (function () {
-    /* ⚠️ 2026-07-30 승준노트가 두 번째 드롭다운이 되면서 querySelector(하나만) → 전체 순회로 바꿨다.
-       하나를 열면 다른 하나는 닫는다 — 둘 다 열리면 메뉴 두 장이 겹쳐 뜬다. */
-    const dds = [].slice.call(document.querySelectorAll('.nav-dd'));
-    if (!dds.length) return;
-    function close(dd) {
-      dd.classList.remove('is-open');
-      const b = dd.querySelector('.nav-dd-btn');
-      if (b) b.setAttribute('aria-expanded', 'false');
-    }
-    dds.forEach((dd) => {
-      const btn = dd.querySelector('.nav-dd-btn');
-      if (!btn) return;
-      btn.addEventListener('click', () => {
-        const open = !dd.classList.contains('is-open');
-        dds.forEach(close);
-        if (open) { dd.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true'); }
-      });
-    });
-    document.addEventListener('click', (e) => { dds.forEach((dd) => { if (!dd.contains(e.target)) close(dd); }); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dds.forEach(close); });
-  })();
-
-  /* ── 햄버거 ── */
-  (function(){
-    const hb = document.getElementById('hamburger');
-    const mm = document.getElementById('mobileMenu');
-    if(hb && mm){
-      hb.addEventListener('click', () => {
-        hb.classList.toggle('open');
-        mm.classList.toggle('open');
-        document.body.style.overflow = mm.classList.contains('open') ? 'hidden' : '';
-      });
-      mm.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-        hb.classList.remove('open');
-        mm.classList.remove('open');
-        document.body.style.overflow = '';
-      }));
-      /* '챌린지' 아코디언 — 토글은 button이라 위 닫기 핸들러(a 대상)에 안 걸린다 */
-      mm.querySelectorAll('.mm-acc-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const open = btn.closest('.mm-acc').classList.toggle('is-open');
-          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
-      });
-    }
-  })();
+  /* ⚠️ nav 드롭다운·햄버거·모바일 아코디언은 nav.js 로 옮겼다(2026-07-30). */
 
   /* ── 카드 재정렬 — 모집 중 → 예정 → 마감 + 번호 다시 매기기 (index 시절 heroReorder 이관).
      recruit.js의 applyIndexRecruit()가 상태·칩을 채운 뒤 monc:recruitready를 쏘면 받는다. */

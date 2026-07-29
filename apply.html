@@ -23,6 +23,9 @@
 <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
 <meta name="theme-color" content="#102B56">
 <link rel="stylesheet" href="tokens.css">
+<!-- 공용 상단 메뉴(2026-07-30) — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+<link rel="stylesheet" href="nav.css">
+<script src="nav.js" defer></script>
 <style>
   * { box-sizing: border-box; }
   /* View Transitions — Finder 조합 CTA(index) → 이 페이지 이동 시 root 크로스페이드 */
@@ -45,17 +48,6 @@
   a { color: inherit; }
   .wrap { max-width: 720px; margin: 0 auto; padding: 0 18px; }
 
-  /* ── 상단 바 ── */
-  .top-bar {
-    position: sticky; top: 0; z-index: 40;
-    background: rgba(233,228,216,.92);
-    backdrop-filter: saturate(1.2) blur(8px);
-    border-bottom: 1px solid var(--border-soft);
-  }
-  .top-inner { display: flex; align-items: center; justify-content: space-between; height: 54px; }
-  .brand { display: flex; align-items: center; text-decoration: none; }
-  .brand img { height: 20px; width: auto; display: block; }
-  .top-login { display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; font-size: 13px; font-weight: 700; color: var(--accent-ink); text-decoration: none; padding: 8px 10px; }
 
   /* ── 히어로 ── */
   .hero { text-align: center; padding: 34px 0 26px; }
@@ -294,14 +286,8 @@
   footer a { color: var(--text-dim); text-decoration: none; margin: 0 6px; }
 </style>
 </head>
-<body>
+<body data-nav-offset>
 
-<div class="top-bar">
-  <div class="wrap top-inner">
-    <a href="index.html" class="brand"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
-    <a href="login.html" class="top-login" id="topLogin">로그인 / 마이페이지</a>
-  </div>
-</div>
 
 <main class="wrap">
 
@@ -762,23 +748,16 @@ let _memberId = null, _profileHadPhone = false;
 async function initMember() {
   let profile = null;
   try { profile = await window.MONC.getMyProfile(); } catch (e) {}
-  const topLogin = document.getElementById('topLogin');
   if (profile && profile.id) {
     _memberId = profile.id;
     _profileHadPhone = !!profile.phone;
-    // nav 우측: 로그인 상태면 '로그인 / 마이페이지' → 마이페이지(관리자면 관리자 페이지)로 정리
-    if (topLogin) {
-      const isAdmin = profile.role === 'admin';
-      topLogin.textContent = isAdmin ? '관리자 페이지' : '마이페이지';
-      topLogin.href = isAdmin ? 'admin.html' : 'mypage.html';
-    }
+    // ⚠️ 구 .top-bar(로고+로그인 링크)는 2026-07-30 삭제 — 공용 nav(nav.js)가 같은 걸 하고 있다.
     const badge = document.getElementById('memberBadge');
     badge.querySelector('[data-name]').textContent = profile.name || '회원';
     badge.style.display = 'block';
     if (profile.name)  { document.getElementById('appName').value  = profile.name;  document.getElementById('rowName').style.display  = 'none'; }
     if (profile.phone) { document.getElementById('appPhone').value = profile.phone; document.getElementById('rowPhone').style.display = 'none'; }
   } else {
-    if (topLogin) topLogin.textContent = '로그인';   // 비회원: 무의미한 '마이페이지' 문구 제거
     document.getElementById('guestNudge').style.display = 'flex';
   }
   // 회원 판별이 끝난 뒤에야 '이미 신청한 기수'를 조회할 수 있다.
