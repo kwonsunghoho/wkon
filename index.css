@@ -427,19 +427,43 @@
       transform: translateY(-50%);
       text-align: center; padding: 0 20px; pointer-events: none;
     }
+    /* 한글 줄을 absolute 로 뺐으므로 이 블록의 높이 = 조립 무대 높이 → 중심이 곧 로고 중심 */
     @media (min-aspect-ratio: 1/1) { .hero-mid { top: 51.5%; } }
-    .hi-logo {
-      font-weight: 800; letter-spacing: .07em; line-height: 1; white-space: nowrap;
-      font-size: clamp(34px, 10.5vw, 46px); color: var(--accent);
+    /* 조립 무대 — 문장과 로고가 같은 자리에 겹쳐 있고, 높이는 로고 기준으로 고정한다.
+       ⚠️ 높이를 고정하지 않으면 조립되며 글자가 커질 때 아래 한글 줄이 밀려 내려간다. */
+    .hi-stack {
+      position: relative; display: flex; align-items: center; justify-content: center;
+      height: clamp(40px, 12vw, 54px);
     }
+    .hi-phrase {
+      position: absolute; left: 0; right: 0; white-space: nowrap;
+      font-size: clamp(15px, 4.6vw, 19px); font-weight: 300; letter-spacing: 0;
+      line-height: 1.15; color: var(--text);
+    }
+    .hi-w { display: inline-block; white-space: nowrap; }
+    /* ⚠️ 글자 하나하나가 FLIP 대상 — will-change 를 빼면 조립 구간에서 매 프레임 리페인트가 난다. */
+    .hi-l { display: inline-block; will-change: transform, opacity; }
+    .hi-l.is-mark { font-weight: 800; color: var(--accent); }
+
+    /* 도착 좌표계 + 조립 완료 후 교체될 네이티브 로고.
+       ⚠️ 자간을 letter-spacing 이 아니라 margin 으로 준다 — letter-spacing 은 글자 박스를
+          부풀려서 getBoundingClientRect 중심이 실제 글자 중심과 어긋난다(구 인트로에서 밟은 함정).
+       ⚠️ visibility:hidden 이라 자리는 차지한다 — JS 가 이 좌표를 도착점으로 읽는다. 지우지 말 것. */
+    .hi-target {
+      position: absolute; left: 0; right: 0; visibility: hidden;
+      font-size: clamp(34px, 10.5vw, 46px); font-weight: 800; letter-spacing: 0;
+      line-height: 1.15; color: var(--accent);
+    }
+    .hi-target span { display: inline-block; margin: 0 .035em; }
+
+    /* ⚠️ 한글 줄은 흐름에서 빼서 절대 배치한다 — 흐름에 두면 이 줄 높이만큼 블록 중심이
+       내려가 로고가 창 정중앙에서 벗어난다(실측 49.1% vs 목표 52.6%). */
     .hi-kor {
-      margin-top: 16px; white-space: nowrap;
+      position: absolute; left: 0; right: 0; top: 100%;
+      margin-top: 18px; white-space: nowrap; opacity: 0;
       font-size: clamp(13px, 3.6vw, 15px); font-weight: 600; letter-spacing: .05em;
-      color: var(--text-muted);
+      color: var(--text-muted); will-change: opacity, transform;
     }
-    /* ⚠️ 글자 하나하나가 따로 움직인다 — JS가 이 span 을 만들어 넣는다.
-       will-change 를 빼면 흩날림 구간에서 매 프레임 리페인트가 난다. */
-    .hi-ch { display: inline-block; will-change: transform, opacity, filter; }
 
     /* 스크롤 안내 — 애니메이션이 끝난 뒤에만 뜬다.
        ⚠️ bottom 값은 하단 고정 CTA 바(56px + 여백 14px)를 피한 자리다. 줄이면 겹친다. */

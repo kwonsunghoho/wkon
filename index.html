@@ -131,9 +131,15 @@
   </picture>
   <!-- 창 개구부의 세로 중심이 실측상 화면의 50.0%(모바일)·52.6%(웹)라, 정중앙에 두면
        그대로 창 한가운데가 된다(2026-07-29 오너 "정중앙에서 뭔가 보였으면"). -->
+  <!-- ⚠️ 조립 FLIP 구조 — 문장(.hi-phrase)의 M·O·N·C 가 로고 자리(.hi-target)로 모인다.
+       .hi-target 은 '도착 좌표를 재기 위한 실물'이자 조립 완료 후 교체될 네이티브 렌더다
+       (transform 으로 2.4배 키운 글자는 래스터가 흐려진다 — 구 인트로에서 검증된 방식). -->
   <div class="hero-mid" id="heroMid">
-    <div class="hi-logo" id="hiLogo" aria-label="MONC"></div>
-    <div class="hi-kor" id="hiKor"></div>
+    <div class="hi-stack">
+      <p class="hi-phrase" id="hiPhrase" aria-label="MONC — Moment Of New Career"><span aria-hidden="true"><span class="hi-w"><span class="hi-l is-mark">M</span><span class="hi-l">o</span><span class="hi-l">m</span><span class="hi-l">e</span><span class="hi-l">n</span><span class="hi-l">t</span></span> <span class="hi-w"><span class="hi-l is-mark">O</span><span class="hi-l">f</span></span> <span class="hi-w"><span class="hi-l is-mark">N</span><span class="hi-l">e</span><span class="hi-l">w</span></span> <span class="hi-w"><span class="hi-l is-mark">C</span><span class="hi-l">a</span><span class="hi-l">r</span><span class="hi-l">e</span><span class="hi-l">e</span><span class="hi-l">r</span></span></span></p>
+      <div class="hi-target" id="hiTarget" aria-hidden="true"><span>M</span><span>O</span><span>N</span><span>C</span></div>
+    </div>
+    <div class="hi-kor" id="hiKor">새로운 커리어가 시작되는 순간</div>
   </div>
   <div class="hero-cue" id="heroCue" aria-hidden="true">SCROLL</div>
 </section>
@@ -500,133 +506,129 @@
 
 
 <script>
-/* ═══ 히어로 — 로고 흩날림 애니메이션 (2026-07-29 오너 확정) ═══
-   구 'MONC 조립 + 창 통과 줌' 스크롤 연출을 대체한다. 새 배경이 창+하늘 합본이라
-   통과 줌이 불가능해졌고, 오너가 정적 배경 + 자동 재생을 지정했다.
+/* ═══ 히어로 — MONC 조립 애니메이션 (2026-07-29) ═══
+   "Moment Of New Career" 문장에서 소문자가 물러나고 M·O·N·C 가 가운데로 모여 로고가 된다.
+   구 인트로의 조립 안무를 그대로 되살리되 **스크롤이 아니라 시간으로** 돌린다
+   (오너: "원래 애니메이션을 쓰되 입장하면 자동으로 발동되게").
 
-   안무: 1.2초 정지(읽는 시간) → 0.9초 밝아짐(네이비→선명한 블루 + 빛 번짐)
-        → 1.7초 위로 스르륵 사라짐 → SCROLL 등장. 로드 직후 1회만.
+   ⚠️ 구 인트로의 뒷부분(조립 후 창 통과 줌 → 페이드아웃)은 되살릴 수 없다 —
+      새 배경이 창+하늘 합본이라 확대해도 통과가 성립하지 않는다. 조립까지만 하고
+      로고가 화면에 남는다. 덕분에 히어로에 브랜드가 계속 보인다.
 
-   ⚠️ 방향은 하나(위)다. 좌우로 벌리지 말 것 — 초안은 글자를 바깥으로 흩었는데
-      오너가 "왜 제각 흐려지냐, 한 방향으로 스르륵 사라져야지"로 기각했다.
-      좌우 이동은 흔들림 수준(±20px)이고 회전도 ±3.5°다.
-   ⚠️ 수치는 오너가 목업(outputs/hero-sand-mockup.html) 슬라이더로 직접 고른 확정값이다:
-      올라가는 거리 50 · 글자 시차 0 · 흐려짐 8.0. 감으로 바꾸지 말 것.
-   ⚠️ 배경 이미지가 뜨기 전에 시작하면 글자만 떠 있는 화면이 보인다 — 이미지 로드를
-      기다리되 1.2초 안에 안 오면 그냥 시작한다(느린 회선에서 영영 안 나오는 것보다 낫다). */
+   ⚠️ 좌표 함정(구 인트로에서 실제로 밟은 것) — 도착점은 .hi-target 의 각 글자를
+      **실측**해서 얻는다. 계산으로 만들지 말 것. 그리고 자간은 letter-spacing 이 아니라
+      margin 으로 줘야 getBoundingClientRect 중심이 실제 글자 중심과 일치한다.
+   ⚠️ 조립이 끝나면 문장 span 을 숨기고 .hi-target 을 보여준다 — transform 으로 2.4배 키운
+      글자는 래스터가 흐려진다. 이 교체를 빼면 로고가 뿌옇게 남는다.
+   ⚠️ 웹폰트(SUIT)가 늦게 오면 글자 폭이 바뀐다 → document.fonts.ready 에서 재측정한다. */
 (function () {
-  var mid  = document.getElementById('heroMid');
-  var logoEl = document.getElementById('hiLogo');
-  var korEl  = document.getElementById('hiKor');
-  var cue  = document.getElementById('heroCue');
-  if (!mid || !logoEl || !korEl) return;
+  var stack  = document.querySelector('.hi-stack');
+  var phrase = document.getElementById('hiPhrase');
+  var target = document.getElementById('hiTarget');
+  var kor    = document.getElementById('hiKor');
+  var cue    = document.getElementById('heroCue');
+  if (!stack || !phrase || !target) return;
 
-  var KOR = '새로운 커리어가 시작되는 순간';
-  /* 오너 확정값 — 목업 슬라이더에서 고른 그대로 */
-  var REACH = 50, STAG = 0, BLUR = 8.0;
-  var T = { hold: 1.2, glowEnd: 2.1, burstEnd: 3.8, cueAt: 3.45, total: 4.2 };
-  var NAVY = [27, 58, 107], VIVID = [46, 99, 184];
-
-  function rand(a, b) { return a + Math.random() * (b - a); }
-  function cl(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
-  function easeOut(t) { return 1 - Math.pow(1 - t, 2.2); }
-
-  /* 글자 하나하나를 span 으로. 스크린리더는 분해된 글자를 한 자씩 읽으므로
-     컨테이너에 aria-label 을 주고 조각은 숨긴다. */
-  function split(text, host) {
-    var out = [], i, ch, sp;
-    host.textContent = '';
-    for (i = 0; i < text.length; i++) {
-      ch = text.charAt(i);
-      if (ch === ' ') { host.appendChild(document.createTextNode(' ')); continue; }
-      sp = document.createElement('span');
-      sp.className = 'hi-ch'; sp.textContent = ch; sp.setAttribute('aria-hidden', 'true');
-      host.appendChild(sp); out.push(sp);
-    }
-    return out;
+  var marks  = phrase.querySelectorAll('.hi-l.is-mark');
+  var others = [];
+  var all = phrase.querySelectorAll('.hi-l');
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].className.indexOf('is-mark') < 0) others.push(all[i]);
   }
-  logoEl.setAttribute('aria-label', 'MONC');
-  korEl.setAttribute('aria-label', KOR);
-  var L = split('MONC', logoEl), K = split(KOR, korEl);
+  var slots = target.querySelectorAll('span');
+  if (marks.length !== slots.length) return;
 
-  function seedAll(list) {
-    var n = list.length;
-    for (var i = 0; i < n; i++) {
-      list[i]._s = {
-        dx: rand(-0.2, 0.2), dy: rand(-1.1, -0.9), rot: rand(-3.5, 3.5),
-        order: n > 1 ? i / (n - 1) : 0, jit: rand(0, 0.10), spin: rand(0.85, 1.15)
-      };
+  /* 타임라인(초) */
+  var T = { hold: 0.6, buildEnd: 2.4, korAt: 2.35, cueAt: 2.9, total: 3.6 };   /* ⚠️ total 은 마지막 페이드(cueAt + 0.6)보다 커야 한다 — 3.4면 SCROLL 이 0.83 에서 멈춘다 */
+  var geo = null;
+
+  function measure() {
+    /* transform 이 걸린 채로 재면 값이 오염된다 — 항상 초기화 후 잰다. */
+    for (var i = 0; i < all.length; i++) { all[i].style.transform = ''; }
+    var sb = stack.getBoundingClientRect();
+    var g = { marks: [], scale: 1 };
+    var pm = marks[0].getBoundingClientRect(), tm = slots[0].getBoundingClientRect();
+    g.scale = pm.width > 0 ? (tm.width / pm.width) : 1;
+    for (var k = 0; k < marks.length; k++) {
+      var a = marks[k].getBoundingClientRect(), b = slots[k].getBoundingClientRect();
+      g.marks.push({
+        dx: (b.left + b.width / 2) - (a.left + a.width / 2),
+        dy: (b.top + b.height / 2) - (a.top + a.height / 2)
+      });
     }
-  }
-  seedAll(L); seedAll(K);
-
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ⚠️ reduced-motion 이면 글자를 지우지 않는다 — 움직임을 못 보는 사람에게서
-     브랜드 메시지까지 뺏을 이유가 없다. 연출만 빼고 정지 화면으로 둔다. */
-  if (reduce) {
-    if (cue) cue.style.opacity = '1';
-    markSeen();
-    return;
+    geo = g;
   }
 
-  function paint(el, isKor, glow, burst, col) {
-    var s = el._s;
-    var d = s.order * STAG + s.jit;
-    var t = cl((burst - d) / Math.max(0.25, 1 - d));
-    var e = easeOut(t);
-    var x = s.dx * 20 * e + Math.sin(t * 3.4 * s.spin) * 4 * t;
-    var y = s.dy * REACH * e;
-    var op = 1 - Math.pow(t, 1.4);
-    el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate('
-                       + (s.rot * t).toFixed(2) + 'deg) scale(' + (1 + 0.05 * e).toFixed(3) + ')';
-    el.style.filter = t > 0 ? 'blur(' + (t * BLUR).toFixed(2) + 'px)' : 'none';
-    if (isKor) {
-      el.style.opacity = (op * (0.82 + glow * 0.18)).toFixed(3);
-    } else {
-      el.style.opacity = op.toFixed(3);
-      el.style.color = 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')';
-      el.style.textShadow = '0 0 ' + (3 + glow * 20).toFixed(0) + 'px rgba(120,170,235,'
-                          + (0.16 + glow * 0.6).toFixed(2) + '),0 0 ' + (glow * 42).toFixed(0)
-                          + 'px rgba(255,255,255,' + (glow * 0.5).toFixed(2) + ')';
+  var cl = function (v) { return v < 0 ? 0 : (v > 1 ? 1 : v); };
+  /* easeInOutCubic — 출발도 도착도 부드럽게. 조립은 '툭' 끝나면 안 된다. */
+  function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+  function apply(u) {
+    if (!geo) return;
+    var e = ease(u);
+    var s = 1 + (geo.scale - 1) * e;
+    for (var k = 0; k < marks.length; k++) {
+      var m = geo.marks[k];
+      marks[k].style.transform = 'translate(' + (m.dx * e).toFixed(2) + 'px,'
+                               + (m.dy * e).toFixed(2) + 'px) scale(' + s.toFixed(4) + ')';
     }
+    /* 소문자는 앞쪽 절반에서 물러난다 — 끝까지 남아 있으면 로고 위에 겹친다. */
+    var fade = cl(u / 0.55);
+    for (var j = 0; j < others.length; j++) {
+      others[j].style.opacity = (1 - fade).toFixed(3);
+      others[j].style.transform = 'scale(' + (1 - 0.25 * fade).toFixed(3) + ')';
+    }
+    /* 마지막에 네이티브 렌더로 교체(확대 래스터 흐림 방지) */
+    var done = u > 0.995;
+    target.style.visibility = done ? 'visible' : 'hidden';
+    phrase.style.visibility = done ? 'hidden' : 'visible';
   }
 
   function frame(sec) {
-    var glow  = cl((sec - T.hold) / (T.glowEnd - T.hold));
-    var burst = cl((sec - T.glowEnd) / (T.burstEnd - T.glowEnd));
-    var col = [
-      Math.round(NAVY[0] + (VIVID[0] - NAVY[0]) * glow),
-      Math.round(NAVY[1] + (VIVID[1] - NAVY[1]) * glow),
-      Math.round(NAVY[2] + (VIVID[2] - NAVY[2]) * glow)
-    ];
-    var i;
-    for (i = 0; i < L.length; i++) paint(L[i], false, glow, burst, col);
-    for (i = 0; i < K.length; i++) paint(K[i], true, glow, burst, col);
+    apply(cl((sec - T.hold) / (T.buildEnd - T.hold)));
+    if (kor) {
+      var kt = cl((sec - T.korAt) / 0.55);
+      kor.style.opacity = kt.toFixed(3);
+      kor.style.transform = 'translateY(' + ((1 - kt) * 7).toFixed(1) + 'px)';
+    }
     if (cue) cue.style.opacity = cl((sec - T.cueAt) / 0.6).toFixed(3);
   }
 
   function markSeen() { try { localStorage.setItem('monc_intro_seen', '1'); } catch (e) {} }
 
-  var t0 = 0;
-  function tick(now) {
-    if (!t0) t0 = now;
-    var sec = (now - t0) / 1000;
-    frame(sec);
-    if (sec < T.total) { requestAnimationFrame(tick); }
-    else { frame(T.total); markSeen(); }
-  }
+  measure();
 
-  /* 배경이 뜬 다음 시작한다(1.2초 안전망) */
-  var started = false;
-  function start() { if (started) return; started = true; frame(0); requestAnimationFrame(tick); }
-  var shot = document.querySelector('.hero-shot');
-  if (shot && !shot.complete) {
-    shot.addEventListener('load', start);
-    shot.addEventListener('error', start);
-    setTimeout(start, 1200);
+  /* ⚠️ reduced-motion 이면 조립을 건너뛰고 '완성된 로고' 상태로 둔다.
+     아무것도 안 하면 문장만 남아 브랜드 로고를 못 보게 된다. */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    frame(T.total); markSeen();
   } else {
-    start();
+    var t0 = 0, running = true;
+    var tick = function (now) {
+      if (!t0) t0 = now;
+      var sec = (now - t0) / 1000;
+      frame(sec);
+      if (sec < T.total) { requestAnimationFrame(tick); }
+      else { running = false; frame(T.total); markSeen(); }
+    };
+    var started = false;
+    var start = function () { if (started) return; started = true; frame(0); requestAnimationFrame(tick); };
+    var shot = document.querySelector('.hero-shot');
+    if (shot && !shot.complete) {
+      shot.addEventListener('load', start);
+      shot.addEventListener('error', start);
+      setTimeout(start, 1200);
+    } else { start(); }
+
+    /* 폰트가 늦게 오면 글자 폭이 바뀐다 → 아직 재생 중이면 좌표를 다시 잡는다. */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { if (running) measure(); });
+    }
+    /* 화면 폭이 바뀌면 도착점도 바뀐다(조립이 끝난 뒤엔 .hi-target 이 실물이라 무관). */
+    window.addEventListener('resize', function () {
+      if (!running) return;
+      measure();
+    }, { passive: true });
   }
 })();
 </script>
