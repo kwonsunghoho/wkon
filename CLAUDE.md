@@ -12,6 +12,11 @@ MONC (몬크 챌린지) — a Korean landing site for a 2-week voice/expression/
 - **Deploy**: `git push origin main` — GitHub Pages serves `main` directly; a push *is* the deploy (1–2 min propagation). Nothing to build.
 - **No lint/test.** Verify by rendering in a browser — **375px first** (99% mobile traffic).
 
+### ⚠️ 어디에 푸시할까 — 오너 확정(2026-07-30)
+**눈으로 보고 판단하는 수정(레이아웃·문구·색·애니메이션)은 `main` 직행.** 브랜치를 거치지 말 것 — GitHub Pages 가 `main` 만 서빙해서 **브랜치는 오너가 폰으로 미리 볼 방법이 없다.** 확인이 어차피 합친 뒤에 일어나므로 브랜치는 단계만 늘리고, 실제로 "왜 적용이 안 되냐"는 사고가 났다(오너가 라이브를 보고 있는데 작업은 브랜치에 있었다). 되돌리기는 `git revert` + 푸시로 1~2분이면 되니 브랜치 여부와 무관하다.
+**잘못되면 돈·데이터가 걸리는 것은 브랜치**: 신청·결제 흐름, Supabase 마이그레이션, 로그인·동의 게이트, 큰 구조 변경. 라이브가 깨지는 몇 분이 실제 손해인 자리들이다.
+⚠️ 어느 쪽이든 **올리기 전에 실제 브라우저로 렌더해서 확인**하는 게 진짜 안전장치다(브랜치가 아니라). 375px 부터.
+
 The repo is sometimes edited from a git **worktree** under `.claude/worktrees/...` on a `claude/*` branch; the canonical checkout is the repo root on `main`.
 
 ## Backend: there is no server
