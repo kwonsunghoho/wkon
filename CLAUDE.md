@@ -231,7 +231,8 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
   - ⚠️ **햄버거는 보이는 크기 38×32px + `::after` 투명 히트영역 44×44px**(2026-07-30). 보이는 크기를 키우면 모바일 바가 57→68px로 부푼다 — news.html 스크랩 알약과 같은 방식으로 히트영역만 넓혔다. 지우면 9대 원칙 2번 위반으로 되돌아간다.
   - ⚠️ nav 높이를 또 바꾸면 **`.msn`의 `scroll-margin-top`(모바일 60 / ≥769px 78)과 `.mobile-menu`의 `top: 60px`**도 같이 볼 것 — 착지점이 바 밑에 깔린다.
 
-### 2026-07-14 목업 리디자인 (소스오브트루스: `outputs/monc-font-mockup.html`·`monc-mockup-2.html`)
+### 2026-07-14 목업 리디자인
+⚠️ 소스오브트루스로 적혀 있던 `outputs/monc-font-mockup.html`·`monc-mockup-2.html`은 **커밋된 적이 없어 어디에도 남아 있지 않다**(2026-07-30 확인 — main·전 브랜치·히스토리 전부 없음). 아래 규칙 자체가 유일한 기록이니 여기서 지우지 말 것.
 색·폰트 + **레이아웃까지** 풀 리디자인(웜 통일). `.section-label`에 코랄 대시(—) `::before` 시그니처, 연구원 이름 명조. **회귀 방지 핵심:**
 - `.section-label` 코랄 대시 시그니처·명조 제목 규칙은 유지. (구 ③ B&A 다크 시네마틱·④ `.cta-box` 항목은 2026-07-29 홈 개편으로 대상 소멸 — 다크 무대 위 라벨 `!important` 오버라이드 패턴은 `.msn`이 계승.)
 

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>특강 디자인 미리보기 — MONC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   ① 사이트 실제 토큰(tokens.css)에서 그대로 가져온 값
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg: #E9E4D8; --bg2: #F1ECE2; --surface: #FFFFFF; --surface2: #F4F0E8;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #6C6454;
+  --border: rgba(38,34,28,.16); --border-soft: rgba(38,34,28,.09);
+  --accent: #F27945; --accent-dark: #D9531F; --accent-tint: #FDE9DE; --accent-ink: #A33D14;
+  --action: #F27945; --action-ink: #2A1206;
+  --serif: 'Noto Serif KR', serif;
+  --radius-md: 20px; --radius-lg: 24px;
+
+  /* 항공사별 액센트 — lectures.css 실제 값 */
+  --air-ke: #14375E;  /* 대한항공 */
+  --air-lj: #3A6440;  /* 진에어 */
+  --air-7c: #8C4318;  /* 제주항공 */
+  --air-tw: #9E3B34;  /* 티웨이 */
+  --air-ze: #97323A;  /* 이스타 */
+  --air-yp: #2E3D63;  /* 에어프레미아 */
+  --air-rf: #8E4064;  /* 에어로케이 */
+
+  --lx-cover: #E4DDC9; --lx-info: #FBF9F4; --lx-navy: #1B2E4E;
+  --lx-body: #4A4640; --lx-metac: #7A756C;
+  --lx-bd: rgba(38,34,28,.12); --lx-bd-h: rgba(38,34,28,.30);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+  background: #DDD6C6; color: var(--text); line-height: 1.6;
+  -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ② 목업 페이지 자체의 껍데기(사이트 디자인 아님 — 설명용)
+   ═══════════════════════════════════════════════════════════ */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 40px 20px 90px; }
+.mk-head { text-align: center; margin-bottom: 20px; }
+.mk-kicker { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); text-transform: uppercase; }
+.mk-title { font-family: var(--serif); font-size: clamp(26px, 4.4vw, 40px); font-weight: 700; margin-top: 8px; letter-spacing: -.5px; }
+.mk-sub { font-size: 15px; color: var(--text-muted); margin-top: 10px; max-width: 36em; margin-left: auto; margin-right: auto; }
+
+/* 흐름 안내 — 4칸 그리드(넓은 화면) / 2칸 / 1칸. 화살표는 칸 사이 ::after라 줄바꿈에도 안 흐트러진다 */
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 28px auto 8px; max-width: 1000px; }
+@media (max-width: 900px) { .flow { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .flow { grid-template-columns: 1fr; } }
+.flow .st { position: relative; background: #fff; border: 1px solid var(--border-soft); border-radius: 14px; padding: 13px 15px; font-size: 13.5px; font-weight: 700; display: flex; align-items: flex-start; gap: 9px; }
+.flow .st .n { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--action); color: #fff; font-size: 12px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.flow .st .n.zero { background: var(--text); }
+.flow .st small { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+.flow .st:not(:last-child)::after { content: '›'; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); font-size: 20px; font-weight: 900; color: var(--text-dim); }
+@media (max-width: 900px) { .flow .st:nth-child(2)::after { display: none; } }
+@media (max-width: 520px) { .flow .st::after { display: none !important; } }
+
+/* 섹션 캡션 */
+.cap { display: flex; align-items: flex-start; gap: 12px; margin: 64px 0 18px; }
+.cap .n { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--action); color: #fff; font-weight: 900; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; margin-top: 2px; }
+.cap h2 { font-size: 20px; font-weight: 900; letter-spacing: -.3px; }
+.cap p { font-size: 14px; color: var(--text-muted); margin-top: 3px; max-width: 46em; }
+.cap p b { color: var(--accent-ink); }
+
+/* 폰 프레임 — 실제 트래픽 99%가 모바일이라 375~390px 기준으로 보여준다 */
+.stage { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.phone { position: relative; width: min(390px, 100%); background: var(--bg); border: 10px solid #2A2620; border-radius: 34px; overflow: hidden; box-shadow: 0 24px 60px rgba(30,25,18,.25); flex: 0 0 auto; }
+.phone-label { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin: 10px 4px 0; }
+
+/* 프레임 안은 '폰 화면'이므로 모바일 규칙을 강제(뷰포트 미디어쿼리 대체) */
+.phone .lx-grid { grid-template-columns: 1fr; }
+.phone .lx-ko { font-size: 24px; }
+.phone .lx-cover { padding: 24px 20px 20px; }
+.phone .lx-info { padding: 14px 20px 18px; }
+.phone .section-title { font-size: 30px; }
+.phone .lx-title { font-size: 28px; }
+.phone .lc-title { font-size: 26px; }
+.phone .lc-facts { grid-template-columns: 1fr 1fr; }
+
+/* ═══════════════════════════════════════════════════════════
+   ③ 사이트 실제 CSS — lectures.css 그대로
+   ═══════════════════════════════════════════════════════════ */
+.lx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.lx-card {
+  --lx-accent: var(--lx-navy);
+  display: flex; flex-direction: column;
+  background: var(--lx-info);
+  border: 1px solid var(--lx-bd); border-radius: 14px; overflow: hidden;
+  text-decoration: none; color: var(--lx-body);
+  transition: border-color .18s ease;
+}
+.lx-card:hover { border-color: var(--lx-bd-h); }
+.lx-card.is-out { opacity: .55; }
+.lx-cover { position: relative; background: var(--lx-cover); padding: 28px 24px 24px; }
+.lx-en { font-size: 12px; font-weight: 400; letter-spacing: .14em; line-height: 1.2; color: var(--lx-accent); text-transform: uppercase; }
+.lx-ko { margin-top: 12px; font-size: 28px; font-weight: 500; line-height: 1.25; color: var(--lx-navy); letter-spacing: -.01em; }
+.lx-rule { margin: 20px 0 0; height: 1px; border: 0; background: var(--lx-accent); opacity: .6; }
+.lx-badge { position: absolute; top: 16px; right: 16px; font-size: 11px; font-weight: 400; line-height: 1.5; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.lx-badge.free { background: rgba(46,125,70,.14); color: #2E6E42; }
+.lx-badge.paid { background: rgba(27,46,78,.10); color: var(--lx-navy); }
+.lx-info { padding: 16px 24px 20px; }
+.lx-copy { font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--lx-body); }
+.lx-meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 13px; font-weight: 400; color: var(--lx-metac); }
+.lx-copy + .lx-meta { margin-top: 12px; }
+.lx-meta .mi { display: inline-flex; align-items: center; gap: 5px; }
+.lx-meta .mi svg { width: 14px; height: 14px; opacity: .7; flex: 0 0 auto; }
+.lx-meta .seats-low { color: var(--lx-accent); font-weight: 500; }
+.lx-meta .seats-low svg { opacity: 1; }
+
+/* ── 홈 섹션(index.css의 실제 규칙 발췌) ── */
+.lx-home { background: var(--bg2); padding: 56px 0; }
+.lx-home .container { padding: 0 20px; }
+.section-label { display: inline-flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 10px; }
+.section-label::before { content: ''; width: 26px; height: 1.5px; background: var(--action); flex: none; }
+.section-title { font-family: var(--serif); font-size: 30px; font-weight: 400; line-height: 1.28; letter-spacing: -.01em; margin-bottom: 14px; color: var(--text); }
+.section-title .bp-hl { font-style: normal; color: var(--action); }
+.section-desc { font-size: 17px; color: var(--text-muted); }
+.lx-home .lx-grid { margin-top: 26px; }
+.bp-foot { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.bp-note { font-size: 13px; color: var(--text-dim); }
+.btn-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--action); color: var(--action-ink); border-radius: 14px; padding: 16px 28px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 8px 20px rgba(242,121,69,.35); }
+
+/* ── 목록 페이지(lectures.html의 실제 규칙 발췌) ── */
+.mock-nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: rgba(233,228,216,.92); border-bottom: 1px solid var(--border-soft); }
+.mock-logo { font-weight: 900; font-size: 15px; letter-spacing: .18em; color: var(--text); }
+.mock-back { font-size: 14px; font-weight: 700; color: var(--text); opacity: .8; }
+.lx-hero { padding: 34px 20px 20px; text-align: center; }
+.lx-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+.lx-title { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--accent); letter-spacing: -.6px; margin-top: 10px; }
+.lx-sub { font-size: 15px; color: var(--text); opacity: .72; margin-top: 12px; }
+.lx-sub b { color: var(--action); font-weight: 800; white-space: nowrap; }
+.lx-list-body { padding: 6px 20px 34px; }
+
+/* ── 상세 페이지(lecture.html의 실제 규칙 발췌) ── */
+/* 목업에선 상세 화면 전체를 펼쳐 보여준다(실제 폰에선 이 안이 스크롤됨) */
+.lc-scroll { padding-bottom: 84px; }
+.lc-container { padding: 0 20px; }
+.lc-hero { padding: 22px 0 8px; }
+.lc-badge { display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 12px; }
+.lc-badge.open { background: rgba(46,125,70,.14); color: #2E7D46; }
+.lc-eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .14em; color: var(--lx-accent, var(--lx-navy)); text-transform: uppercase; margin-bottom: 10px; }
+.lc-title { font-family: var(--serif); font-size: 26px; font-weight: 700; color: var(--lx-navy); letter-spacing: -.5px; line-height: 1.28; }
+.lc-sub { font-size: 16px; color: var(--text); opacity: .82; margin-top: 12px; }
+.lc-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: var(--radius-md); overflow: hidden; margin-top: 22px; }
+.lc-fact { background: var(--surface); padding: 14px 16px; }
+.lc-fact .k { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: .02em; }
+.lc-fact .v { font-size: 16px; font-weight: 800; margin-top: 3px; }
+.lc-fact .v.price { color: var(--accent-ink); }
+.lc-sec { margin-top: 34px; }
+.lc-sec h2 { font-family: var(--serif); font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+.lc-desc p { font-size: 15.5px; color: var(--text); margin-bottom: 12px; }
+.lc-high { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.lc-high li { position: relative; padding-left: 28px; font-size: 15.5px; }
+.lc-high li::before { content: ''; position: absolute; left: 0; top: 7px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A33D14' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/12px no-repeat; }
+.lc-apply { margin-top: 34px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 22px 20px 24px; box-shadow: 0 4px 18px rgba(38,34,28,.07); }
+.lc-apply h2 { font-family: var(--serif); font-size: 21px; font-weight: 700; margin-bottom: 4px; }
+.lc-apply .hint { font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; }
+.guest-nudge { font-size: 13px; color: var(--text-muted); background: var(--surface2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
+.guest-nudge a { color: var(--accent-ink); font-weight: 700; }
+.lc-field { margin-bottom: 12px; }
+.lc-field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.inp { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: 11px; font-size: 16px; font-family: inherit; background: var(--bg); color: var(--text); }
+.inp::placeholder { color: #A79E8F; }
+.consent { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--text); margin: 14px 0 4px; cursor: pointer; line-height: 1.5; }
+.consent input { width: 19px; height: 19px; margin-top: 1px; flex: 0 0 auto; accent-color: var(--accent-dark); }
+.consent a { color: var(--accent-ink); font-weight: 700; }
+.pay-total { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 4px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.pay-total .l { font-size: 14px; font-weight: 700; }
+.pay-total .a { font-size: 22px; font-weight: 900; }
+.btn-toss { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: #0064FF; color: #fff; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.btn-toss .tlogo { font-weight: 900; letter-spacing: -.02em; font-style: italic; }
+.btn-bank { width: 100%; margin-top: 10px; padding: 16px; border: 1.5px solid var(--accent-dark); border-radius: 12px; background: var(--surface); color: var(--accent-ink); font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
+.btn-free { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
+.lc-refund { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-top: 14px; }
+.lc-refund a { color: var(--accent-ink); text-decoration: underline; }
+.lc-sticky { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; background: rgba(233,228,216,.94); backdrop-filter: blur(16px); border-top: 1px solid var(--border-soft); padding: 10px 16px 14px; }
+.lc-sticky-in { display: flex; align-items: center; gap: 14px; }
+.lc-sticky .info { flex: 1 1 auto; min-width: 0; }
+.lc-sticky .info .p { font-size: 17px; font-weight: 900; }
+.lc-sticky .info .s { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-sticky .go { flex: 0 0 auto; padding: 13px 24px; border: none; border-radius: 999px; background: var(--action); color: var(--action-ink); font-size: 15px; font-weight: 900; font-family: inherit; cursor: pointer; }
+
+/* ── 컴퓨터 화면 데모(3열) ── */
+/* 좁은 화면에서도 '컴퓨터 화면 = 3열'을 보여주려고 3열 고정 + 가로 스크롤 */
+.desk { background: var(--bg); border: 1px solid var(--border-soft); border-radius: 18px; padding: 28px 24px 30px; box-shadow: 0 18px 44px rgba(30,25,18,.14); overflow-x: auto; }
+.desk .lx-grid { grid-template-columns: repeat(3, 1fr); min-width: 720px; align-items: start; }
+
+/* ── 규칙 패널 ── */
+.rules { background: #fff; border: 1px solid var(--border-soft); border-radius: 18px; padding: 26px 24px; }
+.rules h3 { font-size: 16px; font-weight: 900; margin-bottom: 12px; }
+.rules ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.rules li { position: relative; padding-left: 22px; font-size: 14px; color: var(--text); }
+.rules li::before { content: '—'; position: absolute; left: 0; color: var(--action); font-weight: 900; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.sw { display: inline-flex; align-items: center; gap: 7px; background: var(--lx-cover); border: 1px solid var(--lx-bd); border-radius: 999px; padding: 6px 13px; font-size: 12px; letter-spacing: .1em; font-weight: 500; }
+.sw i { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; }
+.sw small { color: var(--text-dim); letter-spacing: 0; font-weight: 400; }
+
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .duo { grid-template-columns: 1fr; } }
+
+.footnote { margin-top: 56px; text-align: center; font-size: 13.5px; color: var(--text-muted); }
+.footnote b { color: var(--accent-ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mk-head">
+    <div class="mk-kicker">Design Preview</div>
+    <h1 class="mk-title">특강, 이렇게 올라가요</h1>
+    <p class="mk-sub">어제 만든 특강 시스템의 실제 화면 미리보기예요. 아래 카드와 화면은 전부 <b>예시 데이터</b>이고,
+    실제로는 관리자 페이지에서 등록한 내용이 그대로 이 모양으로 나타납니다.</p>
+  </header>
+
+  <div class="flow">
+    <div class="st"><span class="n zero">0</span><span>관리자 페이지 '특강' 탭에서 등록<small>제목·날짜·강사·참가비·잔여석</small></span></div>
+    <div class="st"><span class="n">1</span><span>홈 화면에 카드가 뜸<small>전·후 목소리 섹션 바로 다음</small></span></div>
+    <div class="st"><span class="n">2</span><span>'특강' 메뉴 = 전체 목록<small>신청 중 → 예정 → 마감 순서</small></span></div>
+    <div class="st"><span class="n">3</span><span>카드를 누르면 상세 화면<small>그 자리에서 결제·신청까지 끝</small></span></div>
+  </div>
+
+  <!-- ═══════════ ① 홈 화면 ═══════════ -->
+  <div class="cap">
+    <span class="n">1</span>
+    <div>
+      <h2>홈 화면 — 특강 섹션</h2>
+      <p>홈에서 '전·후 목소리' 섹션 바로 다음에 나와요. 가장 가까운 특강 <b>2개만</b> 먼저 보여주고,
+      '특강 전체 보기' 버튼이 목록으로 데려갑니다.</p>
+    </div>
+  </div>
+  <div class="stage">
+    <div>
+      <div class="phone">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">☰</span></div>
+        <section class="lx-home">
+          <div class="container">
+            <div class="section-label">Special Lecture</div>
+            <h2 class="section-title">몬크가 여는 <em class="bp-hl">특강</em></h2>
+            <p class="section-desc">주기적으로 열리는 승무원 면접 특강. 신청 중인 특강을 골라 바로 신청하세요.</p>
+            <div class="lx-grid">
+
+              <a class="lx-card" style="--lx-accent:var(--air-ke)" href="#d">
+                <div class="lx-cover">
+                  <span class="lx-badge paid">20,000원</span>
+                  <div class="lx-en">Korean Air</div>
+                  <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+                  <hr class="lx-rule">
+                </div>
+                <div class="lx-info">
+                  <div class="lx-copy">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</div>
+                  <div class="lx-meta">
+                    <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+                    <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>박새암</span>
+                    <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+                  </div>
+                </div>
+              </a>
+
+              <a class="lx-card" style="--lx-accent:var(--air-lj)" href="#">
+                <div class="lx-cover">
+                  <span class="lx-badge free">무료</span>
+                  <div class="lx-en">Jin Air</div>
+                  <div class="lx-ko">진에어 토론면접 파헤치기</div>
+                  <hr class="lx-rule">
+                </div>
+                <div class="lx-info">
+                  <div class="lx-copy">토론면접에서 말 순서보다 중요한 것 — 실전 시뮬레이션으로 익혀요.</div>
+                  <div class="lx-meta">
+                    <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+                    <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>권성호</span>
+                    <span class="mi seats-low"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+                  </div>
+                </div>
+              </a>
+
+            </div>
+            <div class="bp-foot">
+              <a class="btn-action" href="#">특강 전체 보기 →</a>
+              <p class="bp-note">새로운 특강이 열리면 여기에서 가장 먼저 알려드려요.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+      <p class="phone-label">▲ 홈 화면(폰 기준) — 잔여 5석 이하면 '잔여 3석'처럼 항공사 색으로 강조돼요</p>
+    </div>
+
+    <div style="flex:1 1 380px; min-width: 300px;">
+      <div class="rules">
+        <h3>홈에서는 '맛보기'만</h3>
+        <ul>
+          <li>가장 가까운 특강 <b>2개만</b> 뜹니다. 홈이 이미 긴 편이라 여기서 목록을 다 펼치면 아래 섹션들이 밀려요.</li>
+          <li>등록된 특강이 하나도 없으면 카드 자리가 <b>조용히 비고</b> 안내 문구만 남아요 — 빈 네모나 오류 메시지가 뜨지 않습니다.</li>
+          <li>위치는 '전·후 목소리' 섹션 바로 다음. 목소리 증거를 듣고 마음이 움직인 자리에서 특강을 만나게 한 배치예요.</li>
+          <li>배경이 한 톤 밝은 건 홈의 <b>밝고-어둡고 리듬</b>을 지키기 위한 것이고, 제목이 왼쪽에 붙은 것도 '카드가 놓이는 섹션은 왼쪽 정렬'이라는 홈 전체 규칙을 따른 거예요.</li>
+        </ul>
+      </div>
+      <div class="rules" style="margin-top:16px;">
+        <h3>관리자 페이지에서 적는 것</h3>
+        <ul>
+          <li>제목 · 한 줄 설명 · 소개글</li>
+          <li>항공사(고르면 색과 영문명이 자동으로 붙어요)</li>
+          <li>진행 날짜 · 시간/장소 · 강사</li>
+          <li>신청 받는 기간(이 기간이 지나면 자동으로 마감)</li>
+          <li>참가비(0원이면 무료 특강) · 정원 · 잔여석</li>
+          <li>'이런 걸 얻어가요' 항목들</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ② 특강 목록 ═══════════ -->
+  <div class="cap">
+    <span class="n">2</span>
+    <div>
+      <h2>'특강' 메뉴 — 전체 목록 화면</h2>
+      <p>메뉴의 '특강'을 누르면 나오는 화면이에요. <b>신청 중 → 신청 예정 → 마감</b> 순서로 자동 정렬되고,
+      마감·품절된 특강은 흐리게 남아 "이런 것도 했었구나"를 보여줍니다.</p>
+    </div>
+  </div>
+  <div class="stage">
+    <div>
+      <div class="phone">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">← 홈으로</span></div>
+        <header class="lx-hero">
+          <div class="lx-eyebrow">SPECIAL LECTURE</div>
+          <h1 class="lx-title">특강</h1>
+          <p class="lx-sub">몬크가 주기적으로 여는 승무원 면접 특강 — <b>신청 중인 특강을 골라 바로 신청하세요.</b></p>
+        </header>
+        <div class="lx-list-body">
+          <div class="lx-grid">
+
+            <a class="lx-card" style="--lx-accent:var(--air-ke)" href="#d">
+              <div class="lx-cover">
+                <span class="lx-badge paid">20,000원</span>
+                <div class="lx-en">Korean Air</div>
+                <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>박새암</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card" style="--lx-accent:var(--air-lj)" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge free">무료</span>
+                <div class="lx-en">Jin Air</div>
+                <div class="lx-ko">진에어 토론면접 파헤치기</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">토론면접에서 말 순서보다 중요한 것 — 실전 시뮬레이션으로 익혀요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>권성호</span>
+                  <span class="mi seats-low"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge free">무료</span>
+                <div class="lx-ko">면접 답변 구조화 원데이 클래스</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">어느 항공사든 통하는 답변 뼈대 만들기. 항공사 지정이 없는 특강은 이렇게 기본 네이비로 나와요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 30일(일)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>고은지</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 15석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card" style="--lx-accent:var(--air-tw)" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge paid">20,000원</span>
+                <div class="lx-en">T'way Air</div>
+                <div class="lx-ko">티웨이 영어면접 집중 특강</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">기출 질문으로 배우는 답변 루틴 — 아직 신청 전이라 '신청 예정'으로 떠요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>9월 5일(토)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>김유리</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>신청 예정</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card is-out" style="--lx-accent:var(--air-ze)" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge paid">15,000원</span>
+                <div class="lx-en">Eastar Jet</div>
+                <div class="lx-ko">이스타 기내방송문 클리닉</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">지난 특강 — 마감되면 이렇게 흐려진 채 남아요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>7월 19일(일)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>최보민</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>신청 마감</span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+      <p class="phone-label">▲ 특강 목록(폰 기준) — 다섯 가지 상태(유료·무료·기본색·예정·마감)를 한 화면에 담았어요</p>
+    </div>
+
+    <div style="flex:1 1 380px; min-width: 300px;">
+      <div class="rules">
+        <h3>카드 디자인 규칙 — "일곱 항공사가 한 가족처럼"</h3>
+        <ul>
+          <li>카드 윗부분(아이보리색)은 <b>모든 카드가 똑같아요.</b> 항공사마다 바뀌는 건 딱 두 가지 — <b>영문 항공사명 색</b>과 <b>밑줄 색</b>.</li>
+          <li>한글 제목은 항공사와 상관없이 <b>항상 짙은 네이비.</b> 그래서 어떤 카드가 나란히 서도 차분하게 한 세트로 보여요.</li>
+          <li>항공사 로고 이미지는 안 써요(허락 문제도 있고, 로고가 섞이면 조잡해져요). 영문 사명을 글자로만 조판해요.</li>
+          <li>오른쪽 위 뱃지: <b>무료 = 옅은 초록</b>, 유료 = 금액이 그대로 적힌 옅은 네이비.</li>
+          <li>잔여석이 5석 이하로 내려가면 그 글자만 항공사 색으로 강조 — 은근한 마감 임박 신호예요.</li>
+          <li>그림자·번쩍임·기울임 효과는 일부러 뺐어요. 마우스를 올리면 테두리만 살짝 진해집니다.</li>
+        </ul>
+        <div class="swatches">
+          <span class="sw"><i style="background:var(--air-ke)"></i><span style="color:var(--air-ke)">KOREAN AIR</span><small>대한항공</small></span>
+          <span class="sw"><i style="background:var(--air-lj)"></i><span style="color:var(--air-lj)">JIN AIR</span><small>진에어</small></span>
+          <span class="sw"><i style="background:var(--air-7c)"></i><span style="color:var(--air-7c)">JEJU AIR</span><small>제주항공</small></span>
+          <span class="sw"><i style="background:var(--air-tw)"></i><span style="color:var(--air-tw)">T'WAY AIR</span><small>티웨이</small></span>
+          <span class="sw"><i style="background:var(--air-ze)"></i><span style="color:var(--air-ze)">EASTAR JET</span><small>이스타</small></span>
+          <span class="sw"><i style="background:var(--air-yp)"></i><span style="color:var(--air-yp)">AIR PREMIA</span><small>에어프레미아</small></span>
+          <span class="sw"><i style="background:var(--air-rf)"></i><span style="color:var(--air-rf)">AERO K</span><small>에어로케이</small></span>
+        </div>
+      </div>
+      <p class="phone-label">▲ 항공사별 색 — 아이보리 커버 위에서 글자가 또렷하게 읽히도록 살짝 조정해 둔 값이에요</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ ③ 상세 + 신청 ═══════════ -->
+  <div class="cap" id="d">
+    <span class="n">3</span>
+    <div>
+      <h2>상세 화면 — 이 안에서 신청·결제까지 끝</h2>
+      <p>카드를 누르면 나오는 화면이에요. 특강마다 페이지를 새로 만드는 게 아니라, <b>관리자 페이지에 적은 내용이 이 틀에 자동으로 채워져요.</b>
+      아래로 내리면 신청 폼이 있고, 토스 결제 또는 계좌이체로 그 자리에서 신청이 끝납니다.</p>
+    </div>
+  </div>
+  <div class="stage">
+    <div>
+      <div class="phone" style="--lx-accent:var(--air-ke)">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">← 특강 목록</span></div>
+        <div class="lc-scroll">
+          <header class="lc-hero">
+            <div class="lc-container">
+              <span class="lc-badge open">신청 중 · D-3</span>
+              <div class="lc-eyebrow">Korean Air</div>
+              <h1 class="lc-title">대한항공 최종면접 실전 특강</h1>
+              <p class="lc-sub">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</p>
+              <div class="lc-facts">
+                <div class="lc-fact"><div class="k">일시</div><div class="v">8월 8일(토) · 오후 2시</div></div>
+                <div class="lc-fact"><div class="k">강사</div><div class="v">박새암 수석 연구원</div></div>
+                <div class="lc-fact"><div class="k">신청 기간</div><div class="v">7/25 ~ 8/5</div></div>
+                <div class="lc-fact"><div class="k">잔여석</div><div class="v">12석</div></div>
+                <div class="lc-fact"><div class="k">참가비</div><div class="v price">20,000원</div></div>
+              </div>
+            </div>
+          </header>
+          <div class="lc-container">
+            <section class="lc-sec lc-desc">
+              <h2>특강 소개</h2>
+              <p>대한항공 최종면접은 답을 잘하는 사람이 아니라, 함께 일하고 싶은 사람을 뽑는 자리예요.</p>
+              <p>면접관이 실제로 체크하는 항목을 기준으로, 내 답변이 어디서 점수를 잃는지 그 자리에서 짚어드립니다.</p>
+            </section>
+            <section class="lc-sec">
+              <h2>이런 걸 얻어가요</h2>
+              <ul class="lc-high">
+                <li>최종면접 평가표, 실제로 뭘 보는지</li>
+                <li>내 답변 1분 시연 + 즉석 피드백</li>
+                <li>합격생들이 마지막 일주일에 한 것</li>
+              </ul>
+            </section>
+            <section class="lc-apply">
+              <h2>신청하기</h2>
+              <p class="hint">이름·연락처를 남기면 신청이 접수돼요.</p>
+              <div class="guest-nudge"><a href="#">회원가입</a>하면 신청 내역과 성장 기록이 계정에 남아요.</div>
+              <div class="lc-field"><label>이름</label><input type="text" class="inp" placeholder="홍길동"></div>
+              <div class="lc-field"><label>연락처</label><input type="tel" class="inp" placeholder="010-0000-0000"></div>
+              <label class="consent"><input type="checkbox"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="#">개인정보 수집·이용</a>에 동의합니다.</span></label>
+              <div class="pay-total"><span class="l">참가비</span><span class="a">20,000원</span></div>
+              <button type="button" class="btn-toss"><span class="tlogo">toss pay</span><span>로 결제하고 신청하기</span></button>
+              <button type="button" class="btn-bank">계좌이체로 신청하기</button>
+              <p class="lc-refund">신청 후 환불은 「콘텐츠 이용자 보호지침」에 따릅니다. 특강 시작 전 취소는 전액 환불되며, 자세한 내용은 <a href="#">이용약관</a>을 참고해 주세요.</p>
+            </section>
+            <div style="height: 28px"></div>
+          </div>
+        </div>
+        <div class="lc-sticky">
+          <div class="lc-sticky-in">
+            <div class="info"><div class="p">20,000원</div><div class="s">대한항공 최종면접 실전 특강</div></div>
+            <button type="button" class="go">신청하기</button>
+          </div>
+        </div>
+      </div>
+      <p class="phone-label">▲ 상세 화면(폰 기준) — 실제 폰에서는 한 화면씩 스크롤되지만, 여기선 전체를 펼쳐 놨어요.<br>맨 아래 '신청하기' 바는 스크롤 내내 화면에 붙어 있다가, 누르면 신청 폼으로 데려갑니다.</p>
+    </div>
+
+    <div style="flex:1 1 380px; min-width: 300px;">
+      <div class="rules">
+        <h3>참가비에 따라 버튼이 자동으로 바뀌어요</h3>
+        <ul>
+          <li><b>유료 특강</b> — 파란 토스 결제 버튼 + 계좌이체 버튼, 두 가지 길이 떠요. 계좌이체를 누르면 입금 계좌 안내가 화면 아래에서 올라옵니다.</li>
+          <li><b>무료 특강</b> — 결제 없이 주황 버튼 하나로 바로 접수돼요.</li>
+          <li><b>마감·품절</b> — 폼이 사라지고 "신청이 마감된 특강이에요" 안내만 남아요.</li>
+        </ul>
+        <div style="margin-top:18px; display:flex; flex-direction:column; gap:0; max-width:340px;">
+          <button type="button" class="btn-toss" style="margin-top:0"><span class="tlogo">toss pay</span><span>로 결제하고 신청하기</span></button>
+          <button type="button" class="btn-bank">계좌이체로 신청하기</button>
+          <div style="border-top:1px dashed var(--border); margin:18px 0 4px;"></div>
+          <button type="button" class="btn-free">무료로 신청하기</button>
+        </div>
+        <ul style="margin-top:20px;">
+          <li>토스 결제는 금액을 <b>서버가 한 번 더 검사</b>해서, 화면을 조작해 싸게 결제하는 걸 막아요.</li>
+          <li>신청자는 챌린지 신청자와 <b>같은 관리자 명단</b>에 📚 표시로 쌓여요 — 보는 곳이 늘어나지 않아요.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 컴퓨터 화면 ═══════════ -->
+  <div class="cap">
+    <span class="n">＋</span>
+    <div>
+      <h2>컴퓨터 화면에서는</h2>
+      <p>같은 카드가 <b>3열</b>로 나란히 놓여요. (중간 크기 화면은 2열, 폰은 1열)<br>
+      <span style="font-size:13px;">지금 보시는 화면이 좁으면 아래 상자만 <b>옆으로 밀어서</b> 세 번째 카드까지 볼 수 있어요.</span></p>
+    </div>
+  </div>
+  <div class="desk">
+    <div class="lx-grid">
+      <a class="lx-card" style="--lx-accent:var(--air-ke)" href="#d">
+        <div class="lx-cover">
+          <span class="lx-badge paid">20,000원</span>
+          <div class="lx-en">Korean Air</div>
+          <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+          <hr class="lx-rule">
+        </div>
+        <div class="lx-info">
+          <div class="lx-copy">면접관 출신 연구원이 평가 기준을 짚어드려요.</div>
+          <div class="lx-meta">
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+          </div>
+        </div>
+      </a>
+      <a class="lx-card" style="--lx-accent:var(--air-lj)" href="#">
+        <div class="lx-cover">
+          <span class="lx-badge free">무료</span>
+          <div class="lx-en">Jin Air</div>
+          <div class="lx-ko">진에어 토론면접 파헤치기</div>
+          <hr class="lx-rule">
+        </div>
+        <div class="lx-info">
+          <div class="lx-copy">실전 시뮬레이션으로 익히는 토론면접.</div>
+          <div class="lx-meta">
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+            <span class="mi seats-low"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+          </div>
+        </div>
+      </a>
+      <a class="lx-card" style="--lx-accent:var(--air-7c)" href="#">
+        <div class="lx-cover">
+          <span class="lx-badge paid">15,000원</span>
+          <div class="lx-en">Jeju Air</div>
+          <div class="lx-ko">제주항공 기내방송문 클리닉</div>
+          <hr class="lx-rule">
+        </div>
+        <div class="lx-info">
+          <div class="lx-copy">방송문 낭독, 녹음으로 확인하며 다듬어요.</div>
+          <div class="lx-meta">
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 22일(토)</span>
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 8석</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <p class="footnote">
+    화면 속 특강 제목·날짜·가격은 전부 <b>예시</b>예요. 실제 운영에선 관리자 페이지 '특강' 탭에 적는 순간 이 모양 그대로 올라갑니다.<br>
+    사이트에 실제로 보이려면 남은 두 가지(오너 작업) — <b>마이그레이션 실행</b>과 <b>결제 검증 함수 재배포</b>가 필요해요.
+  </p>
+
+</div>
+</body>
+</html>

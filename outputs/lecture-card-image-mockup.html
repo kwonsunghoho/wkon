@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>특강 카드에 사진 넣기 — 네 가지 안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ── 사이트 실제 토큰(tokens.css) ── */
+:root {
+  --bg: #E9E4D8; --bg2: #F1ECE2; --surface: #FFFFFF; --surface2: #F4F0E8;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #6C6454;
+  --border: rgba(38,34,28,.16); --border-soft: rgba(38,34,28,.09);
+  --accent: #F27945; --accent-dark: #D9531F; --accent-tint: #FDE9DE; --accent-ink: #A33D14;
+  --action: #F27945; --action-ink: #2A1206;
+  --serif: 'Noto Serif KR', serif;
+
+  /* 항공사 액센트 — lectures.css 실제 값(밝은 아이보리 배경용) */
+  --air-ke: #14375E; --air-lj: #3A6440; --air-7c: #8C4318;
+  --air-tw: #9E3B34; --air-ze: #97323A; --air-yp: #2E3D63; --air-rf: #8E4064;
+
+  /* ① 어두운 사진 위에서 쓸 '밝은 버전' 항공사색 — A안 전용(진한 네이비는 어두운 사진 위에서 안 보인다) */
+  --airlt-ke: #8FBCEF; --airlt-lj: #93DCA0; --airlt-7c: #F2AC72;
+  --airlt-tw: #F3A29B; --airlt-ze: #F39BA3; --airlt-yp: #A8B9EC; --airlt-rf: #F1A7C9;
+
+  --lx-cover: #E4DDC9; --lx-info: #FBF9F4; --lx-navy: #1B2E4E;
+  --lx-body: #4A4640; --lx-metac: #7A756C;
+  --lx-bd: rgba(38,34,28,.12); --lx-bd-h: rgba(38,34,28,.30);
+
+  /* ② 조절바가 실시간으로 바꾸는 두 값 — 시작값은 검증된 권장치(흐림 6 / 덮개 30) */
+  --blur: 6px;      /* 사진 흐림 정도 */
+  --dim:  0.30;     /* 덮개 진하기 */
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+  background: #DDD6C6; color: var(--text); line-height: 1.6;
+  -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 34px 20px 90px; }
+
+/* ── 목업 껍데기 ── */
+.mk-head { text-align: center; margin-bottom: 22px; }
+.mk-kicker { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); text-transform: uppercase; }
+.mk-title { font-family: var(--serif); font-size: clamp(25px, 4.2vw, 38px); font-weight: 700; margin-top: 8px; letter-spacing: -.5px; }
+.mk-sub { font-size: 15px; color: var(--text-muted); margin-top: 10px; max-width: 40em; margin-left: auto; margin-right: auto; }
+
+/* 조절바 — 스크롤해도 위에 붙어 있다 */
+.ctrl { position: sticky; top: 0; z-index: 50; background: rgba(250,248,243,.95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--border-soft); border-radius: 16px; padding: 16px 18px; margin: 0 0 12px; box-shadow: 0 6px 22px rgba(30,25,18,.12); }
+.ctrl h3 { font-size: 14px; font-weight: 900; margin-bottom: 3px; }
+.ctrl .lead { font-size: 13px; color: var(--text-muted); margin-bottom: 13px; }
+.ctrl-row { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: center; }
+.ctrl-item { display: flex; align-items: center; gap: 11px; flex: 1 1 260px; }
+.ctrl-item label { font-size: 13px; font-weight: 800; white-space: nowrap; }
+.ctrl-item input[type=range] { flex: 1 1 auto; min-width: 110px; accent-color: var(--action); height: 26px; }
+.ctrl-item .val { font-size: 13px; font-weight: 800; color: var(--accent-ink); min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+.ctrl-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.ctrl-presets button { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 15px; font-size: 12.5px; font-weight: 700; font-family: inherit; color: var(--text); cursor: pointer; min-height: 38px; }
+.ctrl-presets button:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+
+/* 폰에서는 조절바가 화면의 3분의 1을 먹어 카드를 보면서 조절할 수가 없다 → 압축 */
+@media (max-width: 640px) {
+  .ctrl { padding: 12px 14px; border-radius: 14px; }
+  .ctrl .lead { display: none; }
+  .ctrl h3 { margin-bottom: 10px; }
+  .ctrl-row { gap: 8px 16px; }
+  .ctrl-item { flex: 1 1 100%; }
+  .ctrl-item label { font-size: 12.5px; }
+  .ctrl-presets { flex-wrap: nowrap; overflow-x: auto; margin-top: 10px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .ctrl-presets button { flex: 0 0 auto; padding: 7px 13px; min-height: 34px; font-size: 12px; }
+}
+
+/* 안 4개 배치 */
+.opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px 26px; margin-top: 30px; }
+@media (max-width: 900px) { .opts { grid-template-columns: 1fr; } }
+.opt { }
+.opt-head { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 12px; }
+.opt-head .tag { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--action); color: #fff; font-weight: 900; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.opt-head h2 { font-size: 18px; font-weight: 900; letter-spacing: -.3px; }
+.opt-head p { font-size: 13.5px; color: var(--text-muted); margin-top: 3px; }
+.opt-note { background: #fff; border: 1px solid var(--border-soft); border-radius: 14px; padding: 15px 17px; margin-top: 14px; }
+.opt-note ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.opt-note li { position: relative; padding-left: 20px; font-size: 13.5px; }
+.opt-note li::before { content: '—'; position: absolute; left: 0; color: var(--action); font-weight: 900; }
+.opt-note li.good::before { content: '＋'; color: #2E6E42; }
+.opt-note li.bad::before { content: '−'; color: #A33D14; }
+
+/* 폰 프레임 */
+.phone { width: 100%; max-width: 390px; background: var(--bg); border: 9px solid #2A2620; border-radius: 32px; overflow: hidden; box-shadow: 0 18px 44px rgba(30,25,18,.22); }
+.mock-nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: rgba(233,228,216,.92); border-bottom: 1px solid var(--border-soft); }
+.mock-logo { font-weight: 900; font-size: 14px; letter-spacing: .18em; }
+.mock-back { font-size: 13px; font-weight: 700; opacity: .8; }
+.phone-body { padding: 18px 16px 22px; }
+
+/* ═══════════ 카드 공통(lectures.css 기반) ═══════════ */
+.lx-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.lx-card {
+  --lx-accent: var(--lx-navy);
+  display: flex; flex-direction: column;
+  background: var(--lx-info);
+  border: 1px solid var(--lx-bd); border-radius: 14px; overflow: hidden;
+  text-decoration: none; color: var(--lx-body);
+  transition: border-color .18s ease;
+}
+.lx-card:hover { border-color: var(--lx-bd-h); }
+.lx-cover { position: relative; background: var(--lx-cover); padding: 24px 20px 20px; overflow: hidden; }
+.lx-cover > * { position: relative; z-index: 2; }     /* 글자는 사진 레이어 위 */
+.lx-en { font-size: 12px; font-weight: 400; letter-spacing: .14em; line-height: 1.2; color: var(--lx-accent); text-transform: uppercase; }
+.lx-ko { margin-top: 12px; font-size: 24px; font-weight: 500; line-height: 1.25; color: var(--lx-navy); letter-spacing: -.01em; }
+.lx-rule { margin: 18px 0 0; height: 1px; border: 0; background: var(--lx-accent); opacity: .6; }
+.lx-badge { position: absolute; top: 14px; right: 14px; z-index: 3; font-size: 11px; font-weight: 400; line-height: 1.5; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.lx-badge.free { background: rgba(46,125,70,.14); color: #2E6E42; }
+.lx-badge.paid { background: rgba(27,46,78,.10); color: var(--lx-navy); }
+.lx-info { padding: 14px 20px 18px; }
+.lx-copy { font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--lx-body); }
+.lx-meta { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 13px; font-weight: 400; color: var(--lx-metac); }
+.lx-meta .mi { display: inline-flex; align-items: center; gap: 5px; }
+.lx-meta .mi svg { width: 14px; height: 14px; opacity: .7; flex: 0 0 auto; }
+.lx-meta .seats-low { color: var(--lx-accent); font-weight: 500; }
+
+/* 사진 레이어 — blur는 가장자리를 투명하게 만들어서 inset을 넉넉히 밖으로 뺀다 */
+.shot .lx-cover::before {
+  content: ''; position: absolute; inset: -34px; z-index: 0;
+  background-image: var(--shot); background-size: cover; background-position: center 34%;
+}
+.shot .lx-cover::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+
+/* ═══ ① 사진 위에 어둡게 덮기 ═══ */
+.v-a .lx-cover { min-height: 188px; display: flex; flex-direction: column; justify-content: flex-end; padding: 22px 20px 20px; }
+.v-a .lx-cover::before { filter: blur(calc(var(--blur) * .34)); }
+.v-a .lx-cover::after {
+  background: linear-gradient(180deg,
+    rgba(20,16,12, calc(var(--dim) * .34)) 0%,
+    rgba(20,16,12, calc(var(--dim) * .72)) 42%,
+    rgba(20,16,12, calc(var(--dim) * 1.14)) 100%);
+}
+.v-a .lx-en { color: var(--lx-accent-lt, #fff); }
+.v-a .lx-ko { color: #fff; text-shadow: 0 1px 12px rgba(0,0,0,.4); }
+.v-a .lx-rule { background: var(--lx-accent-lt, #fff); opacity: .75; }
+/* 사진 위에 얹히는 배지(①③④안)는 반투명 옅은 배경으로는 안 읽힌다 → 불투명 흰 알약 */
+.v-a .lx-badge.paid, .v-c .lx-badge.paid, .v-d .lx-badge.paid { background: rgba(255,255,255,.94); color: #1B2E4E; }
+.v-a .lx-badge.free, .v-c .lx-badge.free, .v-d .lx-badge.free { background: rgba(202,242,214,.95); color: #14512C; }
+
+/* ═══ ② 사진을 흐리게 + 지금의 아이보리 톤 유지 ═══ */
+.v-b .lx-cover { min-height: 176px; display: flex; flex-direction: column; justify-content: flex-end; }
+/* 사진을 그냥 아이보리로 덮으면 어두운 부분(머리카락·유니폼)이 탁한 회색이 된다
+   → 밝기를 올리고 살짝 웜톤으로 보정해서 아이보리와 자연스럽게 섞이게. 톤이 통일되는 부수효과도 있다. */
+.v-b .lx-cover::before { filter: blur(var(--blur)) brightness(1.24) saturate(1.15) sepia(.16); transform: scale(1.06); }
+.v-b .lx-cover::after { background: rgba(228,221,201, calc(.26 + var(--dim) * .72)); }
+
+/* ═══ ③ 선명한 사진 + 아래로 갈수록 아이보리에 녹아들기 ═══
+   구 버전은 글자 자리에 backdrop-filter 유리 패널을 깔았는데, 블러가 뒤 사진을 완전히 뭉개
+   결국 ④안(사진/글자 분리)과 똑같아 보였다. 게다가 backdrop-filter는 구형 아이폰에서 지원이
+   불안정하고 카드 수만큼 블러 레이어가 생겨 무겁다. 지금은 그라디언트만으로 같은 일을 한다. */
+.v-c .lx-cover { min-height: 252px; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; }
+.v-c .lx-cover::before { filter: blur(calc(var(--blur) * .12)); }
+.v-c .lx-cover::after {
+  background: linear-gradient(180deg,
+    rgba(251,249,244, 0) 24%,
+    rgba(251,249,244, calc(.42 + var(--dim) * .40)) 48%,
+    rgba(251,249,244, calc(.82 + var(--dim) * .18)) 70%,
+    rgba(251,249,244, 1) 88%);
+}
+.v-c .glass { position: relative; z-index: 2; padding: 0 20px 18px; }
+.v-c .glass .lx-rule { margin-top: 14px; }
+
+/* ═══ ④ 위는 사진, 아래는 지금 그대로 ═══ */
+.v-d .band { position: relative; height: 132px; overflow: hidden; }
+.v-d .band::before {
+  content: ''; position: absolute; inset: -24px; z-index: 0;
+  background-image: var(--shot); background-size: cover; background-position: center 34%;
+  filter: blur(calc(var(--blur) * .18));
+}
+.v-d .band::after { content: ''; position: absolute; inset: 0; background: rgba(20,16,12, calc(var(--dim) * .12)); }
+/* ④안은 사진이 위 밴드에만 있다 — 공통 .shot 사진 레이어가 글자 영역까지 덮지 않도록 끈다 */
+.v-d .lx-cover::before, .v-d .lx-cover::after { content: none; }
+.v-d .lx-cover { padding-top: 18px; }
+.v-d .band .lx-badge { z-index: 3; }
+
+/* 사진 없는 특강(폴백) */
+.fallback-row { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+@media (max-width: 620px) { .fallback-row { grid-template-columns: 1fr; } }
+
+/* 설명 박스 */
+.rules { background: #fff; border: 1px solid var(--border-soft); border-radius: 18px; padding: 24px 22px; }
+.rules h3 { font-size: 16px; font-weight: 900; margin-bottom: 12px; }
+.rules h4 { font-size: 14px; font-weight: 900; margin: 18px 0 8px; color: var(--accent-ink); }
+.rules ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.rules li { position: relative; padding-left: 22px; font-size: 14px; }
+.rules li::before { content: '—'; position: absolute; left: 0; color: var(--action); font-weight: 900; }
+.rules p { font-size: 14px; color: var(--text-muted); }
+.cap { display: flex; align-items: flex-start; gap: 12px; margin: 62px 0 18px; }
+.cap .n { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--text); color: #fff; font-weight: 900; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; margin-top: 2px; }
+.cap h2 { font-size: 20px; font-weight: 900; letter-spacing: -.3px; }
+.cap p { font-size: 14px; color: var(--text-muted); margin-top: 3px; max-width: 48em; }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .duo { grid-template-columns: 1fr; } }
+.footnote { margin-top: 52px; text-align: center; font-size: 13.5px; color: var(--text-muted); }
+.footnote b { color: var(--accent-ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mk-head">
+    <div class="mk-kicker">Design Options</div>
+    <h1 class="mk-title">특강 카드에 사진 넣기 — 네 가지 안</h1>
+    <p class="mk-sub">사진을 배경에 깔고 흐리게(블러) 처리하는 방식이 크게 네 갈래예요.
+    <b>위 조절바를 밀면 네 안이 동시에 바뀌니</b>, 어느 정도가 좋은지 직접 맞춰보시고 마음에 드는 안을 골라 주세요.</p>
+  </header>
+
+  <!-- 조절바 -->
+  <div class="ctrl">
+    <h3>흐림·어둡기 조절</h3>
+    <p class="lead">밀어보면서 "이 정도면 글자가 잘 읽힌다" 싶은 지점을 찾아 주세요. 네 안에 동시에 적용됩니다.</p>
+    <div class="ctrl-row">
+      <div class="ctrl-item">
+        <label for="rBlur">사진 흐림</label>
+        <input type="range" id="rBlur" min="0" max="26" step="1" value="6">
+        <span class="val" id="vBlur">6px</span>
+      </div>
+      <div class="ctrl-item">
+        <label for="rDim">덮개 진하기</label>
+        <input type="range" id="rDim" min="0" max="100" step="2" value="30">
+        <span class="val" id="vDim">30%</span>
+      </div>
+    </div>
+    <div class="ctrl-presets">
+      <button type="button" data-b="0"  data-d="0">사진 그대로 (처리 없음)</button>
+      <button type="button" data-b="6"  data-d="30">권장 ★</button>
+      <button type="button" data-b="10" data-d="46">조금 더 흐리게</button>
+      <button type="button" data-b="18" data-d="62">푹 흐리게</button>
+      <button type="button" data-b="26" data-d="80">사진은 분위기만</button>
+    </div>
+  </div>
+
+  <!-- 네 가지 안 -->
+  <div class="opts">
+
+    <!-- ① 어둡게 덮기 -->
+    <section class="opt">
+      <div class="opt-head">
+        <span class="tag">1</span>
+        <div>
+          <h2>사진 위에 어둡게 덮기</h2>
+          <p>사진을 꽉 채우고 아래로 갈수록 어둡게. 글자는 흰색.</p>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">← 홈으로</span></div>
+        <div class="phone-body">
+          <div class="lx-grid">
+
+            <a class="lx-card shot v-a" style="--lx-accent:var(--air-ke); --lx-accent-lt:var(--airlt-ke); --shot:url('../images/hero-answer.webp')" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge paid">20,000원</span>
+                <div class="lx-en">Korean Air</div>
+                <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>박새암</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card shot v-a" style="--lx-accent:var(--air-lj); --lx-accent-lt:var(--airlt-lj); --shot:url('../images/hero-expression.webp')" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge free">무료</span>
+                <div class="lx-en">Jin Air</div>
+                <div class="lx-ko">진에어 토론면접 파헤치기</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">토론면접에서 말 순서보다 중요한 것 — 실전 시뮬레이션으로 익혀요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+                  <span class="mi seats-low" style="color:var(--air-lj)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+      <div class="opt-note">
+        <ul>
+          <li class="good">사진이 가장 크게 보이고, 특강마다 확실히 달라 보여요.</li>
+          <li class="bad"><b>밝은 사진이 오면 흰 글씨가 위태로워요.</b> 위 두 번째 카드(진에어)가 그런 경우라 첫 카드보다 글자가 덜 또렷합니다 — '덮개 진하기'를 올리면 읽히지만, 그만큼 사진이 어두워져요.</li>
+          <li class="bad">카드가 어두워져서 지금의 밝은 사이트 톤과 결이 달라요.</li>
+          <li class="bad">항공사 색이 어두운 사진 위에선 안 보여서 <b>밝은 버전 색을 따로 정해야</b> 해요(지금 목업엔 넣어놨습니다).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ② 흐리게 + 아이보리 -->
+    <section class="opt">
+      <div class="opt-head">
+        <span class="tag">2</span>
+        <div>
+          <h2>사진을 흐리게 + 지금 톤 유지</h2>
+          <p>사진을 푹 흐려서 색감만 남기고, 지금의 아이보리 카드를 그대로.</p>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">← 홈으로</span></div>
+        <div class="phone-body">
+          <div class="lx-grid">
+
+            <a class="lx-card shot v-b" style="--lx-accent:var(--air-ke); --shot:url('../images/hero-answer.webp')" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge paid">20,000원</span>
+                <div class="lx-en">Korean Air</div>
+                <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>박새암</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card shot v-b" style="--lx-accent:var(--air-lj); --shot:url('../images/hero-expression.webp')" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge free">무료</span>
+                <div class="lx-en">Jin Air</div>
+                <div class="lx-ko">진에어 토론면접 파헤치기</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">토론면접에서 말 순서보다 중요한 것 — 실전 시뮬레이션으로 익혀요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+                  <span class="mi seats-low"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+      <div class="opt-note">
+        <ul>
+          <li class="good">지금 디자인이 하나도 안 깨져요 — 네이비 제목·항공사 색 그대로.</li>
+          <li class="good"><b>사진 품질을 안 타요.</b> 밝은 사진·어두운 사진(석양, 역광 실루엣)을 다 넣어봤는데 제목이 전부 또렷했습니다. 사진을 밝고 따뜻하게 보정한 뒤 덮개를 씌우기 때문이에요.</li>
+          <li class="good">사진이 작아도 되니 가장 가벼워요.</li>
+          <li class="good">카드가 짧아서 목록에서 한 화면에 더 많이 보여요.</li>
+          <li class="bad">차별화가 은근해요 — 다만 <b>흐림을 6px까지 낮추면</b> 무슨 사진인지 알아볼 정도가 되면서 카드마다 확실히 달라 보입니다(지금 시작값이 그 수치예요).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ③ 젖빛 유리 -->
+    <section class="opt">
+      <div class="opt-head">
+        <span class="tag">3</span>
+        <div>
+          <h2>선명한 사진 + 아래로 녹아들기</h2>
+          <p>사진은 그대로 두고, 아래로 갈수록 아이보리에 스며들게. 글자는 그 자리에.</p>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">← 홈으로</span></div>
+        <div class="phone-body">
+          <div class="lx-grid">
+
+            <a class="lx-card shot v-c" style="--lx-accent:var(--air-ke); --shot:url('../images/hero-answer.webp')" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge paid">20,000원</span>
+                <div class="glass">
+                  <div class="lx-en">Korean Air</div>
+                  <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+                  <hr class="lx-rule">
+                </div>
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>박새암</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card shot v-c" style="--lx-accent:var(--air-lj); --shot:url('../images/hero-expression.webp')" href="#">
+              <div class="lx-cover">
+                <span class="lx-badge free">무료</span>
+                <div class="glass">
+                  <div class="lx-en">Jin Air</div>
+                  <div class="lx-ko">진에어 토론면접 파헤치기</div>
+                  <hr class="lx-rule">
+                </div>
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">토론면접에서 말 순서보다 중요한 것 — 실전 시뮬레이션으로 익혀요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+                  <span class="mi seats-low"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+      <div class="opt-note">
+        <ul>
+          <li class="good">사진이 온전히 보이면서 글자도 또렷해요 — 가독성과 차별화를 둘 다 잡습니다.</li>
+          <li class="good">네이비 제목·항공사 색을 그대로 씁니다.</li>
+          <li class="good">사진과 카드 사이에 선이 안 생겨서 ④안보다 <b>한 덩어리로</b> 보여요.</li>
+          <li class="bad">카드가 세로로 길어져요(사진이 보일 자리가 필요해서).</li>
+          <li class="bad">사진이 흐릿하거나 어수선하면 바로 티가 나요 — <b>특강마다 쓸 만한 사진</b>을 구하셔야 합니다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ④ 위 사진 밴드 -->
+    <section class="opt">
+      <div class="opt-head">
+        <span class="tag">4</span>
+        <div>
+          <h2>위는 사진, 아래는 지금 그대로</h2>
+          <p>사진과 글자를 아예 안 겹치게 위아래로 나눈 방식.</p>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="mock-nav"><span class="mock-logo">MONC</span><span class="mock-back">← 홈으로</span></div>
+        <div class="phone-body">
+          <div class="lx-grid">
+
+            <a class="lx-card shot v-d" style="--lx-accent:var(--air-ke); --shot:url('../images/hero-answer.webp')" href="#">
+              <div class="band"><span class="lx-badge paid">20,000원</span></div>
+              <div class="lx-cover">
+                <div class="lx-en">Korean Air</div>
+                <div class="lx-ko">대한항공 최종면접 실전 특강</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">면접관 출신 연구원이 대한항공 최종면접의 평가 기준을 짚어드려요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 8일(토)</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"/></svg>박새암</span>
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 12석</span>
+                </div>
+              </div>
+            </a>
+
+            <a class="lx-card shot v-d" style="--lx-accent:var(--air-lj); --shot:url('../images/hero-expression.webp')" href="#">
+              <div class="band"><span class="lx-badge free">무료</span></div>
+              <div class="lx-cover">
+                <div class="lx-en">Jin Air</div>
+                <div class="lx-ko">진에어 토론면접 파헤치기</div>
+                <hr class="lx-rule">
+              </div>
+              <div class="lx-info">
+                <div class="lx-copy">토론면접에서 말 순서보다 중요한 것 — 실전 시뮬레이션으로 익혀요.</div>
+                <div class="lx-meta">
+                  <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 14일(금)</span>
+                  <span class="mi seats-low"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 3석</span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+      <div class="opt-note">
+        <ul>
+          <li class="good">글자와 사진이 안 겹치니 <b>가독성 걱정이 아예 없어요.</b> 어떤 사진이 와도 안전합니다.</li>
+          <li class="good">지금 카드 디자인을 한 글자도 안 바꾸고 위에 사진만 얹는 구조.</li>
+          <li class="bad">카드가 가장 길어져요 — 목록에서 한 화면에 보이는 개수가 줄어요.</li>
+          <li class="bad">흔한 블로그 카드 모양이라 특별해 보이진 않아요.</li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 사진 없는 특강 -->
+  <div class="cap">
+    <span class="n">＊</span>
+    <div>
+      <h2>사진을 안 올린 특강은?</h2>
+      <p>사진이 없으면 <b>지금 쓰는 아이보리 카드가 그대로</b> 나옵니다. 급하게 특강을 열 때 사진을 준비 못 해도 카드가 비거나 깨지지 않아요.
+      아래는 사진 있는 카드와 없는 카드를 나란히 둔 모습입니다(②안 기준).</p>
+    </div>
+  </div>
+  <div style="background:var(--bg); border:1px solid var(--border-soft); border-radius:18px; padding:22px 20px;">
+    <div class="fallback-row">
+      <a class="lx-card shot v-b" style="--lx-accent:var(--air-7c); --shot:url('../images/hero-voice.webp')" href="#">
+        <div class="lx-cover">
+          <span class="lx-badge paid">15,000원</span>
+          <div class="lx-en">Jeju Air</div>
+          <div class="lx-ko">제주항공 기내방송문 클리닉</div>
+          <hr class="lx-rule">
+        </div>
+        <div class="lx-info">
+          <div class="lx-copy">사진을 올린 특강 — 커버에 사진 색감이 은은히 깔려요.</div>
+          <div class="lx-meta">
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>8월 22일(토)</span>
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 8석</span>
+          </div>
+        </div>
+      </a>
+      <a class="lx-card" style="--lx-accent:var(--air-tw)" href="#">
+        <div class="lx-cover" style="min-height:176px; display:flex; flex-direction:column; justify-content:flex-end;">
+          <span class="lx-badge paid">20,000원</span>
+          <div class="lx-en">T'way Air</div>
+          <div class="lx-ko">티웨이 영어면접 집중 특강</div>
+          <hr class="lx-rule">
+        </div>
+        <div class="lx-info">
+          <div class="lx-copy">사진을 안 올린 특강 — 지금 쓰던 아이보리 커버 그대로입니다.</div>
+          <div class="lx-meta">
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>9월 5일(토)</span>
+            <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v8h9M6 13l-1 4M15 13l1 4M6 9h9a3 3 0 0 1 3 3v1"/></svg>잔여 15석</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 실무 안내 -->
+  <div class="cap">
+    <span class="n">✓</span>
+    <div>
+      <h2>고르시면 제가 할 일 / 사장님이 하실 일</h2>
+      <p>지금은 관리자 페이지에 <b>사진 주소를 붙여넣는 칸</b>만 있어요. 말씀하신 "이미지 첨부"(파일 골라서 올리기)를 하려면 사진을 보관할 공간이 하나 필요합니다.</p>
+    </div>
+  </div>
+  <div class="duo">
+    <div class="rules">
+      <h3>사진 첨부 — 이렇게 만들 수 있어요</h3>
+      <h4>사장님이 한 번만 하실 일</h4>
+      <ul>
+        <li>Supabase 콘솔에서 사진 보관함(Storage 버킷) 하나 만들기 — 클릭 몇 번, 5분이면 끝나요.</li>
+      </ul>
+      <h4>그다음부터는</h4>
+      <ul>
+        <li>관리자 '특강' 탭에서 <b>사진 파일을 고르면 바로 올라가고</b>, 미리보기가 그 자리에 뜹니다.</li>
+        <li>올리는 순간 <b>브라우저가 알아서 크기를 줄이고 압축</b>해요. 폰으로 찍은 5MB짜리 사진을 그대로 올려도 자동으로 100KB 안쪽이 됩니다.</li>
+        <li>사진을 안 고르면 지금처럼 아이보리 카드로 나가요.</li>
+      </ul>
+      <h4>왜 자동 압축이 필요하냐면</h4>
+      <ul>
+        <li>목록에 특강이 6개면 사진도 6장이에요. 원본을 그대로 쓰면 <b>목록 한 번 여는 데 20MB</b>가 넘어가서, 데이터 켜고 보는 학생 폰에서 카드가 한참 뒤에 뜹니다.</li>
+        <li>흐리게 처리하는 ①②안은 사진이 작아도 티가 안 나서 더 가볍게 갈 수 있어요.</li>
+      </ul>
+    </div>
+    <div class="rules">
+      <h3>"가족처럼 보이기"는 어떻게 지키나</h3>
+      <p style="margin-bottom:12px;">지금 카드 규칙의 핵심이 <b>"커버 배경은 모든 카드가 똑같다"</b>였어요. 사진을 넣으면 그 규칙이 깨지니, 대신 다른 끈으로 묶어야 합니다.</p>
+      <ul>
+        <li><b>흐림·어둡기 수치를 모든 카드에 똑같이</b> 적용해요. 사진은 달라도 '처리된 느낌'이 같으면 한 세트로 보입니다.</li>
+        <li>한글 제목 위치·크기·굵기는 그대로 — 사진이 바뀌어도 글자 배치는 안 흔들려요.</li>
+        <li>사진을 자르는 위치도 통일(가운데 위쪽 기준)해서 인물 눈높이가 대충 맞게 잡습니다.</li>
+      </ul>
+      <h4>제 추천 — ②안, 흐림 6px / 덮개 30%</h4>
+      <p><b>②안(흐리게 + 지금 톤 유지)</b>을 권합니다. 이유는 셋이에요.</p>
+      <ul style="margin-top:10px;">
+        <li><b>아직 특강 사진이 없어요.</b> 첫 특강은 열기 전이라 쓸 사진이 없는데, ②안은 강의실 사진이든 하늘 사진이든 흐려서 색감만 쓰면 되니 지금 바로 시작할 수 있어요. ③안은 좋은 사진이 있어야 성립합니다.</li>
+        <li><b>어떤 사진이 와도 안 깨져요.</b> 밝은 사진·어두운 사진을 넣어 확인했고 둘 다 제목이 또렷했습니다. 특강을 급하게 열 때 사진을 고를 여유가 없어도 안전합니다.</li>
+        <li><b>나중에 ③안으로 갈아탈 수 있어요.</b> 사진은 그대로 두고 화면 규칙만 바꾸면 되니, 쓸 만한 사진이 쌓이면 그때 옮기면 됩니다. 되돌릴 수 있는 선택이라 지금 크게 고민 안 하셔도 돼요.</li>
+      </ul>
+      <p style="margin-top:12px;">①안은 카드가 어두워져 밝은 사이트 톤과 부딪히고 밝은 사진에서 흰 글씨가 위태롭습니다. ④안은 안전하지만 흔한 모양이고 카드가 가장 길어요.</p>
+    </div>
+  </div>
+
+  <p class="footnote">
+    카드에 깔린 사진은 지금 사이트에 있는 <b>기존 사진들</b>을 임시로 가져다 쓴 거예요(실제 특강 사진 아님).<br>
+    마음에 드는 안 번호와 조절바 수치를 알려주시면 그대로 실제 카드에 반영하겠습니다.
+  </p>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const rB = document.getElementById('rBlur'), rD = document.getElementById('rDim');
+  const vB = document.getElementById('vBlur'), vD = document.getElementById('vDim');
+  function apply() {
+    root.style.setProperty('--blur', rB.value + 'px');
+    root.style.setProperty('--dim', (rD.value / 100).toFixed(2));
+    vB.textContent = rB.value + 'px';
+    vD.textContent = rD.value + '%';
+  }
+  rB.addEventListener('input', apply);
+  rD.addEventListener('input', apply);
+  document.querySelectorAll('.ctrl-presets button').forEach(b => {
+    b.addEventListener('click', () => { rB.value = b.dataset.b; rD.value = b.dataset.d; apply(); });
+  });
+  apply();
+</script>
+</body>
+</html>
