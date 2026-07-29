@@ -1,3 +1,16 @@
+/* 스크롤 진입 시 나타나는 연출 — 챌린지 상세 4종([data-reveal]) 전용.
+
+   ⚠️ 2026-07-30 정리: 한때 같이 있던 세 가지를 걷어냈다.
+     · initZoomExit(창 통과 줌 · 293줄) — 2026-07-29 삭제. 홈 히어로가 정적 배경 + 자동
+       애니메이션으로 바뀌면서 [data-zoom-exit]를 쓰는 페이지가 하나도 남지 않았다.
+       monc:zoomprogress 이벤트도 함께 사라졌다(구독처는 하단 CTA 바였고 스크롤 판정으로 교체).
+       되살리려면 하늘/창틀 2겹 이미지부터 필요하다 — 지금 배경은 합본이라 통과가 성립하지 않는다.
+     · initStickyPanel(44줄) — [data-sticky-panel]/[data-sticky-from]/[data-sticky-to]를
+       쓰는 마크업이 사이트에 하나도 없었다.
+     · initCountUp(46줄) — [data-count-up]도 마찬가지. 홈 숫자 타일(#moncStats)은 단위 노출·
+       지연 시작이 필요해서 index.html 이 자체 카운트업을 따로 갖고 있다(그쪽이 정본).
+   같은 정리에서 index.html 의 <script src="scroll-fx.js"> 도 뺐다 — 홈엔 [data-reveal]이 없다.
+   window.MoncScrollFx 내보내기도 부르는 데가 없어 삭제. 필요해지면 그때 다시 열 것. */
 (function () {
   'use strict';
 
@@ -24,115 +37,5 @@
     els.forEach(function (el) { observer.observe(el); });
   }
 
-  function initStickyPanel() {
-    var panels = document.querySelectorAll('[data-sticky-panel]');
-    if (!panels.length) return;
-
-    if (prefersReducedMotion) {
-      panels.forEach(function (panel) {
-        panel.querySelectorAll('[data-sticky-to]').forEach(function (to) {
-          to.style.opacity = 1;
-        });
-        panel.querySelectorAll('[data-sticky-from]').forEach(function (from) {
-          from.style.opacity = 0;
-        });
-      });
-      return;
-    }
-
-    var ticking = false;
-
-    function update() {
-      ticking = false;
-      panels.forEach(function (panel) {
-        var rect = panel.getBoundingClientRect();
-        var vh = window.innerHeight;
-        var progress = Math.min(1, Math.max(0, (vh - rect.top) / (rect.height + vh)));
-        var from = panel.querySelector('[data-sticky-from]');
-        var to = panel.querySelector('[data-sticky-to]');
-        if (from) {
-          from.style.opacity = String(1 - progress);
-          from.style.transform = 'translateY(' + (-progress * 24) + 'px)';
-        }
-        if (to) {
-          to.style.opacity = String(progress);
-          to.style.transform = 'translateY(' + ((1 - progress) * 24) + 'px)';
-        }
-      });
-    }
-
-    function onScroll() {
-      if (!ticking) {
-        window.requestAnimationFrame(update);
-        ticking = true;
-      }
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    update();
-  }
-
-  function initCountUp() {
-    var els = document.querySelectorAll('[data-count-up]');
-    if (!els.length) return;
-
-    function run(el) {
-      var raw = el.getAttribute('data-count-up');
-      var target = parseFloat(raw);
-      var suffix = el.getAttribute('data-count-suffix') || '';
-      if (prefersReducedMotion || isNaN(target)) {
-        el.textContent = target + suffix;
-        return;
-      }
-      // 소수점 자리수는 원본 문자열 기준으로 결정 (예: "14.2" → 소수 1자리).
-      // 정수 값은 기존과 동일하게 Math.round()로 반올림.
-      var dotIndex = raw.indexOf('.');
-      var decimals = dotIndex === -1 ? 0 : raw.length - dotIndex - 1;
-      var duration = 1200;
-      var start = null;
-      function step(ts) {
-        if (start === null) start = ts;
-        var progress = Math.min(1, (ts - start) / duration);
-        var current = decimals > 0
-          ? (target * progress).toFixed(decimals)
-          : Math.round(target * progress);
-        el.textContent = current + suffix;
-        if (progress < 1) window.requestAnimationFrame(step);
-      }
-      window.requestAnimationFrame(step);
-    }
-
-    if (!('IntersectionObserver' in window)) {
-      els.forEach(run);
-      return;
-    }
-
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          run(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.5 });
-
-    els.forEach(function (el) { observer.observe(el); });
-  }
-
-  /* ⚠️ initZoomExit(창 통과 줌 · 293줄)은 2026-07-29 삭제 — 홈 히어로가 정적 배경 +
-     자동 애니메이션으로 바뀌면서 [data-zoom-exit]를 쓰는 페이지가 하나도 남지 않았다.
-     monc:zoomprogress 이벤트도 함께 사라졌다(구독처는 하단 CTA 바였고 스크롤 판정으로 교체).
-     되살리려면 하늘/창틀 2겹 이미지부터 필요하다 — 지금 배경은 합본이라 통과가 성립하지 않는다. */
-
-
-  document.addEventListener('DOMContentLoaded', function () {
-    initReveal();
-    initStickyPanel();
-    initCountUp();
-  });
-
-  window.MoncScrollFx = window.MoncScrollFx || {};
-  window.MoncScrollFx.initReveal = initReveal;
-  window.MoncScrollFx.initStickyPanel = initStickyPanel;
-  window.MoncScrollFx.initCountUp = initCountUp;
+  document.addEventListener('DOMContentLoaded', initReveal);
 })();
