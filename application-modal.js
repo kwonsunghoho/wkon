@@ -16,7 +16,7 @@
       background:#fff; border-radius:20px; padding:32px 28px;
       width:100%; max-width:500px; max-height:88vh; overflow-y:auto;
       box-shadow:0 20px 60px rgba(0,0,0,.25); position:relative;
-      font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;
+      font-family:'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
     }
     .app-modal-content h2 { font-size:22px; font-weight:900; margin-bottom:24px; color:#241A12; }
     .app-modal-close {

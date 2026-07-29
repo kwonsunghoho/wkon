@@ -1,5 +1,34 @@
 /* MONC 디자인 토큰 — Warm Sunrise. index.html + 상세페이지 4개 + 약관/개인정보 페이지가 공유. */
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
+
+/* ── 사이트 전체 글꼴 = SUIT (2026-07-29 오너 확정, 목업 outputs/home-font-mockup.html) ──
+   본문·제목 모두 SUIT 한 벌로 통일했다. 구성은 제목 800 / 소제목 700 / 본문 500.
+   구 Pretendard(본문) + 명조 Song Myung·Noto Serif KR(제목) 2종 체제를 대체한다.
+
+   ⚠️⚠️ 폴백에 웹폰트를 두지 말 것 — 실측으로 밟은 함정이다(2026-07-29).
+      처음엔 'SUIT 다음에 Pretendard' 를 폴백으로 남겨 뒀다. "안 쓰이면 안 받겠지" 라고
+      본 것인데, 실제로는 **Pretendard woff2 2,009KB 를 그대로 내려받았다**(Performance
+      Resource Timing 실측). SUIT 610KB 와 합쳐 2,619KB — 바꾸기 전(2.0MB)보다 오히려
+      늘었다. 폴백은 반드시 **시스템 폰트**로 둔다(어느 OS 든 한글 기본 글꼴이 있다:
+      iOS Apple SD Gothic Neo / Android Noto Sans CJK / Windows 맑은 고딕).
+      현재 실측: SUIT 610KB 한 벌만 — 구 2.0MB 대비 **약 1.4MB 감소**.
+      트래픽 99% 가 모바일인 사이트라 이 숫자가 글꼴 선택보다 크게 작용한다.
+
+   ⚠️ 명조(Song Myung·Noto Serif KR)는 전 페이지에서 제거했다 — 되살리려면 각 HTML <head>에
+      Google Fonts 링크를 다시 넣어야 한다(2026-07-29 전수 삭제).
+
+   ⚠️ SUIT 은 배포처 CSS 를 @import 하지 말고 여기서 직접 선언한다(이것도 실측으로 잡았다).
+      원본(SUIT-Variable.css)이 `format('woff2-variations')` 라는 구 문법을 쓰는데 크롬이
+      이를 인식하지 못해 글꼴이 조용히 무시된다 — 화면은 폴백으로 떨어져 '분명 적용했는데
+      아무것도 안 바뀐' 상태가 된다. `format('woff2')` + `font-weight:100 900` 이 가변폰트의
+      현행 문법이다. 덤으로 @import 왕복이 한 단계 줄어 로딩도 빨라진다.
+      font-display:swap — 610KB 라 다 받기 전에도 글자가 보여야 한다(FOIT 방지). */
+@font-face {
+  font-family: 'SUIT Variable';
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.woff2') format('woff2');
+}
 
 /* ── 모바일 줌/가로 오버플로 가드 (전 페이지 공통) ──
    iOS Safari에서 핀치 줌 후 레이아웃이 화면 왼쪽에 좁게 고착되던 문제 대응.
@@ -160,7 +189,7 @@ html {
 /* ═══════════════════════════════════════════════════════════════
    2026-07-14 웜 리디자인 오버라이드 — '양산형 탈출' (오너 제작 monc-overrides.css 이식)
    ① 파란 액센트(--accent/--rose #194192) → 브랜드 코랄 계열로 통일
-   ② 섹션 제목(h2) 명조(Noto Serif KR) + 스케일 확대(--fs-h2 30~46px)
+   ② 섹션 제목(h2) 스케일 확대(--fs-h2 30~46px) ※ 구 명조 지정은 2026-07-29 SUIT으로 교체
    ③ 라벨(에이브로우) 넓은 자간 + 딥 웜 톤
    ⑤ 인물 사진 통일 그레이딩 (④ 카드 하드라인은 index.html에 직접 반영)
 
@@ -170,8 +199,8 @@ html {
    아이보리) 4.5:1+, 위에 얹는 흰 글씨 6.5:1. 소형 텍스트·링크·강조 볼드·활성
    칩 배경은 반드시 --accent-ink를 쓰고, --accent-dark는 큰 볼드(24px+/굵은
    18.66px+, 3:1)·테두리·포커스링까지만 허용. --accent(코랄)는 장식 면 전용.
-   ⚠ 명조 로드 — 이 블록의 --serif를 쓰는 페이지(index·상세 4종·reviews)는
-   <head>에 Noto Serif KR(600;700;900) 링크가 있어야 한다(없으면 나눔명조 폴백).
+   ⚠ 글꼴 로드 — 이 파일 맨 위 @import 한 줄이 전 페이지의 SUIT을 책임진다. 페이지별
+   <head>에 폰트 링크를 넣을 필요가 없다(구 명조 시절의 Google Fonts 링크는 2026-07-29 전수 삭제).
    ═══════════════════════════════════════════════════════════════ */
 :root {
   --accent: #F27945;       /* was #194192 (네이비) — 장식 면·큰 디스플레이 전용 */
@@ -181,17 +210,19 @@ html {
   /* 이름만 다르게 정의돼 있던 같은 파랑(--rose)도 함께 전환 */
   --rose: #F27945;         /* was #194192 */
   --rose-light: #F68A5C;   /* was #3B5DA6 */
-  /* 제목 명조 — index 밖(상세·reviews)에서도 쓰도록 전역 승격 */
-  --serif: 'Song Myung', 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  /* 제목 글꼴 — 2026-07-29부터 SUIT(산세). ⚠️ 이름이 --serif 인 것은 명조를 쓰던 시절의
+     흔적이다(참조처가 36곳이라 이름만 유지). '제목용 글꼴' 로 읽을 것. */
+  --serif: 'SUIT Variable', SUIT, sans-serif;
   --fs-h2: clamp(30px, 4.2vw, 46px);  /* was clamp(26px,4vw,32px) — 제목 위계 확대 */
 }
 
-/* ② 섹션 제목 전부 명조 + 스케일 확대.
+/* ② 섹션 제목 스케일 확대.
    h2. 접두로 특이도를 올려, tokens.css보다 나중에 로드되는 각 페이지
    인라인 <style>의 .section-title 단일 클래스 규칙을 이긴다. */
 h2.section-title, h2.ts-title, h2.mc-title, h2.ma-title {
   font-family: var(--serif);
-  font-weight: 400;  /* 송명(Song Myung)은 400 단일 굵기 — 정통 명조 렌더(faux-bold 방지) */
+  font-weight: 800;  /* SUIT ExtraBold. ⚠️ 400으로 되돌리지 말 것 — 구 400은 명조(Song Myung)
+                        단일 굵기에 맞춘 값이라, 산세로 바뀐 지금은 제목이 본문 굵기로 보인다. */
   font-size: var(--fs-h2);
   line-height: 1.28;
   letter-spacing: -0.01em;

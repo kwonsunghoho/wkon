@@ -24,7 +24,7 @@
 }
 .bq-label::before { content: ''; width: 26px; height: 1.5px; background: var(--action); flex: none; }
 .bq-title {
-  font-family: var(--serif, 'Noto Serif KR', serif); font-weight: 400;
+  font-family: var(--serif); font-weight: 800;
   font-size: var(--fs-h2); line-height: 1.28; letter-spacing: -0.01em;
   color: var(--action); margin-bottom: 14px; word-break: keep-all;
 }
