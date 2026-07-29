@@ -743,10 +743,28 @@
     }
 
     /* ── ④ 숫자 — '왜 지금인가'의 근거 (2026-07-30 ①에서 여기로 이사) ──
-       타일 자체는 구 .msn-stat 그대로다(클래스 이름만 자리에 맞게 바꿨다). */
+       타일 자체는 구 .msn-stat 그대로다(클래스 이름만 자리에 맞게 바꿨다).
+       ⚠️ 2026-07-30 오너 요청으로 두 묶음이 됐다 — 업계 현실 3개 → 브릿지 → 몬크 4개 → 마무리.
+          `.nums-line` 이 두 번 나오는 건 의도다(묶음 사이 브릿지 + 섹션 마무리). */
     .nums { background: var(--bg2); padding: 72px 0; }
     .nums-inner { max-width: 560px; margin: 0 auto; padding: 0 var(--space-3); }
+    .nums-title {
+      font-family: var(--serif); font-weight: 800;
+      font-size: clamp(24px, 6.4vw, 34px); line-height: 1.46; letter-spacing: -0.01em;
+      margin-top: 14px; margin-bottom: 26px; color: var(--ink); word-break: keep-all;
+    }
     .nums-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+    /* 몬크 숫자 4개 — 2×2 고정(데스크톱 포함, 아래 1024px 블록 주석에 근거).
+       숫자가 여섯 자리라 4열이면 어느 폭에서도 단위가 다음 줄로 떨어진다. */
+    .nums-grid.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* ⚠️ 아주 좁은 화면(≤360px — SE 1세대·폴드 바깥화면) 전용 한 단계.
+       360px 에서 타일 안쪽은 113.5px 인데 '30,000+여 명'은 22px 활자로 116.4px 이라
+       3px 이 모자라 '여 명'이 다음 줄로 떨어진다(실측). 활자 20px + 좌우 여백 5px 로
+       18px 여유를 만든다. 375px 은 22px 그대로 들어가므로 상한을 360 에 둔 것이다. */
+    @media (max-width: 360px) {
+      .nums-grid.is-four .num { padding-left: 5px; padding-right: 5px; }
+      .nums-grid.is-four .num strong { font-size: 20px; }
+    }
     .num {
       background: var(--surface); border: 1px solid var(--border-soft);
       border-radius: var(--radius-sm); padding: 18px 8px 15px; text-align: center;
@@ -757,8 +775,26 @@
       font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
     }
     .num strong em { font-style: normal; font-size: 14px; margin-left: 1px; }
-    .num > span { display: block; font-size: 13px; color: var(--text-muted); margin-top: 7px; letter-spacing: .02em; }
-    /* 액센트가 허용된 '숫자 한 곳' — 세 타일 중 여기만 색이 붙는다(위 팔레트 주석의 세 자리 규칙). */
+    .num strong .np { font-style: normal; }   /* 큰 활자 '+' — 30,000+ 처럼 숫자에 붙어 읽힌다 */
+    /* ⚠️ 단위(em·+)는 카운트가 멈춘 뒤에 뜬다 — 굴러가는 동안 '0여 명' 같은 조합을 안 보이게 하고,
+       착지에 마침표를 찍는다. `.is-armed` 안에서만 숨기는 이유는 JS 가 없거나 죽은 환경에서
+       단위가 영영 안 보이면 안 되기 때문이다(JS 가 관측을 걸 때 .is-armed 를 붙인다). */
+    .nums-grid.is-armed .num strong em,
+    .nums-grid.is-armed .num strong .np {
+      display: inline-block; opacity: 0; transform: translateY(3px);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .nums-grid.is-armed .num.is-done strong em,
+    .nums-grid.is-armed .num.is-done strong .np { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .nums-grid.is-armed .num strong em,
+      .nums-grid.is-armed .num strong .np { transition: none; }
+    }
+    /* 두 줄짜리 설명(예: '몬크와 함께했던 승준생')이 있어 행간을 잡는다 — grid stretch 라
+       같은 줄 타일 높이는 저절로 맞는다. */
+    .num > span { display: block; font-size: 13px; line-height: 1.45; color: var(--text-muted); margin-top: 7px; letter-spacing: .02em; word-break: keep-all; }
+    /* 액센트가 허용된 '숫자 한 곳' — 일곱 타일 중 여기만 색이 붙는다(위 팔레트 주석의 세 자리 규칙).
+       ⚠️ 몬크 타일 4개에 색을 붙이지 말 것 — 강조가 다섯이면 강조가 없는 것과 같다. */
     .num.is-hot { border-color: var(--accent); background: var(--accent-tint); }
     .num.is-hot strong { color: var(--accent); }
     .nums-line {
@@ -858,7 +894,14 @@
 
       .nums { padding: 112px 0; }
       .nums-inner { max-width: 720px; }
+      .nums-title { margin-bottom: 34px; }
       .nums-grid { gap: 14px; margin-top: 24px; }
+      /* ⚠️⚠️ 몬크 4개는 **데스크톱에서도 2×2 다 — 4열로 펴지 말 것.** 720px 컨테이너에서
+         4열이면 타일 안쪽 폭이 131.5px 인데 '30,000+여 명'은 38px 활자로 **159.3px**
+         (숫자 105.7 + '+' 22.9 + '여 명' 30.7 — 전부 실측)이라 단위가 다음 줄로 떨어진다.
+         32px 로 낮춰도 넘치고, 들어가게 하려면 26px 까지 내려야 하는데 그러면 위 3타일(38px)과
+         한 섹션 안에서 숫자 크기가 따로 논다. 2열이면 타일 안쪽이 309px 라 38px 그대로 넉넉하다
+         (원칙 10 '큼직한 레이아웃'에도 맞다). 자릿수가 줄기 전엔 4열이 성립하지 않는다. */
       .num { padding: 26px 12px 22px; }
       .num strong { font-size: 38px; }
       .num strong em { font-size: 16px; }
