@@ -73,6 +73,18 @@
     .btn-action:hover { background: var(--action-hover); }
     .btn-action:active { transform: scale(.99); }
     .btn-action:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; }
+
+    /* ── 다크 면 위의 채운 버튼 = 색 반전(아이보리 바탕 + 네이비 글씨) ──
+       ⚠️ 네이비 바탕 그대로 두면 글씨는 읽혀도 '버튼 모양'이 무대에 묻힌다
+          (네이비 vs 무대 1.36:1). 실제로 최종 CTA·블라인드 퀴즈의 시작 버튼이
+          어둠 속 사각형처럼 보였던 자리다(2026-07-29).
+       ⚠️ 다크 위에 새 버튼을 놓으면 이 목록에 셀렉터를 추가할 것. */
+    .cta-box .btn-action,
+    .bq-intro .btn-action { background: var(--on-dark-fill); color: var(--on-dark-ink); }
+    .cta-box .btn-action:hover,
+    .bq-intro .btn-action:hover { background: #FFFFFF; }
+    .cta-box .btn-action:focus-visible,
+    .bq-intro .btn-action:focus-visible { outline-color: var(--on-dark); }
     /* Secondary(고스트) 포커스 링도 접근성 보강 */
     .btn-ghost:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 
@@ -723,12 +735,14 @@
     /* '가장 좋았던 점' 롤링 배너 — 에스프레소 다크 + 거대한 명조 따옴표. 전환은 JS가 클래스 토글 */
     .mc-rolling { position: relative; overflow: hidden; background: var(--bg-dark); border-radius: 0;
       max-width: 760px; margin: 18px auto 0; padding: 32px 28px 34px; text-align: center; }
+    /* ⚠️ 다크 띠라 따옴표·라벨 모두 아이보리. 구 네이비는 이 배경 위 1.36:1 이라
+       큰 따옴표 장식과 'BEST' 라벨이 통째로 안 보였다(2026-07-29). */
     .mc-rolling::before { content: '\201C'; position: absolute; top: -6px; left: 22px;
-      font-family: var(--serif); font-size: 5.5rem; line-height: 1; color: rgba(16,43,86,.26); pointer-events: none; }
-    .mc-rolling-label { position: relative; font-size: 12px; font-weight: 800; letter-spacing: .22em; color: var(--action); }
+      font-family: var(--serif); font-size: 5.5rem; line-height: 1; color: rgba(246,238,232,.16); pointer-events: none; }
+    .mc-rolling-label { position: relative; font-size: 12px; font-weight: 800; letter-spacing: .22em; color: var(--on-dark-dim); }
     /* stage에 min-height 고정 — 문구 줄수가 달라도 아래 레이아웃이 안 튀게 */
     .mc-rolling-stage { margin-top: 10px; min-height: 3.2em; display: flex; align-items: center; justify-content: center; font-size: clamp(19px, 2.8vw, 23px); }
-    .mc-rolling-text { font-family: var(--serif); font-size: inherit; font-weight: 600; line-height: 1.5; color: #fff; margin: 0; transition: opacity .4s ease, transform .4s ease; }
+    .mc-rolling-text { font-family: var(--serif); font-size: inherit; font-weight: 600; line-height: 1.5; color: var(--on-dark); margin: 0; transition: opacity .4s ease, transform .4s ease; }
     .mc-rolling-text.mc-out { opacity: 0; transform: translateY(-12px); }                     /* 위로 사라짐 */
     .mc-rolling-text.mc-below { opacity: 0; transform: translateY(14px); transition: none; } /* 아래에서 대기 */
     /* 후기 카드 그리드 — minmax 반응형(데스크톱 3열 → 좁아지면 자동 줄바꿈) */
@@ -822,8 +836,10 @@
     .cta-box {
       --cta-ink: #1B1D22; /* 에스프레소 — 사이트 유일 다크 면으로 통일(2026-07-14 목업2) */
       position: relative; overflow: hidden;
-      /* 상단 코랄 방사형 글로우 + 에스프레소 솔리드 */
-      background: radial-gradient(120% 80% at 50% -10%, rgba(16,43,86,.18), transparent 60%), var(--cta-ink);
+      /* 상단 방사형 글로우 + 에스프레소 솔리드.
+         ⚠️ 글로우도 아이보리다 — 구 네이비 글로우는 다크 위에서 빛이 아니라
+            얼룩(1.4:1)으로 보였다. 다크 면에서 '빛'은 종이색으로만 만든다. */
+      background: radial-gradient(120% 80% at 50% -10%, rgba(246,238,232,.09), transparent 60%), var(--cta-ink);
       border-radius: 0; padding: 72px 40px; text-align: center;
       box-shadow: 0 24px 64px rgba(20,22,28,.42);
     }
@@ -836,21 +852,25 @@
     /* inset 16px 헤어라인 프레임 (인쇄 광고 느낌) */
     .cta-box::after {
       content: ''; position: absolute; inset: 16px; pointer-events: none;
-      border: 1px solid rgba(255,255,255,.2); border-radius: 0;
+      border: 1px solid var(--on-dark-line); border-radius: 0;
     }
     .cta-inner { position: relative; z-index: 1; }
-    .cta-title { font-family: var(--serif); font-size: clamp(28px, 4.6vw, 46px); font-weight: 900; color: #fff; margin-bottom: 16px; line-height: 1.24; letter-spacing: -.01em; word-break: keep-all; }
+    .cta-title { font-family: var(--serif); font-size: clamp(28px, 4.6vw, 46px); font-weight: 900; color: var(--on-dark); margin-bottom: 16px; line-height: 1.24; letter-spacing: -.01em; word-break: keep-all; }
     /* ⚠️ font-style:italic 제거(2026-07-29) — Noto Sans KR 에 이탤릭이 없어
-       브라우저가 기울여 만든 가짜 이탤릭이 나온다. 강조는 색으로만 준다. */
-    .cta-title .cta-serif { font-weight: 900; color: #9FB6DC; }  /* 다크 면 위 강조 — 네이비는 안 보이므로 밝은 네이비 틴트 */
+       브라우저가 기울여 만든 가짜 이탤릭이 나온다.
+       ⚠️ 색으로 강조하지 않는다 — 다크 면엔 쓸 수 있는 색이 아이보리 하나뿐이다.
+          "나도 해볼까?"는 읽는 사람의 속말이라 한 단 어둡게 깔고, 우리 대답인
+          '딱 좋아요'가 밑줄로 튀어나온다. 밝기와 밑줄이 위계를 만든다.
+          구 #9FB6DC(밝은 하늘)는 네이비·아이보리 2색 체계에 없는 제3의 색이라 폐기. */
+    .cta-title .cta-serif { font-weight: 900; color: var(--on-dark-mid); }
     .cta-title .cta-ul { position: relative; white-space: nowrap; }
     .cta-title .cta-ul::after {
       content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 3px;
-      background: var(--action); border-radius: 0; transform: scaleX(0); transform-origin: left;
+      background: var(--on-dark); border-radius: 0; transform: scaleX(0); transform-origin: left;
     }
-    .cta-desc { font-size: var(--fs-body); color: rgba(255,255,255,.86); margin-bottom: 34px; line-height: var(--lh-body); }
+    .cta-desc { font-size: var(--fs-body); color: var(--on-dark-mid); margin-bottom: 34px; line-height: var(--lh-body); }
     .cta-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
-    .cta-note { font-size: 12.5px; color: rgba(255,255,255,.66); margin-top: 18px; }
+    .cta-note { font-size: 12.5px; color: var(--on-dark-dim); margin-top: 18px; }
 
     /* 요소별 진입 fade-up (--d 딜레이) + '딱 좋아요' 밑줄 draw-on */
     .cta-anim { opacity: 0; }
@@ -860,14 +880,14 @@
     @keyframes cta-underline { to { transform: scaleX(1); } }
 
     /* 하단 marquee (헤어라인 위 구분선 + 무한 흐름) */
-    .cta-marquee { position: relative; z-index: 1; margin-top: 30px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.14); overflow: hidden; }
+    .cta-marquee { position: relative; z-index: 1; margin-top: 30px; padding-top: 22px; border-top: 1px solid rgba(246,238,232,.16); overflow: hidden; }
     .cta-marquee-track { display: inline-flex; white-space: nowrap; will-change: transform; animation: cta-marquee 38s linear infinite; }
-    .cta-marquee-track span { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.5); letter-spacing: .02em; }
+    .cta-marquee-track span { font-size: 13px; font-weight: 700; color: rgba(246,238,232,.5); letter-spacing: .02em; }
     @keyframes cta-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-    /* CTA 버튼 — 고스트(후기) + 오렌지 solid(참여) */
-    .btn-ghost-white { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); font-size: 15px; padding: 15px 32px; transition: background .2s, border-color .2s; }
-    .btn-ghost-white:hover { background: rgba(255,255,255,.1); border-color: #fff; }
+    /* CTA 버튼 — 고스트(후기) + 아이보리 solid(참여, 위 '다크 면 채운 버튼' 규칙) */
+    .btn-ghost-white { background: transparent; color: var(--on-dark); border: 1.5px solid rgba(246,238,232,.5); font-size: 15px; padding: 15px 32px; transition: background .2s, border-color .2s; }
+    .btn-ghost-white:hover { background: rgba(246,238,232,.1); border-color: var(--on-dark); }
 
     @media (prefers-reduced-motion: reduce) {
       .cta-anim { opacity: 1; }
@@ -894,11 +914,13 @@
     /* ── BEFORE & AFTER (2026-07-14 목업2: 다크 시네마틱) — 에스프레소 배경 + 다크 카드.
        오디오 전/후 플레이어는 기능 유지, 다크 대비만 재조정. ── */
     .ba-section { padding: var(--section-y) 0; background: var(--bg-dark); }
-    /* 다크 배경 위 섹션 헤더 색 보정 — tokens.css의 라벨 !important(어두운 accent-ink)를
-       이겨야 에스프레소 위 대비를 확보하므로 특이도(2클래스)+!important로 밝은 코랄 고정 */
-    .ba-section .section-label { color: var(--action) !important; -webkit-text-fill-color: var(--action) !important; }
-    .ba-section .section-title { color: var(--action); }
-    .ba-section .section-desc { color: rgba(255,255,255,.6); }
+    /* 다크 배경 위 섹션 헤더 — tokens.css 의 라벨 !important 를 이겨야 하므로
+       특이도(2클래스)+!important 유지. 색만 아이보리 계열로 뒤집었다.
+       ⚠️ var(--action)(네이비)으로 되돌리지 말 것 — 무대 위 1.36:1 이라 제목이
+          통째로 사라진다(2026-07-29 실측). 다크 규칙은 tokens.css --on-dark* 참조. */
+    .ba-section .section-label { color: var(--on-dark-dim) !important; -webkit-text-fill-color: var(--on-dark-dim) !important; }
+    .ba-section .section-title { color: var(--on-dark); }
+    .ba-section .section-desc { color: var(--on-dark-mid); }
     .ba-cards {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -908,7 +930,7 @@
     }
     .ba-card {
       background: #1E1B18;
-      border: 1px solid rgba(255,255,255,.12);
+      border: 1px solid rgba(246,238,232,.14);
       border-radius: 0;
       padding: 24px 22px 22px;
       display: flex;
@@ -916,17 +938,19 @@
       gap: 16px;
       transition: transform .22s ease, border-color .22s ease;
     }
-    .ba-card:hover { transform: translateY(-4px); border-color: rgba(16,43,86,.45); }
+    .ba-card:hover { transform: translateY(-4px); border-color: var(--on-dark-line); }
     .ba-card-top { display: flex; align-items: center; justify-content: space-between; }
+    /* ⚠️ 구 버전은 네이비 글씨 + 네이비 틴트 배경이라 카드 위 1.20:1 — 알약이 통째로
+       안 보였다. 다크에서 태그를 알리는 건 색이 아니라 테두리다. */
     .ba-challenge-tag {
       font-size: 12px; font-weight: 800;
-      background: rgba(16,43,86,.14);
-      color: var(--action);
-      border: 1px solid rgba(16,43,86,.32);
+      background: rgba(246,238,232,.08);
+      color: var(--on-dark);
+      border: 1px solid var(--on-dark-line);
       border-radius: 99px;
       padding: 4px 12px;
     }
-    .ba-name { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.55); }
+    .ba-name { font-size: 13px; font-weight: 700; color: var(--on-dark-dim); }
 
     /* ── 변화 문장 띠 (2026-07-27 신설) ──
        히어로 챌린지 카드(.ch-line)와 '글자 그대로 같은' 문장이 여기 다시 나온다.
@@ -934,28 +958,30 @@
        ⚠️ 한쪽 문구만 고치지 말 것(index.html 의 .ch-line ↔ .ba-arc 는 한 쌍).
        덤: 구 구성은 후기 인용문으로 시작해 '무엇이 바뀌었는지'를 듣기 전엔 알 수 없었다.
        이 줄이 앞에 오면 무엇을 들어야 할지 알고 듣게 되어 같은 녹음이 더 잘 들린다. */
+    /* ⚠️ 다크에선 '전 → 후'의 후(em)를 색으로 구분할 수 없다(네이비가 안 보임).
+       밝기로 가른다 — 앞(전)은 --on-dark-mid, 뒤(후)는 --on-dark 로 또렷하게. */
     .ba-arc {
       font-size: var(--fs-caption); font-weight: 700; line-height: 1.55;
-      color: rgba(255,255,255,.92);
+      color: var(--on-dark-mid);
       padding: 10px 12px;
-      border-left: 2px solid var(--action);
-      background: rgba(16,43,86,.10);
+      border-left: 2px solid var(--on-dark);
+      background: rgba(246,238,232,.06);
       border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
       word-break: keep-all;
     }
-    .ba-arc em { font-style: normal; color: var(--action); }
+    .ba-arc em { font-style: normal; color: var(--on-dark); }
 
     /* 영상 카드 전용 — 비어 있는 [전][후] 토글 자리를 메우는 안내.
        다름을 감추는 대신 왜 다른지를 말한다(영상엔 전·후가 한 편에 들어 있다). */
     .ba-medianote {
       display: flex; align-items: center; justify-content: center; gap: 7px;
-      font-size: 13px; font-weight: 700; color: rgba(255,255,255,.62);
+      font-size: 13px; font-weight: 700; color: var(--on-dark-mid);
       padding: 9px 10px;
-      border: 1px dashed rgba(255,255,255,.22);
+      border: 1px dashed var(--on-dark-line);
       border-radius: 99px;
       word-break: keep-all; text-align: center;
     }
-    .ba-medianote svg { width: 15px; height: 15px; fill: var(--action); flex: 0 0 auto; }
+    .ba-medianote svg { width: 15px; height: 15px; fill: var(--on-dark-mid); flex: 0 0 auto; }
 
     .ba-quote {
       font-family: var(--serif);
@@ -971,74 +997,80 @@
       border-radius: 99px;
       font-size: 14px; font-weight: 800;
       cursor: pointer;
-      border: 2px solid rgba(255,255,255,.28);
+      border: 2px solid var(--on-dark-line);
       background: transparent;
-      color: rgba(255,255,255,.72);
+      color: var(--on-dark-mid);
       transition: all .2s;
       -webkit-tap-highlight-color: transparent;
     }
+    /* 전 = 유리(반투명) / 후 = 아이보리 솔리드 + 네이비 글씨.
+       ⚠️ 다크 위 '채운 버튼'은 네이비 바탕이 아니라 아이보리 바탕이다(색 반전).
+          구 네이비 바탕은 무대와 1.36:1 이라 버튼 모양 자체가 안 보였다. */
     .ba-toggle-btn.active.ba-btn-before {
-      background: rgba(255,255,255,.12);
-      color: var(--text-on-dark);
-      border-color: rgba(255,255,255,.42);
+      background: rgba(246,238,232,.14);
+      color: var(--on-dark);
+      border-color: rgba(246,238,232,.44);
     }
     .ba-toggle-btn.active.ba-btn-after {
-      background: var(--action);
-      color: var(--action-ink);
-      border-color: var(--action);
+      background: var(--on-dark-fill);
+      color: var(--on-dark-ink);
+      border-color: var(--on-dark-fill);
     }
     /* 지금 듣기 표시 (전/후 헷갈림 방지) */
     .ba-now {
       display: flex; align-items: center; gap: 6px;
-      font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.6);
+      font-size: 12.5px; font-weight: 700; color: var(--on-dark-dim);
       margin-top: -4px;
     }
-    .ba-now strong { color: var(--action); }                  /* 후(After) 기본 */
-    .ba-now.is-before strong { color: var(--text-on-dark); }  /* 전(Before) */
+    /* 전/후 구분도 밝기로 — 후(성과)가 더 또렷하다 */
+    .ba-now strong { color: var(--on-dark); }                 /* 후(After) 기본 */
+    .ba-now.is-before strong { color: var(--on-dark-mid); }   /* 전(Before) */
     .ba-now-dot {
       width: 7px; height: 7px; border-radius: 50%;
       background: currentColor; flex-shrink: 0;
       animation: baNowPulse 1s ease-in-out infinite;
     }
-    .ba-now.is-before .ba-now-dot { color: var(--text-on-dark); }
-    .ba-now:not(.is-before) .ba-now-dot { color: var(--action); }
+    .ba-now.is-before .ba-now-dot { color: var(--on-dark-mid); }
+    .ba-now:not(.is-before) .ba-now-dot { color: var(--on-dark); }
     @keyframes baNowPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
     /* 커스텀 플레이어 — 다크 카드 위 */
     .ba-player {
       display: flex; align-items: center; gap: 12px;
-      background: rgba(255,255,255,.06);
+      background: rgba(246,238,232,.06);
       border-radius: 0;
       padding: 12px 14px;
-      border: 1px solid rgba(255,255,255,.1);
+      border: 1px solid rgba(246,238,232,.12);
     }
+    /* 재생 버튼도 반전 — 아이보리 원 + 네이비 삼각형 */
     .ba-play-btn {
       width: 40px; height: 40px; flex-shrink: 0;
       border-radius: 50%;
-      background: var(--action);
-      color: var(--action-ink);
+      background: var(--on-dark-fill);
+      color: var(--on-dark-ink);
       border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: transform .15s, background .2s;
       -webkit-tap-highlight-color: transparent;
     }
     .ba-play-btn:active { transform: scale(.92); }
-    .ba-play-btn.playing { background: var(--action-dark); color: #fff; }
+    /* 재생 중 = 살짝 눌린 아이보리(밝기 차이로만 상태를 말한다) */
+    .ba-play-btn.playing { background: rgba(246,238,232,.72); color: var(--on-dark-ink); }
     .ba-progress-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
     .ba-player-bar {
       flex: 1; height: 6px;
-      background: rgba(255,255,255,.16);
+      background: rgba(246,238,232,.18);
       border-radius: 99px;
       overflow: hidden;
       cursor: pointer;
     }
     .ba-player-fill {
       height: 100%; width: 0%;
-      background: var(--action);
+      background: var(--on-dark);
       border-radius: 99px;
       transition: width .1s linear;
     }
-    .ba-play-btn.playing ~ .ba-progress-wrap .ba-player-fill { background: var(--action-dark); }
-    .ba-time { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.72); white-space: nowrap; }
+    .ba-play-btn.playing ~ .ba-progress-wrap .ba-player-fill { background: var(--on-dark); }
+    .ba-time { font-size: 12px; font-weight: 700; color: var(--on-dark-mid); white-space: nowrap; }
     /* 유튜브 썸네일 */
     .ba-yt-thumb {
       position: relative;
@@ -1072,24 +1104,30 @@
       display: block;
       border: none;
     }
-    /* 전체 스토리 링크 — 다크 배경 위 코랄 */
+    /* 전체 스토리 링크 — 다크 배경 위 아이보리.
+       색이 하나뿐인 면이라 '링크임'은 색이 아니라 밑줄이 알린다. */
     .ba-detail-link {
       font-size: 13px; font-weight: 700;
-      color: var(--action);
-      text-decoration: none;
-      transition: color .2s;
+      color: var(--on-dark);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-thickness: 1px;
+      transition: opacity .2s;
       align-self: flex-start;
     }
-    .ba-detail-link:hover { color: var(--action-hover); }
+    .ba-detail-link:hover { opacity: .72; }
 
     /* ── BLIND QUIZ (당신이 면접관이라면?) — 몰입형: 사진 인트로 + 실루엣 영상 씬 ── */
     /* 무대 리듬(2026-07-24 오너 선택 ②): 체험 섹션은 다크 풀블리드 무대 — B&A(.ba-section)와 동일 구도.
        퀴즈 콘솔(.bq-stage)은 밝은 카드라 다크 위에 그대로 얹힌다. 헤더 오버라이드는 ba-section 패턴 복사
        (⚠️ tokens.css의 .section-label accent-ink!important를 이기려면 !important 필수 — 빼면 대비 붕괴). */
     .bq-section { padding: var(--section-y) 0; background: var(--bg-dark); }
-    .bq-section .section-label { color: var(--action) !important; -webkit-text-fill-color: var(--action) !important; }
-    .bq-section .section-title { color: var(--action); }
-    .bq-section .section-desc { color: rgba(255,255,255,.6); }
+    /* ⚠️ 다크 무대 위 헤더는 아이보리(--on-dark*). var(--action)(네이비)으로 되돌리면
+       '당신이 면접관이라면?' 제목이 배경과 1.36:1 이 되어 사라진다(2026-07-29 실측).
+       ⚠️ 단, 아래 .bq-stage 안쪽은 '밝은 카드'라 네이비가 정답이다 — 섞지 말 것. */
+    .bq-section .section-label { color: var(--on-dark-dim) !important; -webkit-text-fill-color: var(--on-dark-dim) !important; }
+    .bq-section .section-title { color: var(--on-dark); }
+    .bq-section .section-desc { color: var(--on-dark-mid); }
     .bq-stage {
       max-width: 520px; margin: 0 auto;
       background: var(--surface);
@@ -1124,7 +1162,7 @@
     
     .bq-intro-title { font-size: clamp(24px, 6.4vw, 30px); font-weight: 900; line-height: 1.3; color: #fff; }
     
-    .bq-intro-meta { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.66); }
+    .bq-intro-meta { font-size: 12.5px; font-weight: 700; color: rgba(246,238,232,.7); }
     .bq-start-btn { min-height: 52px; padding: 14px 36px; font-size: 16px; font-weight: 800; margin-top: 4px; }
     /* 판정 라운드 — 실루엣 영상 씬 */
     .bq-scene { position: relative; aspect-ratio: 16 / 9; background: #131722; }
@@ -1139,16 +1177,17 @@
     }
     .bq-scene-badge {
       font-size: 11.5px; font-weight: 800; color: #F3EFE7;
-      background: rgba(16,18,26,.62); border: 1px solid rgba(255,255,255,.18);
+      background: rgba(16,18,26,.62); border: 1px solid rgba(246,238,232,.2);
       padding: 4px 11px; border-radius: 99px;
       display: inline-flex; align-items: center; gap: 6px;
     }
-    .bq-scene-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--action); }
+    /* 녹화중 점 — 영상(다크) 위라 아이보리. 네이비 점은 영상에 묻힌다 */
+    .bq-scene-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--on-dark); }
     .bq-scene-badge.is-live::before { animation: bq-blink 1.1s ease-in-out infinite; }
     @keyframes bq-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
     .bq-dots { display: inline-flex; gap: 5px; flex: 0 0 auto; }
-    .bq-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); }
-    .bq-dots i.on { background: var(--action); }
+    .bq-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(246,238,232,.35); }
+    .bq-dots i.on { background: var(--on-dark); }
     .bq-scene-tag {
       position: absolute; z-index: 1; left: 14px; bottom: 12px;
       font-size: 11.5px; font-weight: 800; color: #F3EFE7;
@@ -1518,9 +1557,6 @@
           3.9:1로 미달이라 --accent-ink(#102B56)를 쓴다 — --action/--accent-dark로
           되돌리지 말 것. */
     .pillars { background: var(--bg2); padding: var(--space-6) 0 var(--space-8); }
-    /* ⚠️ 재방문자는 인트로가 통째로 숨겨져(2026-07-29) 이 섹션이 페이지 첫 요소가 된다.
-       nav 가 position:fixed 라 이 여백이 없으면 제목이 nav 밑으로 들어간다. */
-    html[data-intro-skipped] .pillars { padding-top: calc(var(--space-6) + 56px); }
     .pl-head { margin-bottom: var(--space-4); }
     .pl-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
     @media (min-width: 720px) {
