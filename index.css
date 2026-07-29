@@ -461,32 +461,34 @@
        px 로 덮어쓴다. 배경이 cover 로 잘리는 양에 따라 창의 세로 위치가 달라져서
        퍼센트로는 못 맞춘다(2026-07-30 오너 "위치도 중앙이 아니다"). */
     .hero-mid {
-      position: absolute; left: 0; right: 0; top: 49.4%;
+      position: absolute; left: 0; right: 0; top: 45.7%;
       transform: translateY(-50%);
       text-align: center; padding: 0 20px; pointer-events: none;
     }
     /* 한글 줄을 absolute 로 뺐으므로 이 블록의 높이 = 조립 무대 높이 → 중심이 곧 로고 중심 */
-    @media (min-aspect-ratio: 1/1) { .hero-mid { top: 50.7%; } }
+    @media (min-aspect-ratio: 1/1) { .hero-mid { top: 46.4%; } }
     /* 조립 무대 — 문장과 로고가 같은 자리에 겹쳐 있고, 높이는 로고 기준으로 고정한다.
        ⚠️ 높이를 고정하지 않으면 조립되며 글자가 커질 때 아래 한글 줄이 밀려 내려간다. */
     .hi-stack {
       position: relative; display: flex; align-items: center; justify-content: center;
       height: clamp(46px, 13vw, 60px);   /* 로고 기준 — 문장은 absolute 라 이 높이에 영향 없다 */
     }
-    /* ⚠️ 화면보다 넓은 문장을 **좌우 균등하게** 넘치게 하려면 left/right:0 + text-align:center
-       로는 안 된다 — 내용이 컨테이너보다 넓으면 왼쪽 기준이 되어 오른쪽으로만 삐져나간다(실측).
-       중앙 기준 배치(left:50% + translateX(-50%) + width:max-content)여야 양쪽으로 나간다. */
+    /* 중앙 기준 배치(left:50% + translateX(-50%) + width:max-content) — 두 줄 중 넓은 줄을
+       기준으로 가운데에 선다. left/right:0 방식은 내용이 컨테이너보다 넓어지는 순간
+       왼쪽 기준이 되어 오른쪽으로만 삐져나간다(구 한 줄 시절 실측으로 밟은 자리). */
     .hi-phrase {
       position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
       width: max-content; white-space: nowrap;
-      /* ⚠️ 문장은 **화면 밖으로 넘칠 만큼** 크다(오너: "원래대로 화면 밖으로 나갈 만큼
-         크게 했다가 창문 안으로 쭉 들어오는 것"). 넘치는 건 .hero-intro 의 overflow:clip 이
-         잘라내므로 가로 스크롤은 생기지 않는다. 작게 줄이면 '들어오는' 연출이 사라진다. */
-      /* ⚠️ 로고가 창 폭에 맞춰 커지면(JS fitLogo) 문장도 같이 키워야 '축소하며 들어오는' 감이
-         산다 — 52px 시절엔 배율이 0.97 이라 크기가 그대로인 것처럼 보였다(실측). 지금은 0.4~0.6. */
-      font-size: clamp(84px, 22vw, 160px); font-weight: 300; letter-spacing: 0;
-      line-height: 1.15; color: var(--text);
+      /* ⚠️ 문장은 **첫 화면에 다 보여야 한다**(2026-07-30 오너). 두 줄로 접어 크기를 살리되,
+         그래도 넘치는 화면에서는 JS(fitPhrase)가 폭에 맞춰 줄인다 — 기기 폭이 제각각이라
+         clamp 만으로는 '화면 안'을 보장할 수 없다. 구 clamp(84px,22vw,160px)는 375px 에서
+         화면의 241%였다(오너 신고 화면). */
+      /* ⚠️ 로고가 창 폭에 맞춰 커지면(JS fitWindow) 문장도 같이 키워야 '축소하며 들어오는' 감이
+         산다 — 배율이 1에 가까우면 크기가 그대로인 것처럼 보인다(실측). 지금은 0.55~0.65. */
+      font-size: clamp(48px, 16vw, 128px); font-weight: 300; letter-spacing: 0;
+      line-height: 1.14; color: var(--text);
     }
+    .hi-line { display: block; }
     .hi-w { display: inline-block; white-space: nowrap; }
     /* ⚠️ 글자 하나하나가 FLIP 대상 — will-change 를 빼면 조립 구간에서 매 프레임 리페인트가 난다. */
     .hi-l { display: inline-block; will-change: transform, opacity; }
@@ -512,9 +514,18 @@
     .hi-kor {
       position: absolute; left: 0; right: 0; top: 100%;
       margin-top: 18px; white-space: nowrap; opacity: 0;
-      font-size: clamp(13px, 3.6vw, 15px); font-weight: 600; letter-spacing: .05em;
+      font-size: clamp(13px, 3.6vw, 15px); font-weight: 600; letter-spacing: 0;
       color: var(--text-muted); will-change: opacity, transform;
     }
+    /* ⚠️ 자간은 CSS 고정값이 아니라 JS(fitKor)가 로고 폭에 맞춰 계산해 넣는다 —
+       로고 폭이 창 크기에 따라 달라지므로 고정 .05em 으로는 양끝이 절대 안 맞는다.
+       inline-block 이라야 마지막 글자 뒤 자간을 margin-right 로 도로 뺄 수 있다
+       (안 빼면 그 여백까지 폭에 잡혀 가운데정렬이 왼쪽으로 밀린다). */
+    .hi-kl { display: inline-block; }
+    /* 한 줄로 펴면 자간이 음수가 되는 좁은 화면에서만 두 줄이 된다 */
+    .hi-kbr { display: none; }
+    .hi-kor.two .hi-kbr { display: inline; }
+    .hi-kor.two .hi-kl { line-height: 1.7; }
 
     /* 스크롤 안내 — 애니메이션이 끝난 뒤에만 뜬다.
        ⚠️ bottom 값은 하단 고정 CTA 바(56px + 여백 14px)를 피한 자리다. 줄이면 겹친다. */
