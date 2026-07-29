@@ -753,8 +753,14 @@
         한글 줄 위 반행간+윗공간 ≈0.5×글자크기)을 빼야 실제로 보이는 간격이 GAP 이 된다. */
   var GAP = 0.55;                       /* 로고 글자 크기 대비 '눈에 보이는' 간격 */
   function gapFor(logoSize) {
-    var korFs = parseFloat(window.getComputedStyle(kor).fontSize) || 14;
-    return Math.max(0, logoSize * (GAP - 0.30) - korFs * 0.5);
+    var line = kor.querySelector('.hi-kl') || kor;
+    var st = window.getComputedStyle(line);
+    var kfs = parseFloat(st.fontSize) || 14;
+    var lh = parseFloat(st.lineHeight) || kfs * 1.4;
+    /* ⚠️ 행간에 따라 글자 위 빈 공간이 달라진다(한 줄 1.7 / 두 줄 1.28) — 고정 계수로 두면
+       두 줄 모드에서만 간격이 벌어진다. 반행간 + 글자 윗공간(≈.15em)을 실제 값에서 뺀다. */
+    var slack = (lh - kfs) / 2 + kfs * 0.15;
+    return Math.max(0, logoSize * (GAP - 0.30) - slack);
   }
   function fitKor(logoInkW) {
     if (!kor) return;
