@@ -1,7 +1,9 @@
 /* ── 블라인드 퀴즈 '당신이 면접관이라면?' — 자기 주입 공용 컴포넌트 (2026-07-29) ──
-   index.html 홈 섹션(#blind-quiz)에서 이사. 퀴즈 재료(전·후 녹음)가 전부 보신각·스피닝
-   클립이라, 그 두 상세 페이지(challenge-voice.html·challenge-spinning.html)에 싣는 것이
-   맞다(오너 확정 — 허브·홈이 아니라 "보신각, 스피닝 이런 쪽").
+   ⚠️ 현재 자리는 **challenges.html(챌린지 허브) 한 곳뿐** — 카드 4장 뒤, '홈으로 돌아가기' 앞.
+      2026-07-30 오너 지시로 옮겼다("보신각, 스피닝에서 빼서 허브 하단에 넣어라, 한 번씩 볼 수
+      있게"). 이력: 홈 → (7/29) 보신각·스피닝 상세 → (7/30) 허브 하단.
+      **두 곳 이상에 싣지 말 것** — 같은 사람이 상세를 여러 개 돌면 같은 체험을 반복해서 만난다.
+      허브는 네 챌린지의 공통 입구라 '한 번씩'이 자연히 성립한다.
    사용법: 페이지에 <div id="blind-quiz-mount"></div> 를 두고 이 파일을 defer 로 로드.
    ⚠️ 스타일·마크업·로직이 이 한 파일에 있다 — 고칠 일이 생기면 여기 한 곳만 고친다
       (application-modal.js와 같은 자기 주입 패턴, 마크업 두 벌 복사 금지).
@@ -36,7 +38,10 @@
   font-family: inherit; text-decoration: none; box-shadow: var(--shadow-action);
   transition: background .2s, transform .2s; -webkit-tap-highlight-color: transparent;
 }
-.bq-btn:hover { background: var(--action-hover); transform: translateY(-2px); }
+/* ⚠️ hover 배경을 --action-hover(네이비)로 두지 말 것 — 글씨가 --accent-ink(네이비)라
+   마우스를 올리는 순간 네이비 위 네이비가 되어 글자가 사라진다. 다크 무대 위 버튼은
+   '흰 알약 + 네이비 글씨'가 규칙이니 hover 도 흰 계열 안에서 한 단계만 눌러 준다. */
+.bq-btn:hover { background: #E8EEF8; transform: translateY(-2px); }
 .bq-btn:active { transform: translateY(0) scale(.99); }
 .bq-btn:focus-visible { outline: 3px solid var(--action-on-dark); outline-offset: 3px; }
 .bq-stage {
