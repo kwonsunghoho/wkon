@@ -205,17 +205,18 @@
       border-bottom: 1px solid rgba(36, 26, 18,.1);
       transition: background .3s, border-color .3s, box-shadow .3s;
     }
-    /* ⚠️⚠️ 메뉴는 **가운데 정렬을 포기하고 로고 옆에 붙인다**(2026-07-30 오너 "정렬 좀 잘 해봐라").
-       같은 날 `1fr auto 1fr`(화면 정중앙) → `auto 1fr auto`(로고·버튼 사이 정중앙)로 한 번
-       고쳤는데도 또 지적이 나온 자리다. 두 번 다 원인이 같다: **왼쪽 로고(87px)와 오른쪽
-       버튼 덩어리(245px)의 무게가 3배 차이**라, 무엇을 기준으로 가운데를 잡든 메뉴가
-       '어디에도 안 붙은 채 떠 있는' 다섯 글자 덩어리가 된다(실측: 양옆이 150px씩 비었다).
-       지금은 `auto auto 1fr` — 로고+메뉴가 왼쪽 한 덩어리, 버튼이 오른쪽 끝, 빈 공간은
-       가운데 **한 군데로 모인다.** 빈칸이 하나면 '의도한 여백'으로 읽히고 둘이면 '정렬 실수'로
-       읽힌다. 가운데 정렬로 되돌리려면 위 두 시도가 왜 실패했는지부터 다시 볼 것.
-       column-gap 은 로고↔메뉴 간격(40px)이다 — 3번째 트랙이 1fr 이라 메뉴↔버튼 사이는 남는
-       공간 전부가 되고, .nav-right 의 justify-self:end 가 버튼을 오른쪽 끝에 붙인다. */
-    .nav-inner { display: grid; grid-template-columns: auto auto 1fr; align-items: center; column-gap: 40px; }
+    /* ⚠️⚠️ 메뉴는 **화면 정중앙**이다(2026-07-30 오너, 나이키 헤더를 예시로 지시).
+       같은 날 앞선 두 시도(`1fr auto 1fr`, `auto 1fr auto`)는 **둘 다 그리드 분배로 가운데를
+       잡으려 했고 둘 다 실패**했다 — 오른쪽 버튼 덩어리(248px)가 제 트랙의 1fr 몫보다 넓어
+       트랙을 밀어내는 순간 가운데가 그만큼 왼쪽으로 밀린다. 즉 **양옆 무게가 다르면 그리드
+       분배로는 정중앙이 안 나온다.** 지금은 메뉴를 흐름에서 빼(absolute) 컨테이너 정중앙에
+       못 박는다 — 로고가 길어지든 오른쪽 버튼이 바뀌든 가운데는 안 움직인다.
+       ⚠️ 대신 겹칠 수 있다. 메뉴가 정중앙이면 좌우로 (컨테이너 − 메뉴)/2 씩 남는데, 이 값이
+       오른쪽 버튼 덩어리(248px)보다 좁아지면 메뉴와 버튼이 포개진다. 실측 경계가 약 925px 인데 941px 에서 여백이 21px 밖에 안 남아(눈에 띄게 아슬아슬) 여유를 둬
+       **1000px 부터만 정중앙**이고, 769~999px 은 구 방식(로고 옆에 붙임)으로 떨어진다.
+       메뉴 항목이나 오른쪽 버튼을 늘리면 이 경계도 같이 올릴 것.
+       ⚠️ 여기서 활자 크기는 건드리지 않는다(오너 "크기는 절대 건드리지 말 것" — 2026-07-30). */
+    .nav-inner { position: relative; display: flex; align-items: center; column-gap: 40px; }
     .logo {
       display: flex; align-items: center;
       text-decoration: none; flex-shrink: 0;
@@ -231,7 +232,12 @@
        그러지 않으면 링크는 body 행간 1.7 을 물려받아 높이가 29px, 드롭다운 <button> 은 21px 이
        되어 가운데 정렬 기준이 달라지고 **'승준노트'만 2px 처진다**(실측). 다섯 항목의 글자
        상자 높이가 전부 17px 로 같아야 한 줄로 읽힌다. 행간 1을 지울 거면 이 문제부터 볼 것. */
-    .nav-links { display: flex; align-items: center; gap: 24px; list-style: none; justify-self: start; white-space: nowrap; }
+    /* ⚠️ 흐름에서 빼서 컨테이너 정중앙에 못 박는다(위 .nav-inner 주석 참조).
+       top/transform 으로 세로도 가운데 — 흐름에 없어 align-items 의 영향을 못 받는다. */
+    .nav-links {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      display: flex; align-items: center; gap: 24px; list-style: none; white-space: nowrap;
+    }
     .nav-links > li { display: flex; align-items: center; }
     .nav-links a {
       font-size: 17px; font-weight: 600; color: var(--text-muted); letter-spacing: -0.015em;
@@ -275,6 +281,11 @@
     }
     .nav-links a.nav-briefing { color: var(--accent-ink); font-weight: 700; }
     .nav-links a.nav-briefing:hover { color: var(--accent-dark); }
+    /* 승준노트도 드롭다운(2026-07-30 오너 "챌린지처럼 하위탭") — 버튼이라 위 a 선택자에 안 걸린다.
+       ⚠️ gap 7px 은 .nav-briefing(8px, 점↔글자)과 .nav-dd-btn(6px, 글자↔화살표)의 절충값이다.
+          .nav-briefing 이 뒤에 와서 8px 이 이기는데, 그러면 화살표만 유독 멀어 보인다. */
+    .nav-dd-btn.nav-briefing { color: var(--accent-ink); font-weight: 700; gap: 7px; }
+    .nav-dd-btn.nav-briefing:hover { color: var(--accent-dark); }
     /* 펄스 점 — '새 것·살아있음' 관습 기호. 글자는 --accent-ink(4.5:1)지만 점은 장식이라 밝은 --action으로 시선 앵커 */
     .nav-briefing::before {
       content: ''; width: 7px; height: 7px; border-radius: 50%;
@@ -285,6 +296,8 @@
     @keyframes bfPulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
     @media (prefers-reduced-motion: reduce) { .nav-briefing::before { animation: none; } }
     .mobile-menu ul a.mm-briefing .nav-briefing { color: var(--accent-ink); font-weight: 700; }
+    /* 모바일 '승준노트'도 아코디언 — 토글이 button 이라 위 a 선택자에 안 걸린다 */
+    .mobile-menu .mm-acc-btn .nav-briefing { color: var(--accent-ink); font-weight: 700; }
 
     /* ⚠️ 구 nav.nav-transparent(인트로 구간 투명 nav + 흰 글씨)는 2026-07-29 삭제 —
        되살리지 말 것. 인트로가 어두운 창밖 사진이던 시절의 설정인데, 지금 인트로 배경은
@@ -293,7 +306,9 @@
        정작 글자가 앉는 높이에선 거의 사라진 상태였다.
        지금은 인트로 구간에서도 nav 가 그냥 밝은 배경 + 다크 글씨다(전 구간 동일).
        index.html 의 classList.toggle('nav-transparent') 도 함께 제거했다. */
-    .nav-right { display: flex; align-items: center; gap: 10px; justify-self: end; white-space: nowrap; }
+    /* margin-left:auto 가 버튼을 오른쪽 끝으로 민다 — 메뉴가 absolute 라 흐름엔 로고와 이 덩어리
+       둘뿐이고, 좁은 화면 폴백(메뉴가 흐름으로 돌아올 때)에서도 같은 규칙으로 오른쪽에 붙는다. */
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; white-space: nowrap; }
     /* ⚠️ line-height 를 명시한다 — .btn 은 body 의 --lh-body(1.7)를 물려받아, 그대로 두면
        활자만큼 버튼이 부푼다(21px 시절 실측: 버튼 60px, 바 85px). 높이는 활자가 아니라
        min-height 44px(9대 원칙 2번)로 잡는다. */
@@ -313,13 +328,16 @@
     .btn-login-outline:hover { background: var(--action-tint); }
     /* ⚠️ 이 블록은 반드시 .nav-cta / .btn-login-outline **뒤에** 있어야 한다 — 특이도가 같아
        앞에 두면 뒤따르는 기본 규칙이 이겨서 버튼만 큰 채로 남는다(실측으로 밟은 자리).
-       ⚠️ 상한 1180→820px(2026-07-30). 활자를 줄이자 한 줄에 필요한 폭이 약 1,150 → 759px 로
-       내려갔다 — 상한을 그대로 뒀으면 1180px 이하 노트북에서 **줄일 이유가 없는데도** 한 단계
-       더 작은 nav 가 떴다. 그리고 여기서는 **활자를 건드리지 않는다** — 769px 까지 간격만
-       좁혀도 한 줄이 유지되고, 활자를 또 줄이면 9대 원칙 1번(가독성)만 깎인다. */
-    @media (min-width: 769px) and (max-width: 820px) {
+       ⚠️ 상한 820→999px(2026-07-30 가운데 정렬). 이 구간은 이제 '간격만 좁히는 구간'이 아니라
+       **가운데 정렬을 포기하고 로고 옆으로 붙이는 폴백 구간**이다 — 메뉴를 정중앙에 두면
+       좌우 여백이 오른쪽 버튼 덩어리(248px)보다 좁아져 메뉴와 버튼이 포개진다.
+       position:static 으로 되돌리면 메뉴가 다시 흐름에 들어와 로고 옆에 붙고,
+       .nav-right 의 margin-left:auto 가 버튼을 오른쪽 끝에 붙인다.
+       그리고 여기서는 **활자를 건드리지 않는다** — 간격만 좁혀도 한 줄이 유지되고,
+       활자를 또 줄이면 9대 원칙 1번(가독성)만 깎인다. */
+    @media (min-width: 769px) and (max-width: 999px) {
       .nav-inner { column-gap: 28px; }
-      .nav-links { gap: 18px; }
+      .nav-links { position: static; transform: none; gap: 18px; }
     }
     /* 로그인 상태: 아바타 + 마이페이지 알약 */
     /* 로그인 상태의 오른쪽 알약 — 로그아웃 상태의 '로그인/회원가입'과 같은 급으로 맞춘다
@@ -368,7 +386,7 @@
          보이는 크기를 키우면 모바일 바가 57→68px 로 부풀어, news.html 스크랩 알약과 같은
          방식으로 **투명 히트영역만** 44×44 로 넓힌다 — 눈에 보이는 건 그대로다. */
       position: relative;
-      grid-column: 3; justify-self: end; /* 모바일: nav-links/nav-right 숨김 시에도 오른쪽 끝 유지 */
+      margin-left: auto; /* 모바일: nav-links/nav-right 숨김 시에도 오른쪽 끝 유지 */
     }
     .hamburger::after {
       content: ''; position: absolute; top: 50%; left: 50%;
