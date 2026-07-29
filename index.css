@@ -728,12 +728,34 @@
     /* ⚠️ 사진은 absolute — 카드가 글 높이에 맞춰 늘어나야 하므로(align-items:stretch)
        img 가 흐름에 있으면 자기 높이로 카드를 밀어버린다. */
     .dr-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
-    .dr-chip {
-      position: absolute; left: 8px; bottom: 8px;
-      background: rgba(255,255,255,.95); border: 1px solid var(--border-soft); border-radius: 999px;
-      font-size: 12px; font-weight: 700; color: var(--ink); padding: 5px 10px;
+    /* ── 사진 위 라벨 = 스크림 + 대시 (2026-07-30 오너가 목업 4안 중 C안 선택 —
+          `outputs/door-chip-mockup.html` 이 결정 기록, 기각안 A·B·D 도 그 파일에 보존).
+       ⚠️⚠️ **상자(배경·테두리·border-radius)를 다시 씌우지 말 것.** 오너 신고
+          "알약이 아니라 드럼통 같다"의 원인이 바로 그 상자였다: 사진 칸은 375px 에서
+          **실측 132px** 뿐이라 한 줄에 한글 7자밖에 안 들어가는데, 12~13자짜리 문구가
+          두 줄로 풀리면서 `border-radius:999px`(반원)가 **122×53px = 2.3:1 짜리 둥근 통**이
+          됐다. 알약은 한 줄일 때만 알약이다. 상자를 없애면 두 줄이 돼도 그냥 두 줄이라
+          이 문제가 **구조적으로** 사라진다(문구 길이를 관리할 필요도 없어진다).
+       ⚠️ 스크림(::after)은 `pointer-events:none` 필수 — .dr-card 가 <a> 라 덮으면 클릭이 죽는다.
+       ⚠️ 칩에 z-index 를 줘야 스크림 위로 올라온다(둘 다 .dr-card 의 자식).
+       ⚠️ 폭은 width 가 아니라 `left+right` 로 잡는다 — 두 줄째가 카드 밖으로 나가지 않게.
+       ⚠️ 대시·숫자 강조는 **--action-on-dark(밝은 하늘색)** 다. 네이비(--accent)는 어두운
+          스크림 위에서 1.4:1 로 묻힌다(팔레트 규칙 '다크 면 위 강조' 참조).
+       ⚠️ text-shadow 를 지우지 말 것 — 글자 윗줄은 스크림이 옅어지는 구간에 걸쳐서,
+          하늘·흰 벽처럼 밝은 사진에서 이것 없이는 대비가 떨어진다. */
+    .dr-card::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64%;
+      background: linear-gradient(to top,
+        rgba(18,28,46,.84) 0%, rgba(18,28,46,.56) 40%, rgba(18,28,46,0) 100%);
+      pointer-events: none;
     }
-    .dr-chip b { color: var(--accent); }
+    .dr-chip {
+      position: absolute; left: 10px; right: 10px; bottom: 9px; z-index: 2;
+      font-size: 12px; font-weight: 700; line-height: 1.35; letter-spacing: .01em;
+      color: #fff; word-break: keep-all; text-shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+    .dr-chip::before { content: "— "; color: var(--action-on-dark); font-weight: 800; }
+    .dr-chip b { color: var(--action-on-dark); font-weight: 800; }
     /* 데스크톱 — 컬럼이 화면 폭보다 좁아 '끝까지 붙는' 블리드가 성립하지 않으므로
        카드 폭을 넓힌다. ⚠️ 폭의 주인은 이제 .tl-step 이다(문이 타임라인 칸 안에 들어갔다) —
        .door 는 칸을 꽉 채우기만 하면 된다. 둘 다 max-width 를 갖고 있으면 좁은 쪽이 이겨
@@ -900,7 +922,8 @@
       .dr-ds { font-size: 17px; margin-top: 12px; }
       .dr-link { font-size: 16px; margin-top: 18px; }
       .dr-card { min-height: 240px; border-radius: 16px; }
-      .dr-chip { left: 14px; bottom: 14px; font-size: 13px; padding: 7px 13px; }
+      /* ⚠️ padding 은 없다 — 상자가 아니라 사진 위에 얹은 글자다(위 .dr-chip 주석 참조). */
+      .dr-chip { left: 14px; right: 14px; bottom: 12px; font-size: 14px; }
 
       .closing { padding: 112px 0; }
       .closing-title { font-size: 38px; }
