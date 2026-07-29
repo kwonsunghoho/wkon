@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>홈 서사 재구성 A·B·C — 목업 (2026-07-29)</title>
+<style>
+/* SUIT — tokens.css와 동일 선언(목업 단독 실행용) */
+@font-face{
+  font-family:'SUIT Variable'; font-weight:100 900; font-style:normal; font-display:swap;
+  src:url('https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.woff2') format('woff2');
+}
+
+/* 사이트 tokens.css 값 그대로 */
+:root{
+  --bg:#F4F1EA; --bg2:#FBF9F5; --bg3:#E7E1D3; --surface:#FFFFFF;
+  --ink:#1C2A3A; --text:#2E2A24; --muted:#645D51; --dim:#736C5E;
+  --accent:#1B3A6B; --accent-tint:#E5E9F1; --accent-dark:#142C52;
+  --on-dark:#F1EFE9; --bg-dark:#1C2A3A; --on-dark-blue:#A8C7F0; --on-dark-dim:#A7AFBB;
+  --border:rgba(40,34,26,.14); --border-soft:rgba(40,34,26,.10);
+  --serif:'SUIT Variable',SUIT,sans-serif;
+  --radius:20px; --radius-sm:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:clip}
+body{
+  font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+  background:#D8D2C4; color:var(--text); word-break:keep-all;
+  -webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%}
+a{text-decoration:none;color:inherit}
+
+/* ── 목업 껍데기 ── */
+.mk-head{max-width:420px;margin:0 auto;padding:30px 20px 14px;text-align:center}
+.mk-head h1{font-size:19px;font-weight:800;letter-spacing:-.02em;color:#1C2A3A}
+.mk-head p{font-size:12.5px;color:#4E4A42;margin-top:8px;line-height:1.7}
+.tabs{
+  position:sticky; top:0; z-index:50; background:rgba(216,210,196,.94);
+  backdrop-filter:blur(10px); padding:10px 14px 12px; display:flex; gap:8px;
+  max-width:420px; margin:0 auto; justify-content:center;
+}
+.tab{
+  flex:1; min-height:44px; border-radius:12px; border:1px solid rgba(28,42,58,.25);
+  background:#FBF9F5; color:#1C2A3A; font-size:13px; font-weight:800; cursor:pointer;
+  font-family:inherit; letter-spacing:-.01em; line-height:1.3; padding:6px 4px;
+}
+.tab b{display:block;font-size:11px;font-weight:600;color:#645D51;margin-top:2px}
+.tab.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+.tab.on b{color:#C9D8EF}
+.col{max-width:420px;margin:0 auto 70px;box-shadow:0 24px 64px rgba(28,42,58,.28);overflow:clip;background:var(--bg)}
+.col[hidden]{display:none}
+.note{
+  background:#FFFDF7; border:1px dashed rgba(28,42,58,.35); border-left:3px solid var(--accent);
+  font-size:11.5px; line-height:1.65; color:#4E4A42; padding:9px 12px;
+}
+.note b{color:var(--accent)}
+.label{
+  font-size:12px; font-weight:800; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--accent); display:flex; align-items:center; gap:9px;
+}
+.label::before{content:"";width:20px;height:2px;background:var(--accent);flex:0 0 20px}
+.label.ctr{justify-content:center}
+
+/* 인트로 자리표시 */
+.intro-ph{background:#1C2A3A;color:var(--on-dark);padding:44px 20px;text-align:center}
+.intro-ph .lg{font-size:26px;font-weight:800;letter-spacing:.34em;text-indent:.34em;color:#fff}
+.intro-ph p{font-size:11.5px;color:var(--on-dark-dim);margin-top:9px;letter-spacing:.06em}
+
+/* ═══ 공통 블록 ═══ */
+.sec{padding:56px 20px}
+.sec.paper{background:var(--bg2)}
+.sec.dark{background:var(--bg-dark);color:var(--on-dark)}
+.h2{
+  font-family:var(--serif); font-weight:800; font-size:27px; line-height:1.44;
+  letter-spacing:-.015em; color:var(--ink); margin-top:14px;
+}
+.dark .h2{color:#fff}
+.lead{font-size:15px;line-height:1.85;color:var(--muted);margin-top:16px}
+.lead b{color:var(--accent);font-weight:800}
+
+/* 워리 카드 + 체크리스트 */
+.worry{
+  margin-top:26px; border:1px solid var(--border-soft); border-radius:var(--radius);
+  background:linear-gradient(140deg,#fff 0%,#FBF7F1 100%); padding:22px 18px;
+  box-shadow:0 8px 26px rgba(28,42,58,.06); position:relative; overflow:hidden;
+}
+.worry::after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-100px;top:-130px;background:var(--accent-tint);opacity:.55}
+.worry q{display:block;font-size:19px;font-weight:800;color:var(--ink);line-height:1.5;position:relative;z-index:1}
+.worry .sub{font-size:13.5px;color:var(--dim);line-height:1.7;margin-top:9px;position:relative;z-index:1}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px;position:relative;z-index:1}
+.chip{
+  min-height:46px;padding:11px 12px;border:1px solid var(--border-soft);border-radius:12px;
+  background:rgba(255,255,255,.9);display:flex;align-items:center;gap:9px;
+  font-size:13px;font-weight:700;color:#48556A;transition:.35s ease;
+}
+.chip i{
+  width:20px;height:20px;flex:0 0 20px;border:1.5px solid rgba(28,42,58,.28);border-radius:6px;
+  background:#fff;display:grid;place-items:center;color:transparent;font-size:12px;font-weight:900;
+  font-style:normal;transition:.35s ease;
+}
+.chip.on{border-color:rgba(27,58,107,.35);background:var(--accent-tint);color:var(--accent)}
+.chip.on i{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* 숫자 3타일 */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:30px}
+.stat{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:18px 8px 15px;text-align:center}
+.stat strong{display:block;font-family:var(--serif);font-weight:800;font-size:26px;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stat strong em{font-style:normal;font-size:13px;margin-left:1px}
+.stat span{display:block;font-size:12.5px;color:var(--muted);margin-top:7px}
+.stat.hot{border-color:var(--accent);background:var(--accent-tint)}
+.stat.hot strong{color:var(--accent)}
+.bridge{font-family:var(--serif);font-weight:800;font-size:25px;line-height:1.5;margin-top:40px;color:var(--ink)}
+.bridge em{font-style:normal;box-shadow:inset 0 -11px 0 var(--accent-tint)}
+
+/* 세 개의 문 */
+.doors{background:var(--bg);padding:44px 20px 56px}
+.door{
+  display:flex;gap:14px;align-items:stretch;padding:16px;background:var(--surface);
+  border:1px solid var(--border-soft);border-radius:var(--radius);box-shadow:0 2px 10px rgba(40,34,26,.05);
+}
+.door+.door{margin-top:14px}
+.door.rev{flex-direction:row-reverse}
+.door.rev .d-txt{text-align:right}
+.d-txt{flex:1;min-width:0}
+.d-title{font-family:var(--serif);font-weight:800;font-size:20px;line-height:1.38;color:var(--ink);margin-top:8px;letter-spacing:-.01em}
+.d-ds{margin-top:8px;font-size:15px;line-height:1.6;color:var(--muted)}
+.d-link{display:inline-block;margin-top:12px;font-size:14px;font-weight:700;color:var(--accent)}
+.d-card{flex:0 0 44%;position:relative;overflow:hidden;min-height:152px;border-radius:12px;background:var(--bg3);border:1px solid var(--border-soft)}
+.d-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%}
+.d-chip{position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.95);border:1px solid var(--border-soft);border-radius:999px;font-size:12px;font-weight:700;color:var(--ink);padding:5px 10px}
+.d-chip b{color:var(--accent)}
+
+/* 다크 마무리 */
+.dark .label{color:var(--on-dark-blue)}
+.dark .label::before{background:var(--on-dark-blue)}
+.promise{margin-top:26px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);border-radius:var(--radius);padding:8px 18px}
+.prow{display:flex;gap:14px;padding:17px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.prow:last-child{border-bottom:0}
+.pnum{font-size:12px;letter-spacing:.12em;color:var(--on-dark-blue);font-weight:800;padding-top:4px;min-width:24px}
+.prow h4{font-size:16px;font-weight:800;color:#fff;margin-bottom:5px}
+.prow p{font-size:13px;line-height:1.65;color:#C7D2DF}
+.dark .lead{color:#CBD5E3}
+.cta-btn{
+  display:block;width:100%;min-height:56px;margin-top:28px;border-radius:999px;background:#fff;
+  color:var(--accent);font-size:16px;font-weight:800;display:grid;place-items:center;
+  box-shadow:0 8px 24px rgba(10,18,30,.35);
+}
+.cta-note{margin-top:13px;font-size:13px;color:var(--on-dark-dim);text-align:center}
+.cta-note a{color:#fff;font-weight:700;text-decoration:underline}
+.ctr{text-align:center}
+
+/* ═══ B안 전용 — 칩 재배치(FLIP) ═══ */
+.sortwrap{margin-top:26px}
+.grp{margin-top:16px;border:1px solid var(--border-soft);border-radius:var(--radius);background:var(--surface);padding:14px;opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease}
+.sorted .grp{opacity:1;transform:none}
+.grp-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--accent)}
+.grp-h span{font-size:11.5px;font-weight:700;color:var(--dim);letter-spacing:.02em}
+.grp .chips{margin-top:11px}
+.pool{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.b-chip{
+  min-height:44px;padding:10px 12px;border:1px solid var(--border-soft);border-radius:12px;
+  background:#fff;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#48556A;
+}
+.b-chip i{width:18px;height:18px;flex:0 0 18px;border:1.5px solid rgba(28,42,58,.28);border-radius:5px;background:#fff;display:grid;place-items:center;color:transparent;font-size:11px;font-weight:900;font-style:normal;transition:.3s ease}
+.b-chip.on i{background:var(--accent);border-color:var(--accent);color:#fff}
+.b-chip.moved{border-color:rgba(27,58,107,.3);background:var(--accent-tint);color:var(--accent)}
+.pressure{margin-top:20px;text-align:center;font-size:14px;font-weight:700;color:var(--dim)}
+.pressure b{display:block;font-family:var(--serif);font-size:40px;font-weight:800;color:var(--accent);letter-spacing:-.02em;margin-bottom:4px}
+.turn-h{font-family:var(--serif);font-weight:800;font-size:26px;line-height:1.45;color:var(--ink);letter-spacing:-.015em}
+.turn-h em{font-style:normal;box-shadow:inset 0 -11px 0 var(--accent-tint)}
+
+/* ═══ C안 전용 — 타임라인 ═══ */
+.tl{margin-top:8px;position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:7px;top:10px;bottom:10px;width:2px;background:linear-gradient(180deg,var(--accent-tint),var(--accent),var(--accent-tint))}
+.tl-item{position:relative;padding-bottom:22px}
+.tl-item::before{content:"";position:absolute;left:-23px;top:8px;width:14px;height:14px;border-radius:50%;background:var(--surface);border:3px solid var(--accent)}
+.tl-when{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
+.tl-card{margin-top:9px}
+.tl-lead{font-size:15px;line-height:1.85;color:var(--muted);margin-top:14px}
+.closing-line{font-family:var(--serif);font-weight:800;font-size:25px;line-height:1.5;color:var(--ink);margin-top:12px}
+.closing-line em{font-style:normal;box-shadow:inset 0 -11px 0 var(--accent-tint)}
+
+@media(min-width:520px){
+  .col{max-width:420px}
+}
+</style>
+</head>
+<body>
+
+<div class="mk-head">
+  <h1>홈 서사 재구성 — A · B · C</h1>
+  <p>창문 인트로 다음부터 마무리까지. 목업 v3의 내용을 현재 홈(딥 네이비 · SUIT)에 얹어 세 가지 흐름으로 짰습니다.<br>사진·숫자는 현재 사이트 실제 값. 점선 메모는 화면이 아니라 설계 노트입니다.</p>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-go="A">A안<b>질문 → 현실 → 문 → 약속</b></button>
+  <button class="tab" data-go="B">B안<b>열 가지 → 세 가지</b></button>
+  <button class="tab" data-go="C">C안<b>남은 시간 순서</b></button>
+</div>
+
+<!-- ══════════════════ A안 ══════════════════ -->
+<div class="col" id="col-A">
+  <div class="intro-ph"><div class="lg">MONC</div><p>창문 인트로 (현행 유지)</p></div>
+  <p class="note"><b>A안</b> — 목업 3섹션을 하나도 안 버리는 안. 감정(막막함) → 사실(숫자) → 해답(문) → 약속(다크). 다크 무대는 마지막 한 곳뿐이라 현재 팔레트 규칙과 충돌하지 않습니다.</p>
+
+  <!-- ① 막막함 -->
+  <section class="sec paper">
+    <div class="label">Why MONC</div>
+    <h2 class="h2">혼자 준비하는 시간이<br>막막하지 않도록.</h2>
+    <p class="lead">승무원 준비를 시작하면 생각보다 많은 순간을 혼자 결정해야 합니다. <b>무엇을 해야 하는지, 잘하고 있는지, 누구에게 물어봐야 하는지.</b></p>
+
+    <div class="worry">
+      <q>“그래서 저는 지금<br>뭘 준비해야 하나요?”</q>
+      <p class="sub">검색하면 정보는 넘치는데, 정작 나에게 필요한 답은 찾기 어렵습니다.</p>
+      <div class="chips" data-checklist>
+        <div class="chip"><i>✓</i>자기소개서</div>
+        <div class="chip"><i>✓</i>답변</div>
+        <div class="chip"><i>✓</i>보이스</div>
+        <div class="chip"><i>✓</i>스피치</div>
+        <div class="chip"><i>✓</i>항공사 분석</div>
+        <div class="chip"><i>✓</i>영상면접</div>
+        <div class="chip"><i>✓</i>헤어&amp;메이크업</div>
+        <div class="chip"><i>✓</i>이미지</div>
+        <div class="chip"><i>✓</i>체력</div>
+        <div class="chip"><i>✓</i>멘탈</div>
+      </div>
+    </div>
+  </section>
+  <p class="note">체크리스트는 화면에 들어오면 <b>0.4초 간격으로 하나씩 체크</b>됩니다. “이걸 다 혼자” 라는 압박을 글이 아니라 움직임으로 전달하는 자리 — 목업 v3의 유일한 새 자산입니다.</p>
+
+  <!-- ② 현실 숫자 -->
+  <section class="sec">
+    <div class="label">The Numbers</div>
+    <h2 class="h2">준비하는 사람은 많고,<br>자리는 적습니다.</h2>
+    <div class="stats" data-count>
+      <div class="stat"><strong><span data-n="2">0</span>만<em>명</em></strong><span>승무원 준비생</span></div>
+      <div class="stat"><strong><span data-n="350">0</span><em>여 명</em></strong><span>매년 최종 합격</span></div>
+      <div class="stat hot"><strong><span data-n="0.18" data-dec="2">0</span><em>%</em></strong><span>가능성</span></div>
+    </div>
+    <p class="bridge">그 <em>가능성</em>을,<br>몬크에서 도전하세요.</p>
+  </section>
+  <p class="note">현재 홈의 숫자 3타일을 <b>버리지 않고 뒤로 한 칸 옮긴 것</b>입니다. 감정 다음에 사실이 오면 같은 숫자가 더 세게 읽힙니다.</p>
+
+  <!-- ③ 세 개의 문 -->
+  <section class="sec" style="background:var(--bg);padding-bottom:22px">
+    <div class="label">So we built MONC</div>
+    <h2 class="h2">그래서 몬크가<br>준비했습니다.</h2>
+    <p class="lead">혼자 준비할 때 필요한 것들을, <b>매일 꺼내 쓰고 직접 연습할 수 있도록</b> 한곳에 담았습니다.</p>
+  </section>
+  <section class="doors" style="padding-top:22px">
+    <div class="door">
+      <div class="d-txt">
+        <div class="label">Challenge</div>
+        <h3 class="d-title">매일 습관을<br>만들 기회</h3>
+        <p class="d-ds">2주 동안 하루 하나씩 —<br>목소리·표정·말투·답변</p>
+        <span class="d-link">챌린지 보러가기 →</span>
+      </div>
+      <div class="d-card"><img src="../images/hero-expression.webp" alt=""><span class="d-chip">하루 한 번 · <b>DAY 7/14</b></span></div>
+    </div>
+    <div class="door rev">
+      <div class="d-txt">
+        <div class="label">Briefing Room</div>
+        <h3 class="d-title">면접에 그대로<br>쓰는 치트키</h3>
+        <p class="d-ds">항공 뉴스·기업 분석부터<br>답변 소재까지</p>
+        <span class="d-link">브리핑룸 열기 →</span>
+      </div>
+      <div class="d-card"><img src="../images/hero-sky-sunset.webp" alt=""><span class="d-chip">오늘 뉴스 <b>12건</b></span></div>
+    </div>
+    <div class="door">
+      <div class="d-txt">
+        <div class="label">Special Lecture</div>
+        <h3 class="d-title">채용이 뜨면,<br>그 항공사에 맞춰</h3>
+        <p class="d-ds">필요한 내용을 연구진과<br>실시간으로</p>
+        <span class="d-link">예정 특강 보기 →</span>
+      </div>
+      <div class="d-card"><img src="../images/instructor-kwon.webp" alt=""><span class="d-chip">면접 직전 대비</span></div>
+    </div>
+  </section>
+  <p class="note">문 3개는 <b>디자인 그대로, 설명 멘트만 목업 문장으로</b> 교체했습니다(목업의 3카드 섹션은 중복이라 폐기).</p>
+
+  <!-- ④ 약속 + CTA -->
+  <section class="sec dark">
+    <div class="label">MONC Promise</div>
+    <h2 class="h2">혼자 준비하더라도,<br>혼자가 아니도록.</h2>
+    <p class="lead">정답 하나를 건네는 곳보다, 준비가 멈추지 않게 만드는 곳이 되고 싶습니다. 막막한 날에도 다시 들어와 다음 한 걸음을 찾을 수 있도록.</p>
+    <div class="promise">
+      <div class="prow"><div class="pnum">01</div><div><h4>오늘 할 일을 찾고</h4><p>막연한 준비를 구체적인 행동으로 바꿉니다.</p></div></div>
+      <div class="prow"><div class="pnum">02</div><div><h4>직접 연습하고</h4><p>말하고, 찍고, 써보면서 내 것으로 만듭니다.</p></div></div>
+      <div class="prow"><div class="pnum">03</div><div><h4>다시 나아가도록</h4><p>피드백과 콘텐츠가 다음 연습으로 이어집니다.</p></div></div>
+    </div>
+    <a class="cta-btn">몬크 시작하기</a>
+    <p class="cta-note">이미 회원이라면 <a>로그인</a></p>
+  </section>
+  <p class="note">목업의 PROMISE(네이비)를 <b>마무리 CTA에 흡수</b>했습니다. 따로 두면 홈에 다크 무대가 둘이 되어 7/29 확정 규칙이 깨집니다.</p>
+</div>
+
+<!-- ══════════════════ B안 ══════════════════ -->
+<div class="col" id="col-B" hidden>
+  <div class="intro-ph"><div class="lg">MONC</div><p>창문 인트로 (현행 유지)</p></div>
+  <p class="note"><b>B안</b> — 체크리스트를 장식이 아니라 서사의 엔진으로 씁니다. 같은 칩 10개가 스크롤에 따라 <b>세 덩어리로 갈라지며</b> 세 개의 문이 됩니다. “왜 몬크가 세 개인가”를 말이 아니라 움직임으로 증명하는 안.</p>
+
+  <!-- ① 압박 -->
+  <section class="sec paper">
+    <div class="label">Why MONC</div>
+    <h2 class="h2">지금 혼자<br>감당하고 계신 것들.</h2>
+    <p class="lead">승무원 준비는 항목이 많습니다. 무엇부터인지 아무도 알려주지 않을 뿐입니다.</p>
+    <div class="worry">
+      <q>“그래서 저는 지금<br>뭘 준비해야 하나요?”</q>
+      <div class="chips" data-checklist>
+        <div class="chip"><i>✓</i>자기소개서</div>
+        <div class="chip"><i>✓</i>답변</div>
+        <div class="chip"><i>✓</i>보이스</div>
+        <div class="chip"><i>✓</i>스피치</div>
+        <div class="chip"><i>✓</i>항공사 분석</div>
+        <div class="chip"><i>✓</i>영상면접</div>
+        <div class="chip"><i>✓</i>헤어&amp;메이크업</div>
+        <div class="chip"><i>✓</i>이미지</div>
+        <div class="chip"><i>✓</i>체력</div>
+        <div class="chip"><i>✓</i>멘탈</div>
+      </div>
+      <p class="pressure" data-count><b><span data-n="0.18" data-dec="2">0</span>%</b>매년 2만 명이 준비해 350여 명이 붙습니다</p>
+    </div>
+  </section>
+  <p class="note">숫자 3타일은 <b>독립 섹션에서 빠지고</b> 압박의 마침표로 한 줄만 남습니다(오너 확정값은 그대로 사용).</p>
+
+  <!-- ② 정리 -->
+  <section class="sec">
+    <p class="turn-h">혼자 하면 열 가지.<br>몬크에선 <em>세 가지</em>.</p>
+    <div class="sortwrap" id="sortB">
+      <div class="pool" id="poolB">
+        <div class="b-chip" data-g="1"><i>✓</i>보이스</div>
+        <div class="b-chip" data-g="1"><i>✓</i>스피치</div>
+        <div class="b-chip" data-g="1"><i>✓</i>답변</div>
+        <div class="b-chip" data-g="1"><i>✓</i>이미지</div>
+        <div class="b-chip" data-g="2"><i>✓</i>항공사 분석</div>
+        <div class="b-chip" data-g="2"><i>✓</i>답변 소재</div>
+        <div class="b-chip" data-g="2"><i>✓</i>자기소개서</div>
+        <div class="b-chip" data-g="3"><i>✓</i>채용 공고</div>
+        <div class="b-chip" data-g="3"><i>✓</i>영상면접</div>
+        <div class="b-chip" data-g="3"><i>✓</i>헤어&amp;메이크업</div>
+      </div>
+      <div id="groupsB" hidden>
+        <div class="grp"><div class="grp-h">챌린지 <span>2주 · 하루 한 번</span></div><div class="chips" data-slot="1"></div></div>
+        <div class="grp"><div class="grp-h">브리핑룸 <span>매일 · 면접 재료</span></div><div class="chips" data-slot="2"></div></div>
+        <div class="grp"><div class="grp-h">특강 <span>채용 시즌 · 항공사별</span></div><div class="chips" data-slot="3"></div></div>
+      </div>
+    </div>
+  </section>
+  <p class="note">스크롤이 이 자리에 닿으면 칩들이 <b>제자리에서 세 그룹으로 날아가</b> 붙습니다(FLIP 애니메이션 — 위로 다시 스크롤했다 내려오면 다시 봅니다). 혼란이 정리되는 순간을 사용자가 직접 봅니다.</p>
+
+  <!-- ③ 세 개의 문 -->
+  <section class="doors">
+    <div class="door">
+      <div class="d-txt">
+        <div class="label">Challenge</div>
+        <h3 class="d-title">2주면<br>습관이 됩니다</h3>
+        <p class="d-ds">목소리·표정·말투·답변을<br>하루 하나씩</p>
+        <span class="d-link">챌린지 보러가기 →</span>
+      </div>
+      <div class="d-card"><img src="../images/hero-expression.webp" alt=""><span class="d-chip">하루 한 번 · <b>DAY 7/14</b></span></div>
+    </div>
+    <div class="door rev">
+      <div class="d-txt">
+        <div class="label">Briefing Room</div>
+        <h3 class="d-title">할 말이<br>쌓입니다</h3>
+        <p class="d-ds">항공 뉴스·기업 분석·<br>답변 소재를 매일</p>
+        <span class="d-link">브리핑룸 열기 →</span>
+      </div>
+      <div class="d-card"><img src="../images/hero-sky-sunset.webp" alt=""><span class="d-chip">오늘 뉴스 <b>12건</b></span></div>
+    </div>
+    <div class="door">
+      <div class="d-txt">
+        <div class="label">Special Lecture</div>
+        <h3 class="d-title">채용이 뜨면<br>바로 엽니다</h3>
+        <p class="d-ds">그 항공사에 맞춰<br>연구진과 실시간으로</p>
+        <span class="d-link">예정 특강 보기 →</span>
+      </div>
+      <div class="d-card"><img src="../images/instructor-kwon.webp" alt=""><span class="d-chip">면접 직전 대비</span></div>
+    </div>
+  </section>
+
+  <!-- ④ 마무리 -->
+  <section class="sec dark ctr">
+    <h2 class="h2">혼자 준비하더라도,<br>혼자가 아니도록.</h2>
+    <p class="lead">오늘 할 일을 찾고, 직접 연습하고, 다시 나아가도록.</p>
+    <a class="cta-btn">몬크 시작하기</a>
+    <p class="cta-note">이미 회원이라면 <a>로그인</a></p>
+  </section>
+  <p class="note">약속 3단계는 <b>한 줄로 압축</b>했습니다 — 앞에서 이미 세 덩어리를 보여줬기 때문에 또 3개를 나열하면 리듬이 죽습니다.</p>
+</div>
+
+<!-- ══════════════════ C안 ══════════════════ -->
+<div class="col" id="col-C" hidden>
+  <div class="intro-ph"><div class="lg">MONC</div><p>창문 인트로 (현행 유지)</p></div>
+  <p class="note"><b>C안</b> — 세 개의 문을 나열이 아니라 <b>순서</b>로 바꿉니다. 스크롤이 곧 면접까지 남은 시간. 숫자는 맨 뒤로 보내 “왜 지금인가”의 근거가 됩니다.</p>
+
+  <!-- ① 막막함 -->
+  <section class="sec paper">
+    <div class="label">Why MONC</div>
+    <h2 class="h2">혼자 준비하는 시간이<br>막막하지 않도록.</h2>
+    <p class="lead">가장 어려운 건 실력이 아니라 <b>순서</b>입니다. 무엇을 먼저 해야 하는지 아무도 알려주지 않습니다.</p>
+    <div class="worry">
+      <q>“그래서 저는 지금<br>뭘 준비해야 하나요?”</q>
+      <div class="chips" data-checklist>
+        <div class="chip"><i>✓</i>자기소개서</div>
+        <div class="chip"><i>✓</i>답변</div>
+        <div class="chip"><i>✓</i>보이스</div>
+        <div class="chip"><i>✓</i>스피치</div>
+        <div class="chip"><i>✓</i>항공사 분석</div>
+        <div class="chip"><i>✓</i>영상면접</div>
+        <div class="chip"><i>✓</i>헤어&amp;메이크업</div>
+        <div class="chip"><i>✓</i>멘탈</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 타임라인 = 세 개의 문 -->
+  <section class="sec">
+    <div class="label">Your Timeline</div>
+    <h2 class="h2">면접까지 남은 시간에<br>맞춰 준비합니다.</h2>
+    <p class="tl-lead">몬크는 세 개의 서비스가 아니라, <b>준비의 세 구간</b>입니다.</p>
+  </section>
+  <section class="doors" style="padding-top:0">
+    <div class="tl">
+      <div class="tl-item">
+        <div class="tl-when">매일 — 재료 쌓기</div>
+        <div class="tl-card door rev">
+          <div class="d-txt">
+            <h3 class="d-title">할 말이<br>쌓입니다</h3>
+            <p class="d-ds">항공 뉴스·기업 분석·<br>답변 소재를 하루 한 번</p>
+            <span class="d-link">브리핑룸 열기 →</span>
+          </div>
+          <div class="d-card"><img src="../images/hero-sky-sunset.webp" alt=""><span class="d-chip">오늘 뉴스 <b>12건</b></span></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-when">2주 — 몸에 붙이기</div>
+        <div class="tl-card door">
+          <div class="d-txt">
+            <h3 class="d-title">2주면<br>습관이 됩니다</h3>
+            <p class="d-ds">목소리·표정·말투·답변을<br>하루 하나씩</p>
+            <span class="d-link">챌린지 보러가기 →</span>
+          </div>
+          <div class="d-card"><img src="../images/hero-expression.webp" alt=""><span class="d-chip">하루 한 번 · <b>DAY 7/14</b></span></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-when">면접 직전 — 맞춰 넣기</div>
+        <div class="tl-card door rev">
+          <div class="d-txt">
+            <h3 class="d-title">채용이 뜨면<br>바로 엽니다</h3>
+            <p class="d-ds">그 항공사에 맞춰<br>연구진과 실시간으로</p>
+            <span class="d-link">예정 특강 보기 →</span>
+          </div>
+          <div class="d-card"><img src="../images/instructor-kwon.webp" alt=""><span class="d-chip">면접 직전 대비</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <p class="note">특강 문은 공개 특강이 없으면 숨겨집니다 — <b>C안은 그때도 서사가 안 깨집니다</b>(‘매일 → 2주’ 만으로도 순서가 성립). 대신 문 순서가 스케치(챌린지→브리핑룸→특강)와 달라지는 점은 확인이 필요합니다.</p>
+
+  <!-- ③ 숫자 = 왜 지금인가 -->
+  <section class="sec paper">
+    <div class="label">The Numbers</div>
+    <div class="stats" data-count>
+      <div class="stat"><strong><span data-n="2">0</span>만<em>명</em></strong><span>승무원 준비생</span></div>
+      <div class="stat"><strong><span data-n="350">0</span><em>여 명</em></strong><span>매년 최종 합격</span></div>
+      <div class="stat hot"><strong><span data-n="0.18" data-dec="2">0</span><em>%</em></strong><span>가능성</span></div>
+    </div>
+    <p class="closing-line">이 숫자를 바꾸는 건<br><em>준비한 시간</em>입니다.</p>
+  </section>
+
+  <!-- ④ 마무리 -->
+  <section class="sec dark">
+    <div class="label">MONC Promise</div>
+    <h2 class="h2">혼자 준비하더라도,<br>혼자가 아니도록.</h2>
+    <div class="promise">
+      <div class="prow"><div class="pnum">01</div><div><h4>오늘 할 일을 찾고</h4><p>막연한 준비를 구체적인 행동으로 바꿉니다.</p></div></div>
+      <div class="prow"><div class="pnum">02</div><div><h4>직접 연습하고</h4><p>말하고, 찍고, 써보면서 내 것으로 만듭니다.</p></div></div>
+      <div class="prow"><div class="pnum">03</div><div><h4>다시 나아가도록</h4><p>피드백과 콘텐츠가 다음 연습으로 이어집니다.</p></div></div>
+    </div>
+    <a class="cta-btn">몬크 시작하기</a>
+    <p class="cta-note">이미 회원이라면 <a>로그인</a></p>
+  </section>
+</div>
+
+<script>
+/* 탭 전환 */
+document.querySelectorAll('.tab').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.toggle('on', x===b); });
+    ['A','B','C'].forEach(function(k){ document.getElementById('col-'+k).hidden = (k !== b.dataset.go); });
+    window.scrollTo({top:0});
+  });
+});
+
+/* 체크리스트 — 화면에 들어오면 하나씩 체크(반복) */
+document.querySelectorAll('[data-checklist]').forEach(function(list){
+  var items = [].slice.call(list.children), timer = null;
+  function run(){
+    clearInterval(timer);
+    items.forEach(function(i){ i.classList.remove('on'); });
+    var k = 0;
+    timer = setInterval(function(){
+      if (k < items.length) { items[k].classList.add('on'); k++; return; }
+      clearInterval(timer);
+      setTimeout(run, 2200);
+    }, 400);
+  }
+  new IntersectionObserver(function(es, ob){
+    if (es.some(function(e){ return e.isIntersecting; })) { run(); ob.disconnect(); }
+  }, {threshold:.3}).observe(list);
+});
+
+/* 숫자 카운트업 */
+document.querySelectorAll('[data-count]').forEach(function(box){
+  new IntersectionObserver(function(es, ob){
+    if (!es.some(function(e){ return e.isIntersecting; })) return;
+    ob.disconnect();
+    box.querySelectorAll('[data-n]').forEach(function(el){
+      var to = parseFloat(el.dataset.n), dec = parseInt(el.dataset.dec || 0, 10), t0 = null;
+      function step(ts){
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / 1100);
+        el.textContent = (to * (1 - Math.pow(1 - p, 3))).toFixed(dec);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }, {threshold:.4}).observe(box);
+});
+
+/* B안 — 칩 10개가 세 그룹으로 날아가 붙는다(FLIP) */
+(function(){
+  var wrap = document.getElementById('sortB');
+  if (!wrap) return;
+  var pool = document.getElementById('poolB');
+  var groups = document.getElementById('groupsB');
+  var chips = [].slice.call(pool.children);
+  var done = false;
+
+  function sort(){
+    if (done) return; done = true;
+    var first = chips.map(function(c){ return c.getBoundingClientRect(); });
+
+    groups.hidden = false;
+    chips.forEach(function(c){
+      groups.querySelector('[data-slot="' + c.dataset.g + '"]').appendChild(c);
+      c.classList.add('moved');
+    });
+    pool.style.display = 'none';
+
+    chips.forEach(function(c, i){
+      var last = c.getBoundingClientRect();
+      var dx = first[i].left - last.left, dy = first[i].top - last.top;
+      c.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      c.style.transition = 'none';
+      requestAnimationFrame(function(){
+        c.style.transition = 'transform .62s cubic-bezier(.22,1,.36,1) ' + (i * 45) + 'ms';
+        c.style.transform = '';
+      });
+    });
+    setTimeout(function(){ wrap.classList.add('sorted'); }, 120);
+  }
+
+  /* 목업이라 되감기 지원: 섹션이 화면 밖으로 나가면 초기 상태로 복원 */
+  function reset(){
+    if (!done) return; done = false;
+    wrap.classList.remove('sorted');
+    chips.forEach(function(c){ c.classList.remove('moved'); c.style.transition=''; c.style.transform=''; pool.appendChild(c); });
+    pool.style.display = '';
+    groups.hidden = true;
+  }
+
+  /* IntersectionObserver 대신 스크롤 위치 직접 계산 — 탭 전환으로 컬럼이
+     display:none 을 오갈 때 IO 콜백이 안 들어오는 걸 실측으로 확인했다(목업 한정 문제). */
+  function check(){
+    if (wrap.offsetParent === null) return;      // 숨은 탭
+    var r = wrap.getBoundingClientRect();
+    if (r.top < innerHeight * .72 && r.bottom > 60) sort();
+    else if (r.bottom < 0 || r.top > innerHeight) reset();
+  }
+  addEventListener('scroll', check, {passive:true});
+  addEventListener('resize', check, {passive:true});
+  document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ setTimeout(check, 60); }); });
+  setTimeout(check, 200);
+})();
+</script>
+</body>
+</html>
