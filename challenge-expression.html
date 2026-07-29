@@ -25,22 +25,27 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }
     .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-    .gradient-text { background: linear-gradient(135deg,var(--primary),var(--accent-ink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 99px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .25s; border: none; }
-    .btn-primary { background: linear-gradient(135deg,var(--primary),var(--accent-ink)); color: #fff; box-shadow: 0 8px 24px rgba(36, 26, 18,.4); }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(36, 26, 18,.55); }
-    .btn-ghost { background: var(--surface); color: var(--primary); border: 2px solid rgba(36, 26, 18,.25); }
-    .btn-ghost:hover { background: var(--surface2); }
+    /* ⚠️ 구 .gradient-text 는 background:linear-gradient(...,var(--accent-ink)) + background-clip:text +
+       -webkit-text-fill-color:transparent 조합이었다. 변수 하나가 미정의가 되면 background 선언 전체가
+       무효가 되어 **글자가 통째로 사라진다**(2026-07-30 실제로 터진 자리 — 흰 배경에 흰 글씨).
+       색 한 값으로 칠하는 지금 방식은 변수가 없어도 최악이 '검은 글씨'라 읽히기는 한다. 되돌리지 말 것. */
+    .gradient-text { color: var(--accent-ink); -webkit-text-fill-color: var(--accent-ink); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; min-height: 48px; border-radius: 99px; font-size: 16px; font-weight: 700; line-height: 1.2; cursor: pointer; text-decoration: none; transition: background .25s, box-shadow .25s, transform .25s; border: none; }
+    /* CTA = 딥 네이비 면 + 흰 글씨(10:1). 구 갈색→네이비 그라디언트는 팔레트 확정 전 값이다. */
+    .btn-primary { background: var(--action); color: var(--action-ink); box-shadow: var(--shadow-action); }
+    .btn-primary:hover { background: var(--action-hover); transform: translateY(-2px); box-shadow: var(--shadow-action-lg); }
+    .btn-ghost { background: var(--surface); color: var(--accent-ink); border: 2px solid rgba(27,58,107,.28); }
+    .btn-ghost:hover { background: var(--action-tint); }
 
     /* NAV */
-    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(255,250,243,.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(36, 26, 18,.1); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(251,249,245,.94); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-soft); }
     .nav-inner { display: flex; align-items: center; justify-content: space-between; }
     .logo { display: flex; align-items: center; text-decoration: none; }
     .logo img { height: 22px; width: auto; display: block; }
-    .nav-back { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
-    .nav-back:hover { color: var(--primary); }
+    .nav-back { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .nav-back:hover { color: var(--accent-ink); }
 
     /* HERO */
     .hero { padding: 100px 0 60px; position: relative; overflow: hidden; }
@@ -48,13 +53,13 @@
     .orb { position: absolute; border-radius: 50%; filter: blur(70px); }
     .orb-1 { width: 400px; height: 400px; background: #C6D4EA; opacity: .5; top: -100px; right: -100px; }
     .orb-2 { width: 300px; height: 300px; background: #DDE5F1; opacity: .5; bottom: -80px; left: -60px; }
-    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(36, 26, 18,.08) 1.5px,transparent 1.5px); background-size: 32px 32px; }
+    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(38,34,28,.07) 1.5px,transparent 1.5px); background-size: 32px 32px; }
     .hero-inner { position: relative; z-index: 1; }
-    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); text-decoration: none; margin-bottom: 24px; transition: color .2s; font-weight: 600; }
-    .back-link:hover { color: var(--primary); }
-    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; background: rgba(36, 26, 18,.12); color: var(--primary); border: 1px solid rgba(36, 26, 18,.25); margin-bottom: 16px; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted); text-decoration: none; margin-bottom: 24px; transition: color .2s; font-weight: 600; }
+    .back-link:hover { color: var(--accent-ink); }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; border-radius: 99px; font-size: 13px; font-weight: 700; background: var(--action-tint); color: var(--accent-ink); border: 1px solid rgba(27,58,107,.24); margin-bottom: 16px; }
     .hero-emoji { font-size: 64px; margin-bottom: 16px; display: block; }
-    /* View Transitions — Finder 결과 카드의 챌린지명 → 이 hero 제목으로 morph + root 크로스페이드 */
+    /* View Transitions — 목록 카드의 챌린지명 → 이 hero 제목으로 morph + root 크로스페이드 */
     @media (prefers-reduced-motion: no-preference) {
       @view-transition { navigation: auto; }
       ::view-transition-old(root) { animation: vt-fade-out .22s both; }
@@ -62,29 +67,32 @@
       @keyframes vt-fade-out { to { opacity: 0; } }
       @keyframes vt-fade-in { from { opacity: 0; } }
     }
-    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: var(--fw-light); line-height: 1.2; margin-bottom: 14px; }
-    .hero-desc { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; }
+    /* ⚠️ 굵기 500. 구 300(--fw-light)은 한글 SUIT 에서 획이 얇아 26~44px 제목이 본문보다
+       흐리게 읽혔다(오너 "가독성 올려라"). 강조 span 은 마크업에서 700 이라 위계가 살아 있다. */
+    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: var(--fw-med); line-height: 1.25; letter-spacing: -0.01em; word-break: keep-all; margin-bottom: 14px; }
+    .hero-desc { font-size: var(--fs-body); color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; word-break: keep-all; }
     .hero-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
-    .meta-chip { background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
-    .meta-chip strong { color: var(--primary); }
+    .meta-chip { background: var(--surface); border: 1.5px solid var(--border); border-radius: 99px; padding: 9px 16px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+    .meta-chip strong { color: var(--accent-ink); }
     .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
     /* SECTION */
     section { padding: 60px 0; }
     section + section { padding-top: 0; }
-    .section-label { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; background: linear-gradient(135deg,var(--primary),var(--accent-ink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
-    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 900; margin-bottom: 24px; }
+    /* 12px 하한 — 구 11px 은 9대 원칙 1(가독성) 미달. 색은 tokens.css 의 .section-label 규칙이 단색 네이비로 덮는다. */
+    .section-label { font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 10px; }
+    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 800; margin-bottom: 24px; word-break: keep-all; }
 
     /* OVERVIEW CARDS */
     .overview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 40px; }
-    .overview-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
-    .overview-val { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--accent-ink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .overview-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .overview-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
+    .overview-val { font-size: 26px; font-weight: 800; color: var(--accent-ink); -webkit-text-fill-color: var(--accent-ink); line-height: 1.2; }
+    .overview-label { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 6px; line-height: 1.4; word-break: keep-all; }
 
     /* CURRICULUM */
     .curriculum-list { display: flex; flex-direction: column; gap: 16px; }
     .curriculum-week {
-      background: #fff; border: 1.5px solid var(--border);
+      background: var(--surface); border: 1.5px solid var(--border);
       border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
     }
     .week-header {
@@ -93,35 +101,35 @@
     }
     .week-num {
       width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(135deg,var(--primary),var(--accent-ink));
+      background: var(--action);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800; color: #fff;
+      font-size: 15px; font-weight: 800; color: var(--action-ink);
     }
     .week-info { flex: 1; }
-    .week-title { font-size: 16px; font-weight: 800; color: var(--text); }
-    .week-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .week-arrow { font-size: 18px; color: var(--text-dim); transition: transform .3s; }
+    .week-title { font-size: var(--fs-body); font-weight: 800; color: var(--text); }
+    .week-sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 3px; line-height: 1.5; word-break: keep-all; }
+    .week-arrow { font-size: 20px; color: var(--text-dim); transition: transform .3s; }
     .curriculum-week.open .week-arrow { transform: rotate(90deg); }
     .week-body { display: none; padding: 0 24px 20px; border-top: 1px solid var(--border-soft); }
     .curriculum-week.open .week-body { display: block; }
-    .lesson-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .lesson-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: var(--fs-body-sm, 15px); color: var(--text-muted); line-height: 1.68; word-break: keep-all; }
     .lesson-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
-    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 3px; }
 
     /* WHAT YOU GET */
     .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .benefit-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
+    .benefit-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
     .benefit-icon { font-size: 28px; margin-bottom: 10px; }
-    .benefit-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
-    .benefit-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+    .benefit-title { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 6px; word-break: keep-all; }
+    .benefit-desc { font-size: var(--fs-body-sm, 15px); color: var(--text-muted); line-height: 1.68; word-break: keep-all; }
 
-    /* CTA */
-    .cta-box { background: linear-gradient(135deg,var(--primary),var(--accent-ink) 55%,var(--accent-dark)); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(36, 26, 18,.4); }
+    /* CTA — 다크 무대. ⚠️ 네이비 면 위 버튼은 '흰 알약 + 네이비 글씨'로 뒤집는다(팔레트 규칙). */
+    .cta-box { background: linear-gradient(150deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(20,44,82,.32); }
     .cta-box::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.08); }
-    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 900; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
-    .cta-desc { font-size: 15px; color: rgba(255,255,255,.85); margin-bottom: 28px; position: relative; z-index: 1; }
-    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.12); position: relative; z-index: 1; }
+    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 800; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; word-break: keep-all; }
+    .cta-desc { font-size: 16px; color: rgba(255,255,255,.88); margin-bottom: 28px; position: relative; z-index: 1; word-break: keep-all; }
+    .btn-white { background: #fff; color: var(--accent-ink); font-size: 16px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.18); position: relative; z-index: 1; }
     .btn-white:hover { transform: translateY(-2px); }
 
     /* FOOTER */
@@ -129,7 +137,7 @@
     .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
     .footer-logo { display: flex; align-items: center; }
     .footer-logo img { height: 22px; width: auto; display: block; }
-    .footer-copy { font-size: 12px; color: var(--text-dim); }
+    .footer-copy { font-size: 13px; color: var(--text-dim); }
 
     @media (max-width: 600px) {
       /* 오버뷰: 3개 카드 → 한 줄 바 */
@@ -141,11 +149,11 @@
       }
       .overview-card {
         flex: 1; border: none; border-radius: 0; box-shadow: none;
-        padding: 16px 6px; border-right: 1px solid var(--border);
+        padding: 14px 6px; border-right: 1px solid var(--border);
       }
       .overview-card:last-child { border-right: none; }
-      .overview-val { font-size: 16px; white-space: nowrap; }
-      .overview-label { font-size: 10px; }
+      .overview-val { font-size: 18px; white-space: nowrap; }
+      .overview-label { font-size: 12px; line-height: 1.35; }  /* was 10px — 9대 원칙 1 미달 */
 
       /* 기타 */
       .benefits-grid { grid-template-columns: 1fr; }
@@ -194,11 +202,11 @@
 </section>
 
 <!-- BEFORE / AFTER 영상 -->
-<section style="padding:60px 0; background:linear-gradient(135deg,rgba(36, 26, 18,.04),rgba(154,91,30,.06));">
+<section style="padding:60px 0; background:var(--bg2);">
   <div class="container" style="max-width:760px;">
     <div class="section-label">Before &amp; After</div>
     <h2 class="section-title" style="margin-bottom:8px;">2주가 만드는 차이</h2>
-    <p style="font-size:15px;color:var(--text-muted);margin-bottom:32px;line-height:1.7;">
+    <p style="font-size:17px;color:var(--text-muted);margin-bottom:32px;line-height:1.7;word-break:keep-all;">
       같은 사람, 같은 말. 단 2주 전후의 실제 영상입니다.
     </p>
     <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:18px;overflow:hidden;box-shadow:0 12px 48px rgba(36, 26, 18,.18);">
@@ -211,7 +219,7 @@
         style="position:absolute;top:0;left:0;width:100%;height:100%;">
       </iframe>
     </div>
-    <p style="text-align:center;font-size:13px;color:var(--text-dim);margin-top:16px;">
+    <p style="text-align:center;font-size:14px;color:var(--text-dim);margin-top:16px;">
       실제 수강생의 비포&애프터 · 영합각 2주 결과
     </p>
   </div>
@@ -287,13 +295,13 @@
 </section>
 
 <!-- 2주 과정의 핵심 변화 -->
-<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(255,243,230,.3), rgba(255,176,136,.15));">
+<section style="padding: 60px 0; background: var(--bg2);">
   <div class="container">
     <div class="section-label">Core of the Program</div>
     <h2 class="section-title">2주 과정의 핵심 변화</h2>
     <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: white; padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
-        <p style="margin-bottom: 24px;">영합각은 <strong style="color: var(--primary);">단순한 영상 촬영 수업이 아닙니다.</strong></p>
+      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
+        <p style="margin-bottom: 24px;">영합각은 <strong style="color: var(--accent-ink);">단순한 영상 촬영 수업이 아닙니다.</strong></p>
 
         <p style="margin-bottom: 20px;">
           <strong style="color: var(--text); display: block; margin-bottom: 8px;">1주차에는</strong>
@@ -307,7 +315,7 @@
 
         <p style="padding-top: 20px; border-top: 1px solid var(--border);">
           이미지와 말하기를 함께 완성하면,<br>
-          <strong style="color: var(--primary);">면접관에게 준비된 지원자로 기억되는</strong> 차이가 생깁니다.
+          <strong style="color: var(--accent-ink);">면접관에게 준비된 지원자로 기억되는</strong> 차이가 생깁니다.
         </p>
       </div>
     </div>
@@ -320,27 +328,27 @@
     <div class="section-label">Recommended For</div>
     <h2 class="section-title">이런 학생에게 추천합니다</h2>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">영상면접이 처음이라 어디서부터 준비해야 할지 막막한 학생</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">카메라 앞에서 표정과 시선이 어색해지는 학생</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">답변은 준비했지만 말투가 딱딱하거나 외운 티가 나는 학생</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">화면 속 이미지가 실제보다 덜 좋아 보여 고민인 학생</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">미소, 자세, 조명, 각도까지 체계적으로 점검받고 싶은 학생</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">1분 자기소개 영상을 최종 제출본 수준으로 완성하고 싶은 학생</div>
       </div>
     </div>
@@ -348,37 +356,37 @@
 </section>
 
 <!-- 최종 목표 -->
-<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(36, 26, 18,.05), rgba(154,91,30,.05));">
+<section style="padding: 60px 0; background: var(--bg2);">
   <div class="container">
     <div class="section-label">Final Goal</div>
     <h2 class="section-title">최종 목표</h2>
     <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: white; padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
         <p style="margin-bottom: 24px;">영합각의 최종 목표는</p>
         <p style="margin-bottom: 24px; font-weight: 600; color: var(--text);">단순히 영상면접 답변을 외우게 만드는 것이 아닙니다.</p>
 
         <p style="margin-bottom: 24px;">
           <strong style="color: var(--text);">카메라 앞에서</strong><br>
           어떻게 보여야 하는지, 어떻게 말해야 하는지, 어떻게 기억되어야 하는지를<br>
-          <strong style="color: var(--primary);">2주 동안 하나씩 완성하는 과정입니다.</strong>
+          <strong style="color: var(--accent-ink);">2주 동안 하나씩 완성하는 과정입니다.</strong>
         </p>
 
         <ul style="list-style: none; padding: 0; margin-bottom: 28px;">
           <li style="margin-bottom: 12px; padding-left: 24px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">1</span>
+            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">1</span>
             <strong style="color: var(--text);">1주차에는</strong> 카메라 속 이미지를 만들고,
           </li>
           <li style="padding-left: 24px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">2</span>
+            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">2</span>
             <strong style="color: var(--text);">2주차에는</strong> 그 이미지에 어울리는 말하기를 입힙니다.
           </li>
         </ul>
 
         <p style="padding-top: 24px; border-top: 1px solid var(--border);">
           그 결과 학생은<br>
-          <span style="display: block; margin: 12px 0; font-weight: 700; color: var(--primary);">영상면접에서 단정하고 자연스럽게 보이며,</span>
-          <span style="display: block; margin: 12px 0; font-weight: 700; color: var(--primary);">답변이 외운 말처럼 들리지 않고,</span>
-          <span style="font-weight: 700; color: var(--primary);">면접관에게 준비된 지원자로 기억될 수 있는</span><br>
+          <span style="display: block; margin: 12px 0; font-weight: 700; color: var(--accent-ink);">영상면접에서 단정하고 자연스럽게 보이며,</span>
+          <span style="display: block; margin: 12px 0; font-weight: 700; color: var(--accent-ink);">답변이 외운 말처럼 들리지 않고,</span>
+          <span style="font-weight: 700; color: var(--accent-ink);">면접관에게 준비된 지원자로 기억될 수 있는</span><br>
           최종 영상면접 제출본을 완성하게 됩니다.
         </p>
       </div>
@@ -392,7 +400,7 @@
       <h2 class="cta-title">2주의 기적, 지금 시작하세요</h2>
       <p class="cta-desc">내 목소리를 찾고, 자신감 있게 표현하는 2주 과정</p>
       <a class="btn btn-white apply-btn" href="#" onclick="handleApply(event)">2주의 기적 챌린지 참여하기</a>
-      <p style="font-size:12px; color:rgba(255,255,255,.72); margin:18px 0 0; line-height:1.6; position:relative; z-index:1;">100% 온라인·비대면 · 기수 시작일부터 14일(총 10회차) 제공 · 카카오톡 전용 채널 진행 · 제공·환불 규정은 <a href="apply.html?c=expression" style="color:#fff; text-decoration:underline;">신청 페이지</a> 참고</p>
+      <p style="font-size:13px; color:rgba(255,255,255,.84); margin:18px 0 0; line-height:1.6; position:relative; z-index:1;">100% 온라인·비대면 · 기수 시작일부터 14일(총 10회차) 제공 · 카카오톡 전용 채널 진행 · 제공·환불 규정은 <a href="apply.html?c=expression" style="color:#fff; text-decoration:underline;">신청 페이지</a> 참고</p>
     </div>
   </div>
 </section>
@@ -400,7 +408,7 @@
 <footer>
   <div class="container footer-inner">
     <div class="footer-logo"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></div>
-    <div class="footer-copy" style="font-size:11px;line-height:1.5;">
+    <div class="footer-copy" style="font-size:13px;line-height:1.6;">
       상호: 몬크 | 대표: 권성호 박새암 | 사업자등록번호: 784-02-04020 | 통신판매업신고번호: 제2026-서울금천-1525호<br>
       주소: 서울특별시 금천구 디지털로9길 99, 10층 13호 | 고객센터: 070-4032-0015<br>
       © 2026 MONC. All rights reserved.

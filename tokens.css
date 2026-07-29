@@ -78,7 +78,11 @@ html {
 
   --radius-xs: 8px;
   --radius-sm: 14px;
+  /* --radius-md 는 --radius 의 별칭이다. briefing.html·lecture.html 이 이 이름으로
+     참조하는데 정의가 없어 border-radius 가 통째로 무효(=모서리 0)가 돼 있었다.
+     이름을 지우지 말 것 — 참조처에 폴백이 없다. */
   --radius: 20px;
+  --radius-md: 20px;
   --radius-lg: 24px;
 
   --space-1: 8px;  --space-2: 16px; --space-3: 24px; --space-4: 32px;
@@ -157,4 +161,61 @@ html {
    2026-07-29 삭제 — 홈 히어로가 정적 배경 + 자동 애니메이션으로 바뀌면서 쓰는 페이지가
    하나도 남지 않았다(scroll-fx.js 의 initZoomExit 도 함께 제거). 되살리려면 하늘/창틀
    2겹 이미지부터 필요하다 — 지금 배경 이미지는 창과 하늘이 합쳐져 있어 통과가 성립하지 않는다. */
+
+/* ═══════════════════════════════════════════════════════════════
+   팔레트 오버라이드 — 딥 네이비 액센트 + 제목 조판
+   ⚠️⚠️ 2026-07-30 복구. 이 블록은 2026-07-29 히어로 교체 커밋(c69c10f)에서 바로 위
+      줌 규칙을 지울 때 **딸려서 통째로 삭제**됐다. 그 바람에 --accent-ink 와 --serif 가
+      사이트 전역에서 미정의가 됐고, 두 이름을 쓰는 20개 파일이 조용히 깨졌다.
+      특히 상세 4종·홈의 '그라디언트 텍스트'(background:linear-gradient(...,var(--accent-ink))
+      + background-clip:text + -webkit-text-fill-color:transparent)는 변수 하나가 없으면
+      background 선언 전체가 무효가 되어 **글자가 통째로 안 보인다** — 흰 배경에 흰 글씨로
+      신고된 증상의 실제 원인이 이것이다. 변수를 지우거나 이름을 바꾸지 말 것.
+
+   ⚠ 9대 원칙 4(명도대비 4.5:1) — 딥 네이비 #1B3A6B 는 밝은 종이 배경 위 9~10:1 이라
+     소형 텍스트에도 그냥 쓸 수 있다. 그래서 accent/accent-ink 를 한 값으로 모았다.
+   ⚠ 반대 방향의 함정: 네이비는 **다크 배경 위에서 묻힌다**(다크 위 1.4:1). 다크 무대 위
+     강조 텍스트·테두리는 --action-on-dark, 다크 위 CTA 는 '흰 알약 + 네이비 글씨'로 뒤집는다.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --accent: #1B3A6B;       /* 장식 면·큰 디스플레이 */
+  --accent-dark: #142C52;  /* 큰 볼드 텍스트·테두리·포커스링 */
+  --accent-tint: #E5E9F1;
+  --accent-ink: #1B3A6B;   /* 소형 텍스트·링크·활성 칩(밝은 배경 위 4.5:1+) */
+  --rose: #1B3A6B;
+  --rose-light: #3B5DA6;
+  /* 제목 글꼴 — 2026-07-29부터 SUIT(산세). ⚠️ 이름이 --serif 인 것은 명조를 쓰던 시절의
+     흔적이다(참조처가 36곳이라 이름만 유지). '제목용 글꼴' 로 읽을 것. */
+  --serif: 'SUIT Variable', SUIT, sans-serif;
+  --fs-h2: clamp(30px, 4.2vw, 46px);  /* 제목 위계 확대 */
+}
+
+/* 섹션 제목 스케일 확대. h2. 접두로 특이도를 올려, tokens.css 보다 나중에 로드되는
+   각 페이지 인라인 <style> 의 .section-title 단일 클래스 규칙을 이긴다. */
+h2.section-title, h2.ts-title, h2.mc-title, h2.ma-title {
+  font-family: var(--serif);
+  font-weight: 800;  /* SUIT ExtraBold. ⚠️ 400 으로 되돌리지 말 것 — 구 400 은 명조 시절
+                        단일 굵기에 맞춘 값이라 산세에서는 제목이 본문 굵기로 보인다. */
+  font-size: var(--fs-h2);
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+}
+
+/* 라벨(에이브로우) — 넓은 자간 + 딥 네이비 단색.
+   !important 는 페이지 인라인 규칙(캐스케이드상 뒤) 대응. 상세페이지 라벨은
+   그라디언트 텍스트라 fill-color 와 background 까지 함께 해제해야 단색이 칠해진다. */
+.section-label, .mc-eyebrow {
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-ink) !important;
+  -webkit-text-fill-color: var(--accent-ink) !important;
+  background: none !important;
+}
+
+/* 인물 원형/포트레이트 사진 — 통일 그레이딩('양산형 스톡' 인상 제거) */
+.ts-photo img, .mi-photo img {
+  filter: grayscale(0.14) contrast(1.05) brightness(1.02) sepia(0.05);
+}
 

@@ -82,7 +82,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .bq-scene-badge {
-  font-size: 11.5px; font-weight: 800; color: #F3EFE7;
+  font-size: 12.5px; font-weight: 800; color: #F3EFE7;
   background: rgba(16,18,26,.62); border: 1px solid rgba(255,255,255,.18);
   padding: 4px 11px; border-radius: 99px;
   display: inline-flex; align-items: center; gap: 6px;
@@ -95,7 +95,7 @@
 .bq-dots i.on { background: var(--action-on-dark); }
 .bq-scene-tag {
   position: absolute; z-index: 1; left: 14px; bottom: 12px;
-  font-size: 11.5px; font-weight: 800; color: #F3EFE7;
+  font-size: 12.5px; font-weight: 800; color: #F3EFE7;
   background: rgba(25,65,146,.72); padding: 4px 11px; border-radius: 99px;
 }
 .bq-console { padding: 18px 18px 22px; }
@@ -121,8 +121,8 @@
 }
 .bq-clip-info { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .bq-clip-name { font-size: 15px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.bq-clip-check { font-size: 11.5px; font-weight: 700; color: var(--accent-ink); }
-.bq-clip-badge { font-size: 11px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
+.bq-clip-check { font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }
+.bq-clip-badge { font-size: 12.5px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
 .bq-clip-badge.is-before { background: rgba(36,26,18,.1); color: var(--primary); }
 .bq-clip-badge.is-after { background: var(--action); color: var(--action-ink); }
 .bq-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }

@@ -25,22 +25,27 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }
     .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-    .gradient-text { background: linear-gradient(135deg,var(--primary),var(--accent-ink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 99px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all .25s; border: none; }
-    .btn-primary { background: linear-gradient(135deg,var(--primary),var(--accent-ink)); color: #fff; box-shadow: 0 8px 24px rgba(36, 26, 18,.4); }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(36, 26, 18,.55); }
-    .btn-ghost { background: var(--surface); color: var(--primary); border: 2px solid rgba(36, 26, 18,.25); }
-    .btn-ghost:hover { background: var(--surface2); }
+    /* ⚠️ 구 .gradient-text 는 background:linear-gradient(...,var(--accent-ink)) + background-clip:text +
+       -webkit-text-fill-color:transparent 조합이었다. 변수 하나가 미정의가 되면 background 선언 전체가
+       무효가 되어 **글자가 통째로 사라진다**(2026-07-30 실제로 터진 자리 — 흰 배경에 흰 글씨).
+       색 한 값으로 칠하는 지금 방식은 변수가 없어도 최악이 '검은 글씨'라 읽히기는 한다. 되돌리지 말 것. */
+    .gradient-text { color: var(--accent-ink); -webkit-text-fill-color: var(--accent-ink); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; min-height: 48px; border-radius: 99px; font-size: 16px; font-weight: 700; line-height: 1.2; cursor: pointer; text-decoration: none; transition: background .25s, box-shadow .25s, transform .25s; border: none; }
+    /* CTA = 딥 네이비 면 + 흰 글씨(10:1). 구 갈색→네이비 그라디언트는 팔레트 확정 전 값이다. */
+    .btn-primary { background: var(--action); color: var(--action-ink); box-shadow: var(--shadow-action); }
+    .btn-primary:hover { background: var(--action-hover); transform: translateY(-2px); box-shadow: var(--shadow-action-lg); }
+    .btn-ghost { background: var(--surface); color: var(--accent-ink); border: 2px solid rgba(27,58,107,.28); }
+    .btn-ghost:hover { background: var(--action-tint); }
 
     /* NAV */
-    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(255,250,243,.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(36, 26, 18,.1); }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 14px 0; background: rgba(251,249,245,.94); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-soft); }
     .nav-inner { display: flex; align-items: center; justify-content: space-between; }
     .logo { display: flex; align-items: center; text-decoration: none; }
     .logo img { height: 22px; width: auto; display: block; }
-    .nav-back { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
-    .nav-back:hover { color: var(--primary); }
+    .nav-back { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .nav-back:hover { color: var(--accent-ink); }
 
     /* HERO */
     .hero { padding: 100px 0 60px; position: relative; overflow: hidden; }
@@ -48,13 +53,13 @@
     .orb { position: absolute; border-radius: 50%; filter: blur(70px); }
     .orb-1 { width: 400px; height: 400px; background: #C6D4EA; opacity: .5; top: -100px; right: -100px; }
     .orb-2 { width: 300px; height: 300px; background: #DDE5F1; opacity: .5; bottom: -80px; left: -60px; }
-    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(36, 26, 18,.08) 1.5px,transparent 1.5px); background-size: 32px 32px; }
+    .dots-bg { position: absolute; inset: 0; background-image: radial-gradient(circle,rgba(38,34,28,.07) 1.5px,transparent 1.5px); background-size: 32px 32px; }
     .hero-inner { position: relative; z-index: 1; }
-    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); text-decoration: none; margin-bottom: 24px; transition: color .2s; font-weight: 600; }
-    .back-link:hover { color: var(--primary); }
-    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; background: rgba(36, 26, 18,.12); color: var(--primary); border: 1px solid rgba(36, 26, 18,.25); margin-bottom: 16px; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted); text-decoration: none; margin-bottom: 24px; transition: color .2s; font-weight: 600; }
+    .back-link:hover { color: var(--accent-ink); }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; border-radius: 99px; font-size: 13px; font-weight: 700; background: var(--action-tint); color: var(--accent-ink); border: 1px solid rgba(27,58,107,.24); margin-bottom: 16px; }
     .hero-emoji { font-size: 64px; margin-bottom: 16px; display: block; }
-    /* View Transitions — Finder 결과 카드의 챌린지명 → 이 hero 제목으로 morph + root 크로스페이드 */
+    /* View Transitions — 목록 카드의 챌린지명 → 이 hero 제목으로 morph + root 크로스페이드 */
     @media (prefers-reduced-motion: no-preference) {
       @view-transition { navigation: auto; }
       ::view-transition-old(root) { animation: vt-fade-out .22s both; }
@@ -62,29 +67,32 @@
       @keyframes vt-fade-out { to { opacity: 0; } }
       @keyframes vt-fade-in { from { opacity: 0; } }
     }
-    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: var(--fw-light); line-height: 1.2; margin-bottom: 14px; }
-    .hero-desc { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; }
+    /* ⚠️ 굵기 500. 구 300(--fw-light)은 한글 SUIT 에서 획이 얇아 26~44px 제목이 본문보다
+       흐리게 읽혔다(오너 "가독성 올려라"). 강조 span 은 마크업에서 700 이라 위계가 살아 있다. */
+    .hero-title { font-size: clamp(26px,5vw,44px); font-weight: var(--fw-med); line-height: 1.25; letter-spacing: -0.01em; word-break: keep-all; margin-bottom: 14px; }
+    .hero-desc { font-size: var(--fs-body); color: var(--text-muted); line-height: 1.8; margin-bottom: 32px; max-width: 560px; word-break: keep-all; }
     .hero-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
-    .meta-chip { background: #fff; border: 1.5px solid var(--border); border-radius: 99px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
-    .meta-chip strong { color: var(--primary); }
+    .meta-chip { background: var(--surface); border: 1.5px solid var(--border); border-radius: 99px; padding: 9px 16px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+    .meta-chip strong { color: var(--accent-ink); }
     .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
     /* SECTION */
     section { padding: 60px 0; }
     section + section { padding-top: 0; }
-    .section-label { font-size: 11px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; background: linear-gradient(135deg,var(--primary),var(--accent-ink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
-    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 900; margin-bottom: 24px; }
+    /* 12px 하한 — 구 11px 은 9대 원칙 1(가독성) 미달. 색은 tokens.css 의 .section-label 규칙이 단색 네이비로 덮는다. */
+    .section-label { font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 10px; }
+    .section-title { font-size: clamp(22px,3vw,32px); font-weight: 800; margin-bottom: 24px; word-break: keep-all; }
 
     /* OVERVIEW CARDS */
     .overview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 40px; }
-    .overview-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
-    .overview-val { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,var(--primary),var(--accent-ink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .overview-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .overview-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; box-shadow: var(--shadow); }
+    .overview-val { font-size: 26px; font-weight: 800; color: var(--accent-ink); -webkit-text-fill-color: var(--accent-ink); line-height: 1.2; }
+    .overview-label { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 6px; line-height: 1.4; word-break: keep-all; }
 
     /* CURRICULUM */
     .curriculum-list { display: flex; flex-direction: column; gap: 16px; }
     .curriculum-week {
-      background: #fff; border: 1.5px solid var(--border);
+      background: var(--surface); border: 1.5px solid var(--border);
       border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
     }
     .week-header {
@@ -93,35 +101,35 @@
     }
     .week-num {
       width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(135deg,var(--primary),var(--accent-ink));
+      background: var(--action);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800; color: #fff;
+      font-size: 15px; font-weight: 800; color: var(--action-ink);
     }
     .week-info { flex: 1; }
-    .week-title { font-size: 16px; font-weight: 800; color: var(--text); }
-    .week-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .week-arrow { font-size: 18px; color: var(--text-dim); transition: transform .3s; }
+    .week-title { font-size: var(--fs-body); font-weight: 800; color: var(--text); }
+    .week-sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 3px; line-height: 1.5; word-break: keep-all; }
+    .week-arrow { font-size: 20px; color: var(--text-dim); transition: transform .3s; }
     .curriculum-week.open .week-arrow { transform: rotate(90deg); }
     .week-body { display: none; padding: 0 24px 20px; border-top: 1px solid var(--border-soft); }
     .curriculum-week.open .week-body { display: block; }
-    .lesson-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .lesson-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .lesson-item { display: flex; align-items: flex-start; gap: 12px; font-size: var(--fs-body-sm, 15px); color: var(--text-muted); line-height: 1.68; word-break: keep-all; }
     .lesson-icon { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; }
-    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+    .lesson-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 3px; }
 
     /* WHAT YOU GET */
     .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .benefit-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
+    .benefit-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow); }
     .benefit-icon { font-size: 28px; margin-bottom: 10px; }
-    .benefit-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
-    .benefit-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+    .benefit-title { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 6px; word-break: keep-all; }
+    .benefit-desc { font-size: var(--fs-body-sm, 15px); color: var(--text-muted); line-height: 1.68; word-break: keep-all; }
 
-    /* CTA */
-    .cta-box { background: linear-gradient(135deg,var(--primary),var(--accent-ink) 55%,var(--accent-dark)); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(36, 26, 18,.4); }
+    /* CTA — 다크 무대. ⚠️ 네이비 면 위 버튼은 '흰 알약 + 네이비 글씨'로 뒤집는다(팔레트 규칙). */
+    .cta-box { background: linear-gradient(150deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius: 24px; padding: 56px 32px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(20,44,82,.32); }
     .cta-box::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.08); }
-    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 900; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
-    .cta-desc { font-size: 15px; color: rgba(255,255,255,.85); margin-bottom: 28px; position: relative; z-index: 1; }
-    .btn-white { background: #fff; color: var(--primary); font-size: 15px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.12); position: relative; z-index: 1; }
+    .cta-title { font-size: clamp(22px,4vw,34px); font-weight: 800; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; word-break: keep-all; }
+    .cta-desc { font-size: 16px; color: rgba(255,255,255,.88); margin-bottom: 28px; position: relative; z-index: 1; word-break: keep-all; }
+    .btn-white { background: #fff; color: var(--accent-ink); font-size: 16px; padding: 14px 32px; box-shadow: 0 6px 20px rgba(0,0,0,.18); position: relative; z-index: 1; }
     .btn-white:hover { transform: translateY(-2px); }
 
     /* FOOTER */
@@ -129,13 +137,22 @@
     .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
     .footer-logo { display: flex; align-items: center; }
     .footer-logo img { height: 22px; width: auto; display: block; }
-    .footer-copy { font-size: 12px; color: var(--text-dim); }
+    .footer-copy { font-size: 13px; color: var(--text-dim); }
 
     @media (max-width: 600px) {
+      /* 375px 실측: 카드 한 칸 안쪽이 약 95px 라 '1회 도전 시간' 같은 라벨은 두 줄이 된다.
+         두 줄을 받아들이고 활자를 13px 로 올렸다 — 구 14px 그대로면 세 글자씩 세 줄이 된다. */
       .overview-grid { grid-template-columns: repeat(3,1fr); gap: 10px; }
+      .overview-card { padding: 16px 8px; }
+      .overview-val { font-size: 24px; }
+      .overview-label { font-size: 13px; }
       .benefits-grid { grid-template-columns: 1fr; }
       .hero-actions { flex-direction: column; }
       .hero-actions .btn { width: 100%; }
+      .container { padding: 0 16px; }
+      .week-header { padding: 16px 16px; gap: 12px; }
+      .week-body { padding: 0 16px 16px; }
+      .cta-box { padding: 40px 20px; border-radius: 20px; }
     }
   </style>
 </head>
@@ -244,13 +261,13 @@
 </section>
 
 <!-- 2주 과정의 핵심 변화 -->
-<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(255,243,230,.3), rgba(255,217,184,.15));">
+<section style="padding: 60px 0; background: var(--bg2);">
   <div class="container">
     <div class="section-label">Core of the Program</div>
     <h2 class="section-title">2주 과정의 핵심 변화</h2>
     <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: white; padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
-        <p style="margin-bottom: 24px;">이 과정은 <strong style="color: var(--primary);">단순한 발성 수업이 아닙니다.</strong></p>
+      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
+        <p style="margin-bottom: 24px;">이 과정은 <strong style="color: var(--accent-ink);">단순한 발성 수업이 아닙니다.</strong></p>
 
         <p style="margin-bottom: 20px;">
           <strong style="color: var(--text); display: block; margin-bottom: 8px;">1주차에는</strong>
@@ -264,8 +281,8 @@
 
         <p style="padding-top: 20px; border-top: 1px solid var(--border);">
           결국 학생들은<br>
-          <strong style="color: var(--primary);">"어떻게 소리를 내야 하는지"</strong>를 아는 것에서 끝나지 않고,<br>
-          <strong style="color: var(--primary);">"어떤 상황에서 어떤 목소리를 사용해야 하는지"</strong>까지 익히게 됩니다.
+          <strong style="color: var(--accent-ink);">"어떻게 소리를 내야 하는지"</strong>를 아는 것에서 끝나지 않고,<br>
+          <strong style="color: var(--accent-ink);">"어떤 상황에서 어떤 목소리를 사용해야 하는지"</strong>까지 익히게 됩니다.
         </p>
       </div>
     </div>
@@ -273,160 +290,160 @@
 </section>
 
 <!-- 실제 챌린저 비포 & 애프터 -->
-<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(36, 26, 18,.04), rgba(154,91,30,.06));">
+<section style="padding: 60px 0; background: var(--bg2);">
   <div class="container">
     <div class="section-label">Before &amp; After</div>
     <h2 class="section-title">실제 챌린저 비포 &amp; 애프터</h2>
-    <p style="font-size:15px; color:var(--text-muted); margin-bottom:40px; line-height:1.7;">
-      직접 들어보세요. 같은 사람의 목소리가 <strong style="color:var(--primary);">2주 만에</strong> 이렇게 달라졌어요.
+    <p style="font-size:17px; color:var(--text-muted); margin-bottom:40px; line-height:1.7; word-break:keep-all;">
+      직접 들어보세요. 같은 사람의 목소리가 <strong style="color:var(--accent-ink);">2주 만에</strong> 이렇게 달라졌어요.
     </p>
 
     <div style="display:flex; flex-direction:column; gap:20px; max-width:720px; margin:0 auto;">
 
       <!-- ── 챌린저 A ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#241A12,#9A5B1E); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">A</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 A</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">A</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 A</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-a-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-a-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"항상 목소리가 너무 낮다는 피드백을 많이 들어와서 고민이 있었습니다. 억지로 톤을 올리니 인위적이고, 원래 톤대로 가자니 밝은 느낌이 없어 중간 톤을 찾고 싶었습니다. 이번에 보신각 챌린지를 통해 저에게 어울리는 톤을 찾은 것 같아 도움 많이 되었습니다!"</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"항상 목소리가 너무 낮다는 피드백을 많이 들어와서 고민이 있었습니다. 억지로 톤을 올리니 인위적이고, 원래 톤대로 가자니 밝은 느낌이 없어 중간 톤을 찾고 싶었습니다. 이번에 보신각 챌린지를 통해 저에게 어울리는 톤을 찾은 것 같아 도움 많이 되었습니다!"</p>
         </div>
       </div>
 
       <!-- ── 챌린저 B ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#9A5B1E,#FF6B35); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">B</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 B</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">B</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 B</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-b-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-b-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"선생님께서 가이드라인을 상세하게 안내해주셔서 좋았습니다. 저 혼자서는 연습하기 힘든데, 선생님의 가이드를 따라하다 보니 자연스럽게 발전할 수 있었습니다. 제 목소리를 객관적으로 들어보는 일이 흔치 않은데, 들어보면서 '아, 이런 점은 고쳐야겠다!' 생각이 바로바로 들어 개선할 수 있었습니다."</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"선생님께서 가이드라인을 상세하게 안내해주셔서 좋았습니다. 저 혼자서는 연습하기 힘든데, 선생님의 가이드를 따라하다 보니 자연스럽게 발전할 수 있었습니다. 제 목소리를 객관적으로 들어보는 일이 흔치 않은데, 들어보면서 '아, 이런 점은 고쳐야겠다!' 생각이 바로바로 들어 개선할 수 있었습니다."</p>
         </div>
       </div>
 
       <!-- ── 챌린저 C ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#6B4A32,#9A5B1E); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">C</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 C</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">C</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 C</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-c-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-c-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"평소 목소리에 힘이 없고 소리를 먹는 발성이 고민이었는데, 이를 보완할 수 있는 훈련법을 알려주셔서 도움이 많이 됐습니다. 목소리 톤이 높지 않아도 따뜻하고 편안한 소리가 될 수 있다는 것을 알았고, 2주 동안 녹음본을 들어보며 힘이 없고 작은 목소리에서 좀 더 안정적이고 단단한 목소리의 변화를 확인할 수 있었습니다."</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"평소 목소리에 힘이 없고 소리를 먹는 발성이 고민이었는데, 이를 보완할 수 있는 훈련법을 알려주셔서 도움이 많이 됐습니다. 목소리 톤이 높지 않아도 따뜻하고 편안한 소리가 될 수 있다는 것을 알았고, 2주 동안 녹음본을 들어보며 힘이 없고 작은 목소리에서 좀 더 안정적이고 단단한 목소리의 변화를 확인할 수 있었습니다."</p>
         </div>
       </div>
 
       <!-- ── 챌린저 D ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#241A12,#6B4A32); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">D</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 D</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">D</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 D</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-d-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-d-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"신뢰감을 주는 올바른 발성법이 무엇인지 알 수 있게 도와주셔서 너무 유익했던 챌린지였습니다. 라이브 방송을 통해서도 학생들의 고민을 더 헤아려주시고 도와주셔서 감사했습니다. 일정상 학원 수업을 잘 듣지 못하는데, 비대면으로 학습할 수 있다는 부분이 좋았습니다. 항상 신경써주셔서 감사합니다 :)"</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"신뢰감을 주는 올바른 발성법이 무엇인지 알 수 있게 도와주셔서 너무 유익했던 챌린지였습니다. 라이브 방송을 통해서도 학생들의 고민을 더 헤아려주시고 도와주셔서 감사했습니다. 일정상 학원 수업을 잘 듣지 못하는데, 비대면으로 학습할 수 있다는 부분이 좋았습니다. 항상 신경써주셔서 감사합니다 :)"</p>
         </div>
       </div>
 
       <!-- ── 챌린저 E ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#FF6B35,#FFB088); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">E</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 E</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">E</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 E</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-e-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-e-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"훈련을 하면서 후두를 제자리에 맞춰서 이야기하는 것이 가장 인상 깊었습니다. 가장 간단한 훈련이었지만 효과가 제일 컸던 것 같습니다. 그 훈련을 하면서 내가 내 톤보다 훨씬 높은 소리로 이야기한다는 것을 깨닫고 나만의 톤을 찾아갔습니다. 처음에는 2주가 굉장히 짧다고 생각했는데, 2주라는 시간에도 효율적으로 훈련할 수 있다는 것을 깨달았습니다. 감사합니다!!"</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"훈련을 하면서 후두를 제자리에 맞춰서 이야기하는 것이 가장 인상 깊었습니다. 가장 간단한 훈련이었지만 효과가 제일 컸던 것 같습니다. 그 훈련을 하면서 내가 내 톤보다 훨씬 높은 소리로 이야기한다는 것을 깨닫고 나만의 톤을 찾아갔습니다. 처음에는 2주가 굉장히 짧다고 생각했는데, 2주라는 시간에도 효율적으로 훈련할 수 있다는 것을 깨달았습니다. 감사합니다!!"</p>
         </div>
       </div>
 
       <!-- ── 챌린저 F ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#1A120C,#241A12); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">F</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 F</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">F</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 F</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-f-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-f-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"다정하고 신뢰감 있는 보이스를 만들 수 있는지 늘 고민해왔었는데, 이번 보신각 챌린지를 통해 앞으로 어떻게 연습해야 하는지 방향성을 잘 잡을 수 있었습니다. 2주 동안 빠짐없이 녹음 인증을 하며 하루하루 발전되는 모습을 느꼈고, 다른 분들 녹음본에 피드백을 달면서도 자극을 받을 수 있어서 정말 효과적인 챌린지였습니다!!"</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"다정하고 신뢰감 있는 보이스를 만들 수 있는지 늘 고민해왔었는데, 이번 보신각 챌린지를 통해 앞으로 어떻게 연습해야 하는지 방향성을 잘 잡을 수 있었습니다. 2주 동안 빠짐없이 녹음 인증을 하며 하루하루 발전되는 모습을 느꼈고, 다른 분들 녹음본에 피드백을 달면서도 자극을 받을 수 있어서 정말 효과적인 챌린지였습니다!!"</p>
         </div>
       </div>
 
       <!-- ── 챌린저 G ── -->
-      <div style="background:#fff; border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#9A5B1E,#6B4A32); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">G</div>
-          <div style="font-size:14px; font-weight:800; color:var(--text);">챌린저 G</div>
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">G</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 G</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-          <div style="background:#FFFAF3; border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.12);">
-            <div style="font-size:11px; font-weight:800; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+          <div style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
             <audio controls style="width:100%;" src="audio/challenger-g-before.mp3"></audio>
           </div>
-          <div style="background:linear-gradient(135deg,rgba(36, 26, 18,.06),rgba(154,91,30,.06)); border-radius:12px; padding:14px; border:1.5px solid rgba(36, 26, 18,.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:8px;">AFTER</div>
+          <div style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
             <audio controls style="width:100%;" src="audio/challenger-g-after.mp3"></audio>
           </div>
         </div>
-        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--primary);">
-          <p style="font-size:13px; color:var(--text-muted); line-height:1.85; margin:0;">"훈련 전에는 승무원 준비생으로서 예쁘고 밝은 보이스여야 할 것 같아 불안정하게 톤을 올렸었습니다. 하지만 대본 주제에 따라 낮게, 혹은 따뜻한 미드톤으로 표현하는 방법을 배울 수 있어서, 낮은 톤은 물론 높은 톤이어도 안정적으로 표현하는 방법을 연습할 수 있었습니다. 대면 수업 외에 큰 비용 없이도 인스타 라이브로 직접 피드백을 받으며 제게 필요한 점이 무엇인지 알 수 있었습니다."</p>
+        <div style="padding:14px 16px; background:var(--surface2); border-radius:12px; border-left:3px solid var(--action);">
+          <p style="font-size:15px; color:var(--text-muted); line-height:1.8; margin:0; word-break:keep-all;">"훈련 전에는 승무원 준비생으로서 예쁘고 밝은 보이스여야 할 것 같아 불안정하게 톤을 올렸었습니다. 하지만 대본 주제에 따라 낮게, 혹은 따뜻한 미드톤으로 표현하는 방법을 배울 수 있어서, 낮은 톤은 물론 높은 톤이어도 안정적으로 표현하는 방법을 연습할 수 있었습니다. 대면 수업 외에 큰 비용 없이도 인스타 라이브로 직접 피드백을 받으며 제게 필요한 점이 무엇인지 알 수 있었습니다."</p>
         </div>
       </div>
 
@@ -440,59 +457,59 @@
     <div class="section-label">Recommended For</div>
     <h2 class="section-title">이런 학생에게 추천합니다</h2>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">면접에서 긴장하면 목소리가 높아지는 학생</div>
-        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">긴장 상황에서도 안정적인 목소리를 유지하는 방법을 배워요.</div>
+        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">긴장 상황에서도 안정적인 목소리를 유지하는 방법을 배워요.</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">말을 할 때 목에 힘이 많이 들어가는 학생</div>
-        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">불필요한 목의 긴장을 풀고 편안하게 말하는 법을 익혀요.</div>
+        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">불필요한 목의 긴장을 풀고 편안하게 말하는 법을 익혀요.</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">답변 내용은 준비했지만 전달력이 약한 학생</div>
-        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">목소리로 신뢰감을 전달하는 기술을 배워요.</div>
+        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">목소리로 신뢰감을 전달하는 기술을 배워요.</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">말끝이 흐려져 자신감이 없어 보이는 학생</div>
-        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">끝까지 명확하고 안정적인 발성을 연습해요.</div>
+        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">끝까지 명확하고 안정적인 발성을 연습해요.</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">목소리가 가볍거나 어린 느낌으로 들리는 학생</div>
-        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">깊이 있고 무게감 있는 목소리를 만들어요.</div>
+        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">깊이 있고 무게감 있는 목소리를 만들어요.</div>
       </div>
 
-      <div style="background: white; padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
         <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">아나운서처럼 안정적이고 신뢰감 있는 목소리를 만들고 싶은 학생</div>
-        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">전문적인 발성과 표현력을 모두 익혀요.</div>
+        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">전문적인 발성과 표현력을 모두 익혀요.</div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- 최종 목표 -->
-<section style="padding: 60px 0; background: linear-gradient(135deg, rgba(36, 26, 18,.05), rgba(154,91,30,.05));">
+<section style="padding: 60px 0; background: var(--bg2);">
   <div class="container">
     <div class="section-label">Final Goal</div>
     <h2 class="section-title">최종 목표</h2>
     <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: white; padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
+      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
         <p style="margin-bottom: 24px; font-weight: 600; color: var(--text);">2주 후에는</p>
 
         <ul style="list-style: none; padding: 0; margin-bottom: 28px;">
           <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">✓</span>
+            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
             내 목소리의 가장 편안한 톤을 알고,
           </li>
           <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">✓</span>
+            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
             목에 무리 없이 안정적으로 말하는 방법을 익히며,
           </li>
           <li style="padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--primary); font-weight: 700;">✓</span>
+            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
             대본과 면접 답변에 어울리는 목소리 사용법을 연습하게 됩니다.
           </li>
         </ul>
@@ -500,7 +517,7 @@
         <p style="padding-top: 24px; border-top: 1px solid var(--border);">
           <span style="display: block; font-weight: 700; color: var(--text); margin-bottom: 8px;">목소리를 억지로 바꾸는 것이 아니라,</span>
           내가 가진 목소리를 더 단단하고 깊이 있게 사용하는 것.<br>
-          <span style="font-weight: 700; color: var(--primary);">그것이 이번 보이스 커리큘럼의 핵심입니다.</span>
+          <span style="font-weight: 700; color: var(--accent-ink);">그것이 이번 보이스 커리큘럼의 핵심입니다.</span>
         </p>
       </div>
     </div>
@@ -517,7 +534,7 @@
       <h2 class="cta-title">2주의 기적, 지금 시작하세요</h2>
       <p class="cta-desc">내 목소리를 찾고, 자신감 있게 표현하는 2주 과정</p>
       <a class="btn btn-white apply-btn" href="#" onclick="handleApply(event)">2주의 기적 챌린지 참여하기</a>
-      <p style="font-size:12px; color:rgba(255,255,255,.72); margin:18px 0 0; line-height:1.6; position:relative; z-index:1;">100% 온라인·비대면 · 기수 시작일부터 14일(총 10회차) 제공 · 카카오톡 전용 채널 진행 · 제공·환불 규정은 <a href="apply.html?c=voice" style="color:#fff; text-decoration:underline;">신청 페이지</a> 참고</p>
+      <p style="font-size:13px; color:rgba(255,255,255,.84); margin:18px 0 0; line-height:1.6; position:relative; z-index:1;">100% 온라인·비대면 · 기수 시작일부터 14일(총 10회차) 제공 · 카카오톡 전용 채널 진행 · 제공·환불 규정은 <a href="apply.html?c=voice" style="color:#fff; text-decoration:underline;">신청 페이지</a> 참고</p>
     </div>
   </div>
 </section>
@@ -525,7 +542,7 @@
 <footer>
   <div class="container footer-inner">
     <div class="footer-logo"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></div>
-    <div class="footer-copy" style="font-size:11px;line-height:1.5;">
+    <div class="footer-copy" style="font-size:13px;line-height:1.6;">
       상호: 몬크 | 대표: 권성호 박새암 | 사업자등록번호: 784-02-04020 | 통신판매업신고번호: 제2026-서울금천-1525호<br>
       주소: 서울특별시 금천구 디지털로9길 99, 10층 13호 | 고객센터: 070-4032-0015<br>
       © 2026 MONC. All rights reserved.
