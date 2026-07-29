@@ -499,23 +499,17 @@
   /* ── 네비바 스크롤 ──
      스크롤마다 querySelector + getBoundingClientRect를 반복하던 구조가
      모바일 버벅임을 유발해, 요소는 한 번만 캐싱하고 rAF로 스로틀. */
-  const heroWindowIntroEl = document.querySelector('.hero-window-intro');
   const navbarEl = document.getElementById('navbar');
   let navTicking = false;
 
+  // ⚠️ 구 '인트로 구간 nav 투명화(nav-transparent)' 토글은 2026-07-29 제거 —
+  //    인트로가 밝은 종이색이 되면서 흰 글씨 nav가 배경에 묻혔다(대비 약 1.1:1).
+  //    이제 nav는 전 구간 밝은 배경 + 다크 글씨다. 자세한 경위는 index.css 의
+  //    같은 날짜 주석 참조. 되살리려면 인트로 배경부터 어둡게 돌려야 한다.
   function updateNavbarOnScroll() {
     navTicking = false;
     navbarEl.style.boxShadow =
       window.scrollY > 40 ? '0 4px 20px rgba(36, 26, 18,.12)' : 'none';
-
-    // hero-window-intro 구간(사진 위) 위에 떠 있는 동안만 nav를 투명화.
-    // reduced-motion이어도 .hero-window-intro의 실제 렌더 높이(getBoundingClientRect)를
-    // 기준으로 판단하므로 별도 분기 없이 자연스럽게 동작 (충돌/오류 없음).
-    // (구 하늘 세로 패닝 코드는 2026-07-10 제거 — 창 통과 정면감을 해침)
-    if (heroWindowIntroEl) {
-      const rect = heroWindowIntroEl.getBoundingClientRect();
-      navbarEl.classList.toggle('nav-transparent', rect.bottom > 0);
-    }
   }
   function onNavbarScroll() {
     if (!navTicking) { navTicking = true; requestAnimationFrame(updateNavbarOnScroll); }
