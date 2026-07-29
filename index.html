@@ -539,12 +539,40 @@
   if (marks.length !== slots.length) return;
 
   /* 타임라인(초) */
-  var T = { hold: 0.6, buildEnd: 2.4, korAt: 2.35, cueAt: 2.9, total: 3.6 };   /* ⚠️ total 은 마지막 페이드(cueAt + 0.6)보다 커야 한다 — 3.4면 SCROLL 이 0.83 에서 멈춘다 */
+  var T = { hold: 0.6, buildEnd: 2.4, korAt: 2.35, cueAt: 2.9, total: 3.6 };
+
+  /* ⚠️ 로고를 **창 개구부에 맞춰 실측으로 키운다**(2026-07-29 오너 "창문 안에 핏하게 맞아야지").
+     CSS clamp 만으로는 못 맞춘다 — 창의 화면 대비 폭이 세로형 54%·가로형 15.6%로 완전히 달라
+     같은 vw 값이 두 경우에 전혀 다른 결과를 낸다. 게다가 배경이 object-fit:cover 라
+     화면 비율에 따라 이미지가 잘리면서 창 폭이 또 달라진다.
+     그래서 cover 스케일을 직접 계산해 창 폭을 구하고, 로고가 그 폭의 FIT 비율이 되도록
+     font-size 를 역산한다. CSS 의 clamp 는 JS 가 죽었을 때의 폴백일 뿐이다.
+     ⚠️ 개구부 비율은 이미지에서 실측한 상수다(세로형 23.0~76.9% · 가로형 42.2~57.8%). */
+  var FIT = 0.90;                       /* 창 폭 대비 로고 폭 — 창틀 안쪽 곡선에 닿지 않을 만큼만 */
+  function fitLogo() {
+    var shot = document.querySelector('.hero-shot');
+    if (!shot || !shot.naturalWidth) return;
+    var cw = shot.clientWidth, ch = shot.clientHeight;
+    var sc = Math.max(cw / shot.naturalWidth, ch / shot.naturalHeight);
+    var renderW = shot.naturalWidth * sc;
+    var portrait = shot.naturalHeight > shot.naturalWidth;
+    var l = portrait ? 0.230 : 0.422, r = portrait ? 0.769 : 0.578;
+    var winW = renderW * (r - l);
+    target.style.fontSize = '';
+    var base = parseFloat(window.getComputedStyle(target).fontSize);
+    var cur = target.getBoundingClientRect().width;
+    if (!base || !cur) return;
+    var size = base * (winW * FIT) / cur;
+    target.style.fontSize = size.toFixed(2) + 'px';
+    /* 무대 높이도 로고에 맞춘다 — 안 맞추면 커진 로고가 아래 한글 줄과 겹친다. */
+    stack.style.height = (size * 1.2).toFixed(1) + 'px';
+  }   /* ⚠️ total 은 마지막 페이드(cueAt + 0.6)보다 커야 한다 — 3.4면 SCROLL 이 0.83 에서 멈춘다 */
   var geo = null;
 
   function measure() {
     /* transform 이 걸린 채로 재면 값이 오염된다 — 항상 초기화 후 잰다. */
     for (var i = 0; i < all.length; i++) { all[i].style.transform = ''; }
+    fitLogo();                           /* 도착점을 재기 전에 로고 크기부터 확정 */
     var sb = stack.getBoundingClientRect();
     var g = { marks: [], scale: 1 };
     var pm = marks[0].getBoundingClientRect(), tm = slots[0].getBoundingClientRect();
@@ -615,7 +643,8 @@
     var start = function () { if (started) return; started = true; frame(0); requestAnimationFrame(tick); };
     var shot = document.querySelector('.hero-shot');
     if (shot && !shot.complete) {
-      shot.addEventListener('load', start);
+      /* ⚠️ 이미지가 오기 전엔 naturalWidth 가 0이라 창 폭을 못 구한다 → 로드 후 반드시 재측정. */
+      shot.addEventListener('load', function () { measure(); start(); });
       shot.addEventListener('error', start);
       setTimeout(start, 1200);
     } else { start(); }
