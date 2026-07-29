@@ -129,8 +129,8 @@
     <source media="(max-aspect-ratio: 1/1)" srcset="images/hero-window-mob.webp" width="853" height="1844">
     <img class="hero-shot" src="images/hero-window-web.webp" alt="" width="1717" height="916" fetchpriority="high" decoding="async">
   </picture>
-  <!-- 창 개구부의 세로 중심이 실측상 화면의 50.0%(모바일)·52.6%(웹)라, 정중앙에 두면
-       그대로 창 한가운데가 된다(2026-07-29 오너 "정중앙에서 뭔가 보였으면"). -->
+  <!-- 로고 자리는 CSS 퍼센트가 아니라 JS(fitWindow)가 개구부를 실측해 잡는다 —
+       CSS 의 top:50% 는 JS 가 죽었을 때의 폴백일 뿐이다(2026-07-29 오너 "창문 안에 핏하게"). -->
   <!-- ⚠️ 조립 FLIP 구조 — 문장(.hi-phrase)의 M·O·N·C 가 로고 자리(.hi-target)로 모인다.
        .hi-target 은 '도착 좌표를 재기 위한 실물'이자 조립 완료 후 교체될 네이티브 렌더다
        (transform 으로 2.4배 키운 글자는 래스터가 흐려진다 — 구 인트로에서 검증된 방식). -->
@@ -655,6 +655,7 @@
       글자는 래스터가 흐려진다. 이 교체를 빼면 로고가 뿌옇게 남는다.
    ⚠️ 웹폰트(SUIT)가 늦게 오면 글자 폭이 바뀐다 → document.fonts.ready 에서 재측정한다. */
 (function () {
+  var mid    = document.getElementById('heroMid');
   var stack  = document.querySelector('.hi-stack');
   var phrase = document.getElementById('hiPhrase');
   var target = document.getElementById('hiTarget');
@@ -674,23 +675,35 @@
   /* 타임라인(초) */
   var T = { hold: 0.6, buildEnd: 2.4, korAt: 2.35, cueAt: 2.9, total: 3.6 };
 
-  /* ⚠️ 로고를 **창 개구부에 맞춰 실측으로 키운다**(2026-07-29 오너 "창문 안에 핏하게 맞아야지").
-     CSS clamp 만으로는 못 맞춘다 — 창의 화면 대비 폭이 세로형 54%·가로형 15.6%로 완전히 달라
+  /* ⚠️ 로고를 **창 개구부에 맞춰 실측으로 키우고, 그 개구부 한가운데에 놓는다**
+     (2026-07-29 오너 "창문 안에 핏하게" · 2026-07-30 "글자가 창틀 밖으로 삐져나오고 위치도 중앙이 아니다").
+     CSS 만으로는 못 맞춘다 — 창의 화면 대비 폭이 세로형 38%·가로형 15.7%로 완전히 달라
      같은 vw 값이 두 경우에 전혀 다른 결과를 낸다. 게다가 배경이 object-fit:cover 라
-     화면 비율에 따라 이미지가 잘리면서 창 폭이 또 달라진다.
-     그래서 cover 스케일을 직접 계산해 창 폭을 구하고, 로고가 그 폭의 FIT 비율이 되도록
-     font-size 를 역산한다. CSS 의 clamp 는 JS 가 죽었을 때의 폴백일 뿐이다.
-     ⚠️ 개구부 비율은 이미지에서 실측한 상수다(세로형 23.0~76.9% · 가로형 42.2~57.8%). */
-  var FIT = 0.90;                       /* 창 폭 대비 로고 폭 — 창틀 안쪽 곡선에 닿지 않을 만큼만 */
-  function fitLogo() {
+     화면 비율에 따라 이미지가 잘리면서 창 폭도, 창의 세로 위치도 또 달라진다.
+     그래서 cover 스케일을 직접 계산해 **개구부 사각형을 박스 좌표로 환산**한 뒤
+     ① 로고 폭이 그 폭의 FIT 비율이 되도록 font-size 를 역산하고
+     ② .hero-mid 를 그 중심에 앉힌다. CSS 의 clamp·top:50% 는 JS 가 죽었을 때의 폴백일 뿐이다.
+
+     ⚠️⚠️ OPEN 은 **유리(개구부)** 좌표다 — 바깥 창틀이 아니다. 2026-07-30 이전 세로형 값
+        (0.230~0.769)은 유리가 아니라 **창틀 바깥 테두리**를 잰 것이어서, 로고가 개구부의
+        127%(실측)로 커져 M 과 C 가 창틀 위로 올라탔다. 가로형 값(0.422~0.578)만 유리였다.
+        배경 이미지를 교체하면 이 네 값을 **유리 기준으로** 다시 잴 것. */
+  var OPEN = {
+    /* hero-window-mob.webp(853×1844) · hero-window-web.webp(1717×916) 픽셀 실측 */
+    portrait:  { l: 0.3118, r: 0.6928, t: 0.3384, b: 0.6490 },
+    landscape: { l: 0.4222, r: 0.5789, t: 0.2750, b: 0.7385 }
+  };
+  var FIT = 0.90;                       /* 개구부 폭 대비 로고 폭 — 유리 안쪽 곡선에 닿지 않을 만큼만 */
+  function fitWindow() {
     var shot = document.querySelector('.hero-shot');
     if (!shot || !shot.naturalWidth) return;
     var cw = shot.clientWidth, ch = shot.clientHeight;
     var sc = Math.max(cw / shot.naturalWidth, ch / shot.naturalHeight);
-    var renderW = shot.naturalWidth * sc;
-    var portrait = shot.naturalHeight > shot.naturalWidth;
-    var l = portrait ? 0.230 : 0.422, r = portrait ? 0.769 : 0.578;
-    var winW = renderW * (r - l);
+    var rw = shot.naturalWidth * sc, rh = shot.naturalHeight * sc;
+    var o = shot.naturalHeight > shot.naturalWidth ? OPEN.portrait : OPEN.landscape;
+    /* object-position:center 라 넘치는 쪽은 좌우(또는 위아래)로 균등하게 잘린다. */
+    var ox = (cw - rw) / 2, oy = (ch - rh) / 2;
+    var winW = rw * (o.r - o.l);
     target.style.fontSize = '';
     var base = parseFloat(window.getComputedStyle(target).fontSize);
     var cur = target.getBoundingClientRect().width;
@@ -699,14 +712,21 @@
     target.style.fontSize = size.toFixed(2) + 'px';
     /* 무대 높이도 로고에 맞춘다 — 안 맞추면 커진 로고가 아래 한글 줄과 겹친다. */
     stack.style.height = (size * 1.2).toFixed(1) + 'px';
+    if (!mid) return;
+    /* ⚠️ 세로 기준은 **로고 중심 = 개구부 중심**이다(한글 줄까지 합친 덩어리의 중심이 아니다).
+       한글 줄은 개구부보다 넓어 어차피 창틀을 가로지르는데, 로고를 정중앙에 두면 그 줄이
+       유리의 **아래쪽 흰 구름 구간**에 앉아 유리·창틀 경계가 글자 뒤에서 안 보인다.
+       덩어리 기준으로 올리면 한글이 파란 하늘 구간을 가로질러 경계선이 드러난다(실측 비교). */
+    mid.style.top = (oy + rh * (o.t + o.b) / 2).toFixed(1) + 'px';
+    /* 가로 중심도 화면 정중앙이 아니라 개구부 중심이다(이미지상 창이 2px 오른쪽에 그려져 있다). */
+    mid.style.transform = 'translate(' + (ox + rw * (o.l + o.r) / 2 - cw / 2).toFixed(1) + 'px, -50%)';
   }   /* ⚠️ total 은 마지막 페이드(cueAt + 0.6)보다 커야 한다 — 3.4면 SCROLL 이 0.83 에서 멈춘다 */
   var geo = null;
 
   function measure() {
     /* transform 이 걸린 채로 재면 값이 오염된다 — 항상 초기화 후 잰다. */
     for (var i = 0; i < all.length; i++) { all[i].style.transform = ''; }
-    fitLogo();                           /* 도착점을 재기 전에 로고 크기부터 확정 */
-    var sb = stack.getBoundingClientRect();
+    fitWindow();                         /* 도착점을 재기 전에 로고 크기·자리부터 확정 */
     var g = { marks: [], scale: 1 };
     var pm = marks[0].getBoundingClientRect(), tm = slots[0].getBoundingClientRect();
     g.scale = pm.width > 0 ? (tm.width / pm.width) : 1;
@@ -759,12 +779,20 @@
 
   measure();
 
+  var running = true;
+  /* 재생이 끝난 뒤엔 도착 좌표(FLIP)는 쓸모없지만 **로고 크기·자리는 계속 맞춰야 한다** —
+     회전하면 배경 이미지가 세로형↔가로형으로 바뀌면서 창 위치와 폭이 통째로 달라진다. */
+  var refit = function () { if (running) measure(); else fitWindow(); };
+  var shot = document.querySelector('.hero-shot');
+  /* ⚠️ 이미지가 오기 전엔 naturalWidth 가 0이라 창을 못 잰다 → 로드(=소스 교체 포함) 후 반드시 재측정. */
+  if (shot) shot.addEventListener('load', refit);
+
   /* ⚠️ reduced-motion 이면 조립을 건너뛰고 '완성된 로고' 상태로 둔다.
      아무것도 안 하면 문장만 남아 브랜드 로고를 못 보게 된다. */
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    frame(T.total); markSeen();
+    running = false; frame(T.total); markSeen();
   } else {
-    var t0 = 0, running = true;
+    var t0 = 0;
     var tick = function (now) {
       if (!t0) t0 = now;
       var sec = (now - t0) / 1000;
@@ -774,10 +802,8 @@
     };
     var started = false;
     var start = function () { if (started) return; started = true; frame(0); requestAnimationFrame(tick); };
-    var shot = document.querySelector('.hero-shot');
     if (shot && !shot.complete) {
-      /* ⚠️ 이미지가 오기 전엔 naturalWidth 가 0이라 창 폭을 못 구한다 → 로드 후 반드시 재측정. */
-      shot.addEventListener('load', function () { measure(); start(); });
+      shot.addEventListener('load', start);
       shot.addEventListener('error', start);
       setTimeout(start, 1200);
     } else { start(); }
@@ -786,12 +812,10 @@
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () { if (running) measure(); });
     }
-    /* 화면 폭이 바뀌면 도착점도 바뀐다(조립이 끝난 뒤엔 .hi-target 이 실물이라 무관). */
-    window.addEventListener('resize', function () {
-      if (!running) return;
-      measure();
-    }, { passive: true });
   }
+
+  /* 화면이 바뀌면 창의 폭·자리가 바뀐다 → 재생 중이면 도착점까지, 끝난 뒤엔 크기·자리만 다시 잡는다. */
+  window.addEventListener('resize', refit, { passive: true });
 })();
 </script>
 

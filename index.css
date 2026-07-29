@@ -457,14 +457,16 @@
       position: absolute; inset: 0; display: block;
       width: 100%; height: 100%; object-fit: cover; object-position: center;
     }
-    /* 정중앙 = 창 한가운데(실측 50.0% 모바일 / 52.6% 웹) */
+    /* ⚠️ top 은 폴백값이다 — 실제 자리는 JS(fitWindow)가 배경 이미지의 개구부를 실측해
+       px 로 덮어쓴다. 배경이 cover 로 잘리는 양에 따라 창의 세로 위치가 달라져서
+       퍼센트로는 못 맞춘다(2026-07-30 오너 "위치도 중앙이 아니다"). */
     .hero-mid {
-      position: absolute; left: 0; right: 0; top: 50%;
+      position: absolute; left: 0; right: 0; top: 49.4%;
       transform: translateY(-50%);
       text-align: center; padding: 0 20px; pointer-events: none;
     }
     /* 한글 줄을 absolute 로 뺐으므로 이 블록의 높이 = 조립 무대 높이 → 중심이 곧 로고 중심 */
-    @media (min-aspect-ratio: 1/1) { .hero-mid { top: 51.5%; } }
+    @media (min-aspect-ratio: 1/1) { .hero-mid { top: 50.7%; } }
     /* 조립 무대 — 문장과 로고가 같은 자리에 겹쳐 있고, 높이는 로고 기준으로 고정한다.
        ⚠️ 높이를 고정하지 않으면 조립되며 글자가 커질 때 아래 한글 줄이 밀려 내려간다. */
     .hi-stack {
@@ -497,9 +499,10 @@
     .hi-target {
       position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
       width: max-content; visibility: hidden;
-      /* 로고는 **창 개구부 안**에 들어갈 크기다(모바일 창 폭 54% / 웹 15.6% 기준 실측).
-         키우면 창틀을 넘어 '창 안으로 들어왔다'가 깨진다. */
-      font-size: clamp(40px, 11.5vw, 52px); font-weight: 800; letter-spacing: 0;
+      /* ⚠️ 폴백 크기다 — 실제 크기는 JS(fitWindow)가 개구부 폭의 90%로 역산한다.
+         개구부 폭이 세로형 38.1% · 가로형 15.7%로 달라 하나의 vw 값으로는 둘 다 못 맞추므로,
+         이 값은 **어느 화면에서도 창을 넘지 않는 안전한 하한**으로 잡았다(넘치면 창틀에 올라탄다). */
+      font-size: clamp(28px, 10vw, 52px); font-weight: 800; letter-spacing: 0;
       line-height: 1.15; color: var(--accent);
     }
     .hi-target span { display: inline-block; margin: 0 .035em; }
