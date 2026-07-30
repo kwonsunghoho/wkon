@@ -5,7 +5,7 @@
 1. SQL Editor 에서 `20260730150000_answer_program.sql` 실행(재실행 안전).
 2. (선택) `docs/monc-answer-program/seed-demo.sql` 실행 — 제주항공 무료 5일 + 티웨이 예시.
 3. Edge Functions > Deploy new function > 이름 `answer-program` > `supabase/functions/answer-program/index.ts` 전체 붙여넣기 > Deploy. (ANTHROPIC_API_KEY 는 프로젝트 공용 시크릿이라 추가 등록 불필요)
-4. **verify-payment 재배포**(이용권 결제에 필요) — 기존 함수 코드 전체를 `supabase/functions/verify-payment/index.ts` 로 교체 > Deploy. 확인: body `{"paymentId":"probe","programId":"00000000-0000-0000-0000-000000000000"}` → `program_not_found` 면 신버전(구버전은 `bad_request`). 결제 생성·DB 쓰기 없는 안전한 프로브다.
+4. **verify-payment 재배포**(이용권 결제에 필요 — 2026-07-30 배포 완료) — 기존 함수 코드 전체를 `supabase/functions/verify-payment/index.ts` 로 교체 > Deploy. 확인: anon key 로 body `{"paymentId":"probe","programId":"00000000-0000-0000-0000-000000000000"}` → `not_authenticated` 면 신버전(JWT 확인이 프로그램 조회보다 먼저), 구버전은 `bad_request`. 결제 생성·DB 쓰기 없는 안전한 프로브다.
 5. 배포 확인 — 로그인 없이:
    `POST /functions/v1/answer-program` body `{"probe":true}` (anon key) → `version`·`programs`·`questions` 숫자가 나오면 정상. 404=미배포.
 6. admin '답변 프로그램' 탭에서 기출 입력 → 프로그램 생성 → '일차 배치' → 가격 확인 → 공개.
