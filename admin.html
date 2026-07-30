@@ -29,9 +29,45 @@
               border-radius: 999px; padding: 10px 16px; min-height: 44px; cursor: pointer; }
     .logout:hover { border-color: var(--action); color: var(--action); }
 
-    .tabs { display: flex; gap: 4px; padding: 0 22px; background: var(--surface); border-bottom: 1px solid var(--border-soft); position: sticky; top: 57px; z-index: 9; overflow-x: auto; }
-    .tabbtn { border: 0; background: none; padding: 12px 16px; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
-    .tabbtn.active { color: var(--action); border-bottom-color: var(--action); }
+    /* ── 2단 네비: 1줄 그룹(언더라인 탭) + 2줄 화면(알약 칩) ──
+       스티키로 두 줄이 함께 따라온다. 그룹 줄이 큰 분류라 언더라인(기존 탭 문법),
+       세부 줄은 신청자 현황 필터와 같은 알약. */
+    .tabs { background: var(--surface); border-bottom: 1px solid var(--border-soft); position: sticky; top: 57px; z-index: 9; }
+    .tab-groups { display: flex; gap: 4px; padding: 0 22px; overflow-x: auto; }
+    .tgbtn { border: 0; background: none; padding: 12px 16px; font-size: 15px; font-weight: 800; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tgbtn.active { color: var(--action); border-bottom-color: var(--action); }
+    .tab-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 22px 12px; border-top: 1px solid var(--border-soft); }
+    .tab-row[hidden] { display: none; }
+    /* 모바일: 알약 줄은 1줄 가로 스크롤 — wrap 로 두면 스티키 탭바가 150px(화면 1/4)를 먹는다(실측) */
+    @media (max-width: 760px) {
+      .tab-row { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+    .tabbtn { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; min-height: 44px; }
+    .tabbtn:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+    .tabbtn.active { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
+
+    /* ── '오늘' 대시보드: 처리할 일 숫자 카드. 0이면 흐려져 '볼 것 없음'이 한눈에. ── */
+    .td-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 22px; }
+    .td-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); cursor: pointer; font-family: inherit; text-align: left; text-decoration: none; }
+    .td-card:hover { border-color: var(--accent-dark); }
+    .td-card .td-num { font-size: 30px; font-weight: 800; color: var(--accent-ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .td-card .td-label { font-size: 13px; font-weight: 700; color: var(--text); }
+    .td-card .td-sub { font-size: 12px; color: var(--text-muted); }
+    .td-card.zero { opacity: .55; }
+    .td-card.zero .td-num { color: var(--text-dim); }
+    .td-recent-title { font-size: 15px; font-weight: 800; margin: 0 0 8px; }
+    .td-recent .round-item { cursor: pointer; }
+    .td-recent .round-item:hover { border-color: var(--accent-dark); }
+    .td-paystat { font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .td-paystat.ok { color: #1a7f37; }
+    .td-paystat.no { color: #A33D14; }
+
+    /* ── 답변 프로그램 서브탭 — 6절을 한 화면씩. 탭 알약과 같은 문법, 한 단계 작게 ── */
+    .ap-subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 16px; }
+    .ap-st { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; min-height: 44px; }
+    .ap-st:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+    .ap-st.on { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
+    .ap-sec[hidden] { display: none; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .rounds-wrap { padding: 24px; max-width: 900px; }
@@ -121,13 +157,6 @@
     .app-card .ac-tg.on-refund { background: var(--action); color: #fff; border-color: var(--action); }
     .app-card .ac-del { margin-left: auto; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--action-dark); }
     .app-card .ac-del:hover { background: var(--action-tint); }
-
-    /* 홈 커뮤니티 섹션 설정 탭 */
-    .cm-wrap { padding: 20px; max-width: 760px; }
-    .cm-block { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
-    .cm-stats-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
-    .cm-stats-form input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; }
-    #cmPhrases { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; line-height: 1.8; font-family: inherit; margin-bottom: 12px; resize: vertical; }
 
     .reviews-wrap { padding: 20px; max-width: 900px; }
     .rv-upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -256,22 +285,56 @@
     <button class="logout" id="logoutBtn">로그아웃</button>
   </div>
 
+  <!-- ══ 2단 네비(2026-07-30 개편 · 오너 "기능 나열만 있고 동선이 아니다") ══
+       1줄 = 업무 그룹(운영/상품/콘텐츠), 2줄 = 그 그룹의 화면(알약 칩).
+       신청자 현황의 종류 필터(1줄 종류·2줄 세부)와 같은 문법이라 새 학습이 없다.
+       그룹 구성은 오너 사용 빈도 기준: 매일 보는 것(신청·입금, 회원·크레딧)이 '운영'.
+       ⚠️ 탭을 추가하면 어느 그룹인지부터 정할 것 — 맨 뒤에 이어붙이면 개편 전으로 돌아간다. -->
   <div class="tabs" id="tabs" style="display:none;">
-    <button class="tabbtn active" data-tab="members">회원 관리</button>
-    <button class="tabbtn" data-tab="rounds">모집일정</button>
-    <button class="tabbtn" data-tab="lectures">특강</button>
-    <button class="tabbtn" data-tab="apps">신청자 현황</button>
-    <button class="tabbtn" data-tab="waitlist">오픈 알림</button>
-    <button class="tabbtn" data-tab="community">홈 커뮤니티</button>
-    <button class="tabbtn" data-tab="reviews">후기 관리</button>
-    <button class="tabbtn" data-tab="credits">크레딧</button>
-    <button class="tabbtn" data-tab="questions">기출문제</button>
-    <button class="tabbtn" data-tab="terms">감점 사전</button>
+    <div class="tab-groups">
+      <button class="tgbtn active" data-group="ops">운영</button>
+      <button class="tgbtn" data-group="products">상품</button>
+      <button class="tgbtn" data-group="content">콘텐츠</button>
+    </div>
+    <div class="tab-row" data-grouprow="ops">
+      <button class="tabbtn active" data-tab="today">오늘</button>
+      <button class="tabbtn" data-tab="apps">신청자 현황</button>
+      <button class="tabbtn" data-tab="waitlist">오픈 알림</button>
+      <button class="tabbtn" data-tab="members">회원 관리</button>
+      <button class="tabbtn" data-tab="credits">크레딧</button>
+    </div>
+    <div class="tab-row" data-grouprow="products" hidden>
+      <button class="tabbtn" data-tab="rounds">챌린지</button>
+      <button class="tabbtn" data-tab="lectures">특강</button>
+      <button class="tabbtn" data-tab="approgram">답변 프로그램</button>
+    </div>
+    <div class="tab-row" data-grouprow="content" hidden>
+      <button class="tabbtn" data-tab="reviews">후기 관리</button>
+      <button class="tabbtn" data-tab="terms">감점 사전</button>
+      <button class="tabbtn" data-tab="questions">소재 문제</button>
+    </div>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
 
-  <div class="tab-panel active" id="panel-members">
+  <!-- ══ 오늘 — 첫 화면(2026-07-30 신설) ══
+       처리할 일을 숫자로 먼저 보여준다(누르면 그 화면으로). 숫자는 이미 로드된
+       _apps/_wl/members 를 재사용하고 검수 대기만 count 쿼리 하나를 더 쓴다. -->
+  <div class="tab-panel active" id="panel-today">
+    <div class="rounds-wrap">
+      <div class="td-grid" id="tdGrid">
+        <button class="td-card" data-goto="apps" id="tdUnpaid"><b class="td-num">–</b><span class="td-label">입금 확인 필요</span><span class="td-sub">계좌이체 미입금</span></button>
+        <button class="td-card" data-goto="waitlist" id="tdWaitlist"><b class="td-num">–</b><span class="td-label">오픈 알림 연락 전</span><span class="td-sub">연락하고 완료 체크</span></button>
+        <a class="td-card" href="review-desk.html" id="tdReview"><b class="td-num">–</b><span class="td-label">검수 대기</span><span class="td-sub">답변 프로그램 → 검수 데스크</span></a>
+        <button class="td-card" data-goto="apps" id="tdTodayApps"><b class="td-num">–</b><span class="td-label">오늘 신청</span><span class="td-sub">챌린지·특강 합계</span></button>
+        <button class="td-card" data-goto="members" id="tdNewMembers"><b class="td-num">–</b><span class="td-label">오늘 새 회원</span><span class="td-sub">가입 기준</span></button>
+      </div>
+      <div class="td-recent-title">최근 신청 5건</div>
+      <div class="round-list td-recent" id="tdRecent"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-members">
   <div class="layout" id="layout" style="display:none;">
     <aside class="side">
       <h2>회원 (<span id="mCount">0</span>)</h2>
@@ -311,7 +374,7 @@
           <input id="chPrice" type="number" min="0" step="1000" placeholder="30000" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;">
         </div>
         <button class="btn btn-action" id="chPriceSave" type="button">참가비 저장</button>
-        <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">4개 챌린지 모두에 적용돼요. 저장하면 신청 페이지·결제 금액에 바로 반영됩니다(특강 가격은 아래 특강 탭에서 따로).</span>
+        <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">4개 챌린지 모두에 적용돼요. 저장하면 신청 페이지·결제 금액에 바로 반영됩니다(특강 가격은 옆 '특강' 탭에서 따로).</span>
       </div>
       <div class="round-editing" id="roundEditing" hidden>
         <span id="roundEditingLabel"></span>
@@ -430,7 +493,6 @@
     </div>
   </div>
 
-  <!-- 홈 커뮤니티 섹션(#community) 설정 — site_config 테이블. 지표·롤링 문구·후기 카드 -->
   <!-- 오픈 알림 대기 명단(challenge_waitlist) — 마감·모집예정 챌린지에 남긴 연락처.
        ⚠️ 자동 발송 기능이 없으므로 '여기 명단을 보고 사람이 연락한다'가 전제다.
           그래서 [연락 완료] 체크가 핵심 — 누구에게 연락했는지 눈으로 딜 수 있어야
@@ -461,16 +523,12 @@
     </div>
   </div>
 
-  <div class="tab-panel" id="panel-community">
-    <div class="cm-wrap">
-      <div class="rv-hint">홈 <b>커뮤니티 섹션</b>("혼자 하지 않아도 돼요")의 지표·문구·후기 카드를 여기서 수정합니다. 저장하면 홈에 바로 반영돼요(방문자 새로고침 기준).</div>
-      <div id="cmBody"><div class="loading">불러오는 중…</div></div>
-    </div>
-  </div>
-
+  <!-- (구 '홈 커뮤니티' 탭은 2026-07-30 삭제 — 홈 개편으로 소비처가 사라진 죽은 탭.
+       site_config 의 community_stats/community_phrases 데이터는 그대로 남아 있어
+       홈에 사회적 증거를 되살리면 그때 편집 UI 를 다시 만든다.) -->
   <div class="tab-panel" id="panel-reviews">
     <div class="reviews-wrap">
-      <div class="rv-hint" style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;">이 탭의 스크린샷 후기는 <b>후기 모음 페이지(reviews.html)</b>에 기수·챌린지별로 노출되고, <b>대표(아래 대표 칸에 1↑)</b>로 지정한 후기는 <b>홈 '커뮤니티' 섹션의 대표 후기 카드</b>로도 노출됩니다. 각 후기의 챌린지·기수·이름·한줄평은 아래에서 바로 수정할 수 있어요.</div>
+      <div class="rv-hint" style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;">이 탭의 스크린샷 후기는 <b>후기 모음 페이지(reviews.html)</b>에 기수·챌린지별로 노출됩니다. 각 후기의 챌린지·기수·이름·한줄평은 아래에서 바로 수정할 수 있어요. (대표 칸은 예전 홈 커뮤니티 섹션용 — 지금은 화면에 반영되지 않지만, 홈에 후기를 되살리면 다시 씁니다.)</div>
       <div class="rv-section-title">여러 장 한번에 (자동 압축 · 라벨 없이)</div>
       <div class="rv-upload rv-upload-bulk">
         <input type="file" id="rvBulkFile" accept="image/*" multiple style="flex:1;min-width:160px;">
@@ -485,7 +543,7 @@
         <button class="btn btn-action" id="rvUpload">1장 올리기</button>
       </div>
       <div class="rv-section-title">올린 후기 · 대표 선정</div>
-      <div class="rv-hint">각 후기의 <b>대표</b> 칸에 숫자를 넣으면 <b>홈 '커뮤니티' 섹션의 대표 후기 카드</b>로 노출됩니다. <b>0=일반</b>, <b>1 이상=대표</b>(작은 번호부터 앞에). 보통 <b>3개</b>에 1·2·3을 매기면 그 순서로 홈에 뜨고, 대표를 하나도 안 매기면 최근 후기 3개가 자동 노출돼요. 홈 카드엔 <b>이름·챌린지·한줄평</b>이 함께 나오니 아래 칸을 채워두세요.</div>
+      <div class="rv-hint"><b>대표</b> 칸(0=일반, 1 이상=대표)은 예전 홈 커뮤니티 섹션의 노출 순서였어요 — 홈 개편으로 지금은 화면에 반영되지 않으니 비워 두셔도 됩니다(홈에 후기를 되살리면 다시 씁니다).</div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
@@ -656,6 +714,145 @@
         <button class="btn btn-ghost" type="button" id="qfRawToggle" style="margin-top:12px;">최근 제보 원문 보기</button>
         <div class="round-list" id="qfRaw" hidden style="margin-top:10px;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ 매일 답변 프로그램 (2026-07-30 신설 · migration 20260730150000) ══
+       기출 은행(interview_questions)은 유료 콘텐츠라 RLS 비공개 — 이 탭이 유일한 편집 창구.
+       프로그램 → 일차 배치 → 이용권 지급 → 연구원 지정 → 수정 코드 → 진행률 순. -->
+  <div class="tab-panel" id="panel-approgram">
+    <div class="rounds-wrap">
+      <div id="apNotReady" style="display:none;" class="rv-hint">
+        아직 마이그레이션이 적용되지 않았어요. <b>supabase/migrations/20260730150000_answer_program.sql</b> 을
+        SQL Editor 에서 실행한 뒤 이 탭을 다시 열어 주세요.</div>
+
+      <!-- 서브탭(2026-07-30) — 6절 세로 나열이 기출 89개 시점부터 한 스크롤에 안 담겨서 분리.
+           ⚠️ .tabbtn 클래스를 쓰지 말 것 — initTabs 가 tabbtn 전부에 패널 전환을 걸어 둔다. -->
+      <div class="ap-subtabs" id="apSubtabs">
+        <button type="button" class="ap-st on" data-apsec="bank">기출 은행</button>
+        <button type="button" class="ap-st" data-apsec="programs">프로그램</button>
+        <button type="button" class="ap-st" data-apsec="enroll">이용권</button>
+        <button type="button" class="ap-st" data-apsec="researchers">연구원</button>
+        <button type="button" class="ap-st" data-apsec="codes">수정 코드</button>
+        <button type="button" class="ap-st" data-apsec="stats">진행률</button>
+      </div>
+
+      <div class="ap-sec" data-apsecbody="bank">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
+        항공사별 기출을 쌓는 곳이에요(회원에게는 <b>등록한 프로그램의 열린 일차만</b> 보여요).
+        의도·평가역량을 채울수록 학생 화면과 AI 첨삭의 질이 올라가요.</p>
+      <form class="round-form" id="apqForm" style="grid-template-columns:1fr;">
+        <div class="field"><label>질문 원문</label>
+          <textarea id="apqContent" rows="2" placeholder="예: 예상치 못한 상황을 침착하게 해결했던 경험을 말해 보세요."
+            style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>항공사</label><select id="apqAirline"></select></div>
+          <div class="field"><label>유형</label><select id="apqType"></select></div>
+          <div class="field"><label>전형</label><input id="apqStage" placeholder="예: 1차 면접"></div>
+          <div class="field"><label>출처 신뢰도</label>
+            <select id="apqConf"><option value="verified">검증된 기출</option>
+              <option value="reported" selected>제보 기출</option><option value="estimated">예상 문항</option></select></div>
+        </div>
+        <details style="margin-top:10px;"><summary style="font-size:13px;font-weight:800;cursor:pointer;min-height:36px;display:flex;align-items:center;">고급(의도·평가역량·꼬리질문…)</summary>
+          <div style="display:grid;gap:10px;margin-top:8px;">
+            <div class="field"><label>질문 의도(학생에게 보여요)</label><input id="apqIntent"></div>
+            <div class="field"><label>핵심 평가 역량(쉼표 구분)</label><input id="apqComp" placeholder="침착함, 우선순위 판단"></div>
+            <div class="field"><label>답변에 필요한 사실(쉼표)</label><input id="apqNeed" placeholder="실제 한 행동, 결과"></div>
+            <div class="field"><label>적합한 경험 유형(쉼표)</label><input id="apqGood" placeholder="아르바이트, 동아리·학회"></div>
+            <div class="field"><label>피해야 할 접근</label><input id="apqAvoid"></div>
+            <div class="field"><label>자주 나오는 실수</label><input id="apqMist"></div>
+            <div class="field"><label>예상 꼬리질문(줄바꿈 구분)</label>
+              <textarea id="apqFollow" rows="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+              <div class="field"><label>난이도(1~5)</label><input id="apqDiff" type="number" min="1" max="5" placeholder="조립용"></div>
+              <div class="field"><label>권장 분량</label><input id="apqLen" placeholder="예: 400~600자"></div>
+              <div class="field"><label>답변 시간(초)</label><input id="apqSec" type="number" min="10" max="300"></div>
+              <div class="field"><label>출제 시기</label><input id="apqWhen" placeholder="예: 2025 하반기"></div>
+              <div class="field"><label>관리자 메모</label><input id="apqMemo"></div>
+            </div>
+          </div></details>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="submit" id="apqSubmit">기출 추가</button>
+          <button class="btn btn-ghost" type="button" id="apqCancel" style="display:none;">취소</button>
+        </div>
+      </form>
+      <details style="margin:10px 0;"><summary style="font-size:13px;font-weight:800;cursor:pointer;min-height:36px;display:flex;align-items:center;">일괄 등록(탭 구분: 질문[TAB]항공사코드[TAB]유형[TAB]의도)</summary>
+        <textarea id="apqBulk" rows="4" placeholder="갈등을 조율했던 경험은?	7c	conflict	상대 관점 확인 여부"
+          style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+        <button class="btn btn-ghost" type="button" id="apqBulkBtn" style="margin-top:6px;">일괄 추가</button></details>
+      <div class="field" style="max-width:220px;"><label>목록 필터</label><select id="apqFilter"></select></div>
+      <div class="round-list" id="apqList"><div class="loading">불러오는 중…</div></div>
+      </div><!-- /bank -->
+
+      <div class="ap-sec" data-apsecbody="programs" hidden>
+      <form class="round-form" id="appForm" style="grid-template-columns:1fr;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>항공사</label><select id="appAirline"></select></div>
+          <div class="field"><label>제목</label><input id="appTitle" placeholder="예: 제주항공 20일 답변 루틴"></div>
+          <div class="field"><label>총 일수</label><input id="appDays" type="number" min="1" max="60" value="20"></div>
+          <div class="field"><label>공개 방식</label>
+            <select id="appPolicy"><option value="daily">하루 한 문제</option>
+              <option value="all">전체 공개</option><option value="by_date">일차별 날짜 지정</option></select></div>
+          <div class="field"><label>가격(원)</label><input id="appPrice" type="number" min="0" placeholder="비움=지급 전용, 0=무료"></div>
+          <div class="field"><label>노출</label><select id="appVisible"><option value="false">숨김</option><option value="true">공개</option></select></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>한 줄 소개</label><input id="appSub"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="submit" id="appSubmit">프로그램 추가</button>
+          <button class="btn btn-ghost" type="button" id="appCancel" style="display:none;">취소</button>
+        </div>
+      </form>
+      <div class="round-list" id="appList"><div class="loading">불러오는 중…</div></div>
+      <div id="apDaysEditor" style="display:none;margin-top:10px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;background:var(--surface2,#faf8f3);">
+        <div style="font-size:14px;font-weight:800;" id="apDaysTitle"></div>
+        <p style="font-size:12px;color:var(--text-muted);margin:6px 0 8px;">일차마다 기출을 고르세요. 비워 두면 그 일차는 '문제 준비 중'으로 떠요.</p>
+        <div id="apDaysRows"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="button" id="apDaysSave">배치 저장</button>
+          <button class="btn btn-ghost" type="button" id="apDaysClose">닫기</button>
+        </div>
+      </div>
+
+      </div><!-- /programs -->
+
+      <div class="ap-sec" data-apsecbody="enroll" hidden>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">구매 없이 직접 지급할 때 씁니다(결제 구매는 자동 지급).</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;" class="round-form">
+        <div class="field"><label>회원 검색(이름·이메일)</label><input id="apEnrSearch" placeholder="2자 이상"></div>
+        <div class="field"><label>프로그램</label><select id="apEnrProgram"></select></div>
+        <div class="field"><label>시작일(1일차 기준)</label><input id="apEnrStart" type="date"></div>
+      </div>
+      <div id="apEnrHits" style="margin-top:6px;"></div>
+      <div class="round-list" id="apEnrList" style="margin-top:10px;"><div class="loading">불러오는 중…</div></div>
+
+      </div><!-- /enroll -->
+
+      <div class="ap-sec" data-apsecbody="researchers" hidden>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">연구원은 <b>review-desk.html</b> 에서 검수해요. 학생 이름·경험 카드에 접근하게 되니 내부 인력만 지정하세요.</p>
+      <div class="field" style="max-width:260px;"><label>회원 검색(이름·이메일)</label><input id="apResSearch" placeholder="2자 이상"></div>
+      <div id="apResHits" style="margin-top:6px;"></div>
+      <div class="round-list" id="apResList" style="margin-top:10px;"></div>
+
+      </div><!-- /researchers -->
+
+      <div class="ap-sec" data-apsecbody="codes" hidden>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">연구원이 첨삭 이유를 남길 때 고르는 분류 코드입니다.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;" class="round-form">
+        <div class="field"><label>코드(영문 대문자_)</label><input id="apCodeId" placeholder="OPENING_WEAK2"></div>
+        <div class="field"><label>라벨</label><input id="apCodeLabel"></div>
+        <div class="field"><label>분류</label>
+          <select id="apCodeCat"><option value="question">질문</option><option value="experience">경험</option>
+            <option value="sentence">문장</option><option value="speaking">말하기</option></select></div>
+        <button class="btn btn-action" type="button" id="apCodeAdd">코드 추가</button>
+      </div>
+      <div class="round-list" id="apCodeList"><div class="loading">불러오는 중…</div></div>
+
+      </div><!-- /codes -->
+
+      <div class="ap-sec" data-apsecbody="stats" hidden>
+      <button class="btn btn-ghost" type="button" id="apStatBtn">집계 새로고침</button>
+      <div class="round-list" id="apStatList" style="margin-top:8px;"></div>
+      </div><!-- /stats -->
     </div>
   </div>
 
@@ -1059,15 +1256,76 @@
     //    소재 발굴은 크레딧으로 통제한다(다듬기 1회 = 아래 '크레딧' 탭의 단가).
     //    권한 스위치를 되살리지 말 것.
 
-    // ── 탭 전환 ──
+    // ── 탭 전환(2단: 그룹 → 화면) ──
+    // 탭 버튼이 자기 그룹 줄까지 함께 맞추므로, 코드 어디서든 activateTab() 하나로 이동한다.
     function initTabs() {
       document.querySelectorAll('.tabbtn').forEach(b => b.addEventListener('click', () => {
+        const row = b.closest('.tab-row');
+        document.querySelectorAll('.tgbtn').forEach(x => x.classList.toggle('active', x.dataset.group === row.dataset.grouprow));
+        document.querySelectorAll('.tab-row').forEach(r => { r.hidden = r !== row; });
         document.querySelectorAll('.tabbtn').forEach(x => x.classList.remove('active'));
         document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
         document.getElementById('panel-' + b.dataset.tab).classList.add('active');
       }));
+      // 그룹 버튼 = 그 그룹의 첫 화면으로
+      document.querySelectorAll('.tgbtn').forEach(g => g.addEventListener('click', () => {
+        const row = document.querySelector(`.tab-row[data-grouprow="${g.dataset.group}"]`);
+        const btn = row && row.querySelector('.tabbtn');
+        if (btn) btn.click();
+      }));
     }
+    function activateTab(name) {
+      const btn = document.querySelector(`.tabbtn[data-tab="${name}"]`);
+      if (btn) btn.click();
+    }
+
+    /* ── '오늘' 대시보드 ──
+       숫자는 이미 전량 로드하는 _apps/_wl/members 를 재사용한다(추가 조회는 검수 대기 count 하나).
+       ⚠️ 그래서 loadToday() 는 초기화 시퀀스 맨 끝에서 부른다 — 앞 데이터가 다 온 뒤. */
+    function tdSet(id, n) {
+      const card = document.getElementById(id);
+      if (!card) return;
+      card.querySelector('.td-num').textContent = n;
+      card.classList.toggle('zero', !n);
+    }
+    async function loadToday() {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const isToday = iso => iso && (new Date(iso) >= today);
+      const live = _apps.filter(a => (MONC.isLiveApplication ? MONC.isLiveApplication(a) : true));
+      tdSet('tdUnpaid', live.filter(a => !appPaid(a)).length);
+      tdSet('tdWaitlist', _wl.filter(r => r.status !== 'notified').length);
+      tdSet('tdTodayApps', _apps.filter(a => isToday(a.created_at)).length);
+      tdSet('tdNewMembers', members.filter(m => isToday(m.created_at)).length);
+      // 검수 대기 — answer_sessions(관리자 RLS). 마이그레이션 미적용이면 카드만 흐리게.
+      try {
+        const { count, error } = await sb().from('answer_sessions')
+          .select('id', { count: 'exact', head: true }).eq('state', 'review_requested');
+        tdSet('tdReview', error ? 0 : (count || 0));
+      } catch (_) { tdSet('tdReview', 0); }
+      // 최근 신청 5건 — 누르면 신청자 현황으로
+      const recent = _apps.slice(0, 5);
+      document.getElementById('tdRecent').innerHTML = recent.length ? recent.map(a => {
+        const paid = appPaid(a);
+        return `<div class="round-item" data-goto="apps">
+          <div><div class="ri-main">${esc(a.name || '-')}</div>
+          <div class="ri-sub">${esc(chSummary(a.challenges) || '-')} · ${esc((a.created_at || '').slice(0, 10))}</div></div>
+          <span class="td-paystat ${paid ? 'ok' : 'no'}">${paid ? '입금 확인' : '미입금'}</span>
+        </div>`;
+      }).join('') : '<div class="empty" style="color:var(--text-dim);padding:12px">아직 신청이 없습니다.</div>';
+    }
+    // 카드·최근 신청 어디를 눌러도 해당 화면으로 (동적 목록까지 위임으로 받는다)
+    document.getElementById('panel-today').addEventListener('click', e => {
+      const go = e.target.closest('[data-goto]');
+      if (go) activateTab(go.dataset.goto);
+    });
+
+    // 답변 프로그램 서브탭 — 절 하나만 보여준다
+    document.getElementById('apSubtabs').addEventListener('click', e => {
+      const b = e.target.closest('.ap-st'); if (!b) return;
+      document.querySelectorAll('.ap-st').forEach(x => x.classList.toggle('on', x === b));
+      document.querySelectorAll('.ap-sec').forEach(s => { s.hidden = s.dataset.apsecbody !== b.dataset.apsec; });
+    });
 
     // ── 모집일정(challenge_rounds) CRUD ──
     const CH_LABEL = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
@@ -1203,7 +1461,7 @@
       const { data, error } = await MONC.sb.from('challenge_rounds')
         .select('*').order('challenge').order('round');
       if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
-      if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 모집일정이 없습니다.</div>'; return; }
+      if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 기수가 없습니다.</div>'; return; }
       listEl.innerHTML = data.map(r => `
         <div class="round-item">
           <div>
@@ -1953,7 +2211,7 @@
               <input type="number" class="rv-co" value="${r.cohort != null ? r.cohort : ''}" placeholder="기수" min="0" title="기수(숫자). 비우면 미상">
             </div>
             <div class="row"><input type="text" class="rv-nm" value="${esc(r.reviewer_name || '')}" placeholder="이름(예: 박신우)" title="작성자 이름 — 홈 대표 카드에 표시"></div>
-            <div class="row"><input type="text" class="rv-qt" value="${esc(r.quote || '')}" placeholder="한줄평 — 홈 대표 카드 문구" title="홈 '커뮤니티' 대표 후기 카드에 크게 표시되는 한 줄"></div>
+            <div class="row"><input type="text" class="rv-qt" value="${esc(r.quote || '')}" placeholder="한줄평 (저장만 — 현재 미표시)" title="예전 홈 대표 후기 카드 문구 — 홈에 후기를 되살리면 다시 씁니다"></div>
             <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
             <div class="row"><button class="rv-btn rv-del">삭제</button></div>
           </div>
@@ -2063,64 +2321,8 @@
       loadReviewsAdmin();
     });
 
-    // ── 홈 커뮤니티 섹션(site_config) ──
-    // index.html #community 의 집계 지표·롤링 문구를 편집한다(후기 카드는 '후기 관리' 탭의 대표 선정).
-    // 저장 형태(jsonb): community_stats={participants,completionRate,verifications}, community_phrases=["..."]
-    async function cmSave(key, value, okMsg) {
-      const { error } = await sb().from('site_config').upsert({ key, value }, { onConflict: 'key' });
-      if (error) { alert('저장 실패: ' + error.message); return false; }
-      toast(okMsg); return true;
-    }
-
-    async function loadCommunity() {
-      const body = document.getElementById('cmBody');
-      const { data, error } = await sb().from('site_config').select('key, value')
-        .in('key', ['community_stats', 'community_phrases']);
-      if (error) {
-        // 대개 site_config 테이블 미생성(마이그레이션 미적용) — 안내 노출
-        body.innerHTML = `<div class="cm-block" style="color:var(--text-muted);font-size:13px;line-height:1.7;">
-          불러오기 실패: ${esc(error.message)}<br><br>
-          <b>site_config 테이블이 아직 없다면</b> 저장소의
-          <b>supabase/migrations/20260710120000_site_config.sql</b> 내용을
-          Supabase 대시보드 → SQL Editor에서 실행한 뒤 이 탭을 다시 열어주세요.<br>
-          (미적용 상태여도 홈은 기본값으로 정상 표시됩니다)</div>`;
-        return;
-      }
-      const cfg = Object.fromEntries((data || []).map(r => [r.key, r.value]));
-      const st = (cfg.community_stats && typeof cfg.community_stats === 'object') ? cfg.community_stats : {};
-      const ph = Array.isArray(cfg.community_phrases) ? cfg.community_phrases : [];
-
-      body.innerHTML = `
-        <div class="cm-block">
-          <div class="rv-section-title">집계 지표 (라이브 피드 숫자)</div>
-          <div class="cm-stats-form">
-            <div class="field"><label>챌린지 참여자 (명)</label><input id="cmParticipants" type="number" min="0" value="${st.participants ?? 190}"></div>
-            <div class="field"><label>챌린지 수료율 (%)</label><input id="cmCompletion" type="number" min="0" max="100" value="${st.completionRate ?? 90}"></div>
-            <div class="field"><label>누적 인증 (개)</label><input id="cmVerifications" type="number" min="0" value="${st.verifications ?? 165}"></div>
-          </div>
-          <button class="btn btn-action" id="cmSaveStats">지표 저장</button>
-        </div>
-        <div class="cm-block">
-          <div class="rv-section-title">'가장 좋았던 점' 롤링 문구 — 한 줄에 하나 (개수 자유, 전환 타이밍 자동)</div>
-          <textarea id="cmPhrases" rows="5">${esc(ph.join('\n'))}</textarea>
-          <button class="btn btn-action" id="cmSavePhrases">문구 저장</button>
-        </div>
-        <div class="cm-block">
-          <div class="rv-section-title">대표 후기 카드</div>
-          <div class="rv-hint" style="margin:0;">홈 '커뮤니티' 섹션의 대표 후기 카드는 이제 <b>실제 후기</b>로 채워집니다 → <b>'후기 관리'</b> 탭에서 원하는 후기의 <b>대표</b> 칸에 1·2·3을 매기세요(이름·챌린지·한줄평도 거기서 수정). 미지정 시 최근 후기 3개가 자동 노출됩니다.</div>
-        </div>`;
-
-      document.getElementById('cmSaveStats').addEventListener('click', () => cmSave('community_stats', {
-        participants: parseInt(document.getElementById('cmParticipants').value || '0', 10),
-        completionRate: parseInt(document.getElementById('cmCompletion').value || '0', 10),
-        verifications: parseInt(document.getElementById('cmVerifications').value || '0', 10),
-      }, '지표 저장됨'));
-      document.getElementById('cmSavePhrases').addEventListener('click', () => {
-        const lines = document.getElementById('cmPhrases').value.split('\n').map(s => s.trim()).filter(Boolean);
-        if (!lines.length) { alert('문구를 1개 이상 입력하세요.'); return; }
-        cmSave('community_phrases', lines, '문구 저장됨');
-      });
-    }
+    // (구 '홈 커뮤니티' 편집 JS 는 2026-07-30 탭 삭제와 함께 제거 —
+    //  site_config 의 community_stats/community_phrases 데이터는 남아 있다.)
 
     // ── 기출문제(questions) CRUD ──
     const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
@@ -2667,6 +2869,431 @@
       await loadCredits();
     });
 
+    // ══ 매일 답변 프로그램 (interview_questions / answer_programs / …) ══
+    // ⚠️ 기출 은행은 RLS 비공개(관리자·연구원만) — 이 탭이 유일한 편집 창구다.
+    //    미적용(PGRST205) 감지 시 안내만 보여주고 조용히 멈춘다(graceful degrade).
+    const AP_QTYPES = { experience:'경험형', values:'가치관형', motivation:'지원동기형', mistake:'실수형',
+      weakness:'단점형', conflict:'갈등형', situation:'상황형', company:'기업형', job:'직무형', opinion:'의견형' };
+    const AP_STATES = { not_started:'시작 전', experience_selecting:'경험 선택', fact_gathering:'사실 수집',
+      student_drafting:'초안 작성', ai_revised:'AI 첨삭', student_editing:'다듬는 중', review_requested:'검수 대기',
+      researcher_reviewing:'검수 중', revision_requested:'보완 요청', approved:'승인', finalized:'완성' };
+    let _apQ = [], _apP = [], _apEditQ = null, _apEditP = null, _apDaysPid = null;
+    const apMissing = e => !!e && (e.code === 'PGRST205' || /schema cache/i.test(e.message || ''));
+
+    function apAirlineOptions(withCommon) {
+      return (withCommon ? '<option value="">공통(항공사 무관)</option>' : '') +
+        Object.keys(LEC.AIRLINES).map(c => `<option value="${c}">${LEC.AIRLINES[c].ko}</option>`).join('');
+    }
+    const apCsv = v => v.split(',').map(s => s.trim()).filter(Boolean);
+
+    // ── ① 기출 은행 ──
+    function apqReset() {
+      _apEditQ = null;
+      ['apqContent','apqStage','apqIntent','apqComp','apqNeed','apqGood','apqAvoid','apqMist','apqFollow','apqDiff','apqLen','apqSec','apqWhen','apqMemo']
+        .forEach(id => document.getElementById(id).value = '');
+      document.getElementById('apqConf').value = 'reported';
+      document.getElementById('apqSubmit').textContent = '기출 추가';
+      document.getElementById('apqCancel').style.display = 'none';
+    }
+
+    async function loadApQuestions() {
+      const listEl = document.getElementById('apqList');
+      const { data, error } = await sb().from('interview_questions').select('*')
+        .order('airline', { ascending: true, nullsFirst: true }).order('created_at', { ascending: false });
+      if (error) {
+        if (apMissing(error)) { document.getElementById('apNotReady').style.display = 'block'; listEl.innerHTML = ''; return false; }
+        listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return true;
+      }
+      _apQ = data || [];
+      const f = document.getElementById('apqFilter').value;
+      const rows = _apQ.filter(q => !f || (f === 'none' ? !q.airline : q.airline === f));
+      listEl.innerHTML = rows.length ? rows.map(q => `
+        <div class="round-item" style="${q.active ? '' : 'opacity:.55;'}">
+          <div><div class="ri-main">${esc(q.content)}</div>
+            <div class="ri-sub">${q.airline ? esc((LEC.AIRLINES[q.airline]||{}).ko || q.airline) : '공통'} ·
+              ${esc(AP_QTYPES[q.qtype] || q.qtype)}${q.stage ? ' · ' + esc(q.stage) : ''}${q.difficulty ? ' · 난이도 ' + q.difficulty : ''} ·
+              ${q.source_confidence === 'verified' ? '검증' : q.source_confidence === 'estimated' ? '예상' : '제보'}${q.intent ? ' · 의도 있음' : ' · <b style="color:#A33D14">의도 비어 있음</b>'}</div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del apq-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
+            <button class="ri-del apq-edit" data-id="${q.id}">수정</button>
+            <button class="ri-del apq-del" data-id="${q.id}">삭제</button></div>
+        </div>`).join('') : '<div class="empty" style="color:var(--text-dim);padding:16px">기출이 없습니다. 위에서 추가하세요.</div>';
+
+      listEl.querySelectorAll('.apq-active').forEach(b => b.addEventListener('click', async () => {
+        const q = _apQ.find(x => x.id === b.dataset.id);
+        const { error } = await sb().from('interview_questions').update({ active: !q.active }).eq('id', q.id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast('변경됨'); loadApQuestions();
+      }));
+      listEl.querySelectorAll('.apq-edit').forEach(b => b.addEventListener('click', () => {
+        const q = _apQ.find(x => x.id === b.dataset.id); if (!q) return;
+        _apEditQ = q.id;
+        document.getElementById('apqContent').value = q.content || '';
+        document.getElementById('apqAirline').value = q.airline || '';
+        document.getElementById('apqType').value = q.qtype || 'experience';
+        document.getElementById('apqStage').value = q.stage || '';
+        document.getElementById('apqConf').value = q.source_confidence || 'reported';
+        document.getElementById('apqIntent').value = q.intent || '';
+        document.getElementById('apqComp').value = (q.competencies || []).join(', ');
+        document.getElementById('apqNeed').value = (q.needed_facts || []).join(', ');
+        document.getElementById('apqGood').value = (q.good_exp_types || []).join(', ');
+        document.getElementById('apqAvoid').value = q.avoid || '';
+        document.getElementById('apqMist').value = q.common_mistakes || '';
+        document.getElementById('apqFollow').value = (q.followups || []).join('\n');
+        document.getElementById('apqDiff').value = q.difficulty || '';
+        document.getElementById('apqLen').value = q.rec_len || '';
+        document.getElementById('apqSec').value = q.rec_seconds || '';
+        document.getElementById('apqWhen').value = q.asked_at || '';
+        document.getElementById('apqMemo').value = q.admin_memo || '';
+        document.getElementById('apqSubmit').textContent = '수정 저장';
+        document.getElementById('apqCancel').style.display = '';
+        document.getElementById('apqForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      listEl.querySelectorAll('.apq-del').forEach(b => b.addEventListener('click', async () => {
+        const q = _apQ.find(x => x.id === b.dataset.id);
+        if (!confirm(`'${(q && q.content || '').slice(0, 24)}…' 기출을 삭제할까요? 배치된 일차는 '문제 준비 중'이 됩니다.`)) return;
+        const { error } = await sb().from('interview_questions').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadApQuestions();
+      }));
+      return true;
+    }
+
+    document.getElementById('apqForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const content = document.getElementById('apqContent').value.trim();
+      if (!content) { alert('질문 원문을 입력하세요.'); return; }
+      const row = {
+        content,
+        airline: document.getElementById('apqAirline').value || null,
+        qtype: document.getElementById('apqType').value,
+        stage: document.getElementById('apqStage').value.trim() || null,
+        source_confidence: document.getElementById('apqConf').value,
+        intent: document.getElementById('apqIntent').value.trim() || null,
+        competencies: apCsv(document.getElementById('apqComp').value),
+        needed_facts: apCsv(document.getElementById('apqNeed').value),
+        good_exp_types: apCsv(document.getElementById('apqGood').value),
+        avoid: document.getElementById('apqAvoid').value.trim() || null,
+        common_mistakes: document.getElementById('apqMist').value.trim() || null,
+        followups: document.getElementById('apqFollow').value.split('\n').map(s => s.trim()).filter(Boolean),
+        difficulty: Number(document.getElementById('apqDiff').value) || null,
+        rec_len: document.getElementById('apqLen').value.trim() || null,
+        rec_seconds: Number(document.getElementById('apqSec').value) || null,
+        asked_at: document.getElementById('apqWhen').value.trim() || null,
+        admin_memo: document.getElementById('apqMemo').value.trim() || null,
+      };
+      const { error } = _apEditQ
+        ? await sb().from('interview_questions').update(row).eq('id', _apEditQ)
+        : await sb().from('interview_questions').insert(row);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast(_apEditQ ? '수정됨' : '추가됨'); apqReset(); loadApQuestions();
+    });
+    document.getElementById('apqCancel').addEventListener('click', apqReset);
+    document.getElementById('apqFilter').addEventListener('change', loadApQuestions);
+
+    document.getElementById('apqBulkBtn').addEventListener('click', async () => {
+      const lines = document.getElementById('apqBulk').value.split('\n').map(s => s.trim()).filter(Boolean);
+      if (!lines.length) return;
+      const rows = lines.map(l => {
+        const [content, airline, qtype, intent] = l.split('\t').map(s => (s || '').trim());
+        return { content, airline: airline || null,
+                 qtype: AP_QTYPES[qtype] ? qtype : 'experience', intent: intent || null };
+      }).filter(r => r.content);
+      const { error } = await sb().from('interview_questions').insert(rows);
+      if (error) { alert('일괄 추가 실패: ' + error.message); return; }
+      toast(rows.length + '건 추가됨');
+      document.getElementById('apqBulk').value = '';
+      loadApQuestions();
+    });
+
+    // ── ② 프로그램 + 일차 배치 ──
+    function appReset() {
+      _apEditP = null;
+      document.getElementById('appTitle').value = '';
+      document.getElementById('appSub').value = '';
+      document.getElementById('appDays').value = '20';
+      document.getElementById('appPolicy').value = 'daily';
+      document.getElementById('appPrice').value = '';
+      document.getElementById('appVisible').value = 'false';
+      document.getElementById('appSubmit').textContent = '프로그램 추가';
+      document.getElementById('appCancel').style.display = 'none';
+    }
+
+    async function loadApPrograms() {
+      const listEl = document.getElementById('appList');
+      const { data, error } = await sb().from('answer_programs').select('*').order('sort_order').order('created_at');
+      if (error) { listEl.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      _apP = data || [];
+      const sel = document.getElementById('apEnrProgram');
+      sel.innerHTML = _apP.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('');
+      listEl.innerHTML = _apP.length ? _apP.map(p => `
+        <div class="round-item" style="${p.visible ? '' : 'opacity:.6;'}">
+          <div><div class="ri-main">${esc(p.title)} <span style="font-size:12px;color:var(--text-muted)">(${esc((LEC.AIRLINES[p.airline]||{}).ko || p.airline || '전 항공사 공통')})</span></div>
+            <div class="ri-sub">${p.total_days}일 · ${p.reveal_policy === 'daily' ? '하루 한 문제' : p.reveal_policy === 'all' ? '전체 공개' : '날짜 지정'} ·
+              ${p.price == null ? '지급 전용' : p.price === 0 ? '무료' : Number(p.price).toLocaleString() + '원'} · ${p.visible ? '공개' : '숨김'}</div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del app-days" data-id="${p.id}" style="color:var(--action-dark);border-color:var(--action)">일차 배치</button>
+            <button class="ri-del app-vis" data-id="${p.id}">${p.visible ? '숨기기' : '공개'}</button>
+            <button class="ri-del app-edit" data-id="${p.id}">수정</button>
+            <button class="ri-del app-del" data-id="${p.id}">삭제</button></div>
+        </div>`).join('') : '<div class="empty" style="color:var(--text-dim);padding:16px">프로그램이 없습니다.</div>';
+
+      listEl.querySelectorAll('.app-vis').forEach(b => b.addEventListener('click', async () => {
+        const p = _apP.find(x => x.id === b.dataset.id);
+        const { error } = await sb().from('answer_programs').update({ visible: !p.visible }).eq('id', p.id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast('변경됨'); loadApPrograms();
+      }));
+      listEl.querySelectorAll('.app-edit').forEach(b => b.addEventListener('click', () => {
+        const p = _apP.find(x => x.id === b.dataset.id); if (!p) return;
+        _apEditP = p.id;
+        document.getElementById('appAirline').value = p.airline || '';
+        document.getElementById('appTitle').value = p.title;
+        document.getElementById('appSub').value = p.subtitle || '';
+        document.getElementById('appDays').value = p.total_days;
+        document.getElementById('appPolicy').value = p.reveal_policy;
+        document.getElementById('appPrice').value = p.price == null ? '' : p.price;
+        document.getElementById('appVisible').value = String(p.visible);
+        document.getElementById('appSubmit').textContent = '수정 저장';
+        document.getElementById('appCancel').style.display = '';
+      }));
+      listEl.querySelectorAll('.app-del').forEach(b => b.addEventListener('click', async () => {
+        const p = _apP.find(x => x.id === b.dataset.id);
+        if (!confirm(`'${p.title}' 프로그램을 삭제할까요? 이용권·세션·버전 기록이 함께 삭제됩니다(cascade). 되돌릴 수 없어요.`)) return;
+        const { error } = await sb().from('answer_programs').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadApPrograms(); loadApEnrollments();
+      }));
+      listEl.querySelectorAll('.app-days').forEach(b => b.addEventListener('click', () => openDaysEditor(b.dataset.id)));
+    }
+
+    document.getElementById('appForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const title = document.getElementById('appTitle').value.trim();
+      if (!title) { alert('제목을 입력하세요.'); return; }
+      const priceRaw = document.getElementById('appPrice').value.trim();
+      const row = {
+        airline: document.getElementById('appAirline').value || null,   // ''=공통 → null
+        title, subtitle: document.getElementById('appSub').value.trim() || null,
+        total_days: Math.max(1, Math.min(60, Number(document.getElementById('appDays').value) || 20)),
+        reveal_policy: document.getElementById('appPolicy').value,
+        price: priceRaw === '' ? null : Math.max(0, Number(priceRaw) || 0),
+        visible: document.getElementById('appVisible').value === 'true',
+      };
+      const { error } = _apEditP
+        ? await sb().from('answer_programs').update(row).eq('id', _apEditP)
+        : await sb().from('answer_programs').insert(row);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast(_apEditP ? '수정됨' : '추가됨'); appReset(); loadApPrograms();
+    });
+    document.getElementById('appCancel').addEventListener('click', appReset);
+
+    async function openDaysEditor(pid) {
+      const p = _apP.find(x => x.id === pid); if (!p) return;
+      _apDaysPid = pid;
+      document.getElementById('apDaysTitle').textContent = p.title + ' — 일차 배치';
+      const { data: days } = await sb().from('answer_program_days').select('*').eq('program_id', pid);
+      const byDay = {}; (days || []).forEach(d => byDay[d.day_no] = d);
+      // 배치 후보: 그 항공사 기출 + 공통 기출
+      const pool = _apQ.filter(q => q.active && (!q.airline || q.airline === p.airline));
+      // 난이도(D n)를 함께 보여준다 — 오너가 난이도를 보며 일차를 조립한다(2026-07-30).
+      const opts = q => `<option value="">— 비움 —</option>` + pool.map(x =>
+        `<option value="${x.id}" ${q && q.question_id === x.id ? 'selected' : ''}>[${AP_QTYPES[x.qtype] || x.qtype}${x.difficulty ? '·D' + x.difficulty : ''}] ${esc(x.content.slice(0, 44))}</option>`).join('');
+      let rows = '';
+      for (let d = 1; d <= p.total_days; d++) {
+        const cur = byDay[d];
+        rows += `<div style="display:grid;grid-template-columns:52px 1fr ${p.reveal_policy === 'by_date' ? '130px' : ''};gap:8px;align-items:center;margin-top:6px;">
+          <b style="font-size:13px;">${d}일차</b>
+          <select class="apd-q" data-day="${d}" style="min-height:38px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:#fff;max-width:100%;">${opts(cur)}</select>
+          ${p.reveal_policy === 'by_date' ? `<input class="apd-date" data-day="${d}" type="date" value="${cur && cur.unlock_date || ''}" style="min-height:38px;border:1px solid var(--border);border-radius:8px;padding:0 8px;">` : ''}
+        </div>`;
+      }
+      document.getElementById('apDaysRows').innerHTML = rows ||
+        '<div class="empty">배치할 기출이 없습니다. ①에서 먼저 추가하세요.</div>';
+      document.getElementById('apDaysEditor').style.display = 'block';
+      document.getElementById('apDaysEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('apDaysClose').addEventListener('click', () => {
+      document.getElementById('apDaysEditor').style.display = 'none'; _apDaysPid = null;
+    });
+    document.getElementById('apDaysSave').addEventListener('click', async () => {
+      if (!_apDaysPid) return;
+      const p = _apP.find(x => x.id === _apDaysPid);
+      const ups = [], dels = [];
+      document.querySelectorAll('#apDaysRows .apd-q').forEach(sel => {
+        const day = Number(sel.dataset.day);
+        const dateEl = document.querySelector(`#apDaysRows .apd-date[data-day="${day}"]`);
+        if (sel.value) ups.push({ program_id: _apDaysPid, day_no: day, question_id: sel.value,
+                                  unlock_date: dateEl && dateEl.value ? dateEl.value : null });
+        else dels.push(day);
+      });
+      if (ups.length) {
+        const { error } = await sb().from('answer_program_days')
+          .upsert(ups, { onConflict: 'program_id,day_no' });
+        if (error) { alert('저장 실패: ' + error.message); return; }
+      }
+      if (dels.length) {
+        await sb().from('answer_program_days').delete().eq('program_id', _apDaysPid).in('day_no', dels);
+      }
+      toast('배치 저장됨 (' + ups.length + '일차)');
+    });
+
+    // ── ③ 이용권 ──
+    function apMemberHits(inputId, hitsId, onPick) {
+      const q = document.getElementById(inputId).value.trim().toLowerCase();
+      const el = document.getElementById(hitsId);
+      if (q.length < 2) { el.innerHTML = ''; return; }
+      const hits = members.filter(m =>
+        (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q)).slice(0, 6);
+      el.innerHTML = hits.length ? hits.map(m =>
+        `<button type="button" class="ri-del" data-id="${m.id}" style="margin:2px 4px 2px 0;">${esc(m.name || '(이름 없음)')} · ${esc(m.email || '-')}</button>`).join('')
+        : '<span style="font-size:12px;color:var(--text-dim)">일치하는 회원이 없어요.</span>';
+      el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.id)));
+    }
+
+    document.getElementById('apEnrSearch').addEventListener('input', () =>
+      apMemberHits('apEnrSearch', 'apEnrHits', async memberId => {
+        const pid = document.getElementById('apEnrProgram').value;
+        if (!pid) { alert('프로그램을 먼저 만들거나 선택하세요.'); return; }
+        const start = document.getElementById('apEnrStart').value || undefined;
+        const row = { program_id: pid, member_id: memberId, source: 'admin' };
+        if (start) row.started_at = start;
+        const { error } = await sb().from('program_enrollments').insert(row);
+        if (error) {
+          alert(error.code === '23505' ? '이미 이 프로그램 이용권이 있어요.' : '지급 실패: ' + error.message);
+          return;
+        }
+        toast('이용권 지급됨');
+        document.getElementById('apEnrSearch').value = '';
+        document.getElementById('apEnrHits').innerHTML = '';
+        loadApEnrollments();
+      }));
+
+    async function loadApEnrollments() {
+      const el = document.getElementById('apEnrList');
+      const { data, error } = await sb().from('program_enrollments').select('*').order('created_at', { ascending: false }).limit(100);
+      if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
+      const rows = data || [];
+      el.innerHTML = rows.length ? rows.map(e2 => {
+        const m = members.find(x => x.id === e2.member_id) || {};
+        const p = _apP.find(x => x.id === e2.program_id) || {};
+        return `<div class="round-item">
+          <div><div class="ri-main">${esc(m.name || '(이름 없음)')} <span style="font-size:12px;color:var(--text-muted)">${esc(m.email || '')}</span></div>
+            <div class="ri-sub">${esc(p.title || '삭제된 프로그램')} · 시작 ${e2.started_at} · ${e2.source} · ${e2.status}</div></div>
+          <div><button class="ri-del ape-del" data-id="${e2.id}">회수</button></div></div>`;
+      }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지급된 이용권이 없습니다.</div>';
+      el.querySelectorAll('.ape-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 이용권을 회수(삭제)할까요? 학생의 작성 기록은 남습니다.')) return;
+        const { error } = await sb().from('program_enrollments').delete().eq('id', b.dataset.id);
+        if (error) { alert('회수 실패: ' + error.message); return; }
+        toast('회수됨'); loadApEnrollments();
+      }));
+    }
+
+    // ── ④ 연구원 ──
+    document.getElementById('apResSearch').addEventListener('input', () =>
+      apMemberHits('apResSearch', 'apResHits', async memberId => {
+        const { error } = await sb().from('researchers').upsert({ member_id: memberId, active: true }, { onConflict: 'member_id' });
+        if (error) { alert('지정 실패: ' + error.message); return; }
+        toast('연구원 지정됨');
+        document.getElementById('apResSearch').value = '';
+        document.getElementById('apResHits').innerHTML = '';
+        loadApResearchers();
+      }));
+
+    async function loadApResearchers() {
+      const el = document.getElementById('apResList');
+      const { data, error } = await sb().from('researchers').select('*').order('created_at');
+      if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
+      const rows = data || [];
+      el.innerHTML = rows.length ? rows.map(r => {
+        const m = members.find(x => x.id === r.member_id) || {};
+        return `<div class="round-item" style="${r.active ? '' : 'opacity:.55;'}">
+          <div><div class="ri-main">${esc(m.name || '(이름 없음)')}</div>
+            <div class="ri-sub">${esc(m.email || '')} · ${r.active ? '활성' : '중지'}</div></div>
+          <div style="display:flex;gap:6px;">
+            <button class="ri-del apr-tog" data-id="${r.member_id}">${r.active ? '중지' : '재개'}</button>
+            <button class="ri-del apr-del" data-id="${r.member_id}">해제</button></div></div>`;
+      }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지정된 연구원이 없습니다.</div>';
+      el.querySelectorAll('.apr-tog').forEach(b => b.addEventListener('click', async () => {
+        const r = rows.find(x => x.member_id === b.dataset.id);
+        await sb().from('researchers').update({ active: !r.active }).eq('member_id', r.member_id);
+        loadApResearchers();
+      }));
+      el.querySelectorAll('.apr-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('연구원 지정을 해제할까요?')) return;
+        await sb().from('researchers').delete().eq('member_id', b.dataset.id);
+        loadApResearchers();
+      }));
+    }
+
+    // ── ⑤ 수정 코드 ──
+    async function loadApCodes() {
+      const el = document.getElementById('apCodeList');
+      const { data, error } = await sb().from('correction_codes').select('*').order('category').order('sort_order');
+      if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
+      const CAT = { question: '질문', experience: '경험', sentence: '문장', speaking: '말하기' };
+      el.innerHTML = (data || []).map(c => `
+        <div class="round-item" style="${c.active ? '' : 'opacity:.5;'}">
+          <div><div class="ri-main">${esc(c.label)} <span style="font-size:11px;color:var(--text-dim)">${esc(c.code)}</span></div>
+            <div class="ri-sub">${CAT[c.category] || c.category}${c.description ? ' · ' + esc(c.description) : ''}</div></div>
+          <div><button class="ri-del apc-tog" data-code="${esc(c.code)}">${c.active ? '끄기' : '켜기'}</button></div>
+        </div>`).join('');
+      el.querySelectorAll('.apc-tog').forEach(b => b.addEventListener('click', async () => {
+        const c = data.find(x => x.code === b.dataset.code);
+        await sb().from('correction_codes').update({ active: !c.active }).eq('code', c.code);
+        loadApCodes();
+      }));
+    }
+    document.getElementById('apCodeAdd').addEventListener('click', async () => {
+      const code = document.getElementById('apCodeId').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+      const label = document.getElementById('apCodeLabel').value.trim();
+      if (!code || !label) { alert('코드와 라벨을 입력하세요.'); return; }
+      const { error } = await sb().from('correction_codes').insert({
+        code, label, category: document.getElementById('apCodeCat').value, sort_order: 99 });
+      if (error) { alert('추가 실패: ' + error.message); return; }
+      toast('추가됨');
+      document.getElementById('apCodeId').value = ''; document.getElementById('apCodeLabel').value = '';
+      loadApCodes();
+    });
+
+    // ── ⑥ 진행률 ──
+    document.getElementById('apStatBtn').addEventListener('click', async () => {
+      const el = document.getElementById('apStatList');
+      el.innerHTML = '<div class="loading">집계 중…</div>';
+      const enr = await sb().from('program_enrollments').select('program_id');
+      const ses = await sb().from('answer_sessions').select('program_id, state');
+      if (enr.error || ses.error) { el.innerHTML = '<div class="empty">집계 실패(마이그레이션 미적용?)</div>'; return; }
+      el.innerHTML = _apP.map(p => {
+        const en = (enr.data || []).filter(x => x.program_id === p.id).length;
+        const ss = (ses.data || []).filter(x => x.program_id === p.id);
+        const byState = {};
+        ss.forEach(x => byState[x.state] = (byState[x.state] || 0) + 1);
+        const fin = byState.finalized || 0;
+        const line = Object.keys(byState).map(k => `${AP_STATES[k] || k} ${byState[k]}`).join(' · ') || '세션 없음';
+        return `<div class="round-item"><div>
+          <div class="ri-main">${esc(p.title)}</div>
+          <div class="ri-sub">이용권 ${en}명 · 완성 답변 ${fin}건 · ${line}</div></div></div>`;
+      }).join('') || '<div class="empty">프로그램이 없습니다.</div>';
+    });
+
+    async function loadApProgram() {
+      document.getElementById('apqAirline').innerHTML = apAirlineOptions(true);
+      // 프로그램도 공통(항공사 무관)이 1급이다 — 1차 상품이 '필수 기출'(전 항공사 공통).
+      document.getElementById('appAirline').innerHTML = apAirlineOptions(true);
+      document.getElementById('apqType').innerHTML = Object.keys(AP_QTYPES)
+        .map(k => `<option value="${k}">${AP_QTYPES[k]}</option>`).join('');
+      document.getElementById('apqFilter').innerHTML =
+        '<option value="">전체</option><option value="none">공통만</option>' + apAirlineOptions(false);
+      const ok = await loadApQuestions();
+      if (!ok) return;                      // 마이그레이션 미적용 — 나머지도 같은 상태라 멈춘다
+      await loadApPrograms();
+      loadApEnrollments();
+      loadApResearchers();
+      loadApCodes();
+    }
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();
@@ -2677,20 +3304,21 @@
       await loadMembers();
       document.getElementById('loading').style.display = 'none';
       document.getElementById('layout').style.display = 'grid';
-      document.getElementById('tabs').style.display = 'flex';
+      document.getElementById('tabs').style.display = 'block';   // ⚠️ flex 금지 — 2단(그룹 줄+알약 줄)이 가로로 눕는다
       initTabs();
       loadChallengePrice();
       loadRounds();
       loadLectures();
-      loadApplications();
-      loadWaitlist();
-      loadCommunity();
+      await loadApplications();
+      await loadWaitlist();
       loadReviewsAdmin();
       loadQuestions();
       loadTerms();
       loadCredits();
       loadCreditPacks();
       loadCreditConfig();
+      loadApProgram();
+      loadToday();   // ⚠️ '오늘' 카드가 _apps/_wl/members 를 재사용하므로 위 로드 뒤에
     })();
   </script>
 </body>

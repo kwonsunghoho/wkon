@@ -14,6 +14,12 @@ import re, sys, urllib.parse, urllib.request, html
 from pathlib import Path
 from collections import defaultdict
 
+# Windows 콘솔(cp949)에서 —·○ 같은 문자가 UnicodeEncodeError 로 죽는다 — 출력만 UTF-8 로 고정
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except AttributeError:
+    pass
+
 JS = Path(__file__).resolve().parent / "fetch-news.mjs"
 if not JS.exists():
     raise SystemExit(f"{JS} 를 찾지 못했습니다.")

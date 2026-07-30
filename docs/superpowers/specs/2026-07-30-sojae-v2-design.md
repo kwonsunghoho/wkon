@@ -203,3 +203,19 @@
 - 다듬기 구조화 출력이 카드·뼈대로 갈라져 렌더되는지, 괄호 빈칸 칠하기, 서랍 저장·수정·삭제.
 - 프로브 게이트: 구버전 함수 상태에서 화면이 기존 흐름으로 동작하는지.
 - 375px 우선 렌더 확인(사이트 관례).
+
+
+## 운영 노트 — CLAUDE.md 이관 (2026-07-30)
+
+> 아래는 CLAUDE.md 다이어트(2026-07-30) 때 원문 그대로 옮긴 운영 기록이다. 위 본문과 겹치면 아래(더 최근 기록)가 우선.
+
+### 소재 발굴 v2 — 교재 방법론 이식 (2026-07-30 신설 · 스펙 docs/superpowers/specs/2026-07-30-sojae-v2-design.md)
+구조: 되묻기(Haiku 4.5·무료·재료 체크리스트) → 다듬기(Sonnet 5·2크레딧·**소재 카드+뼈대 두 산출물**) → 최종 작성. 카드는 서버가 `sojae_materials`에 자동 upsert(문제당 1장), answers.html [내 소재] 탭이 서랍.
+- **⚠️⚠️ 다듬기 버튼은 두 번째 답변부터 항상 열려 있다(이탈 가드 — 오너 확정).** AI의 `materials_sufficient`는 추천 신호일 뿐 관문이 아니다. `userMsgCount >= 2 → showRefine()`을 지우거나 판정 뒤로 숨기지 말 것.
+- **⚠️ 유형은 BEI 5종 — 코드 4종(experience/values/judgment/company) 유지 + `personal`만 신설.** 라벨(과거경험검증형·직무핵심역량형·상황대처형·기업관심도형·개인신상형)은 `sojae-common.js` CAT_LABEL 한 곳. 코드명을 바꾸면 questions·answers 기존 데이터가 깨진다.
+- **⚠️ 교재 노하우는 공개 레포에 없다.** 프롬프트 본문 = `sojae_playbook` 테이블(RLS 관리자만, 서버는 service role). 내용 시드는 SQL로 대화창 전달(커밋 금지). SQL Editor에서 고치면 **재배포 없이 즉시 반영**. 함수 내 `FB_*` 상수는 v1 수준 폴백일 뿐 — 새 노하우를 상수에 넣지 말 것.
+- **⚠️ 신구 판정은 프로브가 아니라 응답 형태.** 다듬기 응답에 `card`/`skeleton`이 있으면 v2 렌더, 없으면(구함수) `message` 렌더. 차감 로직이 신구 동일이라 과금 위험이 없어 폴리시식 프로브 게이트를 쓰지 않았다. 서버 프로브(`POST {probe:true}` → version·playbook_keys)는 배포 확인용으로 존재 — **코드를 고치면 FN_VERSION도 같이 올릴 것.**
+- **⚠️ 응답의 `message` 필드를 지우지 말 것** — 구버전 화면 호환(뼈대 평문 병합본). ⚠️ 되묻기(Haiku 4.5)에 `output_config.effort`를 넣지 말 것(미지원 — 400).
+- 카드 upsert 키 = `(member_id, question_id)` — 재다듬기는 카드를 덮는다(의도). `question_id` 없으면 저장 생략. 저장 실패는 뼈대를 막지 않는다(`card_saved:false`).
+- 계측: page_events `path:'/sojae'` — sojae_start/turn/refine_click/refine_done/card_saved/save_final. 2단계(소재 매칭 추천) 착수 판단 근거.
+- 차감·환급·무료 규칙은 아래 '답변 저장소 + 크레딧' 절 그대로(v2에서 불변).

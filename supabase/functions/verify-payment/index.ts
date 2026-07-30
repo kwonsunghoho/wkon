@@ -22,8 +22,11 @@ const json = (body: unknown, status = 200) =>
 // 결제는 승인됐는데 신청을 저장할 수 없을 때(특강 정원 마감) 전액 자동 환불한다.
 // ⚠️ 돈만 나가고 신청은 실패하는 상태를 남기지 않기 위한 안전장치 — 실패해도 예외를
 //    던지지 않고 false 를 돌려준다(호출부가 사용자에게 고객센터 안내를 띄운다).
+// supa 타입은 any — createClient 의 제네릭 인스턴스가 호출부마다 달라 deno check 가
+// 걸리는 기존 마찰의 해소(타입 표기만 변경, 런타임 동일).
+// deno-lint-ignore no-explicit-any
 async function refundAll(
-  supa: ReturnType<typeof createClient>, paymentId: string, amount: number, reason: string,
+  supa: any, paymentId: string, amount: number, reason: string,
 ): Promise<boolean> {
   try {
     const secret = Deno.env.get('PORTONE_API_SECRET')
@@ -52,7 +55,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId, slotId, creditPack } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -117,6 +120,68 @@ Deno.serve(async (req) => {
       const { data: rows } = await supa.from('credit_ledger').select('delta').eq('member_id', user.id)
       const balance = (rows || []).reduce((a, r) => a + (Number(r.delta) || 0), 0)
       return json({ ok: true, added: count, balance })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 매일 답변 프로그램 이용권 구매 (2026-07-30 · 체험판 없이 바로 유료 — 오너 확정)
+    // 신청(applications)이 아니라 program_enrollments 에 이용권을 넣는다.
+    // ═══════════════════════════════════════════════════════════════════
+    if (programId) {
+      // ⚠️ 누구에게 지급할지는 **body 가 아니라 JWT 로 정한다**(크레딧 충전과 같은 이유 —
+      //    body 의 회원 id 를 믿으면 남의 계정 지급·남의 결제 가로채기가 된다).
+      const auth = req.headers.get('Authorization') || ''
+      const asUser = createClient(
+        Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: auth } } },
+      )
+      const { data: { user } } = await asUser.auth.getUser()
+      if (!user) return json({ ok: false, error: 'not_authenticated' }, 401)
+
+      // 금액은 DB 가 신뢰 소스(브라우저가 보낸 금액 불신). price null=지급 전용 /
+      // 0 이하=판매 대상 아님 — admin 에서 가격을 바꾸면 재배포 없이 반영된다.
+      const { data: prog, error: progErr } = await supa.from('answer_programs')
+        .select('id, title, price, visible').eq('id', programId).maybeSingle()
+      if (progErr || !prog) return json({ ok: false, error: 'program_not_found' }, 400)
+      const progPrice = Number(prog.price)
+      if (!paymentId) return json({ ok: false, error: 'bad_request' }, 400)
+      if (!Number.isFinite(progPrice) || progPrice <= 0 || !prog.visible) {
+        return json({ ok: false, error: 'program_not_for_sale' }, 400)
+      }
+
+      // 같은 결제로 두 번 지급 방지(재시도·모바일 복귀 중복 호출 방어)
+      const { data: dupEnr } = await supa.from('program_enrollments')
+        .select('id').eq('payment_id', paymentId).maybeSingle()
+      if (dupEnr) return json({ ok: true, already: true })
+
+      const pSecret = Deno.env.get('PORTONE_API_SECRET')
+      const pRes = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
+        headers: { Authorization: `PortOne ${pSecret}` },
+      })
+      if (!pRes.ok) return json({ ok: false, error: 'lookup_failed' }, 502)
+      const pPay = await pRes.json()
+      if (pPay.status !== 'PAID') return json({ ok: false, error: 'not_paid', status: pPay.status }, 402)
+      if (pPay?.amount?.total !== progPrice) {
+        return json({ ok: false, error: 'amount_mismatch', paid: pPay?.amount?.total, expected: progPrice }, 402)
+      }
+
+      // 검증 통과 → 이용권 지급. unique(program_id, member_id) 가 최종 방어다.
+      const { error: enrErr } = await supa.from('program_enrollments').insert({
+        program_id: prog.id, member_id: user.id, source: 'purchase',
+        payment_id: paymentId, status: 'active',
+      })
+      if (enrErr) {
+        // 이미 이용권이 있는데 또 결제 — 특강 중복(MC002)과 같은 처리: 전액 자동 환불 + HTTP 200
+        // (non-2xx 면 브라우저가 환불 사실을 안내하지 못한다 — 위 주석과 같은 이유).
+        if (enrErr.code === '23505' || String(enrErr.message).includes('duplicate key')) {
+          const refunded = await refundAll(supa, paymentId, progPrice, '답변 프로그램 중복 구매 · 자동 환불')
+          return json({ ok: false, error: 'already_enrolled', refunded })
+        }
+        console.error('enrollment insert failed', enrErr.message)
+        // 결제는 승인됐는데 지급을 못 했다(마이그레이션 미적용 등) — 돈만 나간 상태를 남기지 않는다.
+        const refunded = await refundAll(supa, paymentId, progPrice, '이용권 지급 실패 · 자동 환불')
+        return json({ ok: false, error: 'grant_failed', refunded })
+      }
+      return json({ ok: true, program: prog.title })
     }
 
     // 결제 대상 판별: lectureId 가 있으면 '특강 1건', 없으면 기존 '챌린지 N개'.

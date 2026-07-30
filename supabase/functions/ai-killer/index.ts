@@ -31,6 +31,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// 타입 전용 별칭 — esm.sh 의 supabase-js@2 는 마이너 버전에 따라 제네릭 기본값이 움직여
+// deno check 가 흔들린다(스키마 미지정이 never 로 떨어지면 insert/rpc 인자가 전부 타입 에러).
+// 이 파일은 DB 스키마 타입을 안 쓰므로 클라이언트를 any 로 고정한다. 런타임 무영향.
+type SB = any
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -456,7 +461,7 @@ const Q_MATCH_MIN = 0.62   // 이 아래면 '다른 문항'으로 본다(보수�
  * ⚠️ 조회가 실패하면(마이그레이션 미적용) 조용히 넘어간다. 항공사 맥락만 빠진다.
  */
 async function airlineBrief(
-  admin: ReturnType<typeof createClient>, code: string, studentQ: string,
+  admin: SB, code: string, studentQ: string,
 ): Promise<{ brief: string; qMatched: boolean | null }> {
   if (!code || code === 'all' || !AIRLINES[code]) return { brief: '', qMatched: null }
   try {
@@ -737,7 +742,7 @@ async function polishFill(
  *    맥락 두 칸 때문에 본체를 잃는 셈이라, 실패하면 그 두 칸을 빼고 한 번 더 넣는다.
  *    (CLAUDE.md 의 '새 컬럼을 공용 select 에 넣지 말 것'과 같은 방어. 여기선 insert 쪽이다.)
  */
-async function saveCheck(admin: ReturnType<typeof createClient>, row: Record<string, unknown>) {
+async function saveCheck(admin: SB, row: Record<string, unknown>) {
   const { error } = await admin.from('ai_killer_checks').insert(row)
   if (!error) return null
   if (row.question == null && row.doc_kind == null) return error   // 맥락이 없으면 그 문제가 아니다
@@ -801,7 +806,7 @@ Deno.serve(async (req) => {
   }
 
   let charged: { tool: string; ref: string } | null = null
-  let supa: ReturnType<typeof createClient> | null = null
+  let supa: SB | null = null
 
   try {
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
