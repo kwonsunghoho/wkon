@@ -679,6 +679,7 @@
             <div class="field"><label>예상 꼬리질문(줄바꿈 구분)</label>
               <textarea id="apqFollow" rows="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+              <div class="field"><label>난이도(1~5)</label><input id="apqDiff" type="number" min="1" max="5" placeholder="조립용"></div>
               <div class="field"><label>권장 분량</label><input id="apqLen" placeholder="예: 400~600자"></div>
               <div class="field"><label>답변 시간(초)</label><input id="apqSec" type="number" min="10" max="300"></div>
               <div class="field"><label>출제 시기</label><input id="apqWhen" placeholder="예: 2025 하반기"></div>
@@ -2692,7 +2693,7 @@
     // ── ① 기출 은행 ──
     function apqReset() {
       _apEditQ = null;
-      ['apqContent','apqStage','apqIntent','apqComp','apqNeed','apqGood','apqAvoid','apqMist','apqFollow','apqLen','apqSec','apqWhen','apqMemo']
+      ['apqContent','apqStage','apqIntent','apqComp','apqNeed','apqGood','apqAvoid','apqMist','apqFollow','apqDiff','apqLen','apqSec','apqWhen','apqMemo']
         .forEach(id => document.getElementById(id).value = '');
       document.getElementById('apqConf').value = 'reported';
       document.getElementById('apqSubmit').textContent = '기출 추가';
@@ -2714,7 +2715,7 @@
         <div class="round-item" style="${q.active ? '' : 'opacity:.55;'}">
           <div><div class="ri-main">${esc(q.content)}</div>
             <div class="ri-sub">${q.airline ? esc((LEC.AIRLINES[q.airline]||{}).ko || q.airline) : '공통'} ·
-              ${esc(AP_QTYPES[q.qtype] || q.qtype)}${q.stage ? ' · ' + esc(q.stage) : ''} ·
+              ${esc(AP_QTYPES[q.qtype] || q.qtype)}${q.stage ? ' · ' + esc(q.stage) : ''}${q.difficulty ? ' · 난이도 ' + q.difficulty : ''} ·
               ${q.source_confidence === 'verified' ? '검증' : q.source_confidence === 'estimated' ? '예상' : '제보'}${q.intent ? ' · 의도 있음' : ' · <b style="color:#A33D14">의도 비어 있음</b>'}</div></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
             <button class="ri-del apq-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
@@ -2743,6 +2744,7 @@
         document.getElementById('apqAvoid').value = q.avoid || '';
         document.getElementById('apqMist').value = q.common_mistakes || '';
         document.getElementById('apqFollow').value = (q.followups || []).join('\n');
+        document.getElementById('apqDiff').value = q.difficulty || '';
         document.getElementById('apqLen').value = q.rec_len || '';
         document.getElementById('apqSec').value = q.rec_seconds || '';
         document.getElementById('apqWhen').value = q.asked_at || '';
@@ -2778,6 +2780,7 @@
         avoid: document.getElementById('apqAvoid').value.trim() || null,
         common_mistakes: document.getElementById('apqMist').value.trim() || null,
         followups: document.getElementById('apqFollow').value.split('\n').map(s => s.trim()).filter(Boolean),
+        difficulty: Number(document.getElementById('apqDiff').value) || null,
         rec_len: document.getElementById('apqLen').value.trim() || null,
         rec_seconds: Number(document.getElementById('apqSec').value) || null,
         asked_at: document.getElementById('apqWhen').value.trim() || null,
@@ -2897,8 +2900,9 @@
       const byDay = {}; (days || []).forEach(d => byDay[d.day_no] = d);
       // 배치 후보: 그 항공사 기출 + 공통 기출
       const pool = _apQ.filter(q => q.active && (!q.airline || q.airline === p.airline));
+      // 난이도(D n)를 함께 보여준다 — 오너가 난이도를 보며 일차를 조립한다(2026-07-30).
       const opts = q => `<option value="">— 비움 —</option>` + pool.map(x =>
-        `<option value="${x.id}" ${q && q.question_id === x.id ? 'selected' : ''}>[${AP_QTYPES[x.qtype] || x.qtype}] ${esc(x.content.slice(0, 44))}</option>`).join('');
+        `<option value="${x.id}" ${q && q.question_id === x.id ? 'selected' : ''}>[${AP_QTYPES[x.qtype] || x.qtype}${x.difficulty ? '·D' + x.difficulty : ''}] ${esc(x.content.slice(0, 44))}</option>`).join('');
       let rows = '';
       for (let d = 1; d <= p.total_days; d++) {
         const cur = byDay[d];
