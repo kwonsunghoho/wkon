@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>승준노트 카드 리디자인 — 4안 비교 (2026-07-31)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* tokens.css 미로딩(파일 단독 열람) 대비 폴백 — 값은 2026-07-31 tokens.css 스냅샷 */
+  :root {
+    --accent: #1B3A6B; --accent-dark: #142C52; --accent-tint: #E5E9F1; --accent-ink: #1B3A6B;
+    --action: #1B3A6B; --action-dark: #142C52; --action-tint: #E5E9F1; --action-ink: #FFFFFF;
+    --action-on-dark: #A8C7F0;
+    --bg: #F4F1EA; --bg2: #FBF9F5; --bg3: #E7E1D3; --surface: #FFFFFF; --surface2: #F4F0E8;
+    --text: #26221C; --text-muted: #5F574B; --text-dim: #6C6454; --text-on-dark: #F5F1E8;
+    --border: rgba(38,34,28,.16); --border-soft: rgba(38,34,28,.09);
+    --radius-xs: 8px; --radius-sm: 14px; --radius-md: 20px; --radius-lg: 24px;
+    --space-1: 8px; --space-2: 16px; --space-3: 24px;
+    --fs-caption: 14px; --serif: 'SUIT Variable', SUIT, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+    background: #EDE9DF; color: var(--text); line-height: 1.6;
+    -webkit-font-smoothing: antialiased; word-break: keep-all; padding: 30px 18px 70px; }
+
+  .mk-head { max-width: 1240px; margin: 0 auto 30px; }
+  .mk-h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; color: var(--accent-dark); }
+  .mk-lead { font-size: 15px; color: var(--text-muted); margin-top: 10px; max-width: 60em; }
+  .mk-lead b { color: var(--accent-ink); }
+
+  .mk-row { display: flex; flex-wrap: wrap; gap: 34px 26px; justify-content: center; max-width: 1240px; margin: 0 auto; }
+  .mk-col { width: 375px; flex: 0 0 auto; }
+  .mk-tag { display: flex; align-items: baseline; gap: 9px; margin-bottom: 4px; }
+  .mk-letter { font-family: var(--serif); font-size: 24px; font-weight: 900; color: var(--accent-dark); }
+  .mk-title { font-size: 16px; font-weight: 800; }
+  .mk-spec { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin-bottom: 12px; min-height: 3.1em; }
+  .mk-spec b { color: var(--text); }
+
+  /* 폰 프레임 — 375px 실폭 그대로 보여준다 */
+  .fr { width: 375px; border-radius: 30px; border: 1px solid rgba(38,34,28,.18);
+    box-shadow: 0 24px 48px -18px rgba(58,42,26,.35), 0 3px 8px rgba(58,42,26,.10);
+    background: var(--bg); overflow: hidden; }
+  .fr-inner { padding: 26px 20px 34px; }
+  .fr-hero { text-align: center; padding: 8px 0 20px; }
+  .fr-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+  .fr-title { font-family: var(--serif); font-size: 27px; font-weight: 700; color: var(--accent); letter-spacing: -.5px; margin-top: 7px; }
+
+  /* ══════════ ① 챌린지 카드형 — 레터프레스 그리드 ══════════
+     challenges.html .ch-* 규격 이식: 종이 그라디언트 + 갈빛 그림자 3겹 + 판화 플레이트.
+     사진 대신 몬크 창문을 판화로 얹는다(도구 = 창문 하나). */
+  .v1-list { display: grid; gap: var(--space-2); grid-template-columns: repeat(2, minmax(0,1fr)); grid-auto-rows: 1fr; }
+  .v1-card { display: flex; flex-direction: column; padding: var(--space-1) var(--space-1) 0;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(180deg, #FCF9F1 0%, #F3EEE1 100%);
+    border: 1px solid rgba(38,34,28,.11);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 3px rgba(58,42,26,.08), 0 18px 36px -14px rgba(58,42,26,.26);
+    text-decoration: none; color: var(--text); }
+  .v1-shot { display: flex; align-items: center; justify-content: center; position: relative;
+    flex: 0 0 auto; aspect-ratio: 4 / 3.1; border-radius: var(--radius-xs);
+    background: linear-gradient(180deg, #EFE9DA 0%, #E7E1D3 100%); }
+  .v1-shot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: inset 0 2px 5px rgba(38,34,28,.30), inset 0 0 0 1px rgba(38,34,28,.16); }
+  .v1-shot svg { width: 34%; height: auto; filter: drop-shadow(0 4px 9px rgba(14,46,105,.28)); }
+  .v1-body { display: flex; flex-direction: column; flex: 1; padding: 11px 4px 13px; }
+  .v1-no { font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+  .v1-name { font-family: var(--serif); font-weight: 700; font-size: 17px; line-height: 1.3; letter-spacing: .02em; margin-top: 5px; }
+  .v1-line { margin-top: 5px; font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+  .v1-line em { font-style: normal; font-weight: 700; color: var(--text); }
+
+  /* ══════════ ② 보딩패스형 — 절취선 티켓 ══════════ */
+  .v2-list { display: flex; flex-direction: column; gap: 14px; }
+  .v2-card { position: relative; display: flex; text-decoration: none; color: var(--text);
+    border-radius: var(--radius-sm); overflow: hidden;
+    background: linear-gradient(180deg, #FCF9F1 0%, #F4EFE2 100%);
+    border: 1px solid rgba(38,34,28,.13);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 2px 3px rgba(58,42,26,.07), 0 14px 30px -14px rgba(58,42,26,.24); }
+  .v2-main { flex: 1 1 auto; min-width: 0; padding: 16px 14px 15px 18px; }
+  .v2-route { display: flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 800; letter-spacing: .14em; color: var(--text-dim);
+    text-transform: uppercase; font-variant-numeric: tabular-nums; }
+  .v2-route i { font-style: normal; color: var(--accent-ink); }
+  .v2-name { display: block; font-family: var(--serif); font-size: 18px; font-weight: 700; margin-top: 5px; }
+  .v2-desc { display: block; font-size: 13.5px; line-height: 1.55; color: var(--text-muted); margin-top: 5px; }
+  .v2-stub { flex: 0 0 92px; position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 7px;
+    border-left: 2px dashed rgba(38,34,28,.24); background: rgba(255,255,255,.42); }
+  /* 절취 펀치 — 카드 overflow:hidden 이 원을 반달로 잘라 준다 */
+  .v2-stub::before, .v2-stub::after { content: ""; position: absolute; left: -10px; width: 19px; height: 19px;
+    border-radius: 50%; background: var(--bg); border: 1px solid rgba(38,34,28,.16); }
+  .v2-stub::before { top: -10px; } .v2-stub::after { bottom: -10px; }
+  .v2-stub svg { width: 27px; height: 37px; filter: drop-shadow(0 2px 5px rgba(14,46,105,.20)); }
+  .v2-code { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .v2-bar { width: 44px; height: 9px; opacity: .55;
+    background: repeating-linear-gradient(to right, #26221C 0 1px, transparent 1px 3px, #26221C 3px 5px, transparent 5px 6px); }
+
+  /* ══════════ ③ 출발 전광판형 — 다크 관제 보드 ══════════ */
+  .v3-board { border-radius: var(--radius-lg); overflow: hidden;
+    background: linear-gradient(180deg, #1B3A6B 0%, #12306B 58%, #142C52 100%);
+    border: 1px solid rgba(20,44,82,.5);
+    box-shadow: 0 22px 44px -16px rgba(20,44,82,.55), inset 0 1px 0 rgba(255,255,255,.10); }
+  .v3-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px 13px; border-bottom: 1px solid rgba(245,241,232,.16); }
+  .v3-ttl { font-size: 12px; font-weight: 800; letter-spacing: .26em; color: var(--action-on-dark); }
+  .v3-live { display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; color: rgba(245,241,232,.75); }
+  .v3-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--action-on-dark); }
+  .v3-row { display: flex; align-items: center; gap: 13px; padding: 15px 18px;
+    min-height: 62px; text-decoration: none;
+    border-bottom: 1px solid rgba(245,241,232,.13); }
+  .v3-row:last-child { border-bottom: 0; }
+  .v3-no { flex: 0 0 auto; font-size: 13px; font-weight: 800; letter-spacing: .1em;
+    color: rgba(245,241,232,.55); font-variant-numeric: tabular-nums; }
+  .v3-cell { flex: 1 1 auto; min-width: 0; }
+  .v3-name { display: block; font-size: 16px; font-weight: 700; color: var(--text-on-dark); letter-spacing: .01em; }
+  .v3-sub { display: block; font-size: 12.5px; color: rgba(245,241,232,.72); margin-top: 2px; }
+  .v3-st { flex: 0 0 auto; text-align: right; }
+  .v3-remark { display: block; font-size: 12px; font-weight: 800; letter-spacing: .12em; color: var(--action-on-dark); }
+  .v3-go { display: block; font-size: 15px; color: rgba(245,241,232,.6); margin-top: 1px; }
+
+  /* ══════════ ④ 매거진 목차형 — 에디토리얼 인덱스 ══════════ */
+  .v4-wrap { border-top: 2px solid var(--accent-dark); }
+  .v4-cap { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 2px 4px; }
+  .v4-cap b { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+  .v4-cap span { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .v4-item { position: relative; display: flex; gap: 15px; align-items: flex-start;
+    padding: 19px 2px 20px; text-decoration: none; color: var(--text);
+    border-bottom: 1px solid var(--border-soft); }
+  .v4-no { flex: 0 0 auto; font-family: var(--serif); font-size: 21px; font-weight: 800;
+    color: var(--accent-dark); font-variant-numeric: tabular-nums; line-height: 1.15; width: 34px; }
+  .v4-no small { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .14em; color: var(--text-dim); margin-top: 2px; }
+  .v4-cell { flex: 1 1 auto; min-width: 0; }
+  .v4-namewrap { display: flex; align-items: baseline; gap: 10px; }
+  .v4-name { font-family: var(--serif); font-size: 19px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+  .v4-dots { flex: 1 1 auto; border-bottom: 2px dotted rgba(38,34,28,.28); transform: translateY(-4px); min-width: 18px; }
+  .v4-go { flex: 0 0 auto; font-size: 16px; color: var(--accent-dark); opacity: .7; transform: translateY(1px); }
+  .v4-desc { display: block; font-size: 13.5px; line-height: 1.58; color: var(--text-muted); margin-top: 5px; max-width: 26em; }
+
+  .mk-note { max-width: 1240px; margin: 40px auto 0; font-size: 14px; color: var(--text-muted); }
+  .mk-note h2 { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .mk-note li { margin: 6px 0 6px 18px; }
+  .mk-note b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- 창문 심볼 스프라이트 — briefing.html 원본 그대로(실측 기하, 다시 그리지 말 것) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mwSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0F3171"/><stop offset=".20" stop-color="#B3B5D0"/>
+      <stop offset=".35" stop-color="#D2C1C7"/><stop offset=".50" stop-color="#F9D4BD"/>
+      <stop offset=".65" stop-color="#FED5AF"/><stop offset=".82" stop-color="#988CA1"/>
+      <stop offset="1" stop-color="#102F67"/>
+    </linearGradient>
+    <linearGradient id="mwVig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0E2E69" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#0E2E69" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#0E2E69" stop-opacity=".62"/>
+    </linearGradient>
+    <clipPath id="mwOp"><rect x="1.60" y="1.60" width="11.94" height="17.80" rx="3.73" ry="4.49"/></clipPath>
+    <g id="mwShell">
+      <rect x="0" y="0" width="15.14" height="21" rx="5.33" ry="6.09" fill="#0E2E69"/>
+      <g clip-path="url(#mwOp)">
+        <rect x="1.6" y="1.6" width="11.94" height="17.8" fill="url(#mwSky)"/>
+        <rect x="1.6" y="1.6" width="11.94" height="17.8" fill="url(#mwVig)"/>
+      </g>
+    </g>
+    <g id="mwSlot"><rect x="4.49" y="1.67" width="6.16" height="1" rx=".5" fill="#F1E9D9" opacity=".92"/></g>
+    <symbol id="mw-news" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+      <g clip-path="url(#mwOp)">
+        <circle cx="9.6" cy="8.6" r="2.05" fill="#FFF6E4"/>
+        <path d="M1.6 15.1c1.9-2.1 3.4-2.1 5.1 0 1.5-2.6 3.2-2.6 4.6-.5 1-.9 2-.9 3.24.1v4.7H1.6Z" fill="#FFFFFF" opacity=".93"/>
+      </g><use href="#mwSlot"/></symbol>
+    <symbol id="mw-dig" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+      <path d="M7.57 6.1 9.33 9.34 12.57 11.1 9.33 12.86 7.57 16.1 5.81 12.86 2.57 11.1 5.81 9.34Z" fill="#FFFFFF"/>
+      <use href="#mwSlot"/></symbol>
+    <symbol id="mw-note" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+      <g stroke="#FFFFFF" stroke-width="1.35" stroke-linecap="round"><path d="M4.3 8.2h6.5M4.3 11.4h6.5M4.3 14.6h3.9"/></g>
+      <use href="#mwSlot"/></symbol>
+    <symbol id="mw-kill" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+      <circle cx="7.57" cy="11.1" r="3.55" fill="none" stroke="#FFFFFF" stroke-width="1"/>
+      <g stroke="#FFFFFF" stroke-width="1" stroke-linecap="round">
+        <path d="M2.92 11.1h2.2M10.02 11.1h2.2M7.57 6.45v2.2M7.57 13.55v2.2"/>
+      </g>
+      <circle cx="7.57" cy="11.1" r=".95" fill="#1B3A6B"/>
+      <use href="#mwSlot"/></symbol>
+    <symbol id="mw-polish" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+      <path d="M10.5 6.1 12.6 8.2 5.5 15.3 2.6 16.2 3.5 13.3Z" fill="#FFFFFF"/>
+      <path d="M9 7.6 11.1 9.7" fill="none" stroke="#1B3A6B" stroke-width="1" stroke-linecap="round"/>
+      <use href="#mwSlot"/></symbol>
+    <symbol id="mw-daily" viewBox="0 0 15.14 21"><use href="#mwShell"/>
+      <rect x="3.62" y="7.15" width="7.9" height="7.9" rx="1.3" fill="none" stroke="#FFFFFF" stroke-width="1.35"/>
+      <path d="M5.7 11.3 7.2 12.8 9.7 9.6" fill="none" stroke="#FFFFFF" stroke-width="1.35"
+        stroke-linecap="round" stroke-linejoin="round"/>
+      <use href="#mwSlot"/></symbol>
+  </defs>
+</svg>
+
+<header class="mk-head">
+  <h1 class="mk-h1">승준노트 카드 리디자인 — 4안 (2026-07-31)</h1>
+  <p class="mk-lead">여섯 도구(뉴스·기초 쌓기·답변노트·AI킬러·첨삭·매일 기출)를 어떤 옷으로 입힐지 4가지 방향.
+  전부 현행 팔레트(딥 네이비 on 웜 페이퍼)·활자 12px+·터치 44px+ 안에서 그렸다.
+  <b>이름·설명 문구는 예시</b> — 방향이 정해지면 확정 문구로 다시 다듬는다.</p>
+</header>
+
+<div class="mk-row">
+
+  <!-- ═══ ① 챌린지 카드형 ═══ -->
+  <section class="mk-col">
+    <div class="mk-tag"><span class="mk-letter">①</span><span class="mk-title">챌린지 카드형 — 레터프레스 그리드</span></div>
+    <p class="mk-spec"><b>챌린지 허브와 같은 종이 카드 문법.</b> 사진 자리엔 도구별 창문을 판화로. 사이트가 한 벌 옷이 되고 화면이 짧아진다. 대신 이름을 짧게 줄여야 하고 설명이 압축된다.</p>
+    <div class="fr"><div class="fr-inner">
+      <div class="fr-hero"><div class="fr-eyebrow">MONC NOTE</div><div class="fr-title">승준노트</div></div>
+      <div class="v1-list">
+        <a class="v1-card" href="#">
+          <span class="v1-shot"><svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-news"/></svg></span>
+          <span class="v1-body">
+            <span class="v1-no">01 · News</span>
+            <span class="v1-name">항공사 뉴스</span>
+            <span class="v1-line">흩어진 소식 → <em>면접 답변 재료</em></span>
+          </span>
+        </a>
+        <a class="v1-card" href="#">
+          <span class="v1-shot"><svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-dig"/></svg></span>
+          <span class="v1-body">
+            <span class="v1-no">02 · Base</span>
+            <span class="v1-name">답변 기초 쌓기</span>
+            <span class="v1-line">막막한 첫 줄 → <em>내 경험에서 시작</em></span>
+          </span>
+        </a>
+        <a class="v1-card" href="#">
+          <span class="v1-shot"><svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-note"/></svg></span>
+          <span class="v1-body">
+            <span class="v1-no">03 · Note</span>
+            <span class="v1-name">답변노트</span>
+            <span class="v1-line">카톡·메모장 → <em>한눈에 보는 노트</em></span>
+          </span>
+        </a>
+        <a class="v1-card" href="#">
+          <span class="v1-shot"><svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-kill"/></svg></span>
+          <span class="v1-body">
+            <span class="v1-no">04 · Scan</span>
+            <span class="v1-name">AI킬러</span>
+            <span class="v1-line">AI 같은 문장 → <em>밑줄로 진단</em></span>
+          </span>
+        </a>
+        <a class="v1-card" href="#">
+          <span class="v1-shot"><svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-polish"/></svg></span>
+          <span class="v1-body">
+            <span class="v1-no">05 · Edit</span>
+            <span class="v1-name">답변 첨삭</span>
+            <span class="v1-line">지금 문장 → <em>'이렇게'로 처방</em></span>
+          </span>
+        </a>
+        <a class="v1-card" href="#">
+          <span class="v1-shot"><svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-daily"/></svg></span>
+          <span class="v1-body">
+            <span class="v1-no">06 · Daily</span>
+            <span class="v1-name">매일 기출</span>
+            <span class="v1-line">하루 한 문제 → <em>근거 있는 답변</em></span>
+          </span>
+        </a>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ═══ ② 보딩패스형 ═══ -->
+  <section class="mk-col">
+    <div class="mk-tag"><span class="mk-letter">②</span><span class="mk-title">보딩패스형 — 절취선 티켓</span></div>
+    <p class="mk-spec"><b>도구 하나 = 탑승권 한 장.</b> 절취선·펀치 홀·바코드로 승무원 브랜드를 카드 자체가 말한다. 설명 줄이 살아 있어 지금처럼 도구를 소개할 수 있다.</p>
+    <div class="fr"><div class="fr-inner">
+      <div class="fr-hero"><div class="fr-eyebrow">MONC NOTE</div><div class="fr-title">승준노트</div></div>
+      <div class="v2-list">
+        <a class="v2-card" href="#">
+          <span class="v2-main">
+            <span class="v2-route">MONC NOTE <i>· 01</i></span>
+            <span class="v2-name">항공사 뉴스 모아보기</span>
+            <span class="v2-desc">국내 10개 항공사 소식을 한곳에서. 스크랩하면 답변 재료가 돼요.</span>
+          </span>
+          <span class="v2-stub">
+            <svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-news"/></svg>
+            <span class="v2-code">NEWS</span>
+            <span class="v2-bar"></span>
+          </span>
+        </a>
+        <a class="v2-card" href="#">
+          <span class="v2-main">
+            <span class="v2-route">MONC NOTE <i>· 02</i></span>
+            <span class="v2-name">답변 기초 쌓기</span>
+            <span class="v2-desc">차별화된 답변은 자기객관화에서부터, 우리 같이 만들어요.</span>
+          </span>
+          <span class="v2-stub">
+            <svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-dig"/></svg>
+            <span class="v2-code">BASE</span>
+            <span class="v2-bar"></span>
+          </span>
+        </a>
+        <a class="v2-card" href="#">
+          <span class="v2-main">
+            <span class="v2-route">MONC NOTE <i>· 03</i></span>
+            <span class="v2-name">답변노트</span>
+            <span class="v2-desc">카톡·메모장에 흩어진 준비, 한눈에 보는 노트로.</span>
+          </span>
+          <span class="v2-stub">
+            <svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-note"/></svg>
+            <span class="v2-code">NOTE</span>
+            <span class="v2-bar"></span>
+          </span>
+        </a>
+        <a class="v2-card" href="#">
+          <span class="v2-main">
+            <span class="v2-route">MONC NOTE <i>· 04</i></span>
+            <span class="v2-name">AI킬러</span>
+            <span class="v2-desc">AI 같은 표현을 찾아 밑줄로 짚어 드려요. 어디가 왜 그런지까지.</span>
+          </span>
+          <span class="v2-stub">
+            <svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-kill"/></svg>
+            <span class="v2-code">SCAN</span>
+            <span class="v2-bar"></span>
+          </span>
+        </a>
+        <a class="v2-card" href="#">
+          <span class="v2-main">
+            <span class="v2-route">MONC NOTE <i>· 05</i></span>
+            <span class="v2-name">답변 첨삭</span>
+            <span class="v2-desc">잘 쓴 문장은 지키고, 고칠 문장은 '지금 → 이렇게'로.</span>
+          </span>
+          <span class="v2-stub">
+            <svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-polish"/></svg>
+            <span class="v2-code">EDIT</span>
+            <span class="v2-bar"></span>
+          </span>
+        </a>
+        <a class="v2-card" href="#">
+          <span class="v2-main">
+            <span class="v2-route">MONC NOTE <i>· 06</i></span>
+            <span class="v2-name">매일 기출</span>
+            <span class="v2-desc">항공사 기출을 하루 한 문제씩, 근거 있게 완성해요.</span>
+          </span>
+          <span class="v2-stub">
+            <svg viewBox="0 0 15.14 21" aria-hidden="true"><use href="#mw-daily"/></svg>
+            <span class="v2-code">DAILY</span>
+            <span class="v2-bar"></span>
+          </span>
+        </a>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ═══ ③ 출발 전광판형 ═══ -->
+  <section class="mk-col">
+    <div class="mk-tag"><span class="mk-letter">③</span><span class="mk-title">출발 전광판형 — 다크 관제 보드</span></div>
+    <p class="mk-spec"><b>공항 Departures 보드 한 판.</b> 여섯 도구가 출발편처럼 걸린다. 시선을 확 잡고 홈 다크 무대와 톤이 이어진다. 대신 페이지 전체가 무거워질 수 있어 히어로는 밝게 남겼다.</p>
+    <div class="fr"><div class="fr-inner">
+      <div class="fr-hero"><div class="fr-eyebrow">MONC NOTE</div><div class="fr-title">승준노트</div></div>
+      <div class="v3-board">
+        <div class="v3-head"><span class="v3-ttl">DEPARTURES</span><span class="v3-live">지금 이용 가능</span></div>
+        <a class="v3-row" href="#">
+          <span class="v3-no">01</span>
+          <span class="v3-cell"><span class="v3-name">항공사 뉴스</span><span class="v3-sub">10개 항공사 소식을 한곳에서</span></span>
+          <span class="v3-st"><span class="v3-remark">NEWS</span><span class="v3-go">→</span></span>
+        </a>
+        <a class="v3-row" href="#">
+          <span class="v3-no">02</span>
+          <span class="v3-cell"><span class="v3-name">답변 기초 쌓기</span><span class="v3-sub">자기객관화에서 시작하는 답변</span></span>
+          <span class="v3-st"><span class="v3-remark">BASE</span><span class="v3-go">→</span></span>
+        </a>
+        <a class="v3-row" href="#">
+          <span class="v3-no">03</span>
+          <span class="v3-cell"><span class="v3-name">답변노트</span><span class="v3-sub">흩어진 준비를 한눈에</span></span>
+          <span class="v3-st"><span class="v3-remark">NOTE</span><span class="v3-go">→</span></span>
+        </a>
+        <a class="v3-row" href="#">
+          <span class="v3-no">04</span>
+          <span class="v3-cell"><span class="v3-name">AI킬러</span><span class="v3-sub">AI 같은 문장을 밑줄로 진단</span></span>
+          <span class="v3-st"><span class="v3-remark">SCAN</span><span class="v3-go">→</span></span>
+        </a>
+        <a class="v3-row" href="#">
+          <span class="v3-no">05</span>
+          <span class="v3-cell"><span class="v3-name">답변 첨삭</span><span class="v3-sub">'지금 → 이렇게'로 처방</span></span>
+          <span class="v3-st"><span class="v3-remark">EDIT</span><span class="v3-go">→</span></span>
+        </a>
+        <a class="v3-row" href="#">
+          <span class="v3-no">06</span>
+          <span class="v3-cell"><span class="v3-name">매일 기출</span><span class="v3-sub">하루 한 문제, 근거 있는 답변</span></span>
+          <span class="v3-st"><span class="v3-remark">DAILY</span><span class="v3-go">→</span></span>
+        </a>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ═══ ④ 매거진 목차형 ═══ -->
+  <section class="mk-col">
+    <div class="mk-tag"><span class="mk-letter">④</span><span class="mk-title">매거진 목차형 — 에디토리얼 인덱스</span></div>
+    <p class="mk-spec"><b>잡지 목차처럼 번호·점선·헤어라인으로만.</b> 카드 상자를 걷어내 가장 조용하고 어른스럽다. 손맛은 덜하지만 도구가 늘어도 줄만 늘면 된다.</p>
+    <div class="fr"><div class="fr-inner">
+      <div class="fr-hero"><div class="fr-eyebrow">MONC NOTE</div><div class="fr-title">승준노트</div></div>
+      <div class="v4-wrap">
+        <div class="v4-cap"><b>INDEX</b><span>6 TOOLS</span></div>
+        <a class="v4-item" href="#">
+          <span class="v4-no">01<small>NEWS</small></span>
+          <span class="v4-cell">
+            <span class="v4-namewrap"><span class="v4-name">항공사 뉴스</span><span class="v4-dots"></span><span class="v4-go">→</span></span>
+            <span class="v4-desc">국내 10개 항공사 소식을 한곳에서. 스크랩하면 답변 재료가 돼요.</span>
+          </span>
+        </a>
+        <a class="v4-item" href="#">
+          <span class="v4-no">02<small>BASE</small></span>
+          <span class="v4-cell">
+            <span class="v4-namewrap"><span class="v4-name">답변 기초 쌓기</span><span class="v4-dots"></span><span class="v4-go">→</span></span>
+            <span class="v4-desc">차별화된 답변은 자기객관화에서부터, 우리 같이 만들어요.</span>
+          </span>
+        </a>
+        <a class="v4-item" href="#">
+          <span class="v4-no">03<small>NOTE</small></span>
+          <span class="v4-cell">
+            <span class="v4-namewrap"><span class="v4-name">답변노트</span><span class="v4-dots"></span><span class="v4-go">→</span></span>
+            <span class="v4-desc">카톡·메모장에 흩어진 준비, 한눈에 보는 노트로.</span>
+          </span>
+        </a>
+        <a class="v4-item" href="#">
+          <span class="v4-no">04<small>SCAN</small></span>
+          <span class="v4-cell">
+            <span class="v4-namewrap"><span class="v4-name">AI킬러</span><span class="v4-dots"></span><span class="v4-go">→</span></span>
+            <span class="v4-desc">AI 같은 표현을 찾아 밑줄로 짚어 드려요.</span>
+          </span>
+        </a>
+        <a class="v4-item" href="#">
+          <span class="v4-no">05<small>EDIT</small></span>
+          <span class="v4-cell">
+            <span class="v4-namewrap"><span class="v4-name">답변 첨삭</span><span class="v4-dots"></span><span class="v4-go">→</span></span>
+            <span class="v4-desc">잘 쓴 문장은 지키고, 고칠 문장은 '지금 → 이렇게'로.</span>
+          </span>
+        </a>
+        <a class="v4-item" href="#">
+          <span class="v4-no">06<small>DAILY</small></span>
+          <span class="v4-cell">
+            <span class="v4-namewrap"><span class="v4-name">매일 기출</span><span class="v4-dots"></span><span class="v4-go">→</span></span>
+            <span class="v4-desc">항공사 기출을 하루 한 문제씩, 근거 있게 완성해요.</span>
+          </span>
+        </a>
+      </div>
+    </div></div>
+  </section>
+
+</div>
+
+<div class="mk-note">
+  <h2>공통 전제 · 판단 기준</h2>
+  <ul>
+    <li>네 안 모두 현행 팔레트·활자 12px+·행 높이 44px+ 유지. 창문 아이콘은 실측 기하 그대로(최소 27px — 슬롯이 뭉개지는 26px 아래 금지).</li>
+    <li><b>① 챌린지 카드형</b>: 사이트 전체가 한 벌이 되는 값이 가장 크다. 대신 긴 이름·설명을 줄여야 해 '도구 소개' 역할은 약해진다 — 챌린지처럼 이미 아는 사람이 고르는 화면에 맞는 문법.</li>
+    <li><b>② 보딩패스형</b>: 브랜드(승무원) 이야기를 카드가 직접 한다. 설명 줄이 살아 있어 처음 온 사람에게도 친절. 여섯 장 전부 같은 밀도라 화면은 현행만큼 길다.</li>
+    <li><b>③ 출발 전광판형</b>: 시선 장악력 1등, 화면 길이 최단. 다만 설명이 한 줄로 줄고, 페이지 전체 무게가 다크로 쏠린다.</li>
+    <li><b>④ 매거진 목차형</b>: 가장 조용하고 확장에 강하다. 다만 '눌리는 카드' 느낌이 약해 터치 유도는 셋보다 약하다.</li>
+    <li>결정되면: 선택안을 briefing.html에 실장 + 홈 티저(index.css `.bp-*`)와 톤 동기화 + 375px 실측. 이 파일은 결정 기록으로 남긴다.</li>
+  </ul>
+</div>
+
+</body>
+</html>
