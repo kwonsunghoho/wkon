@@ -118,6 +118,16 @@
               border: 1px solid var(--border-soft); color: var(--text-muted); }
     .notice.warn { background: rgba(158,59,52,.07); border-color: rgba(158,59,52,.3); color: #7E2F29; }
     .notice.good { background: rgba(46,110,66,.08); border-color: rgba(46,110,66,.3); color: #265C3B; }
+
+    /* 선택한 경험 표시 — 고른 뒤 화면들에서 계속 보인다(2026-07-30 오너 신고로 신설) */
+    .selexp { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
+              margin-top: 12px; padding: 10px 12px; background: rgba(27,58,107,.06);
+              border: 1px solid rgba(27,58,107,.18); border-radius: var(--radius-xs);
+              font-size: 14px; color: var(--text-muted); }
+    .selexp b { color: var(--accent-ink); font-weight: 800; }
+    .selexp button { margin-left: auto; min-height: 34px; padding: 0 12px; border-radius: 999px;
+                     border: 1px solid var(--border); background: var(--surface); font: inherit;
+                     font-size: 13px; font-weight: 800; cursor: pointer; }
     .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(20,30,50,.2);
             border-top-color: var(--accent-ink); border-radius: 50%; animation: sp .7s linear infinite;
             vertical-align: -2px; margin-right: 6px; }
@@ -297,9 +307,27 @@
     var DAY = null;        // 현재 일차 객체
     var SESS = null;       // 현재 세션 행
     var USER = null;
+    var CARDS = [];        // 내 경험 카드(제목 표시용 캐시)
     var lastRevise = null; // 마지막 revise 응답(또는 버전에서 복원)
     var chosen = 'ai_tone';
     var busy = false;
+
+    /* 선택한 경험을 뒤 단계에서도 보여준다(2026-07-30 오너: "고른 경험이 그 뒤에 안 나온다") */
+    function selChipsHtml(withChange) {
+      var sel = (SESS && SESS.selected_cards) || [];
+      if (!sel.length) return '';
+      var names = sel.map(function (id) {
+        var c = CARDS.filter(function (x) { return x.id === id; })[0];
+        return c ? c.title : '경험';
+      });
+      return '<div class="selexp"><span>이 경험으로 답해요 — ' +
+        names.map(function (n) { return '<b>' + esc(n) + '</b>'; }).join(', ') + '</span>' +
+        (withChange ? '<button type="button" id="btnChangeExp">경험 바꾸기</button>' : '') + '</div>';
+    }
+    function wireChangeExp(box) {
+      var b = box.querySelector('#btnChangeExp');
+      if (b) b.addEventListener('click', function () { setState('experience_selecting'); });
+    }
 
     /* ── 유틸 ── */
     function setSave(msg) { $('snSave').textContent = msg || ''; }
@@ -488,6 +516,7 @@
       box.innerHTML = '<div class="blk"><div class="blk-t">부족한 사실 채우기</div>' +
         '<div class="blk-s">답변을 쓰기 전에, 빠진 사실을 한두 개씩 물어볼게요. ' +
         '기억나지 않으면 그렇게 답해도 돼요 — 지어내는 것보다 나아요.</div>' +
+        selChipsHtml(true) +
         '<div id="qaDone"></div><div id="qaNow"></div>' +
         '<button class="cta ghost sub" id="btnAsk">질문 받기</button>' +
         '<button class="cta" id="btnToDraft">이제 초안 쓰기</button></div>';
@@ -545,6 +574,7 @@
 
       box.querySelector('#btnAsk').addEventListener('click', ask);
       box.querySelector('#btnToDraft').addEventListener('click', function () { setState('student_drafting'); });
+      wireChangeExp(box);
       ask();   // 들어오자마자 첫 질문
       return box;
     }
@@ -556,6 +586,7 @@
       box.innerHTML = '<div class="blk"><div class="blk-t">내 초안 쓰기</div>' +
         '<div class="blk-s">완벽하지 않아도 돼요. <b>실제 있었던 일</b>을 내 말로 먼저 적는 게 시작이에요.' +
         (qt.structure ? '<br>이 유형의 흐름 참고: <b>' + esc(q.structure_hint || qt.structure) + '</b>' : '') + '</div>' +
+        selChipsHtml(true) +
         '<textarea class="draft-ta" id="draftTa" placeholder="실제 겪은 일을, 평소 말하듯 적어 주세요 (60자 이상)"></textarea>' +
         '<div class="draft-foot"><span id="draftCnt">0자</span><span id="draftSaved"></span></div>' +
         '<div id="draftNote"></div>' +
@@ -598,6 +629,19 @@
           box.querySelector('#draftNote').innerHTML = '<div class="notice warn">' + esc((r && r.error) || '첨삭에 실패했어요. 글은 저장돼 있어요.') + '</div>';
           return;
         }
+        // 동문서답 게이트(2026-07-30) — 질문과 다른 답이면 다듬지 않고 되돌린다.
+        // 서버가 버전을 저장하지 않았으므로 하루 3회에서도 차감되지 않는다.
+        if (r.mismatch) {
+          b.disabled = false; b.textContent = 'AI 첨삭 받기 — 내가 쓴 사실만으로';
+          var qq = Q();
+          box.querySelector('#draftNote').innerHTML =
+            '<div class="notice warn"><b>이 글은 질문과 다른 답변 같아요.</b><br>' +
+            esc((r.fit_check && r.fit_check.note) || '') +
+            '<br><br>질문이 묻는 것: <b>' + esc(qq ? (qq.intent || qq.content) : '') + '</b>' +
+            '<br>이 질문에 맞는 이야기로 고쳐서 다시 받아 보세요. (횟수는 차감되지 않았어요)</div>';
+          box.querySelector('#draftNote').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
         lastRevise = r;
         lastRevise._sources = r.sources || [];
         SESS.state = 'ai_revised';
@@ -605,6 +649,7 @@
         rerenderFlow();
       });
       box.querySelector('#btnBackSel').addEventListener('click', function () { setState('experience_selecting'); });
+      wireChangeExp(box);
       return box;
     }
 
@@ -642,6 +687,7 @@
       var savedEdit = loadEdit();
 
       var factHtml = '<div class="blk"><div class="blk-t">확인된 사실 정리</div>' +
+        selChipsHtml(false) +
         (fs.confirmed.length ? '<div class="blk-s">' + fs.confirmed.map(function (f) { return '· ' + esc(f.text); }).join('<br>') + '</div>' : '<div class="blk-s">정리된 사실이 없어요.</div>') +
         (fs.missing && fs.missing.length ? '<div class="notice">아직 확인 안 된 것 — ' + fs.missing.map(esc).join(' / ') + '<br>이 부분은 답변에 넣지 않았어요. 채우려면 <b>사실 더 모으기</b>로.</div>' : '') +
         (fs.conflicts && fs.conflicts.length ? '<div class="notice warn">서로 어긋나는 내용 — ' + fs.conflicts.map(esc).join(' / ') + '</div>' : '') +
@@ -1077,6 +1123,11 @@
         renderDays(); return;
       }
       stage.innerHTML = '<div class="loading">여는 중…</div>';
+      // 선택 경험 제목 표시용 카드 캐시(한 번만)
+      if (!CARDS.length) {
+        var cc = await AP.store.listCards();
+        CARDS = (cc && cc.notReady) ? [] : cc;
+      }
       var sess = await AP.store.getOrCreateSession(PID, dayNo, DAY.question.id);
       if (!sess || sess._error) {
         var m = sess && sess._error ? (sess._error.message || '') : '';

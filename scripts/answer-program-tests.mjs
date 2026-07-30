@@ -218,6 +218,9 @@ ok('INFERRED 사실은 근거에서 제외', /'inferred', 'disputed', 'rejected'
 ok('초안 최소 길이(대필 방지)', /MIN_DRAFT_CHARS = 60/.test(serverSrc));
 ok('프로브(FN_VERSION) 존재', /FN_VERSION = '/.test(serverSrc));
 ok('하루 상한(revise) 존재', /MAX_REVISE_PER_DAY/.test(serverSrc));
+// 동문서답 게이트(2026-07-30 오너 신고) — 질문과 다른 답을 다듬어 주면 안 된다
+ok('동문서답 게이트(fit_gate) 존재', /fit_gate/.test(serverSrc) && /mismatch: true/.test(serverSrc));
+ok('동문서답이면 두 버전 생략 지시', /빈 배열로/.test(serverSrc) && /fits === false/.test(serverSrc));
 
 console.log('\n결과: ' + pass + ' 통과 / ' + fail + ' 실패');
 process.exit(fail ? 1 : 0);

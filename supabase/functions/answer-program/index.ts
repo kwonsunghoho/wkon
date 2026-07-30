@@ -37,7 +37,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // ⚠️ 코드를 고치면 여기도 올린다 — 배포 상태를 밖에서 아는 유일한 길(ai-killer 관례).
-const FN_VERSION = '2026-07-30a'
+const FN_VERSION = '2026-07-30b'
 const FN_FEATURES = [
   'recommend',        // 질문에 맞는 경험 카드 추천
   'followup',         // 부족한 사실을 묻는 추가 질문
@@ -47,6 +47,7 @@ const FN_FEATURES = [
   'cliche_selfcheck', // 감점 사전으로 자기 출력 재검사
   'tone_profile',     // 말투 프로필 반영
   'airline_profiles', // 항공사 합격 패턴 참조(레퍼런스≠정답 규칙 포함)
+  'fit_gate',         // 동문서답이면 다듬지 않고 되돌린다(2026-07-30b — 오너 신고)
 ]
 const PROMPT_VERSION = 'ap-2026-07-30a'   // answer_versions.meta 에 기록 — 학습 데이터 추적용
 
@@ -627,8 +628,12 @@ Deno.serve(async (req) => {
 [할 일 — 단계 그대로]
 1. fact_summary: 자료에서 **확인된 사실만** 목록으로. 각 항목에 근거 id(ev). 자료에 없는데
    답변에 필요해 보이는 것은 missing 에, 자료끼리 어긋나는 것은 conflicts 에.
-2. fit_check: 이 경험이 이 질문에 맞는지. 안 맞으면 fits=false 로 두고 note 에 이유 —
-   억지로 맞추지 마라.
+2. fit_check: **학생 초안이 이 질문에 대한 답인지** 먼저 판정하라. 질문이 묻는 것과
+   완전히 다른 이야기면 fits=false, note 에 "질문은 ~을 묻는데 이 글은 ~ 이야기예요"를
+   한 문장으로. ⚠️ fits=false 면 tone_keep 과 delivery 를 **빈 배열로** 두라 —
+   동문서답을 다듬어 주면 학생이 그 답을 외워 면접장에서 틀린다.
+   방향은 맞는데 초점이 흐린 정도면 fits=true 로 두고 scores.notes 에 짚어라.
+   고른 경험이 질문과 안 맞는 경우도 note 에 함께 말하라.
 3. tone_keep(말투 유지형): 학생의 원래 문장·표현을 최대한 살려 다듬은 버전.
 4. delivery(전달력 강화형): 같은 사실·같은 말투 범위 안에서 면접 전달력을 높인 버전.
    두 버전 모두 문장 단위 배열이고, **모든 문장에 근거 id(ev)를 단다.**
@@ -677,6 +682,24 @@ Deno.serve(async (req) => {
           }],
         })
         bad = apClicheHits(joinAll(out.parsed), clicheTerms)
+      }
+
+      // ── 동문서답 게이트(fit_gate · 2026-07-30 오너 신고 "다른 답을 기계처럼 평가만 한다") ──
+      // 질문과 다른 답이면 다듬지 않고 되돌린다. ai_tone 버전을 저장하지 않으므로
+      // 하루 상한(MAX_REVISE_PER_DAY)도 차감되지 않는다. 세션 상태도 그대로 둔다.
+      {
+        // deno-lint-ignore no-explicit-any
+        const fc = (out.parsed as any).fit_check
+        if (fc && fc.fits === false) {
+          await admin.from('answer_versions').insert({
+            session_id: session.id, member_id: user.id, kind: 'fact_summary', author: 'ai',
+            content: '[질문 불일치] ' + String(fc.note || ''),
+            meta: { model: MODEL_HEAVY, prompt_version: PROMPT_VERSION, usage: out.usage,
+                    fit_check: fc, mismatch: true },
+          })
+          console.log('revise mismatch', { session: session.id })
+          return json({ ok: true, mismatch: true, fit_check: fc })
+        }
       }
 
       // ── 근거 검증(서버가 심판) — AI 자평이 아니라 측정값 ────────────────
