@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>미니 다듬기(quickfix) UI 목업 — 2026-07-31</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;}
+  body{font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+    background:var(--bg,#F4F1EA);color:var(--text,#26221C);margin:0;padding:28px 18px 80px;
+    max-width:520px;margin:0 auto;line-height:1.6;word-break:keep-all;}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--accent-ink,#1B3A6B);
+    text-transform:uppercase;margin:0 0 6px;}
+  h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 8px;line-height:1.3;}
+  .lede{font-size:14px;color:var(--text-muted,#736E64);margin:0 0 26px;}
+  h2{font-size:16px;font-weight:800;margin:38px 0 4px;}
+  .sub{font-size:13px;color:var(--text-muted,#736E64);margin:0 0 12px;}
+  .note{font-size:12.5px;color:var(--text-muted,#736E64);background:var(--bg2,#FBF9F5);
+    border:1px dashed var(--border-soft,#DAD3C4);border-radius:10px;padding:10px 12px;margin:10px 0 0;}
+  /* 미니 폰 프레임 — 배치 위치 설명용 */
+  .frame{background:var(--surface,#fff);border:1px solid var(--border-soft,#DAD3C4);
+    border-radius:18px;padding:16px 14px;margin:12px 0 0;}
+  .frame .ft{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text-dim,#9A948A);
+    text-transform:uppercase;margin:0 0 10px;}
+  .sk{background:var(--bg2,#F4F1EA);border-radius:8px;}
+  .sk-title{width:60%;height:18px;margin-bottom:10px;}
+  .sk-card{height:52px;margin-bottom:8px;border:1px solid var(--border-soft,#EDE8DC);}
+  .sk-btn{height:48px;border-radius:12px;background:var(--action,#1B3A6B);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;margin-bottom:4px;}
+  .sk-ta{height:84px;border:1px solid var(--border-soft,#EDE8DC);margin-bottom:8px;}
+  .sk-bub{height:34px;width:75%;border-radius:14px;margin-bottom:8px;border:1px solid var(--border-soft,#EDE8DC);}
+  .sk-bub.me{margin-left:auto;background:var(--action-tint,#E4ECF8);}
+  .sk-field{height:44px;border-radius:18px;border:1px solid var(--border-soft,#DAD3C4);
+    background:var(--bg2,#FBF9F5);margin-top:6px;}
+  .arrow-tag{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:#B4552D;
+    border-radius:6px;padding:2px 7px;margin:8px 0 2px;}
+  /* 시트 상태 스냅샷 — 실제 .qf-* 클래스를 정적 배치로 재사용 */
+  .snap .qf-box{position:static;border:1px solid var(--border-soft,#DAD3C4);border-radius:20px;
+    animation:none;max-height:none;margin-top:10px;box-shadow:0 10px 24px rgba(20,32,46,.08);}
+  .divider{height:1px;background:var(--border-soft,#DAD3C4);margin:34px 0;}
+  /* admin 미리보기 */
+  .adm{background:var(--surface,#fff);border:1px solid var(--border-soft,#DAD3C4);
+    border-radius:14px;padding:14px;margin-top:12px;}
+  .adm .row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:10px 2px;border-bottom:1px solid var(--border-soft,#EDE8DC);}
+  .adm .row:last-child{border-bottom:none;}
+  .adm .t{font-size:14px;font-weight:800;}
+  .adm .s{font-size:12px;color:var(--text-muted,#736E64);margin-top:2px;}
+  .adm .reg{flex:none;font-size:12px;font-weight:800;color:var(--accent-ink,#1B3A6B);
+    border:1.5px solid var(--accent-dark,#142C52);border-radius:999px;padding:7px 12px;background:#fff;}
+  .try{display:inline-block;font-size:13px;font-weight:800;color:var(--accent-ink,#1B3A6B);}
+</style>
+</head>
+<body>
+  <p class="eyebrow">MOCKUP · 2026-07-31</p>
+  <h1>미니 다듬기 — 화면이 이렇게 들어갑니다</h1>
+  <p class="lede">아래 티저는 <b>실제 컴포넌트(quickfix.js)가 그대로 도는 것</b>이라 눌러서 끝까지 체험할 수 있어요(서버 응답만 샘플). 흐름: 티저 한 줄 → 바텀시트 입력 → '지금 → 이렇게' 결과.</p>
+
+  <!-- ══ 1. 눌러보기 ══ -->
+  <h2>① 직접 눌러보세요</h2>
+  <p class="sub">기본형 티저 — 답변노트·KILL AI에 이 모양으로 들어갑니다.</p>
+  <div id="quickfix-mount" data-source="answers"></div>
+  <p class="sub" style="margin-top:16px;">글자 링크형(compact) — 소재 발굴 채팅 하단엔 이 한 줄만.</p>
+  <div id="c2"></div>
+  <p class="note">입력 예시로 <b>"저는 다양한 경험을 통해 소통의 중요성을 깨달았습니다"</b> 같은 문장을 넣어 보세요. 10자 이상이면 버튼이 켜져요.</p>
+
+  <div class="divider"></div>
+
+  <!-- ══ 2. 어디에 놓이나 ══ -->
+  <h2>② 각 페이지 배치 위치</h2>
+  <p class="sub">기존 흐름을 막지 않게 전부 <b>본문 맨 아래 한 줄</b>입니다.</p>
+
+  <div class="frame">
+    <p class="ft">내 답변 저장소 (answers)</p>
+    <div class="sk sk-title"></div>
+    <div class="sk sk-card"></div>
+    <div class="sk sk-card"></div>
+    <div class="sk-btn">＋ 답변 추가하기</div>
+    <div style="font-size:11px;color:var(--text-dim,#9A948A);text-align:center;margin-bottom:2px;">저장은 무제한 무료예요</div>
+    <span class="arrow-tag">↓ 여기</span>
+    <div id="t-answers"></div>
+  </div>
+
+  <div class="frame">
+    <p class="ft">KILL AI — 검사 입력 화면 (ai-killer)</p>
+    <div class="sk sk-title"></div>
+    <div class="sk sk-ta"></div>
+    <div class="sk-btn">KILL AI</div>
+    <span class="arrow-tag">↓ 충전 박스 아래</span>
+    <div id="t-killer"></div>
+    <p class="sub" style="margin:8px 0 0;font-size:12px;">결과 화면에는 안 나옵니다(하단 dock이 주인공).</p>
+  </div>
+
+  <div class="frame">
+    <p class="ft">소재 발굴 — 채팅 하단 (sojae)</p>
+    <div class="sk sk-bub"></div>
+    <div class="sk sk-bub me"></div>
+    <div class="sk sk-bub"></div>
+    <div class="sk-field"></div>
+    <div style="font-size:11px;color:var(--text-dim,#9A948A);text-align:center;margin-top:6px;">Enter 전송 · Shift+Enter 줄바꿈</div>
+    <span class="arrow-tag">↓ 맨 아래 한 줄</span>
+    <div id="t-sojae"></div>
+    <p class="sub" style="margin:6px 0 0;font-size:12px;">채팅이 눌리지 않게 카드 대신 글자 링크만.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══ 3. 시트 상태 ══ -->
+  <h2>③ 바텀시트 상태 한눈에</h2>
+  <p class="sub">①에서 눌러 본 그 시트의 각 상태를 펼쳐 둔 것.</p>
+
+  <div class="snap" id="snapForm"></div>
+  <div class="snap" id="snapResult"></div>
+  <div class="snap" id="snapLimit"></div>
+
+  <div class="divider"></div>
+
+  <!-- ══ 4. admin ══ -->
+  <h2>④ admin — 수집된 표현이 쌓이는 곳</h2>
+  <p class="sub">'감점 사전' 탭 하단 <b>회원 제보</b> — 표현별 빈도 순위. [사전 등록]을 누르면 위 사전 폼에 채워져요.</p>
+  <div class="adm">
+    <div style="font-size:13px;color:var(--text-muted,#736E64);margin-bottom:6px;">제보 128건 · 표현 후보 41개</div>
+    <div class="row"><div><div class="t">1. “다양한 경험”</div><div class="s">상투어 · 제보 23건 · 회원 17명 · 무엇을 했는지가 하나도 안 남는 말이에요.</div></div><span class="reg">사전 등록</span></div>
+    <div class="row"><div><div class="t">2. “소통의 중요성”</div><div class="s">문맥 · 제보 19건 · 회원 15명 · 지원서마다 나오는 결론이라 준비생 티가 나요.</div></div><span class="reg">사전 등록</span></div>
+    <div class="row"><div><div class="t">3. “최선을 다하”</div><div class="s">상투어 · 제보 14건 · 회원 12명 · 등록됨</div></div><span class="reg" style="opacity:.5;">폼에 채우기</span></div>
+    <div class="row"><div><div class="t">4. “첫째, 둘째”</div><div class="s">정형 구조 · 제보 11건 · 회원 9명 · 말할 때 이렇게 세는 사람은 없어요.</div></div><span class="reg">사전 등록</span></div>
+  </div>
+  <p class="note">자동 등록이 아니라 <b>폼 채우기까지만</b> — 어미를 어간으로 다듬어 저장해야 변형까지 잡혀요. 등록하면 킬러 검출·첨삭 기준에 재배포 없이 바로 반영.</p>
+
+<script>
+/* MONC 스텁 — 실제 quickfix.js 가 이 가짜 서버로 끝까지 돈다 */
+window.MONC = {
+  sb: {
+    auth: { getSession: function(){ return Promise.resolve({ data: { session: {} } }); } },
+    functions: { invoke: function(name, opts){
+      var body = (opts && opts.body) || {};
+      if (body.probe) return Promise.resolve({ data: { features: ['quickfix'], quickfix_table: 0, version: 'mockup' } });
+      return new Promise(function(res){ setTimeout(function(){ res({ data: {
+        ok: true, mode: 'quickfix',
+        fixed: '카페 아르바이트에서 컴플레인 손님을 응대하며 (그때 실제로 건넨 말)을 떠올렸고, 그 경험이 손님을 대하는 제 태도를 바꿨습니다.',
+        spotted: [
+          { term: '다양한 경험', kind: 'cliche', why: '무엇을 했는지가 하나도 안 남는 말이에요.' },
+          { term: '소통의 중요성', kind: 'context', why: '지원서마다 나오는 결론이라 준비생 티가 나요.' }
+        ],
+        remaining: 2
+      } }); }, 900); });
+    } },
+    from: function(){ return { insert: function(){ return { then: function(){} }; } }; }
+  }
+};
+</script>
+<script src="../quickfix.js"></script>
+<script>
+(function(){
+  /* 배치 프레임·compact 데모용 티저 복제(실제와 같은 마크업) */
+  function tease(elId, compact, source){
+    var m = document.getElementById(elId); if (!m) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'qf-tease' + (compact ? ' compact' : '');
+    b.innerHTML = compact
+      ? '<span class="qf-tease-t">AI 느낌 나는 구간, 무료로 다듬기 <span class="qf-tease-go">→</span></span>'
+      : '<span class="qf-tease-t">AI 느낌이 나는 구간, 붙여넣으면 다듬어드려요</span><span class="qf-tease-go">무료 →</span>';
+    b.addEventListener('click', function(){ MONC.openQuickfix(source); });
+    m.appendChild(b);
+  }
+  function boot(){
+    tease('c2', true, 'sojae');
+    tease('t-answers', false, 'answers');
+    tease('t-killer', false, 'killer');
+    tease('t-sojae', true, 'sojae');
+
+    /* 시트 상태 스냅샷 — 실제 시트와 같은 클래스 */
+    var head = '<p class="qf-eyebrow">FREE · 하루 3번</p>' +
+      '<h3>AI 느낌이 나는 구간,<br>붙여넣으면 다듬어드려요</h3>';
+    document.getElementById('snapForm').innerHTML = '<div class="qf-box">' + head +
+      '<p class="qf-lede">자소서나 답변에서 <b>어쩐지 AI 같은 한 구간</b>(300자까지)만 붙여넣어 보세요. 연구진 기준으로 자연스럽게 고쳐드려요.</p>' +
+      '<textarea class="qf-ta" readonly>저는 다양한 경험을 통해 소통의 중요성을 깨달았고, 최선을 다해 노력하는 사람이 되었습니다.</textarea>' +
+      '<p class="qf-cnt">49 / 300자</p>' +
+      '<p class="qf-fine">남긴 문장은 몬크 연구진이 검사 기준을 다듬는 데 써요. 더 넣을수록 검사가 똑똑해져요.</p>' +
+      '<button type="button" class="qf-go">다듬기</button></div>';
+    document.getElementById('snapResult').innerHTML = '<div class="qf-box">' + head +
+      '<div class="qf-lbl">지금</div>' +
+      '<div class="qf-was">저는 다양한 경험을 통해 소통의 중요성을 깨달았고, 최선을 다해 노력하는 사람이 되었습니다.</div>' +
+      '<div class="qf-lbl fix">이렇게</div>' +
+      '<div class="qf-now">카페 아르바이트에서 컴플레인 손님을 응대하며 <span class="qf-blank">(그때 실제로 건넨 말)</span>을 떠올렸고, 그 경험이 손님을 대하는 제 태도를 바꿨습니다.</div>' +
+      '<ul class="qf-spots">' +
+        '<li>“<b>다양한 경험</b>” — 무엇을 했는지가 하나도 안 남는 말이에요.</li>' +
+        '<li>“<b>소통의 중요성</b>” — 지원서마다 나오는 결론이라 준비생 티가 나요.</li></ul>' +
+      '<p class="qf-left">오늘 <b>2번</b> 더 다듬을 수 있어요. (괄호)는 내 이야기로 채워 주세요.</p>' +
+      '<div class="qf-acts"><button type="button">고친 문장 복사</button><button type="button">다른 구간 다듬기</button></div>' +
+      '<div class="qf-links"><a href="javascript:void 0">글 전체는 KILL AI로 검사하기 →</a><a href="javascript:void 0">문장까지 제대로 고치려면 첨삭 →</a></div></div>';
+    document.getElementById('snapLimit').innerHTML = '<div class="qf-box">' + head +
+      '<p class="qf-lede">오늘 무료 다듬기 3번을 다 썼어요. 내일 다시 열려요.</p>' +
+      '<div class="qf-links"><a href="javascript:void 0">글 전체는 KILL AI로 검사하기 →</a><a href="javascript:void 0">문장까지 제대로 고치려면 첨삭 →</a></div></div>';
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
