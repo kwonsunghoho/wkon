@@ -1,7 +1,7 @@
 # 매일 답변 프로그램 — 구현 상태 (2026-07-30 · 브랜치 airline-interview-program-mvp)
 
 기준: 오너 원본 스펙 `docs/monc-answer-program-spec.md` (참고용 원문 보존본).
-⚠️ **main 미푸시** — 테스트 후 병합 예정. 라이브 배포 전 필요한 3가지: ① 마이그레이션 실행 ② answer-program 함수 콘솔 배포 ③ privacy.html 고지 갱신.
+⚠️ **main 미푸시** — 테스트 후 병합 예정. 라이브 배포 전 3가지는 전부 해소(2026-07-30 프로브·코드 확인): ① 마이그레이션 실행 ✅(프로브 sessions_table:true) ② answer-program 함수 배포 ✅(version 2026-07-30b) ③ privacy.html 고지 갱신 ✅(이 브랜치 — 병합 시 반영). 프로브 기준 questions 99개(시드 10 + 오너 등록분) · programs 1개.
 
 ## 완료 조건(스펙 28항) 대조
 
@@ -47,7 +47,7 @@
 1. **Opus 실응답 품질 미검증** — 근거 검증기는 어떤 응답이 와도 unsupported 를 붙이지만, 두 버전의 품질 차·점수 타당성은 라이브 스팟체크(테스트 계획 3-5·9) 필요. 프롬프트 조정 시 PROMPT_VERSION 올릴 것.
 2. **연구원의 members 열람 범위** — 행 단위 RLS 한계로 이름 외 컬럼도 열린다(내부 인력 전제). 민감하면 후속으로 이름 전용 뷰 교체.
 3. **revise 원가** — effort high + 20k max_tokens. 실측(meta.usage) 후 상한·effort 조정 여지.
-4. **privacy.html 미갱신** — 라이브 전 필수(privacy-and-consent.md 하단).
+4. ~~privacy.html 미갱신~~ → **2026-07-30 갱신 완료**(수집 항목·이용 목적·보유 기간·Anthropic 위탁·국외 이전 + 선택 동의 고지). 오너 최종 확인만 남음(privacy-and-consent.md 하단).
 5. 데모 모드 흔적 — localStorage 기반이라 실배포에 위험은 없지만, 정식 오픈 시 허브의 '체험 모드' 진입 문구를 유지할지 오너 결정.
 
 ## 다음 개발 우선순위(제안)
