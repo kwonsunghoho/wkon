@@ -57,7 +57,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-07-31a'
+const FN_VERSION = '2026-07-31b'   // b = quickfix 분기 추가(a 는 타입 정리만 — 동작 무변경)
 const FN_FEATURES = [
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
