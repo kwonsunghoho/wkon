@@ -148,7 +148,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 답변 저장소·크레딧 | `answers.html`·`mypage.html` | 저장 무료·무제한, answers/mypage 는 같이 고친다 | `docs/notes/credits.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer 의 `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
-| admin | `admin.html` | 2단 네비 — 탭을 추가하면 어느 그룹인지부터 정한다 | `docs/notes/admin.md` |
+| admin | `admin.html` | 좌측 사이드바 셸(운영/상품/콘텐츠 그룹) + '오늘' 브리핑 — 탭을 추가하면 어느 그룹인지부터 정한다 | `docs/notes/admin.md` |
 | 기타 페이지(후기·연구진·상세 4종·오디오) | `reviews.html`·`researchers.html`·`challenge-*.html` | 상세 4종 인라인 공통 CSS 는 네 파일을 같이 고친다 | `docs/notes/pages.md` |
 | 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
 | 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
