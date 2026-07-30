@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>경험 창고 — MONC 몬크 챌린지</title>
+  <meta name="description" content="면접 답변의 재료가 되는 내 경험을 카드로 모아 두는 곳." />
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       경험 창고 — 경험을 자소서 한 덩어리가 아니라 카드로 (2026-07-30)
+       필수 입력은 제목뿐이다 — 빈칸이 부담이 되면 카드를 안 만든다.
+       빈칸은 프로그램의 추가 질문이 채워 간다.
+       ══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.6;
+           -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+           padding-bottom: 90px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    a { color: inherit; }
+    button { font: inherit; cursor: pointer; }
+
+    .subnav { position: sticky; top: 66px; z-index: 60; padding: 10px 0;
+              background: rgba(244,241,234,.94); -webkit-backdrop-filter: blur(16px);
+              backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-soft); }
+    .subnav-in { display: flex; align-items: center; gap: 10px; max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    .sn-back { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px;
+               font-weight: 700; text-decoration: none; opacity: .85; }
+    .sn-t { font-family: var(--serif); font-size: 16px; font-weight: 700; }
+    @media (max-width: 768px) { .subnav { top: 57px; } }
+
+    .demo-bar { margin: 12px 0 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+                background: var(--accent); color: #fff; border-radius: var(--radius-sm);
+                font-size: 13px; font-weight: 700; }
+
+    .hero { padding: 20px 0 4px; }
+    .hero h1 { font-family: var(--serif); font-size: 24px; font-weight: 700; }
+    .hero p { margin-top: 6px; font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+    .blk { margin-top: 14px; background: var(--surface); border: 1px solid var(--border);
+           border-radius: var(--radius-md); padding: 16px; }
+    .blk-t { font-size: 16px; font-weight: 800; }
+    .blk-s { margin-top: 4px; font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    /* 카드 목록 */
+    .card-item { width: 100%; text-align: left; display: block; border: 1px solid var(--border);
+                 background: var(--bg2); border-radius: var(--radius-sm); padding: 13px;
+                 margin-top: 10px; }
+    .card-item b { font-size: 15px; font-weight: 800; }
+    .card-item small { display: block; margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+    .st-chip { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 9px;
+               border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+    .st-draft { background: rgba(140,67,24,.1); color: #8C4318; }
+    .st-ok { background: rgba(46,110,66,.1); color: #2E6E42; }
+
+    .cta { width: 100%; min-height: 50px; border: 0; border-radius: 999px; background: var(--action);
+           color: var(--action-ink); font-size: 15px; font-weight: 800; margin-top: 14px; }
+    .cta.ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+    .cta.sub { min-height: 44px; font-size: 14px; }
+    .row2 { display: flex; gap: 8px; }
+    .row2 > * { flex: 1; }
+
+    /* 편집 폼 */
+    .fld { margin-top: 12px; }
+    .fld label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 5px; }
+    .fld label small { font-weight: 400; color: var(--text-dim); }
+    .fld input, .fld textarea, .fld select {
+      width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs);
+      font: inherit; font-size: 15px; background: var(--surface); min-height: 44px; }
+    .fld textarea { min-height: 70px; line-height: 1.6; resize: vertical; }
+    details.grp { margin-top: 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+                  background: var(--bg2); padding: 0 12px; }
+    details.grp summary { min-height: 48px; display: flex; align-items: center; font-size: 14px;
+                          font-weight: 800; cursor: pointer; list-style: none; }
+    details.grp summary::before { content: '+'; margin-right: 8px; color: var(--accent-ink); }
+    details.grp[open] summary::before { content: '−'; }
+    details.grp .grp-body { padding-bottom: 12px; }
+    .hint { margin-top: 10px; font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+    .pii { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding: 12px;
+           background: var(--bg2); border: 1px solid var(--border-soft); border-radius: var(--radius-xs);
+           font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .pii input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--action); }
+
+    /* 사실 목록 */
+    .fact { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 10px 12px;
+            background: var(--bg2); border-radius: var(--radius-xs); font-size: 14px; line-height: 1.55; }
+    .fact .tag { flex: 0 0 auto; font-size: 11px; font-weight: 800; padding: 2px 8px;
+                 border-radius: 999px; background: rgba(27,58,107,.08); color: var(--accent-ink);
+                 margin-top: 2px; }
+    .fact .inferred { background: rgba(158,59,52,.1); color: #9E3B34; }
+
+    /* 말투 프로필 */
+    .tone-chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px;
+                 border-radius: 999px; border: 1px solid var(--border); background: var(--bg2);
+                 font-size: 14px; font-weight: 700; margin: 8px 6px 0 0; }
+    .tone-chip.on { background: var(--surface); border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+    .tone-scale { display: flex; gap: 6px; margin-top: 8px; }
+    .tone-scale button { flex: 1; min-height: 44px; border-radius: var(--radius-xs);
+                         border: 1px solid var(--border); background: var(--bg2); font-weight: 800; }
+    .tone-scale button.on { background: var(--surface); border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+    .tone-lbl { margin-top: 12px; font-size: 14px; font-weight: 800; }
+
+    .notice { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-xs);
+              font-size: 14px; line-height: 1.65; background: var(--bg2);
+              border: 1px solid var(--border-soft); color: var(--text-muted); }
+    .notice.warn { background: rgba(158,59,52,.07); border-color: rgba(158,59,52,.3); color: #7E2F29; }
+    .loading { padding: 30px 0; text-align: center; color: var(--text-dim); font-size: 14px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="subnav">
+    <div class="subnav-in">
+      <a class="sn-back" id="backLink" href="programs.html">← 돌아가기</a>
+      <div class="sn-t">경험 창고</div>
+    </div>
+  </div>
+
+  <main class="container">
+    <div id="demoBar"></div>
+    <header class="hero">
+      <h1>내 경험, 카드로 쌓기</h1>
+      <p>면접 답변의 재료는 화려한 스펙이 아니라 <b>실제 겪은 장면</b>이에요.
+        한 경험 = 한 카드. 빈칸이 많아도 괜찮아요 — 답변을 만들 때 부족한 부분만 물어봐요.</p>
+    </header>
+
+    <div id="listBlk" class="blk">
+      <div class="blk-t">내 경험 카드</div>
+      <div id="cardList"><div class="loading">불러오는 중…</div></div>
+      <button class="cta" id="btnNew">+ 새 경험 카드</button>
+    </div>
+
+    <!-- 편집 폼 -->
+    <div id="editBlk" class="blk hidden">
+      <div class="blk-t" id="editTitle">새 경험 카드</div>
+      <div class="blk-s">필수는 제목뿐이에요. 기억나는 것만 적으세요 — 지어내는 것보다 빈칸이 나아요.</div>
+
+      <div class="fld"><label>제목 <small>(한 줄로 무슨 일이었는지)</small></label>
+        <input id="fTitle" maxlength="80" placeholder="예: 카페 마감 알바에서 컴플레인 처리"></div>
+      <div class="fld"><label>경험 유형</label><select id="fType"></select></div>
+
+      <details class="grp" open><summary>언제 · 어디서 · 누구와</summary><div class="grp-body">
+        <div class="fld"><label>시기</label><input id="fPeriod" placeholder="예: 2025년 여름"></div>
+        <div class="fld"><label>기간</label><input id="fDuration" placeholder="예: 8개월"></div>
+        <div class="fld"><label>장소</label><input id="fPlace" placeholder="예: 프랜차이즈 카페"></div>
+        <div class="fld"><label>당시 역할</label><input id="fRole" placeholder="예: 마감 담당 아르바이트"></div>
+        <div class="fld"><label>함께한 사람</label><input id="fPeople" placeholder="예: 같은 조 알바 1명"></div>
+      </div></details>
+
+      <details class="grp"><summary>무슨 일이 있었나</summary><div class="grp-body">
+        <div class="hint">한 줄씩만 적어도 됩니다. 예시처럼, 실제 있었던 일을 그대로 쓰면 돼요.</div>
+        <div class="fld"><label>시작 상황 <small>(언제·어디서·어떤 상황)</small></label><textarea id="fSituation" placeholder="예: 주말 저녁 카페 마감, 주문이 20분씩 밀리기 시작했어요"></textarea></div>
+        <div class="fld"><label>발생한 문제 <small>(그래서 뭐가 곤란해졌나)</small></label><textarea id="fProblem" placeholder="예: 음료가 늦어져 손님 항의가 시작됐어요"></textarea></div>
+        <div class="fld"><label>내가 실제로 한 행동 <small>(팀이 아니라 '내가' 한 것)</small></label><textarea id="fAction" placeholder="예: 대기 손님께 예상 시간을 먼저 말씀드리고, 만들기 쉬운 음료부터 순서를 바꿨어요"></textarea></div>
+        <div class="fld"><label>그 행동을 고른 이유 <small>(왜 하필 그렇게 했나)</small></label><textarea id="fReason" placeholder="예: 기다리는 시간보다 '얼마나 걸릴지 모르는 것'이 더 불안이라고 생각했어요"></textarea></div>
+        <div class="fld"><label>고려했던 다른 방법 <small>(안 골랐지만 떠올렸던 것)</small></label><textarea id="fAlt" placeholder="예: 주문을 잠시 멈추는 것도 생각했지만, 항의가 더 커질 것 같았어요"></textarea></div>
+        <div class="fld"><label>가장 어려웠던 지점</label><textarea id="fHardest" placeholder="예: 항의하시는 손님 앞에서 침착함을 유지하는 것"></textarea></div>
+      </div></details>
+
+      <details class="grp"><summary>그래서 어떻게 됐나</summary><div class="grp-body">
+        <div class="fld"><label>실제 결과 <small>(확인 가능한 것만)</small></label><textarea id="fResult" placeholder="예: 항의가 멈췄고 마감까지 추가 컴플레인이 없었어요"></textarea></div>
+        <div class="fld"><label>상대방의 실제 반응 <small>(실제로 들은 말이면 가장 좋아요)</small></label><textarea id="fReaction" placeholder="예: 단골 손님이 '말해 줘서 고맙다'고 하셨어요"></textarea></div>
+        <div class="fld"><label>느낀 점</label><textarea id="fFeeling" placeholder="예: 먼저 알리는 것만으로 분위기가 바뀐다는 걸 느꼈어요"></textarea></div>
+        <div class="fld"><label>이후 바뀐 행동</label><textarea id="fChange" placeholder="예: 그 뒤로 밀리기 전에 먼저 안내하는 습관이 생겼어요"></textarea></div>
+        <div class="fld"><label>이 경험에서 보이는 내 강점</label><textarea id="fStrength" placeholder="예: 문제를 숨기지 않고 먼저 알리는 정직함"></textarea></div>
+      </div></details>
+
+      <div id="factsWrap" class="hidden">
+        <div class="tone-lbl">확인된 사실 조각</div>
+        <div class="hint">추가 질문에 답하면 여기에 사실이 쌓여요. 직접 보탤 수도 있어요.</div>
+        <div id="factList"></div>
+        <div class="row2" style="margin-top:8px;">
+          <input id="factInput" placeholder="예: 실제로 한 말 — &quot;15분 정도 걸려요&quot;" style="flex:2;min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font:inherit;font-size:14px;background:var(--surface);">
+          <button class="cta ghost sub" id="btnAddFact" style="margin-top:0;">사실 추가</button>
+        </div>
+      </div>
+
+      <div class="pii"><input type="checkbox" id="fPii">
+        <label for="fPii"><b>실명·매장명 등이 들어 있어요</b> — 표시해 두면 답변으로 옮길 때 일반화(○○카페 등)를 권해 드려요.</label></div>
+      <div class="pii"><input type="checkbox" id="fVerified">
+        <label for="fVerified"><b>전부 실제 있었던 일이에요</b> — 내가 확인했어요. (체크하면 답변 근거로 바로 쓸 수 있어요)</label></div>
+
+      <div id="editNote"></div>
+      <div class="row2">
+        <button class="cta ghost" id="btnCancel">닫기</button>
+        <button class="cta" id="btnSave">저장</button>
+      </div>
+      <button class="cta ghost sub hidden" id="btnArchive">이 카드 보관(숨기기)</button>
+    </div>
+
+    <!-- 말투 설정 — 선택 사항이라 접어 둔다(2026-07-30 오너: "갑자기 나와서 어디에 쓰는지 모르겠다") -->
+    <div class="blk">
+      <details class="grp" style="margin-top:0;">
+        <summary>말투 설정 (선택 — 안 해도 됩니다)</summary>
+        <div class="grp-body">
+          <div class="hint" style="margin-top:0;">
+            AI가 답변을 다듬을 때 <b>내 평소 말투를 지키게 하는 설정</b>이에요.
+            설정하면 첨삭된 문장의 말끝·표현이 여기에 맞춰지고,
+            설정하지 않으면 초안에 쓴 말투를 그대로 따라갑니다.
+          </div>
+          <div class="tone-lbl">즐겨 쓰는 말끝 (여러 개 선택)</div>
+          <div id="toneEndings"></div>
+          <div class="tone-lbl">말투의 단정함 <small style="font-weight:400;color:var(--text-dim)">(1 편안 ~ 5 격식)</small></div>
+          <div class="tone-scale" id="toneFormal"></div>
+          <div class="tone-lbl">감정 표현 정도 <small style="font-weight:400;color:var(--text-dim)">(1 담백 ~ 5 풍부)</small></div>
+          <div class="tone-scale" id="toneEmotion"></div>
+          <div class="fld"><label>내가 절대 안 쓰는 표현 <small>(쉼표로 구분)</small></label>
+            <input id="toneAvoid" placeholder="예: 소중한 경험, 한 단계 성장"></div>
+          <button class="cta ghost" id="btnToneSave">말투 저장</button>
+          <div id="toneNote"></div>
+        </div>
+      </details>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="program-common.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var esc = AP.esc;
+    var $ = function (id) { return document.getElementById(id); };
+    var RETURN = new URLSearchParams(location.search).get('return') || '';
+    var editingId = null;
+    var cards = [];
+
+    if (RETURN && /^[\w.?=&%-]+$/.test(RETURN)) $('backLink').href = RETURN;
+
+    if (AP.demoOn()) {
+      $('demoBar').innerHTML = '<div class="demo-bar">체험 모드 — 예시 데이터예요.</div>';
+    }
+
+    var FIELD_MAP = {
+      fTitle: 'title', fPeriod: 'period_text', fDuration: 'duration_text', fPlace: 'place_type',
+      fRole: 'role', fPeople: 'people', fSituation: 'situation', fProblem: 'problem',
+      fAction: 'action', fReason: 'action_reason', fAlt: 'alternatives', fHardest: 'hardest',
+      fResult: 'result', fReaction: 'others_reaction', fFeeling: 'feeling',
+      fChange: 'change_after', fStrength: 'strengths'
+    };
+
+    function statusChip(c) {
+      if (c.status === 'verified_student' || c.status === 'verified_researcher')
+        return '<span class="st-chip st-ok">확인됨</span>';
+      return '<span class="st-chip st-draft">작성 중</span>';
+    }
+
+    async function loadList() {
+      var el = $('cardList');
+      cards = await AP.store.listCards();
+      if (cards.notReady) {
+        el.innerHTML = '<div class="notice">아직 준비 중이에요(마이그레이션 미적용). ' +
+          '<a href="experiences.html?demo=1" style="font-weight:800;color:var(--accent-ink)">체험 모드</a>로 흐름을 볼 수 있어요.</div>';
+        cards = [];
+        return;
+      }
+      if (!cards.length) {
+        el.innerHTML = '<div class="notice">아직 카드가 없어요. 거창하지 않아도 돼요 — 알바에서 있었던 일 하나면 충분해요.</div>';
+        return;
+      }
+      el.innerHTML = cards.map(function (c) {
+        return '<button type="button" class="card-item" data-id="' + esc(c.id) + '">' +
+          '<b>' + esc(c.title) + '</b>' + statusChip(c) +
+          '<small>' + esc(c.exp_type || '유형 미정') +
+          (c.period_text ? ' · ' + esc(c.period_text) : '') +
+          (c.use_count ? ' · 답변 ' + c.use_count + '개에 사용' : '') + '</small></button>';
+      }).join('');
+      el.querySelectorAll('.card-item').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var c = cards.filter(function (x) { return x.id === b.dataset.id; })[0];
+          if (c) openEdit(c);
+        });
+      });
+    }
+
+    function openEdit(c) {
+      editingId = c ? c.id : null;
+      $('editTitle').textContent = c ? '경험 카드 수정' : '새 경험 카드';
+      Object.keys(FIELD_MAP).forEach(function (fid) {
+        $(fid).value = (c && c[FIELD_MAP[fid]]) || '';
+      });
+      $('fType').value = (c && c.exp_type) || AP.EXP_TYPES[0];
+      $('fPii').checked = !!(c && c.has_pii);
+      $('fVerified').checked = !!(c && (c.status === 'verified_student' || c.status === 'verified_researcher'));
+      $('btnArchive').classList.toggle('hidden', !c);
+      $('editNote').innerHTML = '';
+      $('editBlk').classList.remove('hidden');
+      loadFacts();
+      $('editBlk').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function loadFacts() {
+      var wrap = $('factsWrap');
+      if (!editingId) { wrap.classList.add('hidden'); return; }
+      wrap.classList.remove('hidden');
+      var facts = await AP.store.listFacts(editingId);
+      var TYPE_LBL = { when: '시기', where: '장소', role: '역할', people: '사람', action: '행동',
+                       quote: '한 말', reason: '이유', result: '결과', reaction: '반응', change: '변화', other: '기타' };
+      $('factList').innerHTML = facts.length ? facts.map(function (f) {
+        var inferred = f.status === 'inferred';
+        return '<div class="fact"><span class="tag' + (inferred ? ' inferred' : '') + '">' +
+          esc(inferred ? 'AI 추론' : (TYPE_LBL[f.fact_type] || '사실')) + '</span><span>' + esc(f.content) +
+          (inferred ? ' <small>(확인 전 — 답변 근거로 안 써요)</small>' : '') + '</span></div>';
+      }).join('') : '<div class="hint">아직 쌓인 사실이 없어요.</div>';
+    }
+
+    $('btnAddFact').addEventListener('click', async function () {
+      var v = $('factInput').value.trim();
+      if (!v || !editingId) return;
+      await AP.store.addFact({ card_id: editingId, content: v, fact_type: 'other', source: 'student', status: 'user_stated' });
+      $('factInput').value = '';
+      loadFacts();
+    });
+
+    $('btnNew').addEventListener('click', function () { openEdit(null); });
+    $('btnCancel').addEventListener('click', function () { $('editBlk').classList.add('hidden'); editingId = null; });
+
+    $('btnSave').addEventListener('click', async function () {
+      var title = $('fTitle').value.trim();
+      if (!title) { $('editNote').innerHTML = '<div class="notice warn">제목은 꼭 필요해요 — 한 줄이면 돼요.</div>'; return; }
+      var row = { exp_type: $('fType').value, has_pii: $('fPii').checked,
+                  status: $('fVerified').checked ? 'verified_student' : 'draft' };
+      Object.keys(FIELD_MAP).forEach(function (fid) {
+        row[FIELD_MAP[fid]] = $(fid).value.trim() || null;
+      });
+      row.title = title;
+      if (editingId) row.id = editingId;
+      var r = await AP.store.saveCard(row);
+      if (r && r.error) {
+        $('editNote').innerHTML = '<div class="notice warn">저장하지 못했어요: ' + esc(r.error.message || '') + '</div>';
+        return;
+      }
+      AP.logEvent('ap_card_save', { new: !editingId });
+      $('editBlk').classList.add('hidden');
+      editingId = null;
+      loadList();
+    });
+
+    $('btnArchive').addEventListener('click', async function () {
+      if (!editingId) return;
+      if (!confirm('이 카드를 보관(숨기기)할까요? 답변 이력은 그대로 남아요.')) return;
+      await AP.store.archiveCard(editingId);
+      $('editBlk').classList.add('hidden');
+      editingId = null;
+      loadList();
+    });
+
+    /* ── 말투 프로필 ── */
+    var ENDINGS = ['~했습니다', '~했어요', '~인 것 같아요', '~라고 생각합니다', '~했거든요'];
+    var tone = { endings: [], formality: 3, emotion: 2, avoid_words: [] };
+
+    function paintTone() {
+      $('toneEndings').innerHTML = ENDINGS.map(function (e2) {
+        var on = tone.endings.indexOf(e2) >= 0;
+        return '<button type="button" class="tone-chip' + (on ? ' on' : '') + '" data-v="' + esc(e2) + '">' + esc(e2) + '</button>';
+      }).join('');
+      $('toneEndings').querySelectorAll('.tone-chip').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var v = b.dataset.v, i = tone.endings.indexOf(v);
+          if (i >= 0) tone.endings.splice(i, 1); else tone.endings.push(v);
+          paintTone();
+        });
+      });
+      ['toneFormal', 'toneEmotion'].forEach(function (id) {
+        var key = id === 'toneFormal' ? 'formality' : 'emotion';
+        $(id).innerHTML = [1, 2, 3, 4, 5].map(function (n) {
+          return '<button type="button" class="' + (tone[key] === n ? 'on' : '') + '" data-n="' + n + '">' + n + '</button>';
+        }).join('');
+        $(id).querySelectorAll('button').forEach(function (b) {
+          b.addEventListener('click', function () { tone[key] = Number(b.dataset.n); paintTone(); });
+        });
+      });
+      $('toneAvoid').value = (tone.avoid_words || []).join(', ');
+    }
+
+    $('btnToneSave').addEventListener('click', async function () {
+      tone.avoid_words = $('toneAvoid').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      var r = await AP.store.saveTone(tone);
+      $('toneNote').innerHTML = (r && r.error)
+        ? '<div class="notice warn">저장하지 못했어요.</div>'
+        : '<div class="notice" style="background:rgba(46,110,66,.08);border-color:rgba(46,110,66,.3);color:#265C3B;">말투 프로필 저장 완료 — 첨삭에 바로 반영돼요.</div>';
+    });
+
+    (async function init() {
+      var st = await AP.init();
+      if (st.mode === 'real') {
+        if (!st.user) { location.href = 'login.html'; return; }
+        if (!(await MONC.requireConsent())) return;
+      }
+      // 경험 유형 선택지 — 이게 비어 있던 버그(2026-07-30 오너 신고 "유형은 따로 나오는 게 없음")
+      $('fType').innerHTML = AP.EXP_TYPES.map(function (t) {
+        return '<option value="' + esc(t) + '">' + esc(t) + '</option>';
+      }).join('');
+      AP.logEvent('ap_vault_view');
+      var t = await AP.store.getTone();
+      if (t && Object.keys(t).length) tone = Object.assign(tone, t);
+      paintTone();
+      loadList();
+    })();
+  })();
+  </script>
+</body>
+</html>

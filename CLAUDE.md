@@ -126,6 +126,51 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
   - **⚠️ fix 는 학생이 쓴 사실만 재료로**(프롬프트 '첨삭의 선'). 없는 숫자·일화를 지어내면 학생이 그 거짓을 면접장까지 들고 간다 — 부족한 자리는 **(괄호 빈칸)**으로 남기고 화면이 그 괄호를 칠해 준다(`markBlanks`). 합격자 문장 모방·옮겨쓰기 금지는 킬러와 동일(결정 10).
   - 기록 = `answer_polishes`(migration `20260730130000_answer_polishes.sql` — **owner 실행 필요**). `ai_killer_checks` 를 본뜬 구조(1:N · on delete set null · 쓰기는 service role 만). 미적용 degrade: 첨삭만 '준비 중', 킬러·소재 영향 없음. 이력 복원은 `polish.html?polish=<id>`(차감 없음), answers.html 이 검사·첨삭 이력을 시간순 한 줄로 합쳐 그린다.
 
+### MONC 답변 프로그램 개발 원칙 (오너 지시 원문 · 2026-07-30)
+
+#### 제품 목표
+
+항공사별 기출문제를 매일 작성하며 학생의 실제 경험을 바탕으로
+개인화된 면접답변을 완성하는 프로그램을 개발한다.
+
+상세 요구사항은 다음 문서를 따른다.
+
+@docs/monc-answer-program-spec.md
+
+#### 절대 원칙
+
+1. 학생이 제공하지 않은 경험, 행동, 성과, 감정, 결과를 생성하지 않는다.
+2. 정보가 부족하면 답변을 만들지 말고 추가 질문을 한다.
+3. 학생이 먼저 초안을 작성한 뒤 AI가 첨삭한다.
+4. 모든 주요 문장은 학생의 경험 및 사실과 연결돼야 한다.
+5. 학생마다 같은 구조와 말투를 강제하지 않는다.
+6. 기존 회원, 상품, 결제, 답변 첨삭 구조를 우선 재사용한다.
+7. 학생 원문, AI 수정본, 연구원 수정본, 수정 이유를 모두 저장한다.
+8. 기존 기능을 삭제하거나 임의로 변경하지 않는다.
+9. 데이터베이스 변경에는 마이그레이션을 작성한다.
+10. 구현 후 타입 검사, 테스트, 린트, 빌드를 실행한다.
+
+#### 작업 방식
+
+- 먼저 기존 저장소 구조를 분석한다.
+- 저장소에서 확인 가능한 내용은 사용자에게 다시 묻지 않는다.
+- 구현 계획만 작성하고 종료하지 않는다.
+- 기능을 작은 수직 단위로 구현하고 검증한다.
+- 완료하지 못한 내용은 정확하게 기록한다.
+
+### 매일 답변 프로그램 (2026-07-30 신설 · 브랜치 airline-interview-program-mvp — main 미병합)
+**"매일 한 문제씩, 내 경험으로 완성하는 항공사 면접답변 프로그램."** 오너 원본 요구사항은 `docs/monc-answer-program-spec.md`(참고용 원문), 구현 원장은 `docs/monc-answer-program/`(analysis·spec·architecture·data-model·ai-pipeline·privacy·admin-guide·test-plan·implementation-status). 페이지: `programs.html`(허브)·`program.html`(작성 흐름)·`experiences.html`(경험 창고)·`review-desk.html`(연구원 검수 — ⚠️ `reviews.html` 후기와 다른 파일) + admin '답변 프로그램' 탭 + 승준노트 카드 '매일 기출'. 서버: `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음), migration `20260730150000_answer_program.sql`(**owner 실행 필요** — 미적용 시 전부 '준비 중' degrade).
+- **원칙은 바로 위 'MONC 답변 프로그램 개발 원칙'(오너 지시 원문)이 원장이다.** 이 프로그램 코드를 고칠 때 절대 원칙 10개를 먼저 읽을 것. 자체 검수 명령: `node scripts/answer-program-tests.mjs` + `deno check supabase/functions/answer-program/index.ts` + 브라우저 375px 실측.
+- **⚠️ 1차 상품 = 필수 기출(전 항공사 공통 — 2026-07-30 오너 "항공사 세부는 지금 안 다룬다. 필수 기출 30개를 먼저 작성하는 느낌으로").** `answer_programs.airline`/`interview_questions.airline` 의 **null=공통**이고 첫 프로그램이 이것이다. 항공사별 프로그램은 구조만 있고 후속. **오너의 필수 기출 30문항 원본은 아직 미입력** — 받으면 '필수 기출 30일 루틴' 시드를 만든다(그때까지는 seed-demo 의 공통 10문항·맛보기 5일이 검증용).
+- **⚠️ 근거 검증이 이 상품의 심장** — 서버(`apValidateSentences`)가 AI 문장의 근거 id 실존 + **자료에 없는 숫자**를 검사해 unsupported 를 붙인다. 근거 없는 문장은 조용히 통과하지 않는다(화면 빨간 표시, '이 버전으로 다듬기'에서 제외). 이 검증을 우회하는 코드를 넣지 말 것.
+- **⚠️ 기출은 기존 `questions`(소재발굴)에 넣지 않는다** — 그 표는 로그인 회원 전체 읽기 RLS 라 유료 기출이 샌다. `interview_questions` 는 비공개이고 회원 서빙은 `ap_program_view()` RPC 하나(잠긴 일차의 문제는 응답에 안 실린다).
+- **⚠️ 확정본은 `answers` 자유 글로 합류**(title=문항·doc_kind=interview) — 그래서 AI킬러·첨삭·답변노트가 무수정으로 붙는다. 이 연결을 끊지 말 것.
+- **⚠️ 세션 상태는 DB 트리거가 심판**(errcode MC003/MC004/MC005). 학생은 ai_revised 점프·approved 자가 부여 불가. 공개일 식은 SQL·index.ts·program-common.js **세 벌 동기** — 고치면 셋 다 고치고 테스트 스크립트로 확인.
+- **⚠️ 크레딧 차감 없음(이용권 포함 상품)** — 대신 서버 상한(revise 3/일/세션 등)이 원가 잠금. 상투어는 `ai_killer_terms` 재사용(사전 이원화 금지).
+- **⚠️ 체험판·무료 등록 없음(2026-07-30 오너 "체험판 없이 바로 유료").** 이용권이 생기는 길은 둘뿐 — ① **verify-payment 의 `programId` 분기**: 지급 대상은 body 가 아니라 **JWT**, 금액은 `answer_programs.price` 를 서버가 재확인, 이미 이용권 보유면 **전액 자동 환불**(`already_enrolled`), 지급 실패도 전액 환불(`grant_failed`) — 둘 다 HTTP 200(브라우저가 환불 안내를 띄워야 하므로). ② admin '이용권 지급'. **이 분기는 owner 가 verify-payment 를 재배포해야 동작**(콘솔 — **2026-07-30 배포 완료**. 프로브: anon key 로 `{paymentId:'probe', programId:'00000000-…-0'}` → `not_authenticated`=신버전(JWT 확인이 프로그램 조회보다 먼저다), `bad_request`=구버전). ⚠️ `program_enrollments` 에 회원 자가 INSERT 정책이 **일부러 없다** — 되살리면 유료 상품이 공짜로 열린다. 데모(`?demo=1`)는 공개 화면에서 진입 링크를 뺐다(내부 QA 전용). 시드 기본가 99,000원(구 총량제 30개 확정가 기준 — admin 에서 수정).
+- **⚠️ 기출 소스 = 정규반 교재 PDF(오너 PC).** 교재의 기출·가이던스는 학원 자산이라 **공개 리포에 커밋 금지**(airline_profiles 원문과 같은 규칙) — 비공개 표(`interview_questions`)에만 넣고, SQL 은 대화창으로 전달한다.
+- 데모 모드(`?demo=1`) = 로그인·DB·API 키 없이 전체 흐름 검증하는 목업 어댑터(program-common.js). 화면에 체험 배너가 항상 뜬다.
+
 ### 답변 저장소 + 크레딧 (2026-07-25 재설계 — 구조가 뒤집혔다)
 
 **구조의 중심은 AI킬러가 아니라 `answers`(답변 저장소)이고, KILL AI 는 그 위에서 도는 기능이다.**
