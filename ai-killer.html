@@ -748,7 +748,12 @@
         $('dock').classList.remove('hidden');
         document.body.classList.add('no-hits');
         $('dToggle').disabled = true;
-        $('resNotice').innerHTML = '<div class="notice info">걸린 표현이 없어요. 이대로 좋아요.</div>';
+        // ⚠️ "이대로 좋아요"라고 말하지 말 것(2026-07-30 오너 지적). 킬러의 0곳은 '표현 통과'지
+        //    '글이 좋다'가 아니다 — 사람이 쓴 어설픈 글일수록 0곳이 나오는데, 그 학생이
+        //    이 문구를 승인으로 읽고 나가면 정작 필요한 첨삭(내용 진단)을 놓친다.
+        //    킬러는 표현을, 첨삭은 내용을 본다 — 문구가 그 경계를 말해야 한다.
+        $('resNotice').innerHTML = '<div class="notice info"><b>AI 같은 표현은 없어요 — 표현은 통과예요.</b><br>'
+          + '내용이 면접관에게 통할지는 별개예요. 강점과 고칠 방향은 아래 첨삭이 짚어 드려요.</div>';
       } else {
         $('orig').innerHTML = origHtml(r._text, r.hits);
         $('cardList').innerHTML = r.hits.map(cardHtml).join('');
