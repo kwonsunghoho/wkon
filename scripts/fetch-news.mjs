@@ -21,7 +21,9 @@ const AIRLINES = [
   { slug: 'twayair',   name: '티웨이항공',   alias: ['티웨이'] },
   { slug: 'airbusan',  name: '에어부산',     alias: ['에어부산'] },
   { slug: 'airseoul',  name: '에어서울',     alias: ['에어서울'] },
-  { slug: 'eastarjet', name: '이스타항공',   alias: ['이스타항공', '이스타 항공'] },
+  // '이스타'는 제목에서 줄여 쓰는 표기("이스타-관광공사, 중화권 방한객 유치").
+  // 없으면 그 기사가 항공 관련성 게이트에서 '항공무관'으로 잘린다(실측 오탐).
+  { slug: 'eastarjet', name: '이스타항공',   alias: ['이스타항공', '이스타 항공', '이스타'] },
   { slug: 'airpremia', name: '에어프레미아', alias: ['에어프레미아'] },
   { slug: 'aerok',     name: '에어로케이',   alias: ['에어로케이'] },
 ];
@@ -32,6 +34,62 @@ const AIRLINES = [
 const EXCLUDE = /참사|유가족|희생자|분향소|추모|위령|유해\s*수습|재수색|사고 조사|여객기 추락|기체 추락/;
 const RESCUE  = /막았|막아|막은|예방|모면|방지|무사히/;
 const isExcluded = t => EXCLUDE.test(t) && !RESCUE.test(t);
+
+// ── 취업과 무관한 보도 제외(2026-07-30 오너 지시) ─────────────────────────────
+// 항공사 이름으로 검색하면 같은 이름을 쓰는 스포츠단·주식 종목이 함께 딸려 온다.
+// 실측(2026-07-30 뉴스판 상단): "대한항공 방출 선수, 한국전력 이적을 운명이라…"(프로배구),
+// "대한항공우 투자분석"(우선주 시황), "현대차, 수소·SMR 기술 협력"(항공 무관),
+// "아시아나 주가·합병 전환가치 하락 : 네이버 블로그"(개인 블로그).
+// 승준생이 면접 재료로 쓸 수 없는 것들이라 수집 단계에서 뺀다.
+//
+// ⚠️ 세 갈래를 각각 다른 방법으로 막는다 — 하나로 묶으려 하지 말 것:
+//   ① 스포츠·시황은 '있으면 버리는' 낱말로 (블랙리스트)
+//   ② 항공 무관 기업 기사는 낱말을 셀 수 없으니 '항공 낱말이 하나도 없으면 버린다' (화이트리스트)
+//   ③ 블로그·카페는 제목이 아니라 출처로 판단
+// ⚠️ 경영·실적·합병·유가·화물은 빼지 않는다 — 기업분석 면접 답변의 핵심 재료다.
+//    거르는 건 '투자 판단용 시황'(목표주가·투자의견)뿐이다.
+
+// ① 스포츠단 — 대한항공 점보스(프로배구) 등.
+// ⚠️ '방출'을 단독으로 넣지 말 것: "탄소 방출"류 환경 규제 기사가 같이 날아간다.
+// ⚠️ '선수'도 단독 금지: 항공권 "선수금"이 걸린다. '감독'도 단독 금지: "금융감독원".
+// ⚠️ '골프'를 넣지 말 것: "에어서울, 항공·숙박·골프 묶은 원스톱 여행"처럼 항공사가 파는
+//    여행 상품 기사가 같이 날아간다(실측 오탐). 골프단 협찬 기사만 좁게 잡는다.
+const SPORTS = /배구|점보스|V리그|V-리그|프로야구|야구단|축구|농구|골프단|프로골퍼|선수단|프로 선수|이적|트레이드|사령탑|감독 선임|감독 사퇴|구단|세터|리베로|미들블로커|아웃사이드 히터|스파이크|블로킹|플레이오프|챔피언결정전|올스타|개막전|리그 우승/;
+
+// ② 투자 판단용 시황 — ⚠️ '실적·매출·합병·주가' 자체는 남긴다(TOPICS 의 biz 로 분류돼 쓰인다).
+// ⚠️ 우선주 종목명 뒤의 (?![가-힣]) 를 지우지 말 것: 없으면 '제주항공우'가
+//    "제주항공우주박물관"에 걸려 과학관 기사가 시황으로 잘린다(실측 오탐 2건).
+const STOCKS = /투자분석|투자의견|목표주가|적정주가|매수의견|매도의견|상한가|하한가|신고가|신저가|테마주|관련주|급등주|주가 전망|주가 흐름|기술적 분석|배당수익률|공매도|(?:대한항공|아시아나항공|제주항공)우(?![가-힣])/;
+
+// ③ 개인 블로그·카페 — 출처로 판단(제목에 " : 네이버 블로그" 꼬리가 붙는 경우도 함께 본다)
+const BAD_SOURCE = /블로그|blog|티스토리|tistory|브런치|brunch|디시인사이드|클리앙|뽐뿌|인스티즈/i;
+
+// 항공 관련성 게이트 — 제목에 이 중 하나도 없으면 항공 기사가 아니다.
+// ⚠️ '민항기'는 '항공'을 포함하지 않는다(민+항+기) — 따로 넣어야 엠브라에르 협력 기사가 산다.
+// ⚠️ '한진칼·한진그룹'을 빼지 말 것: 대한항공 지주사 경영권 분쟁은 면접 단골 소재인데
+//    제목에 '항공'이 없어 통째로 걸러지고 있었다(실측 오탐 4건).
+// ⚠️ '에어'만 잘라 쓰지 말 것 — "에어컨 고장"이 걸린다. 항공사 이름은 아래 alias 로 판단한다.
+const AVIATION = /항공|공항|비행기|여객기|화물기|민항기|기내|승무원|객실|조종사|파일럿|기장|취항|노선|운항|항공권|활주로|이착륙|국제선|국내선|저비용항공|LCC|하늘길|운수권|한진칼|한진그룹/;
+
+// 항공사 이름이 제목에 있으면 그것만으로 항공 기사다.
+// ⚠️ 이 줄이 없으면 '진에어'·'에어프레미아'·'티웨이'처럼 이름에 '항공'이 없는 6개 항공사
+//    기사가 전부 '항공무관'으로 잘린다(실측: "에어프레미아, 1100억 유상증자"가 사라졌다).
+const mentionsAirline = t => AIRLINES.some(a => a.alias.some(al => t.includes(al)));
+
+// 제외 사유 — dry-run 에서 어떤 규칙이 몇 건을 걷어냈는지 보여주려고 사유를 돌려준다.
+function dropReason(title, source) {
+  if (isExcluded(title)) return '참사';
+  if (SPORTS.test(title)) return '스포츠';
+  if (STOCKS.test(title)) return '시황';
+  if (BAD_SOURCE.test(source || '') || BAD_SOURCE.test(title)) return '블로그';
+  if (!AVIATION.test(title) && !mentionsAirline(title)) return '항공무관';
+  return null;
+}
+
+// ⚠️ 저장할 때와 기존 저장분을 청소할 때 반드시 이 함수 하나를 같이 쓸 것.
+// 분류(classify)와 달리 '제외'는 저장 시점에 굳으므로, 규칙만 고치고 청소를 안 하면
+// 이미 들어온 배구 기사가 뉴스판 맨 위에 그대로 남는다(실제로 그 상태였다).
+const isDropped = (title, source) => dropReason(title, source) !== null;
 
 // 주제 분류 — 첫 매칭 우선(준비생에게 가장 중요한 채용을 맨 앞에)
 // 2026-07-22 키워드 확대: 실데이터 933건에서 미분류가 64%였다(주제 필터가 3분의 1만 걸러냄).
@@ -127,24 +185,39 @@ async function deleteIds(ids) {
   }
   console.log(`수집 ${collected.size}건 (쿼리 ${QUERIES.length}개)`);
 
-  // 2) 참사 보도 제외 + 분류 + 이번 배치 안의 제목 중복 제거
+  // 2) 무관 보도 제외 + 분류 + 이번 배치 안의 제목 중복 제거
   const seen = new Set();
   const rows = [];
-  let dropped = 0;
+  const drops = new Map();                    // 사유 → [제목] (dry-run 검증용)
   for (const it of collected.values()) {
-    if (isExcluded(it.title)) { dropped++; continue; }
+    const why = dropReason(it.title, it.source);
+    if (why) {
+      if (!drops.has(why)) drops.set(why, []);
+      drops.get(why).push(it.title);
+      continue;
+    }
     const key = normTitle(it.title);
     if (seen.has(key)) continue;
     seen.add(key);
     rows.push({ ...it, ...classify(it.title) });
   }
-  console.log(`참사 보도 ${dropped}건 제외`);
+  const droppedTotal = [...drops.values()].reduce((a, v) => a + v.length, 0);
+  console.log(`제외 ${droppedTotal}건 — `
+    + ([...drops].map(([w, v]) => `${w} ${v.length}`).join(' · ') || '없음'));
 
   if (DRY) {
+    // ⚠️ 규칙을 고쳤으면 '버린 것'을 눈으로 확인할 것 — 이 필터는 못 걸러서가 아니라
+    //    멀쩡한 기사를 걷어내서 망한다(AI킬러 규칙과 같은 실패 모드).
+    for (const [why, list] of drops) {
+      console.log(`\n── 제외: ${why} (${list.length}건) ─────────────────`);
+      for (const t of list.slice(0, 8)) console.log(`  ✗ ${t}`);
+      if (list.length > 8) console.log(`  … 외 ${list.length - 8}건`);
+    }
+    console.log(`\n── 저장 대상 (상위 30건) ─────────────────`);
     for (const r of rows.slice(0, 30))
-      console.log(`[${r.airline || '-'}/${r.topic || '-'}] ${r.title} (${r.source || '?'})`);
+      console.log(`  [${r.airline || '-'}/${r.topic || '-'}] ${r.title} (${r.source || '?'})`);
     const unclassified = rows.filter(r => !r.topic).length;
-    console.log(`dry-run: 저장 대상 ${rows.length}건 (상위 30건만 표시) · 주제 미분류 ${unclassified}건`
+    console.log(`\ndry-run: 저장 대상 ${rows.length}건 · 주제 미분류 ${unclassified}건`
                 + ` (${(unclassified / rows.length * 100).toFixed(0)}%)`);
     return;
   }
@@ -174,12 +247,17 @@ async function deleteIds(ids) {
   await deleteIds(deletable);
   console.log(`정리 ${deletable.length}건 삭제 (90일 경과·스크랩 없음)`);
 
-  // 6) 규칙이 생기기 전에 들어온 참사 보도 청소 — 스크랩된 건 여기서도 남긴다
+  // 6) 규칙이 생기기 전에 들어온 무관 보도 청소 — 스크랩된 건 여기서도 남긴다
+  // ⚠️ 수집 때와 같은 isDropped 를 쓴다. '제외'는 분류와 달리 저장 시점에 굳으므로
+  //    이 스텝이 없으면 규칙을 고쳐도 배구·시황 기사가 뉴스판에 그대로 남는다.
+  // ⚠️ source 를 같이 받아야 블로그 출처 판정이 기존 저장분에도 걸린다.
   const stored = await (await sbFetch(
-    'news_articles?select=id,title,airline,topic,news_scraps(id)&limit=2000')).json();
-  const purge = stored.filter(a => isExcluded(a.title) && !(a.news_scraps || []).length).map(a => a.id);
+    'news_articles?select=id,title,source,airline,topic,news_scraps(id)&limit=2000')).json();
+  const purge = stored
+    .filter(a => isDropped(a.title, a.source) && !(a.news_scraps || []).length)
+    .map(a => a.id);
   await deleteIds(purge);
-  console.log(`참사 보도 ${purge.length}건 삭제 (기존 저장분)`);
+  console.log(`무관 보도 ${purge.length}건 삭제 (기존 저장분)`);
 
   // 7) 저장분 재분류 — ⚠️ 분류는 저장 시점에 한 번 굳는다. 이 스텝이 없으면 AIRLINES·TOPICS를
   //    고쳐도 과거 기사엔 영원히 반영되지 않는다(실제로 키워드 확대 후 미분류가 63% 그대로였다).
