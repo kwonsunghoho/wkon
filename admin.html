@@ -328,6 +328,24 @@
              color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
     .toast.show { opacity: 1; }
     .loading { text-align: center; color: var(--text-dim); padding: 80px 0; }
+
+    /* ── 진입 로딩 — 첫 화면은 '한 번에' 그린다 ──
+       ⚠️ 아래 body:not(.authed) 한 줄을 지우지 말 것. 이게 없으면 인증이 끝나기 전에
+          '오늘' 패널이 사이드바 없는 반쪽 폭으로 먼저 그려졌다가, 껍데기가 붙는 순간
+          레이아웃이 통째로 뒤틀린다(오너 신고 2026-07-31 "깨지듯 뒤틀렸다가 로딩된다").
+          짝이 되는 규칙은 초기화의 revealAdmin() — 데이터까지 다 온 뒤에만 켠다. */
+    body:not(.authed) .tab-panel { display: none; }
+    #loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+               min-height: 78vh; padding: 0; font-size: 14px; }
+    #loading::before { content: ""; width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid var(--border);
+                       border-top-color: var(--action); animation: adm-spin .7s linear infinite; }
+    @keyframes adm-spin { to { transform: rotate(360deg); } }
+    body.authed .shell { animation: adm-in .2s ease-out; }
+    @keyframes adm-in { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      #loading::before { animation: none; }
+      body.authed .shell { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -3414,34 +3432,50 @@
       loadApCodes();
     }
 
+    /* 화면 켜기 — 첫 화면('오늘')이 완성된 뒤 딱 한 번.
+       ⚠️ 이걸 데이터 로드보다 앞으로 옮기지 말 것 — 반쪽 화면이 먼저 그려졌다가 뒤틀린다
+          (오너 신고 2026-07-31). 짝이 되는 CSS 는 위 `body:not(.authed) .tab-panel`. */
+    let _revealed = false;
+    function revealAdmin() {
+      if (_revealed) return;
+      _revealed = true;
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('layout').style.display = 'grid';
+      document.getElementById('tabs').style.display = 'flex';    // ⚠️ 'block' 금지 — 인라인이 CSS 를 이겨 사이드바 배치(데스크톱 세로·모바일 가로 칩)가 죽는다(실측)
+      document.body.classList.add('authed');                     // ⚠️ 이 클래스가 셸 그리드(데스크톱 2열)를 켠다 — 지우면 사이드바 자리가 안 잡힌다
+    }
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();
       if (!admin) return;
       if (!(await MONC.requireConsent())) return;   // 관리자도 약관 동의(가입 시 1회) 예외 없음
       myProfile = admin;
-      await loadCohorts();
-      await loadMembers();
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('layout').style.display = 'grid';
-      document.getElementById('tabs').style.display = 'flex';    // ⚠️ 'block' 금지 — 인라인이 CSS 를 이겨 사이드바 배치(데스크톱 세로·모바일 가로 칩)가 죽는다(실측)
-      document.body.classList.add('authed');                     // ⚠️ 이 클래스가 셸 그리드(데스크톱 2열)를 켠다 — 지우면 사이드바 자리가 안 잡힌다
       const snWho = document.getElementById('snWho');
       if (snWho) snWho.textContent = admin.name || admin.email || '관리자';
       initTabs();
-      loadChallengePrice();
-      loadRounds();
-      loadLectures();
-      await loadApplications();
-      await loadWaitlist();
-      loadReviewsAdmin();
-      loadQuestions();
-      loadTerms();
-      loadCredits();
-      loadCreditPacks();
-      loadCreditConfig();
-      loadApProgram();
-      loadToday();   // ⚠️ '오늘' 카드가 _apps/_wl/members 를 재사용하므로 위 로드 뒤에
+      setTimeout(revealAdmin, 8000);   // 안전망 — 조회 하나가 멈춰도 화면은 뜬다(빈 값으로라도)
+      try {
+        await loadCohorts();
+        await loadMembers();
+        loadChallengePrice();
+        loadRounds();
+        loadLectures();
+        await loadApplications();
+        await loadWaitlist();
+        loadReviewsAdmin();
+        loadQuestions();
+        loadTerms();
+        loadCredits();
+        loadCreditPacks();
+        loadCreditConfig();
+        loadApProgram();
+        await loadToday();   // ⚠️ '오늘' 숫자가 _apps/_wl/members 를 재사용하므로 위 로드 뒤에
+      } catch (err) {
+        console.error('초기 로드 실패', err);
+      } finally {
+        revealAdmin();       // 실패해도 화면은 켠다 — 흰 화면으로 갇히지 않게
+      }
     })();
   </script>
 </body>
