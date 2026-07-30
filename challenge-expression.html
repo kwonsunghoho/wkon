@@ -411,6 +411,7 @@
 <script src="supabase-config.js"></script>
 <script src="scroll-fx.js"></script>
 <script src="recruit.js"></script>
+<script src="waitlist.js" defer></script>
 <script>
   document.querySelectorAll('.week-header').forEach(h => {
     h.addEventListener('click', () => {
@@ -427,8 +428,16 @@
   function handleApply(e) {
     e.preventDefault();
     const state = window._recruitStatus || 'open';
-    if (state === 'upcoming') { alert('아직 모집 시작 전이에요. 모집 시작일을 기다려주세요!'); return; }
-    if (state === 'closed')   { alert('이번 회차는 모집이 마감됐어요. 다음 회차를 기다려주세요!'); return; }
+    // ⚠️ 마감·모집예정을 경고창으로 끝내지 말 것 — 전·후 증거와 후기를 다 보고 마음먹은
+    //    사람이 "다음 회차를 기다려주세요!"만 보고 나가던 자리다(2026-07-30 개선).
+    //    waitlist.js 가 오픈 알림 신청을 받아 challenge_waitlist 에 쌓는다.
+    // ⚠️ alert 폴백을 지우지 말 것 — waitlist.js 로드가 실패해도 최소한 상태는 알려야 한다.
+    if (state === 'upcoming' || state === 'closed') {
+      if (window.MONC && MONC.openWaitlist) { MONC.openWaitlist('expression', state); return; }
+      alert(state === 'upcoming' ? '아직 모집 시작 전이에요. 모집 시작일을 기다려주세요!'
+                                 : '이번 회차는 모집이 마감됐어요. 다음 회차를 기다려주세요!');
+      return;
+    }
     window.location.href = 'apply.html?c=expression';
   }
 

@@ -261,6 +261,7 @@
     <button class="tabbtn" data-tab="rounds">모집일정</button>
     <button class="tabbtn" data-tab="lectures">특강</button>
     <button class="tabbtn" data-tab="apps">신청자 현황</button>
+    <button class="tabbtn" data-tab="waitlist">오픈 알림</button>
     <button class="tabbtn" data-tab="community">홈 커뮤니티</button>
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
     <button class="tabbtn" data-tab="credits">크레딧</button>
@@ -429,6 +430,36 @@
   </div>
 
   <!-- 홈 커뮤니티 섹션(#community) 설정 — site_config 테이블. 지표·롤링 문구·후기 카드 -->
+  <!-- 오픈 알림 대기 명단(challenge_waitlist) — 마감·모집예정 챌린지에 남긴 연락처.
+       ⚠️ 자동 발송 기능이 없으므로 '여기 명단을 보고 사람이 연락한다'가 전제다.
+          그래서 [연락 완료] 체크가 핵심 — 누구에게 연락했는지 눈으로 딜 수 있어야
+          명단이 생산지가 된다. -->
+  <div class="tab-panel" id="panel-waitlist">
+    <div class="rounds-wrap">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        마감·모집예정 챌린지 페이지에서 <b>오픈 알림</b>을 신청한 분들이에요.
+        다음 기수를 열면 여기 연락처로 안내하고 <b>[연락 완료]</b>를 눌러 두세요.
+        <b>안내가 끝난 명단은 삭제</b>해 주세요(개인정보는 목적을 다하면 파기해야 합니다).
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
+        <select id="wlFilter" style="padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+          <option value="">전체 챌린지</option>
+          <option value="voice">보이스(보신각)</option>
+          <option value="expression">표현력(영합각)</option>
+          <option value="spinning">스피닝</option>
+          <option value="answer">답변(승자각)</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="wlHideDone" style="width:16px;height:16px;"> 연락 완료 숨기기
+        </label>
+        <button class="btn" id="wlRefresh" type="button">새로고침</button>
+        <button class="btn" id="wlCsv" type="button">CSV 내려받기</button>
+        <span id="wlCount" style="font-size:13px;color:var(--text-muted);margin-left:auto;"></span>
+      </div>
+      <div class="round-list" id="wlList"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="panel-community">
     <div class="cm-wrap">
       <div class="rv-hint">홈 <b>커뮤니티 섹션</b>("혼자 하지 않아도 돼요")의 지표·문구·후기 카드를 여기서 수정합니다. 저장하면 홈에 바로 반영돼요(방문자 새로고침 기준).</div>
@@ -998,6 +1029,103 @@
     }
 
     document.getElementById('roundEditCancel').addEventListener('click', exitRoundEdit);
+
+    /* ── 오픈 알림 대기 명단 (challenge_waitlist) ────────────────────────────
+       ⚠️ 자동 발송이 없으므로 이 화면은 '보고 전화를 거는' 작업대다. 그래서 전화번호를
+          누르면 바로 걸리고(tel:), 연락한 사람은 체크로 갈라 놓는다.
+       ⚠️ 안내가 끝난 명단은 삭제를 권한다 — 개인정보는 목적을 다하면 파기해야 한다. */
+    let _wl = [];
+
+    function wlVisible() {
+      const ch = document.getElementById('wlFilter').value;
+      const hide = document.getElementById('wlHideDone').checked;
+      return _wl.filter(r => (!ch || r.challenge === ch) && (!hide || r.status !== 'notified'));
+    }
+
+    function renderWaitlist() {
+      const listEl = document.getElementById('wlList');
+      const rows = wlVisible();
+      const waiting = rows.filter(r => r.status !== 'notified').length;
+      document.getElementById('wlCount').textContent =
+        rows.length ? `${rows.length}명 (연락 전 ${waiting}명)` : '';
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">대기 중인 알림 신청이 없습니다.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(r => {
+        const done = r.status === 'notified';
+        const when = (r.created_at || '').slice(0, 10);
+        return `
+        <div class="round-item"${done ? ' style="opacity:.6"' : ''}>
+          <div>
+            <div class="ri-main">${esc(r.name)}
+              <a href="tel:${esc((r.phone || '').replace(/[^0-9+]/g, ''))}" style="font-weight:600;color:var(--action-dark)">${esc(r.phone)}</a>
+              ${done ? '<span style="font-size:11px;font-weight:700;color:#2E6E42;border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
+            </div>
+            <div class="ri-sub">${esc(CH_LABEL[r.challenge] || r.challenge)} · 신청 ${when}${r.member_id ? ' · 회원' : ''}</div>
+          </div>
+          <div class="ri-actions">
+            <button class="ri-edit" data-wl-done="${r.id}" data-to="${done ? 'waiting' : 'notified'}">${done ? '되돌리기' : '연락 완료'}</button>
+            <button class="ri-del" data-wl-del="${r.id}">삭제</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      listEl.querySelectorAll('[data-wl-done]').forEach(b => b.addEventListener('click', async () => {
+        const to = b.dataset.to;
+        const { error } = await MONC.sb.from('challenge_waitlist')
+          .update({ status: to, notified_at: to === 'notified' ? new Date().toISOString() : null })
+          .eq('id', b.dataset.wlDone);
+        if (error) { toast('실패: ' + error.message); return; }
+        toast(to === 'notified' ? '연락 완료로 표시' : '연락 전으로 되돌림');
+        loadWaitlist();
+      }));
+      listEl.querySelectorAll('[data-wl-del]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 신청을 삭제할까요? 되돌릴 수 없습니다.')) return;
+        const { error } = await MONC.sb.from('challenge_waitlist').delete().eq('id', b.dataset.wlDel);
+        if (error) { toast('실패: ' + error.message); return; }
+        toast('삭제됨'); loadWaitlist();
+      }));
+    }
+
+    async function loadWaitlist() {
+      const listEl = document.getElementById('wlList');
+      // ⚠️ select('*') — 컬럼을 나열하면 마이그레이션 미적용 환경에서 조회 전체가 400 난다.
+      const { data, error } = await MONC.sb.from('challenge_waitlist')
+        .select('*').order('created_at', { ascending: false });
+      if (error) {
+        // 테이블 미생성이면 '실패'가 아니라 '해야 할 일'을 알려 준다.
+        // ⚠️ PostgREST 는 PGRST205 를 돌려준다(42P01 아님 — 실측 확인).
+        const missing = error.code === 'PGRST205' || error.code === '42P01'
+          || /could not find the table|does not exist/i.test(error.message || '');
+        listEl.innerHTML = '<div class="empty" style="padding:20px;line-height:1.7">' + (missing
+          ? '아직 <b>오픈 알림</b> 테이블이 없어요.<br>Supabase SQL Editor 에서 <code>challenge_waitlist</code> 마이그레이션을 실행하면 이 목록이 켜집니다.'
+          : '불러오기 실패: ' + esc(error.message)) + '</div>';
+        document.getElementById('wlCount').textContent = '';
+        return;
+      }
+      _wl = data || [];
+      renderWaitlist();
+    }
+
+    document.getElementById('wlFilter').addEventListener('change', renderWaitlist);
+    document.getElementById('wlHideDone').addEventListener('change', renderWaitlist);
+    document.getElementById('wlRefresh').addEventListener('click', loadWaitlist);
+    document.getElementById('wlCsv').addEventListener('click', () => {
+      const rows = wlVisible();
+      if (!rows.length) { toast('내려받을 명단이 없어요'); return; }
+      const head = ['챌린지', '이름', '전화번호', '신청일', '상태'];
+      const body = rows.map(r => [
+        CH_LABEL[r.challenge] || r.challenge, r.name, r.phone,
+        (r.created_at || '').slice(0, 10), r.status === 'notified' ? '연락완료' : '연락전',
+      ]);
+      // ⚠️ 전화번호 앞 0 이 엑셀에서 사라지지 않게 문자열로 강제한다(신청자 CSV 와 같은 처리).
+      const csv = [head, ...body].map(cols => cols.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+      const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = '오픈알림_' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click(); URL.revokeObjectURL(url);
+    });
 
     async function loadRounds() {
       const listEl = document.getElementById('roundList');
@@ -2265,6 +2393,7 @@
       loadRounds();
       loadLectures();
       loadApplications();
+      loadWaitlist();
       loadCommunity();
       loadReviewsAdmin();
       loadQuestions();

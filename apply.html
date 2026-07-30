@@ -138,6 +138,18 @@
     background: var(--surface); border: 1px dashed var(--action);
     border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 6px;
   }
+  /* 마감·모집예정 카드의 '오픈 알림 받기'. 카드가 흐려져 있어도 이 버튼은 또렷해야 한다
+     — 지금 할 수 있는 유일한 행동이라서다. ⚠️ .card.disabled 의 흐림 효과를 되돌려 준다. */
+  .wl-cta {
+    display: block; width: calc(100% - 32px); margin: 0 16px 14px; font: inherit;
+    font-size: 14px; font-weight: 800; padding: 13px; min-height: 46px;
+    border: 1px solid var(--action); border-radius: 10px;
+    background: var(--surface); color: var(--accent-ink); cursor: pointer;
+    opacity: 1; filter: none;
+  }
+  .wl-cta[hidden] { display: none; }   /* ⚠️ display:block 이 UA 의 [hidden] 을 이긴다 */
+  @media (hover: hover) { .wl-cta:hover { background: var(--action-tint, #EEF2F9); } }
+
   /* ⚠️ [hidden] 가드 — 조합이 하나도 안 열렸을 때 updateCombo() 가 섹션을 접는다.
      .sec 에 display 를 주는 규칙이 생기면 UA 의 [hidden] 을 이기므로 여기서 못 박는다. */
   #comboSec[hidden] { display: none; }
@@ -477,6 +489,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="recruit.js"></script>
+<script src="waitlist.js" defer></script>
 <!-- 포트원(PortOne) V2 결제 SDK — 테스트 채널 연동 확인용 -->
 <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
 <script>
@@ -562,6 +575,8 @@ function renderCards() {
         </div>
         <div class="card-price">${priceLabel()}<small>참가비</small></div>
       </div>
+      <!-- 마감·모집예정일 때만 applyStatuses() 가 켠다(기본 hidden) -->
+      <button type="button" class="wl-cta" data-role="waitlist" hidden>오픈 알림 받기</button>
       <div class="curr-toggle" data-role="curr"><span class="arw">▶</span> 2주 커리큘럼 보기</div>
       <div class="curr-body">
         <div class="curr-inner">
@@ -575,6 +590,12 @@ function renderCards() {
     const id = card.dataset.id;
     card.querySelector('[data-role="select"]').addEventListener('click', () => toggleSelect(id));
     card.querySelector('[data-role="curr"]').addEventListener('click', (e) => { e.stopPropagation(); card.classList.toggle('curr-open'); });
+    // ⚠️ stopPropagation 필수 — 안 하면 카드 선택 토글까지 같이 돈다(마감 카드라 무시되긴 하지만
+    //    모집예정 카드에서 커리큘럼이 접혔다 펴지는 등 엉뚱한 반응이 난다).
+    card.querySelector('[data-role="waitlist"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.MONC && MONC.openWaitlist) MONC.openWaitlist(id, e.currentTarget.dataset.st || 'closed');
+    });
   });
 }
 
@@ -666,14 +687,18 @@ async function applyStatuses() {
     const st = statuses[c.id];
     const card = cardEl(c.id);
     const tag = card.querySelector('[data-status]');
+    const wl = card.querySelector('[data-role="waitlist"]');
     if (st === 'upcoming' || st === 'closed') {
       card.classList.add('disabled');
       card.classList.remove('selected', 'curr-open');
       tag.textContent = st === 'upcoming' ? '모집예정' : '마감';
       tag.className = 'status-tag ' + (st === 'upcoming' ? 'status-upcoming' : 'status-closed');
+      // 담을 수 없는 카드에 남는 유일한 행동 — 오픈 알림 신청(waitlist.js)
+      if (wl) { wl.hidden = false; wl.dataset.st = st; }
     } else {
       tag.textContent = '';
       tag.className = 'status-tag';
+      if (wl) wl.hidden = true;
     }
   });
   reorderCards();       // 마감 카드를 아래로 — 돈 받는 페이지의 첫 카드가 품절이면 안 된다

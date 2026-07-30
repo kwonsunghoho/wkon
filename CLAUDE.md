@@ -111,6 +111,20 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - `terms.html`, `privacy.html` — footer 법적 페이지. privacy는 실제 스택 기준(수탁자 Supabase 서울/Google/Kakao, 국외이전 고지, CPO 권성호, 14세 미만 조항). 수집 항목·수탁자 변경 시 갱신.
 - **`applications` RLS** (`20260711120000_applications_rls.sql`, owner 실행): INSERT 공개(비회원 신청), SELECT 관리자+본인, UPDATE/DELETE 관리자만.
 
+### 오픈 알림 대기 명단 (`waitlist.js` + `challenge_waitlist`) — 2026-07-30 신설
+마감·모집예정 챌린지에 **연락처를 남길 자리**를 만든 것. 배경: 4개 중 2개가 마감인데 상세페이지가 `alert('다음 회차를 기다려주세요!')`로 끝나서, **전·후 오디오 14개와 후기 55개를 다 보고 마음먹은 사람이 그 경고창만 보고 나갔다.**
+- **자기 주입 공용 컴포넌트**(`nav.js`·`blind-quiz.js` 패턴). `<script src="waitlist.js" defer>` 두 줄이면 되고, 열 자리에서 `MONC.openWaitlist(challengeId, status)`를 부른다. ⚠️ **상세 4종에 모달을 복사해 넣지 말 것** — 그 네 파일의 인라인 `<style>` 공통 블록은 글자 그대로 같아서 한 곳만 고치면 넷이 어긋난다.
+- **입구 2곳(오너 확정)**: ① 상세 4종의 `handleApply()` — 마감·모집예정이면 모달을 연다(⚠️ `alert` 폴백을 지우지 말 것, waitlist.js 로드 실패 시 최소한 상태는 알려야 한다) ② `apply.html` 마감 카드의 `.wl-cta`(기본 `hidden`, `applyStatuses()`가 켠다). **챌린지 허브는 일부러 제외** — 아직 마음을 정하기 전 화면이라 연락처를 남길 마음이 약하다. **마감 + 모집예정 둘 다**에 보여준다.
+- **⚠️⚠️ 등장 연출에서 투명도를 애니메이션하지 말 것 — 실측으로 두 번 밟았다.** ① `requestAnimationFrame`으로 `opacity 0→1` 클래스를 붙이는 방식은 탭이 백그라운드면 rAF 가 늦어 **모달이 안 보인 채로 남는다** ② CSS 애니메이션으로 옮겨도 애니메이션이 일시정지되면 **첫 프레임(투명)에 멈춰** 똑같이 안 보인다(`fill-mode`를 떼도 재생 중에는 애니메이션 값이 이긴다). 지금은 배경막이 **처음부터 불투명**하고 움직임은 `.wl-box`의 위치만(`wl-rise`)이다 — 멈춰도 상자가 14px 아래 있을 뿐 내용은 보인다. **실패 방향이 '열림'이어야 한다.**
+- **⚠️ 법적 필수**: 이름·전화는 개인정보다. `#wlAgree`(만14세 + 수집·이용) 필수 체크를 **사용자가 직접 켜야** 제출 버튼이 열린다. 사전 체크·'간주 동의'·체크 삭제 금지(apply.html·lecture.html 과 동일 규정). 동의 시각은 `agreed_at`, 약관 버전은 `terms_version`에 남긴다. 고지 문구는 **12px 하한**(9대 원칙 1) — 법적 고지라도 더 줄이지 말 것.
+- **⚠️ `applications` 에 섞지 말 것**(섞자는 안은 명시적 기각): 중복 신청 트리거(MC002)·정원 트리거가 대기 명단을 '신청'으로 세고, admin 신청자 현황·CSV·매출 집계가 오염된다. 대기 명단은 **아직 안 산 사람**이다.
+- **⚠️ 중복은 에러가 아니라 '이미 신청됨'**이다. `challenge_waitlist_uq`(challenge + 숫자만 뽑은 전화)가 막고, 클라이언트는 `23505`를 완료 화면으로 돌린다.
+- **⚠️ 테이블 미생성 판정은 `PGRST205`** — PostgREST 는 `42P01`이 아니라 `PGRST205`("Could not find the table … in the schema cache")를 돌려준다(실측). `42P01`만 보면 안내 분기를 영원히 못 탄다. `waitlist.js`·admin 양쪽 같은 판정.
+- **⚠️ apply.html 의 `.wl-cta` 클릭은 `stopPropagation` 필수** — 안 하면 카드 선택 토글까지 같이 돈다. `display:block`이 UA `[hidden]`을 이기므로 `.wl-cta[hidden]{display:none}` 가드도 유지.
+- **admin '오픈 알림' 탭**: 챌린지 필터 · 연락 완료 숨기기 · **전화번호 `tel:` 링크**(보고 바로 거는 작업대다) · [연락 완료]/[되돌리기] · 삭제 · CSV. ⚠️ 자동 발송 기능이 없으므로 **'사람이 보고 연락한다'가 전제**이고, 그래서 [연락 완료] 체크가 핵심이다 — 누구에게 연락했는지 남지 않으면 명단이 쓸모를 잃는다. ⚠️ 조회는 `select('*')`(컬럼 나열 시 미적용 환경에서 400). ⚠️ **안내가 끝난 명단은 삭제를 권한다** — 개인정보는 목적을 다하면 파기.
+- **RLS**: INSERT 공개(비회원도 남긴다, `member_id`는 null 또는 본인 uid만), SELECT/UPDATE/DELETE 는 `is_admin()`만. ⚠️ **본인 조회조차 열지 않는다** — 전화번호로 명단을 조회할 창구를 만들면 번호만으로 '이 사람이 관심을 남겼는지' 캐낼 수 있다(중복 신청 가드에서 비회원 사전 조회를 막은 것과 같은 이유).
+- migration `20260730120000_challenge_waitlist.sql` — **owner 실행 필요.** 미적용 시 degrade: 제출이 실패하며 '준비 중' 안내가 뜨고, admin 탭은 마이그레이션 실행 안내를 보여준다. 챌린지 신청·결제는 영향 없음.
+
 ### recruit.js (challenges + 상세 4종 + index 공유)
 `loadRecruitData()`(Supabase `challenge_rounds` 단일 소스), `applyIndexRecruit()`(`.ch-card` 상태 칩·흑백·`monc:recruitready` 디스패치 — **2026-07-29부터 카드가 challenges.html에 있어 사실상 그 페이지용**, 이름은 구명 유지), `applyDetailRecruit(id)`(상세 + 마감 시 `.apply-btn` 비활성), `loadChallengeStatuses()`(`window._challengeStatuses`), `applyGlobalRecruitCta()`(index 하단 고정 CTA 바 D-day 뱃지 — index에서 호출하는 유일한 함수). 챌린지 정체성 = `data-recruit-id`(`voice`/`expression`/`spinning`/`answer`), 카드·폴백 전반 일관.
 - **⚠️ 데이터 소스는 Supabase `challenge_rounds` 단일(2026-07-23 구글 시트 CSV 폴백 완전 제거 — admin 단일 관리):** `loadRecruitData()`는 `loadRecruitDataFromSupabase()`만 부른다. Supabase에 미등록인 챌린지(예: voice·spinning)나 조회 실패는 그 자리를 비워 두고, 각 호출부(`applyIndexRecruit`/`applyDetailRecruit`/`loadChallengeStatuses`/`applyGlobalRecruitCta`)가 카드의 `data-recruit-start/-end` 어트리뷰트나 `RECRUIT_FALLBACKS`로 폴백한다(전부 null-safe: `data ? data[id] : null` → 폴백). ⚠️ 그래서 Supabase에 일부 기수만 등록된 상태(예: expression·answer만 4기, voice·spinning 미등록)에선 **미등록 챌린지는 하드코딩 날짜로 뜬다 — 올바른 날짜는 admin '모집일정' 탭에서 기수를 등록하면 자동 반영**(코드가 아니라 데이터 문제). **구글 시트/CSV 폴백을 재도입하지 말 것.**
