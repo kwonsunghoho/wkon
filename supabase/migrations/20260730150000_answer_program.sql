@@ -143,7 +143,9 @@ create policy iq_researcher_select on public.interview_questions
 -- =============================================================================
 create table if not exists public.answer_programs (
   id          uuid primary key default gen_random_uuid(),
-  airline     text not null,                     -- 코드(ke/…) — 프로그램은 항공사 단위 상품
+  -- 코드(ke/…) 또는 **null=공통(항공사 무관)**. 1차 상품이 '필수 기출 30'(전 항공사
+  -- 공통 — 2026-07-30 오너 확정 "항공사 세부는 지금 안 다룬다")이라 null 이 첫 프로그램이다.
+  airline     text,
   title       text not null,                     -- 예: "제주항공 20일 답변 루틴"
   subtitle    text,
   description text,
@@ -160,7 +162,7 @@ create table if not exists public.answer_programs (
 );
 
 comment on table public.answer_programs is
-  '항공사별 매일 답변 프로그램 상품. price null=지급 전용 / 0=자가 등록 가능 / 양수=유료(결제 연동은 후속).';
+  '매일 답변 프로그램 상품. airline null=공통(필수 기출). price null=지급 전용 / 0=자가 등록 가능 / 양수=유료(결제 연동은 후속).';
 
 drop trigger if exists trg_answer_programs_updated on public.answer_programs;
 create trigger trg_answer_programs_updated before update on public.answer_programs

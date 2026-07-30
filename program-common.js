@@ -129,21 +129,24 @@
   /* =============================================================================
    * 데모 스토어 — localStorage. 마이그레이션·배포·로그인 없이 전체 흐름 검증.
    * ============================================================================= */
-  var DEMO_STATE_KEY = 'ap_demo_state_v1';
+  // v2(2026-07-30): 데모가 '필수 기출(공통)' 프로그램으로 바뀌어 키를 올렸다 —
+  // 구 키를 그대로 쓰면 이전 체험자의 localStorage 에 옛 제주항공 데모가 남아 보인다.
+  var DEMO_STATE_KEY = 'ap_demo_state_v2';
 
   function demoSeed() {
     var today = kstToday();
     var d2ago = kstToday(Date.now() - 2 * 86400000);
     return {
       programs: [{
-        id: 'demo-prog-7c', airline: '7c', title: '제주항공 5일 답변 루틴 (체험판)',
-        subtitle: '매일 한 문제씩, 내 경험으로', description: '체험 모드 — 실제 기출 은행이 아니라 예시 문항입니다.',
+        // 1차 상품 방향(2026-07-30 오너): 필수 기출(전 항공사 공통) 먼저 — airline null=공통
+        id: 'demo-prog-7c', airline: null, title: '필수 기출 맛보기 (체험판)',
+        subtitle: '어느 항공사든 무조건 나오는 문제부터', description: '체험 모드 — 실제 기출 은행이 아니라 예시 문항입니다.',
         total_days: 5, reveal_policy: 'daily', price: 0, visible: true
       }],
       enrollments: [{ id: 'demo-enr-1', program_id: 'demo-prog-7c', member_id: 'demo-user', started_at: d2ago, status: 'active', source: 'promo' }],
       questions: {
         'demo-q1': { id: 'demo-q1', content: '예상치 못한 상황을 침착하게 해결했던 경험을 말해 보세요.', qtype: 'experience', stage: '1차 면접', intent: '위기에서 무엇을 먼저 챙기는 사람인지, 실제로 몸이 움직였는지를 봅니다.', competencies: ['우선순위 판단', '침착함'], needed_facts: ['실제로 한 행동', '그때 한 말', '확인 가능한 결과'], good_exp_types: ['아르바이트', '동아리·학회'], avoid: '결과 자랑으로 시작하지 않기', common_mistakes: '팀이 한 일을 내가 한 일처럼 말하는 것', rec_seconds: 60, source_confidence: 'reported', asked_at: '2025 하반기', followups: ['그때 주변 반응은 어땠나요?', '같은 일이 다시 생기면 무엇을 다르게 하실 건가요?'] },
-        'demo-q2': { id: 'demo-q2', content: '제주항공에 지원한 이유는 무엇인가요?', qtype: 'motivation', stage: '1차 면접', intent: '왜 항공사가 아니라 "이 항공사"인지를 봅니다.', competencies: ['회사 이해', '진정성'], needed_facts: ['개인 경험', '이 회사를 고른 이유'], good_exp_types: ['여행·생활'], rec_seconds: 45, source_confidence: 'verified', asked_at: '2025 하반기', followups: ['다른 LCC 와의 차이는 뭐라고 생각하세요?'] },
+        'demo-q2': { id: 'demo-q2', content: '승무원이라는 직업을 선택한 이유는 무엇인가요?', qtype: 'motivation', stage: '공통 필수', intent: '멋있어 보여서가 아니라 직업의 실제(서비스+안전+체력)를 알고 골랐는지 봅니다.', competencies: ['직업 이해', '진정성'], needed_facts: ['계기가 된 개인 경험', '이 직업을 고른 이유'], good_exp_types: ['여행·생활'], rec_seconds: 45, source_confidence: 'verified', followups: ['승무원의 가장 힘든 점은 뭐라고 생각하세요?'] },
         'demo-q3': { id: 'demo-q3', content: '팀원과 의견이 크게 부딪혔을 때 어떻게 조율했는지 말해 보세요.', qtype: 'conflict', stage: '2차 면접', intent: '갈등에서 상대의 관점을 확인하는 사람인지 봅니다.', competencies: ['경청', '조율'], needed_facts: ['갈등의 원인', '내가 한 행동', '합의 결과'], good_exp_types: ['동아리·학회', '아르바이트'], rec_seconds: 60, source_confidence: 'reported', followups: ['상대가 끝까지 반대했다면요?'] },
         'demo-q4': { id: 'demo-q4', content: '본인의 단점은 무엇인가요?', qtype: 'weakness', stage: '2차 면접', intent: '자기 인식과 관리 능력을 봅니다. 장점으로 포장한 단점은 감점.', competencies: ['자기 인식'], needed_facts: ['실제 단점', '문제가 됐던 사례', '지금 관리 방법'], rec_seconds: 40, source_confidence: 'estimated', followups: ['그 단점이 기내에서 문제가 되면요?'] },
         'demo-q5': { id: 'demo-q5', content: '기내에서 승객 두 분이 동시에 도움을 요청하면 어떻게 하시겠어요?', qtype: 'situation', stage: '2차 면접', intent: '순서를 정하는 기준이 있는지 봅니다.', competencies: ['우선순위 판단', '안전 의식'], needed_facts: ['가장 먼저 할 행동', '그 이유'], rec_seconds: 40, source_confidence: 'reported', followups: ['두 분 다 급하다고 하시면요?'] }

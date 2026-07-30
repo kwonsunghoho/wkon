@@ -2829,7 +2829,7 @@
       sel.innerHTML = _apP.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('');
       listEl.innerHTML = _apP.length ? _apP.map(p => `
         <div class="round-item" style="${p.visible ? '' : 'opacity:.6;'}">
-          <div><div class="ri-main">${esc(p.title)} <span style="font-size:12px;color:var(--text-muted)">(${esc((LEC.AIRLINES[p.airline]||{}).ko || p.airline)})</span></div>
+          <div><div class="ri-main">${esc(p.title)} <span style="font-size:12px;color:var(--text-muted)">(${esc((LEC.AIRLINES[p.airline]||{}).ko || p.airline || '전 항공사 공통')})</span></div>
             <div class="ri-sub">${p.total_days}일 · ${p.reveal_policy === 'daily' ? '하루 한 문제' : p.reveal_policy === 'all' ? '전체 공개' : '날짜 지정'} ·
               ${p.price == null ? '지급 전용' : p.price === 0 ? '무료' : Number(p.price).toLocaleString() + '원'} · ${p.visible ? '공개' : '숨김'}</div></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
@@ -2848,7 +2848,7 @@
       listEl.querySelectorAll('.app-edit').forEach(b => b.addEventListener('click', () => {
         const p = _apP.find(x => x.id === b.dataset.id); if (!p) return;
         _apEditP = p.id;
-        document.getElementById('appAirline').value = p.airline;
+        document.getElementById('appAirline').value = p.airline || '';
         document.getElementById('appTitle').value = p.title;
         document.getElementById('appSub').value = p.subtitle || '';
         document.getElementById('appDays').value = p.total_days;
@@ -2874,7 +2874,7 @@
       if (!title) { alert('제목을 입력하세요.'); return; }
       const priceRaw = document.getElementById('appPrice').value.trim();
       const row = {
-        airline: document.getElementById('appAirline').value,
+        airline: document.getElementById('appAirline').value || null,   // ''=공통 → null
         title, subtitle: document.getElementById('appSub').value.trim() || null,
         total_days: Math.max(1, Math.min(60, Number(document.getElementById('appDays').value) || 20)),
         reveal_policy: document.getElementById('appPolicy').value,
@@ -3080,7 +3080,8 @@
 
     async function loadApProgram() {
       document.getElementById('apqAirline').innerHTML = apAirlineOptions(true);
-      document.getElementById('appAirline').innerHTML = apAirlineOptions(false);
+      // 프로그램도 공통(항공사 무관)이 1급이다 — 1차 상품이 '필수 기출'(전 항공사 공통).
+      document.getElementById('appAirline').innerHTML = apAirlineOptions(true);
       document.getElementById('apqType').innerHTML = Object.keys(AP_QTYPES)
         .map(k => `<option value="${k}">${AP_QTYPES[k]}</option>`).join('');
       document.getElementById('apqFilter').innerHTML =
