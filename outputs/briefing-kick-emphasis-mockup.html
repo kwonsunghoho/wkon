@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>승준노트 킥 강조 — 판과 소인 vs 도장 짝 (2026-07-31 5차)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* tokens.css 미로딩(파일 단독 열람) 대비 폴백 — 값은 2026-07-31 tokens.css 스냅샷 */
+  :root {
+    --accent: #1B3A6B; --accent-dark: #142C52; --accent-tint: #E5E9F1; --accent-ink: #1B3A6B;
+    --action: #1B3A6B; --action-dark: #142C52; --action-tint: #E5E9F1; --action-ink: #FFFFFF;
+    --bg: #F4F1EA; --bg2: #FBF9F5; --bg3: #E7E1D3; --surface: #FFFFFF; --surface2: #F4F0E8;
+    --text: #26221C; --text-muted: #5F574B; --text-dim: #6C6454;
+    --border: rgba(38,34,28,.16); --border-soft: rgba(38,34,28,.09);
+    --radius-xs: 8px; --radius-sm: 14px; --radius-md: 20px; --radius-lg: 24px;
+    --serif: 'SUIT Variable', SUIT, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+    background: #EDE9DF; color: var(--text); line-height: 1.6;
+    -webkit-font-smoothing: antialiased; word-break: keep-all; padding: 30px 18px 70px; }
+
+  .mk-head { max-width: 1240px; margin: 0 auto 30px; }
+  .mk-h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; color: var(--accent-dark); }
+  .mk-lead { font-size: 15px; color: var(--text-muted); margin-top: 10px; max-width: 60em; }
+  .mk-lead b { color: var(--accent-ink); }
+
+  .mk-row { display: flex; flex-wrap: wrap; gap: 34px 26px; justify-content: center; max-width: 1240px; margin: 0 auto; }
+  .mk-col { width: 375px; flex: 0 0 auto; }
+  .mk-tag { display: flex; align-items: baseline; gap: 9px; margin-bottom: 4px; }
+  .mk-letter { font-family: var(--serif); font-size: 24px; font-weight: 900; color: var(--accent-dark); }
+  .mk-title { font-size: 16px; font-weight: 800; }
+  .mk-spec { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin-bottom: 12px; min-height: 3.1em; }
+  .mk-spec b { color: var(--text); }
+
+  .fr { width: 375px; border-radius: 30px; border: 1px solid rgba(38,34,28,.18);
+    box-shadow: 0 24px 48px -18px rgba(58,42,26,.35), 0 3px 8px rgba(58,42,26,.10);
+    background: var(--bg); overflow: hidden; }
+  .fr-inner { padding: 26px 20px 34px; }
+  .fr-hero { text-align: center; padding: 8px 0 20px; }
+  .fr-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+  .fr-title { font-family: var(--serif); font-size: 27px; font-weight: 700; color: var(--accent); letter-spacing: -.5px; margin-top: 7px; }
+
+  /* ══ 목차 공통(확정 D+룰렛) ══ */
+  .ix-wrap { border-top: 2px solid var(--accent-dark); }
+  .ix-cap { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 2px 0; }
+  .ix-cap b { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+  .ix-cap span { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .ix-item { position: relative; display: flex; gap: 15px; align-items: flex-start;
+    padding: 19px 2px 20px; text-decoration: none; color: var(--text);
+    border-bottom: 1px solid var(--border-soft); }
+  .ix-no { flex: 0 0 auto; width: 36px; }
+  .ix-no b { display: block; font-family: var(--serif); font-size: 21px; font-weight: 800;
+    color: var(--accent-dark); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .ix-no small { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .13em; color: var(--text-dim); margin-top: 2px; }
+  .ix-cell { flex: 1 1 auto; min-width: 0; }
+  .ix-namewrap { display: flex; align-items: baseline; gap: 8px; }
+  .ix-name { font-family: var(--serif); font-size: 19px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+  .ix-dots { flex: 1 1 auto; border-bottom: 2px dotted rgba(38,34,28,.28); transform: translateY(-4px); min-width: 14px; }
+  .ix-go { flex: 0 0 auto; font-size: 16px; color: var(--accent-dark); opacity: .7; transform: translateY(1px); }
+  .ix-desc { display: block; font-size: 13.5px; line-height: 1.58; color: var(--text-muted); margin-top: 5px; max-width: 26em; }
+  .stamp b, .is-feat .ix-no b { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    background: var(--action); color: var(--action-ink); border-radius: 9px; font-size: 16px; }
+  .is-feat .ix-name { font-size: 22px; }
+  .tg { display: inline-flex; align-items: center; flex: 0 0 auto;
+    font-size: 12px; font-weight: 800; letter-spacing: .02em; line-height: 1;
+    padding: 4px 8px; border-radius: 6px; transform: translateY(-2px);
+    background: var(--action); color: var(--action-ink); }
+
+  /* ══ 루트맵 룰렛(확정) ══ */
+  .d-route { margin: 14px 0 6px; padding: 14px 15px 12px; background: var(--surface);
+    border: 1px solid var(--border-soft); border-radius: 14px; box-shadow: 0 2px 10px rgba(38,34,28,.05);
+    cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .d-slide { position: relative; }
+  .d-cap { display: flex; align-items: center; justify-content: space-between; }
+  .d-cap b { font-size: 15px; font-weight: 800; color: var(--text); }
+  .d-plane { width: 17px; height: 17px; fill: var(--accent-ink); transform: rotate(12deg);
+    transition: transform .4s ease; flex: 0 0 auto; }
+  .d-route.is-rolling .d-plane { transform: rotate(12deg) translateX(7px) translateY(-3px); }
+  .d-line { display: flex; align-items: center; margin-top: 12px; min-height: 33px; }
+  .d-chip { flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 5px;
+    background: var(--accent-tint); border-radius: 10px; padding: 7px 10px; }
+  .d-chip i { font-style: normal; font-size: 12px; font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .d-chip b { font-size: 13.5px; font-weight: 800; color: var(--text); white-space: nowrap; }
+  .d-seg { flex: 1 1 auto; border-top: 2px dashed rgba(27,58,107,.38); margin: 0 5px; min-width: 12px; }
+  .d-slide.roll { animation: rtRoll .46s ease; }
+  @keyframes rtRoll {
+    0%   { opacity: 1; transform: translateY(0); }
+    42%  { opacity: 0; transform: translateY(-11px); }
+    58%  { opacity: 0; transform: translateY(11px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .d-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+  .d-dots { display: flex; }
+  .d-dots button { appearance: none; background: none; border: 0; cursor: pointer;
+    width: 24px; height: 30px; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .d-dots button::before { content: ""; width: 6px; height: 6px; border-radius: 999px;
+    background: rgba(27,58,107,.24); transition: width .25s ease, background .25s ease; }
+  .d-dots button.on::before { width: 17px; background: var(--action); }
+  .d-hint { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+  @media (prefers-reduced-motion: reduce) {
+    .d-slide.roll { animation: none; }
+    .d-plane { transition: none; }
+  }
+
+  /* ══ G안 — 판과 소인 ══ */
+  /* 01 = 표지 기사 판: 틴트 한 장이 행을 통째로 감싼다. 헤어라인 리듬을 딱 한 번 깬다 */
+  .vg .ix-item.is-feat { background: var(--accent-tint); border-radius: 14px;
+    padding: 18px 14px 19px 12px; margin: 12px 0 4px; border-bottom: 0; }
+  .vg .is-feat .ix-dots { border-bottom-color: rgba(27,58,107,.30); }
+  /* 06 = 우편 소인: 매일 오는 것에 찍는 도장. 점선 리더 위에 겹쳐 '소인 찍힌' 느낌 */
+  .vg .is-daily .ix-desc { padding-right: 62px; }
+  .pm { position: absolute; right: 32px; top: 6px; width: 57px; height: 57px;
+    border: 1.5px solid rgba(27,58,107,.62); border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+    transform: rotate(-9deg); pointer-events: none; }
+  .pm::before { content: ""; position: absolute; inset: 3px; border: 1px solid rgba(27,58,107,.32); border-radius: 50%; }
+  .pm i { font-style: normal; font-size: 12px; font-weight: 800; letter-spacing: .05em; color: var(--accent-ink); line-height: 1.2; }
+  .pm b { font-size: 13.5px; font-weight: 900; color: var(--accent-ink); line-height: 1.2; }
+
+  /* ══ H안 — 도장 짝 ══ */
+  /* 킥 두 개(01·06)만 같은 네이비 도장 숫자 — 장치 하나로 짝을 만든다 */
+  .vh .is-daily .ix-no b { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    background: var(--action); color: var(--action-ink); border-radius: 9px; font-size: 16px; }
+  .vh .is-daily .ix-name { font-size: 20px; }
+
+  .mk-note { max-width: 1240px; margin: 40px auto 0; font-size: 14px; color: var(--text-muted); }
+  .mk-note h2 { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .mk-note li { margin: 6px 0 6px 18px; }
+  .mk-note b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header class="mk-head">
+  <h1 class="mk-h1">킥 강조 — 01 나만의 승준노트 · 06 필수 기출 (2026-07-31 5차)</h1>
+  <p class="mk-lead">오너 지시: 사이트의 킥인 <b>01 노트</b>와 <b>06 필수 기출</b>도 강조하되, 방법이 달라도 어울리게.
+  두 안 모두 룰렛·'처음 추천' 배지는 확정 그대로. 장치는 전부 <b>종이 위 네이비 잉크 한 계열</b>(판·도장·소인)이라 서로 싸우지 않는다.</p>
+</header>
+
+<div class="mk-row">
+
+  <!-- ═══ G안 — 판과 소인 ═══ -->
+  <section class="mk-col">
+    <div class="mk-tag"><span class="mk-letter">G</span><span class="mk-title">판과 소인 (추천)</span></div>
+    <p class="mk-spec"><b>01은 표지 기사 판, 06은 우편 소인.</b> 노트는 틴트 한 장으로 목차의 유일한 '면'이 되고, 매일 오는 기출엔 소인 도장이 점선 위에 찍힌다. 역할이 다르니 장치도 다르게.</p>
+    <div class="fr vg"><div class="fr-inner">
+      <div class="fr-hero"><div class="fr-eyebrow">MONC NOTE</div><div class="fr-title">승준노트</div></div>
+      <div class="ix-wrap">
+        <div class="ix-cap"><b>INDEX</b><span>6 TOOLS</span></div>
+
+        <div class="d-route" role="button" tabindex="0" aria-label="추천 코스 — 누르면 다음 코스">
+          <div class="d-slide">
+            <div class="d-cap"><b class="rt-title"></b>
+              <svg class="d-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.5 15.6 13.9 12 21.5 8.4c.6-.3.8-1 .5-1.6-.3-.5-.9-.8-1.5-.6L3.6 10.9c-.9.3-1.6 1-1.6 1.1s.7.8 1.6 1.1l16.9 4.7c.6.2 1.2-.1 1.5-.6.3-.6.1-1.3-.5-1.6Z"/></svg>
+            </div>
+            <div class="d-line rt-line"></div>
+          </div>
+          <div class="d-foot">
+            <div class="d-dots rt-dots"></div>
+            <span class="d-hint">누르면 다음 코스</span>
+          </div>
+        </div>
+
+        <a class="ix-item is-feat" href="#">
+          <span class="ix-no"><b>01</b><small>NOTE</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">나만의 승준노트</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">면접 준비의 홈베이스. 쓰고 다듬은 답변이 전부 여기로 모여요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>02</b><small>NEWS</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">항공사 뉴스&산업분석</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">국내 10개 항공사 소식과 산업 흐름을 한곳에서. 스크랩하면 답변 재료가 돼요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>03</b><small>FIND</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">답변 소재 발굴</span><span class="tg">처음 추천</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">차별화는 자기객관화에서부터. 내 경험에서 답변 소재를 같이 찾아요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>04</b><small>LAB</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">나의 답변 연구실</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">잘 쓴 문장은 지키고, 고칠 문장은 '지금 → 이렇게'로 다듬어요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>05</b><small>SCAN</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">AI킬러</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">AI 같은 표현을 찾아 밑줄로 짚어 드려요. 어디가 왜 그런지까지.</span>
+          </span>
+        </a>
+        <a class="ix-item is-daily" href="#">
+          <span class="ix-no"><b>06</b><small>DAILY</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">필수 기출 하루 한 개</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">항공사 필수 기출을 하루 한 개씩, 근거 있게 완성해요.</span>
+          </span>
+          <span class="pm" aria-hidden="true"><i>매일</i><b>1문</b></span>
+        </a>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ═══ H안 — 도장 짝 ═══ -->
+  <section class="mk-col">
+    <div class="mk-tag"><span class="mk-letter">H</span><span class="mk-title">도장 짝 — 최소 강조</span></div>
+    <p class="mk-spec"><b>킥 두 개에 같은 네이비 도장 숫자.</b> 01이 쓰던 도장을 06에도 찍어 '이 둘이 기둥'이라는 짝을 만든다. 장치를 하나도 안 늘려 가장 조용하다.</p>
+    <div class="fr vh"><div class="fr-inner">
+      <div class="fr-hero"><div class="fr-eyebrow">MONC NOTE</div><div class="fr-title">승준노트</div></div>
+      <div class="ix-wrap">
+        <div class="ix-cap"><b>INDEX</b><span>6 TOOLS</span></div>
+
+        <div class="d-route" role="button" tabindex="0" aria-label="추천 코스 — 누르면 다음 코스">
+          <div class="d-slide">
+            <div class="d-cap"><b class="rt-title"></b>
+              <svg class="d-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.5 15.6 13.9 12 21.5 8.4c.6-.3.8-1 .5-1.6-.3-.5-.9-.8-1.5-.6L3.6 10.9c-.9.3-1.6 1-1.6 1.1s.7.8 1.6 1.1l16.9 4.7c.6.2 1.2-.1 1.5-.6.3-.6.1-1.3-.5-1.6Z"/></svg>
+            </div>
+            <div class="d-line rt-line"></div>
+          </div>
+          <div class="d-foot">
+            <div class="d-dots rt-dots"></div>
+            <span class="d-hint">누르면 다음 코스</span>
+          </div>
+        </div>
+
+        <a class="ix-item is-feat" href="#">
+          <span class="ix-no"><b>01</b><small>NOTE</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">나만의 승준노트</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">면접 준비의 홈베이스. 쓰고 다듬은 답변이 전부 여기로 모여요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>02</b><small>NEWS</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">항공사 뉴스&산업분석</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">국내 10개 항공사 소식과 산업 흐름을 한곳에서. 스크랩하면 답변 재료가 돼요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>03</b><small>FIND</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">답변 소재 발굴</span><span class="tg">처음 추천</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">차별화는 자기객관화에서부터. 내 경험에서 답변 소재를 같이 찾아요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>04</b><small>LAB</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">나의 답변 연구실</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">잘 쓴 문장은 지키고, 고칠 문장은 '지금 → 이렇게'로 다듬어요.</span>
+          </span>
+        </a>
+        <a class="ix-item" href="#">
+          <span class="ix-no"><b>05</b><small>SCAN</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">AI킬러</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">AI 같은 표현을 찾아 밑줄로 짚어 드려요. 어디가 왜 그런지까지.</span>
+          </span>
+        </a>
+        <a class="ix-item is-daily" href="#">
+          <span class="ix-no"><b>06</b><small>DAILY</small></span>
+          <span class="ix-cell">
+            <span class="ix-namewrap"><span class="ix-name">필수 기출 하루 한 개</span><span class="ix-dots"></span><span class="ix-go">→</span></span>
+            <span class="ix-desc">항공사 필수 기출을 하루 한 개씩, 근거 있게 완성해요.</span>
+          </span>
+        </a>
+      </div>
+    </div></div>
+  </section>
+
+</div>
+
+<div class="mk-note">
+  <h2>판단 기준</h2>
+  <ul>
+    <li><b>강조 지도(확정 반영)</b>: 01 노트·06 기출 = 킥 / 03 = 처음 추천 배지 / 02·04·05 = 조용한 행. 조용한 세 행이 있어야 강조가 강조로 읽힌다 — 더 늘리지 말 것.</li>
+    <li><b>G 판과 소인</b>: 노트는 '모이는 면'이라 판이, 기출은 '매일 오는 것'이라 소인이 각자 이야기와 맞다. 소인은 점선 리더 위에 겹쳐 찍혀 우편물 느낌 — 실장 시 06 설명줄 오른쪽 여백 62px 유지(도장과 겹침 방지).</li>
+    <li><b>H 도장 짝</b>: 새 장치 없이 도장 하나로 짝을 만든다. 다만 01의 유일함(도장=1티어)은 약해진다 — '둘이 기둥'이라는 오너 말엔 G보다 정직하게 맞는 건 H일 수도.</li>
+    <li>둘 다 룰렛 코스에서 노트·기출이 계속 등장(매일 5분·면접 코앞)해 동선으로도 킥이 반복 노출된다.</li>
+    <li>실장 시: 선택안 briefing.html 이식 + 이름 동기화(nav 하위 메뉴·홈 티저·각 페이지 제목) + 375px 실측 + docs/notes/briefing.md 기록.</li>
+  </ul>
+</div>
+
+<script>
+(function(){
+  var COURSES = [
+    { t: '처음이라면, 이 순서로', s: [['03','소재 발굴'], ['04','연구실'], ['05','AI킬러']] },
+    { t: '매일 5분 루틴',         s: [['02','뉴스'], ['06','필수 기출'], ['01','노트']] },
+    { t: '쓴 답변이 있다면',       s: [['05','AI킬러'], ['04','연구실'], ['01','노트']] },
+    { t: '면접이 코앞이라면',      s: [['01','노트'], ['02','뉴스'], ['06','필수 기출']] }
+  ];
+  var noMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll('.d-route').forEach(function(card){
+    var slide = card.querySelector('.d-slide');
+    var title = card.querySelector('.rt-title');
+    var line  = card.querySelector('.rt-line');
+    var dots  = card.querySelector('.rt-dots');
+    var idx = 0, timer = null;
+
+    COURSES.forEach(function(_, k){
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('aria-label', (k+1) + '번 코스 보기');
+      b.addEventListener('click', function(e){ e.stopPropagation(); go(k); });
+      dots.appendChild(b);
+    });
+
+    function paint(){
+      var c = COURSES[idx];
+      title.textContent = c.t;
+      line.innerHTML = c.s.map(function(st){
+        return '<span class="d-chip"><i>' + st[0] + '</i><b>' + st[1] + '</b></span>';
+      }).join('<span class="d-seg"></span>');
+      [].forEach.call(dots.children, function(d, k){ d.classList.toggle('on', k === idx); });
+    }
+
+    function go(k){
+      if (k === idx) { restart(); return; }
+      idx = k;
+      if (noMotion) { paint(); restart(); return; }
+      card.classList.add('is-rolling');
+      slide.classList.remove('roll'); void slide.offsetWidth;
+      slide.classList.add('roll');
+      setTimeout(paint, 190);
+      setTimeout(function(){ slide.classList.remove('roll'); card.classList.remove('is-rolling'); }, 480);
+      restart();
+    }
+
+    function next(){ go((idx + 1) % COURSES.length); }
+    function restart(){
+      if (timer) clearInterval(timer);
+      if (noMotion) return;
+      timer = setInterval(function(){ if (!document.hidden) next(); }, 3800);
+    }
+
+    card.addEventListener('click', next);
+    card.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); next(); }
+    });
+
+    paint(); restart();
+  });
+})();
+</script>
+
+</body>
+</html>
