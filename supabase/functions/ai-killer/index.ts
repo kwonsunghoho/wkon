@@ -51,7 +51,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-07-30a'
+const FN_VERSION = '2026-07-30b'
 const FN_FEATURES = [
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
@@ -60,6 +60,7 @@ const FN_FEATURES = [
   'autosave',         // 붙여넣은 글을 답변 저장소에 자동 저장
   'credit_tiers',     // 도구별 단가(소재2/킬러3/첨삭10) + 답변 단위 차감
   'polish',           // 첨삭 — mode:'polish' 로 강점·보완점·문장 첨삭 리포트(2026-07-30)
+  'coach_terms',      // 감점 사전의 연구진(coach) 표현을 첨삭 AI 감점 기준으로 주입(2026-07-30b)
 ]
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
@@ -612,7 +613,7 @@ type PolishOut = {
 
 async function polishFill(
   apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
-  airline: string, airBrief: string, regenNote: string,
+  airline: string, airBrief: string, coachBrief: string, regenNote: string,
 ): Promise<PolishOut> {
   const airLine = airline === 'all'
     ? '특정 항공사를 정하지 않았다(만능) — 어느 항공사에도 통할 글이어야 한다'
@@ -625,7 +626,9 @@ async function polishFill(
     model: MODEL,
     max_tokens: POLISH_MAX_TOKENS,
     output_config: { effort: POLISH_EFFORT, format: { type: 'json_schema', schema: POLISH_SCHEMA } },
-    system: [{ type: 'text', text: POLISH_VOICE + regenNote, cache_control: { type: 'ephemeral' } }],
+    // ⚠️ coachBrief(연구진 감점 기준)는 요청마다 같으므로 system 에 두어 프롬프트 캐시를 탄다.
+    //    사전을 고치면 캐시가 한 번 깨질 뿐이다(드문 일). regenNote 는 재생성 때만 붙는다.
+    system: [{ type: 'text', text: POLISH_VOICE + coachBrief + regenNote, cache_control: { type: 'ephemeral' } }],
     messages: [{
       role: 'user',
       content:
@@ -700,6 +703,7 @@ Deno.serve(async (req) => {
   if ((reqBody as { probe?: unknown }).probe === true) {
     let airlines: number | null = null
     let terms: number | null = null
+    let coachTerms: number | null = null
     let polishTable: number | null = null
     try {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -707,6 +711,10 @@ Deno.serve(async (req) => {
       airlines = a.count ?? null
       const t = await admin.from('ai_killer_terms').select('id', { count: 'exact', head: true }).eq('active', true)
       terms = t.count ?? null
+      // 연구진 기준 개수 — admin '감점 사전' 탭으로 쌓이는 자산. 0이면 아직 임시 시드만 있는 것.
+      const ct = await admin.from('ai_killer_terms').select('id', { count: 'exact', head: true })
+        .eq('active', true).eq('origin', 'coach')
+      coachTerms = ct.count ?? null
       // 첨삭 표 — null 이면 20260730130000 마이그레이션 미적용(첨삭만 '준비 중'으로 degrade)
       const p = await admin.from('answer_polishes').select('id', { count: 'exact', head: true })
       polishTable = p.error ? null : (p.count ?? 0)
@@ -717,6 +725,7 @@ Deno.serve(async (req) => {
       features: FN_FEATURES,
       airline_profiles: airlines,   // 4면 제주·에프·이스타·티웨이가 다 들어간 것
       terms: terms,
+      coach_terms: coachTerms,      // 연구진 기준 표현 수 — 0이면 아직 임시 시드만(자산 미유입)
       polish_table: polishTable,    // null=마이그레이션 미적용 / 숫자=지금까지 쌓인 첨삭 수
       model: MODEL,
       has_api_key: !!Deno.env.get('ANTHROPIC_API_KEY'),
@@ -849,19 +858,38 @@ Deno.serve(async (req) => {
       }
       charged = { tool: 'polish', ref: polishRef }
 
-      // ── p-2. 항공사 프로필 + AI 호출 ───────────────────────────────────
+      // ── p-2. 사전·항공사 프로필 로드 + AI 호출 ─────────────────────────
+      // 사전은 한 번만 읽어 두 군데(코치 기준 주입 + 자기 출력 재검사)에 쓴다.
+      const { data: termRows2 } = await admin
+        .from('ai_killer_terms').select('term, kind, origin, why').eq('active', true)
+      const allTerms2 = (termRows2 ?? []) as Array<Term & { origin?: string }>
+
+      // ⚠️ 연구진 기준(coach) 주입 — admin '감점 사전' 탭에 쌓이는 표현을 첨삭 AI 의
+      //    감점 기준으로 가르친다(2026-07-30 오너 지시 "이 데이터를 학습해서").
+      //    킬러는 이 표를 문자열 검출에 직접 쓰지만, 첨삭은 문자열 일치를 넘어
+      //    '이런 습관 자체'를 고치라고 시키는 자리라 프롬프트로 넣는다.
+      //    coach 만 넣는 이유: general 시드는 어차피 AI 도 아는 뻔한 상투어라
+      //    프롬프트 자리만 차지한다 — 몬크만 아는 기준이 이 주입의 값어치다.
+      const COACH_CAP = 80   // 사전이 커져도 프롬프트가 무한히 붓지 않게(원가 상한)
+      const coach2 = allTerms2.filter((t) => t.origin === 'coach' && t.term)
+      if (coach2.length > COACH_CAP) console.log('coach terms capped:', coach2.length, '->', COACH_CAP)
+      const coachBrief = coach2.length
+        ? `\n\n[몬크 연구진이 감점하는 표현 — 3,500명을 가르치며 쌓은 기준]\n`
+          + coach2.slice(0, COACH_CAP).map((t) => `- "${t.term}"${t.why ? ` — ${t.why}` : ''}`).join('\n')
+          + `\n(학생 글에 이 표현이나 같은 습관이 보이면 improvements·rewrites 에서 우선 다뤄라. `
+          + `네 문장에는 절대 쓰지 마라.)`
+        : ''
+
       const { brief: airBrief2, qMatched: qm2 } = await airlineBrief(admin, airline, question)
       if (qm2 === false) console.log('airline question mismatch (polish):', airline, '|', question.slice(0, 60))
 
-      let rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2, '')
+      let rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2, coachBrief, '')
 
       // ── p-3. 자기 출력 재검사 — 상투어 사전을 첨삭 문장에도 돌린다(4겹 고삐 ③) ──
       // ⚠️ 첨삭에서 이게 더 절실하다: fix 는 학생이 **그대로 옮겨 쓸 수도 있는** 문장이라,
       //    여기에 상투어가 섞이면 우리가 학생 글에 AI스러움을 심어 주는 꼴이 된다.
       {
-        const { data: termRows2 } = await admin
-          .from('ai_killer_terms').select('term, kind, why').eq('active', true)
-        const cliche2 = ((termRows2 ?? []) as Term[])
+        const cliche2 = allTerms2
           .filter((t) => t.kind === 'cliche').map((t) => t.term)
         const mine = [
           ...rep.strengths.map((s) => s.note),
@@ -871,7 +899,7 @@ Deno.serve(async (req) => {
         const bad2 = cliche2.filter((t) => t.length >= 3 && mine.includes(t))
         if (bad2.length > 0) {
           console.log('self-check hit (polish), regenerating:', bad2.join(', '))
-          rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2,
+          rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2, coachBrief,
             `\n\n[다시 쓰는 이유]\n방금 네 첨삭에 ${bad2.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
             `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
         }

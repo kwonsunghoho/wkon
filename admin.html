@@ -266,6 +266,7 @@
     <button class="tabbtn" data-tab="reviews">후기 관리</button>
     <button class="tabbtn" data-tab="credits">크레딧</button>
     <button class="tabbtn" data-tab="questions">기출문제</button>
+    <button class="tabbtn" data-tab="terms">감점 사전</button>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
@@ -589,6 +590,55 @@
         </div>
       </form>
       <div class="round-list" id="questionList"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- ══ 감점 사전 (ai_killer_terms) — AI킬러 검출의 본체 (2026-07-30 신설) ══
+       ⚠️ 이 표가 이 도구의 유일한 자산이다(비공개 — 일반 회원은 못 읽는다).
+       서버가 매 요청마다 DB 에서 읽으므로 여기서 고치면 **재배포 없이 즉시** 반영된다.
+       '연구진 기준(coach)' 표현은 첨삭(polish) AI 의 감점 기준으로도 주입된다. -->
+  <div class="tab-panel" id="panel-terms">
+    <div class="rounds-wrap">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        AI킬러가 밑줄을 긋는 <b>감점 표현 사전</b>입니다 — 이 목록이 검출의 본체예요.
+        추가·수정하면 <b>재배포 없이 바로</b> 반영됩니다.
+        <b>연구진 기준</b>으로 넣은 표현은 첨삭 AI 도 감점 기준으로 참고해요.<br>
+        ⚠️ <b>표현은 글에 그대로 등장하는 문자열</b>이어야 잡혀요(어미 변형까지 잡으려면 공통 어간만 —
+        예: "최선을 다하겠습니다" 대신 <b>"최선을 다하"</b>).
+        너무 짧거나 흔한 말(예: "저는")은 멀쩡한 글에도 밑줄이 그어지니 넣지 마세요 —
+        이 검사기는 못 잡아서가 아니라 <b>멀쩡한 글을 잡아서</b> 망해요.
+      </p>
+      <form class="round-form" id="termForm" style="grid-template-columns:1fr;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>표현</label>
+            <input id="tfTerm" placeholder="예: 다양한 경험"></div>
+          <div class="field"><label>종류</label>
+            <select id="tfKind">
+              <option value="cliche">상투어</option>
+              <option value="structure">정형 구조(나열·접속부사)</option>
+              <option value="context">문맥(승무원 지원서 맥락)</option>
+            </select></div>
+          <div class="field"><label>출처</label>
+            <select id="tfOrigin">
+              <option value="coach">연구진 기준</option>
+              <option value="general">일반 상투어</option>
+            </select></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>왜 별로인지 (선택 — 학생에게 그대로 보일 수 있는 한 문장, '~요'로)</label>
+          <textarea id="tfWhy" rows="2" placeholder="예: 무엇을 했는지가 하나도 안 남는 말이라, 면접관이 이어서 물어볼 게 없어요. (비우면 AI가 상황에 맞게 채워요)"
+            style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="submit" id="tfSubmit">추가</button>
+          <button class="btn btn-ghost" type="button" id="tfCancel" style="display:none;">취소</button>
+        </div>
+      </form>
+      <div style="display:flex;gap:10px;align-items:center;margin:14px 0 10px;flex-wrap:wrap;">
+        <input id="termSearch" placeholder="표현·설명 검색"
+          style="flex:1;min-width:180px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <span id="termCount" style="font-size:13px;color:var(--text-muted);white-space:nowrap;"></span>
+      </div>
+      <div class="round-list" id="termList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -2165,6 +2215,124 @@
     });
     document.getElementById('qfCancel').addEventListener('click', resetQForm);
 
+    // ── 감점 사전(ai_killer_terms) CRUD — AI킬러 검출의 본체 (2026-07-30) ──
+    // ⚠️ RLS 가 관리자에게만 열려 있다(일반 회원은 읽기도 불가 — 경쟁사 복제 방지).
+    //    서버(ai-killer)가 매 요청마다 이 표를 읽으므로 저장 즉시 검출에 반영된다.
+    //    'coach'(연구진 기준)는 첨삭 AI 의 감점 기준으로도 주입된다(FN 2026-07-30b+).
+    const TERM_KIND = { cliche: '상투어', structure: '정형 구조', context: '문맥' };
+    let _terms = [], _editTermId = null;
+
+    function resetTermForm() {
+      _editTermId = null;
+      document.getElementById('tfTerm').value = '';
+      document.getElementById('tfWhy').value = '';
+      document.getElementById('tfKind').value = 'cliche';
+      document.getElementById('tfOrigin').value = 'coach';
+      document.getElementById('tfSubmit').textContent = '추가';
+      document.getElementById('tfCancel').style.display = 'none';
+    }
+
+    async function loadTerms() {
+      const listEl = document.getElementById('termList');
+      // coach 먼저(알파벳순 ascending 이 우연히 아니라 의도 — 연구진 기준이 자산의 본체다)
+      const { data, error } = await MONC.sb.from('ai_killer_terms').select('*')
+        .order('origin', { ascending: true })
+        .order('created_at', { ascending: false });
+      if (error) {
+        listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message)
+          + '<br>마이그레이션 20260725150000 이 실행돼 있어야 해요.</div>';
+        return;
+      }
+      _terms = data || [];
+      renderTerms();
+    }
+
+    function renderTerms() {
+      const listEl = document.getElementById('termList');
+      const q = (document.getElementById('termSearch').value || '').trim().toLowerCase();
+      const rows = q
+        ? _terms.filter(t => (t.term || '').toLowerCase().includes(q) || (t.why || '').toLowerCase().includes(q))
+        : _terms;
+      const nCoach = _terms.filter(t => t.origin === 'coach').length;
+      const nOff = _terms.filter(t => !t.active).length;
+      document.getElementById('termCount').textContent =
+        '전체 ' + _terms.length + ' · 연구진 ' + nCoach + ' · 일반 ' + (_terms.length - nCoach)
+        + (nOff ? ' · 꺼짐 ' + nOff : '');
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
+          + (q ? '검색 결과가 없어요.' : '등록된 표현이 없습니다. 위에서 추가하세요.') + '</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(t => `
+        <div class="round-item" data-id="${t.id}" style="${t.active ? '' : 'opacity:.55;'}">
+          <div>
+            <div class="ri-main">“${esc(t.term)}”
+              <span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:1px;
+                ${t.origin === 'coach' ? 'background:var(--action);color:#fff;' : 'background:var(--bg2);color:var(--text-muted);border:1px solid var(--border-soft);'}">
+                ${t.origin === 'coach' ? '연구진' : '일반'}</span></div>
+            <div class="ri-sub">${esc(TERM_KIND[t.kind] || t.kind)}${t.active ? '' : ' · 꺼짐'}${t.why ? ' · ' + esc(t.why.slice(0, 70)) + (t.why.length > 70 ? '…' : '') : ' · (설명 없음 — AI가 채워요)'}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del t-active" data-id="${t.id}">${t.active ? '끄기' : '켜기'}</button>
+            <button class="ri-del t-edit" data-id="${t.id}">수정</button>
+            <button class="ri-del t-del" data-id="${t.id}">삭제</button>
+          </div>
+        </div>`).join('');
+
+      // 끄기/켜기 — 삭제보다 이걸 권한다(오탐이 나면 끄고, 근거가 남는다)
+      listEl.querySelectorAll('.t-active').forEach(b => b.addEventListener('click', async () => {
+        const t = _terms.find(x => x.id === b.dataset.id); if (!t) return;
+        const { error } = await MONC.sb.from('ai_killer_terms').update({ active: !t.active }).eq('id', t.id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast(t.active ? '껐어요 — 검출에서 바로 빠져요' : '켰어요 — 바로 반영돼요'); loadTerms();
+      }));
+      listEl.querySelectorAll('.t-edit').forEach(b => b.addEventListener('click', () => {
+        const t = _terms.find(x => x.id === b.dataset.id); if (!t) return;
+        _editTermId = t.id;
+        document.getElementById('tfTerm').value = t.term || '';
+        document.getElementById('tfKind').value = t.kind || 'cliche';
+        document.getElementById('tfOrigin').value = t.origin || 'general';
+        document.getElementById('tfWhy').value = t.why || '';
+        document.getElementById('tfSubmit').textContent = '수정 저장';
+        document.getElementById('tfCancel').style.display = '';
+        document.getElementById('termForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      listEl.querySelectorAll('.t-del').forEach(b => b.addEventListener('click', async () => {
+        const t = _terms.find(x => x.id === b.dataset.id); if (!t) return;
+        if (!confirm(`'${(t.term || '').slice(0, 20)}' 표현을 삭제할까요?\n오탐이면 삭제보다 '끄기'를 권해요(기록이 남아요).`)) return;
+        const { error } = await MONC.sb.from('ai_killer_terms').delete().eq('id', t.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadTerms();
+      }));
+    }
+
+    document.getElementById('termForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const term = document.getElementById('tfTerm').value.trim();
+      if (!term) { alert('표현을 입력하세요.'); return; }
+      if (term.length < 2) { alert('두 글자 이상이어야 해요 — 짧을수록 멀쩡한 글에 밑줄이 그어져요.'); return; }
+      const row = {
+        term,
+        kind: document.getElementById('tfKind').value,
+        origin: document.getElementById('tfOrigin').value,
+        why: document.getElementById('tfWhy').value.trim() || null,
+      };
+      const { error } = _editTermId
+        ? await MONC.sb.from('ai_killer_terms').update(row).eq('id', _editTermId)
+        : await MONC.sb.from('ai_killer_terms').insert(row);
+      if (error) {
+        // 23505 = (term, kind) 유니크 — 같은 표현·같은 종류가 이미 있다
+        alert((error.code === '23505' || /duplicate|unique/i.test(error.message))
+          ? '같은 표현·종류가 이미 사전에 있어요. 목록에서 검색해 수정하세요.'
+          : ('저장 실패: ' + error.message));
+        return;
+      }
+      toast(_editTermId ? '수정됨 — 바로 반영돼요' : '추가됨 — 바로 반영돼요');
+      resetTermForm(); loadTerms();
+    });
+    document.getElementById('tfCancel').addEventListener('click', resetTermForm);
+    document.getElementById('termSearch').addEventListener('input', renderTerms);
+
     // ── 크레딧(credit_ledger) — AI킬러 등 유료 도구가 쓰는 공용 지갑 ──
     // ⚠️ 잔액은 저장된 컬럼이 아니라 **원장 합계(sum(delta))**다. 그래서 여기서도
     //    잔액 컬럼을 읽지 않고 원장을 긁어 회원별로 더한다. 지급/회수는 반드시
@@ -2408,6 +2576,7 @@
       loadCommunity();
       loadReviewsAdmin();
       loadQuestions();
+      loadTerms();
       loadCredits();
       loadCreditPacks();
       loadCreditConfig();
