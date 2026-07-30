@@ -24,9 +24,12 @@
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
 
   /* 하위 항목 — 승준노트는 briefing.html 카드와, 챌린지는 challenges.html 카드와 같은 목록.
-     ⚠️ 실전 모의면접(rehearsal)은 배포 보류라 briefing.html 에서도 숨겨져 있다 — 넣지 말 것. */
+     ⚠️ 실전 모의면접(rehearsal)은 배포 보류라 briefing.html 에서도 숨겨져 있다 — 넣지 말 것.
+     ⚠️ 맨 앞에 있던 '승준노트 한눈에'·'챌린지 한눈에'(허브 링크)는 2026-07-31 오너 지시로 뺐다.
+        허브로 가는 길은 아래 HUB 상수 + 상위 버튼 '한 번 더 누르기'가 대신한다(wire() 참조) —
+        목록 맨 위에 다시 넣지 말 것. */
+  var BRIEFING_HUB = 'briefing.html';
   var BRIEFING_SUB = [
-    ['briefing.html', '승준노트 한눈에', '도구 전체 보기'],
     ['mypage.html#sec-answers', '나만의 승준노트', '쓴 답변이 전부 모이는 곳'],
     ['news.html', '항공사 뉴스&산업분석', '10개 항공사 소식 · 스크랩'],
     ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
@@ -34,8 +37,8 @@
     ['ai-killer.html', 'AI킬러', 'AI 같은 표현 찾아 밑줄로'],
     ['programs.html', '필수 기출 하루 한 개', '하루 한 개, 내 경험으로']
   ];
+  var CHALLENGE_HUB = 'challenges.html';
   var CHALLENGE_SUB = [
-    ['challenges.html', '챌린지 한눈에', '모집 현황 · 전체 보기'],
     ['challenge-voice.html', '보.신.각', '2주 만에 목소리가 달라져요'],
     ['challenge-expression.html', '영.합.각', '카메라 앞에서도 자연스럽게'],
     ['challenge-spinning.html', '스.피.닝', '리듬을 타며 발음이 터진다'],
@@ -87,11 +90,11 @@
         '<a class="logo" href="' + logoHref + '"><img src="' + LOGO + '" alt="MONC" /></a>' +
         '<ul class="nav-links">' +
           '<li class="nav-dd">' +
-            '<button class="nav-dd-btn nav-briefing" type="button" aria-expanded="false" aria-haspopup="true"' + cur('briefing') + '>승준노트' + CHEV + '</button>' +
+            '<button class="nav-dd-btn nav-briefing" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('briefing') + '>승준노트' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(BRIEFING_SUB) + '</div>' +
           '</li>' +
           '<li class="nav-dd">' +
-            '<button class="nav-dd-btn" type="button" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
+            '<button class="nav-dd-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
@@ -108,12 +111,12 @@
     '<div class="mobile-menu" id="mobileMenu">' +
       '<ul>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" aria-expanded="false" aria-controls="mmBriefing"><span class="nav-briefing">승준노트</span>' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"><span class="nav-briefing">승준노트</span>' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmBriefing">' + accPanel(BRIEFING_SUB) + '</div>' +
         '</li>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" aria-expanded="false" aria-controls="mmChallenges">챌린지' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-controls="mmChallenges">챌린지' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
@@ -138,7 +141,12 @@
 
   function wire() {
     /* ── 드롭다운 ──
-       ⚠️ 드롭다운이 둘이라 하나를 열면 다른 하나는 닫는다 — 둘 다 열리면 메뉴 두 장이 겹쳐 뜬다. */
+       ⚠️ 드롭다운이 둘이라 하나를 열면 다른 하나는 닫는다 — 둘 다 열리면 메뉴 두 장이 겹쳐 뜬다.
+       ⚠️ 한 번 = 목차 열기, 한 번 더 = 허브로 이동(2026-07-31 오너 — 목록 맨 위의 '한눈에'
+          항목을 대신한다). 닫기는 바깥 클릭·Esc 가 맡는다.
+       ⚠️ 판정 기준은 `is-open` 클래스 하나뿐이다 — 마우스 호버로 열린 상태(`:hover`)를 '이미
+          열림'으로 쳐서 한 번에 보내는 안도 검토했지만, 기기마다 규칙이 달라지고 호버가 애매한
+          터치 겸용 노트북에서 첫 누름이 그냥 이동해 버린다. 어디서나 '두 번'으로 통일. */
     var dds = [].slice.call(document.querySelectorAll('#navbar .nav-dd'));
     function closeDd(dd) {
       dd.classList.remove('is-open');
@@ -149,9 +157,11 @@
       var btn = dd.querySelector('.nav-dd-btn');
       if (!btn) return;
       btn.addEventListener('click', function () {
-        var open = !dd.classList.contains('is-open');
+        var hub = btn.getAttribute('data-hub');
+        if (dd.classList.contains('is-open') && hub) { location.href = hub; return; }
         dds.forEach(closeDd);
-        if (open) { dd.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true'); }
+        dd.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
       });
     });
     document.addEventListener('click', function (e) {
@@ -176,11 +186,25 @@
           document.body.style.overflow = '';
         });
       });
-      /* 아코디언 — 토글은 button 이라 위 '링크 클릭 시 닫기'에 안 걸린다 */
-      mm.querySelectorAll('.mm-acc-btn').forEach(function (btn) {
+      /* 아코디언 — 토글은 button 이라 위 '링크 클릭 시 닫기'에 안 걸린다.
+         ⚠️ 데스크톱 드롭다운과 같은 규칙: 한 번 = 펼치기, 한 번 더 = 허브로 이동.
+            그래서 '눌러서 접기'가 없어진 대신 **하나를 펼치면 다른 하나를 접는다** —
+            접는 길이 하나도 없으면 메뉴가 열린 채로만 남는다. */
+      var accs = [].slice.call(mm.querySelectorAll('.mm-acc'));
+      function closeAcc(acc) {
+        acc.classList.remove('is-open');
+        var b = acc.querySelector('.mm-acc-btn');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      }
+      accs.forEach(function (acc) {
+        var btn = acc.querySelector('.mm-acc-btn');
+        if (!btn) return;
         btn.addEventListener('click', function () {
-          var open = btn.closest('.mm-acc').classList.toggle('is-open');
-          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          var hub = btn.getAttribute('data-hub');
+          if (acc.classList.contains('is-open')) { if (hub) location.href = hub; return; }
+          accs.forEach(closeAcc);
+          acc.classList.add('is-open');
+          btn.setAttribute('aria-expanded', 'true');
         });
       });
     }
