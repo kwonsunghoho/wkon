@@ -138,6 +138,9 @@
     background: var(--surface); border: 1px dashed var(--action);
     border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 6px;
   }
+  /* ⚠️ [hidden] 가드 — 조합이 하나도 안 열렸을 때 updateCombo() 가 섹션을 접는다.
+     .sec 에 display 를 주는 규칙이 생기면 UA 의 [hidden] 을 이기므로 여기서 못 박는다. */
+  #comboSec[hidden] { display: none; }
   .combo .txt { flex: 1; min-width: 180px; }
   .combo .txt b { font-size: 14px; font-weight: 900; }
   .combo .txt p { margin: 3px 0 0; font-size: 12px; color: var(--text-muted); }
@@ -320,12 +323,15 @@
     </div>
   </section>
 
-  <!-- ④ 조합 추천 -->
-  <section class="sec">
+  <!-- ④ 조합 추천 — 문구·조합은 updateCombo() 가 런타임에 채운다(마크업 고정값 금지).
+       ⚠️ 구 버전은 조합이 ['voice','answer'] 로 코드에 박혀 있었는데, 보신각이 마감되자
+          '두 개 담기'를 눌러도 **한 개만 담겼다**(마감 카드를 조용히 건너뜀). 버튼 문구와
+          "목소리 + 답변" 안내문은 그대로여서, 장바구니를 키우는 장치가 조용히 죽어 있었다. -->
+  <section class="sec" id="comboSec" hidden>
     <div class="combo">
       <div class="txt">
-        <b>목소리 + 답변 함께 하면 시너지 최고</b>
-        <p>가장 많이 함께 신청하는 조합이에요. (할인은 없지만 효과는 확실!)</p>
+        <b id="comboTitle"></b>
+        <p id="comboSub"></p>
       </div>
       <button type="button" id="comboBtn">두 개 담기</button>
     </div>
@@ -588,6 +594,42 @@ function renderFaq() {
 /* ── 선택 로직 ── */
 function cardEl(id) { return document.querySelector('.card[data-id="' + id + '"]'); }
 
+/* ── 조합 추천 ─────────────────────────────────────────────────────────────
+   지금 **둘 다 담을 수 있는** 첫 조합을 골라 안내한다. 마감·신청완료로 한쪽이 막히면
+   다음 조합으로 내려가고, 넷 다 막히면 섹션을 접는다.
+   ⚠️ 조합을 마크업이나 클릭 핸들러에 고정하지 말 것 — 그게 '두 개 담기가 한 개만 담기던'
+      원인이었다(보신각 마감 → 조용히 건너뜀 → 문구는 그대로 "목소리 + 답변").
+   ⚠️ 우선순위는 오너 확정(2026-07-30). 앞에 있는 것부터 추천한다. */
+const COMBO_LABEL = { voice: '목소리', answer: '답변', expression: '표현력', spinning: '말투' };
+const COMBO_PAIRS = [
+  ['voice', 'answer'],        // 가장 많이 함께 신청하는 조합
+  ['expression', 'answer'],
+  ['voice', 'spinning'],      // 둘 다 소리 계통이라 서로 밀어준다
+  ['expression', 'voice'],    // 영상면접 대비 — 눈·상 조합
+];
+let _combo = null;            // 지금 안내 중인 조합(클릭 핸들러가 이걸 담는다)
+
+/* 지금 담을 수 있는 카드인가 — 마감·모집예정·신청완료는 전부 .disabled 로 표시돼 있다. */
+function comboPickable(id) {
+  const c = cardEl(id);
+  return !!c && !c.classList.contains('disabled');
+}
+
+function updateCombo() {
+  const sec = document.getElementById('comboSec');
+  if (!sec) return;
+  const idx = COMBO_PAIRS.findIndex(p => p.every(comboPickable));
+  _combo = idx < 0 ? null : COMBO_PAIRS[idx];
+  if (!_combo) { sec.hidden = true; return; }   // 담을 조합이 없으면 접는다
+  sec.hidden = false;
+  document.getElementById('comboTitle').textContent =
+    COMBO_LABEL[_combo[0]] + ' + ' + COMBO_LABEL[_combo[1]] + ' 함께 하면 시너지 최고';
+  // ⚠️ '가장 많이 함께 신청하는'은 1순위 조합에만 쓴다 — 대체 조합에 붙이면 거짓이 된다.
+  document.getElementById('comboSub').textContent =
+    (idx === 0 ? '가장 많이 함께 신청하는 조합이에요.' : '함께 하면 서로 밀어주는 조합이에요.')
+    + ' (할인은 없지만 효과는 확실!)';
+}
+
 function toggleSelect(id) {
   const card = cardEl(id);
   if (card.classList.contains('disabled')) return;
@@ -682,6 +724,7 @@ async function markAppliedCards() {
     if (tag && !tag.textContent) { tag.textContent = '신청완료'; tag.className = 'status-tag status-applied'; }
   });
   updateSummary();
+  updateCombo();   // 이미 신청한 챌린지가 막히면 추천 조합도 다음 것으로 내려가야 한다
 }
 
 /* 선택한 챌린지 중 이미 신청한 게 있으면 알리고 true. 결제·계좌 안내 직전의 마지막 확인. */
@@ -1021,10 +1064,16 @@ async function handlePayReturn() {
   renderFaq();
   updateSummary();
   await applyStatuses();
+  // ⚠️ 반드시 applyStatuses() 뒤에 — 마감 여부(.disabled)를 알기 전엔 조합을 고를 수 없다.
+  //    markAppliedCards() 는 신청 이력이 없으면 일찍 빠져나가므로 여기서도 한 번 부른다.
+  updateCombo();
   preselectFromUrl();
 })();
 document.getElementById('comboBtn').addEventListener('click', () => {
-  ['voice', 'answer'].forEach(id => {
+  // ⚠️ 반드시 _combo(지금 화면에 안내된 조합)를 담을 것 — 고정 id 로 되돌리면
+  //    마감된 챌린지를 담으려다 한 개만 담기는 구 버그로 돌아간다.
+  if (!_combo) return;
+  _combo.forEach(id => {
     const card = cardEl(id);
     if (card && !card.classList.contains('disabled') && !card.classList.contains('selected')) {
       card.classList.add('selected', 'curr-open');
