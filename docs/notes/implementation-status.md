@@ -12,7 +12,7 @@
 |---|---|---|
 | verify-payment | 특강 분기 2026-07-24 배포 · creditPack 분기 2026-07-25 · `programId` 분기 2026-07-30 배포 완료 | 특강: `{paymentId:'probe', lectureId:'00000000-0000-0000-0000-000000000000', applicant:{name:'x',phone:'0'}}` → `lecture_not_found`=지원, `bad_request`=구버전, 404=미배포. 프로그램: `{paymentId:'probe', programId:'00000000-…-0'}` → `not_authenticated`=신버전(JWT 확인이 프로그램 조회보다 먼저), `bad_request`=구버전 |
 | cancel-payment | 배포됨(2026-07-23 신설, 환불 실측 확인 2026-07-25) | `{applicationId:'probe', amount:1}` → `unauthorized`(401)=배포됨, 404=미배포 |
-| ai-killer (polish 겸용) | 2026-07-25 확인 `2026-07-25d`·프로필 4곳·사전 28개 → polish 추가 후 `2026-07-30b`(`coach_terms` 주입) | 로그인 없이 `POST {"probe":true}` → `version`·`features`·`airline_profiles`/`terms` 개수·`has_api_key`. `coach_terms` 0 이면 연구진 자산 미유입 |
+| ai-killer (polish 겸용) | 2026-07-25 확인 `2026-07-25d`·프로필 4곳·사전 28개 → polish 추가 후 `2026-07-30b`(`coach_terms` 주입). **레포는 `2026-07-31a`** — deno check 타입 표기 정리만이라 동작 동일, 재배포 급하지 않음(다음 실변경 배포 때 자연 반영) | 로그인 없이 `POST {"probe":true}` → `version`·`features`·`airline_profiles`/`terms` 개수·`has_api_key`. `coach_terms` 0 이면 연구진 자산 미유입 |
 | sojae-chat | v2(카드+뼈대) 배포. **크레딧 차감은 재배포된 버전부터 동작** — 재배포 전엔 화면 안내만 바뀌고 차감 안 됨 | `POST {probe:true}` → `version`·`playbook_keys` |
 | answer-program | `2026-07-30b` (프로브 sessions_table:true · questions 99 · programs 1) | 프로브 있음 — 상세는 `docs/monc-answer-program/implementation-status.md` |
 
