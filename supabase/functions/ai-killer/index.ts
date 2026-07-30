@@ -1,6 +1,7 @@
 // =============================================================================
 // Supabase Edge Function: ai-killer — 자소서·답변의 'AI 문체' 검사 (2026-07-25)
 //                         + 첨삭(mode:'polish') — 강점·보완점·문장 첨삭 (2026-07-30)
+//                         + 미니 다듬기(mode:'quickfix') — 무료 한 구간 고침 + 표현 수집 (2026-07-31)
 // =============================================================================
 // 스펙: docs/superpowers/specs/2026-07-24-ai-killer-design.md (④⑤단계)
 //
@@ -51,7 +52,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-07-30b'
+const FN_VERSION = '2026-07-31a'
 const FN_FEATURES = [
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
@@ -61,6 +62,7 @@ const FN_FEATURES = [
   'credit_tiers',     // 도구별 단가(소재2/킬러3/첨삭10) + 답변 단위 차감
   'polish',           // 첨삭 — mode:'polish' 로 강점·보완점·문장 첨삭 리포트(2026-07-30)
   'coach_terms',      // 감점 사전의 연구진(coach) 표현을 첨삭 AI 감점 기준으로 주입(2026-07-30b)
+  'quickfix',         // 미니 다듬기 — mode:'quickfix' 무료 한 구간 고침 + 표현 수집(2026-07-31)
 ]
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
@@ -112,6 +114,67 @@ const POLISH_EFFORT = 'high'   // 처방의 질이 상품 그 자체 — 킬러(
 const POLISH_MAX_TOKENS = 16000
 const MAX_REWRITES = 8         // 문장 첨삭 상한 — 다 고쳐 주면 학생 글이 아니라 AI 글이 된다
 const MAX_POINTS = 4           // 강점·보완점 각 상한
+
+// =============================================================================
+// 미니 다듬기(quickfix) 상수 — mode:'quickfix' (2026-07-31)
+// =============================================================================
+// "AI 느낌이 나는 구간을 붙여넣으면 다듬어드려요" — 무료 미니 도구이자 **수집 창구**.
+// 사용자는 고침을 받고, 우리는 spotted(사용자 글에서 AI 가 짚은 표현)를
+// expression_reports 에 쌓는다. 감점 사전(coach)의 재료다.
+// ⚠️ 크레딧과 무관(spend_credit 안 부름). 대신 아래 두 개가 원가·잠식 방지 장치다:
+//   ① 하루 QF_DAILY 회(서울 자정 리셋 — expression_reports 행 수로 센다)
+//   ② 300자 상한 — 글을 쪼개 넣어 킬러(1,500자 검사·3크레딧)를 우회하려면
+//      하루 한도에 먼저 걸린다. 둘 중 하나만 풀어도 무료 우회로가 열린다.
+const QF_MODEL = 'claude-haiku-4-5'   // 건당 몇 원 미만 — sojae 되묻기와 같은 모델
+const QF_MIN_CHARS = 10
+const QF_MAX_CHARS = 300
+const QF_DAILY = 3
+// ⚠️ Haiku 4.5 는 output_config.effort 미지원(400) — effort 를 넣지 말 것(sojae 에서 실측).
+//    구조화 출력(format)은 지원한다.
+const QF_MAX_TOKENS = 1000
+const QF_MAX_SPOTTED = 4       // 300자 구간에서 4곳이면 충분 — 더 뽑으면 억지 지적이 섞인다
+
+const QF_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['fixed', 'spotted'],
+  properties: {
+    fixed: { type: 'string' },
+    spotted: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['term', 'kind', 'why'],
+        properties: {
+          term: { type: 'string' },
+          kind: { type: 'string', enum: ['cliche', 'structure', 'context'] },
+          why: { type: 'string' },
+        },
+      },
+    },
+  },
+}
+
+// ⚠️ 첨삭의 선(POLISH_VOICE)과 같은 규칙을 축약해 물려받는다 — fix 는 학생이 그대로
+//    옮겨 쓸 문장이라, 없는 사실을 지어내면 그 거짓이 면접장까지 간다.
+const QF_VOICE = `너는 승무원 면접·자소서를 10년 넘게 첨삭한 코치다. 학생이 "AI 느낌이 난다"며 가져온 짧은 구간 하나를 자연스럽게 다듬는다.
+
+[네가 채우는 칸]
+- fixed: 구간을 자연스러운 한국어로 고쳐 쓴 것. 길이는 원문과 비슷하게, 통째 재작성이 아니라 다듬기.
+- spotted: 원문에서 AI스럽게 읽히는 표현 0~${QF_MAX_SPOTTED}개.
+  · term 은 원문에 **있는 그대로** 등장하는 문자열이어야 한다(한 글자도 바꾸지 마라).
+  · kind 는 cliche(상투어) / structure(정형 구조·나열) / context(승무원 지원서 맥락) 중 하나.
+  · why 는 왜 AI스럽게 읽히는지 한 문장, 50자 이내, '~요'로 끝낸다.
+
+[⚠️ 고침의 선 — 가장 중요하다]
+- **학생이 쓴 사실만 재료로 써라.** 원문에 없는 숫자·기간·장소·일화를 지어내지 마라.
+  구체성이 필요한 자리는 (그때 실제로 한 말) 같은 괄호 빈칸으로 남겨 학생이 채우게 하라.
+- 학생의 말투와 어휘를 살려라. 네 문체로 갈아치우면 지원자들의 글이 전부 같아진다.
+- "다양한", "첫째/둘째", "~을 통해", "매우", "소중한", "최선을 다해" 같은 상투어를
+  **fixed 에 쓰지 마라.** 학생 글을 재는 잣대로 네 글도 잰다.
+- 원문에 AI스러운 데가 없으면 spotted 를 비우고, fixed 는 거의 그대로 두되 어색한 곳만 만져라.
+- 인사말·맺음말·설명을 붙이지 마라. 칸만 채운다.`
 
 type Kind = 'cliche' | 'structure' | 'vague' | 'context'
 type Term = { term: string; kind: Kind; why: string | null }
@@ -705,6 +768,7 @@ Deno.serve(async (req) => {
     let terms: number | null = null
     let coachTerms: number | null = null
     let polishTable: number | null = null
+    let quickfixTable: number | null = null
     try {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
       const a = await admin.from('airline_profiles').select('code', { count: 'exact', head: true })
@@ -718,6 +782,9 @@ Deno.serve(async (req) => {
       // 첨삭 표 — null 이면 20260730130000 마이그레이션 미적용(첨삭만 '준비 중'으로 degrade)
       const p = await admin.from('answer_polishes').select('id', { count: 'exact', head: true })
       polishTable = p.error ? null : (p.count ?? 0)
+      // 미니 다듬기 수집함 — null 이면 20260731120000 미적용(위젯이 '준비 중'으로 degrade)
+      const qf = await admin.from('expression_reports').select('id', { count: 'exact', head: true })
+      quickfixTable = qf.error ? null : (qf.count ?? 0)
     } catch (_) { /* 표가 아직 없으면 null 로 둔다 */ }
     return json({
       fn: 'ai-killer',
@@ -727,6 +794,7 @@ Deno.serve(async (req) => {
       terms: terms,
       coach_terms: coachTerms,      // 연구진 기준 표현 수 — 0이면 아직 임시 시드만(자산 미유입)
       polish_table: polishTable,    // null=마이그레이션 미적용 / 숫자=지금까지 쌓인 첨삭 수
+      quickfix_table: quickfixTable, // null=20260731120000 미적용 / 숫자=쌓인 제보 수
       model: MODEL,
       has_api_key: !!Deno.env.get('ANTHROPIC_API_KEY'),
     })
@@ -751,6 +819,136 @@ Deno.serve(async (req) => {
 
     // 쓰기 전용 클라이언트 — 사전 조회와 검사 기록 저장은 service role 만 가능(RLS)
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 미니 다듬기(quickfix) 분기 — mode:'quickfix' (2026-07-31). 여기서 끝나고 반환한다.
+    // ⚠️ 반드시 킬러의 길이 검증·자동 저장(2-2)보다 **앞**에 있어야 한다 — 뒤에 두면
+    //    300자 구간이 답변 저장소에 조각으로 쌓이고, 100자 미만 구간은 검사로 오인돼 죽는다.
+    // ⚠️ 구버전 함수에는 이 분기가 없어 mode:'quickfix' 요청이 **킬러 검사로 흘러가
+    //    3크레딧이 깎인다** — 그래서 quickfix.js 가 시트를 열 때 프로브로
+    //    features.includes('quickfix') 를 확인한다(polish 게이트와 같은 이유 — 지우지 말 것).
+    // ══════════════════════════════════════════════════════════════════════
+    if (reqBody.mode === 'quickfix') {
+      const qtext: string = typeof reqBody.text === 'string' ? reqBody.text.trim() : ''
+      const qpage: string | null =
+        reqBody.page === 'killer' || reqBody.page === 'answers' || reqBody.page === 'sojae'
+          ? reqBody.page : null
+      // ⚠️ 예상 가능한 실패는 전부 HTTP 200 + code — non-2xx 면 supabase-js 가 본문을
+      //    감춰 화면이 사유(한도·길이)를 못 띄운다(sojae 차감 규칙과 같은 이유).
+      if (qtext.length < QF_MIN_CHARS) {
+        return json({ error: `${QF_MIN_CHARS}자 이상 넣어 주세요`, code: 'too_short' }, 200)
+      }
+      if (qtext.length > QF_MAX_CHARS) {
+        return json({ error: `한 번에 ${QF_MAX_CHARS}자까지 다듬을 수 있어요`, code: 'too_long' }, 200)
+      }
+
+      // ── q-1. 하루 한도(서울 자정 리셋) — expression_reports 행 수로 센다 ──
+      // ⚠️ UTC 자정으로 두면 한국 오전 9시에 초기화된다(credit 하루 무료와 같은 함정).
+      const seoulDayStartUtc = new Date(
+        Math.floor((Date.now() + 9 * 3600_000) / 86400_000) * 86400_000 - 9 * 3600_000,
+      ).toISOString()
+      const dc = await admin.from('expression_reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('member_id', user.id).gte('created_at', seoulDayStartUtc)
+      // ⚠️ count 실패 = 표 미생성(20260731120000 미적용). 무시하고 진행하면 한도를 못
+      //    세는 채로 저장까지 실패한다 — 반드시 여기서 멈춘다(polish p-1 과 같은 게이트).
+      if (dc.error) {
+        return json({ error: '다듬기 준비가 아직 안 됐어요. 잠시 뒤 다시 시도해 주세요.', code: 'not_ready' }, 200)
+      }
+      const usedToday = dc.count ?? 0
+      if (usedToday >= QF_DAILY) {
+        return json({
+          error: `오늘 무료 다듬기 ${QF_DAILY}번을 다 썼어요. 내일 다시 열려요.`,
+          code: 'daily_limit', remaining: 0,
+        }, 200)
+      }
+
+      // ── q-2. 사전 로드 — coach 기준 주입 + 자기 출력 재검사에 쓴다 ────────
+      const { data: qTermRows } = await admin
+        .from('ai_killer_terms').select('term, kind, origin, why').eq('active', true)
+      const qTerms = (qTermRows ?? []) as Array<Term & { origin?: string }>
+      const qCoach = qTerms.filter((t) => t.origin === 'coach' && t.term)
+      const QF_COACH_CAP = 80   // polish 와 같은 상한 — 사전이 커져도 프롬프트가 안 붓는다
+      const qCoachBrief = qCoach.length
+        ? `\n\n[몬크 연구진이 감점하는 표현 — 학생 글에 보이면 spotted 에서 우선 짚어라. 네 fixed 에는 절대 쓰지 마라]\n`
+          + qCoach.slice(0, QF_COACH_CAP).map((t) => `- "${t.term}"${t.why ? ` — ${t.why}` : ''}`).join('\n')
+        : ''
+
+      // ── q-3. Haiku 호출(구조화 출력) + 자기 출력 재검사 ───────────────────
+      const qCall = async (regenNote: string) => {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model: QF_MODEL,
+            max_tokens: QF_MAX_TOKENS,
+            // ⚠️ effort 를 넣지 말 것 — Haiku 4.5 미지원(400, sojae 되묻기에서 실측). format 은 지원.
+            output_config: { format: { type: 'json_schema', schema: QF_SCHEMA } },
+            // 사전 주입은 system 에 — 요청마다 같아 프롬프트 캐시를 탄다(polish 와 동일)
+            system: [{ type: 'text', text: QF_VOICE + qCoachBrief + regenNote, cache_control: { type: 'ephemeral' } }],
+            messages: [{
+              role: 'user',
+              content: `[학생이 가져온 구간]\n${qtext}\n\n[할 일]\n위 구간을 다듬고, AI스러운 표현을 짚어라.`,
+            }],
+          }),
+        })
+        if (!res.ok) {
+          console.error('anthropic error (quickfix)', res.status, await res.text())
+          throw new Error('ai_failed')
+        }
+        const data = await res.json()
+        if (data.stop_reason === 'refusal') throw new Error('ai_refused')
+        const raw = (data.content || []).filter((b: { type: string }) => b.type === 'text')
+          .map((b: { text: string }) => b.text).join('').trim()
+        let parsed: { fixed?: string; spotted?: Array<{ term: string; kind: Kind; why: string }> }
+        try { parsed = JSON.parse(raw) } catch { throw new Error('ai_bad_json') }
+        return {
+          fixed: typeof parsed.fixed === 'string' ? parsed.fixed.trim() : '',
+          spotted: Array.isArray(parsed.spotted) ? parsed.spotted : [],
+          usage: (data.usage ?? {}) as { input_tokens?: number; output_tokens?: number },
+        }
+      }
+
+      let qOut = await qCall('')
+      // 자기 출력 재검사(4겹 고삐 ③) — 고쳐 준 문장은 학생이 그대로 옮겨 쓴다.
+      // 상투어가 섞이면 우리가 AI스러움을 심어 주는 꼴이라 한 번 다시 쓴다(polish 와 동일).
+      {
+        const cliche = qTerms.filter((t) => t.kind === 'cliche' && t.term.length >= 3).map((t) => t.term)
+        const bad = cliche.filter((t) => qOut.fixed.includes(t))
+        if (bad.length > 0) {
+          console.log('self-check hit (quickfix), regenerating:', bad.join(', '))
+          qOut = await qCall(
+            `\n\n[다시 쓰는 이유]\n방금 네 fixed 에 ${bad.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
+            `학생에게 쓰지 말라는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 다듬어라.`)
+        }
+      }
+      if (!qOut.fixed) throw new Error('ai_empty')
+
+      // ── q-4. spotted 검증 + 저장 + 반환 ──────────────────────────────────
+      // ⚠️ 원문에 실제로 등장하는 표현만 남긴다 — AI 가 지어낸 문자열이 수집함에 쌓이면
+      //    사전 후보(자산)가 오염된다(킬러의 '문맥' 자리 검증과 같은 고삐).
+      const spotted = qOut.spotted
+        .filter((s) => s && typeof s.term === 'string' && s.term.trim().length >= 2 && qtext.includes(s.term))
+        .map((s) => ({
+          term: s.term.trim(),
+          kind: s.kind === 'structure' || s.kind === 'context' ? s.kind : 'cliche',
+          why: typeof s.why === 'string' ? s.why.slice(0, 120) : '',
+        }))
+        .slice(0, QF_MAX_SPOTTED)
+
+      const qu = qOut.usage
+      const { error: qSaveErr } = await admin.from('expression_reports').insert({
+        member_id: user.id, page: qpage, content: qtext, fixed: qOut.fixed, spotted,
+        input_tokens: qu.input_tokens ?? 0, output_tokens: qu.output_tokens ?? 0,
+      })
+      // 저장이 실패해도 결과는 준다 — 무료 기능이라 제보 한 건 유실이 사용자 실패보다 낫다.
+      if (qSaveErr) console.error('quickfix save failed', qSaveErr.message)
+
+      return json({
+        ok: true, mode: 'quickfix', fixed: qOut.fixed, spotted,
+        remaining: Math.max(QF_DAILY - usedToday - 1, 0),
+      })
+    }
 
     // ── 2. 입력 검증 ──────────────────────────────────────────────────────
     // ⚠️ reqBody 는 **위에서 이미 읽었다**(프로브가 먼저 읽어야 하므로).
@@ -1130,8 +1328,16 @@ Deno.serve(async (req) => {
     }
     const msg = String((e as Error)?.message || '')
     console.error('ai-killer error', msg)
+    const mode = (reqBody as { mode?: unknown }).mode
+    // 미니 다듬기는 무료 분기 — 차감이 없었으니 '크레딧을 돌려드렸다'고 말하면 거짓이 된다
+    if (mode === 'quickfix') {
+      if (msg === 'ai_refused') {
+        return json({ error: '이 글은 다듬을 수 없어요. 다른 구간으로 시도해 주세요.', code: 'refused' }, 200)
+      }
+      return json({ error: '다듬기에 실패했어요. 잠시 뒤 다시 시도해 주세요.', code: 'failed' }, 200)
+    }
     // 첨삭 분기에서 던져졌으면 문구도 첨삭으로 — '검사에 실패'라고 하면 학생이 딴 도구 이야기로 읽는다
-    const act = (reqBody as { mode?: unknown }).mode === 'polish' ? '첨삭' : '검사'
+    const act = mode === 'polish' ? '첨삭' : '검사'
     if (msg === 'ai_refused') {
       return json({ error: `이 글은 ${act}할 수 없어요. 다른 글로 시도해 주세요.`, code: 'refused', refunded: true }, 200)
     }

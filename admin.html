@@ -640,6 +640,22 @@
         <span id="termCount" style="font-size:13px;color:var(--text-muted);white-space:nowrap;"></span>
       </div>
       <div class="round-list" id="termList"><div class="loading">불러오는 중…</div></div>
+
+      <!-- ── 회원 제보(expression_reports) — 미니 다듬기 수집함 집계 (2026-07-31) ──
+           quickfix.js 위젯이 모은 "회원이 AI 같다고 느낀 표현"의 빈도 순위.
+           ⚠️ [사전 등록]은 위 폼에 채워 줄 뿐 — 검수 없이 자동 등록하지 않는다
+           (사전은 첨삭 AI 프롬프트에도 주입되므로 오염이 두 도구로 번진다). -->
+      <div id="qfRepWrap" style="margin-top:32px;">
+        <h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">회원 제보 — 미니 다듬기 수집함</h3>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px;">
+          회원이 "AI 느낌 난다"며 붙여넣은 구간에서 짚힌 표현이 <b>빈도순</b>으로 쌓여요 —
+          위로 올라올수록 <b>학생들이 공통으로 싫어하는 표현</b>이에요.
+          [사전 등록]을 누르면 위 폼에 채워져요. <b>어미는 공통 어간만 남기고 다듬어서</b> 저장하세요.
+        </p>
+        <div class="round-list" id="qfAgg"><div class="loading">불러오는 중…</div></div>
+        <button class="btn btn-ghost" type="button" id="qfRawToggle" style="margin-top:12px;">최근 제보 원문 보기</button>
+        <div class="round-list" id="qfRaw" hidden style="margin-top:10px;"></div>
+      </div>
     </div>
   </div>
 
@@ -2246,6 +2262,8 @@
       }
       _terms = data || [];
       renderTerms();
+      // 제보 집계는 사전과 같이 새로고침 — '등록됨' 배지가 _terms 를 보므로 이 순서여야 한다
+      loadReports();
     }
 
     function renderTerms() {
@@ -2333,6 +2351,98 @@
     });
     document.getElementById('tfCancel').addEventListener('click', resetTermForm);
     document.getElementById('termSearch').addEventListener('input', renderTerms);
+
+    // ── 회원 제보(expression_reports) 집계 — 미니 다듬기 수집함 (2026-07-31) ──
+    // quickfix 위젯이 모은 spotted(표현·종류·이유)를 표현별로 묶어 빈도 순위로 본다.
+    // ⚠️ 이 규모(최근 500건)엔 브라우저 집계로 충분 — 서버 집계 함수를 만들지 말 것.
+    let _qfReports = [];
+    async function loadReports() {
+      const el = document.getElementById('qfAgg');
+      const { data, error } = await MONC.sb.from('expression_reports').select('*')
+        .order('created_at', { ascending: false }).limit(500);
+      if (error) {
+        // ⚠️ 테이블 미생성 판정은 PGRST205 — 42P01 만 보면 이 분기를 영영 못 탄다(waitlist 실측)
+        el.innerHTML = '<div class="empty">' +
+          ((error.code === 'PGRST205' || error.code === '42P01'
+            || /could not find the table|does not exist/i.test(error.message || ''))
+            ? '수집함이 아직 없어요 — 마이그레이션 20260731120000_expression_reports.sql 을 실행해 주세요.'
+            : '불러오기 실패: ' + esc(error.message)) + '</div>';
+        return;
+      }
+      _qfReports = data || [];
+      renderReports();
+    }
+
+    function renderReports() {
+      const el = document.getElementById('qfAgg');
+      // 표현별 집계: 제보 수·회원 수·종류 최빈값·이유 하나·예시(원문) 최대 3개
+      const agg = new Map();
+      for (const r of _qfReports) {
+        const spots = Array.isArray(r.spotted) ? r.spotted : [];
+        for (const s of spots) {
+          const term = (s && s.term ? String(s.term) : '').trim();
+          if (term.length < 2) continue;
+          let a = agg.get(term);
+          if (!a) { a = { term, count: 0, members: new Set(), kinds: {}, why: '', samples: [] }; agg.set(term, a); }
+          a.count++;
+          a.members.add(r.member_id);
+          a.kinds[s.kind] = (a.kinds[s.kind] || 0) + 1;
+          if (!a.why && s.why) a.why = s.why;
+          if (a.samples.length < 3 && r.content) a.samples.push(r.content);
+        }
+      }
+      const rows = [...agg.values()].sort((x, y) => y.count - x.count || y.members.size - x.members.size);
+      if (!rows.length) {
+        el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:16px">' +
+          (_qfReports.length ? '짚힌 표현이 아직 없어요.' : '아직 제보가 없어요 — 위젯이 열리면 여기에 쌓여요.') + '</div>';
+        return;
+      }
+      const inDict = new Set(_terms.map(t => t.term));
+      el.innerHTML = '<p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">제보 '
+        + _qfReports.length + '건 · 표현 후보 ' + rows.length + '개</p>' +
+        rows.slice(0, 40).map((a, i) => {
+          const kind = Object.entries(a.kinds).sort((x, y) => y[1] - x[1])[0][0];
+          const dup = inDict.has(a.term);
+          return `
+        <div class="round-item">
+          <div>
+            <div class="ri-main">${i + 1}. “${esc(a.term)}”
+              ${dup ? '<span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--bg2);color:var(--text-muted);border:1px solid var(--border-soft);vertical-align:1px;">등록됨</span>' : ''}</div>
+            <div class="ri-sub">${esc(TERM_KIND[kind] || kind)} · 제보 ${a.count}건 · 회원 ${a.members.size}명${a.why ? ' · ' + esc(a.why.slice(0, 60)) : ''}</div>
+          </div>
+          <div style="display:flex;gap:6px;justify-content:flex-end;">
+            <button class="ri-del qf-add" data-term="${esc(a.term)}" data-kind="${esc(kind)}" data-why="${esc(a.why || '')}">${dup ? '폼에 채우기' : '사전 등록'}</button>
+          </div>
+        </div>`;
+        }).join('')
+        + (rows.length > 40 ? '<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">상위 40개만 표시(최근 500건 기준)</p>' : '');
+      // ⚠️ 자동 insert 가 아니라 **폼 채우기** — 어미를 어간으로 다듬을 기회를 남긴다
+      //    ("최선을 다하겠습니다" 그대로 넣으면 변형이 안 잡힌다 — 사전 안내문과 같은 규칙).
+      el.querySelectorAll('.qf-add').forEach(b => b.addEventListener('click', () => {
+        _editTermId = null;
+        document.getElementById('tfTerm').value = b.dataset.term;
+        document.getElementById('tfKind').value = b.dataset.kind || 'cliche';
+        document.getElementById('tfOrigin').value = 'coach';
+        document.getElementById('tfWhy').value = b.dataset.why || '';
+        document.getElementById('tfSubmit').textContent = '추가';
+        document.getElementById('tfCancel').style.display = '';
+        document.getElementById('termForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+    }
+
+    document.getElementById('qfRawToggle').addEventListener('click', () => {
+      const raw = document.getElementById('qfRaw');
+      raw.hidden = !raw.hidden;
+      document.getElementById('qfRawToggle').textContent = raw.hidden ? '최근 제보 원문 보기' : '원문 접기';
+      if (!raw.hidden) {
+        raw.innerHTML = _qfReports.slice(0, 30).map(r => `
+          <div class="round-item"><div>
+            <div class="ri-sub" style="white-space:pre-wrap;">${esc(r.content)}</div>
+            <div class="ri-sub" style="color:var(--accent-ink);white-space:pre-wrap;margin-top:4px;">→ ${esc(r.fixed || '')}</div>
+            <div class="ri-sub" style="margin-top:4px;">${esc((r.created_at || '').slice(0, 10))}${r.page ? ' · ' + esc(r.page) : ''}</div>
+          </div></div>`).join('') || '<div class="empty">제보가 없어요.</div>';
+      }
+    });
 
     // ── 크레딧(credit_ledger) — AI킬러 등 유료 도구가 쓰는 공용 지갑 ──
     // ⚠️ 잔액은 저장된 컬럼이 아니라 **원장 합계(sum(delta))**다. 그래서 여기서도
