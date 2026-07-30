@@ -5,14 +5,16 @@
 -- idempotent — 고정 uuid + on conflict do nothing 이라 재실행 안전.
 --
 -- ⚠️ 방향(2026-07-30 오너): **1차 상품은 '필수 기출'(전 항공사 공통) — 항공사별
---    세부 프로그램은 후속.** 그래서 이 시드도 공통 문항 + 공통 프로그램 하나다.
---    오너가 준비한 **필수 기출 30문항 원본**을 받으면 그걸로 '필수 기출 30일 루틴'
---    시드를 따로 만든다(이 파일은 그때까지의 검증용 맛보기 5일).
+--    세부 프로그램은 후속. 그리고 체험판 없이 바로 유료.**
+--    실제 기출은 정규반 교재에서 뽑는다 — ⚠️ **교재 기출·가이던스는 학원 자산이라
+--    공개 리포에 커밋하지 않는다**(airline_profiles 원문과 같은 규칙). 별도 SQL 로
+--    대화창에서 받아 SQL Editor 에 붙여넣는다. 이 파일은 개발 검증용 예시뿐이다.
 --
 -- 무엇이 들어가나
---   · 공통 기출 10문항(airline null · 유형 다양 · admin_memo='seed-demo')
---   · '필수 기출 맛보기 5일' 프로그램 — 공통(airline null) · price 0 · visible
---     → **회원 스스로 무료 등록 가능**(전체 흐름 테스트용)
+--   · 공통 예시 문항 10개(airline null · 유형 다양 · admin_memo='seed-demo')
+--   · '필수 기출 30일 루틴' 프로그램 — 공통 · **price 99,000 · visible=false**
+--     (교재 기출을 채우고 admin 에서 공개로 전환. 무료 자가 등록 경로는 없다 —
+--      테스트 계정에는 admin '이용권 지급'으로 넣는다)
 --
 -- 정리(테스트 끝):
 --   delete from public.answer_programs where id = 'da000000-0000-4000-8000-000000000001';
@@ -78,12 +80,12 @@ insert into public.interview_questions
  '"신뢰받는 승무원" 같은 상투 포부로 끝내지 않기', 40, '[]', 'verified', null, 'seed-demo')
 on conflict (id) do nothing;
 
--- 필수 기출 맛보기 — 공통(airline null) · 무료 · 공개. 오너 30문항이 오면
--- '필수 기출 30일 루틴'(total_days 30)을 같은 모양으로 만든다.
+-- 필수 기출 30일 루틴 — 공통(airline null) · 유료(99,000원 = 총량제 30개 확정가 기준,
+-- admin 에서 수정 가능) · **visible=false 로 시작**(교재 기출 배치 후 admin 에서 공개).
 insert into public.answer_programs
   (id, airline, title, subtitle, total_days, reveal_policy, price, visible, sort_order) values
-('da000000-0000-4000-8000-000000000001', null, '필수 기출 맛보기 5일',
- '어느 항공사든 무조건 나오는 문제부터, 하루 한 문제씩', 5, 'daily', 0, true, 1)
+('da000000-0000-4000-8000-000000000001', null, '필수 기출 30일 루틴',
+ '어느 항공사든 무조건 나오는 문제부터, 하루 한 문제씩', 30, 'daily', 99000, false, 1)
 on conflict (id) do nothing;
 
 insert into public.answer_program_days (program_id, day_no, question_id) values
@@ -97,4 +99,4 @@ on conflict (program_id, day_no) do nothing;
 -- 확인:
 -- select p.title, count(d.id) as 배치일수 from public.answer_programs p
 --   left join public.answer_program_days d on d.program_id = p.id
---  group by p.title;   → 5 면 정상. 나머지 5문항(6~10)은 은행에 대기(추가 배치용).
+--  group by p.title;   → 5 면 정상(예시 5일만 배치 — 6~30일차는 교재 기출로 admin '일차 배치').

@@ -36,9 +36,9 @@
 ## 3. 라이브 적용 후 수동 시나리오 (⬜ 오너·관리자 실행 — 마이그레이션+함수 배포 뒤)
 
 1. [ ] 마이그레이션 실행 → 적용 확인 쿼리 전부 true
-2. [ ] seed-demo.sql 실행 → admin 탭에 기출 10·프로그램 2 보임
-3. [ ] probe: `{"probe":true}` → version·programs·questions 숫자
-4. [ ] 일반 계정: programs.html → 제주항공 '무료로 시작하기' → 오늘 1일차만 열림, 2일차 잠김
+2. [ ] seed-demo.sql 실행 → admin 탭에 예시 기출 10·'필수 기출 30일 루틴'(비공개) 보임
+3. [ ] answer-program probe + **verify-payment 재배포** 후 프로브(`{"paymentId":"probe","programId":"000…0"}` → `program_not_found`)
+4. [ ] 일반 계정: admin '이용권 지급'으로 열기(또는 가격을 낮춰 실결제 1건 → 지급 확인 → **환불은 포트원 콘솔에서 취소** — admin [환불] 버튼은 신청서(applications) 전용이라 프로그램 구매엔 안 뜬다) → 오늘 1일차만 열림, 2일차 잠김. 구매 화면에 가격·결제 버튼 표시 확인
 5. [ ] 실제 초안 → AI 첨삭(Opus) → 문장 근거·unsupported·지표 확인 → 하루 4번째 첨삭에 daily_cap
 6. [ ] 확정 → mypage 답변노트에 보임 → 그 답변으로 KILL AI 실행됨(기존 상품 연결)
 7. [ ] 검수 요청 → 연구원 계정(admin 탭 지정) review-desk 처리 → 학생 화면 반영

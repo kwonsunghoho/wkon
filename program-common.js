@@ -138,10 +138,11 @@
     var d2ago = kstToday(Date.now() - 2 * 86400000);
     return {
       programs: [{
-        // 1차 상품 방향(2026-07-30 오너): 필수 기출(전 항공사 공통) 먼저 — airline null=공통
-        id: 'demo-prog-7c', airline: null, title: '필수 기출 맛보기 (체험판)',
-        subtitle: '어느 항공사든 무조건 나오는 문제부터', description: '체험 모드 — 실제 기출 은행이 아니라 예시 문항입니다.',
-        total_days: 5, reveal_policy: 'daily', price: 0, visible: true
+        // 1차 상품 방향(2026-07-30 오너): 필수 기출(전 항공사 공통) 먼저 — airline null=공통.
+        // 체험판 없이 유료(price 양수) — 데모 계정은 이용권이 미리 지급된 상태로 시작한다.
+        id: 'demo-prog-7c', airline: null, title: '필수 기출 루틴 (데모)',
+        subtitle: '어느 항공사든 무조건 나오는 문제부터', description: '개발 확인용 데모 — 실제 기출 은행이 아니라 예시 문항입니다.',
+        total_days: 5, reveal_policy: 'daily', price: 99000, visible: true
       }],
       enrollments: [{ id: 'demo-enr-1', program_id: 'demo-prog-7c', member_id: 'demo-user', started_at: d2ago, status: 'active', source: 'promo' }],
       questions: {
@@ -257,15 +258,6 @@
         })(i);
       }
       return { ok: true, program: p, enrolled: !!enr, staff: false, started_at: enr && enr.started_at, unlocked_max: max, days: days };
-    },
-
-    async enrollFree(programId) {
-      var s = this.s;
-      if (!s.enrollments.some(function (e) { return e.program_id === programId; })) {
-        s.enrollments.push({ id: uid('demo-enr'), program_id: programId, member_id: 'demo-user', started_at: kstToday(), status: 'active', source: 'promo' });
-        this._save();
-      }
-      return { ok: true };
     },
 
     async getOrCreateSession(programId, dayNo, questionId) {
@@ -521,12 +513,8 @@
       return r.data;
     },
 
-    async enrollFree(programId) {
-      var r = await MONC.sb.from('program_enrollments')
-        .insert({ program_id: programId, member_id: this.userId, source: 'promo' });
-      if (r.error && r.error.code !== '23505') return { ok: false, message: r.error.message };
-      return { ok: true };
-    },
+    // ⚠️ 무료 자가 등록 메서드는 2026-07-30 삭제 — 체험판 없이 바로 유료(오너).
+    //    이용권은 결제(verify-payment programId 분기) 또는 admin 지급으로만 생긴다.
 
     async getOrCreateSession(programId, dayNo, questionId) {
       var q = await MONC.sb.from('answer_sessions').select('*')

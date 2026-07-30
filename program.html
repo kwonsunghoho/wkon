@@ -22,6 +22,8 @@
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="nav.css">
   <script src="nav.js" defer></script>
+  <!-- 포트원(PortOne) V2 결제 SDK — 이용권 구매(체험판 없이 유료, lecture.html 과 같은 경로) -->
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <style>
     /* ══════════════════════════════════════════════════════════════
        매일 기출 — 하루 작성 흐름 (2026-07-30)
@@ -246,6 +248,13 @@
                     border-radius: var(--radius-xs); font-size: 13px; color: var(--text-muted);
                     line-height: 1.65; }
     .consent-card input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--action); }
+
+    /* 구매 패널 — 가격 한 줄(특강 카드 .lx-price 와 같은 문법: 라벨 + 큰 금액) */
+    .buy-price { display: flex; align-items: baseline; justify-content: space-between;
+                 margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+    .buy-price span { font-size: 14px; color: var(--text-muted); font-weight: 700; }
+    .buy-price b { font-size: 24px; font-weight: 800; color: var(--accent-ink);
+                   font-variant-numeric: tabular-nums; }
 
     .loading { padding: 40px 0; text-align: center; color: var(--text-dim); font-size: 14px; }
     .hidden { display: none !important; }
@@ -927,6 +936,103 @@
     }
     $('sheetMask').addEventListener('click', function () { document.body.classList.remove('sheet-on'); });
 
+    /* ── 이용권 구매 (포트원 · lecture.html 패턴) ─────────────────────────
+       체험판 없이 바로 유료(2026-07-30 오너). 금액 검증·지급은 verify-payment 의
+       programId 분기(서버)가 한다 — 브라우저는 결제창만 띄운다.
+       ⚠️ 모바일은 결제사 리다이렉트라 promise 가 안 끝난다 — sessionStorage 보관 +
+          복귀 처리(handlePayReturn) + bfcache 버튼 복원(pageshow)이 한 세트다. */
+    var PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
+    var PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59';
+    var _payRestore = null;
+
+    window.addEventListener('pageshow', function (e) {
+      if (!e.persisted || !_payRestore) return;
+      var restore = _payRestore; _payRestore = null;   // 한 번 쓰고 버린다
+      restore();
+    });
+
+    async function completeProgramPayment(paymentId) {
+      var r = await MONC.sb.functions.invoke('verify-payment', {
+        body: { paymentId: paymentId, programId: PID }
+      });
+      var data = r.data;
+      // 이미 이용권이 있는데 또 결제 — 서버가 전액 자동 환불(특강 중복과 같은 처리)
+      if (data && data.error === 'already_enrolled') {
+        alert('이미 이용권이 있는 계정이에요.\n\n' + (data.refunded
+          ? '중복 구매가 되지 않아 결제 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+          : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주세요.'));
+        return true;   // 이용권은 있으니 화면은 그대로 진행한다
+      }
+      if (r.error || !data || !data.ok) {
+        if (data && data.error === 'grant_failed') {
+          alert('결제는 승인됐지만 이용권 지급에 문제가 생겨\n' + (data.refunded
+            ? '전액 자동 환불했어요. 잠시 뒤 다시 시도해 주세요.'
+            : '환불도 실패했어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+        } else {
+          alert('결제는 완료됐지만 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
+        }
+        return false;
+      }
+      alert('결제가 완료됐어요! 오늘 1일차부터 바로 시작할 수 있어요.');
+      return true;
+    }
+
+    /* 모바일 결제 복귀 — 페이지가 새로 뜨므로 sessionStorage 의 주문으로 검증을 마친다 */
+    async function handlePayReturn() {
+      var p = new URLSearchParams(location.search);
+      if (p.get('payresult') !== '1') return false;
+      var code = p.get('code'), message = p.get('message');
+      ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId']
+        .forEach(function (k) { p.delete(k); });
+      history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p.toString() : ''));
+      var raw = sessionStorage.getItem('monc_pending_program_pay');
+      sessionStorage.removeItem('monc_pending_program_pay');
+      if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return false; }
+      if (!raw) return false;
+      var pending; try { pending = JSON.parse(raw); } catch (e) { return false; }
+      if (pending.programId !== PID) return false;    // 다른 프로그램의 복귀면 무시
+      return await completeProgramPayment(pending.paymentId);
+    }
+
+    async function payWithPortOne(btn) {
+      if (AP.demoOn()) { alert('데모 모드에서는 결제할 수 없어요.'); return; }
+      if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+      if (busy) return; busy = true;
+      var orig = btn.innerHTML;
+      btn.disabled = true; btn.textContent = '결제 진행 중…';
+      _payRestore = function () { busy = false; if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; } };
+      try {
+        var price = VIEW.program.price;
+        var paymentId = 'monc-prog-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+        sessionStorage.setItem('monc_pending_program_pay', JSON.stringify({ paymentId: paymentId, programId: PID }));
+        var rp = new URLSearchParams(location.search); rp.set('payresult', '1');
+        var redirectUrl = location.origin + location.pathname + '?' + rp.toString();
+        var profile = null;
+        try { profile = await MONC.getMyProfile(); } catch (e) {}
+        var res = await window.PortOne.requestPayment({
+          storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+          paymentId: paymentId, orderName: '몬크 매일 기출 · ' + VIEW.program.title,
+          totalAmount: price, currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
+          customer: (profile && profile.name)
+            ? { fullName: profile.name, phoneNumber: profile.phone || undefined } : undefined,
+          redirectUrl: redirectUrl,
+        });
+        // 여기부터 PC(팝업) 경로 — 모바일은 위에서 페이지가 떠나 도달하지 않는다.
+        sessionStorage.removeItem('monc_pending_program_pay');
+        if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
+        btn.textContent = '결제 확인 중…';
+        var ok = await completeProgramPayment(paymentId);
+        if (ok) { AP.logEvent('ap_purchase', { program: PID }); location.reload(); }
+      } catch (e) {
+        console.error('결제 오류', e);
+        alert('결제 중 오류가 발생했어요: ' + (e && e.message ? e.message : e));
+      } finally {
+        _payRestore = null;
+        busy = false;
+        if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; }
+      }
+    }
+
     /* ── 상태 전이 + 재렌더 ── */
     async function setState(next, silent) {
       var r = await AP.store.updateSession(SESS.id, { state: next });
@@ -999,29 +1105,35 @@
         }
         if (!PID) { location.href = 'programs.html'; return; }
       }
+      // 모바일 결제 복귀 — VIEW 를 읽기 전에 지급을 끝내야 아래에서 '등록됨'으로 열린다
+      if (st.mode === 'real') await handlePayReturn();
+
       VIEW = await AP.store.programView(PID);
       if (!VIEW || !VIEW.ok) {
         var code = VIEW && VIEW.code;
         $('stage').innerHTML = '<div class="blk"><div class="blk-t">' +
           (code === 'not_ready' ? '아직 준비 중이에요' : '프로그램을 찾지 못했어요') + '</div>' +
           '<div class="blk-s">' + (code === 'not_ready'
-            ? '데이터가 아직 열리지 않았어요. 흐름이 궁금하면 <a href="program.html?demo=1" style="font-weight:800;color:var(--accent-ink)">체험 모드</a>로 볼 수 있어요.'
+            ? '데이터가 아직 열리지 않았어요. 곧 열려요.'
             : '<a href="programs.html" style="font-weight:800;color:var(--accent-ink)">목록으로 돌아가기</a>') + '</div></div>';
         return;
       }
       $('snTitle').textContent = VIEW.program.title;
       document.title = VIEW.program.title + ' — MONC';
       if (!VIEW.enrolled && !VIEW.staff) {
+        // 미등록 = 구매 화면. 체험판·무료 등록은 없다(2026-07-30 오너 "바로 유료").
         var p = VIEW.program;
+        var buyable = typeof p.price === 'number' && p.price > 0;
         $('stage').innerHTML = '<div class="blk"><div class="blk-t">' + esc(p.title) + '</div>' +
-          '<div class="blk-s">' + esc(p.subtitle || '') + '<br>총 ' + p.total_days + '일 · 하루 한 문제.</div>' +
-          (p.price === 0 ? '<button class="cta" id="btnEnroll">무료로 시작하기</button>'
+          '<div class="blk-s">' + esc(p.subtitle || '') + '<br>총 <b>' + p.total_days + '일</b> · 하루 한 문제 · 내 경험으로 쓰고, 근거 있게 다듬어요.</div>' +
+          (buyable
+            ? '<div class="buy-price"><span>이용권</span><b>' + Number(p.price).toLocaleString() + '원</b></div>' +
+              '<button class="cta" id="btnBuy">카드·간편결제로 시작하기</button>' +
+              '<div class="notice">결제하면 이용권이 바로 지급되고 오늘 1일차가 열려요.<br>' +
+              '계좌이체를 원하시면 고객센터(070-4032-0015)로 연락 주세요 — 확인 후 이용권을 지급해 드려요.</div>'
             : '<div class="notice">이 프로그램은 오픈 준비 중이에요.</div>') + '</div>';
-        var be = document.getElementById('btnEnroll');
-        if (be) be.addEventListener('click', async function () {
-          var r = await AP.store.enrollFree(PID);
-          if (r && r.ok) { location.reload(); } else alert('등록하지 못했어요.');
-        });
+        var bb = document.getElementById('btnBuy');
+        if (bb) bb.addEventListener('click', function () { payWithPortOne(bb); });
         return;
       }
       renderDays();

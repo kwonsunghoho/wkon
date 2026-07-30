@@ -152,8 +152,9 @@ create table if not exists public.answer_programs (
   total_days  int not null default 20 check (total_days between 1 and 60),
   -- 공개 방식: daily=하루 한 문제(기본) / all=전체 공개 / by_date=일차별 지정 날짜
   reveal_policy text not null default 'daily' check (reveal_policy in ('daily','all','by_date')),
-  -- ⚠️ null=가격 미정(관리자 지급만 가능) / 0=무료(회원 스스로 등록 가능 — 테스트·프로모션)
-  --    / >0=유료(추후 verify-payment 에 programId 분기를 붙일 자리. 이 브랜치에선 안 붙인다)
+  -- ⚠️ null=지급 전용(관리자가 이용권을 넣는다) / >0=유료 판매(verify-payment 의
+  --    programId 분기가 결제 검증 후 지급). **체험판·무료 자가 등록은 없다**(2026-07-30
+  --    오너 "체험판 없이 바로 유료"). 0 은 판매 대상이 아니다 — 무료로 줘야 하면 admin 지급.
   price       int check (price is null or price >= 0),
   visible     boolean not null default false,
   sort_order  int not null default 0,
@@ -162,7 +163,7 @@ create table if not exists public.answer_programs (
 );
 
 comment on table public.answer_programs is
-  '매일 답변 프로그램 상품. airline null=공통(필수 기출). price null=지급 전용 / 0=자가 등록 가능 / 양수=유료(결제 연동은 후속).';
+  '매일 답변 프로그램 상품. airline null=공통(필수 기출). price null=지급 전용 / 양수=유료 판매(verify-payment programId 분기). 체험판 없음.';
 
 drop trigger if exists trg_answer_programs_updated on public.answer_programs;
 create trigger trg_answer_programs_updated before update on public.answer_programs
@@ -220,27 +221,20 @@ create table if not exists public.program_enrollments (
 );
 
 comment on table public.program_enrollments is
-  '프로그램 이용권. started_at 이 공개일 계산의 기준(1일차). MVP 는 admin 지급 + 무료 자가 등록.';
+  '프로그램 이용권. started_at 이 공개일 계산의 기준(1일차). 생기는 길은 둘뿐 — 결제(verify-payment, source=purchase) 또는 admin 지급.';
 
 create index if not exists program_enrollments_member_idx
   on public.program_enrollments (member_id, created_at desc);
 
 alter table public.program_enrollments enable row level security;
 drop policy if exists ap_enroll_select_own on public.program_enrollments;
-drop policy if exists ap_enroll_self_free on public.program_enrollments;
 drop policy if exists ap_enroll_researcher_select on public.program_enrollments;
 drop policy if exists ap_enroll_admin_all on public.program_enrollments;
 create policy ap_enroll_select_own on public.program_enrollments
   for select to authenticated using (member_id = auth.uid());
--- ⚠️ 자가 등록은 **무료(price=0)·공개 프로그램만**. 유료(양수)·미정(null)은 못 뚫는다.
---    유료 결제가 붙기 전까지 테스트·프로모션 통로다.
-create policy ap_enroll_self_free on public.program_enrollments
-  for insert to authenticated
-  with check (
-    member_id = auth.uid() and source = 'promo'
-    and exists (select 1 from public.answer_programs p
-                 where p.id = program_id and p.visible and p.price = 0)
-  );
+-- ⚠️ 회원 INSERT 정책이 **일부러 없다**(2026-07-30 오너 "체험판 없이 바로 유료").
+--    이용권은 verify-payment(service role, 결제 검증 후)와 관리자만 만든다.
+--    무료 자가 등록 정책을 되살리면 유료 상품이 공짜로 열린다.
 create policy ap_enroll_researcher_select on public.program_enrollments
   for select to authenticated using (public.is_researcher());
 create policy ap_enroll_admin_all on public.program_enrollments

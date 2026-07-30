@@ -155,8 +155,8 @@
     function cardHtml(item, user) {
       var p = item.program, e = item.enrollment;
       var air = AP.AIRLINES[p.airline] || p.airline || '전 항공사 공통';
-      var priceLine = p.price === 0 ? '무료 체험 운영 중'
-        : (p.price > 0 ? Number(p.price).toLocaleString() + '원' : '오픈 준비 중');
+      // 체험판 없음(2026-07-30 오너) — 가격 양수만 판매, null 은 오픈 준비 중.
+      var priceLine = p.price > 0 ? Number(p.price).toLocaleString() + '원' : '오픈 준비 중';
       var cta, prog = '';
       if (e && e.status === 'active') {
         var max = AP.unlockedMax(p.reveal_policy, p.total_days, e.started_at);
@@ -166,10 +166,10 @@
         cta = '<span class="p-cta">오늘 문제 풀러 가기</span>';
       } else if (!user) {
         cta = '<span class="p-cta ghost">로그인하고 시작하기</span>';
-      } else if (p.price === 0) {
-        cta = '<span class="p-cta">무료로 시작하기</span>';
+      } else if (p.price > 0) {
+        cta = '<span class="p-cta">자세히 보고 시작하기</span>';
       } else {
-        cta = '<span class="p-cta dim">오픈 준비 중 — 오픈 알림은 준비되는 대로</span>';
+        cta = '<span class="p-cta dim">오픈 준비 중</span>';
       }
       return '<a class="p-card" data-id="' + esc(p.id) + '" data-enrolled="' + (e ? '1' : '') +
         '" data-price="' + (p.price == null ? '' : p.price) + '" href="program.html?p=' + encodeURIComponent(p.id) + '">' +
@@ -188,37 +188,25 @@
       AP.logEvent('ap_hub_view');
 
       var items = await AP.store.listPrograms();
+      // ⚠️ 공개 화면에 '체험 모드' 진입을 노출하지 않는다(체험판 없이 유료 — 오너).
+      //    ?demo=1 은 내부 QA 전용 경로로만 남는다.
       if (items && items.notReady) {
         listEl.innerHTML = '';
-        $('notice').innerHTML = '<div class="notice"><b>준비 중이에요.</b> 프로그램 데이터가 아직 열리지 않았어요.<br>' +
-          '흐름이 궁금하시면 아래 체험 모드로 미리 볼 수 있어요.</div>';
-        $('demoEntry').innerHTML = '<a href="programs.html?demo=1">체험 모드로 둘러보기 →</a>';
+        $('notice').innerHTML = '<div class="notice"><b>준비 중이에요.</b> 곧 열려요.</div>';
         return;
       }
       if (!items.length) {
         listEl.innerHTML = '';
-        $('notice').innerHTML = '<div class="notice">아직 공개된 프로그램이 없어요. 곧 항공사별로 열려요.</div>';
-        $('demoEntry').innerHTML = '<a href="programs.html?demo=1">체험 모드로 둘러보기 →</a>';
+        $('notice').innerHTML = '<div class="notice">아직 공개된 프로그램이 없어요. 곧 열려요.</div>';
         return;
       }
       listEl.innerHTML = items.map(function (it) { return cardHtml(it, st.user); }).join('');
-      if (!AP.demoOn()) $('demoEntry').innerHTML = '<a href="programs.html?demo=1">체험 모드로 둘러보기 →</a>';
 
-      // 카드 클릭 — 미로그인은 로그인으로, 무료 미등록은 등록 후 진입
+      // 카드 클릭 — 미로그인만 로그인으로. 구매·안내는 program.html 이 담당한다.
       listEl.querySelectorAll('.p-card').forEach(function (card) {
-        card.addEventListener('click', async function (ev) {
-          var enrolled = card.dataset.enrolled === '1';
-          var price = card.dataset.price;
-          if (enrolled) return;                       // 그대로 이동
-          ev.preventDefault();
-          if (!st.user && !AP.demoOn()) { location.href = 'login.html'; return; }
-          if (price === '0') {
-            var r = await AP.store.enrollFree(card.dataset.id);
-            if (r && r.ok) { AP.logEvent('ap_enroll_free', { program: card.dataset.id }); location.href = card.href; return; }
-            alert('등록하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
-            return;
-          }
-          alert('이 프로그램은 오픈 준비 중이에요.');
+        card.addEventListener('click', function (ev) {
+          if (card.dataset.enrolled === '1') return;
+          if (!st.user && !AP.demoOn()) { ev.preventDefault(); location.href = 'login.html'; }
         });
       });
     })();
