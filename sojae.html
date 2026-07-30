@@ -107,6 +107,27 @@
       font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
     #saveBtn:disabled { opacity: .7; cursor: default; }
     #saveFoot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted); min-height: 16px; }
+
+    /* ── v2: 소재 카드 + 뼈대 렌더 ── */
+    .mcard { border: 1.5px solid var(--accent-dark); border-radius: 12px; padding: 12px 13px;
+      margin-bottom: 12px; background: var(--accent-tint); }
+    .mcard-h { font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--accent-ink); }
+    .mcard-t { font-size: 15px; font-weight: 800; margin-top: 4px; }
+    .mcard-one { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+    .mcard-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .mcard-tag { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+      background: var(--surface); color: var(--accent-ink); border: 1px solid var(--border-soft); }
+    .mcard-re { font-size: 14px; line-height: 1.55; margin-top: 8px; }
+    .mcard-link { display: inline-block; margin-top: 9px; font-size: 13px; font-weight: 800;
+      color: var(--accent-ink); }
+    .sk-h { font-size: 14px; font-weight: 800; margin: 4px 0 8px; }
+    .sk-step { margin-bottom: 9px; font-size: 15px; line-height: 1.55; }
+    .sk-step b { display: block; margin-bottom: 2px; }
+    .sk-str { margin-top: 11px; font-size: 14px; line-height: 1.55; padding-top: 9px;
+      border-top: 1px dashed var(--border-soft); }
+    .sk-close { margin-top: 8px; font-size: 14px; color: var(--text-muted); }
+    /* 첨삭과 같은 규칙 — (괄호 빈칸)은 학생이 제 사실로 채울 자리 */
+    .blank { background: var(--action-tint); border-radius: 4px; padding: 0 2px; font-weight: 700; }
   </style>
 </head>
 <body data-nav-offset>
@@ -115,7 +136,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       소재 발굴
     </a>
-    <span class="badge" id="catBadge">경험 발굴형</span>
+    <span class="badge" id="catBadge">과거경험검증형</span>
   </div>
 
   <div class="stepbar">
@@ -161,6 +182,17 @@
   <script>
     // ── 문제 유형 코드 → 라벨 (questions.category 와 매칭) ──
     const CAT_LABEL = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
+
+    // ── 계측(page_events) — index.html moncTrack 과 같은 관습. 실패는 조용히 무시.
+    //    되묻기 턴 수·다듬기 전환율·저장률을 실측한다(스펙 확정 9 — 2단계 판단 근거).
+    function moncTrack(event, meta) {
+      if (!window.MONC || !window.MONC.sb) return;
+      try {
+        window.MONC.sb.from('page_events')
+          .insert({ event: event, path: '/sojae', meta: meta || {} })
+          .then(function () {}, function () {});
+      } catch (_) {}
+    }
     let category = 'experience';     // 오늘의 문제에서 확정
     let currentQuestion = null;      // 저장 단계에서 쓸 오늘의 문제 행
     const FALLBACK_QUESTION = '예상치 못한 문제를 침착하게 해결했던 경험';  // DB 조회 실패 시 표시·AI 전달용
@@ -196,6 +228,11 @@
         '그 항공사에서 가장 인상 깊었던 서비스나 방향은 뭐였나요?',
         '그 점이 왜 지원자님에게 특별하게 다가왔어요?',
         '본인의 어떤 강점이 거기에 맞닿아 있다고 생각해요?'
+      ],
+      personal: [
+        '그걸 좋아하게 된 계기가 있었나요?',
+        '그게 지원자님의 어떤 면을 보여준다고 생각해요?',
+        '가장 최근에 그걸로 기억에 남는 순간이 있었어요?'
       ]
     };
     const HELP_REPLY = '좋아요, 같이 찾아봐요. 거창한 사건이 아니어도 돼요 — <b>예상과 달랐던 \'작은 순간\'</b> 하나부터 떠올려볼까요? 그때 몸이 먼저 어떻게 움직였나요?';
@@ -222,7 +259,9 @@
         return esc(data.message).replace(/\n/g, '<br>');
       } catch (_) { return cannedAsk(help); }
     }
-    // 반환 {html} 또는 {err, msg} — 크레딧 부족·환급은 화면에 사유를 띄워야 하므로 나눠 돌린다.
+    // 반환 {v2:{card,skeleton,card_saved}} 또는 {html} 또는 {err, msg}.
+    // ⚠️ 신구 판정은 프로브가 아니라 응답 형태로 한다 — 구함수는 message 만 주고(기존 렌더),
+    //    신함수는 card/skeleton 을 준다. 차감 로직이 신구 동일이라 과금 위험이 없는 자리다.
     async function refineAI() {
       try {
         const { data, error } = await MONC.sb.functions.invoke('sojae-chat', {
@@ -240,8 +279,35 @@
           _wallet.balance = data.balance;
           _wallet.daily_left = data.daily_left;
         }
+        if (data.card && data.skeleton) return { v2: data };
         return { html: esc(data.message).replace(/\n/g, '<br>') };
       } catch (_) { return { html: refineSkeleton() }; }
+    }
+
+    // (괄호 빈칸) 칠하기 — polish.html 과 같은 규칙. esc 를 거친 문자열에만 쓴다.
+    function markBlanks(escaped) {
+      return escaped.replace(/\(([^()<>]{1,24})\)/g, '<span class="blank">($1)</span>');
+    }
+
+    // v2 결과 렌더 — 소재 카드 + 답변 뼈대. 카드의 장면·행동 전문은 서랍(answers.html)이 보여준다.
+    function refineHtmlV2(d) {
+      const c = d.card, s = d.skeleton;
+      const comps = (c.competencies || []).map(x => '<span class="mcard-tag">' + esc(x) + '</span>').join('');
+      const steps = (s.steps || []).map((st, i) =>
+        '<div class="sk-step"><b>' + (i + 1) + '. ' + esc(st.what) + '</b>'
+        + markBlanks(esc(st.fill)) + '</div>').join('');
+      return '<div class="mcard"><div class="mcard-h">소재 카드</div>'
+        + '<div class="mcard-t">' + esc(c.title) + '</div>'
+        + '<div class="mcard-one">' + esc(c.one_line) + '</div>'
+        + (comps ? '<div class="mcard-tags">' + comps + '</div>' : '')
+        + '<div class="mcard-re">' + markBlanks(esc(c.reinterpretation)) + '</div>'
+        + (d.card_saved
+            ? '<a class="mcard-link" href="answers.html#materials">소재 서랍에 저장됨 · 서랍 보기 →</a>'
+            : '')
+        + '</div>'
+        + '<div class="sk-h">답변 뼈대 — 이 순서로 말해보세요</div>' + steps
+        + '<div class="sk-str"><b>강점 포인트</b> · ' + markBlanks(esc(s.strengths)) + '</div>'
+        + '<p class="sk-close">' + esc(s.closing) + '</p>';
     }
 
     // ── 크레딧: 다듬기에만 값이 붙는다 (되묻기 대화는 무료) ────────────────
@@ -336,6 +402,7 @@
       const v = ta.value.trim(); if(!v || _busy || !_ready) return;
       me(v); ta.value=''; grow(); toggle();
       userMsgCount++;
+      moncTrack('sojae_turn', { turn: userMsgCount });
       if (userMsgCount >= 2) showRefine();
       saveDraftAnswer();   // 첫 전송부터 answers 초안 행 생성 → 마이페이지 '작성 중'에 노출
       _busy = true;
@@ -482,6 +549,7 @@
     // ── 다듬기 진입 → 최종 작성 모드 ──
     document.getElementById('refineCta').addEventListener('click', () => {
       if (_busy) return;                                     // 되묻기 응답 대기 중엔 전환 금지
+      moncTrack('sojae_refine_click', { turns: userMsgCount });
       _busy = true;
       hideRefine();                                          // 중복 클릭 방지
       clearTimeout(idleT);                                   // 되묻기 넛지 중지
@@ -503,7 +571,13 @@
           _busy = false;
           return;
         }
-        aiFill(p, r.html);
+        if (r.v2) {
+          aiFill(p, refineHtmlV2(r.v2));
+          if (r.v2.card_saved) moncTrack('sojae_card_saved');
+        } else {
+          aiFill(p, r.html);
+        }
+        moncTrack('sojae_refine_done');
         syncServer('refine');   // ⚠️ 성공한 뒤에 기록 — 실패했는데 '다듬기 완료'로 남으면
                                 //    새로고침 때 되묻기로 못 돌아온다.
         document.getElementById('step3').classList.add('on');
@@ -537,6 +611,7 @@
           if (error) throw error;
           _answerStatus = 'final';               // 이후 자동 저장이 완료본을 draft 로 되돌리지 않게
           footEl.textContent = '답변집에 저장됐어요. (완료)';
+          moncTrack('sojae_save_final');
           btn.textContent = '다시 저장';
           syncServer('done');   // 되묻기 대화도 서버에 마저 기록 + 세션 완료 표시
         }
@@ -569,6 +644,7 @@
         const content = q ? q.content : FALLBACK_QUESTION;
         ai('안녕하세요. 오늘 문제는 <b>' + esc(content) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
       }
+      moncTrack('sojae_start', { category });
       _ready = true;                       // 문제 확정 후에만 전송 허용
       setTimeout(pulse, 1800);             // 인사말이 뜬 뒤에 넛지 시작
       resetIdle();

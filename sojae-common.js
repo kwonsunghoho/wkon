@@ -7,11 +7,14 @@
  *    → 여기 한 곳으로 통합 + KST(Asia/Seoul) 기준으로 고정.
  * ============================================================================= */
 (function () {
+  // BEI 5유형(2026-07-30 교재 정렬). 코드 4종은 데이터 호환을 위해 유지, personal 만 신설.
+  // ⚠️ 코드명을 바꾸지 말 것 — questions·answers 두 테이블의 기존 데이터가 이 코드로 저장돼 있다.
   const CAT_LABEL = {
-    experience: '경험 발굴형',
-    values: '가치관형',
-    judgment: '상황 판단형',
-    company: '정보·기업 분석형',
+    experience: '과거경험검증형',
+    values: '직무핵심역량형',
+    judgment: '상황대처형',
+    company: '기업관심도형',
+    personal: '개인신상형',
   };
 
   // KST(Asia/Seoul) 기준 'YYYY-MM-DD'. 기기 시간대와 무관하게 전원 동일한 '오늘'.

@@ -181,6 +181,28 @@
     .opt:last-child { border-bottom: 0; }
     .opt .en { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--air); }
     .opt .hint { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
+
+    /* ── 내 소재 탭 ── */
+    .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+    .tabs button { flex: 1; min-height: 46px; font: inherit; font-size: 15px; font-weight: 800;
+      border: 1px solid var(--border); background: var(--bg2); border-radius: 999px;
+      color: var(--text-muted); cursor: pointer; }
+    .tabs button.on { background: var(--text); color: #fff; border-color: var(--text); }
+    .mat-comp { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 8px;
+      border-radius: 999px; background: var(--accent-tint); color: var(--accent-ink); margin-right: 4px; }
+    .mat-body { font-size: 15px; line-height: 1.7; border-top: 1px dashed var(--border-soft);
+      margin: 0 15px; padding: 13px 0 16px; }
+    .mat-body dt { font-size: 13px; font-weight: 800; color: var(--text-dim); margin-top: 10px; }
+    .mat-body dd { margin: 2px 0 0; white-space: pre-wrap; }
+    .mat-acts { display: flex; gap: 8px; margin-top: 14px; }
+    .mat-acts button { flex: 1; min-height: 44px; font: inherit; font-size: 14px; font-weight: 800;
+      border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+      color: var(--text-muted); cursor: pointer; }
+    .mat-acts .danger { color: #9E3B34; border-color: rgba(158,59,52,.4); }
+    .mat-edit textarea, .mat-edit input { width: 100%; font: inherit; font-size: 15px; line-height: 1.6;
+      color: var(--text); background: var(--bg2); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xs); padding: 9px 11px; margin-top: 4px; }
+    .mat-edit textarea { min-height: 64px; resize: vertical; }
   </style>
 </head>
 <body data-nav-offset>
@@ -198,6 +220,12 @@
           <div class="eyebrow">MY ANSWERS</div>
           <h1>내 답변 저장소</h1>
           <p class="sub" id="hSub"></p>
+        </div>
+
+        <!-- 내 소재 = 다듬기가 만든 소재 카드 서랍(2026-07-30 v2). 테이블 미생성이면 JS 가 탭을 숨긴다. -->
+        <div class="tabs" id="tabs" hidden>
+          <button type="button" class="on" data-tab="answers">내 답변</button>
+          <button type="button" data-tab="materials">내 소재</button>
         </div>
 
         <div class="filters">
@@ -218,6 +246,16 @@
           </button>
           <p class="add-note">저장은 <b>무제한 무료</b>예요. 검사 횟수와 상관없어요.</p>
         </div>
+
+        <!-- ══ 내 소재(서랍) ══ -->
+        <div id="matWrap" hidden>
+          <p class="count" id="matCount"></p>
+          <div class="notes" id="matList"></div>
+          <p class="add-note" style="margin-top:14px">
+            소재 카드는 <a href="sojae.html" style="color:var(--accent-ink);font-weight:800">소재 발굴</a>의
+            다듬기가 자동으로 만들어 줘요.
+          </p>
+        </div>
       </div>
 
       <!-- ══ 답변 추가 ══ -->
@@ -236,10 +274,11 @@
           <div class="f-hr"></div>
           <div class="lbl">질문 유형</div>
           <div class="grid2" id="fCat" role="group" aria-label="질문 유형">
-            <button type="button" data-v="experience">경험 발굴형</button>
-            <button type="button" data-v="values">가치관형</button>
-            <button type="button" data-v="judgment">상황 판단형</button>
-            <button type="button" data-v="company">정보·기업 분석형</button>
+            <button type="button" data-v="experience">과거경험검증형</button>
+            <button type="button" data-v="values">직무핵심역량형</button>
+            <button type="button" data-v="judgment">상황대처형</button>
+            <button type="button" data-v="company">기업관심도형</button>
+            <button type="button" data-v="personal">개인신상형</button>
           </div>
 
           <div class="f-hr"></div>
@@ -550,6 +589,108 @@
       location.reload();   // 목록·필터·이력을 한 번에 다시 그린다
     }
 
+    // ── 내 소재(서랍) ─────────────────────────────────────────────────────
+    // 다듬기(sojae-chat)가 자동 저장한 소재 카드. 학생이 여기서 고치고 지운다.
+    let MATS = [];
+    const MAT_FIELDS = [
+      ['title', '경험 한 줄 제목', 'input'], ['one_line', '요약', 'input'],
+      ['scene', '핵심 장면', 'ta'], ['actions', '행동·판단', 'ta'],
+      ['reinterpretation', '역량 재해석', 'ta'],
+    ];
+
+    function matRender() {
+      const list = document.getElementById('matList');
+      document.getElementById('matCount').textContent = MATS.length + '개';
+      if (!MATS.length) {
+        list.innerHTML = '<p class="empty">아직 소재 카드가 없어요.<br>'
+          + '<a href="sojae.html">소재 발굴</a>에서 다듬기까지 하면 여기에 쌓여요.</p>';
+        return;
+      }
+      list.innerHTML = MATS.map(m => {
+        const comps = (Array.isArray(m.competencies) ? m.competencies : [])
+          .map(x => '<span class="mat-comp">' + esc(x) + '</span>').join('');
+        const q = (m.questions || {}).content;
+        return `<details class="note" data-id="${esc(m.id)}"><summary>
+            <div class="note-top"><span class="note-cat">소재 카드</span>
+              <span class="note-date">${fmt(m.updated_at)}</span></div>
+            <div class="note-q">${esc(m.title || '(제목 없음)')}</div>
+            ${comps ? '<div class="note-meta">' + comps + '</div>' : ''}
+            <span class="note-more">카드 보기 ▾</span></summary>
+          <div class="mat-body"><dl>
+            ${q ? '<dt>유래 문제</dt><dd>' + esc(q) + '</dd>' : ''}
+            ${m.one_line ? '<dt>요약</dt><dd>' + esc(m.one_line) + '</dd>' : ''}
+            ${m.scene ? '<dt>핵심 장면</dt><dd>' + esc(m.scene) + '</dd>' : ''}
+            ${m.actions ? '<dt>행동·판단</dt><dd>' + esc(m.actions) + '</dd>' : ''}
+            ${m.reinterpretation ? '<dt>역량 재해석</dt><dd>' + esc(m.reinterpretation) + '</dd>' : ''}
+          </dl>
+          <div class="mat-acts">
+            <button type="button" data-act="edit">수정하기</button>
+            <button type="button" class="danger" data-act="del">삭제</button>
+          </div></div></details>`;
+      }).join('');
+    }
+
+    function matEditForm(m, host) {
+      const lbl = t => '<div class="lbl" style="margin-top:10px">' + t + '</div>';
+      host.innerHTML = '<div class="mat-edit">'
+        + MAT_FIELDS.map(([k, label, kind]) =>
+            lbl(label)
+            + (kind === 'input'
+                ? `<input data-f="${k}" maxlength="200" value="${esc(m[k] || '')}">`
+                : `<textarea data-f="${k}">${esc(m[k] || '')}</textarea>`)).join('')
+        + lbl('역량 태그 (쉼표로 구분)')
+        + `<input data-f="competencies" value="${esc((Array.isArray(m.competencies) ? m.competencies : []).join(', '))}">`
+        + '<div class="mat-acts"><button type="button" data-act="save">저장</button>'
+        + '<button type="button" data-act="cancel">취소</button></div></div>';
+    }
+
+    async function matSave(m, host) {
+      const val = f => (host.querySelector(`[data-f="${f}"]`) || {}).value || '';
+      const patch = {
+        title: val('title').trim().slice(0, 200) || '(제목 없음)',
+        one_line: val('one_line').trim(), scene: val('scene').trim(),
+        actions: val('actions').trim(), reinterpretation: val('reinterpretation').trim(),
+        competencies: val('competencies').split(',').map(s => s.trim()).filter(Boolean).slice(0, 5),
+      };
+      const { error } = await MONC.sb.from('sojae_materials').update(patch).eq('id', m.id);
+      if (error) { alert('저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.'); return; }
+      Object.assign(m, patch);
+      matRender();
+    }
+
+    function wireMats() {
+      document.getElementById('matList').addEventListener('click', async e => {
+        const btn = e.target.closest('[data-act]');
+        if (!btn) return;
+        const card = btn.closest('.note');
+        const m = MATS.find(x => x.id === card.dataset.id);
+        if (!m) return;
+        const body = card.querySelector('.mat-body');
+        if (btn.dataset.act === 'edit') matEditForm(m, body);
+        else if (btn.dataset.act === 'cancel') matRender();
+        else if (btn.dataset.act === 'save') await matSave(m, body);
+        else if (btn.dataset.act === 'del') {
+          if (!confirm('이 소재 카드를 지울까요?')) return;
+          const { error } = await MONC.sb.from('sojae_materials').delete().eq('id', m.id);
+          if (error) { alert('지우지 못했어요.'); return; }
+          MATS = MATS.filter(x => x.id !== m.id);
+          matRender();
+        }
+      });
+    }
+
+    function showTab(tab) {
+      const onMat = tab === 'materials';
+      // 답변 쪽 구성요소를 통째로 토글 — 필터·개수·목록·추가바
+      document.querySelector('.filters').style.display = onMat ? 'none' : '';
+      document.getElementById('count').style.display = onMat ? 'none' : '';
+      document.getElementById('list').style.display = onMat ? 'none' : '';
+      document.querySelector('.addbar').style.display = onMat ? 'none' : '';
+      document.getElementById('matWrap').hidden = !onMat;
+      document.querySelectorAll('#tabs button').forEach(b =>
+        b.classList.toggle('on', b.dataset.tab === tab));
+    }
+
     (async () => {
       const session = await MONC.requireSession();
       if (!session) return;
@@ -597,6 +738,28 @@
           POLISHES.get(p.answer_id).push(p);
         });
       } catch (_) { /* 첨삭 마이그레이션 전 — 이력 없이 그린다 */ }
+
+      // 소재 서랍 — 테이블 미생성(v2 마이그레이션 전)이면 탭 자체를 숨긴다(degrade).
+      try {
+        let { data: ms, error: mErr } = await MONC.sb.from('sojae_materials')
+          .select('*, questions(content)')
+          .eq('member_id', me).eq('status', 'active')
+          .order('updated_at', { ascending: false });
+        if (mErr) {
+          ({ data: ms, error: mErr } = await MONC.sb.from('sojae_materials')
+            .select('*').eq('member_id', me).eq('status', 'active')
+            .order('updated_at', { ascending: false }));
+        }
+        if (mErr) throw mErr;
+        MATS = ms || [];
+        document.getElementById('tabs').hidden = false;
+        document.getElementById('tabs').addEventListener('click', e => {
+          const b = e.target.closest('button'); if (b) showTab(b.dataset.tab);
+        });
+        wireMats();
+        matRender();
+        if (location.hash === '#materials') showTab('materials');
+      } catch (_) { /* sojae_materials 미생성 — 탭 없이 종전 화면 그대로 */ }
 
       const nDraft = ROWS.filter(isDraft).length;
       document.getElementById('hSub').textContent = ROWS.length
