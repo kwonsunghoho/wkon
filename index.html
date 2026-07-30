@@ -688,8 +688,10 @@
 
   /* ── 네비바 스크롤 ──
      스크롤마다 querySelector + getBoundingClientRect를 반복하던 구조가
-     모바일 버벅임을 유발해, 요소는 한 번만 캐싱하고 rAF로 스로틀. */
-  const navbarEl = document.getElementById('navbar');
+     모바일 버벅임을 유발해, 요소는 한 번만 캐싱하고 rAF로 스로틀.
+     ⚠️ #navbar 는 nav.js(defer)가 파싱 뒤에 심으므로 여기(파싱 중)선 아직 없다 —
+     즉시 캐싱하면 null 이라 처음 찾은 시점에 보관(lazy). */
+  let navbarEl = null;
   let navTicking = false;
 
   // ⚠️ 구 '인트로 구간 nav 투명화(nav-transparent)' 토글은 2026-07-29 제거 —
@@ -698,6 +700,10 @@
   //    같은 날짜 주석 참조. 되살리려면 인트로 배경부터 어둡게 돌려야 한다.
   function updateNavbarOnScroll() {
     navTicking = false;
+    if (!navbarEl) {
+      navbarEl = document.getElementById('navbar');
+      if (!navbarEl) return;
+    }
     navbarEl.style.boxShadow =
       window.scrollY > 40 ? '0 4px 20px rgba(36, 26, 18,.12)' : 'none';
   }
@@ -706,7 +712,8 @@
   }
   window.addEventListener('scroll', onNavbarScroll, { passive: true });
   window.addEventListener('resize', onNavbarScroll, { passive: true });
-  updateNavbarOnScroll(); // 페이지 로드 직후(스크롤 이벤트 발생 전)에도 초기 상태 반영
+  // 초기 상태 반영은 DOMContentLoaded 에서 — nav.js(defer)가 #navbar 를 심은 뒤다
+  document.addEventListener('DOMContentLoaded', updateNavbarOnScroll);
 
 </script>
 
