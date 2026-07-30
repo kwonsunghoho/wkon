@@ -267,6 +267,7 @@
     <button class="tabbtn" data-tab="credits">크레딧</button>
     <button class="tabbtn" data-tab="questions">기출문제</button>
     <button class="tabbtn" data-tab="terms">감점 사전</button>
+    <button class="tabbtn" data-tab="approgram">답변 프로그램</button>
   </div>
 
   <div class="loading" id="loading">확인 중…</div>
@@ -639,6 +640,121 @@
         <span id="termCount" style="font-size:13px;color:var(--text-muted);white-space:nowrap;"></span>
       </div>
       <div class="round-list" id="termList"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- ══ 매일 답변 프로그램 (2026-07-30 신설 · migration 20260730150000) ══
+       기출 은행(interview_questions)은 유료 콘텐츠라 RLS 비공개 — 이 탭이 유일한 편집 창구.
+       프로그램 → 일차 배치 → 이용권 지급 → 연구원 지정 → 수정 코드 → 진행률 순. -->
+  <div class="tab-panel" id="panel-approgram">
+    <div class="rounds-wrap">
+      <div id="apNotReady" style="display:none;" class="rv-hint">
+        아직 마이그레이션이 적용되지 않았어요. <b>supabase/migrations/20260730150000_answer_program.sql</b> 을
+        SQL Editor 에서 실행한 뒤 이 탭을 다시 열어 주세요.</div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:4px 0 8px;">① 기출 은행</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
+        항공사별 기출을 쌓는 곳이에요(회원에게는 <b>등록한 프로그램의 열린 일차만</b> 보여요).
+        의도·평가역량을 채울수록 학생 화면과 AI 첨삭의 질이 올라가요.</p>
+      <form class="round-form" id="apqForm" style="grid-template-columns:1fr;">
+        <div class="field"><label>질문 원문</label>
+          <textarea id="apqContent" rows="2" placeholder="예: 예상치 못한 상황을 침착하게 해결했던 경험을 말해 보세요."
+            style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>항공사</label><select id="apqAirline"></select></div>
+          <div class="field"><label>유형</label><select id="apqType"></select></div>
+          <div class="field"><label>전형</label><input id="apqStage" placeholder="예: 1차 면접"></div>
+          <div class="field"><label>출처 신뢰도</label>
+            <select id="apqConf"><option value="verified">검증된 기출</option>
+              <option value="reported" selected>제보 기출</option><option value="estimated">예상 문항</option></select></div>
+        </div>
+        <details style="margin-top:10px;"><summary style="font-size:13px;font-weight:800;cursor:pointer;min-height:36px;display:flex;align-items:center;">고급(의도·평가역량·꼬리질문…)</summary>
+          <div style="display:grid;gap:10px;margin-top:8px;">
+            <div class="field"><label>질문 의도(학생에게 보여요)</label><input id="apqIntent"></div>
+            <div class="field"><label>핵심 평가 역량(쉼표 구분)</label><input id="apqComp" placeholder="침착함, 우선순위 판단"></div>
+            <div class="field"><label>답변에 필요한 사실(쉼표)</label><input id="apqNeed" placeholder="실제 한 행동, 결과"></div>
+            <div class="field"><label>적합한 경험 유형(쉼표)</label><input id="apqGood" placeholder="아르바이트, 동아리·학회"></div>
+            <div class="field"><label>피해야 할 접근</label><input id="apqAvoid"></div>
+            <div class="field"><label>자주 나오는 실수</label><input id="apqMist"></div>
+            <div class="field"><label>예상 꼬리질문(줄바꿈 구분)</label>
+              <textarea id="apqFollow" rows="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+              <div class="field"><label>권장 분량</label><input id="apqLen" placeholder="예: 400~600자"></div>
+              <div class="field"><label>답변 시간(초)</label><input id="apqSec" type="number" min="10" max="300"></div>
+              <div class="field"><label>출제 시기</label><input id="apqWhen" placeholder="예: 2025 하반기"></div>
+              <div class="field"><label>관리자 메모</label><input id="apqMemo"></div>
+            </div>
+          </div></details>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="submit" id="apqSubmit">기출 추가</button>
+          <button class="btn btn-ghost" type="button" id="apqCancel" style="display:none;">취소</button>
+        </div>
+      </form>
+      <details style="margin:10px 0;"><summary style="font-size:13px;font-weight:800;cursor:pointer;min-height:36px;display:flex;align-items:center;">일괄 등록(탭 구분: 질문[TAB]항공사코드[TAB]유형[TAB]의도)</summary>
+        <textarea id="apqBulk" rows="4" placeholder="갈등을 조율했던 경험은?	7c	conflict	상대 관점 확인 여부"
+          style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+        <button class="btn btn-ghost" type="button" id="apqBulkBtn" style="margin-top:6px;">일괄 추가</button></details>
+      <div class="field" style="max-width:220px;"><label>목록 필터</label><select id="apqFilter"></select></div>
+      <div class="round-list" id="apqList"><div class="loading">불러오는 중…</div></div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:26px 0 8px;">② 프로그램</h3>
+      <form class="round-form" id="appForm" style="grid-template-columns:1fr;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>항공사</label><select id="appAirline"></select></div>
+          <div class="field"><label>제목</label><input id="appTitle" placeholder="예: 제주항공 20일 답변 루틴"></div>
+          <div class="field"><label>총 일수</label><input id="appDays" type="number" min="1" max="60" value="20"></div>
+          <div class="field"><label>공개 방식</label>
+            <select id="appPolicy"><option value="daily">하루 한 문제</option>
+              <option value="all">전체 공개</option><option value="by_date">일차별 날짜 지정</option></select></div>
+          <div class="field"><label>가격(원)</label><input id="appPrice" type="number" min="0" placeholder="비움=지급 전용, 0=무료"></div>
+          <div class="field"><label>노출</label><select id="appVisible"><option value="false">숨김</option><option value="true">공개</option></select></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>한 줄 소개</label><input id="appSub"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="submit" id="appSubmit">프로그램 추가</button>
+          <button class="btn btn-ghost" type="button" id="appCancel" style="display:none;">취소</button>
+        </div>
+      </form>
+      <div class="round-list" id="appList"><div class="loading">불러오는 중…</div></div>
+      <div id="apDaysEditor" style="display:none;margin-top:10px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;background:var(--surface2,#faf8f3);">
+        <div style="font-size:14px;font-weight:800;" id="apDaysTitle"></div>
+        <p style="font-size:12px;color:var(--text-muted);margin:6px 0 8px;">일차마다 기출을 고르세요. 비워 두면 그 일차는 '문제 준비 중'으로 떠요.</p>
+        <div id="apDaysRows"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-action" type="button" id="apDaysSave">배치 저장</button>
+          <button class="btn btn-ghost" type="button" id="apDaysClose">닫기</button>
+        </div>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:26px 0 8px;">③ 이용권 지급</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;" class="round-form">
+        <div class="field"><label>회원 검색(이름·이메일)</label><input id="apEnrSearch" placeholder="2자 이상"></div>
+        <div class="field"><label>프로그램</label><select id="apEnrProgram"></select></div>
+        <div class="field"><label>시작일(1일차 기준)</label><input id="apEnrStart" type="date"></div>
+      </div>
+      <div id="apEnrHits" style="margin-top:6px;"></div>
+      <div class="round-list" id="apEnrList" style="margin-top:10px;"><div class="loading">불러오는 중…</div></div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:26px 0 8px;">④ 연구원 지정</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">연구원은 <b>review-desk.html</b> 에서 검수해요. 학생 이름·경험 카드에 접근하게 되니 내부 인력만 지정하세요.</p>
+      <div class="field" style="max-width:260px;"><label>회원 검색(이름·이메일)</label><input id="apResSearch" placeholder="2자 이상"></div>
+      <div id="apResHits" style="margin-top:6px;"></div>
+      <div class="round-list" id="apResList" style="margin-top:10px;"></div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:26px 0 8px;">⑤ 수정 코드</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;" class="round-form">
+        <div class="field"><label>코드(영문 대문자_)</label><input id="apCodeId" placeholder="OPENING_WEAK2"></div>
+        <div class="field"><label>라벨</label><input id="apCodeLabel"></div>
+        <div class="field"><label>분류</label>
+          <select id="apCodeCat"><option value="question">질문</option><option value="experience">경험</option>
+            <option value="sentence">문장</option><option value="speaking">말하기</option></select></div>
+        <button class="btn btn-action" type="button" id="apCodeAdd">코드 추가</button>
+      </div>
+      <div class="round-list" id="apCodeList"><div class="loading">불러오는 중…</div></div>
+
+      <h3 style="font-size:15px;font-weight:800;margin:26px 0 8px;">⑥ 진행률</h3>
+      <button class="btn btn-ghost" type="button" id="apStatBtn">집계 새로고침</button>
+      <div class="round-list" id="apStatList" style="margin-top:8px;"></div>
     </div>
   </div>
 
@@ -2556,6 +2672,427 @@
       await loadCredits();
     });
 
+    // ══ 매일 답변 프로그램 (interview_questions / answer_programs / …) ══
+    // ⚠️ 기출 은행은 RLS 비공개(관리자·연구원만) — 이 탭이 유일한 편집 창구다.
+    //    미적용(PGRST205) 감지 시 안내만 보여주고 조용히 멈춘다(graceful degrade).
+    const AP_QTYPES = { experience:'경험형', values:'가치관형', motivation:'지원동기형', mistake:'실수형',
+      weakness:'단점형', conflict:'갈등형', situation:'상황형', company:'기업형', job:'직무형', opinion:'의견형' };
+    const AP_STATES = { not_started:'시작 전', experience_selecting:'경험 선택', fact_gathering:'사실 수집',
+      student_drafting:'초안 작성', ai_revised:'AI 첨삭', student_editing:'다듬는 중', review_requested:'검수 대기',
+      researcher_reviewing:'검수 중', revision_requested:'보완 요청', approved:'승인', finalized:'완성' };
+    let _apQ = [], _apP = [], _apEditQ = null, _apEditP = null, _apDaysPid = null;
+    const apMissing = e => !!e && (e.code === 'PGRST205' || /schema cache/i.test(e.message || ''));
+
+    function apAirlineOptions(withCommon) {
+      return (withCommon ? '<option value="">공통(항공사 무관)</option>' : '') +
+        Object.keys(LEC.AIRLINES).map(c => `<option value="${c}">${LEC.AIRLINES[c].ko}</option>`).join('');
+    }
+    const apCsv = v => v.split(',').map(s => s.trim()).filter(Boolean);
+
+    // ── ① 기출 은행 ──
+    function apqReset() {
+      _apEditQ = null;
+      ['apqContent','apqStage','apqIntent','apqComp','apqNeed','apqGood','apqAvoid','apqMist','apqFollow','apqLen','apqSec','apqWhen','apqMemo']
+        .forEach(id => document.getElementById(id).value = '');
+      document.getElementById('apqConf').value = 'reported';
+      document.getElementById('apqSubmit').textContent = '기출 추가';
+      document.getElementById('apqCancel').style.display = 'none';
+    }
+
+    async function loadApQuestions() {
+      const listEl = document.getElementById('apqList');
+      const { data, error } = await sb().from('interview_questions').select('*')
+        .order('airline', { ascending: true, nullsFirst: true }).order('created_at', { ascending: false });
+      if (error) {
+        if (apMissing(error)) { document.getElementById('apNotReady').style.display = 'block'; listEl.innerHTML = ''; return false; }
+        listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return true;
+      }
+      _apQ = data || [];
+      const f = document.getElementById('apqFilter').value;
+      const rows = _apQ.filter(q => !f || (f === 'none' ? !q.airline : q.airline === f));
+      listEl.innerHTML = rows.length ? rows.map(q => `
+        <div class="round-item" style="${q.active ? '' : 'opacity:.55;'}">
+          <div><div class="ri-main">${esc(q.content)}</div>
+            <div class="ri-sub">${q.airline ? esc((LEC.AIRLINES[q.airline]||{}).ko || q.airline) : '공통'} ·
+              ${esc(AP_QTYPES[q.qtype] || q.qtype)}${q.stage ? ' · ' + esc(q.stage) : ''} ·
+              ${q.source_confidence === 'verified' ? '검증' : q.source_confidence === 'estimated' ? '예상' : '제보'}${q.intent ? ' · 의도 있음' : ' · <b style="color:#A33D14">의도 비어 있음</b>'}</div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del apq-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
+            <button class="ri-del apq-edit" data-id="${q.id}">수정</button>
+            <button class="ri-del apq-del" data-id="${q.id}">삭제</button></div>
+        </div>`).join('') : '<div class="empty" style="color:var(--text-dim);padding:16px">기출이 없습니다. 위에서 추가하세요.</div>';
+
+      listEl.querySelectorAll('.apq-active').forEach(b => b.addEventListener('click', async () => {
+        const q = _apQ.find(x => x.id === b.dataset.id);
+        const { error } = await sb().from('interview_questions').update({ active: !q.active }).eq('id', q.id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast('변경됨'); loadApQuestions();
+      }));
+      listEl.querySelectorAll('.apq-edit').forEach(b => b.addEventListener('click', () => {
+        const q = _apQ.find(x => x.id === b.dataset.id); if (!q) return;
+        _apEditQ = q.id;
+        document.getElementById('apqContent').value = q.content || '';
+        document.getElementById('apqAirline').value = q.airline || '';
+        document.getElementById('apqType').value = q.qtype || 'experience';
+        document.getElementById('apqStage').value = q.stage || '';
+        document.getElementById('apqConf').value = q.source_confidence || 'reported';
+        document.getElementById('apqIntent').value = q.intent || '';
+        document.getElementById('apqComp').value = (q.competencies || []).join(', ');
+        document.getElementById('apqNeed').value = (q.needed_facts || []).join(', ');
+        document.getElementById('apqGood').value = (q.good_exp_types || []).join(', ');
+        document.getElementById('apqAvoid').value = q.avoid || '';
+        document.getElementById('apqMist').value = q.common_mistakes || '';
+        document.getElementById('apqFollow').value = (q.followups || []).join('\n');
+        document.getElementById('apqLen').value = q.rec_len || '';
+        document.getElementById('apqSec').value = q.rec_seconds || '';
+        document.getElementById('apqWhen').value = q.asked_at || '';
+        document.getElementById('apqMemo').value = q.admin_memo || '';
+        document.getElementById('apqSubmit').textContent = '수정 저장';
+        document.getElementById('apqCancel').style.display = '';
+        document.getElementById('apqForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      listEl.querySelectorAll('.apq-del').forEach(b => b.addEventListener('click', async () => {
+        const q = _apQ.find(x => x.id === b.dataset.id);
+        if (!confirm(`'${(q && q.content || '').slice(0, 24)}…' 기출을 삭제할까요? 배치된 일차는 '문제 준비 중'이 됩니다.`)) return;
+        const { error } = await sb().from('interview_questions').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadApQuestions();
+      }));
+      return true;
+    }
+
+    document.getElementById('apqForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const content = document.getElementById('apqContent').value.trim();
+      if (!content) { alert('질문 원문을 입력하세요.'); return; }
+      const row = {
+        content,
+        airline: document.getElementById('apqAirline').value || null,
+        qtype: document.getElementById('apqType').value,
+        stage: document.getElementById('apqStage').value.trim() || null,
+        source_confidence: document.getElementById('apqConf').value,
+        intent: document.getElementById('apqIntent').value.trim() || null,
+        competencies: apCsv(document.getElementById('apqComp').value),
+        needed_facts: apCsv(document.getElementById('apqNeed').value),
+        good_exp_types: apCsv(document.getElementById('apqGood').value),
+        avoid: document.getElementById('apqAvoid').value.trim() || null,
+        common_mistakes: document.getElementById('apqMist').value.trim() || null,
+        followups: document.getElementById('apqFollow').value.split('\n').map(s => s.trim()).filter(Boolean),
+        rec_len: document.getElementById('apqLen').value.trim() || null,
+        rec_seconds: Number(document.getElementById('apqSec').value) || null,
+        asked_at: document.getElementById('apqWhen').value.trim() || null,
+        admin_memo: document.getElementById('apqMemo').value.trim() || null,
+      };
+      const { error } = _apEditQ
+        ? await sb().from('interview_questions').update(row).eq('id', _apEditQ)
+        : await sb().from('interview_questions').insert(row);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast(_apEditQ ? '수정됨' : '추가됨'); apqReset(); loadApQuestions();
+    });
+    document.getElementById('apqCancel').addEventListener('click', apqReset);
+    document.getElementById('apqFilter').addEventListener('change', loadApQuestions);
+
+    document.getElementById('apqBulkBtn').addEventListener('click', async () => {
+      const lines = document.getElementById('apqBulk').value.split('\n').map(s => s.trim()).filter(Boolean);
+      if (!lines.length) return;
+      const rows = lines.map(l => {
+        const [content, airline, qtype, intent] = l.split('\t').map(s => (s || '').trim());
+        return { content, airline: airline || null,
+                 qtype: AP_QTYPES[qtype] ? qtype : 'experience', intent: intent || null };
+      }).filter(r => r.content);
+      const { error } = await sb().from('interview_questions').insert(rows);
+      if (error) { alert('일괄 추가 실패: ' + error.message); return; }
+      toast(rows.length + '건 추가됨');
+      document.getElementById('apqBulk').value = '';
+      loadApQuestions();
+    });
+
+    // ── ② 프로그램 + 일차 배치 ──
+    function appReset() {
+      _apEditP = null;
+      document.getElementById('appTitle').value = '';
+      document.getElementById('appSub').value = '';
+      document.getElementById('appDays').value = '20';
+      document.getElementById('appPolicy').value = 'daily';
+      document.getElementById('appPrice').value = '';
+      document.getElementById('appVisible').value = 'false';
+      document.getElementById('appSubmit').textContent = '프로그램 추가';
+      document.getElementById('appCancel').style.display = 'none';
+    }
+
+    async function loadApPrograms() {
+      const listEl = document.getElementById('appList');
+      const { data, error } = await sb().from('answer_programs').select('*').order('sort_order').order('created_at');
+      if (error) { listEl.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      _apP = data || [];
+      const sel = document.getElementById('apEnrProgram');
+      sel.innerHTML = _apP.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('');
+      listEl.innerHTML = _apP.length ? _apP.map(p => `
+        <div class="round-item" style="${p.visible ? '' : 'opacity:.6;'}">
+          <div><div class="ri-main">${esc(p.title)} <span style="font-size:12px;color:var(--text-muted)">(${esc((LEC.AIRLINES[p.airline]||{}).ko || p.airline)})</span></div>
+            <div class="ri-sub">${p.total_days}일 · ${p.reveal_policy === 'daily' ? '하루 한 문제' : p.reveal_policy === 'all' ? '전체 공개' : '날짜 지정'} ·
+              ${p.price == null ? '지급 전용' : p.price === 0 ? '무료' : Number(p.price).toLocaleString() + '원'} · ${p.visible ? '공개' : '숨김'}</div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del app-days" data-id="${p.id}" style="color:var(--action-dark);border-color:var(--action)">일차 배치</button>
+            <button class="ri-del app-vis" data-id="${p.id}">${p.visible ? '숨기기' : '공개'}</button>
+            <button class="ri-del app-edit" data-id="${p.id}">수정</button>
+            <button class="ri-del app-del" data-id="${p.id}">삭제</button></div>
+        </div>`).join('') : '<div class="empty" style="color:var(--text-dim);padding:16px">프로그램이 없습니다.</div>';
+
+      listEl.querySelectorAll('.app-vis').forEach(b => b.addEventListener('click', async () => {
+        const p = _apP.find(x => x.id === b.dataset.id);
+        const { error } = await sb().from('answer_programs').update({ visible: !p.visible }).eq('id', p.id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast('변경됨'); loadApPrograms();
+      }));
+      listEl.querySelectorAll('.app-edit').forEach(b => b.addEventListener('click', () => {
+        const p = _apP.find(x => x.id === b.dataset.id); if (!p) return;
+        _apEditP = p.id;
+        document.getElementById('appAirline').value = p.airline;
+        document.getElementById('appTitle').value = p.title;
+        document.getElementById('appSub').value = p.subtitle || '';
+        document.getElementById('appDays').value = p.total_days;
+        document.getElementById('appPolicy').value = p.reveal_policy;
+        document.getElementById('appPrice').value = p.price == null ? '' : p.price;
+        document.getElementById('appVisible').value = String(p.visible);
+        document.getElementById('appSubmit').textContent = '수정 저장';
+        document.getElementById('appCancel').style.display = '';
+      }));
+      listEl.querySelectorAll('.app-del').forEach(b => b.addEventListener('click', async () => {
+        const p = _apP.find(x => x.id === b.dataset.id);
+        if (!confirm(`'${p.title}' 프로그램을 삭제할까요? 이용권·세션·버전 기록이 함께 삭제됩니다(cascade). 되돌릴 수 없어요.`)) return;
+        const { error } = await sb().from('answer_programs').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); loadApPrograms(); loadApEnrollments();
+      }));
+      listEl.querySelectorAll('.app-days').forEach(b => b.addEventListener('click', () => openDaysEditor(b.dataset.id)));
+    }
+
+    document.getElementById('appForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const title = document.getElementById('appTitle').value.trim();
+      if (!title) { alert('제목을 입력하세요.'); return; }
+      const priceRaw = document.getElementById('appPrice').value.trim();
+      const row = {
+        airline: document.getElementById('appAirline').value,
+        title, subtitle: document.getElementById('appSub').value.trim() || null,
+        total_days: Math.max(1, Math.min(60, Number(document.getElementById('appDays').value) || 20)),
+        reveal_policy: document.getElementById('appPolicy').value,
+        price: priceRaw === '' ? null : Math.max(0, Number(priceRaw) || 0),
+        visible: document.getElementById('appVisible').value === 'true',
+      };
+      const { error } = _apEditP
+        ? await sb().from('answer_programs').update(row).eq('id', _apEditP)
+        : await sb().from('answer_programs').insert(row);
+      if (error) { alert('저장 실패: ' + error.message); return; }
+      toast(_apEditP ? '수정됨' : '추가됨'); appReset(); loadApPrograms();
+    });
+    document.getElementById('appCancel').addEventListener('click', appReset);
+
+    async function openDaysEditor(pid) {
+      const p = _apP.find(x => x.id === pid); if (!p) return;
+      _apDaysPid = pid;
+      document.getElementById('apDaysTitle').textContent = p.title + ' — 일차 배치';
+      const { data: days } = await sb().from('answer_program_days').select('*').eq('program_id', pid);
+      const byDay = {}; (days || []).forEach(d => byDay[d.day_no] = d);
+      // 배치 후보: 그 항공사 기출 + 공통 기출
+      const pool = _apQ.filter(q => q.active && (!q.airline || q.airline === p.airline));
+      const opts = q => `<option value="">— 비움 —</option>` + pool.map(x =>
+        `<option value="${x.id}" ${q && q.question_id === x.id ? 'selected' : ''}>[${AP_QTYPES[x.qtype] || x.qtype}] ${esc(x.content.slice(0, 44))}</option>`).join('');
+      let rows = '';
+      for (let d = 1; d <= p.total_days; d++) {
+        const cur = byDay[d];
+        rows += `<div style="display:grid;grid-template-columns:52px 1fr ${p.reveal_policy === 'by_date' ? '130px' : ''};gap:8px;align-items:center;margin-top:6px;">
+          <b style="font-size:13px;">${d}일차</b>
+          <select class="apd-q" data-day="${d}" style="min-height:38px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:#fff;max-width:100%;">${opts(cur)}</select>
+          ${p.reveal_policy === 'by_date' ? `<input class="apd-date" data-day="${d}" type="date" value="${cur && cur.unlock_date || ''}" style="min-height:38px;border:1px solid var(--border);border-radius:8px;padding:0 8px;">` : ''}
+        </div>`;
+      }
+      document.getElementById('apDaysRows').innerHTML = rows ||
+        '<div class="empty">배치할 기출이 없습니다. ①에서 먼저 추가하세요.</div>';
+      document.getElementById('apDaysEditor').style.display = 'block';
+      document.getElementById('apDaysEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('apDaysClose').addEventListener('click', () => {
+      document.getElementById('apDaysEditor').style.display = 'none'; _apDaysPid = null;
+    });
+    document.getElementById('apDaysSave').addEventListener('click', async () => {
+      if (!_apDaysPid) return;
+      const p = _apP.find(x => x.id === _apDaysPid);
+      const ups = [], dels = [];
+      document.querySelectorAll('#apDaysRows .apd-q').forEach(sel => {
+        const day = Number(sel.dataset.day);
+        const dateEl = document.querySelector(`#apDaysRows .apd-date[data-day="${day}"]`);
+        if (sel.value) ups.push({ program_id: _apDaysPid, day_no: day, question_id: sel.value,
+                                  unlock_date: dateEl && dateEl.value ? dateEl.value : null });
+        else dels.push(day);
+      });
+      if (ups.length) {
+        const { error } = await sb().from('answer_program_days')
+          .upsert(ups, { onConflict: 'program_id,day_no' });
+        if (error) { alert('저장 실패: ' + error.message); return; }
+      }
+      if (dels.length) {
+        await sb().from('answer_program_days').delete().eq('program_id', _apDaysPid).in('day_no', dels);
+      }
+      toast('배치 저장됨 (' + ups.length + '일차)');
+    });
+
+    // ── ③ 이용권 ──
+    function apMemberHits(inputId, hitsId, onPick) {
+      const q = document.getElementById(inputId).value.trim().toLowerCase();
+      const el = document.getElementById(hitsId);
+      if (q.length < 2) { el.innerHTML = ''; return; }
+      const hits = members.filter(m =>
+        (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q)).slice(0, 6);
+      el.innerHTML = hits.length ? hits.map(m =>
+        `<button type="button" class="ri-del" data-id="${m.id}" style="margin:2px 4px 2px 0;">${esc(m.name || '(이름 없음)')} · ${esc(m.email || '-')}</button>`).join('')
+        : '<span style="font-size:12px;color:var(--text-dim)">일치하는 회원이 없어요.</span>';
+      el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.id)));
+    }
+
+    document.getElementById('apEnrSearch').addEventListener('input', () =>
+      apMemberHits('apEnrSearch', 'apEnrHits', async memberId => {
+        const pid = document.getElementById('apEnrProgram').value;
+        if (!pid) { alert('프로그램을 먼저 만들거나 선택하세요.'); return; }
+        const start = document.getElementById('apEnrStart').value || undefined;
+        const row = { program_id: pid, member_id: memberId, source: 'admin' };
+        if (start) row.started_at = start;
+        const { error } = await sb().from('program_enrollments').insert(row);
+        if (error) {
+          alert(error.code === '23505' ? '이미 이 프로그램 이용권이 있어요.' : '지급 실패: ' + error.message);
+          return;
+        }
+        toast('이용권 지급됨');
+        document.getElementById('apEnrSearch').value = '';
+        document.getElementById('apEnrHits').innerHTML = '';
+        loadApEnrollments();
+      }));
+
+    async function loadApEnrollments() {
+      const el = document.getElementById('apEnrList');
+      const { data, error } = await sb().from('program_enrollments').select('*').order('created_at', { ascending: false }).limit(100);
+      if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
+      const rows = data || [];
+      el.innerHTML = rows.length ? rows.map(e2 => {
+        const m = members.find(x => x.id === e2.member_id) || {};
+        const p = _apP.find(x => x.id === e2.program_id) || {};
+        return `<div class="round-item">
+          <div><div class="ri-main">${esc(m.name || '(이름 없음)')} <span style="font-size:12px;color:var(--text-muted)">${esc(m.email || '')}</span></div>
+            <div class="ri-sub">${esc(p.title || '삭제된 프로그램')} · 시작 ${e2.started_at} · ${e2.source} · ${e2.status}</div></div>
+          <div><button class="ri-del ape-del" data-id="${e2.id}">회수</button></div></div>`;
+      }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지급된 이용권이 없습니다.</div>';
+      el.querySelectorAll('.ape-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 이용권을 회수(삭제)할까요? 학생의 작성 기록은 남습니다.')) return;
+        const { error } = await sb().from('program_enrollments').delete().eq('id', b.dataset.id);
+        if (error) { alert('회수 실패: ' + error.message); return; }
+        toast('회수됨'); loadApEnrollments();
+      }));
+    }
+
+    // ── ④ 연구원 ──
+    document.getElementById('apResSearch').addEventListener('input', () =>
+      apMemberHits('apResSearch', 'apResHits', async memberId => {
+        const { error } = await sb().from('researchers').upsert({ member_id: memberId, active: true }, { onConflict: 'member_id' });
+        if (error) { alert('지정 실패: ' + error.message); return; }
+        toast('연구원 지정됨');
+        document.getElementById('apResSearch').value = '';
+        document.getElementById('apResHits').innerHTML = '';
+        loadApResearchers();
+      }));
+
+    async function loadApResearchers() {
+      const el = document.getElementById('apResList');
+      const { data, error } = await sb().from('researchers').select('*').order('created_at');
+      if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
+      const rows = data || [];
+      el.innerHTML = rows.length ? rows.map(r => {
+        const m = members.find(x => x.id === r.member_id) || {};
+        return `<div class="round-item" style="${r.active ? '' : 'opacity:.55;'}">
+          <div><div class="ri-main">${esc(m.name || '(이름 없음)')}</div>
+            <div class="ri-sub">${esc(m.email || '')} · ${r.active ? '활성' : '중지'}</div></div>
+          <div style="display:flex;gap:6px;">
+            <button class="ri-del apr-tog" data-id="${r.member_id}">${r.active ? '중지' : '재개'}</button>
+            <button class="ri-del apr-del" data-id="${r.member_id}">해제</button></div></div>`;
+      }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지정된 연구원이 없습니다.</div>';
+      el.querySelectorAll('.apr-tog').forEach(b => b.addEventListener('click', async () => {
+        const r = rows.find(x => x.member_id === b.dataset.id);
+        await sb().from('researchers').update({ active: !r.active }).eq('member_id', r.member_id);
+        loadApResearchers();
+      }));
+      el.querySelectorAll('.apr-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('연구원 지정을 해제할까요?')) return;
+        await sb().from('researchers').delete().eq('member_id', b.dataset.id);
+        loadApResearchers();
+      }));
+    }
+
+    // ── ⑤ 수정 코드 ──
+    async function loadApCodes() {
+      const el = document.getElementById('apCodeList');
+      const { data, error } = await sb().from('correction_codes').select('*').order('category').order('sort_order');
+      if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
+      const CAT = { question: '질문', experience: '경험', sentence: '문장', speaking: '말하기' };
+      el.innerHTML = (data || []).map(c => `
+        <div class="round-item" style="${c.active ? '' : 'opacity:.5;'}">
+          <div><div class="ri-main">${esc(c.label)} <span style="font-size:11px;color:var(--text-dim)">${esc(c.code)}</span></div>
+            <div class="ri-sub">${CAT[c.category] || c.category}${c.description ? ' · ' + esc(c.description) : ''}</div></div>
+          <div><button class="ri-del apc-tog" data-code="${esc(c.code)}">${c.active ? '끄기' : '켜기'}</button></div>
+        </div>`).join('');
+      el.querySelectorAll('.apc-tog').forEach(b => b.addEventListener('click', async () => {
+        const c = data.find(x => x.code === b.dataset.code);
+        await sb().from('correction_codes').update({ active: !c.active }).eq('code', c.code);
+        loadApCodes();
+      }));
+    }
+    document.getElementById('apCodeAdd').addEventListener('click', async () => {
+      const code = document.getElementById('apCodeId').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+      const label = document.getElementById('apCodeLabel').value.trim();
+      if (!code || !label) { alert('코드와 라벨을 입력하세요.'); return; }
+      const { error } = await sb().from('correction_codes').insert({
+        code, label, category: document.getElementById('apCodeCat').value, sort_order: 99 });
+      if (error) { alert('추가 실패: ' + error.message); return; }
+      toast('추가됨');
+      document.getElementById('apCodeId').value = ''; document.getElementById('apCodeLabel').value = '';
+      loadApCodes();
+    });
+
+    // ── ⑥ 진행률 ──
+    document.getElementById('apStatBtn').addEventListener('click', async () => {
+      const el = document.getElementById('apStatList');
+      el.innerHTML = '<div class="loading">집계 중…</div>';
+      const enr = await sb().from('program_enrollments').select('program_id');
+      const ses = await sb().from('answer_sessions').select('program_id, state');
+      if (enr.error || ses.error) { el.innerHTML = '<div class="empty">집계 실패(마이그레이션 미적용?)</div>'; return; }
+      el.innerHTML = _apP.map(p => {
+        const en = (enr.data || []).filter(x => x.program_id === p.id).length;
+        const ss = (ses.data || []).filter(x => x.program_id === p.id);
+        const byState = {};
+        ss.forEach(x => byState[x.state] = (byState[x.state] || 0) + 1);
+        const fin = byState.finalized || 0;
+        const line = Object.keys(byState).map(k => `${AP_STATES[k] || k} ${byState[k]}`).join(' · ') || '세션 없음';
+        return `<div class="round-item"><div>
+          <div class="ri-main">${esc(p.title)}</div>
+          <div class="ri-sub">이용권 ${en}명 · 완성 답변 ${fin}건 · ${line}</div></div></div>`;
+      }).join('') || '<div class="empty">프로그램이 없습니다.</div>';
+    });
+
+    async function loadApProgram() {
+      document.getElementById('apqAirline').innerHTML = apAirlineOptions(true);
+      document.getElementById('appAirline').innerHTML = apAirlineOptions(false);
+      document.getElementById('apqType').innerHTML = Object.keys(AP_QTYPES)
+        .map(k => `<option value="${k}">${AP_QTYPES[k]}</option>`).join('');
+      document.getElementById('apqFilter').innerHTML =
+        '<option value="">전체</option><option value="none">공통만</option>' + apAirlineOptions(false);
+      const ok = await loadApQuestions();
+      if (!ok) return;                      // 마이그레이션 미적용 — 나머지도 같은 상태라 멈춘다
+      await loadApPrograms();
+      loadApEnrollments();
+      loadApResearchers();
+      loadApCodes();
+    }
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();
@@ -2580,6 +3117,7 @@
       loadCredits();
       loadCreditPacks();
       loadCreditConfig();
+      loadApProgram();
     })();
   </script>
 </body>

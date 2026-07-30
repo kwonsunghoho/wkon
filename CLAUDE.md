@@ -126,6 +126,16 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
   - **⚠️ fix 는 학생이 쓴 사실만 재료로**(프롬프트 '첨삭의 선'). 없는 숫자·일화를 지어내면 학생이 그 거짓을 면접장까지 들고 간다 — 부족한 자리는 **(괄호 빈칸)**으로 남기고 화면이 그 괄호를 칠해 준다(`markBlanks`). 합격자 문장 모방·옮겨쓰기 금지는 킬러와 동일(결정 10).
   - 기록 = `answer_polishes`(migration `20260730130000_answer_polishes.sql` — **owner 실행 필요**). `ai_killer_checks` 를 본뜬 구조(1:N · on delete set null · 쓰기는 service role 만). 미적용 degrade: 첨삭만 '준비 중', 킬러·소재 영향 없음. 이력 복원은 `polish.html?polish=<id>`(차감 없음), answers.html 이 검사·첨삭 이력을 시간순 한 줄로 합쳐 그린다.
 
+### 매일 답변 프로그램 (2026-07-30 신설 · 브랜치 airline-interview-program-mvp — main 미병합)
+**"매일 한 문제씩, 내 경험으로 완성하는 항공사 면접답변 프로그램."** 오너 원본 요구사항은 `docs/monc-answer-program-spec.md`(참고용 원문), 구현 원장은 `docs/monc-answer-program/`(analysis·spec·architecture·data-model·ai-pipeline·privacy·admin-guide·test-plan·implementation-status). 페이지: `programs.html`(허브)·`program.html`(작성 흐름)·`experiences.html`(경험 창고)·`review-desk.html`(연구원 검수 — ⚠️ `reviews.html` 후기와 다른 파일) + admin '답변 프로그램' 탭 + 승준노트 카드 '매일 기출'. 서버: `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음), migration `20260730150000_answer_program.sql`(**owner 실행 필요** — 미적용 시 전부 '준비 중' degrade).
+- **장기 원칙(오너 스펙 — 바꾸지 말 것):** ① 학생이 제공하지 않은 사실(경험·성과·감정·반응·수치)을 AI가 만들지 않는다 ② 모든 AI 문장은 근거 추적이 가능해야 한다(문장별 근거 id + 서버 검증) ③ 기존 상품·회원·결제·첨삭 구조를 우선 재사용한다 ④ DB 변경은 마이그레이션+롤백+테스트가 한 세트다 ⑤ 계획만 쓰고 멈추지 않는다 ⑥ 구현 후 `node scripts/answer-program-tests.mjs` 와 브라우저 실측으로 자체 검수한다.
+- **⚠️ 근거 검증이 이 상품의 심장** — 서버(`apValidateSentences`)가 AI 문장의 근거 id 실존 + **자료에 없는 숫자**를 검사해 unsupported 를 붙인다. 근거 없는 문장은 조용히 통과하지 않는다(화면 빨간 표시, '이 버전으로 다듬기'에서 제외). 이 검증을 우회하는 코드를 넣지 말 것.
+- **⚠️ 기출은 기존 `questions`(소재발굴)에 넣지 않는다** — 그 표는 로그인 회원 전체 읽기 RLS 라 유료 기출이 샌다. `interview_questions` 는 비공개이고 회원 서빙은 `ap_program_view()` RPC 하나(잠긴 일차의 문제는 응답에 안 실린다).
+- **⚠️ 확정본은 `answers` 자유 글로 합류**(title=문항·doc_kind=interview) — 그래서 AI킬러·첨삭·답변노트가 무수정으로 붙는다. 이 연결을 끊지 말 것.
+- **⚠️ 세션 상태는 DB 트리거가 심판**(errcode MC003/MC004/MC005). 학생은 ai_revised 점프·approved 자가 부여 불가. 공개일 식은 SQL·index.ts·program-common.js **세 벌 동기** — 고치면 셋 다 고치고 테스트 스크립트로 확인.
+- **⚠️ 크레딧 차감 없음(이용권 포함 상품)** — 대신 서버 상한(revise 3/일/세션 등)이 원가 잠금. 상투어는 `ai_killer_terms` 재사용(사전 이원화 금지).
+- 데모 모드(`?demo=1`) = 로그인·DB·API 키 없이 전체 흐름 검증하는 목업 어댑터(program-common.js). 화면에 체험 배너가 항상 뜬다.
+
 ### 답변 저장소 + 크레딧 (2026-07-25 재설계 — 구조가 뒤집혔다)
 
 **구조의 중심은 AI킬러가 아니라 `answers`(답변 저장소)이고, KILL AI 는 그 위에서 도는 기능이다.**

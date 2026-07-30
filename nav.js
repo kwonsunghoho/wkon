@@ -31,7 +31,8 @@
     ['sojae.html', '답변 기초 쌓기', '자기객관화부터 차근차근'],
     ['mypage.html#sec-answers', '답변노트', '쓴 답변 한곳에 모아 보기'],
     ['ai-killer.html', 'AI킬러', 'AI 같은 표현 찾아 밑줄로'],
-    ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"]
+    ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"],
+    ['programs.html', '매일 기출', '하루 한 문제, 내 경험으로']
   ];
   var CHALLENGE_SUB = [
     ['challenges.html', '챌린지 한눈에', '모집 현황 · 전체 보기'],
@@ -46,6 +47,7 @@
   var SECTION_OF = {
     'briefing.html': 'briefing', 'news.html': 'briefing', 'sojae.html': 'briefing',
     'ai-killer.html': 'briefing', 'answers.html': 'briefing', 'polish.html': 'briefing',
+    'programs.html': 'briefing', 'program.html': 'briefing', 'experiences.html': 'briefing',
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',

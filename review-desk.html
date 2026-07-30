@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>연구원 검수 — MONC</title>
+  <meta name="robots" content="noindex" />
+
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       연구원 검수 데스크 (2026-07-30) — admin 처럼 사이트 nav 없이 단독 화면.
+       원문 · AI본(근거 포함) · 편집기 · 수정 코드가 한 화면에 있어야 한다.
+       데스크톱 2열(자료 | 편집) / 모바일 세로 스택.
+       ⚠️ reviews.html(후기 모음)과 다른 파일이다 — 이름을 합치지 말 것.
+       ══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.6;
+           -webkit-font-smoothing: antialiased; word-break: keep-all; padding-bottom: 60px; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+    button { font: inherit; cursor: pointer; }
+    a { color: inherit; }
+
+    header.top { position: sticky; top: 0; z-index: 50; background: rgba(244,241,234,.95);
+                 -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+                 border-bottom: 1px solid var(--border-soft); padding: 12px 0; }
+    .top-in { display: flex; align-items: center; gap: 12px; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+    .top-t { font-family: var(--serif); font-size: 18px; font-weight: 700; }
+    .top-back { margin-left: auto; font-size: 14px; font-weight: 700; text-decoration: none; opacity: .8; min-height: 44px; display: inline-flex; align-items: center; }
+
+    .demo-bar { margin: 12px 0 0; padding: 10px 14px; background: var(--accent); color: #fff;
+                border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; }
+
+    .queue { margin-top: 16px; }
+    .q-item { width: 100%; text-align: left; display: block; background: var(--surface);
+              border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px;
+              margin-top: 10px; }
+    .q-item b { font-size: 15px; font-weight: 800; }
+    .q-item small { display: block; margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+    .q-state { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 9px;
+               border-radius: 999px; margin-left: 6px; vertical-align: 1px;
+               background: rgba(140,67,24,.1); color: #8C4318; }
+    .q-state.mine { background: rgba(27,58,107,.1); color: var(--accent-ink); }
+
+    .detail { display: none; margin-top: 16px; }
+    .detail.on { display: grid; gap: 14px; }
+    @media (min-width: 900px) { .detail.on { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+    .pane { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+            padding: 16px; }
+    .pane h2 { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+    .sec { margin-top: 14px; }
+    .sec h3 { font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 6px; }
+    .box { padding: 12px; background: var(--bg2); border-radius: var(--radius-xs);
+           font-size: 14px; line-height: 1.7; }
+    .box + .box { margin-top: 8px; }
+    .box b { font-weight: 800; }
+    .sent-bad { background: rgba(158,59,52,.12); border-bottom: 2px solid #9E3B34; }
+    .ev-tag { font-size: 11px; color: var(--text-dim); }
+    .meta-line { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .warn { color: #9E3B34; font-weight: 700; }
+
+    .edit-ta { width: 100%; min-height: 260px; padding: 12px; border: 1px solid var(--border);
+               border-radius: var(--radius-sm); font: inherit; font-size: 15px; line-height: 1.8;
+               resize: vertical; background: var(--surface); }
+    .codes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .code-btn { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border);
+                background: var(--bg2); font-size: 13px; font-weight: 700; }
+    .code-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .code-cat { margin-top: 10px; font-size: 12px; font-weight: 800; color: var(--text-dim); }
+    .code-reason { margin-top: 8px; }
+    .code-reason label { display: block; font-size: 13px; font-weight: 800; margin: 8px 0 4px; }
+    .code-reason input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--border);
+                         border-radius: var(--radius-xs); font: inherit; font-size: 14px; background: var(--surface); }
+
+    .cta { width: 100%; min-height: 50px; border: 0; border-radius: 999px; background: var(--action);
+           color: var(--action-ink); font-size: 15px; font-weight: 800; margin-top: 12px; }
+    .cta.ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+    .cta.danger { background: var(--surface); color: #9E3B34; border: 1.5px solid rgba(158,59,52,.5); }
+    .row2 { display: flex; gap: 8px; }
+    .row2 .cta { flex: 1; }
+    .notice { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-xs); font-size: 14px;
+              line-height: 1.65; background: var(--bg2); border: 1px solid var(--border-soft);
+              color: var(--text-muted); }
+    .loading { padding: 30px 0; text-align: center; color: var(--text-dim); font-size: 14px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-in">
+      <div class="top-t">연구원 검수 데스크</div>
+      <span id="qCount" style="font-size:13px;color:var(--text-muted);"></span>
+      <a class="top-back" href="briefing.html">← 승준노트</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="demoBar"></div>
+    <div id="gate"><div class="loading">확인 중…</div></div>
+
+    <div id="queueWrap" class="hidden">
+      <div class="queue" id="queue"></div>
+    </div>
+
+    <div class="detail" id="detail">
+      <!-- 왼쪽 — 자료 -->
+      <div class="pane" id="paneLeft"></div>
+      <!-- 오른쪽 — 편집 -->
+      <div class="pane">
+        <h2>연구원 첨삭</h2>
+        <div class="meta-line">학생이 준 사실 밖의 내용을 더하지 않아요. 부족하면 보완 요청으로 되돌려요.</div>
+        <textarea class="edit-ta" id="rvTa" placeholder="학생 글을 다듬어 적어 주세요"></textarea>
+        <div class="sec"><h3>수정 코드 (해당하는 것 모두)</h3><div id="codesWrap"></div></div>
+        <div class="code-reason" id="reasonWrap"></div>
+        <div id="rvNote"></div>
+        <div class="row2">
+          <button class="cta danger" id="btnReject">보완 요청으로 반려</button>
+          <button class="cta" id="btnApprove">승인</button>
+        </div>
+        <button class="cta ghost" id="btnBack" style="min-height:44px;font-size:14px;">← 대기열로</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="program-common.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var esc = AP.esc;
+    var $ = function (id) { return document.getElementById(id); };
+    var CUR = null;        // reviewDetail 결과
+    var CODES = [];        // correction_codes
+    var picked = {};       // code → reason
+
+    // correction_codes 조회 실패(데모·미적용) 시의 기본 목록 — 마이그레이션 시드의 부분집합
+    var FALLBACK_CODES = [
+      { code: 'QUESTION_INTENT_MISMATCH', label: '질문 의도와 어긋남', category: 'question' },
+      { code: 'EXPERIENCE_TOO_ABSTRACT', label: '경험이 추상적', category: 'experience' },
+      { code: 'OWN_ACTION_MISSING', label: '본인 행동 누락', category: 'experience' },
+      { code: 'FACT_UNCLEAR', label: '사실 불명확', category: 'experience' },
+      { code: 'CLICHE_EXPRESSION', label: '상투 표현', category: 'sentence' },
+      { code: 'SENTENCE_TOO_LONG', label: '문장이 너무 긺', category: 'sentence' },
+      { code: 'TONE_MISMATCH', label: '말투 불일치', category: 'sentence' },
+      { code: 'ANSWER_TOO_LONG', label: '답변이 너무 긺', category: 'speaking' }
+    ];
+    var CAT_LBL = { question: '질문', experience: '경험', sentence: '문장', speaking: '말하기' };
+
+    function kindLabel(k) {
+      return { student_draft: '학생 초안', fact_summary: 'AI 사실 정리', ai_tone: 'AI 말투 유지형',
+               ai_delivery: 'AI 전달력 강화형', student_edit: '학생 수정본', researcher_edit: '연구원 수정본',
+               speaking: '말하기용', final: '최종 확정본' }[k] || k;
+    }
+
+    async function loadQueue() {
+      var el = $('queue');
+      el.innerHTML = '<div class="loading">대기열 불러오는 중…</div>';
+      var rows = await AP.store.reviewQueue();
+      if (rows.notReady) {
+        el.innerHTML = '<div class="notice">아직 준비 중이에요(마이그레이션 미적용). ' +
+          '<a href="review-desk.html?demo=1" style="font-weight:800;color:var(--accent-ink)">체험 모드</a>로 흐름을 볼 수 있어요.</div>';
+        $('qCount').textContent = '';
+        return;
+      }
+      $('qCount').textContent = rows.length ? '대기 ' + rows.length + '건' : '';
+      if (!rows.length) {
+        el.innerHTML = '<div class="notice">검수 대기 중인 답변이 없어요.</div>';
+        return;
+      }
+      el.innerHTML = rows.map(function (r) {
+        var mine = r.session.state === 'researcher_reviewing';
+        return '<button type="button" class="q-item" data-id="' + esc(r.session.id) + '">' +
+          '<b>' + esc(r.member.name || '(이름 없음)') + '</b>' +
+          '<span class="q-state' + (mine ? ' mine' : '') + '">' + (mine ? '검수 중' : '대기') + '</span>' +
+          '<small>' + esc(r.program.title || '') + ' · ' + r.session.day_no + '일차<br>' +
+          esc((r.question && r.question.content || '').slice(0, 60)) + '</small></button>';
+      }).join('');
+      el.querySelectorAll('.q-item').forEach(function (b) {
+        b.addEventListener('click', function () { openDetail(b.dataset.id); });
+      });
+    }
+
+    function evLine(s) {
+      return '<span class="' + (s.unsupported ? 'sent-bad' : '') + '">' + esc(s.text) + '</span>' +
+        ' <span class="ev-tag">[' + (s.unsupported ? '근거 없음' : esc((s.ev || []).join(','))) + ']</span>';
+    }
+
+    async function openDetail(sessionId) {
+      $('queueWrap').classList.add('hidden');
+      var d = $('detail');
+      d.classList.add('on');
+      $('paneLeft').innerHTML = '<div class="loading">불러오는 중…</div>';
+      CUR = await AP.store.reviewDetail(sessionId);
+      if (!CUR) { $('paneLeft').innerHTML = '<div class="notice">세션을 찾지 못했어요.</div>'; return; }
+      CODES = CUR.codes || FALLBACK_CODES;
+      picked = {};
+
+      // 검수 시작(대기 → 검수 중) — 이미 검수 중이면 그대로
+      if (CUR.session.state === 'review_requested') {
+        await AP.store.claimReview(sessionId);
+        CUR.session.state = 'researcher_reviewing';
+      }
+
+      var q = CUR.question || {};
+      var qt = AP.QTYPES[q.qtype] || {};
+      var vers = CUR.versions || [];
+      var lastStudent = vers.filter(function (v) { return v.kind === 'student_edit' || v.kind === 'student_draft'; }).pop();
+      var aiVers = vers.filter(function (v) { return v.kind === 'ai_tone' || v.kind === 'ai_delivery'; });
+      var qa = CUR.session.followup_qa || [];
+
+      var left = '<h2>' + esc(CUR.member.name || '') + ' · ' + esc(CUR.program ? CUR.program.title : '') +
+        ' · ' + CUR.session.day_no + '일차</h2>';
+      left += '<div class="sec"><h3>기출 문항</h3><div class="box"><b>' + esc(q.content || '(문항 없음)') + '</b>' +
+        (q.intent ? '<br>의도 — ' + esc(q.intent) : '') +
+        (qt.label ? '<div class="meta-line">' + esc(qt.label) + (qt.structure ? ' · ' + esc(qt.structure) : '') + '</div>' : '') +
+        '</div></div>';
+
+      if ((CUR.cards || []).length) {
+        left += '<div class="sec"><h3>학생 경험 카드</h3>' + CUR.cards.map(function (c) {
+          var facts = ['situation', 'problem', 'action', 'action_reason', 'result', 'others_reaction']
+            .map(function (f) { return c[f] ? '<b>' + esc(AP.CARD_FIELD_LABELS[f]) + '</b> ' + esc(c[f]) : ''; })
+            .filter(Boolean).join('<br>');
+          return '<div class="box"><b>' + esc(c.title) + '</b> <span class="ev-tag">(' + esc(c.exp_type || '') +
+            (c.use_count >= 2 ? ' · <span class="warn">답변 ' + c.use_count + '개에 사용</span>' : '') + ')</span><br>' + facts + '</div>';
+        }).join('') + '</div>';
+      }
+
+      if (qa.length) {
+        left += '<div class="sec"><h3>추가 질문 문답</h3><div class="box">' + qa.map(function (p) {
+          return 'Q. ' + esc(p.q) + '<br>A. ' + esc(p.a || '');
+        }).join('<br><br>') + '</div></div>';
+      }
+
+      if (lastStudent) {
+        left += '<div class="sec"><h3>' + kindLabel(lastStudent.kind) + ' (학생 원문)</h3><div class="box">' +
+          esc(lastStudent.content).replace(/\n/g, '<br>') + '</div></div>';
+      }
+
+      aiVers.forEach(function (v) {
+        var sents = (v.meta && v.meta.sentences) || [];
+        var un = sents.filter(function (s) { return s.unsupported; }).length;
+        left += '<div class="sec"><h3>' + kindLabel(v.kind) +
+          (un ? ' — <span class="warn">근거 없는 문장 ' + un + '개</span>' : '') + '</h3><div class="box">' +
+          (sents.length ? sents.map(evLine).join(' ') : esc(v.content)) + '</div></div>';
+      });
+
+      var lastAi = aiVers.pop();
+      if (lastAi && lastAi.meta && lastAi.meta.scores) {
+        var sc = lastAi.meta.scores;
+        left += '<div class="sec"><h3>품질 지표</h3><div class="box">합계 ' + AP.totalScore(sc) + '/100 — ' +
+          AP.SCORE_ITEMS.map(function (it) { return it[1] + ' ' + (sc[it[0]] || 0) + '/' + it[2]; }).join(' · ') + '</div></div>';
+      }
+      $('paneLeft').innerHTML = left;
+
+      // 편집기 프리필 — 학생 마지막 글
+      $('rvTa').value = lastStudent ? lastStudent.content : (CUR.session.draft || '');
+      paintCodes();
+      $('rvNote').innerHTML = '';
+      window.scrollTo({ top: 0 });
+    }
+
+    function paintCodes() {
+      var byCat = {};
+      CODES.forEach(function (c) { (byCat[c.category] = byCat[c.category] || []).push(c); });
+      $('codesWrap').innerHTML = Object.keys(byCat).map(function (cat) {
+        return '<div class="code-cat">' + esc(CAT_LBL[cat] || cat) + '</div><div class="codes">' +
+          byCat[cat].map(function (c) {
+            var on = picked[c.code] !== undefined;
+            return '<button type="button" class="code-btn' + (on ? ' on' : '') + '" data-code="' + esc(c.code) + '" title="' + esc(c.description || '') + '">' + esc(c.label) + '</button>';
+          }).join('') + '</div>';
+      }).join('');
+      $('codesWrap').querySelectorAll('.code-btn').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var code = b.dataset.code;
+          if (picked[code] !== undefined) delete picked[code];
+          else picked[code] = '';
+          paintCodes();
+        });
+      });
+      // 선택한 코드마다 이유 입력칸
+      $('reasonWrap').innerHTML = Object.keys(picked).map(function (code) {
+        var c = CODES.filter(function (x) { return x.code === code; })[0] || { label: code };
+        return '<label>' + esc(c.label) + ' — 이유</label>' +
+          '<input data-code="' + esc(code) + '" value="' + esc(picked[code]) + '" placeholder="학생에게 보일 한 문장">';
+      }).join('');
+      $('reasonWrap').querySelectorAll('input').forEach(function (inp) {
+        inp.addEventListener('input', function () { picked[inp.dataset.code] = inp.value; });
+      });
+    }
+
+    async function decide(decision) {
+      if (!CUR) return;
+      var content = $('rvTa').value.trim();
+      if (decision === 'approve' && content.length < 30) {
+        $('rvNote').innerHTML = '<div class="notice" style="color:#7E2F29;">승인하려면 다듬은 글이 있어야 해요.</div>';
+        return;
+      }
+      var codes = Object.keys(picked).map(function (code) {
+        var c = CODES.filter(function (x) { return x.code === code; })[0] || {};
+        return { code: code, label: c.label || code, reason: picked[code] || '' };
+      });
+      if (decision === 'revise' && !codes.length) {
+        $('rvNote').innerHTML = '<div class="notice" style="color:#7E2F29;">반려하려면 수정 코드를 하나 이상 골라 주세요 — 학생이 이유를 알아야 고칠 수 있어요.</div>';
+        return;
+      }
+      var r = await AP.store.saveResearcherEdit(CUR.session.id, content, codes, decision === 'approve' ? 'approve' : 'revise');
+      if (r && r.error) {
+        $('rvNote').innerHTML = '<div class="notice" style="color:#7E2F29;">저장하지 못했어요: ' + esc(r.error.message || '') + '</div>';
+        return;
+      }
+      AP.logEvent('ap_review_done', { decision: decision });
+      backToQueue();
+    }
+
+    function backToQueue() {
+      CUR = null;
+      $('detail').classList.remove('on');
+      $('queueWrap').classList.remove('hidden');
+      loadQueue();
+    }
+
+    $('btnApprove').addEventListener('click', function () { decide('approve'); });
+    $('btnReject').addEventListener('click', function () { decide('revise'); });
+    $('btnBack').addEventListener('click', backToQueue);
+
+    (async function init() {
+      if (AP.demoOn()) $('demoBar').innerHTML = '<div class="demo-bar">체험 모드 — 예시 검수 건이에요.</div>';
+      var st = await AP.init();
+      if (st.mode === 'real') {
+        if (!st.user) { location.href = 'login.html'; return; }
+        if (!(await MONC.requireConsent())) return;
+        var ok = await AP.store.isResearcher();
+        if (!ok) {
+          $('gate').innerHTML = '<div class="notice">연구원 전용 화면이에요. 접근 권한은 관리자에게 문의해 주세요.</div>';
+          return;
+        }
+      }
+      $('gate').innerHTML = '';
+      $('queueWrap').classList.remove('hidden');
+      loadQueue();
+    })();
+  })();
+  </script>
+</body>
+</html>

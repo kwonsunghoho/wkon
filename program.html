@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘의 기출 — MONC 몬크 챌린지</title>
+  <meta name="description" content="매일 한 문제씩, 내 경험으로 완성하는 항공사 면접답변." />
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       매일 기출 — 하루 작성 흐름 (2026-07-30)
+       "내 경험 찾기 → 직접 쓰기 → 근거 있게 다듬기" 순서가 화면에서 그대로
+       보여야 한다(ux_requirements). 375px 우선 · 조작 44px+ · 활자 14px+.
+       ⚠️ AI 가 대신 써 준다는 인상을 주지 않는다 — 첨삭 진입은 반드시
+          학생 초안(MIN 60자)이 있어야 열린다(서버도 같은 검증).
+       ══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.6;
+           -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+           padding-bottom: 80px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    a { color: inherit; }
+    button { font: inherit; cursor: pointer; }
+
+    /* 서브 nav — polish.html 과 같은 문법(공용 바 아래 sticky) */
+    .subnav { position: sticky; top: 66px; z-index: 60; padding: 10px 0;
+              background: rgba(244,241,234,.94); -webkit-backdrop-filter: blur(16px);
+              backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-soft); }
+    .subnav-in { display: flex; align-items: center; gap: 10px;
+                 max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    .sn-back { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px;
+               font-weight: 700; text-decoration: none; opacity: .85; flex: 0 0 auto; }
+    .sn-t { font-family: var(--serif); font-size: 16px; font-weight: 700; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; }
+    .sn-save { margin-left: auto; font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+    @media (max-width: 768px) { .subnav { top: 57px; } }
+
+    /* 데모 배너 */
+    .demo-bar { margin: 12px 0 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+                background: var(--accent); color: #fff; border-radius: var(--radius-sm);
+                font-size: 13px; font-weight: 700; }
+    .demo-bar a { margin-left: auto; color: #fff; font-size: 12px; font-weight: 800;
+                  border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 6px 12px;
+                  text-decoration: none; }
+
+    /* 일차 타임라인 */
+    .days { display: flex; gap: 8px; overflow-x: auto; padding: 16px 0 4px; scrollbar-width: none; }
+    .days::-webkit-scrollbar { display: none; }
+    .day-chip { flex: 0 0 auto; min-width: 52px; min-height: 56px; border-radius: var(--radius-sm);
+                border: 1px solid var(--border); background: var(--surface); text-align: center;
+                padding: 7px 8px; }
+    .day-chip b { display: block; font-size: 14px; font-weight: 800; }
+    .day-chip span { display: block; font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+    .day-chip.cur { border-color: var(--action); box-shadow: inset 0 0 0 1.5px var(--action); }
+    .day-chip.done b { color: #2E6E42; }
+    .day-chip.lock { opacity: .45; }
+
+    /* 오늘의 문제 카드 */
+    .q-card { margin-top: 12px; background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--radius-md); padding: 18px 16px; }
+    .q-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .q-tag { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px;
+             background: var(--bg2); color: var(--text-muted); border: 1px solid var(--border-soft); }
+    .q-tag.conf-verified { color: #2E6E42; border-color: rgba(46,110,66,.35); }
+    .q-tag.conf-estimated { color: #8C4318; border-color: rgba(140,67,24,.35); }
+    .q-text { margin-top: 12px; font-family: var(--serif); font-size: clamp(19px, 4.6vw, 24px);
+              font-weight: 700; line-height: 1.45; }
+    .q-intent { margin-top: 12px; padding: 12px; background: var(--bg2); border-radius: var(--radius-xs);
+                font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+    .q-intent b { color: var(--accent-ink); }
+    .q-more { margin-top: 10px; }
+    .q-more summary { min-height: 44px; display: flex; align-items: center; font-size: 14px;
+                      font-weight: 800; color: var(--accent-ink); cursor: pointer; list-style: none; }
+    .q-more summary::before { content: '+'; margin-right: 6px; font-weight: 800; }
+    .q-more[open] summary::before { content: '−'; }
+    .q-more-body { font-size: 14px; color: var(--text-muted); line-height: 1.7; padding: 4px 0 6px; }
+    .q-more-body b { color: var(--text); }
+
+    /* 단계 표시 — 학생이 지금 어디인지 */
+    .steps { display: flex; gap: 4px; margin-top: 14px; }
+    .steps i { flex: 1; height: 5px; border-radius: 3px; background: var(--border-soft); }
+    .steps i.on { background: var(--action); }
+    .steps-label { margin-top: 6px; font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+
+    /* 공용 블록 */
+    .blk { margin-top: 16px; background: var(--surface); border: 1px solid var(--border);
+           border-radius: var(--radius-md); padding: 16px; }
+    .blk-t { font-size: 16px; font-weight: 800; }
+    .blk-s { margin-top: 4px; font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+    .cta { width: 100%; min-height: 52px; border: 0; border-radius: 999px; background: var(--action);
+           color: var(--action-ink); font-size: 16px; font-weight: 800; margin-top: 14px; }
+    .cta:disabled { opacity: .45; cursor: default; }
+    .cta.ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+    .cta.sub { min-height: 46px; font-size: 14px; }
+    .row2 { display: flex; gap: 8px; }
+    .row2 .cta { flex: 1; }
+    .notice { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-xs);
+              font-size: 14px; line-height: 1.65; background: var(--bg2);
+              border: 1px solid var(--border-soft); color: var(--text-muted); }
+    .notice.warn { background: rgba(158,59,52,.07); border-color: rgba(158,59,52,.3); color: #7E2F29; }
+    .notice.good { background: rgba(46,110,66,.08); border-color: rgba(46,110,66,.3); color: #265C3B; }
+    .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(20,30,50,.2);
+            border-top-color: var(--accent-ink); border-radius: 50%; animation: sp .7s linear infinite;
+            vertical-align: -2px; margin-right: 6px; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+
+    /* 1단계 — 경험 고르기 */
+    .exp-item { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left;
+                border: 1px solid var(--border); background: var(--bg2); border-radius: var(--radius-sm);
+                padding: 12px; margin-top: 10px; }
+    .exp-item.sel { border-color: var(--action); box-shadow: inset 0 0 0 1.5px var(--action);
+                    background: var(--surface); }
+    .exp-check { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px;
+                 border: 2px solid var(--border); margin-top: 2px; display: flex;
+                 align-items: center; justify-content: center; font-size: 14px; color: #fff; }
+    .exp-item.sel .exp-check { background: var(--action); border-color: var(--action); }
+    .exp-body b { font-size: 15px; font-weight: 800; }
+    .exp-body small { display: block; margin-top: 3px; font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+    .exp-fit { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 8px;
+               border-radius: 999px; margin-top: 6px; }
+    .exp-fit.good { background: rgba(46,110,66,.1); color: #2E6E42; }
+    .exp-fit.partial { background: rgba(140,67,24,.1); color: #8C4318; }
+    .exp-fit.weak { background: rgba(158,59,52,.1); color: #9E3B34; }
+
+    /* 2단계 — 추가 질문 문답 */
+    .qa-item { margin-top: 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+               padding: 12px; background: var(--bg2); }
+    .qa-q { font-size: 15px; font-weight: 800; line-height: 1.5; }
+    .qa-why { margin-top: 4px; font-size: 13px; color: var(--text-dim); }
+    .qa-a { margin-top: 8px; font-size: 14px; line-height: 1.6; color: var(--text); }
+    .qa-a::before { content: '내 답 · '; font-weight: 800; color: var(--accent-ink); }
+    .qa-input { width: 100%; min-height: 74px; margin-top: 10px; padding: 10px;
+                border: 1px solid var(--border); border-radius: var(--radius-xs);
+                font: inherit; font-size: 15px; line-height: 1.6; resize: vertical; background: var(--surface); }
+    .qa-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .qa-btns button { flex: 1; min-height: 44px; border-radius: 999px; font-size: 14px;
+                      font-weight: 800; border: 1px solid var(--border); background: var(--surface); }
+    .qa-btns .pri { background: var(--action); color: var(--action-ink); border-color: var(--action); }
+
+    /* 3단계 — 초안 */
+    .draft-ta { width: 100%; min-height: 220px; margin-top: 12px; padding: 12px;
+                border: 1px solid var(--border); border-radius: var(--radius-sm);
+                font: inherit; font-size: 15px; line-height: 1.8; resize: vertical; background: var(--surface); }
+    .draft-foot { display: flex; justify-content: space-between; align-items: center;
+                  margin-top: 8px; font-size: 13px; color: var(--text-dim);
+                  font-variant-numeric: tabular-nums; }
+
+    /* 4단계 — AI 첨삭 결과 */
+    .ver-tabs { display: flex; gap: 6px; margin-top: 12px; }
+    .ver-tabs button { flex: 1; min-height: 46px; border-radius: var(--radius-xs);
+                       border: 1px solid var(--border); background: var(--bg2);
+                       font-size: 14px; font-weight: 800; color: var(--text-muted); }
+    .ver-tabs button.on { background: var(--surface); color: var(--text); border-color: var(--text);
+                          box-shadow: inset 0 0 0 1px var(--text); }
+    .ver-body { margin-top: 12px; font-size: 15px; line-height: 1.9; }
+    .sent { border-bottom: 2px solid rgba(27,58,107,.25); cursor: pointer; }
+    .sent:hover { background: rgba(27,58,107,.06); }
+    .sent.bad { border-bottom-color: #9E3B34; background: rgba(158,59,52,.08); }
+    .ver-meta { margin-top: 10px; font-size: 13px; color: var(--text-dim); }
+    .ev-hint { margin-top: 8px; font-size: 13px; color: var(--text-dim); }
+    .ev-hint b { color: #9E3B34; }
+
+    /* 품질 지표 */
+    .score-t { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+    .score-t b { font-size: 26px; font-variant-numeric: tabular-nums; }
+    .score-t span { font-size: 13px; color: var(--text-dim); }
+    .score-row { display: grid; grid-template-columns: 96px 1fr 44px; gap: 8px; align-items: center;
+                 margin-top: 8px; font-size: 13px; }
+    .score-row .bar { height: 6px; border-radius: 3px; background: var(--bg2); overflow: hidden; }
+    .score-row .bar i { display: block; height: 100%; background: var(--action); }
+    .score-row em { font-style: normal; text-align: right; color: var(--text-muted);
+                    font-variant-numeric: tabular-nums; }
+    .score-notes { margin-top: 10px; font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+    .score-notes li { margin-left: 18px; }
+
+    /* 말하기용 */
+    .speak-line { padding: 8px 0; border-bottom: 1px dashed var(--border-soft);
+                  font-size: 16px; line-height: 1.6; }
+    .speak-line:last-child { border-bottom: 0; }
+
+    /* 꼬리질문 연습 */
+    .fq { margin-top: 10px; padding: 14px; background: var(--bg2); border-radius: var(--radius-sm);
+          font-size: 15px; font-weight: 700; line-height: 1.6; }
+    .fq small { display: block; margin-top: 4px; font-size: 12px; font-weight: 400; color: var(--text-dim); }
+
+    /* 수정 코드(연구원 피드백 표시) */
+    .code-chip { display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 10px;
+                 border-radius: 999px; background: rgba(27,58,107,.08); color: var(--accent-ink);
+                 margin: 4px 4px 0 0; }
+    .rv-reason { margin-top: 8px; font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+
+    /* 편집 */
+    .edit-ta { width: 100%; min-height: 200px; margin-top: 12px; padding: 12px;
+               border: 1px solid var(--border); border-radius: var(--radius-sm);
+               font: inherit; font-size: 15px; line-height: 1.8; resize: vertical; background: var(--surface); }
+
+    /* 근거 바텀시트 */
+    .sheet-mask { position: fixed; inset: 0; z-index: 80; background: rgba(38,34,28,.45);
+                  opacity: 0; pointer-events: none; transition: opacity .18s; }
+    .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 81; max-height: 76vh;
+             overflow-y: auto; background: var(--surface); border-radius: 18px 18px 0 0;
+             padding: 8px 16px 24px; transform: translateY(102%);
+             transition: transform .24s cubic-bezier(.22,.61,.36,1); }
+    body.sheet-on .sheet-mask { opacity: 1; pointer-events: auto; }
+    body.sheet-on .sheet { transform: translateY(0); }
+    .sheet-in { max-width: 720px; margin: 0 auto; }
+    .sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border); margin: 6px auto 14px; }
+    .sheet-h { font-size: 16px; font-weight: 800; }
+    .sheet-s { margin-top: 4px; margin-bottom: 10px; font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+    .ev-src { margin-top: 8px; padding: 10px 12px; background: var(--bg2); border-radius: var(--radius-xs); }
+    .ev-src b { display: block; font-size: 12px; font-weight: 800; color: var(--accent-ink); }
+    .ev-src p { margin-top: 4px; font-size: 14px; line-height: 1.65; }
+
+    /* 말투 프로필 미니 폼 */
+    .tone-chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px;
+                 border-radius: 999px; border: 1px solid var(--border); background: var(--bg2);
+                 font-size: 14px; font-weight: 700; margin: 8px 6px 0 0; }
+    .tone-chip.on { background: var(--surface); border-color: var(--text);
+                    box-shadow: inset 0 0 0 1px var(--text); }
+    .tone-scale { display: flex; gap: 6px; margin-top: 8px; }
+    .tone-scale button { flex: 1; min-height: 44px; border-radius: var(--radius-xs);
+                         border: 1px solid var(--border); background: var(--bg2); font-weight: 800; }
+    .tone-scale button.on { background: var(--surface); border-color: var(--text);
+                            box-shadow: inset 0 0 0 1px var(--text); }
+    .tone-lbl { margin-top: 12px; font-size: 14px; font-weight: 800; }
+
+    .consent-card { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px;
+                    padding: 12px; background: var(--bg2); border: 1px solid var(--border-soft);
+                    border-radius: var(--radius-xs); font-size: 13px; color: var(--text-muted);
+                    line-height: 1.65; }
+    .consent-card input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--action); }
+
+    .loading { padding: 40px 0; text-align: center; color: var(--text-dim); font-size: 14px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="subnav">
+    <div class="subnav-in">
+      <a class="sn-back" href="programs.html">← 목록</a>
+      <div class="sn-t" id="snTitle">매일 기출</div>
+      <div class="sn-save" id="snSave"></div>
+    </div>
+  </div>
+
+  <main class="container">
+    <div id="demoBar"></div>
+    <div id="daysWrap"></div>
+    <div id="stage"><div class="loading">불러오는 중…</div></div>
+  </main>
+
+  <!-- 근거 바텀시트 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-in">
+      <div class="sheet-grip"></div>
+      <div id="sheetBody"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="program-common.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var esc = AP.esc;
+    var $ = function (id) { return document.getElementById(id); };
+    var PID = new URLSearchParams(location.search).get('p') || '';
+    var VIEW = null;       // ap_program_view 결과
+    var DAY = null;        // 현재 일차 객체
+    var SESS = null;       // 현재 세션 행
+    var USER = null;
+    var lastRevise = null; // 마지막 revise 응답(또는 버전에서 복원)
+    var chosen = 'ai_tone';
+    var busy = false;
+
+    /* ── 유틸 ── */
+    function setSave(msg) { $('snSave').textContent = msg || ''; }
+    function editKey() { return 'ap_edit_' + (SESS ? SESS.id : ''); }
+    function loadEdit() { try { return localStorage.getItem(editKey()) || ''; } catch (e) { return ''; } }
+    function saveEdit(t) { try { localStorage.setItem(editKey(), t); } catch (e) {} }
+    function Q() { return DAY && DAY.question ? DAY.question : null; }
+    function debounce(fn, ms) {
+      var t; return function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); };
+    }
+
+    function demoBanner() {
+      if (!AP.demoOn()) return;
+      $('demoBar').innerHTML =
+        '<div class="demo-bar">체험 모드 — 예시 데이터예요. AI 응답도 흉내(규칙 기반)예요.' +
+        '<a href="programs.html">목록으로</a></div>';
+    }
+
+    /* ── 일차 타임라인 ── */
+    function renderDays() {
+      var html = '<div class="days" role="tablist">' + VIEW.days.map(function (d) {
+        var st = d.session ? d.session.state : null;
+        var done = st === 'finalized';
+        var cls = 'day-chip' + (DAY && d.day_no === DAY.day_no ? ' cur' : '') +
+                  (done ? ' done' : '') + (!d.unlocked ? ' lock' : '');
+        var sub = !d.unlocked ? '잠김' : done ? '완료' : (st ? '진행 중' : '');
+        return '<button class="' + cls + '" data-day="' + d.day_no + '" ' +
+          (!d.unlocked ? 'disabled' : '') + '><b>' + d.day_no + '일</b><span>' + esc(sub) + '</span></button>';
+      }).join('') + '</div>';
+      $('daysWrap').innerHTML = html;
+      $('daysWrap').querySelectorAll('.day-chip:not([disabled])').forEach(function (b) {
+        b.addEventListener('click', function () { openDay(Number(b.dataset.day)); });
+      });
+    }
+
+    /* ── 문제 카드 ── */
+    function questionCard() {
+      var q = Q();
+      if (!q) return '';
+      var qt = AP.QTYPES[q.qtype] || { label: q.qtype, structure: '' };
+      var conf = AP.SRC_CONF[q.source_confidence] || '';
+      var tags = '<span class="q-tag">' + esc(qt.label) + '</span>' +
+        (q.stage ? '<span class="q-tag">' + esc(q.stage) + '</span>' : '') +
+        (conf ? '<span class="q-tag conf-' + esc(q.source_confidence) + '">' + esc(conf) +
+          (q.asked_at ? ' · ' + esc(q.asked_at) : '') + '</span>' : '');
+      var more = '';
+      var bits = [];
+      if (q.competencies && q.competencies.length) bits.push('<b>평가 역량</b> — ' + q.competencies.map(esc).join(', '));
+      if (q.avoid) bits.push('<b>피해야 할 접근</b> — ' + esc(q.avoid));
+      if (q.common_mistakes) bits.push('<b>자주 나오는 실수</b> — ' + esc(q.common_mistakes));
+      if (qt.structure) bits.push('<b>권장 구조</b> — ' + esc(q.structure_hint || qt.structure));
+      if (q.rec_seconds) bits.push('<b>예상 답변 시간</b> — 약 ' + q.rec_seconds + '초' + (q.rec_len ? ' (' + esc(q.rec_len) + ')' : ''));
+      if (bits.length) {
+        more = '<details class="q-more"><summary>의도와 주의점 더 보기</summary>' +
+          '<div class="q-more-body">' + bits.join('<br>') + '</div></details>';
+      }
+      return '<div class="q-card">' +
+        '<div class="q-tags">' + tags + '</div>' +
+        '<div class="q-text">' + esc(q.content) + '</div>' +
+        (q.intent ? '<div class="q-intent"><b>이 질문의 의도</b> — ' + esc(q.intent) + '</div>' : '') +
+        more + '</div>';
+    }
+
+    function stepsHtml(state) {
+      var st = AP.STATES[state] || { step: 1, label: '' };
+      var out = '<div class="steps">';
+      for (var i = 1; i <= 6; i++) out += '<i class="' + (i <= st.step ? 'on' : '') + '"></i>';
+      out += '</div><div class="steps-label">' + esc(st.label) + '</div>';
+      return out;
+    }
+
+    /* ══════════════ 상태별 화면 ══════════════ */
+
+    async function renderFlow() {
+      var box = document.createElement('div');
+      box.id = 'flow';
+      var state = SESS.state;
+      if (state === 'not_started') return flowIntro(box);
+      if (state === 'experience_selecting') return flowSelect(box);
+      if (state === 'fact_gathering') return flowFacts(box);
+      if (state === 'student_drafting') return flowDraft(box);
+      if (state === 'ai_revised' || state === 'student_editing') return flowRevised(box);
+      if (state === 'review_requested' || state === 'researcher_reviewing') return flowWaiting(box);
+      if (state === 'revision_requested') return flowRevision(box);
+      if (state === 'approved') return flowApproved(box);
+      if (state === 'finalized') return flowFinalized(box);
+      box.innerHTML = '<div class="notice">알 수 없는 상태예요: ' + esc(state) + '</div>';
+      return box;
+    }
+
+    function flowIntro(box) {
+      box.innerHTML = '<div class="blk"><div class="blk-t">오늘의 한 문제, 시작해 볼까요?</div>' +
+        '<div class="blk-s">순서는 세 걸음이에요 — ① 내 경험 찾기 ② 직접 쓰기 ③ 근거 있게 다듬기.<br>' +
+        'AI가 대신 써 주지 않아요. 내가 겪은 사실이 재료예요.</div>' +
+        '<button class="cta" id="btnStart">시작하기</button></div>';
+      box.querySelector('#btnStart').addEventListener('click', async function () {
+        await setState('experience_selecting');
+      });
+      return box;
+    }
+
+    /* 1단계 — 경험 고르기 */
+    async function flowSelect(box) {
+      box.innerHTML = '<div class="blk"><div class="blk-t">이 질문에 쓸 내 경험 고르기</div>' +
+        '<div class="blk-s">경험 창고에서 골라요(최대 2개). 어떤 게 맞을지 모르겠으면 AI 추천을 받아 보세요.</div>' +
+        '<div id="expList"><div class="loading">경험 카드 불러오는 중…</div></div>' +
+        '<div class="row2"><button class="cta ghost sub" id="btnRec">AI 추천 받기</button>' +
+        '<a class="cta ghost sub" style="display:flex;align-items:center;justify-content:center;text-decoration:none;" ' +
+        'href="experiences.html?return=' + encodeURIComponent('program.html?p=' + PID + '&day=' + DAY.day_no) + '">경험 새로 만들기</a></div>' +
+        '<div id="recNote"></div>' +
+        '<button class="cta" id="btnNext" disabled>이 경험으로 계속</button>' +
+        '<button class="cta ghost sub" id="btnSkip">경험 없이 바로 쓰기</button></div>';
+
+      var selected = (SESS.selected_cards || []).slice();
+      var cards = await AP.store.listCards();
+      if (cards.notReady) {
+        box.querySelector('#expList').innerHTML = '<div class="notice">경험 창고가 아직 준비되지 않았어요.</div>';
+        cards = [];
+      }
+      var recMap = {};
+
+      function paint() {
+        var el = box.querySelector('#expList');
+        if (!cards.length) {
+          el.innerHTML = '<div class="notice">아직 경험 카드가 없어요. <b>경험 새로 만들기</b>로 첫 카드를 만들어 보세요.</div>';
+        } else {
+          el.innerHTML = cards.map(function (c) {
+            var sel = selected.indexOf(c.id) >= 0;
+            var rec = recMap[c.id];
+            return '<button type="button" class="exp-item' + (sel ? ' sel' : '') + '" data-id="' + esc(c.id) + '">' +
+              '<span class="exp-check">' + (sel ? '✓' : '') + '</span>' +
+              '<span class="exp-body"><b>' + esc(c.title) + '</b>' +
+              '<small>' + esc(c.exp_type || '') + (c.period_text ? ' · ' + esc(c.period_text) : '') +
+              (c.use_count >= 2 ? ' · 이미 ' + c.use_count + '개 답변에 사용' : '') + '</small>' +
+              (rec ? '<span class="exp-fit ' + esc(rec.fit) + '">' +
+                (rec.fit === 'good' ? '잘 맞아요' : rec.fit === 'partial' ? '보태면 돼요' : '위험해요') +
+                '</span><small>' + esc(rec.reason) +
+                (rec.missing && rec.missing.length ? ' (더 필요한 것: ' + rec.missing.map(esc).join(', ') + ')' : '') + '</small>' : '') +
+              '</span></button>';
+          }).join('');
+          el.querySelectorAll('.exp-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+              var id = item.dataset.id;
+              var i = selected.indexOf(id);
+              if (i >= 0) selected.splice(i, 1);
+              else { if (selected.length >= 2) selected.shift(); selected.push(id); }
+              paint();
+            });
+          });
+        }
+        box.querySelector('#btnNext').disabled = !selected.length;
+      }
+      paint();
+
+      box.querySelector('#btnRec').addEventListener('click', async function () {
+        if (busy) return; busy = true;
+        var b = box.querySelector('#btnRec');
+        b.innerHTML = '<span class="spin"></span>추천 받는 중…'; b.disabled = true;
+        var r = await AP.store.aiRecommend(SESS.id);
+        busy = false; b.disabled = false; b.textContent = 'AI 추천 받기';
+        if (!r || r.error) {
+          box.querySelector('#recNote').innerHTML = '<div class="notice warn">' + esc((r && r.error) || '추천을 받지 못했어요.') + '</div>';
+          return;
+        }
+        (r.candidates || []).forEach(function (c) { recMap[c.card_id] = c; });
+        if (r.new_card_hint) box.querySelector('#recNote').innerHTML = '<div class="notice">' + esc(r.new_card_hint) + '</div>';
+        AP.logEvent('ap_recommend', { d: DAY.day_no });
+        paint();
+      });
+
+      box.querySelector('#btnNext').addEventListener('click', async function () {
+        await AP.store.updateSession(SESS.id, { selected_cards: selected });
+        SESS.selected_cards = selected;
+        await setState('fact_gathering');
+      });
+      box.querySelector('#btnSkip').addEventListener('click', async function () {
+        await AP.store.updateSession(SESS.id, { selected_cards: selected });
+        SESS.selected_cards = selected;
+        await setState('student_drafting');
+      });
+      return box;
+    }
+
+    /* 2단계 — 부족한 사실 묻기 */
+    async function flowFacts(box) {
+      box.innerHTML = '<div class="blk"><div class="blk-t">부족한 사실 채우기</div>' +
+        '<div class="blk-s">답변을 쓰기 전에, 빠진 사실을 한두 개씩 물어볼게요. ' +
+        '기억나지 않으면 그렇게 답해도 돼요 — 지어내는 것보다 나아요.</div>' +
+        '<div id="qaDone"></div><div id="qaNow"></div>' +
+        '<button class="cta ghost sub" id="btnAsk">질문 받기</button>' +
+        '<button class="cta" id="btnToDraft">이제 초안 쓰기</button></div>';
+
+      var qa = (SESS.followup_qa || []).slice();
+
+      function paintDone() {
+        box.querySelector('#qaDone').innerHTML = qa.filter(function (p) { return (p.a || '').trim(); })
+          .map(function (p) {
+            return '<div class="qa-item"><div class="qa-q">' + esc(p.q) + '</div>' +
+              '<div class="qa-a">' + esc(p.a) + '</div></div>';
+          }).join('');
+      }
+      paintDone();
+
+      async function ask() {
+        if (busy) return; busy = true;
+        var b = box.querySelector('#btnAsk');
+        b.innerHTML = '<span class="spin"></span>생각 중…'; b.disabled = true;
+        var r = await AP.store.aiFollowup(SESS.id);
+        busy = false; b.disabled = false; b.textContent = '질문 더 받기';
+        if (!r || r.error) {
+          box.querySelector('#qaNow').innerHTML = '<div class="notice warn">' + esc((r && r.error) || '질문을 받지 못했어요.') + '</div>';
+          return;
+        }
+        if (r.enough) {
+          box.querySelector('#qaNow').innerHTML = '<div class="notice good">' + esc(r.note || '충분히 모였어요. 이제 초안을 써 볼까요?') + '</div>';
+          return;
+        }
+        box.querySelector('#qaNow').innerHTML = (r.questions || []).map(function (fq, i) {
+          return '<div class="qa-item" data-i="' + i + '"><div class="qa-q">' + esc(fq.q) + '</div>' +
+            (fq.why ? '<div class="qa-why">' + esc(fq.why) + '</div>' : '') +
+            '<textarea class="qa-input" placeholder="실제 있었던 그대로 적어 주세요"></textarea>' +
+            '<div class="qa-btns"><button type="button" class="dontknow">기억나지 않아요</button>' +
+            '<button type="button" class="pri saveA">답 저장</button></div></div>';
+        }).join('');
+        box.querySelector('#qaNow').querySelectorAll('.qa-item').forEach(function (item, idx) {
+          var q = r.questions[idx];
+          async function save(ans) {
+            qa.push({ q: q.q, a: ans, at: new Date().toISOString() });
+            await AP.store.updateSession(SESS.id, { followup_qa: qa });
+            SESS.followup_qa = qa;
+            item.remove();
+            paintDone();
+            AP.logEvent('ap_followup_answer', { d: DAY.day_no });
+          }
+          item.querySelector('.saveA').addEventListener('click', function () {
+            var v = item.querySelector('.qa-input').value.trim();
+            if (!v) { alert('답을 적어 주세요. 기억나지 않으면 옆 버튼을 누르세요.'); return; }
+            save(v);
+          });
+          item.querySelector('.dontknow').addEventListener('click', function () { save('기억나지 않아요'); });
+        });
+      }
+
+      box.querySelector('#btnAsk').addEventListener('click', ask);
+      box.querySelector('#btnToDraft').addEventListener('click', function () { setState('student_drafting'); });
+      ask();   // 들어오자마자 첫 질문
+      return box;
+    }
+
+    /* 3단계 — 학생 초안 */
+    function flowDraft(box) {
+      var q = Q();
+      var qt = q ? (AP.QTYPES[q.qtype] || {}) : {};
+      box.innerHTML = '<div class="blk"><div class="blk-t">내 초안 쓰기</div>' +
+        '<div class="blk-s">완벽하지 않아도 돼요. <b>실제 있었던 일</b>을 내 말로 먼저 적는 게 시작이에요.' +
+        (qt.structure ? '<br>이 유형의 흐름 참고: <b>' + esc(q.structure_hint || qt.structure) + '</b>' : '') + '</div>' +
+        '<textarea class="draft-ta" id="draftTa" placeholder="실제 겪은 일을, 평소 말하듯 적어 주세요 (60자 이상)"></textarea>' +
+        '<div class="draft-foot"><span id="draftCnt">0자</span><span id="draftSaved"></span></div>' +
+        '<div id="draftNote"></div>' +
+        '<button class="cta" id="btnRevise">AI 첨삭 받기 — 내가 쓴 사실만으로</button>' +
+        '<button class="cta ghost sub" id="btnBackSel">경험 다시 고르기</button></div>';
+
+      var ta = box.querySelector('#draftTa');
+      ta.value = SESS.draft || '';
+      var cnt = box.querySelector('#draftCnt');
+      function count() { cnt.textContent = ta.value.trim().length + '자'; }
+      count();
+
+      var save = debounce(async function () {
+        var r = await AP.store.updateSession(SESS.id, { draft: ta.value });
+        SESS.draft = ta.value;
+        var t = new Date();
+        var msg = r && r.error ? '저장 실패' : '저장됨 ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+        box.querySelector('#draftSaved').textContent = msg;
+        setSave(msg);
+      }, 800);
+      ta.addEventListener('input', function () { count(); save(); });
+
+      box.querySelector('#btnRevise').addEventListener('click', async function () {
+        var text = ta.value.trim();
+        if (text.length < 60) {
+          box.querySelector('#draftNote').innerHTML = '<div class="notice warn">60자 이상 써 주세요. 첨삭은 학생의 글에서 시작해요.</div>';
+          return;
+        }
+        if (busy) return; busy = true;
+        var b = box.querySelector('#btnRevise');
+        b.innerHTML = '<span class="spin"></span>내 사실만으로 다듬는 중… (30초쯤 걸려요)'; b.disabled = true;
+        await AP.store.updateSession(SESS.id, { draft: text });
+        SESS.draft = text;
+        // 초안도 버전 원장에 남긴다(append-only 이력)
+        try { await AP.store.insertVersion({ session_id: SESS.id, kind: 'student_draft', author: 'student', content: text, meta: {} }); } catch (e) {}
+        var r = await AP.store.aiRevise(SESS.id);
+        busy = false;
+        if (!r || r.error) {
+          b.disabled = false; b.textContent = 'AI 첨삭 받기 — 내가 쓴 사실만으로';
+          box.querySelector('#draftNote').innerHTML = '<div class="notice warn">' + esc((r && r.error) || '첨삭에 실패했어요. 글은 저장돼 있어요.') + '</div>';
+          return;
+        }
+        lastRevise = r;
+        lastRevise._sources = r.sources || [];
+        SESS.state = 'ai_revised';
+        AP.logEvent('ap_revise', { d: DAY.day_no });
+        rerenderFlow();
+      });
+      box.querySelector('#btnBackSel').addEventListener('click', function () { setState('experience_selecting'); });
+      return box;
+    }
+
+    /* 4단계 — AI 첨삭 결과 + 다듬기 */
+    async function flowRevised(box) {
+      // 새로고침 복원 — 마지막 revise 응답이 없으면 버전 원장에서 되살린다
+      if (!lastRevise) {
+        var vers = await AP.store.versions(SESS.id);
+        var tone = vers.filter(function (v) { return v.kind === 'ai_tone'; }).pop();
+        var deliv = vers.filter(function (v) { return v.kind === 'ai_delivery'; }).pop();
+        var facts = vers.filter(function (v) { return v.kind === 'fact_summary'; }).pop();
+        if (tone && deliv) {
+          lastRevise = {
+            tone_keep: (tone.meta && tone.meta.sentences) || [],
+            delivery: (deliv.meta && deliv.meta.sentences) || [],
+            scores: (deliv.meta && deliv.meta.scores) || (tone.meta && tone.meta.scores) || null,
+            flags: (deliv.meta && deliv.meta.flags) || {},
+            fact_summary: facts ? { confirmed: (facts.meta && facts.meta.confirmed) || [], missing: (facts.meta && facts.meta.missing) || [], conflicts: (facts.meta && facts.meta.conflicts) || [] } : { confirmed: [], missing: [], conflicts: [] },
+            fit_check: (facts && facts.meta && facts.meta.fit_check) || { fits: true, note: '' },
+            followup_practice: (deliv.meta && deliv.meta.followup_practice) || [],
+            est_seconds: {},
+            _sources: (deliv.meta && deliv.meta.sources) || (tone.meta && tone.meta.sources) || []
+          };
+        }
+      }
+      if (!lastRevise) {
+        box.innerHTML = '<div class="blk"><div class="blk-s">첨삭 결과를 찾지 못했어요. 초안으로 돌아가 다시 받아 보세요.</div>' +
+          '<button class="cta ghost" id="backDraft">초안으로</button></div>';
+        box.querySelector('#backDraft').addEventListener('click', function () { setState('student_drafting'); });
+        return box;
+      }
+      var R = lastRevise;
+      var fs = R.fact_summary || { confirmed: [], missing: [], conflicts: [] };
+      var editing = SESS.state === 'student_editing';
+      var savedEdit = loadEdit();
+
+      var factHtml = '<div class="blk"><div class="blk-t">확인된 사실 정리</div>' +
+        (fs.confirmed.length ? '<div class="blk-s">' + fs.confirmed.map(function (f) { return '· ' + esc(f.text); }).join('<br>') + '</div>' : '<div class="blk-s">정리된 사실이 없어요.</div>') +
+        (fs.missing && fs.missing.length ? '<div class="notice">아직 확인 안 된 것 — ' + fs.missing.map(esc).join(' / ') + '<br>이 부분은 답변에 넣지 않았어요. 채우려면 <b>사실 더 모으기</b>로.</div>' : '') +
+        (fs.conflicts && fs.conflicts.length ? '<div class="notice warn">서로 어긋나는 내용 — ' + fs.conflicts.map(esc).join(' / ') + '</div>' : '') +
+        ((R.fit_check && R.fit_check.fits === false) ? '<div class="notice warn">이 경험이 질문과 잘 안 맞을 수 있어요 — ' + esc(R.fit_check.note || '') + '</div>' : '') +
+        '</div>';
+
+      var flags = R.flags || {};
+      var warnHtml = '';
+      if (flags.overused_cards && flags.overused_cards.length) {
+        warnHtml += '<div class="notice warn">이미 여러 답변에 쓴 경험이에요(' +
+          flags.overused_cards.map(function (c) { return esc(c.title); }).join(', ') + '). 면접에서 겹칠 수 있어요.</div>';
+      }
+      if (flags.cliches_left && flags.cliches_left.length) {
+        warnHtml += '<div class="notice warn">상투 표현이 남아 있어요: ' + flags.cliches_left.map(esc).join(', ') + '</div>';
+      }
+
+      var scores = R.scores;
+      var scoreHtml = '';
+      if (scores) {
+        scoreHtml = '<div class="blk"><div class="blk-t">답변 진정성 지표</div>' +
+          '<div class="score-t"><b>' + AP.totalScore(scores) + '</b><span>/ 100 — 합격 예측이 아니라 근거·개인화 점검이에요</span></div>' +
+          AP.SCORE_ITEMS.map(function (it) {
+            var v = Number(scores[it[0]] || 0);
+            return '<div class="score-row"><span>' + it[1] + '</span>' +
+              '<span class="bar"><i style="width:' + Math.round(v / it[2] * 100) + '%"></i></span>' +
+              '<em>' + v + '/' + it[2] + '</em></div>';
+          }).join('') +
+          (scores.notes && scores.notes.length ? '<ul class="score-notes">' + scores.notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>' : '') +
+          '</div>';
+      }
+
+      function verHtml(list, key) {
+        var un = list.filter(function (s) { return s.unsupported; }).length;
+        return '<div class="ver-body" data-ver="' + key + '">' + list.map(function (s, i) {
+          return '<span class="sent' + (s.unsupported ? ' bad' : '') + '" data-i="' + i + '" data-ver="' + key + '">' + esc(s.text) + '</span> ';
+        }).join('') + '</div>' +
+        '<div class="ev-hint">문장을 누르면 어떤 사실에서 왔는지 보여드려요.' +
+        (un ? '<br><b>빨간 밑줄 ' + un + '문장</b>은 내가 준 사실에 근거가 없어요 — 그대로 쓰지 마세요.' : '') + '</div>';
+      }
+
+      box.innerHTML = factHtml + warnHtml +
+        '<div class="blk"><div class="blk-t">두 가지 다듬기</div>' +
+        '<div class="blk-s">둘 다 <b>내가 준 사실만</b>으로 만들었어요. 마음에 드는 쪽을 골라 직접 다듬으세요.</div>' +
+        '<div class="ver-tabs"><button data-v="ai_tone" class="' + (chosen === 'ai_tone' ? 'on' : '') + '">말투 유지형</button>' +
+        '<button data-v="ai_delivery" class="' + (chosen === 'ai_delivery' ? 'on' : '') + '">전달력 강화형</button></div>' +
+        '<div id="verWrap"></div>' +
+        '<div class="ver-meta" id="verMeta"></div>' +
+        '<button class="cta" id="btnPick">이 버전으로 직접 다듬기</button>' +
+        '<button class="cta ghost sub" id="btnMoreFacts">사실 더 모으기</button></div>' +
+        scoreHtml +
+        '<div class="blk ' + (editing ? '' : 'hidden') + '" id="editBlk"><div class="blk-t">직접 다듬기</div>' +
+        '<div class="blk-s">여기서 고친 글이 최종본이 돼요. 내가 실제로 말할 수 있는 문장인지 소리 내어 읽어 보세요.</div>' +
+        '<textarea class="edit-ta" id="editTa"></textarea>' +
+        '<div class="draft-foot"><span id="editCnt"></span><span id="editSec"></span></div>' +
+        '<div id="editNote"></div>' +
+        '<div class="row2"><button class="cta ghost sub" id="btnReRevise">다시 첨삭 받기</button>' +
+        '<button class="cta ghost sub" id="btnSpeak">말하기용 정리</button></div>' +
+        '<div id="speakOut"></div>' +
+        '<div class="row2"><button class="cta ghost" id="btnReview">연구원 검수 요청</button>' +
+        '<button class="cta" id="btnFinal">최종 확정</button></div></div>';
+
+      function currentList() { return chosen === 'ai_delivery' ? (R.delivery || []) : (R.tone_keep || []); }
+      function paintVer() {
+        box.querySelector('#verWrap').innerHTML = verHtml(currentList(), chosen);
+        var est = R.est_seconds && R.est_seconds[chosen === 'ai_tone' ? 'tone' : 'delivery'];
+        var q = Q();
+        box.querySelector('#verMeta').textContent = est
+          ? ('예상 말하기 시간 약 ' + est + '초' + (q && q.rec_seconds ? ' / 권장 ' + q.rec_seconds + '초' : ''))
+          : '';
+        box.querySelectorAll('.sent').forEach(function (el) {
+          el.addEventListener('click', function () { openEvidence(Number(el.dataset.i), el.dataset.ver); });
+        });
+        box.querySelectorAll('.ver-tabs button').forEach(function (b) {
+          b.classList.toggle('on', b.dataset.v === chosen);
+        });
+      }
+      paintVer();
+      box.querySelectorAll('.ver-tabs button').forEach(function (b) {
+        b.addEventListener('click', function () { chosen = b.dataset.v; paintVer(); });
+      });
+
+      var ta = box.querySelector('#editTa');
+      function paintEditMeta() {
+        box.querySelector('#editCnt').textContent = ta.value.trim().length + '자';
+        box.querySelector('#editSec').textContent = '예상 ' + AP.estSeconds(ta.value) + '초';
+      }
+      ta.addEventListener('input', debounce(function () {
+        saveEdit(ta.value); paintEditMeta(); setSave('임시 저장됨');
+      }, 500));
+
+      function enterEdit(text) {
+        box.querySelector('#editBlk').classList.remove('hidden');
+        ta.value = text;
+        saveEdit(text);
+        paintEditMeta();
+        if (SESS.state !== 'student_editing') setState('student_editing', true);
+        ta.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (editing) { ta.value = savedEdit || currentList().map(function (s) { return s.text; }).join(' '); paintEditMeta(); }
+
+      box.querySelector('#btnPick').addEventListener('click', function () {
+        var supported = currentList().filter(function (s) { return !s.unsupported; });
+        enterEdit(supported.map(function (s) { return s.text; }).join(' '));
+        AP.logEvent('ap_pick_version', { v: chosen });
+      });
+      box.querySelector('#btnMoreFacts').addEventListener('click', function () {
+        // ai_revised → student_drafting → fact_gathering 경로(트리거 허용 전이만 밟는다)
+        (async function () {
+          if (SESS.state === 'ai_revised') await setState('student_drafting', true);
+          await setState('fact_gathering');
+        })();
+      });
+
+      box.querySelector('#btnReRevise').addEventListener('click', async function () {
+        var text = ta.value.trim();
+        if (text.length < 60) { box.querySelector('#editNote').innerHTML = '<div class="notice warn">60자 이상이어야 다시 첨삭할 수 있어요.</div>'; return; }
+        await AP.store.updateSession(SESS.id, { draft: text });
+        SESS.draft = text;
+        await setState('student_drafting');
+      });
+
+      box.querySelector('#btnSpeak').addEventListener('click', async function () {
+        var text = ta.value.trim() || currentList().map(function (s) { return s.text; }).join(' ');
+        if (busy) return; busy = true;
+        var b = box.querySelector('#btnSpeak');
+        b.innerHTML = '<span class="spin"></span>정리 중…'; b.disabled = true;
+        var r = await AP.store.aiSpeak(SESS.id, text);
+        busy = false; b.disabled = false; b.textContent = '말하기용 정리';
+        if (!r || r.error) { box.querySelector('#speakOut').innerHTML = '<div class="notice warn">' + esc((r && r.error) || '정리하지 못했어요.') + '</div>'; return; }
+        box.querySelector('#speakOut').innerHTML = '<div class="notice good"><b>말하기용 (' + r.est_seconds + '초)</b><br>' +
+          r.lines.map(function (l) { return '<div class="speak-line">' + esc(l) + '</div>'; }).join('') +
+          (r.tips && r.tips.length ? '<small>' + r.tips.map(esc).join(' · ') + '</small>' : '') + '</div>';
+      });
+
+      async function saveEditVersion(text) {
+        try { await AP.store.insertVersion({ session_id: SESS.id, kind: 'student_edit', author: 'student', content: text, meta: { chosen: chosen } }); } catch (e) {}
+      }
+
+      box.querySelector('#btnReview').addEventListener('click', async function () {
+        var text = ta.value.trim();
+        if (text.length < 60) { box.querySelector('#editNote').innerHTML = '<div class="notice warn">다듬은 글이 있어야 검수를 요청할 수 있어요.</div>'; return; }
+        if (!confirm('연구원 검수를 요청할까요? 검수가 끝나면 이 화면에서 결과를 볼 수 있어요.')) return;
+        await saveEditVersion(text);
+        if (SESS.state !== 'student_editing') await setState('student_editing', true);
+        var r = await AP.store.requestReview(SESS.id);
+        if (r && r.error) { alert('요청하지 못했어요: ' + (r.error.message || '')); return; }
+        SESS.state = 'review_requested';
+        AP.logEvent('ap_review_request', { d: DAY.day_no });
+        rerenderFlow();
+      });
+
+      box.querySelector('#btnFinal').addEventListener('click', async function () {
+        var text = ta.value.trim();
+        if (text.length < 60) { box.querySelector('#editNote').innerHTML = '<div class="notice warn">다듬은 글이 있어야 확정할 수 있어요.</div>'; return; }
+        if (!confirm('이 글을 오늘의 최종 답변으로 확정할까요? 확정해도 이력은 남고 다시 열 수 있어요.')) return;
+        await saveEditVersion(text);
+        if (SESS.state !== 'student_editing') await setState('student_editing', true);
+        await doFinalize(text);
+      });
+      return box;
+    }
+
+    async function doFinalize(text) {
+      var q = Q();
+      var r = await AP.store.finalize(SESS.id, text, {
+        question_title: q ? q.content : '매일 답변 프로그램',
+        category: q ? (AP.QTYPE_TO_CATEGORY[q.qtype] || null) : null,
+        airline: VIEW.program.airline || null,
+        chosen: chosen
+      });
+      if (!r || !r.ok) { alert('확정하지 못했어요' + (r && r.message ? ': ' + r.message : '')); return; }
+      SESS.state = 'finalized';
+      SESS.answer_id = r.answer_id;
+      try { localStorage.removeItem(editKey()); } catch (e) {}
+      AP.logEvent('ap_finalize', { d: DAY.day_no });
+      await refreshView();
+      rerenderFlow();
+    }
+
+    /* 검수 대기 */
+    async function flowWaiting(box) {
+      var vers = await AP.store.versions(SESS.id);
+      var last = vers.filter(function (v) { return v.kind === 'student_edit' || v.kind === 'student_draft'; }).pop();
+      box.innerHTML = '<div class="blk"><div class="blk-t">연구원 검수 대기 중</div>' +
+        '<div class="blk-s">몬크 연구원이 원문과 근거를 함께 보고 다듬어 드려요. 끝나면 이 화면에 결과가 떠요.</div>' +
+        (last ? '<div class="notice">보낸 글<br>' + esc(last.content).replace(/\n/g, '<br>') + '</div>' : '') +
+        '</div>';
+      return box;
+    }
+
+    /* 보완 요청 */
+    async function flowRevision(box) {
+      var vers = await AP.store.versions(SESS.id);
+      var rev = vers.filter(function (v) { return v.kind === 'researcher_edit'; }).pop();
+      var codes = (rev && rev.meta && rev.meta.codes) || [];
+      box.innerHTML = '<div class="blk"><div class="blk-t">연구원이 보완을 요청했어요</div>' +
+        '<div class="blk-s">아래 이유를 보고 글을 다듬어 다시 보내거나, 그대로 확정할 수 있어요.</div>' +
+        (codes.length ? '<div>' + codes.map(function (c) { return '<span class="code-chip">' + esc(c.label || c.code) + '</span>'; }).join('') + '</div>' : '') +
+        (codes.length ? '<div class="rv-reason">' + codes.map(function (c) { return c.reason ? '· ' + esc(c.reason) : ''; }).filter(Boolean).join('<br>') + '</div>' : '') +
+        (rev && rev.content ? '<div class="notice"><b>연구원 제안본</b><br>' + esc(rev.content).replace(/\n/g, '<br>') + '</div>' : '') +
+        '<button class="cta" id="btnEditAgain">반영해서 다듬기</button></div>';
+      box.querySelector('#btnEditAgain').addEventListener('click', async function () {
+        if (rev && rev.content) saveEdit(rev.content);
+        await setState('student_editing');
+      });
+      return box;
+    }
+
+    /* 승인 */
+    async function flowApproved(box) {
+      var vers = await AP.store.versions(SESS.id);
+      var rev = vers.filter(function (v) { return v.kind === 'researcher_edit'; }).pop();
+      var text = (rev && rev.content) || SESS.draft || '';
+      box.innerHTML = '<div class="blk"><div class="blk-t">연구원 승인 완료</div>' +
+        '<div class="blk-s">연구원이 검수를 마쳤어요. 이대로 확정하거나 한 번 더 다듬을 수 있어요.</div>' +
+        '<div class="notice good">' + esc(text).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="row2"><button class="cta ghost" id="btnTune">한 번 더 다듬기</button>' +
+        '<button class="cta" id="btnConfirm">이대로 확정</button></div></div>';
+      box.querySelector('#btnConfirm').addEventListener('click', async function () { await doFinalize(text); });
+      box.querySelector('#btnTune').addEventListener('click', async function () {
+        saveEdit(text);
+        // approved → finalized 만 학생 전이 허용이라, 다듬기는 확정 후 재수정 경로로 안내
+        alert('승인본은 먼저 확정돼요. 확정 후 "다시 다듬기"로 이어서 고칠 수 있어요.');
+      });
+      return box;
+    }
+
+    /* 완료 */
+    async function flowFinalized(box) {
+      var vers = await AP.store.versions(SESS.id);
+      var fin = vers.filter(function (v) { return v.kind === 'final'; }).pop();
+      var speak = vers.filter(function (v) { return v.kind === 'speaking'; }).pop();
+      var deliv = vers.filter(function (v) { return v.kind === 'ai_delivery'; }).pop();
+      var q = Q();
+      var practice = (deliv && deliv.meta && deliv.meta.followup_practice && deliv.meta.followup_practice.length)
+        ? deliv.meta.followup_practice : (q && q.followups) || [];
+      var consented = await AP.store.getConsent('model_training');
+
+      box.innerHTML = '<div class="blk"><div class="blk-t">오늘의 답변 완성 ✓</div>' +
+        '<div class="blk-s">답변노트에도 저장됐어요. 확정 후에도 이력은 전부 남아요.</div>' +
+        '<div class="notice good">' + esc(fin ? fin.content : (SESS.draft || '')).replace(/\n/g, '<br>') + '</div>' +
+        (speak ? '<div class="notice"><b>말하기용</b><br>' + speak.content.split('\n').map(function (l) { return '<div class="speak-line">' + esc(l) + '</div>'; }).join('') + '</div>' : '') +
+        '<div class="row2">' +
+        (SESS.answer_id && !AP.demoOn() ? '<a class="cta ghost sub" style="display:flex;align-items:center;justify-content:center;text-decoration:none;" href="ai-killer.html?answer=' + esc(SESS.answer_id) + '">KILL AI로 확인</a>' : '') +
+        '<button class="cta ghost sub" id="btnReopen">다시 다듬기</button></div>' +
+        '</div>' +
+        (practice.length ? '<div class="blk"><div class="blk-t">예상 꼬리질문으로 연습</div>' +
+          '<div class="blk-s">이 답변을 들은 면접관이 이어 물을 수 있는 질문이에요. 소리 내어 답해 보세요.</div>' +
+          practice.map(function (p, i) { return '<div class="fq">' + (i + 1) + '. ' + esc(p) + '<small>10초 생각하고, 30초 안에 답해 보기</small></div>'; }).join('') + '</div>' : '') +
+        '<div class="blk"><div class="blk-t">다음 문제</div><div class="blk-s">내일 새 문제가 열려요. 지난 문제는 언제든 다시 볼 수 있어요.</div>' +
+        '<div class="consent-card"><input type="checkbox" id="ckTrain" ' + (consented ? 'checked' : '') + '>' +
+        '<label for="ckTrain"><b>연구 개선 활용 동의(선택)</b> — 내 답변과 수정 과정을 몬크 첨삭 기준 연구에 쓸 수 있어요. ' +
+        '이름·연락처 등 직접 식별 정보는 제외돼요. 동의하지 않아도 모든 기능을 쓸 수 있어요.</label></div></div>';
+
+      box.querySelector('#btnReopen').addEventListener('click', async function () {
+        saveEdit(fin ? fin.content : '');
+        await setState('student_editing');
+      });
+      var ck = box.querySelector('#ckTrain');
+      ck.addEventListener('change', async function () {
+        await AP.store.setConsent('model_training', ck.checked);
+        setSave(ck.checked ? '동의 저장됨' : '동의 철회됨');
+      });
+      return box;
+    }
+
+    /* ── 근거 시트 ── */
+    function openEvidence(i, verKey) {
+      var R = lastRevise;
+      if (!R) return;
+      var list = verKey === 'ai_delivery' ? (R.delivery || []) : (R.tone_keep || []);
+      var s = list[i];
+      if (!s) return;
+      var sources = R._sources || [];
+      // 실시간 응답에는 sources 가 안 실려 있으므로 라벨만이라도 만든다
+      var body;
+      if (s.unsupported) {
+        body = '<div class="sheet-h">이 문장은 근거가 없어요</div>' +
+          '<div class="sheet-s">' + (s.reason === 'new_number' ? '내가 준 사실에 없는 <b>숫자</b>가 들어 있어요.' : '내가 준 사실 어디에서도 오지 않은 문장이에요.') +
+          '<br>그대로 쓰면 꼬리질문에서 무너져요 — 지우거나, 사실을 먼저 채워 주세요.</div>';
+      } else {
+        var evs = (s.ev || []).map(function (id) {
+          var src = sources.filter(function (x) { return x.id === id; })[0];
+          return '<div class="ev-src"><b>' + esc(src ? src.label : id) + '</b>' +
+            (src ? '<p>' + esc(src.text) + '</p>' : '') + '</div>';
+        }).join('');
+        body = '<div class="sheet-h">이 문장의 근거</div>' +
+          '<div class="sheet-s">아래 내가 준 사실에서 만들어졌어요.</div>' + (evs || '<div class="sheet-s">근거 id: ' + s.ev.map(esc).join(', ') + '</div>');
+      }
+      $('sheetBody').innerHTML = body + '<div style="font-size:14px;margin-top:14px;">문장 — “' + esc(s.text) + '”</div>';
+      document.body.classList.add('sheet-on');
+    }
+    $('sheetMask').addEventListener('click', function () { document.body.classList.remove('sheet-on'); });
+
+    /* ── 상태 전이 + 재렌더 ── */
+    async function setState(next, silent) {
+      var r = await AP.store.updateSession(SESS.id, { state: next });
+      if (r && r.error) {
+        alert('진행할 수 없어요: ' + (r.error.message || '상태 전이가 막혔어요'));
+        return false;
+      }
+      SESS.state = next;
+      if (!silent) rerenderFlow();
+      return true;
+    }
+
+    async function rerenderFlow() {
+      var stage = $('stage');
+      var old = document.getElementById('flow');
+      var flow = await renderFlow();
+      var head = '<div id="qhead">' + questionCard() + stepsHtml(SESS.state) + '</div>';
+      stage.innerHTML = head;
+      stage.appendChild(flow);
+      renderDays();
+      window.scrollTo({ top: 0 });
+    }
+
+    async function refreshView() {
+      VIEW = await AP.store.programView(PID);
+    }
+
+    /* ── 일차 열기 ── */
+    async function openDay(dayNo) {
+      DAY = VIEW.days.filter(function (d) { return d.day_no === dayNo; })[0];
+      lastRevise = null;
+      var stage = $('stage');
+      if (!DAY) { stage.innerHTML = '<div class="notice">해당 일차가 없어요.</div>'; return; }
+      if (!DAY.unlocked) {
+        stage.innerHTML = '<div class="blk"><div class="blk-t">' + dayNo + '일차는 아직 잠겨 있어요</div>' +
+          '<div class="blk-s">하루에 한 문제씩 열려요. 오늘 문제부터 차근차근.</div></div>';
+        renderDays(); return;
+      }
+      if (!DAY.has_question || !DAY.question) {
+        stage.innerHTML = '<div class="blk"><div class="blk-t">' + dayNo + '일차</div>' +
+          '<div class="blk-s">이 일차에 배치된 문제가 아직 없어요. 관리자 배치를 기다려 주세요.</div></div>';
+        renderDays(); return;
+      }
+      stage.innerHTML = '<div class="loading">여는 중…</div>';
+      var sess = await AP.store.getOrCreateSession(PID, dayNo, DAY.question.id);
+      if (!sess || sess._error) {
+        var m = sess && sess._error ? (sess._error.message || '') : '';
+        stage.innerHTML = '<div class="notice warn">세션을 열지 못했어요' + (m ? ' — ' + esc(m) : '') + '</div>';
+        return;
+      }
+      SESS = sess;
+      AP.logEvent('ap_day_view', { d: dayNo, state: SESS.state });
+      rerenderFlow();
+    }
+
+    /* ── init ── */
+    (async function init() {
+      demoBanner();
+      var st = await AP.init();
+      USER = st.user;
+      if (st.mode === 'real') {
+        if (!USER) { location.href = 'login.html'; return; }
+        if (!(await MONC.requireConsent())) return;
+      }
+      if (!PID) {
+        // 데모 모드는 데모 프로그램으로 자동 진입
+        if (AP.demoOn()) {
+          var items = await AP.store.listPrograms();
+          if (items.length) { PID = items[0].program.id; }
+        }
+        if (!PID) { location.href = 'programs.html'; return; }
+      }
+      VIEW = await AP.store.programView(PID);
+      if (!VIEW || !VIEW.ok) {
+        var code = VIEW && VIEW.code;
+        $('stage').innerHTML = '<div class="blk"><div class="blk-t">' +
+          (code === 'not_ready' ? '아직 준비 중이에요' : '프로그램을 찾지 못했어요') + '</div>' +
+          '<div class="blk-s">' + (code === 'not_ready'
+            ? '데이터가 아직 열리지 않았어요. 흐름이 궁금하면 <a href="program.html?demo=1" style="font-weight:800;color:var(--accent-ink)">체험 모드</a>로 볼 수 있어요.'
+            : '<a href="programs.html" style="font-weight:800;color:var(--accent-ink)">목록으로 돌아가기</a>') + '</div></div>';
+        return;
+      }
+      $('snTitle').textContent = VIEW.program.title;
+      document.title = VIEW.program.title + ' — MONC';
+      if (!VIEW.enrolled && !VIEW.staff) {
+        var p = VIEW.program;
+        $('stage').innerHTML = '<div class="blk"><div class="blk-t">' + esc(p.title) + '</div>' +
+          '<div class="blk-s">' + esc(p.subtitle || '') + '<br>총 ' + p.total_days + '일 · 하루 한 문제.</div>' +
+          (p.price === 0 ? '<button class="cta" id="btnEnroll">무료로 시작하기</button>'
+            : '<div class="notice">이 프로그램은 오픈 준비 중이에요.</div>') + '</div>';
+        var be = document.getElementById('btnEnroll');
+        if (be) be.addEventListener('click', async function () {
+          var r = await AP.store.enrollFree(PID);
+          if (r && r.ok) { location.reload(); } else alert('등록하지 못했어요.');
+        });
+        return;
+      }
+      renderDays();
+      // 기본 일차: URL ?day → 없으면 '열려 있고 아직 완성 아님' 중 마지막, 없으면 최댓값
+      var want = Number(new URLSearchParams(location.search).get('day') || 0);
+      if (!want) {
+        var open = VIEW.days.filter(function (d) { return d.unlocked; });
+        var todo = open.filter(function (d) { return !d.session || d.session.state !== 'finalized'; });
+        want = (todo.length ? todo[todo.length - 1] : open[open.length - 1] || { day_no: 1 }).day_no;
+      }
+      openDay(want);
+    })();
+  })();
+  </script>
+</body>
+</html>
