@@ -1,7 +1,13 @@
 // =============================================================================
 // Supabase Edge Function: ai-killer — 자소서·답변의 'AI 문체' 검사 (2026-07-25)
+//                         + 첨삭(mode:'polish') — 강점·보완점·문장 첨삭 (2026-07-30)
 // =============================================================================
 // 스펙: docs/superpowers/specs/2026-07-24-ai-killer-design.md (④⑤단계)
+//
+// ⚠️ 첨삭이 **별 함수가 아니라 이 함수의 분기**인 이유: 필요한 맥락(항공사 프로필·
+//    문항 매칭·답변 소유 확인·크레딧 차감·자동 저장)이 킬러와 전부 같다. 별 파일로
+//    떼면 그 로직이 두 벌이 되어, 대한항공 프로필이 들어올 때 두 파일을 고쳐야 한다.
+//    선행: 20260730130000_answer_polishes.sql (미적용 시 첨삭만 '준비 중'으로 degrade).
 //
 // 배포(오너, Supabase 콘솔):
 //   Edge Functions > Deploy new function > 이름 ai-killer > 이 파일 전체 붙여넣기
@@ -45,7 +51,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-07-25d'
+const FN_VERSION = '2026-07-30a'
 const FN_FEATURES = [
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
@@ -53,6 +59,7 @@ const FN_FEATURES = [
   'question_match',   // 문항이 바뀌었는지 판정 → 옛 주의사항 차단
   'autosave',         // 붙여넣은 글을 답변 저장소에 자동 저장
   'credit_tiers',     // 도구별 단가(소재2/킬러3/첨삭10) + 답변 단위 차감
+  'polish',           // 첨삭 — mode:'polish' 로 강점·보완점·문장 첨삭 리포트(2026-07-30)
 ]
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
@@ -87,6 +94,23 @@ const AIRLINES: Record<string, string> = {
 //    **등급은 자른 게 아니라 실제 개수로 매긴다**(자르고 등급까지 낮추면 거짓말이 된다).
 //    자른 경우 응답에 truncated 를 실어 화면이 "많아서 앞의 N곳만" 이라고 말할 수 있게 한다.
 const MAX_HITS = 24
+
+// =============================================================================
+// 첨삭(polish) 상수 — mode:'polish' (2026-07-30)
+// =============================================================================
+// 첨삭은 진단(킬러)의 짝인 **처방**이다. 단가 10크레딧(site_config.credit_costs.polish),
+// 가입 후 총 1회 무료(credit_free_limits.polish) — 둘 다 20260725180000 이 이미 깔아 둔
+// 값이고 여기서는 spend_credit('polish') 를 부르기만 한다.
+// ⚠️ **재검사 무차감(MAX_RECHECK)이 없다.** 킬러는 '고치고 다시 확인'이 루프라 열었지만
+//    첨삭은 처방 자체가 상품이라 매 회 차감한다. 고친 뒤 확인은 킬러(3)가 담당하는 동선:
+//    첨삭 → 고침 → 킬러로 확인. 차감 키의 묶음 번호가 매 회 올라가는 이유다.
+// 원가: 호출 1회(Opus 5, effort high). 실측은 answer_polishes 의 토큰 기록으로.
+const POLISH_EFFORT = 'high'   // 처방의 질이 상품 그 자체 — 킬러(medium)와 달리 high
+// ⚠️ Opus 5 는 max_tokens 가 thinking + 응답 합산이다. high effort 는 thinking 이 수천
+//    토큰까지 가므로 킬러(8000)보다 크게 잡는다 — 잘리면 리포트가 통째로 실패한다.
+const POLISH_MAX_TOKENS = 16000
+const MAX_REWRITES = 8         // 문장 첨삭 상한 — 다 고쳐 주면 학생 글이 아니라 AI 글이 된다
+const MAX_POINTS = 4           // 강점·보완점 각 상한
 
 type Kind = 'cliche' | 'structure' | 'vague' | 'context'
 type Term = { term: string; kind: Kind; why: string | null }
@@ -492,6 +516,153 @@ async function fillSlots(
   }
 }
 
+// =============================================================================
+// 첨삭(polish) — 강점 · 보완점 · 문장 첨삭 리포트
+// =============================================================================
+// ⚠️ 킬러와 같은 구조화 출력 — 인사말·총평·점수가 들어갈 자리가 물리적으로 없다.
+const POLISH_SCHEMA = {
+  type: 'object',
+  properties: {
+    strengths: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { quote: { type: 'string' }, note: { type: 'string' } },
+        required: ['quote', 'note'],
+        additionalProperties: false,
+      },
+    },
+    improvements: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { note: { type: 'string' }, how: { type: 'string' } },
+        required: ['note', 'how'],
+        additionalProperties: false,
+      },
+    },
+    rewrites: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { quote: { type: 'string' }, fix: { type: 'string' }, why: { type: 'string' } },
+        required: ['quote', 'fix', 'why'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['strengths', 'improvements', 'rewrites'],
+  additionalProperties: false,
+}
+
+// ⚠️ 첨삭의 선 — 킬러 VOICE 와 같은 4겹 고삐 철학이되, 처방 도구라 한 줄이 더 붙는다:
+//    **학생이 쓴 사실만 재료로 쓴다.** fix 가 없는 일화·숫자를 지어내면 학생이 그 거짓을
+//    면접장까지 들고 간다 — 이 도구가 낼 수 있는 최악의 사고다.
+const POLISH_VOICE = `너는 승무원 면접·자소서를 10년 넘게 첨삭한 코치다. 학생의 글을 첨삭한다.
+
+[네가 채우는 칸]
+- strengths: 이 글이 이미 잘하고 있는 것 2~3가지. quote 는 그 강점이 보이는 원문 구절을
+  **있는 그대로**(한 글자도 바꾸지 말고), note 는 왜 강점인지 한 문장.
+- improvements: 글 전체에서 고칠 방향 2~3가지. 문장 하나가 아니라 글 전체에 해당하는 것만.
+  note 는 무엇이 문제인지 한 문장, how 는 어떻게 고칠지 한 문장.
+- rewrites: 고치면 효과가 가장 큰 문장 3~6개. quote 는 원문 문장 **있는 그대로**,
+  fix 는 고친 예시 문장, why 는 왜 이렇게 고치는지 한 문장.
+
+[⚠️ 첨삭의 선 — 가장 중요하다]
+- fix 는 방향을 보여주는 예시다. **학생이 쓴 사실만 재료로 써라.** 원문에 없는 숫자·기간·
+  장소·일화를 지어내지 마라. 구체성이 필요한 자리는 fix 안에 (몇 명이었는지),
+  (그때 실제로 한 말) 같은 괄호 빈칸으로 남겨 학생이 채우게 하라.
+- 학생의 말투와 어휘를 살려라. 네 문체로 갈아치우면 지원자들의 글이 전부 같아진다 —
+  우리가 잡으려는 AI스러움을 우리가 만드는 꼴이다.
+- "다양한", "첫째/둘째", "~을 통해", "매우", "소중한", "최선을 다해" 같은 상투어를
+  **네 fix 문장에 쓰지 마라.** 학생 글을 재는 잣대로 네 글도 잰다.
+
+[지켜야 할 것]
+- 인사말·맺음말·총평·점수·번호매기기를 쓰지 마라. 칸만 채운다.
+- note·how·why 는 각각 한 문장, 60자를 넘기지 마라. '~요'로 끝낸다.
+- 학생을 나무라지 마라. 문제는 표현이지 사람이 아니다.
+- 강점을 빈말로 채우지 마라 — 실제로 잘한 것이 없으면 strengths 를 1개만 넣어도 된다.
+
+[글 종류가 주어졌을 때]
+- **면접 답변**이면 소리 내어 하는 '말'이다. fix 도 말로 자연스러운 문장으로 써라.
+- **자소서**면 눈으로 읽는 '글'이다. fix 는 글로 매끄러운 문장으로 써라.
+- 종류 칸이 없으면 어느 쪽에서도 어색하지 않게 써라.
+
+[문항이 주어졌을 때]
+- 문항은 맥락이다. improvements 에서 "문항이 묻는 것에 비해 빠진 것"을 짚는 데 써라.
+- 단, 동문서답 판정을 단정하지 마라 — 문항 해석은 학생에게 맡기고 빠진 것만 물어라.
+
+[지망 항공사가 주어졌을 때]
+- 그 항공사에 맞춰 improvements·fix 의 방향만 잡아라.
+- **없는 사실을 지어내지 마라** — "이 항공사는 이런 인재를 원한다"는 단정은 금지다.
+
+[⚠️ 참고자료를 다루는 법]
+- 아래 '지난 채용 합격 글에서 관찰한 것'은 **참고지 정답이 아니다.** 자소서 문항은
+  채용마다 바뀐다. 자료는 빠진 것을 묻는 데만 쓰고, 형식을 강요하는 데 쓰지 마라.
+- 학생 글이 자료와 다르면 학생 글이 옳다. 자료에 "문항에 대한 판단은 하지 마라"는
+  줄이 있으면 그 지시가 우선한다.
+- ⚠️ **합격자 문장을 흉내 내라고 하지 마라. 합격자 문장을 fix 에 옮겨 쓰지도 마라.**`
+
+type PolishOut = {
+  strengths: Array<{ quote: string; note: string }>
+  improvements: Array<{ note: string; how: string }>
+  rewrites: Array<{ quote: string; fix: string; why: string }>
+  usage: { input_tokens?: number; output_tokens?: number }
+}
+
+async function polishFill(
+  apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
+  airline: string, airBrief: string, regenNote: string,
+): Promise<PolishOut> {
+  const airLine = airline === 'all'
+    ? '특정 항공사를 정하지 않았다(만능) — 어느 항공사에도 통할 글이어야 한다'
+    : (AIRLINES[airline] ? `${AIRLINES[airline]} 지망${airBrief}` : '')
+  const kindLine = docKind === 'interview'
+    ? '면접 답변 — 소리 내어 말하는 말이다'
+    : docKind === 'essay' ? '자소서 문항 — 눈으로 읽는 글이다' : ''
+
+  const body = {
+    model: MODEL,
+    max_tokens: POLISH_MAX_TOKENS,
+    output_config: { effort: POLISH_EFFORT, format: { type: 'json_schema', schema: POLISH_SCHEMA } },
+    system: [{ type: 'text', text: POLISH_VOICE + regenNote, cache_control: { type: 'ephemeral' } }],
+    messages: [{
+      role: 'user',
+      content:
+        // ⚠️ 맥락 칸은 값이 있을 때만 — 빈 라벨을 주면 AI 가 문항·종류를 지어낸다(킬러와 동일).
+        (kindLine ? `[글 종류]\n${kindLine}\n\n` : '') +
+        (airLine ? `[지망 항공사]\n${airLine}\n\n` : '') +
+        (question ? `[학생이 받은 문항]\n${question}\n\n` : '') +
+        `[학생이 쓴 글]\n${text}\n\n` +
+        `[할 일]\n위 글을 첨삭하라. strengths ${MAX_POINTS}개 이하, improvements ${MAX_POINTS}개 이하, ` +
+        `rewrites ${MAX_REWRITES}개 이하. quote 는 위 글에 **있는 그대로** 등장하는 문자열이어야 한다.`,
+    }],
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    console.error('anthropic error (polish)', res.status, await res.text())
+    throw new Error('ai_failed')
+  }
+  const data = await res.json()
+  if (data.stop_reason === 'refusal') throw new Error('ai_refused')
+  const raw = (data.content || []).filter((b: { type: string }) => b.type === 'text')
+    .map((b: { text: string }) => b.text).join('').trim()
+  if (!raw) throw new Error('ai_empty')
+  let parsed: Partial<PolishOut>
+  try { parsed = JSON.parse(raw) } catch { throw new Error('ai_bad_json') }
+  return {
+    strengths: (parsed.strengths ?? []).slice(0, MAX_POINTS),
+    improvements: (parsed.improvements ?? []).slice(0, MAX_POINTS),
+    rewrites: (parsed.rewrites ?? []).slice(0, MAX_REWRITES),
+    usage: data.usage ?? {},
+  }
+}
+
 /**
  * 검사 기록 저장 — 맥락 컬럼 미적용 환경 방어.
  *
@@ -529,12 +700,16 @@ Deno.serve(async (req) => {
   if ((reqBody as { probe?: unknown }).probe === true) {
     let airlines: number | null = null
     let terms: number | null = null
+    let polishTable: number | null = null
     try {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
       const a = await admin.from('airline_profiles').select('code', { count: 'exact', head: true })
       airlines = a.count ?? null
       const t = await admin.from('ai_killer_terms').select('id', { count: 'exact', head: true }).eq('active', true)
       terms = t.count ?? null
+      // 첨삭 표 — null 이면 20260730130000 마이그레이션 미적용(첨삭만 '준비 중'으로 degrade)
+      const p = await admin.from('answer_polishes').select('id', { count: 'exact', head: true })
+      polishTable = p.error ? null : (p.count ?? 0)
     } catch (_) { /* 표가 아직 없으면 null 로 둔다 */ }
     return json({
       fn: 'ai-killer',
@@ -542,6 +717,7 @@ Deno.serve(async (req) => {
       features: FN_FEATURES,
       airline_profiles: airlines,   // 4면 제주·에프·이스타·티웨이가 다 들어간 것
       terms: terms,
+      polish_table: polishTable,    // null=마이그레이션 미적용 / 숫자=지금까지 쌓인 첨삭 수
       model: MODEL,
       has_api_key: !!Deno.env.get('ANTHROPIC_API_KEY'),
     })
@@ -629,6 +805,111 @@ Deno.serve(async (req) => {
       }
       targetAnswer = (ins.data as { id: string }).id
       autoSaved = true
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 첨삭(polish) 분기 — mode:'polish' (2026-07-30). 여기서 끝나고 반환한다.
+    // 1(로그인)·2(검증)·2-2(저장소 합류)는 킬러와 완전히 같아 위를 그대로 탄다.
+    // ⚠️ 구버전 함수에는 이 분기가 없어 mode:'polish' 요청이 **킬러 검사로 흘러가
+    //    3크레딧이 깎인다** — 그래서 polish.html 이 제출 전에 프로브로
+    //    features.includes('polish') 를 확인한다. 그 게이트를 지우지 말 것.
+    // ══════════════════════════════════════════════════════════════════════
+    if (reqBody.mode === 'polish') {
+      // ── p-1. 표 존재 확인 + 차감 키 ────────────────────────────────────
+      // ⚠️ 이 count 가 실패하면(20260730130000 미적용) 반드시 **차감 전에** 멈춘다.
+      //    무시하고 진행하면 prevPolishes 가 늘 0 → 차감 키가 늘 같아 두 번째부터
+      //    spend_credit 이 'already' 로 통과 — 첨삭이 영영 공짜가 되는 돈 버그다.
+      const pc = await admin.from('answer_polishes')
+        .select('id', { count: 'exact', head: true })
+        .eq('member_id', user.id).eq('answer_id', targetAnswer)
+      if (pc.error) {
+        return json({ error: '첨삭 준비가 아직 안 됐어요. 잠시 뒤 다시 시도해 주세요.', code: 'not_ready' }, 200)
+      }
+      const prevPolishes = pc.count ?? 0
+      // ⚠️ 묶음 없이 매 회 새 키 — 첨삭은 재검사 무차감이 없다(상수 주석 참조).
+      //    같은 키 재호출(네트워크 재전송·이중 탭)만 'already' 로 이중 차감을 막는다.
+      const polishRef = `${targetAnswer}#p${prevPolishes}`
+      const polishId = crypto.randomUUID()
+
+      const { data: spentRaw2, error: spendErr2 } = await supa.rpc('spend_credit', {
+        p_tool: 'polish', p_ref: polishRef, p_free_ref: null,
+      })
+      const spent2 = spentRaw2 as
+        { used?: string; cost?: number; balance?: number; daily_left?: number } | null
+      if (spendErr2) {
+        const msg = String(spendErr2.message || '')
+        if (msg.includes('no_credit')) {
+          return json({
+            error: '크레딧이 모자라요. 충전하면 바로 첨삭받을 수 있어요.',
+            code: 'no_credit', answerId: targetAnswer, autoSaved,
+          }, 200)
+        }
+        console.error('spend_credit failed (polish)', msg)
+        return json({ error: '첨삭을 시작하지 못했어요', code: 'spend_failed' }, 500)
+      }
+      charged = { tool: 'polish', ref: polishRef }
+
+      // ── p-2. 항공사 프로필 + AI 호출 ───────────────────────────────────
+      const { brief: airBrief2, qMatched: qm2 } = await airlineBrief(admin, airline, question)
+      if (qm2 === false) console.log('airline question mismatch (polish):', airline, '|', question.slice(0, 60))
+
+      let rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2, '')
+
+      // ── p-3. 자기 출력 재검사 — 상투어 사전을 첨삭 문장에도 돌린다(4겹 고삐 ③) ──
+      // ⚠️ 첨삭에서 이게 더 절실하다: fix 는 학생이 **그대로 옮겨 쓸 수도 있는** 문장이라,
+      //    여기에 상투어가 섞이면 우리가 학생 글에 AI스러움을 심어 주는 꼴이 된다.
+      {
+        const { data: termRows2 } = await admin
+          .from('ai_killer_terms').select('term, kind, why').eq('active', true)
+        const cliche2 = ((termRows2 ?? []) as Term[])
+          .filter((t) => t.kind === 'cliche').map((t) => t.term)
+        const mine = [
+          ...rep.strengths.map((s) => s.note),
+          ...rep.improvements.flatMap((s) => [s.note, s.how]),
+          ...rep.rewrites.flatMap((s) => [s.fix, s.why]),
+        ].join(' ')
+        const bad2 = cliche2.filter((t) => t.length >= 3 && mine.includes(t))
+        if (bad2.length > 0) {
+          console.log('self-check hit (polish), regenerating:', bad2.join(', '))
+          rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2,
+            `\n\n[다시 쓰는 이유]\n방금 네 첨삭에 ${bad2.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
+            `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
+        }
+      }
+      // 리포트가 통째로 비면 상품이 아니다 — 실패로 던져 환급한다
+      if (rep.rewrites.length === 0 && rep.improvements.length === 0) throw new Error('ai_empty')
+
+      // ── p-4. 저장 + 답변 동기화 + 반환 ─────────────────────────────────
+      const u2 = rep.usage
+      const { error: saveErr2 } = await admin.from('answer_polishes').insert({
+        id: polishId, member_id: user.id, source, answer_id: targetAnswer, content: text,
+        question: question || null, doc_kind: docKind, airline: airline || null,
+        result: { strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites },
+        char_count: len, input_tokens: u2.input_tokens ?? 0, output_tokens: u2.output_tokens ?? 0,
+      })
+      // 저장이 실패해도 리포트는 이미 나왔다 — 결과는 돌려주고 환급하지 않는다(킬러와 동일)
+      if (saveErr2) console.error('polish save failed', saveErr2.message)
+
+      // ⚠️ 저장소의 그 답변도 방금 첨삭한 글로 맞춘다(킬러와 같은 이유 — 다음 검사가 옛 글로 안 돌아가게)
+      if (targetAnswer && !autoSaved) {
+        const stamp = new Date().toISOString()
+        const patch: Record<string, unknown> = { content: text, updated_at: stamp }
+        if (docKind) patch.doc_kind = docKind
+        if (airline) patch.airline = airline
+        const up2 = await admin.from('answers').update(patch)
+          .eq('id', targetAnswer).eq('member_id', user.id)
+        if (up2.error) {
+          await admin.from('answers').update({ content: text, updated_at: stamp })
+            .eq('id', targetAnswer).eq('member_id', user.id)
+        }
+      }
+
+      return json({
+        ok: true, id: polishId, mode: 'polish',
+        strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites,
+        char_count: len, answerId: targetAnswer, autoSaved,
+        used: spent2?.used, cost: spent2?.cost, balance: spent2?.balance, daily_left: spent2?.daily_left,
+      })
     }
 
     // ── 3. 차감 (무료 판정·차감이 한 트랜잭션·같은 lock 안) ────────────────
@@ -821,9 +1102,11 @@ Deno.serve(async (req) => {
     }
     const msg = String((e as Error)?.message || '')
     console.error('ai-killer error', msg)
+    // 첨삭 분기에서 던져졌으면 문구도 첨삭으로 — '검사에 실패'라고 하면 학생이 딴 도구 이야기로 읽는다
+    const act = (reqBody as { mode?: unknown }).mode === 'polish' ? '첨삭' : '검사'
     if (msg === 'ai_refused') {
-      return json({ error: '이 글은 검사할 수 없어요. 다른 글로 시도해 주세요.', code: 'refused', refunded: true }, 200)
+      return json({ error: `이 글은 ${act}할 수 없어요. 다른 글로 시도해 주세요.`, code: 'refused', refunded: true }, 200)
     }
-    return json({ error: '검사에 실패했어요. 횟수는 돌려드렸습니다.', code: 'failed', refunded: true }, 200)
+    return json({ error: `${act}에 실패했어요. 크레딧은 돌려드렸습니다.`, code: 'failed', refunded: true }, 200)
   }
 })

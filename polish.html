@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>첨삭 — MONC 몬크 챌린지</title>
+  <meta name="description" content="자소서·면접 답변을 문장 단위로 첨삭해 드려요. 강점은 지키고, 고칠 문장은 예시로." />
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴(2026-07-30) — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       첨삭 화면 — AI킬러(진단)의 짝인 처방 도구 (2026-07-30)
+       입력부는 ai-killer.html 과 같은 문법(종류·항공사·문항·본문·바텀시트).
+       결과부는 dock 순회가 아니라 **읽는 리포트**다 — 지적 N곳을 하나씩 넘기는
+       킬러와 달리 첨삭은 강점→방향→문장 순서로 통독하는 글이라 dock 이 없다.
+
+       ⚠️ 이 화면을 고칠 때 지켜야 하는 것
+        1. 필수 조작은 전부 44px 이상 · 활자 하한 14px (9대 원칙).
+        2. 제출 전 프로브 게이트를 지우지 말 것 — 구버전 함수는 mode:'polish' 를
+           몰라서 **킬러 검사로 흘러가 3크레딧이 깎인다**(init 주석 참조).
+        3. '지금 → 이렇게' 쌍은 색으로만 구분하지 않는다(원칙 4 · 색약) —
+           라벨 글자가 함께 말한다.
+       ══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.6;
+           -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+           padding-bottom: 60px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    a { color: inherit; }
+
+    :root {
+      --p-keep: #2E6E42;  --p-keep-bg: rgba(46,110,66,.09);   /* 강점 — 지킬 것 */
+      --p-fix:  #1B3A6B;  --p-fix-bg:  rgba(27,58,107,.07);   /* 고침 — 예시 */
+    }
+
+    /* NAV — ai-killer 와 같은 문법(공용 바 아래 sticky) */
+    nav { position: sticky; top: 67px; z-index: 60; padding: 12px 0;
+          background: rgba(233,228,216,.94); -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-soft); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between;
+                 max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    .nav-back { display: inline-flex; align-items: center; min-height: 44px;
+                font-size: 14px; font-weight: 700; text-decoration: none; opacity: .85; }
+    .nav-t { font-family: var(--serif); font-size: 17px; font-weight: 700; }
+    .nav-bal { font-size: 14px; font-weight: 700; color: var(--accent-ink); min-width: 56px; text-align: right; }
+    @media (max-width: 768px) { nav { top: 57px; } }
+
+    /* ── 입력 (ai-killer 와 같은 문법) ── */
+    .in-head { font-family: var(--serif); font-size: clamp(24px,5vw,30px); font-weight: 700;
+               line-height: 1.3; margin-top: 22px; }
+    .in-sub { margin-top: 8px; font-size: 15px; color: var(--text-muted); }
+    .in-box { margin-top: 18px; background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--radius-sm); padding: 14px; }
+    .in-kind { display: flex; gap: 6px; margin-bottom: 10px; }
+    .in-kind button { flex: 1; min-height: 44px; font: inherit; font-size: 14px; font-weight: 700;
+                      border: 1px solid var(--border); background: var(--bg2);
+                      border-radius: var(--radius-xs); color: var(--text-muted); cursor: pointer; }
+    .in-kind button.on { background: var(--surface); color: var(--text);
+                         border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+    .in-pick { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px;
+               padding: 0 13px; margin-bottom: 10px; border: 1px solid var(--border);
+               background: var(--bg2); border-radius: var(--radius-xs); font: inherit;
+               font-size: 14px; font-weight: 700; color: var(--text-dim); cursor: pointer; text-align: left; }
+    .in-pick.set { background: var(--surface); color: var(--text); border-color: var(--text); }
+    .in-pick .en { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--air); }
+    .in-pick .chev { margin-left: auto; width: 16px; height: 16px; opacity: .5; flex: 0 0 auto; }
+    .in-pick.set .chev { margin-left: 6px; }
+    .air-ke { --air: #14375E; } .air-lj { --air: #3A6440; } .air-7c { --air: #8C4318; }
+    .air-tw { --air: #9E3B34; } .air-ze { --air: #97323A; } .air-yp { --air: #2E3D63; }
+    .air-rf { --air: #8E4064; } .air-all { --air: var(--text); }
+    .in-q { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--border-soft);
+            font: inherit; font-size: 15px; font-weight: 700; color: var(--text);
+            background: transparent; padding: 0 0 10px; margin-bottom: 10px; }
+    .in-q:focus { outline: none; border-bottom-color: var(--text); }
+    .in-q::placeholder { font-weight: 400; color: var(--text-dim); }
+    .in-ta { width: 100%; min-height: 190px; border: 0; resize: vertical; font: inherit;
+             font-size: 15px; line-height: 1.75; color: var(--text); background: transparent; }
+    .in-ta:focus { outline: none; }
+    .in-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+               gap: 4px 10px; margin-top: 10px; padding-top: 10px;
+               border-top: 1px solid var(--border-soft); font-size: 14px; color: var(--text-dim); }
+    .in-foot b { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .in-foot b.over { color: #9E3B34; }
+    .in-free { margin-top: 12px; display: flex; gap: 10px; align-items: flex-start; width: 100%;
+               text-align: left; font: inherit; cursor: pointer;
+               background: rgba(46,110,66,.09); border: 1px solid rgba(46,110,66,.22);
+               border-radius: var(--radius-xs); padding: 12px 13px; font-size: 14px; color: #265C3B; }
+    .in-free b { font-weight: 800; }
+    .in-free svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; }
+    .in-free-go { margin-left: auto; flex: 0 0 auto; font-size: 14px; font-weight: 800; opacity: .8; }
+    .in-cta { margin-top: 16px; width: 100%; min-height: 54px; border: 0; border-radius: 999px;
+              background: var(--action); color: var(--action-ink); font: inherit; font-size: 17px;
+              font-weight: 800; cursor: pointer; }
+    .in-cta:disabled { opacity: .45; cursor: default; }
+    .in-left { margin-top: 10px; text-align: center; font-size: 14px; color: var(--text-dim); }
+    .in-left b { color: var(--accent-ink); font-weight: 800; }
+
+    /* 바텀시트 — 항공사·저장한 답변 (ai-killer 와 같은 관습) */
+    .sheet-mask { position: fixed; inset: 0; z-index: 80; background: rgba(38,34,28,.45);
+                  opacity: 0; pointer-events: none; transition: opacity .18s; }
+    .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 81; max-height: 80vh;
+             overflow-y: auto; background: var(--surface); border-radius: 18px 18px 0 0;
+             padding: 8px 16px 24px; transform: translateY(102%);
+             transition: transform .24s cubic-bezier(.22,.61,.36,1); }
+    body.sheet-on .sheet-mask { opacity: 1; pointer-events: auto; }
+    body.sheet-on .sheet { transform: translateY(0); }
+    .sheet-in { max-width: 720px; margin: 0 auto; }
+    .sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border); margin: 6px auto 14px; }
+    .sheet-h { font-size: 16px; font-weight: 800; }
+    .sheet-s { margin-top: 4px; margin-bottom: 12px; font-size: 14px; color: var(--text-dim); }
+    .opt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 4px;
+           border: 0; border-bottom: 1px solid var(--border-soft); background: none; font: inherit;
+           font-size: 15px; font-weight: 700; color: var(--text); cursor: pointer; text-align: left; }
+    .opt:last-child { border-bottom: 0; }
+    .opt-en { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--air); }
+    .opt-hint { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
+    .opt-note { display: block; padding: 12px 4px; }
+    .opt-note .t { font-size: 15px; font-weight: 800; line-height: 1.4; }
+    .opt-note .m { margin-top: 4px; font-size: 14px; font-weight: 400; color: var(--text-dim);
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sheet-empty { padding: 8px 4px 4px; font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+    .sheet-empty a { color: var(--accent-ink); font-weight: 800; }
+
+    /* ── 결과 = 리포트 ── */
+    .rp-top { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+              padding: 16px; margin-bottom: 16px; }
+    .rp-t { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.2; }
+    .rp-s { font-size: 14px; color: var(--text-dim); margin-top: 5px; line-height: 1.5;
+            font-variant-numeric: tabular-nums; }
+    .sec-h { display: flex; align-items: baseline; gap: 8px; margin: 20px 0 10px; }
+    .sec-t { font-size: 16px; font-weight: 800; }
+    .sec-n { font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    /* 강점 — 지킬 것 */
+    .keep { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            border-left: 4px solid var(--p-keep); padding: 13px 14px; margin-bottom: 10px; }
+    .keep-q { font-size: 15px; font-weight: 800; line-height: 1.5; }
+    .keep-q em { font-style: normal; background: var(--p-keep-bg); padding: 1px 3px; border-radius: 3px; }
+    .keep-r { margin-top: 7px; font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+    /* 고칠 방향 — 글 전체 */
+    .dir { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+           padding: 13px 14px; margin-bottom: 10px; }
+    .dir-t { font-size: 15px; font-weight: 800; line-height: 1.5; }
+    .dir-h { margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--border-soft);
+             font-size: 14px; line-height: 1.65; }
+    .dir-h b { color: var(--accent-ink); font-weight: 800; }
+    /* 문장 첨삭 — 지금 → 이렇게 */
+    .rw { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+          padding: 13px 14px; margin-bottom: 10px; }
+    .rw-lbl { display: block; font-size: 14px; font-weight: 800; color: var(--text-dim); margin-bottom: 4px; }
+    .rw-now { font-size: 15px; line-height: 1.65; color: var(--text-muted); }
+    .rw-fix { margin-top: 10px; padding: 10px 12px; background: var(--p-fix-bg);
+              border-radius: var(--radius-xs); }
+    .rw-fix .rw-lbl { color: var(--p-fix); }
+    .rw-fix p { font-size: 15px; font-weight: 700; line-height: 1.65; }
+    .rw-why { margin-top: 8px; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
+    /* fix 안의 (괄호 빈칸) — 학생이 채울 자리라는 표시 */
+    .rw-fix .blank { font-weight: 800; color: var(--p-fix); background: rgba(27,58,107,.10);
+                     padding: 0 3px; border-radius: 3px; }
+
+    /* 결과 하단 액션 — 리포트는 통독하는 글이라 끝에 둔다(킬러의 dock 과 다른 이유는 상단 주석) */
+    .d-save { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .d-save button, .d-save a { flex: 1 1 140px; min-height: 48px; border-radius: 999px; font: inherit;
+                   font-size: 15px; font-weight: 800; cursor: pointer; border: 1px solid var(--border);
+                   background: var(--surface); color: var(--text); display: flex;
+                   align-items: center; justify-content: center; text-decoration: none; }
+    .d-save .pri { background: var(--action); color: var(--action-ink); border-color: var(--action); }
+
+    .notice { margin-top: 14px; padding: 13px 14px; border-radius: var(--radius-xs);
+              font-size: 14px; line-height: 1.6; }
+    .notice.warn { background: var(--action-tint); border: 1px solid rgba(163,61,20,.25); color: #A33D14; }
+    .notice.info { background: var(--bg2); border: 1px solid var(--border-soft); color: var(--text-muted); }
+    /* ── 충전 (ai-killer 와 같은 문법 — 팩·검증 전부 서버 소관) ── */
+    .charge { margin-top: 18px; background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--radius-sm); overflow: hidden; }
+    .charge-toggle { width: 100%; min-height: 48px; border: 0; background: transparent; font: inherit;
+                     font-size: 15px; font-weight: 800; color: var(--accent-ink); cursor: pointer; }
+    .charge-body { display: none; padding: 0 14px 14px; }
+    .charge.open .charge-body { display: block; }
+    .pack { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            width: 100%; min-height: 56px; padding: 12px 14px; font: inherit; text-align: left;
+            background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-xs);
+            cursor: pointer; margin-bottom: 8px; }
+    .pack:disabled { opacity: .5; cursor: default; }
+    .pack .n { font-size: 16px; font-weight: 800; }
+    .pack-can { display: block; margin-top: 3px; font-size: 14px; font-weight: 700;
+                font-style: normal; color: var(--text-dim); }
+    .pack .p { font-size: 16px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+    .charge-note { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .charge-note b { color: var(--text); font-weight: 800; }
+    .hidden { display: none !important; }
+    .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(20,30,50,.22);
+            border-top-color: var(--accent-ink); border-radius: 50%; animation: sp .7s linear infinite;
+            vertical-align: -2px; margin-right: 7px; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  </style>
+</head>
+<body data-nav-offset>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="briefing.html" class="nav-back">← 승준노트</a>
+      <span class="nav-t">첨삭</span>
+      <span class="nav-bal" id="balBadge"></span>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- ══ 입력 ══ -->
+    <section id="inputView">
+      <h1 class="in-head">어떻게 고치면<br>되는지</h1>
+      <p class="in-sub">잘한 건 지키고, 고칠 문장은 고친 예시로 보여드려요.</p>
+
+      <div class="in-box">
+        <!-- 글 종류 — 첨삭 문장의 결이 갈린다(말/글) -->
+        <div class="in-kind" role="group" aria-label="글 종류">
+          <button type="button" class="on" id="kindInterview" aria-pressed="true">면접 답변</button>
+          <button type="button" id="kindEssay" aria-pressed="false">자소서</button>
+        </div>
+
+        <button type="button" class="in-pick" id="airBtn">
+          <span id="airLabel">지망 항공사 (선택)</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        <input class="in-q" id="qIn" maxlength="200" autocomplete="off"
+          placeholder="받은 질문을 그대로 넣어 주세요 (선택)">
+
+        <textarea class="in-ta" id="ta" maxlength="1500"
+          placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
+        <div class="in-foot">
+          <span id="srcLabel">자소서 1문항 · 답변 1개</span>
+          <b id="cnt">0 / 1,500자</b>
+        </div>
+      </div>
+
+      <button class="in-free" id="freeBox" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h10M4 10h16M4 15h7"/><path d="M14 19l3 3 5-6"/></svg>
+        <div id="freeMsg"></div>
+        <span class="in-free-go" id="freeGo">고르기 →</span>
+      </button>
+
+      <button class="in-cta" id="goBtn" type="button" disabled>첨삭 받기</button>
+      <p class="in-left" id="leftMsg"></p>
+      <div id="inNotice"></div>
+
+      <div class="charge" id="chargeBox">
+        <button class="charge-toggle" id="chargeToggle" type="button">충전하기</button>
+        <div class="charge-body" id="chargeBody">
+          <div id="packList"></div>
+          <!-- ⚠️ 비교 기준을 빼지 말 것 — 이 한 줄이 없으면 '10크레딧'은 싼지 비싼지 판단이 안 된다. -->
+          <p class="charge-note">학원 자소서 첨삭은 한 문항에 2~5만 원. 여기서는 <b>만 원으로 한 문항을 끝까지</b> —
+            소재 찾고, 검사하고, 고쳐 쓰기까지 해요.<br>카드·간편결제로 결제하면 <b>바로 충전</b>돼요.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ 결과 = 리포트 ══ -->
+    <section id="resultView" class="hidden">
+      <div class="rp-top">
+        <div class="rp-t">첨삭 리포트</div>
+        <div class="rp-s" id="rpSub"></div>
+      </div>
+
+      <div id="keepSec">
+        <div class="sec-h"><span class="sec-t">잘하고 있는 것 — 지키세요</span><span class="sec-n" id="keepN"></span></div>
+        <div id="keepList"></div>
+      </div>
+
+      <div id="dirSec">
+        <div class="sec-h"><span class="sec-t">글 전체에서 고칠 방향</span><span class="sec-n" id="dirN"></span></div>
+        <div id="dirList"></div>
+      </div>
+
+      <div id="rwSec">
+        <div class="sec-h"><span class="sec-t">문장 첨삭</span><span class="sec-n" id="rwN"></span></div>
+        <!-- ⚠️ 고친 예시는 그대로 베끼라는 뜻이 아니다 — 그 사실을 목록 위에 못 박는다.
+             (괄호 빈칸)은 학생이 제 사실로 채울 자리다. 서버 프롬프트 '첨삭의 선'과 한 쌍. -->
+        <p class="notice info" style="margin:0 0 10px">고친 예시는 <b>방향</b>이에요.
+          (괄호 빈칸)은 내 경험으로 채우고, 내 말투로 다시 다듬어 주세요.</p>
+        <div id="rwList"></div>
+      </div>
+
+      <div class="d-save">
+        <a id="verifyLink" href="#">KILL AI로 확인</a>
+        <a href="answers.html">저장소 보기</a>
+        <button type="button" class="pri" id="againBtn">새 첨삭</button>
+      </div>
+      <div id="resNotice"></div>
+    </section>
+  </main>
+
+  <!-- 바텀시트 — 항공사 선택 · 저장한 답변 고르기 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetH">
+    <div class="sheet-in">
+      <div class="sheet-grip"></div>
+      <div class="sheet-h" id="sheetH"></div>
+      <p class="sheet-s" id="sheetS"></p>
+      <div id="sheetBody"></div>
+    </div>
+  </div>
+
+  <!-- 포트원(PortOne) V2 결제 SDK — 크레딧 충전 -->
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const MIN = 100, MAX = 1500;                       // ⚠️ 중계 함수와 같은 값
+
+    let _answerId = null;       // 답변노트에서 불러온 글
+    let _answerTitle = '';
+    let _kind = 'interview';    // interview | essay
+    let _air = '';              // '' | 'all' | ke·lj·7c·tw·ze·yp·rf
+    let _wallet = null;         // credit_wallet() 결과
+    let _ready = false;         // ⚠️ 프로브 게이트 — 배포된 함수가 첨삭을 아는가
+    let _notes = [];
+    let _busy = false;
+
+    const AIRLINES = {
+      ke: { ko: '대한항공', en: 'KOREAN AIR' }, lj: { ko: '진에어', en: 'JIN AIR' },
+      '7c': { ko: '제주항공', en: 'JEJU AIR' }, tw: { ko: '티웨이항공', en: "T'WAY AIR" },
+      ze: { ko: '이스타항공', en: 'EASTAR JET' }, yp: { ko: '에어프레미아', en: 'AIR PREMIA' },
+      rf: { ko: '에어로케이', en: 'AERO K' },
+    };
+
+    function polishCost() { return Number(_wallet?.costs?.polish) || 10; }
+    function freePolishLeft() { return Number(_wallet?.polish_free_left) || 0; }
+
+    // ── 프로브 게이트 ─────────────────────────────────────────────────
+    // ⚠️⚠️ 지우지 말 것. 구버전 ai-killer 함수는 mode:'polish' 를 몰라서 요청이
+    //    **킬러 검사로 흘러가 3크레딧이 깎인다**(첨삭이 아니라 밑줄 목록이 온다).
+    //    프로브는 로그인·차감 없이 배포 버전만 알려주므로 여기서 미리 거른다.
+    //    polish_table 이 null 이면 함수는 새것인데 마이그레이션이 안 된 상태다.
+    async function checkReady() {
+      try {
+        const { data } = await MONC.sb.functions.invoke('ai-killer', { body: { probe: true } });
+        const okFn = !!(data && Array.isArray(data.features) && data.features.includes('polish'));
+        const okTable = !!(data && data.polish_table !== null && data.polish_table !== undefined);
+        _ready = okFn && okTable;
+        if (!_ready) {
+          console.warn('polish not ready — fn:', okFn, 'table:', okTable, 'version:', data && data.version);
+          $('inNotice').innerHTML = '<div class="notice info">첨삭이 아직 준비 중이에요. 잠시 뒤 다시 들러 주세요.</div>';
+        }
+      } catch (_) { _ready = false; }
+      onInput();
+    }
+
+    // ── 지갑 ──────────────────────────────────────────────────────────
+    async function loadBalance() {
+      let bal = 0;
+      try {
+        const { data } = await MONC.sb.rpc('credit_wallet');
+        _wallet = data || null;
+        bal = Number(_wallet?.balance) || 0;
+      } catch (_) { /* 지갑 RPC 미적용 — 서버가 차감 시점에 막는다 */ }
+      $('balBadge').textContent = bal > 0 ? '크레딧 ' + bal : '';
+      const cost = polishCost();
+      $('leftMsg').innerHTML = freePolishLeft() > 0
+        ? '<b>첫 첨삭 1회는 무료</b>예요 · 이후 1회 ' + cost + '크레딧'
+        : (bal >= cost ? '크레딧 <b>' + bal + '개</b> · 첨삭 1회에 ' + cost + '개가 쓰여요'
+                       : '첨삭 1회에 <b>' + cost + '크레딧</b> · 충전이 필요해요');
+      if (bal < cost && freePolishLeft() <= 0) $('chargeBox').classList.add('open');
+      return bal;
+    }
+
+    function paintFree() {
+      const msg = $('freeMsg'), go = $('freeGo');
+      if (_answerId) {
+        msg.innerHTML = '<b>저장소에서 불러온 답변이에요.</b><br>'
+          + esc(_answerTitle || '제목 없는 글') + ' · 리포트가 이 답변의 이력에 쌓여요.';
+        go.textContent = '바꾸기 →';
+        return;
+      }
+      msg.innerHTML = freePolishLeft() > 0
+        ? '<b>첫 첨삭은 무료예요.</b><br>저장한 답변을 골라 바로 받아 보세요.'
+        : '<b>저장소에서 답변을 골라 첨삭받으세요.</b><br>붙여넣은 글도 저장소에 자동으로 저장돼요.';
+      go.textContent = '고르기 →';
+    }
+
+    // ── 글 종류 ───────────────────────────────────────────────────────
+    function setKind(k) {
+      _kind = k === 'essay' ? 'essay' : 'interview';
+      const bi = $('kindInterview'), be = $('kindEssay');
+      const on = _kind === 'interview' ? bi : be, off = _kind === 'interview' ? be : bi;
+      on.classList.add('on'); on.setAttribute('aria-pressed', 'true');
+      off.classList.remove('on'); off.setAttribute('aria-pressed', 'false');
+      $('qIn').placeholder = _kind === 'interview'
+        ? '받은 질문을 그대로 넣어 주세요 (선택)' : '자소서 문항을 그대로 붙여넣어 주세요 (선택)';
+      $('ta').placeholder = _kind === 'interview'
+        ? '면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요.'
+        : '자소서 한 문항을 넣어 주세요. 여러 문항을 섞으면 정확도가 떨어져요.';
+    }
+
+    // ── 지망 항공사 ───────────────────────────────────────────────────
+    function setAir(code) {
+      _air = AIRLINES[code] ? code : (code === 'all' ? 'all' : '');
+      const btn = $('airBtn'), label = $('airLabel');
+      btn.querySelector('.en')?.remove();
+      btn.className = 'in-pick' + (_air ? ' set air-' + _air : '');
+      if (_air === 'all') label.textContent = '만능 (항공사 공통)';
+      else if (AIRLINES[_air]) {
+        label.textContent = AIRLINES[_air].ko;
+        const en = document.createElement('span');
+        en.className = 'en'; en.textContent = AIRLINES[_air].en;
+        btn.insertBefore(en, btn.querySelector('.chev'));
+      } else label.textContent = '지망 항공사 (선택)';
+      closeSheet();
+    }
+
+    function openAir() {
+      openSheet('지망 항공사', '항공사마다 자소서 흐름도, 면접이 보는 결도 달라요. 안 정했으면 비워도 돼요.',
+        '<button type="button" class="opt" data-air="all">만능'
+        + '<span class="opt-hint">어디에나 쓰는 답변</span></button>'
+        + Object.keys(AIRLINES).map((c) =>
+            '<button type="button" class="opt air-' + esc(c) + '" data-air="' + esc(c) + '">'
+            + esc(AIRLINES[c].ko) + '<span class="opt-en">' + esc(AIRLINES[c].en) + '</span></button>').join('')
+        + '<button type="button" class="opt" data-air="">아직 안 정했어요</button>');
+    }
+
+    // ── 입력 상태 ─────────────────────────────────────────────────────
+    function onInput() {
+      const n = $('ta').value.trim().length;
+      const c = $('cnt');
+      c.textContent = n.toLocaleString() + ' / 1,500자';
+      c.classList.toggle('over', n > MAX);
+      $('goBtn').disabled = _busy || !_ready || n < MIN || n > MAX;
+      $('goBtn').textContent = _busy ? '첨삭 중…'
+        : (n > 0 && n < MIN ? (MIN - n) + '자 더 필요해요' : '첨삭 받기');
+    }
+
+    // ── 저장한 답변 ───────────────────────────────────────────────────
+    async function loadNotes() {
+      // ⚠️ select('*') — 분류 컬럼 미적용 환경에서도 조회가 통째로 깨지지 않게
+      const { data } = await MONC.sb.from('answers').select('*')
+        .order('updated_at', { ascending: false }).limit(30);
+      _notes = data || [];
+      const qids = [...new Set(_notes.map((a) => a.question_id).filter(Boolean))];
+      if (qids.length) {
+        const { data: qs } = await MONC.sb.from('questions').select('id, content').in('id', qids);
+        const m = new Map((qs || []).map((q) => [q.id, q.content]));
+        _notes.forEach((a) => { a._title = a.title || m.get(a.question_id) || '제목 없는 글'; });
+      } else {
+        _notes.forEach((a) => { a._title = a.title || '제목 없는 글'; });
+      }
+    }
+
+    function openSheet(title, sub, html) {
+      $('sheetH').textContent = title;
+      $('sheetS').textContent = sub;
+      $('sheetBody').innerHTML = html;
+      document.body.classList.add('sheet-on');
+    }
+    function closeSheet() { document.body.classList.remove('sheet-on'); }
+
+    function openNotes() {
+      if (_answerId) {   // 이미 불러온 상태 — 누르면 해제
+        _answerId = null; _answerTitle = '';
+        $('ta').value = ''; $('qIn').value = '';
+        onInput(); refresh();
+        return;
+      }
+      const body = _notes.length
+        ? _notes.map((a, i) =>
+            '<button type="button" class="opt opt-note" data-i="' + i + '">'
+            + '<div class="t">' + esc(a._title) + '</div>'
+            + '<div class="m">' + esc((a.content || '').trim().slice(0, 46) || '아직 본문이 없어요') + '</div></button>').join('')
+        : '<p class="sheet-empty">저장한 답변이 아직 없어요.<br>'
+          + '<a href="answers.html#new">답변 저장소에서 바로 쓰기 →</a><br>'
+          + '여기에 붙여넣고 첨삭받아도 <b>자동으로 저장</b>돼요.</p>';
+      openSheet('저장한 답변에서 고르기',
+        '고르면 종류·항공사·문항이 그대로 따라오고, 리포트가 그 답변의 이력에 쌓여요.', body);
+    }
+
+    function useNote(a) {
+      _answerId = a.id; _answerTitle = a._title;
+      $('ta').value = a.content || '';
+      if (a.doc_kind) setKind(a.doc_kind);
+      else if (a.question_id) setKind('interview');
+      if (a.airline) setAir(a.airline);
+      $('qIn').value = (a._title && a._title !== '제목 없는 글') ? a._title.slice(0, 200) : '';
+      closeSheet();
+      onInput(); refresh();
+    }
+
+    async function refresh() {
+      await loadBalance();
+      paintFree();
+      $('srcLabel').textContent = _answerId ? '저장소에서 불러온 답변' : '자소서 1문항 · 답변 1개';
+    }
+
+    // ── 결과 그리기 ───────────────────────────────────────────────────
+    // fix 안의 (괄호 빈칸) — 학생이 제 사실로 채울 자리를 눈에 띄게 칠한다.
+    // ⚠️ esc 를 거친 문자열에만 쓴다(괄호는 esc 대상이 아니라 안전).
+    function markBlanks(escaped) {
+      return escaped.replace(/\(([^()<>]{1,24})\)/g, '<span class="blank">($1)</span>');
+    }
+
+    function showResult(r) {
+      $('inputView').classList.add('hidden');
+      $('resultView').classList.remove('hidden');
+
+      const st = r.strengths || [], im = r.improvements || [], rw = r.rewrites || [];
+      const when = r._when ? new Date(r._when) : new Date();
+      $('rpSub').textContent = (r.char_count || 0).toLocaleString() + '자 · '
+        + when.getFullYear() + '.' + (when.getMonth() + 1) + '.' + when.getDate()
+        + (r._title ? ' · ' + r._title : '');
+
+      $('keepSec').style.display = st.length ? '' : 'none';
+      $('keepN').textContent = st.length + '가지';
+      $('keepList').innerHTML = st.map((s) =>
+        '<div class="keep">'
+        + (s.quote ? '<div class="keep-q"><em>' + esc(s.quote) + '</em></div>' : '')
+        + '<div class="keep-r">' + esc(s.note) + '</div></div>').join('');
+
+      $('dirSec').style.display = im.length ? '' : 'none';
+      $('dirN').textContent = im.length + '가지';
+      $('dirList').innerHTML = im.map((d) =>
+        '<div class="dir"><div class="dir-t">' + esc(d.note) + '</div>'
+        + '<div class="dir-h"><b>이렇게:</b> ' + esc(d.how) + '</div></div>').join('');
+
+      $('rwSec').style.display = rw.length ? '' : 'none';
+      $('rwN').textContent = rw.length + '문장';
+      $('rwList').innerHTML = rw.map((w) =>
+        '<div class="rw">'
+        + '<span class="rw-lbl">지금</span><p class="rw-now">' + esc(w.quote) + '</p>'
+        + '<div class="rw-fix"><span class="rw-lbl">이렇게</span><p>' + markBlanks(esc(w.fix)) + '</p></div>'
+        + '<p class="rw-why">' + esc(w.why) + '</p></div>').join('');
+
+      // 첨삭 → 고침 → 킬러로 확인이 설계된 동선 — 같은 답변을 물고 넘어간다
+      $('verifyLink').href = _answerId
+        ? 'ai-killer.html?answer=' + encodeURIComponent(_answerId) : 'ai-killer.html';
+      document.documentElement.scrollTop = 0;
+    }
+
+    // ── 첨삭 실행 ─────────────────────────────────────────────────────
+    async function run() {
+      if (_busy || !_ready) return;
+      const text = $('ta').value.trim();
+      if (text.length < MIN || text.length > MAX) return;
+      _busy = true; onInput();
+      $('goBtn').innerHTML = '<span class="spin"></span>첨삭 중…';
+      // ⚠️ Opus + effort high 라 킬러보다 오래 걸린다 — 기다리는 이유를 말해 준다
+      $('inNotice').innerHTML = '<div class="notice info">문장을 하나씩 다시 쓰고 있어요 · 보통 30초~1분 걸려요.</div>';
+
+      try {
+        const { data, error } = await MONC.sb.functions.invoke('ai-killer', {
+          body: {
+            mode: 'polish',
+            source: _answerId ? 'answer' : 'paste', text, answerId: _answerId,
+            question: $('qIn').value.trim(), docKind: _kind, airline: _air,
+          },
+        });
+        if (error || !data) throw new Error('invoke_failed');
+        if (!data.ok) {
+          $('inNotice').innerHTML = '<div class="notice warn">' + esc(data.error || '첨삭에 실패했어요.')
+            + (data.code === 'no_credit' ? '<br>아래에서 충전하면 바로 첨삭받을 수 있어요.' : '') + '</div>';
+          if (data.code === 'no_credit') $('chargeBox').classList.add('open');
+          await refresh();
+          return;
+        }
+        if (data.answerId) { _answerId = data.answerId; }
+        data._title = _answerTitle || '';
+        showResult(data);
+        if (data.autoSaved) loadNotes();
+      } catch (_) {
+        $('inNotice').innerHTML = '<div class="notice warn">첨삭에 실패했어요. 잠시 뒤 다시 시도해 주세요. '
+          + '크레딧이 차감됐다면 자동으로 돌려드립니다.</div>';
+      } finally {
+        _busy = false; onInput();
+        await loadBalance();
+      }
+    }
+
+    // ── 충전(포트원) — ai-killer.html 과 같은 문법 ────────────────────
+    const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
+    const PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59';
+    const PENDING_KEY = 'monc_pending_credit_pay';
+    let _packs = [];
+    let _payRestore = null;   // 결제사에서 뒤로 왔을 때 버튼만 되돌린다(bfcache — 입력값을 살려야 해 reload 금지)
+
+    async function loadPacks() {
+      try {
+        const { data } = await MONC.sb.from('site_config').select('value').eq('key', 'credit_packs').maybeSingle();
+        _packs = Array.isArray(data && data.value) ? data.value.filter((p) => p && p.tool === 'ai_killer') : [];
+      } catch (_) { _packs = []; }
+      const el = $('packList');
+      if (!_packs.length) {
+        el.innerHTML = '<p class="charge-note">충전 상품이 아직 준비되지 않았어요.</p>';
+        return;
+      }
+      // 첨삭 화면이니 '첨삭 몇 회'로 환산해 보여준다(같은 지갑 — 팩은 도구 공용이다)
+      const cost = polishCost();
+      el.innerHTML = _packs.map((p) => {
+        const n = Number(p.count) || 0;
+        return '<button class="pack" type="button" data-pack="' + esc(p.id) + '">'
+          + '<span class="n">' + esc(p.label || (n + '크레딧'))
+          + '<em class="pack-can">첨삭 ' + Math.floor(n / cost) + '회</em></span>'
+          + '<span class="p">' + Number(p.price).toLocaleString() + '원</span></button>';
+      }).join('');
+    }
+
+    async function charge(packId) {
+      const pack = _packs.find((p) => String(p.id) === String(packId));
+      if (!pack) return;
+      if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.'); return; }
+      const btn = document.querySelector('[data-pack="' + packId + '"]');
+      const orig = btn.innerHTML;
+      btn.disabled = true; btn.textContent = '결제 진행 중…';
+      _payRestore = () => { if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; } };
+      try {
+        const paymentId = 'monc-cr-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+        sessionStorage.setItem(PENDING_KEY, JSON.stringify({ paymentId, packId }));
+        const rp = new URLSearchParams(location.search); rp.set('payresult', '1');
+        const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
+
+        const res = await window.PortOne.requestPayment({
+          storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+          paymentId, orderName: '몬크 크레딧 ' + (pack.label || pack.count + '개'),
+          totalAmount: Number(pack.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
+          redirectUrl,
+        });
+        sessionStorage.removeItem(PENDING_KEY);
+        if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
+        btn.textContent = '충전 확인 중…';
+        await completeCharge(paymentId, packId);
+      } catch (e) {
+        console.error(e);
+        alert('결제 중 오류가 발생했어요: ' + (e && e.message ? e.message : e));
+      } finally {
+        _payRestore = null;
+        if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; }
+      }
+    }
+
+    async function completeCharge(paymentId, packId) {
+      try {
+        const { data, error } = await MONC.sb.functions.invoke('verify-payment', {
+          body: { paymentId, creditPack: packId },
+        });
+        if (error || !data || !data.ok) {
+          $('inNotice').innerHTML = '<div class="notice warn">결제는 됐는데 충전 확인에 실패했어요. '
+            + '잠시 뒤 새로고침해 보시고, 그래도 안 되면 알려 주세요(결제번호 ' + esc(paymentId) + ').</div>';
+          return false;
+        }
+        await loadBalance();
+        $('chargeBox').classList.remove('open');
+        $('inNotice').innerHTML = '<div class="notice info">크레딧 ' + data.added + '개를 충전했어요. 이어서 첨삭받아 보세요.</div>';
+        onInput();
+        return true;
+      } catch (_) {
+        $('inNotice').innerHTML = '<div class="notice warn">충전 확인에 실패했어요. 새로고침해 주세요.</div>';
+        return false;
+      }
+    }
+
+    async function handlePayReturn() {
+      const p = new URLSearchParams(location.search);
+      if (p.get('payresult') !== '1') return;
+      const code = p.get('code'), message = p.get('message');
+      ['payresult','paymentId','code','message','pgCode','pgMessage','transactionType','txId']
+        .forEach((k) => p.delete(k));
+      history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : ''));
+      const raw = sessionStorage.getItem(PENDING_KEY);
+      sessionStorage.removeItem(PENDING_KEY);
+      if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
+      if (!raw) return;
+      let pending; try { pending = JSON.parse(raw); } catch (_) { return; }
+      await completeCharge(pending.paymentId, pending.packId);
+    }
+
+    window.addEventListener('pageshow', (e) => {
+      if (!e.persisted || !_payRestore) return;
+      const restore = _payRestore; _payRestore = null;
+      restore();
+    });
+
+    // ── 배선 ──────────────────────────────────────────────────────────
+    $('chargeToggle').addEventListener('click', () => $('chargeBox').classList.toggle('open'));
+    $('packList').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pack]');
+      if (b && !b.disabled) charge(b.dataset.pack);
+    });
+    $('ta').addEventListener('input', onInput);
+    $('goBtn').addEventListener('click', run);
+    $('kindInterview').addEventListener('click', () => setKind('interview'));
+    $('kindEssay').addEventListener('click', () => setKind('essay'));
+    $('againBtn').addEventListener('click', () => {
+      $('resultView').classList.add('hidden');
+      $('inputView').classList.remove('hidden');
+      // ⚠️ 종류·항공사는 그대로 둔다 — 다음 글도 같은 조건일 확률이 훨씬 높다.
+      _answerId = null; _answerTitle = '';
+      $('ta').value = ''; $('qIn').value = ''; onInput(); refresh();
+      document.documentElement.scrollTop = 0;
+    });
+    $('airBtn').addEventListener('click', openAir);
+    $('freeBox').addEventListener('click', openNotes);
+    $('sheetMask').addEventListener('click', closeSheet);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+    $('sheetBody').addEventListener('click', (e) => {
+      const air = e.target.closest('[data-air]');
+      if (air) { setAir(air.dataset.air); return; }
+      const note = e.target.closest('[data-i]');
+      if (note) useNote(_notes[Number(note.dataset.i)]);
+    });
+
+    // ── 저장소·킬러에서 들어온 경우 ───────────────────────────────────
+    // ?answer=<id>  그 답변을 불러온 상태로 시작 (킬러 dock '첨삭받기' · 저장소 CTA)
+    // ?polish=<id>  지난 리포트를 그대로 다시 그린다 (저장소 이력 '보기' — 차감 없음)
+    async function handleEntry() {
+      const p = new URLSearchParams(location.search);
+      const answer = p.get('answer'), polish = p.get('polish');
+      if (polish) {
+        try {
+          const { data } = await MONC.sb.from('answer_polishes')
+            .select('*').eq('id', polish).maybeSingle();
+          if (data) {
+            if (data.doc_kind) setKind(data.doc_kind);
+            $('qIn').value = data.question || '';
+            _answerId = data.answer_id || null;
+            const r = data.result || {};
+            showResult({
+              ok: true, strengths: r.strengths || [], improvements: r.improvements || [],
+              rewrites: r.rewrites || [], char_count: data.char_count, _when: data.created_at,
+            });
+            return true;
+          }
+        } catch (_) { /* 지워졌거나 남의 것 — 입력 화면으로 떨어진다 */ }
+      }
+      if (answer) {
+        const a = _notes.find((n) => n.id === answer);
+        if (a) { useNote(a); return false; }
+      }
+      return false;
+    }
+
+    // ── 진입 ──────────────────────────────────────────────────────────
+    (async () => {
+      const session = await MONC.requireSession();              // 미로그인 → login 으로
+      if (!session) return;
+      if (!(await MONC.requireConsent())) return;               // ⚠️ 동의 게이트 — 빼면 주소창으로 우회된다
+      checkReady();                                             // 프로브 — 기다리지 않고 병렬로 돈다
+      await loadPacks();
+      await loadNotes();
+      await refresh();
+      setKind(_kind);
+      onInput();
+      await handleEntry();
+      await handlePayReturn();
+    })();
+  })();
+  </script>
+</body>
+</html>

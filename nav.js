@@ -44,7 +44,7 @@
      '내가 어디에 있는지'를 알 수 있다(오너가 불편해한 지점의 절반이 이것이다). */
   var SECTION_OF = {
     'briefing.html': 'briefing', 'news.html': 'briefing', 'sojae.html': 'briefing',
-    'ai-killer.html': 'briefing', 'answers.html': 'briefing',
+    'ai-killer.html': 'briefing', 'answers.html': 'briefing', 'polish.html': 'briefing',
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',

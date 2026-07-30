@@ -306,6 +306,7 @@
 
     let ROWS = [];              // 전체 답변(최신순)
     let CHECKS = new Map();     // answer_id → 검사 이력(최신순)
+    let POLISHES = new Map();   // answer_id → 첨삭 이력(최신순) — 킬러 검사와 나란한 1:N
     let filter = { status: 'all', cat: 'all', q: '' };
     let ME = null;
 
@@ -393,25 +394,38 @@
         bits.push(`<span class="tag tag-grade grade-${esc(last.grade)}">${esc(GRADE[last.grade] || last.grade)}`
           + (list.length > 1 ? ` <i>· ${list.length}회 검사</i>` : '') + '</span>');
       }
+      const pols = POLISHES.get(a.id) || [];
+      if (pols.length) bits.push(`<span class="tag">첨삭 ${pols.length}회</span>`);
       return bits.length ? `<div class="note-meta">${bits.join('')}</div>` : '';
     }
 
-    // 펼쳤을 때 아래 — 검사 이력.
+    // 펼쳤을 때 아래 — 검사·첨삭 이력.
     // ⚠️ 한 답변을 고쳐 가며 여러 번 검사하는 게 정상 사용이라 1:N 으로 쌓인다.
-    //    지난 결과는 ai-killer.html?check=<id> 가 저장된 원본 그대로 다시 그린다.
+    //    지난 결과는 ai-killer.html?check=<id> / polish.html?polish=<id> 가
+    //    저장된 원본 그대로 다시 그린다(재검사 아님 — 차감 없음).
     function histHtml(a) {
       const list = CHECKS.get(a.id) || [];
-      const rows = list.map(c =>
-        `<a class="hrow grade-${esc(c.grade)}" href="ai-killer.html?check=${encodeURIComponent(c.id)}">
-           <span class="hrow-d">${fmt(c.created_at)}</span>
-           <span class="hrow-g">${esc(GRADE[c.grade] || c.grade)}</span>
-           <span class="hrow-c">고칠 곳 ${Number(c.hit_count) || 0}</span>
-           <span class="hrow-go">보기 →</span></a>`).join('');
+      const pols = POLISHES.get(a.id) || [];
+      // 두 이력을 시간순 하나로 합친다 — 학생이 겪은 순서 그대로 읽히게
+      const merged = [
+        ...list.map(c => ({ t: c.created_at, html:
+          `<a class="hrow grade-${esc(c.grade)}" href="ai-killer.html?check=${encodeURIComponent(c.id)}">
+             <span class="hrow-d">${fmt(c.created_at)}</span>
+             <span class="hrow-g">${esc(GRADE[c.grade] || c.grade)}</span>
+             <span class="hrow-c">고칠 곳 ${Number(c.hit_count) || 0}</span>
+             <span class="hrow-go">보기 →</span></a>` })),
+        ...pols.map(p => ({ t: p.created_at, html:
+          `<a class="hrow" href="polish.html?polish=${encodeURIComponent(p.id)}">
+             <span class="hrow-d">${fmt(p.created_at)}</span>
+             <span class="hrow-g" style="color:var(--accent-ink)">첨삭 리포트</span>
+             <span class="hrow-go">보기 →</span></a>` })),
+      ].sort((x, y) => new Date(y.t) - new Date(x.t));
       return `<div class="hist">
-        <div class="hist-h"><span class="hist-t">검사 이력</span><span class="hist-n">${list.length}회</span></div>
-        ${rows || '<p class="hist-none">아직 검사하지 않은 답변이에요.</p>'}
+        <div class="hist-h"><span class="hist-t">검사·첨삭 이력</span><span class="hist-n">${merged.length}회</span></div>
+        ${merged.map(m => m.html).join('') || '<p class="hist-none">아직 검사하지 않은 답변이에요.</p>'}
         <a class="hist-cta" href="ai-killer.html?answer=${encodeURIComponent(a.id)}">
           ${list.length ? '고쳐서 다시 KILL AI' : '이 답변 KILL AI'}</a>
+        <a class="hist-cta" style="margin-top:8px" href="polish.html?answer=${encodeURIComponent(a.id)}">이 답변 첨삭받기</a>
       </div>`;
     }
 
@@ -571,6 +585,18 @@
           CHECKS.get(c.answer_id).push(c);
         });
       } catch (_) { /* AI킬러 마이그레이션 전 — 이력 없이 그린다 */ }
+
+      // 첨삭 이력 — 킬러 검사와 나란한 1:N. 테이블 미적용(20260730130000 전)이면 조용히 넘어간다.
+      try {
+        const { data: ps } = await MONC.sb.from('answer_polishes')
+          .select('id, answer_id, created_at')
+          .eq('member_id', me).order('created_at', { ascending: false });
+        (ps || []).forEach(p => {
+          if (!p.answer_id) return;
+          if (!POLISHES.has(p.answer_id)) POLISHES.set(p.answer_id, []);
+          POLISHES.get(p.answer_id).push(p);
+        });
+      } catch (_) { /* 첨삭 마이그레이션 전 — 이력 없이 그린다 */ }
 
       const nDraft = ROWS.filter(isDraft).length;
       document.getElementById('hSub').textContent = ROWS.length
