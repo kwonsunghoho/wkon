@@ -27,12 +27,12 @@
      ⚠️ 실전 모의면접(rehearsal)은 배포 보류라 briefing.html 에서도 숨겨져 있다 — 넣지 말 것. */
   var BRIEFING_SUB = [
     ['briefing.html', '승준노트 한눈에', '도구 전체 보기'],
-    ['news.html', '항공 뉴스', '10개 항공사 소식 · 스크랩'],
-    ['sojae.html', '답변 기초 쌓기', '자기객관화부터 차근차근'],
-    ['mypage.html#sec-answers', '답변노트', '쓴 답변 한곳에 모아 보기'],
+    ['mypage.html#sec-answers', '나만의 승준노트', '쓴 답변이 전부 모이는 곳'],
+    ['news.html', '항공사 뉴스&산업분석', '10개 항공사 소식 · 스크랩'],
+    ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
+    ['polish.html', '나의 답변 연구실', "문장을 '지금 → 이렇게'로"],
     ['ai-killer.html', 'AI킬러', 'AI 같은 표현 찾아 밑줄로'],
-    ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"],
-    ['programs.html', '매일 기출', '하루 한 문제, 내 경험으로']
+    ['programs.html', '필수 기출 하루 한 개', '하루 한 개, 내 경험으로']
   ];
   var CHALLENGE_SUB = [
     ['challenges.html', '챌린지 한눈에', '모집 현황 · 전체 보기'],
