@@ -72,9 +72,13 @@ create table if not exists public.sojae_materials (
 comment on table public.sojae_materials is
   '소재 서랍 — 다듬기(AI)가 자동 생성하는 소재 카드. 문제당 1카드 upsert. 학생이 수정·삭제 가능.';
 
--- 문제당 1카드. question_id 가 NULL 인 행(문제 없이 만든 카드)은 유니크 대상에서 빠진다(Postgres 규칙).
-create unique index if not exists sojae_materials_member_question_uq
-  on public.sojae_materials (member_id, question_id) where question_id is not null;
+-- 문제당 1카드. ⚠️ 부분 인덱스(where question_id is not null)로 두면 PostgREST upsert 의
+-- ON CONFLICT (member_id, question_id) 가 인덱스를 못 찾아 카드 저장이 전부 실패한다
+-- (2026-07-30 배포 검증에서 실측). 전체 유니크로 둔다 — question_id 가 NULL 인 행은
+-- 기본 규칙(NULLS DISTINCT)상 여러 개 허용되므로 의도(문제 없는 카드 자유)도 그대로다.
+drop index if exists sojae_materials_member_question_uq;
+create unique index sojae_materials_member_question_uq
+  on public.sojae_materials (member_id, question_id);
 
 drop trigger if exists trg_sojae_materials_updated_at on public.sojae_materials;
 create trigger trg_sojae_materials_updated_at
