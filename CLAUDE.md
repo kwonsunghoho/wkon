@@ -126,6 +126,17 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
   - **⚠️ fix 는 학생이 쓴 사실만 재료로**(프롬프트 '첨삭의 선'). 없는 숫자·일화를 지어내면 학생이 그 거짓을 면접장까지 들고 간다 — 부족한 자리는 **(괄호 빈칸)**으로 남기고 화면이 그 괄호를 칠해 준다(`markBlanks`). 합격자 문장 모방·옮겨쓰기 금지는 킬러와 동일(결정 10).
   - 기록 = `answer_polishes`(migration `20260730130000_answer_polishes.sql` — **owner 실행 필요**). `ai_killer_checks` 를 본뜬 구조(1:N · on delete set null · 쓰기는 service role 만). 미적용 degrade: 첨삭만 '준비 중', 킬러·소재 영향 없음. 이력 복원은 `polish.html?polish=<id>`(차감 없음), answers.html 이 검사·첨삭 이력을 시간순 한 줄로 합쳐 그린다.
 
+### 소재 발굴 v2 — 교재 방법론 이식 (2026-07-30 신설 · 스펙 docs/superpowers/specs/2026-07-30-sojae-v2-design.md)
+구조: 되묻기(Haiku 4.5·무료·재료 체크리스트) → 다듬기(Sonnet 5·2크레딧·**소재 카드+뼈대 두 산출물**) → 최종 작성. 카드는 서버가 `sojae_materials`에 자동 upsert(문제당 1장), answers.html [내 소재] 탭이 서랍.
+- **⚠️⚠️ 다듬기 버튼은 두 번째 답변부터 항상 열려 있다(이탈 가드 — 오너 확정).** AI의 `materials_sufficient`는 추천 신호일 뿐 관문이 아니다. `userMsgCount >= 2 → showRefine()`을 지우거나 판정 뒤로 숨기지 말 것.
+- **⚠️ 유형은 BEI 5종 — 코드 4종(experience/values/judgment/company) 유지 + `personal`만 신설.** 라벨(과거경험검증형·직무핵심역량형·상황대처형·기업관심도형·개인신상형)은 `sojae-common.js` CAT_LABEL 한 곳. 코드명을 바꾸면 questions·answers 기존 데이터가 깨진다.
+- **⚠️ 교재 노하우는 공개 레포에 없다.** 프롬프트 본문 = `sojae_playbook` 테이블(RLS 관리자만, 서버는 service role). 내용 시드는 SQL로 대화창 전달(커밋 금지). SQL Editor에서 고치면 **재배포 없이 즉시 반영**. 함수 내 `FB_*` 상수는 v1 수준 폴백일 뿐 — 새 노하우를 상수에 넣지 말 것.
+- **⚠️ 신구 판정은 프로브가 아니라 응답 형태.** 다듬기 응답에 `card`/`skeleton`이 있으면 v2 렌더, 없으면(구함수) `message` 렌더. 차감 로직이 신구 동일이라 과금 위험이 없어 폴리시식 프로브 게이트를 쓰지 않았다. 서버 프로브(`POST {probe:true}` → version·playbook_keys)는 배포 확인용으로 존재 — **코드를 고치면 FN_VERSION도 같이 올릴 것.**
+- **⚠️ 응답의 `message` 필드를 지우지 말 것** — 구버전 화면 호환(뼈대 평문 병합본). ⚠️ 되묻기(Haiku 4.5)에 `output_config.effort`를 넣지 말 것(미지원 — 400).
+- 카드 upsert 키 = `(member_id, question_id)` — 재다듬기는 카드를 덮는다(의도). `question_id` 없으면 저장 생략. 저장 실패는 뼈대를 막지 않는다(`card_saved:false`).
+- 계측: page_events `path:'/sojae'` — sojae_start/turn/refine_click/refine_done/card_saved/save_final. 2단계(소재 매칭 추천) 착수 판단 근거.
+- 차감·환급·무료 규칙은 아래 '답변 저장소 + 크레딧' 절 그대로(v2에서 불변).
+
 ### 답변 저장소 + 크레딧 (2026-07-25 재설계 — 구조가 뒤집혔다)
 
 **구조의 중심은 AI킬러가 아니라 `answers`(답변 저장소)이고, KILL AI 는 그 위에서 도는 기능이다.**
