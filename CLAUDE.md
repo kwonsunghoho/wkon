@@ -147,6 +147,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 답변 첨삭 | `polish.html`(서버는 ai-killer 의 `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB) | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
 | 답변 저장소·크레딧 | `answers.html`·`mypage.html` | 저장 무료·무제한, answers/mypage 는 같이 고친다 | `docs/notes/credits.md` |
+| 마이페이지 | `mypage.html` | '오늘 한 칸'엔 사이트가 아는 사실만(제출 여부 문장 금지), 접이는 데이터 있는 줄만 | `docs/notes/mypage.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer 의 `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
 | admin | `admin.html` | 좌측 사이드바 셸(운영/상품/콘텐츠 그룹) + '오늘' 브리핑 — 탭을 추가하면 어느 그룹인지부터 정한다 | `docs/notes/admin.md` |

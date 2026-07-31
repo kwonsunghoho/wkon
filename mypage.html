@@ -12,376 +12,393 @@
   <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
   <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
   <meta name="theme-color" content="#102B56">
-  <!-- 위젯 수치는 제목 글꼴(--serif = SUIT, 2026-07-29 전환) -->
   <link rel="stylesheet" href="tokens.css">
   <!-- 공용 상단 메뉴(2026-07-30) — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
   <link rel="stylesheet" href="nav.css">
   <script src="nav.js" defer></script>
   <style>
+    /* ══ 마이페이지 '오늘 한 칸' 구조 (2026-07-31 재설계 ②안 확정 — outputs/mypage-mockup.html) ══
+       원칙: 위에는 '지금 할 일' 하나(다크 네이비 카드), 과거 기록은 전부 접힌 줄.
+       "오늘 미션이 안 올라왔어요" 같은 문장은 금지 — 제출이 카톡방이라 사이트가 모른다.
+       화면에는 사이트가 아는 사실(일차·기록·신청 상태)만 쓴다. 상세 근거는 docs/notes/mypage.md */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
       background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6;
     }
-    .wrap { max-width: 780px; margin: 0 auto; padding: 24px 20px 80px; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .brand { display: flex; align-items: center; }
-    .brand-link { display: flex; align-items: center; text-decoration: none; }
-    .brand-link img { height: 22px; width: auto; display: block; }
-    .brand-link:hover { opacity: .7; }
-    .admin-link { font-size: 13px; color: var(--action); text-decoration: none; border: 1px solid var(--action);
-      border-radius: 999px; padding: 10px 14px; min-height: 44px; margin-right: 8px; font-weight: 700;
-      display: inline-flex; align-items: center; }
-    .admin-link:hover { background: var(--action); color: #fff; }
-    .logout { font-size: 14px; color: var(--text-muted); background: none; border: 1px solid var(--border);
-              border-radius: 999px; padding: 10px 18px; min-height: 44px; cursor: pointer; }
-    .logout:hover { border-color: var(--action); color: var(--action); }
+    .v2 {
+      padding: 16px 0 64px;
+      /* 기능색(에러·경고 빨강)만 지역 토큰 — 그 외 색은 전부 전역 팔레트 var() */
+      --v2-bad: #B3261E;
+      --v2-hair-on-dark: color-mix(in srgb, var(--action-on-dark) 30%, transparent);
+    }
+    .v2-wrap { max-width: 780px; margin: 0 auto; padding: 0 16px; }
+    .v2-num { font-variant-numeric: tabular-nums; }
 
-    .card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
-            box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; scroll-margin-top: 12px; }
-    .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .card .hint { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
-    /* 카드 헤더 — 제목 + 우측 '전체 보기' (카드 안엔 미리보기만, 전체는 전용 페이지) */
-    .card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .card-head h2 { margin-bottom: 0; }
-    .card-more { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding-left: 8px;
+    /* ── 상단 신원 줄 (로그아웃은 맨 아래 '내 정보' 접이로 내렸다) ── */
+    .v2-id { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 4px 2px 14px; }
+    .v2-id-name { font-family: var(--serif); font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+    .v2-id-sub { font-size: 13px; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v2-admin { margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px;
       font-size: 13px; font-weight: 700; color: var(--accent-ink); text-decoration: none; white-space: nowrap; }
-    .card-more:hover { color: var(--action-dark); }
+    .v2-admin:hover { color: var(--action-dark); }
 
-    /* 내 특강 */
-    .lec-list { list-style: none; }
-    .lec-list li { padding: 12px 0; border-bottom: 1px solid var(--border-soft); display: flex;
-      align-items: center; gap: 10px; }
-    .lec-list li:last-child { border-bottom: 0; }
-    .lec-body { min-width: 0; flex: 1; }
-    .lec-title { font-size: 15px; font-weight: 700; line-height: 1.4; }
-    .lec-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
-    .lec-badge { flex: 0 0 auto; font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 4px 10px;
-      background: var(--action-tint); color: var(--accent-ink); }
-    .lec-badge.past { background: var(--surface2); color: var(--text-muted); }
-    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+    /* ── 오늘 한 칸 (주 카드) ── */
+    .v2-today { background: var(--action); border-radius: var(--radius-lg); padding: 18px 18px 20px;
+      color: var(--text-on-dark); box-shadow: var(--shadow-action); }
+    .v2-today-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .v2-today-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.04em; color: var(--action-on-dark); }
+    .v2-today-tag svg { width: 15px; height: 15px; flex: 0 0 auto; }
+    .v2-today-date { font-size: 12px; color: var(--action-on-dark); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .v2-today-t { font-family: var(--serif); font-size: 22px; line-height: 1.35; font-weight: 800;
+      letter-spacing: -0.03em; color: var(--action-ink); margin: 0 0 8px; word-break: keep-all; }
+    .v2-today-d { font-size: 14px; line-height: 1.6; color: var(--text-on-dark); margin: 0 0 16px; word-break: keep-all; }
+    /* 다크 면 CTA = 흰 알약 + 네이비 글씨 */
+    .v2-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+      min-height: 50px; padding: 0 18px; background: var(--surface); color: var(--action);
+      border: 0; border-radius: 999px; font-size: 16px; font-weight: 800; letter-spacing: -0.01em;
+      text-decoration: none; cursor: pointer; font-family: inherit; }
+    .v2-cta svg { width: 18px; height: 18px; flex: 0 0 auto; }
+    .v2-today-next { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 14px;
+      padding: 10px 2px 0; border-top: 1px solid var(--v2-hair-on-dark);
+      color: var(--action-on-dark); text-decoration: none; min-width: 0; }
+    .v2-next-l { font-size: 12px; font-weight: 700; flex: 0 0 auto; letter-spacing: 0.02em; }
+    .v2-next-q { font-size: 13px; color: var(--text-on-dark); min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .v2-next-ar { flex: 0 0 auto; width: 16px; height: 16px; }
 
-    /* ── 라인 아이콘(스프라이트, currentColor 리컬러) ── */
-    .ic { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2;
-      stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
-    .ic.sm { width: 15px; height: 15px; }
-    .chev { width: 14px; height: 14px; stroke-width: 2.4; }
+    /* ── 얇은 카드 공통 ── */
+    .v2-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+      padding: 14px 16px; margin-top: 12px; }
 
-    /* ── 멤버십 카드 (다크 에스프레소 + 코랄 글로우) — 프로필 + 결제 스트립 ── */
-    .mcard { position: relative; background: linear-gradient(135deg, #2E2822 0%, #3E3125 62%, #54402A 100%);
-      color: #F5F1E8; border-radius: var(--radius); padding: 20px 18px 16px; overflow: hidden;
-      box-shadow: 0 14px 36px rgba(36,26,18,.30); margin: 20px 0 14px; }
-    .mcard::after { content: ''; position: absolute; right: -40px; top: -52px; width: 170px; height: 170px;
-      border-radius: 50%; background: radial-gradient(closest-side, rgba(27,58,107,.26), transparent 72%); }
-    .mcard > * { position: relative; z-index: 1; }
-    .m-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .m-logo { font-family: var(--serif); font-weight: 900; font-size: 15px; letter-spacing: .04em; }
-    .m-role { font-size: 10.5px; font-weight: 800; letter-spacing: .14em; color: var(--action-on-dark); }
-    .m-name { font-family: var(--serif); font-weight: 700; font-size: 22px; }
-    .m-name .name { color: var(--action-on-dark); }
-    .m-sub { font-size: 12.5px; color: #CBBFA8; margin: 2px 0 14px; overflow-wrap: anywhere; }
-    /* 결제 스트립(카드 안 유리판) — 누르면 신청 내역으로 */
-    .paystrip { display: flex; background: rgba(255,255,255,.07); border: 1px solid rgba(245,241,232,.12);
-      border-radius: var(--radius-sm); padding: 11px 0; text-decoration: none; color: inherit; }
-    .paystrip .ps-cell { flex: 1; text-align: center; position: relative; }
-    .paystrip .ps-cell + .ps-cell::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
-      width: 1px; background: rgba(245,241,232,.12); }
-    .ps-num { font-family: var(--serif); font-weight: 900; font-size: 21px; font-variant-numeric: tabular-nums; }
-    .ps-num.hot { color: var(--action-on-dark); }
-    .ps-lbl { font-size: 11.5px; color: #CBBFA8; font-weight: 700; margin-top: 1px; }
+    /* 진행 한 줄 */
+    .v2-prog-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+    .v2-prog-t { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+    .v2-prog-r { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .v2-bar { display: flex; gap: 3px; margin: 12px 0 10px; }
+    .v2-bar i { flex: 1 1 0; min-width: 0; height: 8px; border-radius: 3px; background: var(--border-soft); }
+    .v2-bar i.is-ok { background: var(--action); }
+    .v2-bar i.is-bad { background: var(--v2-bad); }
+    .v2-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+    .v2-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+      color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .v2-legend span::before { content: ""; width: 8px; height: 8px; border-radius: 3px; background: var(--border-soft); }
+    .v2-legend span.is-ok::before { background: var(--action); }
+    .v2-legend span.is-bad::before { background: var(--v2-bad); }
 
-    /* ── 위젯 그리드 (토스형: 한눈 요약, 누르면 상세 섹션으로) ── */
-    .wgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .w { position: relative; display: block; background: var(--surface); border: 1px solid var(--border-soft);
-      border-radius: var(--radius-sm); box-shadow: var(--shadow); padding: 16px; text-decoration: none;
-      color: inherit; min-height: 44px; }
-    a.w:hover { border-color: var(--accent-dark); }
-    .w .w-lbl { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-muted); }
-    .w .w-lbl .ic { width: 15px; height: 15px; color: var(--accent-ink); }
-    .w .w-val { font-family: var(--serif); font-weight: 900; font-size: 25px; margin-top: 4px;
-      font-variant-numeric: tabular-nums; }
-    .w .w-val em { font-style: normal; font-size: 13px; color: var(--accent-ink); font-weight: 700; }
-    .w .w-val.txt { font-size: 16px; margin-top: 9px; }
-    .w .w-cap { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
-    .w .w-arrow { position: absolute; top: 14px; right: 12px; color: var(--text-dim); }
-    .w.wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+    /* 다가오는 일정 */
+    .v2-up { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .v2-up-body { min-width: 0; flex: 1 1 auto; }
+    .v2-up-t { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.01em;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v2-up-d { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .v2-dday { flex: 0 0 auto; white-space: nowrap; background: var(--action-tint); color: var(--action);
+      font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; }
 
-    /* 진행률 링 */
-    .ring { position: relative; width: 74px; height: 74px; flex: 0 0 74px; }
-    .ring svg { transform: rotate(-90deg); display: block; }
-    .ring .ring-txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      font-family: var(--serif); font-weight: 900; font-size: 17px; font-variant-numeric: tabular-nums; }
-    .ring .ring-txt em { font-style: normal; font-size: 10px; color: var(--accent-ink); }
-    .w-days-num { font-family: var(--serif); font-weight: 900; font-size: 19px; margin: 2px 0;
-      font-variant-numeric: tabular-nums; }
-    .w-days-num small { font-size: 13px; color: var(--text-dim); font-weight: 700; }
+    /* 입금 대기 줄 */
+    .v2-due { display: flex; align-items: center; gap: 10px; min-width: 0; margin-top: 12px; padding: 12px 14px;
+      min-height: 44px; background: var(--surface2); border: 1px solid var(--border-soft);
+      border-left: 3px solid var(--v2-bad); border-radius: var(--radius-sm); text-decoration: none; color: var(--text); }
+    .v2-due-body { min-width: 0; flex: 1 1 auto; }
+    .v2-due-t { font-size: 13px; font-weight: 700; color: var(--v2-bad); }
+    .v2-due-d { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v2-due svg { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-dim); }
 
-    /* 오늘의 발굴 (오렌지 위젯 — 채움 --accent 위 글씨는 --action-ink, 흰 글씨 금지) */
-    .today { grid-column: 1 / -1; display: block; background: var(--action); border: 0;
-      border-radius: var(--radius-sm); box-shadow: var(--shadow-action); padding: 16px;
-      text-decoration: none; color: var(--action-ink); }
-    .today .t-lbl { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: .05em; }
-    .today .t-chip { display: inline-block; background: rgba(8,16,32,.22); color: var(--action-ink);
-      font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; margin-top: 8px; }
-    .today .t-q { font-weight: 800; font-size: 15.5px; line-height: 1.45; margin: 8px 0 12px; }
-    .today .t-go { display: inline-flex; align-items: center; gap: 6px; background: var(--action-dark); color: #fff;
-      font-size: 13px; font-weight: 800; border-radius: 999px; padding: 10px 16px; min-height: 40px; }
+    /* ── 접히는 기록 ── */
+    .v2-folds { margin-top: 22px; border-top: 1px solid var(--border-soft); }
+    .v2-folds-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 16px 2px 8px; }
+    .v2-folds-h b { font-size: 13px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+    .v2-folds-h em { font-style: normal; font-size: 12px; color: var(--text-dim); }
+    .v2-fold { border-bottom: 1px solid var(--border-soft); scroll-margin-top: 72px; }
+    .v2-fold > summary { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 2px;
+      cursor: pointer; list-style: none; min-width: 0; }
+    .v2-fold > summary::-webkit-details-marker { display: none; }
+    .v2-fold-ic { flex: 0 0 auto; width: 20px; height: 20px; color: var(--action); }
+    .v2-fold-t { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; color: var(--text);
+      letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v2-fold-c { flex: 0 0 auto; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .v2-fold-ar { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-dim); transition: transform 0.18s ease; }
+    .v2-fold[open] .v2-fold-ar { transform: rotate(180deg); }
+    .v2-fold-body { padding: 2px 2px 20px; }
+    .v2-more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 2px;
+      font-size: 13px; font-weight: 700; color: var(--accent-ink); text-decoration: none; }
+    .v2-more:hover { color: var(--action-dark); }
 
-    /* ── 신청·계정 리스트 ── */
-    .sect { margin: 18px 4px 8px; font-size: 12.5px; font-weight: 800; color: var(--text-dim); letter-spacing: .03em; }
-    .list { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
-      box-shadow: var(--shadow); margin-bottom: 26px; }
-    .list .row { display: flex; align-items: center; gap: 12px; padding: 14px 15px; min-height: 44px;
-      border-bottom: 1px solid var(--border-soft); font-weight: 700; font-size: 14px; color: var(--text);
-      text-decoration: none; }
-    .list .row:last-child { border-bottom: 0; }
-    .list .row:hover { background: var(--surface2); }
-    .list .ricon { width: 34px; height: 34px; border-radius: 10px; background: var(--surface2);
-      color: var(--accent-ink); display: flex; align-items: center; justify-content: center; }
-    .list .r { margin-left: auto; color: var(--text-dim); font-size: 12.5px; font-weight: 600;
-      display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    /* 14일 격자 — 375px 에서 칸 폭 45px, 두 자리 숫자가 한 줄로 들어간다 */
+    .v2-days-cap { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; font-variant-numeric: tabular-nums; }
+    .v2-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .v2-day { min-width: 0; height: 56px; border-radius: var(--radius-xs); background: var(--surface2);
+      border: 1px solid var(--border-soft); display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 6px; }
+    .v2-day span { font-size: 12px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; line-height: 1; }
+    .v2-day i { width: 8px; height: 8px; border-radius: 999px; background: var(--border); display: block; }
+    .v2-day.is-ok { background: var(--action-tint); border-color: transparent; }
+    .v2-day.is-ok span { color: var(--action); }
+    .v2-day.is-ok i { background: var(--action); }
+    .v2-day.is-bad { background: color-mix(in srgb, var(--v2-bad) 9%, var(--surface)); border-color: transparent; }
+    .v2-day.is-bad span { color: var(--v2-bad); }
+    .v2-day.is-bad i { background: var(--v2-bad); }
+    .v2-day.is-now { border: 2px solid var(--action); background: var(--surface); }
+    .v2-day.is-now span { color: var(--action); }
 
-    /* 14일 그리드 */
-    .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-    .day { border-radius: var(--radius-xs); padding: 8px 4px; text-align: center; font-size: 12px;
-           border: 1px solid var(--border-soft); background: #fff; position: relative; cursor: default;
-           min-height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .day .dn { font-weight: 700; font-size: 13px; }
-    .day .ic { font-size: 15px; margin-top: 2px; display: block; height: 18px; }
-    .day.success { background: #eaf6ec; border-color: #bfe3c6; }
-    .day.success .ic { color: #1a7f37; }
-    .day.fail { background: var(--action-tint); border-color: #f2c9b8; }
-    .day.fail .ic { color: var(--action-dark); }
-    .day.pending { color: var(--text-muted); }
-    .day.has-comment::after { content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px;
-           border-radius: 50%; background: var(--action); }
+    /* 접이 안 목록 공통 */
+    .v2-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .v2-item { display: block; min-width: 0; padding: 12px 14px; background: var(--surface);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-sm); text-decoration: none; color: var(--text); }
+    a.v2-item:hover { border-color: var(--accent-dark); }
+    .v2-chip { display: inline-flex; align-items: center; flex: 0 0 auto; white-space: nowrap; font-size: 12px;
+      font-weight: 800; padding: 3px 8px; border-radius: 999px; background: var(--surface2); color: var(--text-muted); }
+    .v2-chip.is-ok { background: var(--action-tint); color: var(--action); }
+    .v2-chip.is-bad { background: color-mix(in srgb, var(--v2-bad) 11%, var(--surface)); color: var(--v2-bad); }
+    .v2-chip.is-done { background: #eaf6ec; color: #1a7f37; }
 
-    /* 코멘트 목록 */
-    .comments { list-style: none; }
-    .comments li { padding: 12px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 12px; }
-    .comments li:last-child { border-bottom: 0; }
-    .cm-day { flex: 0 0 52px; font-weight: 700; font-size: 13px; color: var(--text-muted); }
-    .cm-body { font-size: 15px; }
-    .cm-status { font-size: 12px; font-weight: 700; margin-left: 6px; }
-    .cm-status.ok { color: #1a7f37; } .cm-status.no { color: var(--action-dark); }
+    /* 코치 코멘트 — 배지를 문장 위 별도 줄로 (문장 끝 배지가 '아/쉬움'으로 잘리던 결함의 수정) */
+    .v2-cmt-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 6px; }
+    .v2-cmt-day { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .v2-cmt-body { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); word-break: keep-all; }
 
-    /* Before/After */
-    .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 560px) { .ba { grid-template-columns: 1fr; } .days { grid-template-columns: repeat(7, 1fr); } }
-    .ba .slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
-    .ba .slot .tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-            color: var(--text-muted); margin-bottom: 10px; }
-    .ba .slot.after { outline: 2px solid var(--action); outline-offset: -2px; }
-    .ba .slot.after .tag { color: var(--action); }
-    .ba audio { width: 100%; }
-    .ba .empty { font-size: 14px; color: var(--text-muted); padding: 14px 0; }
+    /* 답변노트 */
+    .v2-note-top { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 6px; }
+    .v2-note-meta { font-size: 12px; color: var(--text-dim); min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .v2-note-t { display: block; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; word-break: keep-all; }
+    .v2-note-p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      margin-top: 5px; font-size: 13px; line-height: 1.55; color: var(--text-muted); word-break: keep-all; }
+
+    /* 뉴스 */
+    .v2-news-t { display: block; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; word-break: keep-all; }
+    .v2-news-s { display: block; margin-top: 5px; font-size: 12px; color: var(--text-dim); }
+
+    /* 신청·결제 */
+    .v2-pay-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+    .v2-pay-t { font-size: 14px; font-weight: 700; color: var(--text); min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v2-pay-d { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 12px;
+      color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    /* Before / After 음성 */
+    .v2-ba { display: flex; flex-direction: column; gap: 10px; }
+    .v2-ba-slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; }
+    .v2-ba-slot.after { outline: 2px solid var(--action); outline-offset: -2px; }
+    .v2-ba-tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 8px; }
+    .v2-ba-slot.after .v2-ba-tag { color: var(--action); }
+    .v2-ba-slot audio { width: 100%; }
+    .v2-ba-empty { font-size: 13px; color: var(--text-muted); }
+
+    /* 내 정보 */
+    .v2-hint { font-size: 12px; line-height: 1.6; color: var(--text-dim); margin-bottom: 10px; word-break: keep-all; }
+    .v2-lb { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+    .v2-field { display: flex; gap: 8px; min-width: 0; }
+    .v2-input { flex: 1 1 auto; min-width: 0; height: 46px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: var(--radius-xs); background: var(--surface); color: var(--text); font-size: 15px;
+      font-family: inherit; font-variant-numeric: tabular-nums; }
+    .v2-save { flex: 0 0 auto; min-height: 46px; min-width: 72px; padding: 0 18px; background: var(--action);
+      color: var(--action-ink); border: 0; border-radius: var(--radius-xs); font-size: 15px; font-weight: 800;
+      font-family: inherit; cursor: pointer; }
+    .v2-msg { font-size: 13px; color: var(--text-muted); margin-top: 8px; min-height: 16px; }
+    .v2-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 46px;
+      margin-top: 14px; padding: 0 18px; background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; font-weight: 700;
+      font-family: inherit; cursor: pointer; text-decoration: none; }
+    .v2-ghost:hover { border-color: var(--action); color: var(--action); }
+
+    /* 비 챌린지 상태 — 소재 발굴 카드 + 빈 안내 줄 */
+    .v2-q-tag { display: block; font-size: 12px; font-weight: 700; color: var(--action); margin-bottom: 6px; }
+    .v2-q { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); word-break: keep-all; font-weight: 700; }
+    .v2-outline { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+      min-height: 46px; margin-top: 12px; padding: 0 16px; background: var(--surface); color: var(--action);
+      border: 1.5px solid var(--action); border-radius: 999px; font-size: 15px; font-weight: 800;
+      font-family: inherit; text-decoration: none; cursor: pointer; }
+    .v2-empty-line { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-dim); word-break: keep-all; }
 
     .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
 
-    .apps-list { list-style: none; }
-    .apps-list li { padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
-    .apps-list li:last-child { border-bottom: 0; }
-    .al-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-    .al-ch { font-weight: 700; font-size: 15px; }
-    .al-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-    .al-status { margin-top: 4px; font-size: 12px; }
-    .al-kind { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 8px;
-      margin-right: 5px; background: var(--surface2); color: var(--text-muted); vertical-align: 1px; }
-    .al-badge { display: inline-block; font-weight: 700; border-radius: 999px; padding: 2px 10px; margin-right: 6px; font-size: 12px; }
-    .al-paid { background: #eaf6ec; color: #1a7f37; }
-    .al-refund { background: var(--action-tint); color: var(--action-dark); }
-    .al-wait { background: var(--surface2); color: var(--text-muted); }
-
-    /* 내 답변노트 */
-    .notes-list { display: flex; flex-direction: column; gap: 10px; }
-    .note { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface2); }
-    .note > summary { list-style: none; cursor: pointer; padding: 14px; }
-    .note > summary::-webkit-details-marker { display: none; }
-    .note-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 7px; }
-    .note-cat { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 11px;
-      font-weight: 700; padding: 3px 9px; border-radius: 999px; }
-    .note-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-    .note-q { font-size: 14px; font-weight: 700; line-height: 1.45; }
-    .note-more { display: inline-block; font-size: 12px; color: var(--accent-ink); margin-top: 8px; font-weight: 700; }
-    .note[open] .note-q { color: var(--action-dark); }
-    .note[open] .note-more { color: var(--text-muted); }
-    .note-a { padding: 0 14px 14px; font-size: 14px; color: var(--text); line-height: 1.65; white-space: pre-wrap;
-      border-top: 1px dashed var(--border-soft); margin: 4px 14px 0; padding: 12px 0 14px; }
-    .nt-empty { font-size: 14px; color: var(--text-muted); }
-    /* 작성 중 / 완료 그룹 */
-    .notes-group { display: flex; flex-direction: column; gap: 10px; }
-    .notes-grouplabel { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: .02em; margin: 0; }
-    .note-draft { display: block; padding: 14px; text-decoration: none; color: inherit; border-left: 3px solid var(--action); }
-    .note-draft:hover { background: var(--surface); }
-    .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
-    .note-draft .note-more { display: inline-block; font-size: 12px; font-weight: 700; color: var(--action-dark); margin-top: 8px; }
-    /* 내 뉴스 스크랩 */
-    .news-list { list-style: none; }
-    .news-list li { padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
-    .news-list li:last-child { border-bottom: 0; }
-    .news-list a { text-decoration: none; display: block; }
-    .news-list a:hover .nl-title { color: var(--accent-dark); }
-    .nl-title { font-size: 14px; font-weight: 700; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-    .nl-meta { display: flex; gap: 6px; align-items: center; margin-top: 4px; font-size: 12px; color: var(--text-muted); }
-    .nl-air { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    @media (min-width: 760px) {
+      .v2 { padding: 24px 0 72px; }
+      .v2-today { padding: 26px 28px 28px; }
+      .v2-today-t { font-size: 26px; }
+      .v2-cta { width: auto; min-width: 260px; max-width: 320px; }
+      .v2-outline { width: auto; min-width: 240px; max-width: 300px; }
+      .v2-day { height: 62px; }
+    }
   </style>
 </head>
 <body data-nav-offset>
-  <!-- 라인 아이콘 스프라이트 (currentColor 리컬러) -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 3.6 10.8c-.6.5-.6 1.2-.6 2.2h-6c0-1 0-1.7-.6-2.2A6 6 0 0 1 12 3z"/><path d="M9.5 19h5M10.5 21.5h3"/></symbol>
-    <symbol id="i-doc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3.5"/></symbol>
-    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 4H4v12h4v4l5-4h7z"/></symbol>
-    <symbol id="i-news" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9.5h6M7 13h6M16.5 9.5v5"/></symbol>
-    <symbol id="i-audio" viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></symbol>
-    <symbol id="i-pay" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></symbol>
-    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M4 6h2l2.2 9.5h9.6L20 8H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="16.5" cy="19" r="1.4"/></symbol>
-    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7.5" y="2.5" width="9" height="19" rx="2"/><path d="M11 18.5h2"/></symbol>
-    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
-    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
-  </svg>
-  <div class="wrap">
-    <div class="topbar">
-      <span></span><!-- 로고는 공용 nav(nav.js) 가 그린다 — topbar 는 space-between 이라 자리는 남긴다 -->
-      <div style="display:flex; align-items:center;">
-        <a href="admin.html" class="admin-link" id="adminLink" style="display:none;">관리자 페이지</a>
-        <button class="logout" id="logoutBtn">로그아웃</button>
-      </div>
-    </div>
+  <main class="v2">
+    <div class="v2-wrap" id="content" style="display:none;">
 
-    <div id="content" style="display:none;">
-      <!-- 멤버십 카드: 프로필 + 결제 스트립(누르면 신청 내역으로) -->
-      <div class="mcard">
-        <div class="m-top"><span class="m-logo">MONC</span><span class="m-role">CHALLENGER</span></div>
-        <h1 class="m-name"><span class="name" id="hName">회원</span><span id="hTitle">님</span></h1>
-        <p class="m-sub" id="hMeta"></p>
-        <a class="paystrip" href="#sec-apps" aria-label="신청·결제 내역 보기">
-          <span class="ps-cell"><span class="ps-num" id="psPaid">0</span><span class="ps-lbl" style="display:block">결제완료</span></span>
-          <span class="ps-cell"><span class="ps-num" id="psWait">0</span><span class="ps-lbl" style="display:block">입금대기</span></span>
-          <span class="ps-cell"><span class="ps-num" id="psRefund">0</span><span class="ps-lbl" style="display:block">환불</span></span>
-        </a>
+      <!-- 신원 한 줄 -->
+      <div class="v2-id">
+        <span class="v2-id-name" id="idName">회원</span>
+        <span class="v2-id-sub" id="idSub"></span>
+        <a class="v2-admin" id="adminLink" href="admin.html" style="display:none;">관리자 →</a>
       </div>
 
-      <!-- 위젯 그리드: 현황 요약, 누르면 아래 상세 섹션으로 -->
-      <div class="wgrid">
-        <a class="today" id="todayCard" href="sojae.html">
-          <span class="t-lbl"><svg class="ic sm" aria-hidden="true"><use href="#i-spark"/></svg>오늘의 소재 발굴</span>
-          <span class="t-chip" id="todayCat" style="display:block;width:fit-content;">과거경험검증형</span>
-          <span class="t-q" id="todayQ" style="display:block;">불러오는 중…</span>
-          <span class="t-go" id="todayCta">소재 발굴 시작
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        </a>
-
-        <a class="w wide" href="#sec-days" id="wProgress">
-          <span class="ring" aria-hidden="true">
-            <svg width="74" height="74" viewBox="0 0 74 74">
-              <circle cx="37" cy="37" r="31" fill="none" stroke="var(--surface2)" stroke-width="8"/>
-              <circle id="ringFg" cx="37" cy="37" r="31" fill="none" stroke="var(--action)" stroke-width="8"
-                stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="194.8"/>
-            </svg>
-            <span class="ring-txt"><span id="ringPct">0</span><em>%</em></span>
-          </span>
-          <span style="min-width:0;">
-            <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg>2주 미션 진행률</span>
-            <span class="w-days-num" style="display:block;"><span id="wDaysOk">0</span> <small>/ 14일 성공</small></span>
-            <span class="w-cap" style="display:block;" id="wDaysCap">아직 기록이 없어요</span>
-          </span>
-          <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
-        </a>
-
-        <a class="w" href="answers.html" id="wAnswers">
-          <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>답변노트</span>
-          <span class="w-val" style="display:block;"><span id="wAnsVal">0</span><em>개</em></span>
-          <span class="w-cap" style="display:block;" id="wAnsCap">소재 발굴로 모아요</span>
-          <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
-        </a>
-
-        <a class="w" href="#sec-comments" id="wComments">
-          <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>코치 코멘트</span>
-          <span class="w-val" style="display:block;"><span id="wCmVal">0</span><em>개</em></span>
-          <span class="w-cap" style="display:block;">코치가 남긴 피드백</span>
-          <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
-        </a>
-
-        <a class="w" href="#sec-news" id="wNews" style="display:none;">
-          <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-news"/></svg>뉴스 스크랩</span>
-          <span class="w-val" style="display:block;"><span id="wNewsVal">0</span><em>건</em></span>
-          <span class="w-cap" style="display:block;" id="wNewsCap">면접 답변 재료</span>
-          <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
-        </a>
-
-        <a class="w" href="#sec-ba" id="wBa">
-          <span class="w-lbl"><svg class="ic" aria-hidden="true"><use href="#i-audio"/></svg>Before / After</span>
-          <span class="w-val txt" style="display:block;" id="wBaVal">수료 시 공개</span>
-          <span class="w-cap" style="display:block;">목소리 비교</span>
-          <span class="w-arrow"><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span>
-        </a>
-      </div>
-
-      <!-- 신청·계정 리스트 -->
-      <div class="sect">신청 · 계정</div>
-      <div class="list">
-        <a class="row" href="#sec-apps"><span class="ricon"><svg class="ic" aria-hidden="true"><use href="#i-pay"/></svg></span>신청 · 결제 내역<span class="r"><span id="listApps">0건</span> <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span></a>
-        <a class="row" href="apply.html"><span class="ricon"><svg class="ic" aria-hidden="true"><use href="#i-cart"/></svg></span>챌린지 더 신청하기<span class="r">둘러보기 <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span></a>
-        <a class="row" href="#sec-contact"><span class="ricon"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></span>연락처 관리<span class="r"><span id="listPhone">미등록</span> <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></span></a>
-      </div>
-
-      <!-- 상세 섹션들. 순서·표시 여부는 회원 상태(applyLayout)가 런타임에 정한다. -->
-      <div id="flow">
-      <div class="card" id="sec-lecture" style="display:none;">
-        <div class="card-head"><h2>내 특강</h2><a class="card-more" href="lectures.html">특강 더 보기 →</a></div>
-        <ul class="lec-list" id="myLectures"></ul>
-      </div>
-
-      <div class="card" id="sec-answers">
-        <div class="card-head"><h2>내 답변노트</h2><a class="card-more" id="ansMore" href="answers.html">전체 보기 →</a></div>
-        <div class="notes-list" id="answerNotes"><p class="nt-empty">불러오는 중…</p></div>
-      </div>
-
-      <div class="card" id="sec-ba">
-        <h2>Before / After</h2>
-        <p class="hint">입과 전과 수료 후 목소리를 비교해보세요.</p>
-        <div class="ba">
-          <div class="slot before"><div class="tag">Before · 입과 전</div><div id="beforeSlot"></div></div>
-          <div class="slot after"><div class="tag">After · 수료 후</div><div id="afterSlot"></div></div>
+      <!-- 오늘 한 칸: 문구는 사이트가 아는 사실만. 내용은 회원 상태별로 스크립트가 채운다. -->
+      <div class="v2-today">
+        <div class="v2-today-top">
+          <span class="v2-today-tag" id="todayTag"></span>
+          <span class="v2-today-date" id="todayDate" style="display:none;"></span>
         </div>
+        <h2 class="v2-today-t" id="todayHead">불러오는 중…</h2>
+        <p class="v2-today-d" id="todayDesc"></p>
+        <a class="v2-cta" id="todayCta" href="sojae.html">
+          <span id="todayCtaT">오늘의 소재 발굴</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="v2-today-next" id="todayNext" href="sojae.html">
+          <span class="v2-next-l" id="todayNextL">오늘의 질문</span>
+          <span class="v2-next-q" id="todayNextQ">불러오는 중…</span>
+          <svg class="v2-next-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
       </div>
 
-      <div class="card" id="sec-days">
-        <h2>날짜별 결과</h2>
-        <div class="days" id="daysGrid"></div>
+      <!-- 소재 발굴 카드 — 챌린지 미참여 상태에서만(참여 중엔 위 카드의 '오늘의 질문' 줄이 그 역할) -->
+      <div class="v2-card" id="sojaeCard" style="display:none;">
+        <span class="v2-q-tag" id="sjTag">오늘의 소재 발굴</span>
+        <p class="v2-q" id="sjQ">불러오는 중…</p>
+        <a class="v2-outline" href="sojae.html">소재 발굴 열기</a>
       </div>
 
-      <div class="card" id="sec-comments">
-        <h2>코치 코멘트</h2>
-        <ul class="comments" id="commentList"></ul>
-      </div>
-
-      <div class="card" id="sec-apps">
-        <h2>내 신청 내역</h2>
-        <ul class="apps-list" id="myApps"><li style="color:var(--text-dim);border:0;">불러오는 중…</li></ul>
-      </div>
-
-      <div class="card" id="sec-news" style="display:none;">
-        <div class="card-head"><h2>내 뉴스 스크랩</h2><a class="card-more" id="newsMore" href="news.html?tab=scraps">전체 보기 →</a></div>
-        <ul class="news-list" id="newsScraps"></ul>
-      </div>
-
-      <div class="card" id="sec-contact">
-        <h2>연락처</h2>
-        <p class="hint">신청 내역과 결과를 연결하려면 신청 시 사용한 전화번호를 입력해 주세요.</p>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <input id="phoneInput" type="tel" inputmode="numeric" placeholder="010-0000-0000"
-            style="flex:1; min-width:180px; padding:14px; font-size:16px; border:1px solid var(--border); border-radius:var(--radius-xs);">
-          <button id="phoneSave" class="logout" style="padding:14px 20px; font-size:15px;">저장</button>
+      <!-- 진행 한 줄 -->
+      <div class="v2-card" id="progCard" style="display:none;">
+        <div class="v2-prog-top">
+          <span class="v2-prog-t">2주 미션</span>
+          <span class="v2-prog-r" id="progR"></span>
         </div>
-        <div id="phoneMsg" style="font-size:13px; color:var(--text-muted); margin-top:8px; min-height:16px;"></div>
+        <div class="v2-bar" id="progBar" aria-hidden="true"></div>
+        <div class="v2-legend" id="progLegend"></div>
       </div>
-      </div><!-- /#flow -->
-    </div>
 
+      <!-- 다가오는 일정(예정 특강) -->
+      <div id="upWrap"></div>
+
+      <!-- 입금 대기 -->
+      <a class="v2-due" id="dueStrip" href="#sec-apps" style="display:none;">
+        <div class="v2-due-body">
+          <div class="v2-due-t">입금이 아직 확인되지 않았어요</div>
+          <div class="v2-due-d" id="dueD"></div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+
+      <!-- 내 기록: 데이터가 있는 줄만 보인다. 빈 껍데기 섹션을 쌓지 않는 게 이 개편의 핵심. -->
+      <div class="v2-folds" data-v2-acc>
+        <div class="v2-folds-h">
+          <b>내 기록</b>
+          <em id="foldsHint">필요할 때만 펼쳐 보세요</em>
+        </div>
+
+        <details class="v2-fold" id="sec-days" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            <span class="v2-fold-t">2주 미션 기록</span>
+            <span class="v2-fold-c">14일</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <p class="v2-days-cap" id="daysCap">숫자는 일차</p>
+            <div class="v2-days" id="daysGrid"></div>
+            <div class="v2-legend" style="margin-top:12px;">
+              <span class="is-ok">성공</span>
+              <span class="is-bad">아쉬움</span>
+              <span>아직</span>
+            </div>
+          </div>
+        </details>
+
+        <details class="v2-fold" id="sec-comments" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4v4l5-4h7a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/></svg>
+            <span class="v2-fold-t">코치 코멘트</span>
+            <span class="v2-fold-c" id="cmCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="commentList"></ul>
+          </div>
+        </details>
+
+        <details class="v2-fold" id="sec-answers" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+            <span class="v2-fold-t">답변노트</span>
+            <span class="v2-fold-c" id="ansCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="answerNotes"></ul>
+            <a class="v2-more" id="ansMore" href="answers.html">저장소 전체 보기 →</a>
+          </div>
+        </details>
+
+        <details class="v2-fold" id="sec-news" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h13v14a1 1 0 0 0 1 1H5a1 1 0 0 1-1-1V5z"/><path d="M17 9h3v10a1 1 0 0 1-1 1M7 9h6M7 13h6M7 17h4"/></svg>
+            <span class="v2-fold-t">뉴스 스크랩</span>
+            <span class="v2-fold-c" id="newsCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="newsScraps"></ul>
+            <a class="v2-more" id="newsMore" href="news.html?tab=scraps">전체 보기 →</a>
+          </div>
+        </details>
+
+        <details class="v2-fold" id="sec-apps" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+            <span class="v2-fold-t">신청·결제 내역</span>
+            <span class="v2-fold-c" id="appsCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="myApps"></ul>
+          </div>
+        </details>
+
+        <details class="v2-fold" id="sec-ba" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>
+            <span class="v2-fold-t">Before / After 음성</span>
+            <span class="v2-fold-c" id="baLabel">수료 후 공개</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <div class="v2-ba">
+              <div class="v2-ba-slot"><div class="v2-ba-tag">BEFORE · 입과 전</div><div id="beforeSlot"></div></div>
+              <div class="v2-ba-slot after"><div class="v2-ba-tag">AFTER · 수료 후</div><div id="afterSlot"></div></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="v2-fold" id="sec-contact">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></svg>
+            <span class="v2-fold-t">내 정보</span>
+            <span class="v2-fold-c" id="contactC">연락처</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <p class="v2-hint">신청 내역과 결과를 연결하려면 신청 시 사용한 전화번호를 입력해 주세요.</p>
+            <label class="v2-lb" for="phoneInput">연락처</label>
+            <div class="v2-field">
+              <input class="v2-input" id="phoneInput" type="tel" inputmode="numeric" placeholder="010-0000-0000">
+              <button class="v2-save" id="phoneSave" type="button">저장</button>
+            </div>
+            <div class="v2-msg" id="phoneMsg"></div>
+            <button class="v2-ghost" id="logoutBtn" type="button">로그아웃</button>
+          </div>
+        </details>
+
+        <p class="v2-empty-line" id="emptyLine" style="display:none;">챌린지를 시작하면 미션 기록과 코치 코멘트가 이 자리에 줄로 추가됩니다.</p>
+      </div>
+
+    </div>
     <div class="loading" id="loading">불러오는 중…</div>
-  </div>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
@@ -394,24 +411,41 @@
     window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    // '2026-07-20' → '7.20' / '7월 20일'
+    function mdDot(s) { const p = String(s || '').split('-'); return p.length === 3 ? (+p[1]) + '.' + (+p[2]) : ''; }
+    function mdKor(s) { const p = String(s || '').split('-'); return p.length === 3 ? (+p[1]) + '월 ' + (+p[2]) + '일' : ''; }
+    function fmtDot(iso) { const d = new Date(iso); return (d.getMonth() + 1) + '.' + d.getDate(); }
+
+    // 아이콘 두 종 — 오늘 할 일(시계) / 먼저 할 일(더하기)
+    const TAG_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    const TAG_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>';
 
     // ── 오늘의 문제 (선정 로직은 공용 sojae-common.js: KST 기준, sojae.html과 100% 동일) ──
+    // 상태 배치(applyState)와 질문 로드가 어느 쪽이 먼저 끝나도 되도록, 채우기는 syncTodayQ 한 곳에서 한다.
+    let todayQ;                 // undefined=로딩 중, null=없음/실패, 객체=오늘의 문제
+    let todayQFailed = false;
+    function syncTodayQ() {
+      const txt = todayQ === undefined ? '불러오는 중…'
+        : todayQ ? todayQ.content
+        : (todayQFailed ? '오늘의 문제를 불러오지 못했어요.' : '오늘의 문제가 아직 준비 중이에요.');
+      const cat = todayQ && window.SOJAE && window.SOJAE.CAT_LABEL[todayQ.category];
+      const nq = document.getElementById('todayNextQ');
+      if (nq.dataset.role === 'q') nq.textContent = txt;
+      document.getElementById('sjQ').textContent = txt;
+      document.getElementById('sjTag').textContent = '오늘의 소재 발굴' + (cat ? ' · ' + cat : '');
+    }
     async function loadTodayQuestion() {
-      const qEl = document.getElementById('todayQ'), catEl = document.getElementById('todayCat'), card = document.getElementById('todayCard');
-      try {
-        const q = await window.SOJAE.fetchTodayQuestion(MONC.sb);
-        if (q) { qEl.textContent = q.content; catEl.textContent = window.SOJAE.CAT_LABEL[q.category] || '소재 발굴'; }
-        else { qEl.textContent = '오늘의 문제가 아직 준비 중이에요.'; catEl.style.display = 'none'; card.removeAttribute('href'); card.style.cursor = 'default'; }
-      } catch (_) { qEl.textContent = '오늘의 문제를 불러오지 못했어요.'; catEl.style.display = 'none'; }
+      try { todayQ = await window.SOJAE.fetchTodayQuestion(MONC.sb); }
+      catch (_) { todayQ = null; todayQFailed = true; }
+      syncTodayQ();
     }
 
-    // ── 내 답변노트 (answers + questions 조인, RLS 상 내 것만) ──
-    //    작성 중(status=draft) → '이어서 작성' / 완료(status=final) → 펼쳐보기.
+    // ── 내 답변노트 접이 (answers + questions 조인, RLS 상 내 것만) ──
     async function loadAnswerNotes(memberId) {
       const el = document.getElementById('answerNotes');
       try {
         // ⚠️ select('*') — 분류 3종(20260725170000)·title 미적용 환경에서도 조회가 깨지지 않게.
-        //    컬럼을 나열하면 없는 컬럼 하나에 카드 전체가 400 이 된다(answers.html 과 같은 방어).
+        //    컬럼을 나열하면 없는 컬럼 하나에 목록 전체가 400 이 된다(answers.html 과 같은 방어).
         let { data, error } = await MONC.sb.from('answers')
           .select('*, questions(content, category)')
           .eq('member_id', memberId).order('updated_at', { ascending: false });
@@ -420,133 +454,104 @@
             .select('*').eq('member_id', memberId).order('updated_at', { ascending: false }));
         }
         if (error) throw error;
-        if (!data || !data.length) {
-          // ⚠️ 소재 발굴로만 보내지 않는다 — 바로 답변만 쓰고 싶은 학생의 길을 막으면 안 된다.
-          el.innerHTML = '<p class="nt-empty">아직 저장한 답변이 없어요. '
-            + '<a href="answers.html#new">답변을 바로 쓰거나</a> 위 <b>오늘의 소재 발굴</b>부터 시작해보세요.</p>';
-          document.getElementById('wAnsCap').textContent = '오늘의 발굴부터 시작해보세요';
-          document.getElementById('ansMore').style.display = 'none';
-          return;
-        }
-        const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
+        if (!data || !data.length) return;          // 접이 자체를 안 연다 — 빈 껍데기 금지
+
         // ⚠️ 유형·제목은 두 곳에서 온다 — 소재 발굴 답변은 questions, 직접 쓴 답변은 answers 자신.
-        //    answers 쪽을 먼저 본다(학생이 직접 고친 값이 문제 원본보다 우선).
-        //    answers.html 과 **같은 규칙**이어야 한다 — 한쪽만 고치면 자유 글이 제목 없이 뜬다.
-        const catOf = a => (window.SOJAE
-          && window.SOJAE.CAT_LABEL[a.category || (a.questions || {}).category]) || '소재 발굴';
+        //    answers 쪽을 먼저 본다. answers.html 과 **같은 규칙**이어야 한다(한쪽만 고치면 자유 글이 제목 없이 뜬다).
+        const catOf = a => (window.SOJAE && window.SOJAE.CAT_LABEL[a.category || (a.questions || {}).category]) || '';
         const titleOf = a => (a.questions || {}).content || a.title || '(제목 없음)';
         const drafts = data.filter(a => (a.status || 'final') === 'draft');
         const finals = data.filter(a => (a.status || 'final') !== 'draft');
 
-        // 답변노트 위젯 수치
-        document.getElementById('wAnsVal').textContent = data.length;
-        document.getElementById('wAnsCap').textContent = '작성 중 ' + drafts.length + ' · 완료 ' + finals.length;
-
         const draftCard = a => {
+          const meta = [catOf(a), fmtDot(a.updated_at)].filter(Boolean).join(' · ');
           const preview = a.content && a.content.trim()
             ? esc(a.content.trim().slice(0, 60)) + (a.content.trim().length > 60 ? '…' : '')
             : '아직 작성 전 — 눌러서 이어쓰기';
-          const top = `<div class="note-top"><span class="note-cat">${esc(catOf(a))}</span>`
-            + `<span class="note-date">${fmt(a.updated_at)}</span></div>`;
-          const inner = `${top}<div class="note-q">${esc(titleOf(a))}</div>`
-            + `<div class="note-preview">${preview}</div>`;
           // 소재 발굴에서 온 초안만 이어쓰기 화면이 있다. 직접 쓴 글은 저장소에서 고친다.
-          return a.question_id
-            ? `<a class="note note-draft" href="sojae.html?q=${encodeURIComponent(a.question_id)}">
-                 ${inner}<span class="note-more">이어서 작성 →</span></a>`
-            : `<a class="note note-draft" href="answers.html">${inner}
-                 <span class="note-more">저장소에서 이어쓰기 →</span></a>`;
+          const href = a.question_id ? 'sojae.html?q=' + encodeURIComponent(a.question_id) : 'answers.html';
+          return `<li><a class="v2-item" href="${href}">
+              <span class="v2-note-top"><span class="v2-chip">작성 중</span><span class="v2-note-meta">${esc(meta)}</span></span>
+              <span class="v2-note-t">${esc(titleOf(a))}</span>
+              <span class="v2-note-p">${preview}</span>
+            </a></li>`;
         };
-        const finalCard = a => `<details class="note">
-            <summary>
-              <div class="note-top"><span class="note-cat">${esc(catOf(a))}</span><span class="note-date">${fmt(a.updated_at)}</span></div>
-              <div class="note-q">${esc(titleOf(a))}</div>
-              <span class="note-more">답변 보기 ▾</span>
-            </summary>
-            <div class="note-a">${esc(a.content)}</div>
-          </details>`;
+        const finalCard = a => {
+          const meta = [catOf(a), fmtDot(a.updated_at)].filter(Boolean).join(' · ');
+          return `<li><a class="v2-item" href="answers.html">
+              <span class="v2-note-top"><span class="v2-chip is-done">완료</span><span class="v2-note-meta">${esc(meta)}</span></span>
+              <span class="v2-note-t">${esc(titleOf(a))}</span>
+            </a></li>`;
+        };
 
-        // 카드엔 미리보기 3개만(작성 중 우선). 전체는 answers.html — 답변이 쌓여도 이 카드 길이는 고정.
+        // 접이 안엔 미리보기 3개만(작성 중 우선). 전체는 answers.html — 쌓여도 이 접이 길이는 고정.
         const PREVIEW = 3;
         const pickDrafts = drafts.slice(0, PREVIEW);
         const pickFinals = finals.slice(0, Math.max(0, PREVIEW - pickDrafts.length));
-        let html = '';
-        if (pickDrafts.length) html += '<div class="notes-group"><p class="notes-grouplabel">작성 중 · ' + drafts.length + '</p>' + pickDrafts.map(draftCard).join('') + '</div>';
-        if (pickFinals.length) html += '<div class="notes-group"><p class="notes-grouplabel">완료 · ' + finals.length + '</p>' + pickFinals.map(finalCard).join('') + '</div>';
-        el.innerHTML = html;
-        document.getElementById('ansMore').textContent = '전체 ' + data.length + '개 →';
-      } catch (_) {
-        el.innerHTML = '<p class="nt-empty">답변을 불러오지 못했어요.</p>';
-      }
+        el.innerHTML = pickDrafts.map(draftCard).join('') + pickFinals.map(finalCard).join('');
+        document.getElementById('ansCount').textContent = data.length
+          + (drafts.length ? ' · 작성 중 ' + drafts.length : '');
+        document.getElementById('ansMore').textContent = '저장소 전체 ' + data.length + '개 →';
+        document.getElementById('sec-answers').style.display = '';
+      } catch (_) { /* 접이 숨김 유지 */ }
     }
 
-    // ⚠️ 구 lockSojaeCard()(소재 발굴 권한 없는 회원의 카드 잠금)는 2026-07-27 삭제 —
-    //    권한 스위치를 없애고 크레딧으로 바꿨으므로 회원이면 누구나 들어갈 수 있다.
-
-    // ── 내 뉴스 스크랩 카드 — 최근 3건 + 항공사별 개수(뉴스 스펙 §6) ──
-    //    news_scraps 테이블 미생성(마이그레이션 전)이면 카드·위젯을 숨긴 채로 둔다.
+    // ── 내 뉴스 스크랩 접이 — 최근 3건. news_scraps 미생성(마이그레이션 전)이면 접이를 숨긴 채로 둔다. ──
+    const AIRLINE_LABEL_MP = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
     async function loadNewsScraps() {
-      const AIRLINE_LABEL_MP = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
       try {
         const { data, error } = await MONC.sb.from('news_scraps')
           .select('created_at, news_articles(title, url, airline)')
           .order('created_at', { ascending: false });
-        if (error) return;                                   // 테이블 미생성 → 카드 숨김 유지
-        document.getElementById('sec-news').style.display = '';
-        document.getElementById('wNews').style.display = '';
+        if (error) return;
         const rows = (data || []).filter(r => r.news_articles);
-        const listEl = document.getElementById('newsScraps');
-        document.getElementById('wNewsVal').textContent = rows.length;
-        if (!rows.length) {
-          listEl.innerHTML = '<li style="color:var(--text-muted);border:0;">항공 뉴스를 스크랩하면 여기에 쌓여요.</li>';
-          document.getElementById('newsMore').textContent = '뉴스 보러 가기 →';
-          document.getElementById('newsMore').href = 'news.html';
-          return;
-        }
-        listEl.innerHTML = rows.slice(0, 3).map(r => {
+        if (!rows.length) return;                    // 0건이면 접이를 안 연다
+        document.getElementById('newsScraps').innerHTML = rows.slice(0, 3).map(r => {
           const a = r.news_articles;
-          const air = a.airline ? `<span class="nl-air">${esc(AIRLINE_LABEL_MP[a.airline] || a.airline)}</span>` : '';
-          return `<li><a href="${esc(a.url)}" target="_blank" rel="noopener">
-            <div class="nl-title">${esc(a.title)}</div><div class="nl-meta">${air}</div></a></li>`;
+          const air = a.airline ? AIRLINE_LABEL_MP[a.airline] || a.airline : '';
+          return `<li><a class="v2-item" href="${esc(a.url)}" target="_blank" rel="noopener">
+            <span class="v2-news-t">${esc(a.title)}</span>
+            ${air ? `<span class="v2-news-s">${esc(air)}</span>` : ''}
+          </a></li>`;
         }).join('');
-        // 항공사별 개수는 위젯 캡션에만(카드 안에 또 쓰면 같은 문장이 한 화면에 두 번).
-        const counts = {};
-        rows.forEach(r => { const k = r.news_articles.airline; if (k) counts[k] = (counts[k] || 0) + 1; });
-        const top2 = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 2)
-          .map(([k, n]) => `${AIRLINE_LABEL_MP[k] || k} ${n}`).join(' · ');
-        if (top2) document.getElementById('wNewsCap').textContent = top2;
-        document.getElementById('newsMore').textContent = `전체 ${rows.length}건 →`;
-      } catch (_) { /* 카드 숨김 유지 */ }
+        document.getElementById('newsCount').textContent = rows.length;
+        document.getElementById('newsMore').textContent = '전체 ' + rows.length + '건 →';
+        document.getElementById('sec-news').style.display = '';
+      } catch (_) { /* 접이 숨김 유지 */ }
     }
 
-    // ── 회원 상태별 화면 구성 ─────────────────────────────────────────────────
-    // 챌린지에 참여하지 않는 회원에게 빈 14칸 그리드·"코멘트 없어요"·"수료하면 비교"를
-    // 보여주면 껍데기만 700px 넘게 쌓인다. 상태는 DB가 이미 아는 값(cohort_id·기수 종료일·
-    // 특강 신청)으로 판정하므로 회원이 따로 설정할 게 없다.
-    const LAYOUT = {
-      // tools: 소재·뉴스·답변노트만 쓰는 회원 (챌린지 미참여)
-      tools:   { role: 'MEMBER',     title: '님의 준비',
-                 flow: ['answers', 'news', 'lecture', 'apps', 'contact'],
-                 widgets: ['todayCard', 'wAnswers', 'wNews'] },
-      // lecture: 특강 신청자 (챌린지 미참여) — 내 특강이 맨 위
-      lecture: { role: 'MEMBER',     title: '님의 준비',
-                 flow: ['lecture', 'answers', 'news', 'apps', 'contact'],
-                 widgets: ['todayCard', 'wAnswers', 'wNews'] },
-      // active: 챌린지 진행 중 — 진행률·오늘의 미션이 주인공
-      active:  { role: 'CHALLENGER', title: '님의 챌린지',
-                 flow: ['days', 'comments', 'answers', 'news', 'lecture', 'apps', 'contact'],
-                 widgets: ['todayCard', 'wProgress', 'wAnswers', 'wComments', 'wNews'] },
-      // done: 수료 — 이제야 오디오가 생기므로 Before/After 섹션이 맨 위.
-      //       ⚠️ 위젯에서는 wBa 를 wide 둘(todayCard·wProgress) 사이에 끼우지 말 것 —
-      //          반칸 위젯이 혼자 남아 오른쪽이 빈다. 반칸 4개를 붙여 2×2로 채운다.
-      done:    { role: 'GRADUATE',   title: '님의 기록',
-                 flow: ['ba', 'days', 'comments', 'answers', 'news', 'lecture', 'apps', 'contact'],
-                 widgets: ['todayCard', 'wProgress', 'wBa', 'wAnswers', 'wComments', 'wNews'] },
-    };
-    const ALL_SECTIONS = ['lecture', 'answers', 'ba', 'days', 'comments', 'apps', 'news', 'contact'];
-    const ALL_WIDGETS = ['todayCard', 'wProgress', 'wAnswers', 'wComments', 'wNews', 'wBa'];
+    // ── 내 특강 → '다가오는 일정' 카드(예정만). 지난 특강은 신청·결제 내역 접이에 남는다. ──
+    const LEC_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+    function fmtLecDate(s) {
+      const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!m) return '';
+      return (+m[2]) + '월 ' + (+m[3]) + '일(' + LEC_WEEK[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ')';
+    }
+    async function loadMyLectures(lectureIds) {
+      if (!lectureIds.length) return [];
+      try {
+        const { data, error } = await MONC.sb.from('special_lectures')
+          .select('id, title, lecture_date, schedule, instructor').in('id', lectureIds);
+        if (error || !data || !data.length) return [];
+        const today = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
+        const up = data.filter(l => l.lecture_date && String(l.lecture_date) >= today)
+          .sort((a, b) => String(a.lecture_date) < String(b.lecture_date) ? -1 : 1);
+        document.getElementById('upWrap').innerHTML = up.map(l => {
+          const meta = [fmtLecDate(l.lecture_date), l.schedule, l.instructor].filter(Boolean).join(' · ');
+          const d = Math.round((Date.parse(l.lecture_date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
+          return `<div class="v2-card"><div class="v2-up">
+              <div class="v2-up-body">
+                <div class="v2-up-t">${esc(l.title || '특강')}</div>
+                ${meta ? `<div class="v2-up-d">${esc(meta)}</div>` : ''}
+              </div>
+              <span class="v2-dday">${d === 0 ? '오늘' : 'D-' + d}</span>
+            </div></div>`;
+        }).join('');
+        return data;
+      } catch (_) { return []; }
+    }
 
-    // cohort_id(기수 배정)가 챌린지 참여의 정본. 기수 미배정인데 기록만 있는 경우도 방어.
+    // ── 회원 상태 판정 — cohort_id(기수 배정)가 챌린지 참여의 정본. 기수 미배정인데 기록만 있는 경우도 방어. ──
     function memberState(profile, hasRecords, hasLectures) {
       const co = profile && profile.cohorts;
       if (profile && profile.cohort_id) {
@@ -557,67 +562,6 @@
       if (hasRecords) return 'active';
       if (hasLectures) return 'lecture';
       return 'tools';
-    }
-
-    // 표시 대상만 순서대로 재배치. ⚠️ 표시 여부는 각 로더(뉴스·특강)가 쥐고 있으므로
-    // 여기서는 '빼는 것'만 하고 display 를 강제로 켜지 않는다.
-    function applyLayout(state) {
-      const L = LAYOUT[state] || LAYOUT.tools;
-      const flow = document.getElementById('flow');
-      ALL_SECTIONS.forEach(k => {
-        const el = document.getElementById('sec-' + k);
-        if (el && L.flow.indexOf(k) < 0) el.style.display = 'none';
-      });
-      L.flow.forEach(k => { const el = document.getElementById('sec-' + k); if (el) flow.appendChild(el); });
-
-      const grid = document.querySelector('.wgrid');
-      ALL_WIDGETS.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && L.widgets.indexOf(id) < 0) el.style.display = 'none';
-      });
-      L.widgets.forEach(id => { const el = document.getElementById(id); if (el) grid.appendChild(el); });
-
-      const role = document.querySelector('.m-role');
-      if (role) role.textContent = L.role;
-      const t = document.getElementById('hTitle');
-      if (t) t.textContent = L.title;
-    }
-
-    // ── 내 특강 (applications.challenges 안의 {type:'lecture', lecture_id, name}) ──
-    //    '8월 3일(토)'. lecture-common.js 는 카드 빌더까지 딸려와서 이 한 줄 때문에 안 싣는다.
-    const LEC_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-    function fmtLecDate(s) {
-      const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (!m) return '';
-      return (+m[2]) + '월 ' + (+m[3]) + '일(' + LEC_WEEK[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ')';
-    }
-
-    async function loadMyLectures(lectureIds) {
-      if (!lectureIds.length) return [];
-      try {
-        const { data, error } = await MONC.sb.from('special_lectures')
-          .select('id, title, lecture_date, schedule, instructor').in('id', lectureIds);
-        if (error || !data || !data.length) return [];
-        const today = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
-        // 예정된 특강 먼저(가까운 순), 지난 것은 뒤로(최근 순)
-        const up = data.filter(l => l.lecture_date && String(l.lecture_date) >= today)
-          .sort((a, b) => String(a.lecture_date) < String(b.lecture_date) ? -1 : 1);
-        const past = data.filter(l => !l.lecture_date || String(l.lecture_date) < today)
-          .sort((a, b) => String(a.lecture_date) > String(b.lecture_date) ? -1 : 1);
-        const rows = up.concat(past);
-        document.getElementById('myLectures').innerHTML = rows.map(l => {
-          const meta = [fmtLecDate(l.lecture_date), l.schedule, l.instructor].filter(Boolean).join(' · ');
-          let badge = '<span class="lec-badge past">지난 특강</span>';
-          if (l.lecture_date && String(l.lecture_date) >= today) {
-            const d = Math.round((Date.parse(l.lecture_date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
-            badge = '<span class="lec-badge">' + (d === 0 ? '오늘' : 'D-' + d) + '</span>';
-          }
-          return `<li><span class="lec-body"><span class="lec-title">${esc(l.title || '특강')}</span>` +
-            (meta ? `<span class="lec-meta" style="display:block">${esc(meta)}</span>` : '') + `</span>${badge}</li>`;
-        }).join('');
-        document.getElementById('sec-lecture').style.display = '';
-        return rows;
-      } catch (_) { return []; }
     }
 
     (async () => {
@@ -633,39 +577,26 @@
       const profile = await MONC.getMyProfile();
 
       // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)
-      if (profile && profile.role === 'admin') {
-        const al = document.getElementById('adminLink');
-        if (al) al.style.display = '';
-      }
+      if (profile && profile.role === 'admin') document.getElementById('adminLink').style.display = '';
 
-      // 이름/메타 (소속 기수 · 챌린지 기간 · 이메일 순. 없는 항목은 생략)
-      document.getElementById('hName').textContent = (profile && profile.name) ? profile.name : '회원';
-      const metaBits = [];
-      const cohort = profile && profile.cohorts;   // FK 조인 결과(없으면 null)
-      if (cohort && cohort.name) metaBits.push(cohort.name);
-      if (cohort && cohort.start_date && cohort.end_date) {
-        // '2026-07-10' → '7/10' 형태로 간결하게
-        const md = s => { const p = String(s).split('-'); return p.length === 3 ? (+p[1]) + '/' + (+p[2]) : s; };
-        metaBits.push(md(cohort.start_date) + '~' + md(cohort.end_date));
-      }
-      if (profile && profile.email) metaBits.push(profile.email);
-      document.getElementById('hMeta').textContent = metaBits.join(' · ');
+      document.getElementById('idName').textContent = (profile && profile.name) ? profile.name : '회원';
 
-      // 연락처(phone) 로드 + 저장 (+ 신청·계정 리스트에 마스킹 표시)
+      // 연락처 로드 + 저장 (+ 접이 요약에 마스킹 표시)
       const phoneInput = document.getElementById('phoneInput');
       const phoneMsg = document.getElementById('phoneMsg');
       const maskPhone = p => {
         const m = String(p || '').replace(/\D/g, '').match(/^(\d{3})(\d{3,4})(\d{4})$/);
         return m ? m[1] + '-****-' + m[3] : (p || '미등록');
       };
-      const listPhoneEl = document.getElementById('listPhone');
-      if (profile && profile.phone) { phoneInput.value = profile.phone; listPhoneEl.textContent = maskPhone(profile.phone); }
+      const contactC = document.getElementById('contactC');
+      if (profile && profile.phone) { phoneInput.value = profile.phone; contactC.textContent = maskPhone(profile.phone); }
+      else contactC.textContent = '미등록';
       document.getElementById('phoneSave').addEventListener('click', async () => {
         const phone = phoneInput.value.trim();
         phoneMsg.textContent = '저장 중…';
         const { error } = await MONC.sb.from('members').update({ phone }).eq('id', me);
         phoneMsg.textContent = error ? ('저장 실패: ' + error.message) : '저장됐어요.';
-        if (!error) listPhoneEl.textContent = phone ? maskPhone(phone) : '미등록';
+        if (!error) contactC.textContent = phone ? maskPhone(phone) : '미등록';
       });
 
       // 날짜별 기록 (RLS 상 내 것만 조회됨)
@@ -674,46 +605,8 @@
         .select('day_number, status, comment')
         .eq('member_id', me)
         .order('day_number', { ascending: true });
-
       const byDay = {};
       (records || []).forEach(r => { byDay[r.day_number] = r; });
-
-      let ok = 0, no = 0;
-      const gridEl = document.getElementById('daysGrid');
-      let gridHtml = '';
-      for (let d = 1; d <= MONC.TOTAL_DAYS; d++) {
-        const r = byDay[d];
-        let cls = 'pending', ic = '·';
-        if (r && r.status === 'success') { cls = 'success'; ic = '○'; ok++; }
-        else if (r && r.status === 'fail') { cls = 'fail'; ic = '×'; no++; }
-        const hasC = r && r.comment ? ' has-comment' : '';
-        gridHtml += `<div class="day ${cls}${hasC}"><span class="dn">${d}일</span><span class="ic">${ic}</span></div>`;
-      }
-      gridEl.innerHTML = gridHtml;
-
-      // 진행률 링 위젯 (dasharray 194.8 = 2π×31)
-      const left = MONC.TOTAL_DAYS - ok - no;
-      const RING_C = 194.8;
-      document.getElementById('ringFg').style.strokeDashoffset = (RING_C * (1 - ok / MONC.TOTAL_DAYS)).toFixed(1);
-      document.getElementById('ringPct').textContent = Math.round(ok / MONC.TOTAL_DAYS * 100);
-      document.getElementById('wDaysOk').textContent = ok;
-      document.getElementById('wDaysCap').textContent =
-        (ok || no) ? ('아쉬움 ' + no + ' · 남은 미션 ' + left) : '오늘부터 시작해보세요';
-
-      // 코멘트 목록 + 위젯 수치
-      const cmEl = document.getElementById('commentList');
-      const withComments = (records || []).filter(r => r.comment && r.comment.trim());
-      document.getElementById('wCmVal').textContent = withComments.length;
-      if (!withComments.length) {
-        cmEl.innerHTML = '<li><span class="cm-body" style="color:var(--text-muted)">아직 코멘트가 없어요.</span></li>';
-      } else {
-        cmEl.innerHTML = withComments.map(r => {
-          const st = r.status === 'success'
-            ? '<span class="cm-status ok">성공</span>'
-            : '<span class="cm-status no">아쉬움</span>';
-          return `<li><span class="cm-day">${r.day_number}일차</span><span class="cm-body">${esc(r.comment)}${st}</span></li>`;
-        }).join('');
-      }
 
       // Before / After 음성
       const { data: recs } = await MONC.sb
@@ -723,84 +616,215 @@
       const recMap = {};
       (recs || []).forEach(x => { recMap[x.type] = x.storage_path; });
 
-      // B/A 위젯 상태
-      document.getElementById('wBaVal').textContent =
-        (recMap.before && recMap.after) ? '듣기 가능' : (recMap.before ? 'Before 등록됨' : '수료 시 공개');
-
-      for (const type of ['before', 'after']) {
-        const slot = document.getElementById(type + 'Slot');
-        if (recMap[type]) {
-          const url = await MONC.getSignedUrl(recMap[type]);
-          slot.innerHTML = url
-            ? `<audio controls preload="none" src="${url}"></audio>`
-            : '<div class="empty">재생 링크를 불러오지 못했어요.</div>';
-        } else {
-          slot.innerHTML = '<div class="empty">챌린지를 수료하면 여기에서 비교할 수 있어요.</div>';
-        }
-      }
-
-      // 내 신청 내역 (RLS: member_id = 본인) + 결제 스트립 집계
+      // 내 신청 내역 (RLS: member_id = 본인)
       const CH_LABEL_MP = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
-      // ⚠️ challenges jsonb 에는 챌린지와 특강이 섞여 들어온다.
-      //    특강은 {type:'lecture', lecture_id, name} 이라 c.challenge 가 없다 —
-      //    예전엔 이걸 안 봐서 특강 신청 건의 상품명이 빈칸으로 나왔다.
-      const itemLabel = c => {
+      // ⚠️ challenges jsonb 에는 챌린지와 특강이 섞여 들어온다 — 특강은 {type:'lecture', lecture_id, name}.
+      const plainLabel = c => {
         if (!c) return '';
-        if (c.type === 'lecture' || c.lecture_id) {
-          return '<span class="al-kind">특강</span>' + esc(c.name || '특강');
-        }
-        return esc((CH_LABEL_MP[c.challenge] || c.challenge || '') + (c.round ? ' ' + c.round + '기' : ''));
+        if (c.type === 'lecture' || c.lecture_id) return '[특강] ' + (c.name || '특강');
+        return (CH_LABEL_MP[c.challenge] || c.challenge || '') + (c.round ? ' ' + c.round + '기' : '');
       };
-      const myAppsEl = document.getElementById('myApps');
       const { data: myApps } = await MONC.sb.from('applications')
         .select('created_at, challenges, total_price, paid, refunded, payment_status')
         .eq('member_id', me)
         .order('created_at', { ascending: false });
-      document.getElementById('listApps').textContent = (myApps ? myApps.length : 0) + '건';
-      if (!myApps || !myApps.length) {
-        myAppsEl.innerHTML = '<li style="color:var(--text-muted);border:0;">아직 신청 내역이 없어요. 전화번호를 입력해두면 신청과 자동으로 연결돼요.</li>';
-      } else {
-        // 결제 스트립: 환불 > 결제완료 > 입금대기 순으로 한 건당 하나의 상태
-        let nPaid = 0, nWait = 0, nRefund = 0;
-        myApps.forEach(a => {
-          if (a.refunded || a.payment_status === 'refunded' || a.payment_status === 'partial_refunded') nRefund++;
-          else if (a.paid || a.payment_status === 'paid') nPaid++;
-          else nWait++;
-        });
-        document.getElementById('psPaid').textContent = nPaid;
-        document.getElementById('psRefund').textContent = nRefund;
-        const psWait = document.getElementById('psWait');
-        psWait.textContent = nWait;
-        if (nWait) psWait.classList.add('hot');   // 입금대기 있으면 강조
 
-        myAppsEl.innerHTML = myApps.map(a => {
-          const chs = Array.isArray(a.challenges) ? a.challenges.map(itemLabel).filter(Boolean).join(', ') : '';
-          const d = new Date(a.created_at);
-          // 간편결제 건은 payment_status 가 소스(paid 불리언은 계좌이체 수동 확인용)
-          const badge = (a.refunded || a.payment_status === 'refunded') ? '<span class="al-badge al-refund">환불완료</span>'
-            : a.payment_status === 'partial_refunded' ? '<span class="al-badge al-refund">부분 환불</span>'
-            : (a.paid || a.payment_status === 'paid') ? '<span class="al-badge al-paid">결제완료</span>'
-            : '<span class="al-badge al-wait">입금대기</span>';
-          return `<li>
-            <div class="al-top"><span class="al-ch">${chs}</span><span class="al-date">${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</span></div>
-            <div class="al-status">${badge}<span style="color:var(--text-muted)">${(a.total_price||0).toLocaleString()}원</span></div>
-          </li>`;
+      if (myApps && myApps.length) {
+        // 상태는 환불 > 결제완료 > 입금대기 순으로 한 건당 하나 (간편결제 건은 payment_status 가 소스)
+        const stateOf = a =>
+          (a.refunded || a.payment_status === 'refunded') ? ['환불완료', ''] :
+          a.payment_status === 'partial_refunded' ? ['부분 환불', ''] :
+          (a.paid || a.payment_status === 'paid') ? ['결제완료', 'is-ok'] : ['입금대기', 'is-bad'];
+        document.getElementById('myApps').innerHTML = myApps.map(a => {
+          const [label, cls] = stateOf(a);
+          const names = Array.isArray(a.challenges) ? a.challenges.map(plainLabel).filter(Boolean).join(', ') : '';
+          return `<li class="v2-item">
+              <div class="v2-pay-top"><span class="v2-pay-t">${esc(names)}</span><span class="v2-chip ${cls}">${label}</span></div>
+              <div class="v2-pay-d"><span class="v2-num">${(a.total_price || 0).toLocaleString()}원</span><span class="v2-num">${fmtDot(a.created_at)}</span></div>
+            </li>`;
         }).join('');
+        document.getElementById('appsCount').textContent = myApps.length + '건';
+        document.getElementById('sec-apps').style.display = '';
+
+        // 입금 대기 줄 — 미확인 건이 있을 때만
+        const waits = myApps.filter(a => stateOf(a)[0] === '입금대기');
+        if (waits.length) {
+          const w = waits[0];
+          const names = Array.isArray(w.challenges) ? w.challenges.map(plainLabel).filter(Boolean).join(', ') : '';
+          document.getElementById('dueD').textContent = names + ' · ' + (w.total_price || 0).toLocaleString()
+            + '원 · ' + fmtDot(w.created_at) + ' 신청' + (waits.length > 1 ? ' 외 ' + (waits.length - 1) + '건' : '');
+          document.getElementById('dueStrip').style.display = '';
+        }
       }
 
-      // 내가 신청한 특강 → 카드 렌더 + 상태 판정 재료
+      // 내가 신청한 특강 → 다가오는 일정 카드 + 상태 판정 재료
       const lectureIds = [];
       (myApps || []).forEach(a => (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
         if (c && c.lecture_id) lectureIds.push(c.lecture_id);
       }));
       const myLectures = await loadMyLectures(Array.from(new Set(lectureIds)));
 
-      // 회원 상태에 맞춰 섹션·위젯을 추리고 순서를 잡는다. content 를 보이기 전에 끝내야 깜빡이지 않는다.
-      applyLayout(memberState(profile, (records || []).length > 0, myLectures.length > 0));
+      // ── 회원 상태별 배치 ──────────────────────────────────────────────
+      const state = memberState(profile, (records || []).length > 0, myLectures.length > 0);
+      const cohort = profile && profile.cohorts;
+      const todayS = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
+      // 기수 배정 후 시작 전이면 '시작 전' 문구로 (일차 계산이 0 이하)
+      const dayN = (cohort && cohort.start_date)
+        ? Math.floor((Date.parse(todayS) - Date.parse(String(cohort.start_date))) / 86400000) + 1 : 0;
+      const phase = (state === 'active' && cohort && cohort.start_date && todayS < String(cohort.start_date))
+        ? 'prestart' : state;
+      const inChallenge = phase === 'active' || phase === 'prestart' || phase === 'done';
+
+      // 신원 줄
+      document.getElementById('idSub').textContent = cohort
+        ? [cohort.name, (cohort.start_date && cohort.end_date) ? mdDot(cohort.start_date) + ' ~ ' + mdDot(cohort.end_date) : '']
+            .filter(Boolean).join(' · ')
+        : (phase === 'active' ? '챌린지 진행 중' : '아직 참여 중인 챌린지 없음');
+
+      // 오늘 한 칸 — 문장은 전부 '사이트가 아는 사실'만 (제출 여부·마감 판정 문구 금지)
+      const tagEl = document.getElementById('todayTag');
+      const dateEl = document.getElementById('todayDate');
+      const headEl = document.getElementById('todayHead');
+      const descEl = document.getElementById('todayDesc');
+      const ctaEl = document.getElementById('todayCta');
+      const ctaTEl = document.getElementById('todayCtaT');
+      const nextEl = document.getElementById('todayNext');
+      const nextL = document.getElementById('todayNextL');
+      const nextQ = document.getElementById('todayNextQ');
+
+      if (phase === 'tools' || phase === 'lecture') {
+        tagEl.innerHTML = TAG_PLUS + '먼저 할 일';
+        headEl.textContent = '2주 챌린지부터 시작해 보세요';
+        descEl.textContent = '매일 미션을 올리면 코치가 다음 날 코멘트를 남깁니다. 모집 중인 기수를 먼저 확인하세요.';
+        ctaTEl.textContent = '모집 일정 보기';
+        ctaEl.href = 'apply.html';
+        nextL.textContent = '특강';
+        nextQ.textContent = '먼저 하루짜리 특강부터 둘러보기';
+        delete nextQ.dataset.role;
+        nextEl.href = 'lectures.html';
+        document.getElementById('sojaeCard').style.display = '';
+        document.getElementById('foldsHint').textContent = '활동이 쌓이면 여기에 생깁니다';
+        document.getElementById('emptyLine').style.display = '';
+      } else {
+        tagEl.innerHTML = TAG_CLOCK + '오늘 할 일';
+        dateEl.style.display = '';
+        nextL.textContent = '오늘의 질문';
+        nextQ.dataset.role = 'q';
+        if (phase === 'prestart') {
+          dateEl.textContent = mdKor(todayS);
+          headEl.textContent = mdKor(cohort.start_date) + '에 시작해요';
+          descEl.textContent = '첫 미션 안내는 챌린지 카톡방에서 드려요. 그동안 소재 발굴로 미리 준비해 보세요.';
+        } else if (phase === 'done') {
+          dateEl.textContent = mdKor(todayS);
+          headEl.textContent = '챌린지를 수료했어요';
+          if (recMap.before && recMap.after) {
+            descEl.textContent = '첫날과 마지막 날 목소리를 나란히 들어 보세요.';
+            ctaTEl.textContent = 'Before / After 듣기';
+            ctaEl.href = '#sec-ba';
+          } else {
+            descEl.textContent = '기록은 아래에 그대로 남아 있어요. 소재 발굴로 이어 가 보세요.';
+          }
+        } else {
+          // active — 일차는 기수 시작일로 계산한 값(사이트가 아는 사실). 제출 여부는 모르므로 쓰지 않는다.
+          dateEl.textContent = mdKor(todayS) + (dayN >= 1 && dayN <= MONC.TOTAL_DAYS ? ' · ' + dayN + '일차' : '');
+          headEl.textContent = (dayN >= 1 && dayN <= MONC.TOTAL_DAYS) ? '오늘은 ' + dayN + '일차예요' : '챌린지 진행 중이에요';
+          descEl.textContent = '미션 녹음은 챌린지 카톡방에 올려 주세요. 코치 코멘트는 이 화면에 쌓입니다.';
+        }
+      }
+      syncTodayQ();
+
+      // 진행 한 줄 + 14일 격자 + 코치 코멘트 — 챌린지 상태에서만
+      if (inChallenge) {
+        let ok = 0, no = 0;
+        let barHtml = '', gridHtml = '';
+        for (let d = 1; d <= MONC.TOTAL_DAYS; d++) {
+          const r = byDay[d];
+          let cls = '';
+          if (r && r.status === 'success') { cls = 'is-ok'; ok++; }
+          else if (r && r.status === 'fail') { cls = 'is-bad'; no++; }
+          else if (phase === 'active' && d === dayN) cls = 'is-now';
+          barHtml += `<i class="${cls === 'is-now' ? '' : cls}"></i>`;
+          gridHtml += `<div class="v2-day ${cls}"><span>${d}</span><i></i></div>`;
+        }
+        const left = MONC.TOTAL_DAYS - ok - no;
+        document.getElementById('progBar').innerHTML = barHtml;
+        document.getElementById('progLegend').innerHTML =
+          `<span class="is-ok">성공 ${ok}</span><span class="is-bad">아쉬움 ${no}</span><span>남은 ${left}</span>`;
+        document.getElementById('progR').textContent =
+          phase === 'prestart' ? '시작 전'
+          : phase === 'done' ? '수료'
+          : Math.min(Math.max(dayN, 1), MONC.TOTAL_DAYS) + ' / ' + MONC.TOTAL_DAYS + '일차';
+        document.getElementById('progCard').style.display = '';
+
+        document.getElementById('daysCap').textContent = (cohort && cohort.start_date && cohort.end_date)
+          ? mdKor(cohort.start_date) + ' ~ ' + mdKor(cohort.end_date) + ' · 숫자는 일차' : '숫자는 일차';
+        document.getElementById('daysGrid').innerHTML = gridHtml;
+        document.getElementById('sec-days').style.display = '';
+
+        // 코치 코멘트 — 최근 일차부터. 배지는 문장 위 별도 줄.
+        const withComments = (records || []).filter(r => r.comment && r.comment.trim())
+          .sort((a, b) => b.day_number - a.day_number);
+        if (withComments.length) {
+          document.getElementById('commentList').innerHTML = withComments.map(r => {
+            const chip = r.status === 'success'
+              ? '<span class="v2-chip is-ok">성공</span>' : '<span class="v2-chip is-bad">아쉬움</span>';
+            return `<li class="v2-item">
+                <div class="v2-cmt-head">${chip}<span class="v2-cmt-day">${r.day_number}일차</span></div>
+                <p class="v2-cmt-body">${esc(r.comment)}</p>
+              </li>`;
+          }).join('');
+          document.getElementById('cmCount').textContent = withComments.length;
+          document.getElementById('sec-comments').style.display = '';
+        }
+
+        // Before / After 음성
+        document.getElementById('baLabel').textContent =
+          (recMap.before && recMap.after) ? '듣기 가능' : (recMap.before ? 'Before 등록됨' : '수료 후 공개');
+        for (const type of ['before', 'after']) {
+          const slot = document.getElementById(type + 'Slot');
+          if (recMap[type]) {
+            const url = await MONC.getSignedUrl(recMap[type]);
+            slot.innerHTML = url
+              ? `<audio controls preload="none" src="${url}"></audio>`
+              : '<div class="v2-ba-empty">재생 링크를 불러오지 못했어요.</div>';
+          } else {
+            slot.innerHTML = '<div class="v2-ba-empty">챌린지를 수료하면 여기에서 비교할 수 있어요.</div>';
+          }
+        }
+        document.getElementById('sec-ba').style.display = '';
+      }
 
       document.getElementById('loading').style.display = 'none';
-      document.getElementById('content').style.display = 'block';
+      document.getElementById('content').style.display = '';
+      openHashFold();
     })();
+
+    // ── 접이 동작 ────────────────────────────────────────────────────────
+    // 한 번에 하나만 펼친다 — 스크롤 길이를 통제하기 위한 처리
+    (function () {
+      const items = document.querySelectorAll('[data-v2-acc] details.v2-fold');
+      items.forEach(d => d.addEventListener('toggle', () => {
+        if (!d.open) return;
+        items.forEach(other => { if (other !== d && other.open) other.open = false; });
+      }));
+    })();
+    // #sec-* 딥링크(nav '나만의 승준노트' → #sec-answers, 입금대기 줄 → #sec-apps)는 접이를 펼쳐서 보여준다
+    function openHashFold() {
+      const id = location.hash.slice(1);
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (el && el.tagName === 'DETAILS' && el.style.display !== 'none') {
+        el.open = true;
+        el.scrollIntoView({ block: 'start' });
+      }
+    }
+    window.addEventListener('hashchange', openHashFold);
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a[href^="#sec-"]');
+      if (!a) return;
+      const el = document.getElementById(a.getAttribute('href').slice(1));
+      if (el && el.tagName === 'DETAILS') el.open = true;
+    });
   </script>
 </body>
 </html>
