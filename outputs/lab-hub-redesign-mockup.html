@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>연구실 허브 재설계 — 3안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   몬크 연구실 허브 — 재설계 목업 3안 (2026-07-31)
+
+   배경: 헤어라인 원장 확정본(outputs/lab-hub-mockup.html)을 라이브에 올린 뒤
+   오너가 재설계 지시 — "허브 페이지 디자인을 새로 짜게 목업으로 한 세 개 보여줘 봐".
+   이전 결정 경과(v1~v3-c)는 lab-hub-mockup.html 머리 주석에 기록으로 남긴다.
+
+   3안 공통 전제:
+     · 히어로 문안·현황 스트립·하단 연구진 2단 카드(오늘 확정)는 그대로 두고
+       **서가 5종(자료실·영상관·기출문제·현장 리포트·채용 캘린더) 표현만 새로 짠다.**
+       (히어로까지 바꾸고 싶으면 말해줄 것)
+     · 팔레트·활자·라운드는 tokens.css 현행 값. 새 색 없음. 활자 12px 하한.
+     · 숫자는 DB 에서 셀 수 있는 값만(지금은 전부 예시). 축적 막대(스파크라인)는
+       오너 지시로 폐지된 물건 — 어느 안에도 없다.
+
+   ① 종이 서가   — 챌린지 카드의 레터프레스 종이 언어. 카드 5장, 큼직한 계기.
+   ② 매거진 목차 — 승준노트 허브와 자매 언어. 점선 리더 + 대표 서가 틴트 판 + 소인.
+   ③ 관측 콘솔   — 홈 다크 섹션 리듬의 잉크 패널 한 판. 라이브 점 + 밝은 블루 계기.
+   ══════════════════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: 'SUIT Variable';
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.woff2') format('woff2');
+}
+:root {
+  --bg: #F4F1EA; --bg2: #FBF9F5; --surface: #FFFFFF; --surface2: #F4F0E8;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #6C6454;
+  --border: rgba(38,34,28,0.16); --border-soft: rgba(38,34,28,0.09);
+  --bg-dark: #26221C; --text-on-dark: #F5F1E8; --dim-on-dark: #C9C3B6;
+  --action: #1B3A6B; --accent-dark: #142C52; --action-tint: #E5E9F1;
+  --accent: #1B3A6B; --accent-ink: #1B3A6B; --action-on-dark: #A8C7F0;
+  --radius-xs: 8px; --radius-sm: 14px; --radius: 20px; --radius-lg: 24px;
+  --shadow: 0 4px 20px rgba(36,26,18,0.10); --shadow-lg: 0 12px 48px rgba(36,26,18,0.18);
+  --serif: 'SUIT Variable', SUIT, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { overflow-x: clip; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: var(--bg); color: var(--text);
+  -webkit-font-smoothing: antialiased; word-break: keep-all;
+}
+a { text-decoration: none; color: inherit; display: block; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 30px 20px 64px; }
+
+.mo-head h1 { font-size: 25px; font-weight: 800; letter-spacing: -0.01em; }
+.mo-head p { font-size: 14px; font-weight: 500; line-height: 1.6; color: var(--text-muted); margin-top: 8px; }
+
+.v-head { margin: 54px 0 16px; display: flex; align-items: flex-start; gap: 11px; }
+.v-num {
+  flex: none; width: 30px; height: 30px; border-radius: 999px; background: var(--action);
+  color: #fff; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+.v-name { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.v-desc { font-size: 13.5px; font-weight: 500; line-height: 1.55; color: var(--text-muted); margin-top: 4px; }
+
+/* ── 공통 프리뷰: 히어로 + 현황 스트립(현행 유지 전제) ── */
+.hero { padding: 6px 0 0; }
+.hero-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-family: var(--serif); font-size: 30px; font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; margin-top: 9px; }
+.hero-sub { font-size: 14.5px; font-weight: 500; line-height: 1.6; color: var(--text-muted); margin-top: 10px; }
+.st-strip {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 16px; padding: 12px 2px 14px; border-bottom: 1px solid var(--border);
+}
+.st-live { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }
+.st-sep { width: 1px; height: 12px; background: var(--border); }
+.st-item { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.st-item b { font-weight: 800; color: var(--text); }
+.live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action); }
+.live.on-dark { background: var(--action-on-dark); }
+@media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
+@keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
+
+/* 연구진 자리 표시(각 안 공통 — 오늘 확정한 2단 카드가 이 아래 그대로 온다) */
+.ph-people {
+  margin-top: 16px; border: 1.5px dashed var(--border); border-radius: var(--radius-sm);
+  padding: 14px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text-dim);
+}
+
+/* ══════════ ① 종이 서가 — 레터프레스 카드 5장 ══════════
+   챌린지 허브의 레터프레스 종이(#FCF9F1→#F3EEE1)를 서가로 가져온 안.
+   카드마다 색인 스탬프 + 큼직한 계기. 면이 생겨 무게감이 있다. */
+.a1-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+.a1-card {
+  position: relative; border-radius: var(--radius); padding: 17px 18px 15px;
+  background: linear-gradient(180deg, #FCF9F1, #F3EEE1);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), var(--shadow);
+}
+.a1-top { display: flex; align-items: flex-start; gap: 12px; }
+.a1-main { min-width: 0; flex: 1; }
+.a1-idx {
+  display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.12em;
+  color: var(--accent-ink); border: 1px solid rgba(27,58,107,0.3); border-radius: 4px; padding: 2px 7px;
+}
+.a1-name { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin-top: 10px; }
+.a1-desc { font-size: 14px; font-weight: 500; line-height: 1.55; color: var(--text-muted); margin-top: 4px; }
+.a1-fig { flex: none; text-align: right; padding-top: 2px; }
+.a1-count { display: flex; align-items: baseline; justify-content: flex-end; gap: 2px; }
+.a1-count b { font-size: 26px; font-weight: 800; color: var(--accent-dark); letter-spacing: -0.02em; line-height: 1; }
+.a1-count span { font-size: 13px; font-weight: 700; color: var(--accent-dark); }
+.a1-delta { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-top: 6px; }
+.a1-foot {
+  display: flex; align-items: center; gap: 8px; margin-top: 13px; padding-top: 11px;
+  border-top: 1px dashed rgba(38,34,28,0.22);
+  font-size: 13px; font-weight: 500; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden;
+}
+.a1-foot .t { overflow: hidden; text-overflow: ellipsis; }
+.a1-foot time { flex: none; margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.a1-foot svg { flex: none; color: var(--accent-ink); }
+
+/* ══════════ ② 매거진 목차 — 점선 리더 + 대표 서가 판 + 소인 ══════════
+   승준노트 허브(매거진 목차형)와 자매 언어. 이름──리더──계기.
+   대표 서가(자료실) 하나만 틴트 판으로 강조, 접수 중엔 소인 도장. */
+.a2-list { border-top: 1.5px solid var(--text); margin-top: 18px; }
+.a2-row { padding: 15px 2px 13px; border-bottom: 1px solid var(--border-soft); }
+.a2-row:last-child { border-bottom: 1.5px solid var(--border); }
+.a2-line { display: flex; align-items: baseline; gap: 10px; }
+.a2-idx { flex: none; width: 24px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-dim); }
+.a2-name { flex: none; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+.a2-leader { flex: 1; min-width: 24px; border-bottom: 2px dotted rgba(38,34,28,0.28); transform: translateY(-4px); }
+.a2-fig { flex: none; display: flex; align-items: baseline; gap: 1px; }
+.a2-fig b { font-size: 17px; font-weight: 800; color: var(--accent-dark); letter-spacing: -0.01em; }
+.a2-fig span { font-size: 12.5px; font-weight: 700; color: var(--accent-dark); }
+.a2-sub { display: flex; align-items: baseline; gap: 8px; padding-left: 34px; margin-top: 4px; }
+.a2-desc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 500; color: var(--text-muted); }
+.a2-delta { flex: none; margin-left: auto; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+/* 대표 서가 — 목차에서 유일하게 면을 가진 행(승준노트 허브의 '판' 문법) */
+.a2-feat { background: var(--action-tint); border-radius: var(--radius-sm); padding: 16px 14px 14px; margin: 6px -2px; border-bottom: none; }
+.a2-feat .a2-idx { color: var(--accent-ink); }
+.a2-feat .a2-name { font-size: 20px; }
+.a2-feat .a2-leader { border-color: rgba(27,58,107,0.3); }
+.a2-feat .a2-sub { padding-left: 34px; }
+/* 소인 — 접수 중인 일정에 찍는 도장(승준노트 '소인' 문법) */
+.a2-stamp {
+  flex: none; display: inline-block; transform: rotate(-5deg);
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--accent-ink);
+  border: 1.5px solid rgba(27,58,107,0.55); border-radius: 6px; padding: 1px 6px;
+}
+
+/* ══════════ ③ 관측 콘솔 — 다크 잉크 패널 한 판 ══════════
+   홈 다크 섹션 리듬. 라이브 점 + 밝은 블루(--action-on-dark) 계기.
+   다크 위 강조는 --action-on-dark, 본문은 --text-on-dark(팔레트 규칙 준수). */
+.a3-panel {
+  margin-top: 18px; background: var(--bg-dark); border-radius: var(--radius-lg);
+  padding: 18px 18px 6px; box-shadow: var(--shadow-lg); color: var(--text-on-dark);
+}
+.a3-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 700; color: var(--action-on-dark);
+  padding: 2px 2px 13px; border-bottom: 1px solid rgba(245,241,232,0.16);
+}
+.a3-head time { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--dim-on-dark); }
+.a3-row { display: flex; align-items: center; gap: 12px; padding: 15px 2px 14px; border-bottom: 1px solid rgba(245,241,232,0.1); }
+.a3-row:last-of-type { border-bottom: none; }
+.a3-idx { flex: none; width: 22px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--dim-on-dark); }
+.a3-txt { min-width: 0; flex: 1; }
+.a3-name { font-size: 17.5px; font-weight: 800; letter-spacing: -0.01em; }
+.a3-desc { font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--dim-on-dark); margin-top: 3px; }
+.a3-fig { flex: none; text-align: right; }
+.a3-count { display: flex; align-items: baseline; justify-content: flex-end; gap: 1px; }
+.a3-count b { font-size: 22px; font-weight: 800; color: var(--action-on-dark); letter-spacing: -0.02em; line-height: 1; }
+.a3-count span { font-size: 12.5px; font-weight: 700; color: var(--action-on-dark); }
+.a3-delta { font-size: 12px; font-weight: 600; color: var(--dim-on-dark); margin-top: 5px; }
+.a3-sum {
+  display: flex; align-items: center; gap: 8px; padding: 12px 2px 14px;
+  border-top: 1px solid rgba(245,241,232,0.16);
+  font-size: 12.5px; font-weight: 600; color: var(--dim-on-dark);
+}
+.a3-sum b { font-weight: 800; color: var(--text-on-dark); }
+
+.foot-note { margin-top: 46px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="mo-head">
+    <h1>연구실 허브 재설계 — 3안</h1>
+    <p>서가 5종의 표현만 새로 짰습니다. 히어로·현황 스트립·하단 연구진 2단 카드(오늘 확정)는 세 안 모두 그대로 두는 전제입니다. 숫자·목록은 전부 예시입니다.</p>
+  </div>
+
+  <!-- 공통 상단(현행 유지 전제) -->
+  <header class="hero" style="margin-top:34px;">
+    <p class="hero-eyebrow">MONC LAB</p>
+    <h1>몬크 연구실</h1>
+    <p class="hero-sub">항공사 자료, 기업분석 영상, 기출문제, 면접 현장의 기록까지 — 연구진이 모아 정리합니다.</p>
+  </header>
+  <div class="st-strip">
+    <span class="st-live"><i class="live"></i>연구 진행 중</span>
+    <span class="st-sep"></span>
+    <span class="st-item num">자료 <b>180</b>건</span>
+    <span class="st-sep"></span>
+    <span class="st-item">갱신 <b>3시간 전</b></span>
+  </div>
+
+  <!-- ══════════ ① 종이 서가 ══════════ -->
+  <div class="v-head">
+    <span class="v-num">1</span>
+    <div>
+      <p class="v-name">종이 서가 — 레터프레스 카드</p>
+      <p class="v-desc">챌린지 허브의 종이 카드 언어를 서가로. 면이 있어 무게감·클릭감이 가장 크고, 카드마다 계기가 큼직합니다.</p>
+    </div>
+  </div>
+
+  <div class="a1-grid">
+    <a class="a1-card">
+      <div class="a1-top">
+        <div class="a1-main">
+          <span class="a1-idx num">01</span>
+          <p class="a1-name">항공사 자료실</p>
+          <p class="a1-desc">항공사를 고르면 그 회사 자료만 모아 보여드려요.</p>
+        </div>
+        <div class="a1-fig">
+          <p class="a1-count"><b class="num">24</b><span>건</span></p>
+          <p class="a1-delta num">최근 +2</p>
+        </div>
+      </div>
+      <p class="a1-foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="t">대한항공 인재상, 한 장 정리</span><time class="num">07.28</time></p>
+    </a>
+    <a class="a1-card">
+      <div class="a1-top">
+        <div class="a1-main">
+          <span class="a1-idx num">02</span>
+          <p class="a1-name">영상관</p>
+          <p class="a1-desc">기업분석·QnA·라이브 다시보기를 주제별로 모았어요.</p>
+        </div>
+        <div class="a1-fig">
+          <p class="a1-count"><b class="num">12</b><span>편</span></p>
+          <p class="a1-delta num">최근 +1</p>
+        </div>
+      </div>
+      <p class="a1-foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="t">7월 채용 QnA 라이브 (42:10)</span><time class="num">07.19</time></p>
+    </a>
+    <a class="a1-card">
+      <div class="a1-top">
+        <div class="a1-main">
+          <span class="a1-idx num">03</span>
+          <p class="a1-name">기출문제</p>
+          <p class="a1-desc">실제 면접장에서 나온 질문을 항공사별로 모았어요.</p>
+        </div>
+        <div class="a1-fig">
+          <p class="a1-count"><b class="num">132</b><span>개</span></p>
+          <p class="a1-delta num">주 +6</p>
+        </div>
+      </div>
+      <p class="a1-foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="t">"옆 지원자의 장점을 찾아 칭찬해 보세요"</span><time class="num">07.31</time></p>
+    </a>
+    <a class="a1-card">
+      <div class="a1-top">
+        <div class="a1-main">
+          <span class="a1-idx num">04</span>
+          <p class="a1-name">현장 리포트</p>
+          <p class="a1-desc">면접 다녀온 회원들의 기록. 남기면 크레딧을 드려요.</p>
+        </div>
+        <div class="a1-fig">
+          <p class="a1-count"><b class="num">12</b><span>편</span></p>
+          <p class="a1-delta num">대기 2</p>
+        </div>
+      </div>
+      <p class="a1-foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="t">제주항공 임원 면접 — 표정을 오래 보셨어요</span><time class="num">07.26</time></p>
+    </a>
+    <a class="a1-card">
+      <div class="a1-top">
+        <div class="a1-main">
+          <span class="a1-idx num">05</span>
+          <p class="a1-name">채용 캘린더</p>
+          <p class="a1-desc">항공사별 채용이 언제 있었는지 흐름을 한눈에.</p>
+        </div>
+        <div class="a1-fig">
+          <p class="a1-count"><b class="num">7</b><span>곳</span></p>
+          <p class="a1-delta">접수 중 1</p>
+        </div>
+      </div>
+      <p class="a1-foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="t">이스타항공 객실승무원 ~8.12(수)</span><time class="num">D-12</time></p>
+    </a>
+  </div>
+  <p class="ph-people">↓ 이 아래는 몬크 연구진 2단 카드(확정본 그대로)</p>
+
+  <!-- ══════════ ② 매거진 목차 ══════════ -->
+  <div class="v-head">
+    <span class="v-num">2</span>
+    <div>
+      <p class="v-name">매거진 목차 — 리더 점선 + 대표 서가 판</p>
+      <p class="v-desc">승준노트 허브(매거진 목차형)와 자매 언어라 사이트 통일감이 가장 좋습니다. 대표 서가(자료실) 하나만 틴트 판으로 강조하고, 접수 중 일정엔 소인을 찍습니다.</p>
+    </div>
+  </div>
+
+  <div class="a2-list">
+    <a class="a2-row a2-feat">
+      <div class="a2-line">
+        <span class="a2-idx num">01</span>
+        <span class="a2-name">항공사 자료실</span>
+        <span class="a2-leader"></span>
+        <span class="a2-fig num"><b>24</b><span>건</span></span>
+      </div>
+      <div class="a2-sub"><span class="a2-desc">항공사를 고르면 그 회사 자료만 모아 보여드려요</span><span class="a2-delta num">최근 +2 · 07.28</span></div>
+    </a>
+    <a class="a2-row">
+      <div class="a2-line">
+        <span class="a2-idx num">02</span>
+        <span class="a2-name">영상관</span>
+        <span class="a2-leader"></span>
+        <span class="a2-fig num"><b>12</b><span>편</span></span>
+      </div>
+      <div class="a2-sub"><span class="a2-desc">기업분석·QnA·라이브 다시보기</span><span class="a2-delta num">최근 +1 · 07.19</span></div>
+    </a>
+    <a class="a2-row">
+      <div class="a2-line">
+        <span class="a2-idx num">03</span>
+        <span class="a2-name">기출문제</span>
+        <span class="a2-leader"></span>
+        <span class="a2-fig num"><b>132</b><span>개</span></span>
+      </div>
+      <div class="a2-sub"><span class="a2-desc">실제 면접장에서 나온 질문, 항공사별</span><span class="a2-delta num">주 +6 · 07.31</span></div>
+    </a>
+    <a class="a2-row">
+      <div class="a2-line">
+        <span class="a2-idx num">04</span>
+        <span class="a2-name">현장 리포트</span>
+        <span class="a2-leader"></span>
+        <span class="a2-fig num"><b>12</b><span>편</span></span>
+      </div>
+      <div class="a2-sub"><span class="a2-desc">면접 다녀온 회원들의 기록 — 남기면 크레딧</span><span class="a2-delta num">대기 2 · 07.26</span></div>
+    </a>
+    <a class="a2-row">
+      <div class="a2-line">
+        <span class="a2-idx num">05</span>
+        <span class="a2-name">채용 캘린더</span>
+        <span class="a2-leader"></span>
+        <span class="a2-stamp">접수 중 1</span>
+      </div>
+      <div class="a2-sub"><span class="a2-desc">이스타항공 객실승무원 ~8.12(수)</span><span class="a2-delta num">D-12</span></div>
+    </a>
+  </div>
+  <p class="ph-people">↓ 이 아래는 몬크 연구진 2단 카드(확정본 그대로)</p>
+
+  <!-- ══════════ ③ 관측 콘솔 ══════════ -->
+  <div class="v-head">
+    <span class="v-num">3</span>
+    <div>
+      <p class="v-name">관측 콘솔 — 다크 잉크 패널</p>
+      <p class="v-desc">홈 다크 섹션 리듬의 잉크 패널 한 판. '연구가 지금 돌아간다'는 인상이 가장 강하고, 페이지에서 서가가 무대처럼 분리돼 보입니다.</p>
+    </div>
+  </div>
+
+  <div class="a3-panel">
+    <p class="a3-head"><i class="live on-dark"></i>연구 진행 중<time class="num">갱신 3시간 전</time></p>
+    <a class="a3-row">
+      <span class="a3-idx num">01</span>
+      <div class="a3-txt">
+        <p class="a3-name">항공사 자료실</p>
+        <p class="a3-desc">항공사를 고르면 그 회사 자료만.</p>
+      </div>
+      <div class="a3-fig">
+        <p class="a3-count"><b class="num">24</b><span>건</span></p>
+        <p class="a3-delta num">최근 +2</p>
+      </div>
+    </a>
+    <a class="a3-row">
+      <span class="a3-idx num">02</span>
+      <div class="a3-txt">
+        <p class="a3-name">영상관</p>
+        <p class="a3-desc">기업분석·QnA·라이브 다시보기.</p>
+      </div>
+      <div class="a3-fig">
+        <p class="a3-count"><b class="num">12</b><span>편</span></p>
+        <p class="a3-delta num">최근 +1</p>
+      </div>
+    </a>
+    <a class="a3-row">
+      <span class="a3-idx num">03</span>
+      <div class="a3-txt">
+        <p class="a3-name">기출문제</p>
+        <p class="a3-desc">실제 면접장에서 나온 질문, 항공사별.</p>
+      </div>
+      <div class="a3-fig">
+        <p class="a3-count"><b class="num">132</b><span>개</span></p>
+        <p class="a3-delta num">주 +6</p>
+      </div>
+    </a>
+    <a class="a3-row">
+      <span class="a3-idx num">04</span>
+      <div class="a3-txt">
+        <p class="a3-name">현장 리포트</p>
+        <p class="a3-desc">면접 다녀온 회원들의 기록.</p>
+      </div>
+      <div class="a3-fig">
+        <p class="a3-count"><b class="num">12</b><span>편</span></p>
+        <p class="a3-delta num">대기 2</p>
+      </div>
+    </a>
+    <a class="a3-row">
+      <span class="a3-idx num">05</span>
+      <div class="a3-txt">
+        <p class="a3-name">채용 캘린더</p>
+        <p class="a3-desc">이스타항공 접수 중 ~8.12(수).</p>
+      </div>
+      <div class="a3-fig">
+        <p class="a3-count"><b class="num">7</b><span>곳</span></p>
+        <p class="a3-delta num">D-12</p>
+      </div>
+    </a>
+    <p class="a3-sum num">이번 주 <b>+9</b> · 누적 자료 <b>180</b>건</p>
+  </div>
+  <p class="ph-people">↓ 이 아래는 몬크 연구진 2단 카드(확정본 그대로)</p>
+
+  <p class="foot-note">연구실 허브 재설계 목업 — 화면 속 자료·영상·일정은 전부 예시입니다.</p>
+
+</main>
+</body>
+</html>
