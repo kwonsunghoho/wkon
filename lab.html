@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>몬크 연구실 — MONC 몬크 챌린지</title>
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+  <meta name="description" content="몬크 연구실 — 항공사 자료실, 영상관, 기출문제, 현장 리포트, 채용 캘린더. 연구진이 모아 정리합니다." />
+
+  <!-- 파비콘 -->
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
+  <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴 — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <style>
+  /* ══════════════════════════════════════════════════════════════════════════
+     몬크 연구실 허브 (2026-07-31 신설)
+
+     원본 목업: outputs/lab-hub-mockup.html (결정 경과·기각안은 그 파일 머리 주석과
+     outputs/lab-cards-mockup.html 에 있다 — 헤어라인 원장 + 연구진 합본 확정).
+
+     ⚠️ 상자(카드 테두리·그림자)를 두지 않는 것이 이 화면의 핵심이다. 상자를 되살리면
+        승준노트 허브와 같은 화면이 되어 '연구실'의 차별점이 사라진다.
+     ⚠️ 축적 막대(8주 스파크라인)는 오너 지시로 제거(2026-07-31) — 되살리지 말 것.
+     ⚠️ 화면의 숫자는 DB 에서 실제로 셀 수 있는 값만 쓴다. 지금은 하위 자료가 아직
+        없어 **전부 예시값**이고 하단 foot-note 가 그 사실을 밝힌다 — 데이터가
+        연결되면 예시값과 foot-note 를 같이 걷어낸다.
+     ⚠️ 원장 5행은 하위 페이지가 아직 없어 href 없는 <a>(비활성)다. 페이지가
+        생기면 href 를 달고, 그때 .lg-row:focus-visible 규칙이 살아난다.
+     팔레트·활자·라운드는 tokens.css 값 그대로. 새 색 없음.
+     ══════════════════════════════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { overflow-x: clip; touch-action: manipulation; }
+  body {
+    font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased; word-break: keep-all;
+  }
+  a { text-decoration: none; color: inherit; }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 20px 56px; }
+
+  /* ── 히어로 — 상단 여백 104px 는 고정 nav 를 피하는 전 페이지 공통값 ── */
+  .hero { padding: 104px 0 0; }
+  .hero-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-ink); }
+  .hero h1 { font-family: var(--serif); font-size: 34px; font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; margin-top: 10px; }
+  .hero-sub { font-size: 15px; font-weight: 500; line-height: 1.62; color: var(--text-muted); margin-top: 12px; }
+  .hero-note {
+    display: flex; align-items: flex-start; gap: 7px; margin-top: 13px;
+    font-size: 13px; font-weight: 500; color: var(--text-dim); line-height: 1.5;
+  }
+  .hero-note svg { flex: none; margin-top: 1px; }
+
+  /* ── 현황 스트립 ── */
+  .st-strip {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 20px; padding: 13px 2px 15px; border-bottom: 1px solid var(--border);
+  }
+  .st-live { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }
+  .st-sep { width: 1px; height: 12px; background: var(--border); }
+  .st-item { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+  .st-item b { font-weight: 800; color: var(--text); }
+  .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action); }
+  @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
+  @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
+
+  /* ══ 연구 대장 — 헤어라인 원장 ══
+     ⚠️ .lg-foot 의 padding-left 33px 는 색인(01) 폭 + gap — 제목 왼쪽선과 맞추는 값이다.
+        색인 활자·자간을 바꾸면 이 값도 같이 본다. */
+  .lg-list { border-top: 1.5px solid var(--text); }
+  .lg-row { display: block; padding: 18px 2px 16px; border-bottom: 1px solid var(--border-soft); transition: background .18s ease; }
+  .lg-row:last-child { border-bottom: 1.5px solid var(--border); }
+  @media (hover: hover) { .lg-row:hover { background: rgba(27,58,107,0.035); } }
+  .lg-row:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+  .lg-top { display: flex; align-items: flex-start; gap: 12px; }
+  .lg-idx { flex: none; width: 21px; padding-top: 3px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-dim); }
+  .lg-txt { min-width: 0; flex: 1; }
+  .lg-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+  .lg-desc { font-size: 14px; font-weight: 500; line-height: 1.55; color: var(--text-muted); margin-top: 4px; }
+
+  /* 오른쪽 계기 열 — 누적 수 → 증감. 폭을 60px 로 묶어 본문을 좁히지 않는다. */
+  .lg-fig { flex: none; width: 60px; text-align: right; }
+  .lg-count { display: flex; align-items: baseline; justify-content: flex-end; gap: 1px; }
+  .lg-count b { font-size: 23px; font-weight: 800; color: var(--accent-dark); letter-spacing: -0.02em; line-height: 1; }
+  .lg-count span { font-size: 12.5px; font-weight: 700; color: var(--accent-dark); }
+  .lg-delta { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-top: 5px; }
+
+  /* 태그 활자는 12px — 목업의 11.5px 는 12px 하한(9대원칙 1) 미달이라 올렸다. */
+  .lg-foot {
+    display: flex; align-items: center; gap: 8px; margin-top: 13px; padding-left: 33px;
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden;
+  }
+  .lg-tag {
+    flex: none; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--accent-ink);
+    border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 2px 6px;
+  }
+  .lg-foot .p-txt { overflow: hidden; text-overflow: ellipsis; }
+  .lg-foot time { flex: none; margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+  @media (prefers-reduced-motion: reduce) { .lg-row { transition: none; } }
+
+  /* ── 연구진 — researchers.html 포맷의 모바일 상태. 데이터는 researchers-data.js 공유 ── */
+  .mi-section { margin-top: 48px; }
+  .mi-head .hero-eyebrow { display: block; }
+  .mi-head h2 { font-family: var(--serif); font-size: 24px; font-weight: 800; line-height: 1.3; letter-spacing: -0.01em; margin-top: 9px; }
+  .mi-head p { font-size: 14.5px; font-weight: 500; line-height: 1.6; color: var(--text-muted); margin-top: 6px; }
+  .mi-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .mi-tab {
+    appearance: none; cursor: pointer; font-family: inherit;
+    padding: 11px 16px; min-height: 44px; border-radius: 999px; display: inline-flex; align-items: center;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+    font-size: 14px; font-weight: 700; letter-spacing: -0.01em; box-shadow: var(--shadow);
+    transition: background .2s, color .2s, border-color .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mi-tab[aria-selected="true"] { background: var(--accent-ink); color: #fff; border-color: var(--accent-ink); box-shadow: var(--shadow-lg); }
+  .mi-tab:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; }
+  .mi-panel { display: none; margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .mi-panel.is-active { display: block; }
+  @media (prefers-reduced-motion: no-preference) { .mi-panel.is-active { animation: mi-fade .4s ease; } }
+  @keyframes mi-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .mi-photo { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: var(--radius); overflow: hidden; background: var(--accent); border: 1px solid var(--border); }
+  .mi-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 18%; display: block; filter: grayscale(0.14) contrast(1.05) brightness(1.02) sepia(0.05); }
+  /* 고은지 사진은 가로 구도 → 인물이 오른쪽 중앙, 가로 60% 지점으로 크롭(researchers.html 과 동일 예외) */
+  #mi-panel-koh .mi-photo img { object-position: 60% 50%; }
+  .mi-mono { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3.4rem; font-weight: 800; color: var(--action-ink); background: var(--accent); }
+  .mi-role { font-size: 15px; letter-spacing: 0.4px; color: var(--accent-ink); font-weight: 800; margin: 20px 0 6px; }
+  .mi-name { font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .mi-position { font-size: 15px; color: var(--text-muted); font-weight: 500; margin: 8px 0 16px; line-height: 1.55; }
+  .mi-tags { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .mi-tags li { font-size: 12.5px; font-weight: 600; color: var(--accent-ink); background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+  .mi-bio { font-size: 16px; line-height: 1.75; margin-top: 18px; }
+  .mi-bio strong { color: var(--accent-ink); font-weight: 700; }
+  .mi-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 20px; }
+  .mi-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 6px; text-align: center; }
+  .mi-stat-num { display: block; font-size: 22px; font-weight: 800; color: var(--accent-dark); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .mi-stat-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 8px; line-height: 1.3; }
+  .mi-creds { margin-top: 22px; }
+  .mi-creds-title { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-ink); font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .mi-creds-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .mi-cred-list { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 11px; }
+  .mi-cred-list li { position: relative; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+  .mi-cred-list li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 7px; height: 7px; border-radius: 50%; background: var(--action); }
+  .mi-cred-list strong { color: var(--accent-ink); font-weight: 700; }
+  .mi-more {
+    appearance: none; background: none; border: none; cursor: pointer; font-family: inherit;
+    color: var(--accent-ink); font-size: 14px; font-weight: 700; padding: 12px 2px 0;
+    min-height: 44px; display: inline-flex; align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mi-more:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; border-radius: var(--radius-xs); }
+
+  .foot-note { margin-top: 42px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+  </style>
+</head>
+<body>
+
+<main class="wrap">
+
+  <header class="hero">
+    <p class="hero-eyebrow">MONC LAB</p>
+    <h1>몬크 연구실</h1>
+    <p class="hero-sub">항공사 자료, 기업분석 영상, 기출문제, 면접 현장의 기록까지 — 연구진이 모아 정리합니다.</p>
+    <p class="hero-note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      목록은 누구나 볼 수 있어요. 자료 열람은 무료 회원 로그인 후 가능합니다.
+    </p>
+  </header>
+
+  <div class="st-strip">
+    <span class="st-live"><i class="live"></i>연구 진행 중</span>
+    <span class="st-sep"></span>
+    <span class="st-item num">자료 <b>180</b>건</span>
+    <span class="st-sep"></span>
+    <span class="st-item">갱신 <b>3시간 전</b></span>
+  </div>
+
+  <!-- 원장 5행 — 하위 페이지가 생기면 각 행에 href 를 단다(머리 주석 참조) -->
+  <div class="lg-list">
+
+    <a class="lg-row">
+      <div class="lg-top">
+        <span class="lg-idx num">01</span>
+        <div class="lg-txt">
+          <p class="lg-name">항공사 자료실</p>
+          <p class="lg-desc">항공사를 고르면 그 회사 자료만 모아 보여드려요.</p>
+        </div>
+        <div class="lg-fig">
+          <p class="lg-count"><b class="num">24</b><span>건</span></p>
+          <p class="lg-delta num">최근 +2</p>
+        </div>
+      </div>
+      <p class="lg-foot"><span class="lg-tag">최신</span><span class="p-txt">대한항공 인재상, 한 장 정리</span><time class="num">07.28</time></p>
+    </a>
+
+    <a class="lg-row">
+      <div class="lg-top">
+        <span class="lg-idx num">02</span>
+        <div class="lg-txt">
+          <p class="lg-name">영상관</p>
+          <p class="lg-desc">기업분석·QnA·라이브 다시보기를 주제별로 모았어요.</p>
+        </div>
+        <div class="lg-fig">
+          <p class="lg-count"><b class="num">12</b><span>편</span></p>
+          <p class="lg-delta num">최근 +1</p>
+        </div>
+      </div>
+      <p class="lg-foot"><span class="lg-tag">최신</span><span class="p-txt">7월 채용 QnA 라이브 (42:10)</span><time class="num">07.19</time></p>
+    </a>
+
+    <a class="lg-row">
+      <div class="lg-top">
+        <span class="lg-idx num">03</span>
+        <div class="lg-txt">
+          <p class="lg-name">기출문제</p>
+          <p class="lg-desc">실제 면접장에서 나온 질문을 항공사별로 모았어요.</p>
+        </div>
+        <div class="lg-fig">
+          <p class="lg-count"><b class="num">132</b><span>개</span></p>
+          <p class="lg-delta num">주 +6</p>
+        </div>
+      </div>
+      <p class="lg-foot"><span class="lg-tag">최신</span><span class="p-txt">"옆 지원자의 장점을 찾아 칭찬해 보세요"</span><time class="num">07.31</time></p>
+    </a>
+
+    <a class="lg-row">
+      <div class="lg-top">
+        <span class="lg-idx num">04</span>
+        <div class="lg-txt">
+          <p class="lg-name">현장 리포트</p>
+          <p class="lg-desc">면접 다녀온 회원들의 기록. 남기면 크레딧을 드려요.</p>
+        </div>
+        <div class="lg-fig">
+          <p class="lg-count"><b class="num">12</b><span>편</span></p>
+          <p class="lg-delta num">대기 2</p>
+        </div>
+      </div>
+      <p class="lg-foot"><span class="lg-tag">최신</span><span class="p-txt">제주항공 임원 면접 — 표정을 오래 보셨어요</span><time class="num">07.26</time></p>
+    </a>
+
+    <a class="lg-row">
+      <div class="lg-top">
+        <span class="lg-idx num">05</span>
+        <div class="lg-txt">
+          <p class="lg-name">채용 캘린더</p>
+          <p class="lg-desc">항공사별 채용이 언제 있었는지 흐름을 한눈에.</p>
+        </div>
+        <div class="lg-fig">
+          <p class="lg-count"><b class="num">7</b><span>곳</span></p>
+          <p class="lg-delta">접수 중 1</p>
+        </div>
+      </div>
+      <p class="lg-foot"><span class="lg-tag">접수 중</span><span class="p-txt">이스타항공 객실승무원 ~8.12(수)</span><time class="num">D-12</time></p>
+    </a>
+
+  </div>
+
+  <!-- 연구진 — researchers.html 포맷의 모바일 상태. 탭·패널은 하단 JS 가 주입 -->
+  <section class="mi-section" id="people">
+    <div class="mi-head">
+      <span class="hero-eyebrow">PEOPLE</span>
+      <h2>몬크 연구진</h2>
+      <p>연구실의 모든 자료는 연구진이 직접 만들고 검수해요.</p>
+    </div>
+    <div class="mi-tabs" role="tablist" aria-label="연구원 선택"></div>
+    <div class="mi-stage"></div>
+  </section>
+
+  <p class="foot-note">화면 속 자료 수·목록·일정은 아직 예시입니다 — 자료가 연결되면 실제 값으로 바뀝니다.</p>
+
+</main>
+
+<script src="researchers-data.js"></script>
+<script>
+  /* ── 연구진 탭·패널 — 데이터는 researchers-data.js(researchers.html 과 공유).
+     렌더러는 이 페이지 전용(모바일 단일 컬럼·지표 정적 표기 — 카운트업 없음). */
+  (function(){
+    const researchers = window.MONC_RESEARCHERS || [];
+    const tabsEl  = document.querySelector('.mi-tabs');
+    const stageEl = document.querySelector('.mi-stage');
+    if(!tabsEl || !stageEl || !researchers.length) return;
+
+    const statText = (s) => (typeof s.num === 'number' ? s.num.toLocaleString('ko-KR') : s.num) + (s.suffix || '');
+
+    tabsEl.innerHTML = researchers.map((r,i)=>`
+      <button class="mi-tab" id="mi-tab-${r.id}" role="tab"
+              aria-controls="mi-panel-${r.id}"
+              aria-selected="${i===0?'true':'false'}"
+              tabindex="${i===0?'0':'-1'}">${r.name}</button>`).join('');
+
+    stageEl.innerHTML = researchers.map((r)=>{
+      const tags  = r.tags.map(t=>`<li>${t}</li>`).join('');
+      const stats = r.stats.map(s=>`
+        <div class="mi-stat">
+          <span class="mi-stat-num">${statText(s)}</span>
+          <span class="mi-stat-label">${s.label}</span>
+        </div>`).join('');
+      const key  = r.key.map(k=>`<li>${k}</li>`).join('');
+      const more = r.more.map(k=>`<li>${k}</li>`).join('');
+      return `
+      <article class="mi-panel" id="mi-panel-${r.id}" role="tabpanel" aria-labelledby="mi-tab-${r.id}" tabindex="0">
+        <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" loading="lazy" decoding="async" data-initial="${r.name.trim().charAt(0)}"></div>
+        <p class="mi-role">${r.role}</p>
+        <h3 class="mi-name">${r.name}</h3>
+        <p class="mi-position">${r.position}</p>
+        <ul class="mi-tags">${tags}</ul>
+        <p class="mi-bio">${r.bio}</p>
+        <div class="mi-stats">${stats}</div>
+        <div class="mi-creds">
+          <p class="mi-creds-title">Key Credentials</p>
+          <ul class="mi-cred-list">${key}</ul>
+          <ul class="mi-cred-list mi-extra" hidden>${more}</ul>
+          <button class="mi-more" type="button" aria-expanded="false">경력 더 보기 +</button>
+        </div>
+      </article>`;
+    }).join('');
+
+    // 사진 로드 실패 시 이니셜 모노그램으로 대체(researchers.html 과 같은 처리)
+    stageEl.querySelectorAll('.mi-photo').forEach(ph=>{
+      const img = ph.querySelector('img');
+      if(!img) return;
+      const swap = ()=>{ ph.innerHTML = `<div class="mi-mono">${img.dataset.initial}</div>`; };
+      img.addEventListener('error', swap);
+      if(img.complete && img.naturalWidth === 0) swap();
+    });
+
+    const tabEls   = [...tabsEl.querySelectorAll('.mi-tab')];
+    const panelEls = [...stageEl.querySelectorAll('.mi-panel')];
+
+    function activate(idx,{focus=false}={}){
+      tabEls.forEach((t,i)=>{
+        const on = i===idx;
+        t.setAttribute('aria-selected', on?'true':'false');
+        t.tabIndex = on?0:-1;
+      });
+      panelEls.forEach((p,i)=>p.classList.toggle('is-active', i===idx));
+      if(focus) tabEls[idx].focus();
+    }
+
+    tabEls.forEach((t,i)=>{
+      t.addEventListener('click', ()=>activate(i));
+      t.addEventListener('keydown', e=>{
+        let ni=null;
+        if(e.key==='ArrowRight'||e.key==='ArrowDown') ni=(i+1)%tabEls.length;
+        else if(e.key==='ArrowLeft'||e.key==='ArrowUp') ni=(i-1+tabEls.length)%tabEls.length;
+        else if(e.key==='Home') ni=0;
+        else if(e.key==='End') ni=tabEls.length-1;
+        if(ni!==null){ e.preventDefault(); activate(ni,{focus:true}); }
+      });
+    });
+
+    stageEl.querySelectorAll('.mi-more').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const extra = btn.parentElement.querySelector('.mi-extra');
+        const opening = extra.hasAttribute('hidden');
+        if(opening){ extra.removeAttribute('hidden'); btn.textContent='경력 접기 −'; btn.setAttribute('aria-expanded','true'); }
+        else{ extra.setAttribute('hidden',''); btn.textContent='경력 더 보기 +'; btn.setAttribute('aria-expanded','false'); }
+      });
+    });
+
+    activate(0);
+  })();
+</script>
+
+</body>
+</html>
