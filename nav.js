@@ -44,6 +44,12 @@
     ['challenge-spinning.html', '스.피.닝', '리듬을 타며 발음이 터진다'],
     ['challenge-answer.html', '승.자.각', '2주에 답변 10개 완성']
   ];
+  /* 연구실 드롭다운(2026-07-31 오너 확정 — '연구진' 단독 항목 대신 연구실 하위로).
+     하위 페이지(자료실·영상관·기출문제 등)가 생기면 이 배열에 한 줄씩 추가한다. */
+  var LAB_HUB = 'lab.html';
+  var LAB_SUB = [
+    ['researchers.html', '연구진 소개', '자료를 만들고 검수하는 사람들']
+  ];
 
   /* 어느 메뉴가 '현재 위치'인지 — 하위 페이지에 있어도 상위 메뉴에 표시가 남아야
      '내가 어디에 있는지'를 알 수 있다(오너가 불편해한 지점의 절반이 이것이다). */
@@ -56,10 +62,9 @@
     'challenge-answer.html': 'challenge',
     'lab.html': 'lab',
     'lectures.html': 'lecture', 'lecture.html': 'lecture',
-    /* 연구진 페이지는 '연구실' 소속으로 표시 — 메뉴의 '연구진' 항목은 2026-07-31 제거
-       (연구실 허브 하단에 같은 연구진 섹션이 있어 겹치고, '연구실/연구진' 두 글자가
-       비슷해 나란히 있으면 구분이 안 된다 — 오너 확정). 페이지 진입은 apply.html
-       '연구진 전체 이력 보기' 링크와 직접 링크가 담당한다. */
+    /* 연구진 페이지는 '연구실' 소속으로 표시 — '연구진' 단독 항목은 2026-07-31 제거하고
+       연구실 드롭다운의 하위 '연구진 소개'로 넣었다(연구실 하단에 같은 연구진 섹션이 있어
+       겹치고, '연구실/연구진' 두 글자가 비슷해 나란히 있으면 구분이 안 된다 — 오너 확정). */
     'researchers.html': 'lab', 'reviews.html': 'reviews'
   };
 
@@ -102,7 +107,10 @@
             '<button class="nav-dd-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
-          '<li><a href="lab.html"' + cur('lab') + '>연구실</a></li>' +
+          '<li class="nav-dd">' +
+            '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
+            '<div class="nav-dd-menu">' + ddMenu(LAB_SUB) + '</div>' +
+          '</li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
           '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
         '</ul>' +
@@ -125,7 +133,11 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
-        '<li><a href="lab.html"' + cur('lab') + '>연구실</a></li>' +
+        '<li class="mm-acc">' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-controls="mmLab">연구실' +
+          '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
+          '<div class="mm-acc-panel" id="mmLab">' + accPanel(LAB_SUB) + '</div>' +
+        '</li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
         '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
       '</ul>' +
@@ -146,7 +158,7 @@
 
   function wire() {
     /* ── 드롭다운 ──
-       ⚠️ 드롭다운이 둘이라 하나를 열면 다른 하나는 닫는다 — 둘 다 열리면 메뉴 두 장이 겹쳐 뜬다.
+       ⚠️ 드롭다운이 여럿이라(승준노트·챌린지·연구실) 하나를 열면 나머지는 닫는다 — 같이 열리면 메뉴가 겹쳐 뜬다.
        ⚠️ 한 번 = 목차 열기, 한 번 더 = 허브로 이동(2026-07-31 오너 — 목록 맨 위의 '한눈에'
           항목을 대신한다). 닫기는 바깥 클릭·Esc 가 맡는다.
        ⚠️ 판정 기준은 `is-open` 클래스 하나뿐이다 — 마우스 호버로 열린 상태(`:hover`)를 '이미

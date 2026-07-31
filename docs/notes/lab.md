@@ -25,7 +25,10 @@
 
 - 데이터는 **`researchers-data.js`(`window.MONC_RESEARCHERS`) 공유** — researchers.html 과 단일 원본. 페이지에 배열 복사 금지.
 - 렌더러는 페이지별: lab 은 모바일 단일 컬럼·지표 정적 표기(카운트업 없음), researchers.html 은 기존 그대로(카운트업 있음).
+- **프로필 박스는 researchers.html 좁은 화면 규격(2026-07-31 오너 — "사진이 너무 커서 부담")**: 사진 블록 `.mi-figure` **340px 상한 + 가운데 정렬**, 정방형, **필터 없음**(목업의 grayscale 필터·패널 꽉 찬 사진은 폐기 — 되살리면 사진이 다시 커진다). 제목 '핵심 이력', 버튼 '전체 이력 보기/접기'로 researchers 와 동일.
+- ⚠️ `.mi-extra[hidden]{display:none}` 보강 필수 — 목록이 `display:flex` 라 이 규칙이 없으면 hidden 이 안 먹혀 '전체 이력'이 항상 펼쳐져 보인다(초기 구현에서 실제로 밟은 버그, researchers.html 도 같은 보강을 갖고 있다).
 - 고은지 사진 크롭 예외(`object-position:60% 50%`)는 두 페이지 공통.
+- 참고: 프리뷰(숨김 탭)에서 `getComputedStyle().filter` 가 없는 grayscale 값을 보고하는 아티팩트가 있다 — 필터 유무는 소스 grep 으로 판정할 것(researchers.html 교차 측정으로 확인됨).
 
 ## 남은 결정·작업
 

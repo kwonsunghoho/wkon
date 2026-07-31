@@ -117,7 +117,9 @@
   .lg-foot time { flex: none; margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
   @media (prefers-reduced-motion: reduce) { .lg-row { transition: none; } }
 
-  /* ── 연구진 — researchers.html 포맷의 모바일 상태. 데이터는 researchers-data.js 공유 ── */
+  /* ── 연구진 — researchers.html 좁은 화면 규격 그대로(2026-07-31 오너 — "사진이 너무
+     커서 부담": 목업의 패널 꽉 찬 사진 대신 연구진 페이지의 340px 상한·가운데 정렬·무필터
+     사진을 이식). 데이터는 researchers-data.js 공유 ── */
   .mi-section { margin-top: 48px; }
   .mi-head .hero-eyebrow { display: block; }
   .mi-head h2 { font-family: var(--serif); font-size: 24px; font-weight: 800; line-height: 1.3; letter-spacing: -0.01em; margin-top: 9px; }
@@ -137,8 +139,12 @@
   .mi-panel.is-active { display: block; }
   @media (prefers-reduced-motion: no-preference) { .mi-panel.is-active { animation: mi-fade .4s ease; } }
   @keyframes mi-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  /* 사진 블록 340px 상한 + 가운데 — researchers.html ≤820px 규격. 패널 폭(최대 524px)을
+     사진이 다 먹지 않게 하는 값이라 지우면 '사진이 너무 크다'로 되돌아간다. */
+  .mi-figure { max-width: 340px; margin: 0 auto; }
+  .mi-body { margin-top: 24px; }
   .mi-photo { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: var(--radius); overflow: hidden; background: var(--accent); border: 1px solid var(--border); }
-  .mi-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 18%; display: block; filter: grayscale(0.14) contrast(1.05) brightness(1.02) sepia(0.05); }
+  .mi-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 18%; display: block; }
   /* 고은지 사진은 가로 구도 → 인물이 오른쪽 중앙, 가로 60% 지점으로 크롭(researchers.html 과 동일 예외) */
   #mi-panel-koh .mi-photo img { object-position: 60% 50%; }
   .mi-mono { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3.4rem; font-weight: 800; color: var(--action-ink); background: var(--accent); }
@@ -160,12 +166,17 @@
   .mi-cred-list li { position: relative; padding-left: 18px; font-size: 14px; line-height: 1.6; }
   .mi-cred-list li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 7px; height: 7px; border-radius: 50%; background: var(--action); }
   .mi-cred-list strong { color: var(--accent-ink); font-weight: 700; }
+  /* ⚠️ display:flex 인 목록에는 [hidden] 이 안 먹는다(작성자 규칙이 UA 의 display:none 을
+     이긴다) — researchers.html 과 같은 보강. 지우면 '전체 이력'이 항상 펼쳐져 보인다. */
+  .mi-extra { margin-top: 11px; }
+  .mi-extra[hidden] { display: none; }
   .mi-more {
     appearance: none; background: none; border: none; cursor: pointer; font-family: inherit;
     color: var(--accent-ink); font-size: 14px; font-weight: 700; padding: 12px 2px 0;
     min-height: 44px; display: inline-flex; align-items: center;
     -webkit-tap-highlight-color: transparent;
   }
+  .mi-more:hover { text-decoration: underline; }
   .mi-more:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; border-radius: var(--radius-xs); }
 
   .foot-note { margin-top: 42px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
@@ -317,18 +328,22 @@
       const more = r.more.map(k=>`<li>${k}</li>`).join('');
       return `
       <article class="mi-panel" id="mi-panel-${r.id}" role="tabpanel" aria-labelledby="mi-tab-${r.id}" tabindex="0">
-        <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" loading="lazy" decoding="async" data-initial="${r.name.trim().charAt(0)}"></div>
-        <p class="mi-role">${r.role}</p>
-        <h3 class="mi-name">${r.name}</h3>
-        <p class="mi-position">${r.position}</p>
-        <ul class="mi-tags">${tags}</ul>
-        <p class="mi-bio">${r.bio}</p>
-        <div class="mi-stats">${stats}</div>
-        <div class="mi-creds">
-          <p class="mi-creds-title">Key Credentials</p>
-          <ul class="mi-cred-list">${key}</ul>
-          <ul class="mi-cred-list mi-extra" hidden>${more}</ul>
-          <button class="mi-more" type="button" aria-expanded="false">경력 더 보기 +</button>
+        <aside class="mi-figure">
+          <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" loading="lazy" decoding="async" data-initial="${r.name.trim().charAt(0)}"></div>
+          <p class="mi-role">${r.role}</p>
+          <h3 class="mi-name">${r.name}</h3>
+          <p class="mi-position">${r.position}</p>
+          <ul class="mi-tags">${tags}</ul>
+        </aside>
+        <div class="mi-body">
+          <p class="mi-bio">${r.bio}</p>
+          <div class="mi-stats">${stats}</div>
+          <div class="mi-creds">
+            <p class="mi-creds-title">핵심 이력</p>
+            <ul class="mi-cred-list">${key}</ul>
+            <ul class="mi-cred-list mi-extra" hidden>${more}</ul>
+            <button class="mi-more" type="button" aria-expanded="false">전체 이력 보기</button>
+          </div>
         </div>
       </article>`;
     }).join('');
@@ -371,8 +386,8 @@
       btn.addEventListener('click', ()=>{
         const extra = btn.parentElement.querySelector('.mi-extra');
         const opening = extra.hasAttribute('hidden');
-        if(opening){ extra.removeAttribute('hidden'); btn.textContent='경력 접기 −'; btn.setAttribute('aria-expanded','true'); }
-        else{ extra.setAttribute('hidden',''); btn.textContent='경력 더 보기 +'; btn.setAttribute('aria-expanded','false'); }
+        if(opening){ extra.removeAttribute('hidden'); btn.textContent='전체 이력 접기'; btn.setAttribute('aria-expanded','true'); }
+        else{ extra.setAttribute('hidden',''); btn.textContent='전체 이력 보기'; btn.setAttribute('aria-expanded','false'); }
       });
     });
 
