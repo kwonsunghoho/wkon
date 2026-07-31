@@ -16,7 +16,7 @@
 
 ## researchers.html(구 CLAUDE.md Pages 항목)
 
-- `researchers.html` — **연구진 소개 전용(2026-07-14 신설).** 구 `#instructors`(mi-section)를 분리. `tokens.css` + 인라인 `.mi-*` CSS·`researchers` 배열·탭 IIFE로 완전 동작. 진입: `#researchers-strip` 티저 + nav '연구진'. **연구원 이력의 소스오브트루스** — ⚠️ index의 `.ts-cred` 스트립 카드와 **별도 소스라 이력 변경 시 양쪽 동기화 필요**(아래 스트립 항목).
+- `researchers.html` — **연구진 소개 전용(2026-07-14 신설).** 구 `#instructors`(mi-section)를 분리. `tokens.css` + 인라인 `.mi-*` CSS·`researchers-data.js`·탭 IIFE로 완전 동작. **진입(2026-07-31 변경): nav '연구진' 항목은 제거됐다**(lab.html 하단 연구진 섹션과 겹침 — 오너 확정, 상세는 nav.md). 지금 진입은 apply.html '연구진 전체 이력 보기' 링크 + 직접 링크뿐이고, 이 페이지에서 nav 현재 위치는 '연구실'로 표시된다.
 
 ### 연구진 (홈 스트립·성장 리포트 목업은 2026-07-29 삭제)
 구 `#researchers-strip`(포트레이트 마퀴 + rAF 물리 IIFE)과 `#member-appeal`(성장 리포트 목업 `.db-root`)은 홈 개편으로 **통째로 삭제**(`.ts-*`/`.db-*`/`.ma-*` CSS 포함). 연구진 소개는 `researchers.html` 단독 — 이력의 소스오브트루스는 **`researchers-data.js`(`window.MONC_RESEARCHERS`) 하나**(2026-07-31 `lab.html` 연구진 섹션과 공유하려고 인라인 배열에서 이관 — 페이지에 배열을 다시 복사해 넣지 말 것. 렌더러는 페이지별로 다르고 데이터만 공유).

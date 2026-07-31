@@ -56,7 +56,11 @@
     'challenge-answer.html': 'challenge',
     'lab.html': 'lab',
     'lectures.html': 'lecture', 'lecture.html': 'lecture',
-    'researchers.html': 'researchers', 'reviews.html': 'reviews'
+    /* 연구진 페이지는 '연구실' 소속으로 표시 — 메뉴의 '연구진' 항목은 2026-07-31 제거
+       (연구실 허브 하단에 같은 연구진 섹션이 있어 겹치고, '연구실/연구진' 두 글자가
+       비슷해 나란히 있으면 구분이 안 된다 — 오너 확정). 페이지 진입은 apply.html
+       '연구진 전체 이력 보기' 링크와 직접 링크가 담당한다. */
+    'researchers.html': 'lab', 'reviews.html': 'reviews'
   };
 
   var here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
@@ -100,7 +104,6 @@
           '</li>' +
           '<li><a href="lab.html"' + cur('lab') + '>연구실</a></li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
-          '<li><a href="researchers.html"' + cur('researchers') + '>연구진</a></li>' +
           '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
         '</ul>' +
         '<div class="nav-right">' +
@@ -124,7 +127,6 @@
         '</li>' +
         '<li><a href="lab.html"' + cur('lab') + '>연구실</a></li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
-        '<li><a href="researchers.html"' + cur('researchers') + '>연구진</a></li>' +
         '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
       '</ul>' +
       '<div class="mobile-menu-cta">' +
