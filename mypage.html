@@ -123,7 +123,9 @@
       background: var(--action-tint); color: var(--action); }
     .v2-fold-t { flex: 1 1 auto; min-width: 0; font-size: 16px; font-weight: 700; color: var(--text);
       letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .v2-fold-c { flex: 0 0 auto; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* 오른쪽 값은 네이비 굵은 활자 — 2026-07-31 오너 "너무 작아서 존재감없다". 12~13px 로 되돌리지 말 것. */
+    .v2-fold-c { flex: 0 0 auto; font-size: 16px; font-weight: 800; color: var(--accent-ink);
+      font-variant-numeric: tabular-nums; white-space: nowrap; }
     .v2-fold-ar { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-dim); transition: transform 0.18s ease; }
     .v2-fold[open] .v2-fold-ar { transform: rotate(180deg); }
     .v2-fold-body { padding: 2px 2px 20px; }
@@ -596,7 +598,10 @@
       const phoneInput = document.getElementById('phoneInput');
       const phoneMsg = document.getElementById('phoneMsg');
       const maskPhone = p => {
-        const m = String(p || '').replace(/\D/g, '').match(/^(\d{3})(\d{3,4})(\d{4})$/);
+        // ⚠️ '+82 10…' 국제 표기는 정규식이 못 잡아 원문이 그대로 노출됐다(실사고) — 82 를 0 으로 정규화.
+        let d = String(p || '').replace(/\D/g, '');
+        if (d.startsWith('82') && d.length >= 12) d = '0' + d.slice(2);
+        const m = d.match(/^(\d{3})(\d{3,4})(\d{4})$/);
         return m ? m[1] + '-****-' + m[3] : (p || '미등록');
       };
       const contactC = document.getElementById('contactC');
