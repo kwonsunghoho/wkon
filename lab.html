@@ -30,15 +30,20 @@
   <script src="nav.js" defer></script>
   <style>
   /* ══════════════════════════════════════════════════════════════════════════
-     몬크 연구실 허브 — 카드 두 장(2026-07-31 오너 확정)
+     몬크 연구실 허브 — 카드 두 장(2026-07-31 오너 확정) + ②안 '콘솔' 표면
+     ("뭔가 밋밋하지않냐" → 3안 목업 outputs/lab-hub-flavor-mockup.html 중
+      ② 채택 — "2안이 좋어보인다")
 
      오너: "간결하게 연구실 / 연구진 이렇게 두개 카드만 딱 나와야지 그게 허브 아니냐고."
      구조: 이 페이지(허브) → 연구실 카드(lab-archive.html 원장) / 연구진 카드(researchers.html).
-     그 전에 이 파일에 있던 원장(서가 5종)은 lab-archive.html 로, 연구진 2단 카드 임베드는
-     researchers.html 링크로 대체(카드 규격 확정본은 researchers.html 에 그대로 있다).
 
-     카드는 챌린지 허브의 레터프레스 종이 언어(#FCF9F1→#F3EEE1) — 새 색 없음.
-     ⚠️ 카드 계기의 자료 수·갱신 시각은 아직 예시(foot-note 가 밝힘). 연구원 6명은 실제 값.
+     ②안 콘솔 = 도구와 사람의 대비:
+     - 연구실 카드: 다크 네이비 콘솔(#1E4079→#142C52) + 서가 목차 5줄(점선 리더) +
+       '연구 진행 중' 라이브 점. 다크 위 강조는 --action-on-dark, CTA 는 흰 알약+네이비
+       화살표(디자인 공통 규칙). 목차 5줄은 lab-archive.html 서가와 같은 순서·수치.
+     - 연구진 카드: 레터프레스 종이(#FCF9F1→#F3EEE1) 그대로 + 얼굴 6개.
+       ⚠️ 얼굴·인원수는 researchers-data.js 단일 원본에서 JS 로 생성 — 여기 복사 금지.
+     ⚠️ 자료 수·갱신 시각은 아직 예시(foot-note 가 밝힘). 연구원 수는 실제 값.
      ══════════════════════════════════════════════════════════════════════════ */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { overflow-x: clip; touch-action: manipulation; }
@@ -77,11 +82,52 @@
   .hub-top svg { margin-left: auto; flex: none; color: var(--accent-ink); }
   .hub-desc { font-size: 14.5px; font-weight: 500; line-height: 1.58; color: var(--text-muted); margin-top: 7px; }
   .hub-meta {
-    display: flex; align-items: center; gap: 6px; margin-top: 15px; padding-top: 12px;
+    display: flex; align-items: center; gap: 7px; margin-top: 15px; padding-top: 12px;
     border-top: 1px dashed rgba(38,34,28,0.22);
     font-size: 12.5px; font-weight: 600; color: var(--text-dim);
   }
   .hub-meta b { font-weight: 800; color: var(--text); }
+
+  /* ── 연구실 카드 = 다크 콘솔(②안). 밝은 활자는 --text-on-dark(#F5F1E8)의 rgba ── */
+  .card-lab {
+    background: linear-gradient(180deg, #1E4079, #142C52);
+    border-color: rgba(255,255,255,0.14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow);
+  }
+  @media (hover: hover) {
+    .card-lab:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow-lg); }
+  }
+  .card-lab:focus-visible { outline-color: #FFFFFF; }
+  .card-lab .hub-name { color: #FFFFFF; }
+  /* 다크 위 CTA = 흰 알약 + 네이비 화살표(디자인 공통 규칙) */
+  .pill {
+    margin-left: auto; flex: none; width: 36px; height: 36px; border-radius: 50%;
+    background: #FFFFFF; color: var(--action);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-lab .hub-meta { border-color: rgba(245,241,232,0.3); color: rgba(245,241,232,0.78); }
+  .card-lab .hub-meta b { color: #FFFFFF; }
+
+  /* 서가 목차 5줄 — 점선 리더. 순서·수치는 lab-archive.html 서가와 같게 유지 */
+  .ix { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+  .ix-row { display: flex; align-items: baseline; gap: 9px; font-size: 14px; }
+  .ix-name { flex: none; font-weight: 600; color: rgba(245,241,232,0.93); }
+  .ix-lead { flex: 1; border-bottom: 2px dotted rgba(245,241,232,0.28); position: relative; top: -3px; min-width: 18px; }
+  .ix-n { flex: none; font-weight: 800; color: var(--action-on-dark); }
+  .ix-n span { font-size: 12.5px; font-weight: 700; }
+
+  /* 연구 진행 신호 */
+  .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
+  @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
+  @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
+
+  /* 연구진 얼굴 6개 — researchers-data.js 에서 JS 로 채운다 */
+  .ppl { display: flex; margin-top: 15px; }
+  .ppl img {
+    width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 50% 16%;
+    border: 2px solid #FCF9F1; margin-left: -9px; background: var(--accent-tint);
+  }
+  .ppl img:first-child { margin-left: 0; }
 
   .foot-note { margin-top: 40px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
   </style>
@@ -98,13 +144,19 @@
 
   <div class="hub-grid">
 
-    <a class="hub-card" href="lab-archive.html">
+    <a class="hub-card card-lab" href="lab-archive.html">
       <div class="hub-top">
         <h2 class="hub-name">연구실</h2>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
-      <p class="hub-desc">항공사 자료실 · 영상관 · 기출문제 · 현장 리포트 · 채용 캘린더</p>
-      <p class="hub-meta num">자료 <b>180</b>건 · 갱신 3시간 전</p>
+      <div class="ix num">
+        <p class="ix-row"><span class="ix-name">항공사 자료실</span><span class="ix-lead"></span><span class="ix-n">24<span>건</span></span></p>
+        <p class="ix-row"><span class="ix-name">영상관</span><span class="ix-lead"></span><span class="ix-n">12<span>편</span></span></p>
+        <p class="ix-row"><span class="ix-name">기출문제</span><span class="ix-lead"></span><span class="ix-n">132<span>개</span></span></p>
+        <p class="ix-row"><span class="ix-name">현장 리포트</span><span class="ix-lead"></span><span class="ix-n">12<span>편</span></span></p>
+        <p class="ix-row"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n">7<span>곳</span></span></p>
+      </div>
+      <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>180</b>건 · 갱신 3시간 전</p>
     </a>
 
     <a class="hub-card" href="researchers.html">
@@ -113,7 +165,8 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </div>
       <p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>
-      <p class="hub-meta num">연구원 <b>6</b>명</p>
+      <div class="ppl" id="labPpl"></div>
+      <p class="hub-meta num">연구원 <b id="labPplN">6</b>명</p>
     </a>
 
   </div>
@@ -121,5 +174,23 @@
   <p class="foot-note">자료 수·갱신 시각은 아직 예시입니다 — 자료가 연결되면 실제 값으로 바뀝니다.</p>
 
 </main>
+
+<script src="researchers-data.js" defer></script>
+<script>
+/* 연구진 얼굴·인원수는 researchers-data.js 단일 원본에서 생성 — 페이지에 복사 금지.
+   스크립트가 못 돌면 얼굴 줄만 비고 인원수는 마크업의 6이 남는다. */
+document.addEventListener('DOMContentLoaded', function () {
+  var list = window.MONC_RESEARCHERS || [];
+  var box = document.getElementById('labPpl');
+  if (!box || !list.length) return;
+  list.forEach(function (r) {
+    var img = document.createElement('img');
+    img.src = r.photo; img.alt = r.name;
+    img.width = 40; img.height = 40;
+    box.appendChild(img);
+  });
+  document.getElementById('labPplN').textContent = list.length;
+});
+</script>
 </body>
 </html>
