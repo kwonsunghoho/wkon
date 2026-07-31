@@ -25,7 +25,7 @@
 
 - 데이터는 **`researchers-data.js`(`window.MONC_RESEARCHERS`) 공유** — researchers.html 과 단일 원본. 페이지에 배열 복사 금지.
 - 렌더러는 페이지별: lab 은 모바일 단일 컬럼·지표 정적 표기(카운트업 없음), researchers.html 은 기존 그대로(카운트업 있음).
-- **프로필 박스는 researchers.html 좁은 화면 규격(2026-07-31 오너 — "사진이 너무 커서 부담")**: 사진 블록 `.mi-figure` **340px 상한 + 가운데 정렬**, 정방형, **필터 없음**(목업의 grayscale 필터·패널 꽉 찬 사진은 폐기 — 되살리면 사진이 다시 커진다). 제목 '핵심 이력', 버튼 '전체 이력 보기/접기'로 researchers 와 동일.
+- **프로필 박스 = researchers.html 데스크톱 카드 그대로(2026-07-31 오너 스크린샷 확정 "아니 난 이걸 말한거야")**: 사진이 왼쪽 300px 컬럼(4/5)인 2단 카드 + 가운데 헤드·탭 + 카운트업. **연구진 섹션만 원장(560px) 밖 1040px `.mi-root` 로 브레이크아웃**한다. 반응형은 researchers 와 동일(≤820px 1단·사진 340px 상한·정방형, ≤520px 밀도). 목업의 grayscale 필터·패널 꽉 찬 사진은 폐기. **카드 규격을 바꾸려면 researchers.html 과 같이 바꾼다** — 두 페이지가 같은 카드다. (경과: 처음 좁은-화면 규격만 이식했다가 오너가 데스크톱 카드 스크린샷으로 정정.)
 - ⚠️ `.mi-extra[hidden]{display:none}` 보강 필수 — 목록이 `display:flex` 라 이 규칙이 없으면 hidden 이 안 먹혀 '전체 이력'이 항상 펼쳐져 보인다(초기 구현에서 실제로 밟은 버그, researchers.html 도 같은 보강을 갖고 있다).
 - 고은지 사진 크롭 예외(`object-position:60% 50%`)는 두 페이지 공통.
 - 참고: 프리뷰(숨김 탭)에서 `getComputedStyle().filter` 가 없는 grayscale 값을 보고하는 아티팩트가 있다 — 필터 유무는 소스 grep 으로 판정할 것(researchers.html 교차 측정으로 확인됨).
