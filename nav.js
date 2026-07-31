@@ -54,6 +54,7 @@
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',
+    'lab.html': 'lab',
     'lectures.html': 'lecture', 'lecture.html': 'lecture',
     'researchers.html': 'researchers', 'reviews.html': 'reviews'
   };
@@ -97,6 +98,7 @@
             '<button class="nav-dd-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
+          '<li><a href="lab.html"' + cur('lab') + '>연구실</a></li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
           '<li><a href="researchers.html"' + cur('researchers') + '>연구진</a></li>' +
           '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
@@ -120,6 +122,7 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
+        '<li><a href="lab.html"' + cur('lab') + '>연구실</a></li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
         '<li><a href="researchers.html"' + cur('researchers') + '>연구진</a></li>' +
         '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
