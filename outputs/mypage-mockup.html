@@ -1,0 +1,2530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MONC 마이페이지 — 재설계 목업 4안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   마이페이지 재설계 목업 4안 (2026-07-31)
+
+   왜 만들었나 — 오너 질문 "마이페이지 UXUI는 괜찮아?" 에 대한 실측 답의 후속.
+   현행 mypage.html 을 로그인 상태로 재현해 375px 에서 잰 결과 다음이 나왔다:
+     ① 뉴스 제목·본문 링크가 브라우저 기본 파랑(#0000EE)
+     ② 14칸 날짜 그리드가 칸 폭 41px 이라 '10일·13일·14일'이 두 줄로 깨짐(줄 높이 59 vs 80)
+     ③ 코치 코멘트의 '아쉬움' 배지가 문장 끝에 붙어 '아/쉬움'으로 잘림
+     ④ 멤버십 카드만 갈색 그라디언트(#2E2822→#54402A) — 7/29 네이비 전환 유물
+     ⑤ 챌린지 중 화면은 반칸 위젯이 3개라 오른쪽 한 칸이 빔
+     ⑥ 연락처 '저장'이 로그아웃과 같은 회색 테두리
+     ⑦ 로그아웃이 화면 최상단 단독
+     ⑧ 답변노트·코치 코멘트·뉴스 스크랩이 요약과 상세에 이름 그대로 두 번 → 3,411px(4스크롤)
+     ⑨ 신규 회원 첫 화면이 0·0·0 + "아직 없어요" 카드 4장
+
+   네 안 모두 **같은 회원·같은 데이터**로 그렸다(김지현 / 보이스 7기 / 11일차).
+   비교 기준을 흐리지 않기 위해서다. 색·활자·라운드는 tokens.css 현행 값 그대로,
+   새 색은 없다. 사진 없음 — 색면·타이포·선 아이콘만.
+
+   ⚠️ 고를 때 같이 판단할 것 — ②·④ 는 지금 데이터로는 못 만드는 문장이 하나씩 있다.
+      ② "오늘 미션 녹음이 아직 안 올라왔어요" · ④ "7일차 녹음 다시 올리기 → 제출 화면"
+      미션 제출은 카톡 오픈챗으로 받고 daily_records 는 관리자가 나중에 입력하는 값이라,
+      사이트는 '오늘 올렸는지'를 모른다. 두 안을 고르면 (가) 문구를 아는 사실로 낮추거나
+      (나) 제출 화면을 실제로 만들거나 둘 중 하나를 같이 정해야 한다.
+   ══════════════════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: 'SUIT Variable';
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.woff2') format('woff2');
+}
+:root {
+  --bg: #F4F1EA; --bg2: #FBF9F5; --surface: #FFFFFF; --surface2: #F4F0E8;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #6C6454;
+  --border: rgba(38,34,28,0.16); --border-soft: rgba(38,34,28,0.09);
+  --bg-dark: #26221C; --text-on-dark: #F5F1E8;
+  --action: #1B3A6B; --action-dark: #142C52; --action-tint: #E5E9F1; --action-ink: #FFFFFF;
+  --accent: #1B3A6B; --accent-dark: #142C52; --accent-ink: #1B3A6B; --action-on-dark: #A8C7F0;
+  --radius-xs: 8px; --radius-sm: 14px; --radius-md: 20px; --radius: 20px; --radius-lg: 24px;
+  --shadow: 0 4px 20px rgba(36,26,18,0.10); --shadow-lg: 0 12px 48px rgba(36,26,18,0.18);
+  --shadow-action: 0 8px 24px rgba(27,58,107,0.22);
+  --serif: 'SUIT Variable', SUIT, sans-serif;
+}
+* , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+  padding-bottom: 92px; -webkit-font-smoothing: antialiased;
+}
+/* 안내 머리말 */
+.mk-intro { max-width: 780px; margin: 0 auto; padding: 20px 20px 4px; }
+.mk-kick { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: var(--accent-ink); }
+.mk-intro h1 { font-family: var(--serif); font-weight: 800; font-size: 22px; line-height: 1.3; margin: 6px 0 6px; letter-spacing: -0.01em; }
+.mk-intro p { font-size: 14px; color: var(--text-muted); }
+.mk-name { max-width: 780px; margin: 0 auto; padding: 16px 20px 0; }
+.mk-name b { font-family: var(--serif); font-weight: 800; font-size: 18px; }
+.mk-name span { display: block; font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+/* 안 전환 */
+.mock { display: none; }
+.mock.on { display: block; }
+.mkbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  display: flex; gap: 6px; justify-content: center;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255,250,243,.96); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border-soft);
+}
+.mkbar button {
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 6px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  font-family: inherit; font-size: 13px; font-weight: 700; color: var(--text-muted);
+  cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mkbar button.on { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+</style>
+</head>
+<body>
+<div class="mk-intro">
+  <div class="mk-kick">MONC · MYPAGE REDESIGN</div>
+  <h1>마이페이지 재설계 4안</h1>
+  <p>네 안 모두 같은 회원·같은 데이터로 그렸습니다. 아래 버튼으로 바꿔 보세요.</p>
+</div>
+<div class="mk-name" id="mkName"></div>
+
+<!-- ── 안 1 ─────────────────────────────────────────────── -->
+<style>
+/* ============================================================
+   ① 정리판 — 지금 골격 유지, 결함만 제거
+   루트: .v1 / 모든 클래스 v1- 접두
+   ============================================================ */
+
+.v1{
+  max-width:780px;
+  margin:0 auto;
+  padding:20px 16px 56px;
+  font-family:'SUIT Variable', SUIT, -apple-system, BlinkMacSystemFont, sans-serif;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+  -webkit-text-size-adjust:100%;
+}
+.v1 *{box-sizing:border-box;}
+.v1 a{color:var(--action); text-decoration:none;}          /* 문제 1 — 기본 파랑 차단 */
+.v1 a:hover{text-decoration:underline;}
+.v1 p{margin:0;}
+.v1 ul{margin:0; padding:0; list-style:none;}
+.v1 button{font:inherit; color:inherit; cursor:pointer;}
+
+.v1-stack{display:flex; flex-direction:column; gap:14px;}
+
+/* ---------- 공통 카드 ---------- */
+.v1-card{
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius);
+  padding:16px;
+}
+.v1-h2{
+  font-family:var(--serif);
+  font-size:16px; font-weight:800; line-height:1.3;
+  margin:0; letter-spacing:-0.01em;
+}
+.v1-sub{font-size:13px; line-height:1.5; color:var(--text-muted);}
+.v1-mt6{margin-top:6px;}
+.v1-mt8{margin-top:8px;}
+.v1-mt14{margin-top:14px;}
+.v1-ic{width:18px; height:18px; flex:none; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round;}
+
+/* ---------- 1. 멤버십 카드 (문제 4 — 갈색 그라디언트 → 단색 네이비) ---------- */
+.v1-member{
+  background:var(--action-dark);
+  border-radius:var(--radius-lg);
+  padding:18px 16px 6px;
+  color:var(--text-on-dark);
+  overflow:hidden;
+}
+.v1-mem-top{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;}
+.v1-mem-id{min-width:0;}
+.v1-mem-brand{
+  font-size:12px; font-weight:700; letter-spacing:0.14em;
+  color:var(--action-on-dark);
+}
+.v1-mem-name{
+  font-family:var(--serif);
+  font-size:24px; font-weight:800; line-height:1.2;
+  margin-top:6px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.v1-mem-meta{
+  font-size:13px; line-height:1.5; margin-top:5px;
+  color:var(--text-on-dark); opacity:.8;
+}
+.v1-mem-day{
+  flex:none; text-align:right;
+  border:1px solid var(--action-on-dark);
+  border-color:color-mix(in srgb, var(--action-on-dark) 50%, transparent);
+  border-radius:999px;
+  padding:7px 12px;
+  font-size:13px; font-weight:700;
+  color:var(--action-on-dark);
+}
+.v1-pay{
+  display:grid; grid-template-columns:repeat(3,1fr);
+  margin:16px -16px 0;
+  border-top:1px solid var(--action-on-dark);
+  border-top-color:color-mix(in srgb, var(--text-on-dark) 20%, transparent);
+}
+.v1-pay-c{
+  padding:12px 6px 14px; text-align:center; min-width:0;
+  border-left:1px solid var(--action-on-dark);
+  border-left-color:color-mix(in srgb, var(--text-on-dark) 20%, transparent);
+}
+.v1-pay-c:first-child{border-left:0;}
+.v1-pay-n{font-size:19px; font-weight:800; line-height:1.1; color:var(--action-on-dark);}
+.v1-pay-l{font-size:12px; margin-top:5px; color:var(--text-on-dark); opacity:.78;}
+
+/* ---------- 2. 오늘 할 일 (화면의 유일한 채움 CTA) ---------- */
+.v1-today{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px;
+}
+.v1-today-lbl{
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:700; color:var(--accent-ink);
+}
+.v1-today-q{
+  font-family:var(--serif);
+  font-size:17px; font-weight:800; line-height:1.45;
+  margin-top:10px; letter-spacing:-0.01em;
+}
+.v1-today-tag{
+  display:inline-block; margin-top:10px;
+  font-size:12px; color:var(--text-muted);
+  background:var(--surface2); border-radius:999px; padding:6px 10px;
+}
+.v1 .v1-cta{
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; min-height:50px; margin-top:14px;
+  background:var(--action); color:var(--action-ink);
+  border:0; border-radius:var(--radius-sm);
+  font-size:15px; font-weight:700;
+}
+.v1 .v1-cta:hover{background:var(--action-dark); text-decoration:none; color:var(--action-ink);}
+
+/* ---------- 3. 2주 미션 (문제 2 — 14칸 재설계) ---------- */
+.v1-bar{
+  display:flex; height:10px; border-radius:999px; overflow:hidden;
+  margin-top:12px; background:var(--surface2);
+}
+.v1-bar-ok{background:#1a7f37;}
+.v1-bar-bad{background:#b3261e;}
+.v1-legend{display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:10px;}
+.v1-lg{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted);}
+.v1-dot{width:10px; height:10px; border-radius:3px; flex:none;}
+.v1-dot.v1-ok{background:#1a7f37;}
+.v1-dot.v1-bad{background:var(--surface); border:1.5px solid #b3261e;}
+.v1-dot.v1-wait{background:var(--surface2); border:1px dashed var(--border);}
+
+.v1-week{margin-top:14px;}
+.v1-week-l{font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px;}
+.v1-days{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+.v1-day{
+  min-width:0; height:52px; border-radius:10px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  background:var(--surface2); border:1px dashed var(--border); color:var(--text-muted);
+}
+.v1-day .v1-day-n{font-size:13px; font-weight:800; line-height:1;}
+.v1-day svg{width:11px; height:11px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;}
+.v1-day.v1-ok{background:#1a7f37; border:1px solid #1a7f37; color:var(--action-ink);}
+.v1-day.v1-bad{background:var(--surface); border:1.5px solid #b3261e; color:#b3261e;}
+
+/* ---------- 4. 접이식 카드 (문제 8 — 요약/상세 이름 중복 제거) ---------- */
+.v1-fold{
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.v1-fold > summary{
+  display:flex; align-items:center; gap:10px;
+  min-height:56px; padding:10px 16px;
+  list-style:none; cursor:pointer;
+}
+.v1-fold > summary::-webkit-details-marker{display:none;}
+.v1-fold > summary::marker{content:'';}
+.v1-fold-t{
+  font-family:var(--serif);
+  font-size:15px; font-weight:800; letter-spacing:-0.01em;
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.v1-count{
+  flex:none; min-width:22px; height:22px; padding:0 7px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:999px; background:var(--action-tint); color:var(--accent-ink);
+  font-size:12px; font-weight:800;
+}
+.v1-peek{
+  margin-left:auto; flex:none;
+  font-size:12px; color:var(--text-muted);
+  max-width:44%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.v1-chev{flex:none; width:18px; height:18px; stroke:var(--text-muted); fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s ease;}
+.v1-fold[open] .v1-chev{transform:rotate(180deg);}
+.v1-fold-body{padding:0 16px 16px; border-top:1px solid var(--border-soft); padding-top:14px;}
+
+/* 코치 코멘트 (문제 3 — 배지를 문장에서 분리) */
+.v1-cmt{padding:12px 0; border-top:1px solid var(--border-soft);}
+.v1-cmt:first-child{padding-top:0; border-top:0;}
+.v1-cmt-h{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+.v1-cmt-d{flex:none; font-size:13px; font-weight:700; color:var(--text-muted);}
+.v1-tag{
+  flex:none; white-space:nowrap;
+  font-size:12px; font-weight:700; line-height:1;
+  padding:5px 9px; border-radius:999px;
+}
+.v1-tag.v1-ok{background:#eaf6ec; color:#1a7f37;}
+.v1-tag.v1-bad{background:#fdecea; color:#b3261e;}
+.v1-tag.v1-neutral{background:var(--surface2); color:var(--text-muted);}
+.v1-cmt-t{font-size:14px; line-height:1.6;}
+
+/* 답변노트 */
+.v1 .v1-note{
+  display:block; padding:12px 0; border-top:1px solid var(--border-soft);
+  color:var(--text);
+}
+.v1 .v1-note:first-child{padding-top:0; border-top:0;}
+.v1 .v1-note:hover{text-decoration:none;}
+.v1-note-h{display:flex; align-items:center; gap:8px; margin-bottom:6px; min-width:0;}
+.v1-note-m{font-size:12px; color:var(--text-muted); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.v1-note-t{font-size:14px; font-weight:700; line-height:1.5;}
+.v1-note-b{
+  font-size:13px; line-height:1.6; color:var(--text-muted);
+  margin-top:6px; padding-left:10px; border-left:2px solid var(--border);
+}
+
+/* 뉴스 스크랩 (문제 1) */
+.v1 .v1-news{
+  display:block; padding:12px 0; border-top:1px solid var(--border-soft);
+  color:var(--text);
+}
+.v1 .v1-news:first-child{padding-top:0; border-top:0;}
+.v1-news-s{font-size:12px; font-weight:700; color:var(--accent-ink); display:block; margin-bottom:4px;}
+.v1-news-t{font-size:14px; line-height:1.55; color:var(--text); display:block;}
+
+/* 신청 내역 */
+.v1-ord{display:flex; align-items:flex-start; gap:10px; padding:12px 0; border-top:1px solid var(--border-soft);}
+.v1-ord:first-child{padding-top:0; border-top:0;}
+.v1-ord-m{min-width:0; flex:1;}
+.v1-ord-t{font-size:14px; font-weight:700; line-height:1.45;}
+.v1-ord-s{font-size:12px; color:var(--text-muted); margin-top:4px;}
+
+/* 연락처 (문제 6 — 저장은 네이비 채움) */
+.v1-field{display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px;}
+.v1-input{
+  width:100%; min-height:48px; padding:12px 14px;
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--bg2); color:var(--text);
+  font:inherit; font-size:15px;
+}
+.v1-save{
+  width:100%; min-height:48px; margin-top:12px;
+  background:var(--action); color:var(--action-ink);
+  border:0; border-radius:var(--radius-sm);
+  font-size:15px; font-weight:700;
+}
+.v1-save:hover{background:var(--action-dark);}
+
+/* ---------- 5. 반칸 위젯 (문제 5 — 홀수 방지 규칙) ---------- */
+.v1-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.v1 .v1-w{
+  min-width:0;
+  background:var(--surface); border:1px solid var(--border-soft);
+  border-radius:var(--radius); padding:14px;
+  display:flex; flex-direction:column; gap:6px;
+  color:var(--text);
+}
+.v1 .v1-w:hover{text-decoration:none;}
+/* 반칸이 홀수로 남으면 마지막 칸을 전체폭으로 승격한다 */
+.v1 .v1-w:last-child:nth-child(odd){grid-column:1 / -1;}
+.v1-w-l{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--text-muted); min-width:0;}
+.v1-w-t{font-size:15px; font-weight:800; line-height:1.4; letter-spacing:-0.01em;}
+.v1-w-s{font-size:12px; line-height:1.5; color:var(--text-muted);}
+.v1-dday{
+  align-self:flex-start; margin-top:2px;
+  font-size:12px; font-weight:800; padding:5px 9px; border-radius:999px;
+  background:var(--action-tint); color:var(--accent-ink);
+}
+
+/* ---------- 6. 계정 / 로그아웃 (문제 7 — 맨 아래) ---------- */
+.v1-acct-t{
+  font-size:12px; font-weight:800; letter-spacing:0.1em;
+  color:var(--text-muted); margin:12px 0 -2px; padding-left:4px;
+}
+.v1-logout{
+  width:100%; min-height:48px; margin-top:4px;
+  background:transparent; border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  font-size:14px; font-weight:600; color:var(--text-muted);
+}
+.v1-logout:hover{background:var(--surface2);}
+.v1-foot{
+  text-align:center; font-size:12px; color:var(--text-muted);
+  margin-top:14px; line-height:1.6;
+}
+
+/* ---------- (나) 신규 회원 예시 ---------- */
+.v1-divider{
+  margin:36px 0 6px; padding-top:24px;
+  border-top:1px dashed var(--border);
+}
+.v1-divider-t{font-family:var(--serif); font-size:15px; font-weight:800;}
+.v1-divider-c{font-size:12px; line-height:1.6; color:var(--text-muted); margin-top:6px;}
+.v1-new{margin-top:14px;}
+.v1-new .v1-member{padding-bottom:18px;}
+.v1-new .v1-mem-meta{margin-top:8px;}
+.v1-start-h{font-family:var(--serif); font-size:17px; font-weight:800; line-height:1.45; letter-spacing:-0.01em;}
+.v1 .v1-ghost{
+  display:flex; align-items:center; justify-content:center;
+  width:100%; min-height:48px; margin-top:8px;
+  border:1px solid var(--action); border-radius:var(--radius-sm);
+  background:transparent; color:var(--action);
+  font-size:15px; font-weight:700;
+}
+.v1 .v1-ghost:hover{background:var(--action-tint); text-decoration:none; color:var(--action);}
+.v1-steps{margin-top:12px; border-top:1px solid var(--border-soft); padding-top:12px;}
+.v1-step{display:flex; gap:10px; align-items:flex-start; padding:7px 0;}
+.v1-step-n{
+  flex:none; width:20px; height:20px; border-radius:999px;
+  background:var(--surface2); color:var(--text-muted);
+  font-size:12px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+.v1-step-t{font-size:13px; line-height:1.55; color:var(--text-muted); min-width:0;}
+
+/* ---------- 넓은 화면 ---------- */
+@media (min-width:760px){
+  .v1{padding:28px 20px 64px;}
+  .v1-member{padding:24px 22px 8px;}
+  .v1-new .v1-member{padding-bottom:22px;}
+  .v1-pay{margin:20px -22px 0;}
+  .v1-mem-name{font-size:28px;}
+  .v1-card,.v1-today,.v1-fold > summary{padding-left:20px; padding-right:20px;}
+  .v1-fold-body{padding-left:20px; padding-right:20px;}
+  .v1-day{height:58px;}
+  .v1-today-q{font-size:19px;}
+}
+</style>
+
+<section class="mock v1">
+
+  <div class="v1-stack">
+
+    <!-- 1. 멤버십 — 단색 네이비 -->
+    <div class="v1-member">
+      <div class="v1-mem-top">
+        <div class="v1-mem-id">
+          <div class="v1-mem-brand">MONC MEMBER</div>
+          <div class="v1-mem-name">김지현</div>
+          <div class="v1-mem-meta">보이스 7기 · 7월 20일 – 8월 2일</div>
+        </div>
+        <div class="v1-mem-day">11일차</div>
+      </div>
+      <div class="v1-pay">
+        <div class="v1-pay-c"><div class="v1-pay-n">2</div><div class="v1-pay-l">신청</div></div>
+        <div class="v1-pay-c"><div class="v1-pay-n">1</div><div class="v1-pay-l">결제완료</div></div>
+        <div class="v1-pay-c"><div class="v1-pay-n">1</div><div class="v1-pay-l">입금대기</div></div>
+      </div>
+    </div>
+
+    <!-- 2. 오늘 할 일 — 유일한 채움 CTA -->
+    <div class="v1-today">
+      <div class="v1-today-lbl">
+        <svg class="v1-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="3.5"/></svg>
+        오늘의 소재 발굴
+      </div>
+      <div class="v1-today-q">살면서 가장 크게 실패했던 경험과 그때 배운 점을 말씀해 주세요.</div>
+      <div class="v1-today-tag">과거경험검증형</div>
+      <a class="v1-cta" href="#">
+        답변 쓰러 가기
+        <svg class="v1-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <!-- 3. 2주 미션 — 14칸 7×2 -->
+    <div class="v1-card">
+      <h2 class="v1-h2">2주 미션</h2>
+      <p class="v1-sub v1-mt6">성공 6 · 아쉬움 2 · 남은 6</p>
+      <div class="v1-bar" aria-hidden="true">
+        <div class="v1-bar-ok" style="width:42.85%"></div>
+        <div class="v1-bar-bad" style="width:14.28%"></div>
+      </div>
+      <div class="v1-legend">
+        <span class="v1-lg"><i class="v1-dot v1-ok"></i>성공</span>
+        <span class="v1-lg"><i class="v1-dot v1-bad"></i>아쉬움</span>
+        <span class="v1-lg"><i class="v1-dot v1-wait"></i>아직</span>
+      </div>
+
+      <div class="v1-week">
+        <div class="v1-week-l">1주차 · 7.20 – 7.26</div>
+        <div class="v1-days">
+          <div class="v1-day v1-ok"><span class="v1-day-n">1</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+          <div class="v1-day v1-ok"><span class="v1-day-n">2</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+          <div class="v1-day v1-bad"><span class="v1-day-n">3</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+          <div class="v1-day v1-ok"><span class="v1-day-n">4</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+          <div class="v1-day v1-ok"><span class="v1-day-n">5</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+          <div class="v1-day v1-ok"><span class="v1-day-n">6</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+          <div class="v1-day v1-bad"><span class="v1-day-n">7</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+      </div>
+
+      <div class="v1-week">
+        <div class="v1-week-l">2주차 · 7.27 – 8.2</div>
+        <div class="v1-days">
+          <div class="v1-day v1-ok"><span class="v1-day-n">8</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg></div>
+          <div class="v1-day"><span class="v1-day-n">9</span></div>
+          <div class="v1-day"><span class="v1-day-n">10</span></div>
+          <div class="v1-day"><span class="v1-day-n">11</span></div>
+          <div class="v1-day"><span class="v1-day-n">12</span></div>
+          <div class="v1-day"><span class="v1-day-n">13</span></div>
+          <div class="v1-day"><span class="v1-day-n">14</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 접이식 — 요약과 상세를 한 카드로 합침 -->
+    <details class="v1-fold" open>
+      <summary>
+        <span class="v1-fold-t">코치 코멘트</span>
+        <span class="v1-count">3</span>
+        <span class="v1-peek">7일차까지</span>
+        <svg class="v1-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="v1-fold-body">
+        <ul>
+          <li class="v1-cmt">
+            <div class="v1-cmt-h"><span class="v1-cmt-d">2일차</span><span class="v1-tag v1-ok">성공</span></div>
+            <p class="v1-cmt-t">첫 문장이 또렷해졌어요.</p>
+          </li>
+          <li class="v1-cmt">
+            <div class="v1-cmt-h"><span class="v1-cmt-d">5일차</span><span class="v1-tag v1-ok">성공</span></div>
+            <p class="v1-cmt-t">속도가 안정적입니다. 이대로 유지하세요.</p>
+          </li>
+          <li class="v1-cmt">
+            <div class="v1-cmt-h"><span class="v1-cmt-d">7일차</span><span class="v1-tag v1-bad">아쉬움</span></div>
+            <p class="v1-cmt-t">녹음이 잘렸어요. 다시 올려주세요.</p>
+          </li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="v1-fold">
+      <summary>
+        <span class="v1-fold-t">답변노트</span>
+        <span class="v1-count">3</span>
+        <span class="v1-peek">작성 중 1건</span>
+        <svg class="v1-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="v1-fold-body">
+        <a class="v1-note" href="#">
+          <div class="v1-note-h"><span class="v1-tag v1-neutral">작성 중</span><span class="v1-note-m">과거경험검증형 · 7.30</span></div>
+          <p class="v1-note-t">어려운 사람과 함께 일한 경험이 있나요?</p>
+          <p class="v1-note-b">학원 조별과제에서 의견이 갈렸을 때 제가 먼저 각자 원하는 걸 물어봤고</p>
+        </a>
+        <a class="v1-note" href="#">
+          <div class="v1-note-h"><span class="v1-tag v1-ok">완료</span><span class="v1-note-m">7.28</span></div>
+          <p class="v1-note-t">지원동기 초안</p>
+        </a>
+        <a class="v1-note" href="#">
+          <div class="v1-note-h"><span class="v1-tag v1-ok">완료</span><span class="v1-note-m">직무핵심역량형 · 7.26</span></div>
+          <p class="v1-note-t">본인의 강점은 무엇입니까?</p>
+        </a>
+      </div>
+    </details>
+
+    <details class="v1-fold">
+      <summary>
+        <span class="v1-fold-t">뉴스 스크랩</span>
+        <span class="v1-count">3</span>
+        <span class="v1-peek">제주항공 외 2</span>
+        <svg class="v1-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="v1-fold-body">
+        <a class="v1-news" href="#">
+          <span class="v1-news-s">제주항공</span>
+          <span class="v1-news-t">제주항공, 하반기 객실승무원 신입 채용 공고</span>
+        </a>
+        <a class="v1-news" href="#">
+          <span class="v1-news-s">티웨이항공</span>
+          <span class="v1-news-t">티웨이항공 유럽 노선 확대… 장거리 운항 인력 확충</span>
+        </a>
+        <a class="v1-news" href="#">
+          <span class="v1-news-s">대한항공</span>
+          <span class="v1-news-t">대한항공-아시아나 통합 이후 객실 운영 방향</span>
+        </a>
+      </div>
+    </details>
+
+    <!-- 5. 반칸 위젯 — 항상 2의 배수 -->
+    <div class="v1-grid">
+      <a class="v1-w" href="#">
+        <div class="v1-w-l">
+          <svg class="v1-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+          내 특강
+        </div>
+        <div class="v1-w-t">자소서 첨삭 특강</div>
+        <div class="v1-w-s">8월 3일(월) 오후 2시–4시<br>김승준 연구원</div>
+        <span class="v1-dday">D-3</span>
+      </a>
+      <div class="v1-w">
+        <div class="v1-w-l">
+          <svg class="v1-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9v6M10 6v12M14 8v8M18 10v4"/></svg>
+          Before / After 음성
+        </div>
+        <div class="v1-w-t">수료 후 공개</div>
+        <div class="v1-w-s">2주 미션을 마치면 첫날과 마지막 날 녹음을 나란히 들을 수 있어요.</div>
+      </div>
+    </div>
+
+    <!-- 6. 계정 — 로그아웃은 맨 아래 -->
+    <div class="v1-acct-t">계정</div>
+
+    <details class="v1-fold">
+      <summary>
+        <span class="v1-fold-t">신청 내역</span>
+        <span class="v1-count">2</span>
+        <span class="v1-peek">입금대기 1건</span>
+        <svg class="v1-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="v1-fold-body">
+        <div class="v1-ord">
+          <div class="v1-ord-m">
+            <div class="v1-ord-t">보이스 7기</div>
+            <div class="v1-ord-s">30,000원 · 7월 18일</div>
+          </div>
+          <span class="v1-tag v1-ok">결제완료</span>
+        </div>
+        <div class="v1-ord">
+          <div class="v1-ord-m">
+            <div class="v1-ord-t">[특강] 자소서 첨삭 특강</div>
+            <div class="v1-ord-s">25,000원 · 7월 25일</div>
+          </div>
+          <span class="v1-tag v1-neutral">입금대기</span>
+        </div>
+      </div>
+    </details>
+
+    <details class="v1-fold">
+      <summary>
+        <span class="v1-fold-t">연락처</span>
+        <span class="v1-peek">010-****-5678</span>
+        <svg class="v1-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="v1-fold-body">
+        <label class="v1-field" for="v1-phone">휴대폰 번호</label>
+        <input class="v1-input" id="v1-phone" type="tel" inputmode="numeric" value="010-****-5678">
+        <p class="v1-sub v1-mt8">챌린지 안내와 특강 공지를 받는 번호입니다.</p>
+        <button class="v1-save" type="button">저장</button>
+      </div>
+    </details>
+
+    <button class="v1-logout" type="button">로그아웃</button>
+    <p class="v1-foot">계정 삭제를 원하시면 고객센터로 문의해 주세요.</p>
+  </div>
+
+  <!-- ============ (나) 신규 회원 예시 ============ -->
+  <div class="v1-divider">
+    <div class="v1-divider-t">신규 회원(가입 직후)</div>
+    <p class="v1-divider-c">※ 실제 페이지의 일부가 아니라, 이 안에서 데이터가 하나도 없을 때 상단이 어떻게 보이는지 보여주는 예시입니다. 0을 나열하지 않고 다음에 할 일을 보여줍니다.</p>
+  </div>
+
+  <div class="v1-stack v1-new">
+    <div class="v1-member">
+      <div class="v1-mem-top">
+        <div class="v1-mem-id">
+          <div class="v1-mem-brand">MONC MEMBER</div>
+          <div class="v1-mem-name">김지현</div>
+          <div class="v1-mem-meta">아직 참여 중인 챌린지가 없어요.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="v1-today">
+      <div class="v1-start-h">2주 챌린지로 시작해요</div>
+      <p class="v1-sub v1-mt8">매일 미션 하나를 올리면 코치가 코멘트를 답니다. 첫날과 마지막 날 녹음은 수료 후 나란히 들을 수 있어요.</p>
+      <a class="v1-cta" href="#">
+        모집 일정 보기
+        <svg class="v1-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="v1-ghost" href="#">특강 둘러보기</a>
+      <div class="v1-steps">
+        <div class="v1-step"><span class="v1-step-n">1</span><span class="v1-step-t">모집 중인 기수를 골라 신청합니다.</span></div>
+        <div class="v1-step"><span class="v1-step-n">2</span><span class="v1-step-t">시작일부터 14일간 매일 미션을 올립니다.</span></div>
+        <div class="v1-step"><span class="v1-step-n">3</span><span class="v1-step-t">코치 코멘트와 답변노트가 이 화면에 쌓입니다.</span></div>
+      </div>
+    </div>
+
+    <div class="v1-card">
+      <div class="v1-today-lbl">
+        <svg class="v1-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="3.5"/></svg>
+        지금 바로 해볼 수 있어요
+      </div>
+      <div class="v1-today-q">살면서 가장 크게 실패했던 경험과 그때 배운 점을 말씀해 주세요.</div>
+      <div class="v1-today-tag">오늘의 소재 발굴 · 과거경험검증형</div>
+      <a class="v1-ghost v1-mt14" href="#">답변 쓰러 가기</a>
+    </div>
+
+    <div class="v1-acct-t">계정</div>
+    <details class="v1-fold">
+      <summary>
+        <span class="v1-fold-t">연락처</span>
+        <span class="v1-peek">등록 안 됨</span>
+        <svg class="v1-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="v1-fold-body">
+        <label class="v1-field" for="v1-phone-new">휴대폰 번호</label>
+        <input class="v1-input" id="v1-phone-new" type="tel" inputmode="numeric" placeholder="010-0000-0000">
+        <button class="v1-save" type="button">저장</button>
+      </div>
+    </details>
+    <button class="v1-logout" type="button">로그아웃</button>
+  </div>
+
+</section>
+<!-- ── 안 2 ─────────────────────────────────────────────── -->
+<style>
+/* ===== ② 오늘 한 칸 — 지금 할 일 하나만 크게 ===== */
+.v2 {
+  padding: 16px 0 40px;
+  /* 기능색(에러·경고 빨강)만 지역 토큰으로 둔다 — 그 외 색은 전부 전역 팔레트 var() */
+  --v2-bad: #B3261E;
+  --v2-hair-on-dark: color-mix(in srgb, var(--action-on-dark) 30%, transparent);
+}
+.v2 .v2-wrap { max-width: 780px; margin: 0 auto; padding: 0 16px; }
+
+/* 공통 활자 */
+.v2 .v2-h { font-family: var(--serif); font-weight: 800; letter-spacing: -0.02em; }
+.v2 .v2-num { font-variant-numeric: tabular-nums; }
+
+/* ---------- 상단 신원 줄 (로그아웃은 맨 아래 '내 정보'로 내렸다) ---------- */
+.v2 .v2-id {
+  display: flex; align-items: baseline; gap: 8px;
+  min-width: 0; padding: 4px 2px 14px;
+}
+.v2 .v2-id-name { font-family: var(--serif); font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+.v2 .v2-id-sub { font-size: 13px; color: var(--text-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 오늘 한 칸 (주 카드) ---------- */
+.v2 .v2-today {
+  background: var(--action); border-radius: var(--radius-lg);
+  padding: 18px 18px 20px; color: var(--text-on-dark);
+  box-shadow: var(--shadow-action);
+}
+.v2 .v2-today-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px;
+}
+.v2 .v2-today-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--action-on-dark);
+}
+.v2 .v2-today-tag svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.v2 .v2-today-date { font-size: 12px; color: var(--action-on-dark); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v2 .v2-today-t {
+  font-family: var(--serif); font-size: 22px; line-height: 1.35; font-weight: 800;
+  letter-spacing: -0.03em; color: var(--action-ink); margin: 0 0 8px; word-break: keep-all;
+}
+.v2 .v2-today-d {
+  font-size: 14px; line-height: 1.6; color: var(--text-on-dark);
+  margin: 0 0 16px; word-break: keep-all;
+}
+/* 다크 면 CTA = 흰 알약 + 네이비 글씨 */
+.v2 .v2-cta {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 50px; padding: 0 18px; box-sizing: border-box;
+  background: var(--surface); color: var(--action);
+  border: 0; border-radius: 999px;
+  font-size: 16px; font-weight: 800; letter-spacing: -0.01em;
+  text-decoration: none; cursor: pointer; font-family: inherit;
+}
+.v2 .v2-cta svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.v2 .v2-today-next {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; margin-top: 14px; padding: 10px 2px 0;
+  border-top: 1px solid var(--v2-hair-on-dark);
+  color: var(--action-on-dark); text-decoration: none; min-width: 0;
+}
+.v2 .v2-today-next .v2-next-l { font-size: 12px; font-weight: 700; flex: 0 0 auto; letter-spacing: 0.02em; }
+.v2 .v2-today-next .v2-next-q {
+  font-size: 13px; color: var(--text-on-dark); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.v2 .v2-today-next .v2-next-ar { flex: 0 0 auto; width: 16px; height: 16px; }
+
+/* ---------- 얇은 카드 공통 ---------- */
+.v2 .v2-card {
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius); padding: 14px 16px; margin-top: 12px;
+}
+
+/* 진행 한 줄 */
+.v2 .v2-prog-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0;
+}
+.v2 .v2-prog-t { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+.v2 .v2-prog-r { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v2 .v2-bar { display: flex; gap: 3px; margin: 12px 0 10px; }
+.v2 .v2-bar i { flex: 1 1 0; min-width: 0; height: 8px; border-radius: 3px; background: var(--border-soft); }
+.v2 .v2-bar i.is-ok { background: var(--action); }
+.v2 .v2-bar i.is-bad { background: var(--v2-bad); }
+.v2 .v2-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.v2 .v2-legend span {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.v2 .v2-legend span::before { content: ""; width: 8px; height: 8px; border-radius: 3px; background: var(--border-soft); }
+.v2 .v2-legend span.is-ok::before { background: var(--action); }
+.v2 .v2-legend span.is-bad::before { background: var(--v2-bad); }
+
+/* 다가오는 일정 */
+.v2 .v2-up { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.v2 .v2-up-body { min-width: 0; flex: 1 1 auto; }
+.v2 .v2-up-t {
+  font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.v2 .v2-up-d { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.v2 .v2-dday {
+  flex: 0 0 auto; white-space: nowrap;
+  background: var(--action-tint); color: var(--action);
+  font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 입금 대기 줄 */
+.v2 .v2-due {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  margin-top: 12px; padding: 12px 14px; min-height: 44px; box-sizing: border-box;
+  background: var(--surface2); border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--v2-bad); border-radius: var(--radius-sm);
+  text-decoration: none; color: var(--text);
+}
+.v2 .v2-due-body { min-width: 0; flex: 1 1 auto; }
+.v2 .v2-due-t { font-size: 13px; font-weight: 700; color: var(--v2-bad); }
+.v2 .v2-due-d {
+  font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.v2 .v2-due svg { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-dim); }
+
+/* ---------- 접히는 기록 ---------- */
+.v2 .v2-folds { margin-top: 22px; border-top: 1px solid var(--border-soft); }
+.v2 .v2-folds-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 16px 2px 8px;
+}
+.v2 .v2-folds-h b { font-size: 13px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+.v2 .v2-folds-h em { font-style: normal; font-size: 12px; color: var(--text-dim); }
+
+.v2 .v2-fold { border-bottom: 1px solid var(--border-soft); }
+.v2 .v2-fold > summary {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 56px; padding: 8px 2px; box-sizing: border-box;
+  cursor: pointer; list-style: none; min-width: 0;
+}
+.v2 .v2-fold > summary::-webkit-details-marker { display: none; }
+.v2 .v2-fold-ic { flex: 0 0 auto; width: 20px; height: 20px; color: var(--action); }
+.v2 .v2-fold-t {
+  flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.v2 .v2-fold-c {
+  flex: 0 0 auto; font-size: 12px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.v2 .v2-fold-ar { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-dim); transition: transform 0.18s ease; }
+.v2 .v2-fold[open] .v2-fold-ar { transform: rotate(180deg); }
+.v2 .v2-fold-body { padding: 2px 2px 20px; }
+
+/* 14일 격자 */
+.v2 .v2-days-cap { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; font-variant-numeric: tabular-nums; }
+/* 375px 에서 칸 폭 = (375 - 32 wrap - 4 body - 24 gap) / 7 = 45px — 두 자리 숫자가 한 줄로 들어간다 */
+.v2 .v2-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.v2 .v2-day {
+  min-width: 0; height: 56px; box-sizing: border-box; border-radius: var(--radius-xs);
+  background: var(--surface2); border: 1px solid var(--border-soft);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+}
+.v2 .v2-day span { font-size: 12px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; line-height: 1; }
+.v2 .v2-day i { width: 8px; height: 8px; border-radius: 999px; background: var(--border); display: block; }
+.v2 .v2-day.is-ok { background: var(--action-tint); border-color: transparent; }
+.v2 .v2-day.is-ok span { color: var(--action); }
+.v2 .v2-day.is-ok i { background: var(--action); }
+.v2 .v2-day.is-bad { background: color-mix(in srgb, var(--v2-bad) 9%, var(--surface)); border-color: transparent; }
+.v2 .v2-day.is-bad span { color: var(--v2-bad); }
+.v2 .v2-day.is-bad i { background: var(--v2-bad); }
+.v2 .v2-day.is-now { border: 2px solid var(--action); background: var(--surface); }
+.v2 .v2-day.is-now span { color: var(--action); }
+
+/* 목록 공통 */
+.v2 .v2-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.v2 .v2-item {
+  display: block; min-width: 0; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); text-decoration: none; color: var(--text);
+}
+.v2 .v2-chip {
+  display: inline-flex; align-items: center; flex: 0 0 auto; white-space: nowrap;
+  font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+  background: var(--surface2); color: var(--text-muted);
+}
+.v2 .v2-chip.is-ok { background: var(--action-tint); color: var(--action); }
+.v2 .v2-chip.is-bad { background: color-mix(in srgb, var(--v2-bad) 11%, var(--surface)); color: var(--v2-bad); }
+.v2 .v2-chip.is-draft { background: #eaf6ec; color: #1a7f37; }
+
+/* 코치 코멘트 — 배지를 문장 위 별도 줄로 뺀다 */
+.v2 .v2-cmt-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 6px; }
+.v2 .v2-cmt-day { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v2 .v2-cmt-body { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); word-break: keep-all; }
+
+/* 답변노트 */
+.v2 .v2-note-top { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 6px; }
+.v2 .v2-note-meta {
+  font-size: 12px; color: var(--text-dim); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.v2 .v2-note-t { display: block; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; word-break: keep-all; }
+.v2 .v2-note-p {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin-top: 5px; font-size: 13px; line-height: 1.55; color: var(--text-muted); word-break: keep-all;
+}
+
+/* 뉴스 */
+.v2 .v2-news-t { display: block; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; word-break: keep-all; }
+.v2 .v2-news-s { display: block; margin-top: 5px; font-size: 12px; color: var(--text-dim); }
+
+/* 결제 */
+.v2 .v2-pay-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.v2 .v2-pay-t {
+  font-size: 14px; font-weight: 700; color: var(--text); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.v2 .v2-pay-d {
+  display: flex; align-items: center; gap: 8px; margin-top: 5px;
+  font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+
+/* 내 정보 */
+.v2 .v2-lb { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+.v2 .v2-field { display: flex; gap: 8px; min-width: 0; }
+.v2 .v2-input {
+  flex: 1 1 auto; min-width: 0; height: 46px; padding: 0 12px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: var(--radius-xs);
+  background: var(--surface); color: var(--text); font-size: 15px; font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.v2 .v2-save {
+  flex: 0 0 auto; min-height: 46px; min-width: 72px; padding: 0 18px;
+  background: var(--action); color: var(--action-ink); border: 0; border-radius: var(--radius-xs);
+  font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer;
+}
+.v2 .v2-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 46px; margin-top: 14px; padding: 0 18px; box-sizing: border-box;
+  background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: var(--radius-xs);
+  font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; text-decoration: none;
+}
+
+/* ---------- (나) 신규 회원 예시 ---------- */
+.v2 .v2-demo { margin-top: 44px; }
+.v2 .v2-demo-h { border-top: 1px dashed var(--border); padding-top: 18px; }
+.v2 .v2-demo-h b { display: block; font-family: var(--serif); font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+.v2 .v2-demo-h p { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-dim); word-break: keep-all; }
+.v2 .v2-demo-box {
+  margin-top: 14px; padding: 14px; border: 1px dashed var(--border);
+  border-radius: var(--radius); background: var(--bg2);
+}
+.v2 .v2-empty-line {
+  margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-dim); word-break: keep-all;
+}
+.v2 .v2-outline {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 46px; box-sizing: border-box; margin-top: 12px; padding: 0 16px;
+  background: var(--surface); color: var(--action);
+  border: 1.5px solid var(--action); border-radius: 999px;
+  font-size: 15px; font-weight: 800; font-family: inherit; text-decoration: none; cursor: pointer;
+}
+.v2 .v2-q {
+  margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); word-break: keep-all; font-weight: 700;
+}
+.v2 .v2-q-tag { display: block; font-size: 12px; font-weight: 700; color: var(--action); margin-bottom: 6px; }
+
+@media (min-width: 760px) {
+  .v2 { padding: 24px 0 56px; }
+  .v2 .v2-today { padding: 26px 28px 28px; }
+  .v2 .v2-today-t { font-size: 26px; }
+  .v2 .v2-cta { width: auto; min-width: 260px; max-width: 320px; }
+  .v2 .v2-outline { width: auto; min-width: 240px; max-width: 300px; }
+  .v2 .v2-day { height: 62px; }
+}
+</style>
+
+<section class="mock v2">
+  <div class="v2-wrap">
+
+    <!-- 신원 한 줄 -->
+    <div class="v2-id">
+      <span class="v2-id-name">김지현</span>
+      <span class="v2-id-sub">보이스 7기 · 7.20 ~ 8.2</span>
+    </div>
+
+    <!-- ===== 오늘 한 칸 ===== -->
+    <div class="v2-today">
+      <div class="v2-today-top">
+        <span class="v2-today-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          오늘 할 일
+        </span>
+        <span class="v2-today-date">7월 31일 · 11일차</span>
+      </div>
+      <h2 class="v2-today-t">오늘 미션 녹음이 아직 안 올라왔어요</h2>
+      <p class="v2-today-d">오늘 자정까지 올리면 내일 코치 코멘트를 받습니다.</p>
+      <a class="v2-cta" href="#">
+        오늘 미션 올리기
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="v2-today-next" href="#">
+        <span class="v2-next-l">다음 · 소재 발굴</span>
+        <span class="v2-next-q">살면서 가장 크게 실패했던 경험과…</span>
+        <svg class="v2-next-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <!-- 진행 한 줄 -->
+    <div class="v2-card">
+      <div class="v2-prog-top">
+        <span class="v2-prog-t">2주 미션</span>
+        <span class="v2-prog-r">11 / 14일차</span>
+      </div>
+      <div class="v2-bar" aria-hidden="true">
+        <i class="is-ok"></i><i class="is-ok"></i><i class="is-bad"></i><i class="is-ok"></i>
+        <i class="is-ok"></i><i class="is-ok"></i><i class="is-bad"></i><i class="is-ok"></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="v2-legend">
+        <span class="is-ok">성공 6</span>
+        <span class="is-bad">아쉬움 2</span>
+        <span>남은 6</span>
+      </div>
+    </div>
+
+    <!-- 다가오는 일정 -->
+    <div class="v2-card">
+      <div class="v2-up">
+        <div class="v2-up-body">
+          <div class="v2-up-t">자소서 첨삭 특강</div>
+          <div class="v2-up-d">8월 3일(월) 오후 2시~4시 · 김승준 연구원</div>
+        </div>
+        <span class="v2-dday">D-3</span>
+      </div>
+    </div>
+
+    <!-- 입금 대기 -->
+    <a class="v2-due" href="#">
+      <div class="v2-due-body">
+        <div class="v2-due-t">입금이 아직 확인되지 않았어요</div>
+        <div class="v2-due-d">[특강] 자소서 첨삭 특강 · 25,000원 · 7.25 신청</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+
+    <!-- ===== 접히는 기록 ===== -->
+    <div class="v2-folds" data-v2-acc>
+      <div class="v2-folds-h">
+        <b>내 기록</b>
+        <em>필요할 때만 펼쳐 보세요</em>
+      </div>
+
+      <!-- 2주 미션 기록 -->
+      <details class="v2-fold">
+        <summary>
+          <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <span class="v2-fold-t">2주 미션 기록</span>
+          <span class="v2-fold-c">14일</span>
+          <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="v2-fold-body">
+          <p class="v2-days-cap">7월 20일 ~ 8월 2일 · 숫자는 일차</p>
+          <div class="v2-days">
+            <div class="v2-day is-ok"><span>1</span><i></i></div>
+            <div class="v2-day is-ok"><span>2</span><i></i></div>
+            <div class="v2-day is-bad"><span>3</span><i></i></div>
+            <div class="v2-day is-ok"><span>4</span><i></i></div>
+            <div class="v2-day is-ok"><span>5</span><i></i></div>
+            <div class="v2-day is-ok"><span>6</span><i></i></div>
+            <div class="v2-day is-bad"><span>7</span><i></i></div>
+            <div class="v2-day is-ok"><span>8</span><i></i></div>
+            <div class="v2-day"><span>9</span><i></i></div>
+            <div class="v2-day"><span>10</span><i></i></div>
+            <div class="v2-day is-now"><span>11</span><i></i></div>
+            <div class="v2-day"><span>12</span><i></i></div>
+            <div class="v2-day"><span>13</span><i></i></div>
+            <div class="v2-day"><span>14</span><i></i></div>
+          </div>
+          <div class="v2-legend" style="margin-top:12px">
+            <span class="is-ok">성공</span>
+            <span class="is-bad">아쉬움</span>
+            <span>아직</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- 코치 코멘트 -->
+      <details class="v2-fold">
+        <summary>
+          <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4v4l5-4h7a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/></svg>
+          <span class="v2-fold-t">코치 코멘트</span>
+          <span class="v2-fold-c">3</span>
+          <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="v2-fold-body">
+          <ul class="v2-list">
+            <li class="v2-item">
+              <div class="v2-cmt-head"><span class="v2-chip is-bad">아쉬움</span><span class="v2-cmt-day">7일차</span></div>
+              <p class="v2-cmt-body">녹음이 잘렸어요. 다시 올려주세요.</p>
+            </li>
+            <li class="v2-item">
+              <div class="v2-cmt-head"><span class="v2-chip is-ok">성공</span><span class="v2-cmt-day">5일차</span></div>
+              <p class="v2-cmt-body">속도가 안정적입니다. 이대로 유지하세요.</p>
+            </li>
+            <li class="v2-item">
+              <div class="v2-cmt-head"><span class="v2-chip is-ok">성공</span><span class="v2-cmt-day">2일차</span></div>
+              <p class="v2-cmt-body">첫 문장이 또렷해졌어요.</p>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 답변노트 -->
+      <details class="v2-fold">
+        <summary>
+          <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+          <span class="v2-fold-t">답변노트</span>
+          <span class="v2-fold-c">3</span>
+          <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="v2-fold-body">
+          <ul class="v2-list">
+            <li>
+              <a class="v2-item" href="#">
+                <span class="v2-note-top"><span class="v2-chip">작성 중</span><span class="v2-note-meta">과거경험검증형 · 7.30</span></span>
+                <span class="v2-note-t">어려운 사람과 함께 일한 경험이 있나요?</span>
+                <span class="v2-note-p">학원 조별과제에서 의견이 갈렸을 때 제가 먼저 각자 원하는 걸 물어봤고</span>
+              </a>
+            </li>
+            <li>
+              <a class="v2-item" href="#">
+                <span class="v2-note-top"><span class="v2-chip is-draft">완료</span><span class="v2-note-meta">7.28</span></span>
+                <span class="v2-note-t">지원동기 초안</span>
+              </a>
+            </li>
+            <li>
+              <a class="v2-item" href="#">
+                <span class="v2-note-top"><span class="v2-chip is-draft">완료</span><span class="v2-note-meta">직무핵심역량형 · 7.26</span></span>
+                <span class="v2-note-t">본인의 강점은 무엇입니까?</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 뉴스 스크랩 -->
+      <details class="v2-fold">
+        <summary>
+          <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h13v14a1 1 0 0 0 1 1H5a1 1 0 0 1-1-1V5z"/><path d="M17 9h3v10a1 1 0 0 1-1 1M7 9h6M7 13h6M7 17h4"/></svg>
+          <span class="v2-fold-t">뉴스 스크랩</span>
+          <span class="v2-fold-c">3</span>
+          <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="v2-fold-body">
+          <ul class="v2-list">
+            <li>
+              <a class="v2-item" href="#">
+                <span class="v2-news-t">제주항공, 하반기 객실승무원 신입 채용 공고</span>
+                <span class="v2-news-s">제주항공</span>
+              </a>
+            </li>
+            <li>
+              <a class="v2-item" href="#">
+                <span class="v2-news-t">티웨이항공 유럽 노선 확대… 장거리 운항 인력 확충</span>
+                <span class="v2-news-s">티웨이항공</span>
+              </a>
+            </li>
+            <li>
+              <a class="v2-item" href="#">
+                <span class="v2-news-t">대한항공-아시아나 통합 이후 객실 운영 방향</span>
+                <span class="v2-news-s">대한항공</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 신청·결제 -->
+      <details class="v2-fold">
+        <summary>
+          <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+          <span class="v2-fold-t">신청·결제 내역</span>
+          <span class="v2-fold-c">2</span>
+          <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="v2-fold-body">
+          <ul class="v2-list">
+            <li class="v2-item">
+              <div class="v2-pay-top">
+                <span class="v2-pay-t">보이스 7기</span>
+                <span class="v2-chip is-ok">결제완료</span>
+              </div>
+              <div class="v2-pay-d"><span class="v2-num">30,000원</span><span class="v2-num">7.18</span></div>
+            </li>
+            <li class="v2-item">
+              <div class="v2-pay-top">
+                <span class="v2-pay-t">[특강] 자소서 첨삭 특강</span>
+                <span class="v2-chip is-bad">입금대기</span>
+              </div>
+              <div class="v2-pay-d"><span class="v2-num">25,000원</span><span class="v2-num">7.25</span></div>
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 내 정보 -->
+      <details class="v2-fold">
+        <summary>
+          <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></svg>
+          <span class="v2-fold-t">내 정보</span>
+          <span class="v2-fold-c">연락처</span>
+          <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="v2-fold-body">
+          <label class="v2-lb" for="v2-phone">연락처</label>
+          <div class="v2-field">
+            <input class="v2-input v2-num" id="v2-phone" type="tel" value="010-****-5678" readonly>
+            <button class="v2-save" type="button">저장</button>
+          </div>
+          <button class="v2-ghost" type="button">로그아웃</button>
+        </div>
+      </details>
+    </div>
+
+    <!-- ===== (나) 신규 회원 예시 ===== -->
+    <div class="v2-demo">
+      <div class="v2-demo-h">
+        <b>신규 회원(가입 직후)</b>
+        <p>같은 화면이 데이터가 하나도 없을 때 어떻게 보이는지 보여주는 예시입니다. 실제 페이지에는 이 블록이 따로 붙지 않고, 위 화면의 '오늘 한 칸'이 아래처럼 바뀝니다.</p>
+      </div>
+
+      <div class="v2-demo-box" data-v2-acc>
+        <div class="v2-id">
+          <span class="v2-id-name">김지현</span>
+          <span class="v2-id-sub">아직 참여 중인 챌린지 없음</span>
+        </div>
+
+        <div class="v2-today">
+          <div class="v2-today-top">
+            <span class="v2-today-tag">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>
+              먼저 할 일
+            </span>
+          </div>
+          <h2 class="v2-today-t">2주 챌린지부터 시작해 보세요</h2>
+          <p class="v2-today-d">매일 미션을 올리면 코치가 다음 날 코멘트를 남깁니다. 모집 중인 기수를 먼저 확인하세요.</p>
+          <a class="v2-cta" href="#">
+            모집 일정 보기
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="v2-today-next" href="#">
+            <span class="v2-next-l">특강</span>
+            <span class="v2-next-q">먼저 하루짜리 특강부터 둘러보기</span>
+            <svg class="v2-next-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+
+        <div class="v2-card">
+          <span class="v2-q-tag">오늘의 소재 발굴 · 과거경험검증형</span>
+          <p class="v2-q">살면서 가장 크게 실패했던 경험과 그때 배운 점을 말씀해 주세요.</p>
+          <a class="v2-outline" href="#">소재 발굴 열기</a>
+        </div>
+
+        <div class="v2-folds" style="margin-top:18px">
+          <div class="v2-folds-h">
+            <b>내 기록</b>
+            <em>활동이 쌓이면 여기에 생깁니다</em>
+          </div>
+          <details class="v2-fold">
+            <summary>
+              <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></svg>
+              <span class="v2-fold-t">내 정보</span>
+              <span class="v2-fold-c">연락처</span>
+              <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </summary>
+            <div class="v2-fold-body">
+              <label class="v2-lb" for="v2-phone-new">연락처</label>
+              <div class="v2-field">
+                <input class="v2-input" id="v2-phone-new" type="tel" placeholder="010-0000-0000">
+                <button class="v2-save" type="button">저장</button>
+              </div>
+              <button class="v2-ghost" type="button">로그아웃</button>
+            </div>
+          </details>
+          <p class="v2-empty-line">2주 미션 기록·코치 코멘트·신청 내역은 챌린지를 시작하면 이 자리에 줄로 추가됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function () {
+  var root = document.querySelector('.mock.v2');
+  if (!root) return;
+  // 한 번에 하나만 펼친다 — 스크롤 길이를 통제하기 위한 처리
+  var groups = root.querySelectorAll('[data-v2-acc]');
+  Array.prototype.forEach.call(groups, function (group) {
+    var items = group.querySelectorAll('details.v2-fold');
+    Array.prototype.forEach.call(items, function (d) {
+      d.addEventListener('toggle', function () {
+        if (!d.open) return;
+        Array.prototype.forEach.call(items, function (other) {
+          if (other !== d && other.open) other.open = false;
+        });
+      });
+    });
+  });
+})();
+</script>
+<!-- ── 안 3 ─────────────────────────────────────────────── -->
+<style>
+/* ───────────────────────────────────────────────
+   ③ 기록 타임라인 — 2주를 세로로
+   모든 선택자는 .v3 로 시작. 클래스는 v3- 접두.
+   ─────────────────────────────────────────────── */
+
+.v3 { max-width: 780px; margin: 0 auto; padding: 24px 20px 72px;
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+  color: var(--text); line-height: 1.6; font-size: 15px; }
+.v3 *, .v3 *::before, .v3 *::after { box-sizing: border-box; }
+/* 기본값은 .v3 로 시작하고 안쪽만 :where() 로 낮춘다 — 컴포넌트 클래스가 언제나 이긴다 */
+.v3 :where(h2, h3, h4, p, ul, ol, li, figure) { margin: 0; padding: 0; }
+.v3 :where(ul, ol) { list-style: none; }
+.v3 :where(a) { color: var(--accent-ink); }      /* 기본 파랑(#0000EE) 방지 안전망 */
+.v3 :where(button, input) { font-family: inherit; }
+.v3 .v3-num { font-variant-numeric: tabular-nums; }
+
+/* ── 상단 상태 판 (다크 면 · 갈색 그라디언트 폐기, 단색 --bg-dark) ── */
+.v3-hero { background: var(--bg-dark); color: var(--text-on-dark);
+  border-radius: var(--radius); padding: 20px 18px 16px; }
+.v3-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.v3-hero-badge { flex: 0 0 auto; white-space: nowrap; font-size: 12px; font-weight: 800;
+  letter-spacing: .04em; color: var(--action-on-dark);
+  border: 1px solid color-mix(in srgb, var(--action-on-dark) 50%, transparent);
+  border-radius: 999px; padding: 4px 10px; }
+.v3-hero-kicker { font-size: 12px; font-weight: 800; letter-spacing: .14em;
+  color: color-mix(in srgb, var(--text-on-dark) 70%, transparent); }
+.v3-hero-name { font-family: var(--serif); font-weight: 800; font-size: 24px;
+  line-height: 1.25; margin-top: 12px; }
+.v3-hero-name span { font-size: 16px; font-weight: 700;
+  color: color-mix(in srgb, var(--text-on-dark) 80%, transparent); }
+.v3-hero-sub { font-size: 13px; margin-top: 2px;
+  color: color-mix(in srgb, var(--text-on-dark) 80%, transparent);
+  font-variant-numeric: tabular-nums; }
+
+/* 14일 미니 바 — 타임라인의 압축본 (활자 없음 → 375px 에서 깨질 글자가 없다) */
+.v3-bar { display: flex; gap: 3px; margin: 16px 0 10px; }
+.v3-bar i { flex: 1 1 0; min-width: 0; height: 7px; border-radius: 4px;
+  background: color-mix(in srgb, var(--text-on-dark) 18%, transparent); display: block; }
+.v3-bar i.v3-b-ok { background: var(--action-on-dark); }
+.v3-bar i.v3-b-no { background: color-mix(in srgb, var(--text-on-dark) 46%, transparent); }
+.v3-bar i.v3-b-now { background: var(--text-on-dark);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-on-dark) 28%, transparent); }
+
+.v3-hero-stats { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 13px; font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--text-on-dark) 88%, transparent); }
+.v3-hero-stats b { font-weight: 800; color: var(--text-on-dark); }
+.v3-hero-stats .v3-sep { color: color-mix(in srgb, var(--text-on-dark) 58%, transparent); }
+.v3-hero-jump { display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+  margin-top: 4px; font-size: 13.5px; font-weight: 700;
+  color: var(--action-on-dark); text-decoration: none; }
+.v3-hero-jump:hover { text-decoration: underline; }
+
+/* ── 섹션 제목 ── */
+.v3-sec { margin-top: 30px; }
+.v3-sec-head { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px; }
+.v3-sec-head h3 { font-family: var(--serif); font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.v3-sec-head .v3-more { flex: 0 0 auto; white-space: nowrap; font-size: 13px; font-weight: 700;
+  color: var(--accent-ink); text-decoration: none; display: inline-flex; align-items: center;
+  gap: 3px; min-height: 44px; padding-left: 8px; }
+.v3-sec-head .v3-more:hover { color: var(--action-dark); }
+.v3-sec-note { font-size: 13px; color: var(--text-muted); margin-top: -6px; margin-bottom: 12px; }
+
+/* ── 타임라인 ── */
+.v3-tl { position: relative; padding-left: 2px; }
+.v3-tl::before { content: ''; position: absolute; left: 12px; top: 10px; bottom: 10px;
+  width: 2px; background: var(--border-soft); border-radius: 2px; }
+
+.v3-day { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr);
+  gap: 12px; padding: 7px 0; }
+.v3-dot { position: relative; z-index: 1; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg); border: 2px solid var(--border); display: flex;
+  align-items: center; justify-content: center; margin-top: 1px; }
+.v3-dot svg { width: 13px; height: 13px; stroke: currentColor; fill: none;
+  stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; display: block; }
+.v3-ok .v3-dot { background: #eaf6ec; border-color: #1a7f37; color: #1a7f37; }
+.v3-mid .v3-dot { background: var(--surface2); border-color: var(--border); color: var(--text-muted); }
+.v3-none .v3-dot { background: var(--bg); border-style: dashed; border-color: var(--border); }
+.v3-soon .v3-dot { width: 26px; height: 26px; background: var(--bg);
+  border: 2px dashed var(--border-soft); }
+.v3-soon .v3-dot i { width: 5px; height: 5px; border-radius: 50%; background: var(--border); display: block; }
+
+.v3-day-body { min-width: 0; }
+.v3-day-head { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.v3-day-n { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.v3-none .v3-day-n, .v3-soon .v3-day-n { font-weight: 700; color: var(--text-dim); }
+/* 결과 칩은 항상 제목 줄에 · 문장 끝에 붙이지 않는다(잘림 방지) */
+.v3-chip { flex: 0 0 auto; white-space: nowrap; font-size: 12px; font-weight: 800;
+  border-radius: 999px; padding: 3px 9px; line-height: 1.5; }
+.v3-c-ok { background: #eaf6ec; color: #1a7f37; }
+.v3-c-mid { background: var(--surface2); color: var(--text-muted); }
+.v3-c-none { background: transparent; color: var(--text-dim); border: 1px dashed var(--border); }
+.v3-c-navy { background: var(--action-tint); color: var(--accent-ink); }
+
+/* 코치 코멘트 — 해당 일차 안에 인라인 */
+.v3-note { margin-top: 7px; background: var(--surface); border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--action); border-radius: var(--radius-xs);
+  padding: 10px 12px; font-size: 13.5px; color: var(--text); overflow-wrap: anywhere; }
+.v3-note b { display: block; font-size: 12px; font-weight: 800; color: var(--accent-ink);
+  letter-spacing: .02em; margin-bottom: 2px; }
+
+/* 오늘 칸 */
+.v3-now { padding: 10px 0 14px; }
+.v3-now .v3-dot { background: var(--action); border-color: var(--action); color: var(--action-ink);
+  box-shadow: 0 0 0 4px var(--action-tint); }
+.v3-today-card { background: var(--surface); border: 2px solid var(--action);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 15px;
+  scroll-margin-top: 16px; }
+.v3-today-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.v3-today-head .v3-day-n { color: var(--accent-ink); }
+.v3-today-q-lbl { font-size: 12px; font-weight: 800; color: var(--text-muted);
+  margin: 12px 0 4px; }
+.v3-today-q { font-family: var(--serif); font-size: 17px; font-weight: 800; line-height: 1.45;
+  letter-spacing: -.01em; overflow-wrap: anywhere; }
+.v3-cta { display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 50px; margin-top: 14px; padding: 0 16px;
+  background: var(--action); color: var(--action-ink); border: 0; border-radius: 999px;
+  font-size: 15.5px; font-weight: 800; text-decoration: none; cursor: pointer; }
+.v3-cta:hover { background: var(--action-dark); }
+.v3-today-foot { font-size: 12.5px; color: var(--text-muted); margin-top: 10px; text-align: center; }
+
+/* 접기 토글 */
+.v3-fold { display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+  margin: 2px 0 2px 38px; padding: 0 6px; background: none; border: 0; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--accent-ink);
+  font-variant-numeric: tabular-nums; }
+.v3-fold svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.6;
+  stroke-linecap: round; stroke-linejoin: round; transition: transform .18s ease; }
+.v3-fold[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.v3-fold-sum { font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.v3 [hidden] { display: none !important; }
+
+/* 마지막 마디 — 수료 */
+.v3-end { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px;
+  padding: 10px 0 0; }
+.v3-end .v3-dot { border-style: dashed; border-color: var(--border); }
+.v3-end-body { min-width: 0; background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 12px 14px; }
+.v3-end-t { font-size: 14px; font-weight: 800; }
+.v3-end-d { font-size: 12.5px; color: var(--text-muted); margin-top: 2px;
+  font-variant-numeric: tabular-nums; }
+
+/* ── 아래 묶음 카드 ── */
+.v3-card { background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px 16px; }
+.v3-row { display: flex; align-items: center; gap: 12px; min-height: 56px;
+  padding: 12px 0; border-bottom: 1px solid var(--border-soft);
+  text-decoration: none; color: var(--text); }
+.v3-row:last-child { border-bottom: 0; }
+.v3-row:hover .v3-row-t { color: var(--action-dark); }
+.v3-row-body { display: block; min-width: 0; flex: 1 1 auto; }
+.v3-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.v3-row-t { display: block; font-size: 15px; font-weight: 700; line-height: 1.45; margin-top: 3px;
+  overflow-wrap: anywhere; }
+.v3-row-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere; }
+.v3-row-tail { flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--text-muted); white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+.v3-chev { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round; color: var(--text-dim); flex: 0 0 auto; }
+.v3-tag { flex: 0 0 auto; white-space: nowrap; font-size: 12px; font-weight: 700;
+  color: var(--text-muted); background: var(--surface2); border-radius: 999px; padding: 2px 8px; }
+
+/* 특강 한 건 */
+.v3-lec { display: flex; align-items: center; gap: 12px; min-height: 56px;
+  text-decoration: none; color: var(--text); padding: 14px 0; }
+.v3-dday { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; width: 54px; height: 54px; border-radius: var(--radius-sm);
+  background: var(--action-tint); color: var(--accent-ink); }
+.v3-dday b { font-family: var(--serif); font-size: 17px; font-weight: 900;
+  font-variant-numeric: tabular-nums; line-height: 1.1; }
+.v3-dday span { font-size: 12px; font-weight: 700; }
+
+/* 신청·계정 */
+.v3-pay-sum { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 13px; color: var(--text-muted); padding: 12px 0 0;
+  font-variant-numeric: tabular-nums; }
+.v3-field { padding: 14px 0 4px; }
+.v3-field label { display: block; font-size: 12.5px; font-weight: 700;
+  color: var(--text-muted); margin-bottom: 6px; }
+.v3-field-row { display: flex; gap: 8px; }
+.v3-field input { flex: 1 1 auto; min-width: 0; min-height: 48px; padding: 0 14px;
+  font-size: 15px; color: var(--text); background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--radius-xs);
+  font-variant-numeric: tabular-nums; }
+.v3-save { flex: 0 0 auto; min-height: 48px; padding: 0 20px; border: 0;
+  border-radius: var(--radius-xs); background: var(--action); color: var(--action-ink);
+  font-size: 15px; font-weight: 800; cursor: pointer; }
+.v3-save:hover { background: var(--action-dark); }
+
+.v3-account { margin-top: 22px; display: flex; justify-content: center; }
+.v3-logout { min-height: 44px; padding: 0 22px; border-radius: 999px;
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+  font-size: 14px; font-weight: 700; cursor: pointer; }
+.v3-logout:hover { border-color: var(--action); color: var(--action); }
+
+/* ── (나) 신규 회원 예시 ── */
+.v3-demo { margin-top: 44px; border-top: 1px dashed var(--border); padding-top: 22px; }
+.v3-demo-cap { font-size: 12.5px; color: var(--text-muted); line-height: 1.55;
+  background: var(--surface2); border-radius: var(--radius-xs); padding: 10px 12px; }
+.v3-demo-cap b { display: block; font-size: 14px; font-weight: 800; color: var(--text);
+  margin-bottom: 3px; }
+.v3-demo-stage { margin-top: 16px; }
+
+.v3-plan { position: relative; padding-left: 2px; margin-top: 4px; }
+.v3-plan::before { content: ''; position: absolute; left: 12px; top: 12px; bottom: 12px;
+  width: 2px; background: var(--border-soft); border-radius: 2px; }
+.v3-step { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr);
+  gap: 12px; padding: 8px 0; }
+.v3-step .v3-dot { font-size: 12.5px; font-weight: 800; color: var(--text-muted); }
+.v3-step.v3-step-on .v3-dot { background: var(--action); border-color: var(--action);
+  color: var(--action-ink); }
+.v3-step-body { min-width: 0; }
+.v3-step-t { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.v3-step-d { font-size: 13px; color: var(--text-muted); margin-top: 2px; overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums; }
+.v3-ghost { margin-top: 10px; background: var(--bg2); border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px; }
+.v3-ghost-l { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
+.v3-ghost-l i { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px dashed var(--border); display: block; }
+.v3-ghost-l span { flex: 1 1 auto; min-width: 0; height: 8px; border-radius: 4px;
+  background: var(--border-soft); display: block; }
+.v3-ghost-cap { font-size: 12.5px; color: var(--text-muted); margin-top: 8px;
+  font-variant-numeric: tabular-nums; }
+
+.v3-two { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
+.v3-mini { display: flex; align-items: center; gap: 12px; min-height: 56px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); padding: 12px 14px; text-decoration: none; color: var(--text); }
+.v3-mini:hover { border-color: var(--action); }
+.v3-mini-b { display: block; min-width: 0; flex: 1 1 auto; }
+.v3-mini-t { display: block; font-size: 14.5px; font-weight: 800; }
+.v3-mini-d { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 1px;
+  overflow-wrap: anywhere; }
+
+@media (min-width: 760px) {
+  .v3 { padding: 28px 24px 88px; }
+  .v3-hero { padding: 26px 24px 20px; }
+  .v3-hero-name { font-size: 27px; }
+  .v3-two { grid-template-columns: 1fr 1fr; }
+  .v3-cta { max-width: 300px; margin-left: auto; margin-right: auto; }
+  .v3-today-foot { text-align: center; }
+}
+</style>
+
+<section class="mock v3">
+
+  <!-- ══ (가) 챌린지 진행 중 회원 ══ -->
+
+  <!-- 상단: 로그아웃이 아니라 '지금 어디까지 왔는지'로 시작 -->
+  <header class="v3-hero">
+    <div class="v3-hero-top">
+      <span class="v3-hero-kicker">2주 기록</span>
+      <span class="v3-hero-badge">보이스 7기</span>
+    </div>
+    <h2 class="v3-hero-name">김지현 <span>님</span></h2>
+    <p class="v3-hero-sub v3-num">7월 20일~8월 2일 · 오늘 11일차</p>
+
+    <div class="v3-bar" role="img" aria-label="14일 중 8일 기록됨. 성공 6일, 아쉬움 2일.">
+      <i class="v3-b-ok"></i><i class="v3-b-ok"></i><i class="v3-b-no"></i><i class="v3-b-ok"></i>
+      <i class="v3-b-ok"></i><i class="v3-b-ok"></i><i class="v3-b-no"></i><i class="v3-b-ok"></i>
+      <i></i><i></i><i class="v3-b-now"></i><i></i><i></i><i></i>
+    </div>
+
+    <p class="v3-hero-stats">
+      <span>성공 <b>6</b></span><span class="v3-sep">·</span>
+      <span>아쉬움 <b>2</b></span><span class="v3-sep">·</span>
+      <span>남은 <b>6</b></span>
+    </p>
+
+    <a class="v3-hero-jump" href="#v3-today">
+      오늘 할 일 보기
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+    </a>
+  </header>
+
+  <!-- 타임라인 = 옛 '날짜별 결과 14칸' + '코치 코멘트 카드' 를 하나로 합친 것 -->
+  <section class="v3-sec">
+    <div class="v3-sec-head">
+      <h3>기록</h3>
+      <a class="v3-more" href="#">전체 보기</a>
+    </div>
+    <p class="v3-sec-note">코치 코멘트는 해당 일차 안에 있습니다.</p>
+
+    <ol class="v3-tl">
+
+      <li>
+        <button class="v3-fold" type="button" aria-expanded="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          <span class="v3-fold-lbl">1–7일차 접기</span>
+          <span class="v3-fold-sum" hidden>성공 5 · 아쉬움 2 · 코멘트 3</span>
+        </button>
+      </li>
+
+      <li class="v3-day v3-ok">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">1일차</span><span class="v3-chip v3-c-ok">성공</span></div>
+        </div>
+      </li>
+
+      <li class="v3-day v3-ok">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">2일차</span><span class="v3-chip v3-c-ok">성공</span></div>
+          <p class="v3-note"><b>코치 코멘트</b>첫 문장이 또렷해졌어요.</p>
+        </div>
+      </li>
+
+      <li class="v3-day v3-mid">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">3일차</span><span class="v3-chip v3-c-mid">아쉬움</span></div>
+        </div>
+      </li>
+
+      <li class="v3-day v3-ok">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">4일차</span><span class="v3-chip v3-c-ok">성공</span></div>
+        </div>
+      </li>
+
+      <li class="v3-day v3-ok">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">5일차</span><span class="v3-chip v3-c-ok">성공</span></div>
+          <p class="v3-note"><b>코치 코멘트</b>속도가 안정적입니다. 이대로 유지하세요.</p>
+        </div>
+      </li>
+
+      <li class="v3-day v3-ok">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">6일차</span><span class="v3-chip v3-c-ok">성공</span></div>
+        </div>
+      </li>
+
+      <li class="v3-day v3-mid">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">7일차</span><span class="v3-chip v3-c-mid">아쉬움</span></div>
+          <p class="v3-note"><b>코치 코멘트</b>녹음이 잘렸어요. 다시 올려주세요.</p>
+        </div>
+      </li>
+
+      <li class="v3-day v3-ok">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">8일차</span><span class="v3-chip v3-c-ok">성공</span></div>
+        </div>
+      </li>
+
+      <li class="v3-day v3-none">
+        <span class="v3-dot" aria-hidden="true"></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">9일차</span><span class="v3-chip v3-c-none">아직</span></div>
+        </div>
+      </li>
+
+      <li class="v3-day v3-none">
+        <span class="v3-dot" aria-hidden="true"></span>
+        <div class="v3-day-body">
+          <div class="v3-day-head"><span class="v3-day-n v3-num">10일차</span><span class="v3-chip v3-c-none">아직</span></div>
+        </div>
+      </li>
+
+      <!-- 오늘 -->
+      <li class="v3-day v3-now">
+        <span class="v3-dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div class="v3-day-body">
+          <div class="v3-today-card" id="v3-today">
+            <div class="v3-today-head">
+              <span class="v3-day-n v3-num">11일차 · 오늘</span>
+              <span class="v3-chip v3-c-none">아직 기록 전</span>
+            </div>
+            <p class="v3-today-q-lbl">오늘의 소재 발굴 · 과거경험검증형</p>
+            <p class="v3-today-q">살면서 가장 크게 실패했던 경험과 그때 배운 점을 말씀해 주세요.</p>
+            <a class="v3-cta" href="#">답변 쓰기</a>
+            <p class="v3-today-foot">기록하면 이 칸이 채워집니다.</p>
+          </div>
+        </div>
+      </li>
+
+      <!-- 앞으로 남은 날 -->
+      <li class="v3-day v3-soon">
+        <span class="v3-dot" aria-hidden="true"><i></i></span>
+        <div class="v3-day-body"><div class="v3-day-head"><span class="v3-day-n v3-num">12일차</span></div></div>
+      </li>
+      <li class="v3-day v3-soon">
+        <span class="v3-dot" aria-hidden="true"><i></i></span>
+        <div class="v3-day-body"><div class="v3-day-head"><span class="v3-day-n v3-num">13일차</span></div></div>
+      </li>
+      <li class="v3-day v3-soon">
+        <span class="v3-dot" aria-hidden="true"><i></i></span>
+        <div class="v3-day-body"><div class="v3-day-head"><span class="v3-day-n v3-num">14일차</span><span class="v3-chip v3-c-none">마지막 날</span></div></div>
+      </li>
+
+      <li class="v3-end">
+        <span class="v3-dot" aria-hidden="true"><i></i></span>
+        <div class="v3-end-body">
+          <p class="v3-end-t">수료</p>
+          <p class="v3-end-d">14일차를 마치면 Before / After 음성이 여기에 열립니다.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- 답변노트 -->
+  <section class="v3-sec">
+    <div class="v3-sec-head">
+      <h3>답변노트</h3>
+      <a class="v3-more" href="#">전체 보기</a>
+    </div>
+    <div class="v3-card">
+      <a class="v3-row" href="#">
+        <span class="v3-row-body">
+          <span class="v3-row-meta"><span class="v3-chip v3-c-navy">작성 중</span><span>과거경험검증형</span><span>·</span><span>7.30</span></span>
+          <span class="v3-row-t">어려운 사람과 함께 일한 경험이 있나요?</span>
+          <span class="v3-row-sub">학원 조별과제에서 의견이 갈렸을 때 제가 먼저 각자 원하는 걸 물어봤고</span>
+        </span>
+        <span class="v3-row-tail">이어쓰기
+          <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        </span>
+      </a>
+      <a class="v3-row" href="#">
+        <span class="v3-row-body">
+          <span class="v3-row-meta"><span class="v3-tag">완료</span><span>7.28</span></span>
+          <span class="v3-row-t">지원동기 초안</span>
+        </span>
+        <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+      </a>
+      <a class="v3-row" href="#">
+        <span class="v3-row-body">
+          <span class="v3-row-meta"><span class="v3-tag">완료</span><span>직무핵심역량형</span><span>·</span><span>7.26</span></span>
+          <span class="v3-row-t">본인의 강점은 무엇입니까?</span>
+        </span>
+        <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- 뉴스 스크랩 -->
+  <section class="v3-sec">
+    <div class="v3-sec-head">
+      <h3>뉴스 스크랩</h3>
+      <a class="v3-more" href="#">전체 보기</a>
+    </div>
+    <div class="v3-card">
+      <a class="v3-row" href="#">
+        <span class="v3-row-body">
+          <span class="v3-row-meta"><span class="v3-tag">제주항공</span></span>
+          <span class="v3-row-t">제주항공, 하반기 객실승무원 신입 채용 공고</span>
+        </span>
+        <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+      </a>
+      <a class="v3-row" href="#">
+        <span class="v3-row-body">
+          <span class="v3-row-meta"><span class="v3-tag">티웨이항공</span></span>
+          <span class="v3-row-t">티웨이항공 유럽 노선 확대… 장거리 운항 인력 확충</span>
+        </span>
+        <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+      </a>
+      <a class="v3-row" href="#">
+        <span class="v3-row-body">
+          <span class="v3-row-meta"><span class="v3-tag">대한항공</span></span>
+          <span class="v3-row-t">대한항공-아시아나 통합 이후 객실 운영 방향</span>
+        </span>
+        <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- 내 특강 -->
+  <section class="v3-sec">
+    <div class="v3-sec-head">
+      <h3>내 특강</h3>
+      <a class="v3-more" href="#">전체 보기</a>
+    </div>
+    <div class="v3-card">
+      <a class="v3-lec" href="#">
+        <span class="v3-dday"><b class="v3-num">D-3</b><span>남음</span></span>
+        <span class="v3-row-body">
+          <span class="v3-row-t" style="margin-top:0">자소서 첨삭 특강</span>
+          <span class="v3-row-meta v3-num" style="margin-top:4px">8월 3일(월) 오후 2시~4시 · 김승준 연구원</span>
+        </span>
+        <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- 신청 · 계정 -->
+  <section class="v3-sec">
+    <div class="v3-sec-head">
+      <h3>신청 · 계정</h3>
+      <a class="v3-more" href="#">신청 내역</a>
+    </div>
+    <div class="v3-card">
+      <div class="v3-row" style="cursor:default">
+        <span class="v3-row-body">
+          <span class="v3-row-meta v3-num">7.18</span>
+          <span class="v3-row-t">보이스 7기</span>
+        </span>
+        <span class="v3-row-tail"><span class="v3-num">30,000원</span><span class="v3-chip v3-c-ok">결제완료</span></span>
+      </div>
+      <div class="v3-row" style="cursor:default">
+        <span class="v3-row-body">
+          <span class="v3-row-meta v3-num">7.25</span>
+          <span class="v3-row-t">[특강] 자소서 첨삭 특강</span>
+        </span>
+        <span class="v3-row-tail"><span class="v3-num">25,000원</span><span class="v3-chip v3-c-none">입금대기</span></span>
+      </div>
+
+      <div class="v3-field">
+        <label for="v3-phone">연락처</label>
+        <div class="v3-field-row">
+          <input id="v3-phone" type="tel" value="010-****-5678" readonly />
+          <button class="v3-save" type="button">저장</button>
+        </div>
+      </div>
+      <div class="v3-pay-sum" style="padding-bottom:14px">입금 확인은 평일 오전에 일괄 처리됩니다.</div>
+    </div>
+
+    <div class="v3-account">
+      <button class="v3-logout" type="button">로그아웃</button>
+    </div>
+  </section>
+
+
+  <!-- ══ (나) 신규 회원(가입 직후) — 이 안의 '빈 화면' 처리 예시 ══ -->
+  <div class="v3-demo">
+    <p class="v3-demo-cap">
+      <b>신규 회원(가입 직후)</b>
+      실제 페이지의 일부가 아니라, 기록이 하나도 없을 때 같은 안에서 상단이 어떻게 보이는지 보여주는 예시입니다.
+      타임라인이 비므로 <b style="display:inline">그 자리에 '앞으로 생길 타임라인'</b>을 흐린 골격으로 대신 놓습니다.
+    </p>
+
+    <div class="v3-demo-stage">
+      <header class="v3-hero">
+        <div class="v3-hero-top">
+          <span class="v3-hero-kicker">2주 기록</span>
+          <span class="v3-hero-badge">시작 전</span>
+        </div>
+        <h2 class="v3-hero-name">김지현 <span>님</span></h2>
+        <p class="v3-hero-sub">아직 참여 중인 챌린지가 없습니다. 신청하면 이 자리에 2주가 그려집니다.</p>
+      </header>
+
+      <section class="v3-sec">
+        <div class="v3-sec-head"><h3>시작하기</h3></div>
+        <ol class="v3-plan">
+          <li class="v3-step v3-step-on">
+            <span class="v3-dot v3-num" aria-hidden="true">1</span>
+            <div class="v3-step-body">
+              <p class="v3-step-t">모집 일정 확인하고 신청</p>
+              <p class="v3-step-d">다음 기수부터 2주 기록이 시작됩니다.</p>
+              <a class="v3-cta" href="#">챌린지 신청하기</a>
+            </div>
+          </li>
+          <li class="v3-step">
+            <span class="v3-dot v3-num" aria-hidden="true">2</span>
+            <div class="v3-step-body">
+              <p class="v3-step-t">1일차부터 하루씩 기록</p>
+              <p class="v3-step-d">코치 코멘트도 그날 칸 안에 함께 쌓입니다.</p>
+              <div class="v3-ghost" aria-hidden="true">
+                <div class="v3-ghost-l"><i></i><span></span></div>
+                <div class="v3-ghost-l"><i></i><span style="max-width:62%"></span></div>
+                <div class="v3-ghost-l"><i></i><span style="max-width:78%"></span></div>
+                <p class="v3-ghost-cap">1일차 – 14일차</p>
+              </div>
+            </div>
+          </li>
+          <li class="v3-step">
+            <span class="v3-dot v3-num" aria-hidden="true">3</span>
+            <div class="v3-step-body">
+              <p class="v3-step-t">14일차에 수료</p>
+              <p class="v3-step-d">Before / After 음성이 마지막 칸에 열립니다.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="v3-sec">
+        <div class="v3-sec-head"><h3>지금도 할 수 있는 것</h3></div>
+        <div class="v3-two">
+          <a class="v3-mini" href="#">
+            <span class="v3-mini-b">
+              <span class="v3-mini-t">오늘의 소재 발굴</span>
+              <span class="v3-mini-d">기출 한 문항으로 답변 하나 써 보기</span>
+            </span>
+            <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+          </a>
+          <a class="v3-mini" href="#">
+            <span class="v3-mini-b">
+              <span class="v3-mini-t">특강 둘러보기</span>
+              <span class="v3-mini-d">챌린지와 별개로 신청할 수 있습니다</span>
+            </span>
+            <svg class="v3-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+          </a>
+        </div>
+      </section>
+    </div>
+  </div>
+
+</section>
+
+<script>
+(function () {
+  var root = document.querySelector('.v3');
+  if (!root) return;
+  var tl = root.querySelector('.v3-tl');
+  var btn = root.querySelector('.v3-fold');
+  if (!tl || !btn) return;
+
+  var past = Array.prototype.slice.call(tl.querySelectorAll('.v3-day')).slice(0, 7);
+  var lbl = btn.querySelector('.v3-fold-lbl');
+  var sum = btn.querySelector('.v3-fold-sum');
+
+  btn.addEventListener('click', function () {
+    var open = btn.getAttribute('aria-expanded') === 'true';
+    open = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    past.forEach(function (el) { el.hidden = !open; });
+    lbl.textContent = open ? '1–7일차 접기' : '1–7일차 펼치기';
+    sum.hidden = open;
+  });
+})();
+</script>
+<!-- ── 안 4 ─────────────────────────────────────────────── -->
+<style>
+/* ─────────────────────────────────────────────────────────────
+   ④ 브리핑 — 문장 헤드라인 + 숫자
+   admin.html '오늘' 브리핑(.tb-*)과 같은 문법을 회원 화면으로 가져온다.
+   날짜 킥 → 큰 문장 헤드라인 → 리드 → 좌 '지금 처리' / 우 숫자 스택 → 아래 기록 목록.
+   위젯 그리드를 없애 요약·상세 이름 중복(문제 8)을 구조적으로 제거한다.
+   모든 선택자는 .v4 로 시작한다.
+   ───────────────────────────────────────────────────────────── */
+
+.v4 {
+  /* 기능색만 예외로 둔다 — 성공 초록 / 경고 빨강 (갈색 계열 금지) */
+  --v4-ok-bg: #eaf6ec;  --v4-ok-ink: #1a7f37;
+  --v4-warn-bg: #FBEAE9; --v4-warn-ink: #B3261E;
+  background: var(--bg);
+  color: var(--text);
+  padding: 22px 16px 56px;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+.v4 *, .v4 *::before, .v4 *::after { box-sizing: border-box; }
+.v4 p, .v4 h1, .v4 h2, .v4 h3, .v4 ul, .v4 li { margin: 0; padding: 0; }
+.v4 ul { list-style: none; }
+.v4-wrap { max-width: 780px; margin: 0 auto; }
+
+/* ── 날짜 킥 ─────────────────────────────────────────────── */
+.v4-kick {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .04em;
+  color: var(--text-dim);
+  padding-bottom: 10px; border-bottom: 2px solid var(--text);
+}
+.v4-kick b { color: var(--text); font-weight: 800; }
+.v4-kick-r { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── 헤드라인 · 리드 ──────────────────────────────────────── */
+.v4-head {
+  font-family: var(--serif);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800; line-height: 1.35; letter-spacing: -0.01em;
+  padding-top: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.v4-head mark { background: none; color: var(--accent-ink); }
+.v4-lede {
+  font-size: 15px; color: var(--text-muted); line-height: 1.7;
+  margin-top: 8px; max-width: 42em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 2단 ─────────────────────────────────────────────────── */
+.v4-grid { display: flex; flex-direction: column; margin-top: 20px; }
+.v4-colA { order: 2; min-width: 0; }
+.v4-colB { order: 1; min-width: 0; margin-bottom: 26px; }
+
+.v4-kk {
+  font-size: 12px; font-weight: 800; letter-spacing: .1em;
+  color: var(--text-dim); margin-bottom: 8px;
+}
+.v4-recs-t { margin-top: 34px; margin-bottom: 0; }
+
+/* ── 지금 처리 ───────────────────────────────────────────── */
+.v4-brief { padding: 12px 0; border-top: 1px solid var(--border-soft); }
+/* 첫 항목은 킥 라벨 바로 아래 — 선을 겹치지 않게 한다 */
+.v4-kk + .v4-brief { border-top: 0; padding-top: 4px; }
+.v4-brief p { font-size: 14.5px; line-height: 1.65; color: var(--text); }
+.v4-brief p::before {
+  content: ""; display: inline-block; width: 6px; height: 6px;
+  background: var(--accent-ink); border-radius: 1px;
+  vertical-align: 2px; margin-right: 8px;
+}
+.v4-brief b { font-weight: 800; }
+.v4-brief q { quotes: '\201C' '\201D'; color: var(--text-muted); }
+.v4-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 12px 0;
+  font-family: inherit; font-size: 13.5px; font-weight: 800;
+  color: var(--accent-ink); background: none; border: 0;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px;
+  cursor: pointer; min-height: 44px;
+}
+.v4-brief .v4-link { margin-left: 14px; }
+.v4-link:hover { color: var(--action-dark); }
+.v4 .v4-ic { width: 13px; height: 13px; flex: 0 0 auto; }
+
+/* ── 숫자 스택 ───────────────────────────────────────────── */
+.v4-stat {
+  display: flex; width: 100%; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 11px 0; min-height: 56px;
+  border: 0; border-top: 1px solid var(--border-soft);
+  background: none; font-family: inherit; text-align: right;
+  color: inherit; cursor: pointer;
+}
+.v4-stat .v4-n { flex: 0 0 auto; white-space: nowrap; }
+.v4-stat .v4-n b {
+  font-family: var(--serif); font-size: 26px; font-weight: 800;
+  color: var(--accent-ink); line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.v4-stat .v4-n small { font-size: 14px; font-weight: 700; color: var(--text-muted); margin-left: 2px; }
+.v4-stat .v4-k { min-width: 0; }
+.v4-stat .v4-k span { display: block; font-size: 13.5px; font-weight: 800; color: var(--text); }
+.v4-stat .v4-k em { font-style: normal; font-size: 12px; color: var(--text-dim); }
+.v4-stat:hover .v4-k span { color: var(--accent-ink); }
+.v4-stat.v4-zero { opacity: .55; }
+.v4-stat.v4-zero .v4-n b { color: var(--text-dim); }
+
+/* ── 기록(접이식 목록) ───────────────────────────────────── */
+.v4-recs { border-top: 2px solid var(--text); }
+.v4-rec { border-bottom: 1px solid var(--border-soft); }
+.v4-rec > summary {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 2px; min-height: 52px;
+  cursor: pointer; list-style: none;
+  font-size: 15px; font-weight: 800; color: var(--text);
+}
+.v4-rec > summary::-webkit-details-marker { display: none; }
+.v4-rec > summary:hover { color: var(--accent-ink); }
+.v4-sum-t { flex: 1 1 auto; min-width: 0; }
+.v4-sum-n {
+  flex: 0 0 auto; font-size: 12.5px; font-weight: 800; color: var(--text-dim);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.v4-chev { flex: 0 0 auto; width: 14px; height: 14px; color: var(--text-dim); transition: transform .15s; }
+.v4-rec[open] > summary .v4-chev { transform: rotate(180deg); }
+.v4-rec-body { padding: 2px 2px 20px; }
+.v4-note { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-top: 12px; }
+
+/* 미션 기록 14칸 — 7열 2줄, 정사각이라 두 줄 높이가 같다.
+   375px 에서 칸 폭 (343-4-30)/7 ≈ 44px 이 되도록 간격을 5px 로 잡는다. */
+.v4-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.v4-day {
+  aspect-ratio: 1 / 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-xs);
+  font-size: 13px; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.v4-day.v4-ok { background: var(--action); color: var(--action-ink); border: 1px solid var(--action); }
+.v4-day.v4-bad { background: var(--v4-warn-bg); color: var(--v4-warn-ink); border: 2px solid var(--v4-warn-ink); }
+.v4-day.v4-todo { background: var(--surface); color: var(--text-dim); border: 1px dashed var(--border); }
+.v4-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.v4-lg { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.v4-lg i { width: 13px; height: 13px; border-radius: 4px; flex: 0 0 auto; }
+.v4-lg i.v4-ok { background: var(--action); }
+.v4-lg i.v4-bad { background: var(--v4-warn-bg); border: 2px solid var(--v4-warn-ink); }
+.v4-lg i.v4-todo { background: var(--surface); border: 1px dashed var(--border); }
+
+/* 목록 공통 행 */
+.v4-item { padding: 13px 0; border-top: 1px solid var(--border-soft); min-width: 0; }
+.v4-item:first-child { border-top: 0; padding-top: 2px; }
+/* 링크 행은 링크 자신이 44px 터치 영역을 갖는다 — 행 여백을 그만큼 줄인다 */
+.v4-item.v4-has-link { padding: 5px 0; }
+.v4-item.v4-has-link:first-child { padding-top: 0; }
+.v4-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 5px; }
+.v4-badge {
+  flex: 0 0 auto; white-space: nowrap;
+  font-size: 12px; font-weight: 800; line-height: 1.5;
+  padding: 2px 9px; border-radius: 999px;
+}
+.v4-badge.v4-b-ok { background: var(--v4-ok-bg); color: var(--v4-ok-ink); }
+.v4-badge.v4-b-bad { background: var(--v4-warn-bg); color: var(--v4-warn-ink); }
+.v4-badge.v4-b-work { background: var(--action-tint); color: var(--accent-ink); }
+.v4-badge.v4-b-done { background: var(--surface2); color: var(--text-muted); }
+.v4-mtxt { font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; min-width: 0; }
+.v4-t { font-size: 14.5px; font-weight: 700; line-height: 1.5; color: var(--text); word-break: keep-all; overflow-wrap: anywhere; }
+.v4-d { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; margin-top: 3px; word-break: keep-all; overflow-wrap: anywhere; }
+.v4-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 목록 안 링크 — 기본 파랑이 나오지 않게 전부 색을 명시한다 */
+.v4 a { color: var(--accent-ink); text-decoration: none; }
+.v4 a:visited { color: var(--accent-ink); }
+.v4-alink { display: block; padding: 9px 0; min-height: 44px; color: var(--text); }
+.v4-alink:visited { color: var(--text); }
+.v4-alink:hover .v4-t { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+.v4-alink .v4-t { color: var(--text); }
+.v4-src { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-dim); margin-top: 4px; }
+.v4-src .v4-ic { width: 12px; height: 12px; }
+
+/* 우측 정렬 값(금액·상태) */
+.v4-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.v4-row > div { min-width: 0; }
+.v4-amt { flex: 0 0 auto; text-align: right; font-size: 13.5px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* 특강 D- 표기 */
+.v4-dday {
+  flex: 0 0 auto; font-family: var(--serif); font-size: 18px; font-weight: 800;
+  color: var(--accent-ink); font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.2;
+}
+
+/* ── 계정 ────────────────────────────────────────────────── */
+.v4-acc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 14px; }
+.v4-acc div { font-size: 13.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.v4-acc b { color: var(--text); font-weight: 800; }
+.v4-field { display: block; font-size: 12.5px; font-weight: 800; color: var(--text-dim); margin-bottom: 6px; letter-spacing: .04em; }
+.v4-inrow { display: flex; gap: 8px; align-items: stretch; }
+.v4-input {
+  flex: 1 1 auto; min-width: 0; min-height: 46px;
+  padding: 11px 12px; font-family: inherit; font-size: 15px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xs);
+  font-variant-numeric: tabular-nums;
+}
+.v4-input:focus { outline: 2px solid var(--action); outline-offset: 1px; border-color: var(--action); }
+/* 이 화면의 유일한 채움 CTA */
+.v4-save {
+  flex: 0 0 auto; min-height: 46px; padding: 0 20px;
+  font-family: inherit; font-size: 15px; font-weight: 800;
+  color: var(--action-ink); background: var(--action);
+  border: 1px solid var(--action); border-radius: var(--radius-xs);
+  cursor: pointer; white-space: nowrap;
+}
+.v4-save:hover { background: var(--action-dark); border-color: var(--action-dark); }
+.v4-out {
+  display: block; margin: 26px auto 0; padding: 12px 8px; min-height: 44px;
+  font-family: inherit; font-size: 13.5px; font-weight: 700; color: var(--text-muted);
+  background: none; border: 0; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.v4-out:hover { color: var(--text); }
+
+/* ── (나) 신규 회원 예시 ─────────────────────────────────── */
+.v4-demo { margin-top: 56px; padding-top: 26px; border-top: 1px dashed var(--border); }
+.v4-demo-h { font-size: 16px; font-weight: 800; color: var(--text); }
+.v4-demo-c { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-top: 6px; max-width: 40em; }
+.v4-demo-box {
+  margin-top: 16px; padding: 20px 16px 22px;
+  background: var(--bg2); border: 1px solid var(--border-soft); border-radius: var(--radius);
+}
+.v4-hint {
+  padding: 14px; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); font-size: 13px; color: var(--text-muted); line-height: 1.65;
+}
+
+/* ── 넓은 화면 ───────────────────────────────────────────── */
+@media (min-width: 760px) {
+  .v4 { padding: 30px 24px 72px; }
+  .v4-grid {
+    display: grid; grid-template-columns: 1.5fr 1fr;
+    margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;
+  }
+  .v4-colA { order: 1; padding-right: 28px; border-right: 1px solid var(--border-soft); }
+  .v4-colB { order: 2; padding-left: 28px; margin-bottom: 0; }
+  .v4-stat .v4-n b { font-size: 32px; }
+  .v4-days { gap: 8px; }
+  .v4-day { font-size: 15px; }
+  .v4-demo-box { padding: 26px 24px 28px; }
+}
+</style>
+
+<section class="mock v4">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="v4-i-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8h10M9 4l4 4-4 4"/>
+    </symbol>
+    <symbol id="v4-i-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 6l4 4 4-4"/>
+    </symbol>
+    <symbol id="v4-i-ext" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 3h4v4M13 3l-6 6M12 9.5V13H3V4h3.5"/>
+    </symbol>
+  </svg>
+
+  <div class="v4-wrap">
+
+    <!-- ── (가) 챌린지 진행 중 회원 ───────────────────────── -->
+    <div class="v4-kick">
+      <span><b>김지현</b> 님의 오늘</span>
+      <span class="v4-kick-r">7월 31일 금요일 · 11일차</span>
+    </div>
+
+    <h1 class="v4-head">오늘까지 <mark>6일 성공</mark>, 남은 미션 6개입니다.</h1>
+    <p class="v4-lede">보이스 7기 · 7월 20일 ~ 8월 2일. 코치 코멘트 3개가 와 있고, 아쉬움으로 남은 날이 2일 있습니다.</p>
+
+    <div class="v4-grid">
+
+      <div class="v4-colA">
+        <div class="v4-kk">지금 처리 · 5건</div>
+
+        <div class="v4-brief">
+          <p><b>자소서 첨삭 특강 25,000원 입금 대기.</b> 7월 25일 신청 건이 아직 입금 확인 전입니다.</p>
+          <button class="v4-link" type="button" data-v4-open="rec-apps">신청 내역 보기 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></button>
+        </div>
+
+        <div class="v4-brief">
+          <p><b>오늘의 소재 발굴 문제가 왔습니다.</b> 과거경험검증형 — <q>살면서 가장 크게 실패했던 경험과 그때 배운 점을 말씀해 주세요.</q></p>
+          <a class="v4-link" href="#">소재 발굴 열기 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+        </div>
+
+        <div class="v4-brief">
+          <p><b>7일차 녹음 다시 올리기.</b> 코치가 <q>녹음이 잘렸어요. 다시 올려주세요.</q> 라고 남겼습니다.</p>
+          <a class="v4-link" href="#">7일차 제출 화면 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+        </div>
+
+        <div class="v4-brief">
+          <p><b>쓰다 만 답변 1개.</b> 7월 30일 <q>어려운 사람과 함께 일한 경험이 있나요?</q> 가 작성 중입니다.</p>
+          <a class="v4-link" href="#">이어 쓰기 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+        </div>
+
+        <div class="v4-brief">
+          <p><b>자소서 첨삭 특강 D-3.</b> 8월 3일(월) 오후 2시~4시 · 김승준 연구원.</p>
+          <button class="v4-link" type="button" data-v4-open="rec-lec">특강 정보 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></button>
+        </div>
+      </div>
+
+      <div class="v4-colB">
+        <div class="v4-kk">숫자로 보는 내 기록</div>
+
+        <button class="v4-stat" type="button" data-v4-open="rec-days">
+          <span class="v4-n"><b>6</b><small>일</small></span>
+          <span class="v4-k"><span>성공한 미션</span><em>14일 중 6일</em></span>
+        </button>
+
+        <button class="v4-stat" type="button" data-v4-open="rec-days">
+          <span class="v4-n"><b>2</b><small>일</small></span>
+          <span class="v4-k"><span>아쉬움</span><em>3일차 · 7일차</em></span>
+        </button>
+
+        <button class="v4-stat" type="button" data-v4-open="rec-notes">
+          <span class="v4-n"><b>3</b><small>개</small></span>
+          <span class="v4-k"><span>내 답변노트</span><em>완료 2 · 작성 중 1</em></span>
+        </button>
+
+        <button class="v4-stat" type="button" data-v4-open="rec-news">
+          <span class="v4-n"><b>3</b><small>건</small></span>
+          <span class="v4-k"><span>뉴스 스크랩</span><em>제주항공 · 티웨이 · 대한항공</em></span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 기록 — 브리핑이 '할 일', 여기가 '쌓인 것'. 이름이 두 번 나오지 않게 요약 위젯을 두지 않는다. -->
+    <div class="v4-kk v4-recs-t">기록</div>
+    <div class="v4-recs">
+
+      <details class="v4-rec" id="v4-rec-days" open>
+        <summary><span class="v4-sum-t">미션 기록</span><span class="v4-sum-n">성공 6 · 아쉬움 2 · 남은 6</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-days">
+            <div class="v4-day v4-ok" title="1일차 성공">1</div>
+            <div class="v4-day v4-ok" title="2일차 성공">2</div>
+            <div class="v4-day v4-bad" title="3일차 아쉬움">3</div>
+            <div class="v4-day v4-ok" title="4일차 성공">4</div>
+            <div class="v4-day v4-ok" title="5일차 성공">5</div>
+            <div class="v4-day v4-ok" title="6일차 성공">6</div>
+            <div class="v4-day v4-bad" title="7일차 아쉬움">7</div>
+            <div class="v4-day v4-ok" title="8일차 성공">8</div>
+            <div class="v4-day v4-todo" title="9일차 아직">9</div>
+            <div class="v4-day v4-todo" title="10일차 아직">10</div>
+            <div class="v4-day v4-todo" title="11일차 아직">11</div>
+            <div class="v4-day v4-todo" title="12일차 아직">12</div>
+            <div class="v4-day v4-todo" title="13일차 아직">13</div>
+            <div class="v4-day v4-todo" title="14일차 아직">14</div>
+          </div>
+          <div class="v4-legend">
+            <span class="v4-lg"><i class="v4-ok"></i>성공</span>
+            <span class="v4-lg"><i class="v4-bad"></i>아쉬움</span>
+            <span class="v4-lg"><i class="v4-todo"></i>아직</span>
+          </div>
+          <p class="v4-note">Before / After 음성은 14일을 마친 뒤에 만들어집니다.</p>
+        </div>
+      </details>
+
+      <details class="v4-rec" id="v4-rec-coach">
+        <summary><span class="v4-sum-t">코치 코멘트</span><span class="v4-sum-n">3개</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-item">
+            <div class="v4-meta"><span class="v4-badge v4-b-ok">성공</span><span class="v4-mtxt">2일차</span></div>
+            <div class="v4-d">첫 문장이 또렷해졌어요.</div>
+          </div>
+          <div class="v4-item">
+            <div class="v4-meta"><span class="v4-badge v4-b-ok">성공</span><span class="v4-mtxt">5일차</span></div>
+            <div class="v4-d">속도가 안정적입니다. 이대로 유지하세요.</div>
+          </div>
+          <div class="v4-item">
+            <div class="v4-meta"><span class="v4-badge v4-b-bad">아쉬움</span><span class="v4-mtxt">7일차</span></div>
+            <div class="v4-d">녹음이 잘렸어요. 다시 올려주세요.</div>
+            <a class="v4-link" href="#">7일차 제출 화면 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+          </div>
+        </div>
+      </details>
+
+      <details class="v4-rec" id="v4-rec-notes">
+        <summary><span class="v4-sum-t">내 답변노트</span><span class="v4-sum-n">3개</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-item v4-has-link">
+            <div class="v4-meta"><span class="v4-badge v4-b-work">작성 중</span><span class="v4-mtxt">과거경험검증형 · 7.30</span></div>
+            <a class="v4-alink" href="#">
+              <div class="v4-t">어려운 사람과 함께 일한 경험이 있나요?</div>
+              <div class="v4-d v4-clamp">학원 조별과제에서 의견이 갈렸을 때 제가 먼저 각자 원하는 걸 물어봤고</div>
+            </a>
+          </div>
+          <div class="v4-item v4-has-link">
+            <div class="v4-meta"><span class="v4-badge v4-b-done">완료</span><span class="v4-mtxt">7.28</span></div>
+            <a class="v4-alink" href="#"><div class="v4-t">지원동기 초안</div></a>
+          </div>
+          <div class="v4-item v4-has-link">
+            <div class="v4-meta"><span class="v4-badge v4-b-done">완료</span><span class="v4-mtxt">직무핵심역량형 · 7.26</span></div>
+            <a class="v4-alink" href="#"><div class="v4-t">본인의 강점은 무엇입니까?</div></a>
+          </div>
+        </div>
+      </details>
+
+      <details class="v4-rec" id="v4-rec-news">
+        <summary><span class="v4-sum-t">뉴스 스크랩</span><span class="v4-sum-n">3건</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-item v4-has-link">
+            <a class="v4-alink" href="#">
+              <div class="v4-t">제주항공, 하반기 객실승무원 신입 채용 공고</div>
+              <span class="v4-src">제주항공 <svg class="v4-ic"><use href="#v4-i-ext"/></svg></span>
+            </a>
+          </div>
+          <div class="v4-item v4-has-link">
+            <a class="v4-alink" href="#">
+              <div class="v4-t">티웨이항공 유럽 노선 확대… 장거리 운항 인력 확충</div>
+              <span class="v4-src">티웨이항공 <svg class="v4-ic"><use href="#v4-i-ext"/></svg></span>
+            </a>
+          </div>
+          <div class="v4-item v4-has-link">
+            <a class="v4-alink" href="#">
+              <div class="v4-t">대한항공-아시아나 통합 이후 객실 운영 방향</div>
+              <span class="v4-src">대한항공 <svg class="v4-ic"><use href="#v4-i-ext"/></svg></span>
+            </a>
+          </div>
+        </div>
+      </details>
+
+      <details class="v4-rec" id="v4-rec-lec">
+        <summary><span class="v4-sum-t">내 특강</span><span class="v4-sum-n">1건</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-item">
+            <div class="v4-row">
+              <div>
+                <div class="v4-t">자소서 첨삭 특강</div>
+                <div class="v4-d">8월 3일(월) 오후 2시 ~ 4시 · 김승준 연구원</div>
+              </div>
+              <span class="v4-dday">D-3</span>
+            </div>
+            <a class="v4-link" href="#">특강 페이지 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+          </div>
+        </div>
+      </details>
+
+      <details class="v4-rec" id="v4-rec-apps">
+        <summary><span class="v4-sum-t">신청 내역</span><span class="v4-sum-n">2건</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-item">
+            <div class="v4-row">
+              <div>
+                <div class="v4-meta"><span class="v4-badge v4-b-ok">결제완료</span><span class="v4-mtxt">7.18</span></div>
+                <div class="v4-t">보이스 7기</div>
+              </div>
+              <span class="v4-amt">30,000원</span>
+            </div>
+          </div>
+          <div class="v4-item">
+            <div class="v4-row">
+              <div>
+                <div class="v4-meta"><span class="v4-badge v4-b-bad">입금대기</span><span class="v4-mtxt">7.25</span></div>
+                <div class="v4-t">[특강] 자소서 첨삭 특강</div>
+              </div>
+              <span class="v4-amt">25,000원</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="v4-rec" id="v4-rec-acc">
+        <summary><span class="v4-sum-t">계정</span><span class="v4-sum-n">김지현 · 보이스 7기</span><svg class="v4-chev"><use href="#v4-i-chev"/></svg></summary>
+        <div class="v4-rec-body">
+          <div class="v4-acc">
+            <div>이름 <b>김지현</b></div>
+            <div>기수 <b>보이스 7기</b></div>
+            <div>기간 <b>7월 20일 ~ 8월 2일</b></div>
+          </div>
+          <label class="v4-field" for="v4-tel">연락처</label>
+          <div class="v4-inrow">
+            <input class="v4-input" id="v4-tel" type="tel" inputmode="numeric" value="010-****-5678" aria-label="연락처">
+            <button class="v4-save" type="button">저장</button>
+          </div>
+          <p class="v4-note">코치 연락과 챌린지 안내에 쓰입니다.</p>
+        </div>
+      </details>
+
+    </div>
+
+    <button class="v4-out" type="button">로그아웃</button>
+
+    <!-- ── (나) 신규 회원(가입 직후) 예시 ─────────────────── -->
+    <div class="v4-demo">
+      <h2 class="v4-demo-h">신규 회원(가입 직후)</h2>
+      <p class="v4-demo-c">같은 안에서 데이터가 하나도 없을 때 상단이 어떻게 보이는지 보여주는 예시입니다. 실제 페이지에서는 위 화면 대신 이 형태만 나타납니다.</p>
+
+      <div class="v4-demo-box">
+        <div class="v4-kick">
+          <span><b>김지현</b> 님의 오늘</span>
+          <span class="v4-kick-r">7월 31일 금요일</span>
+        </div>
+
+        <div class="v4-head">아직 시작한 챌린지가 없습니다.</div>
+        <p class="v4-lede">가입은 끝났습니다. 아래 셋 중 하나부터 하면 됩니다.</p>
+
+        <div class="v4-grid">
+          <div class="v4-colA">
+            <div class="v4-kk">먼저 할 일 · 3건</div>
+
+            <div class="v4-brief">
+              <p><b>챌린지 신청.</b> 14일 동안 매일 미션을 하고 코치 코멘트를 받습니다.</p>
+              <a class="v4-link" href="#">모집 중인 기수 보기 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+            </div>
+
+            <div class="v4-brief">
+              <p><b>오늘의 소재 발굴 해보기.</b> 오늘 문제는 과거경험검증형입니다.</p>
+              <a class="v4-link" href="#">소재 발굴 열기 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+            </div>
+
+            <div class="v4-brief">
+              <p><b>특강 둘러보기.</b> 챌린지 없이 하나만 들을 수도 있습니다.</p>
+              <a class="v4-link" href="#">특강 목록 <svg class="v4-ic"><use href="#v4-i-arrow"/></svg></a>
+            </div>
+          </div>
+
+          <div class="v4-colB">
+            <div class="v4-kk">숫자로 보는 내 기록</div>
+            <div class="v4-hint">기록이 쌓이면 이 자리에 성공한 미션, 답변노트, 뉴스 스크랩 수가 나옵니다. 지금은 보여 드릴 숫자가 없습니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function () {
+  var root = document.querySelector('.v4');
+  if (!root) return;
+
+  // 숫자·브리핑에서 아래 기록 섹션 열고 이동
+  root.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-v4-open]');
+    if (t) {
+      var d = root.querySelector('#v4-' + t.getAttribute('data-v4-open'));
+      if (d) {
+        d.open = true;
+        d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+    // 목업이라 실제 이동은 하지 않는다
+    var a = e.target.closest('a[href="#"]');
+    if (a && root.contains(a)) e.preventDefault();
+  });
+})();
+</script>
+<div class="mkbar" id="mkbar"></div>
+<script>
+(function () {
+  /* 안 이름은 여기 한 곳에서만 고친다 — 조각 파일과 순서를 맞출 것. */
+  var NAMES = [
+    ['① 정리판', '지금 골격을 유지하고 결함만 없앤 안'],
+    ['② 오늘 한 칸', '지금 할 일 하나를 맨 위에 크게'],
+    ['③ 타임라인', '2주를 세로 기록으로 — 코멘트까지 한 줄기'],
+    ['④ 브리핑', '문장 헤드라인 + 숫자 — 관리자 화면과 같은 언어']
+  ];
+  var bar = document.getElementById('mkbar');
+  var nameEl = document.getElementById('mkName');
+  var mocks = [].slice.call(document.querySelectorAll('.mock'));
+
+  function show(i) {
+    mocks.forEach(function (m, k) { m.classList.toggle('on', k === i); });
+    [].slice.call(bar.children).forEach(function (b, k) { b.classList.toggle('on', k === i); });
+    if (NAMES[i]) nameEl.innerHTML = '<b>' + NAMES[i][0] + '</b><span>' + NAMES[i][1] + '</span>';
+    try { history.replaceState(null, '', '?m=' + (i + 1)); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  mocks.forEach(function (m, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = NAMES[i] ? NAMES[i][0] : String(i + 1);
+    b.addEventListener('click', function () { show(i); });
+    bar.appendChild(b);
+  });
+  var q = parseInt((location.search.match(/m=(\d+)/) || [])[1], 10);
+  show(q >= 1 && q <= mocks.length ? q - 1 : 0);
+})();
+</script>
+</body>
+</html>
