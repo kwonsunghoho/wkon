@@ -141,7 +141,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로 | `docs/notes/apply-and-payment.md` |
 | 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
 | 승준노트 허브 | `briefing.html` | 이름은 화면 글자만 '승준노트'(파일·클래스명 유지), 카드에 회원별 상태 문구 금지 | `docs/notes/briefing.md` |
-| 연구실 허브 | `lab.html`·`researchers-data.js` | 헤어라인 원장(상자 금지), 숫자는 DB 실측값만(지금은 예시+foot-note), 연구진 데이터는 researchers-data.js 단일 원본 | `docs/notes/lab.md` |
+| 연구실 | `lab.html`(허브)·`lab-archive.html`(원장)·`researchers-data.js` | 허브는 연구실/연구진 카드 두 장뿐(오너 확정), 원장은 헤어라인(상자 금지), 숫자는 DB 실측값만(지금은 예시+foot-note) | `docs/notes/lab.md` |
 | 뉴스 | `news.html`·`scripts/fetch-news.mjs` | 필터는 픽커+바텀시트(칩 나열 회귀 금지), 규칙 수정 시 verify-news-rules.py | `docs/notes/news.md` |
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 구조화 출력·한 파일 유지, 감점 사전은 admin 탭(DB) | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer 의 `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
