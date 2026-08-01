@@ -116,7 +116,7 @@
   .ix-row { display: flex; align-items: baseline; gap: 9px; font-size: 14px; }
   .ix-name { flex: none; font-weight: 600; color: rgba(245,241,232,0.93); }
   .ix-lead { flex: 1; border-bottom: 2px dotted rgba(245,241,232,0.28); position: relative; top: -3px; min-width: 18px; }
-  .ix-n { flex: none; font-weight: 800; color: var(--action-on-dark); }
+  .ix-n { flex: none; min-height: 20px; font-weight: 800; color: var(--action-on-dark); }
   .ix-n span { font-size: 12.5px; font-weight: 700; }
 
   /* 연구 진행 신호 */
@@ -161,13 +161,13 @@
       </div>
       <!-- 숫자는 lab_shelf_counts() 가 채운다 — 아래 '—' 는 스크립트 전 자리표시 -->
       <div class="ix num">
-        <p class="ix-row" data-shelf="airline"><span class="ix-name">항공사 자료실</span><span class="ix-lead"></span><span class="ix-n">—<span>건</span></span></p>
-        <p class="ix-row" data-shelf="video"><span class="ix-name">영상관</span><span class="ix-lead"></span><span class="ix-n">—<span>편</span></span></p>
-        <p class="ix-row" data-shelf="question"><span class="ix-name">기출문제</span><span class="ix-lead"></span><span class="ix-n">—<span>개</span></span></p>
-        <p class="ix-row" data-shelf="report"><span class="ix-name">현장 리포트</span><span class="ix-lead"></span><span class="ix-n">—<span>편</span></span></p>
-        <p class="ix-row" data-shelf="calendar"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n">—<span>곳</span></span></p>
+        <p class="ix-row" data-shelf="airline"><span class="ix-name">항공사 자료실</span><span class="ix-lead"></span><span class="ix-n"></span></p>
+        <p class="ix-row" data-shelf="video"><span class="ix-name">영상관</span><span class="ix-lead"></span><span class="ix-n"></span></p>
+        <p class="ix-row" data-shelf="question"><span class="ix-name">기출문제</span><span class="ix-lead"></span><span class="ix-n"></span></p>
+        <p class="ix-row" data-shelf="report"><span class="ix-name">현장 리포트</span><span class="ix-lead"></span><span class="ix-n"></span></p>
+        <p class="ix-row" data-shelf="calendar"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n"></span></p>
       </div>
-      <p class="hub-meta num" id="labMeta"><i class="live"></i>연구 진행 중</p>
+      <p class="hub-meta num" id="labMeta"><i class="live"></i></p>
     </a>
 
     <a class="hub-card" href="researchers.html">
@@ -200,17 +200,26 @@
     var d = Math.floor(h / 24);
     return d < 30 ? d + '일 전' : new Date(iso).toISOString().slice(5, 10).replace('-', '.');
   }
+  /* 목차 줄의 단위 — 마크업에는 숫자도 단위도 두지 않는다(자리표시가 깜빡이던 자리) */
+  var UNIT = { airline: '건', video: '편', question: '개', report: '편', calendar: '곳' };
+
   if (!window.MONC || !window.MONC.sb) return;
   window.MONC.sb.rpc('lab_shelf_counts').then(function (res) {
     if (res.error) return;                       // 미적용 환경이면 조용히 둔다
     var total = 0, last = null;
-    (res.data || []).forEach(function (r) {
-      var row = document.querySelector('.ix-row[data-shelf="' + r.shelf + '"] .ix-n');
-      var n = Number(r.n) || 0;
+    var map = {};
+    (res.data || []).forEach(function (r) { map[r.shelf] = r; });
+
+    Object.keys(UNIT).forEach(function (key) {
+      var cell = document.querySelector('.ix-row[data-shelf="' + key + '"] .ix-n');
+      if (!cell) return;
+      var n = map[key] ? (Number(map[key].n) || 0) : 0;
       total += n;
-      if (r.last_at && (!last || r.last_at > last)) last = r.last_at;
-      if (row) row.firstChild.textContent = n;
+      if (map[key] && map[key].last_at && (!last || map[key].last_at > last)) last = map[key].last_at;
+      // 자료가 없는 서가는 숫자를 내걸지 않는다(원장의 '준비 중'과 같은 규칙)
+      cell.innerHTML = n > 0 ? (n + '<span>' + UNIT[key] + '</span>') : '<span>준비 중</span>';
     });
+
     var meta = document.getElementById('labMeta');
     meta.innerHTML = '<i class="live"></i>' + (total > 0
       ? '연구 진행 중 · 자료 <b>' + total + '</b>건' + (last ? ' · 갱신 ' + relTime(last) : '')
