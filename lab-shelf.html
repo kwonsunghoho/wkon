@@ -269,6 +269,21 @@
   .buy-warn b { font-weight: 800; }
   .buy-fine { margin-top: 10px; font-size: 12px; font-weight: 500; line-height: 1.55; color: var(--text-dim); }
 
+  /* 파일 고르기 시트 — 자료 하나에 파일이 여럿일 때(상·하편) */
+  .fl-desc { font-size: 13.5px; font-weight: 500; line-height: 1.6; color: var(--text-muted); margin-bottom: 12px; }
+  .fl-list { display: flex; flex-direction: column; gap: 8px; }
+  .fl-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    min-height: 52px; padding: 10px 14px; border-radius: 12px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    font: inherit; color: var(--text); text-align: left; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fl-item:hover { border-color: var(--accent-dark); }
+  .fl-item:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .fl-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; line-height: 1.45; }
+  .fl-meta { flex: none; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+
   /* 처리 중·안내 토스트 */
   .toast {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 240;
@@ -338,6 +353,11 @@
     <p class="buy-warn" id="shBuyWarn">자료를 열람하거나 내려받으면 <b>환불되지 않습니다.</b><br>아직 열지 않으셨다면 환불해 드려요 — 카카오톡 채널로 문의해 주세요.</p>
     <button class="buy-go" type="button" id="shBuyGo">동의하고 결제하기</button>
     <p class="buy-fine">한 번 구매하면 계정에 계속 남아요. 자료가 갱신되면 최신본으로 다시 받으실 수 있어요.</p>
+  </div>
+  <!-- 자료 하나에 파일이 여럿일 때(상·하편). 값·구매는 자료 단위라 여기서 결제가 다시 일어나지 않는다. -->
+  <div id="shFileBox" hidden>
+    <p class="fl-desc" id="shFileDesc"></p>
+    <div class="fl-list" id="shFileList"></div>
   </div>
 </div>
 
@@ -594,6 +614,7 @@
       if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
       if (r.doc_type) bits.push(esc(r.doc_type));
       if (r.is_link) bits.push('영상' + (r.duration_sec ? ' ' + fmtDur(r.duration_sec) : ''));
+      else if (Number(r.file_count) > 1) bits.push('파일 ' + r.file_count + '개');   // 상·하편처럼 묶인 자료
       else if (r.delivery === 'view') bits.push('화면 열람');
       else if (r.file_ext) bits.push(String(r.file_ext).toUpperCase() + (r.file_size ? ' ' + fmtSize(r.file_size) : ''));
       return '<button class="doc" type="button" data-id="' + esc(r.id) + '">' +
@@ -618,12 +639,15 @@
     sheetKind = kind;
     var isPw = kind === 'pw';
     var isBuy = kind === 'buy';
-    $('shSheetGrid').hidden = isPw || isBuy;
+    var isFile = kind === 'file';
+    $('shSheetGrid').hidden = isPw || isBuy || isFile;
     $('shPwBox').hidden = !isPw;
     $('shBuyBox').hidden = !isBuy;
+    $('shFileBox').hidden = !isFile;
     $('shSheetTitle').textContent = isBuy ? '자료 구매'
+      : (isFile ? '받을 파일 고르기'
       : (isPw ? '비밀번호 입력'
-      : (kind === 'air' ? '항공사 선택' : SH.type + ' 선택'));
+      : (kind === 'air' ? '항공사 선택' : SH.type + ' 선택')));
 
     if (isBuy) {
       buyTarget = opts.row;
@@ -631,6 +655,20 @@
       $('shBuyPrice').textContent = fmtWon(opts.row.price);
       $('shBuyGo').disabled = false;
       $('shBuyGo').textContent = '동의하고 결제하기';
+    } else if (isFile) {
+      // 자료 하나에 파일이 여러 개(상·하편) — 무엇을 받을지 고른다.
+      // 파일 목록은 서버가 준 것만 쓴다(경로는 아예 오지 않는다).
+      fileTarget = opts.row;
+      $('shFileDesc').textContent = '「' + opts.row.title + '」에는 파일이 ' + opts.files.length + '개 있어요.';
+      $('shFileList').innerHTML = opts.files.map(function (f) {
+        var meta = [];
+        if (f.ext) meta.push(String(f.ext).toUpperCase());
+        if (f.size) meta.push(fmtSize(f.size));
+        return '<button class="fl-item" type="button" data-fid="' + esc(f.id) + '">' +
+          '<span class="fl-name">' + esc(f.label) + '</span>' +
+          (meta.length ? '<span class="fl-meta num">' + esc(meta.join(' · ')) + '</span>' : '') +
+        '</button>';
+      }).join('');
     } else if (!isPw) {
       var cur = kind === 'air' ? fAir : fType;
       var vals = kind === 'air' ? optAir : optType;
@@ -661,21 +699,27 @@
     $('pkAir').setAttribute('aria-expanded', 'false');
     $('pkType').setAttribute('aria-expanded', 'false');
     setTimeout(function () { $('shScrim').hidden = true; $('shSheet').hidden = true; }, 220);
-    sheetKind = null; pwTarget = null; buyTarget = null;
+    sheetKind = null; pwTarget = null; buyTarget = null; fileTarget = null;
   }
 
   /* ── 자료 열기 — 판정은 전부 서버(lab-file)가 한다 ── */
   var busy = false;
-  function openDoc(row, password) {
+  var fileTarget = null;
+  // 비밀번호 자료가 파일까지 여러 개면, 파일을 고른 뒤 다시 부를 때 또 물어보면 안 된다.
+  // 방금 통과한 비밀번호를 들고 있다가 같이 보낸다(자료를 바꾸면 지운다).
+  var lastPw = '';
+  function openDoc(row, password, fileId) {
     if (busy) return;
     busy = true;
+    if (password) lastPw = password;
     toast('자료를 준비하는 중…', 8000);
 
     window.MONC.sb.functions.invoke('lab-file', {
       body: {
         resourceId: row.id,
         mode: (row.is_link || row.delivery === 'view') ? 'view' : 'download',
-        password: password || ''
+        password: password || '',
+        fileId: fileId || ''
       }
     }).then(function (res) {
       busy = false;
@@ -697,6 +741,13 @@
         openSheet('buy', { row: row });
         return;
       }
+      // 자료 하나에 파일이 여러 개(상·하편) — 무엇을 받을지 고르게 한다.
+      // 값·구매는 자료 단위라 여기서 다시 결제가 일어나지 않는다.
+      if (d.code === 'pick_file') {
+        $('shToast').hidden = true;
+        openSheet('file', { row: row, files: d.files || [] });
+        return;
+      }
       if (d.code === 'need_password') { $('shToast').hidden = true; openSheet('pw', { title: row.title }); return; }
       if (d.code === 'bad_password' || d.code === 'locked') {
         $('shToast').hidden = true;
@@ -708,7 +759,7 @@
       if (!d.ok || !d.url) { toast(d.error || '자료를 열지 못했어요.'); return; }
 
       $('shToast').hidden = true;
-      if (sheetKind === 'pw') closeSheet();
+      if (sheetKind === 'pw' || sheetKind === 'file') closeSheet();
       // 파일은 60초짜리 서명 URL, 영상은 유튜브 링크 — 둘 다 새 창에서 연다
       window.open(d.url, '_blank', 'noopener');
       if (d.watermarked) toast('받으신 분 정보가 표시된 파일이에요.', 3200);
@@ -867,7 +918,14 @@
     var btn = e.target.closest('.doc, .vid, .gv');
     if (!btn) return;
     var row = rows.filter(function (r) { return r.id === btn.getAttribute('data-id'); })[0];
-    if (row) { pwTarget = row; openDoc(row, ''); }
+    if (row) { pwTarget = row; lastPw = ''; openDoc(row, ''); }
+  });
+
+  // 파일 고르기 — 자료 하나에 파일이 여럿일 때만 뜬다
+  $('shFileList').addEventListener('click', function (e) {
+    var b = e.target.closest('.fl-item');
+    if (!b || !fileTarget) return;
+    openDoc(fileTarget, lastPw, b.getAttribute('data-fid'));
   });
 
   $('pkAir').addEventListener('click', function () { openSheet('air'); });

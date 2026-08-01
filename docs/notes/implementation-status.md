@@ -15,7 +15,7 @@
 | ai-killer (polish·quickfix 겸용) | 2026-07-25 확인 `2026-07-25d`·프로필 4곳·사전 28개 → polish 추가 후 `2026-07-30b`(`coach_terms` 주입). **레포는 `2026-07-31b`(미니 다듬기 `mode:'quickfix'` 분기 — 재배포 필요.** a 는 타입 정리만) | 로그인 없이 `POST {"probe":true}` → `version`·`features`·`airline_profiles`/`terms` 개수·`has_api_key`. `features` 에 `quickfix` + `quickfix_table` 숫자면 미니 다듬기 살아 있음. `coach_terms` 0 이면 연구진 자산 미유입 |
 | sojae-chat | v2(카드+뼈대) 배포. **크레딧 차감은 재배포된 버전부터 동작** — 재배포 전엔 화면 안내만 바뀌고 차감 안 됨 | `POST {probe:true}` → `version`·`playbook_keys` |
 | answer-program | `2026-07-30b` (프로브 sessions_table:true · questions 99 · programs 1) | 프로브 있음 — 상세는 `docs/monc-answer-program/implementation-status.md` |
-| lab-file | **`2026-08-01e` 배포 확인**(프로브 실측 2026-08-01 — `features` 에 `paid` 포함). 레포와 같음 | `POST {"probe":true}` → `version`·`features`·`bucket`. `features` 에 `external_url` 이 있으면 영상 지원, **`paid` 까지 있으면 유료 지원(e)**. 404 면 미배포. ⚠️ **`paid` 없는 버전이 떠 있는 상태에서 자료에 값을 매기면 그 자료가 무료로 열린다** — 마이그레이션과 재배포를 같이 한다 |
+| lab-file | **`2026-08-01e` 배포 확인**(2026-08-01). **레포는 `2026-08-01f`(파일 여러 개 — `pick_file`·`fileId`) — 재배포 필요** | `POST {"probe":true}` → `version`·`features`·`bucket`. `features` 에 `external_url` 이 있으면 영상 지원, **`paid` 까지 있으면 유료 지원(e)**. 404 면 미배포. ⚠️ **`paid` 없는 버전이 떠 있는 상태에서 자료에 값을 매기면 그 자료가 무료로 열린다** — 마이그레이션과 재배포를 같이 한다 |
 
 ## 마이그레이션 적용 현황 (기록 기준)
 
@@ -48,6 +48,8 @@
 | `20260801140000_lab_video` | 영상관 유튜브 링크 — `external_url`·`duration_sec` 추가, `storage_path` nullable, 목록 RPC 재생성 | **실행 완료(2026-08-01)** — 영상 등록·조회 확인 |
 | `20260801150000_lab_thumbs` | 영상 썸네일 — 목록 RPC 가 `video_id`(유튜브 11자 id) 반환 | **실행 불필요 — 아래 160000 이 같은 정의를 품고 있고 그쪽이 적용됐다**(목록 RPC 프로브에 `video_id` 확인). ⚠️ 이 파일을 지금 실행하면 `price`·`owned` 가 사라져 유료가 무료로 열린다 |
 | `20260801160000_lab_paid` | 연구실 **유료 자료**(자료마다 `price`) — `lab_resources.price` · `lab_purchases` · 목록 RPC 에 `price`·`owned` · `lab_my_purchases()` · `lab_sales_summary()` | **실행 완료(2026-08-01)** — 목록 RPC 프로브에 `price`·`owned`·`video_id` 확인. lab-file `2026-08-01e`·verify-payment `resourceId` 분기도 배포 완료. ⚠️ **이 파일이 목록 RPC 의 최종 정의다**(`video_id`+`price`+`owned`). 140000·150000·160000 이 같은 함수를 재생성하므로 **나중에 실행한 쪽이 이긴다.** 이 파일에 150000 의 `video_id` 정의가 그대로 들어 있어 **150000 을 건너뛰고 이것만 실행해도 썸네일까지 켜진다.** 반대로 150000 을 이 파일 뒤에 실행하면 `price`·`owned` 가 사라져 **유료 자료가 전부 무료로 열린다**(그때는 이 파일만 다시 실행하면 복구). 미적용이면 admin 가격 칸이 '마이그레이션 먼저' 안내를 띄운다 |
+
+| `20260801170000_lab_resource_files` | **자료 하나에 파일 여러 개**(상·하편) — `lab_resource_files` 신설 + 기존 `storage_path` 백필 + `source_required` check 해제 + 목록 RPC 에 `file_count` | **owner 실행 필요**(+lab-file `2026-08-01f` 재배포). ⚠️ **이제 이 파일이 목록 RPC 의 최종 정의다**(`video_id`+`price`+`owned`+`file_count`) — 140000·150000·160000 을 이 뒤에 실행하면 `file_count` 가 사라진다. 미적용이면 파일 1개짜리는 그대로 동작하고, 여러 개를 올리려 하면 admin 이 '마이그레이션 먼저' 안내를 띄운다 |
 
 ## 브랜치
 

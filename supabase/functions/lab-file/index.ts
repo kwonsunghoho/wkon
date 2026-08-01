@@ -18,8 +18,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb, degrees } from "npm:pdf-lib@1.17.1";
 
-const FN_VERSION = "2026-08-01e";
-const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid"];
+const FN_VERSION = "2026-08-01f";
+const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid", "multi_file"];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -226,32 +226,83 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── 5-b. 파일 꺼내기
-    const isPdf = (res.file_ext || "").toLowerCase() === "pdf" ||
-      res.storage_path.toLowerCase().endsWith(".pdf");
-    let signPath = res.storage_path as string;
+    // ── 5-b. 어떤 파일을 줄지 고른다 (2026-08-01)
+    // 자료 하나에 파일이 여러 개일 수 있다(상·하편) — 값·구매는 자료 단위 그대로고,
+    // 여기서는 "무엇을 받을지"만 정한다.
+    const { data: fileRows, error: filesErr } = await admin
+      .from("lab_resource_files")
+      .select("id, storage_path, label, file_ext, file_size")
+      .eq("resource_id", res.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    // deno-lint-ignore no-explicit-any
+    let list: any[] = filesErr ? [] : (fileRows || []);
+    // 파일 표가 아직 없거나(마이그레이션 전) 백필 전이면 옛 단일 경로로 떨어진다.
+    if (!list.length && res.storage_path) {
+      list = [{
+        id: "legacy", storage_path: res.storage_path,
+        label: null, file_ext: res.file_ext, file_size: res.file_size,
+      }];
+    }
+    if (!list.length) return json({ error: "받을 파일이 아직 없어요.", code: "no_file" });
+
+    // deno-lint-ignore no-explicit-any
+    let picked: any = null;
+    if (body.fileId) {
+      // ⚠️ 브라우저가 보낸 fileId 는 이 자료의 파일 목록 '안에서만' 찾는다 —
+      //    남의 자료 파일 id 를 넣어도 걸리지 않게 한다.
+      picked = list.filter((f) => String(f.id) === String(body.fileId))[0] || null;
+      if (!picked) return json({ error: "그 파일을 찾을 수 없어요.", code: "file_missing" });
+    } else if (list.length === 1) {
+      picked = list[0];
+    } else {
+      // 여러 개 — 무엇을 받을지 화면이 고르게 한다.
+      // ⚠️ storage_path 는 절대 내보내지 않는다(파일로 가는 문은 이 함수뿐).
+      // ⚠️ label 이 없으면 '파일 1·2'로 부른다 — 저장 파일명은 난수라 보여줄 게 못 된다.
+      return json({
+        ok: true,
+        code: "pick_file",
+        title: res.title,
+        files: list.map((f, i) => ({
+          id: f.id,
+          label: f.label || `파일 ${i + 1}`,
+          ext: f.file_ext || null,
+          size: f.file_size || null,
+        })),
+      });
+    }
+
+    const isPdf = (picked.file_ext || "").toLowerCase() === "pdf" ||
+      String(picked.storage_path).toLowerCase().endsWith(".pdf");
+    let signPath = picked.storage_path as string;
 
     // 워터마크 — PDF 만. 원본을 건드리지 않고 사본을 만들어 그 사본을 내준다
     if (res.watermark && isPdf) {
-      const { data: file, error: dlErr } = await admin.storage.from(BUCKET).download(res.storage_path);
+      const { data: file, error: dlErr } = await admin.storage.from(BUCKET).download(picked.storage_path);
       if (dlErr || !file) {
         return json({ error: "파일을 준비하지 못했어요.", code: "file_missing" });
       }
       try {
         const stamped = await stampPdf(new Uint8Array(await file.arrayBuffer()), markText(user.email ?? "", user.id));
-        // 사본은 회원별 임시 경로에 둔다. 같은 경로를 재사용해 쌓이지 않게 한다.
-        signPath = `wm/${user.id}/${res.id}.pdf`;
+        // 사본은 회원별·파일별 임시 경로에 둔다. 같은 경로를 재사용해 쌓이지 않게 한다.
+        signPath = `wm/${user.id}/${res.id}-${picked.id}.pdf`;
         const { error: upErr } = await admin.storage.from(BUCKET)
           .upload(signPath, stamped, { contentType: "application/pdf", upsert: true });
-        if (upErr) signPath = res.storage_path;   // 사본 실패 시 원본으로 — 열람은 막지 않는다
+        if (upErr) signPath = picked.storage_path;   // 사본 실패 시 원본으로 — 열람은 막지 않는다
       } catch (_e) {
-        signPath = res.storage_path;              // 손상·암호화 PDF 등
+        signPath = picked.storage_path;              // 손상·암호화 PDF 등
       }
     }
 
+    // 받는 파일 이름 — 파일이 여럿이면 제목만으로는 뭘 받았는지 구분이 안 된다
+    const dlName = (list.length > 1 && picked.label)
+      ? `${res.title} - ${picked.label}`
+      : res.title;
+
     const { data: signed, error: signErr } = await admin.storage.from(BUCKET)
       .createSignedUrl(signPath, URL_TTL, wantDownload
-        ? { download: `${res.title}.${res.file_ext || "pdf"}` }
+        ? { download: `${dlName}.${picked.file_ext || "pdf"}` }
         : undefined);
 
     if (signErr || !signed?.signedUrl) {
@@ -271,8 +322,9 @@ Deno.serve(async (req) => {
       url: signed.signedUrl,
       expiresIn: URL_TTL,
       title: res.title,
+      fileLabel: list.length > 1 ? (picked.label || null) : null,
       mode: wantDownload ? "download" : "view",
-      watermarked: !!(res.watermark && isPdf && signPath !== res.storage_path),
+      watermarked: !!(res.watermark && isPdf && signPath !== picked.storage_path),
     });
   } catch (e) {
     return json({ error: "잠시 뒤에 다시 시도해 주세요.", code: "unexpected", detail: String(e) });

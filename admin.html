@@ -765,8 +765,9 @@
         열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.<br>
         <b>가격을 넣으면 유료 자료가 됩니다</b>(0 이면 무료 — 로그인만 하면 열려요). 값은 언제든 고칠 수 있고,
         이미 산 회원의 결제 금액은 그대로 남습니다. <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.
-        <b>파일은 한 번에 여러 개 고를 수 있어요</b> — 각각 따로 자료로 올라가고 파일명이 제목이 됩니다.
-        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01e</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
+        <b>파일을 여러 개 고르면 자료 하나로 묶입니다</b>(상·하편) — 값도 하나, 구매도 한 번이고
+        학생은 자료를 눌러 받을 파일을 고릅니다. 자료를 여러 건으로 나누려면 한 번씩 올리세요.
+        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01f</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
@@ -822,9 +823,11 @@
         </div>
         <!-- 서가가 '영상관'이면 파일 대신 링크를 받는다(lrKindSync 가 토글) -->
         <div class="field" id="lrFileWrap">
-          <label>파일 <span style="font-weight:600;color:var(--text-muted);">— 여러 개 고를 수 있어요</span><span id="lrFileHint" hidden style="font-weight:600;color:var(--text-muted);"> · 그대로 두면 기존 파일을 유지해요</span></label>
+          <label>파일 <span style="font-weight:600;color:var(--text-muted);">— 여러 개 고르면 한 자료로 묶여요</span><span id="lrFileHint" hidden style="font-weight:600;color:var(--text-muted);"> · 새로 고른 파일은 기존 파일에 더해집니다</span></label>
           <input id="lrFile" type="file" multiple>
           <p id="lrMultiHint" hidden style="margin-top:6px;font-size:12.5px;font-weight:700;color:var(--accent-ink);line-height:1.55;"></p>
+          <!-- 수정 중일 때만 — 이 자료에 붙어 있는 파일 목록(개별 삭제) -->
+          <div id="lrFileList" hidden style="margin-top:10px;"></div>
         </div>
         <div id="lrLinkWrap" hidden>
           <div style="display:grid;grid-template-columns:1fr 130px;gap:10px;">
@@ -3136,11 +3139,10 @@
       set('lrDur', r.duration_sec ? fmtDur(r.duration_sec) : '');
       set('lrPrice', Number(r.price) || 0);
       F.querySelector('#lrFile').value = '';
-      // 수정은 한 자료를 고치는 것이라 파일도 한 개만 받는다(여러 개를 고를 수 있으면 헷갈린다)
-      F.querySelector('#lrFile').multiple = false;
       F.querySelector('#lrPublish').checked = !!r.published;
       lrKindSync();
       labMultiSync();
+      labLoadFiles(r.id);      // 지금 붙어 있는 파일 목록
 
       document.getElementById('lrEditBar').hidden = false;
       document.getElementById('lrEditWho').textContent = '수정 중 — ' + r.title;
@@ -3157,8 +3159,9 @@
         const el = F.querySelector('#' + k); if (el) el.value = '';
       });
       const priceEl = F.querySelector('#lrPrice'); if (priceEl) priceEl.value = '0';   // 값은 매번 다시 정한다
-      F.querySelector('#lrFile').multiple = true;   // 새로 올릴 땐 여러 개를 받는다
       F.querySelector('#lrPublish').checked = true;
+      const flBox = document.getElementById('lrFileList');
+      if (flBox) { flBox.hidden = true; flBox.innerHTML = ''; }
       document.getElementById('lrEditBar').hidden = true;
       document.getElementById('lrFileHint').hidden = true;
       document.getElementById('lrSubmit').textContent = '자료 올리기';
@@ -3168,22 +3171,53 @@
 
     document.getElementById('lrCancel').addEventListener('click', labEditCancel);
 
-    /* 파일을 여러 개 고르면 제목 칸을 잠그고 무슨 일이 일어날지 미리 알려준다.
-       ⚠️ 여러 개일 때 제목 칸을 살려 두면 같은 제목의 자료가 여러 건 생긴다. */
+    /* 수정 중인 자료에 붙어 있는 파일 목록 — 없으면 잘못 올린 파일을 뺄 방법이 없다.
+       ⚠️ 마지막 파일까지 지우면 받을 게 없는 자료가 된다(화면은 '받을 파일이 아직 없어요'). */
+    async function labLoadFiles(resourceId) {
+      const box = document.getElementById('lrFileList');
+      if (!box) return;
+      const { data, error } = await MONC.sb.from('lab_resource_files')
+        .select('*').eq('resource_id', resourceId)
+        .order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+      const rows = error ? [] : (data || []);
+      if (!rows.length) { box.hidden = true; box.innerHTML = ''; return; }
+      box.hidden = false;
+      box.innerHTML = '<div style="font-size:12.5px;font-weight:800;margin-bottom:4px;">붙어 있는 파일 '
+        + rows.length + '개 <span style="font-weight:600;color:var(--text-muted);">— 새로 고르면 여기에 더해져요</span></div>'
+        + rows.map((f, i) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-soft);">
+            <span style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.label || ('파일 ' + (i + 1)))}</span>
+            <span style="flex:none;font-size:12px;color:var(--text-dim);">${esc(String(f.file_ext || '').toUpperCase())}</span>
+            <button class="ri-del lab-file-del" type="button" data-fid="${f.id}" data-path="${esc(f.storage_path)}">삭제</button>
+          </div>`).join('');
+
+      box.querySelectorAll('.lab-file-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('이 파일을 자료에서 지울까요? 되돌릴 수 없습니다.')) return;
+        const { error: delErr } = await MONC.sb.from('lab_resource_files').delete().eq('id', b.dataset.fid);
+        if (delErr) { alert('삭제 실패: ' + delErr.message); return; }
+        await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
+        // 대표 경로(storage_path)를 지웠으면 남은 첫 파일로 옮긴다 — 레거시 폴백이 죽지 않게.
+        const left = await MONC.sb.from('lab_resource_files').select('*')
+          .eq('resource_id', resourceId).order('sort_order', { ascending: true }).limit(1);
+        const head = (left.data || [])[0];
+        await MONC.sb.from('lab_resources').update(head
+          ? { storage_path: head.storage_path, file_ext: head.file_ext, file_size: head.file_size }
+          : { storage_path: null, file_ext: null, file_size: null }).eq('id', resourceId);
+        toast('파일을 지웠어요');
+        labLoadFiles(resourceId); loadLabFiles();
+      }));
+    }
+
+    /* 파일을 여러 개 고르면 무슨 일이 일어날지 미리 알려준다.
+       ⚠️ 고른 파일은 **한 자료로 묶인다** — 제목 칸을 잠그지 말 것(묶인 자료의 이름이다). */
     function labMultiSync() {
       const fileEl = document.getElementById('lrFile');
-      const titleEl = document.getElementById('lrTitle');
       const hint = document.getElementById('lrMultiHint');
       const n = fileEl && fileEl.files ? fileEl.files.length : 0;
       if (n > 1) {
-        titleEl.disabled = true;
-        titleEl.placeholder = '파일명이 제목이 됩니다';
-        hint.textContent = `파일 ${n}개 — 각각 따로 자료로 올라가고 파일명이 제목이 돼요. `
-          + '서가·항공사·유형·가격·열람 방식·비밀번호는 아래 설정이 전부에 똑같이 붙습니다.';
+        hint.textContent = `파일 ${n}개가 자료 하나로 묶여요 — 값도 하나, 구매도 한 번입니다. `
+          + '학생은 자료를 누르면 어떤 파일을 받을지 고릅니다(파일 이름은 올리신 파일명이 그대로 쓰여요).';
         hint.hidden = false;
       } else {
-        titleEl.disabled = false;
-        titleEl.placeholder = '예: 대한항공 인재상, 한 장 정리';
         hint.hidden = true;
       }
     }
@@ -3319,30 +3353,75 @@
       return p.reduce((a, b) => a * 60 + b, 0);
     }
 
-    /* 자료 한 건 저장(새 등록 전용). 파일을 여러 개 고르면 이 함수를 파일마다 부른다.
-       실패하면 사유 문자열, 성공하면 null 을 돌려준다 — 한 건이 실패해도 나머지는 계속 올린다.
-       ⚠️ 실패 시 방금 올린 파일을 지운다(안 지우면 저장소에 유령 파일이 쌓인다). */
-    async function labInsertOne(baseRow, file, title, shelf, pw) {
-      const row = Object.assign({}, baseRow, { title });
-      if (file) {
-        const ext = (file.name.split('.').pop() || '').toLowerCase();
+    /* 파일 여러 개를 lab-files 버킷에 올린다. 하나라도 실패하면 올린 것을 되돌린다
+       — 자료 행을 만들기 전에 다 올려야 실패했을 때 빈 자료가 남지 않는다. */
+    async function labUploadFiles(files, shelf) {
+      const done = [];
+      for (const f of files) {
+        const ext = (f.name.split('.').pop() || '').toLowerCase();
         // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
         const path = `${shelf}/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
-        const up = await MONC.sb.storage.from('lab-files').upload(path, file, { contentType: file.type || undefined });
-        if (up.error) return '파일 업로드가 막혔어요 — ' + up.error.message;
-        row.storage_path = path; row.file_ext = ext; row.file_size = file.size;
+        const up = await MONC.sb.storage.from('lab-files').upload(path, f, { contentType: f.type || undefined });
+        if (up.error) {
+          for (const d of done) await MONC.sb.storage.from('lab-files').remove([d.path]);
+          return { error: '파일 업로드가 막혔어요 — ' + up.error.message };
+        }
+        // label = 화면에 보이는 이름. 저장 경로는 난수라 원본 파일명을 여기 남긴다.
+        done.push({ path, ext, size: f.size, label: f.name.replace(/\.[^.]+$/, '') });
+      }
+      return { files: done };
+    }
+
+    /* 올린 파일들을 자료에 붙인다(lab_resource_files).
+       표가 아직 없으면(마이그레이션 전) 파일 1개짜리는 storage_path 로 그대로 동작하므로
+       조용히 넘어가고, 여러 개이거나 추가일 때만 알려준다. */
+    async function labAttachFiles(resourceId, uploaded, startOrder) {
+      const rows = uploaded.map((u, i) => ({
+        resource_id: resourceId, storage_path: u.path, label: u.label,
+        file_ext: u.ext, file_size: u.size, sort_order: (startOrder || 0) + i,
+      }));
+      const fi = await MONC.sb.from('lab_resource_files').insert(rows);
+      if (fi.error && (uploaded.length > 1 || startOrder)) {
+        return '파일을 묶으려면 마이그레이션(20260801170000_lab_resource_files)을 먼저 실행하세요. '
+          + '지금은 첫 파일만 등록됐어요.';
+      }
+      return null;
+    }
+
+    /* 자료 한 건 등록 — 고른 파일은 **전부 이 자료에 묶인다**
+       (2026-08-01 오너 확정: "2개를 올려도 하나씩 따로따로 올라가는데? 상, 하편같은것도…").
+       값·구매는 자료 단위라 상·하편을 한 번에 사고 한 번에 받는다.
+       실패하면 사유 문자열, 성공하면 null. */
+    async function labCreateResource(baseRow, files, title, shelf, pw) {
+      const up = await labUploadFiles(files, shelf);
+      if (up.error) return up.error;
+      const uploaded = up.files;
+
+      const row = Object.assign({}, baseRow, { title });
+      if (uploaded.length) {
+        // ⚠️ 첫 파일은 storage_path 에도 넣는다 — 파일 표(20260801170000) 전 환경과
+        //    lab-file 의 레거시 폴백이 이 값을 본다.
+        row.storage_path = uploaded[0].path;
+        row.file_ext = uploaded[0].ext;
+        row.file_size = uploaded[0].size;
       }
       row.published_at = row.published ? new Date().toISOString() : null;
+
       const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
       if (ins.error) {
-        if (row.storage_path) await MONC.sb.storage.from('lab-files').remove([row.storage_path]);
+        for (const u of uploaded) await MONC.sb.storage.from('lab-files').remove([u.path]);
         return /price/.test(ins.error.message || '')
           ? '가격 칸이 아직 없어요(마이그레이션 20260801160000_lab_paid 를 먼저 실행하세요)'
           : ins.error.message;
       }
-      // 비밀번호는 적었을 때만. 여러 건을 올리면 전부 같은 비밀번호가 걸린다.
-      if (pw && ins.data && ins.data.id) {
-        const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: ins.data.id, p_pw: pw });
+      const newId = ins.data && ins.data.id;
+
+      if (newId && uploaded.length) {
+        const attachErr = await labAttachFiles(newId, uploaded, 0);
+        if (attachErr) return attachErr;
+      }
+      if (pw && newId) {
+        const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: newId, p_pw: pw });
         if (pwErr) return '올렸지만 비밀번호 설정에 실패했어요 — ' + pwErr.message;
       }
       return null;
@@ -3402,39 +3481,47 @@
       let multiCount = 0;
 
       if (_labEditId) {
-        // ── 수정: 한 건만 고친다(파일도 한 개만 받는다) ──────────────────────
+        // ── 수정: 자료 정보를 고친다. 파일을 고르면 **기존 파일에 더해진다**
+        //    (교체가 아니다 — 상·하편에 3편을 붙이는 게 자연스러운 동작이다.
+        //     파일을 빼려면 아래 파일 목록에서 개별로 지운다.) ──────────────────
         const row = Object.assign({}, baseRow, { title });
-        if (!isVideo && file) {
-          ext = (file.name.split('.').pop() || '').toLowerCase();
-          size = file.size;
-          // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
-          path = `${shelf}/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
-          const up = await MONC.sb.storage.from('lab-files').upload(path, file, { contentType: file.type || undefined });
+        let addedFiles = [];
+        if (!isVideo && files.length) {
+          const up = await labUploadFiles(files, shelf);
           if (up.error) {
             btn.disabled = false;
-            lrSay('파일 업로드가 막혔어요: ' + up.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
+            lrSay(up.error + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
             return;
           }
-          row.storage_path = path; row.file_ext = ext; row.file_size = size;
+          addedFiles = up.files;
         }
         // 공개로 바꾸는 순간에만 게시 시각을 새로 찍는다(이미 공개면 그대로 둔다)
         const before = _labRows.filter(x => x.id === _labEditId)[0] || {};
         if (row.published && !before.published) row.published_at = new Date().toISOString();
         if (!row.published) row.published_at = null;
         row.updated_at = new Date().toISOString();
+        // 파일이 하나도 없던 자료에 처음 붙이는 경우에만 대표 경로를 채운다
+        // (레거시 폴백용 — 이미 있으면 건드리지 않는다).
+        if (addedFiles.length && !before.storage_path) {
+          row.storage_path = addedFiles[0].path;
+          row.file_ext = addedFiles[0].ext;
+          row.file_size = addedFiles[0].size;
+        }
 
         const upd = await MONC.sb.from('lab_resources').update(row).eq('id', _labEditId);
         if (upd.error) {
           btn.disabled = false;
-          if (path) await MONC.sb.storage.from('lab-files').remove([path]);   // 방금 올린 새 파일을 되돌린다
+          for (const u of addedFiles) await MONC.sb.storage.from('lab-files').remove([u.path]);
           lrSay(/price/.test(upd.error.message || '')
             ? '가격 칸이 아직 없어요 — 마이그레이션(20260801160000_lab_paid.sql)을 먼저 실행하세요.'
             : '수정 저장이 막혔어요: ' + upd.error.message, 'err');
           return;
         }
-        // 파일을 교체했으면 옛 파일을 지운다 — 안 지우면 저장소에 유령 파일이 쌓인다
-        if (path && before.storage_path && before.storage_path !== path) {
-          await MONC.sb.storage.from('lab-files').remove([before.storage_path]);
+        if (addedFiles.length) {
+          // 기존 파일 뒤에 붙인다
+          const cur = await MONC.sb.from('lab_resource_files').select('id').eq('resource_id', _labEditId);
+          const attachErr = await labAttachFiles(_labEditId, addedFiles, (cur.data || []).length);
+          if (attachErr) pwFailed = attachErr;
         }
         // 비밀번호는 적었을 때만 건드린다 — 비워 두면 기존 비밀번호가 그대로 남는다
         if (pw) {
@@ -3442,27 +3529,19 @@
           if (pwErr) pwFailed = '자료는 저장했지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
         }
       } else if (isVideo) {
-        // ── 영상 새 등록 — 파일이 없으니 한 건 ──────────────────────────────
-        const err = await labInsertOne(baseRow, null, title, shelf, pw);
+        // ── 영상 새 등록 — 파일이 없으니 링크 한 건 ─────────────────────────
+        const err = await labCreateResource(baseRow, [], title, shelf, pw);
         if (err) { btn.disabled = false; lrSay('영상 등록이 막혔어요 — ' + err, 'err'); return; }
       } else {
-        // ── 파일 새 등록 — 고른 파일 수만큼 자료를 만든다(2026-08-01 오너 요청) ──
-        // ⚠️ 한 건이 실패해도 멈추지 않는다. 끝나고 실패한 파일만 이름을 적어 보여준다 —
-        //    중간에 끊으면 어디까지 올라갔는지 알 수 없어 다시 올릴 때 중복이 생긴다.
-        const fails = [];
-        for (let i = 0; i < files.length; i++) {
-          const f = files[i];
-          if (files.length > 1) lrSay(`올리는 중… ${i + 1}/${files.length} · ${f.name}`, 'info');
-          // 제목 칸은 파일이 한 개일 때만 쓴다 — 여러 개면 같은 제목이 여러 건 생긴다
-          const t = (title && files.length === 1) ? title : f.name.replace(/\.[^.]+$/, '');
-          const err = await labInsertOne(baseRow, f, t, shelf, pw);
-          if (err) fails.push('· ' + f.name + ' — ' + err);
-        }
-        if (fails.length) {
+        // ── 파일 새 등록 — 고른 파일은 **전부 한 자료로 묶인다**(2026-08-01 오너 확정) ──
+        // 상·하편이 한 자료여야 값도 하나고 구매도 한 번이다.
+        if (files.length > 1) lrSay(`파일 ${files.length}개를 한 자료로 올리는 중…`, 'info');
+        const t = title || files[0].name.replace(/\.[^.]+$/, '');   // 제목을 비우면 첫 파일명
+        const err = await labCreateResource(baseRow, files, t, shelf, pw);
+        if (err) {
           btn.disabled = false;
-          lrSay(files.length === 1
-            ? '자료 등록이 막혔어요 —' + fails[0].slice(1) + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.'
-            : `${files.length}개 중 ${fails.length}개가 실패했어요(나머지는 올라갔습니다):\n` + fails.join('\n'), 'err');
+          lrSay('자료 등록이 막혔어요 — ' + err
+            + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
           loadLabFiles();
           return;
         }
@@ -3474,7 +3553,7 @@
       if (pwFailed) lrSay(pwFailed, 'err'); else lrSay('', '');
       toast(wasEdit ? '수정했어요'
         : (isVideo ? '영상을 등록했어요'
-        : (multiCount > 1 ? `자료 ${multiCount}개를 올렸어요` : '자료를 올렸어요')));
+        : (multiCount > 1 ? `파일 ${multiCount}개를 한 자료로 올렸어요` : '자료를 올렸어요')));
       labEditCancel();       // 폼을 비우고 '새로 올리기' 상태로 되돌린다
       loadLabFiles();
     });
