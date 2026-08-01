@@ -162,6 +162,36 @@
   .vid-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 7px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
   @media (hover: hover) { .vid:hover .vid-tit { color: var(--accent-ink); } }
 
+  /* ── 최신 1편만 큰 카드, 지난 영상은 2열 (2026-08-01 오너 확정) ──
+     오너: "10개 이상만 올려도 길이가 엄청 길어질거같은데?" — 실측이 맞았다.
+     큰 카드 1열은 한 편 276px 이라 10편에 2,699px. 4종 비교 후 C안으로 확정해
+     같은 10편이 1,193px 이 됐다(비교 목업 outputs/lab-video-list-mockup.html).
+     ⚠️ 새로 올린 영상은 지금 크기 그대로 둔다 — 썸네일을 전부 줄이면 오너가
+     지적했던 "이러면 아무도 안보지" 화면으로 되돌아간다.
+     ⚠️ 2열이라고 활자를 11.5px 로 내리지 말 것(9대원칙 12px 하한). */
+  .vid.lead { padding-bottom: 0; border-bottom: 0; }
+  .vid-more {
+    display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.12em;
+    color: var(--accent-ink); margin: 22px 0 2px;
+  }
+  .vid-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 11px; margin-top: 14px; }
+  .gv {
+    display: block; width: 100%; padding: 0; background: none; border: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .gv:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: var(--radius-xs); }
+  /* 썸네일 틀(.vid-thumb)은 큰 카드와 공용 — 폭만 부모를 따라 줄어든다(375px 에서 147×83) */
+  .gv .vid-play { width: 34px; height: 34px; }
+  .gv .vid-play svg { width: 17px; height: 17px; }
+  .gv .vid-dur { right: 5px; bottom: 5px; padding: 1px 5px; }
+  .gv-tit {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    font-size: 13.5px; font-weight: 700; line-height: 1.42; margin-top: 8px;
+  }
+  .gv-sub { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+  @media (hover: hover) { .gv:hover .gv-tit { color: var(--accent-ink); } }
+
   .empty { margin-top: 26px; padding: 26px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
   .empty p { font-size: 14px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
   .skel { height: 74px; border-radius: var(--radius-xs); background: linear-gradient(90deg, rgba(38,34,28,.05), rgba(38,34,28,.09), rgba(38,34,28,.05)); margin-top: 12px; }
@@ -455,6 +485,46 @@
   var ICON_LOCK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   var ICON_EYE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 
+  /* 영상 카드 한 장. big=true 는 맨 위 최신 1편(큰 썸네일·요약·날짜),
+     false 는 '지난 영상' 2열 칸(폭이 좁아 요약과 날짜는 뺀다 — 최신 표시는 NEW 태그가 한다).
+     lead=true 면 아래에 '지난 영상'이 이어지므로 카드 밑줄을 지운다. */
+  function vidCard(r, big, lead) {
+    var vid = r.video_id || null;
+    var bits = [];
+    if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
+    if (r.doc_type) bits.push(esc(r.doc_type));
+    // 값이 붙은 영상도 목록에서 값이 보여야 한다(자료 줄과 같은 규칙 — 무료는 표시 없음).
+    // ⚠️ 썸네일 위에 배지를 얹지 말 것(특강 커버 가격 배지 회귀 금지 · lectures.md).
+    var tags =
+      (isNew(r.published_at) ? '<span class="tag new">NEW</span>' : '') +
+      (Number(r.price) > 0
+        ? (r.owned ? '<span class="tag">구매함</span>'
+                   : '<span class="tag pay num">' + fmtWon(r.price) + '</span>')
+        : '') +
+      (r.needs_password ? '<span class="tag">비밀번호</span>' : '');
+    var thumb = '<span class="vid-thumb">' +
+      (vid
+        ? '<img src="' + esc(ytThumb(vid, true)) + '" data-fb="' + esc(ytThumb(vid, false)) + '" alt="" />'
+        : '<span class="ph-ico">' + ICON_PLAY_BIG + '</span>') +
+      '<span class="vid-play">' + ICON_TRI + '</span>' +
+      (r.duration_sec ? '<span class="vid-dur num">' + fmtDur(r.duration_sec) + '</span>' : '') +
+    '</span>';
+
+    if (!big) {
+      return '<button class="gv" type="button" data-id="' + esc(r.id) + '">' + thumb +
+        '<span class="gv-tit">' + esc(r.title) + '</span>' +
+        '<span class="gv-sub">' + tags + esc(bits.join(' · ')) + '</span>' +
+      '</button>';
+    }
+    return '<button class="vid' + (lead ? ' lead' : '') + '" type="button" data-id="' + esc(r.id) + '">' + thumb +
+      '<span class="vid-tit">' + esc(r.title) + '</span>' +
+      (r.summary ? '<span class="vid-sum">' + esc(r.summary) + '</span>' : '') +
+      '<span class="vid-sub">' + tags + esc(bits.join(' · ')) +
+        (r.published_at ? (bits.length ? ' · ' : '') + '<span class="num">' + fmtDate(r.published_at) + '</span>' : '') +
+      '</span>' +
+    '</button>';
+  }
+
   function render() {
     var list = visible();
     var total = rows.length;
@@ -482,37 +552,16 @@
     }
     $('shEmpty').hidden = true;
 
-    // 영상은 목록 줄이 아니라 썸네일 카드로 — 이 서가는 그림이 있어야 눌린다
+    // 영상은 목록 줄이 아니라 썸네일 카드로 — 이 서가는 그림이 있어야 눌린다.
+    // 맨 위 1편(= 최신, RPC 가 published_at desc 로 준다)만 크게 두고 나머지는 2열.
     if (list.every(function (r) { return r.is_link; })) {
-      $('shList').innerHTML = list.map(function (r) {
-        var vid = r.video_id || null;
-        var bits = [];
-        if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
-        if (r.doc_type) bits.push(esc(r.doc_type));
-        return '<button class="vid" type="button" data-id="' + esc(r.id) + '">' +
-          '<span class="vid-thumb">' +
-            (vid
-              ? '<img src="' + esc(ytThumb(vid, true)) + '" data-fb="' + esc(ytThumb(vid, false)) + '" alt="" />'
-              : '<span class="ph-ico">' + ICON_PLAY_BIG + '</span>') +
-            '<span class="vid-play">' + ICON_TRI + '</span>' +
-            (r.duration_sec ? '<span class="vid-dur num">' + fmtDur(r.duration_sec) + '</span>' : '') +
-          '</span>' +
-          '<span class="vid-tit">' + esc(r.title) + '</span>' +
-          (r.summary ? '<span class="vid-sum">' + esc(r.summary) + '</span>' : '') +
-          '<span class="vid-sub">' +
-            (isNew(r.published_at) ? '<span class="tag new">NEW</span>' : '') +
-            // 값이 붙은 영상도 목록에서 값이 보여야 한다(자료 줄과 같은 규칙 — 무료는 표시 없음).
-            // ⚠️ 썸네일 위에 배지를 얹지 말 것(특강 커버 가격 배지 회귀 금지 · lectures.md).
-            (Number(r.price) > 0
-              ? (r.owned ? '<span class="tag">구매함</span>'
-                         : '<span class="tag pay num">' + fmtWon(r.price) + '</span>')
-              : '') +
-            (r.needs_password ? '<span class="tag">비밀번호</span>' : '') +
-            esc(bits.join(' · ')) +
-            (r.published_at ? (bits.length ? ' · ' : '') + '<span class="num">' + fmtDate(r.published_at) + '</span>' : '') +
-          '</span>' +
-        '</button>';
-      }).join('');
+      var rest = list.slice(1);
+      $('shList').innerHTML =
+        vidCard(list[0], true, rest.length > 0) +
+        (rest.length
+          ? '<span class="vid-more">지난 영상</span>' +
+            '<div class="vid-grid">' + rest.map(function (r) { return vidCard(r, false); }).join('') + '</div>'
+          : '');
       return;
     }
 
@@ -803,7 +852,7 @@
   });
 
   $('shList').addEventListener('click', function (e) {
-    var btn = e.target.closest('.doc, .vid');
+    var btn = e.target.closest('.doc, .vid, .gv');
     if (!btn) return;
     var row = rows.filter(function (r) { return r.id === btn.getAttribute('data-id'); })[0];
     if (row) { pwTarget = row; openDoc(row, ''); }
