@@ -806,7 +806,19 @@
               <option value="0">찍지 않는다</option>
             </select></div>
         </div>
-        <div class="field"><label>파일</label><input id="lfFile" type="file"></div>
+        <!-- 서가가 '영상관'이면 파일 대신 링크를 받는다(lfKindSync 가 토글) -->
+        <div class="field" id="lfFileWrap"><label>파일</label><input id="lfFile" type="file"></div>
+        <div id="lfLinkWrap" hidden>
+          <div style="display:grid;grid-template-columns:1fr 130px;gap:10px;">
+            <div class="field"><label>유튜브 링크</label><input id="lfUrl" placeholder="https://youtu.be/… 또는 https://www.youtube.com/watch?v=…"></div>
+            <div class="field"><label>길이(선택)</label><input id="lfDur" placeholder="42:10"></div>
+          </div>
+          <p style="font-size:12.5px;color:var(--text-muted);line-height:1.6;margin:-2px 0 4px;">
+            영상은 <b>회원이 눌렀을 때만</b> 링크가 나갑니다. 목록에는 제목·길이만 보여요.
+            다만 <b>링크를 받은 회원이 퍼뜨리면 막을 수 없습니다</b> — 유튜브에서 <b>일부공개(미등록)</b>로 올리고,
+            아래 열람 이력으로 누가 봤는지 확인하세요.
+          </p>
+        </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;">
             <input type="checkbox" id="lfPublish" checked> 올리자마자 공개
@@ -2784,6 +2796,12 @@
           lab-files 에 is_admin() 정책이 따로 필요하다(20260801130000). 그 정책이 없으면
           업로드·조회가 전부 막힌다. 미적용 환경에서는 안내를 띄우고 조용히 멈춘다. */
     var LAB_SHELF_LABEL = { airline: '항공사 자료실', video: '영상관', question: '기출문제', report: '현장 리포트', calendar: '채용 캘린더' };
+    function fmtDur(sec) {
+      if (!sec) return '';
+      var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      var p = function (n) { return String(n).padStart(2, '0'); };
+      return h ? (h + ':' + p(m) + ':' + p(s)) : (m + ':' + p(s));
+    }
     var LAB_AIR_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
 
     async function loadLabFiles() {
@@ -2810,9 +2828,14 @@
         const bits = [LAB_SHELF_LABEL[r.shelf] || r.shelf];
         if (r.airline) bits.push(LAB_AIR_LABEL[r.airline] || r.airline);
         if (r.doc_type) bits.push(r.doc_type);
-        bits.push(r.delivery === 'view' ? '화면 열람' : '파일 받기');
+        if (r.external_url) {
+          bits.push('유튜브');
+          if (r.duration_sec) bits.push(fmtDur(r.duration_sec));
+        } else {
+          bits.push(r.delivery === 'view' ? '화면 열람' : '파일 받기');
+          if (r.watermark) bits.push('워터마크');
+        }
         if (r.access === 'password') bits.push('🔒 비밀번호');
-        if (r.watermark) bits.push('워터마크');
         return `
         <div class="round-item" data-id="${r.id}" style="${r.published ? '' : 'opacity:.55;'}">
           <div>
@@ -2897,26 +2920,69 @@
       }).join('');
     }
 
+    /* 영상관은 파일이 아니라 유튜브 링크로 올린다 — 서가에 따라 입력칸을 바꾼다.
+       ⚠️ 링크 자료엔 워터마크를 찍을 수 없다(우리 파일이 아니다) — 해당 칸을 잠근다. */
+    function lfKindSync() {
+      const isVideo = document.getElementById('lfShelf').value === 'video';
+      document.getElementById('lfFileWrap').hidden = isVideo;
+      document.getElementById('lfLinkWrap').hidden = !isVideo;
+      const dv = document.getElementById('lfDelivery');
+      const wm = document.getElementById('lfWm');
+      dv.disabled = isVideo; wm.disabled = isVideo;
+      if (isVideo) { dv.value = 'view'; wm.value = '0'; }
+    }
+    document.getElementById('lfShelf').addEventListener('change', lfKindSync);
+    lfKindSync();
+
+    // 유튜브 주소에서 영상 id 를 뽑아 표준 링크로 정규화(짧은 주소·재생목록 파라미터 정리)
+    function ytNormalize(raw) {
+      const s = String(raw || '').trim();
+      if (!s) return null;
+      let m = s.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/);
+      if (m) return 'https://www.youtube.com/watch?v=' + m[1];
+      if (/^[A-Za-z0-9_-]{11}$/.test(s)) return 'https://www.youtube.com/watch?v=' + s;
+      return null;
+    }
+    // "42:10" · "1:02:30" · "610"(초) 를 초로
+    function durToSec(raw) {
+      const s = String(raw || '').trim();
+      if (!s) return null;
+      if (/^\d+$/.test(s)) return Number(s);
+      const p = s.split(':').map(Number);
+      if (p.some(isNaN)) return null;
+      return p.reduce((a, b) => a * 60 + b, 0);
+    }
+
     document.getElementById('labForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('lfMsg');
       const btn = document.getElementById('lfSubmit');
+      const shelf = document.getElementById('lfShelf').value;
+      const isVideo = shelf === 'video';
       const file = document.getElementById('lfFile').files[0];
       const title = document.getElementById('lfTitle').value.trim();
       if (!title) { msg.textContent = '제목을 입력하세요.'; return; }
-      if (!file) { msg.textContent = '파일을 고르세요.'; return; }
 
-      btn.disabled = true; msg.textContent = '올리는 중…';
-      const shelf = document.getElementById('lfShelf').value;
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
-      const path = `${shelf}/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+      let path = null, ext = null, size = null, url = null, dur = null;
 
-      const up = await MONC.sb.storage.from('lab-files').upload(path, file, { contentType: file.type || undefined });
-      if (up.error) {
-        btn.disabled = false;
-        msg.textContent = '업로드 실패: ' + up.error.message;
-        return;
+      if (isVideo) {
+        url = ytNormalize(document.getElementById('lfUrl').value);
+        if (!url) { msg.textContent = '유튜브 링크를 확인해 주세요.'; return; }
+        dur = durToSec(document.getElementById('lfDur').value);
+        btn.disabled = true; msg.textContent = '등록 중…';
+      } else {
+        if (!file) { msg.textContent = '파일을 고르세요.'; return; }
+        btn.disabled = true; msg.textContent = '올리는 중…';
+        ext = (file.name.split('.').pop() || '').toLowerCase();
+        size = file.size;
+        // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
+        path = `${shelf}/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+        const up = await MONC.sb.storage.from('lab-files').upload(path, file, { contentType: file.type || undefined });
+        if (up.error) {
+          btn.disabled = false;
+          msg.textContent = '업로드 실패: ' + up.error.message;
+          return;
+        }
       }
 
       const pw = document.getElementById('lfPw').value.trim();
@@ -2927,10 +2993,12 @@
         summary: document.getElementById('lfSummary').value.trim() || null,
         doc_type: document.getElementById('lfType').value.trim() || null,
         storage_path: path,
+        external_url: url,
+        duration_sec: dur,
         file_ext: ext,
-        file_size: file.size,
-        delivery: document.getElementById('lfDelivery').value,
-        watermark: document.getElementById('lfWm').value === '1',
+        file_size: size,
+        delivery: isVideo ? 'view' : document.getElementById('lfDelivery').value,
+        watermark: isVideo ? false : document.getElementById('lfWm').value === '1',
         published: document.getElementById('lfPublish').checked,
         published_at: document.getElementById('lfPublish').checked ? new Date().toISOString() : null
       };
@@ -2947,11 +3015,13 @@
 
       btn.disabled = false;
       if (!msg.textContent.startsWith('자료는 올렸지만')) msg.textContent = '';
-      toast('자료를 올렸어요');
+      toast(isVideo ? '영상을 등록했어요' : '자료를 올렸어요');
       document.getElementById('lfTitle').value = '';
       document.getElementById('lfSummary').value = '';
       document.getElementById('lfPw').value = '';
       document.getElementById('lfFile').value = '';
+      document.getElementById('lfUrl').value = '';
+      document.getElementById('lfDur').value = '';
       loadLabFiles();
     });
 

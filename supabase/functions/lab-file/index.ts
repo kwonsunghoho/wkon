@@ -18,8 +18,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb, degrees } from "npm:pdf-lib@1.17.1";
 
-const FN_VERSION = "2026-08-01a";
-const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit"];
+const FN_VERSION = "2026-08-01b";
+const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url"];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -132,7 +132,9 @@ Deno.serve(async (req) => {
     }
 
     // ── 3. 열람 방식 — 화면 전용 자료를 다운로드로 요청해도 서버가 막는다
-    const wantDownload = body.mode !== "view";
+    // 외부 링크(영상관 유튜브)는 애초에 받을 파일이 없으므로 늘 '열람'이다
+    const isLink = !!res.external_url;
+    const wantDownload = !isLink && body.mode !== "view";
     if (wantDownload && res.delivery === "view") {
       return json({
         error: "이 자료는 화면에서만 볼 수 있어요.",
@@ -180,7 +182,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 5. 파일 꺼내기
+    // ── 5-a. 외부 링크(유튜브) — 회원·비밀번호를 통과한 뒤에만 링크를 넘긴다.
+    //         ⚠️ 워터마크를 찍을 수 없다(우리 파일이 아니다). 링크가 한 번 새면 그걸로
+    //            열리므로, 영상은 유튜브 쪽 '미등록' 설정과 이 기록이 유일한 방어다.
+    if (isLink) {
+      await admin.from("lab_downloads").insert({
+        resource_id: res.id,
+        user_id: user.id,
+        kind: "view",
+        ua: req.headers.get("user-agent") ?? null,
+      });
+      return json({
+        ok: true,
+        url: res.external_url,
+        external: true,
+        title: res.title,
+        mode: "view",
+        watermarked: false,
+      });
+    }
+
+    // ── 5-b. 파일 꺼내기
     const isPdf = (res.file_ext || "").toLowerCase() === "pdf" ||
       res.storage_path.toLowerCase().endsWith(".pdf");
     let signPath = res.storage_path as string;

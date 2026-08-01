@@ -361,6 +361,14 @@
   }
 
   var ICON_DOC = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>';
+  // 영상 항목 — 썸네일은 쓰지 않는다(유튜브 썸네일 주소에 영상 id 가 들어 있어 링크를 노출한 것과 같다)
+  var ICON_PLAY = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>';
+  function fmtDur(sec) {
+    if (!sec) return '';
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return h ? (h + ':' + p(m) + ':' + p(s)) : (m + ':' + p(s));
+  }
   var ICON_LOCK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   var ICON_EYE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 
@@ -392,14 +400,15 @@
     $('shEmpty').hidden = true;
 
     $('shList').innerHTML = list.map(function (r) {
-      var mark = r.needs_password ? ICON_LOCK : (r.delivery === 'view' ? ICON_EYE : '');
+      var mark = r.needs_password ? ICON_LOCK : ((r.delivery === 'view' && !r.is_link) ? ICON_EYE : '');
       var bits = [];
       if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
       if (r.doc_type) bits.push(esc(r.doc_type));
-      if (r.delivery === 'view') bits.push('화면 열람');
+      if (r.is_link) bits.push('영상' + (r.duration_sec ? ' ' + fmtDur(r.duration_sec) : ''));
+      else if (r.delivery === 'view') bits.push('화면 열람');
       else if (r.file_ext) bits.push(String(r.file_ext).toUpperCase() + (r.file_size ? ' ' + fmtSize(r.file_size) : ''));
       return '<button class="doc" type="button" data-id="' + esc(r.id) + '">' +
-        '<span class="doc-ico">' + ICON_DOC + '</span>' +
+        '<span class="doc-ico">' + (r.is_link ? ICON_PLAY : ICON_DOC) + '</span>' +
         '<span class="doc-txt">' +
           '<span class="doc-tit">' + esc(r.title) + '</span>' +
           (r.summary ? '<span class="doc-sum">' + esc(r.summary) + '</span>' : '') +
@@ -466,7 +475,7 @@
     window.MONC.sb.functions.invoke('lab-file', {
       body: {
         resourceId: row.id,
-        mode: row.delivery === 'view' ? 'view' : 'download',
+        mode: (row.is_link || row.delivery === 'view') ? 'view' : 'download',
         password: password || ''
       }
     }).then(function (res) {
@@ -493,7 +502,7 @@
 
       $('shToast').hidden = true;
       if (sheetKind === 'pw') closeSheet();
-      // 서명 URL 은 60초짜리 — 새 창에서 바로 연다(다운로드/열람 모두 브라우저가 처리)
+      // 파일은 60초짜리 서명 URL, 영상은 유튜브 링크 — 둘 다 새 창에서 연다
       window.open(d.url, '_blank', 'noopener');
       if (d.watermarked) toast('받으신 분 정보가 표시된 파일이에요.', 3200);
     }).catch(function () {
