@@ -131,6 +131,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - **`tokens.css` 맨 아래 '팔레트 오버라이드' 블록 삭제 금지**(실사고 — CSS 변수는 미정의여도 에러 없이 글자만 사라진다). 큰 블록을 지웠으면 `var(--x)` 미정의 사용처를 훑는다. `background-clip:text` 로 글자를 칠하지 말 것(실패 모드가 '글자 없음').
 - CSS 를 크게 손댔으면 **주석 짝(`/* */`) 균형을 센다** — 주석 안 클래스 나열의 별표+슬래시가 규칙 하나를 조용히 삼킨 실사고 2건.
 - **nav 는 `nav.js`+`nav.css` 전 페이지 공용** — 페이지에 nav 마크업 복사 금지(admin·login·onboarding 은 일부러 제외). 메뉴 항목·현재 위치는 `nav.js` 의 배열·표에서만 고친다.
+- **새 페이지를 만들면 `<title>` 아래 og·twitter 메타 블록을 복사해 넣는다**(다른 페이지 head 에서 그대로 가져와 url·title·description만 교체). 카톡·DM 링크 미리보기용이라 **크롤러가 JS 를 안 돌린다 — nav 처럼 스크립트로 심으면 무효**다. 빠지면 로고 없이 제목만 뜬다(2026-08-01 실사고 — index 말고 28개 페이지 전부 비어 있었다).
 
 ## 기능별 문서(소스오브트루스)
 
