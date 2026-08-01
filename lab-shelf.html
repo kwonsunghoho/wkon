@@ -140,6 +140,8 @@
     border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 1px 6px;
   }
   .tag.new { background: var(--action); color: var(--action-ink); border-color: transparent; }
+  /* 값이 붙은 영상 — 채운 네이비로 눈에 띄게(무료 영상엔 아무 태그도 안 붙는다) */
+  .tag.pay { background: var(--accent-dark); color: var(--action-ink); border-color: transparent; }
   .doc-mark { flex: none; margin-top: 9px; color: var(--text-dim); }
 
   /* ── 영상 카드 — 썸네일이 커야 누른다(오너: "이러면 아무도 안보지") ──
@@ -494,6 +496,12 @@
           (r.summary ? '<span class="vid-sum">' + esc(r.summary) + '</span>' : '') +
           '<span class="vid-sub">' +
             (isNew(r.published_at) ? '<span class="tag new">NEW</span>' : '') +
+            // 값이 붙은 영상도 목록에서 값이 보여야 한다(자료 줄과 같은 규칙 — 무료는 표시 없음).
+            // ⚠️ 썸네일 위에 배지를 얹지 말 것(특강 커버 가격 배지 회귀 금지 · lectures.md).
+            (Number(r.price) > 0
+              ? (r.owned ? '<span class="tag">구매함</span>'
+                         : '<span class="tag pay num">' + fmtWon(r.price) + '</span>')
+              : '') +
             (r.needs_password ? '<span class="tag">비밀번호</span>' : '') +
             esc(bits.join(' · ')) +
             (r.published_at ? (bits.length ? ' · ' : '') + '<span class="num">' + fmtDate(r.published_at) + '</span>' : '') +
