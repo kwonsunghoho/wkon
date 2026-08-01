@@ -142,6 +142,23 @@
     .nw-bm .bm-on, .nw-bm.on .bm-off { display: none; }
     .nw-bm.on .bm-on { display: inline; }
 
+    /* 같은 날·같은 항공사 도배 접기(2026-08-01) — 보도자료 하나를 수십 곳이 받아쓰면 제목이
+       제각각이라 수집기의 중복 묶기(제목 유사도)로는 안 걸린다(실측: 부여군-에어로케이
+       업무협약 8건이 서로 유사도 0.06~0.29). ⚠️ 지우지 말고 화면에서만 접을 것 —
+       잘못 묶여도 펼치면 보이므로 멀쩡한 기사가 사라지지 않는다. */
+    .nw-fold-btn { appearance: none; cursor: pointer; display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--border-soft); background: transparent; color: var(--accent-ink); font: inherit; font-size: 13px; font-weight: 800; padding: 12px 16px; min-height: 44px; border-radius: 0 0 var(--radius-sm) var(--radius-sm); -webkit-tap-highlight-color: transparent; }
+    .nw-fold-btn:hover { background: var(--surface2); }
+    .nw-fold-btn:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; }
+    /* 두 라벨을 DOM에 두고 CSS로 토글 — 스크랩 버튼과 같은 방식 */
+    .nw-fold-btn .fd-open { display: none; }
+    .nw-fold-btn.open .fd-open { display: inline; }
+    .nw-fold-btn.open .fd-off { display: none; }
+    .nw-sublist { list-style: none; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .nw-sublist .nw-card { box-shadow: none; background: var(--surface2); }
+    .nw-sublist .nw-card:hover { transform: none; box-shadow: 0 4px 14px rgba(38,34,28,.10); }
+    .nw-sublist .nw-card-title { font-size: 14px; }
+    .nw-sublist .nw-link { padding: 13px 98px 12px 14px; }
+
     .nw-count { font-size: 13px; font-weight: 700; color: var(--text); opacity: .6; margin: 16px 2px 4px; }
     .nw-empty { text-align: center; padding: 60px 20px; color: var(--text); opacity: .6; font-size: 15px; }
     .nw-skeleton { height: 92px; border-radius: var(--radius-sm); background: var(--surface2); margin-bottom: 12px; }
@@ -456,20 +473,74 @@
       return q;
     }
 
-    function cardHtml(a) {
+    function cardHtml(a, group) {
       const scrapped = scrapByArticle.has(a.id);
       const chips =
         (a.airline ? `<span class="nw-tag">${esc(AIRLINE_LABEL[a.airline] || a.airline)}</span>` : '') +
         (a.topic ? `<span class="nw-tag nw-tag-topic">${esc(TOPIC_LABEL[a.topic] || a.topic)}</span>` : '');
-      return `<li class="nw-card" data-id="${esc(a.id)}">
+      return `<li class="nw-card" data-id="${esc(a.id)}"${group ? ` data-group="${esc(group)}"` : ''}>
         <a class="nw-link" href="${esc(a.url)}" target="_blank" rel="noopener">
           <div class="nw-card-title">${esc(a.title)}</div>
           <div class="nw-card-meta">${chips}<span>${esc(a.source || '')}</span><span>${fmtDate(a.published_at)}</span></div>
         </a>
         <button class="nw-bm${scrapped ? ' on' : ''}" type="button" data-id="${esc(a.id)}"
-          aria-label="${scrapped ? '스크랩 해제' : '스크랩'}" aria-pressed="${scrapped}">${BM_SVG}</button>
+          aria-label="${scrapped ? '스크랩 해제' : '스크랩'}" aria-pressed="${scrapped}">${BM_SVG}</button>${group ? `
+        <button class="nw-fold-btn" type="button" hidden aria-expanded="false"><span class="fd-off">같은 소식 <b>0</b>건 더 보기</span><span class="fd-open">접기</span></button>
+        <ul class="nw-sublist" hidden></ul>` : ''}
       </li>`;
     }
+
+    // ── 같은 소식 접기 ────────────────────────────────────────────────────────
+    // 같은 날 + 같은 항공사 + 제목이 어느 정도 겹치면 한 소식으로 보고 뒤엣것을 접는다.
+    // ⚠️ 날짜·항공사만으로 묶지 말 것 — 실측에서 같은 날 대한항공 기사 26건이 한 묶음이 됐고,
+    //    그 안에 '기내식 자회사 지분 인수 연기'·'MRO 아웃소싱 확대'처럼 면접 재료가 되는
+    //    별개 사건이 '출국 팁' 도배 밑으로 숨었다.
+    // ⚠️ 주제(topic)는 조건에 넣지 말 것 — 같은 사건인데 언론사마다 service/policy 로
+    //    갈려 들어온다(에어서울 결항 7건 실측).
+    // ⚠️ 항공사 미분류(airline=null)는 묶지 않는다 — 업계 일반 기사라 같은 날이어도 다른 사건이다.
+    // 임계값이 수집기(0.5)보다 훨씬 낮은 건 실패 비용이 다르기 때문이다 — 수집기는 지우지만
+    // 여기는 접을 뿐이라, 잘못 묶여도 펼치면 그대로 보인다.
+    const FOLD_SIM = 0.15;
+    const groupKey = a => (a.published_at || '').slice(0, 10) + '|' + (a.airline || '');
+    const foldTok = t => new Set(t.replace(/\[[^\]]{0,20}\]/g, ' ')
+      .replace(/[^가-힣A-Za-z0-9]+/g, ' ').split(' ').filter(w => w.length >= 2));
+    function foldSim(a, b) {
+      if (!a.size || !b.size) return 0;
+      let inter = 0;
+      for (const w of a) if (b.has(w)) inter++;
+      return inter / (a.size + b.size - inter);
+    }
+    const groupHeads = new Map();            // "날짜|항공사" → [{el, tok}] (펼쳐 둔 대표 카드들)
+
+    function appendRows(rows) {
+      for (const a of rows) {
+        const key = a.airline ? groupKey(a) : '';
+        const tok = foldTok(a.title);
+        const heads = key ? (groupHeads.get(key) || []) : [];
+        const hit = heads.find(h => foldSim(h.tok, tok) >= FOLD_SIM);
+        if (!hit) {
+          listEl.insertAdjacentHTML('beforeend', cardHtml(a, key));
+          if (key) { heads.push({ el: listEl.lastElementChild, tok }); groupHeads.set(key, heads); }
+          continue;
+        }
+        const sub = hit.el.querySelector('.nw-sublist');
+        sub.insertAdjacentHTML('beforeend', cardHtml(a));
+        const btn = hit.el.querySelector('.nw-fold-btn');
+        btn.hidden = false;
+        btn.querySelector('.fd-off b').textContent = sub.children.length;
+      }
+    }
+
+    // 펼치기/접기 — 스크랩 토글은 body 위임이라 접힌 카드에서도 그대로 동작한다.
+    listEl.addEventListener('click', e => {
+      const btn = e.target.closest('.nw-fold-btn');
+      if (!btn) return;
+      const sub = btn.closest('.nw-card').querySelector('.nw-sublist');
+      const open = sub.hidden;
+      sub.hidden = !open;
+      btn.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+    });
 
     async function loadMore() {
       moreBtn.disabled = true;
@@ -479,7 +550,7 @@
       const rows = data || [];
       if (!offset && !rows.length) { emptyEl.hidden = false; listEl.innerHTML = ''; moreBtn.hidden = true; return; }
       emptyEl.hidden = true;
-      listEl.insertAdjacentHTML('beforeend', rows.map(cardHtml).join(''));
+      appendRows(rows);
       offset += rows.length;
       exhausted = rows.length < PAGE;
       moreBtn.hidden = exhausted;
@@ -489,6 +560,7 @@
 
     function resetAndLoad() {
       offset = 0; exhausted = false; listEl.innerHTML = ''; countEl.textContent = '';
+      groupHeads.clear();                       // 필터가 바뀌면 묶음 계산도 처음부터
       moreBtn.hidden = true; emptyEl.hidden = true;
       loadMore();
     }
