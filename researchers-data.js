@@ -8,6 +8,9 @@
    ⚠️ 연구원 정보를 페이지에 복사해 넣지 말 것 — nav 가 세 페이지에 복사돼
       자주 어긋났던 것과 같은 사고를 막으려고 이 파일 하나로 모았다.
    연구원 수를 화면에 쓸 땐 이 배열 길이가 원본이다(lab.html 허브 카드 '연구원 6명').
+   photoPos: 사진을 잘라 넣을 때의 초점(CSS object-position). 없으면 'center 18%'.
+   ⚠️ researchers.html 은 같은 값을 자기 CSS 에 하드코딩해 두고 있다(확정 디자인이라
+      건드리지 않았다) — 값을 바꾸면 두 곳을 같이 본다.
    ══════════════════════════════════════════════════════════════════════════ */
 window.MONC_RESEARCHERS = [
   {
@@ -69,6 +72,7 @@ window.MONC_RESEARCHERS = [
     name:'고은지',
     position:'브랜딩 · 스피치 · 라이브커머스 전문가',
     photo:'images/instructor-koh.webp',
+    photoPos:'60% 50%',
     tags:['쇼호스트','MC'],
     bio:'<strong>차별화된 나만의 브랜딩</strong>부터 스피치까지 현장에서 쌓은 경험을 전합니다.',
     stats:[
