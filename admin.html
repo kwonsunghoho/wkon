@@ -769,6 +769,11 @@
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
+        <!-- 수정 중일 때만 뜨는 머리 — 지금 새로 올리는 중인지 고치는 중인지 헷갈리지 않게 -->
+        <p id="lrEditBar" hidden style="margin:0 0 2px;padding:9px 12px;border-radius:var(--radius-xs);background:var(--action-tint);color:var(--accent-ink);font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span id="lrEditWho"></span>
+          <button class="btn" type="button" id="lrCancel" style="margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;">새로 올리기로 돌아가기</button>
+        </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
           <div class="field"><label>서가</label>
             <select id="lrShelf">
@@ -811,7 +816,10 @@
             </select></div>
         </div>
         <!-- 서가가 '영상관'이면 파일 대신 링크를 받는다(lrKindSync 가 토글) -->
-        <div class="field" id="lrFileWrap"><label>파일</label><input id="lrFile" type="file"></div>
+        <div class="field" id="lrFileWrap">
+          <label>파일 <span id="lrFileHint" hidden style="font-weight:600;color:var(--text-muted);">— 그대로 두면 기존 파일을 유지해요</span></label>
+          <input id="lrFile" type="file">
+        </div>
         <div id="lrLinkWrap" hidden>
           <div style="display:grid;grid-template-columns:1fr 130px;gap:10px;">
             <div class="field"><label>유튜브 링크</label><input id="lrUrl" placeholder="https://youtu.be/… 또는 https://www.youtube.com/watch?v=…"></div>
@@ -834,13 +842,19 @@
         <p id="lrMsg" hidden style="margin-top:2px;padding:10px 12px;border-radius:var(--radius-xs);font-size:13.5px;font-weight:700;line-height:1.6;white-space:pre-wrap;"></p>
       </form>
 
+      <!-- 서가 필터 — 다섯 서가가 한 목록에 섞이면 관리가 안 된다(오너 지적 2026-08-01) -->
+      <div class="nw-filter-row" id="lrShelfBar" style="margin-top:22px;display:flex;gap:8px;flex-wrap:wrap;"></div>
       <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
 
-      <!-- 열람 이력 — 유출이 의심될 때 '누가 언제 무엇을 받았는지' 보는 곳 -->
-      <h3 style="margin:26px 0 8px;font-size:15px;font-weight:800;">열람 이력</h3>
+      <!-- 열람 이력 — 유출이 의심될 때 '어떤 자료를 누가 열었는지' 보는 곳.
+           자료 행의 [이력] 버튼이 이 목록을 그 자료로 좁힌다. -->
+      <h3 style="margin:26px 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span id="lrLogTitle">열람 이력</span>
+        <button class="btn" type="button" id="lrLogAll" hidden style="border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:700;">전체 보기</button>
+      </h3>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
-        최근 200건입니다. <b>받기</b>는 파일을 내려받은 기록, <b>열람</b>은 화면으로 본 기록,
-        <b>비번 실패</b>는 비밀번호를 틀린 기록이에요. 같은 회원이 짧은 시간에 여러 자료를 몰아 받으면 여기서 보입니다.
+        <b>받기</b>는 파일을 내려받은 기록, <b>열람</b>은 화면으로 본 기록, <b>비번 실패</b>는 비밀번호를 틀린 기록이에요.
+        자료별로 보려면 위 목록에서 <b>[이력]</b>을 누르세요.
       </p>
       <div class="round-list" id="labLogList"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -2810,6 +2824,17 @@
     }
     var LAB_AIR_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
 
+    /* 목록 상태 — 서가 필터와 '이력을 보고 있는 자료'를 기억한다.
+       ⚠️ 다섯 서가를 한 목록에 쏟으면 관리가 안 된다(오너 지적 2026-08-01):
+          "영상관, 항공사 자료실 이렇게 한 방에 다 나오면 정리가 안 되지". */
+    let _labRows = [];
+    let _labShelf = 'all';
+    let _labLogFor = null;      // 이력을 좁혀 볼 자료 id (null 이면 전체)
+    let _labCount = {};         // 자료별 열람 집계 {id: {download, view, fail}}
+    let _labSales = {};         // 자료별 판매 집계 {id: {purchase_count, revenue, download_count}}
+    let _labLogs = [];
+    let _labEditId = null;      // 수정 중인 자료 id (null 이면 새로 올리기)
+
     async function loadLabFiles() {
       const listEl = document.getElementById('labList');
       if (!listEl) return;
@@ -2825,52 +2850,121 @@
           + '</div>';
         return;
       }
-      const rows = data || [];
+      _labRows = data || [];
+
+      // 판매 현황 — 유료 마이그레이션 전이면 조용히 건너뛴다(가격 칸만 안 보인다)
+      _labSales = {};
+      try {
+        const sres = await MONC.sb.rpc('lab_sales_summary');
+        (sres.data || []).forEach(x => { _labSales[x.resource_id] = x; });
+      } catch (e) { /* 미적용 환경 */ }
+
+      await loadLabLogs();        // 집계를 먼저 구해야 목록 행에 '받기 N' 을 적을 수 있다
+      renderLabShelfBar();
+      renderLabList();
+    }
+
+    /* 서가 칩 — 각 칩에 그 서가의 자료 수를 적는다(빈 서가도 보여야 '없다'를 안다) */
+    function renderLabShelfBar() {
+      const bar = document.getElementById('lrShelfBar');
+      if (!bar) return;
+      const n = {};
+      _labRows.forEach(r => { n[r.shelf] = (n[r.shelf] || 0) + 1; });
+      const chips = [['all', '전체', _labRows.length]]
+        .concat(Object.keys(LAB_SHELF_LABEL).map(k => [k, LAB_SHELF_LABEL[k], n[k] || 0]));
+      bar.innerHTML = chips.map(c =>
+        '<button class="nw-chip lr-shelf' + (c[0] === _labShelf ? ' active' : '') + '" type="button" data-shelf="' + c[0] + '">'
+        + esc(c[1]) + ' ' + c[2] + '</button>'
+      ).join('');
+      bar.querySelectorAll('.lr-shelf').forEach(b => b.addEventListener('click', () => {
+        _labShelf = b.dataset.shelf;
+        renderLabShelfBar(); renderLabList();
+      }));
+    }
+
+    function renderLabList() {
+      const listEl = document.getElementById('labList');
+      const rows = _labShelf === 'all' ? _labRows : _labRows.filter(r => r.shelf === _labShelf);
       if (!rows.length) {
-        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 자료가 없습니다. 위에서 올리세요.</div>';
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
+          + (_labRows.length ? '이 서가에는 아직 자료가 없습니다.' : '등록된 자료가 없습니다. 위에서 올리세요.')
+          + '</div>';
         return;
       }
+      // '전체'일 땐 서가별로 묶어 소제목을 단다 — 섞여 나오면 눈으로 못 가른다
+      const groups = _labShelf === 'all'
+        ? Object.keys(LAB_SHELF_LABEL).map(k => [k, rows.filter(r => r.shelf === k)]).filter(g => g[1].length)
+        : [[_labShelf, rows]];
 
-      // 판매 현황 — 유료 마이그레이션(20260801150000) 전이면 조용히 건너뛴다.
-      const sales = {};
-      try {
-        const s = await MONC.sb.rpc('lab_sales_summary');
-        (s.data || []).forEach(x => { sales[x.resource_id] = x; });
-      } catch (e) { /* 미적용 환경 — 가격·판매 칸만 안 보인다 */ }
+      listEl.innerHTML = groups.map(g =>
+        (_labShelf === 'all'
+          ? '<div style="margin:16px 0 4px;font-size:13px;font-weight:800;color:var(--accent-ink);">'
+            + esc(LAB_SHELF_LABEL[g[0]] || g[0])
+            + ' <span style="color:var(--text-dim);font-weight:700;">' + g[1].length + '</span></div>'
+          : '')
+        + g[1].map(labRowHtml).join('')
+      ).join('');
 
-      listEl.innerHTML = rows.map(r => {
-        const bits = [LAB_SHELF_LABEL[r.shelf] || r.shelf];
-        // 값이 붙은 자료는 맨 앞에 값을 보여준다(무료는 표시하지 않는다)
-        if (Number(r.price) > 0) bits.unshift('💰 ' + Number(r.price).toLocaleString('ko-KR') + '원');
-        if (r.airline) bits.push(LAB_AIR_LABEL[r.airline] || r.airline);
-        if (r.doc_type) bits.push(r.doc_type);
-        if (r.external_url) {
-          bits.push('유튜브');
-          if (r.duration_sec) bits.push(fmtDur(r.duration_sec));
-        } else {
-          bits.push(r.delivery === 'view' ? '화면 열람' : '파일 받기');
-          if (r.watermark) bits.push('워터마크');
-        }
-        if (r.access === 'password') bits.push('🔒 비밀번호');
-        const sl = sales[r.id];
-        const sold = (sl && Number(sl.purchase_count) > 0)
-          ? `<div class="ri-sub" style="color:var(--accent-ink);font-weight:700;">판매 ${sl.purchase_count}건 · ${Number(sl.revenue).toLocaleString('ko-KR')}원 · 열람 ${sl.download_count}회</div>`
-          : '';
-        return `
-        <div class="round-item" data-id="${r.id}" style="${r.published ? '' : 'opacity:.55;'}">
-          <div>
-            <div class="ri-main">${esc(r.title)}</div>
-            <div class="ri-sub">${esc(bits.join(' · '))}${r.published ? '' : ' · 비공개'}${r.published_at ? ' · ' + String(r.published_at).slice(0, 10) : ''}</div>
-            ${sold}
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-            <button class="ri-del lab-price" data-id="${r.id}" data-price="${Number(r.price) || 0}">가격</button>
-            <button class="ri-del lab-pw" data-id="${r.id}">비밀번호</button>
-            <button class="ri-del lab-pub" data-id="${r.id}" data-pub="${r.published ? 1 : 0}">${r.published ? '숨기기' : '공개'}</button>
-            <button class="ri-del lab-del" data-id="${r.id}" data-path="${esc(r.storage_path || '')}">삭제</button>
-          </div>
-        </div>`;
-      }).join('');
+      bindLabRowButtons(listEl);
+    }
+
+    function labRowHtml(r) {
+      const bits = [];
+      // 값이 붙은 자료는 맨 앞에 값을 보여준다(무료는 표시하지 않는다)
+      if (Number(r.price) > 0) bits.push('💰 ' + Number(r.price).toLocaleString('ko-KR') + '원');
+      if (r.airline) bits.push(LAB_AIR_LABEL[r.airline] || r.airline);
+      if (r.doc_type) bits.push(r.doc_type);
+      if (r.external_url) {
+        bits.push('유튜브');
+        if (r.duration_sec) bits.push(fmtDur(r.duration_sec));
+      } else {
+        bits.push(r.delivery === 'view' ? '화면 열람' : '파일 받기');
+        if (r.watermark) bits.push('워터마크');
+      }
+      if (r.access === 'password') bits.push('🔒 비밀번호');
+      if (!r.published) bits.push('비공개');
+      if (r.published_at) bits.push(String(r.published_at).slice(0, 10));
+
+      // 열람 요약 — 이 자료를 몇 번 받아 갔는지가 행에서 바로 보여야 한다
+      const c = _labCount[r.id] || {};
+      const hits = [];
+      // 유료 자료는 판매 실적을 먼저 본다(돈이 걸린 숫자가 앞)
+      const sl = _labSales[r.id];
+      if (sl && Number(sl.purchase_count) > 0) {
+        hits.push('판매 ' + sl.purchase_count + '건 · ' + Number(sl.revenue).toLocaleString('ko-KR') + '원');
+      }
+      if (c.download) hits.push('받기 ' + c.download);
+      if (c.view) hits.push('열람 ' + c.view);
+      if (c.fail) hits.push('비번실패 ' + c.fail);
+
+      return '<div class="round-item" data-id="' + r.id + '" style="' + (r.published ? '' : 'opacity:.55;') + '">'
+        + '<div>'
+          + '<div class="ri-main">' + esc(r.title) + '</div>'
+          + '<div class="ri-sub">' + esc(bits.join(' · ')) + '</div>'
+          + (hits.length
+              ? '<div class="ri-sub" style="color:var(--accent-ink);font-weight:700;">' + esc(hits.join(' · ')) + '</div>'
+              : '')
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
+          + '<button class="ri-del lab-edit" data-id="' + r.id + '" style="color:var(--action-dark);border-color:var(--action)">수정</button>'
+          + '<button class="ri-del lab-log" data-id="' + r.id + '">이력' + (hits.length ? '' : ' 0') + '</button>'
+          + '<button class="ri-del lab-price" data-id="' + r.id + '" data-price="' + (Number(r.price) || 0) + '">가격</button>'
+          + '<button class="ri-del lab-pw" data-id="' + r.id + '">비밀번호</button>'
+          + '<button class="ri-del lab-pub" data-id="' + r.id + '" data-pub="' + (r.published ? 1 : 0) + '">' + (r.published ? '숨기기' : '공개') + '</button>'
+          + '<button class="ri-del lab-del" data-id="' + r.id + '" data-path="' + esc(r.storage_path || '') + '">삭제</button>'
+        + '</div>'
+      + '</div>';
+    }
+
+    function bindLabRowButtons(listEl) {
+      listEl.querySelectorAll('.lab-edit').forEach(b => b.addEventListener('click', () => labEditStart(b.dataset.id)));
+
+      // 이 자료의 열람 이력만 보기
+      listEl.querySelectorAll('.lab-log').forEach(b => b.addEventListener('click', () => {
+        _labLogFor = b.dataset.id;
+        renderLabLogs();
+        document.getElementById('labLogList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
 
       // 가격 고치기 — 값은 언제든 바꾼다(재배포 불필요).
       // ⚠️ 이미 산 회원의 결제액은 lab_purchases.amount 가 따로 보존한다 — 값을 올려도 과거 영수증은 그대로다.
@@ -2908,8 +3002,6 @@
         toast(on ? '공개했어요' : '숨겼어요'); loadLabFiles();
       }));
 
-      // 이미 올린 영상에 썸네일을 붙이거나 다시 받아온다
-
       // 삭제는 파일까지 지운다 — 남겨두면 저장소에 유실된 파일이 쌓인다
       listEl.querySelectorAll('.lab-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('자료와 파일을 함께 지울까요? 되돌릴 수 없습니다.')) return;
@@ -2922,51 +3014,138 @@
           return;
         }
         if (b.dataset.path) await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
-        toast('삭제됐어요'); loadLabFiles(); loadLabLogs();
+        if (_labEditId === b.dataset.id) labEditCancel();
+        if (_labLogFor === b.dataset.id) _labLogFor = null;
+        toast('삭제됐어요'); loadLabFiles();
       }));
-
-      loadLabLogs(rows);
     }
 
     /* 열람 이력 — lab_downloads. 회원 이름은 이미 로드된 members 에서 붙인다(추가 조회 없이).
        ⚠️ kind='fail' 은 비밀번호를 틀린 기록이다 — 지우지 말 것(잠금 판정도 이 행을 센다). */
     const LAB_KIND = { download: '받기', view: '열람', fail: '비번 실패' };
-    async function loadLabLogs(resRows) {
+
+    async function loadLabLogs() {
       const el = document.getElementById('labLogList');
       if (!el) return;
       const { data, error } = await MONC.sb.from('lab_downloads')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) {
+        _labLogs = []; _labCount = {};
         el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
           + (error.code === 'PGRST205' ? '기록 테이블이 아직 없어요.' : '기록을 읽지 못했어요: ' + esc(error.message))
           + '</div>';
         return;
       }
-      const logs = data || [];
+      _labLogs = data || [];
+      _labCount = {};
+      _labLogs.forEach(l => {
+        const c = _labCount[l.resource_id] || (_labCount[l.resource_id] = {});
+        c[l.kind] = (c[l.kind] || 0) + 1;
+      });
+      renderLabLogs();
+    }
+
+    function renderLabLogs() {
+      const el = document.getElementById('labLogList');
+      const titleEl = document.getElementById('lrLogTitle');
+      const allBtn = document.getElementById('lrLogAll');
+      if (!el) return;
+
+      const target = _labLogFor ? _labRows.filter(r => r.id === _labLogFor)[0] : null;
+      const logs = _labLogFor ? _labLogs.filter(l => l.resource_id === _labLogFor) : _labLogs;
+
+      titleEl.textContent = target ? ('열람 이력 — ' + target.title) : '열람 이력';
+      allBtn.hidden = !_labLogFor;
+
       if (!logs.length) {
-        el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">아직 열람 기록이 없습니다.</div>';
+        el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
+          + (_labLogFor ? '이 자료를 아직 아무도 열지 않았습니다.' : '아직 열람 기록이 없습니다.')
+          + '</div>';
         return;
       }
+
       const titleOf = {};
-      (resRows || []).forEach(r => { titleOf[r.id] = r.title; });
-      const nameOf = {};
-      (typeof members !== 'undefined' && members ? members : []).forEach(m => { nameOf[m.id] = m.name || m.email || ''; });
+      _labRows.forEach(r => { titleOf[r.id] = r.title; });
+      const nameOf = {}, mailOf = {};
+      (typeof members !== 'undefined' && members ? members : []).forEach(m => {
+        nameOf[m.id] = m.name || ''; mailOf[m.id] = m.email || '';
+      });
 
       el.innerHTML = logs.map(l => {
-        const who = nameOf[l.user_id] || (String(l.user_id).slice(0, 8) + '…');
-        const what = titleOf[l.resource_id] || '(삭제된 자료)';
+        const nm = nameOf[l.user_id], mail = mailOf[l.user_id];
+        const who = nm || mail || (String(l.user_id).slice(0, 8) + '…');
+        const sub = (nm && mail) ? mail : '';
         const when = new Date(l.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        return `
-        <div class="round-item"${l.kind === 'fail' ? ' style="opacity:.7"' : ''}>
-          <div>
-            <div class="ri-main">${esc(who)} · ${esc(LAB_KIND[l.kind] || l.kind)}</div>
-            <div class="ri-sub">${esc(what)} · ${esc(when)}</div>
-          </div>
-        </div>`;
+        // 자료별로 좁혀 볼 땐 제목을 반복하지 않는다 — 누가 언제인지가 주인공이다
+        return '<div class="round-item"' + (l.kind === 'fail' ? ' style="opacity:.7"' : '') + '>'
+          + '<div>'
+            + '<div class="ri-main">' + esc(who) + ' · ' + esc(LAB_KIND[l.kind] || l.kind) + '</div>'
+            + '<div class="ri-sub">'
+              + (_labLogFor ? '' : esc(titleOf[l.resource_id] || '(삭제된 자료)') + ' · ')
+              + (sub ? esc(sub) + ' · ' : '')
+              + esc(when)
+            + '</div>'
+          + '</div>'
+        + '</div>';
       }).join('');
     }
+
+    document.getElementById('lrLogAll').addEventListener('click', () => {
+      _labLogFor = null; renderLabLogs();
+    });
+
+    /* ── 수정 ──────────────────────────────────────────────────────────────
+       오너 지적: "한 번 올리면 수정이 안 돼."
+       같은 폼을 재사용한다 — _labEditId 가 있으면 insert 대신 update.
+       ⚠️ 파일은 새로 고르지 않으면 그대로 둔다(교체하면 옛 파일을 지운다).
+       ⚠️ 비밀번호 칸은 수정 모드에서 비워 둔다 — 해시라 되읽을 수 없다. 비운 채 저장하면
+          기존 비밀번호가 유지된다(바꾸거나 없애려면 행의 [비밀번호] 버튼). */
+    function labEditStart(id) {
+      const r = _labRows.filter(x => x.id === id)[0];
+      if (!r) return;
+      _labEditId = id;
+      const F = document.getElementById('labForm');
+      const set = (k, v) => { const el = F.querySelector('#' + k); if (el) el.value = (v == null ? '' : v); };
+      set('lrShelf', r.shelf);
+      set('lrAirline', r.airline || '');
+      set('lrType', r.doc_type || '');
+      set('lrTitle', r.title || '');
+      set('lrSummary', r.summary || '');
+      set('lrDelivery', r.delivery || 'download');
+      set('lrWm', r.watermark ? '1' : '0');
+      set('lrPw', '');
+      set('lrUrl', r.external_url || '');
+      set('lrDur', r.duration_sec ? fmtDur(r.duration_sec) : '');
+      set('lrPrice', Number(r.price) || 0);
+      F.querySelector('#lrFile').value = '';
+      F.querySelector('#lrPublish').checked = !!r.published;
+      lrKindSync();
+
+      document.getElementById('lrEditBar').hidden = false;
+      document.getElementById('lrEditWho').textContent = '수정 중 — ' + r.title;
+      document.getElementById('lrFileHint').hidden = false;
+      document.getElementById('lrSubmit').textContent = '수정 저장';
+      lrSay('', '');
+      F.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function labEditCancel() {
+      _labEditId = null;
+      const F = document.getElementById('labForm');
+      ['lrTitle', 'lrSummary', 'lrPw', 'lrFile', 'lrUrl', 'lrDur', 'lrType'].forEach(k => {
+        const el = F.querySelector('#' + k); if (el) el.value = '';
+      });
+      const priceEl = F.querySelector('#lrPrice'); if (priceEl) priceEl.value = '0';   // 값은 매번 다시 정한다
+      F.querySelector('#lrPublish').checked = true;
+      document.getElementById('lrEditBar').hidden = true;
+      document.getElementById('lrFileHint').hidden = true;
+      document.getElementById('lrSubmit').textContent = '자료 올리기';
+      lrSay('', '');
+    }
+
+    document.getElementById('lrCancel').addEventListener('click', labEditCancel);
 
     /* 폼 메시지 — 오류는 붉게, 눈에 띄게. 회색 작은 글씨면 못 보고 '그냥 안 올라간다'가 된다. */
     function lrSay(text, kind) {
@@ -3100,8 +3279,12 @@
         dur = durToSec(fv('lrDur'));
         btn.disabled = true; lrSay('등록 중…', 'info');
       } else {
-        if (!file) { lrSay('파일을 고르세요.', 'err'); return; }
-        btn.disabled = true; lrSay('올리는 중…', 'info');
+        // 새로 올릴 때만 파일이 필수다 — 수정 중엔 안 고르면 기존 파일을 그대로 둔다
+        if (!file && !_labEditId) { lrSay('파일을 고르세요.', 'err'); return; }
+        btn.disabled = true; lrSay(_labEditId ? '저장 중…' : '올리는 중…', 'info');
+      }
+
+      if (!isVideo && file) {
         ext = (file.name.split('.').pop() || '').toLowerCase();
         size = file.size;
         // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
@@ -3121,57 +3304,67 @@
         title,
         summary: fv('lrSummary').trim() || null,
         doc_type: fv('lrType').trim() || null,
-        storage_path: path,
         external_url: url,
         duration_sec: dur,
-        file_ext: ext,
-        file_size: size,
         delivery: isVideo ? 'view' : fv('lrDelivery'),
         watermark: isVideo ? false : fv('lrWm') === '1',
-        published: !!F.querySelector('#lrPublish').checked,
-        published_at: F.querySelector('#lrPublish').checked ? new Date().toISOString() : null
+        published: !!F.querySelector('#lrPublish').checked
       };
       // 값(2026-08-01). ⚠️ 무료(0)면 아예 넣지 않는다 — 유료 마이그레이션
-      // (20260801150000) 전 환경에서 없는 컬럼을 보내면 등록 자체가 막힌다.
+      // (20260801150000_lab_paid) 전 환경에서 없는 컬럼을 보내면 저장 자체가 막힌다.
       const priceVal = Math.floor(Number(String(fv('lrPrice')).replace(/[^0-9]/g, '')) || 0);
       if (priceVal > 0) row.price = priceVal;
 
-      const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
-      if (ins.error) {
-        btn.disabled = false;
-        lrSay(/price/.test(ins.error.message || '')
-          ? '가격 칸이 아직 없어요 — 마이그레이션(20260801150000_lab_paid.sql)을 먼저 실행하세요.\n가격을 0 으로 두면 지금도 올릴 수 있어요.'
-          : '자료 등록이 막혔어요: ' + ins.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
-        return;
-      }
-      if (pw && ins.data && ins.data.id) {
-        const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: ins.data.id, p_pw: pw });
-        if (pwErr) pwFailed = '자료는 올렸지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
+      // 파일을 새로 고른 경우에만 경로를 바꾼다 — 수정 중 파일을 안 고르면 기존 것을 유지
+      if (path) { row.storage_path = path; row.file_ext = ext; row.file_size = size; }
+
+      let savedId = _labEditId;
+
+      if (_labEditId) {
+        // 공개로 바꾸는 순간에만 게시 시각을 새로 찍는다(이미 공개면 그대로 둔다)
+        const before = _labRows.filter(x => x.id === _labEditId)[0] || {};
+        if (row.published && !before.published) row.published_at = new Date().toISOString();
+        if (!row.published) row.published_at = null;
+        row.updated_at = new Date().toISOString();
+
+        const upd = await MONC.sb.from('lab_resources').update(row).eq('id', _labEditId);
+        if (upd.error) {
+          btn.disabled = false;
+          if (path) await MONC.sb.storage.from('lab-files').remove([path]);   // 방금 올린 새 파일을 되돌린다
+          lrSay(/price/.test(upd.error.message || '')
+            ? '가격 칸이 아직 없어요 — 마이그레이션(20260801150000_lab_paid.sql)을 먼저 실행하세요.'
+            : '수정 저장이 막혔어요: ' + upd.error.message, 'err');
+          return;
+        }
+        // 파일을 교체했으면 옛 파일을 지운다 — 안 지우면 저장소에 유령 파일이 쌓인다
+        if (path && before.storage_path && before.storage_path !== path) {
+          await MONC.sb.storage.from('lab-files').remove([before.storage_path]);
+        }
+      } else {
+        row.published_at = row.published ? new Date().toISOString() : null;
+        const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
+        if (ins.error) {
+          btn.disabled = false;
+          if (path) await MONC.sb.storage.from('lab-files').remove([path]);
+          lrSay(/price/.test(ins.error.message || '')
+            ? '가격 칸이 아직 없어요 — 마이그레이션(20260801150000_lab_paid.sql)을 먼저 실행하세요.\n가격을 0 으로 두면 지금도 올릴 수 있어요.'
+            : '자료 등록이 막혔어요: ' + ins.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
+          return;
+        }
+        savedId = ins.data && ins.data.id;
       }
 
-      /* 영상은 썸네일을 자동으로 붙인다 — 서버가 유튜브에서 받아 우리 버킷에 복사한다.
-         ⚠️ 유튜브 썸네일 주소를 화면에서 바로 쓰지 않는 이유: 그 주소에 영상 id 가
-            들어 있어 목록에 노출하면 미등록 영상의 링크를 준 것과 같아진다. */
-      if (isVideo && ins.data && ins.data.id) {
-        lrSay('썸네일을 가져오는 중…', 'info');
-        const th = await MONC.sb.functions.invoke('lab-file', {
-          body: { action: 'thumb', resourceId: ins.data.id }
-        });
-        const td = (th && th.data) || {};
-        if (!td.ok) {
-          pwFailed = (pwFailed ? pwFailed + '\n' : '')
-            + '영상은 등록했지만 썸네일을 못 가져왔어요' + (td.error ? ': ' + td.error : '')
-            + '\n(함수가 2026-08-01c 이상이어야 해요 — [업로드 진단]에서 확인)';
-        }
+      // 비밀번호는 적었을 때만 건드린다 — 수정 중 비워 두면 기존 비밀번호가 그대로 남는다
+      if (pw && savedId) {
+        const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: savedId, p_pw: pw });
+        if (pwErr) pwFailed = '자료는 저장했지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
       }
 
       btn.disabled = false;
+      const wasEdit = !!_labEditId;
       if (pwFailed) lrSay(pwFailed, 'err'); else lrSay('', '');
-      toast(isVideo ? '영상을 등록했어요' : '자료를 올렸어요');
-      ['lrTitle', 'lrSummary', 'lrPw', 'lrFile', 'lrUrl', 'lrDur'].forEach((id) => {
-        const el = F.querySelector('#' + id); if (el) el.value = '';
-      });
-      const priceEl = F.querySelector('#lrPrice'); if (priceEl) priceEl.value = '0';   // 값은 매번 다시 정한다
+      toast(wasEdit ? '수정했어요' : (isVideo ? '영상을 등록했어요' : '자료를 올렸어요'));
+      labEditCancel();       // 폼을 비우고 '새로 올리기' 상태로 되돌린다
       loadLabFiles();
     });
 
