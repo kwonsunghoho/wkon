@@ -41,8 +41,12 @@ EXCLUDE = grab("EXCLUDE")
 RESCUE = grab("RESCUE")
 rules = {}
 if not OLD_ONLY:
-    for n in ("SPORTS", "STOCKS", "BAD_SOURCE", "AVIATION"):
+    for n in ("SPORTS", "STOCKS", "MUSEUM", "TRAVEL_AD", "AD_KEEP", "BAD_SOURCE", "AVIATION"):
         rules[n] = grab(n)
+
+# 같은 사건 묶기 임계값도 JS 에서 읽는다(손으로 옮겨 적으면 규칙이 어긋난다)
+m = re.search(r"^const\s+DUP_MIN\s*=\s*([0-9.]+);", src, re.M)
+DUP_MIN = float(m.group(1)) if m else 0.5
 
 # AIRLINES 도 JS 에서 읽는다(이름·별칭이 어긋나지 않게)
 AIRLINES, AIRLINE_ALIAS = [], []
@@ -65,6 +69,10 @@ def drop_reason(title, source):
         return "스포츠"
     if rules["STOCKS"].search(title):
         return "시황"
+    if rules["MUSEUM"].search(title):
+        return "박물관"
+    if rules["TRAVEL_AD"].search(title) and not rules["AD_KEEP"].search(title):
+        return "여행상품"
     if rules["BAD_SOURCE"].search(source or "") or rules["BAD_SOURCE"].search(title):
         return "블로그"
     if not rules["AVIATION"].search(title) and not any(
@@ -116,7 +124,25 @@ for q in QUERIES:
 print(f"수집 {len(collected)}건 (쿼리 {len(QUERIES)}개)  규칙={'구(참사만)' if OLD_ONLY else '신(전체)'}")
 
 norm = lambda s: re.sub(r"""[\s\[\]()"'“”‘’·…‥,.?!\-]""", "", s).lower()
-drops, kept, seen = defaultdict(list), [], set()
+
+
+m = re.search(r"^const\s+DUP_MIN_TOKENS\s*=\s*(\d+);", src, re.M)
+DUP_MIN_TOKENS = int(m.group(1)) if m else 5
+
+
+def tokenize(t):
+    t = re.sub(r"\[[^\]]{0,20}\]", " ", t)  # 코너 말머리는 기사 내용이 아니다
+    return {w for w in re.sub(r"[^가-힣A-Za-z0-9]+", " ", t).split() if len(w) >= 2}
+
+
+def similar(a, b):
+    if len(a) < DUP_MIN_TOKENS or len(b) < DUP_MIN_TOKENS:
+        return 0.0
+    inter = len(a & b)
+    return inter / (len(a) + len(b) - inter)
+
+
+drops, kept, seen, kept_tk, dups = defaultdict(list), [], set(), [], []
 for it in collected.values():
     why = drop_reason(it["title"], it["source"])
     if why:
@@ -124,8 +150,15 @@ for it in collected.values():
         continue
     k = norm(it["title"])
     if k in seen:
+        dups.append((it["title"], "(제목 완전 일치)"))
+        continue
+    tk = tokenize(it["title"])
+    hit = next((i for i, t in enumerate(kept_tk) if similar(t, tk) >= DUP_MIN), None)
+    if hit is not None:
+        dups.append((it["title"], kept[hit]["title"]))
         continue
     seen.add(k)
+    kept_tk.append(tk)
     kept.append(it)
 
 total_drop = sum(len(v) for v in drops.values())
@@ -137,7 +170,17 @@ for why, lst in drops.items():
     if len(lst) > 10:
         print(f"  … 외 {len(lst)-10}건")
 
+if not OLD_ONLY:
+    print(f"\n── 같은 사건으로 묶어 버림 ({len(dups)}건, 임계 {DUP_MIN}) ──────────────")
+    print("   ⚠️ 두 줄이 정말 같은 사건인지 볼 것 — 다르면 임계값을 올려야 한다")
+    for dropped, keptt in dups[:12]:
+        print("  ✗", dropped[:98])
+        print("    ↳ 남긴 것:", keptt[:92])
+    if len(dups) > 12:
+        print(f"  … 외 {len(dups)-12}건")
+
 print(f"\n── 남은 기사 (상위 25건) ──────────────")
 for it in kept[:25]:
     print("  ○", it["title"][:100], f"({it['source']})")
-print(f"\n결과: 저장 대상 {len(kept)}건 / 수집 {len(collected)}건")
+print(f"\n결과: 저장 대상 {len(kept)}건 / 수집 {len(collected)}건"
+      + (f" (제외 {total_drop}건 · 중복 {len(dups)}건)" if not OLD_ONLY else ""))
