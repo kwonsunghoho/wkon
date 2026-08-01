@@ -1,32 +1,25 @@
 /* =============================================================================
-   인앱 브라우저 탈출 안내 — inapp.js (2026-08-01 · 같은 날 전체 화면으로 재작성)
+   인앱 브라우저 안내 — inapp.js (2026-08-01 · v3 상단 고정 한 줄)
    =============================================================================
-   왜 필요한가: **인스타가 우리 유입 1위인데, 인스타 인앱 브라우저는**
-     ① 파일 다운로드를 막거나 조용히 삼키고
-     ② 구글 OAuth 를 아예 거부한다(disallowed_useragent).
-   실제 제보(2026-08-01): "인스타보고 무료배포 읽어보려니 팝업 뜨고 안들어가는데".
+   인스타(유입 1위)·카톡 인앱 브라우저는 파일 다운로드를 막고 구글 OAuth 를
+   거부한다(disallowed_useragent). 그래서 인앱이면 상단에 안내를 띄운다.
 
-   ⚠️ 첫 판은 페이지 '흐름 안'에 배너를 끼워 넣었다가 고정 nav 와 겹치고 레이아웃을
-      밀어 화면이 깨졌다(오너: "완전 다 깨져보여서 뭔말인지 하나도 모르겠다").
-      그래서 지금은 **position:fixed 전체 화면 덮개**다 — 페이지 레이아웃을 1px 도
-      건드리지 않는다. 흐름 안 배너로 되돌리지 말 것.
+   ⚠️ 형태 변경 금지 — 오너 확정 경과(2026-08-01, 하루 안에 세 번):
+      v1 흐름 안 배너 → 고정 nav 와 글자가 겹쳐 깨져 보임(실사고).
+      v2 전체 화면 덮개 → 오너 기각("장난치냐? 그냥 상단 설명으로 바꿔").
+      v3(현재) = position:fixed 로 nav '아래'에 붙는 한 줄 — 페이지 레이아웃을
+      건드리지 않고(fixed), nav 와도 겹치지 않는다(top = navbar 실측 높이,
+      z-index 90 < nav 100 이라 만에 하나 겹쳐도 nav 가 이긴다).
 
-   동작(오너 확정: "자동으로 나가게"):
-     - 안드로이드: 들어오자마자 **자동으로 크롬으로 이동**(인텐트). 실패 대비로
-       화면에 버튼·수동 방법도 같이 둔다.
-     - 아이폰: 자동 이동이 **기술적으로 불가능**(애플이 웹에서 Safari 강제 오픈을
-       막아 놨다 — 어떤 사이트도 못 한다). 전체 화면 안내 + 주소 복사로 민다.
-
-   ⚠️ 이 파일을 지우면 인스타 유입 전체가 자료를 못 받는다(전 페이지 공용, login 포함).
-   ⚠️ '이대로 볼게요'는 그 탭에서만 기억한다(sessionStorage) — 새로 들어오면 다시 뜬다.
+   ⚠️ 화면 문자열은 전부 \uXXXX 이스케이프(생성기 scratchpad/gen_inapp.py) —
+      어떤 charset 오독에서도 글자가 깨질 수 없다. 한글을 그대로 넣지 말 것.
+   ⚠️ 페이지에서 src="inapp.js?v=N" 으로 부른다 — 인앱 웹뷰가 캐시를 잘 안 버려서
+      파일을 고치면 ?v= 도 같이 올린다(v1 깨진 화면이 캐시로 계속 보인 실사고).
    ============================================================================= */
 (function () {
   'use strict';
 
   var ua = navigator.userAgent || '';
-
-  // 인앱 웹뷰들(인스타·페북·카톡·라인·네이버·다음·에브리타임 등 — 학생 유입 경로).
-  // 판정은 넉넉하게: 놓치면 사고, 오탐이면 안내 한 번 더 보일 뿐이다.
   var IN_APP = /Instagram|FBAN|FBAV|FB_IAB|FBIOS|KAKAOTALK|Line\/|NAVER\(inapp|NAVER |DaumApps|everytime|band|Snapchat|Twitter|TikTok/i.test(ua);
   if (!IN_APP) return;
 
@@ -35,46 +28,76 @@
 
   var isAndroid = /Android/i.test(ua);
   var isKakao = /KAKAOTALK/i.test(ua);
-  var appName = /Instagram/i.test(ua) ? '인스타그램'
-    : isKakao ? '카카오톡'
-    : /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua) ? '페이스북'
-    : '앱';
+  var appName = /Instagram/i.test(ua) ? "\uc778\uc2a4\ud0c0\uadf8\ub7a8"
+    : isKakao ? "\uce74\uce74\uc624\ud1a1"
+    : /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua) ? "\ud398\uc774\uc2a4\ubd81"
+    : null;
   var pageUrl = location.href;
 
-  /* ── 스타일 — 전부 이 안에서만. 페이지 CSS 를 쓰지도, 건드리지도 않는다 ── */
-  var css = ''
-    + '.iao{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;'
-    + 'padding:24px 20px;background:linear-gradient(180deg,#1E4079,#142C52);'
-    + "font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;"
-    + 'word-break:keep-all;-webkit-font-smoothing:antialiased;}'
-    + '.iao-card{width:min(100%,340px);max-height:92vh;overflow-y:auto;background:#FCF9F1;color:#26221C;'
-    + 'border-radius:20px;padding:26px 22px 18px;box-shadow:0 18px 60px rgba(0,0,0,.35);text-align:center;}'
-    + '.iao-card h2{margin:0 0 10px;font-size:21px;font-weight:800;letter-spacing:-0.01em;}'
-    + '.iao-sub{margin:0 0 18px;font-size:14.5px;font-weight:500;line-height:1.6;color:#5A5346;}'
-    + '.iao-sub b{color:#26221C;font-weight:800;}'
-    + '.iao-step{display:flex;align-items:flex-start;gap:10px;text-align:left;margin-bottom:10px;'
-    + 'font-size:15px;font-weight:600;line-height:1.5;}'
-    + '.iao-step b{flex:none;width:22px;height:22px;border-radius:50%;background:#1B3A6B;color:#fff;'
-    + 'font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px;}'
-    + '.iao-main{display:block;width:100%;min-height:52px;margin-top:14px;border:0;border-radius:14px;'
-    + 'background:#1B3A6B;color:#fff;font:inherit;font-size:16px;font-weight:800;cursor:pointer;}'
-    + '.iao-tip{margin:12px 0 0;font-size:12.5px;font-weight:600;line-height:1.55;color:#5A5346;}'
-    + '.iao-skip{display:block;width:100%;min-height:44px;margin-top:6px;border:0;background:transparent;'
-    + 'color:#8A8578;font:inherit;font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer;}';
+  function mount() {
+    // nav 바로 아래에 붙인다. nav 가 없는 페이지(login)는 맨 위(0).
+    var nav = document.getElementById('navbar');
+    var top = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
 
-  // 안드로이드 — 크롬으로 바로 넘긴다. 크롬이 없으면 아무 일도 안 일어나고
-  // 화면의 수동 안내가 그대로 남는다(같은 주소를 폴백으로 주면 제자리 루프가 된다).
-  function toChrome() {
-    location.href = 'intent://' + pageUrl.replace(/^https?:\/\//, '')
-      + '#Intent;scheme=https;package=com.android.chrome;end';
+    var css = ''
+      + '.iab{position:fixed;left:0;right:0;z-index:90;top:' + top + 'px;'
+      + 'display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;'
+      + 'background:#1B3A6B;color:#fff;box-shadow:0 6px 18px rgba(20,28,44,.25);'
+      + "font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;"
+      + 'word-break:keep-all;-webkit-font-smoothing:antialiased;}'
+      + '.iab-tx{flex:1;min-width:0;}'
+      + '.iab-t{margin:0;font-size:13px;font-weight:700;line-height:1.45;}'
+      + '.iab-s{margin:3px 0 0;font-size:12px;font-weight:600;line-height:1.45;color:rgba(255,255,255,.82);}'
+      + '.iab-go{flex:none;min-height:44px;padding:0 13px;border:0;border-radius:999px;'
+      + 'background:#fff;color:#1B3A6B;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;}'
+      + '.iab-x{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:transparent;'
+      + 'color:rgba(255,255,255,.78);font-size:20px;line-height:1;cursor:pointer;}';
+    var st = document.createElement('style');
+    st.textContent = css;
+    document.head.appendChild(st);
+
+    var bar = document.createElement('div');
+    bar.className = 'iab';
+    bar.setAttribute('role', 'region');
+
+    var msg = appName ? ('<b>' + appName + '</b>' + " \uc548\uc5d0\uc11c\ub294 \uc790\ub8cc \ubc1b\uae30\uc640 \ub85c\uadf8\uc778\uc774 \uc548 \ub3fc\uc694.") : "\uc9c0\uae08 \ubcf4\uc2dc\ub294 \uc571 \uc548\uc5d0\uc11c\ub294 \uc790\ub8cc \ubc1b\uae30\uc640 \ub85c\uadf8\uc778\uc774 \uc548 \ub3fc\uc694.";
+    var sub = isAndroid ? '' : (isKakao ? "\uc624\ub978\ucabd \uc544\ub798 Safari \uc544\uc774\ucf58\uc744 \ub20c\ub7ec \uc8fc\uc138\uc694." : "\uc624\ub978\ucabd \uc704 \u22ef \uba54\ub274 \u2192 \u2018\uc678\ubd80 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \uc5f4\uae30\u2019\ub97c \ub20c\ub7ec \uc8fc\uc138\uc694.");
+
+    bar.innerHTML = ''
+      + '<span class="iab-tx"><p class="iab-t">' + msg + '</p>'
+      + (sub ? '<p class="iab-s">' + sub + '</p>' : '') + '</span>'
+      + '<button class="iab-go" type="button">' + (isAndroid ? "Chrome\uc73c\ub85c \uc5f4\uae30" : "\uc8fc\uc18c \ubcf5\uc0ac") + '</button>'
+      + '<button class="iab-x" type="button" aria-label="\ub2eb\uae30">\u00d7</button>';
+
+    document.body.appendChild(bar);
+
+    bar.querySelector('.iab-x').addEventListener('click', function () {
+      bar.remove();
+      try { sessionStorage.setItem(HIDE_KEY, '1'); } catch (e) {}
+    });
+
+    bar.querySelector('.iab-go').addEventListener('click', function () {
+      if (isAndroid) {
+        // 크롬으로 넘긴다(버튼을 눌렀을 때만 — 자동 이동 없음).
+        // 같은 주소를 폴백으로 주면 제자리 루프가 되므로 주지 않는다.
+        location.href = 'intent://' + pageUrl.replace(/^https?:\/\//, '')
+          + '#Intent;scheme=https;package=com.android.chrome;end';
+        return;
+      }
+      var btn = this;
+      copy(pageUrl, function (ok) {
+        btn.textContent = ok ? "\ubcf5\uc0ac\ud588\uc5b4\uc694! \ube0c\ub77c\uc6b0\uc800\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uc8fc\uc138\uc694." : "\ubcf5\uc0ac\uac00 \uc548 \ub3fc\uc694 \u2014 \uc8fc\uc18c\ucc3d\uc744 \uae38\uac8c \ub20c\ub7ec \ubcf5\uc0ac\ud574 \uc8fc\uc138\uc694.";
+        btn.style.whiteSpace = 'normal';
+      });
+    });
   }
 
+  // 인앱 웹뷰는 클립보드 API 를 막는 경우가 많다 — 옛 방식으로 폴백
   function copy(text, done) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () { done(true); }, function () { legacy(); });
     } else legacy();
     function legacy() {
-      // 인앱 웹뷰는 클립보드 API 를 막는 경우가 많다 — 옛 방식으로 폴백
       try {
         var ta = document.createElement('textarea');
         ta.value = text;
@@ -87,67 +110,6 @@
         done(!!ok);
       } catch (e) { done(false); }
     }
-  }
-
-  function mount() {
-    var st = document.createElement('style');
-    st.textContent = css;
-    document.head.appendChild(st);
-
-    var wrap = document.createElement('div');
-    wrap.className = 'iao';
-    wrap.setAttribute('role', 'dialog');
-    wrap.setAttribute('aria-modal', 'true');
-
-    var inner = ''
-      + '<div class="iao-card">'
-      + '<h2>브라우저로 열어 주세요</h2>'
-      + '<p class="iao-sub"><b>' + appName + '</b> 안에서는<br>자료 받기와 로그인이 막혀 있어요.</p>';
-
-    if (isAndroid) {
-      inner += ''
-        + '<p class="iao-sub" style="margin-bottom:4px;">잠시 뒤 <b>Chrome</b> 으로 자동 이동해요.</p>'
-        + '<button class="iao-main" type="button" data-act="chrome">지금 바로 열기</button>'
-        + '<p class="iao-tip">이동하지 않으면 오른쪽 위 <b>⋮</b> 를 눌러<br><b>다른 브라우저에서 열기</b>를 선택해 주세요.</p>';
-    } else {
-      inner += (isKakao
-        ? '<div class="iao-step"><b>1</b><span>오른쪽 아래 <b>Safari 아이콘</b>을 눌러요</span></div>'
-        : '<div class="iao-step"><b>1</b><span>오른쪽 위 <b>⋯</b> 버튼을 눌러요</span></div>'
-          + '<div class="iao-step"><b>2</b><span><b>외부 브라우저에서 열기</b><br>(또는 Safari로 열기)를 눌러요</span></div>')
-        + '<button class="iao-main" type="button" data-act="copy">주소 복사하기</button>'
-        + '<p class="iao-tip">복사한 주소를 Safari 주소창에 붙여넣어도 돼요.</p>';
-    }
-
-    inner += '<button class="iao-skip" type="button" data-act="skip">괜찮아요, 이대로 볼게요</button></div>';
-    wrap.innerHTML = inner;
-    document.body.appendChild(wrap);
-
-    // 덮개가 떠 있는 동안 뒤 페이지 스크롤을 잠근다(닫으면 되돌린다)
-    var prevOverflow = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = 'hidden';
-
-    wrap.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-act]');
-      if (!b) return;
-      var act = b.getAttribute('data-act');
-      if (act === 'chrome') { toChrome(); return; }
-      if (act === 'copy') {
-        copy(pageUrl, function (ok) {
-          b.textContent = ok ? '복사됐어요! 브라우저에 붙여넣어 주세요'
-                             : '복사가 막혔어요 — 주소창을 길게 눌러 복사해 주세요';
-        });
-        return;
-      }
-      if (act === 'skip') {
-        wrap.remove();
-        document.documentElement.style.overflow = prevOverflow;
-        try { sessionStorage.setItem(HIDE_KEY, '1'); } catch (e2) {}
-      }
-    });
-
-    // 오너 확정 "자동으로 나가게" — 안드로이드는 안내가 그려진 직후 자동 이동.
-    // 아이폰은 자동 이동 자체가 불가능하다(애플이 막아 놨다) — 위 수동 안내가 전부다.
-    if (isAndroid) setTimeout(toChrome, 700);
   }
 
   if (document.body) mount();
