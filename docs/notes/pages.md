@@ -21,7 +21,7 @@
 - 목록 미리보기는 **한줄평(quote) 있는 것을 먼저** 고른다(`pickPreview`). 없으면 스크린샷 조각. 허브가 이정표가 아니라 내용으로 읽혀야 해서다.
 
 ### 종류 구분 — `reviews.kind`
-`challenge`(기본) / `consult` 두 값. migration `20260801170000_reviews_kind.sql`(오너 실행). 기존 108건은 default 로 자동 `challenge` — 백필 update 가 없다.
+`challenge`(기본) / `consult` 두 값. migration `20260801180000_reviews_kind.sql`(오너 실행). 기존 108건은 default 로 자동 `challenge` — 백필 update 가 없다.
 - **⚠️ 목록은 `select('*')` 뒤 JS 에서 거른다.** `.eq('kind', …)` 로 서버 필터하면 마이그레이션 미적용 환경에서 400 이 난다. 미적용이면 전부 `challenge` 로 떨어져 챌린지 목록은 그대로 돌고 상담 목록만 0건이 된다.
 - 같은 마이그레이션이 `image_path` 의 not null 을 풀어 **글만 있는 후기**를 허용한다(상담 후기는 캡처와 글이 섞여 있다 — 오너 확인). 대신 `reviews_body_required` check 로 '이미지도 글도 없는 행'을 막는다.
 

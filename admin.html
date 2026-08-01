@@ -676,7 +676,7 @@
       </div>
 
       <!-- 글만 있는 후기 — 캡처 없이 텍스트로 받은 상담 후기용.
-           ⚠️ image_path 를 비운 채 넣으므로 마이그레이션 20260801170000(not null 완화)이 필요하다. -->
+           ⚠️ image_path 를 비운 채 넣으므로 마이그레이션 20260801180000(not null 완화)이 필요하다. -->
       <div class="rv-section-title">글만 있는 후기 (사진 없이)</div>
       <div class="rv-upload">
         <select id="rvTextKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;">
@@ -2535,7 +2535,7 @@
       if (error) { grid.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       if (!data.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 후기가 없습니다. 카톡 스크린샷을 업로드하세요.</div>'; return; }
       const CH_OPTS = ['', '보신각', '영합각', '스피닝', '승자각'];
-      // kind 컬럼 마이그레이션(20260801170000) 전이면 undefined → 전부 챌린지로 취급
+      // kind 컬럼 마이그레이션(20260801180000) 전이면 undefined → 전부 챌린지로 취급
       const rows = data.filter(r => rvKindFilter === 'all' || (r.kind || 'challenge') === rvKindFilter);
       if (!rows.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">이 종류의 후기가 아직 없습니다.</div>'; return; }
       grid.innerHTML = rows.map(r => `
@@ -2558,7 +2558,7 @@
       // 분류 필드 저장(챌린지·기수·이름) — site_config가 아니라 reviews 컬럼. 마이그레이션 미적용 시 컬럼 없음 에러 안내.
       const saveField = async (id, patch) => {
         const { error } = await MONC.sb.from('reviews').update(patch).eq('id', id);
-        if (error) { alert('저장 실패: ' + error.message + '\n(reviews 분류 컬럼 마이그레이션 20260710130000 · 20260801170000 미적용일 수 있어요)'); return false; }
+        if (error) { alert('저장 실패: ' + error.message + '\n(reviews 분류 컬럼 마이그레이션 20260710130000 · 20260801180000 미적용일 수 있어요)'); return false; }
         toast('저장됨'); return true;
       };
       // 종류를 바꾸면 필터가 걸려 있을 때 목록에서 사라져야 하므로 다시 그린다
@@ -2612,7 +2612,7 @@
       const { error } = await MONC.sb.from('reviews').insert({ quote, kind, review_date: date, sort_order: 0, visible: true });
       btn.disabled = false; btn.textContent = '글 후기 추가';
       if (error) {
-        alert('추가 실패: ' + error.message + '\n(사진 없는 후기는 마이그레이션 20260801170000 이 적용돼야 들어갑니다)');
+        alert('추가 실패: ' + error.message + '\n(사진 없는 후기는 마이그레이션 20260801180000 이 적용돼야 들어갑니다)');
         return;
       }
       document.getElementById('rvTextQuote').value = ''; document.getElementById('rvTextDate').value = '';
@@ -2645,7 +2645,7 @@
     }
 
     // 후기 1장 저장(압축 → 스토리지 업로드 → 행 삽입). caption 은 null 가능.
-    // ⚠️ kind 는 마이그레이션 20260801170000 이후에만 존재한다 — 미적용 환경에서 insert 가
+    // ⚠️ kind 는 마이그레이션 20260801180000 이후에만 존재한다 — 미적용 환경에서 insert 가
     //    통째로 깨지지 않게, 컬럼 없음(42703/PGRST204)이면 kind 를 빼고 한 번 더 넣는다.
     async function uploadReviewImage(file, caption, kind) {
       const opt = await optimizeReviewImage(file);
@@ -2698,7 +2698,7 @@
     });
 
     // ── 합격 수기(success_stories) CRUD ──
-    // ⚠️ reviews 와 다른 표다. 긴 본문·항공사·상세 페이지가 필요해 나눴다(마이그레이션 20260801170000).
+    // ⚠️ reviews 와 다른 표다. 긴 본문·항공사·상세 페이지가 필요해 나눴다(마이그레이션 20260801180000).
     //    표가 아직 없으면(PGRST205) '아직 없음'으로 조용히 떨어뜨린다 — 다른 탭까지 막지 않는다.
     let _stories = [];
     async function loadStoriesAdmin() {
@@ -2708,7 +2708,7 @@
       if (error) {
         _stories = [];
         box.innerHTML = error.code === 'PGRST205'
-          ? '<div class="empty" style="color:var(--text-dim);padding:16px">합격 수기 표가 아직 없습니다. 마이그레이션 <b>20260801170000_reviews_kind.sql</b> 을 실행하면 이 칸이 열립니다.</div>'
+          ? '<div class="empty" style="color:var(--text-dim);padding:16px">합격 수기 표가 아직 없습니다. 마이그레이션 <b>20260801180000_reviews_kind.sql</b> 을 실행하면 이 칸이 열립니다.</div>'
           : '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>';
         return;
       }
@@ -2755,7 +2755,7 @@
         .insert({ title: title.trim(), body: '(본문을 입력하세요)', visible: false });
       if (error) {
         alert('추가 실패: ' + error.message
-          + (error.code === 'PGRST205' ? '\n(마이그레이션 20260801170000_reviews_kind.sql 을 먼저 실행해 주세요)' : ''));
+          + (error.code === 'PGRST205' ? '\n(마이그레이션 20260801180000_reviews_kind.sql 을 먼저 실행해 주세요)' : ''));
         return;
       }
       toast('추가됨 — 숨김 상태입니다'); loadStoriesAdmin();
