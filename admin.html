@@ -824,8 +824,10 @@
             <input type="checkbox" id="lfPublish" checked> 올리자마자 공개
           </label>
           <button class="btn btn-action" type="submit" id="lfSubmit">자료 올리기</button>
-          <span id="lfMsg" style="font-size:13px;font-weight:700;color:var(--text-muted);"></span>
+          <button class="btn" type="button" id="lfDiag" style="border:1px solid var(--border);background:var(--surface);">업로드 진단</button>
         </div>
+        <!-- 오류는 눈에 띄게 — 작은 회색 글씨면 못 보고 '그냥 안 올라간다'가 된다 -->
+        <p id="lfMsg" hidden style="margin-top:2px;padding:10px 12px;border-radius:var(--radius-xs);font-size:13.5px;font-weight:700;line-height:1.6;white-space:pre-wrap;"></p>
       </form>
 
       <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
@@ -2920,6 +2922,81 @@
       }).join('');
     }
 
+    /* 폼 메시지 — 오류는 붉게, 눈에 띄게. 회색 작은 글씨면 못 보고 '그냥 안 올라간다'가 된다. */
+    function lfSay(text, kind) {
+      const el = document.getElementById('lfMsg');
+      if (!text) { el.hidden = true; el.textContent = ''; return; }
+      el.textContent = text;
+      el.hidden = false;
+      if (kind === 'err') { el.style.background = '#FBE9E7'; el.style.color = '#B23B2E'; }
+      else if (kind === 'ok') { el.style.background = 'var(--action-tint)'; el.style.color = 'var(--accent-ink)'; }
+      else { el.style.background = 'var(--surface2)'; el.style.color = 'var(--text-muted)'; }
+    }
+
+    /* 업로드 진단 — '안 올라간다'의 원인을 관리자가 직접 짚을 수 있게.
+       테이블 읽기 → 행 등록 → 파일 업로드 → 파일 삭제 순으로 실제로 해 보고, 막힌 단계를 알려준다.
+       ⚠️ 흔적을 남기지 않는다: 만든 행과 파일은 검사 끝에 반드시 지운다. */
+    document.getElementById('lfDiag').addEventListener('click', async () => {
+      const btn = document.getElementById('lfDiag');
+      btn.disabled = true;
+      lfSay('진단 중…', 'info');
+      const out = [];
+      let bad = false, madeId = null, madePath = null;
+
+      // 1) 자료 표 읽기 — 관리자 정책(20260801130000)이 있어야 통과
+      const r1 = await MONC.sb.from('lab_resources').select('*').limit(1);
+      if (r1.error) {
+        bad = true;
+        out.push('✗ 자료 표 읽기: ' + r1.error.message
+          + (r1.error.code === 'PGRST205' ? '\n   → 20260801120000 마이그레이션이 실행되지 않았습니다.'
+             : '\n   → 20260801130000(관리자 정책)이 실행되지 않았을 수 있습니다.'));
+      } else out.push('✓ 자료 표 읽기');
+
+      // 2) 행 등록 — 링크 자료로 넣어 파일 없이 확인(비공개라 화면에 안 뜬다)
+      if (!bad) {
+        const r2 = await MONC.sb.from('lab_resources')
+          .insert({ shelf: 'airline', title: '[진단] 임시', external_url: 'https://example.com/diag', published: false })
+          .select('id').maybeSingle();
+        if (r2.error) {
+          bad = true;
+          out.push('✗ 자료 등록: ' + r2.error.message
+            + (/row-level security/i.test(r2.error.message)
+              ? '\n   → 관리자 정책이 없거나, 이 계정의 role 이 admin 이 아닙니다.'
+              : (/column .* does not exist|external_url/i.test(r2.error.message)
+                ? '\n   → 20260801140000(영상 링크) 마이그레이션이 실행되지 않았습니다.' : '')));
+        } else { madeId = r2.data && r2.data.id; out.push('✓ 자료 등록'); }
+      }
+
+      // 3) 파일 업로드 — 버킷 정책 확인. 아주 작은 텍스트 파일로 실제 업로드
+      if (!bad) {
+        madePath = 'diag/' + crypto.randomUUID() + '.txt';
+        const blob = new Blob(['monc lab upload check'], { type: 'text/plain' });
+        const r3 = await MONC.sb.storage.from('lab-files').upload(madePath, blob, { contentType: 'text/plain' });
+        if (r3.error) {
+          bad = true; madePath = null;
+          out.push('✗ 파일 업로드: ' + r3.error.message
+            + (/row-level security|not authorized|Unauthorized/i.test(r3.error.message)
+              ? '\n   → lab-files 버킷 정책이 없습니다. 20260801130000 의 storage 정책 부분만 다시 실행해 보세요.'
+              : (/Bucket not found/i.test(r3.error.message)
+                ? '\n   → lab-files 버킷이 없습니다. 20260801120000 의 buckets insert 를 실행하세요.' : '')));
+        } else out.push('✓ 파일 업로드');
+      }
+
+      // 4) 뒷정리 — 진단이 쓰레기를 남기면 안 된다
+      if (madePath) {
+        const r4 = await MONC.sb.storage.from('lab-files').remove([madePath]);
+        out.push(r4.error ? ('✗ 파일 삭제: ' + r4.error.message) : '✓ 파일 삭제');
+      }
+      if (madeId) {
+        const r5 = await MONC.sb.from('lab_resources').delete().eq('id', madeId);
+        out.push(r5.error ? ('✗ 임시 자료 삭제: ' + r5.error.message + '\n   → 목록에서 [진단] 임시 를 직접 지우세요.') : '✓ 임시 자료 삭제');
+      }
+
+      btn.disabled = false;
+      lfSay(out.join('\n') + (bad ? '' : '\n\n모두 통과했습니다 — 지금 상태로 자료를 올릴 수 있어요.'), bad ? 'err' : 'ok');
+      loadLabFiles();
+    });
+
     /* 영상관은 파일이 아니라 유튜브 링크로 올린다 — 서가에 따라 입력칸을 바꾼다.
        ⚠️ 링크 자료엔 워터마크를 찍을 수 없다(우리 파일이 아니다) — 해당 칸을 잠근다. */
     function lfKindSync() {
@@ -2955,24 +3032,24 @@
 
     document.getElementById('labForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const msg = document.getElementById('lfMsg');
       const btn = document.getElementById('lfSubmit');
+      let pwFailed = '';
       const shelf = document.getElementById('lfShelf').value;
       const isVideo = shelf === 'video';
       const file = document.getElementById('lfFile').files[0];
       const title = document.getElementById('lfTitle').value.trim();
-      if (!title) { msg.textContent = '제목을 입력하세요.'; return; }
+      if (!title) { lfSay('제목을 입력하세요.', 'err'); return; }
 
       let path = null, ext = null, size = null, url = null, dur = null;
 
       if (isVideo) {
         url = ytNormalize(document.getElementById('lfUrl').value);
-        if (!url) { msg.textContent = '유튜브 링크를 확인해 주세요.'; return; }
+        if (!url) { lfSay('유튜브 링크를 확인해 주세요.', 'err'); return; }
         dur = durToSec(document.getElementById('lfDur').value);
-        btn.disabled = true; msg.textContent = '등록 중…';
+        btn.disabled = true; lfSay('등록 중…', 'info');
       } else {
-        if (!file) { msg.textContent = '파일을 고르세요.'; return; }
-        btn.disabled = true; msg.textContent = '올리는 중…';
+        if (!file) { lfSay('파일을 고르세요.', 'err'); return; }
+        btn.disabled = true; lfSay('올리는 중…', 'info');
         ext = (file.name.split('.').pop() || '').toLowerCase();
         size = file.size;
         // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
@@ -2980,7 +3057,7 @@
         const up = await MONC.sb.storage.from('lab-files').upload(path, file, { contentType: file.type || undefined });
         if (up.error) {
           btn.disabled = false;
-          msg.textContent = '업로드 실패: ' + up.error.message;
+          lfSay('파일 업로드가 막혔어요: ' + up.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
           return;
         }
       }
@@ -3005,16 +3082,16 @@
       const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
       if (ins.error) {
         btn.disabled = false;
-        msg.textContent = '자료 등록 실패: ' + ins.error.message;
+        lfSay('자료 등록이 막혔어요: ' + ins.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
         return;
       }
       if (pw && ins.data && ins.data.id) {
         const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: ins.data.id, p_pw: pw });
-        if (pwErr) msg.textContent = '자료는 올렸지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
+        if (pwErr) pwFailed = '자료는 올렸지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
       }
 
       btn.disabled = false;
-      if (!msg.textContent.startsWith('자료는 올렸지만')) msg.textContent = '';
+      if (pwFailed) lfSay(pwFailed, 'err'); else lfSay('', '');
       toast(isVideo ? '영상을 등록했어요' : '자료를 올렸어요');
       document.getElementById('lfTitle').value = '';
       document.getElementById('lfSummary').value = '';

@@ -16,6 +16,7 @@
 drop policy if exists lab_resources_admin_all on public.lab_resources;
 create policy lab_resources_admin_all on public.lab_resources
   for all
+  to authenticated
   using (public.is_admin())
   with check (public.is_admin());
 
@@ -23,12 +24,17 @@ create policy lab_resources_admin_all on public.lab_resources
 drop policy if exists lab_downloads_admin_read on public.lab_downloads;
 create policy lab_downloads_admin_read on public.lab_downloads
   for select
+  to authenticated
   using (public.is_admin());
 
 -- ── 파일 버킷: 관리자만 올리고 지운다. 회원 열람은 서명 URL 이 담당한다 ──────
+-- ⚠️ `to authenticated` 를 반드시 명시한다 — 생략하면 대상이 PUBLIC 이 되는데,
+--    Supabase storage 는 이 경우 로그인 사용자의 업로드를 통과시키지 못하는 일이 있다
+--    (lecture-images 버킷은 처음부터 `to authenticated` 로 만들어 정상 동작 중 — 그 형태에 맞춘다).
 drop policy if exists lab_files_admin_all on storage.objects;
 create policy lab_files_admin_all on storage.objects
   for all
+  to authenticated
   using (bucket_id = 'lab-files' and public.is_admin())
   with check (bucket_id = 'lab-files' and public.is_admin());
 
