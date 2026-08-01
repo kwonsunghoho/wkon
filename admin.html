@@ -27,9 +27,12 @@
     .logout:hover { border-color: var(--action); color: var(--action); }
     .ic { width: 18px; height: 18px; flex: 0 0 auto; }
 
-    /* ── 셸: 데스크톱 = 좌측 사이드바(그룹 라벨 + 세로 메뉴), 모바일 = 상단 칩 1줄 스크롤 ──
-       2026-07-31 브리핑 개편. 인증 전에는 body.authed 가 없어 셸이 일반 흐름(로딩 문구만)이고,
-       requireAdmin 통과 시 JS 가 body.authed 를 붙여 그리드가 켜진다. */
+    /* ── 셸: 데스크톱 = 좌측 사이드바(그룹 라벨 + 세로 메뉴), 모바일 = 상단 바 + 바텀시트 메뉴 ──
+       2026-07-31 브리핑 개편 · 2026-08-01 모바일 네비 개편(칩 1줄 → 시트).
+       인증 전에는 body.authed 가 없어 셸이 일반 흐름(로딩 문구만)이고,
+       requireAdmin 통과 시 JS 가 body.authed 를 붙여 그리드가 켜진다.
+       ⚠️ #tabs 의 display 는 CSS 가 정한다 — revealAdmin 은 인라인 display 를 비울 뿐('flex'/'block' 인라인 금지.
+          인라인이 남으면 모바일 시트 그리드가 죽는다. 2026-07-31 'flex' 규칙은 이 개편으로 폐기). */
     body.authed .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: start; }
     .snav { background: var(--bg2); border-right: 1px solid var(--border-soft); position: sticky; top: 0;
             height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 20px 12px 16px; }
@@ -45,22 +48,41 @@
     .sn-me { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px;
              padding: 12px 6px 0; border-top: 1px solid var(--border-soft); }
     .sn-who { font-size: 13px; font-weight: 800; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    /* 모바일: 메뉴는 스티키 칩 1줄 가로 스크롤 — wrap 로 두면 상단 고정부가 화면 1/4 를 먹는다(구 탭바 실측 교훈 유지) */
+    /* 모바일 네비(2026-08-01 개편): 상단 바 = 현재 화면 이름 + '메뉴' 버튼(한 줄 유지 — wrap 금지 교훈 그대로),
+       메뉴는 바텀시트로 운영/상품/콘텐츠 12개를 한 화면에(구 칩 1줄 스크롤은 그룹이 안 보여서 폐기).
+       시트 버튼은 데스크톱 사이드바와 같은 .tabbtn — 전환 규약(initTabs) 불변. 열림은 body.navopen 하나로 제어. */
+    .mtop, .sn-sheethead, .mscrim { display: none; }
     @media (max-width: 960px) {
       body.authed .shell { display: block; }
-      .snav { position: sticky; top: 0; z-index: 9; height: auto; flex-direction: row; align-items: center; gap: 6px;
-              overflow-x: auto; overflow-y: hidden; padding: 10px 12px; border-right: 0;
-              border-bottom: 1px solid var(--border-soft); -webkit-overflow-scrolling: touch; }
-      .sn-logo { padding: 0 4px 0 0; }
-      /* 그룹 라벨은 칩 사이 구분선+미니 라벨로 남긴다 — 칩 12개가 한 줄일 때 그룹 경계가 유일한 지도다(2026-08-01 모바일 정비) */
-      .sn-glabel { display: flex; align-items: center; flex: 0 0 auto; padding: 0 2px 0 10px;
-                   margin-left: 4px; border-left: 1px solid var(--border); font-size: 10.5px; }
-      .tabbtn { width: auto; flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface);
-                border-radius: 999px; padding: 9px 13px; font-size: 13px; gap: 7px; }
-      .tabbtn .ic { display: none; }
-      .tabbtn.active { border-color: var(--action); box-shadow: none; }
-      .sn-me { margin: 0; border: 0; padding: 0; }
-      .sn-who { display: none; }
+      body.authed .mtop { display: flex; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 9;
+                          padding: 9px 16px; background: var(--bg2); border-bottom: 1px solid var(--border-soft); }
+      .mt-cur { font-size: 16.5px; font-weight: 800; letter-spacing: -0.01em; margin-left: 2px; min-width: 0;
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mt-menu { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; flex: 0 0 auto; min-height: 44px;
+                 border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 9px 14px;
+                 font-size: 13.5px; font-weight: 800; color: var(--text); font-family: inherit; cursor: pointer; }
+      .mt-menu .ic { width: 16px; height: 16px; }
+      body.navopen .mscrim { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(16, 27, 45, .42); }
+      body.navopen { overflow: hidden; }
+      .snav { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 40; height: auto; max-height: 82vh;
+              overflow-y: auto; border: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -14px 44px rgba(16, 43, 86, .22);
+              display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: stretch;
+              padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+              visibility: hidden; transform: translateY(105%);
+              transition: transform .24s ease, visibility 0s linear .24s; }
+      body.navopen .snav { visibility: visible; transform: translateY(0); transition: transform .24s ease; }
+      .sn-sheethead { display: flex; grid-column: 1 / -1; align-items: center; justify-content: space-between; padding: 0 2px; }
+      .sn-sheethead b { font-size: 12.5px; font-weight: 800; letter-spacing: .08em; color: var(--text-dim); }
+      .sn-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+                  margin: -4px -10px -4px 0; border: 0; background: none; color: var(--text-muted); cursor: pointer; border-radius: 12px; }
+      .sn-close:hover { background: var(--surface2); }
+      .sn-close .ic { width: 20px; height: 20px; }
+      .snav .sn-logo { display: none; }   /* 로고는 상단 바가 갖고 있다 */
+      .sn-glabel { grid-column: 1 / -1; padding: 10px 4px 2px; }
+      .tabbtn { min-height: 48px; padding: 11px 12px; border: 1px solid var(--border-soft); background: var(--surface);
+                border-radius: 14px; font-size: 14px; }
+      .tabbtn.active { box-shadow: none; }
+      .sn-me { grid-column: 1 / -1; margin-top: 8px; padding: 12px 4px 0; }
     }
 
     /* ── '오늘' 브리핑: 신문 1면 문법(2026-07-31 개편 · 목업 ⑥ 합본 오너 확정) ──
@@ -395,6 +417,7 @@
     @media (prefers-reduced-motion: reduce) {
       #loading::before { animation: none; }
       body.authed .shell { animation: none; }
+      .snav, body.navopen .snav { transition: none; }
     }
   </style>
 </head>
@@ -413,15 +436,29 @@
     <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h12v16H7a2 2 0 0 0-2 2z"/><path d="M5 19a2 2 0 0 1 2-2h12"/></g></symbol>
     <symbol id="i-q" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.4 9.6a2.6 2.6 0 1 1 3.7 2.3c-.8.4-1.1 1-1.1 1.8v.2"/><path d="M12 17h.01"/></g></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"/></g></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></g></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
   </svg>
 
   <!-- ══ 셸(2026-07-31 개편 · 오너 목업 ⑥ 확정 — "① 골격 × ⑤ 브리핑") ══
-       데스크톱 = 좌측 사이드바(그룹 라벨 3개 + 세로 메뉴), 모바일(<960px) = 상단 칩 1줄 스크롤.
+       데스크톱 = 좌측 사이드바(그룹 라벨 3개 + 세로 메뉴).
+       모바일(≤960px) = 상단 바(.mtop: 현재 화면 이름 + 메뉴 버튼) + 바텀시트(.snav 를 시트로 재배치,
+       2026-08-01 개편 — 구 칩 1줄 스크롤 대체). 시트 안 버튼도 같은 .tabbtn 이라 전환 규약이 그대로다.
        그룹 구성은 2026-07-30 2단 네비 확정안 그대로: 운영(매일 보는 것)/상품/콘텐츠.
        ⚠️ 탭을 추가하면 어느 그룹 라벨 아래인지부터 정할 것 — 맨 뒤에 이어붙이면 개편 전으로 돌아간다.
        ⚠️ 패널 전환은 .tabbtn[data-tab] ↔ #panel-* 규약 그대로다(initTabs·activateTab). -->
   <div class="shell">
+  <!-- 모바일 상단 바 — body.authed 일 때만, ≤960px 에서만 보인다. 제목은 initTabs 가 동기화 -->
+  <div class="mtop" id="mtop">
+    <a href="index.html" class="brand-link" title="홈으로"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
+    <span class="badge">관리자</span>
+    <span class="mt-cur" id="mtCur">오늘</span>
+    <button class="mt-menu" id="mtMenu" type="button" aria-expanded="false" aria-controls="tabs"><svg class="ic"><use href="#i-menu"/></svg>메뉴</button>
+  </div>
+  <div class="mscrim" id="mscrim"></div>
   <aside class="snav" id="tabs" style="display:none;">
+    <!-- 시트 머리 — 데스크톱에선 숨김. 닫기는 스크림 탭·Esc 로도 된다 -->
+    <div class="sn-sheethead"><b>메뉴</b><button class="sn-close" id="snClose" type="button" aria-label="메뉴 닫기"><svg class="ic"><use href="#i-x"/></svg></button></div>
     <div class="sn-logo">
       <a href="index.html" class="brand-link" title="홈으로"><img src="images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp" alt="MONC" /></a>
       <span class="badge">관리자</span>
@@ -1577,13 +1614,26 @@
         document.querySelectorAll('.tabbtn').forEach(x => x.classList.toggle('active', x === b));
         document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
         document.getElementById('panel-' + b.dataset.tab).classList.add('active');
-        b.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // 모바일 칩 줄에서 활성 칩이 보이게
+        b.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // 데스크톱 사이드바가 스크롤일 때 활성 항목이 보이게
+        document.getElementById('mtCur').textContent = b.textContent.trim();   // 모바일 상단 바 제목 동기화(svg 는 textContent 가 비어 이름만 남는다)
+        navSheet(false);                                             // 시트에서 골랐으면 닫는다
       }));
     }
     function activateTab(name) {
       const btn = document.querySelector(`.tabbtn[data-tab="${name}"]`);
       if (btn) btn.click();
     }
+
+    // ── 모바일 네비 시트(≤960px · 2026-08-01) — 상단 바 '메뉴' → 운영/상품/콘텐츠를 한 화면에 ──
+    // 시트 안 버튼은 사이드바와 같은 .tabbtn 그대로라 전환 규약(위 initTabs)이 그대로 먹는다.
+    function navSheet(open) {
+      document.body.classList.toggle('navopen', open);
+      document.getElementById('mtMenu').setAttribute('aria-expanded', String(open));
+    }
+    document.getElementById('mtMenu').addEventListener('click', () => navSheet(!document.body.classList.contains('navopen')));
+    document.getElementById('mscrim').addEventListener('click', () => navSheet(false));
+    document.getElementById('snClose').addEventListener('click', () => navSheet(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') navSheet(false); });
 
     /* ── '오늘' 브리핑(2026-07-31 개편) ──
        숫자는 이미 전량 로드하는 _apps/_wl/members 를 재사용한다(추가 조회는 검수 대기 count 하나).
@@ -4564,7 +4614,7 @@
       _revealed = true;
       document.getElementById('loading').style.display = 'none';
       document.getElementById('layout').style.display = 'grid';
-      document.getElementById('tabs').style.display = 'flex';    // ⚠️ 'block' 금지 — 인라인이 CSS 를 이겨 사이드바 배치(데스크톱 세로·모바일 가로 칩)가 죽는다(실측)
+      document.getElementById('tabs').style.display = '';        // ⚠️ 인라인 display 는 '비운다' — 레이아웃(데스크톱 flex 세로 / 모바일 시트 grid)은 CSS 가 정한다. 'flex'/'block' 을 넣으면 모바일 시트 그리드가 죽는다(2026-08-01 네비 개편)
       document.body.classList.add('authed');                     // ⚠️ 이 클래스가 셸 그리드(데스크톱 2열)를 켠다 — 지우면 사이드바 자리가 안 잡힌다
     }
 
