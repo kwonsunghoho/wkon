@@ -196,7 +196,9 @@
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
     .round-item .ri-sub { font-size: 13px; color: var(--text-muted); }
     .round-item .ri-del { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
-    .round-item .ri-actions { display: flex; gap: 6px; }
+    /* 행 버튼 묶음 — 목록 행의 버튼은 전부 이 클래스로 감싼다(인라인 flex 금지).
+       모바일에서 본문 아래로 내리는 규칙(아래 960px 블록)이 이 클래스를 기준으로 걸린다. */
+    .round-item .ri-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     .round-item .ri-edit { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
     .round-item .ri-edit:hover { background: var(--action-tint); }
     .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
@@ -413,6 +415,11 @@
       .ac-tg, .ac-del, .rv-btn, .rv-kf, .seg button { min-height: 44px; }
       .mchk, .bulk-bar input[type="checkbox"] { width: 20px; height: 20px; }
       .mitem { padding: 12px 10px; }
+      /* 목록 행: 좁은 화면에선 2열(본문+버튼)을 1열로 — 버튼 6개짜리 행(연구실 자료)이
+         본문 열을 눌러 제목이 한 글자씩 세로로 꺾인 실사고(2026-08-01). 버튼 줄은
+         본문 아래 왼쪽 정렬로 내려온다. 상태 칩(td-paystat 등)도 같이 내려간다. */
+      .round-item { grid-template-columns: 1fr; }
+      .round-item .ri-actions { justify-content: flex-start; }
     }
     @media (prefers-reduced-motion: reduce) {
       #loading::before { animation: none; }
@@ -890,7 +897,7 @@
         이미 산 회원의 결제 금액은 그대로 남습니다. <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.
         <b>파일을 여러 개 고르면 자료 하나로 묶입니다</b>(상·하편) — 값도 하나, 구매도 한 번이고
         학생은 자료를 눌러 받을 파일을 고릅니다. 자료를 여러 건으로 나누려면 한 번씩 올리세요.
-        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01g</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
+        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01h</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
@@ -2917,7 +2924,7 @@
             <div class="ri-main">${esc(q.content)}</div>
             <div class="ri-sub">${liveTag}${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="ri-actions">
             <button class="ri-del q-today" data-id="${q.id}" style="color:var(--action-dark);border-color:var(--action)">오늘 지정</button>
             <button class="ri-del q-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
             <button class="ri-del q-edit" data-id="${q.id}">수정</button>
@@ -3048,7 +3055,7 @@
                 ${t.origin === 'coach' ? '연구진' : '일반'}</span></div>
             <div class="ri-sub">${esc(TERM_KIND[t.kind] || t.kind)}${t.active ? '' : ' · 꺼짐'}${t.why ? ' · ' + esc(t.why.slice(0, 70)) + (t.why.length > 70 ? '…' : '') : ' · (설명 없음 — AI가 채워요)'}</div>
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="ri-actions">
             <button class="ri-del t-active" data-id="${t.id}">${t.active ? '끄기' : '켜기'}</button>
             <button class="ri-del t-edit" data-id="${t.id}">수정</button>
             <button class="ri-del t-del" data-id="${t.id}">삭제</button>
@@ -3243,7 +3250,7 @@
               ? '<div class="ri-sub" style="color:var(--accent-ink);font-weight:700;">' + esc(hits.join(' · ')) + '</div>'
               : '')
         + '</div>'
-        + '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
+        + '<div class="ri-actions">'
           + '<button class="ri-del lab-edit" data-id="' + r.id + '" style="color:var(--action-dark);border-color:var(--action)">수정</button>'
           + '<button class="ri-del lab-log" data-id="' + r.id + '">이력' + (hits.length ? '' : ' 0') + '</button>'
           + '<button class="ri-del lab-price" data-id="' + r.id + '" data-price="' + (Number(r.price) || 0) + '">가격</button>'
@@ -3903,7 +3910,7 @@
               ${dup ? '<span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--bg2);color:var(--text-muted);border:1px solid var(--border-soft);vertical-align:1px;">등록됨</span>' : ''}</div>
             <div class="ri-sub">${esc(TERM_KIND[kind] || kind)} · 제보 ${a.count}건 · 회원 ${a.members.size}명${a.why ? ' · ' + esc(a.why.slice(0, 60)) : ''}</div>
           </div>
-          <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <div class="ri-actions">
             <button class="ri-del qf-add" data-term="${esc(a.term)}" data-kind="${esc(kind)}" data-why="${esc(a.why || '')}">${dup ? '폼에 채우기' : '사전 등록'}</button>
           </div>
         </div>`;
@@ -4222,7 +4229,7 @@
             <div class="ri-sub">${q.airline ? esc((LEC.AIRLINES[q.airline]||{}).ko || q.airline) : '공통'} ·
               ${esc(AP_QTYPES[q.qtype] || q.qtype)}${q.stage ? ' · ' + esc(q.stage) : ''}${q.difficulty ? ' · 난이도 ' + q.difficulty : ''} ·
               ${q.source_confidence === 'verified' ? '검증' : q.source_confidence === 'estimated' ? '예상' : '제보'}${q.intent ? ' · 의도 있음' : ' · <b style="color:#A33D14">의도 비어 있음</b>'}</div></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="ri-actions">
             <button class="ri-del apq-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
             <button class="ri-del apq-edit" data-id="${q.id}">수정</button>
             <button class="ri-del apq-del" data-id="${q.id}">삭제</button></div>
@@ -4344,7 +4351,7 @@
           <div><div class="ri-main">${esc(p.title)} <span style="font-size:12px;color:var(--text-muted)">(${esc((LEC.AIRLINES[p.airline]||{}).ko || p.airline || '전 항공사 공통')})</span></div>
             <div class="ri-sub">${p.total_days}일 · ${p.reveal_policy === 'daily' ? '하루 한 문제' : p.reveal_policy === 'all' ? '전체 공개' : '날짜 지정'} ·
               ${p.price == null ? '지급 전용' : p.price === 0 ? '무료' : Number(p.price).toLocaleString() + '원'} · ${p.visible ? '공개' : '숨김'}</div></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="ri-actions">
             <button class="ri-del app-days" data-id="${p.id}" style="color:var(--action-dark);border-color:var(--action)">일차 배치</button>
             <button class="ri-del app-vis" data-id="${p.id}">${p.visible ? '숨기기' : '공개'}</button>
             <button class="ri-del app-edit" data-id="${p.id}">수정</button>
@@ -4525,7 +4532,7 @@
         return `<div class="round-item" style="${r.active ? '' : 'opacity:.55;'}">
           <div><div class="ri-main">${esc(m.name || '(이름 없음)')}</div>
             <div class="ri-sub">${esc(m.email || '')} · ${r.active ? '활성' : '중지'}</div></div>
-          <div style="display:flex;gap:6px;">
+          <div class="ri-actions">
             <button class="ri-del apr-tog" data-id="${r.member_id}">${r.active ? '중지' : '재개'}</button>
             <button class="ri-del apr-del" data-id="${r.member_id}">해제</button></div></div>`;
       }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지정된 연구원이 없습니다.</div>';
