@@ -66,7 +66,8 @@
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',
-    'lab.html': 'lab', 'lab-archive.html': 'lab',
+    'lab.html': 'lab',
+    'lab-shelf.html': 'lab', 'lab-archive.html': 'lab',
     'lectures.html': 'lecture', 'lecture.html': 'lecture',
     /* 연구진 페이지는 '연구실' 소속으로 표시 — '연구진' 단독 항목은 2026-07-31 제거하고
        연구실 드롭다운의 하위 '연구진 소개'로 넣었다(연구실 하단에 같은 연구진 섹션이 있어

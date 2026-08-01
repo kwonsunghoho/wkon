@@ -15,7 +15,7 @@
 | ai-killer (polish·quickfix 겸용) | 2026-07-25 확인 `2026-07-25d`·프로필 4곳·사전 28개 → polish 추가 후 `2026-07-30b`(`coach_terms` 주입). **레포는 `2026-07-31b`(미니 다듬기 `mode:'quickfix'` 분기 — 재배포 필요.** a 는 타입 정리만) | 로그인 없이 `POST {"probe":true}` → `version`·`features`·`airline_profiles`/`terms` 개수·`has_api_key`. `features` 에 `quickfix` + `quickfix_table` 숫자면 미니 다듬기 살아 있음. `coach_terms` 0 이면 연구진 자산 미유입 |
 | sojae-chat | v2(카드+뼈대) 배포. **크레딧 차감은 재배포된 버전부터 동작** — 재배포 전엔 화면 안내만 바뀌고 차감 안 됨 | `POST {probe:true}` → `version`·`playbook_keys` |
 | answer-program | `2026-07-30b` (프로브 sessions_table:true · questions 99 · programs 1) | 프로브 있음 — 상세는 `docs/monc-answer-program/implementation-status.md` |
-| lab-file | **신설(2026-08-01) — 아직 미배포.** 레포 `2026-08-01a`. 연구실 자료 열람/다운로드(서명 URL·비밀번호·워터마크) | `POST {"probe":true}` → `version`·`features`(`signed_url`,`password`,`watermark`,`view_mode`,`audit`)·`bucket`. 404 면 미배포 |
+| lab-file | **배포 확인 `2026-08-01a`**(2026-08-01 프로브 실측 — features 5종·bucket lab-files·ttl 60) | `POST {"probe":true}` → `version`·`features`(`signed_url`,`password`,`watermark`,`view_mode`,`audit`)·`bucket`. 404 면 미배포 |
 
 ## 마이그레이션 적용 현황 (기록 기준)
 
@@ -43,7 +43,8 @@
 | `20260730130000_answer_polishes` | 첨삭 기록 + 리허설 단가 15 선반영 | **owner 실행 필요** 표기(단 `credit_free_limits.polish` 는 'DB 적용 완료'로 기록 — 어긋나 보이면 프로브 `polish_table` 로 확인) |
 | `20260730150000_answer_program` | 답변 프로그램 전체(롤백 포함) | 실행 완료(프로브 확인) |
 | `20260731120000_expression_reports` | 미니 다듬기(quickfix) 수집함 | **owner 실행 필요**(+ai-killer 재배포 — 미적용 시 위젯만 '준비 중') |
-| `20260801120000_lab_resources` | 연구실 자료(비공개 버킷 `lab-files` + `lab_resources`·`lab_downloads` + 목록/집계/비밀번호 RPC) | **owner 실행 필요**(+lab-file 배포). 미적용 시 자료실은 `not_ready` 로 멈춘다 |
+| `20260801120000_lab_resources` | 연구실 자료(비공개 버킷 `lab-files` + `lab_resources`·`lab_downloads` + 목록/집계/비밀번호 RPC) | **실행 완료(2026-08-01)** — anon RPC 프로브로 확인(`lab_shelf_counts`·`lab_resource_list` 정상 응답) |
+| `20260801130000_lab_resources_admin` | 위 보완 — `is_admin()` 에게만 자료 전권·열람기록 조회·`lab-files` 버킷·`lab_set_password` 개방 | **owner 실행 필요.** 미적용이면 **관리자가 자료를 올릴 수 없다**(admin '연구실 자료' 탭이 오류 안내를 띄운다) |
 
 ## 브랜치
 

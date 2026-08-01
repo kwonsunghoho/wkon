@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>연구실 자료 — MONC 몬크 챌린지</title>
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+  <meta name="description" content="몬크 연구실 자료 — 항공사 자료실·영상관·기출문제·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+
+  <!-- 파비콘 -->
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
+  <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴 — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <style>
+  /* ══════════════════════════════════════════════════════════════════════════
+     연구실 서가 상세 — ①안 '서류철'(2026-08-01 오너 확정: "1안으로 진행")
+
+     한 파일이 서가 5종을 다 그린다: lab-shelf.html?shelf=airline|video|question|report|calendar
+     (특강 lecture.html?id= 와 같은 사상 — 페이지를 5개로 나누면 머리 모양 한 번 고칠 때
+      5번 고쳐야 한다. 서가를 늘릴 땐 SHELVES 표에 한 줄만 더한다.)
+
+     화면: 다크 머리(서가 이름·현황) + 픽커(항공사·유형) + 종이 목록.
+     허브(lab.html)의 다크 콘솔 카드와 같은 면을 머리에 써서 세 화면이 한 몸으로 보인다.
+
+     ⚠️ 파일 경로는 이 페이지가 절대 모른다. 목록은 lab_resource_list RPC(경로·비밀번호
+        해시를 반환하지 않음), 실제 열람은 lab-file Edge Function 이 발급하는 60초
+        서명 URL 뿐이다. 여기에 Storage 직접 접근 코드를 넣지 말 것.
+     ⚠️ 목록은 비회원도 본다(원장 화면 문구와 일치). 로그인 요구는 '열람 시점'에만.
+     ⚠️ 필터는 픽커+바텀시트 — 칩 나열로 되돌리지 말 것(news.html 과 같은 규칙).
+     ══════════════════════════════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { overflow-x: clip; touch-action: manipulation; }
+  body {
+    font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased; word-break: keep-all;
+  }
+  a { text-decoration: none; color: inherit; }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+  [hidden] { display: none !important; }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 20px 56px; }
+
+  /* ── 되돌아가기 — 상세는 늘 원장에서 들어온다 ── */
+  .back {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+    margin-top: 92px; font-size: 13px; font-weight: 700; color: var(--text-muted);
+  }
+  .back:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+  /* ── 다크 머리 — 허브 연구실 카드와 같은 면 ── */
+  .hd {
+    border-radius: var(--radius); padding: 20px 20px 17px;
+    background: linear-gradient(180deg, #1E4079, #142C52);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow);
+  }
+  .hd-idx { font-size: 12px; font-weight: 800; letter-spacing: 0.18em; color: var(--action-on-dark); }
+  .hd h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.01em; margin-top: 7px; }
+  .hd-desc { font-size: 13.5px; font-weight: 500; line-height: 1.55; color: rgba(245,241,232,0.8); margin-top: 6px; }
+  .hd-meta {
+    display: flex; align-items: center; gap: 7px; margin-top: 14px; padding-top: 12px;
+    border-top: 1px dashed rgba(245,241,232,0.3);
+    font-size: 12.5px; font-weight: 600; color: rgba(245,241,232,0.78);
+  }
+  .hd-meta b { color: #FFFFFF; font-weight: 800; }
+  .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
+  @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
+  @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
+
+  /* ── 픽커 — news.html 과 같은 알약 버튼 → 바텀시트 ── */
+  .pickrow { display: flex; gap: 8px; margin-top: 16px; }
+  .pick {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    min-height: 44px; padding: 0 14px; border-radius: 999px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    font: inherit; font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pick:hover { border-color: var(--accent-dark); }
+  .pick:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .pick.set { background: var(--action-tint); border-color: var(--accent-dark); color: var(--accent-ink); font-weight: 800; }
+  .pick .cv { font-size: 10px; opacity: .55; }
+
+  /* ── 자료 목록 ── */
+  .count { margin-top: 18px; font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+  .doc-list { margin-top: 4px; }
+  .doc {
+    display: flex; align-items: flex-start; gap: 12px; width: 100%;
+    padding: 16px 2px 15px; border-bottom: 1px solid var(--border-soft);
+    background: none; border-left: 0; border-right: 0; border-top: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .doc:last-child { border-bottom: 1.5px solid var(--border); }
+  @media (hover: hover) { .doc:hover { background: rgba(27,58,107,0.035); } }
+  .doc:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: var(--radius-xs); }
+  .doc[disabled] { cursor: default; opacity: .6; }
+  .doc-ico {
+    flex: none; width: 38px; height: 38px; border-radius: 10px;
+    background: var(--accent-tint); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .doc-txt { min-width: 0; flex: 1; }
+  .doc-tit { font-size: 15px; font-weight: 700; line-height: 1.45; }
+  .doc-sum { font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 3px; }
+  .doc-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+  .tag {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent-ink);
+    border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 1px 6px;
+  }
+  .tag.new { background: var(--action); color: var(--action-ink); border-color: transparent; }
+  .doc-mark { flex: none; margin-top: 9px; color: var(--text-dim); }
+
+  .empty { margin-top: 26px; padding: 26px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
+  .empty p { font-size: 14px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
+  .skel { height: 74px; border-radius: var(--radius-xs); background: linear-gradient(90deg, rgba(38,34,28,.05), rgba(38,34,28,.09), rgba(38,34,28,.05)); margin-top: 12px; }
+
+  .foot-note { margin-top: 34px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); line-height: 1.6; }
+
+  /* ── 바텀시트(픽커 선택 · 비밀번호 입력 공용 뼈대) ── */
+  .scrim { position: fixed; inset: 0; z-index: 205; background: rgba(38,34,28,.45); opacity: 0; transition: opacity .22s; }
+  .scrim.open { opacity: 1; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 210;
+    width: min(100%, 560px); margin: 0 auto; background: var(--surface);
+    border-radius: 22px 22px 0 0; padding: 8px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -14px 44px rgba(38,34,28,.24); max-height: 76vh; overflow-y: auto;
+    transform: translateY(18px); opacity: 0;
+    transition: transform .26s cubic-bezier(.22,1,.36,1), opacity .2s;
+  }
+  .sheet.open { transform: none; opacity: 1; }
+  .sheet-handle { width: 38px; height: 4px; border-radius: 999px; background: var(--border); margin: 6px auto 14px; }
+  .sheet-title { font-family: var(--serif); font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+  .sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (min-width: 640px) { .sheet-grid { grid-template-columns: 1fr 1fr 1fr; } }
+  .opt {
+    appearance: none; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text); font: inherit; font-size: 14px; font-weight: 700;
+    min-height: 46px; padding: 8px 10px; border-radius: 999px; -webkit-tap-highlight-color: transparent;
+  }
+  .opt:hover { border-color: var(--accent-dark); }
+  .opt:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .opt.on { background: var(--action); color: var(--action-ink); border-color: transparent; }
+
+  /* 비밀번호 시트 */
+  .pw-desc { font-size: 13.5px; font-weight: 500; line-height: 1.6; color: var(--text-muted); margin-bottom: 12px; }
+  .pw-row { display: flex; gap: 8px; }
+  .pw-row input {
+    flex: 1; min-width: 0; min-height: 48px; padding: 10px 16px; font: inherit; font-size: 15px;
+    color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+  }
+  .pw-row input:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+  .pw-go {
+    flex: none; min-height: 48px; padding: 0 18px; border: 0; border-radius: 12px;
+    background: var(--action); color: var(--action-ink); font: inherit; font-size: 15px; font-weight: 800; cursor: pointer;
+  }
+  .pw-go[disabled] { opacity: .6; cursor: default; }
+  .pw-err { margin-top: 10px; font-size: 13px; font-weight: 700; color: #C0392B; line-height: 1.5; }
+
+  /* 처리 중·안내 토스트 */
+  .toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 240;
+    max-width: min(92%, 420px); padding: 12px 16px; border-radius: 999px;
+    background: var(--bg-dark); color: var(--text-on-dark);
+    font-size: 13.5px; font-weight: 600; line-height: 1.5; text-align: center;
+    box-shadow: 0 12px 32px rgba(36,26,18,.28);
+  }
+  @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
+  </style>
+</head>
+<body>
+
+<main class="wrap">
+
+  <a class="back" href="lab-archive.html">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    연구실
+  </a>
+
+  <header class="hd">
+    <p class="hd-idx num" id="shIdx">01 — 자료실</p>
+    <h1 id="shName">항공사 자료실</h1>
+    <p class="hd-desc" id="shDesc">항공사를 고르면 그 회사 자료만 모아 보여드려요.</p>
+    <p class="hd-meta num" id="shMeta"><i class="live"></i>자료를 불러오는 중…</p>
+  </header>
+
+  <div class="pickrow" id="shPicks" hidden>
+    <button class="pick" type="button" id="pkAir" hidden aria-haspopup="dialog" aria-expanded="false"><span class="pk-label">항공사</span><span class="cv" aria-hidden="true">▾</span></button>
+    <button class="pick" type="button" id="pkType" hidden aria-haspopup="dialog" aria-expanded="false"><span class="pk-label">자료 유형</span><span class="cv" aria-hidden="true">▾</span></button>
+  </div>
+
+  <p class="count num" id="shCount" hidden></p>
+
+  <div id="shSkel"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  <div class="doc-list" id="shList"></div>
+
+  <div class="empty" id="shEmpty" hidden><p id="shEmptyMsg">아직 올라온 자료가 없어요.</p></div>
+
+  <p class="foot-note" id="shFoot" hidden>자료는 무료 회원 로그인 후 열 수 있어요. 받은 파일에는 받으신 분 정보가 표시됩니다.</p>
+
+</main>
+
+<!-- 시트 뼈대 — 픽커 선택과 비밀번호 입력이 같이 쓴다 -->
+<div class="scrim" id="shScrim" hidden></div>
+<div class="sheet" id="shSheet" role="dialog" aria-modal="true" aria-labelledby="shSheetTitle" hidden>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h2 class="sheet-title" id="shSheetTitle">항공사 선택</h2>
+  <div class="sheet-grid" id="shSheetGrid" hidden></div>
+  <div id="shPwBox" hidden>
+    <p class="pw-desc" id="shPwDesc">이 자료는 비밀번호가 필요해요.</p>
+    <div class="pw-row">
+      <input type="password" id="shPwInput" inputmode="text" autocomplete="off" aria-label="자료 비밀번호" placeholder="비밀번호" />
+      <button class="pw-go" type="button" id="shPwGo">열기</button>
+    </div>
+    <p class="pw-err" id="shPwErr" hidden></p>
+  </div>
+</div>
+
+<div class="toast" id="shToast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* 서가 표 — 여기 한 줄이 페이지 하나다. 서가를 늘릴 땐 이 표에만 더한다.
+     idx/name/desc 는 원장(lab-archive.html)의 카드와 같은 말을 쓴다. */
+  var SHELVES = {
+    airline:  { idx: '01 — 자료실',   name: '항공사 자료실', desc: '항공사를 고르면 그 회사 자료만 모아 보여드려요.', noun: '자료',   unit: '건', airline: true,  type: '자료 유형' },
+    video:    { idx: '02 — 영상관',   name: '영상관',       desc: '기업분석·QnA·라이브 다시보기를 주제별로 모았어요.', noun: '영상',   unit: '편', airline: false, type: '주제' },
+    question: { idx: '03 — 기출문제', name: '기출문제',     desc: '실제 면접장에서 나온 질문을 항공사별로 모았어요.',   noun: '문제',   unit: '개', airline: true,  type: '질문 유형' },
+    report:   { idx: '04 — 리포트',   name: '현장 리포트',   desc: '면접 다녀온 회원들의 기록.',                        noun: '리포트', unit: '편', airline: true,  type: '유형' },
+    calendar: { idx: '05 — 캘린더',   name: '채용 캘린더',   desc: '항공사별 채용이 언제 있었는지 흐름을 한눈에.',       noun: '채용',   unit: '곳', airline: true,  type: '상태' }
+  };
+
+  /* 항공사 라벨 — news.html 과 같은 슬러그를 쓴다(자료를 등록할 때도 이 값으로) */
+  var AIRLINE_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
+  var AIRLINE_ORDER = ['kal','asiana','jinair','jejuair','twayair','airbusan','airseoul','eastarjet','airpremia','aerok'];
+
+  var params = new URLSearchParams(location.search);
+  var shelfKey = params.get('shelf') || 'airline';
+  if (!SHELVES[shelfKey]) shelfKey = 'airline';
+  var SH = SHELVES[shelfKey];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+  document.title = SH.name + ' — MONC 몬크 챌린지';
+  $('shIdx').textContent = SH.idx;
+  $('shName').textContent = SH.name;
+  $('shDesc').textContent = SH.desc;
+
+  var rows = [], fAir = 'all', fType = 'all';
+  var sheetKind = null;          // 'air' | 'type' | 'pw' | null
+  var pwTarget = null;           // 비밀번호 시트가 열려 있는 자료
+
+  /* ── 토스트 ── */
+  var toastTimer = null;
+  function toast(msg, ms) {
+    var el = $('shToast');
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, ms || 2600);
+  }
+
+  /* ── 날짜 ── */
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso), p = function (n) { return String(n).padStart(2, '0'); };
+    return p(d.getMonth() + 1) + '.' + p(d.getDate());
+  }
+  function isNew(iso) {
+    if (!iso) return false;
+    return (Date.now() - new Date(iso).getTime()) < 14 * 864e5;
+  }
+  function fmtSize(n) {
+    if (!n) return '';
+    if (n < 1024 * 1024) return Math.max(1, Math.round(n / 1024)) + 'KB';
+    return (n / 1024 / 1024).toFixed(1) + 'MB';
+  }
+  function relTime(iso) {
+    if (!iso) return '';
+    var diff = Date.now() - new Date(iso).getTime();
+    var h = Math.floor(diff / 36e5);
+    if (h < 1) return '방금';
+    if (h < 24) return h + '시간 전';
+    var d = Math.floor(h / 24);
+    if (d < 30) return d + '일 전';
+    return fmtDate(iso);
+  }
+
+  /* ── 목록 불러오기 ── */
+  function load() {
+    if (!window.MONC || !window.MONC.sb) { fail('연결이 준비되지 않았어요.'); return; }
+    window.MONC.sb.rpc('lab_resource_list', { p_shelf: shelfKey, p_airline: null })
+      .then(function (res) {
+        $('shSkel').hidden = true;
+        if (res.error) { fail('자료실 준비가 아직 안 됐어요.'); return; }
+        rows = res.data || [];
+        buildOpts();
+        render();
+      })
+      .catch(function () { $('shSkel').hidden = true; fail('자료를 불러오지 못했어요.'); });
+  }
+
+  function fail(msg) {
+    $('shMeta').innerHTML = '<i class="live"></i>' + esc(msg);
+    $('shEmpty').hidden = false;
+    $('shEmptyMsg').textContent = msg;
+  }
+
+  /* 픽커 옵션은 '데이터에 실제로 있는 값'만 — 눌러도 0건인 선택지를 만들지 않는다 */
+  var optAir = [], optType = [];
+  function buildOpts() {
+    var a = {}, t = {};
+    rows.forEach(function (r) {
+      if (r.airline) a[r.airline] = 1;
+      if (r.doc_type) t[r.doc_type] = 1;
+    });
+    optAir = AIRLINE_ORDER.filter(function (s) { return a[s]; });
+    optType = Object.keys(t).sort();
+    $('shPicks').hidden = !(optAir.length > 1 || optType.length > 1);
+    $('pkAir').hidden = !(SH.airline && optAir.length > 1);
+    $('pkType').hidden = !(optType.length > 1);
+    syncPicks();
+  }
+
+  function syncPicks() {
+    var a = $('pkAir').querySelector('.pk-label');
+    a.textContent = fAir === 'all' ? '항공사' : (AIRLINE_LABEL[fAir] || fAir);
+    $('pkAir').classList.toggle('set', fAir !== 'all');
+    var t = $('pkType').querySelector('.pk-label');
+    t.textContent = fType === 'all' ? SH.type : fType;
+    $('pkType').classList.toggle('set', fType !== 'all');
+  }
+
+  function visible() {
+    return rows.filter(function (r) {
+      if (fAir !== 'all' && r.airline !== fAir) return false;
+      if (fType !== 'all' && r.doc_type !== fType) return false;
+      return true;
+    });
+  }
+
+  var ICON_DOC = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>';
+  var ICON_LOCK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  var ICON_EYE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+  function render() {
+    var list = visible();
+    var total = rows.length;
+    var last = rows.reduce(function (m, r) { return (!m || r.published_at > m) ? r.published_at : m; }, null);
+
+    // 자료가 없으면 0 을 내걸지 않는다 — '준비 중'이 사실에 가깝고 덜 허전하다
+    $('shMeta').innerHTML = '<i class="live"></i>' + (total > 0
+      ? SH.noun + ' <b class="num">' + total + '</b>' + SH.unit + (last ? ' · 갱신 <b>' + esc(relTime(last)) + '</b>' : '')
+      : SH.noun + ' 준비 중');
+
+    $('shCount').hidden = !(total > 0);
+    $('shCount').textContent = (fAir !== 'all' || fType !== 'all')
+      ? list.length + SH.unit + ' / 전체 ' + total + SH.unit
+      : total + SH.unit;
+
+    $('shFoot').hidden = total === 0;
+
+    if (!list.length) {
+      $('shList').innerHTML = '';
+      $('shEmpty').hidden = false;
+      $('shEmptyMsg').textContent = total === 0
+        ? '아직 올라온 자료가 없어요. 연구진이 준비하는 대로 채워집니다.'
+        : '고른 조건에 맞는 자료가 없어요.';
+      return;
+    }
+    $('shEmpty').hidden = true;
+
+    $('shList').innerHTML = list.map(function (r) {
+      var mark = r.needs_password ? ICON_LOCK : (r.delivery === 'view' ? ICON_EYE : '');
+      var bits = [];
+      if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
+      if (r.doc_type) bits.push(esc(r.doc_type));
+      if (r.delivery === 'view') bits.push('화면 열람');
+      else if (r.file_ext) bits.push(String(r.file_ext).toUpperCase() + (r.file_size ? ' ' + fmtSize(r.file_size) : ''));
+      return '<button class="doc" type="button" data-id="' + esc(r.id) + '">' +
+        '<span class="doc-ico">' + ICON_DOC + '</span>' +
+        '<span class="doc-txt">' +
+          '<span class="doc-tit">' + esc(r.title) + '</span>' +
+          (r.summary ? '<span class="doc-sum">' + esc(r.summary) + '</span>' : '') +
+          '<span class="doc-sub">' +
+            (isNew(r.published_at) ? '<span class="tag new">NEW</span>' : '') +
+            esc(bits.join(' · ')) +
+            (r.published_at ? ' · <span class="num">' + fmtDate(r.published_at) + '</span>' : '') +
+          '</span>' +
+        '</span>' +
+        (mark ? '<span class="doc-mark">' + mark + '</span>' : '') +
+      '</button>';
+    }).join('');
+  }
+
+  /* ── 시트 ── */
+  function openSheet(kind, opts) {
+    sheetKind = kind;
+    var isPw = kind === 'pw';
+    $('shSheetGrid').hidden = isPw;
+    $('shPwBox').hidden = !isPw;
+    $('shSheetTitle').textContent = isPw ? '비밀번호 입력'
+      : (kind === 'air' ? '항공사 선택' : SH.type + ' 선택');
+
+    if (!isPw) {
+      var cur = kind === 'air' ? fAir : fType;
+      var vals = kind === 'air' ? optAir : optType;
+      var label = function (v) { return kind === 'air' ? (AIRLINE_LABEL[v] || v) : v; };
+      var html = '<button class="opt' + (cur === 'all' ? ' on' : '') + '" type="button" data-v="all">' +
+        (kind === 'air' ? '전체 항공사' : '전체') + '</button>';
+      html += vals.map(function (v) {
+        return '<button class="opt' + (cur === v ? ' on' : '') + '" type="button" data-v="' + esc(v) + '">' + esc(label(v)) + '</button>';
+      }).join('');
+      $('shSheetGrid').innerHTML = html;
+      var btn = kind === 'air' ? $('pkAir') : $('pkType');
+      btn.setAttribute('aria-expanded', 'true');
+    } else {
+      $('shPwDesc').textContent = '「' + opts.title + '」은 비밀번호가 필요한 자료예요.';
+      $('shPwErr').hidden = true;
+      $('shPwInput').value = '';
+      $('shPwGo').disabled = false;
+    }
+
+    $('shScrim').hidden = false; $('shSheet').hidden = false;
+    void $('shSheet').offsetWidth;   // 강제 리플로 — hidden 해제를 먼저 커밋해야 슬라이드업이 걸린다
+    $('shScrim').classList.add('open'); $('shSheet').classList.add('open');
+    if (isPw) setTimeout(function () { $('shPwInput').focus(); }, 80);
+  }
+
+  function closeSheet() {
+    $('shScrim').classList.remove('open'); $('shSheet').classList.remove('open');
+    $('pkAir').setAttribute('aria-expanded', 'false');
+    $('pkType').setAttribute('aria-expanded', 'false');
+    setTimeout(function () { $('shScrim').hidden = true; $('shSheet').hidden = true; }, 220);
+    sheetKind = null; pwTarget = null;
+  }
+
+  /* ── 자료 열기 — 판정은 전부 서버(lab-file)가 한다 ── */
+  var busy = false;
+  function openDoc(row, password) {
+    if (busy) return;
+    busy = true;
+    toast('자료를 준비하는 중…', 8000);
+
+    window.MONC.sb.functions.invoke('lab-file', {
+      body: {
+        resourceId: row.id,
+        mode: row.delivery === 'view' ? 'view' : 'download',
+        password: password || ''
+      }
+    }).then(function (res) {
+      busy = false;
+      var d = (res && res.data) || {};
+      if (res && res.error && !d.code) { toast('자료를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.'); return; }
+
+      if (d.code === 'need_login') {
+        toast('로그인하면 자료를 보실 수 있어요.');
+        setTimeout(function () {
+          location.href = 'login.html?returnTo=' + encodeURIComponent(location.pathname + location.search);
+        }, 900);
+        return;
+      }
+      if (d.code === 'need_password') { $('shToast').hidden = true; openSheet('pw', { title: row.title }); return; }
+      if (d.code === 'bad_password' || d.code === 'locked') {
+        $('shToast').hidden = true;
+        if (sheetKind !== 'pw') openSheet('pw', { title: row.title });
+        $('shPwErr').textContent = d.error; $('shPwErr').hidden = false;
+        $('shPwGo').disabled = (d.code === 'locked');
+        return;
+      }
+      if (!d.ok || !d.url) { toast(d.error || '자료를 열지 못했어요.'); return; }
+
+      $('shToast').hidden = true;
+      if (sheetKind === 'pw') closeSheet();
+      // 서명 URL 은 60초짜리 — 새 창에서 바로 연다(다운로드/열람 모두 브라우저가 처리)
+      window.open(d.url, '_blank', 'noopener');
+      if (d.watermarked) toast('받으신 분 정보가 표시된 파일이에요.', 3200);
+    }).catch(function () {
+      busy = false;
+      toast('자료를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+    });
+  }
+
+  /* ── 이벤트 ── */
+  $('shList').addEventListener('click', function (e) {
+    var btn = e.target.closest('.doc');
+    if (!btn) return;
+    var row = rows.filter(function (r) { return r.id === btn.getAttribute('data-id'); })[0];
+    if (row) { pwTarget = row; openDoc(row, ''); }
+  });
+
+  $('pkAir').addEventListener('click', function () { openSheet('air'); });
+  $('pkType').addEventListener('click', function () { openSheet('type'); });
+
+  $('shSheetGrid').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (!b) return;
+    var v = b.getAttribute('data-v');
+    if (sheetKind === 'air') fAir = v; else fType = v;
+    syncPicks(); render(); closeSheet();
+  });
+
+  $('shPwGo').addEventListener('click', function () {
+    var pw = $('shPwInput').value.trim();
+    if (!pw) { $('shPwErr').textContent = '비밀번호를 입력해 주세요.'; $('shPwErr').hidden = false; return; }
+    if (pwTarget) openDoc(pwTarget, pw);
+  });
+  $('shPwInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('shPwGo').click(); });
+
+  $('shScrim').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sheetKind) closeSheet(); });
+
+  load();
+})();
+</script>
+</body>
+</html>

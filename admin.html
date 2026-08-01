@@ -394,6 +394,7 @@
     <button class="tabbtn" data-tab="reviews"><svg class="ic"><use href="#i-star"/></svg>후기 관리</button>
     <button class="tabbtn" data-tab="terms"><svg class="ic"><use href="#i-book"/></svg>감점 사전</button>
     <button class="tabbtn" data-tab="questions"><svg class="ic"><use href="#i-q"/></svg>소재 문제</button>
+    <button class="tabbtn" data-tab="labfiles"><svg class="ic"><use href="#i-book"/></svg>연구실 자료</button>
     <div class="sn-me">
       <span class="sn-who" id="snWho">관리자</span>
       <button class="logout" id="logoutBtn">로그아웃</button>
@@ -747,6 +748,75 @@
         </div>
       </form>
       <div class="round-list" id="questionList"><div class="loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- ══ 연구실 자료 (lab_resources + lab-files 버킷) — 2026-08-01 신설 ══
+       ⚠️ 파일은 비공개 버킷에 올라간다. 회원은 lab-file Edge Function 이 발급하는
+          60초 서명 URL 로만 연다 — 여기서 공개 URL 을 만들지 말 것.
+       ⚠️ 비밀번호는 평문으로 넣지 않는다. lab_set_password() RPC 가 해시로 바꿔 저장한다.
+       ⚠️ 항공사는 news.html 과 같은 슬러그(kal·asiana…)를 쓴다 — 자료실 필터가 이 값으로 묶는다. -->
+  <div class="tab-panel" id="panel-labfiles">
+    <div class="rounds-wrap">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
+        연구실 서가에 올라가는 <b>자료 파일</b>입니다. 파일은 <b>비공개 저장소</b>에 들어가고,
+        회원이 열 때마다 <b>60초짜리 임시 링크</b>가 새로 발급돼요. 링크를 퍼뜨려도 1분이면 끊깁니다.<br>
+        <b>PDF 는 받는 사람 정보(이메일·회원번호·날짜)가 자동으로 찍힙니다.</b>
+        열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.
+      </p>
+
+      <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <div class="field"><label>서가</label>
+            <select id="lfShelf">
+              <option value="airline">01 항공사 자료실</option>
+              <option value="video">02 영상관</option>
+              <option value="question">03 기출문제</option>
+              <option value="report">04 현장 리포트</option>
+              <option value="calendar">05 채용 캘린더</option>
+            </select></div>
+          <div class="field"><label>항공사(선택)</label>
+            <select id="lfAirline">
+              <option value="">전체 공통</option>
+              <option value="kal">대한항공</option>
+              <option value="asiana">아시아나항공</option>
+              <option value="jinair">진에어</option>
+              <option value="jejuair">제주항공</option>
+              <option value="twayair">티웨이항공</option>
+              <option value="airbusan">에어부산</option>
+              <option value="airseoul">에어서울</option>
+              <option value="eastarjet">이스타항공</option>
+              <option value="airpremia">에어프레미아</option>
+              <option value="aerok">에어로케이</option>
+            </select></div>
+          <div class="field"><label>자료 유형(선택)</label><input id="lfType" placeholder="예: 한 장 요약"></div>
+        </div>
+        <div class="field"><label>제목</label><input id="lfTitle" placeholder="예: 대한항공 인재상, 한 장 정리"></div>
+        <div class="field"><label>한 줄 설명(선택)</label><input id="lfSummary" placeholder="목록에서 제목 아래 작게 보여요"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label>열람 방식</label>
+            <select id="lfDelivery">
+              <option value="download">파일 받기</option>
+              <option value="view">화면 열람만</option>
+            </select></div>
+          <div class="field"><label>비밀번호(선택)</label><input id="lfPw" placeholder="비우면 회원이면 누구나"></div>
+          <div class="field"><label>받는 사람 표시</label>
+            <select id="lfWm">
+              <option value="1">찍는다 (PDF)</option>
+              <option value="0">찍지 않는다</option>
+            </select></div>
+        </div>
+        <div class="field"><label>파일</label><input id="lfFile" type="file"></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;">
+            <input type="checkbox" id="lfPublish" checked> 올리자마자 공개
+          </label>
+          <button class="btn btn-action" type="submit" id="lfSubmit">자료 올리기</button>
+          <span id="lfMsg" style="font-size:13px;font-weight:700;color:var(--text-muted);"></span>
+        </div>
+      </form>
+
+      <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -2698,6 +2768,143 @@
     document.getElementById('tfCancel').addEventListener('click', resetTermForm);
     document.getElementById('termSearch').addEventListener('input', renderTerms);
 
+    /* ── 연구실 자료 (lab_resources + lab-files 버킷) — 2026-08-01 ──
+       ⚠️ 파일은 비공개 버킷에 올린다. 여기서 공개 URL(getPublicUrl)을 만들지 말 것 —
+          회원 열람은 lab-file 함수의 60초 서명 URL 이 유일한 길이다.
+       ⚠️ 비밀번호는 평문으로 컬럼에 넣지 않는다. lab_set_password() 가 해시로 바꾼다.
+       ⚠️ 관리자도 service_role 이 아니라 그냥 로그인 사용자다 — 그래서 lab_resources·
+          lab-files 에 is_admin() 정책이 따로 필요하다(20260801130000). 그 정책이 없으면
+          업로드·조회가 전부 막힌다. 미적용 환경에서는 안내를 띄우고 조용히 멈춘다. */
+    var LAB_SHELF_LABEL = { airline: '항공사 자료실', video: '영상관', question: '기출문제', report: '현장 리포트', calendar: '채용 캘린더' };
+    var LAB_AIR_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
+
+    async function loadLabFiles() {
+      const listEl = document.getElementById('labList');
+      if (!listEl) return;
+      // select('*') — 컬럼을 나열하면 마이그레이션 미적용 환경에서 400 이 난다(프로젝트 공통 규칙)
+      const { data, error } = await MONC.sb.from('lab_resources')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
+          + (error.code === 'PGRST205'
+            ? '자료실 테이블이 아직 없어요 — 마이그레이션(20260801120000)을 실행하세요.'
+            : '자료를 읽지 못했어요: ' + esc(error.message) + '<br>관리자 정책(20260801130000)이 적용됐는지 확인하세요.')
+          + '</div>';
+        return;
+      }
+      const rows = data || [];
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 자료가 없습니다. 위에서 올리세요.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(r => {
+        const bits = [LAB_SHELF_LABEL[r.shelf] || r.shelf];
+        if (r.airline) bits.push(LAB_AIR_LABEL[r.airline] || r.airline);
+        if (r.doc_type) bits.push(r.doc_type);
+        bits.push(r.delivery === 'view' ? '화면 열람' : '파일 받기');
+        if (r.access === 'password') bits.push('🔒 비밀번호');
+        if (r.watermark) bits.push('워터마크');
+        return `
+        <div class="round-item" data-id="${r.id}" style="${r.published ? '' : 'opacity:.55;'}">
+          <div>
+            <div class="ri-main">${esc(r.title)}</div>
+            <div class="ri-sub">${esc(bits.join(' · '))}${r.published ? '' : ' · 비공개'}${r.published_at ? ' · ' + String(r.published_at).slice(0, 10) : ''}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del lab-pw" data-id="${r.id}">비밀번호</button>
+            <button class="ri-del lab-pub" data-id="${r.id}" data-pub="${r.published ? 1 : 0}">${r.published ? '숨기기' : '공개'}</button>
+            <button class="ri-del lab-del" data-id="${r.id}" data-path="${esc(r.storage_path)}">삭제</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      // 비밀번호 걸기·풀기 — 평문은 서버 함수에만 넘긴다(컬럼에 직접 쓰지 말 것)
+      listEl.querySelectorAll('.lab-pw').forEach(b => b.addEventListener('click', async () => {
+        const pw = prompt('새 비밀번호를 입력하세요. (비우고 확인하면 비밀번호를 없앱니다)');
+        if (pw === null) return;
+        const { error } = await MONC.sb.rpc('lab_set_password', { p_id: b.dataset.id, p_pw: pw });
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast(pw ? '비밀번호를 걸었어요' : '비밀번호를 풀었어요'); loadLabFiles();
+      }));
+
+      listEl.querySelectorAll('.lab-pub').forEach(b => b.addEventListener('click', async () => {
+        const on = b.dataset.pub !== '1';
+        const patch = { published: on };
+        if (on) patch.published_at = new Date().toISOString();
+        const { error } = await MONC.sb.from('lab_resources').update(patch).eq('id', b.dataset.id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast(on ? '공개했어요' : '숨겼어요'); loadLabFiles();
+      }));
+
+      // 삭제는 파일까지 지운다 — 남겨두면 저장소에 유실된 파일이 쌓인다
+      listEl.querySelectorAll('.lab-del').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('자료와 파일을 함께 지울까요? 되돌릴 수 없습니다.')) return;
+        const { error } = await MONC.sb.from('lab_resources').delete().eq('id', b.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
+        toast('삭제됐어요'); loadLabFiles();
+      }));
+    }
+
+    document.getElementById('labForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('lfMsg');
+      const btn = document.getElementById('lfSubmit');
+      const file = document.getElementById('lfFile').files[0];
+      const title = document.getElementById('lfTitle').value.trim();
+      if (!title) { msg.textContent = '제목을 입력하세요.'; return; }
+      if (!file) { msg.textContent = '파일을 고르세요.'; return; }
+
+      btn.disabled = true; msg.textContent = '올리는 중…';
+      const shelf = document.getElementById('lfShelf').value;
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      // 경로는 서가/연월/난수 — 파일명으로 내용을 추측할 수 없게 한다
+      const path = `${shelf}/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+
+      const up = await MONC.sb.storage.from('lab-files').upload(path, file, { contentType: file.type || undefined });
+      if (up.error) {
+        btn.disabled = false;
+        msg.textContent = '업로드 실패: ' + up.error.message;
+        return;
+      }
+
+      const pw = document.getElementById('lfPw').value.trim();
+      const row = {
+        shelf,
+        airline: document.getElementById('lfAirline').value || null,
+        title,
+        summary: document.getElementById('lfSummary').value.trim() || null,
+        doc_type: document.getElementById('lfType').value.trim() || null,
+        storage_path: path,
+        file_ext: ext,
+        file_size: file.size,
+        delivery: document.getElementById('lfDelivery').value,
+        watermark: document.getElementById('lfWm').value === '1',
+        published: document.getElementById('lfPublish').checked,
+        published_at: document.getElementById('lfPublish').checked ? new Date().toISOString() : null
+      };
+      const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
+      if (ins.error) {
+        btn.disabled = false;
+        msg.textContent = '자료 등록 실패: ' + ins.error.message;
+        return;
+      }
+      if (pw && ins.data && ins.data.id) {
+        const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: ins.data.id, p_pw: pw });
+        if (pwErr) msg.textContent = '자료는 올렸지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
+      }
+
+      btn.disabled = false;
+      if (!msg.textContent.startsWith('자료는 올렸지만')) msg.textContent = '';
+      toast('자료를 올렸어요');
+      document.getElementById('lfTitle').value = '';
+      document.getElementById('lfSummary').value = '';
+      document.getElementById('lfPw').value = '';
+      document.getElementById('lfFile').value = '';
+      loadLabFiles();
+    });
+
     // ── 회원 제보(expression_reports) 집계 — 미니 다듬기 수집함 (2026-07-31) ──
     // quickfix 위젯이 모은 spotted(표현·종류·이유)를 표현별로 묶어 빈도 순위로 본다.
     // ⚠️ 이 규모(최근 500건)엔 브라우저 집계로 충분 — 서버 집계 함수를 만들지 말 것.
@@ -3492,6 +3699,7 @@
         loadReviewsAdmin();
         loadQuestions();
         loadTerms();
+        loadLabFiles();
         loadCredits();
         loadCreditPacks();
         loadCreditConfig();

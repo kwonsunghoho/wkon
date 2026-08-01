@@ -39,10 +39,9 @@
      헤어라인 확정본은 outputs/lab-hub-mockup.html 에 기록으로만 남는다.
 
      ⚠️ 축적 막대(8주 스파크라인)는 오너 지시로 제거 — 되살리지 말 것.
-     ⚠️ 숫자는 DB 에서 실제로 셀 수 있는 값만. 지금은 전부 예시값이고 foot-note 가
-        밝힌다 — 데이터가 연결되면 예시값과 foot-note 를 같이 걷어낸다.
-     ⚠️ 서가 5장은 하위 페이지가 아직 없어 href 없는 <a>(비활성). 페이지가 생기면
-        href 를 단다 — 호버 리프트·포커스 링이 [href] 게이트라 그때 살아난다.
+     ⚠️ 숫자는 DB 에서 실제로 셀 수 있는 값만 — `lab_shelf_counts()` 가 실제 값을
+        덮어쓴다. 자료 0건인 서가는 '준비 중'으로 표시한다(예시값을 남기지 말 것).
+     ⚠️ 서가 5장은 lab-shelf.html?shelf=… 로 간다(한 파일이 5종을 다 그린다).
      팔레트·활자·라운드는 tokens.css 값 그대로. 새 색 없음.
      ══════════════════════════════════════════════════════════════════════════ */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -141,18 +140,19 @@
     </p>
   </header>
 
+  <!-- 숫자는 lab_shelf_counts() 가 채운다. 아래 값은 스크립트가 못 돌 때만 잠깐 보이는 자리다. -->
   <div class="st-strip">
     <span class="st-live"><i class="live"></i>연구 진행 중</span>
     <span class="st-sep"></span>
-    <span class="st-item num">자료 <b>180</b>건</span>
-    <span class="st-sep"></span>
-    <span class="st-item">갱신 <b>3시간 전</b></span>
+    <span class="st-item num" id="stTotal">자료 <b>—</b>건</span>
+    <span class="st-sep" id="stSep2" hidden></span>
+    <span class="st-item" id="stFresh" hidden></span>
   </div>
 
-  <!-- 서가 카드 5장 — 하위 페이지가 생기면 각 카드에 href 를 단다(머리 주석 참조) -->
+  <!-- 서가 카드 5장 — 각 카드는 lab-shelf.html?shelf=… 로 간다 -->
   <div class="sh-list">
 
-    <a class="sh-card">
+    <a class="sh-card" href="lab-shelf.html?shelf=airline" data-shelf="airline">
       <div class="sh-top">
         <span class="sh-idx num">01</span>
         <div class="sh-txt">
@@ -160,14 +160,14 @@
           <p class="sh-desc">항공사를 고르면 그 회사 자료만 모아 보여드려요.</p>
         </div>
         <div class="sh-fig">
-          <p class="sh-count"><b class="num">24</b><span>건</span></p>
-          <p class="sh-delta num">최근 +2</p>
+          <p class="sh-count" data-count><b class="num">24</b><span>건</span></p>
+          <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
       <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">대한항공 인재상, 한 장 정리</span><time class="num">07.28</time></p>
     </a>
 
-    <a class="sh-card">
+    <a class="sh-card" href="lab-shelf.html?shelf=video" data-shelf="video">
       <div class="sh-top">
         <span class="sh-idx num">02</span>
         <div class="sh-txt">
@@ -175,14 +175,14 @@
           <p class="sh-desc">기업분석·QnA·라이브 다시보기를 주제별로 모았어요.</p>
         </div>
         <div class="sh-fig">
-          <p class="sh-count"><b class="num">12</b><span>편</span></p>
-          <p class="sh-delta num">최근 +1</p>
+          <p class="sh-count" data-count><b class="num">12</b><span>편</span></p>
+          <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
       <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">7월 채용 QnA 라이브 (42:10)</span><time class="num">07.19</time></p>
     </a>
 
-    <a class="sh-card">
+    <a class="sh-card" href="lab-shelf.html?shelf=question" data-shelf="question">
       <div class="sh-top">
         <span class="sh-idx num">03</span>
         <div class="sh-txt">
@@ -190,14 +190,14 @@
           <p class="sh-desc">실제 면접장에서 나온 질문을 항공사별로 모았어요.</p>
         </div>
         <div class="sh-fig">
-          <p class="sh-count"><b class="num">132</b><span>개</span></p>
-          <p class="sh-delta num">주 +6</p>
+          <p class="sh-count" data-count><b class="num">132</b><span>개</span></p>
+          <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
       <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">"옆 지원자의 장점을 찾아 칭찬해 보세요"</span><time class="num">07.31</time></p>
     </a>
 
-    <a class="sh-card">
+    <a class="sh-card" href="lab-shelf.html?shelf=report" data-shelf="report">
       <div class="sh-top">
         <span class="sh-idx num">04</span>
         <div class="sh-txt">
@@ -205,14 +205,14 @@
           <p class="sh-desc">면접 다녀온 회원들의 기록. 남기면 크레딧을 드려요.</p>
         </div>
         <div class="sh-fig">
-          <p class="sh-count"><b class="num">12</b><span>편</span></p>
-          <p class="sh-delta num">대기 2</p>
+          <p class="sh-count" data-count><b class="num">12</b><span>편</span></p>
+          <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
       <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">제주항공 임원 면접 — 표정을 오래 보셨어요</span><time class="num">07.26</time></p>
     </a>
 
-    <a class="sh-card">
+    <a class="sh-card" href="lab-shelf.html?shelf=calendar" data-shelf="calendar">
       <div class="sh-top">
         <span class="sh-idx num">05</span>
         <div class="sh-txt">
@@ -220,8 +220,8 @@
           <p class="sh-desc">항공사별 채용이 언제 있었는지 흐름을 한눈에.</p>
         </div>
         <div class="sh-fig">
-          <p class="sh-count"><b class="num">7</b><span>곳</span></p>
-          <p class="sh-delta">접수 중 1</p>
+          <p class="sh-count" data-count><b class="num">7</b><span>곳</span></p>
+          <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
       <p class="sh-foot"><span class="sh-tag">접수 중</span><span class="p-txt">이스타항공 객실승무원 ~8.12(수)</span><time class="num">D-12</time></p>
@@ -229,8 +229,77 @@
 
   </div>
 
-  <p class="foot-note">화면 속 자료 수·목록·일정은 아직 예시입니다 — 자료가 연결되면 실제 값으로 바뀝니다.</p>
+  <p class="foot-note" id="labFoot" hidden></p>
 
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script>
+/* 서가별 자료 수·마지막 갱신 — lab_shelf_counts() 가 원본이다.
+   ⚠️ 화면 숫자는 DB 에서 셀 수 있는 값만 쓴다(신뢰가 이 페이지의 콘셉트).
+      자료가 0건인 서가는 숫자 대신 '준비 중'을 보여준다 — 예시값을 남기지 말 것.
+   ⚠️ 각 카드의 '최신' 줄(sh-foot)은 아직 자료 제목을 물리지 않았다. 자료가 쌓이면
+      lab_resource_list 로 서가별 최신 1건을 물려 채운다(그때 이 주석도 지운다). */
+(function () {
+  'use strict';
+  var UNIT = { airline: '건', video: '편', question: '개', report: '편', calendar: '곳' };
+
+  function relTime(iso) {
+    if (!iso) return '';
+    var h = Math.floor((Date.now() - new Date(iso).getTime()) / 36e5);
+    if (h < 1) return '방금';
+    if (h < 24) return h + '시간 전';
+    var d = Math.floor(h / 24);
+    return d < 30 ? d + '일 전' : new Date(iso).toISOString().slice(5, 10).replace('-', '.');
+  }
+
+  function paint(map) {
+    var total = 0, last = null;
+    Object.keys(UNIT).forEach(function (key) {
+      var card = document.querySelector('.sh-card[data-shelf="' + key + '"]');
+      if (!card) return;
+      var row = map[key];
+      var n = row ? Number(row.n) : 0;
+      total += n;
+      if (row && row.last_at && (!last || row.last_at > last)) last = row.last_at;
+
+      var cnt = card.querySelector('[data-count]');
+      var delta = card.querySelector('[data-delta]');
+      var foot = card.querySelector('.sh-foot');
+
+      if (n > 0) {
+        cnt.innerHTML = '<b class="num">' + n + '</b><span>' + UNIT[key] + '</span>';
+        if (row.last_at) { delta.textContent = relTime(row.last_at); delta.hidden = false; }
+      } else {
+        // 자료가 없는 서가 — 숫자를 지어내지 않는다
+        cnt.innerHTML = '<span>준비 중</span>';
+        delta.hidden = true;
+        if (foot) foot.remove();
+      }
+    });
+
+    document.getElementById('stTotal').innerHTML = '자료 <b>' + total + '</b>건';
+    if (last) {
+      document.getElementById('stFresh').innerHTML = '갱신 <b>' + relTime(last) + '</b>';
+      document.getElementById('stFresh').hidden = false;
+      document.getElementById('stSep2').hidden = false;
+    }
+    if (total === 0) {
+      var f = document.getElementById('labFoot');
+      f.textContent = '자료는 준비되는 대로 서가별로 채워집니다.';
+      f.hidden = false;
+    }
+  }
+
+  if (!window.MONC || !window.MONC.sb) return;
+  window.MONC.sb.rpc('lab_shelf_counts').then(function (res) {
+    if (res.error) return;                       // 미적용 환경이면 조용히 둔다
+    var map = {};
+    (res.data || []).forEach(function (r) { map[r.shelf] = r; });
+    paint(map);
+  }).catch(function () {});
+})();
+</script>
 </body>
 </html>

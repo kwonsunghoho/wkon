@@ -159,14 +159,15 @@
         <h2 class="hub-name">연구실</h2>
         <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
+      <!-- 숫자는 lab_shelf_counts() 가 채운다 — 아래 '—' 는 스크립트 전 자리표시 -->
       <div class="ix num">
-        <p class="ix-row"><span class="ix-name">항공사 자료실</span><span class="ix-lead"></span><span class="ix-n">24<span>건</span></span></p>
-        <p class="ix-row"><span class="ix-name">영상관</span><span class="ix-lead"></span><span class="ix-n">12<span>편</span></span></p>
-        <p class="ix-row"><span class="ix-name">기출문제</span><span class="ix-lead"></span><span class="ix-n">132<span>개</span></span></p>
-        <p class="ix-row"><span class="ix-name">현장 리포트</span><span class="ix-lead"></span><span class="ix-n">12<span>편</span></span></p>
-        <p class="ix-row"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n">7<span>곳</span></span></p>
+        <p class="ix-row" data-shelf="airline"><span class="ix-name">항공사 자료실</span><span class="ix-lead"></span><span class="ix-n">—<span>건</span></span></p>
+        <p class="ix-row" data-shelf="video"><span class="ix-name">영상관</span><span class="ix-lead"></span><span class="ix-n">—<span>편</span></span></p>
+        <p class="ix-row" data-shelf="question"><span class="ix-name">기출문제</span><span class="ix-lead"></span><span class="ix-n">—<span>개</span></span></p>
+        <p class="ix-row" data-shelf="report"><span class="ix-name">현장 리포트</span><span class="ix-lead"></span><span class="ix-n">—<span>편</span></span></p>
+        <p class="ix-row" data-shelf="calendar"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n">—<span>곳</span></span></p>
       </div>
-      <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>180</b>건 · 갱신 3시간 전</p>
+      <p class="hub-meta num" id="labMeta"><i class="live"></i>연구 진행 중</p>
     </a>
 
     <a class="hub-card" href="researchers.html">
@@ -181,9 +182,47 @@
 
   </div>
 
-  <p class="foot-note">자료 수·갱신 시각은 아직 예시입니다 — 자료가 연결되면 실제 값으로 바뀝니다.</p>
+  <p class="foot-note" id="labFoot" hidden></p>
 
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script>
+/* 서가별 자료 수 — lab_shelf_counts() 가 원본. 화면 숫자는 DB 에서 셀 수 있는 값만 쓴다.
+   자료가 아직 없으면 목차 줄은 '—' 로 남고 카드 발치가 '자료 준비 중'이 된다. */
+(function () {
+  'use strict';
+  function relTime(iso) {
+    var h = Math.floor((Date.now() - new Date(iso).getTime()) / 36e5);
+    if (h < 1) return '방금';
+    if (h < 24) return h + '시간 전';
+    var d = Math.floor(h / 24);
+    return d < 30 ? d + '일 전' : new Date(iso).toISOString().slice(5, 10).replace('-', '.');
+  }
+  if (!window.MONC || !window.MONC.sb) return;
+  window.MONC.sb.rpc('lab_shelf_counts').then(function (res) {
+    if (res.error) return;                       // 미적용 환경이면 조용히 둔다
+    var total = 0, last = null;
+    (res.data || []).forEach(function (r) {
+      var row = document.querySelector('.ix-row[data-shelf="' + r.shelf + '"] .ix-n');
+      var n = Number(r.n) || 0;
+      total += n;
+      if (r.last_at && (!last || r.last_at > last)) last = r.last_at;
+      if (row) row.firstChild.textContent = n;
+    });
+    var meta = document.getElementById('labMeta');
+    meta.innerHTML = '<i class="live"></i>' + (total > 0
+      ? '연구 진행 중 · 자료 <b>' + total + '</b>건' + (last ? ' · 갱신 ' + relTime(last) : '')
+      : '자료 준비 중');
+    if (total === 0) {
+      var f = document.getElementById('labFoot');
+      f.textContent = '자료는 준비되는 대로 서가별로 채워집니다.';
+      f.hidden = false;
+    }
+  }).catch(function () {});
+})();
+</script>
 
 <script src="researchers-data.js" defer></script>
 <script>
