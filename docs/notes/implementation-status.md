@@ -47,7 +47,7 @@
 | `20260801130000_lab_resources_admin` | 위 보완 — `is_admin()` 에게만 자료 전권·열람기록 조회·`lab-files` 버킷·`lab_set_password` 개방 | **실행 완료(2026-08-01)** — anon 프로브로 확인(자료 등록 시도가 RLS 로 거부·`lab_set_password` 42501) |
 | `20260801140000_lab_video` | 영상관 유튜브 링크 — `external_url`·`duration_sec` 추가, `storage_path` nullable, 목록 RPC 재생성 | **실행 완료(2026-08-01)** — 영상 등록·조회 확인 |
 | `20260801150000_lab_thumbs` | 영상 썸네일 — 목록 RPC 가 `video_id`(유튜브 11자 id) 반환 | **owner 실행 필요.** 미적용이면 영상관에 썸네일이 안 뜨고 큰 재생 아이콘만 나온다 |
-| `20260801160000_lab_paid` | 연구실 **유료 자료**(자료마다 `price`) — `lab_resources.price` · `lab_purchases` · 목록 RPC 에 `price`·`owned` · `lab_my_purchases()` · `lab_sales_summary()` | **owner 실행 필요**(+lab-file `2026-08-01e` 재배포). ⚠️ **반드시 `_lab_thumbs` 다음에 실행한다** — 세 파일(140000·150000·160000)이 같은 목록 RPC 를 재생성해 **나중에 실행한 쪽이 이긴다.** 이 파일이 셋을 모두 합친 최종 정의(`video_id`+`price`+`owned`)라 마지막이어야 한다. 순서가 뒤집히면 유료 자료가 전부 무료로 열린다. 미적용이면 admin 가격 칸이 '마이그레이션 먼저' 안내를 띄운다 |
+| `20260801160000_lab_paid` | 연구실 **유료 자료**(자료마다 `price`) — `lab_resources.price` · `lab_purchases` · 목록 RPC 에 `price`·`owned` · `lab_my_purchases()` · `lab_sales_summary()` | **owner 실행 필요**(+lab-file `2026-08-01e` 재배포). ⚠️ **이 파일이 목록 RPC 의 최종 정의다**(`video_id`+`price`+`owned`). 140000·150000·160000 이 같은 함수를 재생성하므로 **나중에 실행한 쪽이 이긴다.** 이 파일에 150000 의 `video_id` 정의가 그대로 들어 있어 **150000 을 건너뛰고 이것만 실행해도 썸네일까지 켜진다.** 반대로 150000 을 이 파일 뒤에 실행하면 `price`·`owned` 가 사라져 **유료 자료가 전부 무료로 열린다**(그때는 이 파일만 다시 실행하면 복구). 미적용이면 admin 가격 칸이 '마이그레이션 먼저' 안내를 띄운다 |
 
 ## 브랜치
 
