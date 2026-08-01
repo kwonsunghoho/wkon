@@ -122,7 +122,7 @@
     /* 기출 은행 목록 필터 — 유형 칩(개수 배지). 칩 자체는 신청자 현황과 같은 .af-chip 을 쓴다. */
     .apq-filter { margin: 4px 0 12px; }
     .apq-flabel { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    #apqFilter b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
+    #apqFilter b, #lrShelfBar b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .rounds-wrap { padding: 24px; max-width: 900px; }
@@ -842,8 +842,13 @@
         <p id="lrMsg" hidden style="margin-top:2px;padding:10px 12px;border-radius:var(--radius-xs);font-size:13.5px;font-weight:700;line-height:1.6;white-space:pre-wrap;"></p>
       </form>
 
-      <!-- 서가 필터 — 다섯 서가가 한 목록에 섞이면 관리가 안 된다(오너 지적 2026-08-01) -->
-      <div class="nw-filter-row" id="lrShelfBar" style="margin-top:22px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <!-- 서가 필터 — 다섯 서가가 한 목록에 섞이면 관리가 안 된다(오너 지적 2026-08-01).
+           ⚠️ 칩은 admin 정본 문법(.apq-filter + .af-row + .af-chip)만 쓴다 —
+              news.html 의 .nw-chip 을 가져다 쓰면 admin 에 그 CSS 가 없어 민짜로 나온다. -->
+      <div class="apq-filter" style="margin-top:22px;">
+        <span class="apq-flabel">서가별 보기</span>
+        <div class="af-row" id="lrShelfBar"></div>
+      </div>
       <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
 
       <!-- 열람 이력 — 유출이 의심될 때 '어떤 자료를 누가 열었는지' 보는 곳.
@@ -2873,13 +2878,9 @@
       const chips = [['all', '전체', _labRows.length]]
         .concat(Object.keys(LAB_SHELF_LABEL).map(k => [k, LAB_SHELF_LABEL[k], n[k] || 0]));
       bar.innerHTML = chips.map(c =>
-        '<button class="nw-chip lr-shelf' + (c[0] === _labShelf ? ' active' : '') + '" type="button" data-shelf="' + c[0] + '">'
-        + esc(c[1]) + ' ' + c[2] + '</button>'
+        '<button type="button" class="af-chip' + (c[0] === _labShelf ? ' on' : '') + '" data-shelf="' + c[0] + '">'
+        + esc(c[1]) + '<b>' + c[2] + '</b></button>'
       ).join('');
-      bar.querySelectorAll('.lr-shelf').forEach(b => b.addEventListener('click', () => {
-        _labShelf = b.dataset.shelf;
-        renderLabShelfBar(); renderLabList();
-      }));
     }
 
     function renderLabList() {
@@ -3091,6 +3092,14 @@
         + '</div>';
       }).join('');
     }
+
+    // 서가 칩 — 다시 그려도 살아 있도록 위임으로 받는다(기출 은행 필터와 같은 방식)
+    document.getElementById('lrShelfBar').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-shelf]');
+      if (!b) return;
+      _labShelf = b.dataset.shelf;
+      renderLabShelfBar(); renderLabList();
+    });
 
     document.getElementById('lrLogAll').addEventListener('click', () => {
       _labLogFor = null; renderLabLogs();
