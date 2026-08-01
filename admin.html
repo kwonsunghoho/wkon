@@ -52,7 +52,9 @@
               overflow-x: auto; overflow-y: hidden; padding: 10px 12px; border-right: 0;
               border-bottom: 1px solid var(--border-soft); -webkit-overflow-scrolling: touch; }
       .sn-logo { padding: 0 4px 0 0; }
-      .sn-glabel { display: none; }
+      /* 그룹 라벨은 칩 사이 구분선+미니 라벨로 남긴다 — 칩 12개가 한 줄일 때 그룹 경계가 유일한 지도다(2026-08-01 모바일 정비) */
+      .sn-glabel { display: flex; align-items: center; flex: 0 0 auto; padding: 0 2px 0 10px;
+                   margin-left: 4px; border-left: 1px solid var(--border); font-size: 10.5px; }
       .tabbtn { width: auto; flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface);
                 border-radius: 999px; padding: 9px 13px; font-size: 13px; gap: 7px; }
       .tabbtn .ic { display: none; }
@@ -177,6 +179,11 @@
     .round-item .ri-edit:hover { background: var(--action-tint); }
     .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
     .round-editing .ri-cancel { font-size: 12px; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+    /* ⚠️ hidden 짝 규칙 — display 를 직접 주는 요소는 [hidden] 이 그 규칙에 진다(작성자 CSS > UA 스타일).
+       챌린지·특강·연구실 자료의 편집 바가 빈 바 + '취소' 버튼인 채 항상 떠 있던 버그(2026-08-01 실측).
+       display 있는 요소에 hidden 을 쓰면 아래처럼 [hidden] 짝을 같이 둘 것. */
+    #lrEditBar { display: flex; }
+    .round-editing[hidden], #lrEditBar[hidden] { display: none; }
 
     .apps-wrap { padding: 20px; max-width: 900px; }
     .apps-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
@@ -369,6 +376,22 @@
     @keyframes adm-spin { to { transform: rotate(360deg); } }
     body.authed .shell { animation: adm-in .2s ease-out; }
     @keyframes adm-in { from { opacity: 0; } to { opacity: 1; } }
+    /* ── 모바일 공통 보정(≤960px · 2026-08-01 모바일 UX 정비) ──
+       ① 입력 활자 16px — iOS 사파리는 16px 미만 입력을 누르면 화면을 강제 확대하고 되돌리지 않는다.
+          폼이 많은 admin 에서 가장 큰 사용성 손실이라 모바일에서만 16px 로 올린다(데스크톱 밀도는 그대로).
+       ② 자주 누르는 액션 버튼 44px+ (9대 원칙 2). ③ 본문 좌우 여백 16px — '오늘' 탭과 같은 기준으로 통일. */
+    @media (max-width: 960px) {
+      .smain input:not([type="checkbox"]):not([type="file"]), .smain select, .smain textarea { font-size: 16px; }
+      .rounds-wrap, .apps-wrap, .reviews-wrap { padding: 20px 16px 44px; }
+      .main { padding: 16px; }
+      /* 신청자 툴바: 검색은 한 줄 전체, 건수·버튼은 그 아래 한 줄 — CSV 버튼만 외따로 떨어지던 줄바꿈 정리 */
+      .apps-toolbar .search { flex-basis: 100%; }
+      .apps-count { margin-right: auto; }
+      .ri-edit, .ri-del, .ri-cancel { min-height: 44px; padding: 10px 16px; }
+      .ac-tg, .ac-del, .rv-btn, .rv-kf, .seg button { min-height: 44px; }
+      .mchk, .bulk-bar input[type="checkbox"] { width: 20px; height: 20px; }
+      .mitem { padding: 12px 10px; }
+    }
     @media (prefers-reduced-motion: reduce) {
       #loading::before { animation: none; }
       body.authed .shell { animation: none; }
@@ -480,7 +503,8 @@
     </aside>
 
     <main class="main">
-      <div class="empty-main" id="emptyMain">왼쪽에서 회원을 선택하세요.</div>
+      <!-- '왼쪽에서' 금지 — 모바일(≤820px)은 목록이 위에 있다. 위치를 안 박는 문구로 유지할 것 -->
+      <div class="empty-main" id="emptyMain">목록에서 회원을 선택하세요.</div>
       <div id="detail" style="display:none;"></div>
     </main>
   </div>
@@ -829,12 +853,13 @@
         이미 산 회원의 결제 금액은 그대로 남습니다. <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.
         <b>파일을 여러 개 고르면 자료 하나로 묶입니다</b>(상·하편) — 값도 하나, 구매도 한 번이고
         학생은 자료를 눌러 받을 파일을 고릅니다. 자료를 여러 건으로 나누려면 한 번씩 올리세요.
-        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01f</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
+        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01g</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
         <!-- 수정 중일 때만 뜨는 머리 — 지금 새로 올리는 중인지 고치는 중인지 헷갈리지 않게 -->
-        <p id="lrEditBar" hidden style="margin:0 0 2px;padding:9px 12px;border-radius:var(--radius-xs);background:var(--action-tint);color:var(--accent-ink);font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <!-- ⚠️ display:flex 를 인라인에 두지 말 것 — 인라인 display 는 [hidden] 을 이겨 늘 보인다(위 CSS #lrEditBar 짝 규칙) -->
+        <p id="lrEditBar" hidden style="margin:0 0 2px;padding:9px 12px;border-radius:var(--radius-xs);background:var(--action-tint);color:var(--accent-ink);font-size:13.5px;font-weight:800;align-items:center;gap:10px;flex-wrap:wrap;">
           <span id="lrEditWho"></span>
           <button class="btn" type="button" id="lrCancel" style="margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;">새로 올리기로 돌아가기</button>
         </p>
@@ -903,7 +928,7 @@
           </p>
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap;">
             <input type="checkbox" id="lrPublish" checked> 올리자마자 공개
           </label>
           <button class="btn btn-action" type="submit" id="lrSubmit">자료 올리기</button>
