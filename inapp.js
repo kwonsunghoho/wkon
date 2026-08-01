@@ -1,20 +1,22 @@
 /* =============================================================================
-   인앱 브라우저 안내 — inapp.js (2026-08-01 · v3 상단 고정 한 줄)
+   인앱 브라우저 안내 — inapp.js (2026-08-01 · v4)
    =============================================================================
    인스타(유입 1위)·카톡 인앱 브라우저는 파일 다운로드를 막고 구글 OAuth 를
-   거부한다(disallowed_useragent). 그래서 인앱이면 상단에 안내를 띄운다.
+   거부한다(disallowed_useragent). 인앱이면 nav 아래에 안내를 띄운다.
 
-   ⚠️ 형태 변경 금지 — 오너 확정 경과(2026-08-01, 하루 안에 세 번):
-      v1 흐름 안 배너 → 고정 nav 와 글자가 겹쳐 깨져 보임(실사고).
-      v2 전체 화면 덮개 → 오너 기각("장난치냐? 그냥 상단 설명으로 바꿔").
-      v3(현재) = position:fixed 로 nav '아래'에 붙는 한 줄 — 페이지 레이아웃을
-      건드리지 않고(fixed), nav 와도 겹치지 않는다(top = navbar 실측 높이,
-      z-index 90 < nav 100 이라 만에 하나 겹쳐도 nav 가 이긴다).
-
-   ⚠️ 화면 문자열은 전부 \uXXXX 이스케이프(생성기 scratchpad/gen_inapp.py) —
-      어떤 charset 오독에서도 글자가 깨질 수 없다. 한글을 그대로 넣지 말 것.
-   ⚠️ 페이지에서 src="inapp.js?v=N" 으로 부른다 — 인앱 웹뷰가 캐시를 잘 안 버려서
-      파일을 고치면 ?v= 도 같이 올린다(v1 깨진 화면이 캐시로 계속 보인 실사고).
+   ⚠️ 하루 동안 세 번 깨진 자리다 — 아래를 지키지 않으면 네 번째가 된다.
+      v1 흐름 안 배너: 고정 nav 와 글자 겹침 → 깨짐.
+      v2 전체 화면 덮개: 오너 기각("그냥 상단 설명으로 바꿔").
+      v3 한 줄 flex(글+버튼 옆 배치): '주소 복사' 버튼이 눌린 뒤 문구가 길어지며
+         옆의 글을 짓눌러 한 단어씩 세로로 무너짐 + 남색 배경이 아래 남색 카드와
+         붙어 한 덩어리로 보임(오너: "이게 뭐냐고").
+      v4(현재) 규칙:
+        - 글과 조작을 **위아래로 쌓는다** — 한 줄 flex 에 글+버튼을 같이 넣지 말 것.
+        - **버튼 문구를 상태에 따라 바꾸지 말 것**(길어지면 레이아웃이 무너진다).
+        - 아이폰은 버튼 없음 — \u22ef 안내 문장만(복사 버튼이 사고 원인이라 제거).
+        - 배경은 밝은 종이색 — 남색 금지(페이지 다크 카드와 붙어 보인다).
+   ⚠️ 화면 문자열은 전부 \uXXXX 이스케이프(생성기 scratchpad/gen_inapp.py).
+   ⚠️ 파일을 고치면 페이지들의 src="inapp.js?v=N" 도 같이 올린다(인앱 캐시).
    ============================================================================= */
 (function () {
   'use strict';
@@ -35,23 +37,22 @@
   var pageUrl = location.href;
 
   function mount() {
-    // nav 바로 아래에 붙인다. nav 가 없는 페이지(login)는 맨 위(0).
     var nav = document.getElementById('navbar');
     var top = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
 
     var css = ''
       + '.iab{position:fixed;left:0;right:0;z-index:90;top:' + top + 'px;'
-      + 'display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;'
-      + 'background:#1B3A6B;color:#fff;box-shadow:0 6px 18px rgba(20,28,44,.25);'
+      + 'padding:10px 12px 12px 16px;background:#FFFDF6;color:#26221C;'
+      + 'border-bottom:1.5px solid rgba(27,58,107,.22);box-shadow:0 8px 22px rgba(20,28,44,.12);'
       + "font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;"
       + 'word-break:keep-all;-webkit-font-smoothing:antialiased;}'
-      + '.iab-tx{flex:1;min-width:0;}'
-      + '.iab-t{margin:0;font-size:13px;font-weight:700;line-height:1.45;}'
-      + '.iab-s{margin:3px 0 0;font-size:12px;font-weight:600;line-height:1.45;color:rgba(255,255,255,.82);}'
-      + '.iab-go{flex:none;min-height:44px;padding:0 13px;border:0;border-radius:999px;'
-      + 'background:#fff;color:#1B3A6B;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;}'
-      + '.iab-x{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:transparent;'
-      + 'color:rgba(255,255,255,.78);font-size:20px;line-height:1;cursor:pointer;}';
+      + '.iab-r1{display:flex;align-items:flex-start;gap:6px;}'
+      + '.iab-t{flex:1;min-width:0;margin:5px 0 0;font-size:13.5px;font-weight:800;line-height:1.5;color:#1B3A6B;}'
+      + '.iab-s{margin:4px 44px 0 0;font-size:12.5px;font-weight:600;line-height:1.55;color:#5A5346;}'
+      + '.iab-go{display:inline-block;margin-top:9px;min-height:44px;padding:0 18px;border:0;border-radius:999px;'
+      + 'background:#1B3A6B;color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;}'
+      + '.iab-x{flex:none;width:44px;height:44px;margin:-4px -4px 0 0;border:0;border-radius:50%;'
+      + 'background:transparent;color:#8A8578;font-size:20px;line-height:1;cursor:pointer;}';
     var st = document.createElement('style');
     st.textContent = css;
     document.head.appendChild(st);
@@ -61,13 +62,13 @@
     bar.setAttribute('role', 'region');
 
     var msg = appName ? ('<b>' + appName + '</b>' + " \uc548\uc5d0\uc11c\ub294 \uc790\ub8cc \ubc1b\uae30\uc640 \ub85c\uadf8\uc778\uc774 \uc548 \ub3fc\uc694.") : "\uc9c0\uae08 \ubcf4\uc2dc\ub294 \uc571 \uc548\uc5d0\uc11c\ub294 \uc790\ub8cc \ubc1b\uae30\uc640 \ub85c\uadf8\uc778\uc774 \uc548 \ub3fc\uc694.";
-    var sub = isAndroid ? '' : (isKakao ? "\uc624\ub978\ucabd \uc544\ub798 Safari \uc544\uc774\ucf58\uc744 \ub20c\ub7ec \uc8fc\uc138\uc694." : "\uc624\ub978\ucabd \uc704 \u22ef \uba54\ub274 \u2192 \u2018\uc678\ubd80 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \uc5f4\uae30\u2019\ub97c \ub20c\ub7ec \uc8fc\uc138\uc694.");
 
     bar.innerHTML = ''
-      + '<span class="iab-tx"><p class="iab-t">' + msg + '</p>'
-      + (sub ? '<p class="iab-s">' + sub + '</p>' : '') + '</span>'
-      + '<button class="iab-go" type="button">' + (isAndroid ? "Chrome\uc73c\ub85c \uc5f4\uae30" : "\uc8fc\uc18c \ubcf5\uc0ac") + '</button>'
-      + '<button class="iab-x" type="button" aria-label="\ub2eb\uae30">\u00d7</button>';
+      + '<div class="iab-r1"><p class="iab-t">' + msg + '</p>'
+      + '<button class="iab-x" type="button" aria-label="\ub2eb\uae30">\u00d7</button></div>'
+      + (isAndroid
+          ? '<button class="iab-go" type="button">Chrome\uc73c\ub85c \uc5f4\uae30</button>'
+          : '<p class="iab-s">' + (isKakao ? "\uc624\ub978\ucabd \uc544\ub798 Safari \uc544\uc774\ucf58\uc744 \ub204\ub974\uba74 \uc815\uc0c1\uc73c\ub85c \uc5f4\ub824\uc694." : "\uc624\ub978\ucabd \uc704 \u22ef \uba54\ub274\uc5d0\uc11c \u2018\uc678\ubd80 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \uc5f4\uae30\u2019\ub97c \ub204\ub974\uba74 \uc815\uc0c1\uc73c\ub85c \uc5f4\ub824\uc694.") + '</p>');
 
     document.body.appendChild(bar);
 
@@ -76,40 +77,12 @@
       try { sessionStorage.setItem(HIDE_KEY, '1'); } catch (e) {}
     });
 
-    bar.querySelector('.iab-go').addEventListener('click', function () {
-      if (isAndroid) {
-        // 크롬으로 넘긴다(버튼을 눌렀을 때만 — 자동 이동 없음).
-        // 같은 주소를 폴백으로 주면 제자리 루프가 되므로 주지 않는다.
-        location.href = 'intent://' + pageUrl.replace(/^https?:\/\//, '')
-          + '#Intent;scheme=https;package=com.android.chrome;end';
-        return;
-      }
-      var btn = this;
-      copy(pageUrl, function (ok) {
-        btn.textContent = ok ? "\ubcf5\uc0ac\ud588\uc5b4\uc694! \ube0c\ub77c\uc6b0\uc800\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uc8fc\uc138\uc694." : "\ubcf5\uc0ac\uac00 \uc548 \ub3fc\uc694 \u2014 \uc8fc\uc18c\ucc3d\uc744 \uae38\uac8c \ub20c\ub7ec \ubcf5\uc0ac\ud574 \uc8fc\uc138\uc694.";
-        btn.style.whiteSpace = 'normal';
-      });
+    var go = bar.querySelector('.iab-go');
+    if (go) go.addEventListener('click', function () {
+      // 크롬으로 넘긴다. 같은 주소를 폴백으로 주면 제자리 루프라 주지 않는다.
+      location.href = 'intent://' + pageUrl.replace(/^https?:\/\//, '')
+        + '#Intent;scheme=https;package=com.android.chrome;end';
     });
-  }
-
-  // 인앱 웹뷰는 클립보드 API 를 막는 경우가 많다 — 옛 방식으로 폴백
-  function copy(text, done) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { legacy(); });
-    } else legacy();
-    function legacy() {
-      try {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        ta.setAttribute('readonly', '');
-        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-        document.body.appendChild(ta);
-        ta.select(); ta.setSelectionRange(0, text.length);
-        var ok = document.execCommand('copy');
-        ta.remove();
-        done(!!ok);
-      } catch (e) { done(false); }
-    }
   }
 
   if (document.body) mount();
