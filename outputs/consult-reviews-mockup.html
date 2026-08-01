@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>상담 후기 화면 — 자료가 들어왔을 때 (375px 목업)</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   상담 후기 화면 목업 — 2026-08-01
+   오너: "상담 후기 화면 어떻게 보이는지 목업으로 보여줘"
+
+   라이브에는 아직 상담 후기 자료가 0건이라 카드가 안 나온다.
+   이 목업은 **자료를 넣었을 때** 어떻게 보이는지를 미리 보여 준다.
+
+   폭·활자·색·간격은 라이브(reviews.html · reviews-list.html)에서 그대로 옮겼다.
+   다른 건 데이터뿐이다 — 후기 문장은 목업용 창작이고, 캡처 자리는 회색 판이다.
+   ⚠️ 실제 학생 상담 내용을 목업에 넣지 않는다(개인정보).
+   ══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #E9E4D8; color: #26221C;
+  -webkit-font-smoothing: antialiased; word-break: keep-all;
+  padding: 28px 14px 72px;
+}
+
+/* 라이브 토큰(발췌) */
+:root {
+  --bg: #E9E4D8; --surface: #FFFFFF; --surface2: #F4F1EA;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #857C6E;
+  --border: rgba(38,34,28,0.16); --border-soft: rgba(38,34,28,0.09);
+  --accent: #1B3A6B; --accent-ink: #1B3A6B; --accent-dark: #142C52;
+  --action: #1B3A6B; --action-ink: #FFFFFF; --action-tint: rgba(27,58,107,0.08);
+  --radius-xs: 8px; --radius-sm: 12px;
+  --serif: Georgia, 'Times New Roman', serif;
+  --rv-dim: #5D5851;
+}
+
+/* 목업 껍데기 */
+.mk-head { max-width: 375px; margin: 0 auto 6px; }
+.mk-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.mk-sub { font-size: 13.5px; font-weight: 500; line-height: 1.6; color: #5F574B; margin-top: 8px; }
+.mk-label { max-width: 375px; margin: 44px auto 10px; }
+.mk-label b { font-size: 17px; font-weight: 800; color: #1B3A6B; }
+.mk-cap { display: block; font-size: 12.5px; font-weight: 500; color: #5F574B; line-height: 1.55; margin-top: 5px; }
+.mk-note { max-width: 375px; margin: 12px auto 0; font-size: 12.5px; line-height: 1.6; color: #5F574B;
+  background: rgba(27,58,107,0.06); border-left: 3px solid var(--accent-ink); border-radius: 0 8px 8px 0; padding: 10px 12px; }
+.ph { max-width: 375px; margin: 0 auto; background: var(--bg); border: 1px solid rgba(38,34,28,0.2);
+  border-radius: 26px; overflow: hidden; box-shadow: 0 12px 48px rgba(36,26,18,0.14); }
+/* 고정 nav 자리(라이브 57px) — 히어로 상단 여백이 실제와 같게 보이도록 */
+.fakenav { height: 57px; background: var(--surface); border-bottom: 1px solid var(--border-soft);
+  display: flex; align-items: center; padding: 0 18px; font-weight: 800; font-size: 15px; color: var(--accent-ink); letter-spacing: .06em; }
+.scr { padding: 0 0 26px; }
+.container { padding: 0 20px; }
+
+/* ══ 라이브에서 그대로 옮긴 규칙 ══ */
+.rv-hero { padding: 26px 0 6px; text-align: center; }   /* 라이브 92px 중 nav 높이(57)+여백을 fakenav 가 대신한다 */
+.rv-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+.rv-title { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--accent); letter-spacing: -.6px; margin-top: 10px; }
+.rv-lede { font-size: 15px; color: var(--rv-dim); margin-top: 10px; line-height: 1.6; }
+.rv-back { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 14px; font-weight: 800; color: var(--accent-ink); text-decoration: none; padding: 8px 4px; }
+.rv-back svg { width: 14px; height: 14px; }
+
+/* 허브 — 전체 합계 + 종류 카드 */
+.rv-total { margin: 22px auto 0; padding: 0 20px; }
+.rv-total-box { display: flex; align-items: baseline; justify-content: center; gap: 9px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 15px 20px; }
+.rv-total-n { font-family: var(--serif); font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.rv-total-l { font-size: 15px; color: var(--rv-dim); }
+.rv-hub { display: grid; gap: 16px; padding: 26px 0 8px; }
+.rv-sec { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); overflow: hidden; box-shadow: 0 2px 10px rgba(38,34,28,.06); }
+.rv-sec-head { padding: 20px 18px 14px; border-bottom: 1px solid var(--border-soft); }
+.rv-sec-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rv-sec-title { font-family: var(--serif); font-size: 21px; font-weight: 700; color: var(--accent); letter-spacing: -.3px; }
+.rv-sec-n { flex-shrink: 0; font-size: 13px; font-weight: 800; color: var(--accent-ink); background: var(--action-tint); border-radius: 999px; padding: 4px 11px; font-variant-numeric: tabular-nums; }
+.rv-sec-desc { font-size: 14px; color: var(--rv-dim); margin-top: 7px; line-height: 1.6; }
+.rv-prev { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px 4px; flex: 1; }
+.rv-prev-item { display: flex; flex-direction: column; gap: 5px; }
+.rv-prev-item + .rv-prev-item { border-top: 1px solid var(--border-soft); padding-top: 12px; }
+.rv-prev-q { font-family: var(--serif); font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--text);
+  letter-spacing: -.1px; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rv-prev-meta { font-size: 12px; font-weight: 700; color: var(--rv-dim); }
+.rv-sec-go { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 14px 14px 14px; min-height: 46px; padding: 11px 16px; border-radius: 999px;
+  background: var(--action-tint); color: var(--accent-ink); font-size: 14.5px; font-weight: 800; text-decoration: none; }
+.rv-sec-go svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* 목록 — 요약 + 카드 */
+.rv-summary { margin: 14px auto 0; padding: 0 20px; }
+.rv-sum-box { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 18px 20px; }
+.rv-sum-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.rv-sum-n { font-family: var(--serif); font-size: 28px; font-weight: 700; line-height: 1; color: var(--text); }
+.rv-sum-l { font-size: 15px; color: var(--rv-dim); }
+.rv-count { font-size: 14px; font-weight: 700; color: var(--rv-dim); margin: 16px 2px 14px; }
+.rv-masonry { display: flex; flex-direction: column; }   /* 375px 은 라이브도 1열(column-count:1) */
+.rv-card { margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); overflow: hidden; box-shadow: 0 2px 10px rgba(38,34,28,.06); }
+.rv-body { padding: 20px 18px 16px; display: flex; flex-direction: column; }
+.rv-verify { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; font-size: 12px; font-weight: 800;
+  color: #2F6B42; background: rgba(47,107,66,.12); border-radius: 999px; padding: 4px 10px; margin-bottom: 13px; }
+.rv-verify svg { width: 12px; height: 12px; flex-shrink: 0; }
+.rv-quote { font-family: var(--serif); font-size: 18px; font-weight: 700; line-height: 1.55; color: var(--text); letter-spacing: -.2px; margin: 0; }
+.rv-shot { position: relative; max-height: 300px; overflow: hidden; display: block; width: 100%; }
+.rv-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 16px 13px; border-top: 1px solid var(--border-soft); flex-wrap: wrap; }
+.rv-card--quote .rv-foot { margin-top: 16px; }
+.rv-who { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+.rv-name { font-family: var(--serif); font-size: 15px; font-weight: 800; color: var(--text); }
+.rv-when { font-size: 13px; font-weight: 700; color: var(--rv-dim); font-variant-numeric: tabular-nums; }
+.rv-tag { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(27,58,107,.10); color: var(--accent-ink); }
+.rv-tag-cohort { background: var(--action-tint); }
+.rv-src { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 13px; font-weight: 800; color: var(--accent-ink); padding: 5px 2px; }
+.rv-src svg { width: 12px; height: 12px; }
+.rv-foot-cta { text-align: center; padding: 20px 0 10px; }
+.rv-foot-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px;
+  padding: 15px 34px; border-radius: 999px; background: var(--action); color: var(--action-ink);
+  font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 10px 28px rgba(27,58,107,.28); }
+
+/* 캡처 자리 — 실제로는 오너가 올린 카톡·카페 스크린샷이 들어간다 */
+.shot-ph { height: 230px; background:
+    repeating-linear-gradient(0deg, #F4F1EA 0 30px, #EDE9DF 30px 31px), var(--surface2);
+  display: flex; align-items: center; justify-content: center; position: relative; }
+.shot-ph span { font-size: 12.5px; font-weight: 800; color: #8B8378; background: rgba(255,255,255,.9);
+  border: 1px dashed rgba(38,34,28,.28); border-radius: 999px; padding: 6px 13px; }
+.shot-ph::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 86px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--surface)); }
+
+/* 비교 칸 — 챌린지 vs 상담 카드를 나란히 */
+.cmp { max-width: 375px; margin: 0 auto; }
+.cmp-lab { display: flex; align-items: center; gap: 8px; margin: 18px 2px 8px; font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+.cmp-lab i { font-style: normal; font-size: 11px; font-weight: 800; background: var(--accent-ink); color: #fff; border-radius: 999px; padding: 3px 8px; }
+</style>
+</head>
+<body>
+
+<div class="mk-head">
+  <div class="mk-title">상담 후기 — 자료를 넣었을 때 보이는 화면</div>
+  <p class="mk-sub">지금 라이브는 상담 후기가 0건이라 카드가 안 나옵니다. 아래는 <b>넣었을 때</b>의 모습이고, 폭·활자·색·간격은 라이브와 같습니다. 후기 문장은 목업용으로 지어낸 것입니다.</p>
+</div>
+
+<!-- ① 허브 -->
+<div class="mk-label">
+  <b>① 허브 — 상담 후기 카드가 생긴다</b>
+  <span class="mk-cap">지금은 챌린지 후기 카드 한 장뿐입니다. 상담 후기를 넣으면 두 번째 카드가 자동으로 나타납니다.</span>
+</div>
+<div class="ph">
+  <div class="fakenav">MONC</div>
+  <div class="scr">
+    <header class="rv-hero"><div class="container">
+      <div class="rv-eyebrow">REAL REVIEWS</div>
+      <h1 class="rv-title">실제 후기</h1>
+      <p class="rv-lede">챌린지를 끝낸 사람, 상담을 받은 사람, 합격한 사람이 직접 남긴 기록입니다.</p>
+    </div></header>
+
+    <div class="rv-total"><div class="rv-total-box">
+      <span class="rv-total-n">120</span><span class="rv-total-l">개의 기록 · 2가지</span>
+    </div></div>
+
+    <div class="container"><div class="rv-hub">
+      <section class="rv-sec">
+        <div class="rv-sec-head">
+          <div class="rv-sec-top"><h2 class="rv-sec-title">챌린지 후기</h2><span class="rv-sec-n">108개</span></div>
+          <p class="rv-sec-desc">2주 챌린지를 끝낸 참여자들이 직접 남긴 후기입니다.</p>
+        </div>
+        <div class="rv-prev">
+          <div class="rv-prev-item">
+            <p class="rv-prev-q">2주 만에 찾은 내 목소리</p>
+            <span class="rv-prev-meta">예지 · 보신각 · 1기</span>
+          </div>
+          <div class="rv-prev-item">
+            <p class="rv-prev-q">눈빛까지 함께 진심으로 웃는 자연스러운 표정을 지을 수 있게 되었습니다</p>
+            <span class="rv-prev-meta">윤서연 · 영합각 · 1기</span>
+          </div>
+          <div class="rv-prev-item">
+            <p class="rv-prev-q">매일매일 답변 하나씩을 정리할 수 있어서 너무 좋았습니다</p>
+            <span class="rv-prev-meta">정서영 · 승자각 · 1기</span>
+          </div>
+        </div>
+        <a class="rv-sec-go">챌린지 후기 전체 보기
+          <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </section>
+
+      <section class="rv-sec">
+        <div class="rv-sec-head">
+          <div class="rv-sec-top"><h2 class="rv-sec-title">상담 후기</h2><span class="rv-sec-n">12개</span></div>
+          <p class="rv-sec-desc">1:1 상담을 받은 분들이 남긴 후기입니다.</p>
+        </div>
+        <div class="rv-prev">
+          <div class="rv-prev-item">
+            <p class="rv-prev-q">어디부터 손대야 할지 몰랐는데 제 상황에 맞는 순서를 짚어 주셨습니다</p>
+            <span class="rv-prev-meta">2026.07</span>
+          </div>
+          <div class="rv-prev-item">
+            <p class="rv-prev-q">서류에서 계속 떨어진 이유를 처음으로 알았어요</p>
+            <span class="rv-prev-meta">2026.07</span>
+          </div>
+          <div class="rv-prev-item">
+            <p class="rv-prev-q">늦었다고만 생각했는데 실제 기준을 듣고 나니 불안이 줄었습니다</p>
+            <span class="rv-prev-meta">2026.06</span>
+          </div>
+        </div>
+        <a class="rv-sec-go">상담 후기 전체 보기
+          <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </section>
+    </div></div>
+  </div>
+</div>
+<p class="mk-note"><b>이름 자리가 다릅니다.</b> 챌린지 후기는 <b>이름 · 챌린지 · 기수</b>, 상담 후기는 <b>연월만</b> 붙습니다.</p>
+
+<!-- ② 목록 -->
+<div class="mk-label">
+  <b>② 상담 후기 목록</b>
+  <span class="mk-cap">허브에서 '상담 후기 전체 보기'를 누르면 열리는 화면입니다. 캡처와 글이 섞여 있어도 한 목록에 같이 들어갑니다.</span>
+</div>
+<div class="ph">
+  <div class="fakenav">MONC</div>
+  <div class="scr">
+    <header class="rv-hero"><div class="container">
+      <div class="rv-eyebrow">CONSULT REVIEWS</div>
+      <h1 class="rv-title">상담 후기</h1>
+      <p class="rv-lede">1:1 상담을 받은 분들이 남긴 후기입니다.</p>
+      <a class="rv-back">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        후기 전체 보기</a>
+    </div></header>
+
+    <div class="rv-summary"><div class="rv-sum-box"><div class="rv-sum-top">
+      <span class="rv-sum-n">12</span><span class="rv-sum-l">개의 상담 후기</span>
+    </div></div></div>
+
+    <div class="container">
+      <div class="rv-count">12개 후기</div>
+      <div class="rv-masonry">
+
+        <!-- 글만 있는 후기 -->
+        <figure class="rv-card rv-card--quote">
+          <div class="rv-body">
+            <span class="rv-verify"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 후기</span>
+            <p class="rv-quote">어디부터 손대야 할지 몰랐는데, 제 상황에 맞는 순서를 짚어 주셔서 다음에 뭘 할지가 정해졌습니다.</p>
+          </div>
+          <div class="rv-foot"><div class="rv-who"><span class="rv-when">2026.07</span></div></div>
+        </figure>
+
+        <!-- 캡처가 있는 후기 -->
+        <figure class="rv-card rv-card--shot">
+          <div class="rv-shot"><div class="shot-ph"><span>카톡 캡처가 들어가는 자리</span></div></div>
+          <div class="rv-foot">
+            <div class="rv-who"><span class="rv-when">2026.07</span></div>
+            <span class="rv-src">원문 보기
+              <svg viewBox="0 0 16 16" fill="none"><path d="M6 3h7v7M13 3 4 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </figure>
+
+        <figure class="rv-card rv-card--quote">
+          <div class="rv-body">
+            <span class="rv-verify"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 후기</span>
+            <p class="rv-quote">서류에서 계속 떨어진 이유를 처음으로 알았어요. 경력을 어떻게 배치할지까지 같이 봐주셨습니다.</p>
+          </div>
+          <div class="rv-foot"><div class="rv-who"><span class="rv-when">2026.06</span></div></div>
+        </figure>
+
+      </div>
+
+      <div class="rv-foot-cta"><a class="rv-foot-btn">챌린지 신청하기 →</a></div>
+    </div>
+  </div>
+</div>
+<p class="mk-note"><b>필터 줄이 없습니다.</b> 상담 후기엔 챌린지·기수 축이 없어서요. 건수가 쌓이면 그때 답니다.<br>
+<b>하단 버튼</b>은 지금 '챌린지 신청하기'입니다 — 사이트에 상담 신청 창구가 없어서요. 카톡·오픈채팅 주소를 주시면 바꿉니다.</p>
+
+<!-- ③ 카드 비교 -->
+<div class="mk-label">
+  <b>③ 같은 자리, 다른 표기 — 챌린지 vs 상담</b>
+  <span class="mk-cap">카드 아래 칸만 다릅니다. 상담 후기는 이름을 띄우지 않습니다.</span>
+</div>
+<div class="cmp">
+  <div class="cmp-lab"><i>챌린지</i> 이름 · 챌린지 · 기수</div>
+  <figure class="rv-card rv-card--quote">
+    <div class="rv-body">
+      <span class="rv-verify"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 후기</span>
+      <p class="rv-quote">2주 동안 매일 연습하니 안정감이 생겼습니다.</p>
+    </div>
+    <div class="rv-foot"><div class="rv-who">
+      <span class="rv-name">주미</span><span class="rv-tag">영합각</span><span class="rv-tag rv-tag-cohort">1기</span>
+    </div></div>
+  </figure>
+
+  <div class="cmp-lab"><i>상담</i> 연월만</div>
+  <figure class="rv-card rv-card--quote">
+    <div class="rv-body">
+      <span class="rv-verify"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>실제 후기</span>
+      <p class="rv-quote">30분 만에 다음에 뭘 해야 할지가 정리됐습니다.</p>
+    </div>
+    <div class="rv-foot"><div class="rv-who"><span class="rv-when">2026.07</span></div></div>
+  </figure>
+</div>
+<p class="mk-note">⚠️ 화면에서 이름을 빼도 <b>캡처 이미지 안에 찍힌 이름·번호·프로필 사진은 그대로 보입니다.</b> 올리기 전에 가려 주세요 — admin 업로드 칸에도 같은 경고를 띄워 뒀습니다.</p>
+
+</body>
+</html>
