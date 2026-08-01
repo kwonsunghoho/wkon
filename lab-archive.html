@@ -164,7 +164,7 @@
           <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
-      <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">대한항공 인재상, 한 장 정리</span><time class="num">07.28</time></p>
+      <p class="sh-foot" data-foot hidden><span class="sh-tag">최신</span><span class="p-txt"></span><time class="num"></time></p>
     </a>
 
     <a class="sh-card" href="lab-shelf.html?shelf=video" data-shelf="video">
@@ -179,7 +179,7 @@
           <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
-      <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">7월 채용 QnA 라이브 (42:10)</span><time class="num">07.19</time></p>
+      <p class="sh-foot" data-foot hidden><span class="sh-tag">최신</span><span class="p-txt"></span><time class="num"></time></p>
     </a>
 
     <a class="sh-card" href="lab-shelf.html?shelf=question" data-shelf="question">
@@ -194,7 +194,7 @@
           <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
-      <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">"옆 지원자의 장점을 찾아 칭찬해 보세요"</span><time class="num">07.31</time></p>
+      <p class="sh-foot" data-foot hidden><span class="sh-tag">최신</span><span class="p-txt"></span><time class="num"></time></p>
     </a>
 
     <a class="sh-card" href="lab-shelf.html?shelf=report" data-shelf="report">
@@ -209,7 +209,7 @@
           <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
-      <p class="sh-foot"><span class="sh-tag">최신</span><span class="p-txt">제주항공 임원 면접 — 표정을 오래 보셨어요</span><time class="num">07.26</time></p>
+      <p class="sh-foot" data-foot hidden><span class="sh-tag">최신</span><span class="p-txt"></span><time class="num"></time></p>
     </a>
 
     <a class="sh-card" href="lab-shelf.html?shelf=calendar" data-shelf="calendar">
@@ -224,7 +224,7 @@
           <p class="sh-delta num" data-delta hidden></p>
         </div>
       </div>
-      <p class="sh-foot"><span class="sh-tag">접수 중</span><span class="p-txt">이스타항공 객실승무원 ~8.12(수)</span><time class="num">D-12</time></p>
+      <p class="sh-foot" data-foot hidden><span class="sh-tag">최신</span><span class="p-txt"></span><time class="num"></time></p>
     </a>
 
   </div>
@@ -236,11 +236,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script>
-/* 서가별 자료 수·마지막 갱신 — lab_shelf_counts() 가 원본이다.
-   ⚠️ 화면 숫자는 DB 에서 셀 수 있는 값만 쓴다(신뢰가 이 페이지의 콘셉트).
-      자료가 0건인 서가는 숫자 대신 '준비 중'을 보여준다 — 예시값을 남기지 말 것.
-   ⚠️ 각 카드의 '최신' 줄(sh-foot)은 아직 자료 제목을 물리지 않았다. 자료가 쌓이면
-      lab_resource_list 로 서가별 최신 1건을 물려 채운다(그때 이 주석도 지운다). */
+/* 서가별 자료 수·마지막 갱신·최신 자료 — lab_shelf_counts() + lab_resource_list() 가 원본.
+   ⚠️ 화면 숫자·제목은 DB 에서 실제로 나온 값만 쓴다(신뢰가 이 페이지의 콘셉트).
+      자료가 0건인 서가는 숫자 대신 '준비 중'을 보여주고 '최신' 줄을 숨긴다.
+      예시 제목·예시 날짜를 마크업에 남기지 말 것 — 자료가 붙는 순간 거짓말이 된다. */
 (function () {
   'use strict';
   var UNIT = { airline: '건', video: '편', question: '개', report: '편', calendar: '곳' };
@@ -252,6 +251,28 @@
     if (h < 24) return h + '시간 전';
     var d = Math.floor(h / 24);
     return d < 30 ? d + '일 전' : new Date(iso).toISOString().slice(5, 10).replace('-', '.');
+  }
+
+  function fmtDay(iso) {
+    var d = new Date(iso), p = function (n) { return String(n).padStart(2, '0'); };
+    return p(d.getMonth() + 1) + '.' + p(d.getDate());
+  }
+
+  /* 서가별 최신 1건 — 자료가 있는 서가에서만 부른다(빈 서가에 헛 조회를 보내지 않게) */
+  function fillLatest(key, card) {
+    window.MONC.sb.rpc('lab_resource_list', { p_shelf: key, p_airline: null })
+      .then(function (res) {
+        if (res.error) return;
+        var top = (res.data || [])[0];       // RPC 가 최신순으로 준다
+        if (!top) return;
+        var foot = card.querySelector('[data-foot]');
+        if (!foot) return;
+        foot.querySelector('.p-txt').textContent = top.title;
+        var t = foot.querySelector('time');
+        if (top.published_at) { t.textContent = fmtDay(top.published_at); t.dateTime = top.published_at; }
+        foot.hidden = false;
+      })
+      .catch(function () {});
   }
 
   function paint(map) {
@@ -266,16 +287,15 @@
 
       var cnt = card.querySelector('[data-count]');
       var delta = card.querySelector('[data-delta]');
-      var foot = card.querySelector('.sh-foot');
 
       if (n > 0) {
         cnt.innerHTML = '<b class="num">' + n + '</b><span>' + UNIT[key] + '</span>';
         if (row.last_at) { delta.textContent = relTime(row.last_at); delta.hidden = false; }
+        fillLatest(key, card);          // '최신' 줄은 실제 자료 제목으로만 채운다
       } else {
-        // 자료가 없는 서가 — 숫자를 지어내지 않는다
+        // 자료가 없는 서가 — 숫자도 최신 줄도 지어내지 않는다
         cnt.innerHTML = '<span>준비 중</span>';
         delta.hidden = true;
-        if (foot) foot.remove();
       }
     });
 

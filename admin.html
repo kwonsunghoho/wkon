@@ -817,6 +817,14 @@
       </form>
 
       <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
+
+      <!-- 열람 이력 — 유출이 의심될 때 '누가 언제 무엇을 받았는지' 보는 곳 -->
+      <h3 style="margin:26px 0 8px;font-size:15px;font-weight:800;">열람 이력</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
+        최근 200건입니다. <b>받기</b>는 파일을 내려받은 기록, <b>열람</b>은 화면으로 본 기록,
+        <b>비번 실패</b>는 비밀번호를 틀린 기록이에요. 같은 회원이 짧은 시간에 여러 자료를 몰아 받으면 여기서 보입니다.
+      </p>
+      <div class="round-list" id="labLogList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -2843,8 +2851,50 @@
         const { error } = await MONC.sb.from('lab_resources').delete().eq('id', b.dataset.id);
         if (error) { alert('삭제 실패: ' + error.message); return; }
         await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
-        toast('삭제됐어요'); loadLabFiles();
+        toast('삭제됐어요'); loadLabFiles(); loadLabLogs();
       }));
+
+      loadLabLogs(rows);
+    }
+
+    /* 열람 이력 — lab_downloads. 회원 이름은 이미 로드된 members 에서 붙인다(추가 조회 없이).
+       ⚠️ kind='fail' 은 비밀번호를 틀린 기록이다 — 지우지 말 것(잠금 판정도 이 행을 센다). */
+    const LAB_KIND = { download: '받기', view: '열람', fail: '비번 실패' };
+    async function loadLabLogs(resRows) {
+      const el = document.getElementById('labLogList');
+      if (!el) return;
+      const { data, error } = await MONC.sb.from('lab_downloads')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) {
+        el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
+          + (error.code === 'PGRST205' ? '기록 테이블이 아직 없어요.' : '기록을 읽지 못했어요: ' + esc(error.message))
+          + '</div>';
+        return;
+      }
+      const logs = data || [];
+      if (!logs.length) {
+        el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">아직 열람 기록이 없습니다.</div>';
+        return;
+      }
+      const titleOf = {};
+      (resRows || []).forEach(r => { titleOf[r.id] = r.title; });
+      const nameOf = {};
+      (typeof members !== 'undefined' && members ? members : []).forEach(m => { nameOf[m.id] = m.name || m.email || ''; });
+
+      el.innerHTML = logs.map(l => {
+        const who = nameOf[l.user_id] || (String(l.user_id).slice(0, 8) + '…');
+        const what = titleOf[l.resource_id] || '(삭제된 자료)';
+        const when = new Date(l.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `
+        <div class="round-item"${l.kind === 'fail' ? ' style="opacity:.7"' : ''}>
+          <div>
+            <div class="ri-main">${esc(who)} · ${esc(LAB_KIND[l.kind] || l.kind)}</div>
+            <div class="ri-sub">${esc(what)} · ${esc(when)}</div>
+          </div>
+        </div>`;
+      }).join('');
     }
 
     document.getElementById('labForm').addEventListener('submit', async (e) => {
