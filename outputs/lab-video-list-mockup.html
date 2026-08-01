@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>영상관 목록 배치 — 현행 vs 3안 (10편 기준 길이 비교)</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   영상관 목록 배치 비교 — 2026-08-01 목업
+   오너: "영상관 영상이 한줄로 나오는데? 10개 이상만 올려도 길이가 엄청 길어질거같은데?"
+
+   현행 = 16:9 큰 썸네일 1열 (lab-shelf.html .vid)
+   A안 = 2열 그리드
+   B안 = 가로형(썸네일 왼쪽 132px)
+   C안 = 하이브리드(최신 1편만 크게 + 나머지 2열)
+
+   폭·활자·색은 라이브(lab-shelf.html)와 동일. 다른 건 배치뿐이다.
+   썸네일은 목업 자립용 그라디언트(실구현은 i.ytimg.com).
+   각 안의 목록 총 높이는 아래 JS 가 실제 렌더값으로 찍는다.
+   ══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #E9E4D8; color: #26221C;
+  -webkit-font-smoothing: antialiased; word-break: keep-all;
+  padding: 28px 14px 64px;
+}
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+/* 라이브 토큰(발췌) */
+:root {
+  --surface: #FFFFFF; --paper: #F4F1EA;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #857C6E;
+  --border: rgba(38,34,28,0.16); --border-soft: rgba(38,34,28,0.09);
+  --accent-ink: #1B3A6B; --accent-dark: #142C52; --accent-tint: rgba(27,58,107,0.08);
+  --action: #1B3A6B; --action-ink: #FFFFFF;
+  --radius-xs: 8px; --radius-sm: 12px;
+}
+
+.mk-head { max-width: 375px; margin: 0 auto 6px; }
+.mk-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.mk-sub { font-size: 13.5px; font-weight: 500; line-height: 1.6; color: #5F574B; margin-top: 8px; }
+
+.mk-label { max-width: 375px; margin: 40px auto 10px; }
+.mk-label b { font-size: 17px; font-weight: 800; color: #1B3A6B; }
+.mk-cap { display: block; font-size: 12.5px; font-weight: 500; color: #5F574B; line-height: 1.55; margin-top: 5px; }
+.mk-num { display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 800; color: #1B3A6B; background: rgba(27,58,107,0.09); border-radius: 999px; padding: 4px 11px; }
+
+.ph { max-width: 375px; margin: 0 auto; background: var(--paper); border: 1px solid rgba(38,34,28,0.2); border-radius: 26px; overflow: hidden; box-shadow: 0 12px 48px rgba(36,26,18,0.14); }
+.wrap { padding: 22px 20px 34px; }
+
+/* 목록 머리(라이브 축약) */
+.lh { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1.5px solid var(--border); }
+.lh b { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 700; }
+.lh span { font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+
+.tag { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent-ink); border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 1px 6px; }
+.tag.new { background: var(--action); color: var(--action-ink); border-color: transparent; }
+.tag.pay { background: var(--accent-dark); color: var(--action-ink); border-color: transparent; }
+
+/* 썸네일 공통 — 실구현은 <img>, 목업은 그라디언트 면 */
+.th { display: block; position: relative; border-radius: var(--radius-sm); overflow: hidden; background: var(--accent-tint); }
+.th i { position: absolute; inset: 0; background: linear-gradient(135deg, #2C4C82, #16305A 60%, #34506F); }
+.th i::after { content: ''; position: absolute; inset: 0; background:
+  radial-gradient(120px 70px at 26% 34%, rgba(255,255,255,.22), transparent 70%),
+  radial-gradient(90px 90px at 78% 74%, rgba(255,255,255,.12), transparent 70%); }
+.th.v2 i { background: linear-gradient(135deg, #3A5F5A, #1D3B39 60%, #48705F); }
+.th.v3 i { background: linear-gradient(135deg, #6B4B3A, #3A2A20 60%, #7A5C42); }
+.th.v4 i { background: linear-gradient(135deg, #4A3A6B, #241C3E 60%, #5D4A80); }
+.th.v5 i { background: linear-gradient(135deg, #6B3A48, #3A1F28 60%, #80505E); }
+.play { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); border-radius: 50%; background: rgba(20,44,82,0.82); color: #FFF; display: flex; align-items: center; justify-content: center; }
+.dur { position: absolute; padding: 2px 7px; border-radius: 5px; background: rgba(20,20,18,0.82); color: #FFF; font-size: 12px; font-weight: 700; }
+
+/* ─────────── 현행: 16:9 큰 카드 1열 ─────────── */
+.vid { display: block; width: 100%; padding: 0 0 18px; margin-top: 16px; border-bottom: 1px solid var(--border-soft); background: none; border: 0; border-bottom: 1px solid var(--border-soft); font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.vid:last-child { border-bottom: 1.5px solid var(--border); }
+.vid .th { width: 100%; aspect-ratio: 16/9; }
+.vid .play { width: 54px; height: 54px; }
+.vid .dur { right: 8px; bottom: 8px; }
+.vid-tit { display: block; font-size: 15.5px; font-weight: 700; line-height: 1.45; margin-top: 11px; }
+.vid-sum { display: block; font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 4px; }
+.vid-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 7px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+
+/* ─────────── A안: 2열 그리드 ─────────── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 11px; margin-top: 16px; }
+.gv { display: block; width: 100%; padding: 0; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.gv .th { width: 100%; aspect-ratio: 16/9; }
+.gv .play { width: 34px; height: 34px; }
+.gv .play svg { width: 16px; height: 16px; }
+.gv .dur { right: 5px; bottom: 5px; font-size: 11.5px; padding: 1px 5px; }
+.gv-tit { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.42; margin-top: 8px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.gv-sub { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+.gv-sub .tag { font-size: 11.5px; padding: 0 5px; }
+
+/* ─────────── B안: 가로형 ─────────── */
+.rowv { display: flex; gap: 12px; width: 100%; padding: 13px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border-soft); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; align-items: flex-start; }
+.rowv:first-of-type { padding-top: 16px; }
+.rowv:last-child { border-bottom: 1.5px solid var(--border); }
+.rowv .th { flex: none; width: 132px; aspect-ratio: 16/9; }
+.rowv .play { width: 30px; height: 30px; }
+.rowv .play svg { width: 14px; height: 14px; }
+.rowv .dur { right: 4px; bottom: 4px; font-size: 11px; padding: 1px 4px; }
+.rowv-txt { min-width: 0; flex: 1; }
+.rowv-tit { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; font-weight: 700; line-height: 1.42; }
+.rowv-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+.rowv-sub .tag { font-size: 11.5px; padding: 0 5px; }
+
+/* ─────────── C안: 하이브리드 머리글 ─────────── */
+.c-cap { display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: var(--accent-ink); margin: 22px 0 2px; }
+
+.mk-foot { max-width: 375px; margin: 34px auto 0; font-size: 12.5px; font-weight: 500; color: #5F574B; line-height: 1.7; }
+.mk-foot b { color: #1B3A6B; }
+</style>
+</head>
+<body>
+
+<div class="mk-head">
+  <div class="mk-title">영상관 목록 — 배치 4종 비교</div>
+  <p class="mk-sub">전부 <b>영상 10편·375px</b> 기준입니다. 활자·색·간격은 라이브와 같고 배치만 다릅니다. 회색 알약의 숫자는 실제 렌더 높이입니다.</p>
+</div>
+
+<!-- ══════════ 현행 ══════════ -->
+<div class="mk-label">
+  <b>현행 — 큰 썸네일 1열</b>
+  <span class="mk-cap">한 편이 통째로 한 화면을 먹습니다. 대신 뭘 다루는 영상인지 가장 잘 보입니다.</span>
+  <span class="mk-num" id="n0">—</span>
+</div>
+<div class="ph"><div class="wrap">
+  <div class="lh"><b>영상</b><span class="num">10편</span></div>
+  <div id="list0"></div>
+</div></div>
+
+<!-- ══════════ A안 ══════════ -->
+<div class="mk-label">
+  <b>A안 — 2열 그리드</b>
+  <span class="mk-cap">썸네일은 그대로 남기고 두 편씩 나란히. 한 화면에 4편이 보입니다. 요약 한 줄은 빠집니다.</span>
+  <span class="mk-num" id="nA">—</span>
+</div>
+<div class="ph"><div class="wrap">
+  <div class="lh"><b>영상</b><span class="num">10편</span></div>
+  <div class="grid" id="listA"></div>
+</div></div>
+
+<!-- ══════════ B안 ══════════ -->
+<div class="mk-label">
+  <b>B안 — 가로형(썸네일 왼쪽)</b>
+  <span class="mk-cap">제목을 읽어 내려가며 고르는 화면. 제목이 두 줄까지 들어가 찾기가 제일 빠릅니다. 대신 썸네일이 작습니다.</span>
+  <span class="mk-num" id="nB">—</span>
+</div>
+<div class="ph"><div class="wrap">
+  <div class="lh"><b>영상</b><span class="num">10편</span></div>
+  <div id="listB"></div>
+</div></div>
+
+<!-- ══════════ C안 ══════════ -->
+<div class="mk-label">
+  <b>C안 — 최신 1편만 크게 + 나머지 2열</b>
+  <span class="mk-cap">새로 올린 영상은 지금처럼 크게 보여주고, 지난 영상은 2열로 접습니다. 유튜브·넷플릭스가 쓰는 방식입니다.</span>
+  <span class="mk-num" id="nC">—</span>
+</div>
+<div class="ph"><div class="wrap">
+  <div class="lh"><b>영상</b><span class="num">10편</span></div>
+  <div id="listC1"></div>
+  <span class="c-cap">지난 영상</span>
+  <div class="grid" id="listC2"></div>
+</div></div>
+
+<p class="mk-foot">
+  어느 안이든 <b>'더 보기'(12편씩)</b>를 얹으면 첫 화면 길이는 더 줄어듭니다. 영상이 30편을 넘어가면 그때 붙이는 게 맞습니다.
+</p>
+
+<script>
+/* 목업 데이터 — 실제 영상관에 올릴 법한 제목 길이로 */
+var V = [
+  { t: '대한항공 2026 상반기 채용 공고 완전 분석', s: '지원자격·전형 일정·달라진 점을 한 번에 정리했습니다.', d: '18:42', a: '대한항공', k: '기업분석', tag: 'new', price: 0 },
+  { t: '에미레이트 오픈데이 현장 QnA 다시보기', s: '작년 오픈데이에서 실제로 나온 질문만 모았습니다.', d: '42:10', a: '에미레이트', k: 'QnA', tag: '', price: 9900 },
+  { t: '아시아나 승무원 면접 복장, 이렇게 준비하세요', s: '', d: '11:05', a: '아시아나', k: '면접준비', tag: '', price: 0 },
+  { t: '제주항공 실무면접 기출 5개 답변 예시', s: '', d: '25:33', a: '제주항공', k: '기출', tag: '', price: 0 },
+  { t: '카타르항공 파이널 인터뷰 준비 라이브', s: '', d: '1:02:30', a: '카타르', k: '라이브', tag: '', price: 12000 },
+  { t: '진에어 채용 설명회 요약', s: '', d: '08:14', a: '진에어', k: '기업분석', tag: '', price: 0 },
+  { t: '외항사 CV 사진 규격, 자주 틀리는 3가지', s: '', d: '13:27', a: '', k: '서류', tag: '', price: 0 },
+  { t: '티웨이항공 2026 신입 채용 흐름 정리', s: '', d: '16:58', a: '티웨이', k: '기업분석', tag: '', price: 0 },
+  { t: '싱가포르항공 그룹 디스커션 실전 연습', s: '', d: '38:02', a: '싱가포르', k: '라이브', tag: '', price: 9900 },
+  { t: '에어부산 면접 후기 인터뷰 — 합격자 3인', s: '', d: '31:19', a: '에어부산', k: 'QnA', tag: '', price: 0 }
+];
+var TRI = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 7.5v9l7.5-4.5z"/></svg>';
+function won(n) { return n.toLocaleString('ko-KR') + '원'; }
+function thumb(i, cls) {
+  return '<span class="th ' + (cls || '') + ' v' + (i % 5 + 1) + '"><i></i><span class="play">' + TRI + '</span>' +
+    '<span class="dur num">' + V[i].d + '</span></span>';
+}
+function bits(i) {
+  var v = V[i], out = '';
+  if (v.tag === 'new') out += '<span class="tag new">NEW</span>';
+  if (v.price > 0) out += '<span class="tag pay num">' + won(v.price) + '</span>';
+  var t = [v.a, v.k].filter(Boolean).join(' · ');
+  return out + t;
+}
+
+/* 현행 */
+document.getElementById('list0').innerHTML = V.map(function (v, i) {
+  return '<button class="vid" type="button">' + thumb(i) +
+    '<span class="vid-tit">' + v.t + '</span>' +
+    (v.s ? '<span class="vid-sum">' + v.s + '</span>' : '') +
+    '<span class="vid-sub">' + bits(i) + ' · <span class="num">08.01</span></span>' +
+  '</button>';
+}).join('');
+
+/* A안 — 2열 */
+document.getElementById('listA').innerHTML = V.map(function (v, i) {
+  return '<button class="gv" type="button">' + thumb(i) +
+    '<span class="gv-tit">' + v.t + '</span>' +
+    '<span class="gv-sub">' + bits(i) + '</span>' +
+  '</button>';
+}).join('');
+
+/* B안 — 가로형 */
+document.getElementById('listB').innerHTML = V.map(function (v, i) {
+  return '<button class="rowv" type="button">' + thumb(i) +
+    '<span class="rowv-txt"><span class="rowv-tit">' + v.t + '</span>' +
+    '<span class="rowv-sub">' + bits(i) + ' · <span class="num">08.01</span></span></span>' +
+  '</button>';
+}).join('');
+
+/* C안 — 최신 1편 크게 + 나머지 2열 */
+document.getElementById('listC1').innerHTML = (function () {
+  var v = V[0];
+  return '<button class="vid" type="button" style="border-bottom:0;padding-bottom:0">' + thumb(0) +
+    '<span class="vid-tit">' + v.t + '</span>' +
+    (v.s ? '<span class="vid-sum">' + v.s + '</span>' : '') +
+    '<span class="vid-sub">' + bits(0) + ' · <span class="num">08.01</span></span>' +
+  '</button>';
+})();
+document.getElementById('listC2').innerHTML = V.slice(1).map(function (v, j) {
+  var i = j + 1;
+  return '<button class="gv" type="button">' + thumb(i) +
+    '<span class="gv-tit">' + v.t + '</span>' +
+    '<span class="gv-sub">' + bits(i) + '</span>' +
+  '</button>';
+}).join('');
+
+/* 실측 — 목록 영역만(머리글 제외) */
+function px(el) { return Math.round(el.getBoundingClientRect().height); }
+function shout(id, h, base) {
+  var el = document.getElementById(id);
+  el.textContent = '목록 높이 ' + h.toLocaleString('ko-KR') + 'px' +
+    (base ? ' · 현행 대비 ' + Math.round(h / base * 100) + '%' : '');
+}
+window.addEventListener('load', function () {
+  var h0 = px(document.getElementById('list0'));
+  var hA = px(document.getElementById('listA'));
+  var hB = px(document.getElementById('listB'));
+  var hC = px(document.getElementById('listC1')) + px(document.getElementById('listC2')) + 40;
+  shout('n0', h0);
+  shout('nA', hA, h0);
+  shout('nB', hB, h0);
+  shout('nC', hC, h0);
+});
+</script>
+</body>
+</html>
