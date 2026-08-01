@@ -704,6 +704,19 @@
 
   /* ── 자료 열기 — 판정은 전부 서버(lab-file)가 한다 ── */
   var busy = false;
+  /* ⚠️ window.open 으로 열지 말 것 — 인앱 브라우저(인스타·카톡)가 조용히 막는다.
+     2026-08-01 실제 제보: "인스타보고 무료배포 읽어보려니 팝업 뜨고 안 들어가는데".
+     서버 응답까지는 성공해 토스트만 뜨고 파일 창이 안 열린 상태였다.
+     ⚠️ 비동기(Edge Function) 응답 뒤라 사용자 제스처가 끊겨 차단이 더 잘 걸린다.
+     - 받기: 같은 탭 이동. 서명 URL 이 Content-Disposition: attachment 라 화면은 그대로 있고 받기만 시작된다.
+     - 열람·영상: 새 창을 시도하되 막히면(null) 같은 탭으로 넘어간다. */
+  function openUrl(url, isView) {
+    if (!isView) { location.href = url; return; }
+    var w = null;
+    try { w = window.open(url, '_blank', 'noopener'); } catch (e) {}
+    if (!w) location.href = url;
+  }
+
   var fileTarget = null;
   // 비밀번호 자료가 파일까지 여러 개면, 파일을 고른 뒤 다시 부를 때 또 물어보면 안 된다.
   // 방금 통과한 비밀번호를 들고 있다가 같이 보낸다(자료를 바꾸면 지운다).
@@ -760,9 +773,9 @@
 
       $('shToast').hidden = true;
       if (sheetKind === 'pw' || sheetKind === 'file') closeSheet();
-      // 파일은 60초짜리 서명 URL, 영상은 유튜브 링크 — 둘 다 새 창에서 연다
-      window.open(d.url, '_blank', 'noopener');
+      openUrl(d.url, d.mode === 'view' || d.external === true);
       if (d.watermarked) toast('받으신 분 정보가 표시된 파일이에요.', 3200);
+      else if (d.mode !== 'view') toast('파일 받기를 시작했어요.', 2600);
     }).catch(function () {
       busy = false;
       toast('자료를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.');
