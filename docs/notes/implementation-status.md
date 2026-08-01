@@ -15,7 +15,7 @@
 | ai-killer (polish·quickfix 겸용) | 2026-07-25 확인 `2026-07-25d`·프로필 4곳·사전 28개 → polish 추가 후 `2026-07-30b`(`coach_terms` 주입). **레포는 `2026-07-31b`(미니 다듬기 `mode:'quickfix'` 분기 — 재배포 필요.** a 는 타입 정리만) | 로그인 없이 `POST {"probe":true}` → `version`·`features`·`airline_profiles`/`terms` 개수·`has_api_key`. `features` 에 `quickfix` + `quickfix_table` 숫자면 미니 다듬기 살아 있음. `coach_terms` 0 이면 연구진 자산 미유입 |
 | sojae-chat | v2(카드+뼈대) 배포. **크레딧 차감은 재배포된 버전부터 동작** — 재배포 전엔 화면 안내만 바뀌고 차감 안 됨 | `POST {probe:true}` → `version`·`playbook_keys` |
 | answer-program | `2026-07-30b` (프로브 sessions_table:true · questions 99 · programs 1) | 프로브 있음 — 상세는 `docs/monc-answer-program/implementation-status.md` |
-| lab-file | `2026-08-01a` 배포 확인(프로브 실측). **레포는 `2026-08-01b`(영상관 유튜브 링크 `external_url` 분기) — 재배포 필요** | `POST {"probe":true}` → `version`·`features`·`bucket`. `features` 에 `external_url` 이 있으면 b 버전(영상 지원). 404 면 미배포 |
+| lab-file | **`2026-08-01b` 배포 확인**(프로브 실측 2026-08-01). 레포는 `2026-08-01d` — **재배포 불필요**(폐기된 썸네일 복사 코드를 걷어낸 것뿐이라 동작이 같다. c 는 배포된 적 없는 번호) | `POST {"probe":true}` → `version`·`features`·`bucket`. `features` 에 `external_url` 이 있으면 영상 지원. 404 면 미배포 |
 
 ## 마이그레이션 적용 현황 (기록 기준)
 
@@ -45,7 +45,8 @@
 | `20260731120000_expression_reports` | 미니 다듬기(quickfix) 수집함 | **owner 실행 필요**(+ai-killer 재배포 — 미적용 시 위젯만 '준비 중') |
 | `20260801120000_lab_resources` | 연구실 자료(비공개 버킷 `lab-files` + `lab_resources`·`lab_downloads` + 목록/집계/비밀번호 RPC) | **실행 완료(2026-08-01)** — anon RPC 프로브로 확인(`lab_shelf_counts`·`lab_resource_list` 정상 응답) |
 | `20260801130000_lab_resources_admin` | 위 보완 — `is_admin()` 에게만 자료 전권·열람기록 조회·`lab-files` 버킷·`lab_set_password` 개방 | **실행 완료(2026-08-01)** — anon 프로브로 확인(자료 등록 시도가 RLS 로 거부·`lab_set_password` 42501) |
-| `20260801140000_lab_video` | 영상관 유튜브 링크 — `external_url`·`duration_sec` 추가, `storage_path` nullable, 목록 RPC 재생성 | **owner 실행 필요**(+lab-file `2026-08-01b` 재배포). 미적용이면 영상 등록 시 컬럼 없음 오류 |
+| `20260801140000_lab_video` | 영상관 유튜브 링크 — `external_url`·`duration_sec` 추가, `storage_path` nullable, 목록 RPC 재생성 | **실행 완료(2026-08-01)** — 영상 등록·조회 확인 |
+| `20260801150000_lab_thumbs` | 영상 썸네일 — 목록 RPC 가 `video_id`(유튜브 11자 id) 반환 | **owner 실행 필요.** 미적용이면 영상관에 썸네일이 안 뜨고 큰 재생 아이콘만 나온다 |
 
 ## 브랜치
 

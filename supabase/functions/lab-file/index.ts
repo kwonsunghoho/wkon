@@ -18,7 +18,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb, degrees } from "npm:pdf-lib@1.17.1";
 
-const FN_VERSION = "2026-08-01b";
+const FN_VERSION = "2026-08-01d";
 const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url"];
 
 const cors = {

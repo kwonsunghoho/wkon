@@ -2848,7 +2848,7 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
             <button class="ri-del lab-pw" data-id="${r.id}">비밀번호</button>
             <button class="ri-del lab-pub" data-id="${r.id}" data-pub="${r.published ? 1 : 0}">${r.published ? '숨기기' : '공개'}</button>
-            <button class="ri-del lab-del" data-id="${r.id}" data-path="${esc(r.storage_path)}">삭제</button>
+            <button class="ri-del lab-del" data-id="${r.id}" data-path="${esc(r.storage_path || '')}">삭제</button>
           </div>
         </div>`;
       }).join('');
@@ -2871,12 +2871,14 @@
         toast(on ? '공개했어요' : '숨겼어요'); loadLabFiles();
       }));
 
+      // 이미 올린 영상에 썸네일을 붙이거나 다시 받아온다
+
       // 삭제는 파일까지 지운다 — 남겨두면 저장소에 유실된 파일이 쌓인다
       listEl.querySelectorAll('.lab-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('자료와 파일을 함께 지울까요? 되돌릴 수 없습니다.')) return;
         const { error } = await MONC.sb.from('lab_resources').delete().eq('id', b.dataset.id);
         if (error) { alert('삭제 실패: ' + error.message); return; }
-        await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
+        if (b.dataset.path) await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
         toast('삭제됐어요'); loadLabFiles(); loadLabLogs();
       }));
 
@@ -3095,6 +3097,22 @@
       if (pw && ins.data && ins.data.id) {
         const { error: pwErr } = await MONC.sb.rpc('lab_set_password', { p_id: ins.data.id, p_pw: pw });
         if (pwErr) pwFailed = '자료는 올렸지만 비밀번호 설정에 실패했어요: ' + pwErr.message;
+      }
+
+      /* 영상은 썸네일을 자동으로 붙인다 — 서버가 유튜브에서 받아 우리 버킷에 복사한다.
+         ⚠️ 유튜브 썸네일 주소를 화면에서 바로 쓰지 않는 이유: 그 주소에 영상 id 가
+            들어 있어 목록에 노출하면 미등록 영상의 링크를 준 것과 같아진다. */
+      if (isVideo && ins.data && ins.data.id) {
+        lrSay('썸네일을 가져오는 중…', 'info');
+        const th = await MONC.sb.functions.invoke('lab-file', {
+          body: { action: 'thumb', resourceId: ins.data.id }
+        });
+        const td = (th && th.data) || {};
+        if (!td.ok) {
+          pwFailed = (pwFailed ? pwFailed + '\n' : '')
+            + '영상은 등록했지만 썸네일을 못 가져왔어요' + (td.error ? ': ' + td.error : '')
+            + '\n(함수가 2026-08-01c 이상이어야 해요 — [업로드 진단]에서 확인)';
+        }
       }
 
       btn.disabled = false;

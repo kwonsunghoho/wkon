@@ -118,8 +118,8 @@
     display: flex; align-items: center; justify-content: center;
   }
   .doc-txt { min-width: 0; flex: 1; }
-  .doc-tit { font-size: 15px; font-weight: 700; line-height: 1.45; }
-  .doc-sum { font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 3px; }
+  .doc-tit { display: block; font-size: 15px; font-weight: 700; line-height: 1.45; }
+  .doc-sum { display: block; font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 3px; }
   .doc-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
   .tag {
     font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent-ink);
@@ -127,6 +127,24 @@
   }
   .tag.new { background: var(--action); color: var(--action-ink); border-color: transparent; }
   .doc-mark { flex: none; margin-top: 9px; color: var(--text-dim); }
+
+  /* ── 영상 카드 — 썸네일이 커야 누른다(오너: "이러면 아무도 안보지") ──
+     썸네일은 유튜브(i.ytimg.com)에서 바로 가져온다 — 오너가 영상 id 노출을 허용했다
+     ("영상 아이디는 노출해도 되니까"). 우리 버킷에 복사하던 방식은 걷어냈다.
+     ⚠️ 재생은 그래도 lab-file 을 거친다 — 열람 기록이 남아야 하기 때문이다. */
+  .vid { display: block; width: 100%; padding: 0 0 18px; margin-top: 16px; border-bottom: 1px solid var(--border-soft); background: none; border-left: 0; border-right: 0; border-top: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .vid:last-child { border-bottom: 1.5px solid var(--border); }
+  .vid:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: var(--radius-xs); }
+  .vid-thumb { display: block; position: relative; width: 100%; aspect-ratio: 16/9; border-radius: var(--radius-sm); overflow: hidden; background: var(--accent-tint); }
+  .vid-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* 썸네일이 아직 없을 때 — 빈 회색 네모 대신 재생 아이콘을 크게 둔다 */
+  .vid-thumb .ph-ico { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--accent-ink); opacity: .5; }
+  .vid-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 54px; height: 54px; border-radius: 50%; background: rgba(20,44,82,0.82); color: #FFFFFF; display: flex; align-items: center; justify-content: center; }
+  .vid-dur { position: absolute; right: 8px; bottom: 8px; padding: 2px 7px; border-radius: 5px; background: rgba(20,20,18,0.82); color: #FFFFFF; font-size: 12px; font-weight: 700; }
+  .vid-tit { display: block; font-size: 15.5px; font-weight: 700; line-height: 1.45; margin-top: 11px; }
+  .vid-sum { display: block; font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 4px; }
+  .vid-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 7px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+  @media (hover: hover) { .vid:hover .vid-tit { color: var(--accent-ink); } }
 
   .empty { margin-top: 26px; padding: 26px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
   .empty p { font-size: 14px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
@@ -361,8 +379,16 @@
   }
 
   var ICON_DOC = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>';
-  // 영상 항목 — 썸네일은 쓰지 않는다(유튜브 썸네일 주소에 영상 id 가 들어 있어 링크를 노출한 것과 같다)
   var ICON_PLAY = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>';
+  var ICON_PLAY_BIG = '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>';
+  var ICON_TRI = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 7.5v9l7.5-4.5z"/></svg>';
+
+  /* 유튜브 썸네일 주소. maxres 는 없는 영상이 많아 hqdefault 로 떨어뜨린다(아래 error 폴백).
+     hqdefault 는 4:3(480×360)이라 16:9 틀에서 위아래가 잘리는데, 유튜브 자체도 같은 방식이다. */
+  function ytThumb(id, big) {
+    return 'https://i.ytimg.com/vi/' + encodeURIComponent(id) + '/' +
+      (big ? 'maxresdefault' : 'hqdefault') + '.jpg';
+  }
   function fmtDur(sec) {
     if (!sec) return '';
     var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
@@ -398,6 +424,34 @@
       return;
     }
     $('shEmpty').hidden = true;
+
+    // 영상은 목록 줄이 아니라 썸네일 카드로 — 이 서가는 그림이 있어야 눌린다
+    if (list.every(function (r) { return r.is_link; })) {
+      $('shList').innerHTML = list.map(function (r) {
+        var vid = r.video_id || null;
+        var bits = [];
+        if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
+        if (r.doc_type) bits.push(esc(r.doc_type));
+        return '<button class="vid" type="button" data-id="' + esc(r.id) + '">' +
+          '<span class="vid-thumb">' +
+            (vid
+              ? '<img src="' + esc(ytThumb(vid, true)) + '" data-fb="' + esc(ytThumb(vid, false)) + '" alt="" />'
+              : '<span class="ph-ico">' + ICON_PLAY_BIG + '</span>') +
+            '<span class="vid-play">' + ICON_TRI + '</span>' +
+            (r.duration_sec ? '<span class="vid-dur num">' + fmtDur(r.duration_sec) + '</span>' : '') +
+          '</span>' +
+          '<span class="vid-tit">' + esc(r.title) + '</span>' +
+          (r.summary ? '<span class="vid-sum">' + esc(r.summary) + '</span>' : '') +
+          '<span class="vid-sub">' +
+            (isNew(r.published_at) ? '<span class="tag new">NEW</span>' : '') +
+            (r.needs_password ? '<span class="tag">비밀번호</span>' : '') +
+            esc(bits.join(' · ')) +
+            (r.published_at ? (bits.length ? ' · ' : '') + '<span class="num">' + fmtDate(r.published_at) + '</span>' : '') +
+          '</span>' +
+        '</button>';
+      }).join('');
+      return;
+    }
 
     $('shList').innerHTML = list.map(function (r) {
       var mark = r.needs_password ? ICON_LOCK : ((r.delivery === 'view' && !r.is_link) ? ICON_EYE : '');
@@ -512,8 +566,19 @@
   }
 
   /* ── 이벤트 ── */
+  /* 썸네일 폴백 — maxresdefault 가 없는 영상이 많다(유튜브가 404 를 준다).
+     ⚠️ error 이벤트는 버블링하지 않으므로 캡처 단계로 받는다. */
+  $('shList').addEventListener('error', function (e) {
+    var img = e.target;
+    if (img && img.tagName === 'IMG' && img.dataset && img.dataset.fb) {
+      var fb = img.dataset.fb;
+      delete img.dataset.fb;          // 폴백도 실패하면 더 시도하지 않는다(무한 루프 방지)
+      img.src = fb;
+    }
+  }, true);
+
   $('shList').addEventListener('click', function (e) {
-    var btn = e.target.closest('.doc');
+    var btn = e.target.closest('.doc, .vid');
     if (!btn) return;
     var row = rows.filter(function (r) { return r.id === btn.getAttribute('data-id'); })[0];
     if (row) { pwTarget = row; openDoc(row, ''); }
