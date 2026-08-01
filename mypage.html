@@ -375,6 +375,19 @@
           </div>
         </details>
 
+        <details class="v2-fold" id="sec-labdocs" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M8 7h7M8 11h5"/></svg>
+            <span class="v2-fold-t">구매한 자료</span>
+            <span class="v2-fold-c" id="labDocCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="labDocs"></ul>
+            <a class="v2-more" href="lab-archive.html">연구실 전체 보기 →</a>
+          </div>
+        </details>
+
         <details class="v2-fold" id="sec-apps" style="display:none;">
           <summary>
             <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
@@ -550,6 +563,29 @@
       } catch (_) { /* 접이 숨김 유지 */ }
     }
 
+    // ── 구매한 연구실 자료 접이 — lab_my_purchases() RPC. 유료 마이그레이션
+    //    (20260801150000) 전이거나 산 게 없으면 접이를 숨긴 채로 둔다(빈 껍데기 금지).
+    //    ⚠️ 자료 제목은 lab_resources 에 회원 읽기 정책이 없어 직접 못 읽는다 — 이 RPC 로만 온다.
+    const LAB_SHELF_MP = { airline:'항공사 자료실', video:'영상관', question:'기출문제', report:'현장 리포트', calendar:'채용 캘린더' };
+    async function loadLabPurchases() {
+      try {
+        const { data, error } = await MONC.sb.rpc('lab_my_purchases');
+        if (error) return;
+        const rows = data || [];
+        if (!rows.length) return;                    // 0건이면 접이를 안 연다
+        document.getElementById('labDocs').innerHTML = rows.slice(0, 3).map(r => {
+          const shelf = LAB_SHELF_MP[r.shelf] || '연구실';
+          const day = String(r.purchased_at || '').slice(0, 10).replace(/-/g, '.');
+          return `<li><a class="v2-item" href="lab-shelf.html?shelf=${encodeURIComponent(r.shelf || 'airline')}">
+            <span class="v2-news-t">${esc(r.title)}</span>
+            <span class="v2-news-s">${esc(shelf)} · ${esc(day)}</span>
+          </a></li>`;
+        }).join('');
+        document.getElementById('labDocCount').textContent = rows.length;
+        document.getElementById('sec-labdocs').style.display = '';
+      } catch (_) { /* 접이 숨김 유지 */ }
+    }
+
     // ── 내 특강 → '다가오는 일정' 카드(예정만). 지난 특강은 신청·결제 내역 접이에 남는다. ──
     const LEC_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
     function fmtLecDate(s) {
@@ -604,6 +640,7 @@
       const me = session.user.id;
       loadAnswerNotes(me);
       loadNewsScraps();
+      loadLabPurchases();
       const profile = await MONC.getMyProfile();
 
       // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)

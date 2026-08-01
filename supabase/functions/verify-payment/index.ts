@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId, resourceId } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -182,6 +182,69 @@ Deno.serve(async (req) => {
         return json({ ok: false, error: 'grant_failed', refunded })
       }
       return json({ ok: true, program: prog.title })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 연구실 유료 자료 구매 (2026-08-01) — 자료 하나하나에 값이 붙는다(오너 확정).
+    // 신청(applications)이 아니라 lab_purchases 에 구매를 기록한다.
+    // 위 이용권(programId) 분기와 구조가 같다: 단건 · JWT 지급 · DB 가격 재확인 ·
+    // 중복이면 전액 환불.
+    // ═══════════════════════════════════════════════════════════════════
+    if (resourceId) {
+      // ⚠️ 누구의 구매인지는 **body 가 아니라 JWT 로 정한다**(위 두 분기와 같은 이유).
+      const auth = req.headers.get('Authorization') || ''
+      const asUser = createClient(
+        Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: auth } } },
+      )
+      const { data: { user } } = await asUser.auth.getUser()
+      if (!user) return json({ ok: false, error: 'not_authenticated' }, 401)
+
+      // 금액은 DB 가 신뢰 소스. admin 에서 값을 바꾸면 재배포 없이 즉시 반영된다.
+      // price 0 = 무료 자료라 애초에 결제 대상이 아니다(로그인만으로 열린다).
+      const { data: res0, error: resErr } = await supa.from('lab_resources')
+        .select('id, title, price, published').eq('id', resourceId).maybeSingle()
+      if (resErr || !res0) return json({ ok: false, error: 'resource_not_found' }, 400)
+      const resPrice = Number(res0.price)
+      if (!paymentId) return json({ ok: false, error: 'bad_request' }, 400)
+      if (!Number.isFinite(resPrice) || resPrice <= 0 || !res0.published) {
+        return json({ ok: false, error: 'resource_not_for_sale' }, 400)
+      }
+
+      // 같은 결제로 두 번 기록 방지(재시도·모바일 복귀 중복 호출 방어).
+      const { data: dupBuy } = await supa.from('lab_purchases')
+        .select('id').eq('payment_id', paymentId).maybeSingle()
+      if (dupBuy) return json({ ok: true, already: true })
+
+      const rSecret = Deno.env.get('PORTONE_API_SECRET')
+      const rRes = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
+        headers: { Authorization: `PortOne ${rSecret}` },
+      })
+      if (!rRes.ok) return json({ ok: false, error: 'lookup_failed' }, 502)
+      const rPay = await rRes.json()
+      if (rPay.status !== 'PAID') return json({ ok: false, error: 'not_paid', status: rPay.status }, 402)
+      if (rPay?.amount?.total !== resPrice) {
+        return json({ ok: false, error: 'amount_mismatch', paid: rPay?.amount?.total, expected: resPrice }, 402)
+      }
+
+      // 검증 통과 → 구매 기록. unique(resource_id, user_id) 가 최종 방어다.
+      const { error: buyErr } = await supa.from('lab_purchases').insert({
+        resource_id: res0.id, user_id: user.id, amount: resPrice, payment_id: paymentId,
+      })
+      if (buyErr) {
+        // 이미 산 자료를 또 결제 — 특강 중복(MC002)·이용권 중복과 같은 처리:
+        // 전액 자동 환불 + HTTP 200. ⚠️ non-2xx 로 돌려주면 supabase-js 가 본문을
+        // 감춰 브라우저가 '환불됐다'를 못 띄운다.
+        if (buyErr.code === '23505' || String(buyErr.message).includes('duplicate key')) {
+          const refunded = await refundAll(supa, paymentId, resPrice, '연구실 자료 중복 구매 · 자동 환불')
+          return json({ ok: false, error: 'already_purchased', refunded })
+        }
+        console.error('lab purchase insert failed', buyErr.message)
+        // 결제는 승인됐는데 기록을 못 했다(마이그레이션 미적용 등) — 돈만 나간 상태를 남기지 않는다.
+        const refunded = await refundAll(supa, paymentId, resPrice, '자료 구매 기록 실패 · 자동 환불')
+        return json({ ok: false, error: 'grant_failed', refunded })
+      }
+      return json({ ok: true, resource: res0.title })
     }
 
     // 결제 대상 판별: lectureId 가 있으면 '특강 1건', 없으면 기존 '챌린지 N개'.

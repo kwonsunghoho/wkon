@@ -762,8 +762,10 @@
         연구실 서가에 올라가는 <b>자료 파일</b>입니다. 파일은 <b>비공개 저장소</b>에 들어가고,
         회원이 열 때마다 <b>60초짜리 임시 링크</b>가 새로 발급돼요. 링크를 퍼뜨려도 1분이면 끊깁니다.<br>
         <b>PDF 는 받는 사람 정보(이메일·회원번호·날짜)가 자동으로 찍힙니다.</b>
-        열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.
-        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01c</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
+        열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.<br>
+        <b>가격을 넣으면 유료 자료가 됩니다</b>(0 이면 무료 — 로그인만 하면 열려요). 값은 언제든 고칠 수 있고,
+        이미 산 회원의 결제 금액은 그대로 남습니다. <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.
+        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01d</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
@@ -800,6 +802,7 @@
               <option value="download">파일 받기</option>
               <option value="view">화면 열람만</option>
             </select></div>
+          <div class="field"><label>가격(원)</label><input id="lrPrice" type="number" min="0" step="100" value="0" placeholder="0 = 무료"></div>
           <div class="field"><label>비밀번호(선택)</label><input id="lrPw" placeholder="비우면 회원이면 누구나"></div>
           <div class="field"><label>받는 사람 표시</label>
             <select id="lrWm">
@@ -2827,8 +2830,18 @@
         listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 자료가 없습니다. 위에서 올리세요.</div>';
         return;
       }
+
+      // 판매 현황 — 유료 마이그레이션(20260801150000) 전이면 조용히 건너뛴다.
+      const sales = {};
+      try {
+        const s = await MONC.sb.rpc('lab_sales_summary');
+        (s.data || []).forEach(x => { sales[x.resource_id] = x; });
+      } catch (e) { /* 미적용 환경 — 가격·판매 칸만 안 보인다 */ }
+
       listEl.innerHTML = rows.map(r => {
         const bits = [LAB_SHELF_LABEL[r.shelf] || r.shelf];
+        // 값이 붙은 자료는 맨 앞에 값을 보여준다(무료는 표시하지 않는다)
+        if (Number(r.price) > 0) bits.unshift('💰 ' + Number(r.price).toLocaleString('ko-KR') + '원');
         if (r.airline) bits.push(LAB_AIR_LABEL[r.airline] || r.airline);
         if (r.doc_type) bits.push(r.doc_type);
         if (r.external_url) {
@@ -2839,19 +2852,43 @@
           if (r.watermark) bits.push('워터마크');
         }
         if (r.access === 'password') bits.push('🔒 비밀번호');
+        const sl = sales[r.id];
+        const sold = (sl && Number(sl.purchase_count) > 0)
+          ? `<div class="ri-sub" style="color:var(--accent-ink);font-weight:700;">판매 ${sl.purchase_count}건 · ${Number(sl.revenue).toLocaleString('ko-KR')}원 · 열람 ${sl.download_count}회</div>`
+          : '';
         return `
         <div class="round-item" data-id="${r.id}" style="${r.published ? '' : 'opacity:.55;'}">
           <div>
             <div class="ri-main">${esc(r.title)}</div>
             <div class="ri-sub">${esc(bits.join(' · '))}${r.published ? '' : ' · 비공개'}${r.published_at ? ' · ' + String(r.published_at).slice(0, 10) : ''}</div>
+            ${sold}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="ri-del lab-price" data-id="${r.id}" data-price="${Number(r.price) || 0}">가격</button>
             <button class="ri-del lab-pw" data-id="${r.id}">비밀번호</button>
             <button class="ri-del lab-pub" data-id="${r.id}" data-pub="${r.published ? 1 : 0}">${r.published ? '숨기기' : '공개'}</button>
             <button class="ri-del lab-del" data-id="${r.id}" data-path="${esc(r.storage_path || '')}">삭제</button>
           </div>
         </div>`;
       }).join('');
+
+      // 가격 고치기 — 값은 언제든 바꾼다(재배포 불필요).
+      // ⚠️ 이미 산 회원의 결제액은 lab_purchases.amount 가 따로 보존한다 — 값을 올려도 과거 영수증은 그대로다.
+      listEl.querySelectorAll('.lab-price').forEach(b => b.addEventListener('click', async () => {
+        const cur = Number(b.dataset.price) || 0;
+        const v = prompt('가격을 원 단위로 넣으세요. 0 이면 무료입니다.\n(예: 9900)', String(cur));
+        if (v === null) return;
+        const n = Math.floor(Number(String(v).replace(/[^0-9]/g, '')) || 0);
+        if (!Number.isFinite(n) || n < 0) { alert('숫자만 넣어 주세요.'); return; }
+        const { error } = await MONC.sb.from('lab_resources').update({ price: n }).eq('id', b.dataset.id);
+        if (error) {
+          alert(/price/.test(error.message || '')
+            ? '가격 칸이 아직 없어요 — 마이그레이션(20260801150000)을 먼저 실행하세요.'
+            : '변경 실패: ' + error.message);
+          return;
+        }
+        toast(n > 0 ? n.toLocaleString('ko-KR') + '원으로 바꿨어요' : '무료로 바꿨어요'); loadLabFiles();
+      }));
 
       // 비밀번호 걸기·풀기 — 평문은 서버 함수에만 넘긴다(컬럼에 직접 쓰지 말 것)
       listEl.querySelectorAll('.lab-pw').forEach(b => b.addEventListener('click', async () => {
@@ -2877,7 +2914,13 @@
       listEl.querySelectorAll('.lab-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('자료와 파일을 함께 지울까요? 되돌릴 수 없습니다.')) return;
         const { error } = await MONC.sb.from('lab_resources').delete().eq('id', b.dataset.id);
-        if (error) { alert('삭제 실패: ' + error.message); return; }
+        if (error) {
+          // 구매 기록이 있는 자료는 FK(on delete restrict)가 막는다 — 영수증을 지우지 않기 위한 설계다.
+          alert(/foreign key|23503/.test((error.message || '') + (error.code || ''))
+            ? '이미 구매한 회원이 있어 지울 수 없어요.\n대신 [숨기기]를 눌러 목록에서 내려 주세요.'
+            : '삭제 실패: ' + error.message);
+          return;
+        }
         if (b.dataset.path) await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
         toast('삭제됐어요'); loadLabFiles(); loadLabLogs();
       }));
@@ -3088,10 +3131,17 @@
         published: !!F.querySelector('#lrPublish').checked,
         published_at: F.querySelector('#lrPublish').checked ? new Date().toISOString() : null
       };
+      // 값(2026-08-01). ⚠️ 무료(0)면 아예 넣지 않는다 — 유료 마이그레이션
+      // (20260801150000) 전 환경에서 없는 컬럼을 보내면 등록 자체가 막힌다.
+      const priceVal = Math.floor(Number(String(fv('lrPrice')).replace(/[^0-9]/g, '')) || 0);
+      if (priceVal > 0) row.price = priceVal;
+
       const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
       if (ins.error) {
         btn.disabled = false;
-        lrSay('자료 등록이 막혔어요: ' + ins.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
+        lrSay(/price/.test(ins.error.message || '')
+          ? '가격 칸이 아직 없어요 — 마이그레이션(20260801150000_lab_paid.sql)을 먼저 실행하세요.\n가격을 0 으로 두면 지금도 올릴 수 있어요.'
+          : '자료 등록이 막혔어요: ' + ins.error.message + '\n\n[업로드 진단] 버튼을 눌러 어느 단계가 막혔는지 확인하세요.', 'err');
         return;
       }
       if (pw && ins.data && ins.data.id) {
@@ -3121,6 +3171,7 @@
       ['lrTitle', 'lrSummary', 'lrPw', 'lrFile', 'lrUrl', 'lrDur'].forEach((id) => {
         const el = F.querySelector('#' + id); if (el) el.value = '';
       });
+      const priceEl = F.querySelector('#lrPrice'); if (priceEl) priceEl.value = '0';   // 값은 매번 다시 정한다
       loadLabFiles();
     });
 

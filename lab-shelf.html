@@ -206,6 +206,30 @@
   .pw-go[disabled] { opacity: .6; cursor: default; }
   .pw-err { margin-top: 10px; font-size: 13px; font-weight: 700; color: #C0392B; line-height: 1.5; }
 
+  /* ── 값 (2026-08-01) — 자료마다 값이 붙는다(price 0=무료). 무료는 아무 표시도
+     하지 않는다: 목록 대부분이 무료라 '무료' 알약을 다 붙이면 유료가 안 보인다. ── */
+  .doc-price {
+    flex: none; margin-top: 8px; white-space: nowrap;
+    font-size: 12.5px; font-weight: 800; color: var(--accent-ink);
+    border: 1px solid rgba(27,58,107,0.28); border-radius: 999px; padding: 3px 9px;
+  }
+  .doc-price.owned { font-weight: 700; color: var(--text-dim); border-color: var(--border); }
+
+  /* 구매 시트 — 비밀번호 시트와 같은 뼈대를 쓴다 */
+  .buy-tit { font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--text); }
+  .buy-price { margin-top: 6px; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; color: var(--accent-dark); }
+  .buy-note {
+    margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-xs);
+    background: rgba(27,58,107,0.05); border: 1px solid rgba(27,58,107,0.14);
+    font-size: 12.5px; font-weight: 600; line-height: 1.55; color: var(--accent-ink);
+  }
+  .buy-go {
+    width: 100%; min-height: 52px; margin-top: 14px; border: 0; border-radius: 14px;
+    background: var(--action); color: var(--action-ink); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
+  }
+  .buy-go[disabled] { opacity: .6; cursor: default; }
+  .buy-fine { margin-top: 10px; font-size: 12px; font-weight: 500; line-height: 1.55; color: var(--text-dim); }
+
   /* 처리 중·안내 토스트 */
   .toast {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 240;
@@ -245,7 +269,7 @@
 
   <div class="empty" id="shEmpty" hidden><p id="shEmptyMsg">아직 올라온 자료가 없어요.</p></div>
 
-  <p class="foot-note" id="shFoot" hidden>자료는 무료 회원 로그인 후 열 수 있어요. 받은 파일에는 받으신 분 정보가 표시됩니다.</p>
+  <p class="foot-note" id="shFoot" hidden>무료 자료는 로그인 후, 값이 붙은 자료는 구매 후 열 수 있어요. 받은 파일에는 받으신 분 정보가 표시됩니다.</p>
 
 </main>
 
@@ -263,12 +287,24 @@
     </div>
     <p class="pw-err" id="shPwErr" hidden></p>
   </div>
+  <div id="shBuyBox" hidden>
+    <p class="buy-tit" id="shBuyTit"></p>
+    <p class="buy-price num" id="shBuyPrice"></p>
+    <!-- ⚠️ 비교 기준 한 줄을 빼지 말 것 — 이 문장이 없으면 값이 싼지 비싼지 판단이
+         안 돼 결제가 일어나지 않는다(크레딧 팩에서 확인된 부분 · credits.md). -->
+    <p class="buy-note" id="shBuyNote">학원 항공사 정보 특강은 회당 3~5만 원입니다.</p>
+    <button class="buy-go" type="button" id="shBuyGo">결제하고 바로 보기</button>
+    <p class="buy-fine">한 번 구매하면 계정에 계속 남아요. 자료가 갱신되면 최신본으로 다시 받으실 수 있어요.</p>
+  </div>
 </div>
 
 <div class="toast" id="shToast" role="status" aria-live="polite" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<!-- 유료 자료 결제 — 포트원 V2. 무료 자료만 보는 방문자에겐 쓰이지 않지만
+     목록에 유료가 섞여 있어 미리 싣는다(누른 뒤 받으면 결제창이 늦게 뜬다). -->
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
 <script>
 (function () {
   'use strict';
@@ -469,6 +505,17 @@
 
     $('shList').innerHTML = list.map(function (r) {
       var mark = r.needs_password ? ICON_LOCK : ((r.delivery === 'view' && !r.is_link) ? ICON_EYE : '');
+      // 값이 붙은 자료는 오른쪽에 값을 먼저 보여준다(자물쇠·눈 아이콘 대신).
+      // 무료(price 0)에는 아무 표시도 하지 않는다 — 목록 대부분이 무료라 '무료'를
+      // 다 붙이면 정작 유료가 묻힌다.
+      var paid = Number(r.price) > 0;
+      var priceHtml = '';
+      if (paid) {
+        mark = '';
+        priceHtml = r.owned
+          ? '<span class="doc-price owned">구매함</span>'
+          : '<span class="doc-price num">' + fmtWon(r.price) + '</span>';
+      }
       var bits = [];
       if (r.airline && AIRLINE_LABEL[r.airline]) bits.push(esc(AIRLINE_LABEL[r.airline]));
       if (r.doc_type) bits.push(esc(r.doc_type));
@@ -487,6 +534,7 @@
           '</span>' +
         '</span>' +
         (mark ? '<span class="doc-mark">' + mark + '</span>' : '') +
+        priceHtml +
       '</button>';
     }).join('');
   }
@@ -495,12 +543,21 @@
   function openSheet(kind, opts) {
     sheetKind = kind;
     var isPw = kind === 'pw';
-    $('shSheetGrid').hidden = isPw;
+    var isBuy = kind === 'buy';
+    $('shSheetGrid').hidden = isPw || isBuy;
     $('shPwBox').hidden = !isPw;
-    $('shSheetTitle').textContent = isPw ? '비밀번호 입력'
-      : (kind === 'air' ? '항공사 선택' : SH.type + ' 선택');
+    $('shBuyBox').hidden = !isBuy;
+    $('shSheetTitle').textContent = isBuy ? '자료 구매'
+      : (isPw ? '비밀번호 입력'
+      : (kind === 'air' ? '항공사 선택' : SH.type + ' 선택'));
 
-    if (!isPw) {
+    if (isBuy) {
+      buyTarget = opts.row;
+      $('shBuyTit').textContent = '「' + opts.row.title + '」';
+      $('shBuyPrice').textContent = fmtWon(opts.row.price);
+      $('shBuyGo').disabled = false;
+      $('shBuyGo').textContent = '결제하고 바로 보기';
+    } else if (!isPw) {
       var cur = kind === 'air' ? fAir : fType;
       var vals = kind === 'air' ? optAir : optType;
       var label = function (v) { return kind === 'air' ? (AIRLINE_LABEL[v] || v) : v; };
@@ -530,7 +587,7 @@
     $('pkAir').setAttribute('aria-expanded', 'false');
     $('pkType').setAttribute('aria-expanded', 'false');
     setTimeout(function () { $('shScrim').hidden = true; $('shSheet').hidden = true; }, 220);
-    sheetKind = null; pwTarget = null;
+    sheetKind = null; pwTarget = null; buyTarget = null;
   }
 
   /* ── 자료 열기 — 판정은 전부 서버(lab-file)가 한다 ── */
@@ -558,6 +615,14 @@
         }, 900);
         return;
       }
+      // 값이 붙은 자료 — 서버가 구매 기록을 못 찾았다. 결제 시트로 넘긴다.
+      // ⚠️ row.price 가 비어 있어도 서버가 준 d.price 로 받는다(목록이 낡았을 때).
+      if (d.code === 'need_purchase') {
+        $('shToast').hidden = true;
+        if (!Number(row.price) && Number(d.price)) row.price = d.price;
+        openSheet('buy', { row: row });
+        return;
+      }
       if (d.code === 'need_password') { $('shToast').hidden = true; openSheet('pw', { title: row.title }); return; }
       if (d.code === 'bad_password' || d.code === 'locked') {
         $('shToast').hidden = true;
@@ -579,6 +644,135 @@
     });
   }
 
+  /* ══ 유료 자료 결제 (2026-08-01) — 값은 자료마다 붙는다(price 0=무료) ══
+     ⚠️ 금액도 구매자도 브라우저가 정하지 않는다. verify-payment 가
+        lab_resources.price 를 다시 읽고, 지급 대상은 JWT 로 정한다.
+     ⚠️ 실패·중복은 서버가 HTTP 200 + code 로 답한다 — 그래야 환불 안내를 띄운다. */
+  var PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
+  var PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59';
+  var PAY_KEY = 'monc_pending_lab_pay';
+  var buyTarget = null;
+  var payRestore = null;
+
+  function fmtWon(n) { return (Number(n) || 0).toLocaleString('ko-KR') + '원'; }
+
+  // bfcache — 결제로 나갔다 뒤로 돌아오면 버튼이 '진행 중…'에 멈춰 있다.
+  // 입력값이 없는 화면이라 버튼만 되돌린다(CLAUDE.md 공통 규칙).
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted || !payRestore) return;
+    var restore = payRestore; payRestore = null;
+    restore();
+  });
+
+  function verifyPay(paymentId, resourceId) {
+    return window.MONC.sb.functions.invoke('verify-payment', {
+      body: { paymentId: paymentId, resourceId: resourceId }
+    }).then(function (r) {
+      var d = (r && r.data) || {};
+      // 이미 산 자료를 또 결제 — 서버가 전액 자동 환불했다.
+      if (d.error === 'already_purchased') {
+        alert('이미 구매하신 자료예요.\n\n' + (d.refunded
+          ? '중복 결제분은 전액 자동 환불했어요.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+          : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주세요.'));
+        return true;   // 자료는 이미 있으니 화면은 열어 준다
+      }
+      if ((r && r.error) || !d.ok) {
+        if (d.error === 'grant_failed') {
+          alert('결제는 승인됐지만 자료 지급에 문제가 생겨\n' + (d.refunded
+            ? '전액 자동 환불했어요. 잠시 뒤 다시 시도해 주세요.'
+            : '환불도 실패했어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+        } else {
+          alert('결제는 완료됐지만 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
+        }
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function buyDoc(row) {
+    if (busy) return;
+    if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.'); return; }
+    busy = true;
+    var btn = $('shBuyGo');
+    btn.disabled = true; btn.textContent = '결제 진행 중…';
+    var restore = function () {
+      busy = false;
+      btn.disabled = false; btn.textContent = '결제하고 바로 보기';
+    };
+    payRestore = restore;
+
+    var paymentId = 'monc-lab-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+    // 모바일은 결제창으로 페이지가 아예 떠난다 — 돌아왔을 때 이어서 확인하려고 남긴다.
+    try {
+      sessionStorage.setItem(PAY_KEY, JSON.stringify({
+        paymentId: paymentId, resourceId: row.id, shelf: shelfKey
+      }));
+    } catch (e) {}
+    var rp = new URLSearchParams(location.search); rp.set('payresult', '1');
+    var redirectUrl = location.origin + location.pathname + '?' + rp.toString();
+
+    Promise.resolve(window.MONC.getMyProfile ? window.MONC.getMyProfile() : null)
+      .catch(function () { return null; })
+      .then(function (profile) {
+        return window.PortOne.requestPayment({
+          storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+          paymentId: paymentId, orderName: '몬크 연구실 · ' + row.title,
+          totalAmount: Number(row.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
+          customer: (profile && profile.name)
+            ? { fullName: profile.name, phoneNumber: profile.phone || undefined } : undefined,
+          redirectUrl: redirectUrl
+        });
+      })
+      .then(function (res) {
+        // 여기부터 PC(팝업) 경로 — 모바일은 위에서 페이지가 떠나 도달하지 않는다.
+        try { sessionStorage.removeItem(PAY_KEY); } catch (e) {}
+        if (res && res.code) {
+          alert('결제가 완료되지 않았어요.\n' + (res.message || res.code));
+          payRestore = null; restore(); return;
+        }
+        btn.textContent = '결제 확인 중…';
+        return verifyPay(paymentId, row.id).then(function (ok) {
+          payRestore = null; busy = false;
+          if (!ok) { btn.disabled = false; btn.textContent = '결제하고 바로 보기'; return; }
+          closeSheet();
+          toast('구매가 완료됐어요. 자료를 열어 드릴게요.', 2600);
+          load();                                   // 목록의 '구매함' 표시를 갱신
+          setTimeout(function () { openDoc(row, ''); }, 500);
+        });
+      })
+      .catch(function (e) {
+        console.error('결제 오류', e);
+        alert('결제 중 오류가 발생했어요.');
+        payRestore = null; restore();
+      });
+  }
+
+  // 모바일 결제 복귀 — 주소창에 붙어 온 결과를 지우고 서버 확인만 이어서 한다.
+  function resumePay() {
+    var p = new URLSearchParams(location.search);
+    if (!p.get('payresult')) return;
+    var code = p.get('code'), message = p.get('message');
+    ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId']
+      .forEach(function (k) { p.delete(k); });
+    history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p.toString() : ''));
+
+    var raw = null;
+    try { raw = sessionStorage.getItem(PAY_KEY); sessionStorage.removeItem(PAY_KEY); } catch (e) {}
+    if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
+    if (!raw) return;
+    var pending; try { pending = JSON.parse(raw); } catch (e) { return; }
+    if (!pending || pending.shelf !== shelfKey) return;   // 다른 서가의 복귀면 무시
+
+    toast('결제를 확인하는 중…', 9000);
+    verifyPay(pending.paymentId, pending.resourceId).then(function (ok) {
+      $('shToast').hidden = true;
+      if (!ok) return;
+      toast('구매가 완료됐어요.', 2600);
+      load();
+    });
+  }
+
   /* ── 이벤트 ── */
   /* 썸네일 폴백 — maxresdefault 가 없는 영상이 많다(유튜브가 404 를 준다).
      ⚠️ error 이벤트는 버블링하지 않으므로 캡처 단계로 받는다. */
@@ -590,6 +784,10 @@
       img.src = fb;
     }
   }, true);
+
+  $('shBuyGo').addEventListener('click', function () {
+    if (buyTarget) buyDoc(buyTarget);
+  });
 
   $('shList').addEventListener('click', function (e) {
     var btn = e.target.closest('.doc, .vid');
@@ -620,6 +818,7 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sheetKind) closeSheet(); });
 
   load();
+  resumePay();   // 모바일 결제창에서 돌아온 경우에만 동작한다
 })();
 </script>
 </body>

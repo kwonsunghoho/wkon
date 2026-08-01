@@ -67,6 +67,20 @@
 
 남은 작업: 한글 이름 워터마크(폰트 임베드), 영상 페이지 안 재생(지금은 유튜브로 새 창).
 
+### 유료 자료 — 자료마다 값 (2026-08-01 오너 확정·구현)
+
+오너 확정: **"올리는 각 자료당 설정해야지. 무료도 있고 유료도 있으니까."** 항공사 묶음 상품이 아니라 **자료 하나하나에 `price`** 가 붙는다(0=무료). 결제는 **현금 단건**(포트원 V2 + verify-payment) — 크레딧으로 열지 않는다(하루 무료 5가 저가 자료를 매일 공짜로 여는 구멍이 된다).
+
+⚠️ **자료 테이블을 새로 만들지 말 것.** 첫 설계는 `lab_materials` 신설이었으나, 없던 것은 '값' 하나뿐이라 `lab_resources` 확장으로 전량 바꿨다(migration `20260801160000_lab_paid`). 새 표를 만들면 자료가 두 곳으로 갈라지고 admin·목록 RPC·`lab-file` 이 두 벌이 된다.
+
+- `lab_purchases`(`unique(resource_id,user_id)`) — **회원 자가 INSERT 정책 없음.** 지급은 verify-payment(service_role)와 admin 뿐.
+- 목록 RPC 가 `price`·`owned` 를 함께 준다. `lab_my_purchases()`(마이페이지) · `lab_sales_summary()`(admin 집계, 본문에 `is_admin()` 가드) 신설.
+- **`lab-file` 이 유료를 판정한다**(`FN_VERSION 2026-08-01e`): `price>0` 이면 구매 기록 확인 → 없으면 `need_purchase`. ⚠️ **구매 조회가 실패하면 열어 주지 않는다**(`not_ready`) — 통과시키면 유료 자료가 영구 무료가 된다. 구매 확인은 **비밀번호보다 먼저**다.
+- 화면(`lab-shelf.html`): 목록 오른쪽에 값을 활자로(무료는 표시 없음 — 대부분이 무료라 다 붙이면 유료가 묻힌다), `need_purchase` → 구매 바텀시트(비밀번호 시트와 같은 뼈대) → 포트원 결제 → 목록 갱신 후 자동 열기. 모바일 복귀는 `monc_pending_lab_pay`.
+- **구매 시트의 비교 기준 한 줄("학원 항공사 정보 특강은 회당 3~5만 원")을 빼지 말 것** — 없으면 값이 싼지 비싼지 판단이 안 돼 결제가 멈춘다(크레딧 팩 전례).
+- admin: 등록 폼 가격 칸 + 행마다 [가격] 버튼 + 판매 집계. ⚠️ **0 원이면 insert 에 `price` 를 넣지 않는다**(미적용 환경에서 등록 자체가 막힌다). 구매자가 있는 자료는 FK 가 삭제를 막는다 → [숨기기]로 안내.
+- 값의 기준선·함정 전체는 `docs/superpowers/specs/2026-08-01-lab-paid-materials-design.md`.
+
 ## 상세 페이지 — lab-shelf.html (①안 서류철, 2026-08-01 오너 확정 "1안으로 진행")
 
 **한 파일이 서가 5종을 다 그린다**: `lab-shelf.html?shelf=airline|video|question|report|calendar`. 특강 `lecture.html?id=` 와 같은 사상 — 페이지를 5개로 나누면 머리 모양 한 번 고칠 때 5번 고쳐야 한다. **서가를 늘릴 땐 파일 안 `SHELVES` 표에 한 줄만 더한다**(idx·name·desc·noun·unit·airline·type).

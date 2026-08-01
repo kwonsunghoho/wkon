@@ -18,8 +18,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb, degrees } from "npm:pdf-lib@1.17.1";
 
-const FN_VERSION = "2026-08-01d";
-const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url"];
+const FN_VERSION = "2026-08-01e";
+const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid"];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -140,6 +140,30 @@ Deno.serve(async (req) => {
         error: "이 자료는 화면에서만 볼 수 있어요.",
         code: "view_only",
       });
+    }
+
+    // ── 3-b. 유료 자료 — 산 사람만 연다 (2026-08-01)
+    // 값은 자료마다 붙는다(price 0 = 무료). 비밀번호보다 먼저 본다 —
+    // 돈을 안 낸 사람에게 비밀번호부터 묻는 건 순서가 뒤집힌 것이다.
+    // ⚠️ 조회 자체가 실패하면(테이블 미생성 등) 열어 주지 말고 멈춘다 —
+    //    여기서 통과시키면 유료 자료가 영구 무료가 된다(프로젝트 공통 규칙).
+    if (Number(res.price) > 0) {
+      const { data: buy, error: buyErr } = await admin
+        .from("lab_purchases")
+        .select("id")
+        .eq("resource_id", res.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (buyErr) return json({ error: "자료실 준비가 아직 안 됐어요.", code: "not_ready" });
+      if (!buy) {
+        return json({
+          error: "구매하시면 바로 보실 수 있어요.",
+          code: "need_purchase",
+          price: Number(res.price),
+          title: res.title,
+        });
+      }
     }
 
     // ── 4. 비밀번호 — 대조는 서버에서. 연속 실패는 잠근다
