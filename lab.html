@@ -124,13 +124,20 @@
   @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
   @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
 
-  /* 연구진 얼굴 6개 — researchers-data.js 에서 JS 로 채운다 */
-  .ppl { display: flex; margin-top: 15px; }
-  .ppl img {
-    width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 50% 16%;
-    border: 2px solid #FCF9F1; margin-left: -9px; background: var(--accent-tint);
+  /* 연구진 얼굴 6개 + 이름 — researchers-data.js 에서 JS 로 채운다.
+     겹쳐 쌓지 않고 6열로 편 이유: 이름을 붙이려면 얼굴과 1:1 로 보여야 한다.
+     칸 폭은 flex 로 나눠 좁은 기기(360px)에서도 줄바꿈 없이 들어간다 — 얼굴 상한 42px. */
+  .ppl { display: flex; gap: 8px; margin-top: 15px; }
+  .ppl-item { flex: 1 1 0; min-width: 0; text-align: center; }
+  .ppl-item img {
+    width: 100%; max-width: 42px; aspect-ratio: 1; border-radius: 50%;
+    object-fit: cover; object-position: 50% 16%; background: var(--accent-tint);
   }
-  .ppl img:first-child { margin-left: 0; }
+  /* 이름 12px — 9대원칙 1의 하한. 더 줄이지 말 것(줄이려면 인원을 줄인다) */
+  .ppl-name {
+    margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted);
+    letter-spacing: -0.02em; white-space: nowrap;
+  }
 
   .foot-note { margin-top: 40px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
   </style>
@@ -169,7 +176,7 @@
       </div>
       <p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>
       <div class="ppl" id="labPpl"></div>
-      <p class="hub-meta num">연구원 <b id="labPplN">6</b>명</p>
+      <p class="hub-meta num" id="labPplMeta">연구원 <b>6</b>명</p>
     </a>
 
   </div>
@@ -180,19 +187,38 @@
 
 <script src="researchers-data.js" defer></script>
 <script>
-/* 연구진 얼굴·인원수는 researchers-data.js 단일 원본에서 생성 — 페이지에 복사 금지.
-   스크립트가 못 돌면 얼굴 줄만 비고 인원수는 마크업의 6이 남는다. */
+/* 연구진 얼굴·이름·직함 구성은 researchers-data.js 단일 원본에서 생성 — 페이지에
+   복사 금지(연구원이 바뀌면 카드도 같이 바뀌어야 한다).
+   ⚠️ 카드에 쓰는 문구는 배열에서 셀 수 있는 사실만. 출신 항공사·경력 연수처럼
+      position 문자열을 파싱해야 나오는 값은 넣지 말 것(데이터가 바뀌면 조용히 틀어진다).
+   스크립트가 못 돌면 얼굴 줄만 비고 마크업의 '연구원 6명'이 남는다. */
 document.addEventListener('DOMContentLoaded', function () {
   var list = window.MONC_RESEARCHERS || [];
   var box = document.getElementById('labPpl');
   if (!box || !list.length) return;
+
   list.forEach(function (r) {
+    var item = document.createElement('span');
+    item.className = 'ppl-item';
     var img = document.createElement('img');
-    img.src = r.photo; img.alt = r.name;
-    img.width = 40; img.height = 40;
-    box.appendChild(img);
+    /* ⚠️ loading:'lazy' 금지 — 첫 화면 카드라 이득이 없고, 프리뷰(숨김 탭)에서
+       영영 로드되지 않아 검증이 막힌다(전례 기록: docs/notes/lab.md). */
+    img.src = r.photo; img.alt = '';
+    var name = document.createElement('span');
+    name.className = 'ppl-name'; name.textContent = r.name;
+    item.appendChild(img); item.appendChild(name);
+    box.appendChild(item);
   });
-  document.getElementById('labPplN').textContent = list.length;
+
+  /* 직함 구성 — '수석 연구원' 같은 role 문자열의 앞 두 글자로 묶는다 */
+  var rank = {};
+  list.forEach(function (r) {
+    var k = String(r.role || '').replace(/\s*연구원\s*$/, '').trim();
+    if (k) rank[k] = (rank[k] || 0) + 1;
+  });
+  var parts = Object.keys(rank).map(function (k) { return k + ' ' + rank[k]; });
+  var meta = document.getElementById('labPplMeta');
+  meta.innerHTML = '연구원 <b>' + list.length + '</b>명' + (parts.length ? ' · ' + parts.join(' · ') : '');
 });
 </script>
 </body>
