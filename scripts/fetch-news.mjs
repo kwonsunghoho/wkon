@@ -212,6 +212,22 @@ async function sbFetch(path, opts = {}) {
   return res;
 }
 
+// ⚠️ PostgREST 는 요청 limit 과 무관하게 한 번에 최대 1,000행만 돌려준다(서버 max-rows).
+//    limit=2000 을 줬는데 1,000건만 와서, DB 2,163건 중 절반이 청소·중복정리 대상에서
+//    통째로 빠져 있었다(실측 2026-08-01 — 규칙을 고쳐도 뉴스판 상단 도배가 그대로였다).
+//    안정된 순서(id)로 페이지를 넘겨 전부 받아온다. 20페이지(2만건)는 폭주 방어용 상한이다.
+async function sbFetchAll(path) {
+  const PAGE = 1000;
+  const out = [];
+  for (let page = 0; page < 20; page++) {
+    const rows = await (await sbFetch(
+      `${path}&order=id.asc&offset=${page * PAGE}&limit=${PAGE}`)).json();
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
 // id 목록 삭제 — uuid 36자를 URL에 나열하므로 100개씩 끊는다(한 번에 500개면 URL이 18KB를 넘겨
 // 게이트웨이가 414로 끊는다). 빈 배열이면 요청 자체를 보내지 않는다.
 async function deleteIds(ids) {
@@ -317,8 +333,9 @@ async function deleteIds(ids) {
   // ⚠️ 수집 때와 같은 isDropped 를 쓴다. '제외'는 분류와 달리 저장 시점에 굳으므로
   //    이 스텝이 없으면 규칙을 고쳐도 배구·시황 기사가 뉴스판에 그대로 남는다.
   // ⚠️ source 를 같이 받아야 블로그 출처 판정이 기존 저장분에도 걸린다.
-  const stored = await (await sbFetch(
-    'news_articles?select=id,title,source,airline,topic,published_at,news_scraps(id)&limit=2000')).json();
+  const stored = await sbFetchAll(
+    'news_articles?select=id,title,source,airline,topic,published_at,news_scraps(id)');
+  console.log(`저장분 ${stored.length}건 점검`);
   const purge = stored
     .filter(a => isDropped(a.title, a.source) && !(a.news_scraps || []).length)
     .map(a => a.id);
