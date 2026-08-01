@@ -72,7 +72,10 @@
     /* 연구진 페이지는 '연구실' 소속으로 표시 — '연구진' 단독 항목은 2026-07-31 제거하고
        연구실 드롭다운의 하위 '연구진 소개'로 넣었다(연구실 하단에 같은 연구진 섹션이 있어
        겹치고, '연구실/연구진' 두 글자가 비슷해 나란히 있으면 구분이 안 된다 — 오너 확정). */
-    'researchers.html': 'lab', 'reviews.html': 'reviews'
+    'researchers.html': 'lab',
+    /* 후기는 허브(reviews.html) 아래 세 갈래 — 종류별 목록·수기 상세에서도 '후기'에 표시가 남는다 */
+    'reviews.html': 'reviews', 'reviews-list.html': 'reviews',
+    'stories.html': 'reviews', 'story.html': 'reviews'
   };
 
   var here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
