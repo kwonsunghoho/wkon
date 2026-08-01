@@ -763,6 +763,7 @@
         회원이 열 때마다 <b>60초짜리 임시 링크</b>가 새로 발급돼요. 링크를 퍼뜨려도 1분이면 끊깁니다.<br>
         <b>PDF 는 받는 사람 정보(이메일·회원번호·날짜)가 자동으로 찍힙니다.</b>
         열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.
+        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01c</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
@@ -3032,20 +3033,26 @@
 
     document.getElementById('labForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('lrSubmit');
+      /* ⚠️ 입력칸은 '폼 안에서' 찾는다 — getElementById 는 문서 전체에서 첫 요소를 잡아,
+         다른 탭이 같은 id 를 쓰면 엉뚱한(빈) 칸을 읽는다. 실제로 특강 폼의 lfTitle 과
+         겹쳐 "제목을 입력하세요"만 반복된 사고가 있었다(2026-08-01, admin.md 참조). */
+      const F = e.target;
+      const fv = (id) => { const el = F.querySelector('#' + id); return el ? el.value : ''; };
+      const btn = F.querySelector('#lrSubmit');
       let pwFailed = '';
-      const shelf = document.getElementById('lrShelf').value;
+      const shelf = fv('lrShelf');
       const isVideo = shelf === 'video';
-      const file = document.getElementById('lrFile').files[0];
-      const title = document.getElementById('lrTitle').value.trim();
+      const fileEl = F.querySelector('#lrFile');
+      const file = fileEl && fileEl.files[0];
+      const title = fv('lrTitle').trim();
       if (!title) { lrSay('제목을 입력하세요.', 'err'); return; }
 
       let path = null, ext = null, size = null, url = null, dur = null;
 
       if (isVideo) {
-        url = ytNormalize(document.getElementById('lrUrl').value);
+        url = ytNormalize(fv('lrUrl'));
         if (!url) { lrSay('유튜브 링크를 확인해 주세요.', 'err'); return; }
-        dur = durToSec(document.getElementById('lrDur').value);
+        dur = durToSec(fv('lrDur'));
         btn.disabled = true; lrSay('등록 중…', 'info');
       } else {
         if (!file) { lrSay('파일을 고르세요.', 'err'); return; }
@@ -3062,22 +3069,22 @@
         }
       }
 
-      const pw = document.getElementById('lrPw').value.trim();
+      const pw = fv('lrPw').trim();
       const row = {
         shelf,
-        airline: document.getElementById('lrAirline').value || null,
+        airline: fv('lrAirline') || null,
         title,
-        summary: document.getElementById('lrSummary').value.trim() || null,
-        doc_type: document.getElementById('lrType').value.trim() || null,
+        summary: fv('lrSummary').trim() || null,
+        doc_type: fv('lrType').trim() || null,
         storage_path: path,
         external_url: url,
         duration_sec: dur,
         file_ext: ext,
         file_size: size,
-        delivery: isVideo ? 'view' : document.getElementById('lrDelivery').value,
-        watermark: isVideo ? false : document.getElementById('lrWm').value === '1',
-        published: document.getElementById('lrPublish').checked,
-        published_at: document.getElementById('lrPublish').checked ? new Date().toISOString() : null
+        delivery: isVideo ? 'view' : fv('lrDelivery'),
+        watermark: isVideo ? false : fv('lrWm') === '1',
+        published: !!F.querySelector('#lrPublish').checked,
+        published_at: F.querySelector('#lrPublish').checked ? new Date().toISOString() : null
       };
       const ins = await MONC.sb.from('lab_resources').insert(row).select('id').maybeSingle();
       if (ins.error) {
@@ -3093,12 +3100,9 @@
       btn.disabled = false;
       if (pwFailed) lrSay(pwFailed, 'err'); else lrSay('', '');
       toast(isVideo ? '영상을 등록했어요' : '자료를 올렸어요');
-      document.getElementById('lrTitle').value = '';
-      document.getElementById('lrSummary').value = '';
-      document.getElementById('lrPw').value = '';
-      document.getElementById('lrFile').value = '';
-      document.getElementById('lrUrl').value = '';
-      document.getElementById('lrDur').value = '';
+      ['lrTitle', 'lrSummary', 'lrPw', 'lrFile', 'lrUrl', 'lrDur'].forEach((id) => {
+        const el = F.querySelector('#' + id); if (el) el.value = '';
+      });
       loadLabFiles();
     });
 
