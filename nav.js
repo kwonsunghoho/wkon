@@ -59,6 +59,17 @@
     ['lab-archive.html', '연구실', '자료실·영상관·기출문제·채용 캘린더'],
     ['researchers.html', '연구진', '이력과 전문 분야 소개']
   ];
+  /* 후기 드롭다운 (2026-08-02 C-9) — 세 갈래로 가는 길이 reviews.html 의 JS 카드
+     하나뿐이었다. 그 카드는 로드 실패 시 hub.innerHTML='' 로 비우기 때문에, 한 번
+     실패하면 세 목록에 닿을 방법이 사라진다. 승준노트(6)·챌린지(4)·연구실(2)은
+     드롭다운이 있는데 3갈래인 후기만 없던 자리다.
+     ⚠️ 목록은 reviews.html 허브 카드와 같은 세 갈래를 유지한다 — 한쪽만 늘리지 말 것. */
+  var REVIEW_HUB = 'reviews.html';
+  var REVIEW_SUB = [
+    ['reviews-list.html?kind=challenge', '챌린지 후기', '2주를 마친 학생들의 기록'],
+    ['reviews-list.html?kind=consult', '상담 후기', '1:1 상담을 받아 본 이야기'],
+    ['stories.html', '합격 수기', '합격까지의 과정을 긴 글로']
+  ];
 
   /* 어느 메뉴가 '현재 위치'인지 — 하위 페이지에 있어도 상위 메뉴에 표시가 남아야
      '내가 어디에 있는지'를 알 수 있다(오너가 불편해한 지점의 절반이 이것이다). */
@@ -71,6 +82,12 @@
     'challenge-answer.html': 'challenge',
     'lab.html': 'lab',
     'lab-shelf.html': 'lab', 'lab-archive.html': 'lab',
+    /* ⚠️ lab-shelf.html 은 열리자마자 history.replaceState 로 주소를 lab-<key>.html 로
+       바꾼다(공유용 스텁). nav.js 는 defer 라 실행 시점엔 이미 바뀐 뒤여서, 이 다섯 개를
+       등록하지 않으면 서가 5종 전부 '연구실' 표시가 사라진다(2026-08-02 C-8).
+       서가를 추가하면 여기에도 한 줄 넣는다. */
+    'lab-airline.html': 'lab', 'lab-video.html': 'lab', 'lab-question.html': 'lab',
+    'lab-calendar.html': 'lab', 'lab-report.html': 'lab',
     'lectures.html': 'lecture', 'lecture.html': 'lecture',
     /* 연구진 페이지는 '연구실' 소속으로 표시 — '연구진' 단독 항목은 2026-07-31 제거하고
        연구실 드롭다운의 하위 '연구진 소개'로 넣었다(연구실 하단에 같은 연구진 섹션이 있어
@@ -91,16 +108,21 @@
     });
   }
   function cur(key) { return section === key ? ' aria-current="page"' : ''; }
+  /* 하위 항목(드롭다운·아코디언)은 '섹션'이 아니라 '이 파일'인지로 표시한다 —
+     펼쳤을 때 지금 보고 있는 줄이 어디인지 알 수 있어야 한다(2026-08-02 C-3). */
+  function curFile(href) {
+    return (String(href).split(/[?#]/)[0].toLowerCase() === here) ? ' aria-current="page"' : '';
+  }
   var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
   function ddMenu(items) {
     return items.map(function (it) {
-      return '<a href="' + it[0] + '"><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
+      return '<a href="' + it[0] + '"' + curFile(it[0]) + '><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
     }).join('');
   }
   function accPanel(items) {
     return items.map(function (it) {
-      return '<a class="mm-sub" href="' + it[0] + '"><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
+      return '<a class="mm-sub" href="' + it[0] + '"' + curFile(it[0]) + '><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
     }).join('');
   }
 
@@ -139,7 +161,10 @@
             '<div class="nav-dd-menu">' + ddMenu(LAB_SUB) + '</div>' +
           '</li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
-          '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
+          '<li class="nav-dd">' +
+            '<button class="nav-dd-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('reviews') + '>후기' + CHEV + '</button>' +
+            '<div class="nav-dd-menu">' + ddMenu(REVIEW_SUB) + '</div>' +
+          '</li>' +
         '</ul>' +
         '<div class="nav-right">' +
           '<a class="nav-login" href="' + loginHref() + '">로그인/회원가입</a>' +
@@ -151,22 +176,26 @@
     '<div class="mobile-menu" id="mobileMenu">' +
       '<ul>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"><span class="nav-briefing">승준노트</span>' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('briefing') + '><span class="nav-briefing">승준노트</span>' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmBriefing">' + accPanel(BRIEFING_SUB) + '</div>' +
         '</li>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-controls="mmChallenges">챌린지' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-controls="mmChallenges"' + cur('challenge') + '>챌린지' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-controls="mmLab">연구실' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-controls="mmLab"' + cur('lab') + '>연구실' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmLab">' + accPanel(LAB_SUB) + '</div>' +
         '</li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
-        '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
+        '<li class="mm-acc">' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-controls="mmReviews"' + cur('reviews') + '>후기' +
+          '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
+          '<div class="mm-acc-panel" id="mmReviews">' + accPanel(REVIEW_SUB) + '</div>' +
+        '</li>' +
       '</ul>' +
       '<div class="mobile-menu-cta">' +
         '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>' +

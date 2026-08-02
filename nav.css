@@ -154,10 +154,14 @@
 
 /* ⚠️ 이 블록은 반드시 .nav-cta / .nav-login **뒤에** 둘 것 — 특이도가 같아 앞에 두면
    뒤따르는 기본 규칙이 이겨서 조용히 무시된다(구 index.css 에서 실제로 죽어 있던 자리).
-   769~999px = 가운데 정렬 폴백 구간: 정중앙이면 좌우 여백이 버튼 덩어리보다 좁아져 겹친다.
+   769~1059px = 가운데 정렬 폴백 구간: 정중앙이면 좌우 여백이 버튼 덩어리보다 좁아져 겹친다.
    position:static 으로 되돌리면 메뉴가 흐름에 들어와 로고 옆에 붙는다.
-   ⚠️ 여기서 활자는 안 건드린다 — 간격만 좁혀도 한 줄이 유지된다. */
-@media (min-width: 769px) and (max-width: 999px) {
+   ⚠️ 여기서 활자는 안 건드린다 — 간격만 좁혀도 한 줄이 유지된다.
+   ⚠️ 상한이 999 → 1059 로 올라간 이유(2026-08-02 C-9): '후기'가 드롭다운이 되며
+      화살표만큼(+21px) 넓어져 **1000px 에서 메뉴가 우측 블록을 3px 침범**했다(실측).
+      메뉴 5항목 폭은 gap 24 기준 429px 이고 1060px 부터 가운데 정렬이 들어간다.
+      항목이나 화살표를 또 늘리면 **1060px 부터 다시 잰다.** */
+@media (min-width: 769px) and (max-width: 1059px) {
   #navbar .nav-inner { column-gap: 28px; }
   /* gap 16: '연구실'이 드롭다운이 되며 화살표만큼(+21px) 넓어져 18로는 769px에서 5px
      넘쳤다(2026-07-31 실측). 16이면 넘침 0. */
@@ -222,6 +226,19 @@
 }
 #mobileMenu ul a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
 #mobileMenu .mm-acc-btn .nav-briefing { color: var(--accent-ink); font-weight: 700; }
+
+/* ── '지금 여기' 표시 (2026-08-02 C-3) ────────────────────────────────────────
+   ⚠️ 색만으로는 안 된다. `.nav-briefing`(승준노트)은 어느 페이지에서든 항상
+      --accent-ink 굵게라, 색 규칙만 넓히면 승준노트가 늘 '현재 위치'로 읽힌다.
+      그래서 색과 별개인 왼쪽 막대를 쓴다 — 색각 이상에서도 구분된다(원칙 4). */
+#mobileMenu ul > li > a[aria-current="page"],
+#mobileMenu .mm-acc-btn[aria-current="page"],
+#mobileMenu .mm-acc-panel a[aria-current="page"] {
+  box-shadow: inset 3px 0 0 var(--action);
+  padding-left: 12px;
+  color: var(--accent-ink);
+}
+#mobileMenu .mm-acc-btn[aria-current="page"] { font-weight: 800; }
 
 /* 아코디언(승준노트·챌린지) — 탭 한 번에 하위 항목을 펼쳐 바로 이동.
    ⚠️ 토글은 반드시 <button> — 햄버거 로직이 메뉴 안 <a> 전부에 '클릭 시 메뉴 닫기'를

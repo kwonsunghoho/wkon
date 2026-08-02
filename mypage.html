@@ -32,7 +32,7 @@
   <link rel="stylesheet" href="nav.css">
   <script src="nav.js" defer></script>
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — 파일 받기·로그인이 막히는 자리 -->
-  <script src="inapp.js?v=5" defer></script>
+  <script src="inapp.js?v=7" defer></script>
   <style>
     /* ══ 마이페이지 '오늘 한 칸' 구조 (2026-07-31 재설계 ②안 확정 — outputs/mypage-mockup.html) ══
        원칙: 위에는 '지금 할 일' 하나(다크 네이비 카드), 과거 기록은 전부 접힌 줄.
@@ -421,7 +421,7 @@
           </summary>
           <div class="v2-fold-body">
             <ul class="v2-list" id="answerNotes"></ul>
-            <a class="v2-more" id="ansMore" href="answers.html">저장소 전체 보기 →</a>
+            <a class="v2-more" id="ansMore" href="answers.html">승준노트 전체 보기 →</a>
           </div>
         </details>
 
@@ -818,6 +818,29 @@
       el.style.display = ''; el.classList.toggle('err', !!err); el.textContent = msg;
     }
 
+    /* 가입 축하 크레딧 안내 (2026-08-02 C-7).
+       login.html 의 grant_signup_credit RPC 가 '이번에 새로 지급됨'일 때만
+       sessionStorage 에 남겨 두고, 도착한 이 화면에서 한 번 알린다.
+       ⚠️ 문구는 숫자가 아니라 **행위**로 말한다 — '15크레딧'은 학생에게 크기 감각이 없다.
+          환산은 credit_wallet 의 costs 가 오기 전이라 기본 단가(AI킬러 3)를 쓰되,
+          지갑이 로드되면 loadWallet 이 정확한 값으로 다시 그린다. */
+    function showSignupBonus() {
+      let n = 0;
+      try {
+        n = parseInt(sessionStorage.getItem('monc_signup_bonus') || '0', 10);
+        sessionStorage.removeItem('monc_signup_bonus');   // 한 번만 — 새로고침해도 다시 안 뜬다
+      } catch (e) {}
+      if (!(n > 0)) return;
+      const el = document.getElementById('wNotice');
+      if (!el) return;
+      const times = Math.floor(n / 3);   // AI킬러 검사 1회 = 3크레딧(기본값)
+      el.style.display = '';
+      el.classList.remove('err');
+      el.textContent = '가입 축하로 ' + n + '크레딧을 드렸어요'
+        + (times > 0 ? ' — AI킬러 검사를 ' + times + '번 해 볼 수 있어요.' : '.');
+      document.getElementById('walletCard').style.display = '';
+    }
+
     async function charge(packId) {
       const pack = _packs.find(p => String(p.id) === String(packId));
       if (!pack) return;
@@ -956,6 +979,7 @@
       loadNewsScraps();
       loadLabPurchases();
       handlePayReturn();          // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작
+      showSignupBonus();          // 가입 축하 크레딧을 '방금 받았다'고 한 번 알린다
       loadWallet(); loadPacks(); loadCreditLedger(); loadMyPrograms();
       const profile = await MONC.getMyProfile();
 

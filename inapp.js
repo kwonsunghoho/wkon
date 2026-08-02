@@ -71,9 +71,24 @@
 
     document.body.appendChild(bar);
 
+    /* 배너는 fixed 라 흐름을 안 밀어서, 본문 맨 위(눈썹 라벨·'← 홈으로' 같은 것)를 덮었다
+       (2026-08-02 C-4). 배너 높이만큼 자리를 만든다.
+       ⚠️ body 의 padding-top 을 건드리지 말 것 — 페이지마다 자기 padding 을 나중에
+          다시 쓰는 곳이 있어 조용히 덮인다(reviews.html 실측: 113 을 넣었는데 56 으로
+          되돌아갔다). 흐름에 들어가는 **자리 차지 요소**는 아무도 덮어쓰지 않는다.
+       ⚠️ 높이는 고정값이 아니라 실측 — 문구가 두 줄이 되는 기기에서 달라진다. */
+    var spacer = document.createElement('div');
+    spacer.className = 'iab-space';
+    spacer.setAttribute('aria-hidden', 'true');
+    document.body.insertBefore(spacer, document.body.firstChild);
+    function sizeSpacer() { spacer.style.height = (bar.offsetHeight || 0) + 'px'; }
+    sizeSpacer();
+    window.addEventListener('resize', sizeSpacer);
+
     bar.querySelector('.iab-x').addEventListener('click', function (ev) {
       ev.stopPropagation();   // 안드로이드에선 줄 전체가 탭 영역이라 닫기가 이동으로 새면 안 된다
       bar.remove();
+      spacer.remove();        // 안 지우면 화면 위에 빈 띠가 남는다
       try { sessionStorage.setItem(HIDE_KEY, '1'); } catch (e) {}
     });
 

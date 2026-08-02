@@ -40,7 +40,7 @@
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — ⚠️ 로그인 페이지엔 특히 중요하다:
        구글이 인앱 웹뷰 OAuth 를 아예 거부한다(disallowed_useragent). nav 가 없는
        페이지라 nav.js 옆이 아니라 여기에 직접 넣는다. -->
-  <script src="inapp.js?v=5" defer></script>
+  <script src="inapp.js?v=7" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -302,7 +302,18 @@
           따지지 않는다(따지기 시작하면 '동의는 했는데 못 받은 사람'이 생긴다).
        ⚠️ 마이그레이션 미적용이면 조용히 넘어간다(로그인이 멈추면 안 된다). */
     async function grantSignupBonus() {
-      try { await MONC.sb.rpc('grant_signup_credit'); } catch (e) {}
+      /* 지급 사실을 학생에게 알린다 (2026-08-02 C-7). 전엔 조용히 넣기만 해서,
+         AI킬러 5회 값어치를 받고도 마이페이지 지갑을 열기 전엔 아무도 몰랐다.
+         ⚠️ 판정은 RPC 반환값으로만 한다 — 호출부가 '처음인지'를 따로 계산하면
+            멱등성이 깨져 두 번째 로그인에도 배너가 뜬다.
+         ⚠️ 도착 페이지에서 띄운다(여기서 replace 로 곧장 넘어가므로 이 화면엔 못 띄운다).
+            sessionStorage 는 같은 탭 리다이렉트를 넘어 살아남는다 — returnTo 와 같은 방식. */
+      try {
+        const { data } = await MONC.sb.rpc('grant_signup_credit');
+        if (data && data.code === 'granted' && data.granted > 0) {
+          sessionStorage.setItem('monc_signup_bonus', String(data.granted));
+        }
+      } catch (e) {}
     }
 
     // 역할에 따라 알맞은 페이지로 보냄 — returnTo(가려던 화면)가 있으면 그쪽이 우선
