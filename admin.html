@@ -763,6 +763,10 @@
         <button class="rv-kf" type="button" data-k="challenge">챌린지 후기</button>
         <button class="rv-kf" type="button" data-k="consult">상담 후기</button>
       </div>
+      <!-- 챌린지 상세 페이지(challenge-*.html)의 후기 섹션은 reviews.challenge 값으로 골라 담는다.
+           '여러 장 한번에'로 올리면 이 값이 비어 상세에 안 뜨는데, 화면상으로는 조용히 숨겨질 뿐이라
+           여기서 건수를 보여 준다. 숫자가 0이면 그 챌린지 상세엔 후기 섹션이 없다. -->
+      <div class="rv-hint" id="rvChSum"></div>
       <div class="rv-grid" id="rvGrid"><div class="loading">불러오는 중…</div></div>
 
       <!-- ══ 합격 수기 — reviews 가 아니라 success_stories 표다 ══
@@ -902,7 +906,7 @@
         이미 산 회원의 결제 금액은 그대로 남습니다. <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.
         <b>파일을 여러 개 고르면 자료 하나로 묶입니다</b>(상·하편) — 값도 하나, 구매도 한 번이고
         학생은 자료를 눌러 받을 파일을 고릅니다. 자료를 여러 건으로 나누려면 한 번씩 올리세요.
-        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-01h</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
+        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-02a</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
       </p>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
@@ -2619,14 +2623,26 @@
     // ── 후기 관리(reviews) ──
     // 종류(kind)는 챌린지/상담 둘뿐이다. 합격 수기는 이 표가 아니라 success_stories(아래 절).
     const RV_KIND_LABEL = { challenge: '챌린지 후기', consult: '상담 후기' };
+    // ⚠️ 이 네 글자는 challenge-*.html 의 data-challenge 와 문자열이 같아야 한다(상세 후기 섹션의 매칭 키).
+    const RV_CH_OPTS = ['보신각', '영합각', '스피닝', '승자각'];
     let rvKindFilter = 'all';
+    // 챌린지별로 상세 페이지에 실제로 뜰 후기가 몇 건인지 — 노출(visible)·챌린지 지정된 것만 센다.
+    function renderRvChSum(data) {
+      const box = document.getElementById('rvChSum');
+      const ch = data.filter(r => (r.kind || 'challenge') === 'challenge' && r.visible);
+      const counts = RV_CH_OPTS.map(c => c + ' <b>' + ch.filter(r => r.challenge === c).length + '</b>');
+      const none = ch.filter(r => !r.challenge).length;
+      box.innerHTML = '챌린지 상세 페이지에 뜨는 후기 — ' + counts.join(' · ')
+        + (none ? ' <span style="color:var(--danger,#C0392B)">· 챌린지 미지정 <b>' + none + '</b>건(상세에 안 뜹니다 — 아래에서 챌린지를 골라 주세요)</span>' : '');
+    }
     function rvUrl(path) { return MONC.sb.storage.from('reviews').getPublicUrl(path).data.publicUrl; }
     async function loadReviewsAdmin() {
       const grid = document.getElementById('rvGrid');
       const { data, error } = await MONC.sb.from('reviews').select('*').order('sort_order').order('created_at');
       if (error) { grid.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      renderRvChSum(data);
       if (!data.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 후기가 없습니다. 카톡 스크린샷을 업로드하세요.</div>'; return; }
-      const CH_OPTS = ['', '보신각', '영합각', '스피닝', '승자각'];
+      const CH_OPTS = [''].concat(RV_CH_OPTS);
       // kind 컬럼 마이그레이션(20260801180000) 전이면 undefined → 전부 챌린지로 취급
       const rows = data.filter(r => rvKindFilter === 'all' || (r.kind || 'challenge') === rvKindFilter);
       if (!rows.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">이 종류의 후기가 아직 없습니다.</div>'; return; }
@@ -2654,12 +2670,25 @@
         toast('저장됨'); return true;
       };
       // 종류를 바꾸면 필터가 걸려 있을 때 목록에서 사라져야 하므로 다시 그린다
+      // 종류·챌린지를 바꾸면 위 요약 숫자가 달라진다. 통째로 다시 그리면 스크롤이 튀므로
+      // 방금 고친 행만 메모리에서 갱신하고 요약만 다시 계산한다.
+      const patchRow = (id, patch) => {
+        const row = data.find(r => String(r.id) === String(id));
+        if (row) Object.assign(row, patch);
+        renderRvChSum(data);
+      };
       grid.querySelectorAll('.rv-kind').forEach(sel => sel.addEventListener('change', async () => {
-        const ok = await saveField(sel.closest('.rv-item').dataset.id, { kind: sel.value });
-        if (ok && rvKindFilter !== 'all') loadReviewsAdmin();
+        const id = sel.closest('.rv-item').dataset.id;
+        const ok = await saveField(id, { kind: sel.value });
+        if (!ok) return;
+        if (rvKindFilter !== 'all') { loadReviewsAdmin(); return; }
+        patchRow(id, { kind: sel.value });
       }));
-      grid.querySelectorAll('.rv-ch').forEach(sel => sel.addEventListener('change', () =>
-        saveField(sel.closest('.rv-item').dataset.id, { challenge: sel.value || null })));
+      grid.querySelectorAll('.rv-ch').forEach(sel => sel.addEventListener('change', async () => {
+        const id = sel.closest('.rv-item').dataset.id;
+        const ok = await saveField(id, { challenge: sel.value || null });
+        if (ok) patchRow(id, { challenge: sel.value || null });
+      }));
       grid.querySelectorAll('.rv-co').forEach(inp => inp.addEventListener('change', () =>
         saveField(inp.closest('.rv-item').dataset.id, { cohort: inp.value === '' ? null : parseInt(inp.value, 10) })));
       grid.querySelectorAll('.rv-nm').forEach(inp => inp.addEventListener('change', () =>
