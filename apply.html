@@ -767,10 +767,13 @@ async function applyStatuses() {
     const card = cardEl(c.id);
     const tag = card.querySelector('[data-status]');
     const wl = card.querySelector('[data-role="waitlist"]');
-    if (st === 'upcoming' || st === 'closed') {
+    /* ⚠️ 'none' = 조회 성공 + 기수 미등록 = **모집 안 함.** 반드시 여기 포함할 것.
+       2026-08-02 실사고: 'none' 이 없어서 기수가 하나도 없는데 전 챌린지 카드가
+       선택·결제 가능했다. 키가 아예 없는 경우(=조회 실패)만 열어 둔다. */
+    if (st === 'upcoming' || st === 'closed' || st === 'none') {
       card.classList.add('disabled');
       card.classList.remove('selected', 'curr-open');
-      tag.textContent = st === 'upcoming' ? '모집예정' : '마감';
+      tag.textContent = st === 'upcoming' ? '모집예정' : (st === 'none' ? '준비 중' : '마감');
       tag.className = 'status-tag ' + (st === 'upcoming' ? 'status-upcoming' : 'status-closed');
       // 담을 수 없는 카드에 남는 유일한 행동 — 오픈 알림 신청(waitlist.js)
       if (wl) { wl.hidden = false; wl.dataset.st = st; }
@@ -797,7 +800,8 @@ function reorderCards() {
   const root = document.getElementById('cards');
   if (!root) return;
   const st = window._challengeStatuses || {};
-  const rank = { open: 0, upcoming: 1, closed: 2 };
+  // 'none'(기수 미등록)은 마감과 같은 자리 — 돈 받는 페이지의 첫 카드가 품절이면 안 된다.
+  const rank = { open: 0, upcoming: 1, closed: 2, none: 2 };
   const base = [...root.querySelectorAll('.card')];
   const order = base.slice().sort((a, b) => {
     let ra = rank[st[a.dataset.id]], rb = rank[st[b.dataset.id]];

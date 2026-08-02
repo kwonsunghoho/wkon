@@ -521,14 +521,20 @@
 
   function handleApply(e) {
     e.preventDefault();
-    const state = window._recruitStatus || 'open';
-    // ⚠️ 마감·모집예정을 경고창으로 끝내지 말 것 — 전·후 증거와 후기를 다 보고 마음먹은
-    //    사람이 "다음 회차를 기다려주세요!"만 보고 나가던 자리다(2026-07-30 개선).
+    /* ⚠️⚠️ `|| 'open'` 기본값을 되살리지 말 것(2026-08-02 실사고).
+       challenge_rounds 에 기수가 하나도 없을 때 state 가 undefined 라 'open' 으로
+       떨어졌고, **모집을 안 하는데 신청 페이지가 열렸다.**
+       state 가 null 인 경우는 오직 '조회 실패'뿐이다 — 그때만 통과시킨다
+       (서버가 어차피 재판정하므로 브라우저가 장애로 길을 막지 않는다). */
+    const state = window._recruitStatus;
+    // ⚠️ 마감·모집예정·미등록을 경고창으로 끝내지 말 것 — 전·후 증거와 후기를 다 보고
+    //    마음먹은 사람이 "다음 회차를 기다려주세요!"만 보고 나가던 자리다(2026-07-30 개선).
     //    waitlist.js 가 오픈 알림 신청을 받아 challenge_waitlist 에 쌓는다.
     // ⚠️ alert 폴백을 지우지 말 것 — waitlist.js 로드가 실패해도 최소한 상태는 알려야 한다.
-    if (state === 'upcoming' || state === 'closed') {
+    if (state && state !== 'open') {
       if (window.MONC && MONC.openWaitlist) { MONC.openWaitlist('answer', state); return; }
       alert(state === 'upcoming' ? '아직 모집 시작 전이에요. 모집 시작일을 기다려주세요!'
+          : state === 'none'     ? '다음 기수를 준비하고 있어요. 오픈 알림을 신청해 주세요!'
                                  : '이번 회차는 모집이 마감됐어요. 다음 회차를 기다려주세요!');
       return;
     }

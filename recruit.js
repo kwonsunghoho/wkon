@@ -3,13 +3,21 @@
 /* challenge_rounds(Supabase)에서 챌린지별 "현재 기수"를 읽어
    {challenge: {start, end, round}} 형태로 반환.
 
-   ⚠️⚠️ 조회 실패·미등록 챌린지는 **상태를 모르는 것으로 둔다(null).** 하드코딩 날짜로
-   폴백하지 말 것 — 2026-08-02 실사고: RECRUIT_FALLBACKS 에 6월 날짜가 박혀 있어서
-   조회가 실패하면 getStatus 가 전부 'closed' 를 냈고, **방문자에게는 오류가 아니라
-   "이 사이트는 모집이 끝났다"로 보였다**(오류처럼 안 보이니 재시도도 안 한다).
-   `challenge_rounds` 에 행이 없기만 해도 같은 길을 탔다 — 장애만의 문제가 아니었다.
-   모르면 '확인 중'이라고 말하고 **신청 버튼은 살려 둔다** — 잔여석·중복·마감 최종 판정은
-   어차피 DB 트리거와 verify-payment 가 한다(브라우저가 미리 막을 이유가 없다). */
+   ⚠️⚠️ **상태는 네 갈래다. 둘로 줄이지 말 것** — 2026-08-02 하루에 양쪽으로 다 틀렸다.
+
+     'open'/'upcoming'/'closed'  기수가 있고 기간을 안다
+     'none'   조회 **성공** + 그 챌린지 행 없음 = admin 에 기수를 안 만들었다
+              = **지금 모집하지 않는다.** 신청을 닫고 오픈 알림으로 보낸다.
+     null     조회 **실패**(네트워크·권한) = 정말 모른다.
+              '확인 중'이라고 말하고 **버튼은 살려 둔다** — 최종 판정은 어차피 DB 트리거와
+              verify-payment 가 한다(브라우저가 장애로 길을 막을 이유가 없다).
+
+   하루에 난 실사고 둘:
+   ① 하드코딩 폴백(RECRUIT_FALLBACKS)에 6월 날짜가 박혀 있어 조회 실패 시 전부 'closed'.
+      방문자에게는 오류가 아니라 "이 사이트는 모집이 끝났다"로 보였다.
+   ② ①을 고치면서 'none' 과 null 을 같이 '키 없음'으로 두었더니, 소비처의 `|| 'open'`
+      기본값 때문에 **기수가 하나도 없는데 전 챌린지가 신청 가능**해졌다(오너 지적).
+   → 하드코딩 날짜 폴백 금지는 그대로. 대신 '모른다'와 '안 한다'를 반드시 가른다. */
 async function loadRecruitDataFromSupabase() {
   if (!window.MONC || !window.MONC.sb) return null;
   const { data, error } = await window.MONC.sb
@@ -123,7 +131,17 @@ async function applyIndexRecruit() {
        카드는 흑백 처리도 안 하고 클릭도 열려 있다. 파일 맨 위 실사고 기록 참조. */
     const start = d && d.start;
     const end   = d && d.end;
-    if (!start || !end) return;
+    /* ⚠️ 조회 성공 + 기수 미등록('none')과 조회 실패(모름)를 가른다.
+       미등록이면 '다음 기수 준비 중'이라고 말한다 — 모르는 게 아니라 안 하는 것이다. */
+    if (!start || !end) {
+      if (!data) return;                       // 조회 실패 — 칩을 안 그린다(구 동작 유지)
+      window._challengeStatuses = window._challengeStatuses || {};
+      window._challengeStatuses[id] = 'none';
+      card.classList.add('is-dim');
+      const c0 = card.querySelector('.ch-st');
+      if (c0) { c0.textContent = '다음 기수 준비 중'; c0.className = 'ch-st is-closed'; c0.hidden = false; }
+      return;
+    }
 
     const status = getStatus(start, end);
     window._challengeStatuses = window._challengeStatuses || {};
@@ -181,7 +199,16 @@ async function loadChallengeStatuses() {
   window._recruitLoadFailed = !data;
   CHALLENGE_IDS.forEach(id => {
     const d = data ? data[id] : null;
-    if (!d || !d.start || !d.end) return;      // 모르면 비워 둔다 — 'closed' 로 단정 금지
+    if (!d || !d.start || !d.end) {
+      /* ⚠️⚠️ 여기서 '모른다'와 '모집을 안 한다'를 갈라야 한다(2026-08-02 실사고).
+         조회가 **성공**했는데 그 챌린지 행이 없다 = admin 에 기수를 안 만들었다
+         = **지금 모집하지 않는다.** 신청을 열면 안 된다.
+         조회가 **실패**했다 = 정말 모른다. 그때만 버튼을 살려 둔다(서버가 재판정한다).
+         구 코드는 둘 다 '키 없음'으로 두었고, 소비처의 `|| 'open'` 기본값 때문에
+         **기수가 하나도 없는 상태에서 전 챌린지가 신청 가능**했다. */
+      if (data) window._challengeStatuses[id] = 'none';
+      return;
+    }
     window._challengeStatuses[id] = getStatus(d.start, d.end);
 
     window._challengeRounds = window._challengeRounds || {};
@@ -209,8 +236,12 @@ async function applyDetailRecruit(challengeId) {
      '모집 마감 6/1 ~ 6/28' 을 **확정 문구로** 출력했다(2026-08-02 실사고). 파일 맨 위 참조. */
   const start = d && d.start;
   const end   = d && d.end;
-  const status = (start && end) ? getStatus(start, end) : null;
-  const dday   = status ? getDday(start, end, status) : null;
+  /* status 세 갈래를 구분한다 —
+       'open'/'upcoming'/'closed' : 기수가 있고 기간을 안다
+       'none'                     : 조회 성공 + 이 챌린지 기수가 없다 = 모집 안 함
+       null                       : 조회 실패 = 정말 모른다(버튼 살려 둠) */
+  const status = (start && end) ? getStatus(start, end) : (data ? 'none' : null);
+  const dday   = (status && status !== 'none') ? getDday(start, end, status) : null;
 
   if (chip) {
     chip.style.opacity = '';
@@ -219,6 +250,10 @@ async function applyDetailRecruit(challengeId) {
          아래 .apply-btn 비활성 블록이 status 를 요구하므로 신청 버튼은 살아 있다. */
       chip.textContent = '모집 기간을 불러오지 못했어요 · 새로고침';
       chip.style.background = '';
+    } else if (status === 'none') {
+      // 기수가 아직 없다 — 날짜를 지어내지 않고 '준비 중'만 말한다
+      chip.textContent = '다음 기수 준비 중';
+      chip.style.background = 'rgba(120,120,120,.1)';
     } else if (status === 'open') {
       chip.innerHTML = dday
         ? `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`
@@ -231,11 +266,14 @@ async function applyDetailRecruit(challengeId) {
   }
 
   if (status && status !== 'open') {
+    const label = status === 'upcoming' ? '모집 예정'
+                : status === 'none'     ? '다음 기수 준비 중'
+                : '모집 마감';
     document.querySelectorAll('.apply-btn').forEach(btn => {
       btn.style.opacity = '.55';
       btn.style.filter = 'grayscale(.4)';
       btn.style.cursor = 'not-allowed';
-      btn.textContent = status === 'upcoming' ? '모집 예정' : '모집 마감';
+      btn.textContent = label;
     });
   }
 
