@@ -143,6 +143,55 @@
   }
   window.moncLoginHref = loginHref;   // 런타임에 로그인 링크를 조립하는 페이지들이 쓴다
 
+  /* ── 로그인 상태 '기기 기억' (2026-08-03) ────────────────────────────────
+     전에는 매 페이지가 '로그인/회원가입'을 먼저 그리고, 서버 확인(getSession→
+     getMyProfile, 0.3~1초)이 끝나야 회원 알약으로 바꿨다 — 페이지를 옮길 때마다
+     오른쪽 위가 깜빡이는 원인(오너 신고). 마지막으로 확인된 상태를 기기에 적어
+     두고 **처음부터 그 상태로** 그린다.
+     · 이 기억은 '먼저 그리는 용도'일 뿐 권한이 아니다 — 진짜 판정은 여전히
+       initAuth(서버)가 하고, 기억과 다르면 그때 바로잡는다. 회원 페이지 접근
+       통제도 각 페이지의 requireSession/requireAdmin 그대로다.
+     · supabase 토큰 키(sb-…-auth-token)가 기기에 없으면 기억도 지운다 —
+       로그아웃하면 supabase 가 토큰을 지우므로 다음 화면부터 자동으로 비로그인.
+     · MONC 없는 페이지(terms·privacy)에서는 기억대로 그리기만 하고 검증은 없다 —
+       틀려도 눌러서 간 페이지의 가드가 로그인으로 보낸다. */
+  var AUTH_HINT_KEY = 'monc_nav_auth_v1';
+  function readAuthHint() {
+    try {
+      var hasToken = false;
+      for (var i = 0; i < localStorage.length; i++) {
+        if (/^sb-[a-z0-9]+-auth-token$/.test(localStorage.key(i) || '')) { hasToken = true; break; }
+      }
+      if (!hasToken) { localStorage.removeItem(AUTH_HINT_KEY); return null; }
+      var h = JSON.parse(localStorage.getItem(AUTH_HINT_KEY) || 'null');
+      if (h && (h.role === 'admin' || h.role === 'member')) return h;
+    } catch (e) {}
+    return null;
+  }
+  var authHint = readAuthHint();
+
+  /* 오른쪽 버튼·모바일 회원 카드 마크업 — 첫 그리기(위 기억)와 서버 확인 뒤
+     갱신(initAuth)이 같은 모양을 쓰도록 한 곳에 둔다. hint 가 null 이면 비로그인. */
+  function memberHref(hint) { return hint.role === 'admin' ? 'admin.html' : 'mypage.html'; }
+  function navRightHtml(hint) {
+    var btn;
+    if (hint) {
+      var name = (hint.name || '회원').trim();
+      btn = '<a class="mypage-pill" href="' + memberHref(hint) + '"><span class="nav-avatar">'
+        + esc(name.charAt(0) || '·') + '</span>'
+        + (hint.role === 'admin' ? '관리자 페이지' : '마이페이지') + '</a>';
+    } else {
+      btn = '<a class="nav-login" href="' + loginHref() + '">로그인/회원가입</a>';
+    }
+    return btn + '<a class="nav-cta" href="apply.html">신청하기</a>';
+  }
+  function memberCardHtml(hint) {
+    var name = (hint.name || '회원').trim() || '회원';
+    return '<span class="mm-avatar">' + esc(name.charAt(0) || '·') + '</span>' +
+      '<span class="mm-member-text"><b>' + esc(name) + '</b> 님' +
+      '<span class="mm-go">' + (hint.role === 'admin' ? '관리자 페이지 가기 →' : '마이페이지 가기 →') + '</span></span>';
+  }
+
   var navHtml =
     /* 본문 바로가기 (2026-08-02 D-12) — 37개 페이지 전부에 없었다. 데스크톱 키보드
        사용자는 매 페이지 nav 링크 9개를 지나야 본문에 닿는다.
@@ -171,14 +220,14 @@
             '<div class="nav-dd-menu">' + ddMenu(REVIEW_SUB) + '</div>' +
           '</li>' +
         '</ul>' +
-        '<div class="nav-right">' +
-          '<a class="nav-login" href="' + loginHref() + '">로그인/회원가입</a>' +
-          '<a class="nav-cta" href="apply.html">신청하기</a>' +
-        '</div>' +
+        '<div class="nav-right">' + navRightHtml(authHint) + '</div>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
       '</div>' +
     '</nav>' +
     '<div class="mobile-menu" id="mobileMenu">' +
+      (authHint
+        ? '<a class="mm-member-card" href="' + memberHref(authHint) + '">' + memberCardHtml(authHint) + '</a>'
+        : '') +
       '<ul>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('briefing') + '><span class="nav-briefing">승준노트</span>' +
@@ -203,7 +252,7 @@
         '</li>' +
       '</ul>' +
       '<div class="mobile-menu-cta">' +
-        '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>' +
+        (authHint ? '' : '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>') +
         '<a class="mm-apply" href="apply.html">신청하기</a>' +
       '</div>' +
     '</div>';
@@ -372,49 +421,74 @@
     });
   }
 
+  /* 서버 확인 결과대로 오른쪽 버튼·모바일 회원 카드를 맞춘다. hint=null 이면 비로그인 화면.
+     위 '기기 기억'이 이미 같은 모양을 그려 놨으면 그대로 두고(교체 깜빡임 방지),
+     다를 때만 고친다 — 이름·역할이 바뀌었거나 기억이 틀렸던 경우다. */
+  function applyAuthUI(hint) {
+    var navRight = document.querySelector('#navbar .nav-right');
+    if (navRight) {
+      var html = navRightHtml(hint);
+      if (navRight.innerHTML !== html) navRight.innerHTML = html;
+    }
+    var mmEl = document.getElementById('mobileMenu');
+    if (!mmEl) return;
+    var card = mmEl.querySelector('.mm-member-card');
+    var loginBtn = mmEl.querySelector('.mm-login');
+    if (!hint) {                       // 기억으로 그렸는데 실제론 로그아웃 → 되돌린다
+      if (card) card.remove();
+      if (!loginBtn) {
+        var cta = mmEl.querySelector('.mobile-menu-cta');
+        if (cta) {
+          var a = document.createElement('a');
+          a.className = 'mm-login';
+          a.href = loginHref();
+          a.textContent = '로그인 / 회원가입';
+          cta.insertBefore(a, cta.firstChild);
+        }
+      }
+      return;
+    }
+    if (!card) {
+      card = document.createElement('a');
+      card.className = 'mm-member-card';
+      mmEl.insertBefore(card, mmEl.firstElementChild);
+      // 회원 카드가 메뉴를 닫는 처리에 걸리도록(위 wire 는 주입 전에 돌았다)
+      card.addEventListener('click', function () { document.body.style.overflow = ''; });
+    }
+    card.href = memberHref(hint);
+    var cardHtml = memberCardHtml(hint);
+    if (card.innerHTML !== cardHtml) card.innerHTML = cardHtml;
+    if (loginBtn) loginBtn.remove();
+  }
+
   /* 로그인 상태면 오른쪽 버튼을 '마이페이지 알약'으로 바꾸고 모바일 메뉴에 회원 카드를 끼운다.
-     ⚠️ MONC(supabase-config.js) 가 없는 페이지에서는 아무것도 하지 않는다 — 로그아웃 화면 유지. */
+     ⚠️ MONC(supabase-config.js) 가 없는 페이지에서는 아무것도 하지 않는다 — 기억대로 유지. */
   function initAuth() {
     if (!window.MONC || !window.MONC.getSession) return;
     (async function () {
       var session = null;
       try { session = await MONC.getSession(); } catch (e) { return; }
-      if (!session) return;
+      if (!session) {
+        // 기억으로 먼저 그렸는데 세션이 없다(만료 등) → 기억을 지우고 비로그인으로 되돌린다
+        if (authHint) {
+          try { localStorage.removeItem(AUTH_HINT_KEY); } catch (e) {}
+          applyAuthUI(null);
+        }
+        return;
+      }
 
       var profile = null;
       try { profile = await MONC.getMyProfile(); } catch (e) {}
-      var name = (profile && profile.name) ? profile.name : '회원';
-      var initial = (name.trim().charAt(0)) || '·';
-
       // 관리자는 회원 마이페이지가 아니라 관리자 페이지로 보낸다.
-      var isAdmin = !!(profile && profile.role === 'admin');
-      var memberHref = isAdmin ? 'admin.html' : 'mypage.html';
-      var pillLabel = isAdmin ? '관리자 페이지' : '마이페이지';
-      var goLabel = isAdmin ? '관리자 페이지 가기 →' : '마이페이지 가기 →';
-
-      var navRight = document.querySelector('#navbar .nav-right');
-      if (navRight) {
-        navRight.innerHTML =
-          '<a class="mypage-pill" href="' + memberHref + '"><span class="nav-avatar">' + esc(initial) +
-          '</span>' + pillLabel + '</a>' +
-          '<a class="nav-cta" href="apply.html">신청하기</a>';
+      var hint = {
+        role: (profile && profile.role === 'admin') ? 'admin' : 'member',
+        name: (profile && profile.name) ? profile.name : '회원'
+      };
+      // 다음 페이지가 처음부터 맞게 그리도록 기억을 갱신 — 조회 실패 시엔 덮어쓰지 않는다
+      if (profile) {
+        try { localStorage.setItem(AUTH_HINT_KEY, JSON.stringify(hint)); } catch (e) {}
       }
-
-      var mmEl = document.getElementById('mobileMenu');
-      if (mmEl) {
-        var card = document.createElement('a');
-        card.className = 'mm-member-card';
-        card.href = memberHref;
-        card.innerHTML =
-          '<span class="mm-avatar">' + esc(initial) + '</span>' +
-          '<span class="mm-member-text"><b>' + esc(name) + '</b> 님' +
-          '<span class="mm-go">' + esc(goLabel) + '</span></span>';
-        mmEl.insertBefore(card, mmEl.firstElementChild);
-        // 회원 카드가 메뉴를 닫는 처리에 걸리도록(위 wire 는 주입 전에 돌았다)
-        card.addEventListener('click', function () { document.body.style.overflow = ''; });
-        var loginBtn = mmEl.querySelector('.mm-login');
-        if (loginBtn) loginBtn.remove();
-      }
+      applyAuthUI(profile ? hint : (authHint || hint));
     })();
   }
 

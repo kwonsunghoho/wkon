@@ -5475,6 +5475,13 @@
       document.body.classList.add('authed');                     // ⚠️ 이 클래스가 셸 그리드(데스크톱 2열)를 켠다 — 지우면 사이드바 자리가 안 잡힌다
     }
 
+    /* 뒤로가기 복원(bfcache) — 이 처리가 admin 에만 빠져 있어서, 다른 페이지에 갔다
+       뒤로가기로 돌아오면 브라우저가 얼려둔 옛 화면(옛 숫자·명단)이 그대로 보였다
+       (2026-08-03 오너 신고). login·mypage·answers 와 같은 전체 재로드 방식.
+       입력 중이던 값은 사라질 수 있지만, admin 편집은 한 칸 수정 → 즉시 저장이
+       대부분이라 옛 데이터를 보여주는 쪽이 더 위험하다. */
+    window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+
     // 진입 가드 + 초기 로드
     (async () => {
       const admin = await MONC.requireAdmin();

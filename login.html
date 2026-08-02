@@ -41,6 +41,27 @@
        구글이 인앱 웹뷰 OAuth 를 아예 거부한다(disallowed_useragent). nav 가 없는
        페이지라 nav.js 옆이 아니라 여기에 직접 넣는다. -->
   <script src="inapp.js?v=7" defer></script>
+  <!-- 이미 로그인된 사람에겐 로그인 버튼을 그리기 전에 가린다(2026-08-03 오너 신고) —
+       뒤로가기·복귀로 이 페이지에 오면 로그인 카드가 1초쯤 통째로 보였다가 관리자/
+       마이페이지로 튕기는 깜빡임이 났다. supabase 토큰 키가 기기에 있거나 OAuth 복귀
+       (#access_token)면 '확인 중' 문구만 보이고, 아래 부트스트랩이 세션을 실제로 확인해
+       이동시킨다. 세션이 없으면 되살린다(revealLoginView).
+       ⚠️ 동의 게이트(#consentView) 판정·노출 로직은 그대로다 — 이 처리는 #loginView 만 가린다.
+       ⚠️ 반드시 <head> 인라인이어야 한다 — body 끝 스크립트는 CDN 대기 중 카드가 먼저
+          그려진 뒤에 돌아서 늦는다. -->
+  <script>
+    (function () {
+      try {
+        var t = false;
+        for (var i = 0; i < localStorage.length; i++) {
+          if (/^sb-[a-z0-9]+-auth-token$/.test(localStorage.key(i) || '')) { t = true; break; }
+        }
+        if (t || location.hash.indexOf('access_token') !== -1) {
+          document.documentElement.classList.add('has-session');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -99,6 +120,10 @@
     }
     .status { margin-top: 18px; font-size: 13px; color: var(--text-muted); min-height: 18px; }
     .status.err { color: var(--action-dark); }
+    /* 세션이 있어 보이면(위 head 스크립트) 로그인 버튼 대신 확인 문구만 — 확인 뒤 이동하거나 되살린다 */
+    .checking { display: none; margin-top: 22px; font-size: 14px; color: var(--text-muted); }
+    .has-session #loginView, .has-session .sub, .has-session .status { display: none; }
+    .has-session .checking { display: block; }
     .foot { margin-top: 28px; font-size: 12px; color: var(--text-muted); line-height: 1.7; }
     .foot a { color: var(--text-muted); text-decoration: underline; }
     .perks { list-style: none; text-align: left; margin: 22px auto 4px; max-width: 300px; display: flex; flex-direction: column; gap: 12px; }
@@ -165,6 +190,10 @@
       </p>
     </div>
 
+    <!-- head 의 has-session 판정이 켜졌을 때만 보이는 자리표시 — 스크립트가 status 를
+         채우기 전(카드 첫 그리기~CDN 로드 사이)에도 빈 화면이 아니어야 한다 -->
+    <p class="checking">로그인 상태를 확인하고 있어요…</p>
+
     <div class="status" id="status"></div>
 
     <p class="foot">
@@ -188,6 +217,11 @@
     const consentNote = document.getElementById('consentNote');
     function setStatus(t, isErr) { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!isErr); }
 
+    /* head 의 has-session 가림을 푼다 — 토큰은 있었는데 실제 세션이 없던 경우(만료 등).
+       이걸 부르지 않는 실패 경로가 생기면 로그인 버튼이 영영 안 보인다 — 아래 부트스트랩의
+       모든 '세션 없음·실패' 갈래에서 반드시 부를 것. */
+    function revealLoginView() { document.documentElement.classList.remove('has-session'); }
+
     /* ⚠️ 뒤로가기 복원(bfcache) — 이 한 줄이 없으면 로그인이 통째로 막힌다(2026-07-24 오너 신고).
        OAuth 버튼을 누르면 두 버튼을 비활성하고 '…창으로 이동 중' 을 띄운 채 카카오·구글로 나가는데,
        브라우저는 이 문서를 그대로 얼려 뒀다가 뒤로가기 때 스크립트 재실행 없이 되살린다
@@ -209,6 +243,8 @@
       consentView.hidden = false;
       const sub = document.querySelector('.sub');   // "…로그인하세요" — 이미 로그인한 상태라 맞지 않는 안내
       if (sub) sub.hidden = true;
+      // has-session 가림 해제 — 버튼은 위 hidden 이 계속 가리고, '확인 중' 문구를 끄고 status 를 살린다
+      revealLoginView();
       agree.checked = false;                        // ⚠️ 사전 체크 금지 — 매번 사용자가 직접 체크해야 명시 동의
       consentGo.disabled = true;
 
@@ -323,7 +359,7 @@
     // 역할에 따라 알맞은 페이지로 보냄 — returnTo(가려던 화면)가 있으면 그쪽이 우선
     async function routeByRole() {
       const profile = await MONC.getMyProfile();
-      if (!profile) return; // 프로필이 아직 없으면(드묾) 그대로 로그인 화면 유지
+      if (!profile) { revealLoginView(); return; } // 프로필이 아직 없으면(드묾) 로그인 화면으로 되돌림
       await grantSignupBonus();   // 동의를 마친 회원만 서버가 지급한다(미동의는 RPC 가 거른다)
       const rt = takeReturnTo();
       if (profile.role === 'admin') { window.location.replace(rt || 'admin.html'); return; }
@@ -358,13 +394,19 @@
     // 동의 기록 있음 → 바로 역할별 페이지 / 없음 → 동의 게이트(최초 1회).
     // 회원 페이지의 requireConsent() 가 ?consent=1 로 되돌려보내는 경로도 여기로 들어온다.
     (async () => {
-      if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
-      const session = await MONC.getSession();
-      if (!session) return;                       // 미로그인 → 로그인 뷰 유지
-      setStatus('로그인 확인 중…');
-      if (await MONC.hasConsented()) { routeByRole(); return; }
-      setStatus('');
-      showConsentGate();
+      try {
+        if (!window.MONC) { revealLoginView(); setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
+        const session = await MONC.getSession();
+        if (!session) { revealLoginView(); return; }   // 미로그인 → (head 에서 가렸다면) 로그인 뷰 복귀
+        setStatus('로그인 확인 중…');
+        if (await MONC.hasConsented()) { await routeByRole(); return; }
+        setStatus('');
+        showConsentGate();
+      } catch (e) {
+        // 어떤 실패든 로그인 버튼 없는 화면에 갇히게 두지 않는다
+        revealLoginView();
+        console.error('로그인 상태 확인 실패', e);
+      }
     })();
   </script>
 </body>
