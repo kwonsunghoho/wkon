@@ -87,6 +87,11 @@
     .guest-nudge { display: none; font-size: 13px; color: var(--text-muted); background: var(--surface2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
     .guest-nudge a { color: var(--accent-ink); font-weight: 700; }
     .lc-field { margin-bottom: 12px; }
+    /* 인라인 오류 (2026-08-02) — alert 는 어느 칸이 틀렸는지 못 알려주고 닫으면 사라진다.
+       apply.html .field-err 와 같은 규칙. */
+    .lc-field .inp.is-err { border-color: #C0392B; }
+    .lc-err { display: none; margin-top: 6px; font-size: 13px; line-height: 1.5; color: #C0392B; }
+    .lc-err.on { display: block; }
     .lc-field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
     /* 시간대 선택 — 정원·잔여석이 타임마다 따로라 신청 전에 반드시 하나를 고른다.
        라디오는 시각적으로 숨기고 라벨 전체를 44px+ 터치 타깃으로 쓴다(키보드 포커스는 :focus-visible 링으로). */
@@ -174,6 +179,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
+  <script src="phone-check.js"></script>
   <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
        ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
           지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
@@ -338,8 +345,8 @@
         + '<div class="member-badge" id="memberBadge"><span data-name></span>님, 회원으로 신청해요. (마이페이지에서 내역 확인)</div>'
         + '<div class="guest-nudge" id="guestNudge"><a href="' + (window.moncLoginHref ? window.moncLoginHref() : 'login.html') + '">회원가입</a>하면 신청 내역과 성장 기록이 계정에 남아요.</div>'
         + slotPicker
-        + '<div class="lc-field" id="rowName"><label>이름</label><input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name"></div>'
-        + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel"></div>'
+        + '<div class="lc-field" id="rowName"><label>이름</label><input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name" maxlength="20" aria-describedby="lcErrName"><p class="lc-err" id="lcErrName"></p></div>'
+        + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric" maxlength="20" aria-describedby="lcErrPhone"><p class="lc-err" id="lcErrPhone"></p></div>'
         + '<label class="consent" for="appConsent"><input type="checkbox" id="appConsent"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다.</span></label>'
         + (free ? '' : '<div class="pay-total"><span class="l">참가비</span><span class="a">' + LEC.esc(priceStr) + '</span></div>')
         + payButtons
@@ -515,7 +522,22 @@
       }
       const name = (document.getElementById('appName') || {}).value?.trim() || '';
       const phone = (document.getElementById('appPhone') || {}).value?.trim() || '';
-      if (!name || !phone) { alert('이름과 연락처를 모두 입력해주세요.'); return null; }
+      /* 규칙은 phone-check.js 한 곳 — 가입·챌린지·특강·오픈알림이 같은 번호를 받는다.
+         오류는 alert 이 아니라 틀린 칸 바로 아래에 띄운다(2026-08-02). */
+      const setErr = (inputId, errId, m) => {
+        const i = document.getElementById(inputId), e = document.getElementById(errId);
+        if (i) i.classList.toggle('is-err', !!m);
+        if (e) { e.textContent = m || ''; e.classList.toggle('on', !!m); }
+      };
+      const nc = window.MONC_PHONE ? MONC_PHONE.checkName(name) : { ok: !!name, message: '이름을 입력해 주세요.' };
+      const pc = window.MONC_PHONE ? MONC_PHONE.check(phone) : { ok: !!phone, message: '연락처를 입력해 주세요.' };
+      setErr('appName', 'lcErrName', nc.ok ? '' : nc.message);
+      setErr('appPhone', 'lcErrPhone', pc.ok ? '' : pc.message);
+      if (!nc.ok || !pc.ok) {
+        const bad = document.getElementById(nc.ok ? 'appPhone' : 'appName');
+        if (bad) { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); bad.focus({ preventScroll: true }); }
+        return null;
+      }
       if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return null; }
       const applicant = { name, phone };
       if (_memberId) applicant.member_id = _memberId;

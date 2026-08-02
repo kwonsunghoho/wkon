@@ -54,6 +54,7 @@
       width: 100%; padding: 13px 14px; border: 1.5px solid var(--border-strong);
       border-radius: 10px; font-size: 16px; font-family: inherit; background: #fff; color: var(--text);
     }
+    .inp.is-err { border-color: #C0392B; }
     .inp:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-tint); }
     .save-btn {
       width: 100%; margin-top: 22px; padding: 15px; border: none; border-radius: 12px;
@@ -90,6 +91,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
+  <script src="phone-check.js"></script>
   <script>
     const statusEl = document.getElementById('status');
     const setStatus = (t, err) => { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!err); };
@@ -121,7 +124,14 @@
 
       saveBtn.addEventListener('click', async () => {
         const name = nameEl.value.trim(), phone = phoneEl.value.trim(), major = majorEl.value.trim();
-        if (!name || !phone) { setStatus('이름과 전화번호를 입력해주세요.', true); return; }
+        /* 규칙은 phone-check.js 한 곳 (2026-08-02 오너 "전화번호 양식이 다를 시 가입 또는
+           신청 안 되게"). 여기가 '가입' 쪽 관문이다 — 챌린지·특강·오픈알림과 같은 규칙을 쓴다.
+           ⚠️ 이 화면은 상태 줄(setStatus) 하나로 말하므로 인라인 오류 대신 그것을 쓴다. */
+        const nc = window.MONC_PHONE ? MONC_PHONE.checkName(name) : { ok: !!name, message: '이름을 입력해주세요.' };
+        if (!nc.ok) { setStatus(nc.message, true); nameEl.focus(); return; }
+        const pc = window.MONC_PHONE ? MONC_PHONE.check(phone) : { ok: !!phone, message: '전화번호를 입력해주세요.' };
+        if (!pc.ok) { setStatus(pc.message, true); phoneEl.classList.add('is-err'); phoneEl.focus(); return; }
+        phoneEl.classList.remove('is-err');
         saveBtn.disabled = true; setStatus('저장 중…');
 
         // 전공 컬럼(major)이 아직 없을 수 있어, 실패하면 전공 빼고 재시도

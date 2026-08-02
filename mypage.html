@@ -1012,6 +1012,10 @@
       else contactC.textContent = '미등록';
       document.getElementById('phoneSave').addEventListener('click', async () => {
         const phone = phoneInput.value.trim();
+        /* 규칙은 phone-check.js 한 곳 (2026-08-02). 여기서 잘못된 번호를 저장하면
+           apply 가 회원 번호를 가져다 쓸 때 형식 검증을 우회하는 구멍이 된다. */
+        const pc = window.MONC_PHONE ? MONC_PHONE.check(phone) : { ok: !!phone, message: '전화번호를 입력해 주세요.' };
+        if (!pc.ok) { phoneMsg.textContent = pc.message; phoneInput.focus(); return; }
         phoneMsg.textContent = '저장 중…';
         const { error } = await MONC.sb.from('members').update({ phone }).eq('id', me);
         phoneMsg.textContent = error ? ('저장 실패: ' + error.message) : '저장됐어요.';

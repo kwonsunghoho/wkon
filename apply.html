@@ -530,6 +530,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
+<script src="phone-check.js"></script>
   <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
        ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
           지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
@@ -579,9 +581,12 @@ const CHALLENGES = [
   }
 ];
 
-// 챌린지 공통 참가비 — admin에서 site_config.challenge_price 로 관리(미설정 시 3만원).
+// 챌린지 공통 참가비 — admin '챌린지' 탭의 site_config.challenge_price 가 단일 소스다.
+// ⚠️ 아래 값은 **DB 를 못 읽었을 때만** 쓰이는 폴백이다. 화면에 보이는 금액을 바꾸려면
+//    코드가 아니라 admin 에서 고친다 — 코드에 박으면 광고가와 청구가가 어긋난다(전례 있음).
+//    폴백도 DB 와 같은 값으로 맞춰 둔다(2026-08-02 오너 지시 33,000원).
 // 초기화 때 loadChallengePrice()로 갱신한 뒤 카드·요약·FAQ·결제에 반영한다.
-let PRICE = 30000;
+let PRICE = 33000;
 function priceLabel() { return PRICE.toLocaleString() + '원'; }
 async function loadChallengePrice() {
   try {
@@ -589,7 +594,7 @@ async function loadChallengePrice() {
     const v = data && data.value;
     const n = typeof v === 'number' ? v : parseInt(v, 10);
     if (Number.isFinite(n) && n >= 0) PRICE = n;
-  } catch (e) { /* 조회 실패 시 기본 3만원 유지 */ }
+  } catch (e) { /* 조회 실패 시 위 폴백 유지 */ }
 }
 
 /* ── 포트원(PortOne) V2 — 토스페이 간편결제 채널 (공개 가능 값) ── */
@@ -888,9 +893,12 @@ function setFieldErr(inputId, errId, message) {
 function validateApplicant() {
   const name = document.getElementById('appName').value.trim();
   const phone = document.getElementById('appPhone').value.trim();
-  const nameErr = name.length < 2 ? '이름을 두 글자 이상 입력해 주세요.' : '';
-  const phoneErr = phone.replace(/\D/g, '').length < 10
-    ? '휴대전화번호를 정확히 입력해 주세요. (숫자 10자리 이상)' : '';
+  /* 규칙은 phone-check.js 한 곳에만 둔다 — 가입·챌린지·특강·오픈알림 네 창구가
+     같은 번호를 받는데 한쪽만 통과하면 안 된다(2026-08-02 오너 지시). */
+  const nc = MONC_PHONE.checkName(name);
+  const pc = MONC_PHONE.check(phone);
+  const nameErr = nc.ok ? '' : nc.message;
+  const phoneErr = pc.ok ? '' : pc.message;
   setFieldErr('appName', 'errName', nameErr);
   setFieldErr('appPhone', 'errPhone', phoneErr);
   const firstBad = nameErr ? 'appName' : (phoneErr ? 'appPhone' : null);

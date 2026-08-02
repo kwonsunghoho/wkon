@@ -19,10 +19,9 @@
       이 파일은 상세 4종 전용이다.
    ⚠️ 특강 카드 커버의 가격 배지는 폐기 확정이다(lectures.md) — 그것과 다른 물건이다.
       여기는 '상세 하단 고정 바'로, lecture.html 의 .lc-sticky 와 같은 계열이다.
-   ⚠️ 코치는 **챌린지별로 누가 가르치는지 배정하지 않는다.** 그 정보를 코드가 모르는데
-      추측해서 이름을 붙이면 허위 표시가 된다. 지금은 apply.html 이 이미 쓰고 있는 사실
-      ('전직 승무원·전문 코치진')만 말하고 연구진 페이지로 보낸다.
-      오너가 챌린지별 담당을 확정해 주면 그때 이 파일에서 갈라 쓴다.
+   ⚠️⚠️ **담당 코치는 오너가 확정한 배정만 쓴다**(2026-08-02 오너: 보신각=권성호,
+      영합각·스피닝·승자각=박새암). 추측해서 이름을 붙이면 허위 표시다. 배정이 바뀌면
+      아래 LEAD 표만 고치고, 이름·사진·직함은 researchers-data.js 에서 가져온다.
    ⚠️ 현형빈은 챌린지 미지도라 코치 줄에서 뺀다(pages.md).
    ══════════════════════════════════════════════════════════════════════════ */
 (function () {
@@ -37,6 +36,10 @@
 
   /* 챌린지를 지도하지 않는 연구원은 뺀다(pages.md — '연구진 전원 = 챌린지 코치'가 아니다) */
   var NON_COACH = { hyun: 1 };
+
+  /* 챌린지별 담당 코치 — 오너 확정(2026-08-02). researchers-data.js 의 id 를 쓴다.
+     ⚠️ 여기 없는 챌린지는 담당을 말하지 않고 코치진 전체만 보여준다(추측 금지). */
+  var LEAD = { voice: 'kwon', expression: 'park', spinning: 'park', answer: 'park' };
 
   /* ── 스타일 (이 파일이 주입 — 상세 4종 인라인 CSS 에 복사하지 말 것) ── */
   if (!document.getElementById('chStickyCss')) {
@@ -81,6 +84,11 @@
       '.ch-coach .who{min-width:0;display:block;}',
       '.ch-coach .nm{display:block;font-size:15px;font-weight:800;color:var(--text,#26221C);line-height:1.35;}',
       '.ch-coach .po{display:block;margin-top:2px;font-size:12.5px;color:var(--text-muted,#5C564C);line-height:1.45;}',
+      /* 담당 코치 한 줄만 강조 — 나머지는 조용한 행으로 남긴다(원칙 6: 강조는 하나) */
+      '.ch-coach li.is-lead{border-color:var(--accent-dark,#142C52);background:var(--action-tint,#E5E9F1);}',
+      '.ch-coach li.is-lead img{width:52px;height:52px;flex:0 0 52px;}',
+      '.ch-coach .lead-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;',
+      '  background:var(--action,#1B3A6B);color:#fff;font-size:12px;font-weight:800;vertical-align:1px;}',
       '.ch-coach .more{display:inline-flex;align-items:center;min-height:44px;font-size:14px;',
       '  font-weight:800;color:var(--accent-ink,#1B3A6B);text-decoration:underline;',
       '  text-underline-offset:3px;}'
@@ -95,7 +103,7 @@
     '<div class="ch-sticky-in">' +
       '<div class="info">' +
         '<div class="p" id="chStickyPrice">참가비 확인 중…</div>' +
-        '<div class="s">' + NAME + ' · 2주 · 미션 10회차</div>' +
+        '<div class="s" id="chStickySub">' + NAME + ' · 2주 · 미션 10회차</div>' +
       '</div>' +
       '<button type="button" class="go" id="chStickyGo">신청하기</button>' +
     '</div>';
@@ -165,21 +173,29 @@
      후기 섹션(#chReviews) 바로 위에 넣는다 — 커리큘럼 → 코치 → 후기 → 추천 순.
      연구원 데이터는 researchers-data.js 단일 원본을 쓴다(이름·사진 복사 금지). */
   var anchor = document.getElementById('chReviews');
-  var people = (window.MONC_RESEARCHERS || []).filter(function (r) { return !NON_COACH[r.id]; });
-  if (anchor && people.length) {
+  var all = (window.MONC_RESEARCHERS || []).filter(function (r) { return !NON_COACH[r.id]; });
+  var lead = all.filter(function (r) { return r.id === LEAD[CH]; })[0] || null;
+  var rest = all.filter(function (r) { return !lead || r.id !== lead.id; });
+
+  function row(r, isLead) {
+    return '<li' + (isLead ? ' class="is-lead"' : '') + '>' +
+      '<img src="' + r.photo + '" alt="" loading="lazy" width="44" height="44"' +
+      (r.photoPos ? ' style="object-position:' + r.photoPos + '"' : '') + '>' +
+      '<span class="who"><span class="nm">' + r.name +
+      (isLead ? '<span class="lead-tag">담당 코치</span>' : '') + '</span>' +
+      '<span class="po">' + r.position + '</span></span></li>';
+  }
+
+  if (anchor && all.length) {
     var sec = document.createElement('section');
     sec.className = 'ch-coach';
     sec.innerHTML =
       '<div class="ch-coach-in">' +
         '<h2>누가 지도하나요</h2>' +
-        '<p class="lead">전직 객실승무원과 보이스·스피치 전문 코치진이 함께합니다. ' +
-        '2주 동안 미션을 확인하고 피드백을 남기는 사람들이에요.</p>' +
-        '<ul>' + people.map(function (r) {
-          return '<li><img src="' + r.photo + '" alt="" loading="lazy" width="44" height="44"' +
-                 (r.photoPos ? ' style="object-position:' + r.photoPos + '"' : '') + '>' +
-                 '<span class="who"><span class="nm">' + r.name + '</span>' +
-                 '<span class="po">' + r.position + '</span></span></li>';
-        }).join('') + '</ul>' +
+        '<p class="lead">' + (lead
+          ? NAME + '은 <b>' + lead.name + ' 코치</b>가 맡습니다. 2주 동안 미션을 확인하고 피드백을 남겨요.'
+          : '전직 객실승무원과 보이스·스피치 전문 코치진이 함께합니다.') + '</p>' +
+        '<ul>' + (lead ? row(lead, true) : '') + rest.map(function (r) { return row(r, false); }).join('') + '</ul>' +
         '<a class="more" href="researchers.html">연구진 전체 이력 보기 →</a>' +
       '</div>';
     anchor.parentNode.insertBefore(sec, anchor);

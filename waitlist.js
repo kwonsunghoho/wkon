@@ -168,10 +168,14 @@
       var name = back.querySelector('#wlName').value.trim();
       var phone = back.querySelector('#wlPhone').value.trim();
       msg.className = 'wl-msg';
-      if (name.length < 2) { msg.className = 'wl-msg err'; msg.textContent = '이름을 입력해 주세요.'; return; }
-      if (phone.replace(/\D/g, '').length < 10) {
-        msg.className = 'wl-msg err'; msg.textContent = '휴대전화번호를 정확히 입력해 주세요.'; return;
-      }
+      /* ⚠️ 검증 규칙은 phone-check.js 한 곳에만 둔다(2026-08-02 오너 지시) — 가입·챌린지·
+         특강·오픈알림 네 창구가 같은 번호를 받는데 한쪽만 통과하면 안 된다.
+         phone-check.js 가 없는 페이지에서도 죽지 않게 폴백을 남긴다. */
+      var P = window.MONC_PHONE;
+      var nc = P ? P.checkName(name) : { ok: name.length >= 2, message: '이름을 두 글자 이상 입력해 주세요.' };
+      if (!nc.ok) { msg.className = 'wl-msg err'; msg.textContent = nc.message; return; }
+      var pc = P ? P.check(phone) : { ok: phone.replace(/\D/g, '').length >= 10, message: '휴대전화번호를 정확히 입력해 주세요.' };
+      if (!pc.ok) { msg.className = 'wl-msg err'; msg.textContent = pc.message; return; }
       if (!agree.checked) return;
       go.disabled = true;
       msg.textContent = '신청 중…';
