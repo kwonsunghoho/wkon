@@ -172,11 +172,22 @@
   function wire() {
     /* ── 드롭다운 ──
        ⚠️ 드롭다운이 여럿이라(승준노트·챌린지·연구실) 하나를 열면 나머지는 닫는다 — 같이 열리면 메뉴가 겹쳐 뜬다.
-       ⚠️ 한 번 = 목차 열기, 한 번 더 = 허브로 이동(2026-07-31 오너 — 목록 맨 위의 '한눈에'
-          항목을 대신한다). 닫기는 바깥 클릭·Esc 가 맡는다.
-       ⚠️ 판정 기준은 `is-open` 클래스 하나뿐이다 — 마우스 호버로 열린 상태(`:hover`)를 '이미
-          열림'으로 쳐서 한 번에 보내는 안도 검토했지만, 기기마다 규칙이 달라지고 호버가 애매한
-          터치 겸용 노트북에서 첫 누름이 그냥 이동해 버린다. 어디서나 '두 번'으로 통일. */
+       ⚠️ 누름 횟수는 **마우스 유무로 갈린다**(2026-08-02 오너 "웹에서는 두번 클릭해야 허브로
+          이동하잖아? 한번 클릭으로 바꿔줘 … 모바일은 한번에 이동하면 하위탭이 의미가 없잖아").
+          · 마우스가 있는 기기 → **한 번에 허브로 이동.** 목차는 CSS 의 `:hover`/`:focus-within`
+            이 이미 열어 주므로(nav.css) '여는 클릭'이 하는 일이 없었다.
+          · 마우스가 없는 넓은 화면(터치 태블릿 ≥769px) → **예전대로 두 번.** 여기서 한 번에
+            보내면 드롭다운을 열 방법이 아예 사라진다.
+          · 모바일(≤768px)은 이 코드가 아니라 아래 햄버거 아코디언이고 거기는 두 번 유지.
+       ⚠️ 폭(미디어쿼리)이 아니라 `(hover: hover)` 로 가른다 — 같은 1024px 라도 노트북과
+          아이패드는 필요한 동작이 다르다. 클릭 시점에 물어봐서 기기 상태가 바뀌어도 따라간다.
+          (구 규칙은 '어디서나 두 번'이었고, 그때 쓰던 `:hover` **상태** 판정은 여전히 금지 —
+           호버가 남아 있는지 아닌지가 애매해 첫 누름이 제멋대로 이동한다. 여기서 보는 건
+           상태가 아니라 기기 능력이다.)
+       닫기는 바깥 클릭·Esc 가 맡는다. */
+    function hasMouse() {
+      return !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
+    }
     var dds = [].slice.call(document.querySelectorAll('#navbar .nav-dd'));
     function closeDd(dd) {
       dd.classList.remove('is-open');
@@ -188,7 +199,7 @@
       if (!btn) return;
       btn.addEventListener('click', function () {
         var hub = btn.getAttribute('data-hub');
-        if (dd.classList.contains('is-open') && hub) { location.href = hub; return; }
+        if (hub && (hasMouse() || dd.classList.contains('is-open'))) { location.href = hub; return; }
         dds.forEach(closeDd);
         dd.classList.add('is-open');
         btn.setAttribute('aria-expanded', 'true');
@@ -217,7 +228,9 @@
         });
       });
       /* 아코디언 — 토글은 button 이라 위 '링크 클릭 시 닫기'에 안 걸린다.
-         ⚠️ 데스크톱 드롭다운과 같은 규칙: 한 번 = 펼치기, 한 번 더 = 허브로 이동.
+         ⚠️ **여기는 계속 두 번이다**: 한 번 = 펼치기, 한 번 더 = 허브로 이동. 모바일엔 호버가
+            없어 첫 탭에 허브로 보내면 하위 항목을 볼 방법이 사라진다(2026-08-02 오너 확정 —
+            데스크톱만 한 번으로 바꿨다). 위 드롭다운을 고칠 때 여기까지 같이 바꾸지 말 것.
             그래서 '눌러서 접기'가 없어진 대신 **하나를 펼치면 다른 하나를 접는다** —
             접는 길이 하나도 없으면 메뉴가 열린 채로만 남는다. */
       var accs = [].slice.call(mm.querySelectorAll('.mm-acc'));
