@@ -313,6 +313,8 @@
     .rv-bulk-status { font-size: 13px; color: var(--text-muted); margin: 0 2px 20px; line-height: 1.5; }
     .rv-bulk-status .ok { color: #1a7f37; font-weight: 700; }
     .rv-bulk-status .err { color: #c0392b; font-weight: 700; }
+    .rv-searchrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0 12px; }
+    .rv-searchrow .search { flex: 1; min-width: 180px; margin-bottom: 0; }
     .rv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
     .rv-item { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); overflow: hidden; }
     .rv-item img { width: 100%; display: block; aspect-ratio: 3/4; object-fit: cover; background: var(--surface2); }
@@ -1046,6 +1048,12 @@
         <button class="rv-kf" type="button" data-k="challenge">챌린지 후기</button>
         <button class="rv-kf" type="button" data-k="consult">상담 후기</button>
       </div>
+      <!-- 검색(2026-08-03) — 후기가 100장을 넘으면 한 건을 고치려고 화면을 계속 내려야 했다.
+           ⚠️ 이름은 `reviewer_name` 컬럼이다(`name` 아님 — 한 번 틀려서 이름이 안 붙은 전례). -->
+      <div class="rv-searchrow">
+        <input type="text" class="search" id="rvSearch" placeholder="이름·한줄평·챌린지·기수 검색">
+        <span class="apps-count" id="rvCount"></span>
+      </div>
       <!-- 챌린지 상세 페이지(challenge-*.html)의 후기 섹션은 reviews.challenge 값으로 골라 담는다.
            '여러 장 한번에'로 올리면 이 값이 비어 상세에 안 뜨는데, 화면상으로는 조용히 숨겨질 뿐이라
            여기서 건수를 보여 준다. 숫자가 0이면 그 챌린지 상세엔 후기 섹션이 없다. -->
@@ -1069,12 +1077,41 @@
           그만큼 원장에 행이 쌓이고 잔액은 다시 계산된다. -->
   <div class="tab-panel" id="panel-credits">
     <div class="rounds-wrap">
+      <!-- ⚠️ 순서는 '자주 쓰는 것 먼저'다(2026-08-03 재배치).
+           전에는 "웬만하면 건드리지 말 것"인 단가 설정 7칸이 맨 위를 차지하고, 매번 쓰는
+           회원 지급 목록이 그 아래 스크롤에 있었다. 설정은 맨 아래 접이로 내렸다. -->
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        AI킬러·소재 발굴 등이 함께 쓰는 <b>공용 크레딧</b>이에요. 도구마다 1회에 빠지는
-        크레딧이 다르고(아래에서 조절), <b>하루 무료분은 매일 자동으로 채워지므로</b>
-        여기서 넣지 않아도 됩니다. 여기서 넣는 건 <b>유료분</b>이에요(테스트·보상·환불 대응).
+        AI킬러·소재 발굴 등이 함께 쓰는 <b>공용 크레딧</b>이에요.
+        <b>하루 무료분은 매일 자동으로 채워지므로</b> 여기서 넣지 않아도 됩니다.
+        여기서 넣는 건 <b>유료분</b>이에요(테스트·보상·환불 대응).
       </p>
 
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 10px;">
+        <input class="search" id="credSearch" placeholder="이름·이메일 검색"
+               style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <label style="font-size:13px;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="credHasOnly"> 잔액 있는 회원만</label>
+      </div>
+      <div class="round-list" id="credList"><div class="loading">불러오는 중…</div></div>
+
+      <!-- 기수 일괄 지급 -->
+      <form class="round-form" id="creditBulkForm">
+        <div class="field"><label>기수 일괄 지급</label>
+          <select id="cbCohort"><option value="">기수 선택…</option></select></div>
+        <div class="field"><label>지급 횟수</label>
+          <input id="cbAmount" type="number" min="1" step="1" placeholder="예: 3"></div>
+        <div class="field"><label>사유(기록에 남아요)</label>
+          <input id="cbNote" placeholder="예: 3기 오픈 기념"></div>
+        <button class="btn btn-action" type="submit" id="cbSubmit">기수 전원에게 지급</button>
+      </form>
+
+      <h3 style="font-size:15px;font-weight:800;margin:22px 0 8px;">최근 원장 (50건)</h3>
+      <div class="round-list" id="credLog"><div class="loading">불러오는 중…</div></div>
+
+      <!-- 설정 두 벌 — 자주 안 건드리는 값이라 접어 둔다. 값 로드는 접혀 있어도 그대로 된다. -->
+      <details class="adm-help" style="margin-top:22px;">
+        <summary>무료 제공량 · 단가 · 충전 상품 설정 <span class="adm-help-v">웬만하면 그대로 두세요</span></summary>
+        <div class="adm-help-body">
       <!-- 하루 무료 + 도구별 단가 — site_config.credit_daily_free / credit_costs.
            ⚠️ 이 두 값이 '얼마나 후하게 풀지'의 손잡이다. 초반엔 하루 무료를 넉넉히 두고
               나중에 줄이면 "이벤트 종료"로 설명되지만, 단가를 올리면 "요금 인상"이 된다.
@@ -1118,28 +1155,8 @@
         <button class="btn btn-action cf-save" id="cpSave" type="button">충전 상품 저장</button>
         <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">AI킬러 충전 화면과 <b>결제 금액 검증</b>에 함께 쓰여요. 저장하면 바로 반영됩니다.</span>
       </div>
-
-      <!-- 기수 일괄 지급 -->
-      <form class="round-form" id="creditBulkForm">
-        <div class="field"><label>기수 일괄 지급</label>
-          <select id="cbCohort"><option value="">기수 선택…</option></select></div>
-        <div class="field"><label>지급 횟수</label>
-          <input id="cbAmount" type="number" min="1" step="1" placeholder="예: 3"></div>
-        <div class="field"><label>사유(기록에 남아요)</label>
-          <input id="cbNote" placeholder="예: 3기 오픈 기념"></div>
-        <button class="btn btn-action" type="submit" id="cbSubmit">기수 전원에게 지급</button>
-      </form>
-
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 10px;">
-        <input class="search" id="credSearch" placeholder="이름·이메일 검색"
-               style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
-        <label style="font-size:13px;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;">
-          <input type="checkbox" id="credHasOnly"> 잔액 있는 회원만</label>
-      </div>
-      <div class="round-list" id="credList"><div class="loading">불러오는 중…</div></div>
-
-      <h3 style="font-size:15px;font-weight:800;margin:22px 0 8px;">최근 원장 (50건)</h3>
-      <div class="round-list" id="credLog"><div class="loading">불러오는 중…</div></div>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -3263,6 +3280,8 @@
     // ⚠️ 이 네 글자는 challenge-*.html 의 data-challenge 와 문자열이 같아야 한다(상세 후기 섹션의 매칭 키).
     const RV_CH_OPTS = ['보신각', '영합각', '스피닝', '승자각'];
     let rvKindFilter = 'all';
+    const R_PAGE = 60;        // 후기 카드를 한 번에 그리는 수(회원 목록과 같은 규칙)
+    let _rvShown = R_PAGE;
     // 챌린지별로 상세 페이지에 실제로 뜰 후기가 몇 건인지 — 노출(visible)·챌린지 지정된 것만 센다.
     function renderRvChSum(data) {
       const box = document.getElementById('rvChSum');
@@ -3273,17 +3292,41 @@
         + (none ? ' <span style="color:var(--danger,#C0392B)">· 챌린지 미지정 <b>' + none + '</b>건(상세에 안 뜹니다 — 아래에서 챌린지를 골라 주세요)</span>' : '');
     }
     function rvUrl(path) { return MONC.sb.storage.from('reviews').getPublicUrl(path).data.publicUrl; }
-    async function loadReviewsAdmin() {
+    /* ⚠️ useCache — 검색·더 보기·종류 필터는 **다시 조회하지 않는다**(2026-08-03).
+       검색은 글자마다 부르므로 매번 DB 를 치면 후기 수백 장을 반복해 받는다.
+       저장·삭제·업로드처럼 데이터가 바뀐 뒤에는 인자 없이 불러 새로 받는다. */
+    let _rvRows = null;
+    async function loadReviewsAdmin(useCache) {
       const grid = document.getElementById('rvGrid');
-      const { data, error } = await fetchAll(() => MONC.sb.from('reviews').select('*').order('sort_order').order('created_at'));
-      if (error) { grid.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      let data;
+      if (useCache && _rvRows) { data = _rvRows; }
+      else {
+        const res = await fetchAll(() => MONC.sb.from('reviews').select('*').order('sort_order').order('created_at'));
+        if (res.error) { grid.innerHTML = '<div class="empty err">불러오기 실패: ' + esc(res.error.message) + '</div>'; return; }
+        data = _rvRows = res.data || [];
+      }
       renderRvChSum(data);
       if (!data.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 후기가 없습니다. 카톡 스크린샷을 업로드하세요.</div>'; return; }
       const CH_OPTS = [''].concat(RV_CH_OPTS);
       // kind 컬럼 마이그레이션(20260801180000) 전이면 undefined → 전부 챌린지로 취급
-      const rows = data.filter(r => rvKindFilter === 'all' || (r.kind || 'challenge') === rvKindFilter);
-      if (!rows.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">이 종류의 후기가 아직 없습니다.</div>'; return; }
-      grid.innerHTML = rows.map(r => `
+      /* 종류 필터 + 검색. ⚠️ 이름 컬럼은 `reviewer_name` 이다 — `name` 으로 읽어 이름이 한 번도
+         안 붙었던 전례가 있다(2026-08-02 원칙 15 근거). */
+      const rq = (document.getElementById('rvSearch').value || '').trim().toLowerCase();
+      const rows = data.filter(r => {
+        if (rvKindFilter !== 'all' && (r.kind || 'challenge') !== rvKindFilter) return false;
+        if (!rq) return true;
+        return [r.reviewer_name, r.quote, r.caption, r.challenge, r.cohort == null ? '' : (r.cohort + '기')]
+          .some(v => String(v || '').toLowerCase().includes(rq));
+      });
+      document.getElementById('rvCount').textContent =
+        rq || rvKindFilter !== 'all' ? `${rows.length} / ${data.length}장` : `${data.length}장`;
+      if (!rows.length) {
+        grid.innerHTML = '<div class="empty">' + (rq ? '검색과 맞는 후기가 없습니다.' : '이 종류의 후기가 아직 없습니다.') + '</div>';
+        return;
+      }
+      // 화면에 그리는 것만 끊는다 — 위 건수·챌린지별 요약은 전량(data)으로 센다.
+      const rvShown = rows.slice(0, _rvShown);
+      grid.innerHTML = rvShown.map(r => `
         <div class="rv-item ${r.visible ? '' : 'hidden'}" data-id="${r.id}" data-path="${esc(r.image_path || '')}">
           ${r.image_path
             ? `<img src="${esc(rvUrl(r.image_path))}" alt="${esc(r.caption || '후기')}">`
@@ -3299,7 +3342,13 @@
             <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
             <div class="row"><button class="rv-btn rv-del is-danger">삭제</button></div>
           </div>
-        </div>`).join('');
+        </div>`).join('')
+        + (rows.length > rvShown.length
+            ? `<div class="mmore" style="grid-column:1/-1"><span>${rvShown.length} / ${rows.length}장 표시</span>`
+              + `<button class="btn btn-ghost btn-sm" type="button" id="rvMoreBtn">더 보기</button></div>`
+            : '');
+      const rvMore = document.getElementById('rvMoreBtn');
+      if (rvMore) rvMore.addEventListener('click', () => { _rvShown += R_PAGE; loadReviewsAdmin(true); });
       // 분류 필드 저장(챌린지·기수·이름) — site_config가 아니라 reviews 컬럼. 마이그레이션 미적용 시 컬럼 없음 에러 안내.
       const saveField = async (id, patch) => {
         const { error } = await MONC.sb.from('reviews').update(patch).eq('id', id);
@@ -3318,7 +3367,7 @@
         const id = sel.closest('.rv-item').dataset.id;
         const ok = await saveField(id, { kind: sel.value });
         if (!ok) return;
-        if (rvKindFilter !== 'all') { loadReviewsAdmin(); return; }
+        if (rvKindFilter !== 'all') { patchRow(id, { kind: sel.value }); loadReviewsAdmin(true); return; }
         patchRow(id, { kind: sel.value });
       }));
       grid.querySelectorAll('.rv-ch').forEach(sel => sel.addEventListener('change', async () => {
@@ -3362,9 +3411,11 @@
     document.getElementById('rvKindFilter').addEventListener('click', e => {
       const b = e.target.closest('.rv-kf'); if (!b) return;
       rvKindFilter = b.dataset.k;
+      _rvShown = R_PAGE;   // 조건이 바뀌면 표시 수를 처음으로
       document.querySelectorAll('#rvKindFilter .rv-kf').forEach(x => x.classList.toggle('on', x === b));
-      loadReviewsAdmin();
+      loadReviewsAdmin(true);
     });
+    document.getElementById('rvSearch').addEventListener('input', () => { _rvShown = R_PAGE; loadReviewsAdmin(true); });
 
     // 글만 있는 후기 추가 — 캡처 없이 텍스트로 받은 상담 후기
     document.getElementById('rvTextAdd').addEventListener('click', async () => {
