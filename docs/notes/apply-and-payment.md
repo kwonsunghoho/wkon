@@ -84,3 +84,39 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 2. **Recruitment dates** — **Supabase `challenge_rounds`(admin '챌린지' 탭에서 CRUD — 구명 '모집일정', 2026-07-30 개편)가 단일 소스.** `recruit.js`가 읽어 모집중/예정/마감 + D-day chips를 그린다. 미등록 챌린지·조회 실패는 페이지별 하드코딩 폴백(`data-recruit-*` / `RECRUIT_FALLBACKS`)으로 떨어진다. **⚠️ 구 published Sheet CSV(`RECRUIT_CSV`·`loadRecruitDataFromCsv`)는 2026-07-23 완전 제거 — 구글 시트 폴백 재도입 금지(admin 단일 관리).**
 3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`, `news_articles`, `news_scraps`. **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
 4. **뉴스 수집기 (GitHub Actions)** — 예외적으로 **브라우저 밖에서 도는 유일한 코드**. `scripts/fetch-news.mjs`가 3시간마다 구글뉴스 RSS를 긁어 `news_articles`에 쓴다(service role 키는 GitHub Secrets). 아래 '항공 뉴스 수집 파이프라인' 참조.
+
+## 2026-08-02 UX 진단 반영 — 모집 상태·결제 폼·결제 복귀
+
+### ⚠️⚠️ 모집 상태 하드코딩 폴백 금지 (A-1 실사고)
+`recruit.js` 의 `RECRUIT_FALLBACKS` 에 6월 날짜가 박혀 있어서, Supabase 조회가 실패하면
+`getStatus()` 가 전부 `'closed'` 를 냈다. **방문자에게는 오류가 아니라 "이 사이트는 모집이
+끝났다"로 보였고, 오류처럼 안 보이니 재시도도 안 한다.** `challenge_rounds` 에 행이 없기만
+해도 같은 길을 탔다 — 장애만의 문제가 아니었다. 재현 완료(목으로 조회 실패 → 4장 전부 '마감').
+- 지금은 **모르면 상태 키를 아예 안 넣는다.** 소비처 4곳(apply.applyStatuses ·
+  apply.reorderCards · challenges.heroReorder · index.challengeChip)이 이미 '키 없음'을
+  안전하게 다룬다 — 비활성 안 함·정렬 가운데·개수 안 셈.
+- 상세 4종 `#recruitChip` 의 `data-recruit-*` 도 제거. 실패 시 '모집 기간을 불러오지
+  못했어요 · 새로고침', apply 는 `#recruitFail` 안내. **어느 쪽도 신청 버튼을 막지 않는다** —
+  잔여석·중복·마감 최종 판정은 DB 트리거와 verify-payment 가 한다.
+- **하드코딩 날짜를 다시 넣지 말 것.** 이 절이 그 이유다.
+
+### 결제 폼 3종 (A-2)
+- `.inp` **font-size 16px 하한** — iOS 는 15px 이하 입력칸에서 화면을 확대하고 안 되돌린다.
+  같은 조건이던 onboarding·news 2곳·answers 도 같이 올렸다. **15px 로 되돌리지 말 것.**
+- **전화번호 검증** — 구 검증은 `if (!name || !phone)` 이 전부라 '1' 한 글자도 통과했다.
+  규칙은 `waitlist.js:171-174`(오픈 알림)와 **같은 값**(이름 2자·숫자 10자리)으로 맞춘다.
+  한쪽을 바꾸면 다른 쪽도 바꾼다.
+- **오류는 인라인**(`.field-err`) — alert 은 어느 칸이 틀렸는지 못 알려주고 닫으면 사라진다.
+  제출 3경로 전부 교체.
+- **로그인 링크 returnTo** — 자동 리다이렉트는 이미 붙이는데 사람이 누르는 링크에만 빠져
+  있었다. apply 는 선택한 챌린지까지 싣는다(`?c=` — `preselectFromUrl` 기존 규약,
+  `a.js-login-ret` 클래스를 `syncLoginReturn()` 이 갱신).
+
+### 결제 복귀 대기 화면 (D-7 · `pay-return.js`)
+모바일 결제는 `?payresult=1` 로 **페이지가 새로 뜬다.** verify-payment 왕복이 끝날 때까지
+평소와 똑같은 화면이 보여서 뒤로가기·새로고침을 누르게 됐다(트래픽 99%가 이 경로).
+- `?payresult` 를 스스로 보고 **즉시** 뜬다. 끝나면 `moncPayDone()`.
+- ⚠️ **`defer` 를 붙이지 말 것** — 페이지 인라인 스크립트가 URL 에서 payresult 를 지운 뒤
+  실행돼 오버레이가 아예 안 뜬다(실측).
+- 30초 안전장치 — 어떤 이유로든 화면이 잠기면 안 된다.
+- 대기 중인 주문이 없으면(직접 접근) 즉시 사라진다.
