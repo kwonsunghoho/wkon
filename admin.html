@@ -154,6 +154,18 @@
     .round-form .field label { font-size: 12px; color: var(--text-muted); }
     .round-form input, .round-form select, .round-form textarea { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; font-family: inherit; }
     .round-form textarea { resize: vertical; }
+    /* ⚠️ 격자 칸은 기본 min-width 가 min-content 라 **안에 든 것이 크면 칸이 트랙을 넘친다.**
+       넘친 칸은 옆 칸 위로 올라타고, 그게 오너 화면의 '박스가 튀어나오고 정렬이 안 된' 모습이다
+       (2026-08-02). min-width:0 을 줘야 트랙 안으로 접힌다 — 지우지 말 것. */
+    .round-form > *, .round-form .field { min-width: 0; }
+    .round-form input, .round-form select, .round-form textarea { min-width: 0; max-width: 100%; }
+    .field { min-width: 0; }
+    .field input, .field select, .field textarea { min-width: 0; max-width: 100%; }
+    /* ⚠️ 날짜 칸은 두 트랙을 쓴다. 사파리의 date 컨트롤은 **약 168px 아래로 안 줄어드는데**
+       auto-fit minmax(120px,1fr) 트랙은 393px 화면에서 158px, 데스크톱에선 127px 다.
+       한 트랙에 넣으면 접히지 않고 삐져나온다(크로미움은 date 가 좁아 재현 안 됨 — 눈검사로 못 잡는다).
+       ⚠️ 새 날짜 입력을 만들면 감싸는 .field 에 field-date 를 같이 단다. */
+    .round-form .field-date, .field-date { grid-column: span 2; min-width: 170px; }
     /* 특강 카드 사진 첨부 — 고르면 즉시 압축·업로드되고 미리보기가 뜬다 */
     .lf-thumb { display: flex; gap: 12px; align-items: flex-start; }
     .lf-thumb-prev { flex: 0 0 auto; width: 132px; height: 92px; border-radius: var(--radius-xs); overflow: hidden; border: 1px solid var(--border); background: var(--surface2); }
@@ -430,8 +442,8 @@
     /* ── 지우는 버튼은 다르게 보여야 한다(2026-08-02) ──
        연구실 자료 행은 버튼이 여섯이고 '삭제'가 '수정·이력·가격'과 똑같이 생겼다.
        모바일에서 두 줄로 접히면 오눌림이 실제로 난다. 되돌릴 수 없는 것만 이 색을 쓴다. */
-    .round-item .ri-del.is-danger { color: #B3261E; border-color: rgba(179,38,30,.5); }
-    .round-item .ri-del.is-danger:hover { background: rgba(179,38,30,.07); }
+    .is-danger { color: #B3261E !important; border-color: rgba(179,38,30,.5) !important; }
+    .is-danger:hover { background: rgba(179,38,30,.07) !important; }
 
     /* ── 모바일 공통 보정(≤960px · 2026-08-01 모바일 UX 정비) ──
        ① 입력 활자 16px — iOS 사파리는 16px 미만 입력을 누르면 화면을 강제 확대하고 되돌리지 않는다.
@@ -456,6 +468,9 @@
          .btn-sm 도 모바일에선 44px 다 — 좁은 화면에서 '작은 버튼'은 그냥 못 누르는 버튼이다. */
       .smain .btn, .smain select, .smain .af-chip, .smain .lf-slot-add,
       .smain input[type="file"], .smain input[type="date"] { min-height: 44px; }
+      /* 제출 버튼이 입력칸 옆 칸에 끼면 좁은 화면에서 바로 옆 칸을 덮는다(오너 화면의 '추가/수정').
+         한 줄을 통째로 준다 — 폼의 마지막 행동은 어차피 한 줄을 쓸 만한 무게다. */
+      .round-form > button[type="submit"] { grid-column: 1 / -1; width: 100%; }
       .smain .btn { padding-top: 10px; padding-bottom: 10px; }
       .tb-more { display: inline-flex; align-items: center; min-height: 44px; }
       /* 타이핑 칸도 표적이다 — 36~40px 로 남아 있던 40여 개를 공개 폼(.inp)과 같은 44px 로. */
@@ -628,9 +643,9 @@
             <option value="answer">답변</option>
           </select></div>
         <div class="field"><label>기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
-        <div class="field"><label>모집 시작</label><input id="rfStart" type="date"></div>
-        <div class="field"><label>모집 마감</label><input id="rfEnd" type="date"></div>
-        <div class="field"><label>프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
+        <div class="field field-date"><label>모집 시작</label><input id="rfStart" type="date"></div>
+        <div class="field field-date"><label>모집 마감</label><input id="rfEnd" type="date"></div>
+        <div class="field field-date"><label>프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
         <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
       <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
@@ -674,9 +689,9 @@
           <div class="field"><label>정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-          <div class="field"><label>신청 시작</label><input id="lfRStart" type="date"></div>
-          <div class="field"><label>신청 마감</label><input id="lfREnd" type="date"></div>
-          <div class="field"><label>특강 진행일</label><input id="lfDate" type="date"></div>
+          <div class="field field-date"><label>신청 시작</label><input id="lfRStart" type="date"></div>
+          <div class="field field-date"><label>신청 마감</label><input id="lfREnd" type="date"></div>
+          <div class="field field-date"><label>특강 진행일</label><input id="lfDate" type="date"></div>
         </div>
         <div class="field">
           <label>시간대 (같은 특강을 여러 날·여러 타임으로 열 때)</label>
@@ -941,7 +956,7 @@
               <option value="personal">개인신상형</option>
             </select></div>
           <div class="field"><label>항공사(선택)</label><input id="qfAirline" placeholder="예: 대한항공"></div>
-          <div class="field"><label>오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
+          <div class="field field-date"><label>오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
           <button class="btn btn-action" type="submit" id="qfSubmit">추가</button>
           <button class="btn btn-ghost" type="button" id="qfCancel" style="display:none;">취소</button>
         </div>
@@ -1268,7 +1283,7 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;" class="round-form">
         <div class="field"><label>회원 검색(이름·이메일)</label><input id="apEnrSearch" placeholder="2자 이상"></div>
         <div class="field"><label>프로그램</label><select id="apEnrProgram"></select></div>
-        <div class="field"><label>시작일(1일차 기준)</label><input id="apEnrStart" type="date"></div>
+        <div class="field field-date"><label>시작일(1일차 기준)</label><input id="apEnrStart" type="date"></div>
       </div>
       <div id="apEnrHits" style="margin-top:6px;"></div>
       <div class="round-list" id="apEnrList" style="margin-top:10px;"><div class="loading">불러오는 중…</div></div>
@@ -1902,7 +1917,7 @@
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-wl-done="${r.id}" data-to="${done ? 'waiting' : 'notified'}">${done ? '되돌리기' : '연락 완료'}</button>
-            <button class="ri-del" data-wl-del="${r.id}">삭제</button>
+            <button class="ri-del is-danger" data-wl-del="${r.id}">삭제</button>
           </div>
         </div>`;
       }).join('');
@@ -1973,11 +1988,11 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
-            <div class="ri-sub">모집 ${r.recruit_start} ~ ${r.recruit_end}${r.program_start ? ' · 시작 ' + r.program_start : ''}</div>
+            <div class="ri-sub">모집 ${r.recruit_start || '미정'} ~ ${r.recruit_end || '미정'}${r.program_start ? ' · 시작 ' + r.program_start : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${r.id}">수정</button>
-            <button class="ri-del" data-id="${r.id}">삭제</button>
+            <button class="ri-del is-danger" data-id="${r.id}">삭제</button>
           </div>
         </div>`).join('');
       listEl.querySelectorAll('.ri-edit').forEach(b => b.addEventListener('click', () => {
@@ -2202,7 +2217,7 @@
         + '<input type="text" data-f="label" placeholder="메모(선택)" value="' + esc(s.label || '') + '">'
         + '<div class="lf-slot-end"><span class="lf-slot-seat">' + esc(seat) + '</span>'
         + '<button type="button" class="lf-slot-copy" title="이 줄을 복사해 시간만 바꿔 쓰기">복제</button>'
-        + '<button type="button" class="lf-slot-del">삭제</button></div>'
+        + '<button type="button" class="lf-slot-del is-danger">삭제</button></div>'
         + '</div>';
     }
 
@@ -2359,7 +2374,7 @@
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
-            <button class="ri-del" data-id="${l.id}">삭제</button>
+            <button class="ri-del is-danger" data-id="${l.id}">삭제</button>
           </div>
         </div>`).join('');
       listEl.querySelectorAll('.ri-edit').forEach(b => b.addEventListener('click', () => {
@@ -2618,7 +2633,7 @@
             ${appPaid(a) && ((a.paid_amount||0) - (a.refunded_amount||0)) > 0 ? `<button class="ac-tg ac-refundbtn">환불</button>` : ''}` : `
             <button class="ac-tg ${a.paid ? 'on' : ''}" data-field="paid">입금 ${a.paid ? '✓' : ''}</button>
             <button class="ac-tg ${a.refunded ? 'on on-refund' : ''}" data-field="refunded">환급 ${a.refunded ? '✓' : ''}</button>`}
-            <button class="ac-del">삭제</button>
+            <button class="ac-del is-danger">삭제</button>
           </div>
         </div>`).join('');
       // 간편결제 환불 — cancel-payment Edge Function(관리자 검증) → 포트원 취소(원결제수단 자동 환불)
@@ -2741,7 +2756,7 @@
             <div class="row"><input type="text" class="rv-nm" value="${esc(r.reviewer_name || '')}" placeholder="이름(예: 박신우)" title="작성자 이름 — 챌린지 후기에만 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></div>
             <div class="row"><input type="text" class="rv-qt" value="${esc(r.quote || '')}" placeholder="한줄평" title="후기 카드 앞면에 뜨는 문구. 비면 스크린샷만 보입니다"></div>
             <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
-            <div class="row"><button class="rv-btn rv-del">삭제</button></div>
+            <div class="row"><button class="rv-btn rv-del is-danger">삭제</button></div>
           </div>
         </div>`).join('');
       // 분류 필드 저장(챌린지·기수·이름) — site_config가 아니라 reviews 컬럼. 마이그레이션 미적용 시 컬럼 없음 에러 안내.
@@ -2927,7 +2942,7 @@
           <span class="st-row-sub">${esc(sub)}</span>
           <button class="rv-btn st-vis ${s.visible ? 'on' : ''}">${s.visible ? '노출' : '숨김'}</button>
           <button class="rv-btn st-edit">수정</button>
-          <button class="rv-btn st-del">삭제</button>
+          <button class="rv-btn st-del is-danger">삭제</button>
         </div>
         <div class="st-form">
           <div class="row">
@@ -3048,7 +3063,7 @@
             <button class="ri-del q-today" data-id="${q.id}" style="color:var(--action-dark);border-color:var(--action)">오늘 지정</button>
             <button class="ri-del q-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
             <button class="ri-del q-edit" data-id="${q.id}">수정</button>
-            <button class="ri-del q-del" data-id="${q.id}">삭제</button>
+            <button class="ri-del is-danger q-del" data-id="${q.id}">삭제</button>
           </div>
         </div>`;
       }).join('');
@@ -3178,7 +3193,7 @@
           <div class="ri-actions">
             <button class="ri-del t-active" data-id="${t.id}">${t.active ? '끄기' : '켜기'}</button>
             <button class="ri-del t-edit" data-id="${t.id}">수정</button>
-            <button class="ri-del t-del" data-id="${t.id}">삭제</button>
+            <button class="ri-del is-danger t-del" data-id="${t.id}">삭제</button>
           </div>
         </div>`).join('');
 
@@ -3602,7 +3617,7 @@
         + rows.map((f, i) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-soft);">
             <span style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.label || ('파일 ' + (i + 1)))}</span>
             <span style="flex:none;font-size:12px;color:var(--text-dim);">${esc(String(f.file_ext || '').toUpperCase())}</span>
-            <button class="ri-del lab-file-del" type="button" data-fid="${f.id}" data-path="${esc(f.storage_path)}">삭제</button>
+            <button class="ri-del is-danger lab-file-del" type="button" data-fid="${f.id}" data-path="${esc(f.storage_path)}">삭제</button>
           </div>`).join('');
 
       box.querySelectorAll('.lab-file-del').forEach(b => b.addEventListener('click', async () => {
@@ -4359,7 +4374,7 @@
           <div class="ri-actions">
             <button class="ri-del apq-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
             <button class="ri-del apq-edit" data-id="${q.id}">수정</button>
-            <button class="ri-del apq-del" data-id="${q.id}">삭제</button></div>
+            <button class="ri-del is-danger apq-del" data-id="${q.id}">삭제</button></div>
         </div>`).join('') : `<div class="empty" style="color:var(--text-dim);padding:16px">${
           _apQ.length ? '이 유형의 기출이 없습니다.' : '기출이 없습니다. 위에서 추가하세요.'}</div>`;
 
@@ -4483,7 +4498,7 @@
             <button class="ri-del app-days" data-id="${p.id}" style="color:var(--action-dark);border-color:var(--action)">일차 배치</button>
             <button class="ri-del app-vis" data-id="${p.id}">${p.visible ? '숨기기' : '공개'}</button>
             <button class="ri-del app-edit" data-id="${p.id}">수정</button>
-            <button class="ri-del app-del" data-id="${p.id}">삭제</button></div>
+            <button class="ri-del is-danger app-del" data-id="${p.id}">삭제</button></div>
         </div>`).join('') : '<div class="empty" style="color:var(--text-dim);padding:16px">프로그램이 없습니다.</div>';
 
       listEl.querySelectorAll('.app-vis').forEach(b => b.addEventListener('click', async () => {
