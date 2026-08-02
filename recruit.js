@@ -2,8 +2,14 @@
 
 /* challenge_rounds(Supabase)에서 챌린지별 "현재 기수"를 읽어
    {challenge: {start, end, round}} 형태로 반환.
-   조회 실패나 미등록 챌린지는 그 자리를 비워 두고 → 각 호출부가
-   data-recruit-* / RECRUIT_FALLBACKS 하드코딩으로 폴백한다. */
+
+   ⚠️⚠️ 조회 실패·미등록 챌린지는 **상태를 모르는 것으로 둔다(null).** 하드코딩 날짜로
+   폴백하지 말 것 — 2026-08-02 실사고: RECRUIT_FALLBACKS 에 6월 날짜가 박혀 있어서
+   조회가 실패하면 getStatus 가 전부 'closed' 를 냈고, **방문자에게는 오류가 아니라
+   "이 사이트는 모집이 끝났다"로 보였다**(오류처럼 안 보이니 재시도도 안 한다).
+   `challenge_rounds` 에 행이 없기만 해도 같은 길을 탔다 — 장애만의 문제가 아니었다.
+   모르면 '확인 중'이라고 말하고 **신청 버튼은 살려 둔다** — 잔여석·중복·마감 최종 판정은
+   어차피 DB 트리거와 verify-payment 가 한다(브라우저가 미리 막을 이유가 없다). */
 async function loadRecruitDataFromSupabase() {
   if (!window.MONC || !window.MONC.sb) return null;
   const { data, error } = await window.MONC.sb
@@ -30,9 +36,9 @@ async function loadRecruitDataFromSupabase() {
 let _recruitDataPromise = null;
 async function loadRecruitData() {
   if (_recruitDataPromise) return _recruitDataPromise;
-  // 단일 소스 = Supabase challenge_rounds. 조회 실패나 미등록 챌린지는
-  // null/누락으로 두고, 각 호출부가 data-recruit-* / RECRUIT_FALLBACKS
-  // 하드코딩으로 폴백한다(구 구글 시트 CSV 폴백은 2026-07-23 제거 — admin 단일 관리).
+  // 단일 소스 = Supabase challenge_rounds. 조회 실패나 미등록 챌린지는 null/누락으로
+  // 두고, 호출부는 그것을 '마감'이 아니라 '모름'으로 다룬다(위 절 참조).
+  // 구 구글 시트 CSV 폴백은 2026-07-23 제거 — admin 단일 관리.
   _recruitDataPromise = loadRecruitDataFromSupabase();
   return _recruitDataPromise;
 }
@@ -113,8 +119,10 @@ async function applyIndexRecruit() {
   document.querySelectorAll('.ch-card[data-recruit-id]').forEach(card => {
     const id = card.dataset.recruitId;
     const d = data ? data[id] : null;
-    const start = (d && d.start) || card.dataset.recruitStart;
-    const end   = (d && d.end)   || card.dataset.recruitEnd;
+    /* ⚠️ HTML 하드코딩 날짜로 폴백하지 않는다 — 모르면 칩을 아예 안 그린다(hidden 유지).
+       카드는 흑백 처리도 안 하고 클릭도 열려 있다. 파일 맨 위 실사고 기록 참조. */
+    const start = d && d.start;
+    const end   = d && d.end;
     if (!start || !end) return;
 
     const status = getStatus(start, end);
@@ -156,27 +164,28 @@ async function applyIndexRecruit() {
   document.dispatchEvent(new CustomEvent('monc:recruitready'));
 }
 
-/* ── 카드 없이도 전체 챌린지 상태 로드 (모달 공용) ── */
-const RECRUIT_FALLBACKS = {
-  voice:      { start: '2026-06-01', end: '2026-06-28' },
-  expression: { start: '2026-06-08', end: '2026-07-05' },
-  spinning:   { start: '2026-06-02', end: '2026-06-29' },
-  answer:     { start: '2026-06-09', end: '2026-07-06' }
-};
+/* ── 카드 없이도 전체 챌린지 상태 로드 (신청 페이지·홈 칩 공용) ──
+   ⚠️ 상태를 모르는 챌린지는 **키를 아예 안 넣는다.** 소비처(apply.applyStatuses ·
+   apply.reorderCards · challenges.heroReorder · index.challengeChip)는 전부 '키 없음'을
+   이미 안전하게 다룬다 — 카드를 비활성하지 않고, 정렬은 가운데, 개수는 안 센다.
+   여기서 하드코딩 날짜를 다시 넣으면 그 안전장치가 통째로 무력해진다(파일 맨 위 실사고). */
+const CHALLENGE_IDS = ['voice', 'expression', 'spinning', 'answer'];
 
 async function loadChallengeStatuses() {
   if (window._challengeStatuses) return;
   let data = null;
   try { data = await loadRecruitData(); } catch(e) {}
   window._challengeStatuses = {};
-  Object.entries(RECRUIT_FALLBACKS).forEach(([id, fb]) => {
+  /* 조회 자체가 실패했는가(= 네트워크·권한 문제). 행이 없어서 비는 것과 구분해
+     화면이 "정보를 못 불러왔다"고 말할 수 있게 한다. */
+  window._recruitLoadFailed = !data;
+  CHALLENGE_IDS.forEach(id => {
     const d = data ? data[id] : null;
-    const start = (d && d.start) || fb.start;
-    const end   = (d && d.end)   || fb.end;
-    window._challengeStatuses[id] = getStatus(start, end);
+    if (!d || !d.start || !d.end) return;      // 모르면 비워 둔다 — 'closed' 로 단정 금지
+    window._challengeStatuses[id] = getStatus(d.start, d.end);
 
     window._challengeRounds = window._challengeRounds || {};
-    if (d && d.round != null) window._challengeRounds[id] = d.round;
+    if (d.round != null) window._challengeRounds[id] = d.round;
   });
 }
 
@@ -196,15 +205,20 @@ async function applyDetailRecruit(challengeId) {
 
   const data = await loadRecruitData();
   const d = data ? data[challengeId] : null;
-  const start = (d && d.start) || (chip && chip.dataset.recruitStart);
-  const end   = (d && d.end)   || (chip && chip.dataset.recruitEnd);
+  /* ⚠️ chip.dataset 하드코딩 날짜로 폴백하지 않는다 — 그 값이 과거면 히어로가
+     '모집 마감 6/1 ~ 6/28' 을 **확정 문구로** 출력했다(2026-08-02 실사고). 파일 맨 위 참조. */
+  const start = d && d.start;
+  const end   = d && d.end;
   const status = (start && end) ? getStatus(start, end) : null;
   const dday   = status ? getDday(start, end, status) : null;
 
   if (chip) {
     chip.style.opacity = '';
     if (!status) {
-      chip.textContent = '모집기간 준비 중';           // 원격·하드코딩 다 실패 시(빈 chip 방지)
+      /* 모를 때는 '마감'도 '준비 중'도 아니다 — 못 불러왔다고 말하고 다시 시도할 길을 준다.
+         아래 .apply-btn 비활성 블록이 status 를 요구하므로 신청 버튼은 살아 있다. */
+      chip.textContent = '모집 기간을 불러오지 못했어요 · 새로고침';
+      chip.style.background = '';
     } else if (status === 'open') {
       chip.innerHTML = dday
         ? `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`
@@ -235,9 +249,9 @@ async function applyGlobalRecruitCta() {
   if (!badges.length) return;
   let data = null;
   try { data = await loadRecruitData(); } catch (e) {}
-  const sources = data || RECRUIT_FALLBACKS;
+  if (!data) return;   // 모르면 뱃지를 안 띄운다(hidden 유지) — 하드코딩 날짜 폴백 금지
   let best = null;
-  Object.values(sources).forEach(d => {
+  Object.values(data).forEach(d => {
     if (!d || !d.start || !d.end) return;
     const st = getStatus(d.start, d.end);
     const dd = getDday(d.start, d.end, st);
