@@ -715,7 +715,7 @@
         <div class="tb-colB">
           <div class="tb-kk">숫자로 보는 오늘</div>
           <button class="tb-stat" data-goto="apps" id="tdTodayApps"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>오늘 신청</span><em>챌린지·특강 합계</em></span></button>
-          <button class="tb-stat" data-goto="members" id="tdNewMembers"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오늘 새 회원</span><em>가입 기준</em></span></button>
+          <button class="tb-stat" data-goto="members" id="tdNewMembers"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오늘 새 회원</span><em id="tdMembersTotal">전체 –명</em></span></button>
           <button class="tb-stat" data-goto="apps" data-focus="unpaid" id="tdUnpaid"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>입금 확인 필요</span><em>계좌이체 미입금</em></span></button>
           <button class="tb-stat" data-goto="waitlist" data-focus="waiting" id="tdWaitlist"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오픈 알림 연락 전</span><em>연락하고 완료 체크</em></span></button>
           <a class="tb-stat" href="review-desk.html" id="tdReview"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>검수 대기</span><em>답변 프로그램 → 검수 데스크</em></span></a>
@@ -2016,6 +2016,8 @@
       const failed = Object.keys(_loadErr).filter(k => _loadErr[k]);
       if (failed.length) {
         ['tdTodayApps', 'tdNewMembers', 'tdUnpaid', 'tdWaitlist', 'tdReview'].forEach(id => tdSet(id, '–'));
+        const mtErr = document.getElementById('tdMembersTotal');
+        if (mtErr) mtErr.textContent = '전체 –명';
         document.getElementById('tbHead').textContent = '오늘 현황을 불러오지 못했습니다.';
         document.getElementById('tbLede').textContent =
           '아래 [다시 불러오기]를 눌러 주세요. 숫자를 못 받았을 뿐이지 "할 일이 없다"는 뜻이 아닙니다.';
@@ -2050,6 +2052,11 @@
       tdSet('tdWaitlist', wl.length);
       tdSet('tdTodayApps', todayApps);
       tdSet('tdNewMembers', newMembers);
+      /* 오늘 새 회원 옆에 전체 회원 수도 같이 적는다(2026-08-02 오너 요청 — "총 회원이 몇 명인지를 몰라").
+         members 는 이미 전량 받아 둔 배열이라 추가 조회가 없다. 구 문구 '가입 기준'은
+         읽어도 아는 게 없어 이 자리를 대신 쓴다. */
+      const mt = document.getElementById('tdMembersTotal');
+      if (mt) mt.textContent = '전체 ' + members.length.toLocaleString() + '명';
       tdSet('tdReview', review);
 
       // 헤드라인 — 오늘 신청·입금 순으로 가장 급한 사실 한 문장
