@@ -250,6 +250,10 @@
       .lf-slot-del, .lf-slot-copy { min-height: 44px; padding: 10px 18px; }
     }
 
+    /* ⚠️ 끝난 행·숨긴 행을 opacity 로 통째 흐리게 하지 않는다(원칙 4) — 되돌리는 버튼까지 같이
+       안 읽힌다. 바탕만 눕히고 글자·버튼 대비는 그대로 둔다(2026-08-03). */
+    .round-item.is-done, .round-item.is-off { background: var(--bg2); }
+    .round-item.is-done .ri-main, .round-item.is-off .ri-main { color: var(--text-muted); }
     .round-list { display: flex; flex-direction: column; gap: 8px; }
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
@@ -260,7 +264,8 @@
     .ri-del { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
     /* 행 버튼 묶음 — 목록 행의 버튼은 전부 이 클래스로 감싼다(인라인 flex 금지).
        모바일에서 본문 아래로 내리는 규칙(아래 960px 블록)이 이 클래스를 기준으로 걸린다. */
-    .ri-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    /* 인접 표적 8px(원칙 2) — 이 줄엔 '삭제'가 끼어 있어 오눌림의 대가가 크다. */
+    .ri-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .ri-edit { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
     .ri-edit:hover { background: var(--action-tint); }
     .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
@@ -414,8 +419,11 @@
     .field input, .field select { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; }
     .field input[readonly] { background: var(--surface2); color: var(--text-muted); }
 
-    .btn { font-size: 14px; font-weight: 600; border: 0; border-radius: var(--radius-xs); padding: 9px 16px; cursor: pointer; }
-    .btn-action { background: var(--action); color: var(--action-ink); }
+    /* ⚠️ 변형(.btn-action/.btn-ghost)을 안 붙이면 배경도 테두리도 없어 **브라우저 기본 회색 버튼**이
+       나온다 — 오픈 알림 툴바의 두 개가 그랬다(2026-08-03). 기본값을 고스트로 두어 그럴 수 없게 한다. */
+    .btn { font-size: 14px; font-weight: 600; border: 1px solid var(--border); border-radius: var(--radius-xs);
+           padding: 9px 16px; cursor: pointer; background: var(--surface2); color: var(--text); }
+    .btn-action { background: var(--action); color: var(--action-ink); border-color: var(--action); }
     .btn-action:hover { background: var(--action-hover); }
     .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
     .btn-sm { padding: 8px 12px; font-size: 13px; }
@@ -981,9 +989,9 @@
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
           <input type="checkbox" id="wlHideDone"> 연락 완료 숨기기
         </label>
-        <button class="btn" id="wlRefresh" type="button">새로고침</button>
-        <button class="btn" id="wlCsv" type="button">CSV 내려받기</button>
-        <span id="wlCount" style="font-size:13px;color:var(--text-muted);margin-left:auto;"></span>
+        <span id="wlCount" style="font-size:13px;color:var(--text-muted);margin-right:auto;"></span>
+        <button class="btn btn-ghost" id="wlRefresh" type="button">새로고침</button>
+        <button class="btn btn-ghost" id="wlCsv" type="button">CSV</button>
       </div>
       <div class="round-list" id="wlList"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -1039,7 +1047,8 @@
           <option value="challenge">챌린지 후기</option>
         </select>
         <input type="text" id="rvTextQuote" placeholder="후기 내용 (그대로 화면에 뜹니다)" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
-        <input type="date" id="rvTextDate" title="후기를 받은 날짜 — 상담 후기 카드에 'YYYY.MM' 로 표시됩니다" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <label class="field" style="flex:0 1 180px;"><span>받은 날짜(카드에 YYYY.MM)</span>
+          <input type="date" id="rvTextDate" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;"></label>
         <button class="btn btn-action" id="rvTextAdd">글 후기 추가</button>
       </div>
 
@@ -2325,7 +2334,7 @@
       const recent = _apps.slice(0, 5);
       document.getElementById('tdRecent').innerHTML = recent.length ? recent.map(a => {
         const paid = appPaid(a);
-        return `<div class="round-item" data-goto="apps">
+        return `<div class="round-item" data-goto="apps" role="button" tabindex="0">
           <div><div class="ri-main">${esc(a.name || '-')}</div>
           <div class="ri-sub">${esc(chSummary(a.challenges) || '종류 미상')} · ${esc(fmtDate(a.created_at))}</div></div>
           <span class="td-paystat ${paid ? 'ok' : 'no'}">${paid ? '입금 확인' : '미입금'}</span>
@@ -2337,6 +2346,14 @@
     document.getElementById('panel-today').addEventListener('click', e => {
       const go = e.target.closest('[data-goto]');
       if (go) activateTab(go.dataset.goto, go.dataset.focus);
+    });
+    // div 로 만든 행(최근 신청)은 role·tabindex 만으로는 안 열린다 — Enter/Space 가 한 벌이다(원칙 14).
+    document.getElementById('panel-today').addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const go = e.target.closest('[data-goto][role="button"]');
+      if (!go) return;
+      e.preventDefault();
+      activateTab(go.dataset.goto, go.dataset.focus);
     });
 
     // 답변 프로그램 서브탭 — 절 하나만 보여준다
@@ -2408,7 +2425,7 @@
         const done = r.status === 'notified';
         const when = fmtDate(r.created_at);
         return `
-        <div class="round-item"${done ? ' style="opacity:.6"' : ''}>
+        <div class="round-item${done ? ' is-done' : ''}">
           <div>
             <div class="ri-main">${esc(r.name)}
               <a class="wl-tel" href="tel:${esc((r.phone || '').replace(/[^0-9+]/g, ''))}">${esc(r.phone)}</a>
@@ -3334,13 +3351,13 @@
             ? `<img src="${esc(rvUrl(r.image_path))}" alt="${esc(r.caption || '후기')}">`
             : `<div class="rv-noimg">${esc(r.quote || '(내용 없음)')}</div>`}
           <div class="rv-meta">
-            <div class="row"><select class="rv-kind" title="후기 종류 — 어느 목록에 실릴지 정합니다">${Object.keys(RV_KIND_LABEL).map(k => `<option value="${k}" ${(r.kind || 'challenge') === k ? 'selected' : ''}>${RV_KIND_LABEL[k]}</option>`).join('')}</select></div>
+            <div class="row"><label class="rv-lb" style="flex:1">종류<select class="rv-kind" style="flex:1" aria-label="후기 종류 — 어느 목록에 실릴지 정합니다">${Object.keys(RV_KIND_LABEL).map(k => `<option value="${k}" ${(r.kind || 'challenge') === k ? 'selected' : ''}>${RV_KIND_LABEL[k]}</option>`).join('')}</select></label></div>
             <div class="row rv-cls" title="챌린지 후기 목록(reviews-list.html?kind=challenge) 기수·챌린지 필터에 쓰임">
-              <select class="rv-ch" title="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(챌린지)'}</option>`).join('')}</select>
+              <label class="rv-lb" style="flex:1">챌린지<select class="rv-ch" style="flex:1" aria-label="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(미지정)'}</option>`).join('')}</select></label>
               <label class="rv-lb">기수<input type="number" class="rv-co" value="${r.cohort != null ? r.cohort : ''}" placeholder="?" min="0" aria-label="기수(숫자). 비우면 미상"></label>
             </div>
-            <div class="row"><input type="text" class="rv-nm" value="${esc(r.reviewer_name || '')}" placeholder="이름(예: 박신우)" title="작성자 이름 — 챌린지 후기에만 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></div>
-            <div class="row"><input type="text" class="rv-qt" value="${esc(r.quote || '')}" placeholder="한줄평" title="후기 카드 앞면에 뜨는 문구. 비면 스크린샷만 보입니다"></div>
+            <div class="row"><label class="rv-lb" style="flex:1">이름<input type="text" class="rv-nm" style="flex:1" value="${esc(r.reviewer_name || '')}" placeholder="예: 박신우" aria-label="작성자 이름 — 챌린지 후기에만 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></label></div>
+            <div class="row"><label class="rv-lb" style="flex:1">한줄평<input type="text" class="rv-qt" style="flex:1" value="${esc(r.quote || '')}" placeholder="비우면 스크린샷만" aria-label="후기 카드 앞면에 뜨는 문구"></label></div>
             <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
             <div class="row"><button class="rv-btn rv-del is-danger">삭제</button></div>
           </div>
@@ -4068,7 +4085,7 @@
         if (b.dataset.path) await MONC.sb.storage.from('lab-files').remove([b.dataset.path]);
         if (_labEditId === b.dataset.id) labEditCancel();
         if (_labLogFor === b.dataset.id) _labLogFor = null;
-        toast('삭제됐어요'); loadLabFiles();
+        toast('삭제됨'); loadLabFiles();
       }));
     }
 
@@ -5145,7 +5162,7 @@
       const sel = document.getElementById('apEnrProgram');
       sel.innerHTML = _apP.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('');
       listEl.innerHTML = _apP.length ? _apP.map(p => `
-        <div class="round-item" style="${p.visible ? '' : 'opacity:.6;'}">
+        <div class="round-item${p.visible ? '' : ' is-off'}">
           <div><div class="ri-main">${esc(p.title)} <span style="font-size:12px;color:var(--text-muted)">(${esc((LEC.AIRLINES[p.airline]||{}).ko || p.airline || '전 항공사 공통')})</span></div>
             <div class="ri-sub">${p.total_days}일 · ${p.reveal_policy === 'daily' ? '하루 한 문제' : p.reveal_policy === 'all' ? '전체 공개' : '날짜 지정'} ·
               ${p.price == null ? '지급 전용' : p.price === 0 ? '무료' : Number(p.price).toLocaleString() + '원'} · ${p.visible ? '공개' : '숨김'}</div></div>
