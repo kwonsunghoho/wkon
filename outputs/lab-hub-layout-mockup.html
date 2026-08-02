@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>몬크 연구실 허브 — 좌우 배치 5안 비교</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   몬크 연구실 허브 — '위아래 말고 좌우' 5안 비교 (2026-08-02)
+   오너 요청: "더 좋은 예시 있어? 3-4가지 정도 더 보고싶긴해"
+
+   A = 지금 적용된 안(히어로 좌우 + 카드 2단 균등)
+   B~E = 대안 4개. 카드 두 장 구조·팔레트·카드 규격(1.5배 한 벌)은 다섯 안 모두 동일 —
+         달라지는 건 '무엇을 좌우로 두느냐'뿐이다.
+
+   ⚠️ 이 파일은 비교용 목업이다. 다섯 안 모두 375px 에서는 지금처럼 위아래로 쌓인다
+      (폰에서 두 장을 나란히 두면 카드 하나가 160px 라 목차가 접히고 얼굴이 41px 로
+      주저앉는다). 그래서 무대를 1120px 로 고정하고 화면 폭에 맞춰 축소해 보여준다 —
+      폰으로 열어도 다섯 안이 같은 조건으로 비교된다.
+   ══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #E9E4D8; color: var(--text); -webkit-font-smoothing: antialiased; word-break: keep-all;
+}
+a { text-decoration: none; color: inherit; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+/* ── 문서 머리 ── */
+.doc { max-width: 1120px; margin: 0 auto; padding: 40px 20px 80px; }
+.doc h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+.doc .lead { font-size: 14.5px; font-weight: 500; line-height: 1.7; color: var(--text-muted); margin-top: 10px; }
+
+/* ── 안 하나 = 라벨 + 무대 + 설명 ── */
+.opt { margin-top: 44px; }
+.opt-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.opt-tag {
+  font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; padding: 5px 11px; border-radius: 999px;
+  background: var(--action); color: var(--action-ink);
+}
+.opt-now { background: #7A6A55; }
+.opt-name { font-size: 17px; font-weight: 800; }
+.opt-why { font-size: 13.5px; font-weight: 500; line-height: 1.7; color: var(--text-muted); margin-top: 9px; }
+.opt-why b { font-weight: 800; color: var(--text); }
+
+/* 무대 — 1120px 데스크톱 화면을 그대로 축소해 보여준다 */
+.frame { margin-top: 14px; border-radius: 18px; overflow: hidden; border: 1px solid rgba(38,34,28,0.16); background: var(--bg); }
+.stage { width: 1120px; transform-origin: top left; background: var(--bg); padding-bottom: 36px; }
+
+/* ══ 아래는 lab.html 의 실제 CSS 를 그대로 옮긴 것 — 값을 바꾸지 말 것 ══ */
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+.hero { padding: 40px 0 0; }
+.hero-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-family: var(--serif); font-size: 34px; font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; margin-top: 10px; }
+.hero-sub { font-size: 15px; font-weight: 500; line-height: 1.62; color: var(--text-muted); margin-top: 12px; }
+
+.hub-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 26px; }
+.hub-card {
+  display: block; border-radius: 26px; padding: 28px 28px 22px;
+  background: linear-gradient(180deg, #FCF9F1, #F3EEE1);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), var(--shadow);
+}
+.hub-top { display: flex; align-items: center; gap: 10px; }
+.hub-name { font-family: var(--serif); font-size: 32px; font-weight: 800; letter-spacing: -0.01em; }
+.hub-desc { font-size: 16px; font-weight: 500; line-height: 1.58; color: var(--text-muted); margin-top: 9px; }
+.hub-meta {
+  display: flex; align-items: center; gap: 7px; margin-top: 20px; padding-top: 16px;
+  border-top: 1px dashed rgba(38,34,28,0.22);
+  font-size: 13.5px; font-weight: 600; color: var(--text-dim);
+}
+.hub-meta b { font-weight: 800; color: var(--text); }
+.card-lab {
+  background: linear-gradient(180deg, #1E4079, #142C52);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow);
+}
+.card-lab .hub-name { color: #FFFFFF; }
+.pill {
+  margin-left: auto; flex: none; width: 52px; height: 52px; border-radius: 50%;
+  background: var(--action); color: var(--action-ink);
+  display: flex; align-items: center; justify-content: center;
+}
+.pill svg { width: 24px; height: 24px; }
+.card-lab .pill { background: #FFFFFF; color: var(--action); }
+.card-lab .hub-meta { border-color: rgba(245,241,232,0.3); color: rgba(245,241,232,0.78); }
+.card-lab .hub-meta b { color: #FFFFFF; }
+.card-lab .hub-desc { color: rgba(245,241,232,0.8); }
+
+.ix { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.ix-row { display: flex; align-items: baseline; gap: 9px; font-size: 17px; }
+.ix-name { flex: none; font-weight: 600; color: rgba(245,241,232,0.93); }
+.ix-lead { flex: 1; border-bottom: 2px dotted rgba(245,241,232,0.28); position: relative; top: -3px; min-width: 18px; }
+.ix-n { flex: none; min-height: 20px; font-weight: 800; color: var(--action-on-dark); }
+.ix-n span { font-size: 12.5px; font-weight: 700; }
+.live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
+.ppl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+.ppl img {
+  width: 100%; aspect-ratio: 4/5; border-radius: 14px; display: block;
+  object-fit: cover; object-position: center 18%; background: var(--accent-tint);
+}
+
+/* ══ A안 — 지금 적용된 것: 히어로 좌우 + 카드 2단 균등 ══ */
+.v-a .hero {
+  display: grid; column-gap: 44px; align-items: baseline;
+  grid-template-columns: minmax(0, max-content) minmax(300px, 1fr);
+}
+.v-a .hero-eyebrow, .v-a .hero h1 { grid-column: 1; }
+.v-a .hero-sub { grid-column: 2; grid-row: 2; margin-top: 0; }
+.v-a .hub-grid { flex-direction: row; align-items: stretch; }
+.v-a .hub-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.v-a .ix, .v-a .ppl { margin-bottom: 20px; }
+.v-a .hub-meta { margin-top: auto; }
+.v-a .ix { flex: 1 1 auto; justify-content: space-between; max-height: 380px; }
+
+/* ══ B안 — 히어로는 지금처럼 위아래, 카드만 좌우 ══ */
+.v-b .hub-grid { flex-direction: row; align-items: stretch; }
+.v-b .hub-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.v-b .ix, .v-b .ppl { margin-bottom: 20px; }
+.v-b .hub-meta { margin-top: auto; }
+.v-b .ix { flex: 1 1 auto; justify-content: space-between; max-height: 380px; }
+
+/* ══ C안 — 좌우 2단인데 폭이 다르다(연구실 6 : 연구진 4) ══ */
+.v-c .hero {
+  display: grid; column-gap: 44px; align-items: baseline;
+  grid-template-columns: minmax(0, max-content) minmax(300px, 1fr);
+}
+.v-c .hero-eyebrow, .v-c .hero h1 { grid-column: 1; }
+.v-c .hero-sub { grid-column: 2; grid-row: 2; margin-top: 0; }
+.v-c .hub-grid { flex-direction: row; align-items: stretch; }
+.v-c .hub-card { min-width: 0; display: flex; flex-direction: column; }
+.v-c .card-lab { flex: 6 1 0; }
+.v-c .hub-card:not(.card-lab) { flex: 4 1 0; }
+.v-c .ix, .v-c .ppl { margin-bottom: 20px; }
+.v-c .hub-meta { margin-top: auto; }
+.v-c .ix { flex: 1 1 auto; justify-content: space-between; max-height: 380px; }
+
+/* ══ D안 — 카드는 위아래, 대신 카드 '안'이 좌우(가로로 긴 카드 두 장) ══ */
+.v-d .hero {
+  display: grid; column-gap: 44px; align-items: baseline;
+  grid-template-columns: minmax(0, max-content) minmax(300px, 1fr);
+}
+.v-d .hero-eyebrow, .v-d .hero h1 { grid-column: 1; }
+.v-d .hero-sub { grid-column: 2; grid-row: 2; margin-top: 0; }
+/* 왼쪽 열은 '이름 위 · 발치 아래'로 붙인다 — 행을 auto/1fr/auto 로 두지 않으면
+   빈 자리가 세 줄에 고루 퍼져 제목과 설명이 벌어진다(첫 시도에서 실제로 벌어졌다) */
+.v-d .hub-card {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto; column-gap: 40px;
+}
+.v-d .hub-top, .v-d .hub-desc, .v-d .hub-meta { grid-column: 1; }
+.v-d .hub-desc { align-self: start; }
+.v-d .ix, .v-d .ppl { grid-column: 2; grid-row: 1 / -1; margin-top: 6px; align-self: center; }
+.v-d .ppl { grid-template-columns: repeat(6, 1fr); }
+
+/* ══ E안 — 페이지 전체가 좌우: 왼쪽 제목, 오른쪽 카드 두 장 ══ */
+.v-e .wrap {
+  display: grid; grid-template-columns: 320px minmax(0, 1fr);
+  column-gap: 44px; align-items: start;
+}
+.v-e .hub-grid { margin-top: 0; }
+
+.note { margin-top: 56px; font-size: 13px; font-weight: 500; line-height: 1.75; color: var(--text-dim); border-top: 1px dashed rgba(38,34,28,0.24); padding-top: 18px; }
+</style>
+</head>
+<body>
+
+<div class="doc">
+  <h1>몬크 연구실 허브 — 좌우 배치 5안</h1>
+  <p class="lead">카드 두 장 구조·색·카드 규격(1.5배 한 벌)은 다섯 안 모두 같습니다. 달라지는 건 <b>무엇을 좌우로 두느냐</b>뿐입니다.
+  다섯 안 모두 폰(375px)에서는 지금처럼 위아래로 쌓입니다 — 아래 무대는 데스크톱 화면(1120px)을 그대로 줄여 보여주는 것입니다.</p>
+
+  <section class="opt">
+    <div class="opt-head"><span class="opt-tag opt-now">A · 지금</span><span class="opt-name">히어로 좌우 + 카드 2단 균등</span></div>
+    <p class="opt-why">제목은 왼쪽, 설명은 오른쪽. 카드 두 장은 같은 폭으로 나란히. <b>둘 다 같은 무게</b>로 보입니다.</p>
+    <div class="frame"><div class="stage v-a"></div></div>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><span class="opt-tag">B</span><span class="opt-name">히어로는 그대로, 카드만 좌우</span></div>
+    <p class="opt-why">제목·설명은 지금처럼 위아래로 두고 카드만 나란히. <b>머리가 조용해서 카드가 먼저 눈에 들어옵니다.</b> 대신 제목 오른쪽이 비어 보입니다.</p>
+    <div class="frame"><div class="stage v-b"></div></div>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><span class="opt-tag">C</span><span class="opt-name">좌우인데 폭이 다르다 (연구실 6 : 연구진 4)</span></div>
+    <p class="opt-why">자료가 주인공이라는 뜻을 폭으로 말합니다. 목차 줄이 길어져 읽기 편하고, <b>연구진은 옆에 붙는 소개</b>가 됩니다.</p>
+    <div class="frame"><div class="stage v-c"></div></div>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><span class="opt-tag">D</span><span class="opt-name">카드는 위아래, 카드 '안'이 좌우</span></div>
+    <p class="opt-why">가로로 긴 카드 두 장. 왼쪽에 이름, 오른쪽에 내용(목차 5줄 / 얼굴 6장 한 줄). <b>얼굴이 한 줄로 늘어서 연구진이 팀처럼 보입니다.</b> 대신 얼굴 한 장이 78px 로 작아집니다.</p>
+    <div class="frame"><div class="stage v-d"></div></div>
+  </section>
+
+  <section class="opt">
+    <div class="opt-head"><span class="opt-tag">E</span><span class="opt-name">페이지 전체가 좌우 — 왼쪽 제목, 오른쪽 카드</span></div>
+    <p class="opt-why">제목이 왼쪽 기둥으로 서고 카드 두 장이 오른쪽에 쌓입니다. <b>카드가 넓어져 얼굴이 145px 로 가장 큽니다.</b> 대신 세로로 가장 깁니다.</p>
+    <div class="frame"><div class="stage v-e"></div></div>
+  </section>
+
+  <p class="note">기록: 이 목업은 <b>docs/notes/lab.md</b> 의 '허브는 카드 두 장' 원칙을 그대로 지킵니다 — 다섯 안 어디에도 카드를 늘리거나 목록을 허브에 끌어오지 않았습니다.
+  숫자(자료 2건·영상 6편·연구원 6명)는 지금 라이브와 같은 값입니다.</p>
+</div>
+
+<script src="../researchers-data.js"></script>
+<script>
+/* 다섯 무대에 같은 마크업을 심는다 — 안끼리 내용이 어긋나면 비교가 안 된다.
+   얼굴·인원수는 researchers-data.js 단일 원본에서 생성(페이지에 복사 금지 규칙 그대로). */
+(function () {
+  'use strict';
+  var ARROW = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  var SHELVES = [
+    ['항공사 자료실', '2<span>건</span>'],
+    ['영상관', '6<span>편</span>'],
+    ['기출문제', '<span>준비 중</span>'],
+    ['현장 리포트', '<span>준비 중</span>'],
+    ['채용 캘린더', '<span>준비 중</span>']
+  ];
+
+  var list = window.MONC_RESEARCHERS || [];
+  var faces = list.map(function (r) {
+    return '<img src="../' + r.photo + '" alt="' + r.name + '"' +
+           (r.photoPos ? ' style="object-position:' + r.photoPos + '"' : '') + '>';
+  }).join('');
+  var rank = {};
+  list.forEach(function (r) {
+    var k = String(r.role || '').replace(/\s*연구원\s*$/, '').trim();
+    if (k) rank[k] = (rank[k] || 0) + 1;
+  });
+  var pplMeta = '연구원 <b>' + list.length + '</b>명 · ' +
+    Object.keys(rank).map(function (k) { return k + ' ' + rank[k]; }).join(' · ');
+
+  var ix = SHELVES.map(function (s) {
+    return '<p class="ix-row"><span class="ix-name">' + s[0] + '</span><span class="ix-lead"></span><span class="ix-n">' + s[1] + '</span></p>';
+  }).join('');
+
+  /* D안만 연구실 카드에 한 줄 설명이 붙는다 — 왼쪽 열이 제목 하나면 허전해서다 */
+  var HTML = function (labDesc) {
+    return '<div class="wrap">' +
+      '<header class="hero">' +
+        '<p class="hero-eyebrow">MONC LAB</p>' +
+        '<h1>몬크 연구실 &amp; 연구진</h1>' +
+        '<p class="hero-sub">항공사 자료, 기업분석 영상, 기출문제, 면접 현장의 기록까지 — 연구진이 모아 정리합니다.</p>' +
+      '</header>' +
+      '<div class="hub-grid">' +
+        '<a class="hub-card card-lab" href="#">' +
+          '<div class="hub-top"><h2 class="hub-name">연구실</h2><span class="pill">' + ARROW + '</span></div>' +
+          (labDesc ? '<p class="hub-desc">항공사별 자료와 기출을 서가로 정리했습니다.</p>' : '') +
+          '<div class="ix num">' + ix + '</div>' +
+          '<p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>8</b>건 · 갱신 16시간 전</p>' +
+        '</a>' +
+        '<a class="hub-card" href="#">' +
+          '<div class="hub-top"><h2 class="hub-name">연구진</h2><span class="pill">' + ARROW + '</span></div>' +
+          '<p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>' +
+          '<div class="ppl">' + faces + '</div>' +
+          '<p class="hub-meta num">' + pplMeta + '</p>' +
+        '</a>' +
+      '</div>' +
+    '</div>';
+  };
+
+  Array.prototype.forEach.call(document.querySelectorAll('.stage'), function (st) {
+    st.innerHTML = HTML(st.classList.contains('v-d'));
+  });
+
+  /* 무대(1120px)를 화면 폭에 맞춰 축소 — 폰으로 열어도 다섯 안이 같은 조건으로 비교된다.
+     ⚠️ window 의 resize 만 듣지 말 것 — 개발자도구 기기 에뮬레이션은 resize 를 안 쏘는
+        경우가 있어 폰 폭에서도 데스크톱 배율이 그대로 남는다(실제로 그랬다).
+     ⚠️ 감시는 .doc(폭만 바뀌는 상자)에 건다 — .frame 을 보면 우리가 쓴 height 가
+        다시 콜백을 불러 무한 반복이 된다. 폭이 그대로면 되돌아 나간다. */
+  var lastW = -1;
+  function fit(force) {
+    var doc = document.querySelector('.doc');
+    if (!force && doc.clientWidth === lastW) return;
+    lastW = doc.clientWidth;
+    Array.prototype.forEach.call(document.querySelectorAll('.frame'), function (fr) {
+      var st = fr.querySelector('.stage');
+      var s = Math.min(1, fr.clientWidth / 1120);
+      st.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+      fr.style.height = Math.ceil(st.scrollHeight * s) + 'px';
+    });
+  }
+  window.addEventListener('resize', function () { fit(); });
+  window.addEventListener('load', function () { fit(true); });   // 사진이 다 실린 뒤 높이 재계산
+  if (window.ResizeObserver) new ResizeObserver(function () { fit(); }).observe(document.querySelector('.doc'));
+  fit(true);
+})();
+</script>
+</body>
+</html>

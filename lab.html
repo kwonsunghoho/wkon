@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>몬크 연구실 — MONC 몬크 챌린지</title>
+  <title>몬크 연구실 &amp; 연구진 — MONC 몬크 챌린지</title>
   <!-- Open Graph / SNS 공유 — 크롤러는 JS 를 안 돌리므로 여기에 직접 둔다 -->
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://monc.ai.kr/lab.html" />
-  <meta property="og:title"       content="몬크 연구실 — MONC 몬크 챌린지" />
+  <meta property="og:title"       content="몬크 연구실 &amp; 연구진 — MONC 몬크 챌린지" />
   <meta property="og:description" content="몬크 연구실 허브 — 연구실(항공사 자료실·영상관·기출문제·현장 리포트·채용 캘린더)과 연구진." />
   <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
   <meta property="og:image:width"  content="1200" />
@@ -15,7 +15,7 @@
   <meta property="og:locale"      content="ko_KR" />
   <meta property="og:site_name"   content="MONC 몬크" />
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="몬크 연구실 — MONC 몬크 챌린지" />
+  <meta name="twitter:title"       content="몬크 연구실 &amp; 연구진 — MONC 몬크 챌린지" />
   <meta name="twitter:description" content="몬크 연구실 허브 — 연구실(항공사 자료실·영상관·기출문제·현장 리포트·채용 캘린더)과 연구진." />
   <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
 
@@ -157,6 +157,45 @@
   }
 
   .foot-note { margin-top: 40px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+
+  /* ══ 넓은 화면 = 좌우 2단 (2026-08-02 오너 "위아래 보다는 좌우로 보여지게") ══
+     히어로는 제목(왼쪽) + 설명(오른쪽), 허브 카드 두 장은 나란히.
+     ⚠️ 375px 는 지금처럼 위아래로 둔다 — 폰에서 두 장을 나란히 두면 카드 하나가
+        약 160px 라 목차 줄('항공사 자료실')이 접히고 얼굴 3열이 41px 로 주저앉는다.
+        3열 사진 84px 를 지키는 카드 최소 폭이 353px 이라 760px 부터 2단이다.
+     ⚠️ 카드 규격(padding 28·제목 32px·화살표 52px 등)은 1.5배 한 벌 그대로 —
+        2단으로 바꾼다고 활자를 줄이지 말 것. */
+  @media (min-width: 760px) {
+    .wrap { max-width: 920px; }
+
+    /* 제목·설명 좌우 — 첫 줄 베이스라인을 맞춘다(align-items:baseline) */
+    .hero {
+      display: grid; column-gap: 44px; align-items: baseline;
+      grid-template-columns: minmax(0, max-content) minmax(300px, 1fr);
+    }
+    .hero-eyebrow, .hero h1 { grid-column: 1; }
+    .hero-sub { grid-column: 2; grid-row: 2; margin-top: 0; }
+
+    /* 카드 두 장 나란히 — 발치(점선 줄)를 카드 바닥에 붙여 두 장의 밑선을 맞춘다.
+       폭은 6:4(연구실 넓게) — 자료가 주인공이라는 위계를 폭으로 말한다.
+       2026-08-02 오너가 5안 비교(outputs/lab-hub-layout-mockup.html) 후 "C안으로 가자".
+       ⚠️ 연구진 카드의 `min-width: 332px` 를 내리지 말 것 — 이 폭이라야 얼굴 3열이
+          84px 로 나온다(375px 폰과 같은 크기, 문서의 하한). 40% 만 주면 760px 화면에서
+          카드가 288px 로 좁아져 얼굴이 68px 로 주저앉는다. 좁을 땐 이 카드가 폭을
+          지키고 연구실 카드가 남는 자리를 가져간다(760px 에서 374:332). */
+    .hub-grid { flex-direction: row; align-items: stretch; }
+    .hub-card { min-width: 0; display: flex; flex-direction: column; }
+    .card-lab { flex: 1 1 0; }
+    .hub-card:not(.card-lab) { flex: 0 1 40%; min-width: 332px; }
+    .ix, .ppl { margin-bottom: 20px; }
+    .hub-meta { margin-top: auto; }
+    /* 연구실 카드는 얼굴 6장이 있는 연구진 카드보다 180px 짧다(실측 362 vs 562).
+       남는 자리를 그냥 비우면 다크 면에 큰 구멍이 생겨서, 목차 5줄을 세로로 펴
+       채운다(줄 간격 14→64px). ⚠️ 가운데 정렬은 제목 밑이 벌어져 실패한 안이다.
+       max-height 는 안전장치 — 연구원이 늘어 옆 카드가 더 길어져도 목차가
+       무한정 벌어지지 않고 남는 자리가 발치 위로 간다. */
+    .ix { flex: 1 1 auto; justify-content: space-between; max-height: 380px; }
+  }
   </style>
 </head>
 <body>
@@ -165,7 +204,7 @@
 
   <header class="hero">
     <p class="hero-eyebrow">MONC LAB</p>
-    <h1>몬크 연구실</h1>
+    <h1>몬크 연구실 &amp; 연구진</h1>
     <p class="hero-sub">항공사 자료, 기업분석 영상, 기출문제, 면접 현장의 기록까지 — 연구진이 모아 정리합니다.</p>
   </header>
 
