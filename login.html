@@ -84,6 +84,8 @@
     .note b { font-weight: 800; color: var(--text); }
     /* 최초 1회 동의 게이트 */
     .gate-h { margin-top: 24px; font-size: 15px; font-weight: 800; color: var(--text); }
+    /* 파괴적 동작 안내 — 법적 고지 활자 하한 12px 준수 */
+    .gate-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
     .a-btn {
       margin-top: 18px; width: 100%; padding: 15px 20px; font-size: 16px; font-weight: 800; cursor: pointer;
       border: 0; border-radius: var(--radius-sm); background: var(--action); color: var(--action-ink);
@@ -148,7 +150,15 @@
         </span>
       </label>
       <button class="a-btn" id="consentGo" disabled>동의하고 시작하기</button>
-      <button class="x-btn" id="consentNo">동의하지 않고 나가기</button>
+      <!-- 기존 회원(약관 개정 재동의)에게만 보이는 길. 지금 결정하지 않고 나갈 수 있어야
+           '나가기'로 읽고 눌렀다가 몇 달치 기록이 사라지는 일을 막는다(2026-08-02 B-1). -->
+      <button class="x-btn" id="consentLater" hidden>나중에 하기 (로그아웃)</button>
+      <!-- ⚠️ 라벨에 '계정 삭제'를 반드시 남길 것. 구 라벨은 '동의하지 않고 나가기'였는데
+           실제 동작은 cascade 삭제였다 — 파괴적 동작이 이름에 드러나야 한다. -->
+      <button class="x-btn" id="consentNo">동의하지 않고 계정 삭제하기</button>
+      <p class="gate-note" id="consentNote">
+        동의하지 않으면 방금 만들어진 계정 정보를 즉시 삭제합니다.
+      </p>
     </div>
 
     <div class="status" id="status"></div>
@@ -170,6 +180,8 @@
     const consentView = document.getElementById('consentView');
     const consentGo = document.getElementById('consentGo');
     const consentNo = document.getElementById('consentNo');
+    const consentLater = document.getElementById('consentLater');
+    const consentNote = document.getElementById('consentNote');
     function setStatus(t, isErr) { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!isErr); }
 
     /* ⚠️ 뒤로가기 복원(bfcache) — 이 한 줄이 없으면 로그인이 통째로 막힌다(2026-07-24 오너 신고).
@@ -188,13 +200,33 @@
        기록이 있으면 어느 기기에서 로그인하든 이 화면을 건너뛴다.
        ⚠️ 법적 필수: 동의는 여전히 명시적이어야 한다 — 사전 체크·간주 동의로 되돌리지 말 것.
        (동의 없이는 consentGo 가 disabled 이고, 회원 페이지는 requireConsent() 로 막힌다.) */
-    function showConsentGate() {
+    async function showConsentGate() {
       loginView.hidden = true;
       consentView.hidden = false;
       const sub = document.querySelector('.sub');   // "…로그인하세요" — 이미 로그인한 상태라 맞지 않는 안내
       if (sub) sub.hidden = true;
       agree.checked = false;                        // ⚠️ 사전 체크 금지 — 매번 사용자가 직접 체크해야 명시 동의
       consentGo.disabled = true;
+
+      /* 이 화면을 보는 사람은 두 종류다 (2026-08-02 B-1).
+         ① 방금 가입한 사람 — 지울 것이 '몇 초 전 만들어진 빈 계정'뿐이다.
+         ② 약관 개정으로 재동의를 요구받은 기존 회원 — 저장한 답변·경험 카드·구매한
+            크레딧이 걸려 있다. 이 사람에게 '나가기'로 읽히는 버튼 하나만 주면
+            오탭 한 번에 몇 달치가 사라진다. 그래서 '나중에 하기'(로그아웃만)를 연다.
+         ⚠️ 지금은 TERMS_VERSION 이 최초값이라 ②가 0명이지만, 약관을 올리는 순간
+            전원이 ②가 된다. 그때 급히 만들면 늦는다.
+         ⚠️ getConsent() 가 undefined 를 주는 환경(컬럼 미생성)에서는 판정할 수 없으므로
+            안전한 쪽 — 기존 회원 취급 — 으로 둔다. 지울 수 있는 길은 그대로 남는다. */
+      let prior = null;
+      try { prior = await MONC.getConsent(); } catch (e) { prior = undefined; }
+      const isReturning = (prior === undefined) || !!(prior && prior.agreed_at);
+      if (isReturning) {
+        consentLater.hidden = false;
+        consentNote.textContent =
+          '동의하지 않고 계정을 삭제하면 저장한 답변·경험 카드·남은 크레딧이 함께 사라지며 되돌릴 수 없습니다. '
+          + '지금 결정하지 않으려면 ‘나중에 하기’를 누르세요.';
+      }
+      consentView.dataset.returning = isReturning ? '1' : '';
     }
     agree.addEventListener('change', () => { consentGo.disabled = !agree.checked; });
 
@@ -211,15 +243,35 @@
        로그아웃만 하면 '동의를 거부한 사람'(만 14세 미만 포함)의 개인정보가 서버에 남는다.
        deleteMyAccount() 로 계정을 지우고 나간다 — 이 호출을 빼지 말 것. */
     consentNo.addEventListener('click', async () => {
-      consentNo.disabled = true; consentGo.disabled = true;
-      setStatus('동의를 거부하셨습니다. 방금 만들어진 계정 정보를 삭제하는 중…');
+      /* ⚠️ 확인 절차를 빼지 말 것 (2026-08-02 B-1). 이 버튼은 되돌릴 수 없는 cascade
+         삭제다. 구 버전은 확인 없이 바로 지웠고 라벨도 '동의하지 않고 나가기'였다 —
+         '나가기'로 읽고 누르면 기존 회원의 몇 달치 기록이 사라진다.
+         ⚠️ 삭제 호출 자체는 법적 필수라 남긴다(위 절 참조). 없애는 게 아니라 확인을 더한 것. */
+      const returning = consentView.dataset.returning === '1';
+      const msg = returning
+        ? '계정을 삭제할까요?\n\n저장한 답변·경험 카드·남은 크레딧이 함께 삭제되며 되돌릴 수 없습니다.\n\n지금 결정하지 않으려면 취소를 누르고 ‘나중에 하기’를 선택하세요.'
+        : '계정을 삭제할까요?\n\n방금 만들어진 계정 정보(이름·이메일)를 즉시 삭제합니다.\n되돌릴 수 없습니다.';
+      if (!window.confirm(msg)) return;
+
+      consentNo.disabled = true; consentGo.disabled = true; consentLater.disabled = true;
+      setStatus('동의를 거부하셨습니다. 계정 정보를 삭제하는 중…');
       const r = await MONC.deleteMyAccount();
       if (r === 'failed') {
         setStatus('계정 정보 삭제에 실패했습니다. moveownnextcreate@gmail.com 으로 알려주시면 즉시 파기하겠습니다.', true);
-        consentNo.disabled = false;
+        consentNo.disabled = false; consentLater.disabled = false;
         return;                     // 파기 실패를 숨긴 채 내보내지 않는다
       }
       await MONC.signOut();         // 세션 종료 후 홈으로
+    });
+
+    /* '나중에 하기' — 기존 회원 전용. 로그아웃만 하고 데이터는 그대로 둔다.
+       ⚠️ 이것이 '간주 동의'가 되지 않는다: 동의 기록이 없으므로 다음 로그인 때 이 게이트를
+          다시 만나고, 회원 페이지는 requireConsent() 가 계속 막는다. 미동의 상태로
+          서비스를 쓰게 두는 길이 아니라, 결정을 미루는 길이다. */
+    consentLater.addEventListener('click', async () => {
+      consentLater.disabled = true; consentNo.disabled = true; consentGo.disabled = true;
+      setStatus('로그아웃하는 중…');
+      await MONC.signOut();
     });
 
     /* ── 로그인 뒤 '가려던 화면'으로 복귀 (2026-08-02 오너 "로그인하면 마지막 페이지로 돌아가야지") ──
