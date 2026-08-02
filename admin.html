@@ -166,6 +166,34 @@
        한 트랙에 넣으면 접히지 않고 삐져나온다(크로미움은 date 가 좁아 재현 안 됨 — 눈검사로 못 잡는다).
        ⚠️ 새 날짜 입력을 만들면 감싸는 .field 에 field-date 를 같이 단다. */
     .round-form .field-date, .field-date { grid-column: span 2; min-width: 170px; }
+    /* ⚠️⚠️ 날짜 입력은 **네이티브 위젯 렌더링을 끈다**(`appearance:none`).
+       2026-08-02 오너가 같은 자리를 세 번 지적했다 — 칸을 넓혀도(span 2) 계속 삐져나왔다.
+       원인: iOS 사파리는 `input[type=date]` 를 **네이티브 컨트롤**로 그려서 우리 테두리·배경을
+       무시하고 **자기 고유 크기로 폭을 정한다.** 그래서 width:100%·max-width:100%·min-width:0 을
+       다 줘도 칸 밖으로 약 20px 나갔다(오너 화면 실측 — 회색 민짜 박스로 보인 것이 그 증거다.
+       우리가 준 흰 배경·테두리가 안 먹고 있었다는 뜻).
+       appearance 를 끄면 평범한 박스가 되어 box-sizing:border-box 를 따른다.
+       ⚠️ 탭하면 날짜 피커는 그대로 열린다 — 동작이 아니라 그리기만 바뀐다.
+       ⚠️ 크로미움에서는 이 버그가 재현되지 않는다(네이티브 date 가 좁다). 이 컨테이너엔
+          webkit 엔진이 없어(프록시가 다운로드 차단) 사파리로 직접 못 잰다. 그래서 원인을
+          좇는 대신 **네이티브에게 크기 결정권을 주지 않는 쪽**으로 바꿨다. */
+    .smain input[type="date"] {
+      -webkit-appearance: none; appearance: none;
+      background: #fff; color: var(--text); text-align: left;
+      box-sizing: border-box; max-width: 100%; min-width: 0;
+      border: 1px solid var(--border); border-radius: var(--radius-xs);
+      font-family: inherit; line-height: 1.2;
+    }
+    /* ⚠️ width:100% 는 격자 칸 안에 있는 날짜만 — 후기 탭의 `#rvTextDate` 처럼 flex 줄에
+       끼어 있는 것까지 100% 로 만들면 옆 입력을 밀어내고 혼자 한 줄을 먹는다. */
+    .round-form input[type="date"], .field input[type="date"] { width: 100%; }
+    /* 크로미움의 달력 아이콘은 살려 둔다(데스크톱에서 고르는 수단) */
+    .smain input[type="date"]::-webkit-calendar-picker-indicator { opacity: .6; cursor: pointer; }
+    /* iOS 는 날짜 값을 가운데 정렬로 그린다 — 다른 입력칸과 같이 왼쪽으로. */
+    .smain input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+    /* 마지막 안전장치 — 무엇이 됐든 카드 밖으로는 못 나간다.
+       clip 은 hidden 과 달리 스크롤 컨테이너를 안 만들어 세로 포커스 링이 안 잘린다. */
+    .round-form { overflow-x: clip; }
     /* 특강 카드 사진 첨부 — 고르면 즉시 압축·업로드되고 미리보기가 뜬다 */
     .lf-thumb { display: flex; gap: 12px; align-items: flex-start; }
     .lf-thumb-prev { flex: 0 0 auto; width: 132px; height: 92px; border-radius: var(--radius-xs); overflow: hidden; border: 1px solid var(--border); background: var(--surface2); }
