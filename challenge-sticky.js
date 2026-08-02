@@ -61,9 +61,12 @@
             없는 게 맞다 — iOS 가 레이아웃 뷰포트를 이미 안전영역 안으로 잡아 준다.
             cover 를 추가하려면 상·좌·우 인셋까지 전부 처리해야 하므로 건드리지 않는다. */
       '  padding:14px 16px calc(20px + env(safe-area-inset-bottom));',
-        /* 110% + 안전여유 — bottom 을 올려 둔 상태에서도 완전히 화면 밖으로 내려가야 한다 */
+        /* 110% + 안전여유 — --vv-gap 으로 올려 둔 상태에서도 완전히 화면 밖으로 내려가야 한다 */
       '  transform:translateY(calc(110% + 60px));transition:transform .28s ease;}',
-      '.ch-sticky.on{transform:none;}',
+      /* 보일 때 위치 = iOS 툴바 보정값(--vv-gap, 아래 place())만큼 위로.
+         bottom 을 직접 옮기지 않고 transform 을 쓰는 이유는 place() 주석 참조
+         (합성 단계라 레이아웃 계산이 없고, 위 transition 을 타고 미끄러져 자리 잡는다). */
+      '.ch-sticky.on{transform:translateY(calc(-1 * var(--vv-gap, 0px)));}',
       '.ch-sticky-in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:14px;}',
       '.ch-sticky .info{flex:1 1 auto;min-width:0;}',
       '.ch-sticky .p{font-size:17px;font-weight:900;color:var(--text,#26221C);line-height:1.25;}',
@@ -123,11 +126,17 @@
   /* 바가 푸터·본문 끝을 덮지 않도록 실측 높이만큼 body 를 밀어 준다.
      ⚠️ 고정값(예: 72px)을 쓰지 말 것 — 안전영역(env(safe-area-inset-bottom))이
         기기마다 달라 아이폰에서만 덜 밀리거나 더 밀린다. */
+  var lastPad = -1;
   function padBody() {
-    /* 바 실측 높이 + 8px 여유. 여유가 없으면 마지막 줄이 경계선에 딱 붙어 잘려 보인다.
-       ⚠️ 고정값(예: 72px)을 쓰지 말 것 — 안전영역이 기기마다 다르다. */
+    /* 바 실측 높이 + 떠오른 만큼(--vv-gap) + 8px 여유. 여유가 없으면 마지막 줄이
+       경계선에 딱 붙어 잘려 보인다.
+       ⚠️ 고정값(예: 72px)을 쓰지 말 것 — 안전영역이 기기마다 다르다.
+       ⚠️ 값이 같으면 안 쓴다 — 스타일 쓰기는 전부 '바뀔 때만'이 이 파일의 규칙이다. */
     var h = bar.offsetHeight || 0;
-    document.body.style.paddingBottom = h ? (h + 8) + 'px' : '';
+    var pad = h ? h + lastGap + 8 : 0;
+    if (pad === lastPad) return;
+    lastPad = pad;
+    document.body.style.paddingBottom = pad ? pad + 'px' : '';
   }
 
   /* ── 언제 바를 보여줄까 ─────────────────────────────────────────────────
@@ -150,7 +159,7 @@
   if (footer) guards.push(footer);
 
   var visible = new Set();
-  function show(on) { bar.classList.toggle('on', !!on); place(); padBody(); }
+  function show(on) { bar.classList.toggle('on', !!on); }
   if (guards.length && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (es) {
       es.forEach(function (e) {
@@ -170,29 +179,46 @@
      툴바 뒤로 들어가 **아랫부분이 잘려 보인다.**
      ⚠️ 데스크톱 크로미움에서는 두 값이 항상 같아 **절대 재현되지 않는다** — 내가 이걸
         못 잡은 이유다. 앞으로 하단 고정 요소를 만들면 이 보정을 같이 단다.
-     보정: 두 값의 차이만큼 바를 올린다. visualViewport 가 없는 브라우저에선 0 이라
-     기존 동작 그대로다(no-op). */
+     보정: 두 값의 차이(gap)만큼 바를 올린다. visualViewport 가 없는 브라우저에선 0 이라
+     기존 동작 그대로다(no-op).
+
+     ⚠️⚠️ 프레임마다 쫓아가지 말 것 (2026-08-02 밤 성능 사고 — 오너 "왜 이렇게 버벅이고
+        깜빡여"). 처음엔 scroll 마다 rAF 로 위치·높이를 다시 쟀는데, 툴바가 움직이는 동안
+        매 프레임 스타일 쓰기 + 강제 레이아웃(offsetHeight)이 나가 폰에서 스크롤이 끊기고
+        바가 덜덜 떨렸다(보정 1회 실측 0.7ms/맥 — 폰은 몇 배고, 120Hz 아이폰의 프레임
+        예산은 8.3ms 다). 지금 규칙 셋(lecture.html placeSticky 도 동일):
+        ① 움직임이 멈추고 120ms 뒤 **한 번만** 잰다(settle 디바운스).
+        ② 값이 안 바뀌었으면 아무것도 안 쓴다.
+        ③ 위치는 bottom 이 아니라 transform 변수(--vv-gap)로 옮긴다 — 합성 단계라
+           레이아웃 계산이 없고, 기존 .28s transition 을 타고 미끄러져 자리 잡는다.
+        트레이드오프(오너 승인): 툴바가 움직이는 동안엔 바가 안 따라가고 멈춘 직후
+        한 번에 자리 잡는다. 정지 상태의 위치는 프레임 추적 때와 동일하다. */
+  var lastGap = 0;
   function place() {
     var vv = window.visualViewport;
     if (!vv) return;
     var gap = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    bar.style.bottom = gap + 'px';
+    if (gap === lastGap) return;
+    lastGap = gap;
+    bar.style.setProperty('--vv-gap', gap + 'px');
   }
 
-  /* 높이·위치는 한 번만 재면 안 된다 — 안전영역·툴바 접힘으로 스크롤 도중에 바뀐다. */
-  var ticking = false;
-  function sync() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function () { ticking = false; place(); padBody(); });
+  /* 높이·위치는 한 번만 재면 안 된다 — 안전영역·툴바 접힘·회전으로 나중에 바뀐다.
+     다만 재는 시점은 위 규칙대로 '멈춘 직후 한 번'이다. 120ms 는 iOS 툴바 전환(~250ms)
+     이벤트가 멎었는지 확인하는 값. */
+  var settleT = null;
+  function settle() {
+    clearTimeout(settleT);
+    settleT = setTimeout(function () { place(); padBody(); }, 120);
   }
-  sync();
-  window.addEventListener('resize', sync);
-  window.addEventListener('scroll', sync, { passive: true });
-  if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
+  place(); padBody();
+  window.addEventListener('resize', settle);
+  window.addEventListener('scroll', settle, { passive: true });
+  window.addEventListener('pageshow', settle);   // 뒤로가기 복귀 — 뷰포트 상태가 다를 수 있다
+  if (window.ResizeObserver) new ResizeObserver(settle).observe(bar);
   if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', sync);
-    window.visualViewport.addEventListener('scroll', sync);
+    window.visualViewport.addEventListener('resize', settle);
+    window.visualViewport.addEventListener('scroll', settle);
   }
 
   document.getElementById('chStickyGo').addEventListener('click', function (e) {

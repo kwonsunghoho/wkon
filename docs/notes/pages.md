@@ -176,15 +176,27 @@ iOS Safari 는 스크롤 중 하단 툴바를 접었다 폈다 하는데, 접힌
 ⚠️⚠️ **데스크톱 크로미움에서는 두 값이 항상 같아 절대 재현되지 않는다.** 내가 두 번
 놓친 이유가 이것이다. **하단 고정 요소를 새로 만들면 이 보정을 반드시 같이 단다.**
 
-**보정**(`challenge-sticky.js` `place()`):
+**보정**(`challenge-sticky.js` `place()` · `lecture.html` `placeSticky()` — 두 파일 동일):
 ```js
 var gap = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-bar.style.bottom = gap + 'px';
+bar.style.setProperty('--vv-gap', gap + 'px');  // CSS: transform:translateY(calc(-1 * var(--vv-gap)))
 ```
-`visualViewport` 의 `resize`·`scroll`, `window` 의 `resize`·`scroll`(rAF 로 묶음),
-`ResizeObserver` 로 계속 따라간다. visualViewport 가 없으면 no-op 이라 기존 동작 그대로.
-숨김 상태의 `translateY` 도 `calc(110% + 60px)` 로 키웠다 — bottom 을 올려 둔 상태에서도
-완전히 화면 밖으로 내려가야 한다.
+visualViewport 가 없으면 no-op 이라 기존 동작 그대로.
+숨김 상태의 `translateY` 는 `calc(110% + 60px)` 유지 — 올려 둔 상태에서도 완전히 화면
+밖으로 내려가야 한다.
+
+⚠️⚠️ **프레임마다 쫓아가지 말 것 (2026-08-02 밤 성능 사고 — 오너 "엄청 버벅이고 깜빡임도
+생겼어").** 처음 구현은 `visualViewport`·`window` 의 `resize`·`scroll` 을 rAF 로 묶어
+**매 프레임** place+padBody 를 돌렸다. 툴바가 움직이는 동안 프레임마다 스타일 쓰기 +
+강제 레이아웃(offsetHeight)이 나가 폰에서 스크롤이 끊기고 바가 덜덜 떨렸다(보정 1회
+실측 0.7ms/맥 — 폰은 몇 배, 120Hz 아이폰의 프레임 예산은 8.3ms). 바뀐 규칙 셋:
+① 같은 이벤트를 듣되 **멈추고 120ms 뒤 한 번만** 잰다(settle 디바운스, `pageshow` 포함).
+② **값이 안 바뀌면 아무것도 안 쓴다**(스타일 쓰기 전부).
+③ 위치는 `bottom` 이 아니라 **transform 변수(`--vv-gap`)** 로 옮긴다 — 합성 단계라
+   레이아웃 계산이 없고, 기존 `.28s` transition 을 타고 미끄러져 자리 잡는다.
+트레이드오프(오너 승인 2026-08-02): 툴바가 움직이는 ~0.3초 동안은 바가 안 따라가고 멈춘
+직후 한 번에 자리 잡는다. 정지 상태의 위치는 프레임 추적 때와 동일하다. **rAF 프레임
+추적으로 되돌리지 말 것.**
 
 **검증 방법(재현 레시피)**: `window.visualViewport` 를 가짜 객체로 덮어
 `height = innerHeight - 툴바` 로 만든다. 상세 4종 × 툴바 0/44/88px = 12개 조합에서
