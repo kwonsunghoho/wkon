@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>챌린지 허브 카드 — 형태(레이아웃) 4안 (2026-08-03)</title>
+<!-- 2차 목업. 1차(challenge-card-impact-mockup.html — 하단 띠·절취선 4안)는 오너 기각:
+     "아랫쪽에만 갖고 뭘 하잖아. 배치는 지금처럼 한 줄로 가자" → 배치(2×2·데스크톱 4열)와
+     하단 정보 줄은 그대로 두고 **카드의 형태**만 바꾼 안들이다. -->
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,sans-serif;
+       line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:36px 20px 90px}
+  .mk-eyebrow{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--accent-ink)}
+  .mk-eyebrow::before{content:"— ";letter-spacing:0}
+  h1{font-family:var(--serif);font-weight:800;font-size:clamp(26px,5vw,36px);line-height:1.32;
+     margin:10px 0 14px;color:var(--text);letter-spacing:-.5px}
+  .lede{font-size:16px;color:var(--text-muted);margin:0 0 6px;max-width:44em;word-break:keep-all}
+  .lede b{color:var(--text);font-weight:700}
+  .rules{margin:14px 0 0;padding:14px 16px;background:var(--surface);border:1px solid rgba(38,34,28,.11);
+         border-radius:14px;font-size:13.5px;color:var(--text-muted);max-width:44em;word-break:keep-all}
+  .rules b{color:var(--text)}
+  h2.sec{font-family:var(--serif);font-weight:800;font-size:24px;color:var(--text);
+         margin:52px 0 6px;padding-top:26px;border-top:1px solid rgba(38,34,28,.14);letter-spacing:-.3px}
+  .sub{margin:0 0 18px;font-size:15px;color:var(--text-muted);max-width:46em;word-break:keep-all}
+  .sub b{color:var(--text);font-weight:700}
+  .verdict{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;
+           border-radius:999px;padding:4px 11px;margin-left:8px;vertical-align:4px}
+  .v-rec{background:var(--accent);color:#fff}
+  .v-ok{background:var(--accent-tint);color:var(--accent-ink)}
+  .note{margin:14px 0 0;font-size:14px;color:var(--text-muted);max-width:46em;word-break:keep-all}
+  .note b{color:var(--text)}
+
+  /* 375px 폰 프레임 + 데스크톱 4열 프레임(좁은 화면에선 옆으로 밀어 본다) */
+  .phone{width:375px;max-width:100%;background:var(--bg);border:1px solid rgba(38,34,28,.18);
+         border-radius:22px;padding:18px 0 24px;overflow:hidden}
+  .frame-tag{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);margin:0 24px 12px}
+  .desk{margin-top:14px;overflow-x:auto;border:1px solid rgba(38,34,28,.18);border-radius:16px;background:var(--bg)}
+  .desk-in{width:900px;padding:16px 24px 24px}
+  .desk .frame-tag{margin:0 0 12px}
+  .desk .ch-list{grid-template-columns:repeat(4,minmax(0,1fr));padding:0}
+
+  /* ── 기준 카드 = challenges.html .ch-* 그대로(레터프레스 종이 카드) ── */
+  .ch-list{display:grid;gap:var(--space-2);grid-template-columns:repeat(2,minmax(0,1fr));
+           grid-auto-rows:1fr;padding:0 var(--space-3)}
+  .ck{display:flex;flex-direction:column;padding:var(--space-1) var(--space-1) 0;
+      border-radius:var(--radius-sm);
+      background:linear-gradient(180deg,#FCF9F1 0%,#F3EEE1 100%);
+      border:1px solid rgba(38,34,28,.11);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 3px rgba(58,42,26,.08),
+                 0 18px 36px -14px rgba(58,42,26,.26);
+      text-decoration:none;color:var(--text)}
+  .ck-shot{display:block;position:relative;overflow:hidden;flex:0 0 auto;aspect-ratio:4/5;
+           border-radius:var(--radius-xs);background:#E7E1D3}
+  .ck-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 24%}
+  .ck-shot::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+                  box-shadow:inset 0 2px 5px rgba(38,34,28,.30),inset 0 0 0 1px rgba(38,34,28,.16)}
+  .ck.is-dim .ck-shot img{filter:grayscale(1)}
+  .ck-body{display:flex;flex-direction:column;flex:1;padding:12px 4px 14px}
+  .ck-no{font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+         color:var(--text-dim);white-space:nowrap}
+  .ck-name{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.28;
+           letter-spacing:.06em;color:var(--text);margin-top:6px}
+  .ck.is-dim .ck-name{color:var(--text-muted)}
+  .ck-line{margin-top:6px;font-size:14px;line-height:1.5;color:var(--text-dim);word-break:keep-all}
+  .ck-line em{font-style:normal;font-weight:700;color:var(--text)}
+  .ck.is-dim .ck-line em{color:var(--text-muted)}
+  .ck-meta{margin-top:auto;padding-top:10px;font-size:12.5px;font-weight:600;color:var(--text-dim);
+           font-variant-numeric:tabular-nums}
+  .ck-meta:empty{padding-top:0}
+  .ck-st{padding-top:3px;font-size:14px;font-weight:700;line-height:1.4}
+  .ck-st.is-open{color:var(--accent-ink);font-weight:800}
+  .ck-st.is-upcoming,.ck-st.is-closed{color:var(--text-dim)}
+  /* 형태안들의 일정 줄은 한 줄 고정('모집'은 상태 줄이 이미 말한다 — 날짜 줄은 'N기 · M/D~M/D') */
+  .oA .ck-meta,.oB .ck-meta,.oC .ck-meta,.oD .ck-meta{white-space:nowrap}
+
+  /* ── A안: 사진 풀블리드(포스터형) — 종이 액자 없이 사진이 카드 상단을 꽉 채움 ── */
+  .oA .ck{padding:0;overflow:hidden}
+  .oA .ck-shot{border-radius:var(--radius-sm) var(--radius-sm) 0 0}
+  .oA .ck-body{padding:12px 12px 14px}
+
+  /* ── B안: 비행기 창(窓) 사진 — 로고·히어로와 같은 창문 모티프. 종이는 그대로, 사진만 창이 된다 ── */
+  .oB .ck-shot{margin:6px 7px 0;aspect-ratio:4/5.1;border-radius:45%/35%}
+
+  /* ── C안: 역배치 — 글이 위, 사진이 아래(이름 줄이 카드 맨 위에 정렬돼 훑기 쉬움) ── */
+  .oC .ck{padding:0;overflow:hidden}
+  .oC .ck-body{padding:13px 12px 11px}
+  .oC .ck-shot{border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-top:auto}
+
+  /* ── D안: 명판 겹침(매거진) — 풀블리드 사진 + 번호·이름 명판이 사진 하단에 걸침 ── */
+  .oD .ck{padding:0;overflow:hidden}
+  .oD .ck-shot{border-radius:var(--radius-sm) var(--radius-sm) 0 0}
+  .oD .plate{display:block;position:relative;z-index:2;margin:-26px 10px 0;padding:8px 11px 9px;
+             background:linear-gradient(180deg,#FCF9F1,#F5F0E2);border:1px solid rgba(38,34,28,.14);
+             border-radius:10px;
+             box-shadow:0 3px 8px rgba(58,42,26,.20),inset 0 1px 0 rgba(255,255,255,.9)}
+  /* 명판 폭이 좁아 SPEECH·ANSWER가 넘친다 — 킥커만 자간·크기 한 단계 축소 */
+  .oD .plate .ck-no{font-size:12px;letter-spacing:.1em}
+  .oD .plate .ck-name{margin-top:3px}
+  .oD .ck-body{padding:9px 12px 14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mk-eyebrow">Mockup · 2차</div>
+  <h1>챌린지 허브 카드 — 형태 4안</h1>
+  <p class="lede">오너 지시: <b>배치는 지금처럼 한 줄(데스크톱 4열 · 모바일 2×2)</b>, 아래쪽 정보 줄을
+     만지는 게 아니라 <b>카드의 형태</b>를 바꿀 것. 하단 일정·상태 줄은 네 안 모두 지금과 같다.</p>
+  <div class="rules">
+    지킨 것: 레터프레스 종이 카드 · 사진 위 글자 금지 · 새 색 없음 · 배치·하단 줄 그대로 ·
+    상태 예시는 <b>모집 중 1 + 예정 1 + 마감 2</b>. 1차 목업(하단 띠·절취선)은 기각 기록으로 보존.
+  </div>
+
+  <h2 class="sec">기준 — 지금 화면</h2>
+  <p class="sub">사진이 종이 안 액자(8px 여백)에 들어간 지금 형태. 넉 장이 같은 실루엣이라 밋밋하다.</p>
+  <div class="phone"><div class="frame-tag">375px</div><div class="ch-list" data-v="base"></div></div>
+  <div class="desk"><div class="desk-in"><div class="frame-tag">데스크톱 4열(한 줄) — 옆으로 밀어 보기</div><div class="ch-list" data-v="base"></div></div></div>
+
+  <h2 class="sec">A안 — 사진 풀블리드<span class="verdict v-ok">사진이 커짐</span></h2>
+  <p class="sub">종이 액자를 없애고 <b>사진이 카드 위를 끝까지 채운다.</b> 같은 사진인데 한 둘레 커져
+     포스터처럼 보인다. 글 자리는 지금과 같다.</p>
+  <div class="phone"><div class="frame-tag">375px</div><div class="ch-list oA" data-v="A"></div></div>
+  <div class="desk"><div class="desk-in"><div class="frame-tag">데스크톱 4열(한 줄)</div><div class="ch-list oA" data-v="A"></div></div></div>
+
+  <h2 class="sec">B안 — 비행기 창문 사진<span class="verdict v-rec">추천 · 브랜드 모티프</span></h2>
+  <p class="sub">사진을 <b>비행기 창 모양</b>으로 깎는다. 로고의 O, 홈 첫 화면(창문), 챌린지 카드가
+     같은 모티프로 이어진다 — 넉 장이 늘어서면 기내 창가 한 줄처럼 읽힌다.</p>
+  <div class="phone"><div class="frame-tag">375px</div><div class="ch-list oB" data-v="B"></div></div>
+  <div class="desk"><div class="desk-in"><div class="frame-tag">데스크톱 4열(한 줄)</div><div class="ch-list oB" data-v="B"></div></div></div>
+
+  <h2 class="sec">C안 — 역배치(글 위 · 사진 아래)<span class="verdict v-ok">이름이 먼저</span></h2>
+  <p class="sub">번호·이름·변화 문장이 카드 <b>맨 위에 한 줄로 정렬</b>돼 넉 장을 훑기 쉽다.
+     사진은 아래에서 받친다. 마감 카드의 흑백 사진이 아래로 내려가 덜 무겁다.</p>
+  <div class="phone"><div class="frame-tag">375px</div><div class="ch-list oC" data-v="C"></div></div>
+  <div class="desk"><div class="desk-in"><div class="frame-tag">데스크톱 4열(한 줄)</div><div class="ch-list oC" data-v="C"></div></div></div>
+
+  <h2 class="sec">D안 — 명판 겹침(매거진형)<span class="verdict v-ok">가장 입체적</span></h2>
+  <p class="sub">풀블리드 사진 위로 <b>번호·이름 명판(불투명 종이패)이 반쯤 걸친다.</b> 글자가 사진에
+     직접 얹히는 게 아니라 불투명 명판이라 '사진 위 글자 금지'의 취지(크림 막)와는 다르지만,
+     경계에 걸치는 건 사실이라 오너 판단 필요.</p>
+  <div class="phone"><div class="frame-tag">375px</div><div class="ch-list oD" data-v="D"></div></div>
+  <div class="desk"><div class="desk-in"><div class="frame-tag">데스크톱 4열(한 줄)</div><div class="ch-list oD" data-v="D"></div></div></div>
+
+  <p class="note"><b>하단 정보 줄은 전부 동일</b> — 날짜는 'N기 · M/D~M/D' 한 줄, 상태는 활자
+     ('모집 중 · D-3' 네이비 / '모집 예정' / '다음 기수 준비 중'). 1차에서 만들던 띠·절취선은 없다.</p>
+</div>
+
+<script>
+/* 카드 4장 × 5안 — 상태 예시: 모집 중(보신각) / 예정(영합각) / 마감 2(스피닝·승자각) */
+var CARDS = [
+  { img:'hero-voice.webp',      no:'01', en:'Voice',  name:'보.신.각', before:'떨리는 목소리', after:'신뢰가 실리는 목소리',       state:'open',     round:'2기', dates:'7/28~8/6',  dday:'D-3' },
+  { img:'hero-expression.webp', no:'02', en:'Image',  name:'영.합.각', before:'굳은 표정',     after:'카메라 앞에서도 자연스럽게', state:'upcoming', round:'1기', dates:'8/18~8/24' },
+  { img:'hero-spinning.webp',   no:'03', en:'Speech', name:'스.피.닝', before:'딱딱한 말투',   after:'귀에 감기는 말투',           state:'closed' },
+  { img:'hero-answer.webp',     no:'04', en:'Answer', name:'승.자.각', before:'뻔한 답변',     after:'나만 할 수 있는 답변',       state:'closed' }
+];
+function stL(c){
+  return c.state === 'open' ? '모집 중 · ' + c.dday
+       : c.state === 'upcoming' ? '모집 예정' : '다음 기수 준비 중';
+}
+function card(c, v){
+  var dim  = c.state !== 'open' ? ' is-dim' : '';
+  var kick = '<span class="ck-no">' + c.no + ' · ' + c.en + '</span>';
+  var name = '<span class="ck-name">' + c.name + '</span>';
+  var line = '<span class="ck-line">' + c.before + ' → <em>' + c.after + '</em></span>';
+  /* 하단 정보 줄 — 전 안 공통(기준만 현행 문구 그대로: 'N기 · 모집 M/D ~ M/D') */
+  var metaTxt = c.dates ? (v === 'base' ? c.round + ' · 모집 ' + c.dates.replace('~', ' ~ ') : c.round + ' · ' + c.dates) : '';
+  var info = '<span class="ck-meta">' + metaTxt + '</span>'
+           + '<span class="ck-st is-' + c.state + '">' + stL(c) + '</span>';
+  var shot = '<span class="ck-shot"><img src="../images/' + c.img + '" alt=""></span>';
+  var inner;
+  if (v === 'C')      inner = '<span class="ck-body">' + kick + name + line + info + '</span>' + shot;
+  else if (v === 'D') inner = shot + '<span class="plate">' + kick + name + '</span>'
+                            + '<span class="ck-body">' + line + info + '</span>';
+  else                inner = shot + '<span class="ck-body">' + kick + name + line + info + '</span>';
+  return '<a class="ck' + dim + '" href="#" onclick="return false">' + inner + '</a>';
+}
+document.querySelectorAll('[data-v]').forEach(function(list){
+  var v = list.getAttribute('data-v');
+  list.innerHTML = CARDS.map(function(c){ return card(c, v); }).join('');
+});
+</script>
+</body>
+</html>
