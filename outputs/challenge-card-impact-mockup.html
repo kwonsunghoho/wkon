@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>챌린지 허브 카드 — 임팩트 4안 (2026-08-03)</title>
+<!-- 글꼴·팔레트는 실제 사이트와 같은 tokens.css 를 그대로 쓴다(SUIT 포함) -->
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,sans-serif;
+       line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:36px 20px 90px}
+  .mk-eyebrow{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--accent-ink)}
+  .mk-eyebrow::before{content:"— ";letter-spacing:0}
+  h1{font-family:var(--serif);font-weight:800;font-size:clamp(26px,5vw,36px);line-height:1.32;
+     margin:10px 0 14px;color:var(--text);letter-spacing:-.5px}
+  .lede{font-size:16px;color:var(--text-muted);margin:0 0 6px;max-width:44em;word-break:keep-all}
+  .lede b{color:var(--text);font-weight:700}
+  .rules{margin:14px 0 0;padding:14px 16px;background:var(--surface);border:1px solid rgba(38,34,28,.11);
+         border-radius:14px;font-size:13.5px;color:var(--text-muted);max-width:44em}
+  .rules b{color:var(--text)}
+
+  h2.sec{font-family:var(--serif);font-weight:800;font-size:24px;color:var(--text);
+         margin:52px 0 6px;padding-top:26px;border-top:1px solid rgba(38,34,28,.14);letter-spacing:-.3px}
+  .sub{margin:0 0 18px;font-size:15px;color:var(--text-muted);max-width:46em;word-break:keep-all}
+  .sub b{color:var(--text);font-weight:700}
+  .verdict{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;
+           border-radius:999px;padding:4px 11px;margin-left:8px;vertical-align:4px}
+  .v-rec{background:var(--accent);color:#fff}
+  .v-ok{background:var(--accent-tint);color:var(--accent-ink)}
+
+  /* ── 375px 폰 프레임 ── */
+  .phone{width:375px;max-width:100%;background:var(--bg);border:1px solid rgba(38,34,28,.18);
+         border-radius:22px;padding:18px 0 24px;overflow:hidden}
+  .phone-tag{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--text-dim);margin:0 24px 12px}
+
+  /* ── 기준 카드 = challenges.html .ch-* 를 그대로 옮김(레터프레스 종이 카드) ── */
+  .ch-list{display:grid;gap:var(--space-2);grid-template-columns:repeat(2,minmax(0,1fr));
+           grid-auto-rows:1fr;padding:0 var(--space-3)}
+  .ck{display:flex;flex-direction:column;padding:var(--space-1) var(--space-1) 0;
+      border-radius:var(--radius-sm);
+      background:linear-gradient(180deg,#FCF9F1 0%,#F3EEE1 100%);
+      border:1px solid rgba(38,34,28,.11);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 3px rgba(58,42,26,.08),
+                 0 18px 36px -14px rgba(58,42,26,.26);
+      text-decoration:none;color:var(--text)}
+  .ck-shot{display:block;position:relative;overflow:hidden;flex:0 0 auto;aspect-ratio:4/5;
+           border-radius:var(--radius-xs);background:#E7E1D3}
+  .ck-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 24%}
+  .ck-shot::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+                  box-shadow:inset 0 2px 5px rgba(38,34,28,.30),inset 0 0 0 1px rgba(38,34,28,.16)}
+  .ck.is-dim .ck-shot img{filter:grayscale(1)}
+  .ck-body{display:flex;flex-direction:column;flex:1;padding:12px 4px 14px}
+  .ck-no{font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+         color:var(--text-dim);white-space:nowrap}
+  .ck-name{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.28;
+           letter-spacing:.06em;color:var(--text);margin-top:6px}
+  .ck.is-dim .ck-name{color:var(--text-muted)}
+  .ck-line{margin-top:6px;font-size:14px;line-height:1.5;color:var(--text-dim);word-break:keep-all}
+  .ck-line em{font-style:normal;font-weight:700;color:var(--text)}
+  .ck.is-dim .ck-line em{color:var(--text-muted)}
+  .ck-meta{margin-top:auto;padding-top:10px;font-size:12.5px;font-weight:600;color:var(--text-dim);
+           font-variant-numeric:tabular-nums}
+  .ck-meta:empty{padding-top:0}
+  .ck-st{padding-top:3px;font-size:14px;font-weight:700;line-height:1.4}
+  .ck-st.is-open{color:var(--accent-ink);font-weight:800}
+  .ck-st.is-upcoming,.ck-st.is-closed{color:var(--text-dim)}
+
+  /* ── A안: 모집 일정을 카드 하단 '띠'로(정보 전부 띠에 모음) ── */
+  .vA .ck{padding-bottom:0;overflow:hidden}
+  .vA .ck-body{padding-bottom:12px}
+  .vA .ck-band{margin:auto calc(-1 * var(--space-1)) 0;padding:8px 8px 9px;text-align:center;
+               font-variant-numeric:tabular-nums}
+  .vA .ck-band .b1{display:block;font-size:12px;font-weight:800;letter-spacing:.02em}
+  .vA .ck-band .b2{display:block;margin-top:1px;font-size:12.5px;font-weight:800}
+  .vA .ck-band.is-open{background:var(--accent);color:#fff}
+  .vA .ck-band.is-upcoming{background:var(--accent-tint);color:var(--accent-ink)}
+  .vA .ck-quiet{margin:auto 0 0;padding-top:10px;font-size:12.5px;font-weight:700;color:var(--text-dim)}
+
+  /* ── B안: 티켓 절취선 + 일정 칸(종이 물성 유지, 활자만 키움) ── */
+  .vB .ck{padding-bottom:0;overflow:hidden}
+  .vB .ck-stub{margin:auto calc(-1 * var(--space-1)) 0;padding:8px 12px 11px;
+               border-top:1px dashed rgba(38,34,28,.30);background:rgba(58,42,26,.035)}
+  .vB .ck-stub .st{display:block;font-size:12px;font-weight:800;letter-spacing:.02em}
+  .vB .ck-stub .st.is-open{color:var(--accent-ink)}
+  .vB .ck-stub .st.is-upcoming,.vB .ck-stub .st.is-closed{color:var(--text-dim)}
+  .vB .ck-stub .dates{display:block;margin-top:2px;font-size:13.5px;font-weight:800;color:var(--text);
+                      font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .vB .ck.is-dim .ck-stub .dates{color:var(--text-muted)}
+
+  /* ── C안: 변화 문장(강조글자)을 카드의 주인공으로 ── */
+  .vC .ck-line,.vD .ck-line{margin-top:7px;font-size:12.5px;color:var(--text-dim)}
+  .vC .ck-after,.vD .ck-after{display:block;margin-top:3px;font-size:15px;line-height:1.42;
+      font-weight:800;color:var(--text);word-break:keep-all}
+  .vC .ck-after b,.vD .ck-after b{font-weight:800;
+      box-shadow:inset 0 -7px 0 var(--accent-tint);
+      -webkit-box-decoration-break:clone;box-decoration-break:clone}
+  .vC .ck.is-dim .ck-after,.vD .ck.is-dim .ck-after{color:var(--text-muted)}
+  .vC .ck.is-dim .ck-after b,.vD .ck.is-dim .ck-after b{box-shadow:none}
+  .vC .ck-meta.is-open{color:var(--accent-ink);font-weight:800;font-size:13px}
+
+  /* ── D안 = C 문장 + B 일정 칸 ── */
+  .vD .ck{padding-bottom:0;overflow:hidden}
+  .vD .ck-stub{margin:auto calc(-1 * var(--space-1)) 0;padding:8px 12px 11px;
+               border-top:1px dashed rgba(38,34,28,.30);background:rgba(58,42,26,.035)}
+  .vD .ck-stub .st{display:block;font-size:12px;font-weight:800;letter-spacing:.02em}
+  .vD .ck-stub .st.is-open{color:var(--accent-ink)}
+  .vD .ck-stub .st.is-upcoming,.vD .ck-stub .st.is-closed{color:var(--text-dim)}
+  .vD .ck-stub .dates{display:block;margin-top:2px;font-size:13.5px;font-weight:800;color:var(--text);
+                      font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .vD .ck.is-dim .ck-stub .dates{color:var(--text-muted)}
+
+  .note{margin:14px 0 0;font-size:14px;color:var(--text-muted);max-width:46em;word-break:keep-all}
+  .note b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mk-eyebrow">Mockup</div>
+  <h1>챌린지 허브 카드 — 임팩트 4안</h1>
+  <p class="lede">요청: 카드가 밋밋하다. <b>모집일정</b>과 <b>강조글자(변화 문장)</b>가 잘 보이게.</p>
+  <div class="rules">
+    네 안 모두 지킨 것: 레터프레스 종이 카드 유지(흰 카드 금지) · 사진 위 글자 금지 ·
+    새 색 없음(네이비·틴트만) · 활자 12px 하한 · 마감 카드에 지난 일정을 쓰지 않음 ·
+    카드 상태 예시는 <b>모집 중 1 + 예정 1 + 마감 2</b>(실제 재정렬 순서).
+  </div>
+
+  <h2 class="sec">기준 — 지금 화면</h2>
+  <p class="sub">일정(12.5px 회색)과 강조글자(14px 굵기만)가 전부 같은 무게라 눈이 걸릴 곳이 없다.</p>
+  <div class="phone"><div class="phone-tag">375px</div><div class="ch-list" data-v="base"></div></div>
+
+  <h2 class="sec">A안 — 하단 모집 띠<span class="verdict v-ok">일정이 가장 큼</span></h2>
+  <p class="sub">기수·기간·디데이를 <b>카드 하단 색 띠</b>에 모은다. 모집 중=네이비 띠+흰 글자,
+     예정=연블루 띠+네이비 글자, 마감=띠 없음(조용히).</p>
+  <div class="phone"><div class="phone-tag">375px</div><div class="ch-list vA" data-v="A"></div></div>
+  <p class="note">⚠️ 유의: '상태는 활자로만(구 초록 알약 금지)' 규칙과 긴장이 있다. 사진 밖이고
+     알약이 아니라 띠지만, 색 면으로 상태를 말하는 건 같다 — 오너 판단 필요.</p>
+
+  <h2 class="sec">B안 — 티켓 절취선 + 일정 칸<span class="verdict v-ok">종이 물성 유지</span></h2>
+  <p class="sub">종이 카드라는 물성을 살려 하단을 <b>절취선(점선)으로 나눈 티켓 칸</b>으로.
+     색 면 없이 활자만 키워서 기존 규칙과 충돌이 없다.</p>
+  <div class="phone"><div class="phone-tag">375px</div><div class="ch-list vB" data-v="B"></div></div>
+
+  <h2 class="sec">C안 — 강조 문장 승격<span class="verdict v-ok">문장이 주인공</span></h2>
+  <p class="sub">변화 문장을 두 줄로 나눠 <b>뒷문장(약속)을 15px 굵게 + 연블루 밑줄</b>.
+     밑줄은 홈 숫자 섹션이 이미 쓰는 강조 장치라 새 문법이 아니다. 일정은 모집 중일 때만 네이비로.</p>
+  <div class="phone"><div class="phone-tag">375px</div><div class="ch-list vC" data-v="C"></div></div>
+
+  <h2 class="sec">D안 — C 문장 + B 일정 칸<span class="verdict v-rec">추천</span></h2>
+  <p class="sub">요청이 '일정<b>이나</b> 강조글자'가 아니라 사실 둘 다다 — 문장은 C처럼 세우고,
+     일정은 B의 티켓 칸으로. 색 면 없이 둘 다 해결된다.</p>
+  <div class="phone"><div class="phone-tag">375px</div><div class="ch-list vD" data-v="D"></div></div>
+
+  <p class="note"><b>마감 카드가 밋밋한 건 의도다</b> — 사진 흑백 + '다음 기수 준비 중' 한 줄이
+     '지금은 살 수 없다'를 정확히 말한다. 임팩트는 모집 중·예정 카드에 몰아준다.</p>
+</div>
+
+<script>
+/* 카드 4장 × 5안 — 상태 예시: 모집 중(보신각) / 예정(영합각) / 마감 2(스피닝·승자각) */
+var CARDS = [
+  { img:'hero-voice.webp',      no:'01', en:'Voice',  name:'보.신.각', before:'떨리는 목소리', after:'신뢰가 실리는 목소리',        state:'open',     round:'2기', dates:'7/28 ~ 8/6',  dday:'D-3' },
+  { img:'hero-expression.webp', no:'02', en:'Image',  name:'영.합.각', before:'굳은 표정',     after:'카메라 앞에서도 자연스럽게',  state:'upcoming', round:'1기', dates:'8/18 ~ 8/24' },
+  { img:'hero-spinning.webp',   no:'03', en:'Speech', name:'스.피.닝', before:'딱딱한 말투',   after:'귀에 감기는 말투',            state:'closed' },
+  { img:'hero-answer.webp',     no:'04', en:'Answer', name:'승.자.각', before:'뻔한 답변',     after:'나만 할 수 있는 답변',        state:'closed' }
+];
+function stLabel(c){
+  return c.state === 'open' ? '모집 중 · ' + c.dday
+       : c.state === 'upcoming' ? '모집 예정' : '다음 기수 준비 중';
+}
+function card(c, v){
+  var dim = c.state !== 'open' ? ' is-dim' : '';
+  var h = '<a class="ck' + dim + '" href="#" onclick="return false">'
+        + '<span class="ck-shot"><img src="../images/' + c.img + '" alt="" loading="lazy"></span>'
+        + '<span class="ck-body">'
+        + '<span class="ck-no">' + c.no + ' · ' + c.en + '</span>'
+        + '<span class="ck-name">' + c.name + '</span>';
+  if (v === 'base' || v === 'A' || v === 'B') {
+    h += '<span class="ck-line">' + c.before + ' → <em>' + c.after + '</em></span>';
+  } else { /* C·D — 뒷문장 승격 */
+    h += '<span class="ck-line">' + c.before + ' →</span>'
+       + '<span class="ck-after"><b>' + c.after + '</b></span>';
+  }
+  if (v === 'base') {
+    h += '<span class="ck-meta">' + (c.dates ? c.round + ' · 모집 ' + c.dates : '') + '</span>'
+       + '<span class="ck-st is-' + c.state + '">' + stLabel(c) + '</span>';
+  } else if (v === 'A') {
+    h += c.state === 'closed'
+      ? '<span class="ck-quiet">다음 기수 준비 중</span>'
+      : '</span><span class="ck-band is-' + c.state + '"><span class="b1">' + stLabel(c) + '</span>'
+        + '<span class="b2">' + c.round + ' · ' + c.dates + '</span>';
+  } else if (v === 'B' || v === 'D') {
+    h += '</span><span class="ck-stub"><span class="st is-' + c.state + '">' + stLabel(c) + '</span>'
+       + (c.dates ? '<span class="dates">' + c.round + ' · ' + c.dates + '</span>' : '');
+  } else if (v === 'C') {
+    h += '<span class="ck-meta' + (c.state === 'open' ? ' is-open' : '') + '">'
+       + (c.dates ? c.round + ' · 모집 ' + c.dates : '') + '</span>'
+       + '<span class="ck-st is-' + c.state + '">' + stLabel(c) + '</span>';
+  }
+  return h + '</span></a>';
+}
+document.querySelectorAll('[data-v]').forEach(function(list){
+  var v = list.getAttribute('data-v');
+  list.innerHTML = CARDS.map(function(c){ return card(c, v); }).join('');
+});
+</script>
+</body>
+</html>
