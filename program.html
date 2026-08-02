@@ -281,6 +281,12 @@
     .buy-price span { font-size: 14px; color: var(--text-muted); font-weight: 700; }
     .buy-price b { font-size: 24px; font-weight: 800; color: var(--accent-ink);
                    font-variant-numeric: tabular-nums; }
+    /* 상세 소개 · 챌린지와의 자리 구분 — 구매 화면에만 뜬다(등록하면 사라진다) */
+    .buy-desc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-soft);
+                font-size: 14.5px; line-height: 1.75; color: var(--text); word-break: keep-all; }
+    .buy-ladder { margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+                  background: var(--action-tint, #EEF2F9); font-size: 13.5px; line-height: 1.7;
+                  color: var(--accent-ink); word-break: keep-all; }
 
     .loading { padding: 40px 0; text-align: center; color: var(--text-dim); font-size: 14px; }
     .hidden { display: none !important; }
@@ -1199,8 +1205,22 @@
         // 미등록 = 구매 화면. 체험판·무료 등록은 없다(2026-07-30 오너 "바로 유료").
         var p = VIEW.program;
         var buyable = typeof p.price === 'number' && p.price > 0;
+        /* 상세 소개(answer_programs.description · admin '상세 소개' 칸) — 없으면 안 그린다.
+           ⚠️ 이 칸이 비면 구매 화면이 제목·일수·가격 네 줄이라 살 이유가 안 보인다(2026-08-02).
+              줄바꿈은 살리되 태그는 이스케이프 — 관리자 입력이라도 원문 그대로 넣지 않는다. */
+        var descHtml = p.description
+          ? '<div class="buy-desc">' + esc(p.description).replace(/\n/g, '<br>') + '</div>' : '';
+        /* 챌린지(승.자.각)와의 자리 구분 — 두 상품이 "하루 하나씩 답변 완성"이라는 같은 약속을
+           하고 있어 무엇이 다른지 학생이 알 수 없었다(2026-08-02 오너 확정: 단계로 나눈다).
+           승.자.각 = 공통 필수 10답변·2주·코치 / 이 프로그램 = 항공사별 실전 기출·상시. */
+        var ladder = '<div class="buy-ladder">'
+          + '<b>승.자.각 챌린지를 먼저 들었다면</b> 이 프로그램이 그다음 단계예요. '
+          + '챌린지는 <b>모든 항공사에 통하는 필수 답변</b>을 2주 동안 코치와 만들고, '
+          + '여기서는 <b>지원할 항공사의 실전 기출</b>을 하루 한 개씩 내 경험으로 채웁니다.'
+          + '</div>';
         $('stage').innerHTML = '<div class="blk"><div class="blk-t">' + esc(p.title) + '</div>' +
           '<div class="blk-s">' + esc(p.subtitle || '') + '<br>총 <b>' + p.total_days + '일</b> · 하루 한 문제 · 내 경험으로 쓰고, 근거 있게 다듬어요.</div>' +
+          descHtml + ladder +
           (buyable
             ? '<div class="buy-price"><span>이용권</span><b>' + Number(p.price).toLocaleString() + '원</b></div>' +
               '<button class="cta" id="btnBuy">카드·간편결제로 시작하기</button>' +

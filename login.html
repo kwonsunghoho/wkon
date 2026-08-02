@@ -245,10 +245,19 @@
       return safeReturnTo(v);
     }
 
+    /* 가입 축하 크레딧 15 (2026-08-02 오너 확정 · migration 20260802100000).
+       ⚠️ RPC 가 멱등이라 로그인마다 불러도 회원당 1회만 들어간다 — 호출부에서 조건을
+          따지지 않는다(따지기 시작하면 '동의는 했는데 못 받은 사람'이 생긴다).
+       ⚠️ 마이그레이션 미적용이면 조용히 넘어간다(로그인이 멈추면 안 된다). */
+    async function grantSignupBonus() {
+      try { await MONC.sb.rpc('grant_signup_credit'); } catch (e) {}
+    }
+
     // 역할에 따라 알맞은 페이지로 보냄 — returnTo(가려던 화면)가 있으면 그쪽이 우선
     async function routeByRole() {
       const profile = await MONC.getMyProfile();
       if (!profile) return; // 프로필이 아직 없으면(드묾) 그대로 로그인 화면 유지
+      await grantSignupBonus();   // 동의를 마친 회원만 서버가 지급한다(미동의는 RPC 가 거른다)
       const rt = takeReturnTo();
       if (profile.role === 'admin') { window.location.replace(rt || 'admin.html'); return; }
       // 전화번호 미입력 = 온보딩(프로필 완성) 미완료 → 온보딩으로. 한 번 건너뛰면(monc_onboard_done) 다시 강제 안 함.
