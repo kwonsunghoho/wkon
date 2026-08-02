@@ -382,6 +382,12 @@
     /* 기수 줄 — 배정이 이 화면의 주 작업이라 목록에서 바로 보여야 한다(2026-08-02 5차) */
     .mitem .mc { font-size: 12px; font-weight: 700; color: var(--accent-ink); margin-top: 2px; }
     .mitem .mc .mc-none { color: var(--text-dim); font-weight: 600; }
+    /* 상태 배지(2026-08-03) — 기수 줄 옆에 붙는다. 값만 남기지 않고 뜻을 글자로 적는다. */
+    .mitem .mc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .mb { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+          border: 1px solid var(--border-strong); color: var(--text-muted); background: #fff; }
+    .mb-warn { color: #A33D14; border-color: rgba(163,61,20,.45); }
+    .mb-ghost { color: #fff; background: var(--text-dim); border-color: var(--text-dim); }
     .wl-tel { display: inline-flex; align-items: center; font-weight: 600; color: var(--action-dark); }
     .mitem .madm { font-size: 12px; color: var(--action); font-weight: 700; }
     .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
@@ -748,10 +754,34 @@
   <div class="layout" id="layout" style="display:none;">
     <aside class="side">
       <h2>회원 (<span id="mCount">0</span>)</h2>
-      <input class="search" id="search" placeholder="이름·이메일 검색" />
+      <input class="search" id="search" placeholder="이름·이메일·전화 검색" />
+      <!-- 상태 필터(2026-08-03) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip).
+           ⚠️ 구 '미배정만' 체크박스를 이 줄의 '기수 미배정' 칩이 대신한다. 두 벌로 두지 말 것. -->
+      <div class="apq-filter">
+        <span class="apq-flabel">회원 상태</span>
+        <div class="af-row" id="mFilter">
+          <button type="button" class="af-chip on" data-mf="all">전체</button>
+          <button type="button" class="af-chip" data-mf="nophone">가입 미완료</button>
+          <button type="button" class="af-chip" data-mf="badphone">번호 확인 필요</button>
+          <button type="button" class="af-chip" data-mf="nocohort">기수 미배정</button>
+          <button type="button" class="af-chip" data-mf="active">신청 있음</button>
+          <button type="button" class="af-chip" data-mf="ghost">흔적 없음</button>
+        </div>
+      </div>
+      <!-- '흔적 없음' 이 무엇인지 · 지울 때 무엇을 알아야 하는지 -->
+      <details class="adm-help" id="mGhostHelp">
+        <summary><b>흔적 없는 계정</b> <span class="adm-help-v" id="mGhostCount">–</span></summary>
+        <div class="adm-help-body">
+          <p><b>번호 없음 + 신청 없음 + 크레딧 사용 없음 + 가입 30일 지남</b> 인 계정입니다.
+             로그인은 했지만 이름·번호를 넣는 화면에서 나간 사람이라, 연락할 방법이 없습니다.</p>
+          <p>⚠️ <b>여기서 지우지 마세요.</b> 회원 행만 지우면 로그인 계정이 남아, 그 사람이 다시 로그인해도
+             프로필이 다시 만들어지지 않습니다(회원 행은 첫 로그인 때 한 번만 생깁니다).
+             정말 지우시려면 <b>Supabase 콘솔 → Authentication → Users</b> 에서 계정을 지우셔야 하고,
+             그러면 크레딧 기록·저장한 답변까지 같이 사라집니다.</p>
+        </div>
+      </details>
       <div class="bulk-bar">
         <label><input type="checkbox" id="selAll"> 전체</label>
-        <label><input type="checkbox" id="unassignedOnly"> 미배정만</label>
         <select id="bulkCohort"><option value="">기수 선택…</option></select>
         <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
         <span class="bulk-count" id="selCount"></span>
@@ -1497,6 +1527,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 회원 번호 상태 판정에 쓴다 — 가입·신청 창구가 쓰는 것과 **같은 규칙**이어야 한다(2026-08-03) -->
+  <script src="phone-check.js"></script>
   <script src="sojae-common.js"></script>
   <script src="lecture-common.js"></script>
   <!-- 녹음 미리듣기 동시 재생 차단(전역) -->
@@ -1593,14 +1625,78 @@
       renderMemberList();
     }
 
+    /* ══ 회원 상태(2026-08-03 · 오너 "번호 없는 사람·이상한 사람을 갈라 놓자") ══
+       ⚠️ 번호 판정은 **가입·신청 창구와 같은 규칙**(phone-check.js)을 쓴다. 여기서 정규식을
+          따로 만들면 "가입은 통과했는데 admin 은 이상하다고 하는" 번호가 생긴다.
+       ⚠️ '흔적 없음'은 지워도 되는지 판단하는 값이라 **보수적으로** 센다 — 하나라도 흔적이
+          있으면 흔적 있음이다. 크레딧 원장을 아직 못 읽었으면(마이그레이션 미적용 등)
+          아무도 '흔적 없음'으로 치지 않는다. 모르는 것을 '없다'로 말하지 않는다(원칙 11). */
+    const GHOST_DAYS = 30;
+    /* ⚠️ 신청 건수를 회원마다 _apps 를 훑어서 세면 3,000 × 1,500 = 450만 번이라
+       렌더 한 번에 **2.3초**가 걸린다(실측). 검색은 글자마다 렌더하므로 그대로는 못 쓴다.
+       렌더를 시작할 때 색인을 딱 한 번 만들고 조회만 한다. */
+    function buildAppIndex() {
+      if (!_appsLoaded) return null;
+      const byMember = new Map(), byPhone = new Map();
+      for (const a of _apps) {
+        if (a.member_id) { byMember.set(a.member_id, (byMember.get(a.member_id) || 0) + 1); continue; }
+        const d = (a.phone || '').replace(/\D/g, '');
+        if (d) byPhone.set(d, (byPhone.get(d) || 0) + 1);
+      }
+      return { byMember, byPhone };
+    }
+    function memberFlags(m, idx) {
+      const digits = (m.phone || '').replace(/\D/g, '');
+      const noPhone = !digits;
+      const badPhone = !noPhone && !(window.MONC_PHONE ? MONC_PHONE.check(m.phone).ok : true);
+      // 신청 이력 — 로그인 상태로 신청(member_id) 하거나 전화가 같으면 그 사람 것으로 본다.
+      const apps = idx
+        ? (idx.byMember.get(m.id) || 0) + (digits ? (idx.byPhone.get(digits) || 0) : 0)
+        : 0;
+      const usedCredit = _credRows.length > 0 && (_credFree.get(m.id) || 0) > 0;
+      const days = m.created_at ? (Date.now() - new Date(m.created_at).getTime()) / 86400000 : 0;
+      const ghost = !!idx && _credRows.length > 0
+        && noPhone && !apps && !usedCredit && days >= GHOST_DAYS;
+      return { noPhone, badPhone, apps, ghost };
+    }
+    const M_FILTERS = {
+      all:      () => true,
+      nophone:  f => f.noPhone,
+      badphone: f => f.badPhone,
+      nocohort: (f, m) => !m.cohort_id,
+      active:   f => f.apps > 0,
+      ghost:    f => f.ghost,
+    };
+    let _mFilter = 'all';
+    // 목록 행에 붙는 상태 배지. ⚠️ 값만 남기지 않는다 — 무엇을 뜻하는지 글자로 적는다(원칙 15).
+    function mBadges(f) {
+      let out = '';
+      if (f.noPhone)  out += '<span class="mb mb-warn">가입 미완료</span>';
+      if (f.badPhone) out += '<span class="mb mb-warn">번호 확인 필요</span>';
+      if (f.apps)     out += '<span class="mb">신청 ' + f.apps + '건</span>';
+      if (f.ghost)    out += '<span class="mb mb-ghost">흔적 없음</span>';
+      return out;
+    }
+
     function renderMemberList() {
       const q = document.getElementById('search').value.trim().toLowerCase();
-      const unassignedOnly = document.getElementById('unassignedOnly').checked;
+      const qd = q.replace(/\D/g, '');
+      const pass = M_FILTERS[_mFilter] || M_FILTERS.all;
+      const appIdx = buildAppIndex();
+      const flagOf = new Map();
       const list = members.filter(m => {
-        if (unassignedOnly && m.cohort_id) return false;
+        const f = memberFlags(m, appIdx); flagOf.set(m.id, f);
+        if (!pass(f, m)) return false;
         if (!q) return true;
-        return (m.name && m.name.toLowerCase().includes(q)) || (m.email && m.email.toLowerCase().includes(q));
+        return (m.name && m.name.toLowerCase().includes(q))
+          || (m.email && m.email.toLowerCase().includes(q))
+          || (qd && (m.phone || '').replace(/\D/g, '').includes(qd));
       });
+      // '흔적 없는 계정'은 필터와 무관하게 늘 전체 기준으로 센다(접이 머리에 붙는 숫자다).
+      const ghostN = members.reduce((n, m) => n + ((flagOf.get(m.id) || memberFlags(m, appIdx)).ghost ? 1 : 0), 0);
+      const gc = document.getElementById('mGhostCount');
+      if (gc) gc.textContent = (_appsLoaded && _credRows.length > 0)
+        ? ghostN.toLocaleString() + '명' : '확인 중';
       visibleIds = list.map(m => m.id);
       document.getElementById('mCount').textContent = members.length.toLocaleString();
       /* ⚠️ 화면에는 한 번에 M_PAGE 명만 그린다(2026-08-03).
@@ -1620,7 +1716,7 @@
             <div class="me">${esc(m.email || '이메일 없음')}</div>
             <div class="mc">${m.cohort_id
               ? esc(cohortName(m.cohort_id) || '기수 확인 중')
-              : '<span class="mc-none">기수 미배정</span>'}</div>
+              : '<span class="mc-none">기수 미배정</span>'}${mBadges(flagOf.get(m.id) || memberFlags(m, appIdx))}</div>
           </div>
         </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
       /* 몇 명 중 몇 명을 보고 있는지 + 더 보기. ⚠️ '전체 선택'은 화면에 보이는 것이 아니라
@@ -1974,7 +2070,12 @@
     // ⚠️ 조건이 바뀌면 표시 수를 처음으로 되돌린다 — 안 그러면 검색 결과 3명인데 '더 보기'가 남는다.
     const mReset = () => { _mShown = M_PAGE; renderMemberList(); };
     document.getElementById('search').addEventListener('input', mReset);
-    document.getElementById('unassignedOnly').addEventListener('change', mReset);
+    document.getElementById('mFilter').addEventListener('click', e => {
+      const b = e.target.closest('.af-chip'); if (!b) return;
+      _mFilter = b.dataset.mf;
+      document.querySelectorAll('#mFilter .af-chip').forEach(x => x.classList.toggle('on', x === b));
+      mReset();
+    });
     document.getElementById('selAll').addEventListener('change', e => {
       if (e.target.checked) visibleIds.forEach(id => selected.add(id));
       else visibleIds.forEach(id => selected.delete(id));
@@ -4498,9 +4599,10 @@
     let _credShown = M_PAGE;   // ⚠️ renderCredList 보다 위에 둔다 — 아래에 두면 초기 로드가 TDZ 로 터진다
 
     async function loadCredits() {
-      const { data, error } = await sb().from('credit_ledger')
+      // ⚠️ 원장은 무료 사용 한 번마다 한 줄이라 가장 빨리 1000행을 넘긴다 — 잘리면 잔액이 틀린다.
+      const { data, error } = await fetchAll(() => sb().from('credit_ledger')
         .select('member_id, tool, delta, reason, ref, created_at')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }));
       if (error) {
         // 마이그레이션 미적용 — 조용히 죽지 말고 무엇을 실행해야 하는지 알려준다
         document.getElementById('credList').innerHTML =
@@ -4520,6 +4622,9 @@
       sel.innerHTML = '<option value="">기수 선택…</option>'
         + cohorts.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
       renderCredList(); renderCredLog();
+      /* ⚠️ 회원 목록은 초기화 순서상 신청·크레딧보다 **먼저** 그려진다. 그때는 '흔적 없음'을
+         판정할 근거가 없어 '확인 중'으로 둔다 — 근거가 도착한 지금 다시 그린다. */
+      if (members.length) renderMemberList();
     }
 
     function renderCredList() {
