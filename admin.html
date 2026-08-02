@@ -15,12 +15,20 @@
   <link rel="stylesheet" href="tokens.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* 폼 컨트롤은 본문 글꼴을 물려받는다 — 브라우저 기본은 시스템 글꼴이라, 개별 규칙에
+       font-family:inherit 를 빠뜨린 17곳에서 SUIT 와 시스템 글꼴이 한 화면에 섞였다(2026-08-02 5차). */
+    button, input, select, textarea { font-family: inherit; }
+    /* ⚠️ [hidden] 을 이기는 display 선언이 자꾸 생긴다 — .round-editing·#lrEditBar 는 2026-08-01 에
+       짝 규칙으로 하나씩 막았지만, 같은 사고가 #qfRaw(.round-list=flex · '원문 접기'가 안 접힘)와
+       #afSub(.af-row=flex · 비어 있어도 필터 아래 자리를 먹음)에서 또 났다.
+       자리마다 짝을 다는 대신 한 줄로 끝낸다 — 인라인 display 까지 이긴다. 지우지 말 것. */
+    [hidden] { display: none !important; }
     body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
            background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.55; }
     .brand-link { display: flex; align-items: center; text-decoration: none; }
     .brand-link img { height: 20px; width: auto; display: block; }
     .brand-link:hover { opacity: .7; }
-    .badge { font-size: 11.5px; font-weight: 800; color: #fff; background: var(--action);
+    .badge { font-size: 12px; font-weight: 800; color: #fff; background: var(--action);
              border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
     .logout { font-size: 13px; color: var(--text-muted); background: #fff; border: 1px solid var(--border);
               border-radius: 999px; padding: 9px 14px; min-height: 44px; cursor: pointer; white-space: nowrap; }
@@ -37,7 +45,7 @@
     .snav { background: var(--bg2); border-right: 1px solid var(--border-soft); position: sticky; top: 0;
             height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 20px 12px 16px; }
     .sn-logo { display: flex; align-items: center; gap: 8px; padding: 0 10px 12px; flex: 0 0 auto; }
-    .sn-glabel { font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--text-dim); padding: 14px 10px 6px; }
+    .sn-glabel { font-size: 12px; font-weight: 800; letter-spacing: .1em; color: var(--text-dim); padding: 14px 10px 6px; }
     .tabbtn { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left;
               padding: 11px 12px; border-radius: 12px; font-size: 14.5px; font-weight: 700; color: var(--text-muted);
               font-family: inherit; cursor: pointer; min-height: 44px; white-space: nowrap; }
@@ -152,7 +160,9 @@
     .rounds-wrap { padding: 24px; max-width: 900px; }
     .round-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
     .round-form .field label { font-size: 12px; color: var(--text-muted); }
-    .round-form input, .round-form select, .round-form textarea { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; font-family: inherit; }
+    /* ⚠️ width:100% 에서 체크박스·라디오는 뺀다 — 데스크톱에서 '공개' 체크박스가 폼 폭(772px)만큼
+       늘어나 거대한 사각형이 됐다(2026-08-02 5차). */
+    .round-form input:not([type="checkbox"]):not([type="radio"]), .round-form select, .round-form textarea { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; width: 100%; font-family: inherit; }
     .round-form textarea { resize: vertical; }
     /* ⚠️ 격자 칸은 기본 min-width 가 min-content 라 **안에 든 것이 크면 칸이 트랙을 넘친다.**
        넘친 칸은 옆 칸 위로 올라타고, 그게 오너 화면의 '박스가 튀어나오고 정렬이 안 된' 모습이다
@@ -235,14 +245,17 @@
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
     .round-item .ri-sub { font-size: 13px; color: var(--text-muted); }
-    .round-item .ri-del { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+    /* ⚠️ .round-item 자손으로만 정의하면 목록 밖에서 쓸 때 스타일이 하나도 안 먹는다
+       (자료 파일 목록·이용권 지급 회원 고르기가 브라우저 기본 회색 사각 버튼으로 나왔다 — 2026-08-02 5차).
+       행 버튼은 어디서 쓰든 같은 모양이어야 한다. */
+    .ri-del { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
     /* 행 버튼 묶음 — 목록 행의 버튼은 전부 이 클래스로 감싼다(인라인 flex 금지).
        모바일에서 본문 아래로 내리는 규칙(아래 960px 블록)이 이 클래스를 기준으로 걸린다. */
-    .round-item .ri-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-    .round-item .ri-edit { font-size: 12px; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
-    .round-item .ri-edit:hover { background: var(--action-tint); }
+    .ri-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .ri-edit { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
+    .ri-edit:hover { background: var(--action-tint); }
     .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
-    .round-editing .ri-cancel { font-size: 12px; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+    .ri-cancel { font-size: 12px; font-family: inherit; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
     /* ⚠️ hidden 짝 규칙 — display 를 직접 주는 요소는 [hidden] 이 그 규칙에 진다(작성자 CSS > UA 스타일).
        챌린지·특강·연구실 자료의 편집 바가 빈 바 + '취소' 버튼인 채 항상 떠 있던 버그(2026-08-01 실측).
        display 있는 요소에 hidden 을 쓰면 아래처럼 [hidden] 짝을 같이 둘 것. */
@@ -276,7 +289,7 @@
     .app-card .ac-sub { font-weight: 400; color: var(--text-muted); }
     /* 같은 사람이 같은 프로그램을 두 번 신청한 행 — 지울 수 있게 눈에 띄게 */
     .app-card.is-dup { border-color: var(--action); background: var(--action-tint); }
-    .app-card .ac-dup { font-size: 11px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+    .app-card .ac-dup { font-size: 12px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
     .app-card .ac-toggles { display: flex; gap: 8px; margin-top: 8px; }
     .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
     .app-card .ac-tg.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
@@ -298,7 +311,9 @@
     .rv-meta { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .rv-meta .row { display: flex; gap: 6px; align-items: center; }
     .rv-order { width: 46px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
-    .rv-rank { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; color: var(--text-muted); }
+    /* 값 옆에 이름을 붙인다(원칙 15) — 채워 넣으면 placeholder 가 사라져 '2' 만 남았다. */
+    .rv-lb { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    .rv-rank { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--text-muted); }
     .rv-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 4px 2px 16px; }
     .rv-hint b { color: var(--action); }
     .rv-qt { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
@@ -352,10 +367,19 @@
     .mitem.active { background: var(--action-tint); border-color: #f2c9b8; }
     .mitem .mn { font-weight: 600; font-size: 15px; }
     .mitem .me { font-size: 13px; color: var(--text-muted); }
+    /* 기수 줄 — 배정이 이 화면의 주 작업이라 목록에서 바로 보여야 한다(2026-08-02 5차) */
+    .mitem .mc { font-size: 12px; font-weight: 700; color: var(--accent-ink); margin-top: 2px; }
+    .mitem .mc .mc-none { color: var(--text-dim); font-weight: 600; }
+    .wl-tel { display: inline-flex; align-items: center; font-weight: 600; color: var(--action-dark); }
     .mitem .madm { font-size: 12px; color: var(--action); font-weight: 700; }
     .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
 
     .main { padding: 24px; }
+    /* ⚠️ `.empty` 는 38곳이 쓰는데 정의가 없었다(2026-08-02 5차) — 빈 목록·조회 실패 안내가
+       여백 0의 맨 글자로 붙어 로딩 문구와 구분이 안 됐다. 자리마다 인라인 style 로 때우던 것도
+       같은 원인이다. 실패는 색으로 구분한다(`.empty.err`). */
+    .empty { color: var(--text-dim); font-size: 14px; line-height: 1.7; padding: 20px 4px; }
+    .empty.err { color: #A33D14; }
     .empty-main { color: var(--text-dim); text-align: center; padding: 80px 20px; }
 
     .panel { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
@@ -418,7 +442,7 @@
     .note-adm .na-q { font-weight: 700; font-size: 14px; margin-top: 3px; }
     .note-adm .na-body { margin-top: 8px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: var(--text); border-top: 1px solid var(--border-soft); padding-top: 8px; }
     .note-adm.draft { border-left: 3px solid var(--action); }
-    .na-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
+    .na-badge { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
     .na-badge.draft { background: var(--action-tint); color: var(--action-dark); }
     .na-badge.final { background: #e7f5ec; color: #1a7f37; }
 
@@ -451,6 +475,13 @@
     .adm-help > summary::after { content: '펴기'; margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-muted); }
     .adm-help[open] > summary::after { content: '접기'; }
     .adm-help-v { font-weight: 600; color: var(--text-dim); font-size: 12px; }
+    /* 답변 프로그램 탭의 접이 머리 — 인라인 min-height:36px 로 44px 규칙을 이기고 있었고,
+       펴지는지 접히는지 알려 주는 표시도 없었다(2026-08-02 5차). .adm-help 와 같은 문법으로 맞춘다. */
+    .ap-sum { display: flex; align-items: center; gap: 8px; min-height: 44px;
+              font-size: 13px; font-weight: 800; cursor: pointer; list-style: none; }
+    .ap-sum::-webkit-details-marker { display: none; }
+    .ap-sum::after { content: '펴기'; margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    details[open] > .ap-sum::after { content: '접기'; }
     .adm-help-body { padding: 2px 14px 14px; font-size: 13px; line-height: 1.65; color: var(--text-muted); }
     .adm-help-body p + p { margin-top: 8px; }
     .adm-help-note { color: var(--text-dim); font-size: 12px; }
@@ -470,8 +501,66 @@
     /* ── 지우는 버튼은 다르게 보여야 한다(2026-08-02) ──
        연구실 자료 행은 버튼이 여섯이고 '삭제'가 '수정·이력·가격'과 똑같이 생겼다.
        모바일에서 두 줄로 접히면 오눌림이 실제로 난다. 되돌릴 수 없는 것만 이 색을 쓴다. */
-    .is-danger { color: #B3261E !important; border-color: rgba(179,38,30,.5) !important; }
+    /* ⚠️ 테두리는 반투명이 아니라 제 색으로 — .5 알파는 흰 면 위 2.47:1 이라 경계선 3:1 하한에
+       못 미쳤다(원칙 4). 이 버튼은 테두리가 유일한 식별 수단이다. */
+    .is-danger { color: #B3261E !important; border-color: #B3261E !important; }
     .is-danger:hover { background: rgba(179,38,30,.07) !important; }
+
+    /* ══ 기본기 4종(2026-08-02 5차 진단) — admin 만 빠져 있던 것들 ══
+       admin 은 nav.css 를 안 읽는다(의도). 그래서 공개 페이지가 2026-08-02 에 받은
+       포커스 링·경계선 대비가 여기만 적용되지 않았다. 실측으로 확인한 값만 적는다. */
+
+    /* ① 포커스 링 — nav.css 공통 규칙과 같은 값(원칙 14).
+       admin 은 크로미움 기본 링(1px #E59700 · 흰 배경 2.2:1)만 나오고 있었다(실측).
+       ⚠️ :focus-visible 만 건드린다 — :focus 로 하면 마우스 클릭에도 링이 남는다. */
+    a:focus-visible, button:focus-visible, input:focus-visible,
+    select:focus-visible, textarea:focus-visible, summary:focus-visible,
+    [tabindex]:not([tabindex="-1"]):focus-visible {
+      outline: 3px solid var(--action); outline-offset: 2px;
+    }
+
+    /* ①-b 본문 바로가기 — nav.css 의 것과 같은 값(admin 은 nav.css 를 안 읽어 직접 둔다).
+       평소엔 .sr-only(tokens.css)로 숨고 포커스되면 왼쪽 위에 나타난다.
+       ⚠️ :focus 에서 .sr-only 의 clip/position 을 전부 되돌려야 보인다 — 하나만 남아도
+          "포커스는 갔는데 화면엔 안 보이는" 상태가 된다. */
+    .skip-link { z-index: 200; }
+    .skip-link:focus {
+      position: fixed; top: 8px; left: 8px;
+      width: auto; height: auto; margin: 0; padding: 12px 18px;
+      clip: auto; clip-path: none; white-space: normal; overflow: visible;
+      background: var(--action); color: var(--action-ink);
+      font-size: 15px; font-weight: 800; border-radius: var(--radius-xs);
+      text-decoration: none; box-shadow: var(--shadow-lg);
+      outline: 3px solid var(--accent-dark); outline-offset: 2px;
+    }
+    #main:focus { outline: none; }
+
+    /* ② 못 누르는 버튼은 못 누르게 보여야 한다.
+       admin 에는 :disabled 규칙이 하나도 없어서 회원 '배정' 버튼이 disabled 인 채로
+       채움 네이비 CTA 그대로 떠 있었다(눌러도 아무 일이 안 난다 — 원칙 11).
+       ⚠️ opacity 로 흐리지 않는다 — 글씨 대비가 무너진다(원칙 4). 흰 면 + 흐린 글씨로 간다. */
+    .smain button:disabled, .smain .btn:disabled, .side button:disabled {
+      background: #fff !important; color: var(--text-dim) !important;
+      border: 1px solid var(--border-strong) !important;
+      box-shadow: none !important; cursor: not-allowed;
+    }
+
+    /* ③ 체크박스·라디오도 우리 색으로 — 기본값은 브라우저 파랑(#0d6efd 계열)이라
+       네이비 팔레트 안에서 이것만 튄다. */
+    .smain input[type="checkbox"], .smain input[type="radio"],
+    .side input[type="checkbox"], .side input[type="radio"] { accent-color: var(--action); }
+
+    /* ④ 경계선이 유일한 식별 수단인 조작요소는 --border-strong (원칙 4 · WCAG 1.4.11).
+       admin 의 입력칸·고스트 버튼·칩 384곳이 --border(흰 면 위 1.38:1)를 쓰고 있었다(실측).
+       ⚠️ --border 자체를 올리지 말 것 — 카드·구분선까지 진해져 화면이 표처럼 보인다.
+       ⚠️ !important 가 필요하다 — 입력칸 30곳이 style="border:1px solid var(--border)" 인라인이다.
+       ⚠️ .is-danger 는 제외한다(빨간 테두리가 이 규칙에 먹히면 삭제 버튼이 도로 평범해진다). */
+    .smain :is(input, select, textarea, .btn, .btn-ghost, .af-chip, .ri-edit, .ri-del, .ri-cancel,
+               .ac-tg, .ac-del, .rv-btn, .rv-kf, .rv-order, .rv-qt, .rv-ch, .rv-co, .rv-nm, .rv-kind,
+               .ap-st, .tb-more, .lf-slot-add, .search):not(.is-danger),
+    .side :is(input, select, .btn-ghost):not(.is-danger) {
+      border-color: var(--border-strong) !important;
+    }
 
     /* ── 모바일 공통 보정(≤960px · 2026-08-01 모바일 UX 정비) ──
        ① 입력 활자 16px — iOS 사파리는 16px 미만 입력을 누르면 화면을 강제 확대하고 되돌리지 않는다.
@@ -507,11 +596,25 @@
       /* 체크박스는 WCAG 2.5.8 AA 하한이 24px 다 — 13~20px 로 흩어져 있었다(#credHasOnly 13px). */
       .smain input[type="checkbox"], .smain input[type="radio"] { width: 24px; height: 24px; }
       .mitem { padding: 12px 10px; }
+      /* 회원 목록의 내부 스크롤(60vh)을 모바일에선 푼다 — 페이지 스크롤 안에 또 스크롤이 있으면
+         손가락이 어느 쪽을 움직이는지 알 수 없다. 목록이 길어지면 위 검색칸으로 좁힌다.
+         ⚠️ 회원이 수백 명으로 늘면 이 줄을 다시 검토할 것(지금은 소수라 페이지가 길어져도 낫다). */
+      .mlist { max-height: none; overflow-y: visible; }
       /* 목록 행: 좁은 화면에선 2열(본문+버튼)을 1열로 — 버튼 6개짜리 행(연구실 자료)이
          본문 열을 눌러 제목이 한 글자씩 세로로 꺾인 실사고(2026-08-01). 버튼 줄은
          본문 아래 왼쪽 정렬로 내려온다. 상태 칩(td-paystat 등)도 같이 내려간다. */
       .round-item { grid-template-columns: 1fr; }
-      .round-item .ri-actions { justify-content: flex-start; }
+      .ri-actions { justify-content: flex-start; }
+      /* 인접 표적 사이 8px(원칙 2 — 크기만 지키면 촘촘한 버튼 줄이 통과한다).
+         실측 6px 쌍이 151개였다. 행 버튼은 '수정' 옆이 '삭제'라 오눌림의 대가가 크다. */
+      .af-row, .ri-actions, #rvKindFilter, .ap-subtabs { gap: 8px; }
+      /* '지금 처리'의 다음 행동 링크가 16.5px 밖에 안 됐다 — 브리핑에서 유일하게 누르는 자리다. */
+      .tb-link { display: inline-flex; align-items: center; min-height: 44px; }
+      /* 오픈 알림 명단의 전화번호는 눌러서 바로 거는 자리인데 19px 이었다(WCAG 하한 24px 미만). */
+      .wl-tel { min-height: 44px; padding: 0 4px; }
+      /* 크레딧 폼의 저장 버튼이 마지막 입력칸 옆 칸에 끼어 그 칸만 폭이 줄었다(159 vs 121/130px).
+         .round-form 의 submit 규칙과 같은 처방 — 마지막 행동은 한 줄을 쓴다. */
+      .cf-save { flex-basis: 100%; }
     }
     @media (prefers-reduced-motion: reduce) {
       #loading::before { animation: none; }
@@ -534,6 +637,8 @@
     <symbol id="i-star" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/></g></symbol>
     <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h12v16H7a2 2 0 0 0-2 2z"/><path d="M5 19a2 2 0 0 1 2-2h12"/></g></symbol>
     <symbol id="i-q" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.4 9.6a2.6 2.6 0 1 1 3.7 2.3c-.8.4-1.1 1-1.1 1.8v.2"/><path d="M12 17h.01"/></g></symbol>
+    <!-- 연구실 자료 — '감점 사전'과 같은 #i-book 을 쓰고 있어 메뉴에서 두 항목이 구분되지 않았다(2026-08-02 5차) -->
+    <symbol id="i-folder" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l2 2.4h7.4a2 2 0 0 1 2 2v8.1a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 11.5h17"/></g></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"/></g></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></g></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
@@ -546,6 +651,10 @@
        그룹 구성은 2026-07-30 2단 네비 확정안 그대로: 운영(매일 보는 것)/상품/콘텐츠.
        ⚠️ 탭을 추가하면 어느 그룹 라벨 아래인지부터 정할 것 — 맨 뒤에 이어붙이면 개편 전으로 돌아간다.
        ⚠️ 패널 전환은 .tabbtn[data-tab] ↔ #panel-* 규약 그대로다(initTabs·activateTab). -->
+  <!-- 본문 바로가기 — 공개 페이지는 nav.js 가 심어 주지만 admin 은 nav 를 안 쓴다(의도).
+       ⚠️ 착지점 #main 에 tabindex="-1" 이 필요하다 — 없으면 스크롤만 되고 포커스가 안 옮겨가
+          다음 Tab 이 다시 사이드바로 돌아간다. -->
+  <a class="skip-link sr-only" href="#main">본문 바로가기</a>
   <div class="shell">
   <!-- 모바일 상단 바 — body.authed 일 때만, ≤960px 에서만 보인다. 제목은 initTabs 가 동기화 -->
   <div class="mtop" id="mtop">
@@ -576,13 +685,13 @@
     <button class="tabbtn" data-tab="reviews"><svg aria-hidden="true" class="ic"><use href="#i-star"/></svg>후기 관리</button>
     <button class="tabbtn" data-tab="terms"><svg aria-hidden="true" class="ic"><use href="#i-book"/></svg>감점 사전</button>
     <button class="tabbtn" data-tab="questions"><svg aria-hidden="true" class="ic"><use href="#i-q"/></svg>소재 문제</button>
-    <button class="tabbtn" data-tab="labfiles"><svg aria-hidden="true" class="ic"><use href="#i-book"/></svg>연구실 자료</button>
+    <button class="tabbtn" data-tab="labfiles"><svg aria-hidden="true" class="ic"><use href="#i-folder"/></svg>연구실 자료</button>
     <div class="sn-me">
       <span class="sn-who" id="snWho">관리자</span>
       <button class="logout" id="logoutBtn">로그아웃</button>
     </div>
   </aside>
-  <div class="smain">
+  <div class="smain" id="main" tabindex="-1">
 
   <div class="loading" id="loading">확인 중…</div>
 
@@ -607,8 +716,8 @@
           <div class="tb-kk">숫자로 보는 오늘</div>
           <button class="tb-stat" data-goto="apps" id="tdTodayApps"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>오늘 신청</span><em>챌린지·특강 합계</em></span></button>
           <button class="tb-stat" data-goto="members" id="tdNewMembers"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오늘 새 회원</span><em>가입 기준</em></span></button>
-          <button class="tb-stat" data-goto="apps" id="tdUnpaid"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>입금 확인 필요</span><em>계좌이체 미입금</em></span></button>
-          <button class="tb-stat" data-goto="waitlist" id="tdWaitlist"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오픈 알림 연락 전</span><em>연락하고 완료 체크</em></span></button>
+          <button class="tb-stat" data-goto="apps" data-focus="unpaid" id="tdUnpaid"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>입금 확인 필요</span><em>계좌이체 미입금</em></span></button>
+          <button class="tb-stat" data-goto="waitlist" data-focus="waiting" id="tdWaitlist"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오픈 알림 연락 전</span><em>연락하고 완료 체크</em></span></button>
           <a class="tb-stat" href="review-desk.html" id="tdReview"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>검수 대기</span><em>답변 프로그램 → 검수 데스크</em></span></a>
         </div>
       </div>
@@ -665,10 +774,10 @@
       <form class="round-form" id="roundForm">
         <div class="field"><label>챌린지</label>
           <select id="rfChallenge">
-            <option value="voice">보이스</option>
-            <option value="expression">표현력</option>
+            <option value="voice">보신각(보이스)</option>
+            <option value="expression">영합각(표현력)</option>
             <option value="spinning">스피닝</option>
-            <option value="answer">답변</option>
+            <option value="answer">승자각(답변)</option>
           </select></div>
         <div class="field"><label>기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
         <div class="field field-date"><label>모집 시작</label><input id="rfStart" type="date"></div>
@@ -759,17 +868,29 @@
         <input type="text" class="search" id="appSearch" placeholder="이름·전화·챌린지 검색">
         <span class="apps-count" id="appCount"></span>
         <button class="btn btn-ghost btn-sm" id="appRefresh">새로고침</button>
-        <button class="btn btn-action btn-sm" id="appCsv">CSV</button>
+        <!-- CSV 는 보조 행동이다 — 채움(btn-action)으로 두면 이 화면에서 가장 무거운 버튼이 되고,
+             정작 매일 하는 일(입금 확인)은 카드 안 알약이라 무게가 뒤집힌다(원칙 6 · 2026-08-02 5차). -->
+        <button class="btn btn-ghost btn-sm" id="appCsv">CSV</button>
       </div>
       <!-- 종류 필터(전체/챌린지/특강) + 선택한 종류 안에서 세부 필터.
-           세부 옵션은 실제 신청이 있는 것만 뜬다(신청자 0명인 특강은 안 뜸). -->
+           세부 옵션은 실제 신청이 있는 것만 뜬다(신청자 0명인 특강은 안 뜸).
+           ⚠️ 칩 줄이 둘 이상이면 무엇을 고르는 줄인지 라벨을 붙인다(.apq-flabel — 기출 은행과 같은 문법). -->
       <div class="apps-filter">
+        <span class="apq-flabel">종류</span>
         <div class="af-row" id="afKind">
           <button type="button" class="af-chip on" data-kind="all">전체</button>
           <button type="button" class="af-chip" data-kind="challenge">챌린지</button>
           <button type="button" class="af-chip" data-kind="lecture">특강</button>
         </div>
         <div class="af-row af-sub" id="afSub" hidden></div>
+        <!-- 입금 필터 — '오늘'의 [입금 확인 필요]가 이 화면으로 보내면서 같이 켠다.
+             ⚠️ '미입금' 판정식은 loadToday 의 unpaid 와 **같아야 한다**(isLiveApplication && !appPaid).
+                한쪽만 고치면 카드 숫자와 목록 건수가 어긋나 화면이 거짓말을 한다. -->
+        <span class="apq-flabel">입금</span>
+        <div class="af-row" id="afPay">
+          <button type="button" class="af-chip on" data-pay="all">전체</button>
+          <button type="button" class="af-chip" data-pay="unpaid">미입금만</button>
+        </div>
       </div>
       <div id="appsBody"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -789,10 +910,10 @@
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
         <select id="wlFilter" style="padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
           <option value="">전체 챌린지</option>
-          <option value="voice">보이스(보신각)</option>
-          <option value="expression">표현력(영합각)</option>
+          <option value="voice">보신각(보이스)</option>
+          <option value="expression">영합각(표현력)</option>
           <option value="spinning">스피닝</option>
-          <option value="answer">답변(승자각)</option>
+          <option value="answer">승자각(답변)</option>
         </select>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
           <input type="checkbox" id="wlHideDone"> 연락 완료 숨기기
@@ -906,24 +1027,24 @@
           단가는 도구를 <b>1회 쓸 때 빠지는 크레딧</b>입니다. 저장하면 바로 반영돼요.
         </div>
         <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;">
-          <div class="field" style="flex:1;min-width:130px;"><label>하루 무료 크레딧</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>하루 무료 크레딧</label>
             <input id="cfDaily" type="number" min="0" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <div class="field" style="flex:1;min-width:110px;"><label>소재 발굴(다듬기)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>소재 발굴(다듬기)</label>
             <input id="cfSojae" type="number" min="1" step="1" placeholder="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <div class="field" style="flex:1;min-width:110px;"><label>AI 킬러(검사)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>AI 킬러(검사)</label>
             <input id="cfKiller" type="number" min="1" step="1" placeholder="3" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <div class="field" style="flex:1;min-width:110px;"><label>첨삭</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>첨삭</label>
             <input id="cfPolish" type="number" min="1" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
           <!-- 리허설(모의면접)은 아직 미출시 — 단가만 미리 잠가 둔 상태(2026-07-30, 15).
                ⚠️ 하루 무료보다 작게 내리면 출시하는 날부터 매일 공짜가 된다(첨삭과 같은 함정). -->
-          <div class="field" style="flex:1;min-width:110px;"><label>모의면접(미출시)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>모의면접(미출시)</label>
             <input id="cfRehearsal" type="number" min="1" step="1" placeholder="15" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
           <!-- 가입 축하 크레딧 — 회원당 1회(migration 20260802100000). 0 이면 지급 중단.
                ⚠️ 하루 무료와 성격이 다르다: 이건 인당 1회라 비용 상한이 고정이고,
                   하루 무료는 매일 반복된다. 후하게 풀 땐 여기를 올릴 것. -->
-          <div class="field" style="flex:1;min-width:130px;"><label>가입 축하(1회)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>가입 축하(1회)</label>
             <input id="cfSignup" type="number" min="0" step="1" placeholder="15" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <button class="btn btn-action" id="cfSave" type="button">저장</button>
+          <button class="btn btn-action cf-save" id="cfSave" type="button">저장</button>
         </div>
         <div id="cfHint" style="font-size:13px;color:var(--text-muted);margin-top:10px;line-height:1.6;"></div>
       </div>
@@ -931,11 +1052,11 @@
       <!-- 충전 상품 — site_config.credit_packs. ⚠️ verify-payment 가 결제 금액을 검증할 때
            같은 값을 읽는다. 여기서 바꾸면 즉시 반영(함수 재배포 불필요). -->
       <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
-        <div class="field" style="flex:1;min-width:110px;"><label>충전 횟수</label>
+        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>충전 횟수</label>
           <input id="cpCount" type="number" min="1" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-        <div class="field" style="flex:1;min-width:110px;"><label>가격(원)</label>
+        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>가격(원)</label>
           <input id="cpPrice" type="number" min="0" step="100" placeholder="9900" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-        <button class="btn btn-action" id="cpSave" type="button">충전 상품 저장</button>
+        <button class="btn btn-action cf-save" id="cpSave" type="button">충전 상품 저장</button>
         <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">AI킬러 충전 화면과 <b>결제 금액 검증</b>에 함께 쓰여요. 저장하면 바로 반영됩니다.</span>
       </div>
 
@@ -1237,7 +1358,7 @@
             <select id="apqConf"><option value="verified">검증된 기출</option>
               <option value="reported" selected>제보 기출</option><option value="estimated">예상 문항</option></select></div>
         </div>
-        <details style="margin-top:10px;"><summary style="font-size:13px;font-weight:800;cursor:pointer;min-height:36px;display:flex;align-items:center;">고급(의도·평가역량·꼬리질문…)</summary>
+        <details style="margin-top:10px;"><summary class="ap-sum">고급(의도·평가역량·꼬리질문…)</summary>
           <div style="display:grid;gap:10px;margin-top:8px;">
             <div class="field"><label>질문 의도(학생에게 보여요)</label><input id="apqIntent"></div>
             <div class="field"><label>핵심 평가 역량(쉼표 구분)</label><input id="apqComp" placeholder="침착함, 우선순위 판단"></div>
@@ -1260,7 +1381,7 @@
           <button class="btn btn-ghost" type="button" id="apqCancel" style="display:none;">취소</button>
         </div>
       </form>
-      <details style="margin:10px 0;"><summary style="font-size:13px;font-weight:800;cursor:pointer;min-height:36px;display:flex;align-items:center;">일괄 등록(탭 구분: 질문[TAB]항공사코드[TAB]유형[TAB]의도)</summary>
+      <details style="margin:10px 0;"><summary class="ap-sum">일괄 등록(탭 구분: 질문[TAB]항공사코드[TAB]유형[TAB]의도)</summary>
         <textarea id="apqBulk" rows="4" placeholder="갈등을 조율했던 경험은?	7c	conflict	상대 관점 확인 여부"
           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
         <button class="btn btn-ghost" type="button" id="apqBulkBtn" style="margin-top:6px;">일괄 추가</button></details>
@@ -1363,9 +1484,31 @@
     let members = [], cohorts = [], currentId = null, myProfile = null;
     const selected = new Set();   // 일괄 배정용으로 체크된 회원 id
     let visibleIds = [];          // 현재 필터/검색으로 보이는 회원 id (전체선택 대상)
+    /* '오늘' 브리핑이 쓰는 세 조회의 성패. ⚠️ 실패를 기억해 두지 않으면 빈 배열과 구별이 안 되고,
+       화면이 "할 일이 없습니다"로 단정한다(원칙 11 · 2026-08-02 5차). 키는 화면에 그대로 뜬다. */
+    const _loadErr = { '신청': false, '오픈 알림': false, '회원': false };
 
     function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    /* 폼 제출 연타 방지(2026-08-02 5차) — 전에는 저장·추가 버튼을 두 번 누르면 특강·프로그램·기수·
+       문제·기출이 두 벌씩 들어갔다(되돌리려면 하나를 손으로 지워야 한다).
+       ⚠️ handler 가 async 이고 return 경로가 많아 자리마다 풀어 주면 반드시 하나를 빠뜨린다.
+          그래서 리스너를 감싸고 finally 에서만 푼다 — 실패로 빠져나가도 잠금이 남지 않는다. */
+    function guardSubmit(formId, handler) {
+      const f = document.getElementById(formId);
+      if (!f) return;
+      f.addEventListener('submit', async e => {
+        e.preventDefault();
+        if (f.dataset.busy === '1') return;
+        const btn = f.querySelector('button[type="submit"]');
+        const label = btn ? btn.textContent : '';
+        f.dataset.busy = '1';
+        if (btn) { btn.disabled = true; btn.textContent = '처리 중…'; }
+        try { await handler(e); }
+        finally { f.dataset.busy = ''; if (btn) { btn.disabled = false; btn.textContent = label; } }
+      });
+    }
 
     document.getElementById('logoutBtn').addEventListener('click', () => MONC.signOut());
 
@@ -1381,8 +1524,19 @@
       }
     }
 
+    /* ⚠️ 최근 가입이 맨 위다(2026-08-02 5차) — '오늘 새 회원 3명'을 눌러 들어갔는데
+       그 3명이 60vh 목록 맨 끝에 있으면 지표가 행동으로 이어지지 않는다.
+       ⚠️ error 를 버리지 않는다 — 조회가 막히면 목록은 '회원이 없습니다'로, 신청자 배지는
+       전원 '비회원'으로 뒤바뀐다(둘 다 사실이 아니다). */
     async function loadMembers() {
-      const { data } = await sb().from('members').select('*').order('created_at', { ascending: true });
+      const { data, error } = await sb().from('members').select('*').order('created_at', { ascending: false });
+      _loadErr['회원'] = !!error;
+      if (error) {
+        members = [];
+        document.getElementById('mlist').innerHTML =
+          '<li style="color:#A33D14;font-size:13px;padding:8px">회원 목록을 불러오지 못했습니다 — ' + esc(error.message) + '</li>';
+        return;
+      }
       members = data || [];
       renderMemberList();
     }
@@ -1397,15 +1551,28 @@
       });
       visibleIds = list.map(m => m.id);
       document.getElementById('mCount').textContent = members.length;
+      /* ⚠️ 기수를 같이 적는다(2026-08-02 5차) — 전에는 이름·이메일뿐이라 '미배정만' 을 켜기 전에는
+         누가 배정됐는지 알 수 없었다. 배정이 이 화면의 주 작업인데 판단 근거가 화면에 없었다(원칙 12).
+         ⚠️ 회원 선택은 div+click 이었다 — role·tabindex·Enter/Space 가 한 벌이다(원칙 14). */
+      const cohortName = id => (cohorts.find(c => c.id === id) || {}).name;
       document.getElementById('mlist').innerHTML = list.map(m => `
         <li class="mitem ${m.id === currentId ? 'active' : ''}" data-id="${m.id}">
-          <input type="checkbox" class="mchk" data-id="${m.id}" ${selected.has(m.id) ? 'checked' : ''}>
-          <div class="minfo" data-id="${m.id}">
+          <input type="checkbox" class="mchk" data-id="${m.id}" ${selected.has(m.id) ? 'checked' : ''}
+                 aria-label="${esc(m.name || '이름 없음')} 선택">
+          <div class="minfo" data-id="${m.id}" role="button" tabindex="0">
             <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}</div>
             <div class="me">${esc(m.email || '이메일 없음')}</div>
+            <div class="mc">${m.cohort_id
+              ? esc(cohortName(m.cohort_id) || '기수 확인 중')
+              : '<span class="mc-none">기수 미배정</span>'}</div>
           </div>
         </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
-      document.querySelectorAll('.minfo').forEach(el => el.addEventListener('click', () => selectMember(el.dataset.id)));
+      document.querySelectorAll('.minfo').forEach(el => {
+        el.addEventListener('click', () => selectMember(el.dataset.id));
+        el.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectMember(el.dataset.id); }
+        });
+      });
       document.querySelectorAll('.mchk').forEach(cb => cb.addEventListener('change', () => {
         if (cb.checked) selected.add(cb.dataset.id); else selected.delete(cb.dataset.id);
         syncBulkUI();
@@ -1761,19 +1928,63 @@
         document.getElementById('panel-' + b.dataset.tab).classList.add('active');
         b.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // 데스크톱 사이드바가 스크롤일 때 활성 항목이 보이게
         document.getElementById('mtCur').textContent = b.textContent.trim();   // 모바일 상단 바 제목 동기화(svg 는 textContent 가 비어 이름만 남는다)
+        document.querySelectorAll('.tabbtn').forEach(x => x.setAttribute('aria-current', x === b ? 'page' : 'false'));
         navSheet(false);                                             // 시트에서 골랐으면 닫는다
+        /* ⚠️ 메뉴로 들어오면 필터는 초기 상태다(2026-08-02 5차).
+           '오늘'에서 미입금만 보다가 나중에 메뉴로 신청자 현황을 다시 열면 여전히 3건만 보여
+           "신청이 왜 이것뿐이지"가 된다. activateTab 은 이 뒤에 다시 걸므로 순서상 안전하다. */
+        if (b.dataset.tab === 'apps') setAppPay('all');
+        /* ⚠️ '오늘'로 돌아오면 다시 센다(2026-08-02 5차).
+           loadToday 는 초기화 때 딱 한 번만 돌았다. 그래서 입금 3건을 다 처리하고 돌아와도
+           헤드라인·'지금 처리'가 3건 그대로 남아, 첫 화면이 이미 끝난 일을 계속 남은 일로
+           단정했다(원칙 11). 캐시(_apps·_wl·members)만 다시 읽으므로 추가 조회는 검수 count 하나뿐. */
+        if (b.dataset.tab === 'today' && _appsLoaded) loadToday();
+        /* ⚠️ 새 화면은 맨 위에서 시작한다(2026-08-02 5차).
+           전에는 스크롤 위치가 그대로여서, 연구실 자료를 아래까지 내려 보다가 메뉴에서
+           감점 사전을 고르면 그 탭의 중간부터 보였다(실측 1200px → 745px). */
+        window.scrollTo(0, 0);
       }));
     }
-    function activateTab(name) {
+    /* 탭 이동 + 그 탭에서 볼 것까지 지정한다.
+       ⚠️ '오늘'의 [입금 확인 필요 2건]이 신청자 현황으로만 보내고 끝나면, 오너는 전체 목록에서
+          그 2건을 눈으로 다시 찾아야 한다. 숫자를 눌렀으면 그 숫자의 목록이 나와야 한다. */
+    function activateTab(name, focus) {
       const btn = document.querySelector(`.tabbtn[data-tab="${name}"]`);
       if (btn) btn.click();
+      if (!focus) return;
+      if (name === 'apps' && focus === 'unpaid') setAppPay('unpaid');
+      if (name === 'waitlist' && focus === 'waiting') {
+        const cb = document.getElementById('wlHideDone');
+        if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+      }
     }
 
     // ── 모바일 네비 시트(≤960px · 2026-08-01) — 상단 바 '메뉴' → 운영/상품/콘텐츠를 한 화면에 ──
     // 시트 안 버튼은 사이드바와 같은 .tabbtn 그대로라 전환 규약(위 initTabs)이 그대로 먹는다.
+    /* ⚠️ 화면을 덮는 것은 세 가지가 한 벌이다(원칙 14) — 열 때 포커스를 안으로,
+       열린 동안 뒤를 inert 로, 닫을 때 열었던 버튼으로 되돌리기. 하나만 하면 반쪽이다.
+       전에는 셋 다 없어서 시트를 열어도 포커스가 body 에 남았고, Tab 을 누르면 시트 뒤의
+       폼으로 들어가 화면에 안 보이는 칸에 글자를 치게 됐다.
+       ⚠️ 데스크톱(>960px)에선 .snav 가 상시 사이드바라 덮개가 아니다 — 포커스를 건드리지 않는다. */
+    let _sheetOpener = null;
     function navSheet(open) {
+      const was = document.body.classList.contains('navopen');
       document.body.classList.toggle('navopen', open);
       document.getElementById('mtMenu').setAttribute('aria-expanded', String(open));
+      if (open === was) return;
+      if (!window.matchMedia('(max-width: 960px)').matches) return;
+      const behind = [document.getElementById('main'), document.getElementById('mtop')];
+      if (open) {
+        // 여는 버튼은 사실상 항상 #mtMenu 다(스크림이 mtop 을 덮어 다른 경로가 없다).
+        _sheetOpener = document.getElementById('mtMenu');
+        behind.forEach(el => el && el.setAttribute('inert', ''));
+        const first = document.querySelector('.snav .tabbtn.active') || document.getElementById('snClose');
+        if (first) first.focus();
+      } else {
+        behind.forEach(el => el && el.removeAttribute('inert'));
+        if (_sheetOpener) _sheetOpener.focus();
+        _sheetOpener = null;
+      }
     }
     document.getElementById('mtMenu').addEventListener('click', () => navSheet(!document.body.classList.contains('navopen')));
     document.getElementById('mscrim').addEventListener('click', () => navSheet(false));
@@ -1796,6 +2007,31 @@
       const isToday = iso => iso && (new Date(iso) >= today);
       document.getElementById('tbDate').textContent =
         now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
+
+      /* ⚠️ 못 받은 것을 '없다'고 말하지 않는다(원칙 11 · 2026-08-02 5차 · P1).
+         전에는 신청·오픈알림·회원 조회가 실패해도 배열이 빈 채로 남아 브리핑이
+         **"처리할 일이 없습니다. 오늘도 가볍게 시작하세요."** 로 단정했다.
+         오류처럼 보이지 않으니 오너는 재시도하지 않고 그날 입금 확인을 통째로 건너뛴다.
+         (공개 페이지에서 같은 모양의 사고가 있었다 — recruit.js 폴백 날짜로 전 챌린지 '마감'.) */
+      const failed = Object.keys(_loadErr).filter(k => _loadErr[k]);
+      if (failed.length) {
+        ['tdTodayApps', 'tdNewMembers', 'tdUnpaid', 'tdWaitlist', 'tdReview'].forEach(id => tdSet(id, '–'));
+        document.getElementById('tbHead').textContent = '오늘 현황을 불러오지 못했습니다.';
+        document.getElementById('tbLede').textContent =
+          '아래 [다시 불러오기]를 눌러 주세요. 숫자를 못 받았을 뿐이지 "할 일이 없다"는 뜻이 아닙니다.';
+        document.getElementById('tbTodoTitle').textContent = '지금 처리';
+        document.getElementById('tbTodos').innerHTML =
+          '<div class="tb-brief"><p>조회가 막혔습니다(' + esc(failed.join(', ')) + ').</p>'
+          + '<button class="tb-link" id="tbRetry" type="button">다시 불러오기 →</button></div>';
+        document.getElementById('tdRecent').innerHTML =
+          '<div class="tb-empty">신청 목록을 불러오지 못했습니다.</div>';
+        const retry = document.getElementById('tbRetry');
+        if (retry) retry.addEventListener('click', async () => {
+          retry.disabled = true; retry.textContent = '불러오는 중…';
+          await loadMembers(); await loadApplications(); await loadWaitlist(); await loadToday();
+        });
+        return;
+      }
 
       const live = _apps.filter(a => (MONC.isLiveApplication ? MONC.isLiveApplication(a) : true));
       const unpaid = live.filter(a => !appPaid(a));
@@ -1837,11 +2073,11 @@
       const todos = [];
       if (unpaid.length) {
         const oldest = unpaid[unpaid.length - 1];   // _apps 는 최신순 정렬이라 마지막이 가장 오래됨
-        todos.push({ html: `<b>${esc(oldest.name || '-')} 님${unpaid.length > 1 ? ` 외 ${unpaid.length - 1}건` : ''} 입금 확인.</b> 계좌이체 입금 내역을 확인하고 완료로 바꿔 주세요.`, go: 'apps', label: '신청자 현황 →' });
+        todos.push({ html: `<b>${esc(oldest.name || '-')} 님${unpaid.length > 1 ? ` 외 ${unpaid.length - 1}건` : ''} 입금 확인.</b> 계좌이체 입금 내역을 확인하고 완료로 바꿔 주세요.`, go: 'apps', focus: 'unpaid', label: '미입금 목록 열기 →' });
       }
       if (wl.length) {
         const oldest = [...wl].sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))[0];
-        todos.push({ html: `<b>오픈 알림 ${wl.length}명 연락.</b> ${esc((oldest && oldest.name) || '-')} 님이 가장 오래 기다렸습니다.`, go: 'waitlist', label: '명단 열기 →' });
+        todos.push({ html: `<b>오픈 알림 ${wl.length}명 연락.</b> ${esc((oldest && oldest.name) || '-')} 님이 가장 오래 기다렸습니다.`, go: 'waitlist', focus: 'waiting', label: '연락 전 명단 열기 →' });
       }
       if (review) {
         todos.push({ html: `<b>답변 검수 ${review}건.</b> 검수 데스크에 올라와 있습니다.`, href: 'review-desk.html', label: '검수 데스크 →' });
@@ -1850,7 +2086,7 @@
       document.getElementById('tbTodos').innerHTML = todos.length ? todos.map(t => `
         <div class="tb-brief"><p>${t.html}</p>${t.href
           ? `<a class="tb-link" href="${t.href}">${t.label}</a>`
-          : `<button class="tb-link" data-goto="${t.go}">${t.label}</button>`}</div>`).join('')
+          : `<button class="tb-link" data-goto="${t.go}"${t.focus ? ` data-focus="${t.focus}"` : ''}>${t.label}</button>`}</div>`).join('')
         : '<div class="tb-empty">지금 처리할 일이 없습니다. 다 비웠어요.</div>';
 
       // 최근 신청 5건 — 누르면 신청자 현황으로
@@ -1865,9 +2101,10 @@
       }).join('') : '<div class="empty" style="color:var(--text-dim);padding:12px">아직 신청이 없습니다.</div>';
     }
     // 카드·최근 신청 어디를 눌러도 해당 화면으로 (동적 목록까지 위임으로 받는다)
+    // data-focus 가 있으면 그 화면에서 볼 목록까지 좁혀 준다(미입금만 · 연락 전만).
     document.getElementById('panel-today').addEventListener('click', e => {
       const go = e.target.closest('[data-goto]');
-      if (go) activateTab(go.dataset.goto);
+      if (go) activateTab(go.dataset.goto, go.dataset.focus);
     });
 
     // 답변 프로그램 서브탭 — 절 하나만 보여준다
@@ -1878,7 +2115,11 @@
     });
 
     // ── 모집일정(challenge_rounds) CRUD ──
-    const CH_LABEL = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
+    /* 화면에 뜨는 챌린지 이름 — 학생이 보는 이름과 같아야 한다(2026-08-02 5차).
+       DB 값은 voice/expression/spinning/answer 그대로고 여기서 표시만 바꾼다.
+       ⚠️ 전에는 '보이스·표현력·답변'이라 후기 탭('보신각·영합각·승자각')·공개 페이지와 이름이 갈렸다.
+          오너가 학생 문의를 받고 어느 챌린지인지 admin 에서 다시 번역해야 했다. */
+    const CH_LABEL = { voice:'보신각', expression:'영합각', spinning:'스피닝', answer:'승자각' };
     let editingRoundId = null;   // null=추가 모드, 값=그 id 기수를 수정 중
 
     // 기존 기수를 폼에 불러와 수정 모드로. 챌린지·기수는 잠그고(바꾸면 다른 기수가 됨) 날짜만 고친다.
@@ -1938,8 +2179,8 @@
         <div class="round-item"${done ? ' style="opacity:.6"' : ''}>
           <div>
             <div class="ri-main">${esc(r.name)}
-              <a href="tel:${esc((r.phone || '').replace(/[^0-9+]/g, ''))}" style="font-weight:600;color:var(--action-dark)">${esc(r.phone)}</a>
-              ${done ? '<span style="font-size:11px;font-weight:700;color:#2E6E42;border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
+              <a class="wl-tel" href="tel:${esc((r.phone || '').replace(/[^0-9+]/g, ''))}">${esc(r.phone)}</a>
+              ${done ? '<span style="font-size:12px;font-weight:700;color:#2E6E42;border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
             </div>
             <div class="ri-sub">${esc(CH_LABEL[r.challenge] || r.challenge)} · 신청 ${when}${r.member_id ? ' · 회원' : ''}</div>
           </div>
@@ -1972,6 +2213,7 @@
       // ⚠️ select('*') — 컬럼을 나열하면 마이그레이션 미적용 환경에서 조회 전체가 400 난다.
       const { data, error } = await MONC.sb.from('challenge_waitlist')
         .select('*').order('created_at', { ascending: false });
+      _loadErr['오픈 알림'] = !!error;
       if (error) {
         // 테이블 미생성이면 '실패'가 아니라 '해야 할 일'을 알려 준다.
         // ⚠️ PostgREST 는 PGRST205 를 돌려준다(42P01 아님 — 실측 확인).
@@ -2036,7 +2278,7 @@
       }));
     }
 
-    document.getElementById('roundForm').addEventListener('submit', async e => {
+    guardSubmit('roundForm', async e => {
       e.preventDefault();
       const start   = document.getElementById('rfStart').value;
       const end     = document.getElementById('rfEnd').value;
@@ -2417,7 +2659,7 @@
       }));
     }
 
-    document.getElementById('lectureForm').addEventListener('submit', async e => {
+    guardSubmit('lectureForm', async e => {
       e.preventDefault();
       const title = lecVal('lfTitle');
       const priceRaw = lecVal('lfPrice');
@@ -2520,6 +2762,7 @@
       const body = document.getElementById('appsBody');
       const { data, error } = await MONC.sb.from('applications')
         .select('*').order('created_at', { ascending: false });
+      _loadErr['신청'] = !!error;
       if (error) { body.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       _apps = data || [];
       _appsLoaded = true;
@@ -2529,7 +2772,7 @@
     /* ── 종류 필터(전체/챌린지/특강 + 세부) ──
        특강 신청은 lecture.html 이 challenges jsonb 에 {type:'lecture', lecture_id, name} 을 넣고
        행에도 lecture_id 를 남긴다. 둘 중 하나만 있어도 특강으로 친다(구 데이터 방어). */
-    let _appKind = 'all', _appSub = '';
+    let _appKind = 'all', _appSub = '', _appPay = 'all';
 
     function appIsLecture(a) {
       if (a.lecture_id) return true;
@@ -2593,7 +2836,13 @@
       return [...map.entries()];
     }
 
+    // 입금 필터 — '오늘'의 [입금 확인 필요]와 판정식이 같아야 한다(loadToday 의 unpaid 참조).
+    function appIsUnpaid(a) {
+      return (MONC.isLiveApplication ? MONC.isLiveApplication(a) : true) && !appPaid(a);
+    }
+
     function appMatchesFilter(a) {
+      if (_appPay === 'unpaid' && !appIsUnpaid(a)) return false;
       if (_appKind === 'all') return true;
       const isLec = appIsLecture(a);
       if (_appKind === 'lecture' && !isLec) return false;
@@ -2624,9 +2873,12 @@
     // 화면에 보이는 목록 = 종류 필터 + 검색어. CSV 도 이걸 쓴다(보이는 대로 내려받게).
     function visibleApps() {
       const q = (document.getElementById('appSearch').value || '').trim().toLowerCase();
+      /* ⚠️ 전화는 숫자만 남겨 맞춘다(2026-08-02 5차) — 전에는 저장된 문자열과 하이픈까지 똑같아야
+         걸려서, 폰에서 흔한 '01098765432' 입력은 0건이 나왔다. 회원 대조는 이미 숫자만 쓴다. */
+      const qd = q.replace(/\D/g, '');
       return _apps.filter(a => appMatchesFilter(a)).filter(a => !q
         || (a.name && a.name.toLowerCase().includes(q))
-        || (a.phone && a.phone.includes(q))
+        || (a.phone && (a.phone.includes(q) || (qd && String(a.phone).replace(/\D/g, '').includes(qd))))
         || chSummary(a.challenges).toLowerCase().includes(q));
     }
 
@@ -2635,6 +2887,17 @@
       _appKind = b.dataset.kind; _appSub = '';
       document.querySelectorAll('#afKind .af-chip').forEach(x => x.classList.toggle('on', x === b));
       renderApps();
+    });
+
+    // 입금 필터. setAppPay 를 따로 둔 이유 — '오늘' 카드에서도 같은 길로 켜야 칩 표시가 같이 맞는다.
+    function setAppPay(v) {
+      _appPay = v || 'all';
+      document.querySelectorAll('#afPay .af-chip').forEach(x => x.classList.toggle('on', x.dataset.pay === _appPay));
+      if (_appsLoaded) renderApps();
+    }
+    document.getElementById('afPay').addEventListener('click', e => {
+      const b = e.target.closest('.af-chip'); if (!b) return;
+      setAppPay(b.dataset.pay);
     });
 
     function renderApps() {
@@ -2779,7 +3042,7 @@
             <div class="row"><select class="rv-kind" title="후기 종류 — 어느 목록에 실릴지 정합니다">${Object.keys(RV_KIND_LABEL).map(k => `<option value="${k}" ${(r.kind || 'challenge') === k ? 'selected' : ''}>${RV_KIND_LABEL[k]}</option>`).join('')}</select></div>
             <div class="row rv-cls" title="챌린지 후기 목록(reviews-list.html?kind=challenge) 기수·챌린지 필터에 쓰임">
               <select class="rv-ch" title="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(챌린지)'}</option>`).join('')}</select>
-              <input type="number" class="rv-co" value="${r.cohort != null ? r.cohort : ''}" placeholder="기수" min="0" title="기수(숫자). 비우면 미상">
+              <label class="rv-lb">기수<input type="number" class="rv-co" value="${r.cohort != null ? r.cohort : ''}" placeholder="?" min="0" aria-label="기수(숫자). 비우면 미상"></label>
             </div>
             <div class="row"><input type="text" class="rv-nm" value="${esc(r.reviewer_name || '')}" placeholder="이름(예: 박신우)" title="작성자 이름 — 챌린지 후기에만 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></div>
             <div class="row"><input type="text" class="rv-qt" value="${esc(r.quote || '')}" placeholder="한줄평" title="후기 카드 앞면에 뜨는 문구. 비면 스크린샷만 보입니다"></div>
@@ -2819,11 +3082,17 @@
         saveField(inp.closest('.rv-item').dataset.id, { reviewer_name: inp.value.trim() || null })));
       grid.querySelectorAll('.rv-qt').forEach(inp => inp.addEventListener('change', () =>
         saveField(inp.closest('.rv-item').dataset.id, { quote: inp.value.trim() || null })));
+      /* ⚠️ 노출/숨김도 patchRow 로 간다(2026-08-02 5차) — 전에는 loadReviewsAdmin() 으로 통째로
+         다시 그려서 후기 100건을 정리하다 한 건을 숨길 때마다 스크롤이 맨 위로 튀었다.
+         바로 위 종류·챌린지 변경은 이미 patchRow 를 쓰고 있었다(같은 이유). */
       grid.querySelectorAll('.rv-vis').forEach(b => b.addEventListener('click', async () => {
         const id = b.closest('.rv-item').dataset.id;
         const cur = b.classList.contains('on');
         const { error } = await MONC.sb.from('reviews').update({ visible: !cur }).eq('id', id);
-        if (error) { alert('실패: ' + error.message); return; } loadReviewsAdmin();
+        if (error) { alert('실패: ' + error.message); return; }
+        b.classList.toggle('on', !cur);
+        b.textContent = !cur ? '노출' : '숨김';
+        patchRow(id, { visible: !cur });
       }));
       grid.querySelectorAll('.rv-order').forEach(inp => inp.addEventListener('change', async () => {
         const id = inp.closest('.rv-item').dataset.id;
@@ -3140,7 +3409,7 @@
       }));
     }
 
-    document.getElementById('questionForm').addEventListener('submit', async e => {
+    guardSubmit('questionForm', async e => {
       e.preventDefault();
       const content = document.getElementById('qfContent').value.trim();
       if (!content) { alert('문제 내용을 입력하세요.'); return; }
@@ -3252,7 +3521,7 @@
       }));
     }
 
-    document.getElementById('termForm').addEventListener('submit', async e => {
+    guardSubmit('termForm', async e => {
       e.preventDefault();
       const term = document.getElementById('tfTerm').value.trim();
       if (!term) { alert('표현을 입력하세요.'); return; }
@@ -3885,7 +4154,7 @@
       return null;
     }
 
-    document.getElementById('labForm').addEventListener('submit', async (e) => {
+    guardSubmit('labForm', async (e) => {
       e.preventDefault();
       /* ⚠️ 입력칸은 '폼 안에서' 찾는다 — getElementById 는 문서 전체에서 첫 요소를 잡아,
          다른 탭이 같은 id 를 쓰면 엉뚱한(빈) 칸을 읽는다. 실제로 특강 폼의 lfTitle 과
@@ -3931,10 +4200,16 @@
         watermark: isVideo ? false : fv('lrWm') === '1',
         published: !!F.querySelector('#lrPublish').checked
       };
-      // 값(2026-08-01). ⚠️ 무료(0)면 아예 넣지 않는다 — 유료 마이그레이션
-      // (20260801160000_lab_paid) 전 환경에서 없는 컬럼을 보내면 저장 자체가 막힌다.
+      /* 값(2026-08-01). ⚠️ **새로 올릴 때만** 0이면 안 넣는다 — 유료 마이그레이션
+         (20260801160000_lab_paid) 전 환경에서 없는 컬럼을 보내면 저장 자체가 막히기 때문이다.
+         ⚠️ 수정(update)에서는 0도 반드시 보낸다(2026-08-02 5차 · P1).
+            전에는 `if (priceVal > 0)` 하나로 두 경로를 같이 막아서, **유료 자료를 무료(0)로
+            되돌리면 price 가 update 본문에 아예 안 들어가 옛 가격이 그대로 남았다.**
+            화면은 '수정했어요'라고 말하므로 오너는 되돌린 줄 안다 — 돈이 걸린 자리에서
+            가장 나쁜 형태의 침묵이다. 컬럼이 없는 환경이면 update 가 에러를 내고,
+            그 에러는 아래에서 '가격 칸이 아직 없어요…'로 이미 안내된다. */
       const priceVal = Math.floor(Number(String(fv('lrPrice')).replace(/[^0-9]/g, '')) || 0);
-      if (priceVal > 0) baseRow.price = priceVal;
+      if (priceVal > 0 || _labEditId) baseRow.price = priceVal;
 
       let multiCount = 0;
 
@@ -4152,18 +4427,23 @@
       if (!list.length) { el.innerHTML = '<div class="loading">해당하는 회원이 없어요.</div>'; return; }
       el.innerHTML = list.map(m => {
         const bal = _credBal.get(m.id) || 0, free = _credFree.get(m.id) || 0;
-        return '<div class="round-item" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
-          + '<div style="flex:1;min-width:170px;">'
+        /* ⚠️ 인라인 display:flex 금지(2026-08-01 규칙) — 이 줄만 지키지 않아서 모바일에서
+           .round-item 1열 규칙이 안 먹고 '지급'과 '회수'가 서로 다른 줄 반대쪽 끝으로 갈라졌다.
+           행 버튼 묶음은 .ri-actions 로 감싼다. */
+        return '<div class="round-item">'
+          + '<div style="min-width:0;">'
           +   '<b>' + esc(m.name || '이름 없음') + '</b>'
           +   '<span style="color:var(--text-muted);font-size:13px;"> · ' + esc(m.email || '') + '</span>'
           +   '<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">'
           +     '잔액 <b style="color:var(--accent-ink);">' + bal + '회</b> · 무료 사용 ' + free + '회</div>'
           + '</div>'
+          + '<div class="ri-actions">'
           + '<input type="number" min="1" step="1" value="1" data-amt="' + m.id + '" '
+          +   'aria-label="' + esc(m.name || '이름 없음') + ' 지급·회수 횟수" '
           +   'style="width:64px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">'
           + '<button class="btn btn-action btn-sm" data-grant="' + m.id + '" type="button">지급</button>'
           + '<button class="btn btn-ghost btn-sm" data-revoke="' + m.id + '" type="button">회수</button>'
-          + '</div>';
+          + '</div></div>';
       }).join('');
     }
 
@@ -4297,8 +4577,21 @@
     document.getElementById('cpSave').addEventListener('click', async () => {
       const count = Math.floor(Number(document.getElementById('cpCount').value) || 0);
       const price = Math.floor(Number(document.getElementById('cpPrice').value) || 0);
-      if (count < 1 || price < 0) { toast('횟수와 가격을 확인해 주세요'); return; }
-      const packs = [{ id: 'ai10', tool: 'ai_killer', count, price, label: count + '회' }];
+      if (count < 1) { toast('충전 횟수는 1 이상이어야 해요'); return; }
+      /* ⚠️ 0원 팩을 막는다(2026-08-02 5차 · P1). 전에는 `price < 0` 만 봐서 가격 칸을 비우면
+         Number('')||0 = 0 이 그대로 저장됐고, verify-payment 가 같은 값을 읽으므로
+         **충전이 공짜가 된다.** */
+      if (price < 1) { toast('가격을 넣어 주세요 — 0원으로 저장하면 충전이 공짜가 됩니다'); return; }
+      /* ⚠️ 다른 도구의 팩을 지우지 않는다(2026-08-02 5차 · P1).
+         이 화면은 ai_killer 팩 하나만 읽어 편집하는데, 저장은 배열을 통째로 덮어쓰고 있었다.
+         팩이 둘 이상인 순간 나머지가 조용히 사라지고, verify-payment 가 같은 값으로
+         결제 금액을 검증하므로 그 상품 결제가 전부 막힌다.
+         (바로 위 단가 저장이 `_creditCosts` 로 같은 사고를 이미 막고 있다 — 같은 처방.) */
+      const cur = await sb().from('site_config').select('value').eq('key', 'credit_packs').maybeSingle();
+      if (cur.error) { toast('저장 실패: 기존 상품을 못 읽었어요 — ' + cur.error.message); return; }
+      const keep = (Array.isArray(cur.data && cur.data.value) ? cur.data.value : [])
+        .filter(x => x && x.tool !== 'ai_killer');
+      const packs = keep.concat([{ id: 'ai10', tool: 'ai_killer', count, price, label: count + '회' }]);
       const { error } = await sb().from('site_config')
         .upsert({ key: 'credit_packs', value: packs }, { onConflict: 'key' });
       toast(error ? '저장 실패: ' + error.message : '저장됨');
@@ -4317,7 +4610,7 @@
       if (ok) { toast(g ? n + '회 지급' : n + '회 회수'); await loadCredits(); }
     });
 
-    document.getElementById('creditBulkForm').addEventListener('submit', async (e) => {
+    guardSubmit('creditBulkForm', async (e) => {
       e.preventDefault();
       const cid = document.getElementById('cbCohort').value;
       const n = Math.floor(Number(document.getElementById('cbAmount').value) || 0);
@@ -4445,7 +4738,7 @@
       }));
     }
 
-    document.getElementById('apqForm').addEventListener('submit', async e => {
+    guardSubmit('apqForm', async e => {
       e.preventDefault();
       const content = document.getElementById('apqContent').value.trim();
       if (!content) { alert('질문 원문을 입력하세요.'); return; }
@@ -4559,7 +4852,7 @@
       listEl.querySelectorAll('.app-days').forEach(b => b.addEventListener('click', () => openDaysEditor(b.dataset.id)));
     }
 
-    document.getElementById('appForm').addEventListener('submit', async e => {
+    guardSubmit('appForm', async e => {
       e.preventDefault();
       const title = document.getElementById('appTitle').value.trim();
       if (!title) { alert('제목을 입력하세요.'); return; }
@@ -4589,16 +4882,26 @@
       const byDay = {}; (days || []).forEach(d => byDay[d.day_no] = d);
       // 배치 후보: 그 항공사 기출 + 공통 기출
       const pool = _apQ.filter(q => q.active && (!q.airline || q.airline === p.airline));
-      // 난이도(D n)를 함께 보여준다 — 오너가 난이도를 보며 일차를 조립한다(2026-07-30).
-      const opts = q => `<option value="">— 비움 —</option>` + pool.map(x =>
-        `<option value="${x.id}" ${q && q.question_id === x.id ? 'selected' : ''}>[${AP_QTYPES[x.qtype] || x.qtype}${x.difficulty ? '·D' + x.difficulty : ''}] ${esc(x.content.slice(0, 44))}</option>`).join('');
+      /* ⚠️ 지금 배치된 기출이 후보에 없으면 그 자리를 위해 항목을 따로 만든다(2026-08-02 5차 · P1).
+         전에는 숨김 처리했거나 다른 항공사 기출이 배치돼 있으면 후보에 없어서 select 가
+         **'— 비움 —' 으로 보였고, 그대로 [배치 저장]을 누르면 그 일차 배치가 삭제됐다.**
+         화면이 "원래 비어 있었다"고 말하는 바람에 지운 줄도 모른다. */
+      const opts = q => {
+        const cur = q && q.question_id;
+        const outside = cur && !pool.some(x => x.id === cur);
+        const hit = outside ? _apQ.find(x => x.id === cur) : null;
+        return `<option value="">— 비움 —</option>`
+          + (outside ? `<option value="${esc(cur)}" selected>[지금 목록 밖]${hit ? ' ' + esc(hit.content.slice(0, 40)) : ' 숨김·타항공사 기출'}</option>` : '')
+          + pool.map(x =>
+            `<option value="${x.id}" ${cur === x.id ? 'selected' : ''}>[${AP_QTYPES[x.qtype] || x.qtype}${x.difficulty ? '·D' + x.difficulty : ''}] ${esc(x.content.slice(0, 44))}</option>`).join('');
+      };
       let rows = '';
       for (let d = 1; d <= p.total_days; d++) {
         const cur = byDay[d];
         rows += `<div style="display:grid;grid-template-columns:52px 1fr ${p.reveal_policy === 'by_date' ? '130px' : ''};gap:8px;align-items:center;margin-top:6px;">
           <b style="font-size:13px;">${d}일차</b>
-          <select class="apd-q" data-day="${d}" style="min-height:38px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:#fff;max-width:100%;">${opts(cur)}</select>
-          ${p.reveal_policy === 'by_date' ? `<input class="apd-date" data-day="${d}" type="date" value="${cur && cur.unlock_date || ''}" style="min-height:38px;border:1px solid var(--border);border-radius:8px;padding:0 8px;">` : ''}
+          <select class="apd-q" data-day="${d}" style="font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:#fff;max-width:100%;">${opts(cur)}</select>
+          ${p.reveal_policy === 'by_date' ? `<input class="apd-date" data-day="${d}" type="date" value="${cur && cur.unlock_date || ''}" style="border:1px solid var(--border);border-radius:8px;padding:0 8px;">` : ''}
         </div>`;
       }
       document.getElementById('apDaysRows').innerHTML = rows ||
@@ -4627,7 +4930,10 @@
         if (error) { alert('저장 실패: ' + error.message); return; }
       }
       if (dels.length) {
-        await sb().from('answer_program_days').delete().eq('program_id', _apDaysPid).in('day_no', dels);
+        // ⚠️ 지우기 실패도 실패다 — 전에는 error 를 안 받아서 '배치 저장됨'만 떴다.
+        const { error } = await sb().from('answer_program_days')
+          .delete().eq('program_id', _apDaysPid).in('day_no', dels);
+        if (error) { alert('비운 일차를 지우지 못했어요: ' + error.message); return; }
       }
       toast('배치 저장됨 (' + ups.length + '일차)');
     });
@@ -4663,6 +4969,11 @@
         loadApEnrollments();
       }));
 
+    /* ⚠️ DB 원문(admin/purchase · active/expired)이 그대로 화면에 뜨고 있었다(2026-08-02 5차).
+       화면 문구는 한국어로 옮긴다 — 모르는 값이 오면 그 값을 그대로 보이되 '미상'을 붙인다. */
+    const AP_SOURCE = { admin: '관리자 지급', purchase: '결제', gift: '선물' };
+    const AP_ENR_STATUS = { active: '이용 중', expired: '기간 지남', revoked: '회수됨' };
+
     async function loadApEnrollments() {
       const el = document.getElementById('apEnrList');
       const { data, error } = await sb().from('program_enrollments').select('*').order('created_at', { ascending: false }).limit(100);
@@ -4673,7 +4984,7 @@
         const p = _apP.find(x => x.id === e2.program_id) || {};
         return `<div class="round-item">
           <div><div class="ri-main">${esc(m.name || '(이름 없음)')} <span style="font-size:12px;color:var(--text-muted)">${esc(m.email || '')}</span></div>
-            <div class="ri-sub">${esc(p.title || '삭제된 프로그램')} · 시작 ${e2.started_at} · ${e2.source} · ${e2.status}</div></div>
+            <div class="ri-sub">${esc(p.title || '삭제된 프로그램')} · 시작 ${esc(String(e2.started_at || '').slice(0, 10) || '미정')} · ${AP_SOURCE[e2.source] || esc(e2.source || '경로 미상')} · ${AP_ENR_STATUS[e2.status] || esc(e2.status || '상태 미상')}</div></div>
           <div><button class="ri-del ape-del" data-id="${e2.id}">회수</button></div></div>`;
       }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지급된 이용권이 없습니다.</div>';
       el.querySelectorAll('.ape-del').forEach(b => b.addEventListener('click', async () => {
@@ -4729,7 +5040,7 @@
       const CAT = { question: '질문', experience: '경험', sentence: '문장', speaking: '말하기' };
       el.innerHTML = (data || []).map(c => `
         <div class="round-item" style="${c.active ? '' : 'opacity:.5;'}">
-          <div><div class="ri-main">${esc(c.label)} <span style="font-size:11px;color:var(--text-dim)">${esc(c.code)}</span></div>
+          <div><div class="ri-main">${esc(c.label)} <span style="font-size:12px;color:var(--text-dim)">${esc(c.code)}</span></div>
             <div class="ri-sub">${CAT[c.category] || c.category}${c.description ? ' · ' + esc(c.description) : ''}</div></div>
           <div><button class="ri-del apc-tog" data-code="${esc(c.code)}">${c.active ? '끄기' : '켜기'}</button></div>
         </div>`).join('');
