@@ -221,14 +221,14 @@
           <div class="bq-round-num" id="bq-round-num">ROUND 1/5</div>
           <div class="bq-clips">
             <button class="bq-clip" type="button" data-slot="0">
-              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="bq-clip-play"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
               <span class="bq-clip-info">
                 <span class="bq-clip-name">지원자 A <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
                 <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
               </span>
             </button>
             <button class="bq-clip" type="button" data-slot="1">
-              <span class="bq-clip-play"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
+              <span class="bq-clip-play"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg></span>
               <span class="bq-clip-info">
                 <span class="bq-clip-name">지원자 B <span class="bq-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="bq-clip-badge" hidden></span><span class="bq-clip-check" hidden>✓ 들었어요</span></span>
                 <span class="bq-clip-bar"><span class="bq-clip-fill"></span></span>
@@ -302,8 +302,8 @@
   var clipBtns = Array.prototype.slice.call(card.querySelectorAll('.bq-clip'));
   var answerBtns = Array.prototype.slice.call(card.querySelectorAll('.bq-answer-btn'));
 
-  var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg>';
-  var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+  var ICON_PLAY = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg>';
+  var ICON_PAUSE = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
   // 모션 최소화 사용자는 영상 자동재생 금지 (정지 프레임만)
   var REDUCE_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

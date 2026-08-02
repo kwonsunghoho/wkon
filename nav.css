@@ -326,3 +326,31 @@ body[data-nav-offset] { padding-top: 67px; }
   #navbar .nav-right { display: none; }   /* 모바일 상단은 로고+햄버거만 — CTA는 햄버거 메뉴로 일원화 */
   #navbar .hamburger { display: flex; }
 }
+
+/* ── 본문 바로가기 (2026-08-02 D-12) ─────────────────────────────────────────
+   평소엔 .sr-only(tokens.css)로 숨어 있고, 포커스되면 화면 왼쪽 위에 나타난다.
+   ⚠️ :focus 시 .sr-only 의 clip/position 을 전부 되돌려야 보인다 — 하나라도 남으면
+      포커스는 갔는데 화면엔 안 보이는 상태가 된다(키보드 사용자가 길을 잃는다). */
+#navbar ~ .skip-link, .skip-link { z-index: 200; }
+.skip-link:focus {
+  position: fixed; top: 8px; left: 8px;
+  width: auto; height: auto; margin: 0; padding: 12px 18px;
+  clip: auto; clip-path: none; white-space: normal; overflow: visible;
+  background: var(--action); color: var(--action-ink);
+  font-size: 15px; font-weight: 800; border-radius: var(--radius-xs);
+  text-decoration: none; box-shadow: var(--shadow-lg);
+  outline: 3px solid var(--accent-dark); outline-offset: 2px;
+}
+/* 착지점에 포커스가 갈 때 브라우저 기본 테두리가 본문 전체를 감싸 보이는 걸 막는다 */
+#main:focus { outline: none; }
+
+/* ── 포커스 링 공통 (2026-08-02 D-14) ──────────────────────────────────────
+   크로미움 기본 링은 1px 주황이라 웜페이퍼 위에서 거의 안 보인다(실측).
+   ⚠️ :focus-visible 만 건드린다 — :focus 로 하면 마우스 클릭에도 링이 남는다.
+   ⚠️ 개별 페이지가 자기 :focus-visible 을 정의했으면 그쪽이 이긴다(의도). */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, summary:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 3px solid var(--action);
+  outline-offset: 2px;
+}

@@ -144,6 +144,11 @@
   window.moncLoginHref = loginHref;   // 런타임에 로그인 링크를 조립하는 페이지들이 쓴다
 
   var navHtml =
+    /* 본문 바로가기 (2026-08-02 D-12) — 37개 페이지 전부에 없었다. 데스크톱 키보드
+       사용자는 매 페이지 nav 링크 9개를 지나야 본문에 닿는다.
+       ⚠️ 평소엔 .sr-only 로 숨고 **포커스되면 화면에 나타난다** — 안 나타나면 있으나 마나다.
+       ⚠️ 대상 #main 은 아래 mount() 가 본문 컨테이너를 찾아 붙인다(페이지마다 다르다). */
+    '<a class="skip-link sr-only" href="#main">본문 바로가기</a>' +
     '<nav id="navbar">' +
       '<div class="nav-inner">' +
         '<a class="logo" href="' + logoHref + '"><img src="' + LOGO + '" alt="MONC" /></a>' +
@@ -207,10 +212,27 @@
     var holder = document.createElement('div');
     holder.innerHTML = navHtml;
     // body 맨 앞에 넣는다 — nav 는 fixed 라 위치엔 영향이 없지만, 키보드 tab 순서가 화면과 맞아야 한다.
-    while (holder.firstChild) document.body.insertBefore(holder.firstChild, document.body.firstChild);
+    /* ⚠️ 순서를 뒤집지 말 것. 구 코드는 `insertBefore(holder.firstChild, body.firstChild)` 를
+       반복해서 **넣을수록 앞으로 밀리는** 구조라 결과가 역순이었다(mobileMenu → navbar →
+       skip-link). 그래도 티가 안 나다가, 2026-08-02 본문 바로가기를 넣자 **첫 Tab 이
+       바로가기가 아니라 로고로 가서** 기능이 죽었다(실측). 기준 노드를 고정해 순서를 지킨다. */
+    var anchor = document.body.firstChild;
+    while (holder.firstChild) document.body.insertBefore(holder.firstChild, anchor);
+    markMain();
     wire();
     upgradeLoginLinks();
     initAuth();
+  }
+
+  /* 본문 바로가기의 착지점. 페이지마다 컨테이너가 달라 여기서 찾아 붙인다.
+     ⚠️ tabindex="-1" 이 필요하다 — 안 주면 앵커로 스크롤만 되고 포커스가 안 옮겨가서
+        다음 Tab 이 다시 nav 로 돌아간다(바로가기의 의미가 없어진다). */
+  function markMain() {
+    if (document.getElementById('main')) return;
+    var el = document.querySelector('main, .wrap, .container, [role="main"]');
+    if (!el) return;
+    el.id = 'main';
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
   }
 
   /* 페이지 본문에 static 으로 박혀 있는 로그인 링크에도 returnTo 를 붙인다.
@@ -270,18 +292,52 @@
     var hb = document.getElementById('hamburger');
     var mm = document.getElementById('mobileMenu');
     if (hb && mm) {
-      hb.addEventListener('click', function () {
-        var open = mm.classList.toggle('open');
+      /* ── 포커스 가두기 (2026-08-02 D-1) ────────────────────────────────────
+         메뉴를 열어도 포커스가 햄버거에 남고 뒤 화면이 그대로 탭에 걸려 있었다.
+         낭독기·키보드 사용자는 '열린 메뉴 뒤의 안 보이는 링크들'을 계속 지나야 했다.
+         세 가지를 같이 한다 — ① 열면 첫 항목으로 포커스 이동 ② 열려 있는 동안 뒤 화면
+         inert ③ 닫으면 열었던 버튼으로 되돌림. 하나만 하면 반쪽이다.
+         ⚠️ inert 미지원 브라우저를 위해 aria-hidden 도 같이 건다(둘 다 없으면 낭독기가
+            뒤 화면을 계속 읽는다). nav 자신과 메뉴는 대상에서 뺀다. */
+      function backdropInert(on) {
+        [].slice.call(document.body.children).forEach(function (el) {
+          if (el === mm || el.id === 'navbar' || el.classList.contains('skip-link')) return;
+          if (on) { el.setAttribute('inert', ''); el.setAttribute('aria-hidden', 'true'); }
+          else { el.removeAttribute('inert'); el.removeAttribute('aria-hidden'); }
+        });
+      }
+      function setMenu(open) {
+        mm.classList.toggle('open', open);
         hb.classList.toggle('open', open);
         hb.setAttribute('aria-expanded', open ? 'true' : 'false');
         document.body.style.overflow = open ? 'hidden' : '';
+        backdropInert(open);
+        if (open) {
+          var first = mm.querySelector('button, a');
+          if (first) first.focus();
+        } else {
+          hb.focus();
+        }
+      }
+      hb.addEventListener('click', function () { setMenu(!mm.classList.contains('open')); });
+      /* 열린 메뉴 안에서 Tab 이 밖으로 새지 않게 순환시킨다 */
+      mm.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab' || !mm.classList.contains('open')) return;
+        var f = [].slice.call(mm.querySelectorAll('a[href], button:not([disabled])'))
+          .filter(function (el) { return el.offsetParent !== null; });
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
       });
       // 메뉴 안의 링크를 누르면 닫는다(같은 페이지 앵커로 가는 경우 메뉴가 덮고 있으면 안 되므로)
       mm.querySelectorAll('a').forEach(function (a) {
         a.addEventListener('click', function () {
+          // 이동하면서 닫힌다 — 여기서 hb.focus() 를 부르면 안 되므로 상태만 되돌린다.
           mm.classList.remove('open'); hb.classList.remove('open');
           hb.setAttribute('aria-expanded', 'false');
           document.body.style.overflow = '';
+          backdropInert(false);
         });
       });
       /* 아코디언 — 토글은 button 이라 위 '링크 클릭 시 닫기'에 안 걸린다.
@@ -312,7 +368,7 @@
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       dds.forEach(closeDd);
-      if (mm && mm.classList.contains('open') && hb) hb.click();
+      if (mm && mm.classList.contains('open') && hb) hb.click();   // setMenu(false) → 포커스 복귀까지
     });
   }
 

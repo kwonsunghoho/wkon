@@ -85,7 +85,7 @@
                 border: 1px solid var(--border); background: var(--surface); text-align: center;
                 padding: 7px 8px; }
     .day-chip b { display: block; font-size: 14px; font-weight: 800; }
-    .day-chip span { display: block; font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+    .day-chip span { display: block; font-size: 12px; color: var(--text-dim); margin-top: 1px; }
     .day-chip.cur { border-color: var(--action); box-shadow: inset 0 0 0 1.5px var(--action); }
     .day-chip.done b { color: #2E6E42; }
     .day-chip.lock { opacity: .45; }
@@ -298,6 +298,10 @@
   </style>
 </head>
 <body>
+  <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
+       태그를 h1 으로 바꾸면 조판이 깨진다. 낭독기·검색엔진용으로만 둔다.
+       ⚠️ 지우지 말 것: h1 이 없으면 낭독기 사용자가 "여기가 어디인지"를 못 듣는다. -->
+  <h1 class="sr-only">매일 답변 프로그램</h1>
   <div class="subnav">
     <div class="subnav-in">
       <a class="sn-back" href="programs.html">← 목록</a>
@@ -331,6 +335,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
+       ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
+          지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
+  <script src="pay-return.js"></script>
   <script src="program-common.js"></script>
   <script>
   (function () {
@@ -1192,7 +1200,7 @@
         if (!PID) { location.href = 'programs.html'; return; }
       }
       // 모바일 결제 복귀 — VIEW 를 읽기 전에 지급을 끝내야 아래에서 '등록됨'으로 열린다
-      if (st.mode === 'real') await handlePayReturn();
+      if (st.mode === 'real') { try { await handlePayReturn(); } finally { if (window.moncPayDone) moncPayDone(); } }
 
       VIEW = await AP.store.programView(PID);
       if (!VIEW || !VIEW.ok) {

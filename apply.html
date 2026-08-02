@@ -107,7 +107,7 @@
   .card-price { flex: none; text-align: right; font-weight: 900; font-size: 14px; white-space: nowrap; margin-top: 2px; }
   .card-price small { display: block; font-weight: 600; font-size: 12px; color: var(--text-muted); }
   .status-tag {
-    display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 7px;
+    display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 7px;
     border-radius: 99px; margin-left: 6px; vertical-align: 1px;
   }
   .status-upcoming { background: var(--accent-tint); color: var(--accent-ink); }
@@ -120,6 +120,7 @@
     color: var(--accent-ink); cursor: pointer; padding: 4px 16px 14px; user-select: none;
     min-height: 44px; box-sizing: border-box;
   }
+  /* ▸ 글리프 — 장식이라 활자 하한(12px) 대상이 아니다. */
   .curr-toggle .arw { transition: transform .2s; font-size: 10px; }
   .card.curr-open .curr-toggle .arw { transform: rotate(90deg); }
 
@@ -194,7 +195,7 @@
      포커스가 가면 화면을 확대하고, blur 해도 되돌리지 않는다(viewport 에 maximum-scale 이
      없으므로 반드시 일어난다). 결제 직전 화면이 확대된 채 가로로 밀린다(2026-08-02 진단). */
   .inp {
-    width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
+    width: 100%; padding: 13px 14px; border: 1.5px solid var(--border-strong);
     border-radius: 10px; font-size: 16px; font-family: inherit; background: #fff; color: var(--text);
   }
   /* 인라인 오류 — alert 로 맥락을 잃지 않게. 필드 바로 아래에 붙는다. */
@@ -225,7 +226,7 @@
   .bank .line { font-size: 13.5px; line-height: 1.7; }
   .bank .acct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .bank .acct strong { font-size: 15px; }
-  .copy-btn { font-size: 11px; font-weight: 800; color: #fff; background: var(--action-dark); border: none; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+  .copy-btn { font-size: 12px; font-weight: 800; color: #fff; background: var(--action-dark); border: none; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
   .bank .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(27,58,107,.18); }
 
   /* ── 서비스 제공·환불 안내 (상품 정보 고지) ── */
@@ -237,7 +238,7 @@
   .svc-list dd a { color: var(--accent-ink); font-weight: 700; }
   .svc-refund { margin-top: 16px; background: var(--action-tint); border: 1px solid rgba(27,58,107,.22); border-radius: 12px; padding: 15px; }
   .svc-refund-h { font-size: 13px; font-weight: 900; color: var(--action-dark); margin-bottom: 10px; }
-  .svc-refund-h span { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+  .svc-refund-h span { font-size: 12px; font-weight: 700; color: var(--text-muted); }
   .svc-refund ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.7; }
   .svc-refund ul li { margin-bottom: 5px; }
   .svc-refund ul li b { font-weight: 800; color: var(--action-dark); }
@@ -267,7 +268,7 @@
     background: var(--action); box-shadow: 0 -6px 24px rgba(36,26,18,.16);
   }
   .sticky-inner { max-width: 720px; margin: 0 auto; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .sticky-info .c { font-size: 11px; font-weight: 800; color: var(--action-ink); opacity: .8; }
+  .sticky-info .c { font-size: 12px; font-weight: 800; color: var(--action-ink); opacity: .8; }
   .sticky-info .a { font-size: 18px; font-weight: 900; color: var(--action-ink); }
   .sticky-go { flex: none; background: var(--action-dark); color: #fff; border: none; font-size: 15px; font-weight: 900; padding: 13px 26px; border-radius: 10px; cursor: pointer; font-family: inherit; }
   .sticky-bar.empty .sticky-go { opacity: .55; }
@@ -529,6 +530,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+  <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
+       ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
+          지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
+  <script src="pay-return.js"></script>
 <script src="recruit.js"></script>
 <script src="waitlist.js" defer></script>
 <!-- 포트원(PortOne) V2 결제 SDK — 테스트 채널 연동 확인용 -->
@@ -1239,7 +1244,7 @@ document.getElementById('stickyGo').addEventListener('click', () => {
   setTimeout(() => document.getElementById('appName').focus(), 400);
 });
 initMember();
-handlePayReturn();
+Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });
 </script>
 </body>
 </html>

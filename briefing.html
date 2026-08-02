@@ -91,7 +91,7 @@
     .ix-no { flex: 0 0 auto; width: 44px; }
     .ix-no b { display: block; font-family: var(--serif); font-size: 21px; font-weight: 800;
       color: var(--accent-dark); font-variant-numeric: tabular-nums; line-height: 1.15; }
-    .ix-no small { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .13em;
+    .ix-no small { display: block; font-size: 12px; font-weight: 800; letter-spacing: .13em;
       color: var(--text-dim); margin-top: 2px; white-space: nowrap; }
     .ix-cell { flex: 1 1 auto; min-width: 0; }
     .ix-namewrap { display: flex; align-items: baseline; gap: 8px; }
@@ -160,6 +160,18 @@
     .d-chip i { font-style: normal; font-size: 12px; font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
     .d-chip b { font-size: 13.5px; font-weight: 800; color: var(--text); white-space: nowrap; }
     .d-seg { flex: 1 1 auto; border-top: 2px dashed rgba(27,58,107,.38); margin: 0 5px; min-width: 12px; }
+    /* 320px 실측 넘침 18px (2026-08-02 D-9) — overflow-x:clip 이라 스크롤이 아니라
+       **조용히 잘렸다**. 활자는 12px 하한이라 못 줄이므로 여백만 좁힌다. */
+    @media (max-width: 360px) {
+      /* 목차 행도 같이 좁힌다 — .ix-name 이 nowrap 이라 이름이 긴 줄(항공사 뉴스&산업분석)에서
+         화살표(.ix-go)가 8px 밖으로 밀렸다(320px 실측). 활자는 안 건드리고 여백만. */
+      .container { padding: 0 12px; }
+      .ix-item.is-feat { padding-left: 8px; padding-right: 8px; }
+      .d-chip { padding: 6px 7px; gap: 4px; }
+      .d-chip b { font-size: 13px; }
+      .d-seg { margin: 0 3px; min-width: 8px; }
+      .d-dots { gap: 4px; }
+    }
     .d-slide.roll { animation: rtRoll .46s ease; }
     @keyframes rtRoll {
       0%   { opacity: 1; transform: translateY(0); }
@@ -169,9 +181,20 @@
     }
     .d-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
     .d-dots { display: flex; }
-    /* 점 자체는 6px 이지만 버튼은 24×30 — 터치 표적을 활자가 아니라 버튼이 책임진다 */
-    .d-dots button { appearance: none; background: none; border: 0; cursor: pointer;
+    /* 점 자체는 6px 이지만 버튼은 24×30. 보이는 크기는 그대로 두고 **터치 영역만**
+       투명 ::after 로 넓힌다(2026-08-02 D-8 — nav.css 햄버거와 같은 수법).
+       실측(elementFromPoint 히트 테스트): 세로 43px · 가로 31px.
+       ⚠️ 가로가 44 가 아닌 이유: 점 4개가 나란히 있어 ::after 44px 끼리 겹치고,
+          겹친 자리는 이웃 버튼이 가져간다. 실효 폭은 '버튼 24 + gap 8 = 32'가 상한이다.
+          버튼 자체를 44 로 키우면 4개가 176px 을 먹어 옆 제목과 부딪힌다(구 24×30 의 이유).
+       ⚠️ 그래서 이 자리는 원칙 2의 예외 조항을 탄다 — 24×24(WCAG 2.5.8 AA) 이상이고
+          이웃 간격 8px 을 지킨다. 캐러셀은 카드 자체 클릭·자동 회전이라는 대체 경로도 있다.
+          이 값을 '44 미달'이라고 다시 지적하지 말 것 — 재보고 내린 결론이다. */
+    .d-dots { gap: 8px; }
+    .d-dots button { appearance: none; background: none; border: 0; cursor: pointer; position: relative;
       width: 24px; height: 30px; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .d-dots button::after { content: ""; position: absolute; top: 50%; left: 50%;
+      width: 44px; height: 44px; transform: translate(-50%, -50%); }
     .d-dots button::before { content: ""; width: 6px; height: 6px; border-radius: 999px;
       background: rgba(27,58,107,.24); transition: width .25s ease, background .25s ease; }
     .d-dots button.on::before { width: 17px; background: var(--action); }

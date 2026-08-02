@@ -261,7 +261,7 @@
         <input class="in-q" id="qIn" maxlength="200" autocomplete="off"
           placeholder="받은 질문을 그대로 넣어 주세요 (선택)">
 
-        <textarea class="in-ta" id="ta" maxlength="1500"
+        <textarea class="in-ta" id="ta" data-keep="polish-input" maxlength="1500"
           placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
         <div class="in-foot">
           <span id="srcLabel">자소서 1문항 · 답변 1개</span>
@@ -349,6 +349,13 @@
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 긴 글 임시 보관(2026-08-02 D-10) — data-keep 붙은 칸을 sessionStorage 에.
+       ⚠️ localStorage 로 바꾸지 말 것(공용 기기에 학생 글이 남는다). -->
+  <script src="draft-keep.js" defer></script>
+  <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
+       ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
+          지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
+  <script src="pay-return.js"></script>
   <script>
   (function () {
     const $ = (id) => document.getElementById(id);
@@ -795,7 +802,7 @@
       setKind(_kind);
       onInput();
       await handleEntry();
-      await handlePayReturn();
+      try { await handlePayReturn(); } finally { if (window.moncPayDone) moncPayDone(); }
     })();
   })();
   </script>

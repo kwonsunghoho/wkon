@@ -174,6 +174,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
+       ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
+          지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
+  <script src="pay-return.js"></script>
   <script src="lecture-common.js"></script>
   <!-- 포트원(PortOne) V2 결제 SDK -->
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
@@ -203,7 +207,7 @@
       LECTURE = data;
       SLOTS = await fetchSlots();
       await rerender(data);
-      handlePayReturn();
+      Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });
     }
 
     /* 시간대 조회. lecture_slots 마이그레이션(20260724160000) 미적용이면 조용히 빈 배열

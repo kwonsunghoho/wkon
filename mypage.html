@@ -291,6 +291,10 @@
   </style>
 </head>
 <body data-nav-offset>
+  <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
+       태그를 h1 으로 바꾸면 조판이 깨진다. 낭독기·검색엔진용으로만 둔다.
+       ⚠️ 지우지 말 것: h1 이 없으면 낭독기 사용자가 "여기가 어디인지"를 못 듣는다. -->
+  <h1 class="sr-only">마이페이지</h1>
   <main class="v2">
     <div class="v2-wrap" id="content" style="display:none;">
 
@@ -561,6 +565,10 @@
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
+       ⚠️ defer 를 붙이지 말 것 — 페이지 인라인 스크립트가 URL 에서 payresult 를
+          지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
+  <script src="pay-return.js"></script>
   <script src="sojae-common.js"></script>
   <script>
     document.getElementById('logoutBtn').addEventListener('click', () => MONC.signOut());
@@ -978,7 +986,8 @@
       loadAnswerNotes(me);
       loadNewsScraps();
       loadLabPurchases();
-      handlePayReturn();          // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작
+      // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작. 끝나면 대기 화면을 내린다.
+      Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });
       showSignupBonus();          // 가입 축하 크레딧을 '방금 받았다'고 한 번 알린다
       loadWallet(); loadPacks(); loadCreditLedger(); loadMyPrograms();
       const profile = await MONC.getMyProfile();

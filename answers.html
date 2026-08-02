@@ -46,7 +46,7 @@
     .back:hover { border-color: var(--action); color: var(--action-dark); }
 
     .head { margin-bottom: 18px; }
-    .eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--accent-ink); }
+    .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .1em; color: var(--accent-ink); }
     .eyebrow::before { content: '— '; color: var(--action); }
     h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(26px, 5vw, 34px); margin-top: 4px; }
     .head .sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
@@ -74,7 +74,7 @@
     .note > summary { list-style: none; cursor: pointer; padding: 15px; }
     .note > summary::-webkit-details-marker { display: none; }
     .note-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 7px; }
-    .note-cat { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 11px;
+    .note-cat { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 12px;
       font-weight: 700; padding: 3px 9px; border-radius: 999px; }
     .note-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
     .note-q { font-size: 15px; font-weight: 700; line-height: 1.45; }
@@ -319,7 +319,7 @@
 
           <div class="f-hr"></div>
           <div class="lbl">답변</div>
-          <textarea class="f-ta" id="fBody" maxlength="1500"
+          <textarea class="f-ta" id="fBody" data-keep="answers-body" maxlength="1500"
                     placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
           <div class="f-foot"><span>나중에 이어서 써도 돼요</span><b id="fCnt">0 / 1,500자</b></div>
         </div>
@@ -350,6 +350,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 긴 글 임시 보관(2026-08-02 D-10) — data-keep 붙은 칸을 sessionStorage 에.
+       ⚠️ localStorage 로 바꾸지 말 것(공용 기기에 학생 글이 남는다). -->
+  <script src="draft-keep.js" defer></script>
   <script src="sojae-common.js"></script>
   <script src="quickfix.js" defer></script>
   <script>
@@ -608,6 +611,9 @@
         btn.disabled = false; btn.textContent = '저장하기';
         return;
       }
+      // 저장에 성공했으니 임시 보관(draft-keep)을 지운다 — 안 지우면 다음에 빈 폼을
+      // 열었을 때 이미 저장한 글이 되살아나 '중복 저장'으로 이어진다.
+      if (window.moncDraftClear) moncDraftClear('answers-body');
       location.reload();   // 목록·필터·이력을 한 번에 다시 그린다
     }
 
