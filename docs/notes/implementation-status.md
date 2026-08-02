@@ -51,6 +51,8 @@
 | `20260801180000_reviews_kind` | **후기 종류 분리** — `reviews.kind`(challenge/consult) + `image_path` not null 완화(글만 있는 후기) + `success_stories`(합격 수기) 표·RLS | **owner 실행 필요(2026-08-01 작성)** — 미적용이면 챌린지 후기 108건은 그대로 뜨고(전부 challenge 취급), 허브에 상담·합격 수기 카드가 안 나온다. admin 은 '글만 후기 추가'·'합격 수기' 칸에서 마이그레이션 안내를 띄운다. lab 쪽 표를 건드리지 않으므로 실행 순서 무관 |
 | `20260802100000_signup_credit` | **가입 축하 크레딧** — `site_config.credit_signup_bonus`(15) + `grant_signup_credit()` RPC(회원당 1회·멱등) + 부분 유니크 인덱스 | **적용 완료(2026-08-02 오너 실행)** — 로그인하면 회원당 1회 15크레딧이 들어간다. 지급량은 admin '크레딧' 탭 '가입 축하(1회)' 칸에서 조절(0=중단) |
 | `20260801170000_lab_resource_files` | **자료 하나에 파일 여러 개**(상·하편) — `lab_resource_files` 신설 + 기존 `storage_path` 백필 + `source_required` check 해제 + 목록 RPC 에 `file_count` | **실행 완료(2026-08-01)** — 목록 RPC 프로브에 `file_count` 확인, lab-file `2026-08-01f` 배포 확인. ⚠️ **이제 이 파일이 목록 RPC 의 최종 정의다**(`video_id`+`price`+`owned`+`file_count`) — 140000·150000·160000 을 이 뒤에 실행하면 `file_count` 가 사라진다. 미적용이면 파일 1개짜리는 그대로 동작하고, 여러 개를 올리려 하면 admin 이 '마이그레이션 먼저' 안내를 띄운다 |
+| `20260803120000_member_archive` | **회원 보관** — `members.archived_at` + 인덱스. 새 RLS 없음(기존 `members_admin_all` 이 덮는다) | **owner 실행 필요(2026-08-03 작성)** — 미적용이면 아무도 보관 상태가 아니고 '보관함' 칩 숫자가 비며, [보관] 을 누르면 admin 이 실행할 파일명을 안내한다(`PGRST204` 판정). 다른 표를 안 건드리므로 실행 순서 무관 |
+| `20260803130000_ap_reviewed_at` | **연구원 검수 건수** — `answer_sessions.reviewed_at` + 도장 트리거 `trg_ap_stamp_reviewed_at` + 인덱스 | **owner 실행 필요(2026-08-03 작성)** — 미적용이면 admin 연구원 목록이 '검수 N건'만 쓰고 '이번 달'을 아예 안 쓴다(컬럼 나열 select 가 400 이라 자동으로 한 번 더 부른다). ⚠️ 상태 전이 심판 `ap_session_guard` 는 안 건드린다 — 트리거 이름이 알파벳 순으로 심판 뒤라 심판이 막은 전이엔 도장이 안 찍힌다 |
 
 ## 브랜치
 
