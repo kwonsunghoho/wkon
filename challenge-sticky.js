@@ -53,7 +53,14 @@
       '  background:var(--bg,#F4F1EA);',
       '  border-top:1px solid var(--border-strong,rgba(38,34,28,.52));',
       '  box-shadow:0 -6px 18px rgba(36,26,18,.10);',
-      '  padding:10px 16px calc(10px + env(safe-area-inset-bottom));',
+      /* 여백 (2026-08-02 오너 3차 "아이폰15pro 하단부가 너무 타이트해").
+         구 10/10 은 45px 알약이 66px 바 안에 위아래 10px 만 남기고 꽉 찼다 — 답답하다.
+         아래를 위보다 크게 준다: 화면 맨 아래(사파리 주소창·홈 인디케이터)와 맞닿는
+         쪽이라 같은 값이면 시각적으로 더 좁아 보인다.
+         ⚠️ env(safe-area-inset-bottom) 은 viewport-fit=cover 가 없으면 0 이다. 지금은
+            없는 게 맞다 — iOS 가 레이아웃 뷰포트를 이미 안전영역 안으로 잡아 준다.
+            cover 를 추가하려면 상·좌·우 인셋까지 전부 처리해야 하므로 건드리지 않는다. */
+      '  padding:14px 16px calc(20px + env(safe-area-inset-bottom));',
         /* 110% + 안전여유 — bottom 을 올려 둔 상태에서도 완전히 화면 밖으로 내려가야 한다 */
       '  transform:translateY(calc(110% + 60px));transition:transform .28s ease;}',
       '.ch-sticky.on{transform:none;}',

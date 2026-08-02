@@ -150,7 +150,10 @@
     .bt-confirm { width: 100%; margin-top: 16px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
 
     /* 하단 고정 바 */
-    .lc-sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: rgba(233,228,216,.94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--border-soft); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+    /* ⚠️ 챌린지 상세의 .ch-sticky 와 같은 규칙을 쓴다(2026-08-02) — 반투명 금지(밑 글자가
+       비쳐 잘려 보인다), 여백은 14/20(구 10/10 은 알약이 꽉 차 답답했다).
+       iOS 접히는 툴바 보정은 아래 스크립트의 placeSticky() 가 맡는다. */
+    .lc-sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--bg); border-top: 1px solid var(--border-strong); box-shadow: 0 -6px 18px rgba(36,26,18,.10); padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
     .lc-sticky-in { max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
     .lc-sticky .info { flex: 1 1 auto; min-width: 0; }
     .lc-sticky .info .p { font-size: 17px; font-weight: 900; }
@@ -382,7 +385,31 @@
     }
 
     /* ── 이벤트 연결 ── */
+    /* iOS Safari 접히는 툴바 보정 — position:fixed;bottom:0 은 레이아웃 뷰포트 기준이라
+       툴바가 접힌 동안 바 아랫부분이 툴바 뒤로 들어가 잘린다(2026-08-02 실사고).
+       ⚠️ 데스크톱 크로미움에서는 절대 재현되지 않는다. 하단 고정 요소엔 항상 같이 단다.
+       ⚠️ challenge-sticky.js 의 place() 와 같은 계산이다 — 한쪽만 고치지 말 것. */
+    function placeSticky() {
+      const el = document.querySelector('.lc-sticky');
+      const vv = window.visualViewport;
+      if (!el || !vv) return;
+      el.style.bottom = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) + 'px';
+    }
+    (function watchSticky() {
+      let t = false;
+      const sync = () => { if (t) return; t = true;
+        requestAnimationFrame(() => { t = false; placeSticky(); }); };
+      sync();
+      window.addEventListener('resize', sync);
+      window.addEventListener('scroll', sync, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', sync);
+        window.visualViewport.addEventListener('scroll', sync);
+      }
+    })();
+
     function wireApply(st, price) {
+      placeSticky();   // 바가 방금 그려졌으니 위치를 한 번 맞춘다
       const sticky = document.getElementById('stickyGo');
       if (sticky) sticky.addEventListener('click', () => {
         document.getElementById('applyBox').scrollIntoView({ behavior: 'smooth' });
