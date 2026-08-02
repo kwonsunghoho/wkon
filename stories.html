@@ -158,8 +158,10 @@
       emptyEl.hidden = true;
 
       listEl.innerHTML = items.map(s => {
-        const tags = (s.airline ? `<span class="st-tag">${esc(s.airline)}</span>` : '')
-                   + (s.cohort != null ? `<span class="st-tag st-tag-cohort">${Number(s.cohort)}기</span>` : '');
+        // ⚠️ 기수 칩은 반드시 '몬크 N기' — 합격 항공사 칩 바로 옆이라 'N기' 만 두면
+        //    '대한항공 1기'(항공사 입사 기수)로 읽힌다. 이건 몬크 참여 기수다.
+        const tags = (s.airline ? `<span class="st-tag">${esc(s.airline)} 합격</span>` : '')
+                   + (s.cohort != null ? `<span class="st-tag st-tag-cohort">몬크 ${Number(s.cohort)}기</span>` : '');
         const meta = [s.author_name || '', ymd(s.published_at)].filter(Boolean).join(' · ');
         const thumb = s.thumb_path ? `<img class="st-thumb" src="${esc(thumbUrl(s.thumb_path))}" alt="" loading="lazy">` : '';
         return `<a class="st-item" href="story.html?id=${encodeURIComponent(s.id)}">

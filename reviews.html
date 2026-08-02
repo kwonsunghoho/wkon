@@ -213,10 +213,18 @@
       return withQuote.concat(rest).slice(0, n);
     }
 
+    /* 발신자 줄 — 챌린지와 기수는 한 덩어리로 붙인다('보신각 1기').
+       ' · '로 갈라 놓으면 '1기'가 홀로 떠서 무엇의 기수인지 안 읽힌다(2026-08-02 오너 지적).
+       이름이 없는 건은 '참여자'를 붙여 숫자만 남지 않게 한다. */
+    function whoLine(i) {
+      const co = i.cohort != null ? [i.challenge, i.cohort + '기'].filter(Boolean).join(' ') : (i.challenge || '');
+      if (i.name && co) return i.name + ' · ' + co;
+      if (co) return i.cohort != null ? co + ' 참여자' : co;
+      return i.name || '';
+    }
+
     function prevItemHtml(i, showName) {
-      const meta = showName
-        ? [i.name, i.challenge, i.cohort != null ? i.cohort + '기' : ''].filter(Boolean).join(' · ')
-        : ym(i.date);
+      const meta = showName ? whoLine(i) : ym(i.date);
       const metaEl = meta ? `<span class="rv-prev-meta">${esc(meta)}</span>` : '';
       const bodyEl = i.quote
         ? `<p class="rv-prev-q">${esc(i.quote)}</p>`
@@ -225,7 +233,8 @@
     }
 
     function storyItemHtml(s) {
-      const meta = [s.author_name || '', s.airline || ''].filter(Boolean).join(' · ');
+      // 항공사 이름만 두면 '합격'인지 '재직'인지 안 읽힌다 — stories.html 칩과 같은 규칙.
+      const meta = [s.author_name || '', s.airline ? s.airline + ' 합격' : ''].filter(Boolean).join(' · ');
       return `<div class="rv-prev-item">
         <p class="rv-prev-q">${esc(s.title)}</p>
         ${meta ? `<span class="rv-prev-meta">${esc(meta)}</span>` : ''}

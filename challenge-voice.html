@@ -571,14 +571,48 @@
 <script src="challenge-sticky.js" defer></script>
 <script src="waitlist.js" defer></script>
 <script>
-  document.querySelectorAll('.week-header').forEach(h => {
-    h.addEventListener('click', () => {
-      const week = h.parentElement;
-      const isOpen = week.classList.contains('open');
-      document.querySelectorAll('.curriculum-week').forEach(w => w.classList.remove('open'));
-      if (!isOpen) week.classList.add('open');
+  /* 커리큘럼 아코디언 — 2026-08-02: div + click 뿐이라 **키보드로 열 수 없었다.**
+     1주차만 기본 열림이라 키보드·스크린리더 사용자는 2주차 내용(DAY 6~10)에 아예
+     닿지 못했다. 결제를 결심하는 화면이라 방치할 자리가 아니다.
+     ⚠️ 마크업이 아니라 여기서 role·tabindex·aria-expanded 를 단다 — 상세 4종이
+        같은 스크립트를 복사해 쓰므로 한 곳만 고치면 네 파일이 같이 맞는다.
+     ⚠️ Space 는 기본 동작이 스크롤이라 preventDefault 가 필요하다. */
+  (function () {
+    const heads = document.querySelectorAll('.week-header');
+    const sync = () => heads.forEach(h => h.setAttribute(
+      'aria-expanded', h.parentElement.classList.contains('open') ? 'true' : 'false'));
+    heads.forEach(h => {
+      h.setAttribute('role', 'button');
+      h.setAttribute('tabindex', '0');
+      const arrow = h.querySelector('.week-arrow');
+      if (arrow) arrow.setAttribute('aria-hidden', 'true');   // '›' 는 장식
+      const toggle = () => {
+        const week = h.parentElement;
+        const isOpen = week.classList.contains('open');
+        /* ⚠️ 스크롤 보정 — 2주차를 누르면 위에 있던 1주차가 접히면서 내용이 사라지고,
+           스크롤 위치는 그대로라 **누른 헤더가 화면 위로 474px 밀려 나갔다**(2026-08-02
+           실측 · 393px). 누른 자리를 지키도록 접힌 만큼 스크롤을 되돌린다.
+           html 에 scroll-behavior:smooth 가 걸려 있어 instant 를 명시한다(보정은 안 보여야 한다). */
+        const y0 = h.getBoundingClientRect().top;
+        document.querySelectorAll('.curriculum-week').forEach(w => w.classList.remove('open'));
+        if (!isOpen) week.classList.add('open');
+        sync();
+        const fix = () => {
+          const dy = h.getBoundingClientRect().top - y0;
+          if (!dy) return;
+          try { window.scrollBy({ top: dy, behavior: 'instant' }); }
+          catch (err) { window.scrollBy(0, dy); }
+        };
+        fix();                              // 이번 프레임이 이미 제자리로 그려지게
+        requestAnimationFrame(fix);         // 브라우저가 다음 프레임에 도로 밀어내는 몫(실측 24px)까지 되돌린다
+      };
+      h.addEventListener('click', toggle);
+      h.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
+      });
     });
-  });
+    sync();
+  })();
 
   // 모집 기간 연동 (Supabase challenge_rounds)
   applyDetailRecruit('voice');
@@ -597,18 +631,6 @@
       return;
     }
     window.location.href = 'apply.html?c=voice';
-  }
-
-  function toggleWeekModal(week) {
-    const content = document.getElementById(week + 'ContentModal');
-    const arrow = event.target.closest('div').querySelector('span');
-    if (content && content.style.display === 'none') {
-      content.style.display = 'block';
-      arrow.style.transform = 'rotate(90deg)';
-    } else if (content) {
-      content.style.display = 'none';
-      arrow.style.transform = 'rotate(0deg)';
-    }
   }
 
 </script>

@@ -479,9 +479,11 @@
         const alt = (CFG.showName
           ? `${esc(i.challenge || '')} ${i.cohort ? i.cohort + '기' : ''} ${esc(i.name)} 후기`
           : `${CFG.title} ${ym(i.date)}`).replace(/\s+/g, ' ').trim();
+        // 기수 칩은 챌린지 칩 옆에 있을 때만 '1기'로 충분하다. 혼자 서면 무엇의
+        // 기수인지 안 읽히므로 '참여자'를 붙인다(2026-08-02 오너 지적 — 상세 카드 건과 같은 규칙).
         const tags = CFG.filters
           ? (i.challenge ? `<span class="rv-tag">${esc(i.challenge)}</span>` : '')
-            + (i.cohort != null ? `<span class="rv-tag rv-tag-cohort">${i.cohort}기</span>` : '')
+            + (i.cohort != null ? `<span class="rv-tag rv-tag-cohort">${i.cohort}기${i.challenge ? '' : ' 참여자'}</span>` : '')
           : '';
         const nameEl = (CFG.showName && i.name) ? `<span class="rv-name">${esc(i.name)}</span>` : '';
         const whenEl = (CFG.showDate && ym(i.date)) ? `<span class="rv-when">${ym(i.date)}</span>` : '';
