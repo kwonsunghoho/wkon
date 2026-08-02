@@ -400,12 +400,50 @@
     @keyframes adm-spin { to { transform: rotate(360deg); } }
     body.authed .shell { animation: adm-in .2s ease-out; }
     @keyframes adm-in { from { opacity: 0; } to { opacity: 1; } }
+    /* ── 접이 안내(2026-08-02) — 설명은 매번 읽는 글이 아니다 ──
+       연구실 자료 탭의 안내가 393px 에서 312px(화면 한 판)를 먹고 첫 입력칸을 밀어냈다.
+       다른 탭의 긴 안내도 이 부품으로 옮긴다(새 스타일을 탭마다 만들지 말 것). */
+    .adm-help { margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius-xs); background: var(--surface); }
+    .adm-help > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px;
+      font-size: 13.5px; font-weight: 800; color: var(--action-dark); cursor: pointer; list-style: none; }
+    .adm-help > summary::-webkit-details-marker { display: none; }
+    /* 펼침 표시는 글자로 — 아이콘 하나 더 만들지 않는다 */
+    .adm-help > summary::after { content: '펴기'; margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    .adm-help[open] > summary::after { content: '접기'; }
+    .adm-help-v { font-weight: 600; color: var(--text-dim); font-size: 12px; }
+    .adm-help-body { padding: 2px 14px 14px; font-size: 13px; line-height: 1.65; color: var(--text-muted); }
+    .adm-help-body p + p { margin-top: 8px; }
+    .adm-help-note { color: var(--text-dim); font-size: 12px; }
+
+    /* ── 연구실 자료 폼 아래쪽(2026-08-02) — 옵션·주 행동·진단을 각자 줄에 둔다 ── */
+    .lr-opt { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+    .lr-go { width: 100%; }
+    /* 진단은 문제가 났을 때만 쓰는 도구 — 주 버튼과 같은 무게로 두면 어느 걸 눌러야 할지 헷갈린다 */
+    /* ⚠️ justify-self(가로) 여야 한다 — .round-form 이 그리드라 align-self 로는 폭이 안 줄어
+       주 버튼과 나란히 꽉 찬 두 개가 된다(2026-08-02 실측). */
+    .lr-diag { justify-self: start; background: none; border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 13px; font-weight: 700; }
+    /* 데스크톱에선 주 버튼을 폼 폭 전체로 늘리지 않는다 — 그리드 칸이라 justify-self 로 줄인다
+       (width:auto 만으로는 stretch 가 이겨 818px 가 됐다 · 2026-08-02 실측). */
+    @media (min-width: 961px) { .lr-go { width: auto; justify-self: start; min-width: 200px; } }
+
+    /* ── 지우는 버튼은 다르게 보여야 한다(2026-08-02) ──
+       연구실 자료 행은 버튼이 여섯이고 '삭제'가 '수정·이력·가격'과 똑같이 생겼다.
+       모바일에서 두 줄로 접히면 오눌림이 실제로 난다. 되돌릴 수 없는 것만 이 색을 쓴다. */
+    .round-item .ri-del.is-danger { color: #B3261E; border-color: rgba(179,38,30,.5); }
+    .round-item .ri-del.is-danger:hover { background: rgba(179,38,30,.07); }
+
     /* ── 모바일 공통 보정(≤960px · 2026-08-01 모바일 UX 정비) ──
        ① 입력 활자 16px — iOS 사파리는 16px 미만 입력을 누르면 화면을 강제 확대하고 되돌리지 않는다.
           폼이 많은 admin 에서 가장 큰 사용성 손실이라 모바일에서만 16px 로 올린다(데스크톱 밀도는 그대로).
        ② 자주 누르는 액션 버튼 44px+ (9대 원칙 2). ③ 본문 좌우 여백 16px — '오늘' 탭과 같은 기준으로 통일. */
     @media (max-width: 960px) {
-      .smain input:not([type="checkbox"]):not([type="file"]), .smain select, .smain textarea { font-size: 16px; }
+      /* ⚠️ !important 가 필요하다 — 이 규칙은 2026-08-01 에 넣었지만 **한 번도 먹지 않았다.**
+         admin 의 입력칸 24개가 `style="…font-size:14px"` 인라인을 달고 있어서 클래스 규칙이
+         전부 졌다(2026-08-02 실측 — 크레딧 9 · 후기 8 · 답변 프로그램 3 …). 인라인을 이기는
+         길은 !important 뿐이고, 이걸 빼면 iOS 에서 입력칸을 누를 때마다 화면이 확대된다.
+         ⚠️ 규칙을 고쳤으면 반드시 브라우저로 세어 볼 것 — '썼다'와 '먹는다'는 다르다. */
+      .smain input:not([type="checkbox"]):not([type="file"]), .smain select, .smain textarea { font-size: 16px !important; }
       .rounds-wrap, .apps-wrap, .reviews-wrap { padding: 20px 16px 44px; }
       .main { padding: 16px; }
       /* 신청자 툴바: 검색은 한 줄 전체, 건수·버튼은 그 아래 한 줄 — CSV 버튼만 외따로 떨어지던 줄바꿈 정리 */
@@ -413,7 +451,18 @@
       .apps-count { margin-right: auto; }
       .ri-edit, .ri-del, .ri-cancel { min-height: 44px; padding: 10px 16px; }
       .ac-tg, .ac-del, .rv-btn, .rv-kf, .seg button { min-height: 44px; }
-      .mchk, .bulk-bar input[type="checkbox"] { width: 20px; height: 20px; }
+      /* 위 목록은 '행 버튼'만 덮었다 — 정작 저장·추가·CSV 같은 **주 버튼과 모든 select** 가
+         빠져 있어 36~38px 로 남아 있었다(2026-08-02 실측 30종). 폼 조작요소를 통째로 잡는다.
+         .btn-sm 도 모바일에선 44px 다 — 좁은 화면에서 '작은 버튼'은 그냥 못 누르는 버튼이다. */
+      .smain .btn, .smain select, .smain .af-chip, .smain .lf-slot-add,
+      .smain input[type="file"], .smain input[type="date"] { min-height: 44px; }
+      .smain .btn { padding-top: 10px; padding-bottom: 10px; }
+      .tb-more { display: inline-flex; align-items: center; min-height: 44px; }
+      /* 타이핑 칸도 표적이다 — 36~40px 로 남아 있던 40여 개를 공개 폼(.inp)과 같은 44px 로. */
+      .smain input[type="text"], .smain input[type="number"], .smain input[type="tel"],
+      .smain input[type="email"], .smain input[type="search"], .smain input:not([type]) { min-height: 44px; }
+      /* 체크박스는 WCAG 2.5.8 AA 하한이 24px 다 — 13~20px 로 흩어져 있었다(#credHasOnly 13px). */
+      .smain input[type="checkbox"], .smain input[type="radio"] { width: 24px; height: 24px; }
       .mitem { padding: 12px 10px; }
       /* 목록 행: 좁은 화면에선 2열(본문+버튼)을 1열로 — 버튼 6개짜리 행(연구실 자료)이
          본문 열을 눌러 제목이 한 글자씩 세로로 꺾인 실사고(2026-08-01). 버튼 줄은
@@ -654,7 +703,7 @@
           </p>
           <input id="lfThumb" type="text" placeholder="또는 사진 주소(https://...) 직접 붙여넣기" style="margin-top:8px;">
         </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked style="width:18px;height:18px;"> 공개(목록에 노출)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked> 공개(목록에 노출)</label>
         <button class="btn btn-action" type="submit" id="lecSubmitBtn">추가</button>
       </form>
       <div class="round-list" id="lectureList"><div class="loading">불러오는 중…</div></div>
@@ -703,7 +752,7 @@
           <option value="answer">답변(승자각)</option>
         </select>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" id="wlHideDone" style="width:16px;height:16px;"> 연락 완료 숨기기
+          <input type="checkbox" id="wlHideDone"> 연락 완료 숨기기
         </label>
         <button class="btn" id="wlRefresh" type="button">새로고침</button>
         <button class="btn" id="wlCsv" type="button">CSV 내려받기</button>
@@ -718,7 +767,18 @@
        홈에 사회적 증거를 되살리면 그때 편집 UI 를 다시 만든다.) -->
   <div class="tab-panel" id="panel-reviews">
     <div class="reviews-wrap">
-      <div class="rv-hint" style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;">후기는 <b>허브(reviews.html)</b> 아래 세 갈래로 나뉩니다 — <b>챌린지 후기</b>·<b>상담 후기</b>는 이 탭에서, <b>합격 수기</b>는 맨 아래 칸에서 관리해요. 각 후기의 종류·챌린지·기수·이름·한줄평은 아래에서 바로 고칠 수 있습니다. (대표 칸은 예전 홈 커뮤니티 섹션용 — 지금은 화면에 반영되지 않지만, 홈에 후기를 되살리면 다시 씁니다.)</div>
+      <!-- 설명은 접는다(393px 145px 였다). ⚠️ 아래 개인정보 경고는 **접지 말 것** —
+           스크린샷에 박힌 이름·전화번호를 코드가 가릴 수 없어 올리기 전에 눈에 띄어야 한다. -->
+      <details class="adm-help">
+        <summary>후기 세 갈래 · 이 탭에서 무엇을 고치나</summary>
+        <div class="adm-help-body">
+          <p>후기는 <b>허브(reviews.html)</b> 아래 세 갈래로 나뉩니다 — <b>챌린지 후기</b>·<b>상담 후기</b>는
+            이 탭에서, <b>합격 수기</b>는 맨 아래 칸에서 관리해요.</p>
+          <p>각 후기의 종류·챌린지·기수·이름·한줄평은 아래에서 바로 고칠 수 있습니다.</p>
+          <p class="adm-help-note">대표 칸은 예전 홈 커뮤니티 섹션용 — 지금은 화면에 반영되지 않지만,
+            홈에 후기를 되살리면 다시 씁니다.</p>
+        </div>
+      </details>
       <div class="rv-hint" style="background:#FFF6E5;border-radius:var(--radius-xs);padding:10px 12px;">⚠️ <b>상담 후기는 화면에 이름을 띄우지 않습니다</b>(1:1 상담이라 챌린지 후기와 성격이 다릅니다). 다만 <b>스크린샷 안에 이름·전화번호·프로필 사진이 찍혀 있으면 그대로 보입니다</b> — 올리기 전에 가려 주세요.</div>
 
       <div class="rv-section-title">여러 장 한번에 (자동 압축 · 라벨 없이)</div>
@@ -897,17 +957,25 @@
        ⚠️ 항공사는 news.html 과 같은 슬러그(kal·asiana…)를 쓴다 — 자료실 필터가 이 값으로 묶는다. -->
   <div class="tab-panel" id="panel-labfiles">
     <div class="rounds-wrap">
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        연구실 서가에 올라가는 <b>자료 파일</b>입니다. 파일은 <b>비공개 저장소</b>에 들어가고,
-        회원이 열 때마다 <b>60초짜리 임시 링크</b>가 새로 발급돼요. 링크를 퍼뜨려도 1분이면 끊깁니다.<br>
-        <b>PDF 는 받는 사람 정보(이메일·회원번호·날짜)가 자동으로 찍힙니다.</b>
-        열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.<br>
-        <b>가격을 넣으면 유료 자료가 됩니다</b>(0 이면 무료 — 로그인만 하면 열려요). 값은 언제든 고칠 수 있고,
-        이미 산 회원의 결제 금액은 그대로 남습니다. <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.
-        <b>파일을 여러 개 고르면 자료 하나로 묶입니다</b>(상·하편) — 값도 하나, 구매도 한 번이고
-        학생은 자료를 눌러 받을 파일을 고릅니다. 자료를 여러 건으로 나누려면 한 번씩 올리세요.
-        <br><span style="font-size:12px;color:var(--text-dim);">화면 버전 <b>2026-08-02a</b> — 이 번호가 낮으면 브라우저에 옛 화면이 남아 있는 거예요(Ctrl+Shift+R 로 새로고침).</span>
-      </p>
+      <!-- ⚠️ 안내는 접어 둔다 — 2026-08-02 오너 지적 전까지 이 문단이 **393px 에서 312px**,
+           화면 한 판을 통째로 먹고 첫 입력칸 앞을 막고 있었다. 매번 읽을 글이 아니라
+           헷갈릴 때 펴 보는 글이다. 새 안내를 추가할 땐 이 안에 넣을 것. -->
+      <details class="adm-help">
+        <summary>이 화면 설명 · 주의할 점 <span class="adm-help-v">화면 버전 2026-08-02b</span></summary>
+        <div class="adm-help-body">
+          <p><b>파일은 비공개 저장소</b>에 들어가고, 회원이 열 때마다 <b>60초짜리 임시 링크</b>가
+            새로 발급돼요. 링크를 퍼뜨려도 1분이면 끊깁니다.</p>
+          <p><b>PDF 는 받는 사람 정보(이메일·회원번호·날짜)가 자동으로 찍힙니다.</b>
+            열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.</p>
+          <p><b>가격을 넣으면 유료 자료가 됩니다</b>(0 이면 무료 — 로그인만 하면 열려요).
+            값은 언제든 고칠 수 있고, 이미 산 회원의 결제 금액은 그대로 남습니다.
+            <b>유료 자료에는 비밀번호를 같이 걸지 마세요</b> — 산 사람이 또 막힙니다.</p>
+          <p><b>파일을 여러 개 고르면 자료 하나로 묶입니다</b>(상·하편) — 값도 하나, 구매도 한 번이고
+            학생은 자료를 눌러 받을 파일을 고릅니다. 자료를 여러 건으로 나누려면 한 번씩 올리세요.</p>
+          <p class="adm-help-note">화면 버전이 위 번호보다 낮게 보이면 브라우저에 옛 화면이 남아
+            있는 거예요(Ctrl+Shift+R 로 새로고침).</p>
+        </div>
+      </details>
 
       <form class="round-form" id="labForm" style="grid-template-columns:1fr;">
         <!-- 수정 중일 때만 뜨는 머리 — 지금 새로 올리는 중인지 고치는 중인지 헷갈리지 않게 -->
@@ -941,10 +1009,12 @@
             </select></div>
           <!-- 주제는 자유 입력이되 목록에서 고를 수 있게 둔다 — 손으로 칠 때마다 표기가
                흔들리면('영상 면접' vs '영상면접') 상세 화면 픽커에 같은 뜻이 두 줄로 뜬다. -->
-          <div class="field"><label id="lrTypeLabel">자료 유형(선택)</label>
-            <input id="lrType" list="lrTypeList" placeholder="예: 한 장 요약" autocomplete="off">
-            <datalist id="lrTypeList"></datalist></div>
         </div>
+        <!-- ⚠️ 이 칸은 위 2열 격자 밖이다 — 안에 두면 서가·항공사 다음 세 번째가 되어 모바일에서
+             **반쪽 폭으로 혼자 남아** 깨진 칸처럼 보였다(2026-08-02 실측 159/327px). -->
+        <div class="field"><label id="lrTypeLabel">자료 유형(선택)</label>
+          <input id="lrType" list="lrTypeList" placeholder="예: 한 장 요약" autocomplete="off">
+          <datalist id="lrTypeList"></datalist></div>
         <div class="field"><label>제목 <span style="font-weight:600;color:var(--text-muted);">— 비우면 파일명이 제목이 돼요</span></label><input id="lrTitle" placeholder="예: 대한항공 인재상, 한 장 정리"></div>
         <div class="field"><label>한 줄 설명(선택)</label><input id="lrSummary" placeholder="목록에서 제목 아래 작게 보여요"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
@@ -954,7 +1024,8 @@
               <option value="view">화면 열람만</option>
             </select></div>
           <div class="field"><label>가격(원)</label><input id="lrPrice" type="number" min="0" step="100" value="0" placeholder="0 = 무료"></div>
-          <div class="field"><label>비밀번호(선택)</label><input id="lrPw" placeholder="비우면 회원이면 누구나"></div>
+          <!-- placeholder 는 짧게 — 긴 문장은 좁은 칸에서 잘려 '누구ᅡ' 처럼 보인다(2026-08-02 오너 화면) -->
+          <div class="field"><label>비밀번호(선택)</label><input id="lrPw" placeholder="비우면 회원 누구나"></div>
           <div class="field"><label>받는 사람 표시</label>
             <select id="lrWm">
               <option value="1">찍는다 (PDF)</option>
@@ -980,13 +1051,16 @@
             아래 열람 이력으로 누가 봤는지 확인하세요.
           </p>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap;">
-            <input type="checkbox" id="lrPublish" checked> 올리자마자 공개
-          </label>
-          <button class="btn btn-action" type="submit" id="lrSubmit">자료 올리기</button>
-          <button class="btn" type="button" id="lrDiag" style="border:1px solid var(--border);background:var(--surface);">업로드 진단</button>
-        </div>
+        <!-- ⚠️ 옵션·주 버튼·진단을 한 flex 줄에 몰아넣지 말 것 — 2026-08-02 오너 화면(아이폰)에서
+             '올리자마자 공개' 글자가 **'자료 올리기' 버튼 뒤로 깔렸다.** 세 칸을 한 줄에 밀어 넣은
+             구조라 사파리가 라벨을 줄여 버렸다(크로미움은 재현 안 됨 — 구조를 바꿔 원인을 없앤다).
+             줄을 셋으로 나눈다: ① 선택지 ② 주 행동 ③ 문제 생겼을 때 여는 진단. -->
+        <label class="lr-opt">
+          <input type="checkbox" id="lrPublish" checked> 올리자마자 공개
+        </label>
+        <button class="btn btn-action lr-go" type="submit" id="lrSubmit">자료 올리기</button>
+        <!-- 진단은 '안 올라갈 때'만 쓰는 도구다 — 주 버튼과 같은 무게로 두지 않는다 -->
+        <button class="btn lr-diag" type="button" id="lrDiag">안 올라가나요? 업로드 진단</button>
         <!-- 오류는 눈에 띄게 — 작은 회색 글씨면 못 보고 '그냥 안 올라간다'가 된다 -->
         <p id="lrMsg" hidden style="margin-top:2px;padding:10px 12px;border-radius:var(--radius-xs);font-size:13.5px;font-weight:700;line-height:1.6;white-space:pre-wrap;"></p>
       </form>
@@ -1020,15 +1094,20 @@
        '연구진 기준(coach)' 표현은 첨삭(polish) AI 의 감점 기준으로도 주입된다. -->
   <div class="tab-panel" id="panel-terms">
     <div class="rounds-wrap">
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        AI킬러가 밑줄을 긋는 <b>감점 표현 사전</b>입니다 — 이 목록이 검출의 본체예요.
-        추가·수정하면 <b>재배포 없이 바로</b> 반영됩니다.
-        <b>연구진 기준</b>으로 넣은 표현은 첨삭 AI 도 감점 기준으로 참고해요.<br>
-        ⚠️ <b>표현은 글에 그대로 등장하는 문자열</b>이어야 잡혀요(어미 변형까지 잡으려면 공통 어간만 —
-        예: "최선을 다하겠습니다" 대신 <b>"최선을 다하"</b>).
-        너무 짧거나 흔한 말(예: "저는")은 멀쩡한 글에도 밑줄이 그어지니 넣지 마세요 —
-        이 검사기는 못 잡아서가 아니라 <b>멀쩡한 글을 잡아서</b> 망해요.
-      </p>
+      <!-- ⚠️ 가장 중요한 한 줄은 summary 에 남긴다(항상 보임). 나머지는 접는다 —
+           구 문단은 393px 에서 166px 였다(2026-08-02). -->
+      <details class="adm-help">
+        <summary>표현은 <b>글에 그대로 나오는 문자열</b>로 · 짧고 흔한 말은 넣지 마세요</summary>
+        <div class="adm-help-body">
+          <p>AI킬러가 밑줄을 긋는 <b>감점 표현 사전</b>입니다 — 이 목록이 검출의 본체예요.
+            추가·수정하면 <b>재배포 없이 바로</b> 반영됩니다.
+            <b>연구진 기준</b>으로 넣은 표현은 첨삭 AI 도 감점 기준으로 참고해요.</p>
+          <p>어미 변형까지 잡으려면 공통 어간만 넣습니다 — 예: "최선을 다하겠습니다" 대신
+            <b>"최선을 다하"</b>.</p>
+          <p>너무 짧거나 흔한 말(예: "저는")은 멀쩡한 글에도 밑줄이 그어지니 넣지 마세요 —
+            이 검사기는 못 잡아서가 아니라 <b>멀쩡한 글을 잡아서</b> 망해요.</p>
+        </div>
+      </details>
       <form class="round-form" id="termForm" style="grid-template-columns:1fr;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
           <div class="field"><label>표현</label>
@@ -3297,7 +3376,8 @@
           + '<button class="ri-del lab-price" data-id="' + r.id + '" data-price="' + (Number(r.price) || 0) + '">가격</button>'
           + '<button class="ri-del lab-pw" data-id="' + r.id + '">비밀번호</button>'
           + '<button class="ri-del lab-pub" data-id="' + r.id + '" data-pub="' + (r.published ? 1 : 0) + '">' + (r.published ? '숨기기' : '공개') + '</button>'
-          + '<button class="ri-del lab-del" data-id="' + r.id + '" data-path="' + esc(r.storage_path || '') + '">삭제</button>'
+          // 되돌릴 수 없는 행동만 is-danger — 버튼 여섯이 다 같아 보이면 오눌림이 난다(2026-08-02)
+          + '<button class="ri-del is-danger lab-del" data-id="' + r.id + '" data-path="' + esc(r.storage_path || '') + '">삭제</button>'
         + '</div>'
       + '</div>';
     }
