@@ -45,10 +45,22 @@
     return data.session;
   }
 
+  // 지금 화면 주소(파일명+쿼리+해시) — 로그인 뒤 '가려던 화면'으로 되돌리기 위한 값.
+  // ⚠️ 절대경로가 아니라 파일명만 쓴다(GitHub Pages 하위 경로 /wkon/ 에서도 성립).
+  //    열린 리다이렉트 검증은 login.html 쪽 safeReturnTo() 가 한다.
+  function pageRef() {
+    return (window.location.pathname.split('/').pop() || 'index.html')
+      + window.location.search + window.location.hash;
+  }
+
   // 로그인 필수. 미로그인 시 로그인 페이지로 보내고 null 반환.
+  // 2026-08-02 오너 "로그인하면 마지막 페이지로 돌아가야지" — 가려던 화면을 returnTo 로 들려 보낸다.
   async function requireSession() {
     const session = await getSession();
-    if (!session) { window.location.href = LOGIN_PAGE; return null; }
+    if (!session) {
+      window.location.href = LOGIN_PAGE + '?returnTo=' + encodeURIComponent(pageRef());
+      return null;
+    }
     return session;
   }
 
@@ -150,9 +162,10 @@
   }
 
   // 동의 미완료 회원을 로그인 페이지의 동의 게이트로 보낸다(회원 전용 페이지 가드).
+  // 동의를 마치면 routeByRole 이 returnTo(가려던 화면)로 되돌린다.
   async function requireConsent() {
     if (await hasConsented()) return true;
-    window.location.replace(LOGIN_PAGE + '?consent=1');
+    window.location.replace(LOGIN_PAGE + '?consent=1&returnTo=' + encodeURIComponent(pageRef()));
     return false;
   }
 

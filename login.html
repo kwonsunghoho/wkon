@@ -222,15 +222,43 @@
       await MONC.signOut();         // 세션 종료 후 홈으로
     });
 
-    // 역할에 따라 알맞은 페이지로 보냄
+    /* ── 로그인 뒤 '가려던 화면'으로 복귀 (2026-08-02 오너 "로그인하면 마지막 페이지로 돌아가야지") ──
+       requireSession/requireConsent 가 ?returnTo=<파일명+쿼리+해시> 를 붙여 보낸다.
+       OAuth 왕복은 redirectTo(쿼리 없는 이 페이지)로 돌아와 쿼리가 사라지므로,
+       도착 즉시 sessionStorage 에 보관한다(같은 탭 리다이렉트라 살아남는다).
+       ⚠️ 열린 리다이렉트 방지 — '파일명.html(?…)(#…)' 형식만 통과시킨다. 외부 URL·
+          프로토콜('//','http:')은 형식에서 걸러지고, login/onboarding 자신은 루프라 제외. */
+    const RETURN_KEY = 'monc_return_to';
+    function safeReturnTo(v) {
+      v = String(v || '');
+      if (!/^[a-z0-9-]+\.html([?#][^\s]*)?$/i.test(v)) return '';
+      if (/^(login|onboarding)\.html/i.test(v)) return '';
+      return v;
+    }
+    (function () {
+      const rt = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
+      if (rt) { try { sessionStorage.setItem(RETURN_KEY, rt); } catch (e) {} }
+    })();
+    function takeReturnTo() {
+      let v = '';
+      try { v = sessionStorage.getItem(RETURN_KEY) || ''; sessionStorage.removeItem(RETURN_KEY); } catch (e) {}
+      return safeReturnTo(v);
+    }
+
+    // 역할에 따라 알맞은 페이지로 보냄 — returnTo(가려던 화면)가 있으면 그쪽이 우선
     async function routeByRole() {
       const profile = await MONC.getMyProfile();
       if (!profile) return; // 프로필이 아직 없으면(드묾) 그대로 로그인 화면 유지
-      if (profile.role === 'admin') { window.location.replace('admin.html'); return; }
+      const rt = takeReturnTo();
+      if (profile.role === 'admin') { window.location.replace(rt || 'admin.html'); return; }
       // 전화번호 미입력 = 온보딩(프로필 완성) 미완료 → 온보딩으로. 한 번 건너뛰면(monc_onboard_done) 다시 강제 안 함.
+      // 온보딩에도 목적지를 넘긴다 — onboarding 의 nextPage() 가 ?returnTo 를 읽는다.
       let skipped = false; try { skipped = !!localStorage.getItem('monc_onboard_done'); } catch (e) {}
-      if (!profile.phone && !skipped) { window.location.replace('onboarding.html'); return; }
-      window.location.replace('mypage.html');
+      if (!profile.phone && !skipped) {
+        window.location.replace('onboarding.html' + (rt ? '?returnTo=' + encodeURIComponent(rt) : ''));
+        return;
+      }
+      window.location.replace(rt || 'mypage.html');
     }
 
     const returnHere = () => window.location.origin + window.location.pathname;

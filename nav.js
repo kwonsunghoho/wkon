@@ -30,7 +30,10 @@
         목록 맨 위에 다시 넣지 말 것. */
   var BRIEFING_HUB = 'briefing.html';
   var BRIEFING_SUB = [
-    ['mypage.html#sec-answers', '나만의 승준노트', '쓴 답변이 전부 모이는 곳'],
+    /* ⚠️ 1번 항목은 저장소(answers.html) 직행 — 구 mypage.html#sec-answers 는 저장 답변이
+       0건이면 접이가 아예 안 그려져 '눌렀는데 아무것도 없음'이 됐다(2026-08-02 오너
+       "접힌 칸으로 안 가게 해야지"). 마이페이지 접이로 되돌리지 말 것. */
+    ['answers.html', '나만의 승준노트', '쓴 답변이 전부 모이는 곳'],
     ['news.html', '항공사 뉴스&산업분석', '10개 항공사 소식 · 스크랩'],
     ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
     ['polish.html', '나의 답변 연구실', "문장을 '지금 → 이렇게'로"],

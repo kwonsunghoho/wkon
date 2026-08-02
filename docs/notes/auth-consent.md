@@ -1,5 +1,12 @@
 # 로그인·동의·개인정보 — 상세 기록
 
+## 로그인 뒤 '가려던 화면' 복귀 — returnTo (2026-08-02 오너 "로그인하면 마지막 페이지로 돌아가야지")
+
+- `requireSession()`·`requireConsent()` 가 `login.html?returnTo=<파일명+쿼리+해시>` 로 보낸다(`pageRef()` — 파일명만, 절대경로 금지: GitHub Pages 하위 경로에서도 성립).
+- OAuth 왕복은 쿼리가 사라지므로 **login.html 도착 즉시 sessionStorage(`monc_return_to`)에 보관**하고, `routeByRole()` 이 꺼내 쓴다(1회용 — 꺼내면 지운다). 온보딩으로 갈 땐 `onboarding.html?returnTo=…` 로 넘긴다(온보딩 `nextPage()` 가 이미 읽는다).
+- ⚠️ **열린 리다이렉트 방지 — `safeReturnTo()` 를 지우지 말 것**: `파일명.html(?…)(#…)` 형식만 통과, `login/onboarding` 자신 제외. 외부 URL·`//`·`javascript:` 는 형식에서 걸러진다(2026-08-02 Playwright 실측: 정상값 보관·악성값 거부 확인).
+- 되돌리면 안 되는 이유: 도구(소재·킬러·첨삭·기출) 때문에 가입한 사람이 전부 마이페이지에 떨어져 유입이 끊겼다. 관리자도 returnTo 가 있으면 그쪽 우선(없으면 admin.html).
+
 > 2026-07-30 CLAUDE.md 다이어트로 이관한 기능별 상세 기록·의사결정 원장이다.
 > 매 작업 공통 규칙은 CLAUDE.md 에 있고, 이 문서는 해당 기능을 고칠 때 읽는다.
 > 본문 속 '위/아래 ○○ 절 참조'는 구 CLAUDE.md 기준 표현이라, 그 절은 docs/notes/ 의 다른 문서에 있을 수 있다.

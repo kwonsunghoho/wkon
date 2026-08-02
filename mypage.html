@@ -242,6 +242,30 @@
 
     .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
 
+    /* ── 크레딧 지갑 (2026-08-02 "재구매도 만들어줘라") ──
+       충전 창구가 도구 안(AI킬러·첨삭)에만 있어 마이페이지에 지갑 개념이 없던 것 보완. */
+    .v2-w-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .v2-w-bal { margin: 6px 0 3px; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); line-height: 1; }
+    .v2-w-unit { font-size: 14px; font-weight: 700; color: var(--text-muted); margin-left: 5px; letter-spacing: 0; }
+    .v2-w-free { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.55; word-break: keep-all; }
+    .v2-w-btn { flex: none; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px;
+      background: var(--action); color: var(--action-ink, #fff); font-size: 14px; font-weight: 800;
+      font-family: inherit; cursor: pointer; }
+    .v2-w-box { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+    .v2-w-box[hidden] { display: none; }
+    .v2-pack { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+      min-height: 52px; margin-bottom: 8px; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 12px; background: var(--surface); font-family: inherit; font-size: 14px;
+      cursor: pointer; text-align: left; }
+    .v2-pack:disabled { opacity: .6; }
+    .v2-pack-n { display: flex; flex-direction: column; gap: 2px; font-weight: 800; color: var(--text); }
+    .v2-pack-n em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .v2-pack-p { font-weight: 800; color: var(--text); white-space: nowrap; }
+    /* 비교 기준 문구 — credits.md "이 한 줄이 없으면 싼지 비싼지 판단이 안 된다". 빼지 말 것. */
+    .v2-w-note { margin: 6px 0 0; font-size: 12px; color: var(--text-dim); line-height: 1.6; word-break: keep-all; }
+    .v2-w-notice { margin-top: 10px; font-size: 13px; line-height: 1.6; color: var(--text); font-weight: 700; }
+    .v2-w-notice.err { color: #B3261E; }
+
     @media (min-width: 760px) {
       .v2 { padding: 24px 0 72px; }
       .v2-today { padding: 26px 28px 28px; }
@@ -313,6 +337,28 @@
         </div>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </a>
+
+      <!-- 내 크레딧 지갑 (2026-08-02 오너 "재구매도 만들어줘라") — 잔액·오늘 무료·충전을 한 카드에.
+           ⚠️ 잔액은 credit_wallet() RPC(원장 합계)만 믿는다 — 화면에서 계산하지 않는다.
+           충전 규약은 ai-killer 충전함과 동일(같은 PENDING 키 · verify-payment { creditPack } —
+           금액 검증은 서버가 site_config.credit_packs 를 다시 읽어서 한다).
+           크레딧 시스템 미적용 환경이면 카드째 숨는다(빈 껍데기 금지). -->
+      <div class="v2-card" id="walletCard" style="display:none;">
+        <div class="v2-w-top">
+          <div>
+            <span class="v2-q-tag">내 크레딧</span>
+            <p class="v2-w-bal"><span id="wBal">0</span><span class="v2-w-unit">크레딧</span></p>
+            <p class="v2-w-free" id="wFree"></p>
+          </div>
+          <button class="v2-w-btn" id="wChargeBtn" type="button">충전하기</button>
+        </div>
+        <div class="v2-w-box" id="wBox" hidden>
+          <div id="wPacks"></div>
+          <p class="v2-w-note" id="wCostNote">1회에 소재 다듬기 2 · AI킬러 검사 3 · 첨삭 10크레딧이 쓰여요.</p>
+          <p class="v2-w-note">학원 자소서 첨삭은 한 문항에 2~5만 원이에요. 카드·간편결제로 결제하면 바로 충전됩니다.</p>
+        </div>
+        <div class="v2-w-notice" id="wNotice" style="display:none;"></div>
+      </div>
 
       <!-- 내 기록: 데이터가 있는 줄만 보인다. 빈 껍데기 섹션을 쌓지 않는 게 이 개편의 핵심. -->
       <div class="v2-folds" data-v2-acc>
@@ -390,6 +436,33 @@
           </div>
         </details>
 
+        <!-- 답변 프로그램 이용권 — 산 사람이 마이페이지에서 확인·재진입할 자리(2026-08-02). 0건이면 안 연다. -->
+        <details class="v2-fold" id="sec-programs" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 9h8M8 13h5"/></svg>
+            <span class="v2-fold-t">답변 프로그램</span>
+            <span class="v2-fold-c" id="programCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="programRows"></ul>
+            <a class="v2-more" href="programs.html">프로그램 전체 보기 →</a>
+          </div>
+        </details>
+
+        <!-- 크레딧 사용·충전 내역 — 원장(credit_ledger) 최근 10건. 0건이면 안 연다. -->
+        <details class="v2-fold" id="sec-credits" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8.8 10.2c.6-1 1.8-1.6 3.2-1.6 1.9 0 3.2.9 3.2 2.1 0 2.6-6.2 1.5-6.2 4 0 1.2 1.3 2.1 3 2.1 1.5 0 2.7-.6 3.3-1.6"/></svg>
+            <span class="v2-fold-t">크레딧 내역</span>
+            <span class="v2-fold-c" id="creditCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="creditRows"></ul>
+          </div>
+        </details>
+
         <details class="v2-fold" id="sec-apps" style="display:none;">
           <summary>
             <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
@@ -445,6 +518,16 @@
     <div class="loading" id="loading">불러오는 중…</div>
   </main>
 
+  <!-- 사업자 정보 — 결제가 일어나는 화면에는 통신판매업자 표시가 있어야 한다(2026-08-02 오너 지시).
+       문구는 apply.html·index.html 푸터와 같은 내용을 유지한다. 활자 12px 하한. -->
+  <footer style="max-width:720px;margin:44px auto 28px;padding:0 20px;font-size:12px;line-height:1.7;color:var(--text-dim,#8a8f98);text-align:center;word-break:keep-all;">
+    상호: 몬크 | 대표: 권성호 박새암 | 사업자등록번호: 784-02-04020 | 통신판매업신고번호: 제2026-서울금천-1525호<br>
+    주소: 서울특별시 금천구 디지털로9길 99, 10층 13호 | 고객센터: 070-4032-0015 | 이메일: moveownnextcreate@gmail.com<br>
+    <a href="terms.html" style="color:inherit;">이용약관</a> · <a href="privacy.html" style="color:inherit;">개인정보처리방침</a> · © 2026 MONC
+  </footer>
+
+  <!-- 포트원(PortOne) V2 결제 SDK — 크레딧 충전. 누른 뒤 받으면 결제창이 늦게 떠서 미리 싣는다. -->
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="sojae-common.js"></script>
@@ -619,6 +702,177 @@
       } catch (_) { return []; }
     }
 
+    // ── 크레딧 지갑 + 충전 (2026-08-02 오너 "재구매도 만들어줘라") ──────────────
+    // ⚠️ 잔액은 서버 RPC(원장 합계)만 믿는다. 무료는 '크레딧'이 아니라 '행위'로 말한다
+    //    (credits.md — "3크레딧 남았는데 왜 검사가 안 되지"를 막는 표기).
+    //    충전 규약은 ai-killer.html 충전함과 동일 — 같은 PENDING 키, verify-payment { creditPack },
+    //    금액 검증은 서버가 site_config.credit_packs 를 다시 읽어서 한다(브라우저가 보낸 금액 불신).
+    const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
+    const PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59';
+    const PENDING_KEY = 'monc_pending_credit_pay';
+    let _wallet = null, _packs = [];
+    const COST_FALLBACK = { sojae: 2, ai_killer: 3, polish: 10 };
+    const walletCost = t => Number(((_wallet && _wallet.costs) || {})[t]) || COST_FALLBACK[t];
+
+    async function loadWallet() {
+      let bal = null, dailyLeft = 0;
+      try {
+        const { data, error } = await MONC.sb.rpc('credit_wallet');
+        if (!error && data) { _wallet = data; bal = Number(data.balance) || 0; dailyLeft = Number(data.daily_left) || 0; }
+      } catch (_) {}
+      if (bal === null) {
+        // credit_wallet 미적용(구 원장) — 잔액만이라도 그린다
+        try { const { data } = await MONC.sb.rpc('credit_balance'); if (data != null) bal = Number(data) || 0; } catch (_) {}
+      }
+      if (bal === null) return;               // 크레딧 시스템 미적용 환경 → 카드째 숨김 유지
+      document.getElementById('wBal').textContent = bal.toLocaleString();
+      const freeEl = document.getElementById('wFree');
+      freeEl.textContent = !_wallet ? ''
+        : dailyLeft > 0
+          ? '오늘 무료: 소재 다듬기 ' + Math.floor(dailyLeft / walletCost('sojae'))
+            + '회 또는 검사 ' + Math.floor(dailyLeft / walletCost('ai_killer')) + '회'
+          : '오늘 무료분을 다 썼어요 · 자정에 다시 채워져요';
+      document.getElementById('wCostNote').textContent = '1회에 소재 다듬기 ' + walletCost('sojae')
+        + ' · AI킬러 검사 ' + walletCost('ai_killer') + ' · 첨삭 ' + walletCost('polish') + '크레딧이 쓰여요.';
+      document.getElementById('walletCard').style.display = '';
+    }
+
+    async function loadPacks() {
+      try {
+        const { data } = await MONC.sb.from('site_config').select('value').eq('key', 'credit_packs').maybeSingle();
+        _packs = Array.isArray(data && data.value) ? data.value.filter(p => p && p.tool === 'ai_killer') : [];
+      } catch (_) { _packs = []; }
+      const el = document.getElementById('wPacks');
+      if (!_packs.length) { el.innerHTML = '<p class="v2-w-note">충전 상품이 아직 준비되지 않았어요.</p>'; return; }
+      // 크레딧 숫자만으로는 값이 안 읽힌다 — 무엇을 몇 번 할 수 있는지로 환산해 같이 적는다
+      el.innerHTML = _packs.map(p => {
+        const n = Number(p.count) || 0;
+        return '<button class="v2-pack" type="button" data-pack="' + esc(p.id) + '">'
+          + '<span class="v2-pack-n">' + esc(p.label || (n + '크레딧'))
+          + '<em>검사 ' + Math.floor(n / walletCost('ai_killer')) + '회 또는 첨삭 ' + Math.floor(n / walletCost('polish')) + '회</em></span>'
+          + '<span class="v2-pack-p">' + Number(p.price).toLocaleString() + '원</span></button>';
+      }).join('');
+      el.querySelectorAll('[data-pack]').forEach(b => b.addEventListener('click', () => charge(b.dataset.pack)));
+    }
+
+    function wNotice(msg, err) {
+      const el = document.getElementById('wNotice');
+      el.style.display = ''; el.classList.toggle('err', !!err); el.textContent = msg;
+    }
+
+    async function charge(packId) {
+      const pack = _packs.find(p => String(p.id) === String(packId));
+      if (!pack) return;
+      if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.'); return; }
+      const btn = document.querySelector('#wPacks [data-pack="' + packId + '"]');
+      const orig = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.textContent = '결제 진행 중…'; }
+      try {
+        const paymentId = 'monc-cr-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+        // 모바일은 결제사 페이지로 이동했다가 redirectUrl 로 복귀 → sessionStorage 에 보관
+        sessionStorage.setItem(PENDING_KEY, JSON.stringify({ paymentId, packId }));
+        const res = await window.PortOne.requestPayment({
+          storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+          paymentId, orderName: '몬크 크레딧 ' + (pack.label || pack.count + '개'),
+          totalAmount: Number(pack.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
+          redirectUrl: location.origin + location.pathname + '?payresult=1',
+        });
+        // 여기부터 PC(팝업) 경로. 모바일은 위에서 페이지가 떠나 도달하지 않는다.
+        sessionStorage.removeItem(PENDING_KEY);
+        if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
+        if (btn) btn.textContent = '충전 확인 중…';
+        await completeCharge(paymentId, packId);
+      } catch (e) {
+        alert('결제 중 오류가 발생했어요: ' + (e && e.message ? e.message : e));
+      } finally {
+        if (btn && document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; }
+      }
+    }
+
+    async function completeCharge(paymentId, packId) {
+      try {
+        const { data, error } = await MONC.sb.functions.invoke('verify-payment', {
+          body: { paymentId, creditPack: packId },
+        });
+        if (error || !data || !data.ok) {
+          wNotice('결제는 됐는데 충전 확인에 실패했어요. 잠시 뒤 새로고침해 보시고, 그래도 안 되면 알려 주세요(결제번호 ' + paymentId + ').', true);
+          return;
+        }
+        document.getElementById('wBox').hidden = true;
+        document.getElementById('wChargeBtn').textContent = '충전하기';
+        wNotice('크레딧 ' + data.added + '개를 충전했어요.');
+        loadWallet(); loadCreditLedger();
+      } catch (_) { wNotice('충전 확인에 실패했어요. 새로고침해 주세요.', true); }
+    }
+
+    // 모바일 결제 복귀 처리 — 주소의 결제 파라미터를 지우고 서버 확인으로 마무리
+    async function handlePayReturn() {
+      const p = new URLSearchParams(location.search);
+      if (p.get('payresult') !== '1') return;
+      const code = p.get('code'), message = p.get('message');
+      ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId']
+        .forEach(k => p.delete(k));
+      history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : '') + location.hash);
+      const raw = sessionStorage.getItem(PENDING_KEY);
+      sessionStorage.removeItem(PENDING_KEY);
+      if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
+      if (!raw) return;
+      let pending; try { pending = JSON.parse(raw); } catch (_) { return; }
+      await completeCharge(pending.paymentId, pending.packId);
+    }
+
+    document.getElementById('wChargeBtn').addEventListener('click', () => {
+      const box = document.getElementById('wBox');
+      box.hidden = !box.hidden;
+      document.getElementById('wChargeBtn').textContent = box.hidden ? '충전하기' : '접기';
+    });
+
+    // ── 크레딧 내역 접이 — 원장 최근 10건(RLS 상 내 것만). 0건이면 접이를 안 연다. ──
+    const CL_TOOL = { ai_killer: '검사', sojae: '소재', polish: '첨삭', rehearsal: '모의면접' };
+    const CL_REASON = { purchase: '충전', admin_grant: '지급', use: '사용', free_use: '무료 사용', refund: '환급' };
+    async function loadCreditLedger() {
+      try {
+        const { data, error } = await MONC.sb.from('credit_ledger')
+          .select('*').order('created_at', { ascending: false }).limit(30);
+        if (error || !data || !data.length) return;
+        document.getElementById('creditRows').innerHTML = data.slice(0, 10).map(r => {
+          const d = Number(r.delta) || 0;
+          const amt = r.reason === 'free_use' ? '무료' : (d > 0 ? '+' + d : String(d));
+          const what = [CL_REASON[r.reason] || r.reason, CL_TOOL[r.tool] || ''].filter(Boolean).join(' · ');
+          return `<li class="v2-item">
+              <div class="v2-pay-top"><span class="v2-pay-t">${esc(what)}</span><span class="v2-chip ${d > 0 ? 'is-ok' : ''}">${esc(amt)}</span></div>
+              <div class="v2-pay-d"><span class="v2-num">${fmtDot(r.created_at)}</span></div>
+            </li>`;
+        }).join('');
+        document.getElementById('creditCount').textContent = data.length >= 30 ? '30+' : data.length;
+        document.getElementById('sec-credits').style.display = '';
+      } catch (_) { /* 접이 숨김 유지 */ }
+    }
+
+    // ── 답변 프로그램 이용권 접이 — 산 사람이 여기서 확인·재진입한다(2026-08-02). 0건이면 안 연다. ──
+    async function loadMyPrograms() {
+      try {
+        const { data, error } = await MONC.sb.from('program_enrollments')
+          .select('*').order('started_at', { ascending: false });
+        if (error || !data || !data.length) return;
+        const titles = {};
+        try {
+          const ids = Array.from(new Set(data.map(r => r.program_id)));
+          const { data: ps } = await MONC.sb.from('answer_programs').select('id, title').in('id', ids);
+          (ps || []).forEach(p => { titles[p.id] = p.title; });
+        } catch (_) {}
+        document.getElementById('programRows').innerHTML = data.slice(0, 3).map(r => {
+          const st = r.status === 'active' ? ['진행 중', 'is-ok'] : [r.status || '', ''];
+          return `<li><a class="v2-item" href="program.html?p=${encodeURIComponent(r.program_id)}">
+              <div class="v2-pay-top"><span class="v2-pay-t">${esc(titles[r.program_id] || '답변 프로그램')}</span>${st[0] ? `<span class="v2-chip ${st[1]}">${esc(st[0])}</span>` : ''}</div>
+              <div class="v2-pay-d"><span class="v2-num">시작 ${esc(String(r.started_at || '').slice(0, 10).replace(/-/g, '.'))}</span></div>
+            </a></li>`;
+        }).join('');
+        document.getElementById('programCount').textContent = data.length;
+        document.getElementById('sec-programs').style.display = '';
+      } catch (_) { /* 접이 숨김 유지 */ }
+    }
+
     // ── 회원 상태 판정 — cohort_id(기수 배정)가 챌린지 참여의 정본. 기수 미배정인데 기록만 있는 경우도 방어. ──
     function memberState(profile, hasRecords, hasLectures) {
       const co = profile && profile.cohorts;
@@ -643,6 +897,8 @@
       loadAnswerNotes(me);
       loadNewsScraps();
       loadLabPurchases();
+      handlePayReturn();          // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작
+      loadWallet(); loadPacks(); loadCreditLedger(); loadMyPrograms();
       const profile = await MONC.getMyProfile();
 
       // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)
