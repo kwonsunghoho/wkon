@@ -18,6 +18,29 @@
     /* 폼 컨트롤은 본문 글꼴을 물려받는다 — 브라우저 기본은 시스템 글꼴이라, 개별 규칙에
        font-family:inherit 를 빠뜨린 17곳에서 SUIT 와 시스템 글꼴이 한 화면에 섞였다(2026-08-02 5차). */
     button, input, select, textarea { font-family: inherit; }
+    /* ── 상태색 한 벌(2026-08-03) ──────────────────────────────────────────────
+       ⚠️ 전에는 같은 뜻에 색이 여러 개였다: 경고 글자가 #A33D14·#c0392b·#B23B2E 세 가지,
+          삭제가 또 다른 빨강, 성공이 두 가지였다. 게다가 `var(--danger, …)` 를 두 곳에서
+          쓰는데 **--danger 는 어디에도 정의돼 있지 않아** 폴백 색이 그대로 칠해졌다 —
+          같은 뜻의 경고가 화면마다 다른 색으로 나왔다.
+       규칙은 셋뿐이다. 새 색을 자리마다 만들지 말 것(팔레트 공통 규칙).
+         --st-alert  : 잘못됐거나 손댈 것이 남음(경고·오류 글자·미입금·가입 미완료)
+         --st-danger : 되돌릴 수 없는 조작(삭제 버튼)
+         --st-ok     : 끝남·성공
+       ⚠️ 이 색들은 팔레트 통일 대상이 아니다(의미색). 네이비로 바꾸지 말 것 — design-principles.md.
+       ⚠️ 변수를 지우면 에러 없이 **글자만 사라진다.** 값은 여기서만 고친다. */
+    :root {
+      --st-alert:      #A33D14;
+      --st-alert-line: rgba(163, 61, 20, .45);
+      --st-alert-bg:   #FDF4F0;
+      --st-danger:     #B3261E;
+      /* ⚠️ 옛 #1A7F37 은 웜 페이퍼 위 4.50, 연녹색 배경 위 4.52 로 **기준선(4.5)에 딱 붙어** 있었다.
+         한 단계 어둡게 해서 여유를 준다(5.45/5.47). 흰 글자를 얹는 자리(입금 ✓ 버튼)도 같이 좋아진다. */
+      --st-ok:         #17703A;
+      --st-ok-bg:      #E7F5EC;
+      --st-ok-line:    #BCE3C9;
+      --st-note-bg:    #FFF6E5;   /* 아직 저장 안 함 · 읽어 둘 주의 */
+    }
     /* ⚠️ [hidden] 을 이기는 display 선언이 자꾸 생긴다 — .round-editing·#lrEditBar 는 2026-08-01 에
        짝 규칙으로 하나씩 막았지만, 같은 사고가 #qfRaw(.round-list=flex · '원문 접기'가 안 접힘)와
        #afSub(.af-row=flex · 비어 있어도 필터 아래 자리를 먹음)에서 또 났다.
@@ -25,12 +48,15 @@
     [hidden] { display: none !important; }
     body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;
            background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.55; }
-    .brand-link { display: flex; align-items: center; text-decoration: none; }
+    /* 로고는 20px 이지만 누르는 자리는 44px 이다(원칙 2) — 로고 크기를 키우지 않고 여백으로 넓힌다.
+       ⚠️ 상단 바에서 사이트로 나가는 유일한 링크라, 작으면 안 눌리거나 옆 버튼이 눌린다. */
+    .brand-link { display: flex; align-items: center; text-decoration: none; min-height: 44px; padding-right: 8px; }
     .brand-link img { height: 20px; width: auto; display: block; }
     .brand-link:hover { opacity: .7; }
     .badge { font-size: 12px; font-weight: 800; color: #fff; background: var(--action);
              border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
-    .logout { font-size: 13px; color: var(--text-muted); background: #fff; border: 1px solid var(--border);
+    /* ⚠️ .snav 안이라 .smain/.side 의 경계선 규칙이 안 닿는다 — 여기만 --border 였다(1.37:1 · 실측) */
+    .logout { font-size: 13px; color: var(--text-muted); background: #fff; border: 1px solid var(--border-strong);
               border-radius: 999px; padding: 9px 14px; min-height: 44px; cursor: pointer; white-space: nowrap; }
     .logout:hover { border-color: var(--action); color: var(--action); }
     .ic { width: 18px; height: 18px; flex: 0 0 auto; }
@@ -124,8 +150,10 @@
        ⚠️ minmax 를 150px 이상으로 올리지 말 것 — 320px 화면에서 1열로 풀려 도로 길어진다
           (본문 여백 16×2 를 뺀 288px 에 132×2+8 이 들어간다). */
     .tb-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
+    /* ⚠️ 이 칸은 눌러서 그 목록으로 가는 버튼이다 — 테두리도 조작요소 기준 3:1(원칙 4 · 2026-08-03).
+       전에는 카드용 --border-soft(1.19:1)라 칸 경계가 사실상 안 보였다. */
     .tb-stat { display: block; text-align: left; background: var(--surface);
-               border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+               border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
                padding: 10px 12px; font-family: inherit; cursor: pointer; text-decoration: none; color: inherit; }
     .tb-stat .n b { font-family: var(--serif, inherit); font-size: 26px; font-weight: 800; color: var(--accent-ink);
                     line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
@@ -138,8 +166,8 @@
     .tb-stat.zero .n b { color: var(--text-dim); }
     /* 아직 손댈 것이 남은 칸만 빨강. admin 의 '처리 필요' 의미색(.td-paystat.no 와 같은 값)이고
        브랜드색이 아니라 통일 대상이 아니다. ⚠️ 0 이면 강조하지 않는다 — 할 일이 없으면 눈에 띌 이유가 없다. */
-    .tb-stat.todo { border-color: rgba(163,61,20,.45); }
-    .tb-stat.todo .n b { color: #A33D14; }
+    .tb-stat.todo { border-color: var(--st-alert); }   /* 반투명(2.05:1)이면 '남은 칸'이라는 표시가 안 읽힌다 */
+    .tb-stat.todo .n b { color: var(--st-alert); }
     .tb-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 13px; font-weight: 800;
                color: var(--accent-ink); background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
     @media (max-width: 960px) {
@@ -151,8 +179,8 @@
     .td-recent .round-item { cursor: pointer; }
     .td-recent .round-item:hover { border-color: var(--accent-dark); }
     .td-paystat { font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .td-paystat.ok { color: #1a7f37; }
-    .td-paystat.no { color: #A33D14; }
+    .td-paystat.ok { color: var(--st-ok); }
+    .td-paystat.no { color: var(--st-alert); }
 
     /* ── 답변 프로그램 서브탭 — 6절을 한 화면씩. 탭 알약과 같은 문법, 한 단계 작게 ── */
     .ap-subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 16px; }
@@ -219,7 +247,7 @@
     .lf-thumb-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .lf-thumb-act { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 auto; min-width: 0; }
     .lf-thumb-msg { flex-basis: 100%; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-    .lf-thumb-msg.err { color: #A33D14; font-weight: 700; }
+    .lf-thumb-msg.err { color: var(--st-alert); font-weight: 700; }
     /* 권장 사이즈 고정 안내 — 상태 메시지(.lf-thumb-msg)와 달리 늘 같은 자리에 흐리게 남는다 */
     .lf-thumb-spec { margin-top: 8px; font-size: 12px; color: var(--text-dim); line-height: 1.6; }
     .lf-thumb-spec b { font-weight: 700; color: var(--text-muted); }
@@ -234,12 +262,12 @@
     .lf-slot input { padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; width: 100%; font-family: inherit; }
     /* 시간은 브라우저 다이얼·오전/오후 UI가 쓰기 불편해서 텍스트로 직접 적는다(24시간). */
     .lf-slot input.t { text-align: center; letter-spacing: .02em; }
-    .lf-slot input.t.bad { border-color: #A33D14; background: #FDF4F0; }
+    .lf-slot input.t.bad { border-color: var(--st-alert); background: var(--st-alert-bg); }
     .lf-slot-end { display: flex; align-items: center; gap: 8px; }
     .lf-slot-seat { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
     .lf-slot-del, .lf-slot-copy { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-xs);
                    padding: 8px 10px; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit; }
-    .lf-slot-del:hover { border-color: #A33D14; color: #A33D14; }
+    .lf-slot-del:hover { border-color: var(--st-alert); color: var(--st-alert); }
     .lf-slot-copy:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
     .lf-slot-add { border: 1px dashed var(--border); background: none; border-radius: var(--radius-xs);
                    padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--accent-ink); cursor: pointer; }
@@ -297,7 +325,7 @@
     .app-card .ac-refund { font-size: 13px; color: var(--text-muted); margin-top: 4px; word-break: break-all; }
     .app-card .ac-refund b { color: var(--text); font-weight: 700; }
     .app-card .ac-ch { font-size: 13px; color: var(--text); margin: 8px 0; }
-    .app-card .ac-linked { font-size: 12px; font-weight: 700; color: #1a7f37; }
+    .app-card .ac-linked { font-size: 12px; font-weight: 700; color: var(--st-ok); }
     .app-card .ac-unlinked { font-size: 12px; color: var(--text-muted); }
     .app-card .ac-guest { font-size: 12px; font-weight: 700; color: var(--action-dark); }
     .app-card .ac-sub { font-weight: 400; color: var(--text-muted); }
@@ -306,18 +334,21 @@
     .app-card .ac-dup { font-size: 12px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
     .app-card .ac-toggles { display: flex; gap: 8px; margin-top: 8px; }
     .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
-    .app-card .ac-tg.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
+    .app-card .ac-tg.on { background: var(--st-ok); color: #fff; border-color: var(--st-ok); }
     .app-card .ac-tg.on-refund { background: var(--action); color: #fff; border-color: var(--action); }
     .app-card .ac-del { margin-left: auto; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--action-dark); }
     .app-card .ac-del:hover { background: var(--action-tint); }
 
     .reviews-wrap { padding: 20px; max-width: 900px; }
     .rv-upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    /* ⚠️ 파일 고르기 칸은 브라우저가 제 폭을 정해서 좁은 화면(320px)에서 상자 밖으로 나갔다(실측 298>286).
+       flex-wrap 은 '줄을 바꾸는 것'이라 **한 칸 자체가 넘칠 때는 안 듣는다** — max-width 로 잘라야 한다. */
+    .rv-upload input[type="file"] { max-width: 100%; min-width: 0; }
     .rv-upload-bulk { margin-bottom: 8px; }
     .rv-section-title { font-size: 13px; font-weight: 800; color: var(--text-muted); margin: 0 0 6px 2px; }
     .rv-bulk-status { font-size: 13px; color: var(--text-muted); margin: 0 2px 20px; line-height: 1.5; }
-    .rv-bulk-status .ok { color: #1a7f37; font-weight: 700; }
-    .rv-bulk-status .err { color: #c0392b; font-weight: 700; }
+    .rv-bulk-status .ok { color: var(--st-ok); font-weight: 700; }
+    .rv-bulk-status .err { color: var(--st-alert); font-weight: 700; }
     .rv-searchrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0 12px; }
     .rv-searchrow .search { flex: 1; min-width: 180px; margin-bottom: 0; }
     .rv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
@@ -325,15 +356,23 @@
     .rv-item img { width: 100%; display: block; aspect-ratio: 3/4; object-fit: cover; background: var(--surface2); }
     .rv-item.hidden img { opacity: .4; }
     .rv-meta { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-    .rv-meta .row { display: flex; gap: 6px; align-items: center; }
+    /* ⚠️ 줄바꿈을 허용한다(2026-08-03). 칸마다 이름표(종류·챌린지·기수·이름·한줄평)를 붙인 뒤로
+       한 줄에 다 안 들어가 375px 에서 카드 밖으로 글자가 삐져나왔다(실측 231px > 148px).
+       min-width:0 이 없으면 label 이 flex 기본값(auto)이라 아무리 좁아도 안 줄어든다. */
+    .rv-meta .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
     .rv-order { width: 46px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     /* 값 옆에 이름을 붙인다(원칙 15) — 채워 넣으면 placeholder 가 사라져 '2' 만 남았다. */
-    .rv-lb { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    /* ⚠️ min-width:0 이 있어야 이름표+입력칸 덩이가 카드 폭에 맞춰 줄어든다.
+       빼면 input 의 기본 폭(size=20 · 약 177px)이 최소폭으로 남아 카드 밖으로 글자가 나간다(실측 231px > 148px). */
+    .rv-lb { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--text-muted);
+             white-space: nowrap; min-width: 0; }
     .rv-rank { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--text-muted); }
     .rv-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 4px 2px 16px; }
     .rv-hint b { color: var(--action); }
     .rv-qt { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
-    .rv-cls { gap: 6px; }
+    /* 챌린지+기수는 늘 두 줄이다 — 후기 카드는 어느 화면에서든 140~200px 라 한 줄에 넣으면
+       챌린지 선택칸이 25px 까지 찌부러진다(실측). 좁아서 못 넣는 것은 줄을 바꾼다. */
+    .rv-cls { gap: 6px; flex-direction: column; align-items: stretch; }
     .rv-ch { flex: 1; min-width: 0; padding: 6px 4px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; background: #fff; }
     .rv-co { width: 54px; flex: 0 0 auto; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     /* 종류(kind) — 챌린지/상담. 이미지 자리와 같은 폭을 쓰므로 카드 맨 위에 둔다. */
@@ -361,7 +400,7 @@
     .st-form textarea { min-height: 200px; line-height: 1.7; resize: vertical; }
     .rv-nm { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     .rv-btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: var(--radius-xs); padding: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
-    .rv-btn.on { background: #1a7f37; color: #fff; border-color: #1a7f37; }
+    .rv-btn.on { background: var(--st-ok); color: #fff; border-color: var(--st-ok); }
     .rv-del { color: var(--action-dark); border-color: var(--action); }
 
     .layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
@@ -395,8 +434,13 @@
     .mitem .mc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
     .mb { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
           border: 1px solid var(--border-strong); color: var(--text-muted); background: #fff; }
-    .mb-warn { color: #A33D14; border-color: rgba(163,61,20,.45); }
+    .mb-warn { color: var(--st-alert); border-color: var(--st-alert-line); }
     .mb-ghost { color: #fff; background: var(--text-dim); border-color: var(--text-dim); }
+    .mb-arc { color: #fff; background: var(--accent-ink); border-color: var(--accent-ink); }
+    /* 회원 상세 맨 아래 보관 줄 — 파괴적이지 않은 정리 작업이라 빨강을 쓰지 않는다 */
+    .m-arc { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+             margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+    .m-arc-sub { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-top: 3px; max-width: 52ch; }
     .wl-tel { display: inline-flex; align-items: center; font-weight: 600; color: var(--action-dark); }
     .mitem .madm { font-size: 12px; color: var(--action); font-weight: 700; }
     .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
@@ -406,7 +450,7 @@
        여백 0의 맨 글자로 붙어 로딩 문구와 구분이 안 됐다. 자리마다 인라인 style 로 때우던 것도
        같은 원인이다. 실패는 색으로 구분한다(`.empty.err`). */
     .empty { color: var(--text-dim); font-size: 14px; line-height: 1.7; padding: 20px 4px; }
-    .empty.err { color: #A33D14; }
+    .empty.err { color: var(--st-alert); }
     .empty-main { color: var(--text-dim); text-align: center; padding: 80px 20px; }
 
     .panel { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
@@ -440,12 +484,12 @@
     .drow .d-num { font-weight: 700; font-size: 14px; }
     .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
     .seg button { border: 0; background: #fff; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); }
-    .seg button.on-ok { background: #1a7f37; color: #fff; }
+    .seg button.on-ok { background: var(--st-ok); color: #fff; }
     .seg button.on-no { background: var(--action); color: #fff; }
     .seg button.on-clear { background: var(--text-dim); color: #fff; }
     .d-comment input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     .d-save button { width: 100%; }
-    .drow.dirty { background: #fffaf0; box-shadow: inset 3px 0 0 var(--action); }
+    .drow.dirty { background: var(--st-note-bg); box-shadow: inset 3px 0 0 var(--action); }
 
     .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 560px) { .ba { grid-template-columns: 1fr; } }
@@ -459,7 +503,7 @@
     .mstats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
     .mstat { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
     .mstat b { color: var(--text); }
-    .mstat.paid { background: #e7f5ec; border-color: #bce3c9; color: #1a7f37; }
+    .mstat.paid { background: var(--st-ok-bg); border-color: var(--st-ok-line); color: var(--st-ok); }
     .mstat.wait { background: var(--action-tint); border-color: var(--action); color: var(--action-dark); }
     .mstat.refund { background: var(--accent-tint); border-color: var(--accent-ink); color: var(--accent-ink); }
     /* 회원 상세 — 신청/답변 미니 리스트 */
@@ -474,7 +518,7 @@
     .note-adm.draft { border-left: 3px solid var(--action); }
     .na-badge { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
     .na-badge.draft { background: var(--action-tint); color: var(--action-dark); }
-    .na-badge.final { background: #e7f5ec; color: #1a7f37; }
+    .na-badge.final { background: var(--st-ok-bg); color: var(--st-ok); }
 
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary);
              color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
@@ -540,7 +584,7 @@
        모바일에서 두 줄로 접히면 오눌림이 실제로 난다. 되돌릴 수 없는 것만 이 색을 쓴다. */
     /* ⚠️ 테두리는 반투명이 아니라 제 색으로 — .5 알파는 흰 면 위 2.47:1 이라 경계선 3:1 하한에
        못 미쳤다(원칙 4). 이 버튼은 테두리가 유일한 식별 수단이다. */
-    .is-danger { color: #B3261E !important; border-color: #B3261E !important; }
+    .is-danger { color: var(--st-danger) !important; border-color: var(--st-danger) !important; }
     .is-danger:hover { background: rgba(179,38,30,.07) !important; }
 
     /* ══ 기본기 4종(2026-08-02 5차 진단) — admin 만 빠져 있던 것들 ══
@@ -595,7 +639,12 @@
     .smain :is(input, select, textarea, .btn, .btn-ghost, .af-chip, .ri-edit, .ri-del, .ri-cancel,
                .ac-tg, .ac-del, .rv-btn, .rv-kf, .rv-order, .rv-qt, .rv-ch, .rv-co, .rv-nm, .rv-kind,
                .ap-st, .tb-more, .lf-slot-add, .search):not(.is-danger),
-    .side :is(input, select, .btn-ghost):not(.is-danger) {
+    .side :is(input, select, .btn-ghost):not(.is-danger),
+    /* ⚠️ 누를 수 있게 만든 것은 테두리도 조작요소 기준이다(2026-08-03).
+       '오늘 · 최근 신청' 행은 role=button 을 달아 누르는 것이 됐는데 테두리는 카드용 --border
+       (1.19:1)라 어디까지가 한 칸인지 안 보였다. 모바일 '메뉴'도 같은 이유 — 폰에서 다른 탭으로
+       가는 유일한 문이라 여기가 흐리면 길이 막힌다. */
+    #tdRecent .round-item, .mt-menu {
       border-color: var(--border-strong) !important;
     }
 
@@ -773,7 +822,7 @@
   <div class="layout" id="layout" style="display:none;">
     <aside class="side">
       <h2>회원 (<span id="mCount">0</span>)</h2>
-      <input class="search" id="search" placeholder="이름·이메일·전화 검색" />
+      <input class="search" id="search" placeholder="이름·이메일·전화 검색"  aria-label="회원 검색 — 이름·이메일·전화"/>
       <!-- 상태 필터(2026-08-03) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip).
            ⚠️ 구 '미배정만' 체크박스를 이 줄의 '기수 미배정' 칩이 대신한다. 두 벌로 두지 말 것. -->
       <div class="apq-filter">
@@ -785,6 +834,8 @@
           <button type="button" class="af-chip" data-mf="nocohort">기수 미배정</button>
           <button type="button" class="af-chip" data-mf="active">신청 있음</button>
           <button type="button" class="af-chip" data-mf="ghost">흔적 없음</button>
+          <!-- 보관함은 '상태'가 아니라 '치워 둔 곳'이다 — 다른 칩은 전부 보관된 회원을 뺀 결과다. -->
+          <button type="button" class="af-chip" data-mf="archived">보관함 <span id="mArcN"></span></button>
         </div>
       </div>
       <!-- '흔적 없음' 이 무엇인지 · 지울 때 무엇을 알아야 하는지 -->
@@ -793,16 +844,22 @@
         <div class="adm-help-body">
           <p><b>번호 없음 + 신청 없음 + 크레딧 사용 없음 + 가입 30일 지남</b> 인 계정입니다.
              로그인은 했지만 이름·번호를 넣는 화면에서 나간 사람이라, 연락할 방법이 없습니다.</p>
-          <p>⚠️ <b>여기서 지우지 마세요.</b> 회원 행만 지우면 로그인 계정이 남아, 그 사람이 다시 로그인해도
+          <p><b>정리하는 방법: 위 [흔적 없음] 을 누르고 → [전체] 체크 → [보관].</b>
+             보관하면 이 목록·회원 수·검색에서 빠집니다. 되돌리려면 [보관함] 에서 [보관 해제] 를 누르세요.</p>
+          <p>⚠️ <b>지우지는 마세요.</b> 회원 행만 지우면 로그인 계정이 남아, 그 사람이 다시 로그인해도
              프로필이 다시 만들어지지 않습니다(회원 행은 첫 로그인 때 한 번만 생깁니다).
              정말 지우시려면 <b>Supabase 콘솔 → Authentication → Users</b> 에서 계정을 지우셔야 하고,
-             그러면 크레딧 기록·저장한 답변까지 같이 사라집니다.</p>
+             그러면 크레딧 기록·저장한 답변까지 같이 사라집니다. 보관은 그런 위험이 없습니다 —
+             회원 본인 화면·로그인·크레딧은 그대로고, 이 관리자 목록에서만 빠집니다.</p>
         </div>
       </details>
       <div class="bulk-bar">
         <label><input type="checkbox" id="selAll"> 전체</label>
-        <select id="bulkCohort"><option value="">기수 선택…</option></select>
+        <select id="bulkCohort" aria-label="일괄 배정할 기수"><option value="">기수 선택…</option></select>
         <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
+        <!-- 보관/해제는 지금 보고 있는 목록에 따라 한 개만 나온다(둘 다 두면 잘못 누른다) -->
+        <button class="btn btn-ghost btn-sm" id="bulkArchive" disabled>보관</button>
+        <button class="btn btn-ghost btn-sm" id="bulkUnarchive" disabled hidden>보관 해제</button>
         <span class="bulk-count" id="selCount"></span>
       </div>
       <ul class="mlist" id="mlist"></ul>
@@ -812,7 +869,7 @@
       <div class="newcohort">
         <h2>기수 추가</h2>
         <div class="field" style="margin-bottom:8px;">
-          <input id="cohortName" placeholder="예: MONC 1기" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+          <input id="cohortName" placeholder="예: MONC 1기" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="새 기수 이름">
         </div>
         <button class="btn btn-ghost btn-sm" id="addCohortBtn">+ 기수 만들기</button>
       </div>
@@ -832,7 +889,7 @@
       <!-- 챌린지 공통 참가비 — site_config.challenge_price. 4개 챌린지 모두에 적용. -->
       <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
         <div class="field" style="flex:1;min-width:150px;">
-          <label>챌린지 공통 참가비(원)</label>
+          <label for="chPrice">챌린지 공통 참가비(원)</label>
           <input id="chPrice" type="number" min="0" step="1000" placeholder="33000" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;">
         </div>
         <button class="btn btn-action" id="chPriceSave" type="button">참가비 저장</button>
@@ -843,17 +900,17 @@
         <button type="button" class="ri-cancel" id="roundEditCancel">취소하고 새로 추가</button>
       </div>
       <form class="round-form" id="roundForm">
-        <div class="field"><label>챌린지</label>
+        <div class="field"><label for="rfChallenge">챌린지</label>
           <select id="rfChallenge">
             <option value="voice">보신각(보이스)</option>
             <option value="expression">영합각(표현력)</option>
             <option value="spinning">스피닝</option>
             <option value="answer">승자각(답변)</option>
           </select></div>
-        <div class="field"><label>기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
-        <div class="field field-date"><label>모집 시작</label><input id="rfStart" type="date"></div>
-        <div class="field field-date"><label>모집 마감</label><input id="rfEnd" type="date"></div>
-        <div class="field field-date"><label>프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
+        <div class="field"><label for="rfRound">기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
+        <div class="field field-date"><label for="rfStart">모집 시작</label><input id="rfStart" type="date"></div>
+        <div class="field field-date"><label for="rfEnd">모집 마감</label><input id="rfEnd" type="date"></div>
+        <div class="field field-date"><label for="rfProgram">프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
         <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
       <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
@@ -873,9 +930,9 @@
         <button type="button" class="ri-cancel" id="lecEditCancel">취소하고 새로 추가</button>
       </div>
       <form class="round-form" id="lectureForm" style="grid-template-columns:1fr;">
-        <div class="field"><label>제목 *</label><input id="lfTitle" type="text" placeholder="예: 대한항공 대비 특강"></div>
+        <div class="field"><label for="lfTitle">제목 *</label><input id="lfTitle" type="text" placeholder="예: 대한항공 대비 특강"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="field"><label>항공사</label>
+          <div class="field"><label for="lfAirline">항공사</label>
             <select id="lfAirline">
               <option value="">일반(항공사 없음)</option>
               <option value="ke">대한항공 (KOREAN AIR)</option>
@@ -886,20 +943,20 @@
               <option value="yp">에어프레미아 (AIR PREMIA)</option>
               <option value="rf">에어로케이 (AERO K)</option>
             </select></div>
-          <div class="field"><label>한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드에 뜨는 짧은 소개"></div>
+          <div class="field"><label for="lfSubtitle">한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드에 뜨는 짧은 소개"></div>
         </div>
-        <div class="field"><label>상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
-        <div class="field"><label>핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
+        <div class="field"><label for="lfDesc">상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
+        <div class="field"><label for="lfHigh">핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-          <div class="field"><label>참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
-          <div class="field"><label>정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
+          <div class="field"><label for="lfPrice">참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
+          <div class="field"><label for="lfCapacity">정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
           <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
-          <div class="field"><label>정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
+          <div class="field"><label for="lfSort">정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-          <div class="field field-date"><label>신청 시작</label><input id="lfRStart" type="date"></div>
-          <div class="field field-date"><label>신청 마감</label><input id="lfREnd" type="date"></div>
-          <div class="field field-date"><label>특강 진행일</label><input id="lfDate" type="date"></div>
+          <div class="field field-date"><label for="lfRStart">신청 시작</label><input id="lfRStart" type="date"></div>
+          <div class="field field-date"><label for="lfREnd">신청 마감</label><input id="lfREnd" type="date"></div>
+          <div class="field field-date"><label for="lfDate">특강 진행일</label><input id="lfDate" type="date"></div>
         </div>
         <div class="field">
           <label>시간대 (같은 특강을 여러 날·여러 타임으로 열 때)</label>
@@ -907,14 +964,14 @@
           <button type="button" class="lf-slot-add" id="lfSlotAdd">+ 시간대 추가</button>
           <div class="lf-thumb-spec">순서대로 <b>날짜 · 시작 · 종료 · 정원 · 메모</b>. 시간은 <b>24시간으로 직접 입력</b>(14:00 — 1400, 14 로 적어도 알아서 맞춰줍니다). 시간대를 하나라도 넣으면 <b>정원·진행일이 시간대에서 자동 계산</b>되고, 신청자는 상세페이지에서 시간대를 골라 신청합니다. 안 넣으면 지금처럼 특강 하나에 일정 하나예요.</div>
         </div>
-        <div class="field"><label>시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
-        <div class="field"><label>강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
+        <div class="field"><label for="lfSchedule">시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
+        <div class="field"><label for="lfInstructor">강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
         <div class="field">
           <label>카드 사진(선택)</label>
           <div class="lf-thumb">
             <div class="lf-thumb-prev" id="lfThumbPrev" hidden><img id="lfThumbImg" alt="카드 사진 미리보기"></div>
             <div class="lf-thumb-act">
-              <input type="file" id="lfThumbFile" accept="image/*" style="display:none;">
+              <input type="file" id="lfThumbFile" accept="image/*" style="display:none;" aria-label="특강 카드 사진 고르기">
               <button type="button" class="btn btn-ghost btn-sm" id="lfThumbPick">사진 고르기</button>
               <button type="button" class="btn btn-ghost btn-sm" id="lfThumbClear" hidden>사진 빼기</button>
               <span class="lf-thumb-msg" id="lfThumbMsg">안 넣으면 지금까지의 아이보리 카드로 나가요.</span>
@@ -924,7 +981,7 @@
             권장 <b>1600 × 900</b> (16:9 가로 사진) · 인물은 <b>가운데·위쪽</b>에 두세요 — 카드에선 사진 위쪽만 보입니다.<br>
             크기·용량은 올릴 때 자동으로 줄어드니 큰 사진 그대로 올리셔도 됩니다.
           </p>
-          <input id="lfThumb" type="text" placeholder="또는 사진 주소(https://...) 직접 붙여넣기" style="margin-top:8px;">
+          <input id="lfThumb" type="text" placeholder="또는 사진 주소(https://...) 직접 붙여넣기" style="margin-top:8px;" aria-label="카드 사진 주소 직접 입력">
         </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked> 공개(목록에 노출)</label>
         <button class="btn btn-action" type="submit" id="lecSubmitBtn">추가</button>
@@ -936,7 +993,7 @@
   <div class="tab-panel" id="panel-apps">
     <div class="apps-wrap">
       <div class="apps-toolbar">
-        <input type="text" class="search" id="appSearch" placeholder="이름·전화·챌린지 검색">
+        <input type="text" class="search" id="appSearch" placeholder="이름·전화·챌린지 검색" aria-label="신청자 검색 — 이름·전화·챌린지">
         <span class="apps-count" id="appCount"></span>
         <button class="btn btn-ghost btn-sm" id="appRefresh">새로고침</button>
         <!-- CSV 는 보조 행동이다 — 채움(btn-action)으로 두면 이 화면에서 가장 무거운 버튼이 되고,
@@ -979,7 +1036,7 @@
         <b>안내가 끝난 명단은 삭제</b>해 주세요(개인정보는 목적을 다하면 파기해야 합니다).
       </p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
-        <select id="wlFilter" style="padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <select id="wlFilter" style="padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="오픈 알림 명단 정렬">
           <option value="">전체 챌린지</option>
           <option value="voice">보신각(보이스)</option>
           <option value="expression">영합각(표현력)</option>
@@ -1014,27 +1071,27 @@
             홈에 후기를 되살리면 다시 씁니다.</p>
         </div>
       </details>
-      <div class="rv-hint" style="background:#FFF6E5;border-radius:var(--radius-xs);padding:10px 12px;">⚠️ <b>상담 후기는 화면에 이름을 띄우지 않습니다</b>(1:1 상담이라 챌린지 후기와 성격이 다릅니다). 다만 <b>스크린샷 안에 이름·전화번호·프로필 사진이 찍혀 있으면 그대로 보입니다</b> — 올리기 전에 가려 주세요.</div>
+      <div class="rv-hint" style="background:var(--st-note-bg);border-radius:var(--radius-xs);padding:10px 12px;">⚠️ <b>상담 후기는 화면에 이름을 띄우지 않습니다</b>(1:1 상담이라 챌린지 후기와 성격이 다릅니다). 다만 <b>스크린샷 안에 이름·전화번호·프로필 사진이 찍혀 있으면 그대로 보입니다</b> — 올리기 전에 가려 주세요.</div>
 
       <div class="rv-section-title">여러 장 한번에 (자동 압축 · 라벨 없이)</div>
       <div class="rv-upload rv-upload-bulk">
-        <select id="rvBulkKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;">
+        <select id="rvBulkKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;" aria-label="여러 장 올릴 후기 종류">
           <option value="challenge">챌린지 후기</option>
           <option value="consult">상담 후기</option>
         </select>
-        <input type="file" id="rvBulkFile" accept="image/*" multiple style="flex:1;min-width:160px;">
+        <input type="file" id="rvBulkFile" accept="image/*" multiple style="flex:1;min-width:160px;" aria-label="후기 스크린샷 여러 장 고르기">
         <button class="btn btn-action" id="rvBulkUpload">여러 장 올리기</button>
       </div>
       <div class="rv-bulk-status" id="rvBulkStatus"></div>
 
       <div class="rv-section-title">1장 (라벨 포함)</div>
       <div class="rv-upload">
-        <select id="rvOneKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;">
+        <select id="rvOneKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;" aria-label="한 장 올릴 후기 종류">
           <option value="challenge">챌린지 후기</option>
           <option value="consult">상담 후기</option>
         </select>
-        <input type="file" id="rvFile" accept="image/*">
-        <input type="text" id="rvCaption" placeholder="라벨 (예: 승자각 · 최종합격)" title="후기 이미지 아래 칩으로 표시됩니다(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <input type="file" id="rvFile" accept="image/*" aria-label="후기 스크린샷 한 장 고르기">
+        <input type="text" id="rvCaption" placeholder="라벨 (예: 승자각 · 최종합격)" title="후기 이미지 아래 칩으로 표시됩니다(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="후기 라벨">
         <button class="btn btn-action" id="rvUpload">1장 올리기</button>
       </div>
 
@@ -1042,11 +1099,11 @@
            ⚠️ image_path 를 비운 채 넣으므로 마이그레이션 20260801180000(not null 완화)이 필요하다. -->
       <div class="rv-section-title">글만 있는 후기 (사진 없이)</div>
       <div class="rv-upload">
-        <select id="rvTextKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;">
+        <select id="rvTextKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;" aria-label="글 후기 종류">
           <option value="consult">상담 후기</option>
           <option value="challenge">챌린지 후기</option>
         </select>
-        <input type="text" id="rvTextQuote" placeholder="후기 내용 (그대로 화면에 뜹니다)" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+        <input type="text" id="rvTextQuote" placeholder="후기 내용 (그대로 화면에 뜹니다)" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="글 후기 내용">
         <label class="field" style="flex:0 1 180px;"><span>받은 날짜(카드에 YYYY.MM)</span>
           <input type="date" id="rvTextDate" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;"></label>
         <button class="btn btn-action" id="rvTextAdd">글 후기 추가</button>
@@ -1062,7 +1119,7 @@
       <!-- 검색(2026-08-03) — 후기가 100장을 넘으면 한 건을 고치려고 화면을 계속 내려야 했다.
            ⚠️ 이름은 `reviewer_name` 컬럼이다(`name` 아님 — 한 번 틀려서 이름이 안 붙은 전례). -->
       <div class="rv-searchrow">
-        <input type="text" class="search" id="rvSearch" placeholder="이름·한줄평·챌린지·기수 검색">
+        <input type="text" class="search" id="rvSearch" placeholder="이름·한줄평·챌린지·기수 검색" aria-label="후기 검색 — 이름·한줄평·챌린지·기수">
         <span class="apps-count" id="rvCount"></span>
       </div>
       <!-- 챌린지 상세 페이지(challenge-*.html)의 후기 섹션은 reviews.challenge 값으로 골라 담는다.
@@ -1099,7 +1156,7 @@
 
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 10px;">
         <input class="search" id="credSearch" placeholder="이름·이메일 검색"
-               style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+               style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="크레딧 회원 검색 — 이름·이메일">
         <label style="font-size:13px;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;">
           <input type="checkbox" id="credHasOnly"> 잔액 있는 회원만</label>
       </div>
@@ -1107,11 +1164,11 @@
 
       <!-- 기수 일괄 지급 -->
       <form class="round-form" id="creditBulkForm">
-        <div class="field"><label>기수 일괄 지급</label>
+        <div class="field"><label for="cbCohort">기수 일괄 지급</label>
           <select id="cbCohort"><option value="">기수 선택…</option></select></div>
-        <div class="field"><label>지급 횟수</label>
+        <div class="field"><label for="cbAmount">지급 횟수</label>
           <input id="cbAmount" type="number" min="1" step="1" placeholder="예: 3"></div>
-        <div class="field"><label>사유(기록에 남아요)</label>
+        <div class="field"><label for="cbNote">사유(기록에 남아요)</label>
           <input id="cbNote" placeholder="예: 3기 오픈 기념"></div>
         <button class="btn btn-action" type="submit" id="cbSubmit">기수 전원에게 지급</button>
       </form>
@@ -1134,22 +1191,22 @@
           단가는 도구를 <b>1회 쓸 때 빠지는 크레딧</b>입니다. 저장하면 바로 반영돼요.
         </div>
         <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;">
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>하루 무료 크레딧</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfDaily">하루 무료 크레딧</label>
             <input id="cfDaily" type="number" min="0" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>소재 발굴(다듬기)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfSojae">소재 발굴(다듬기)</label>
             <input id="cfSojae" type="number" min="1" step="1" placeholder="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>AI 킬러(검사)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfKiller">AI 킬러(검사)</label>
             <input id="cfKiller" type="number" min="1" step="1" placeholder="3" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>첨삭</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfPolish">첨삭</label>
             <input id="cfPolish" type="number" min="1" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
           <!-- 리허설(모의면접)은 아직 미출시 — 단가만 미리 잠가 둔 상태(2026-07-30, 15).
                ⚠️ 하루 무료보다 작게 내리면 출시하는 날부터 매일 공짜가 된다(첨삭과 같은 함정). -->
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>모의면접(미출시)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfRehearsal">모의면접(미출시)</label>
             <input id="cfRehearsal" type="number" min="1" step="1" placeholder="15" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
           <!-- 가입 축하 크레딧 — 회원당 1회(migration 20260802100000). 0 이면 지급 중단.
                ⚠️ 하루 무료와 성격이 다르다: 이건 인당 1회라 비용 상한이 고정이고,
                   하루 무료는 매일 반복된다. 후하게 풀 땐 여기를 올릴 것. -->
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>가입 축하(1회)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfSignup">가입 축하(1회)</label>
             <input id="cfSignup" type="number" min="0" step="1" placeholder="15" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
           <button class="btn btn-action cf-save" id="cfSave" type="button">저장</button>
         </div>
@@ -1159,9 +1216,9 @@
       <!-- 충전 상품 — site_config.credit_packs. ⚠️ verify-payment 가 결제 금액을 검증할 때
            같은 값을 읽는다. 여기서 바꾸면 즉시 반영(함수 재배포 불필요). -->
       <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
-        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>충전 횟수</label>
+        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cpCount">충전 횟수</label>
           <input id="cpCount" type="number" min="1" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
-        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label>가격(원)</label>
+        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cpPrice">가격(원)</label>
           <input id="cpPrice" type="number" min="0" step="100" placeholder="9900" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
         <button class="btn btn-action cf-save" id="cpSave" type="button">충전 상품 저장</button>
         <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">AI킬러 충전 화면과 <b>결제 금액 검증</b>에 함께 쓰여요. 저장하면 바로 반영됩니다.</span>
@@ -1178,12 +1235,12 @@
         <b>오늘 지정</b> 버튼이나 날짜를 지정해 <b>고정</b>하세요. 목록에서 <b style="color:var(--action)">▶ 오늘 노출 중</b>이 지금 나가는 문제예요.
       </p>
       <form class="round-form" id="questionForm" style="grid-template-columns:1fr;">
-        <div class="field"><label>문제 내용</label>
+        <div class="field"><label for="qfContent">문제 내용</label>
           <textarea id="qfContent" rows="2" placeholder="예: 예상치 못한 문제를 침착하게 해결했던 경험"
             style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;align-items:end;">
-          <div class="field"><label>유형</label>
+          <div class="field"><label for="qfCategory">유형</label>
             <select id="qfCategory">
               <option value="experience">과거경험검증형</option>
               <option value="values">직무핵심역량형</option>
@@ -1191,8 +1248,8 @@
               <option value="company">기업관심도형</option>
               <option value="personal">개인신상형</option>
             </select></div>
-          <div class="field"><label>항공사(선택)</label><input id="qfAirline" placeholder="예: 대한항공"></div>
-          <div class="field field-date"><label>오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
+          <div class="field"><label for="qfAirline">항공사(선택)</label><input id="qfAirline" placeholder="예: 대한항공"></div>
+          <div class="field field-date"><label for="qfDate">오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
           <button class="btn btn-action" type="submit" id="qfSubmit">추가</button>
           <button class="btn btn-ghost" type="button" id="qfCancel" style="display:none;">취소</button>
         </div>
@@ -1236,7 +1293,7 @@
           <button class="btn" type="button" id="lrCancel" style="margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;">새로 올리기로 돌아가기</button>
         </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
-          <div class="field"><label>서가</label>
+          <div class="field"><label for="lrShelf">서가</label>
             <select id="lrShelf">
               <option value="airline">01 항공사 자료실</option>
               <option value="video">02 영상관</option>
@@ -1244,7 +1301,7 @@
               <option value="report">04 현장 리포트</option>
               <option value="calendar">05 채용 캘린더</option>
             </select></div>
-          <div class="field"><label>항공사(선택)</label>
+          <div class="field"><label for="lrAirline">항공사(선택)</label>
             <select id="lrAirline">
               <option value="">전체 공통</option>
               <option value="kal">대한항공</option>
@@ -1264,20 +1321,20 @@
         <!-- ⚠️ 이 칸은 위 2열 격자 밖이다 — 안에 두면 서가·항공사 다음 세 번째가 되어 모바일에서
              **반쪽 폭으로 혼자 남아** 깨진 칸처럼 보였다(2026-08-02 실측 159/327px). -->
         <div class="field"><label id="lrTypeLabel">자료 유형(선택)</label>
-          <input id="lrType" list="lrTypeList" placeholder="예: 한 장 요약" autocomplete="off">
+          <input id="lrType" list="lrTypeList" placeholder="예: 한 장 요약" autocomplete="off" aria-label="자료 종류">
           <datalist id="lrTypeList"></datalist></div>
-        <div class="field"><label>제목 <span style="font-weight:600;color:var(--text-muted);">— 비우면 파일명이 제목이 돼요</span></label><input id="lrTitle" placeholder="예: 대한항공 인재상, 한 장 정리"></div>
-        <div class="field"><label>한 줄 설명(선택)</label><input id="lrSummary" placeholder="목록에서 제목 아래 작게 보여요"></div>
+        <div class="field"><label for="lrTitle">제목 <span style="font-weight:600;color:var(--text-muted);">— 비우면 파일명이 제목이 돼요</span></label><input id="lrTitle" placeholder="예: 대한항공 인재상, 한 장 정리"></div>
+        <div class="field"><label for="lrSummary">한 줄 설명(선택)</label><input id="lrSummary" placeholder="목록에서 제목 아래 작게 보여요"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
-          <div class="field"><label>열람 방식</label>
+          <div class="field"><label for="lrDelivery">열람 방식</label>
             <select id="lrDelivery">
               <option value="download">파일 받기</option>
               <option value="view">화면 열람만</option>
             </select></div>
-          <div class="field"><label>가격(원)</label><input id="lrPrice" type="number" min="0" step="100" value="0" placeholder="0 = 무료"></div>
+          <div class="field"><label for="lrPrice">가격(원)</label><input id="lrPrice" type="number" min="0" step="100" value="0" placeholder="0 = 무료"></div>
           <!-- placeholder 는 짧게 — 긴 문장은 좁은 칸에서 잘려 '누구ᅡ' 처럼 보인다(2026-08-02 오너 화면) -->
-          <div class="field"><label>비밀번호(선택)</label><input id="lrPw" placeholder="비우면 회원 누구나"></div>
-          <div class="field"><label>받는 사람 표시</label>
+          <div class="field"><label for="lrPw">비밀번호(선택)</label><input id="lrPw" placeholder="비우면 회원 누구나"></div>
+          <div class="field"><label for="lrWm">받는 사람 표시</label>
             <select id="lrWm">
               <option value="1">찍는다 (PDF)</option>
               <option value="0">찍지 않는다</option>
@@ -1285,16 +1342,16 @@
         </div>
         <!-- 서가가 '영상관'이면 파일 대신 링크를 받는다(lrKindSync 가 토글) -->
         <div class="field" id="lrFileWrap">
-          <label>파일 <span style="font-weight:600;color:var(--text-muted);">— 여러 개 고르면 한 자료로 묶여요</span><span id="lrFileHint" hidden style="font-weight:600;color:var(--text-muted);"> · 새로 고른 파일은 기존 파일에 더해집니다</span></label>
-          <input id="lrFile" type="file" multiple>
+          <label for="lrFile">파일 <span style="font-weight:600;color:var(--text-muted);">— 여러 개 고르면 한 자료로 묶여요</span><span id="lrFileHint" hidden style="font-weight:600;color:var(--text-muted);"> · 새로 고른 파일은 기존 파일에 더해집니다</span></label>
+          <input id="lrFile" type="file" multiple aria-label="연구실 자료 파일 고르기">
           <p id="lrMultiHint" hidden style="margin-top:6px;font-size:12.5px;font-weight:700;color:var(--accent-ink);line-height:1.55;"></p>
           <!-- 수정 중일 때만 — 이 자료에 붙어 있는 파일 목록(개별 삭제) -->
           <div id="lrFileList" hidden style="margin-top:10px;"></div>
         </div>
         <div id="lrLinkWrap" hidden>
           <div style="display:grid;grid-template-columns:1fr 130px;gap:10px;">
-            <div class="field"><label>유튜브 링크</label><input id="lrUrl" placeholder="https://youtu.be/… 또는 https://www.youtube.com/watch?v=…"></div>
-            <div class="field"><label>길이(선택)</label><input id="lrDur" placeholder="42:10"></div>
+            <div class="field"><label for="lrUrl">유튜브 링크</label><input id="lrUrl" placeholder="https://youtu.be/… 또는 https://www.youtube.com/watch?v=…"></div>
+            <div class="field"><label for="lrDur">길이(선택)</label><input id="lrDur" placeholder="42:10"></div>
           </div>
           <p style="font-size:12.5px;color:var(--text-muted);line-height:1.6;margin:-2px 0 4px;">
             영상은 <b>회원이 눌렀을 때만</b> 링크가 나갑니다. 목록에는 제목·길이만 보여요.
@@ -1361,21 +1418,21 @@
       </details>
       <form class="round-form" id="termForm" style="grid-template-columns:1fr;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
-          <div class="field"><label>표현</label>
+          <div class="field"><label for="tfTerm">표현</label>
             <input id="tfTerm" placeholder="예: 다양한 경험"></div>
-          <div class="field"><label>종류</label>
+          <div class="field"><label for="tfKind">종류</label>
             <select id="tfKind">
               <option value="cliche">상투어</option>
               <option value="structure">정형 구조(나열·접속부사)</option>
               <option value="context">문맥(승무원 지원서 맥락)</option>
             </select></div>
-          <div class="field"><label>출처</label>
+          <div class="field"><label for="tfOrigin">출처</label>
             <select id="tfOrigin">
               <option value="coach">연구진 기준</option>
               <option value="general">일반 상투어</option>
             </select></div>
         </div>
-        <div class="field" style="margin-top:10px;"><label>왜 별로인지 (선택 — 학생에게 그대로 보일 수 있는 한 문장, '~요'로)</label>
+        <div class="field" style="margin-top:10px;"><label for="tfWhy">왜 별로인지 (선택 — 학생에게 그대로 보일 수 있는 한 문장, '~요'로)</label>
           <textarea id="tfWhy" rows="2" placeholder="예: 무엇을 했는지가 하나도 안 남는 말이라, 면접관이 이어서 물어볼 게 없어요. (비우면 AI가 상황에 맞게 채워요)"
             style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea>
         </div>
@@ -1386,7 +1443,7 @@
       </form>
       <div style="display:flex;gap:10px;align-items:center;margin:14px 0 10px;flex-wrap:wrap;">
         <input id="termSearch" placeholder="표현·설명 검색"
-          style="flex:1;min-width:180px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">
+          style="flex:1;min-width:180px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="감점 표현 검색">
         <span id="termCount" style="font-size:13px;color:var(--text-muted);white-space:nowrap;"></span>
       </div>
       <div class="round-list" id="termList"><div class="loading">불러오는 중…</div></div>
@@ -1434,33 +1491,33 @@
         항공사별 기출을 쌓는 곳이에요(회원에게는 <b>등록한 프로그램의 열린 일차만</b> 보여요).
         의도·평가역량을 채울수록 학생 화면과 AI 첨삭의 질이 올라가요.</p>
       <form class="round-form" id="apqForm" style="grid-template-columns:1fr;">
-        <div class="field"><label>질문 원문</label>
+        <div class="field"><label for="apqContent">질문 원문</label>
           <textarea id="apqContent" rows="2" placeholder="예: 예상치 못한 상황을 침착하게 해결했던 경험을 말해 보세요."
             style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;">
-          <div class="field"><label>항공사</label><select id="apqAirline"></select></div>
-          <div class="field"><label>유형</label><select id="apqType"></select></div>
-          <div class="field"><label>전형</label><input id="apqStage" placeholder="예: 1차 면접"></div>
-          <div class="field"><label>출처 신뢰도</label>
+          <div class="field"><label for="apqAirline">항공사</label><select id="apqAirline"></select></div>
+          <div class="field"><label for="apqType">유형</label><select id="apqType"></select></div>
+          <div class="field"><label for="apqStage">전형</label><input id="apqStage" placeholder="예: 1차 면접"></div>
+          <div class="field"><label for="apqConf">출처 신뢰도</label>
             <select id="apqConf"><option value="verified">검증된 기출</option>
               <option value="reported" selected>제보 기출</option><option value="estimated">예상 문항</option></select></div>
         </div>
         <details style="margin-top:10px;"><summary class="ap-sum">고급(의도·평가역량·꼬리질문…)</summary>
           <div style="display:grid;gap:10px;margin-top:8px;">
-            <div class="field"><label>질문 의도(학생에게 보여요)</label><input id="apqIntent"></div>
-            <div class="field"><label>핵심 평가 역량(쉼표 구분)</label><input id="apqComp" placeholder="침착함, 우선순위 판단"></div>
-            <div class="field"><label>답변에 필요한 사실(쉼표)</label><input id="apqNeed" placeholder="실제 한 행동, 결과"></div>
-            <div class="field"><label>적합한 경험 유형(쉼표)</label><input id="apqGood" placeholder="아르바이트, 동아리·학회"></div>
-            <div class="field"><label>피해야 할 접근</label><input id="apqAvoid"></div>
-            <div class="field"><label>자주 나오는 실수</label><input id="apqMist"></div>
-            <div class="field"><label>예상 꼬리질문(줄바꿈 구분)</label>
+            <div class="field"><label for="apqIntent">질문 의도(학생에게 보여요)</label><input id="apqIntent"></div>
+            <div class="field"><label for="apqComp">핵심 평가 역량(쉼표 구분)</label><input id="apqComp" placeholder="침착함, 우선순위 판단"></div>
+            <div class="field"><label for="apqNeed">답변에 필요한 사실(쉼표)</label><input id="apqNeed" placeholder="실제 한 행동, 결과"></div>
+            <div class="field"><label for="apqGood">적합한 경험 유형(쉼표)</label><input id="apqGood" placeholder="아르바이트, 동아리·학회"></div>
+            <div class="field"><label for="apqAvoid">피해야 할 접근</label><input id="apqAvoid"></div>
+            <div class="field"><label for="apqMist">자주 나오는 실수</label><input id="apqMist"></div>
+            <div class="field"><label for="apqFollow">예상 꼬리질문(줄바꿈 구분)</label>
               <textarea id="apqFollow" rows="2" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea></div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-              <div class="field"><label>난이도(1~5)</label><input id="apqDiff" type="number" min="1" max="5" placeholder="조립용"></div>
-              <div class="field"><label>권장 분량</label><input id="apqLen" placeholder="예: 400~600자"></div>
-              <div class="field"><label>답변 시간(초)</label><input id="apqSec" type="number" min="10" max="300"></div>
-              <div class="field"><label>출제 시기</label><input id="apqWhen" placeholder="예: 2025 하반기"></div>
-              <div class="field"><label>관리자 메모</label><input id="apqMemo"></div>
+              <div class="field"><label for="apqDiff">난이도(1~5)</label><input id="apqDiff" type="number" min="1" max="5" placeholder="조립용"></div>
+              <div class="field"><label for="apqLen">권장 분량</label><input id="apqLen" placeholder="예: 400~600자"></div>
+              <div class="field"><label for="apqSec">답변 시간(초)</label><input id="apqSec" type="number" min="10" max="300"></div>
+              <div class="field"><label for="apqWhen">출제 시기</label><input id="apqWhen" placeholder="예: 2025 하반기"></div>
+              <div class="field"><label for="apqMemo">관리자 메모</label><input id="apqMemo"></div>
             </div>
           </div></details>
         <div style="display:flex;gap:8px;margin-top:10px;">
@@ -1470,7 +1527,7 @@
       </form>
       <details style="margin:10px 0;"><summary class="ap-sum">일괄 등록(탭 구분: 질문[TAB]항공사코드[TAB]유형[TAB]의도)</summary>
         <textarea id="apqBulk" rows="4" placeholder="갈등을 조율했던 경험은?	7c	conflict	상대 관점 확인 여부"
-          style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+          style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;" aria-label="기출 일괄 등록 — 탭으로 구분한 줄들"></textarea>
         <button class="btn btn-ghost" type="button" id="apqBulkBtn" style="margin-top:6px;">일괄 추가</button></details>
       <!-- 목록 필터 = 질문 유형(2026-07-31 오너 요청 — 구 항공사 select 대체).
            실존하는 유형만 칩으로 세운다(신청자 현황 세부 필터와 같은 규칙). 항공사는 각 줄에 그대로 보인다. -->
@@ -1481,20 +1538,20 @@
       <div class="ap-sec" data-apsecbody="programs" hidden>
       <form class="round-form" id="appForm" style="grid-template-columns:1fr;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;">
-          <div class="field"><label>항공사</label><select id="appAirline"></select></div>
-          <div class="field"><label>제목</label><input id="appTitle" placeholder="예: 제주항공 20일 답변 루틴"></div>
-          <div class="field"><label>총 일수</label><input id="appDays" type="number" min="1" max="60" value="20"></div>
-          <div class="field"><label>공개 방식</label>
+          <div class="field"><label for="appAirline">항공사</label><select id="appAirline"></select></div>
+          <div class="field"><label for="appTitle">제목</label><input id="appTitle" placeholder="예: 제주항공 20일 답변 루틴"></div>
+          <div class="field"><label for="appDays">총 일수</label><input id="appDays" type="number" min="1" max="60" value="20"></div>
+          <div class="field"><label for="appPolicy">공개 방식</label>
             <select id="appPolicy"><option value="daily">하루 한 문제</option>
               <option value="all">전체 공개</option><option value="by_date">일차별 날짜 지정</option></select></div>
-          <div class="field"><label>가격(원)</label><input id="appPrice" type="number" min="0" placeholder="비움=지급 전용, 0=무료"></div>
-          <div class="field"><label>노출</label><select id="appVisible"><option value="false">숨김</option><option value="true">공개</option></select></div>
+          <div class="field"><label for="appPrice">가격(원)</label><input id="appPrice" type="number" min="0" placeholder="비움=지급 전용, 0=무료"></div>
+          <div class="field"><label for="appVisible">노출</label><select id="appVisible"><option value="false">숨김</option><option value="true">공개</option></select></div>
         </div>
-        <div class="field" style="margin-top:10px;"><label>한 줄 소개</label><input id="appSub"></div>
+        <div class="field" style="margin-top:10px;"><label for="appSub">한 줄 소개</label><input id="appSub"></div>
         <!-- 상세 소개 — 구매 화면(program.html 미등록자)에 그대로 뜬다. 이 칸이 비어 있으면
              학생이 보는 구매 화면은 '제목·일수·가격' 네 줄뿐이라 살 이유가 안 보인다.
              줄바꿈은 그대로 살아난다(빈 줄로 문단 구분). -->
-        <div class="field" style="margin-top:10px;"><label>상세 소개 <span style="font-weight:600;color:var(--text-muted);">— 구매 화면에 그대로 보여요(줄바꿈 가능)</span></label>
+        <div class="field" style="margin-top:10px;"><label for="appDesc">상세 소개 <span style="font-weight:600;color:var(--text-muted);">— 구매 화면에 그대로 보여요(줄바꿈 가능)</span></label>
           <textarea id="appDesc" rows="5" placeholder="누구를 위한 프로그램인지 · 무엇이 남는지 · 챌린지(승.자.각)와 무엇이 다른지"></textarea></div>
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="btn btn-action" type="submit" id="appSubmit">프로그램 추가</button>
@@ -1517,9 +1574,9 @@
       <div class="ap-sec" data-apsecbody="enroll" hidden>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">구매 없이 직접 지급할 때 씁니다(결제 구매는 자동 지급).</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;" class="round-form">
-        <div class="field"><label>회원 검색(이름·이메일)</label><input id="apEnrSearch" placeholder="2자 이상"></div>
-        <div class="field"><label>프로그램</label><select id="apEnrProgram"></select></div>
-        <div class="field field-date"><label>시작일(1일차 기준)</label><input id="apEnrStart" type="date"></div>
+        <div class="field"><label for="apEnrSearch">회원 검색(이름·이메일)</label><input id="apEnrSearch" placeholder="2자 이상"></div>
+        <div class="field"><label for="apEnrProgram">프로그램</label><select id="apEnrProgram"></select></div>
+        <div class="field field-date"><label for="apEnrStart">시작일(1일차 기준)</label><input id="apEnrStart" type="date"></div>
       </div>
       <div id="apEnrHits" style="margin-top:6px;"></div>
       <div class="round-list" id="apEnrList" style="margin-top:10px;"><div class="loading">불러오는 중…</div></div>
@@ -1528,7 +1585,7 @@
 
       <div class="ap-sec" data-apsecbody="researchers" hidden>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">연구원은 <b>review-desk.html</b> 에서 검수해요. 학생 이름·경험 카드에 접근하게 되니 내부 인력만 지정하세요.</p>
-      <div class="field" style="max-width:260px;"><label>회원 검색(이름·이메일)</label><input id="apResSearch" placeholder="2자 이상"></div>
+      <div class="field" style="max-width:260px;"><label for="apResSearch">회원 검색(이름·이메일)</label><input id="apResSearch" placeholder="2자 이상"></div>
       <div id="apResHits" style="margin-top:6px;"></div>
       <div class="round-list" id="apResList" style="margin-top:10px;"></div>
 
@@ -1537,9 +1594,9 @@
       <div class="ap-sec" data-apsecbody="codes" hidden>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">연구원이 첨삭 이유를 남길 때 고르는 분류 코드입니다.</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;" class="round-form">
-        <div class="field"><label>코드(영문 대문자_)</label><input id="apCodeId" placeholder="OPENING_WEAK2"></div>
-        <div class="field"><label>라벨</label><input id="apCodeLabel"></div>
-        <div class="field"><label>분류</label>
+        <div class="field"><label for="apCodeId">코드(영문 대문자_)</label><input id="apCodeId" placeholder="OPENING_WEAK2"></div>
+        <div class="field"><label for="apCodeLabel">라벨</label><input id="apCodeLabel"></div>
+        <div class="field"><label for="apCodeCat">분류</label>
           <select id="apCodeCat"><option value="question">질문</option><option value="experience">경험</option>
             <option value="sentence">문장</option><option value="speaking">말하기</option></select></div>
         <button class="btn btn-action" type="button" id="apCodeAdd">코드 추가</button>
@@ -1652,7 +1709,7 @@
       if (error) {
         members = [];
         document.getElementById('mlist').innerHTML =
-          '<li style="color:#A33D14;font-size:13px;padding:8px">회원 목록을 불러오지 못했습니다 — ' + esc(error.message) + '</li>';
+          '<li style="color:var(--st-alert);font-size:13px;padding:8px">회원 목록을 불러오지 못했습니다 — ' + esc(error.message) + '</li>';
         return;
       }
       members = data || [];
@@ -1701,11 +1758,23 @@
       nocohort: (f, m) => !m.cohort_id,
       active:   f => f.apps > 0,
       ghost:    f => f.ghost,
+      archived: () => true,   // 보관함은 아래 isArchived 로 따로 가른다
     };
     let _mFilter = 'all';
+
+    /* ── 보관(archive) — 2026-08-03 오너 "연락 안 되는 계정을 치워 놓자" ──
+       ⚠️ 삭제가 아니다. members 행을 지우면 auth.users 계정이 남아, 그 사람이 다시 로그인해도
+          프로필이 다시 안 만들어진다(handle_new_user 는 첫 로그인 때 한 번뿐). 되돌릴 수도 없다.
+          보관은 admin 목록에서만 빼는 것이라 회원 본인 화면·크레딧·저장 답변에 영향이 없다.
+       ⚠️ 마이그레이션(20260803120000_member_archive.sql) 미적용 환경에서도 조용히 degrade 한다 —
+          컬럼이 없으면 아무도 보관 상태가 아니고, 버튼은 눌렀을 때 이유를 말한다. */
+    const isArchived = m => !!m.archived_at;
+    // 컬럼 존재 여부는 조회를 더 하지 않고 받아 둔 행에서 확인한다(members 는 select('*') 다).
+    const archiveReady = () => members.length > 0 && Object.prototype.hasOwnProperty.call(members[0], 'archived_at');
     // 목록 행에 붙는 상태 배지. ⚠️ 값만 남기지 않는다 — 무엇을 뜻하는지 글자로 적는다(원칙 15).
-    function mBadges(f) {
+    function mBadges(f, m) {
       let out = '';
+      if (m && isArchived(m)) out += '<span class="mb mb-arc">보관됨</span>';
       if (f.noPhone)  out += '<span class="mb mb-warn">가입 미완료</span>';
       if (f.badPhone) out += '<span class="mb mb-warn">번호 확인 필요</span>';
       if (f.apps)     out += '<span class="mb">신청 ' + f.apps + '건</span>';
@@ -1717,9 +1786,13 @@
       const q = document.getElementById('search').value.trim().toLowerCase();
       const qd = q.replace(/\D/g, '');
       const pass = M_FILTERS[_mFilter] || M_FILTERS.all;
+      const wantArc = _mFilter === 'archived';
       const appIdx = buildAppIndex();
       const flagOf = new Map();
       const list = members.filter(m => {
+        // ⚠️ 보관한 회원은 '보관함'에서만 보인다 — '전체'를 포함해 다른 칩에는 안 섞인다.
+        //    치워 놓은 것이 그대로 다시 나오면 치운 의미가 없다.
+        if (isArchived(m) !== wantArc) return false;
         const f = memberFlags(m, appIdx); flagOf.set(m.id, f);
         if (!pass(f, m)) return false;
         if (!q) return true;
@@ -1727,13 +1800,19 @@
           || (m.email && m.email.toLowerCase().includes(q))
           || (qd && (m.phone || '').replace(/\D/g, '').includes(qd));
       });
-      // '흔적 없는 계정'은 필터와 무관하게 늘 전체 기준으로 센다(접이 머리에 붙는 숫자다).
-      const ghostN = members.reduce((n, m) => n + ((flagOf.get(m.id) || memberFlags(m, appIdx)).ghost ? 1 : 0), 0);
+      const arcN = members.reduce((n, m) => n + (isArchived(m) ? 1 : 0), 0);
+      /* '흔적 없는 계정'은 필터와 무관하게 늘 전체 기준으로 센다(접이 머리에 붙는 숫자다).
+         ⚠️ 단 보관한 회원은 뺀다 — 이미 치운 것을 "정리할 게 남았다"고 계속 말하면 안 된다. */
+      const ghostN = members.reduce((n, m) =>
+        n + (!isArchived(m) && (flagOf.get(m.id) || memberFlags(m, appIdx)).ghost ? 1 : 0), 0);
+      const ghostReady = _appsLoaded && _credRows.length > 0;
       const gc = document.getElementById('mGhostCount');
-      if (gc) gc.textContent = (_appsLoaded && _credRows.length > 0)
-        ? ghostN.toLocaleString() + '명' : '확인 중';
+      if (gc) gc.textContent = ghostReady ? ghostN.toLocaleString() + '명' : '확인 중';
+      const arcChip = document.getElementById('mArcN');
+      if (arcChip) arcChip.textContent = arcN ? arcN.toLocaleString() : '';
       visibleIds = list.map(m => m.id);
-      document.getElementById('mCount').textContent = members.length.toLocaleString();
+      // ⚠️ 회원 수는 **보관을 뺀 수**다 — 연락 닿는 사람이 몇 명인지를 이 숫자로 판단한다.
+      document.getElementById('mCount').textContent = (members.length - arcN).toLocaleString();
       /* ⚠️ 화면에는 한 번에 M_PAGE 명만 그린다(2026-08-03).
          3천 명을 통째로 그리면 탭을 열 때마다 브라우저가 멎는다. 목록은 '보는 것'이고
          숫자·검색은 위 members 전량을 그대로 쓰므로 계산은 안 줄어든다. */
@@ -1751,9 +1830,18 @@
             <div class="me">${esc(m.email || '이메일 없음')}</div>
             <div class="mc">${m.cohort_id
               ? esc(cohortName(m.cohort_id) || '기수 확인 중')
-              : '<span class="mc-none">기수 미배정</span>'}${mBadges(flagOf.get(m.id) || memberFlags(m, appIdx))}</div>
+              : '<span class="mc-none">기수 미배정</span>'}${mBadges(flagOf.get(m.id) || memberFlags(m, appIdx), m)}</div>
           </div>
-        </li>`).join('') || '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>';
+        </li>`).join('')
+        /* ⚠️ 근거를 아직 못 받았으면 '없다'고 말하지 않는다(원칙 11 · 2026-08-03).
+           '흔적 없음'은 크레딧 원장이 있어야 판정되는데, 원장은 이 탭을 열 때 받는다.
+           그 0.2초 사이에 칩을 누르면 전에는 "회원이 없습니다"가 떠서, 지울 대상이
+           없는 것으로 읽혔다. */
+        || (_mFilter === 'ghost' && !ghostReady
+              ? '<li style="color:var(--text-dim);font-size:13px;padding:8px">판단할 자료를 받는 중입니다…</li>'
+              : wantArc
+              ? '<li style="color:var(--text-dim);font-size:13px;padding:8px">보관한 회원이 없습니다.</li>'
+              : '<li style="color:var(--text-dim);font-size:13px;padding:8px">회원이 없습니다.</li>');
       /* 몇 명 중 몇 명을 보고 있는지 + 더 보기. ⚠️ '전체 선택'은 화면에 보이는 것이 아니라
          **조건에 맞는 전원(visibleIds)** 을 고른다 — 더 보기를 안 눌러도 일괄 배정은 전부에 걸린다.
          그래서 이 줄에 선택 대상 수를 같이 적는다(모르고 3천 명을 배정하면 되돌리기 어렵다). */
@@ -1765,15 +1853,16 @@
         document.getElementById('mMoreBtn').addEventListener('click', () => {
           _mShown += M_PAGE; renderMemberList();
         });
-      } else if (list.length !== members.length) {
+      } else if (list.length !== (wantArc ? arcN : members.length - arcN)) {
         more.hidden = false;
-        more.innerHTML = '<span>' + list.length.toLocaleString() + '명 (전체 ' + members.length.toLocaleString() + '명 중)</span>';
+        more.innerHTML = '<span>' + list.length.toLocaleString() + '명 (전체 '
+          + (wantArc ? arcN : members.length - arcN).toLocaleString() + '명 중)</span>';
       } else {
         more.hidden = true; more.innerHTML = '';
       }
       if (_membersTruncated) {
         more.hidden = false;
-        more.innerHTML += '<span style="color:#A33D14;flex-basis:100%">회원이 너무 많아 일부만 불러왔습니다 — 목록·숫자가 실제보다 적습니다.</span>';
+        more.innerHTML += '<span style="color:var(--st-alert);flex-basis:100%">회원이 너무 많아 일부만 불러왔습니다 — 목록·숫자가 실제보다 적습니다.</span>';
       }
       document.querySelectorAll('.minfo').forEach(el => {
         el.addEventListener('click', () => selectMember(el.dataset.id));
@@ -1794,7 +1883,42 @@
       document.getElementById('selCount').textContent = n ? (n + '명 선택') : '';
       document.getElementById('bulkAssign').disabled = !n;
       document.getElementById('selAll').checked = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
+      // 보관함을 보고 있으면 '보관 해제', 아니면 '보관' 하나만 (둘 다 두면 잘못 누른다)
+      const inArc = _mFilter === 'archived';
+      const arc = document.getElementById('bulkArchive'), un = document.getElementById('bulkUnarchive');
+      arc.hidden = inArc; arc.disabled = !n;
+      un.hidden = !inArc; un.disabled = !n;
     }
+
+    /* 보관/해제 — members.archived_at 만 건드린다.
+       ⚠️ 오너·관리자는 보관 대상에서 뺀다(운영 계정이 목록에서 사라지면 권한 확인이 막힌다).
+       ⚠️ 마이그레이션 미적용이면 저장이 실패한다 — 그때는 이유와 파일명을 그대로 말한다. */
+    async function setArchived(ids, on) {
+      const targets = ids.filter(id => {
+        const m = members.find(x => x.id === id);
+        return m && !m.is_owner && m.role !== 'admin';
+      });
+      const skipped = ids.length - targets.length;
+      if (!targets.length) { alert('보관할 수 있는 회원이 없습니다(오너·관리자는 보관하지 않습니다).'); return; }
+      const word = on ? '보관' : '보관 해제';
+      if (!confirm(targets.length + '명을 ' + word + '할까요?'
+        + (skipped ? '\n(오너·관리자 ' + skipped + '명은 제외됩니다)' : '')
+        + (on ? '\n\n삭제가 아닙니다 — 관리자 목록에서만 빠지고, 회원 본인 화면·크레딧·저장한 답변은 그대로입니다.' : ''))) return;
+      const { error } = await sb().from('members')
+        .update({ archived_at: on ? new Date().toISOString() : null }).in('id', targets);
+      if (error) {
+        const missing = error.code === 'PGRST204' || /archived_at/.test(error.message || '');
+        alert(missing
+          ? '보관 기능이 아직 켜지지 않았습니다.\nSupabase SQL Editor 에서 20260803120000_member_archive.sql 을 실행해 주세요.'
+          : word + ' 실패: ' + error.message);
+        return;
+      }
+      selected.clear();
+      await loadMembers();
+      toast(targets.length + '명 ' + word + '됨');
+    }
+    document.getElementById('bulkArchive').addEventListener('click', () => setArchived([...selected], true));
+    document.getElementById('bulkUnarchive').addEventListener('click', () => setArchived([...selected], false));
 
     // 회원 답변노트 조회 — status(draft/final) 컬럼이 없으면(마이그레이션 전) 빼고 재시도.
     async function fetchAnswers(id) {
@@ -1917,14 +2041,24 @@
           <h3>회원 정보</h3>
           ${statsHtml}
           <div class="prow">
-            <div class="field"><label>이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
+            <div class="field"><label for="fName">이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
             <div class="field"><label>이메일</label><input value="${esc(m.email || '')}" readonly></div>
-            <div class="field"><label>연락처</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></div>
-            <div class="field"><label>전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공(선택)"></div>
-            <div class="field"><label>기수</label><select id="fCohort">${cohortOpts}</select></div>
+            <div class="field"><label for="fPhone">연락처</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></div>
+            <div class="field"><label for="fMajor">전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공(선택)"></div>
+            <div class="field"><label for="fCohort">기수</label><select id="fCohort">${cohortOpts}</select></div>
             <div class="field"><label>권한</label>${roleField(m)}</div>
             <button class="btn btn-action" id="saveProfile">정보 저장</button>
           </div>
+          ${(m.is_owner || m.role === 'admin') ? '' : `
+          <div class="m-arc">
+            <div>
+              <b>${isArchived(m) ? '보관된 회원입니다' : '보관'}</b>
+              <div class="m-arc-sub">${isArchived(m)
+                ? esc(fmtDate(m.archived_at)) + '에 보관했습니다. 해제하면 회원 목록·회원 수에 다시 들어옵니다.'
+                : '연락이 안 되는 계정을 목록·회원 수에서 빼 둡니다. 삭제가 아니라서 회원 본인 화면·크레딧·저장한 답변은 그대로입니다.'}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="arcOne">${isArchived(m) ? '보관 해제' : '보관'}</button>
+          </div>`}
         </div>
 
         <div class="panel">
@@ -1984,6 +2118,14 @@
     }
 
     function wireDetail(id, recMap) {
+      // 보관/해제(한 명) — 목록 일괄과 같은 함수를 쓴다(확인 문구·권한 제외 규칙이 한 벌)
+      const arcBtn = document.getElementById('arcOne');
+      if (arcBtn) arcBtn.addEventListener('click', async () => {
+        const m = members.find(x => x.id === id);
+        await setArchived([id], !(m && isArchived(m)));
+        if (document.getElementById('detail').style.display !== 'none') selectMember(id);
+      });
+
       // 상태 세그먼트 토글
       document.querySelectorAll('#daysEdit .seg').forEach(seg => {
         seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
@@ -2125,6 +2267,9 @@
     document.getElementById('search').addEventListener('input', mReset);
     document.getElementById('mFilter').addEventListener('click', e => {
       const b = e.target.closest('.af-chip'); if (!b) return;
+      // ⚠️ 칩을 바꾸면 선택을 비운다 — 안 그러면 '전체'에서 고른 사람이 '보관함'으로 넘어가
+      //    [보관 해제] 대상에 섞인다(화면에는 안 보이는 채로).
+      if (_mFilter !== b.dataset.mf) selected.clear();
       _mFilter = b.dataset.mf;
       document.querySelectorAll('#mFilter .af-chip').forEach(x => x.classList.toggle('on', x === b));
       mReset();
@@ -2172,6 +2317,7 @@
            헤드라인·'지금 처리'가 3건 그대로 남아, 첫 화면이 이미 끝난 일을 계속 남은 일로
            단정했다(원칙 11). 캐시(_apps·_wl·members)만 다시 읽으므로 추가 조회는 검수 count 하나뿐. */
         if (b.dataset.tab === 'today' && _appsLoaded) loadToday();
+        ensureTab(b.dataset.tab);   // 이 탭 데이터를 아직 안 받았으면 지금 받는다(아래 ensureTab)
         /* ⚠️ 새 화면은 맨 위에서 시작한다(2026-08-02 5차).
            전에는 스크롤 위치가 그대로여서, 연구실 자료를 아래까지 내려 보다가 메뉴에서
            감점 사전을 고르면 그 탭의 중간부터 보였다(실측 1200px → 745px). */
@@ -2190,6 +2336,47 @@
         const cb = document.getElementById('wlHideDone');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
       }
+    }
+
+    /* ── 탭 데이터는 그 탭을 열 때 받는다(2026-08-03 · 진입 조회 33회 → 9회) ──
+       전에는 들어오자마자 12개 탭 데이터를 전부 받았다. 회원 3,000명 기준 진입 한 번에
+       테이블을 **33번** 쳤는데(실측), 첫 화면('오늘')에 실제로 필요한 것은 9번뿐이다.
+       나머지 24번은 그날 한 번도 안 여는 탭(감점 사전·연구실 자료·소재 문제…) 몫이었다.
+       ⚠️ 로더끼리 배열을 공유하므로 **묶음 단위**로 관리한다(탭 이름이 아니라 데이터 이름).
+          회원 관리는 크레딧 원장이 있어야 '흔적 없음'을 판정하므로 credits 를 같이 받는다.
+       ⚠️ 실패하면 표시를 되돌린다 — 다시 눌렀을 때 재시도돼야 한다.
+       ⚠️ 여기 없는 탭(today·apps·waitlist)은 부팅 때 받는 것으로 이미 그려진다. */
+    const TAB_DEPS = {
+      members:   ['credits'],
+      credits:   ['credits'],
+      rounds:    ['rounds'],
+      lectures:  ['lectures'],
+      reviews:   ['reviews'],
+      questions: ['questions'],
+      terms:     ['terms'],
+      labfiles:  ['labfiles'],
+      approgram: ['approgram'],
+    };
+    const TAB_LOADERS = {
+      credits:   async () => { await loadCredits(); await loadCreditPacks(); await loadCreditConfig(); },
+      rounds:    async () => { await loadChallengePrice(); await loadRounds(); },
+      lectures:  () => loadLectures(),
+      reviews:   async () => { await loadReviewsAdmin(); await loadStoriesAdmin(); },
+      questions: () => loadQuestions(),
+      terms:     () => loadTerms(),
+      labfiles:  () => loadLabFiles(),
+      approgram: () => loadApProgram(),
+    };
+    const _tabLoaded = {};
+    function ensureTab(name) {
+      (TAB_DEPS[name] || []).forEach(key => {
+        if (_tabLoaded[key]) return;
+        _tabLoaded[key] = true;
+        Promise.resolve().then(TAB_LOADERS[key]).catch(err => {
+          _tabLoaded[key] = false;                 // 다시 열면 재시도
+          console.error(key + ' 로드 실패', err);
+        });
+      });
     }
 
     // ── 모바일 네비 시트(≤960px · 2026-08-01) — 상단 바 '메뉴' → 운영/상품/콘텐츠를 한 화면에 ──
@@ -2276,7 +2463,9 @@
       const unpaid = live.filter(a => !appPaid(a));
       const wl = _wl.filter(r => r.status !== 'notified');
       const todayApps = _apps.filter(a => isToday(a.created_at)).length;
-      const newMembers = members.filter(m => isToday(m.created_at)).length;
+      // 보관한 회원은 회원 수에서 뺀다 — 회원 관리 탭의 숫자와 같은 기준이어야 한다(2026-08-03).
+      const liveMembers = members.filter(m => !isArchived(m));
+      const newMembers = liveMembers.filter(m => isToday(m.created_at)).length;
       // 검수 대기 — answer_sessions(관리자 RLS). 마이그레이션 미적용이면 0으로 조용히.
       let review = 0;
       try {
@@ -2291,7 +2480,7 @@
       tdSet('tdNewMembers', newMembers);
       /* 전체 회원 수(2026-08-02 오너 요청 — "총 회원이 몇 명인지를 몰라").
          members 는 이미 전량 받아 둔 배열이라 추가 조회가 없다. */
-      tdSet('tdMembersAll', members.length);
+      tdSet('tdMembersAll', liveMembers.length);
       tdSet('tdReview', review);
 
       // 헤드라인 — 오늘 신청·입금 순으로 가장 급한 사실 한 문장
@@ -2429,7 +2618,7 @@
           <div>
             <div class="ri-main">${esc(r.name)}
               <a class="wl-tel" href="tel:${esc((r.phone || '').replace(/[^0-9+]/g, ''))}">${esc(r.phone)}</a>
-              ${done ? '<span style="font-size:12px;font-weight:700;color:#2E6E42;border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
+              ${done ? '<span style="font-size:12px;font-weight:700;color:var(--st-ok);border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
             </div>
             <div class="ri-sub">${esc(CH_LABEL[r.challenge] || r.challenge)} · 신청 ${when}${r.member_id ? ' · 회원' : ''}</div>
           </div>
@@ -3209,7 +3398,7 @@
               + `<button class="btn btn-ghost btn-sm" type="button" id="appMoreBtn">더 보기</button></div>`
             : '')
         + (_appsTruncated
-            ? '<div class="mmore"><span style="color:#A33D14">신청이 너무 많아 일부만 불러왔습니다 — 건수·중복 표시가 실제보다 적습니다.</span></div>'
+            ? '<div class="mmore"><span style="color:var(--st-alert)">신청이 너무 많아 일부만 불러왔습니다 — 건수·중복 표시가 실제보다 적습니다.</span></div>'
             : '');
       const appMoreBtn = document.getElementById('appMoreBtn');
       if (appMoreBtn) appMoreBtn.addEventListener('click', () => { _aShown += A_PAGE; renderApps(); });
@@ -3308,7 +3497,7 @@
       const counts = RV_CH_OPTS.map(c => c + ' <b>' + ch.filter(r => r.challenge === c).length + '</b>');
       const none = ch.filter(r => !r.challenge).length;
       box.innerHTML = '챌린지 상세 페이지에 뜨는 후기 — ' + counts.join(' · ')
-        + (none ? ' <span style="color:var(--danger,#C0392B)">· 챌린지 미지정 <b>' + none + '</b>건(상세에 안 뜹니다 — 아래에서 챌린지를 골라 주세요)</span>' : '');
+        + (none ? ' <span style="color:var(--st-alert)">· 챌린지 미지정 <b>' + none + '</b>건(상세에 안 뜹니다 — 아래에서 챌린지를 골라 주세요)</span>' : '');
     }
     function rvUrl(path) { return MONC.sb.storage.from('reviews').getPublicUrl(path).data.publicUrl; }
     /* ⚠️ useCache — 검색·더 보기·종류 필터는 **다시 조회하지 않는다**(2026-08-03).
@@ -3682,7 +3871,7 @@
         const pin = q.scheduled_date ? (q.scheduled_date === today ? '오늘 고정' : ('예정 고정 ' + q.scheduled_date)) : '자동 순환';
         const liveTag = isEffective ? '<b style="color:var(--action)">▶ 오늘 노출 중</b> · ' : '';
         return `
-        <div class="round-item" data-id="${q.id}" style="${q.active ? '' : 'opacity:.55;'}${isEffective ? 'box-shadow:inset 3px 0 0 var(--action);' : ''}">
+        <div class="round-item${q.active ? '' : ' is-off'}" data-id="${q.id}" style="${isEffective ? 'box-shadow:inset 3px 0 0 var(--action);' : ''}">
           <div>
             <div class="ri-main">${esc(q.content)}</div>
             <div class="ri-sub">${liveTag}${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
@@ -3810,7 +3999,7 @@
         return;
       }
       listEl.innerHTML = rows.map(t => `
-        <div class="round-item" data-id="${t.id}" style="${t.active ? '' : 'opacity:.55;'}">
+        <div class="round-item${t.active ? '' : ' is-off'}" data-id="${t.id}">
           <div>
             <div class="ri-main">“${esc(t.term)}”
               <span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:1px;
@@ -4005,7 +4194,7 @@
       if (c.view) hits.push('열람 ' + c.view);
       if (c.fail) hits.push('비번실패 ' + c.fail);
 
-      return '<div class="round-item" data-id="' + r.id + '" style="' + (r.published ? '' : 'opacity:.55;') + '">'
+      return '<div class="round-item' + (r.published ? '' : ' is-off') + '" data-id="' + r.id + '">'
         + '<div>'
           + '<div class="ri-main">' + esc(r.title) + '</div>'
           + '<div class="ri-sub">' + esc(bits.join(' · ')) + '</div>'
@@ -4148,7 +4337,7 @@
         const sub = (nm && mail) ? mail : '';
         const when = new Date(l.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         // 자료별로 좁혀 볼 땐 제목을 반복하지 않는다 — 누가 언제인지가 주인공이다
-        return '<div class="round-item"' + (l.kind === 'fail' ? ' style="opacity:.7"' : '') + '>'
+        return '<div class="round-item' + (l.kind === 'fail' ? ' is-off' : '') + '">'
           + '<div>'
             + '<div class="ri-main">' + esc(who) + ' · ' + esc(LAB_KIND[l.kind] || l.kind) + '</div>'
             + '<div class="ri-sub">'
@@ -4287,7 +4476,7 @@
       if (!text) { el.hidden = true; el.textContent = ''; return; }
       el.textContent = text;
       el.hidden = false;
-      if (kind === 'err') { el.style.background = '#FBE9E7'; el.style.color = '#B23B2E'; }
+      if (kind === 'err') { el.style.background = 'var(--st-alert-bg)'; el.style.color = 'var(--st-alert)'; }
       else if (kind === 'ok') { el.style.background = 'var(--action-tint)'; el.style.color = 'var(--accent-ink)'; }
       else { el.style.background = 'var(--surface2)'; el.style.color = 'var(--text-muted)'; }
     }
@@ -4758,6 +4947,7 @@
       const q = document.getElementById('credSearch').value.trim().toLowerCase();
       const hasOnly = document.getElementById('credHasOnly').checked;
       const list = members.filter(m => {
+        if (isArchived(m)) return false;   // 보관한 회원은 회원 관리와 같이 여기서도 뺀다
         const bal = _credBal.get(m.id) || 0;
         if (hasOnly && bal <= 0) return false;
         if (!q) return true;
@@ -4892,7 +5082,7 @@
           + '번</b> 또는 AI킬러 검사 <b>' + Math.floor(d / k) + '번</b>을 무료로 할 수 있어요.'
         : '하루 무료가 0이면 충전한 회원만 쓸 수 있어요.')
         + (sg > 0 ? ' 가입하면 <b>' + sg + '크레딧</b>을 한 번 더 드려요(회원당 1회).' : '')
-        + (warn ? '<div style="margin-top:8px;color:var(--danger,#B3261E);font-weight:700;">⚠️ ' + warn + '</div>' : '');
+        + (warn ? '<div style="margin-top:8px;color:var(--st-alert);font-weight:700;">⚠️ ' + warn + '</div>' : '');
     }
     ['cfDaily', 'cfSojae', 'cfKiller', 'cfPolish', 'cfRehearsal', 'cfSignup'].forEach(id => {
       document.getElementById(id).addEventListener('input', renderCreditHint);
@@ -5038,11 +5228,11 @@
 
       const rows = _apqF ? _apQ.filter(q => q.qtype === _apqF) : _apQ;
       listEl.innerHTML = rows.length ? rows.map(q => `
-        <div class="round-item" style="${q.active ? '' : 'opacity:.55;'}">
+        <div class="round-item${q.active ? '' : ' is-off'}">
           <div><div class="ri-main">${esc(q.content)}</div>
             <div class="ri-sub">${q.airline ? esc((LEC.AIRLINES[q.airline]||{}).ko || q.airline) : '공통'} ·
               ${esc(AP_QTYPES[q.qtype] || q.qtype)}${q.stage ? ' · ' + esc(q.stage) : ''}${q.difficulty ? ' · 난이도 ' + q.difficulty : ''} ·
-              ${q.source_confidence === 'verified' ? '검증' : q.source_confidence === 'estimated' ? '예상' : '제보'}${q.intent ? ' · 의도 있음' : ' · <b style="color:#A33D14">의도 비어 있음</b>'}</div></div>
+              ${q.source_confidence === 'verified' ? '검증' : q.source_confidence === 'estimated' ? '예상' : '제보'}${q.intent ? ' · 의도 있음' : ' · <b style="color:var(--st-alert)">의도 비어 있음</b>'}</div></div>
           <div class="ri-actions">
             <button class="ri-del apq-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
             <button class="ri-del apq-edit" data-id="${q.id}">수정</button>
@@ -5365,16 +5555,61 @@
         loadApResearchers();
       }));
 
+    /* 검수 건수 집계(2026-08-03) — 연구원 보수를 이 숫자로 정산한다.
+       ⚠️ '결과를 낸 것'만 센다: 잡아만 두고 안 낸 것(researcher_reviewing)은 아직 일이 안 끝났다.
+       ⚠️ 이번 달은 reviewed_at 기준이다. 그 컬럼이 없는 환경(마이그레이션 미적용)에서는
+          updated_at 으로 대신 세지 않고 **이번 달 줄을 아예 안 쓴다** — 학생이 나중에 글을
+          고쳐도 updated_at 이 움직여 엉뚱한 달로 옮겨가기 때문이다(원칙 11). */
+    const AP_DONE_STATES = ['approved', 'finalized', 'revision_requested'];
+    async function apReviewCounts() {
+      /* ⚠️ 컬럼을 나열하는 select 는 마이그레이션 미적용 환경에서 400 이다(공통 규칙).
+         reviewed_at 이 없으면 그 컬럼만 빼고 다시 부른다 — select('*') 로 도망가지 않는다
+         (초안·문답 jsonb 까지 딸려와 전송량이 크게 는다). */
+      let hasStamp = true;
+      let res = await fetchAll(() => sb().from('answer_sessions')
+        .select('reviewed_by, state, reviewed_at').not('reviewed_by', 'is', null));
+      if (res.error) {
+        hasStamp = false;
+        res = await fetchAll(() => sb().from('answer_sessions')
+          .select('reviewed_by, state').not('reviewed_by', 'is', null));
+      }
+      const { data, error } = res;
+      if (error || !data) return null;
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const total = new Map(), month = new Map(), doing = new Map();
+      for (const s of data) {
+        if (s.state === 'researcher_reviewing') { doing.set(s.reviewed_by, (doing.get(s.reviewed_by) || 0) + 1); continue; }
+        if (!AP_DONE_STATES.includes(s.state)) continue;
+        total.set(s.reviewed_by, (total.get(s.reviewed_by) || 0) + 1);
+        if (hasStamp && s.reviewed_at && s.reviewed_at >= monthStart) {
+          month.set(s.reviewed_by, (month.get(s.reviewed_by) || 0) + 1);
+        }
+      }
+      return { total, month, doing, hasStamp };
+    }
+
     async function loadApResearchers() {
       const el = document.getElementById('apResList');
       const { data, error } = await sb().from('researchers').select('*').order('created_at');
       if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
       const rows = data || [];
+      const cnt = rows.length ? await apReviewCounts() : null;
       el.innerHTML = rows.length ? rows.map(r => {
         const m = members.find(x => x.id === r.member_id) || {};
-        return `<div class="round-item" style="${r.active ? '' : 'opacity:.55;'}">
+        /* ⚠️ opacity 로 행을 통째로 흐리게 하지 않는다 — 되돌리는 버튼('재개')까지 같이 안 읽힌다.
+           바탕만 눕히는 .is-off 를 쓴다(2026-08-03 · 다른 목록과 같은 규약). */
+        const done = cnt ? (cnt.total.get(r.member_id) || 0) : null;
+        const mon  = cnt ? (cnt.month.get(r.member_id) || 0) : null;
+        const now  = cnt ? (cnt.doing.get(r.member_id) || 0) : null;
+        const stat = cnt === null ? '검수 건수 확인 중'
+          : '검수 <b>' + done + '건</b>'
+            + (cnt.hasStamp ? ' · 이번 달 <b>' + mon + '건</b>' : '')
+            + (now ? ' · 지금 잡고 있는 것 ' + now + '건' : '');
+        return `<div class="round-item${r.active ? '' : ' is-off'}">
           <div><div class="ri-main">${esc(m.name || '(이름 없음)')}</div>
-            <div class="ri-sub">${esc(m.email || '')} · ${r.active ? '활성' : '중지'}</div></div>
+            <div class="ri-sub">${esc(m.email || '')} · ${r.active ? '활동 중' : '쉬는 중'}</div>
+            <div class="ri-sub">${stat}</div></div>
           <div class="ri-actions">
             <button class="ri-del apr-tog" data-id="${r.member_id}">${r.active ? '중지' : '재개'}</button>
             <button class="ri-del apr-del" data-id="${r.member_id}">해제</button></div></div>`;
@@ -5403,7 +5638,7 @@
       if (error) { el.innerHTML = apMissing(error) ? '' : '<div class="empty">불러오기 실패</div>'; return; }
       const CAT = { question: '질문', experience: '경험', sentence: '문장', speaking: '말하기' };
       el.innerHTML = (data || []).map(c => `
-        <div class="round-item" style="${c.active ? '' : 'opacity:.5;'}">
+        <div class="round-item${c.active ? '' : ' is-off'}">
           <div><div class="ri-main">${esc(c.label)} <span style="font-size:12px;color:var(--text-dim)">${esc(c.code)}</span></div>
             <div class="ri-sub">${CAT[c.category] || c.category}${c.description ? ' · ' + esc(c.description) : ''}</div></div>
           <div><button class="ri-del apc-tog" data-code="${esc(c.code)}">${c.active ? '끄기' : '켜기'}</button></div>
@@ -5492,23 +5727,15 @@
       if (snWho) snWho.textContent = admin.name || admin.email || '관리자';
       initTabs();
       setTimeout(revealAdmin, 8000);   // 안전망 — 조회 하나가 멈춰도 화면은 뜬다(빈 값으로라도)
+      /* ⚠️ 여기서 받는 것은 **첫 화면('오늘')에 필요한 것뿐**이다(2026-08-03).
+         나머지 탭은 그 탭을 열 때 ensureTab() 이 받는다 — 전에는 여기서 12개 탭을 다
+         받느라 진입 한 번에 조회가 33회였다(회원 3,000명 실측). 새 로더를 만들면
+         이 목록이 아니라 **위 TAB_DEPS/TAB_LOADERS 에** 넣는다. */
       try {
         await loadCohorts();
         await loadMembers();
-        loadChallengePrice();
-        loadRounds();
-        loadLectures();
         await loadApplications();
         await loadWaitlist();
-        loadReviewsAdmin();
-        loadStoriesAdmin();
-        loadQuestions();
-        loadTerms();
-        loadLabFiles();
-        loadCredits();
-        loadCreditPacks();
-        loadCreditConfig();
-        loadApProgram();
         await loadToday();   // ⚠️ '오늘' 숫자가 _apps/_wl/members 를 재사용하므로 위 로드 뒤에
       } catch (err) {
         console.error('초기 로드 실패', err);
