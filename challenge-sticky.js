@@ -47,9 +47,12 @@
     st.id = 'chStickyCss';
     st.textContent = [
       /* 하단 고정 바 — lecture.html .lc-sticky 와 같은 문법(높이·활자·알약 CTA) */
+      /* ⚠️ 배경을 반투명으로 되돌리지 말 것 (2026-08-02 오너 신고) — 바 밑을 지나가는
+         글자가 비쳐 **가로로 잘린 것처럼** 보인다. 불투명 + 또렷한 경계선이어야 한다. */
       '.ch-sticky{position:fixed;left:0;right:0;bottom:0;z-index:90;',
-      '  background:rgba(244,241,234,.94);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);',
-      '  border-top:1px solid var(--border,rgba(38,34,28,.16));',
+      '  background:var(--bg,#F4F1EA);',
+      '  border-top:1px solid var(--border-strong,rgba(38,34,28,.52));',
+      '  box-shadow:0 -6px 18px rgba(36,26,18,.10);',
       '  padding:10px 16px calc(10px + env(safe-area-inset-bottom));',
       '  transform:translateY(110%);transition:transform .28s ease;}',
       '.ch-sticky.on{transform:none;}',
@@ -113,24 +116,50 @@
      ⚠️ 고정값(예: 72px)을 쓰지 말 것 — 안전영역(env(safe-area-inset-bottom))이
         기기마다 달라 아이폰에서만 덜 밀리거나 더 밀린다. */
   function padBody() {
+    /* 바 실측 높이 + 8px 여유. 여유가 없으면 마지막 줄이 경계선에 딱 붙어 잘려 보인다.
+       ⚠️ 고정값(예: 72px)을 쓰지 말 것 — 안전영역이 기기마다 다르다. */
     var h = bar.offsetHeight || 0;
-    document.body.style.paddingBottom = h ? (h + 'px') : '';
+    document.body.style.paddingBottom = h ? (h + 8) + 'px' : '';
   }
 
-  /* 히어로의 신청 버튼이 화면에 보이는 동안엔 바를 감춘다 — 같은 행동이 두 개
-     겹쳐 보이면 어느 것을 눌러야 하는지 헷갈린다(원칙 6: 같은 행동의 반복은
-     허용하되 '동시에 두 개'는 아니다). */
+  /* ── 언제 바를 보여줄까 ─────────────────────────────────────────────────
+     '가리면 안 되는 것'이 화면에 보이는 동안엔 내린다. 둘이다.
+       ① 히어로·본문의 신청 버튼 — 같은 행동이 두 개 겹치면 어느 걸 눌러야 할지 모른다.
+       ② 푸터(사업자 정보) — **2026-08-02 오너 신고의 실제 원인.** 바가 푸터 위를
+          지나가면서 '주소: … 고객센터: 070-' 줄이 가로로 잘려 보였다. 통신판매업자
+          표시는 법적 고지라 반쯤 가린 채 두면 안 된다.
+     ⚠️ 하나만 보고 판단하던 구 코드로 되돌리지 말 것 — 그게 이 사고의 원인이다. */
+  var guards = [];
   var heroBtn = document.querySelector('.hero .apply-btn, .hero-inner .apply-btn') ||
                 document.querySelector('.apply-btn');
+  if (heroBtn) guards.push(heroBtn);
+  var lastBtn = (function () {
+    var all = document.querySelectorAll('.apply-btn');
+    return all.length > 1 ? all[all.length - 1] : null;
+  })();
+  if (lastBtn) guards.push(lastBtn);
+  var footer = document.querySelector('footer, .footer, .footer-inner');
+  if (footer) guards.push(footer);
+
+  var visible = new Set();
   function show(on) { bar.classList.toggle('on', !!on); padBody(); }
-  if (heroBtn && 'IntersectionObserver' in window) {
-    new IntersectionObserver(function (es) {
-      es.forEach(function (e) { show(!e.isIntersecting); });
-    }, { threshold: 0 }).observe(heroBtn);
+  if (guards.length && 'IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) visible.add(e.target); else visible.delete(e.target);
+      });
+      show(visible.size === 0);
+    }, { threshold: 0 });
+    guards.forEach(function (g) { io.observe(g); });
   } else {
     show(true);
   }
+
+  /* 높이는 한 번만 재면 안 된다 — iOS 는 안전영역(env(safe-area-inset-bottom))과
+     주소창 접힘 때문에 바 높이·화면 높이가 스크롤 도중에 바뀐다. 계속 따라간다. */
   window.addEventListener('resize', padBody);
+  if (window.ResizeObserver) new ResizeObserver(padBody).observe(bar);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', padBody);
 
   document.getElementById('chStickyGo').addEventListener('click', function (e) {
     /* 마감·모집예정 처리(오픈 알림 시트)는 각 페이지의 handleApply 가 이미 갖고 있다.
