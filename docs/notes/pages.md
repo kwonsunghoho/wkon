@@ -136,3 +136,29 @@ challenge-voice `<audio>` 14개 · spinning 8개에 **`preload="none"`**. 재생
 **검증(이번엔 제대로)**: 상세 4종 × 320/375/393+safe/430+safe = **16개 조합**에서
 ① 본문 중간 바 노출 ② 맨 아래에서 바 내려감 ③ **푸터 가려짐 0px** ④ 푸터 전체 노출.
 안전영역은 `padding-bottom` 을 강제 주입해 흉내 냈다(크로미움은 env() 가 0).
+
+### 2026-08-02(저녁 2차) 바 **자체**의 아랫부분이 잘리던 문제 — iOS Safari 툴바
+오너 2차 신고: 바 크롭은 정상인데 화면에선 하단부가 잘려 보인다.
+
+**원인**: `position:fixed; bottom:0` 은 **레이아웃 뷰포트**(`window.innerHeight`) 기준이다.
+iOS Safari 는 스크롤 중 하단 툴바를 접었다 폈다 하는데, 접힌 동안 레이아웃 뷰포트가
+**실제로 보이는 영역(`visualViewport.height`)보다 커진다.** 그래서 bottom:0 인 바가
+툴바 뒤로 들어가 아랫부분이 잘린다.
+
+⚠️⚠️ **데스크톱 크로미움에서는 두 값이 항상 같아 절대 재현되지 않는다.** 내가 두 번
+놓친 이유가 이것이다. **하단 고정 요소를 새로 만들면 이 보정을 반드시 같이 단다.**
+
+**보정**(`challenge-sticky.js` `place()`):
+```js
+var gap = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+bar.style.bottom = gap + 'px';
+```
+`visualViewport` 의 `resize`·`scroll`, `window` 의 `resize`·`scroll`(rAF 로 묶음),
+`ResizeObserver` 로 계속 따라간다. visualViewport 가 없으면 no-op 이라 기존 동작 그대로.
+숨김 상태의 `translateY` 도 `calc(110% + 60px)` 로 키웠다 — bottom 을 올려 둔 상태에서도
+완전히 화면 밖으로 내려가야 한다.
+
+**검증 방법(재현 레시피)**: `window.visualViewport` 를 가짜 객체로 덮어
+`height = innerHeight - 툴바` 로 만든다. 상세 4종 × 툴바 0/44/88px = 12개 조합에서
+바 잘림 0 · 푸터 가려짐 0 · 맨 아래에서 바 내려감을 확인했고, 같은 측정이 '보정이
+없었다면 44/88px 잘렸을 것'임을 함께 보여 준다.

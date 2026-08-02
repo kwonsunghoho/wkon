@@ -54,7 +54,8 @@
       '  border-top:1px solid var(--border-strong,rgba(38,34,28,.52));',
       '  box-shadow:0 -6px 18px rgba(36,26,18,.10);',
       '  padding:10px 16px calc(10px + env(safe-area-inset-bottom));',
-      '  transform:translateY(110%);transition:transform .28s ease;}',
+        /* 110% + 안전여유 — bottom 을 올려 둔 상태에서도 완전히 화면 밖으로 내려가야 한다 */
+      '  transform:translateY(calc(110% + 60px));transition:transform .28s ease;}',
       '.ch-sticky.on{transform:none;}',
       '.ch-sticky-in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:14px;}',
       '.ch-sticky .info{flex:1 1 auto;min-width:0;}',
@@ -142,7 +143,7 @@
   if (footer) guards.push(footer);
 
   var visible = new Set();
-  function show(on) { bar.classList.toggle('on', !!on); padBody(); }
+  function show(on) { bar.classList.toggle('on', !!on); place(); padBody(); }
   if (guards.length && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (es) {
       es.forEach(function (e) {
@@ -155,11 +156,37 @@
     show(true);
   }
 
-  /* 높이는 한 번만 재면 안 된다 — iOS 는 안전영역(env(safe-area-inset-bottom))과
-     주소창 접힘 때문에 바 높이·화면 높이가 스크롤 도중에 바뀐다. 계속 따라간다. */
-  window.addEventListener('resize', padBody);
-  if (window.ResizeObserver) new ResizeObserver(padBody).observe(bar);
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', padBody);
+  /* ── iOS Safari: 바 아랫부분이 잘리는 문제 (2026-08-02 오너 신고 2차) ─────────
+     `position:fixed; bottom:0` 은 **레이아웃 뷰포트** 기준이다. iOS Safari 는 스크롤 중
+     하단 툴바를 접었다 폈다 하는데, 그때 레이아웃 뷰포트(window.innerHeight)가
+     **실제로 보이는 영역(visualViewport.height)보다 커진다.** 그러면 bottom:0 인 바가
+     툴바 뒤로 들어가 **아랫부분이 잘려 보인다.**
+     ⚠️ 데스크톱 크로미움에서는 두 값이 항상 같아 **절대 재현되지 않는다** — 내가 이걸
+        못 잡은 이유다. 앞으로 하단 고정 요소를 만들면 이 보정을 같이 단다.
+     보정: 두 값의 차이만큼 바를 올린다. visualViewport 가 없는 브라우저에선 0 이라
+     기존 동작 그대로다(no-op). */
+  function place() {
+    var vv = window.visualViewport;
+    if (!vv) return;
+    var gap = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    bar.style.bottom = gap + 'px';
+  }
+
+  /* 높이·위치는 한 번만 재면 안 된다 — 안전영역·툴바 접힘으로 스크롤 도중에 바뀐다. */
+  var ticking = false;
+  function sync() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { ticking = false; place(); padBody(); });
+  }
+  sync();
+  window.addEventListener('resize', sync);
+  window.addEventListener('scroll', sync, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', sync);
+    window.visualViewport.addEventListener('scroll', sync);
+  }
 
   document.getElementById('chStickyGo').addEventListener('click', function (e) {
     /* 마감·모집예정 처리(오픈 알림 시트)는 각 페이지의 handleApply 가 이미 갖고 있다.
