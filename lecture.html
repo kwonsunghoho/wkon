@@ -341,6 +341,7 @@
       const slotPicker = SLOTS.length
         ? '<div class="lc-slots" id="slotPicker"><span class="cap">시간대 선택</span>'
           + SLOTS.map(s => slotRowHtml(s, false)).join('') + '</div>'
+          + '<p class="lc-err" id="lcErrSlot"></p>'
         : '';
       return '<section class="lc-apply" id="applyBox">'
         + '<h2>신청하기</h2>'
@@ -351,6 +352,7 @@
         + '<div class="lc-field" id="rowName"><label>이름</label><input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name" maxlength="20" aria-describedby="lcErrName"><p class="lc-err" id="lcErrName"></p></div>'
         + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric" maxlength="20" aria-describedby="lcErrPhone"><p class="lc-err" id="lcErrPhone"></p></div>'
         + '<label class="consent" for="appConsent"><input type="checkbox" id="appConsent"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다.</span></label>'
+        + '<p class="lc-err" id="lcErrConsent"></p>'
         + (free ? '' : '<div class="pay-total"><span class="l">참가비</span><span class="a">' + LEC.esc(priceStr) + '</span></div>')
         + payButtons
         + '<p class="lc-refund">신청 후 환불은 「콘텐츠 이용자 보호지침」에 따릅니다. 특강 시작 전 취소는 전액 환불되며, 자세한 내용은 <a href="terms.html" target="_blank" rel="noopener">이용약관</a>을 참고해 주세요.</p>'
@@ -539,14 +541,24 @@
     }
 
     /* ── 입력 검증(공통) ── */
+    /* 칸이 아니라 묶음(시간대·동의)에 붙는 오류 — apply.html 의 setBlockErr 와 같은 규칙.
+       ⚠️ 두 파일은 같은 결제 흐름이다. 한쪽만 고치지 말 것. */
+    function setBlockErr(id, message) {
+      const e = document.getElementById(id);
+      if (!e) return;
+      e.textContent = message || '';
+      e.classList.toggle('on', !!message);
+    }
     function readApplicant() {
       // 시간대가 있는 특강은 반드시 하나를 골라야 한다(정원·마감이 타임마다 따로라서)
       if (SLOTS.length && !_slotId) {
-        alert('신청할 시간대를 선택해주세요.');
+        // 오류는 고를 대상 바로 아래 인라인 — alert 은 닫으면 문구가 사라진다(진단 D-6)
+        setBlockErr('lcErrSlot', '신청할 시간대를 골라주세요.');
         const box = document.getElementById('slotPicker');
         if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return null;
       }
+      setBlockErr('lcErrSlot', '');
       const name = (document.getElementById('appName') || {}).value?.trim() || '';
       const phone = (document.getElementById('appPhone') || {}).value?.trim() || '';
       /* 규칙은 phone-check.js 한 곳 — 가입·챌린지·특강·오픈알림이 같은 번호를 받는다.
@@ -565,7 +577,14 @@
         if (bad) { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); bad.focus({ preventScroll: true }); }
         return null;
       }
-      if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return null; }
+      const agreed = document.getElementById('appConsent').checked;
+      setBlockErr('lcErrConsent', agreed ? '' : '개인정보 수집·이용에 동의해야 신청할 수 있어요.');
+      if (!agreed) {
+        const c = document.getElementById('appConsent');
+        c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        c.focus({ preventScroll: true });
+        return null;
+      }
       const applicant = { name, phone };
       if (_memberId) applicant.member_id = _memberId;
       return applicant;

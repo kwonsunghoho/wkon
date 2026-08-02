@@ -121,7 +121,8 @@
     min-height: 44px; box-sizing: border-box;
   }
   /* ▸ 글리프 — 장식이라 활자 하한(12px) 대상이 아니다. */
-  .curr-toggle .arw { transition: transform .2s; font-size: 10px; }
+  /* 12px 하한(원칙 1) — 구 10px. 장식이라도 활자면 하한을 지킨다. */
+  .curr-toggle .arw { transition: transform .2s; font-size: 12px; }
   .card.curr-open .curr-toggle .arw { transform: rotate(90deg); }
 
   .curr-body { display: none; padding: 0 16px 16px; }
@@ -248,7 +249,8 @@
 
   /* ── 개인정보 수집·이용 동의 (필수) ── */
   .consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px 2px; cursor: pointer; user-select: none; }
-  .consent input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--action); cursor: pointer; }
+  /* 24px 하한(WCAG 2.5.8 AA) — 구 20px. 법정 필수 동의라 못 눌러서 막히면 안 되는 자리다. */
+  .consent input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--action); cursor: pointer; }
   .consent .txt { font-size: 13px; line-height: 1.6; }
   .consent .txt b { font-weight: 800; color: var(--action-dark); }
   .consent .detail { display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
@@ -357,6 +359,8 @@
                      color:var(--accent-ink);text-decoration:underline;cursor:pointer;">새로고침</button>
     </p>
     <div id="cards"></div>
+    <!-- 미선택 오류는 고를 대상 바로 아래에 — 결제 버튼 옆에 두면 무엇을 고르라는 건지 안 읽힌다 -->
+    <p class="field-err" id="errPick"></p>
   </section>
 
   <!-- ③ 회원가입 유도 배너 -->
@@ -466,6 +470,7 @@
           <span class="detail">수집 항목: 이름·휴대전화번호 / 목적: 신청 접수·본인 확인·안내 연락 / 보유 기간: 챌린지 종료 후 지체 없이 파기 · <a href="privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보처리방침</a></span>
         </span>
       </label>
+      <p class="field-err" id="errConsent"></p>
 
       <!-- 결제 방법 -->
       <!-- 토스페이 간편결제(라이브, 2026-07-23 전환). 계좌이체와 함께 상시 노출. -->
@@ -890,6 +895,38 @@ function setFieldErr(inputId, errId, message) {
   if (input) input.classList.toggle('is-err', !!message);
   if (err) { err.textContent = message || ''; err.classList.toggle('on', !!message); }
 }
+/* 칸이 아니라 '묶음'에 붙는 오류(챌린지 미선택·동의 미체크) — alert 로 띄우던 자리다.
+   ⚠️ alert 은 닫는 순간 문구가 사라지고, 모바일에서 **어디를 고쳐야 하는지**를 못 알려준다
+      (2026-08-02 진단 D-6 · 업계 비교: Stripe 는 필드 옆 인라인). */
+function setBlockErr(errId, message) {
+  const err = document.getElementById(errId);
+  if (!err) return;
+  err.textContent = message || '';
+  err.classList.toggle('on', !!message);
+}
+
+/* 주문 전체 검증 — 결제 경로 세 갈래(계좌 안내·계좌 확정·토스)가 같은 것을 본다.
+   ⚠️ 세 곳에 검사를 복사하지 말 것. 한쪽만 고쳐지면 그 경로로만 빠져나간다. */
+function validateOrder(opts) {
+  const scroll = !(opts && opts.noScroll);
+  const ids = selectedIds();
+  setBlockErr('errPick', ids.length ? '' : '신청할 챌린지를 하나 이상 골라주세요.');
+  if (!ids.length) {
+    if (scroll) document.getElementById('cards').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  if (!validateApplicant()) return false;
+  const agreed = document.getElementById('appConsent').checked;
+  setBlockErr('errConsent', agreed ? '' : '개인정보 수집·이용에 동의해야 신청할 수 있어요.');
+  if (!agreed) {
+    const el = document.getElementById('appConsent');
+    if (scroll) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+    return false;
+  }
+  return true;
+}
+
 function validateApplicant() {
   const name = document.getElementById('appName').value.trim();
   const phone = document.getElementById('appPhone').value.trim();
@@ -977,10 +1014,8 @@ async function openBankModal() {
   const phone = document.getElementById('appPhone').value.trim();
   const ids = selectedIds();
 
-  // 챌린지 선택 + 이름·전화·동의를 통과해야 계좌를 안내한다.
-  if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
-  if (!validateApplicant()) return;
-  if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
+  // 챌린지 선택 + 이름·전화·동의를 통과해야 계좌를 안내한다(오류는 전부 인라인).
+  if (!validateOrder()) return;
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   // 접수될 수 없는 신청에 입금 계좌를 먼저 보여주면 안 된다(입금부터 하고 막히는 사고)
   if (await dupBlocked(ids)) return;
@@ -1016,10 +1051,8 @@ async function confirmBankTransfer() {
   const ids = selectedIds();
 
   // 모달을 여는 시점에 이미 검증했지만, 열린 사이 변동 가능성에 대비해 재확인한다.
-  if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); closeBankModal(); return; }
-  // 인라인 오류는 모달 뒤에 가려 안 보인다 — 닫고 나서 필드에 표시한다.
-  if (!validateApplicant()) { closeBankModal(); validateApplicant(); return; }
-  if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
+  // ⚠️ 인라인 오류는 모달 뒤에 가려 안 보인다 — 먼저 닫고 나서 표시·스크롤한다.
+  if (!validateOrder({ noScroll: true })) { closeBankModal(); validateOrder(); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
 
   _isSubmitting = true;
@@ -1091,9 +1124,7 @@ async function payWithToss() {
   const phone = document.getElementById('appPhone').value.trim();
   const ids = selectedIds();
 
-  if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
-  if (!validateApplicant()) return;
-  if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
+  if (!validateOrder()) return;
   if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   // 결제창을 띄우기 전에 중복을 걸러낸다 — 결제 후 막히면 환불(verify-payment)까지 가야 한다
