@@ -1961,8 +1961,14 @@
         btn.disabled = true; btn.textContent = '…';
         try {
           if (!status) {
-            // 미정 → 기존 기록 삭제
-            await sb().from('daily_records').delete().eq('member_id', id).eq('day_number', day);
+            /* 미정 → 기존 기록 삭제. ⚠️ 코멘트도 같이 사라진다(기록 행 자체가 없어진다).
+               전에는 말없이 지워 놓고 '저장됨'만 띄웠고 화면엔 코멘트가 그대로 남아 있었다(2026-08-03). */
+            if (comment && !confirm(day + '일차를 미정으로 되돌리면 적어 두신 코멘트도 같이 지워집니다.\n계속할까요?')) {
+              btn.disabled = false; btn.textContent = '저장'; return;
+            }
+            const { error } = await sb().from('daily_records').delete().eq('member_id', id).eq('day_number', day);
+            if (error) throw error;
+            const ci = row.querySelector('.d-comment input'); if (ci) ci.value = '';
           } else {
             const { error } = await sb().from('daily_records')
               .upsert({ member_id: id, day_number: day, status, comment }, { onConflict: 'member_id,day_number' });
@@ -4604,10 +4610,14 @@
         .select('member_id, tool, delta, reason, ref, created_at')
         .order('created_at', { ascending: false }));
       if (error) {
-        // 마이그레이션 미적용 — 조용히 죽지 말고 무엇을 실행해야 하는지 알려준다
-        document.getElementById('credList').innerHTML =
-          '<div class="loading">크레딧 원장이 아직 없어요. Supabase SQL Editor 에서 '
-          + '<b>20260725130000_credits.sql</b> 을 실행해 주세요.</div>';
+        /* ⚠️ 모든 실패를 '마이그레이션 미적용'으로 단정하지 않는다(2026-08-03) —
+           네트워크·권한 오류까지 "SQL 을 실행하세요"로 안내하면 엉뚱한 곳을 고치게 된다.
+           테이블 없음 판정은 PGRST205 다(42P01 아님 — 실측). */
+        const missing = error.code === 'PGRST205' || /could not find the table|does not exist/i.test(error.message || '');
+        document.getElementById('credList').innerHTML = missing
+          ? '<div class="empty">크레딧 원장이 아직 없어요. Supabase SQL Editor 에서 '
+            + '<b>20260725130000_credits.sql</b> 을 실행해 주세요.</div>'
+          : '<div class="empty err">크레딧을 불러오지 못했습니다 — ' + esc(error.message) + '</div>';
         document.getElementById('credLog').innerHTML = '';
         return;
       }
@@ -4673,7 +4683,7 @@
     function renderCredLog() {
       const byId = new Map(members.map(m => [m.id, m.name || m.email || '(알 수 없음)']));
       const el = document.getElementById('credLog');
-      if (!_credRows.length) { el.innerHTML = '<div class="loading">아직 기록이 없어요.</div>'; return; }
+      if (!_credRows.length) { el.innerHTML = '<div class="empty">아직 기록이 없어요.</div>'; return; }
       el.innerHTML = _credRows.slice(0, 50).map(r => {
         const d = new Date(r.created_at);
         const when = (d.getMonth() + 1) + '/' + d.getDate() + ' '
@@ -5170,15 +5180,20 @@
       const hits = members.filter(m =>
         (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q)).slice(0, 6);
       el.innerHTML = hits.length ? hits.map(m =>
-        `<button type="button" class="ri-del" data-id="${m.id}" style="margin:2px 4px 2px 0;">${esc(m.name || '(이름 없음)')} · ${esc(m.email || '-')}</button>`).join('')
+        `<button type="button" class="ri-del" data-id="${m.id}" data-who="${esc((m.name || '이름 없음') + ' · ' + (m.email || '-'))}" style="margin:2px 4px 2px 0;">${esc(m.name || '(이름 없음)')} · ${esc(m.email || '-')}</button>`).join('')
         : '<span style="font-size:12px;color:var(--text-dim)">일치하는 회원이 없어요.</span>';
-      el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.id)));
+      // ⚠️ 이름도 같이 넘긴다 — 부르는 쪽이 '누구에게' 를 확인 문구에 적어야 한다.
+      el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.id, b.dataset.who)));
     }
 
     document.getElementById('apEnrSearch').addEventListener('input', () =>
-      apMemberHits('apEnrSearch', 'apEnrHits', async memberId => {
+      apMemberHits('apEnrSearch', 'apEnrHits', async (memberId, who) => {
         const pid = document.getElementById('apEnrProgram').value;
         if (!pid) { alert('프로그램을 먼저 만들거나 선택하세요.'); return; }
+        /* ⚠️ 검색 결과를 누르는 순간 바로 지급되고 있었다(2026-08-03) — 이용권은 유료 상품이라
+           옆 이름을 잘못 누르면 그냥 하나 나간다. 누구에게 무엇을 주는지 확인한다. */
+        const pname = (document.getElementById('apEnrProgram').selectedOptions[0] || {}).textContent || '';
+        if (!confirm(who + '\n\n「' + pname + '」 이용권을 지급할까요?')) return;
         const start = document.getElementById('apEnrStart').value || undefined;
         const row = { program_id: pid, member_id: memberId, source: 'admin' };
         if (start) row.started_at = start;
@@ -5221,7 +5236,10 @@
 
     // ── ④ 연구원 ──
     document.getElementById('apResSearch').addEventListener('input', () =>
-      apMemberHits('apResSearch', 'apResHits', async memberId => {
+      apMemberHits('apResSearch', 'apResHits', async (memberId, who) => {
+        /* ⚠️ 연구원은 검수 데스크에서 **학생 이름·경험 카드**를 본다 — 개인정보 접근 권한을
+           주는 행동이라 누르자마자 실행되면 안 된다(2026-08-03). */
+        if (!confirm(who + '\n\n이 회원을 연구원으로 지정할까요?\n검수 데스크에서 학생 이름·경험 카드를 볼 수 있게 됩니다.')) return;
         const { error } = await sb().from('researchers').upsert({ member_id: memberId, active: true }, { onConflict: 'member_id' });
         if (error) { alert('지정 실패: ' + error.message); return; }
         toast('연구원 지정됨');
@@ -5244,14 +5262,19 @@
             <button class="ri-del apr-tog" data-id="${r.member_id}">${r.active ? '중지' : '재개'}</button>
             <button class="ri-del apr-del" data-id="${r.member_id}">해제</button></div></div>`;
       }).join('') : '<div class="empty" style="color:var(--text-dim);padding:14px">지정된 연구원이 없습니다.</div>';
+      // ⚠️ error 를 받는다 — 전에는 실패해도 목록만 다시 그려서 '눌렀는데 그대로'가 됐다(2026-08-03).
       el.querySelectorAll('.apr-tog').forEach(b => b.addEventListener('click', async () => {
         const r = rows.find(x => x.member_id === b.dataset.id);
-        await sb().from('researchers').update({ active: !r.active }).eq('member_id', r.member_id);
+        const { error } = await sb().from('researchers').update({ active: !r.active }).eq('member_id', r.member_id);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast(r.active ? '쉬는 중으로 바꿨어요' : '활동 중으로 바꿨어요');
         loadApResearchers();
       }));
       el.querySelectorAll('.apr-del').forEach(b => b.addEventListener('click', async () => {
-        if (!confirm('연구원 지정을 해제할까요?')) return;
-        await sb().from('researchers').delete().eq('member_id', b.dataset.id);
+        if (!confirm('연구원 지정을 해제할까요?\n검수 데스크에 더 이상 들어갈 수 없게 됩니다.')) return;
+        const { error } = await sb().from('researchers').delete().eq('member_id', b.dataset.id);
+        if (error) { alert('해제 실패: ' + error.message); return; }
+        toast('해제됨');
         loadApResearchers();
       }));
     }
@@ -5270,7 +5293,9 @@
         </div>`).join('');
       el.querySelectorAll('.apc-tog').forEach(b => b.addEventListener('click', async () => {
         const c = data.find(x => x.code === b.dataset.code);
-        await sb().from('correction_codes').update({ active: !c.active }).eq('code', c.code);
+        const { error } = await sb().from('correction_codes').update({ active: !c.active }).eq('code', c.code);
+        if (error) { alert('변경 실패: ' + error.message); return; }
+        toast(c.active ? '끔' : '켬');
         loadApCodes();
       }));
     }
