@@ -174,7 +174,7 @@
   function renderLogin() {
     shell(
       '<p class="qf-lede">로그인하면 바로 쓸 수 있어요.</p>' +
-      '<a class="qf-go" style="display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none;" href="login.html">로그인하기</a>' +
+      '<a class="qf-go" style="display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none;" href="' + (window.moncLoginHref ? window.moncLoginHref() : 'login.html') + '">로그인하기</a>' +
       '<button type="button" class="qf-cancel" id="qfNo">다음에 할게요</button>');
   }
 

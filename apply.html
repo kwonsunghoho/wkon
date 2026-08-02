@@ -190,10 +190,17 @@
   .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px 18px; }
   .field-label { font-size: 12.5px; font-weight: 800; margin: 14px 0 6px; }
   .field-label:first-child { margin-top: 0; }
+  /* ⚠️ font-size 는 16px 미만으로 내리지 말 것 — iOS Safari 는 15px 이하 입력칸에
+     포커스가 가면 화면을 확대하고, blur 해도 되돌리지 않는다(viewport 에 maximum-scale 이
+     없으므로 반드시 일어난다). 결제 직전 화면이 확대된 채 가로로 밀린다(2026-08-02 진단). */
   .inp {
     width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
-    border-radius: 10px; font-size: 15px; font-family: inherit; background: #fff; color: var(--text);
+    border-radius: 10px; font-size: 16px; font-family: inherit; background: #fff; color: var(--text);
   }
+  /* 인라인 오류 — alert 로 맥락을 잃지 않게. 필드 바로 아래에 붙는다. */
+  .inp.is-err { border-color: #C0392B; }
+  .field-err { display: none; margin-top: 6px; font-size: 13px; line-height: 1.5; color: #C0392B; }
+  .field-err.on { display: block; }
   .inp:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-tint); }
 
   .member-badge { background: var(--accent-tint); border: 1px solid rgba(27,58,107,.22); border-radius: 12px; padding: 13px 15px; margin-bottom: 8px; }
@@ -357,7 +364,9 @@
       <div class="jump">잠깐!</div>
       <h3>회원가입하면 2주간<br>성장한 내 모습을 매일 확인!</h3>
       <div class="desc">데일리 기록 · 전/후 비교 · 나만의 마이페이지</div>
-      <a href="login.html" class="btn">3초 회원가입하기</a>
+      <!-- ⚠️ href 는 syncLoginReturn() 이 선택한 챌린지까지 실어 갱신한다(class="js-login-ret").
+           비워 두면 nav.js 의 upgradeLoginLinks() 가 returnTo=apply.html 만 붙인다. -->
+      <a href="login.html" class="btn js-login-ret">3초 회원가입하기</a>
     </div>
   </section>
 
@@ -424,16 +433,22 @@
       <!-- 비회원: 로그인 유도 -->
       <div id="guestNudge" class="guest-nudge" style="display:none;">
         <div class="gn-txt">회원이면 <b>로그인</b>하고 간편하게 — 신청 내역·2주 성장 기록이 연동돼요.</div>
-        <a class="gn-btn" href="login.html">로그인</a>
+        <a class="gn-btn js-login-ret" href="login.html">로그인</a>
       </div>
 
       <div id="rowName">
         <div class="field-label">이름</div>
-        <input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name">
+        <input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name"
+               maxlength="20" aria-describedby="errName">
+        <p class="field-err" id="errName"></p>
       </div>
       <div id="rowPhone">
         <div class="field-label">전화번호</div>
-        <input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel">
+        <!-- ⚠️ maxlength 20 은 '010-0000-0000'(13자)에 여유를 둔 값이다. 검증은 숫자만 세므로
+             하이픈·공백을 어떻게 넣든 통과한다(자릿수 강제 포맷은 오히려 오입력을 만든다). -->
+        <input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel"
+               inputmode="numeric" maxlength="20" aria-describedby="errPhone">
+        <p class="field-err" id="errPhone"></p>
       </div>
       <div class="summary">
         <div class="cnt">선택된 챌린지: <span id="selCount">0</span>개</div>
@@ -690,9 +705,21 @@ function selectedIds() {
   return Array.from(document.querySelectorAll('.card.selected')).map(c => c.dataset.id);
 }
 
+/* 결제 직전의 로그인 링크는 '고른 챌린지까지' 들고 돌아온다 (2026-08-02).
+   nav.js 의 upgradeLoginLinks() 가 이미 returnTo=apply.html 을 붙여 두는데, 그것만으로는
+   복귀했을 때 선택이 비어 있다. ?c= 는 preselectFromUrl() 이 읽는 기존 규약이라
+   여기서 새로 만들 것이 없다. 선택이 바뀔 때마다 갱신한다. */
+function syncLoginReturn() {
+  const ids = selectedIds();
+  const ref = 'apply.html' + (ids.length ? '?c=' + ids.join(',') : '');
+  const href = 'login.html?returnTo=' + encodeURIComponent(ref);
+  document.querySelectorAll('a.js-login-ret').forEach(a => a.setAttribute('href', href));
+}
+
 function updateSummary() {
   const n = selectedIds().length;
   const total = n * PRICE;
+  syncLoginReturn();
   document.getElementById('selCount').textContent = n;
   const feeLabel = document.getElementById('feeLabel');
   if (feeLabel) feeLabel.textContent = '참가비 (챌린지당 ' + priceLabel() + ')';
@@ -839,6 +866,43 @@ function alertDuplicate(program) {
     + '\n다른 챌린지를 고르시거나, 문의는 070-4032-0015 로 연락 주세요.');
 }
 
+/* ── 이름·전화번호 검증 (2026-08-02) ────────────────────────────────────────
+   구 검증은 `if (!name || !phone)` 이 전부라 **'1' 한 글자도 통과**했다. 오타난 번호로
+   3만원이 결제되면 연락이 안 가고 환불·재접수로 처리해야 한다.
+   ⚠️ 규칙은 waitlist.js:171-174(오픈 알림)와 같은 값으로 맞춘다 — 같은 사람이 같은 번호를
+      두 창구에 넣는데 한쪽만 통과하면 안 된다. 한쪽을 바꾸면 다른 쪽도 바꾼다.
+   ⚠️ 오류는 alert 이 아니라 필드 바로 아래 인라인으로 — 모바일에서 alert 은 어느 칸이
+      틀렸는지를 못 알려주고, 닫는 순간 문구가 사라진다.
+   반환 true 면 통과. 실패 시 첫 오류 칸으로 스크롤하고 포커스를 준다. */
+function setFieldErr(inputId, errId, message) {
+  const input = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (input) input.classList.toggle('is-err', !!message);
+  if (err) { err.textContent = message || ''; err.classList.toggle('on', !!message); }
+}
+function validateApplicant() {
+  const name = document.getElementById('appName').value.trim();
+  const phone = document.getElementById('appPhone').value.trim();
+  const nameErr = name.length < 2 ? '이름을 두 글자 이상 입력해 주세요.' : '';
+  const phoneErr = phone.replace(/\D/g, '').length < 10
+    ? '휴대전화번호를 정확히 입력해 주세요. (숫자 10자리 이상)' : '';
+  setFieldErr('appName', 'errName', nameErr);
+  setFieldErr('appPhone', 'errPhone', phoneErr);
+  const firstBad = nameErr ? 'appName' : (phoneErr ? 'appPhone' : null);
+  if (firstBad) {
+    const el = document.getElementById(firstBad);
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+    return false;
+  }
+  return true;
+}
+/* 다시 입력하기 시작하면 그 칸의 오류를 지운다 — 고쳤는데 빨간 줄이 남아 있으면 안 된다. */
+['appName', 'appPhone'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => setFieldErr(id, id === 'appName' ? 'errName' : 'errPhone', ''));
+});
+
 /* ── URL ?c= 프리셀렉트 (상세페이지에서 넘어올 때) ── */
 function preselectFromUrl() {
   const p = new URLSearchParams(location.search).get('c');
@@ -902,7 +966,7 @@ async function openBankModal() {
 
   // 챌린지 선택 + 이름·전화·동의를 통과해야 계좌를 안내한다.
   if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
-  if (!name || !phone) { alert('이름과 전화번호를 모두 입력해주세요.'); return; }
+  if (!validateApplicant()) return;
   if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   // 접수될 수 없는 신청에 입금 계좌를 먼저 보여주면 안 된다(입금부터 하고 막히는 사고)
@@ -940,7 +1004,8 @@ async function confirmBankTransfer() {
 
   // 모달을 여는 시점에 이미 검증했지만, 열린 사이 변동 가능성에 대비해 재확인한다.
   if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); closeBankModal(); return; }
-  if (!name || !phone) { alert('이름과 전화번호를 모두 입력해주세요.'); return; }
+  // 인라인 오류는 모달 뒤에 가려 안 보인다 — 닫고 나서 필드에 표시한다.
+  if (!validateApplicant()) { closeBankModal(); validateApplicant(); return; }
   if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
 
@@ -1014,7 +1079,7 @@ async function payWithToss() {
   const ids = selectedIds();
 
   if (ids.length === 0) { alert('신청할 챌린지를 선택해주세요.'); document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
-  if (!name || !phone) { alert('이름과 전화번호를 모두 입력해주세요.'); return; }
+  if (!validateApplicant()) return;
   if (!document.getElementById('appConsent').checked) { alert('개인정보 수집·이용 동의(만 14세 이상 확인)에 체크해주세요.'); return; }
   if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }

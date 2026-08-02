@@ -107,6 +107,20 @@
   /* 로고는 홈에서만 #home(미션 섹션) 앵커, 다른 페이지에선 홈으로 이동 */
   var logoHref = onHome ? '#home' : 'index.html';
 
+  /* ── 로그인 링크는 '지금 화면'을 들려 보낸다 (2026-08-02) ────────────────────
+     자동 리다이렉트(supabase-config 의 requireSession/requireConsent)는 이미 returnTo 를
+     붙이는데, **사람이 직접 누르는 로그인 링크에만 빠져 있었다.** 결제 직전 화면에서
+     '로그인'을 누르면 로그인 6~8탭을 거친 뒤 마이페이지에 도착하고 고른 챌린지가 날아갔다.
+     ⚠️ nav.js 는 supabase 없이도 도는 파일이라(terms·privacy) MONC 에 기대지 않고 직접 만든다.
+     ⚠️ 열린 리다이렉트 검증은 login.html 의 safeReturnTo() 가 한다 — 여기서 만들지 말 것.
+     ⚠️ login·onboarding 에서 자기 자신으로 되돌아오면 무한 루프라 그때는 안 붙인다. */
+  function loginHref() {
+    var ref = (location.pathname.split('/').pop() || 'index.html') + location.search + location.hash;
+    if (/^(login|onboarding)\.html/i.test(ref)) return 'login.html';
+    return 'login.html?returnTo=' + encodeURIComponent(ref);
+  }
+  window.moncLoginHref = loginHref;   // 런타임에 로그인 링크를 조립하는 페이지들이 쓴다
+
   var navHtml =
     '<nav id="navbar">' +
       '<div class="nav-inner">' +
@@ -128,7 +142,7 @@
           '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
         '</ul>' +
         '<div class="nav-right">' +
-          '<a class="nav-login" href="login.html">로그인/회원가입</a>' +
+          '<a class="nav-login" href="' + loginHref() + '">로그인/회원가입</a>' +
           '<a class="nav-cta" href="apply.html">신청하기</a>' +
         '</div>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
@@ -155,7 +169,7 @@
         '<li><a href="reviews.html"' + cur('reviews') + '>후기</a></li>' +
       '</ul>' +
       '<div class="mobile-menu-cta">' +
-        '<a class="mm-login" href="login.html">로그인 / 회원가입</a>' +
+        '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>' +
         '<a class="mm-apply" href="apply.html">신청하기</a>' +
       '</div>' +
     '</div>';
@@ -166,7 +180,21 @@
     // body 맨 앞에 넣는다 — nav 는 fixed 라 위치엔 영향이 없지만, 키보드 tab 순서가 화면과 맞아야 한다.
     while (holder.firstChild) document.body.insertBefore(holder.firstChild, document.body.firstChild);
     wire();
+    upgradeLoginLinks();
     initAuth();
+  }
+
+  /* 페이지 본문에 static 으로 박혀 있는 로그인 링크에도 returnTo 를 붙인다.
+     (index 클로징 '이미 회원이라면 로그인' · apply 결제 직전 2곳 등)
+     ⚠️ nav 가 방금 심은 자기 링크는 이미 완성돼 있어 `href="login.html"` 정확 일치에
+        안 걸린다 — 그래서 선택자를 넓히지 말 것. 런타임에 만들어지는 링크
+        (lecture 게스트 안내·quickfix·programs)는 window.moncLoginHref() 를 직접 쓴다. */
+  function upgradeLoginLinks() {
+    var href = loginHref();
+    if (href === 'login.html') return;                       // login·onboarding 에서는 안 붙인다
+    document.querySelectorAll('a[href="login.html"]').forEach(function (a) {
+      a.setAttribute('href', href);
+    });
   }
 
   function wire() {
