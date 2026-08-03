@@ -16,6 +16,7 @@
 
 ## lectures.html / lecture.html 개요(구 CLAUDE.md Pages 항목)
 
+- ⚠️ **커버 사진(`.lc-cover`)이 뜰 때 아래 글이 밀리는 것은 그대로 둔다 — 2026-08-03 오너 확정("그대로 둬").** 자리를 미리 잡으려면 `16:9` 같은 비율을 못 박고 넘치는 부분을 잘라야 하는데, **커버는 오너가 올리는 사진이라 비율을 모른다** — 이미 올려둔 커버가 잘려 보일 수 있어서 밀림보다 나쁘다는 판단이다. 비율을 admin 에서 같이 저장하는 안(마이그레이션+admin 수정)은 사진 있는 특강이 늘면 다시 본다. **버그로 보고 aspect-ratio 를 넣지 말 것.** 같은 판단이 `story.html .st-cover`·`reviews-list.html .rv-shot img` 에도 적용된다(pages.md).
 - `lectures.html` / `lecture.html` — **특강 시스템(2026-07-24 신설).** nav '특강' + 홈 '특강 문'(.doors, 2026-07-29부터)의 목적지. 아래 '특강(special_lectures) 시스템' 참조. 챌린지와 달리 **상세페이지를 코드로 만들지 않고** admin '특강' 탭 등록분을 `lecture.html?id=<id>` 템플릿이 읽어 그리고, **그 상세페이지 안에서 바로** 토스결제·계좌이체로 신청한다(apply.html 안 거침 — 오너 요청).
 
 ### 특강(special_lectures) 시스템 (2026-07-24 신설)
