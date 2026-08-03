@@ -120,6 +120,9 @@
     /* 되묻기가 무료라는 사실 — 다듬기 칩이 생기기 전(1턴)에 그 자리에 선다 */
     .chip-note { font-size: 13px; color: var(--text-muted); }
     .chip-note a { color: var(--accent-ink); font-weight: 700; text-decoration: underline; }
+    /* 전구를 눌렀을 때 뜨는 확인 말풍선 안의 두 버튼 */
+    .askrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .askrow .chip { font-size: 13px; padding: 0 14px; }
     /* 입력줄 왼쪽 도움 버튼 — 카톡의 + 와 같은 자리·크기. 44px 터치 유지 */
     .helpic { width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent;
       color: var(--accent-ink); display: flex; align-items: center; justify-content: center;
@@ -524,13 +527,39 @@
     ta.addEventListener('input', ()=>{ grow(); toggle(); resetIdle(); });
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
     snd.addEventListener('click', send);
-    help.addEventListener('click', ()=>{
+    /* 전구는 바로 도움을 부르지 않고 **한 번 물어본다**(2026-08-04 오너 지시).
+       입력칸 옆 아이콘이라 잘못 눌리기 쉽고, 눌러 보기 전에는 뭘 하는 버튼인지도 모른다.
+       확인 말풍선이 그 두 가지를 같이 해결한다 — 이름을 말해 주고, 실수 클릭을 막는다.
+       ⚠️ 이 확인 말풍선은 transcript 에 넣지 않는다 — 대화 재료가 아니라 화면 장치라,
+          넣으면 다듬기 프롬프트의 {collected_materials} 와 서버 저장본이 오염된다. */
+    let _helpAskEl = null;
+    function closeHelpAsk(){ if (_helpAskEl) { _helpAskEl.remove(); _helpAskEl = null; } }
+    function runHelp(){
       if (_busy || !_ready) return;
       transcript.push({ role: 'help', content: '잘 안 떠올라요' });   // 서버에서 [막힘 대응] 트리거
       _busy = true;
       const p = aiPending();
       askAI(true).then(html => { aiFill(p, html); _busy = false; syncServer(); });
       resetIdle();
+    }
+    function askHelpConfirm(){
+      if (_helpAskEl) return;                       // 이미 물어보는 중이면 겹쳐 띄우지 않는다
+      const d = document.createElement('div');
+      d.className = 'bub ai';
+      d.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div>'
+        + '지금 쓰기 어려우신가요? 아무 말이나 적기보다, 원하시면 제가 실마리부터 드릴게요.'
+        + '<div class="askrow">'
+        +   '<button class="chip chip-go" type="button" data-yes>네, 도와주세요</button>'
+        +   '<button class="chip" type="button" data-no>아니요, 더 써볼게요</button>'
+        + '</div>';
+      chat.appendChild(d); tailTools(); chat.scrollTop = chat.scrollHeight;
+      _helpAskEl = d;
+      d.querySelector('[data-no]').addEventListener('click', closeHelpAsk);
+      d.querySelector('[data-yes]').addEventListener('click', ()=>{ closeHelpAsk(); runHelp(); });
+    }
+    help.addEventListener('click', ()=>{
+      if (_busy || !_ready) return;
+      askHelpConfirm();
     });
 
     // ── 다듬기(뼈대) 폴백 — Edge Function 실패 시에만 사용 (실호출은 refineAI) ──
