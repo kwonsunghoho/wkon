@@ -8,7 +8,7 @@
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://monc.ai.kr/lab-shelf.html" />
   <meta property="og:title"       content="연구실 자료 — MONC 몬크" />
-  <meta property="og:description" content="몬크 연구실 자료 — 항공사 자료실·영상관·기출문제·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+  <meta property="og:description" content="몬크 연구실 자료 — 항공사 자료실(자료·기출)·영상관·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
   <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
@@ -16,7 +16,7 @@
   <meta property="og:site_name"   content="MONC 몬크" />
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="연구실 자료 — MONC 몬크" />
-  <meta name="twitter:description" content="몬크 연구실 자료 — 항공사 자료실·영상관·기출문제·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+  <meta name="twitter:description" content="몬크 연구실 자료 — 항공사 자료실(자료·기출)·영상관·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
   <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
 
   <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
@@ -27,7 +27,7 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "xlu6nkv2uh");
   </script>
-  <meta name="description" content="몬크 연구실 자료 — 항공사 자료실·영상관·기출문제·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+  <meta name="description" content="몬크 연구실 자료 — 항공사 자료실(자료·기출)·영상관·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
 
   <!-- 파비콘 -->
   <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
@@ -48,11 +48,15 @@
   /* ══════════════════════════════════════════════════════════════════════════
      연구실 서가 상세 — ①안 '서류철'(2026-08-01 오너 확정: "1안으로 진행")
 
-     한 파일이 서가 5종을 다 그린다: lab-shelf.html?shelf=airline|video|question|report|calendar
-     (특강 lecture.html?id= 와 같은 사상 — 페이지를 5개로 나누면 머리 모양 한 번 고칠 때
-      5번 고쳐야 한다. 서가를 늘릴 땐 SHELVES 표에 한 줄만 더한다.)
+     한 파일이 서가 4종을 다 그린다: lab-shelf.html?shelf=airline|video|report|calendar
+     (특강 lecture.html?id= 와 같은 사상 — 페이지를 나누면 머리 모양 한 번 고칠 때
+      그 수만큼 고쳐야 한다. 서가를 늘릴 땐 SHELVES 표에 한 줄만 더한다.)
 
-     화면: 다크 머리(서가 이름·현황) + 픽커(항공사·유형) + 종이 목록.
+     ⚠️ 항공사 자료실은 DB 의 shelf 두 값(airline·question)을 한 서가로 보여준다
+        (2026-08-03). 갈래 줄에서 전체·자료·기출을 고른다. 구 주소 ?shelf=question 은
+        기출 갈래로 살려 둔다 — 카톡·DM 에 뿌린 링크가 그 주소다.
+
+     화면: 다크 머리(서가 이름·현황) + 갈래 + 픽커(항공사·유형) + 종이 목록.
      허브(lab.html)의 다크 콘솔 카드와 같은 면을 머리에 써서 세 화면이 한 몸으로 보인다.
 
      ⚠️ 파일 경로는 이 페이지가 절대 모른다. 목록은 lab_resource_list RPC(경로·비밀번호
@@ -100,6 +104,22 @@
   @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
   @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
 
+  /* ── 갈래 단추 — 합친 서가(자료+기출)에서 무엇을 볼지 고른다 ──
+     2026-08-03 3안 비교 후 확정(목업 outputs/lab-merge-branch-mockup.html).
+     고른 칸만 흰 면으로 떠오른다 — 픽커(알약)와 모양이 달라 축이 다르다는 게 읽힌다.
+     ⚠️ 단추 44px 하한을 내리지 말 것(4px 안쪽 여백이 있어도 누르는 것은 단추다).
+     ⚠️ 건수 활자의 opacity 를 .62 로 내리지 말 것 — 틴트 면 위에서 3.40:1 로 하한 미달이다. */
+  .seg { display: flex; gap: 4px; margin-top: 16px; padding: 4px; background: var(--action-tint); border-radius: 999px; }
+  .seg-b {
+    flex: 1; min-height: 44px; padding: 0 6px; border: 0; border-radius: 999px;
+    background: none; font: inherit; font-size: 14px; font-weight: 700; color: var(--accent-ink);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .seg-b.on { background: var(--surface); font-weight: 800; box-shadow: 0 1px 3px rgba(20,44,82,0.16); }
+  .seg-b:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .seg-b .n { font-size: 12px; font-weight: 700; opacity: .8; }
+
   /* ── 픽커 — news.html 과 같은 알약 버튼 → 바텀시트 ── */
   .pickrow { display: flex; gap: 8px; margin-top: 16px; }
   .pick {
@@ -134,6 +154,8 @@
     background: var(--accent-tint); color: var(--accent-ink);
     display: flex; align-items: center; justify-content: center;
   }
+  /* 기출 줄은 아이콘 면을 채운다 — 태그 없이도 갈래가 줄마다 읽힌다 */
+  .doc-ico.q { background: var(--accent-dark); color: #FFFFFF; }
   .doc-txt { min-width: 0; flex: 1; }
   .doc-tit { display: block; font-size: 15px; font-weight: 700; line-height: 1.45; }
   .doc-sum { display: block; font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 3px; }
@@ -314,6 +336,9 @@
     <p class="hd-meta num" id="shMeta"><i class="live"></i>자료를 불러오는 중…</p>
   </header>
 
+  <!-- 갈래(전체·자료·기출) — 합친 서가에서만 나온다. 건수는 JS 가 채운다(자리표시 금지). -->
+  <div class="seg" id="shSeg" role="group" aria-label="갈래 고르기" hidden></div>
+
   <div class="pickrow" id="shPicks" hidden>
     <button class="pick" type="button" id="pkAir" hidden aria-haspopup="dialog" aria-expanded="false"><span class="pk-label">항공사</span><span class="cv" aria-hidden="true">▾</span></button>
     <button class="pick" type="button" id="pkType" hidden aria-haspopup="dialog" aria-expanded="false"><span class="pk-label">자료 유형</span><span class="cv" aria-hidden="true">▾</span></button>
@@ -385,13 +410,23 @@
 
   /* 서가 표 — 여기 한 줄이 페이지 하나다. 서가를 늘릴 땐 이 표에만 더한다.
      idx/name/desc 는 원장(lab-archive.html)의 카드와 같은 말을 쓴다. */
+  /* ⚠️ 항공사 자료실은 DB 의 shelf 두 값(airline·question)을 한 서가로 보여준다
+     (2026-08-03 오너 "따로있을 이유가없어보여서" — 설계는
+     docs/superpowers/specs/2026-08-03-lab-shelf-merge-design.md).
+     shelves = 이 서가가 품는 DB 값 · branches = 화면에서 고르는 갈래.
+     ⚠️ DB 는 그대로다 — 합친 것은 화면뿐이라 갈래 줄만 빼면 원상복구다. */
   var SHELVES = {
-    airline:  { idx: '01 — 자료실',   name: '항공사 자료실', desc: '항공사를 고르면 그 회사 자료만 모아 보여드려요.', noun: '자료',   unit: '건', airline: true,  type: '자료 유형' },
+    airline:  { idx: '01 — 자료실',   name: '항공사 자료실', desc: '항공사를 고르면 그 회사 자료와 기출을 모아 보여드려요.', noun: '자료',   unit: '건', airline: true,  type: '유형',
+                shelves: ['airline', 'question'],
+                branches: [
+                  { key: 'all',      label: '전체' },
+                  { key: 'airline',  label: '자료', type: '자료 유형' },
+                  { key: 'question', label: '기출', type: '질문 유형' }
+                ] },
     // 영상관도 항공사별로 올린다(2026-08-01 오너) — 항공사·주제 두 축으로 고른다
     video:    { idx: '02 — 영상관',   name: '영상관',       desc: '보고 싶은 항공사와 주제를 골라 보세요.',            noun: '영상',   unit: '편', airline: true,  type: '주제' },
-    question: { idx: '03 — 기출문제', name: '기출문제',     desc: '실제 면접장에서 나온 질문을 항공사별로 모았어요.',   noun: '문제',   unit: '개', airline: true,  type: '질문 유형' },
-    report:   { idx: '04 — 리포트',   name: '현장 리포트',   desc: '면접 다녀온 회원들의 기록.',                        noun: '리포트', unit: '편', airline: true,  type: '유형' },
-    calendar: { idx: '05 — 캘린더',   name: '채용 캘린더',   desc: '항공사별 채용이 언제 있었는지 흐름을 한눈에.',       noun: '채용',   unit: '곳', airline: true,  type: '상태' }
+    report:   { idx: '03 — 리포트',   name: '현장 리포트',   desc: '면접 다녀온 회원들의 기록.',                        noun: '리포트', unit: '편', airline: true,  type: '유형' },
+    calendar: { idx: '04 — 캘린더',   name: '채용 캘린더',   desc: '항공사별 채용이 언제 있었는지 흐름을 한눈에.',       noun: '채용',   unit: '곳', airline: true,  type: '상태' }
   };
 
   /* 항공사 라벨 — news.html 과 같은 슬러그를 쓴다(자료를 등록할 때도 이 값으로) */
@@ -400,13 +435,26 @@
 
   var params = new URLSearchParams(location.search);
   var shelfKey = params.get('shelf') || 'airline';
+  var branch = 'all';
+
+  /* ⚠️ 구 주소 ?shelf=question 은 죽이지 않는다 — 카톡·DM 에 뿌린 링크와 즐겨찾기가 그 주소다.
+     합친 서가의 '기출 갈래'로 열어 준다(스텁 lab-question.html 이 보내는 ?kind=question 도 같은 자리). */
+  if (shelfKey === 'question') { shelfKey = 'airline'; branch = 'question'; }
   if (!SHELVES[shelfKey]) shelfKey = 'airline';
   var SH = SHELVES[shelfKey];
+  var SHELF_LIST = SH.shelves || [shelfKey];          // 이 화면이 불러올 DB shelf 값
+  var kindParam = params.get('kind');
+  if (kindParam && SHELF_LIST.indexOf(kindParam) >= 0) branch = kindParam;
 
   /* 주소를 서가 전용 주소(lab-<key>.html)로 바꿔 둔다 — 주소창을 그대로 복사해 카톡·DM 에 보내도
      서가별 제목·사진이 뜬다. 그 파일은 og 만 든 얇은 스텁이고 화면은 이 파일이 그린다.
+     기출 갈래일 땐 lab-question.html 로 쓴다(받는 사람이 기대하는 것이 기출이다).
      ⚠️ 상대 주소라 경로 깊이가 같아야 한다(하위 폴더로 옮기면 페이지 안 상대 링크가 전부 어긋난다). */
-  try { history.replaceState(null, '', 'lab-' + shelfKey + '.html' + location.hash); } catch (e) {}
+  function syncUrl() {
+    var key = (SH.branches && branch === 'question') ? 'question' : shelfKey;
+    try { history.replaceState(null, '', 'lab-' + key + '.html' + location.hash); } catch (e) {}
+  }
+  syncUrl();
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
@@ -456,13 +504,25 @@
   }
 
   /* ── 목록 불러오기 ── */
+  /* 합친 서가는 DB shelf 값마다 한 번씩 부른 뒤 최신순으로 다시 세운다.
+     ⚠️ 목록 RPC 를 배열 인자로 고치지 않는 이유 — 반환 타입 재생성이라 오너가 SQL 을
+        실행할 때까지 미적용 구간이 생긴다. 자료가 목록 규모라 두 번 호출이 더 싸다. */
   function load() {
     if (!window.MONC || !window.MONC.sb) { fail('연결이 준비되지 않았어요.'); return; }
-    window.MONC.sb.rpc('lab_resource_list', { p_shelf: shelfKey, p_airline: null })
-      .then(function (res) {
+    Promise.all(SHELF_LIST.map(function (k) {
+      return window.MONC.sb.rpc('lab_resource_list', { p_shelf: k, p_airline: null });
+    }))
+      .then(function (reses) {
         $('shSkel').hidden = true;
-        if (res.error) { fail('자료실 준비가 아직 안 됐어요.'); return; }
-        rows = res.data || [];
+        // ⚠️ 하나라도 실패하면 절반만 그리지 않는다 — 반쪽 목록은 '기출이 없다'로 읽힌다
+        if (reses.some(function (res) { return res.error; })) { fail('자료실 준비가 아직 안 됐어요.'); return; }
+        rows = [];
+        reses.forEach(function (res) { rows = rows.concat(res.data || []); });
+        // RPC 는 서가별로만 최신순이라, 합쳤으면 한 줄로 다시 세운다
+        rows.sort(function (a, b) {
+          return String(b.published_at || '').localeCompare(String(a.published_at || ''));
+        });
+        buildSeg();
         buildOpts();
         render();
       })
@@ -475,11 +535,46 @@
     $('shEmptyMsg').textContent = msg;
   }
 
-  /* 픽커 옵션은 '데이터에 실제로 있는 값'만 — 눌러도 0건인 선택지를 만들지 않는다 */
+  /* ── 갈래(자료·기출) ── 합친 서가에만 있는 줄. 건수를 단추 안에 적어 눌러 보기 전에
+     어느 쪽이 두꺼운지 알게 한다. ⚠️ 한쪽이 0건이면 줄 자체를 감춘다 — 픽커와 같은
+     규칙(눌러도 0건인 선택지를 만들지 않는다)이고, 빈 갈래에 갇히지도 않는다. */
+  function inBranch(r) { return branch === 'all' || r.shelf === branch; }
+
+  function branchType() {
+    if (!SH.branches || branch === 'all') return SH.type;
+    for (var i = 0; i < SH.branches.length; i++) {
+      if (SH.branches[i].key === branch) return SH.branches[i].type || SH.type;
+    }
+    return SH.type;
+  }
+
+  function buildSeg() {
+    if (!SH.branches) return;
+    var n = {};
+    SHELF_LIST.forEach(function (k) { n[k] = 0; });
+    rows.forEach(function (r) { if (n[r.shelf] != null) n[r.shelf]++; });
+    if (SHELF_LIST.some(function (k) { return !n[k]; })) {
+      $('shSeg').hidden = true;
+      branch = 'all';
+      syncUrl();
+      return;
+    }
+    $('shSeg').hidden = false;
+    $('shSeg').innerHTML = SH.branches.map(function (b) {
+      var c = b.key === 'all' ? rows.length : n[b.key];
+      return '<button class="seg-b' + (branch === b.key ? ' on' : '') + '" type="button"' +
+        ' data-b="' + esc(b.key) + '" aria-pressed="' + (branch === b.key) + '">' +
+        esc(b.label) + ' <span class="n num">' + c + '</span></button>';
+    }).join('');
+  }
+
+  /* 픽커 옵션은 '데이터에 실제로 있는 값'만 — 눌러도 0건인 선택지를 만들지 않는다.
+     ⚠️ 고른 갈래 안에서 센다 — 유형 목록이 갈래별로 갈리는 것이 합치기의 실익이다
+        (한 픽커에 자료 유형과 질문 유형 12종을 몰아넣지 않는다). */
   var optAir = [], optType = [];
   function buildOpts() {
     var a = {}, t = {};
-    rows.forEach(function (r) {
+    rows.filter(inBranch).forEach(function (r) {
       if (r.airline) a[r.airline] = 1;
       if (r.doc_type) t[r.doc_type] = 1;
     });
@@ -496,17 +591,36 @@
     a.textContent = fAir === 'all' ? '항공사' : (AIRLINE_LABEL[fAir] || fAir);
     $('pkAir').classList.toggle('set', fAir !== 'all');
     var t = $('pkType').querySelector('.pk-label');
-    t.textContent = fType === 'all' ? SH.type : fType;
+    t.textContent = fType === 'all' ? branchType() : fType;
     $('pkType').classList.toggle('set', fType !== 'all');
   }
 
   function visible() {
     return rows.filter(function (r) {
+      if (!inBranch(r)) return false;
       if (fAir !== 'all' && r.airline !== fAir) return false;
       if (fType !== 'all' && r.doc_type !== fType) return false;
       return true;
     });
   }
+
+  /* 갈래를 바꾼다. ⚠️ 유형은 갈래마다 값이 달라 반드시 푼다(안 풀면 0건 화면이 된다).
+     항공사는 새 갈래에도 그 값이 있으면 지킨다 — 고른 회사를 이유 없이 잃지 않게. */
+  function setBranch(next) {
+    if (branch === next) return;
+    branch = next;
+    fType = 'all';
+    if (fAir !== 'all' && !rows.some(function (r) { return inBranch(r) && r.airline === fAir; })) fAir = 'all';
+    syncUrl();
+    buildSeg();
+    buildOpts();
+    render();
+  }
+
+  $('shSeg').addEventListener('click', function (e) {
+    var b = e.target.closest('.seg-b');
+    if (b) setBranch(b.dataset.b);
+  });
 
   var ICON_DOC = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>';
   var ICON_PLAY = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>';
@@ -525,6 +639,8 @@
     var p = function (n) { return String(n).padStart(2, '0'); };
     return h ? (h + ':' + p(m) + ':' + p(s)) : (m + ':' + p(s));
   }
+  /* 기출 줄 아이콘 — 면접장에서 받은 '질문'이라 말풍선 안 물음표(자료는 문서 아이콘) */
+  var ICON_Q = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.6c0 1.7-2.5 2-2.5 3.5"/><path d="M12 16.6h.01"/></svg>';
   var ICON_LOCK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
   var ICON_EYE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 
@@ -578,8 +694,10 @@
       ? SH.noun + ' <b class="num">' + total + '</b>' + SH.unit + (last ? ' · 갱신 <b>' + esc(relTime(last)) + '</b>' : '')
       : SH.noun + ' 준비 중');
 
+    // 갈래도 좁히는 것이다 — 빼면 '기출 3건'이 서가 전체인 것처럼 읽힌다
+    var narrowed = fAir !== 'all' || fType !== 'all' || branch !== 'all';
     $('shCount').hidden = !(total > 0);
-    $('shCount').textContent = (fAir !== 'all' || fType !== 'all')
+    $('shCount').textContent = narrowed
       ? list.length + SH.unit + ' / 전체 ' + total + SH.unit
       : total + SH.unit;
 
@@ -628,13 +746,17 @@
       else if (Number(r.file_count) > 1) bits.push('파일 ' + r.file_count + '개');   // 상·하편처럼 묶인 자료
       else if (r.delivery === 'view') bits.push('화면 열람');
       else if (r.file_ext) bits.push(String(r.file_ext).toUpperCase() + (r.file_size ? ' ' + fmtSize(r.file_size) : ''));
+      // 갈래 구분 — 기출은 아이콘 면을 채워 줄마다 읽히게 하고, '전체'일 때만 태그를 단다
+      // (기출 갈래를 고르면 화면 전체가 기출이라 반복하지 않는다 — admin 열람 이력과 같은 규칙).
+      var isQ = !!SH.branches && r.shelf === 'question';
       return '<button class="doc" type="button" data-id="' + esc(r.id) + '">' +
-        '<span class="doc-ico">' + (r.is_link ? ICON_PLAY : ICON_DOC) + '</span>' +
+        '<span class="doc-ico' + (isQ ? ' q' : '') + '">' + (r.is_link ? ICON_PLAY : (isQ ? ICON_Q : ICON_DOC)) + '</span>' +
         '<span class="doc-txt">' +
           '<span class="doc-tit">' + esc(r.title) + '</span>' +
           (r.summary ? '<span class="doc-sum">' + esc(r.summary) + '</span>' : '') +
           '<span class="doc-sub">' +
             (isNew(r.published_at) ? '<span class="tag new">NEW</span>' : '') +
+            (isQ && branch === 'all' ? '<span class="tag">기출</span>' : '') +
             esc(bits.join(' · ')) +
             (r.published_at ? ' · <span class="num">' + fmtDate(r.published_at) + '</span>' : '') +
           '</span>' +
@@ -658,7 +780,7 @@
     $('shSheetTitle').textContent = isBuy ? '자료 구매'
       : (isFile ? '받을 파일 고르기'
       : (isPw ? '비밀번호 입력'
-      : (kind === 'air' ? '항공사 선택' : SH.type + ' 선택')));
+      : (kind === 'air' ? '항공사 선택' : branchType() + ' 선택')));
 
     if (isBuy) {
       buyTarget = opts.row;

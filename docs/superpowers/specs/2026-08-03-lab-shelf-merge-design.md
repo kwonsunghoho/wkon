@@ -82,7 +82,11 @@ SQL Editor 에서 실행해야 반영된다(미적용 구간이 생긴다). 자�
 ## 3. 서가 표·색인 재배열
 
 `lab-shelf.html` 의 `SHELVES` 표에서 `question` 줄을 지우고, `airline` 이 두 shelf 값을
-품는다. 갈래 값은 `all` | `doc` | `question`(`doc` → DB `shelf='airline'`).
+품는다(`shelves: ['airline','question']` · `branches` 세 줄).
+
+**갈래 값은 DB 의 shelf 값을 그대로 쓴다** — `all` | `airline`(자료) | `question`(기출).
+줄마다 `r.shelf` 로 갈래를 판정하므로 변환표가 없어야 어긋날 자리도 없다. 주소의
+`kind` 파라미터도 같은 값이다(`?shelf=airline&kind=question`).
 
 원장·허브의 색인이 한 칸씩 당겨진다.
 
