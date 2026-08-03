@@ -579,6 +579,28 @@
        (width:auto 만으로는 stretch 가 이겨 818px 가 됐다 · 2026-08-02 실측). */
     @media (min-width: 961px) { .lr-go { width: auto; justify-self: start; min-width: 200px; } }
 
+    /* ── 채용 캘린더 단계 편집기(2026-08-04) ──
+       단계 하나가 카드 하나다. 한 줄에 6칸을 밀어 넣으면 393px 에서 칸마다 50px 이 되어
+       날짜가 '2026-…' 로 잘린다(연구실 자료 폼에서 이미 겪은 자리 · admin.md 5차).
+       ⚠️ 순서가 뜻을 가진다 — `result`(발표)는 '바로 앞 단계의 결과'라서 ↑↓ 로 옮길 수 있어야
+          한다. 날짜순 자동 정렬로 대체하지 말 것: 발표와 다음 전형이 같은 날인 회차가 많아
+          (대한항공 3회차 전부) 같은 날짜끼리는 정렬이 순서를 못 정한다. */
+    .rcs { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface);
+      padding: 12px 13px 13px; margin-top: 10px; }
+    .rcs-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rcs-no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--action-tint);
+      color: var(--accent-ink); font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .rcs-h select { flex: 1; min-width: 120px; }
+    .rcs-mv { display: flex; gap: 6px; margin-left: auto; }
+    .rcs-g { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 9px; margin-top: 10px; }
+    .rcs-g .field label { font-size: 12px; color: var(--text-muted); }
+    /* 계산 미리보기 — 저장 버튼 위에 둔다. 누른 뒤에 보이는 근거는 근거가 아니다(원칙 13). */
+    .rc-prev { margin-top: 4px; padding: 11px 13px; border-radius: var(--radius-xs);
+      background: var(--action-tint); border: 1px solid rgba(27,58,107,.18);
+      font-size: 13px; font-weight: 700; line-height: 1.6; color: var(--accent-ink); }
+    .rc-prev b { font-weight: 800; }
+    .rc-prev .warn { display: block; margin-top: 6px; color: var(--st-danger); }
+
     /* ── 지우는 버튼은 다르게 보여야 한다(2026-08-02) ──
        연구실 자료 행은 버튼이 여섯이고 '삭제'가 '수정·이력·가격'과 똑같이 생겼다.
        모바일에서 두 줄로 접히면 오눌림이 실제로 난다. 되돌릴 수 없는 것만 이 색을 쓴다. */
@@ -775,6 +797,10 @@
     <button class="tabbtn" data-tab="terms"><svg aria-hidden="true" class="ic"><use href="#i-book"/></svg>감점 사전</button>
     <button class="tabbtn" data-tab="questions"><svg aria-hidden="true" class="ic"><use href="#i-q"/></svg>소재 문제</button>
     <button class="tabbtn" data-tab="labfiles"><svg aria-hidden="true" class="ic"><use href="#i-folder"/></svg>연구실 자료</button>
+    <!-- 연구실 04 서가지만 표가 다르다(recruit_rounds — 파일이 아니라 날짜). 그래서 '연구실 자료'
+         안 서브탭이 아니라 옆 탭이다. 그 탭은 이미 가장 긴 화면이고, 편집 모양(단계 반복 입력)도
+         겹치는 코드가 없다. 콘텐츠 그룹 · 연구실 자료 바로 아래가 자리다. -->
+    <button class="tabbtn" data-tab="reccal"><svg aria-hidden="true" class="ic"><use href="#i-flag"/></svg>채용 캘린더</button>
     <div class="sn-me">
       <span class="sn-who" id="snWho">관리자</span>
       <button class="logout" id="logoutBtn">로그아웃</button>
@@ -1407,6 +1433,105 @@
         </p>
         <div class="round-list" id="labLogList"><div class="loading">불러오는 중…</div></div>
       </details>
+    </div>
+  </div>
+
+  <!-- ══ 채용 캘린더 (recruit_rounds) — 2026-08-04 신설 ══
+       연구실 04 서가지만 표가 다르다. 여긴 파일이 아니라 **날짜**라서, PDF 로 올리면
+       단계 사이 날수·반복 패턴을 계산할 수 없다(그래서 lab_resources 를 안 쓴다).
+       ⚠️ 단계의 `key` 는 '전형 이름'이 아니라 '역할' 9개다. 항공사마다 전형 방법·횟수가
+          달라서(오너 지적 2026-08-04), 대한항공 전형표를 어휘로 쓰면 아시아나 2차 실무면접·
+          에어프레미아 AI역량검사가 전부 '그 외'로 밀려 계산에서 빠진다.
+          화면에 뜨는 글자는 `name` 이다 — 항공사 표기를 그대로 적는다.
+       ⚠️ 발표(result)는 하나뿐이고 '무엇의 발표인가'는 **차례**가 말한다. 그래서 ↑↓ 가 있다.
+       ⚠️ 값을 붙이지 않는다 — 무료 공개 확정(오너 2026-08-04). 가격 칸을 만들지 말 것. -->
+  <div class="tab-panel" id="panel-reccal">
+    <div class="rounds-wrap">
+      <details class="adm-help">
+        <summary>이 화면 설명 · 주의할 점 <span class="adm-help-v">화면 버전 2026-08-04</span></summary>
+        <div class="adm-help-body">
+          <p><b>공채 한 번이 회차 하나</b>예요. 이름은 접수 시작 월로 부릅니다 — '2026년 2월 공채'.
+            연도나 상·하반기로 칸을 미리 나누지 않아요(항공사마다 채용 횟수가 달라서, 빈 칸이
+            생기면 '안 뽑았다'인지 '아직 안 채웠다'인지 구분이 안 됩니다).</p>
+          <p><b>단계 종류는 '역할' 아홉 가지</b>예요. 1차든 2차든 임원이든 전부 <b>대면 면접</b>으로
+            고르고, 실제 이름은 <b>이름 칸</b>에 그대로 적으세요('2차 실무면접'). 학생 화면에는
+            이름 칸이 보입니다.</p>
+          <p><b>발표는 종류가 하나</b>입니다. 무엇의 발표인지는 <b>차례</b>가 말해요 — 바로 위 단계의
+            결과입니다. 차례가 틀리면 ↑↓ 로 옮기세요.</p>
+          <p><b>면접일이 띄엄띄엄이면</b>(11/10 · 11/11 · 11/13) 시작·종료에 첫날과 마지막날을 넣고
+            <b>메모 칸에 실제 날짜</b>를 적으세요. 학생 화면은 메모를 그대로 보여줍니다.</p>
+          <p><b>공고 문구를 다듬지 마세요.</b> '오후 6시 <b>경</b>'처럼 애매하게 쓰여 있으면 그대로
+            적습니다 — 그 애매함까지가 사실이에요.</p>
+          <p><b>이 자료는 무료 공개</b>입니다. 비회원도 목록을 봅니다. 다만 <b>공개 체크를 끄면</b>
+            아무에게도 안 보여요(작성 중일 때 꺼 두세요).</p>
+        </div>
+      </details>
+
+      <form class="round-form" id="recForm" style="grid-template-columns:1fr;">
+        <!-- ⚠️ display:flex 를 인라인에 두지 말 것 — 인라인 display 는 [hidden] 을 이겨 늘 보인다 -->
+        <p id="rcEditBar" hidden style="margin:0 0 2px;padding:9px 12px;border-radius:var(--radius-xs);background:var(--action-tint);color:var(--accent-ink);font-size:13.5px;font-weight:800;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span id="rcEditWho"></span>
+          <button class="btn" type="button" id="rcCancel" style="margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;">새로 만들기로 돌아가기</button>
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <div class="field"><label for="rcAirline">항공사</label>
+            <select id="rcAirline">
+              <option value="kal">대한항공</option>
+              <option value="asiana">아시아나항공</option>
+              <option value="jinair">진에어</option>
+              <option value="jejuair">제주항공</option>
+              <option value="twayair">티웨이항공</option>
+              <option value="airbusan">에어부산</option>
+              <option value="airseoul">에어서울</option>
+              <option value="eastarjet">이스타항공</option>
+              <option value="airpremia">에어프레미아</option>
+              <option value="aerok">에어로케이</option>
+            </select></div>
+          <div class="field"><label for="rcStarted">접수 시작일</label><input id="rcStarted" type="date"></div>
+        </div>
+        <div class="field"><label for="rcTitle">회차 이름 <span style="font-weight:600;color:var(--text-muted);">— 비우면 접수 시작 월로 자동</span></label>
+          <input id="rcTitle" placeholder="예: 2026년 2월 공채" autocomplete="off"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <div class="field"><label for="rcNote">메모(선택) <span style="font-weight:600;color:var(--text-muted);">— 학생 화면에 보여요</span></label>
+            <input id="rcNote" placeholder="예: 객실승무원" autocomplete="off"></div>
+          <div class="field"><label for="rcSource">출처(선택) <span style="font-weight:600;color:var(--text-muted);">— 우리만 봐요</span></label>
+            <input id="rcSource" placeholder="예: 채용 공고 / 합격자 제보" autocomplete="off"></div>
+        </div>
+
+        <!-- 단계 -->
+        <div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <b style="font-size:14px;">전형 단계</b>
+          <span id="rcStageN" style="font-size:12.5px;font-weight:700;color:var(--text-dim);"></span>
+          <!-- 같은 항공사 지난 회차의 '단계 이름'만 가져온다 — 대한항공 11줄을 다시 치지 않게.
+               ⚠️ 날짜는 절대 안 가져온다(지난 회차 날짜가 새 회차에 남으면 그게 사실이 된다). -->
+          <button class="btn" type="button" id="rcTmpl" style="margin-left:auto;border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:700;">지난 회차 틀 가져오기</button>
+        </div>
+        <div id="rcStages"></div>
+        <button class="btn" type="button" id="rcAddStage" style="justify-self:start;border:1px solid var(--action);background:var(--surface);color:var(--action-dark);font-weight:700;">＋ 단계 추가</button>
+
+        <!-- 계산 미리보기 — 저장 전에 보여준다 -->
+        <div class="rc-prev" id="rcPrev">단계를 넣으면 계산 결과가 여기 나와요.</div>
+
+        <!-- ⚠️ 설명을 .lr-opt 안에 넣지 말 것 — flex 한 줄이라 393px 에서 '기록'/'끝'이 세로로
+             꺾인다(2026-08-04 실측). 체크박스 줄과 설명 줄을 나눈다. -->
+        <div>
+          <label class="lr-opt"><input type="checkbox" id="rcComplete"> 기록 끝</label>
+          <p style="margin:4px 0 0 32px;font-size:12.5px;font-weight:600;color:var(--text-muted);line-height:1.55;">더 채울 단계가 없을 때만 켜세요. 끄면 학생 화면에 '기록 진행 중'으로 나옵니다.</p>
+        </div>
+        <div>
+          <label class="lr-opt"><input type="checkbox" id="rcPublish" checked> 공개</label>
+          <p style="margin:4px 0 0 32px;font-size:12.5px;font-weight:600;color:var(--text-muted);line-height:1.55;">끄면 아무에게도 안 보여요. 작성 중일 때 꺼 두세요.</p>
+        </div>
+        <button class="btn btn-action lr-go" type="submit" id="rcSubmit">회차 저장</button>
+        <p id="rcMsg" hidden style="margin-top:2px;padding:10px 12px;border-radius:var(--radius-xs);font-size:13.5px;font-weight:700;line-height:1.6;white-space:pre-wrap;"></p>
+      </form>
+
+      <div class="apq-filter" style="margin-top:22px;">
+        <span class="apq-flabel">항공사별 보기</span>
+        <div class="af-row" id="rcAirBar"></div>
+      </div>
+      <div class="round-list" id="rcList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -2371,6 +2496,7 @@
       questions: ['questions'],
       terms:     ['terms'],
       labfiles:  ['labfiles'],
+      reccal:    ['reccal'],
       approgram: ['approgram'],
     };
     const TAB_LOADERS = {
@@ -2381,6 +2507,7 @@
       questions: () => loadQuestions(),
       terms:     () => loadTerms(),
       labfiles:  () => loadLabFiles(),
+      reccal:    () => loadRecCal(),
       approgram: () => loadApProgram(),
     };
     const _tabLoaded = {};
@@ -4919,6 +5046,353 @@
         : (multiCount > 1 ? `파일 ${multiCount}개를 한 자료로 올렸어요` : '자료를 올렸어요')));
       labEditCancel();       // 폼을 비우고 '새로 올리기' 상태로 되돌린다
       loadLabFiles();
+    });
+
+    /* ══ 채용 캘린더(recruit_rounds) CRUD — 2026-08-04 신설 ══════════════════
+       연구실 04 서가지만 lab_resources 를 안 쓴다 — 파일이 아니라 날짜라서, PDF 로 올리면
+       단계 사이 날수·반복 패턴을 계산할 수 없다.
+       ⚠️ 역할 어휘 9개는 마이그레이션 20260804120000 의 recruit_stages_ok() 와 **같은 목록**이다.
+          여기만 늘리면 저장이 23514(check 위반)로 막힌다 — 늘릴 땐 SQL 도 같이 고친다.
+       ⚠️ 값(가격) 칸을 만들지 말 것 — 무료 공개 확정(오너 2026-08-04). */
+    const RC_ROLES = [
+      ['apply',     '서류 접수'],
+      ['screen',    '온라인 검사'],
+      ['video',     '영상 면접'],
+      ['interview', '대면 면접'],
+      ['health',    '신체 관련'],
+      ['result',    '발표'],
+      ['pass',      '최종 합격'],
+      ['intake',    '입과'],
+      ['etc',       '그 외'],
+    ];
+    /* 고를 때 보이는 긴 설명 — 오너가 '1차 실무면접'을 어디에 넣을지 헤매지 않게.
+       ⚠️ 화면에 뜨는 글자는 여기가 아니라 단계의 '이름' 칸이다. */
+    const RC_ROLE_HELP = {
+      apply: '서류 접수', screen: '온라인 검사 (AI역량·인적성·어학)', video: '영상 면접',
+      interview: '대면 면접 (1차·2차·실무·임원·최종)', health: '신체 관련 (수영·신검·체력)',
+      result: '발표 (바로 위 단계의 결과)', pass: '최종 합격', intake: '입과', etc: '그 외',
+    };
+    let _rcRows = [], _rcStages = [], _rcEditId = null, _rcAir = 'all';
+
+    const rcEl = id => document.getElementById(id);
+    const rcDate = s => { const m = String(s || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+    const rcDays = (a, b) => Math.round((b - a) / 864e5);
+    const rcEnd  = s => s.end || s.start;                    // 하루짜리 단계는 종료일이 없다
+
+    function rcSay(msg, kind) {
+      const p = rcEl('rcMsg');
+      if (!msg) { p.hidden = true; p.textContent = ''; return; }
+      p.hidden = false; p.textContent = msg;
+      p.style.background = kind === 'err' ? '#FBE9E7' : 'var(--action-tint)';
+      p.style.color = kind === 'err' ? 'var(--st-danger)' : 'var(--accent-ink)';
+    }
+
+    /* ── 단계 편집기 ──────────────────────────────────────────────────────────
+       _rcStages 가 원장이고 DOM 은 그림이다. 글자를 칠 때마다 다시 그리면 커서가 튀므로
+       input 은 배열만 고치고, 다시 그리는 것은 추가·삭제·이동뿐이다. */
+    function rcRenderStages() {
+      const box = rcEl('rcStages');
+      box.innerHTML = _rcStages.map((s, i) => `
+        <div class="rcs" data-i="${i}">
+          <div class="rcs-h">
+            <span class="rcs-no">${i + 1}</span>
+            <select class="rcs-key" aria-label="${i + 1}번째 단계 종류">
+              ${RC_ROLES.map(r => `<option value="${r[0]}"${r[0] === s.key ? ' selected' : ''}>${esc(RC_ROLE_HELP[r[0]])}</option>`).join('')}
+            </select>
+            <span class="rcs-mv">
+              <button class="ri-edit rcs-up" type="button" data-i="${i}" aria-label="위로">↑</button>
+              <button class="ri-edit rcs-down" type="button" data-i="${i}" aria-label="아래로">↓</button>
+              <button class="ri-del is-danger rcs-del" type="button" data-i="${i}">삭제</button>
+            </span>
+          </div>
+          <div class="rcs-g">
+            <div class="field"><label>이름 <span style="color:var(--text-dim);">— 학생 화면에 뜨는 글자</span></label>
+              <input class="rcs-name" value="${esc(s.name || '')}" placeholder="예: 2차 실무면접" autocomplete="off"></div>
+            <div class="field"><label>시작일</label><input class="rcs-start" type="date" value="${esc(s.start || '')}"></div>
+            <div class="field"><label>종료일(선택)</label><input class="rcs-end" type="date" value="${esc(s.end || '')}"></div>
+            <div class="field"><label>시각(선택)</label>
+              <input class="rcs-time" value="${esc(s.time || '')}" placeholder="오후 6시 마감" autocomplete="off"></div>
+          </div>
+          <div class="field" style="margin-top:9px;"><label>메모(선택) <span style="color:var(--text-dim);">— 날짜가 띄엄띄엄일 때</span></label>
+            <input class="rcs-note" value="${esc(s.note || '')}" placeholder="11/10(월) · 11/11(화) · 11/13(금)" autocomplete="off"></div>
+        </div>`).join('') || '<div class="empty" style="padding:14px 4px;">아직 단계가 없어요. 아래 [＋ 단계 추가]를 누르세요.</div>';
+
+      box.querySelectorAll('.rcs').forEach(card => {
+        const i = +card.dataset.i;
+        const bind = (sel, key) => card.querySelector(sel).addEventListener('input', e => {
+          _rcStages[i][key] = e.target.value.trim() || undefined;
+          rcPreview();
+        });
+        bind('.rcs-name', 'name'); bind('.rcs-start', 'start');
+        bind('.rcs-end', 'end');   bind('.rcs-time', 'time'); bind('.rcs-note', 'note');
+        card.querySelector('.rcs-key').addEventListener('change', e => {
+          _rcStages[i].key = e.target.value;
+          // 이름이 비어 있을 때만 기본 이름을 넣는다 — 적어 둔 이름을 덮으면 안 된다
+          if (!_rcStages[i].name) {
+            const lbl = (RC_ROLES.find(r => r[0] === e.target.value) || [])[1] || '';
+            _rcStages[i].name = lbl;
+            card.querySelector('.rcs-name').value = lbl;
+          }
+          rcPreview();
+        });
+      });
+      box.querySelectorAll('.rcs-del').forEach(b => b.addEventListener('click', () => {
+        _rcStages.splice(+b.dataset.i, 1); rcRenderStages();
+      }));
+      box.querySelectorAll('.rcs-up').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.i; if (i < 1) return;
+        _rcStages.splice(i - 1, 0, _rcStages.splice(i, 1)[0]); rcRenderStages();
+      }));
+      box.querySelectorAll('.rcs-down').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.i; if (i >= _rcStages.length - 1) return;
+        _rcStages.splice(i + 1, 0, _rcStages.splice(i, 1)[0]); rcRenderStages();
+      }));
+      rcEl('rcStageN').textContent = _rcStages.length ? _rcStages.length + '단계' : '';
+      rcPreview();
+    }
+
+    /* 저장 전 계산 미리보기 — 학생 화면이 돌릴 것과 같은 식이다.
+       ⚠️ 문제를 '경고'로만 적고 저장을 막지 않는 항목과, 막는 항목을 나눈다(막는 것은 submit 에서). */
+    function rcPreview() {
+      const box = rcEl('rcPrev');
+      const ss = _rcStages;
+      if (!ss.length) { box.innerHTML = '단계를 넣으면 계산 결과가 여기 나와요.'; return; }
+      const warn = [];
+      ss.forEach((s, i) => {
+        const n = i + 1;
+        if (!s.name) warn.push(`${n}번째 단계에 이름이 없어요.`);
+        if (!s.start) warn.push(`${n}번째 단계에 시작일이 없어요.`);
+        const a = rcDate(s.start), b = rcDate(s.end);
+        if (a && b && b < a) warn.push(`${n}번째 단계의 종료일이 시작일보다 앞이에요.`);
+        if (i > 0) {
+          const prev = rcDate(rcEnd(ss[i - 1]));
+          if (a && prev && a < prev) warn.push(`${n}번째 단계가 앞 단계보다 먼저 시작해요 — 차례가 맞나요?`);
+        }
+      });
+      const bits = [`<b>${ss.length}단계</b>`];
+      const first = rcDate(ss[0].start), last = rcDate(rcEnd(ss[ss.length - 1]));
+      if (first && last) bits.push(`처음 → 마지막 <b>${rcDays(first, last)}일</b>`);
+      // '발표 당일 다음 전형 시작' — 이 배지가 학생 화면의 핵심이라 여기서 미리 확인시킨다
+      const badges = [];
+      ss.forEach((s, i) => {
+        if (s.key !== 'result' || i === ss.length - 1) return;
+        const nx = ss[i + 1];
+        if (!s.start || !nx.start || nx.start !== s.start) return;
+        const a = rcDate(nx.start), b = rcDate(rcEnd(nx));
+        badges.push(`${esc(s.name || '발표')} 당일 <b>${esc(nx.name || '다음 전형')}</b> 시작`
+          + (a && b ? ` — 준비 ${rcDays(a, b) + 1}일` : ''));
+      });
+      box.innerHTML = bits.join(' · ')
+        + (badges.length ? '<br>' + badges.map(t => '📌 ' + t).join('<br>') : '')
+        + warn.map(w => `<span class="warn">⚠ ${esc(w)}</span>`).join('');
+    }
+
+    rcEl('rcAddStage').addEventListener('click', () => {
+      // 첫 단계는 서류 접수가 압도적이고, 그 뒤는 대개 발표 → 전형 → 발표 순이다
+      _rcStages.push(_rcStages.length === 0
+        ? { key: 'apply', name: '서류 접수' }
+        : { key: 'result', name: '발표' });
+      rcRenderStages();
+      rcEl('rcStages').lastElementChild.querySelector('.rcs-name').focus();
+    });
+
+    /* 지난 회차 '틀' 가져오기 — 단계 종류·이름만. ⚠️ 날짜는 절대 안 가져온다:
+       지난 회차 날짜가 새 회차에 남으면 그게 그대로 사실로 공개된다. */
+    rcEl('rcTmpl').addEventListener('click', () => {
+      const air = rcEl('rcAirline').value;
+      const src = _rcRows.filter(r => r.airline === air && String(r.id) !== String(_rcEditId))
+        .sort((a, b) => String(b.started_on).localeCompare(String(a.started_on)))[0];
+      if (!src || !Array.isArray(src.stages) || !src.stages.length) {
+        rcSay('이 항공사에는 가져올 지난 회차가 아직 없어요.', 'err'); return;
+      }
+      if (_rcStages.length && !confirm('지금 적은 단계를 지우고 「' + src.title + '」의 단계 이름을 가져올까요?\n(날짜는 안 가져옵니다)')) return;
+      _rcStages = src.stages.map(s => ({ key: s.key, name: s.name }));
+      rcRenderStages();
+      rcSay('「' + src.title + '」의 단계 ' + _rcStages.length + '개를 가져왔어요. 날짜를 채워 주세요.', '');
+    });
+
+    /* ── 수정 모드 ──
+       ⚠️ 저장 버튼 글자는 반드시 이 함수로만 바꾼다. guardSubmit 은 핸들러 **시작 시점의**
+          글자를 기억했다가 finally 에서 되돌리므로, 핸들러 안에서 textContent 를 직접 고치면
+          저장 직후 '수정 저장'이 그대로 남는다(연구실 자료 폼에 남아 있는 자리와 같은 함정). */
+    function rcSyncLabel() { rcEl('rcSubmit').textContent = _rcEditId ? '수정 저장' : '회차 저장'; }
+
+    function rcEnterEdit(r) {
+      _rcEditId = r.id;
+      rcEl('rcAirline').value  = r.airline || 'kal';
+      rcEl('rcTitle').value    = r.title || '';
+      rcEl('rcStarted').value  = r.started_on || '';
+      rcEl('rcNote').value     = r.note || '';
+      rcEl('rcSource').value   = r.source || '';
+      rcEl('rcComplete').checked = !!r.complete;
+      rcEl('rcPublish').checked  = !!r.published;
+      _rcStages = (Array.isArray(r.stages) ? r.stages : []).map(s => Object.assign({}, s));
+      rcRenderStages();
+      rcEl('rcEditBar').hidden = false;
+      rcEl('rcEditBar').style.display = 'flex';
+      rcEl('rcEditWho').textContent = '수정 중 — ' + (LAB_AIR_LABEL[r.airline] || r.airline) + ' ' + (r.title || '');
+      rcSyncLabel();
+      rcSay('', '');
+      rcEl('recForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function rcExitEdit() {
+      _rcEditId = null; _rcStages = [];
+      rcEl('rcTitle').value = ''; rcEl('rcStarted').value = '';
+      rcEl('rcNote').value = ''; rcEl('rcSource').value = '';
+      rcEl('rcComplete').checked = false; rcEl('rcPublish').checked = true;
+      rcRenderStages();
+      rcEl('rcEditBar').hidden = true;
+      rcSyncLabel();
+      rcSay('', '');
+    }
+    rcEl('rcCancel').addEventListener('click', rcExitEdit);
+    rcRenderStages();   // 첫 그림 — 비어 있을 때의 안내('아직 단계가 없어요')도 여기서 나온다
+
+    // ── 목록 ──
+    async function loadRecCal() {
+      const listEl = rcEl('rcList');
+      const { data, error } = await MONC.sb.from('recruit_rounds')
+        .select('*').order('started_on', { ascending: false });
+      if (error) {
+        // ⚠️ 테이블 미생성 판정은 PGRST205 — 42P01 만 보면 이 분기를 영영 못 탄다
+        listEl.innerHTML = '<div class="empty">'
+          + ((error.code === 'PGRST205' || error.code === '42P01'
+              || /could not find the table|does not exist/i.test(error.message || ''))
+            ? '채용 캘린더 표가 아직 없어요 — 마이그레이션 20260804120000_recruit_rounds.sql 을 실행해 주세요.'
+            : '불러오기 실패: ' + esc(error.message)) + '</div>';
+        return;
+      }
+      _rcRows = data || [];
+      rcRenderAirBar();
+      rcRenderList();
+    }
+
+    function rcRenderAirBar() {
+      const bar = rcEl('rcAirBar');
+      const n = {};
+      _rcRows.forEach(r => { n[r.airline] = (n[r.airline] || 0) + 1; });
+      // ⚠️ 자료가 있는 항공사만 칩으로 낸다 — 눌러도 0건인 선택지를 만들지 않는다(연구실 규칙)
+      const chips = [['all', '전체', _rcRows.length]]
+        .concat(Object.keys(n).sort((a, b) => n[b] - n[a]).map(k => [k, LAB_AIR_LABEL[k] || k, n[k]]));
+      bar.innerHTML = chips.map(c =>
+        '<button type="button" class="af-chip' + (c[0] === _rcAir ? ' on' : '') + '" data-air="' + esc(c[0]) + '">'
+        + esc(c[1]) + '<b>' + c[2] + '</b></button>').join('');
+    }
+    rcEl('rcAirBar').addEventListener('click', e => {
+      const b = e.target.closest('.af-chip'); if (!b) return;
+      _rcAir = b.dataset.air; rcRenderAirBar(); rcRenderList();
+    });
+
+    function rcRenderList() {
+      const listEl = rcEl('rcList');
+      const rows = _rcAir === 'all' ? _rcRows : _rcRows.filter(r => r.airline === _rcAir);
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
+          + (_rcRows.length ? '이 항공사는 아직 등록된 회차가 없습니다.' : '등록된 회차가 없습니다. 위에서 만드세요.')
+          + '</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(r => {
+        const ss = Array.isArray(r.stages) ? r.stages : [];
+        const last = ss.length ? rcEnd(ss[ss.length - 1]) : null;
+        const a = rcDate(r.started_on), b = rcDate(last);
+        const sub = [fmtDay(r.started_on) + ' 시작', ss.length + '단계'];
+        if (a && b) sub.push('처음 → 마지막 ' + rcDays(a, b) + '일');
+        sub.push(r.complete ? '기록 끝' : '기록 진행 중');
+        return `
+        <div class="round-item${r.published ? '' : ' is-off'}">
+          <div>
+            <div class="ri-main">${esc(LAB_AIR_LABEL[r.airline] || r.airline)} · ${esc(r.title || '')}${r.published ? '' : ' <span style="font-size:12px;font-weight:700;color:var(--text-dim);">숨김</span>'}</div>
+            <div class="ri-sub">${esc(sub.join(' · '))}</div>
+          </div>
+          <div class="ri-actions">
+            <button class="ri-edit rc-tg" data-id="${r.id}">${r.published ? '숨기기' : '공개'}</button>
+            <button class="ri-edit rc-ed" data-id="${r.id}">수정</button>
+            <button class="ri-del is-danger rc-rm" data-id="${r.id}">삭제</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      listEl.querySelectorAll('.rc-ed').forEach(btn => btn.addEventListener('click', () => {
+        const r = _rcRows.find(x => String(x.id) === btn.dataset.id);
+        if (r) rcEnterEdit(r);
+      }));
+      listEl.querySelectorAll('.rc-tg').forEach(btn => btn.addEventListener('click', async () => {
+        const r = _rcRows.find(x => String(x.id) === btn.dataset.id); if (!r) return;
+        const { error } = await MONC.sb.from('recruit_rounds').update({ published: !r.published }).eq('id', r.id);
+        if (error) { alert('바꾸기 실패: ' + error.message); return; }
+        toast(r.published ? '숨겼어요' : '공개했어요'); loadRecCal();
+      }));
+      listEl.querySelectorAll('.rc-rm').forEach(btn => btn.addEventListener('click', async () => {
+        const r = _rcRows.find(x => String(x.id) === btn.dataset.id); if (!r) return;
+        if (!confirm(`「${LAB_AIR_LABEL[r.airline] || r.airline} ${r.title}」 회차를 삭제할까요?\n단계 기록이 같이 사라집니다.`)) return;
+        const { error } = await MONC.sb.from('recruit_rounds').delete().eq('id', r.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        if (String(_rcEditId) === String(r.id)) rcExitEdit();   // 수정 중이던 회차를 지우면 폼도 되돌린다
+        toast('삭제됨'); loadRecCal();
+      }));
+    }
+
+    // ── 저장 ──
+    guardSubmit('recForm', async e => {
+      e.preventDefault();
+      const airline = rcEl('rcAirline').value;
+      const started = rcEl('rcStarted').value;
+      if (!started) { rcSay('접수 시작일을 넣어 주세요 — 정렬과 간격 계산의 기준입니다.', 'err'); return; }
+      if (!_rcStages.length) { rcSay('전형 단계를 하나 이상 넣어 주세요.', 'err'); return; }
+
+      // ⚠️ 여기서 막는 것은 DB check(recruit_stages_ok)가 어차피 막는 것들이다. 미리 잡아
+      //    'check 위반' 이라는 알 수 없는 오류 대신 어느 줄이 문제인지 말해 준다.
+      for (let i = 0; i < _rcStages.length; i++) {
+        const s = _rcStages[i], n = i + 1;
+        if (!s.name)  { rcSay(`${n}번째 단계에 이름이 없어요.`, 'err'); return; }
+        if (!s.start) { rcSay(`${n}번째 단계에 시작일이 없어요.`, 'err'); return; }
+        const a = rcDate(s.start), b = rcDate(s.end);
+        if (a && b && b < a) { rcSay(`${n}번째 단계의 종료일이 시작일보다 앞이에요.`, 'err'); return; }
+      }
+
+      // 이름을 비우면 접수 시작 월로 짓는다 — '2026년 2월 공채'
+      let title = rcEl('rcTitle').value.trim();
+      if (!title) { const d = rcDate(started); title = d ? `${d.getFullYear()}년 ${d.getMonth() + 1}월 공채` : '공채'; }
+
+      // undefined 칸은 아예 빼고 보낸다 — jsonb 에 null 이 박히면 화면이 빈 값을 그린다
+      const stages = _rcStages.map(s => {
+        const o = { key: s.key, name: s.name, start: s.start };
+        if (s.end)  o.end  = s.end;
+        if (s.time) o.time = s.time;
+        if (s.note) o.note = s.note;
+        return o;
+      });
+      const row = {
+        airline, title, started_on: started, stages,
+        complete:  rcEl('rcComplete').checked,
+        published: rcEl('rcPublish').checked,
+        note:   rcEl('rcNote').value.trim()   || null,
+        source: rcEl('rcSource').value.trim() || null,
+      };
+
+      // 버튼 잠금·'처리 중…' 표시는 guardSubmit 이 한다 — 여기서 또 하지 않는다
+      const { error } = _rcEditId
+        ? await MONC.sb.from('recruit_rounds').update(row).eq('id', _rcEditId)
+        : await MONC.sb.from('recruit_rounds').insert(row);
+
+      if (error) {
+        // 자주 나는 셋은 사람 말로 바꾼다 — 원문만 보여 주면 무엇을 고쳐야 할지 알 수 없다
+        const c = error.code || '';
+        rcSay(
+          c === '23505' ? '이 항공사에 접수 시작일이 같은 회차가 이미 있어요. 기존 회차를 [수정]하거나 날짜를 확인해 주세요.'
+          : c === '23514' ? '단계 값이 규칙에 안 맞아요. 종류·이름·시작일을 다시 확인해 주세요.'
+          : c === '42501' ? '권한이 없어요. 관리자 계정인지 확인해 주세요.'
+          : (c === 'PGRST205' || /could not find the table/i.test(error.message || ''))
+            ? '채용 캘린더 표가 아직 없어요 — 마이그레이션 20260804120000_recruit_rounds.sql 을 실행해 주세요.'
+          : '저장 실패: ' + error.message, 'err');
+        return;
+      }
+      toast(_rcEditId ? '수정했어요' : '회차를 만들었어요');
+      rcExitEdit();
+      // ⚠️ guardSubmit 의 finally 가 이 뒤에 옛 글자를 되돌린다 — 그 뒤에 다시 맞춘다(위 rcSyncLabel 주석)
+      setTimeout(rcSyncLabel, 0);
+      loadRecCal();
     });
 
     // ── 회원 제보(expression_reports) 집계 — 미니 다듬기 수집함 (2026-07-31) ──

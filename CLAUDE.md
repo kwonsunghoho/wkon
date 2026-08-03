@@ -150,7 +150,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로 | `docs/notes/apply-and-payment.md` |
 | 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
 | 승준노트 허브 | `briefing.html` | 이름은 화면 글자만 '승준노트'(파일·클래스명 유지), 카드에 회원별 상태 문구 금지 | `docs/notes/briefing.md` |
-| 연구실 | `lab.html`(허브)·`lab-archive.html`(원장)·`lab-shelf.html`(서가 4종 공용)·`researchers-data.js` | 허브는 카드 두 장·원장은 카드형·상세는 `?shelf=` 한 파일(서가별 HTML 금지), 기출문제는 항공사 자료실 안의 갈래(2026-08-03 합침 — DB shelf 값은 그대로), 자료 파일은 비공개 버킷 + lab-file 서명 URL 로만(공개 URL 금지), 숫자는 `lab_shelf_counts()` 실측값만, **값은 자료마다 `lab_resources.price`(0=무료) — 자료 테이블을 새로 만들지 말 것** | `docs/notes/lab.md` |
+| 연구실 | `lab.html`(허브)·`lab-archive.html`(원장)·`lab-shelf.html`(서가 4종 공용)·`researchers-data.js` | 허브는 카드 두 장·원장은 카드형·상세는 `?shelf=` 한 파일(서가별 HTML 금지), 기출문제는 항공사 자료실 안의 갈래(2026-08-03 합침 — DB shelf 값은 그대로), 자료 파일은 비공개 버킷 + lab-file 서명 URL 로만(공개 URL 금지), 숫자는 `lab_shelf_counts()` 실측값만, **값은 자료마다 `lab_resources.price`(0=무료) — 자료 테이블을 새로 만들지 말 것**, 단 **채용 캘린더만 예외로 `recruit_rounds`**(파일이 아니라 날짜 · 무료 확정 · 상/하반기 칸 금지) | `docs/notes/lab.md` |
 | 뉴스 | `news.html`·`scripts/fetch-news.mjs` | 필터는 픽커+바텀시트(칩 나열 회귀 금지), 규칙 수정 시 verify-news-rules.py | `docs/notes/news.md` |
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 구조화 출력·한 파일 유지, 감점 사전은 admin 탭(DB) | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer 의 `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |

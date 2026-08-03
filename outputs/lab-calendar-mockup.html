@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>채용 캘린더 목업 — MONC 몬크</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   연구실 04 서가 '채용 캘린더' — 화면 목업 (2026-08-04)
+
+   실제 자료: 대한항공 3회차(2025.04 / 2025.09 / 2026.02) — 오너 제공 이미지 값 그대로.
+   그 외 항공사 줄은 배치 확인용 자리 채움이며 화면에 '예시'로 표시했다.
+
+   팔레트·라운드·활자 하한은 tokens.css / docs/design-principles.md 값을 그대로 옮겨 왔다
+   (목업 파일은 단독으로 열리므로 변수만 복사).
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#F4F1EA; --bg2:#FBF9F5; --surface:#FFFFFF; --surface2:#F4F0E8;
+  --text:#26221C; --text-muted:#5F574B; --text-dim:#6C6454;
+  --border:rgba(38,34,28,0.16); --border-soft:rgba(38,34,28,0.09);
+  --action:#1B3A6B; --action-dark:#142C52; --action-tint:#E5E9F1; --action-ink:#FFFFFF;
+  --action-on-dark:#A8C7F0; --accent-ink:#1B3A6B; --accent-tint:#E5E9F1; --accent-dark:#142C52;
+  --radius-xs:8px; --radius-sm:14px; --radius:20px;
+  --shadow:0 4px 20px rgba(36,26,18,0.10);
+  --serif:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:#DED8C9;color:var(--text);-webkit-font-smoothing:antialiased;word-break:keep-all;
+  padding:32px 20px 72px;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+[hidden]{display:none!important}
+
+/* ── 목업 시트 머리 ── */
+.sheet-head{max-width:1180px;margin:0 auto 30px}
+.sheet-head .kicker{font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent-ink)}
+.sheet-head h1{font-family:var(--serif);font-size:28px;font-weight:800;letter-spacing:-.01em;margin-top:8px}
+.sheet-head p{font-size:14.5px;font-weight:500;line-height:1.65;color:var(--text-muted);margin-top:10px;max-width:64ch}
+.sheet-head .note{margin-top:14px;padding:12px 14px;border-radius:var(--radius-xs);
+  background:rgba(27,58,107,.06);border:1px solid rgba(27,58,107,.16);
+  font-size:13px;font-weight:600;line-height:1.6;color:var(--accent-ink);max-width:64ch}
+
+/* ── 폰 3대 ── */
+.rail{display:flex;gap:26px;justify-content:flex-start;align-items:flex-start;
+  max-width:1180px;margin:0 auto;overflow-x:auto;padding-bottom:14px}
+.col{flex:none;width:375px}
+.col-cap{margin-bottom:10px}
+.col-cap b{display:block;font-size:15px;font-weight:800;color:var(--accent-dark)}
+.col-cap span{display:block;font-size:12.5px;font-weight:600;color:var(--text-muted);margin-top:3px;line-height:1.5}
+.phone{width:375px;background:var(--bg);border-radius:26px;overflow:hidden;
+  box-shadow:0 18px 46px rgba(36,26,18,.22);border:1px solid rgba(38,34,28,.14)}
+.phone-in{padding:0 20px 34px;min-height:760px}
+
+/* 가짜 상단바 */
+.fakenav{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;background:var(--surface);border-bottom:1px solid var(--border-soft)}
+.fakenav .lg{font-family:var(--serif);font-size:15px;font-weight:800;letter-spacing:.08em;color:var(--accent-dark)}
+.fakenav .bars{width:20px;height:14px;display:flex;flex-direction:column;justify-content:space-between}
+.fakenav .bars i{display:block;height:2px;background:var(--text);border-radius:2px}
+
+.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;
+  font-size:13px;font-weight:700;color:var(--text-dim)}
+
+/* ── 다크 머리 (lab-shelf.html 과 같은 면) ── */
+.hd{border-radius:var(--radius);padding:20px 20px 17px;
+  background:linear-gradient(180deg,#1E4079,#142C52);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),var(--shadow)}
+.hd-idx{font-size:12px;font-weight:800;letter-spacing:.18em;color:var(--action-on-dark)}
+.hd h1{font-family:var(--serif);font-size:26px;font-weight:800;color:#fff;letter-spacing:-.01em;margin-top:7px}
+.hd-desc{font-size:13.5px;font-weight:500;line-height:1.55;color:rgba(245,241,232,.8);margin-top:6px}
+.hd-meta{display:flex;align-items:center;gap:7px;margin-top:14px;padding-top:12px;
+  border-top:1px dashed rgba(245,241,232,.3);font-size:12.5px;font-weight:600;color:rgba(245,241,232,.78)}
+.hd-meta b{color:#fff;font-weight:800}
+.live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--action-on-dark)}
+
+/* ── 픽커 ── */
+.pickrow{display:flex;gap:8px;margin-top:16px}
+.pick{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--border);
+  background:var(--surface);font:inherit;font-size:14px;font-weight:700;color:var(--text)}
+.pick.set{background:var(--action-tint);border-color:var(--accent-dark);color:var(--accent-ink);font-weight:800}
+.pick .cv{font-size:10px;opacity:.55}
+
+/* ── 패턴 요약 띠 (항공사를 고르면 목록 위에 붙는다) ── */
+.pat{margin-top:16px;border-radius:var(--radius-sm);background:var(--surface);
+  border:1px solid var(--border);padding:15px 16px 14px;box-shadow:var(--shadow)}
+.pat-top{display:flex;align-items:baseline;gap:8px}
+.pat-top b{font-size:15px;font-weight:800}
+.pat-top span{font-size:12.5px;font-weight:700;color:var(--text-dim)}
+.pat-hero{margin-top:11px;padding:11px 12px;border-radius:var(--radius-xs);
+  background:#FBE9E7;border:1px solid rgba(178,59,46,.22)}
+.pat-hero p{font-size:13px;font-weight:700;line-height:1.55;color:#B23B2E}
+.pat-hero p b{font-weight:800}
+.pat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;margin-top:12px;
+  background:var(--border-soft);border-radius:var(--radius-xs);overflow:hidden}
+.pat-cell{background:var(--surface);padding:10px 8px;text-align:center}
+.pat-cell .v{font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--accent-dark)}
+.pat-cell .v em{font-style:normal;font-size:12.5px;font-weight:700;margin-left:1px}
+.pat-cell .k{font-size:12px;font-weight:600;color:var(--text-dim);margin-top:3px;line-height:1.4}
+.pat-foot{margin-top:10px;font-size:12px;font-weight:600;color:var(--text-dim);line-height:1.55}
+
+/* ── 회차 목록 ── */
+.count{margin-top:18px;font-size:12.5px;font-weight:700;color:var(--text-dim)}
+.rd{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:15px 16px 14px;margin-top:10px;text-align:left;box-shadow:0 1px 3px rgba(20,44,82,.06)}
+.rd-top{display:flex;align-items:center;gap:8px}
+.rd-air{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--accent-ink);
+  border:1px solid rgba(27,58,107,.28);border-radius:4px;padding:1px 6px}
+.rd-state{margin-left:auto;font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;
+  background:var(--surface2);color:var(--text-dim)}
+.rd-state.live{background:#1B3A6B;color:#fff}
+.rd-tit{font-size:17px;font-weight:800;letter-spacing:-.01em;margin-top:9px}
+.rd-range{font-size:13px;font-weight:600;color:var(--text-muted);margin-top:4px}
+/* 미니 진행 막대 — 회차 전체를 한 줄로 압축해 카드에서 흐름이 읽히게 */
+.mini{display:flex;gap:2px;margin-top:11px}
+.mini i{flex:1;height:6px;border-radius:2px;background:var(--accent-tint)}
+.mini i.on{background:var(--action)}
+.mini i.now{background:#B23B2E}
+.rd-sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px;
+  font-size:12.5px;font-weight:600;color:var(--text-dim)}
+.rd-sub .dot{opacity:.4}
+.rd-open{display:flex;align-items:center;justify-content:space-between;margin-top:12px;
+  padding-top:11px;border-top:1px solid var(--border-soft);
+  font-size:13px;font-weight:800;color:var(--accent-ink)}
+
+/* ── 펼친 타임라인 ── */
+.tl{margin-top:14px;padding-top:2px}
+.tl-note{padding:10px 12px;border-radius:var(--radius-xs);background:rgba(27,58,107,.05);
+  border:1px solid rgba(27,58,107,.14);font-size:12.5px;font-weight:600;line-height:1.55;color:var(--accent-ink)}
+.step{position:relative;padding:0 0 0 34px}
+.step::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;background:var(--accent-tint)}
+.step:last-child::before{bottom:auto;height:14px}
+.step-dot{position:absolute;left:2px;top:9px;width:16px;height:16px;border-radius:50%;
+  background:var(--surface);border:2.5px solid var(--action);z-index:1}
+.step.fill .step-dot{background:var(--action)}
+.step.pend .step-dot{border-color:var(--border);border-style:dashed}
+.step-body{padding:6px 0 14px}
+.step-h{display:flex;align-items:baseline;gap:7px}
+.step-no{font-size:12px;font-weight:800;color:var(--text-dim);letter-spacing:.02em}
+.step-nm{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.step-d{font-size:14px;font-weight:700;color:var(--accent-dark);margin-top:4px;line-height:1.5}
+.step-t{font-size:12.5px;font-weight:600;color:var(--text-dim);margin-top:3px}
+.step-t b{color:#B23B2E;font-weight:800}
+/* 단계 사이 '며칠' 칩 — 이 화면의 알맹이. 날짜보다 간격이 궁금해서 들어온다. */
+.gap{position:relative;padding:0 0 0 34px;margin:-6px 0 -2px}
+.gap::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;background:var(--accent-tint)}
+.gap span{display:inline-block;font-size:12px;font-weight:700;color:var(--text-dim);
+  background:var(--bg);border:1px solid var(--border-soft);border-radius:999px;padding:2px 9px}
+.gap.tight span{color:#B23B2E;border-color:rgba(178,59,46,.3);background:#FBE9E7;font-weight:800}
+.step-tag{display:inline-block;margin-top:7px;font-size:12px;font-weight:800;letter-spacing:.02em;
+  color:#fff;background:#B23B2E;border-radius:4px;padding:2px 7px}
+.step-tag.calm{background:var(--accent-dark)}
+.tl-sum{margin-top:6px;padding:13px 14px;border-radius:var(--radius-xs);
+  background:var(--action-tint);border:1px solid rgba(27,58,107,.18)}
+.tl-sum p{font-size:13px;font-weight:700;line-height:1.6;color:var(--accent-ink)}
+.tl-sum p+p{margin-top:5px}
+.tl-cta{display:block;width:100%;min-height:50px;margin-top:14px;border:0;border-radius:14px;
+  background:var(--action);color:var(--action-ink);font:inherit;font-size:15px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.tl-close{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:6px;
+  font-size:13px;font-weight:800;color:var(--text-dim)}
+
+.foot-note{margin-top:26px;text-align:center;font-size:12.5px;font-weight:500;color:var(--text-dim);line-height:1.6}
+
+/* ── 아래 설명 블록 ── */
+.why{max-width:1180px;margin:44px auto 0;background:var(--surface);border-radius:var(--radius);
+  padding:26px 26px 24px;box-shadow:var(--shadow)}
+.why h2{font-family:var(--serif);font-size:21px;font-weight:800;letter-spacing:-.01em}
+.why h3{font-size:15px;font-weight:800;color:var(--accent-dark);margin-top:20px}
+.why p,.why li{font-size:14px;font-weight:500;line-height:1.7;color:var(--text-muted);margin-top:7px}
+.why li{margin-left:18px}
+.why b{color:var(--text);font-weight:800}
+.why table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px}
+.why th,.why td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border-soft);vertical-align:top;line-height:1.55}
+.why th{font-weight:800;color:var(--accent-dark);background:var(--surface2)}
+.why td{font-weight:500;color:var(--text-muted)}
+.why td b{font-weight:800}
+</style>
+</head>
+<body>
+
+<div class="sheet-head">
+  <p class="kicker">MOCKUP · 2026-08-04</p>
+  <h1>연구실 04 — 채용 캘린더</h1>
+  <p>대한항공 3회차(2025.04 · 2025.09 · 2026.02)를 실제 값 그대로 넣어 그렸습니다. 다른 항공사 줄은 배치 확인용 자리 채움이고 화면에 '예시'로 표시했습니다. 폭은 375px 기준입니다.</p>
+  <p class="note">핵심 제안: <b>연도 → 상/하반기</b> 로 칸을 미리 나누지 않고, <b>공채 회차</b>를 시작 월 이름으로 쌓습니다. 그리고 날짜만 나열하지 않고 <b>단계 사이가 며칠인지</b>를 같이 계산해서 보여줍니다.</p>
+</div>
+
+<div class="rail">
+
+  <!-- ═══════════ ① 서가 첫 화면 ═══════════ -->
+  <div class="col">
+    <div class="col-cap"><b>① 서가 첫 화면</b><span>모든 항공사 회차를 최신순으로. 픽커로 좁힌다.</span></div>
+    <div class="phone">
+      <div class="fakenav"><span class="lg">MONC</span><span class="bars"><i></i><i></i><i></i></span></div>
+      <div class="phone-in">
+        <a class="back">← 연구실</a>
+
+        <header class="hd">
+          <p class="hd-idx num">04 — 캘린더</p>
+          <h1>채용 캘린더</h1>
+          <p class="hd-desc">항공사별 채용이 언제 있었는지, 단계 사이가 며칠이었는지 한눈에.</p>
+          <p class="hd-meta num"><i class="live"></i>항공사 <b>6곳</b> · 기록한 공채 <b>21회</b></p>
+        </header>
+
+        <div class="pickrow">
+          <button class="pick"><span>항공사</span><span class="cv">▾</span></button>
+          <button class="pick"><span>연도</span><span class="cv">▾</span></button>
+        </div>
+
+        <p class="count num">공채 21회 · 최신순</p>
+
+        <div class="rd">
+          <div class="rd-top">
+            <span class="rd-air">대한항공</span>
+            <span class="rd-state">기록 진행 중</span>
+          </div>
+          <p class="rd-tit">2026년 2월 공채</p>
+          <p class="rd-range num">26.02.09 접수 시작 · 9단계 확인</p>
+          <div class="mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+          <div class="rd-sub num"><span>접수 → 수영·신검 <b>77일</b></span><span class="dot">·</span><span>최종 합격 미확인</span></div>
+          <div class="rd-open"><span>단계별로 보기</span><span>›</span></div>
+        </div>
+
+        <div class="rd">
+          <div class="rd-top">
+            <span class="rd-air">진에어</span>
+            <span class="rd-state">예시</span>
+          </div>
+          <p class="rd-tit">2026년 1월 공채</p>
+          <p class="rd-range num">26.01.12 접수 시작 · 7단계</p>
+          <div class="mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="rd-sub num"><span>접수 → 최종 <b>63일</b></span></div>
+          <div class="rd-open"><span>단계별로 보기</span><span>›</span></div>
+        </div>
+
+        <div class="rd">
+          <div class="rd-top">
+            <span class="rd-air">대한항공</span>
+            <span class="rd-state">마감</span>
+          </div>
+          <p class="rd-tit">2025년 9월 공채</p>
+          <p class="rd-range num">25.09.22 접수 시작 · 11단계 전부</p>
+          <div class="mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="rd-sub num"><span>접수 → 최종 합격 <b>108일</b></span><span class="dot">·</span><span>약 3개월 반</span></div>
+          <div class="rd-open"><span>단계별로 보기</span><span>›</span></div>
+        </div>
+
+        <p class="foot-note">공고·합격자 제보를 바탕으로 연구진이 기록합니다.<br>항공사 공식 발표와 다를 수 있어요.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ② 항공사 하나 고른 화면 ═══════════ -->
+  <div class="col">
+    <div class="col-cap"><b>② 항공사를 고르면</b><span>목록 위에 '이 회사는 이렇게 움직인다' 요약이 붙는다.</span></div>
+    <div class="phone">
+      <div class="fakenav"><span class="lg">MONC</span><span class="bars"><i></i><i></i><i></i></span></div>
+      <div class="phone-in">
+        <a class="back">← 연구실</a>
+
+        <header class="hd">
+          <p class="hd-idx num">04 — 캘린더</p>
+          <h1>채용 캘린더</h1>
+          <p class="hd-desc">항공사별 채용이 언제 있었는지, 단계 사이가 며칠이었는지 한눈에.</p>
+          <p class="hd-meta num"><i class="live"></i>대한항공 · 기록한 공채 <b>3회</b></p>
+        </header>
+
+        <div class="pickrow">
+          <button class="pick set"><span>대한항공</span><span class="cv">▾</span></button>
+          <button class="pick"><span>연도</span><span class="cv">▾</span></button>
+        </div>
+
+        <section class="pat">
+          <div class="pat-top"><b>대한항공은 이렇게 움직였어요</b></div>
+          <div class="pat-hero">
+            <p>3회 연속 <b>서류 결과가 뜨는 날 영상면접이 바로 시작</b>됐어요. 발표를 보고 준비하면 <b>평균 6일</b>밖에 없습니다.</p>
+          </div>
+          <div class="pat-grid">
+            <div class="pat-cell"><p class="v num">6<em>일</em></p><p class="k">영상 촬영<br>가능 기간</p></div>
+            <div class="pat-cell"><p class="v num">11<em>일</em></p><p class="k">접수 마감 →<br>서류 결과</p></div>
+            <div class="pat-cell"><p class="v num">4<em>개월</em></p><p class="k">접수 →<br>최종 합격</p></div>
+          </div>
+          <p class="pat-foot num">지난 공채 간격 174일 · 140일 &nbsp;|&nbsp; 마지막 접수 시작 26.02.09 (176일 전)</p>
+        </section>
+
+        <p class="count num">대한항공 공채 3회 · 최신순</p>
+
+        <div class="rd">
+          <div class="rd-top"><span class="rd-air">대한항공</span><span class="rd-state">기록 진행 중</span></div>
+          <p class="rd-tit">2026년 2월 공채</p>
+          <p class="rd-range num">26.02.09 → 26.04.27 · 9단계 확인</p>
+          <div class="mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+          <div class="rd-sub num"><span>접수 → 수영·신검 <b>77일</b></span></div>
+          <div class="rd-open"><span>단계별로 보기</span><span>›</span></div>
+        </div>
+
+        <div class="rd">
+          <div class="rd-top"><span class="rd-air">대한항공</span><span class="rd-state">마감</span></div>
+          <p class="rd-tit">2025년 9월 공채</p>
+          <p class="rd-range num">25.09.22 → 26.02.04 · 11단계 전부</p>
+          <div class="mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="rd-sub num"><span>접수 → 최종 합격 <b>108일</b></span><span class="dot">·</span><span>영상 준비 5일</span></div>
+          <div class="rd-open"><span>단계별로 보기</span><span>›</span></div>
+        </div>
+
+        <div class="rd">
+          <div class="rd-top"><span class="rd-air">대한항공</span><span class="rd-state">마감</span></div>
+          <p class="rd-tit">2025년 4월 공채</p>
+          <p class="rd-range num">25.04.01 → 25.09.08 · 11단계 전부</p>
+          <div class="mini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="rd-sub num"><span>접수 → 최종 합격 <b>132일</b></span><span class="dot">·</span><span>영상 준비 8일</span></div>
+          <div class="rd-open"><span>단계별로 보기</span><span>›</span></div>
+        </div>
+
+        <p class="foot-note">공고·합격자 제보를 바탕으로 연구진이 기록합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ③ 회차 펼침 — 타임라인 ═══════════ -->
+  <div class="col">
+    <div class="col-cap"><b>③ 회차를 누르면 그 자리에서 펼쳐진다</b><span>페이지를 새로 안 만든다. 여러 회차를 펼쳐 나란히 비교할 수 있다.</span></div>
+    <div class="phone">
+      <div class="fakenav"><span class="lg">MONC</span><span class="bars"><i></i><i></i><i></i></span></div>
+      <div class="phone-in">
+        <a class="back">← 연구실</a>
+
+        <div class="rd" style="margin-top:8px">
+          <div class="rd-top"><span class="rd-air">대한항공</span><span class="rd-state">기록 진행 중</span></div>
+          <p class="rd-tit">2026년 2월 공채</p>
+          <p class="rd-range num">26.02.09 → 26.04.27 · 9단계 확인</p>
+
+          <div class="tl">
+            <p class="tl-note">단계 사이 숫자는 <b>앞 단계가 끝난 날부터 센 날수</b>예요. 빨간 칸은 지난 3회 평균보다 짧았던 구간입니다.</p>
+
+            <div style="margin-top:14px"></div>
+
+            <div class="step fill">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">①</span><span class="step-nm">서류 접수</span></div>
+                <p class="step-d num">26.02.09 (월) — 26.02.24 (화)</p>
+                <p class="step-t num">마감 <b>오후 4시</b> · 접수 기간 16일</p>
+              </div>
+            </div>
+
+            <div class="gap"><span class="num">10일 뒤</span></div>
+
+            <div class="step fill">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">②</span><span class="step-nm">서류 결과</span></div>
+                <p class="step-d num">26.03.06 (금)</p>
+                <p class="step-t num">오후 6시 경</p>
+              </div>
+            </div>
+
+            <div class="gap tight"><span class="num">같은 날 · 기다림 없음</span></div>
+
+            <div class="step">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">③</span><span class="step-nm">영상 면접</span></div>
+                <p class="step-d num">26.03.06 (금) — 26.03.10 (화)</p>
+                <p class="step-t num">마감 <b>오후 5시</b> · 촬영 가능 기간 <b>5일</b></p>
+              </div>
+            </div>
+
+            <div class="gap"><span class="num">10일 뒤</span></div>
+
+            <div class="step fill">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">④</span><span class="step-nm">영상 결과</span></div>
+                <p class="step-d num">26.03.20 (금)</p>
+                <p class="step-t num">오후 5시 경</p>
+              </div>
+            </div>
+
+            <div class="gap"><span class="num">7일 뒤</span></div>
+
+            <div class="step">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">⑤</span><span class="step-nm">임원 면접</span></div>
+                <p class="step-d num">26.03.27 (금) — 26.03.31 (화)</p>
+                <p class="step-t num">준비 기간 7일</p>
+              </div>
+            </div>
+
+            <div class="gap"><span class="num">6일 뒤</span></div>
+
+            <div class="step fill">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">⑥</span><span class="step-nm">임원 결과</span></div>
+                <p class="step-d num">26.04.06 (월)</p>
+                <p class="step-t num">오후 5시 경</p>
+              </div>
+            </div>
+
+            <div class="gap tight"><span class="num">4일 뒤</span></div>
+
+            <div class="step">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">⑦</span><span class="step-nm">최종 면접</span></div>
+                <p class="step-d num">26.04.10 (금) — 26.04.13 (월)</p>
+                <p class="step-t num">준비 기간 <b>4일</b></p>
+              </div>
+            </div>
+
+            <div class="gap"><span class="num">4일 뒤</span></div>
+
+            <div class="step fill">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">⑧</span><span class="step-nm">최종 결과</span></div>
+                <p class="step-d num">26.04.17 (금)</p>
+                <p class="step-t num">오후 5시 경</p>
+              </div>
+            </div>
+
+            <div class="gap"><span class="num">4일 뒤</span></div>
+
+            <div class="step">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">⑨</span><span class="step-nm">수영 · 신체검사</span></div>
+                <p class="step-d num">26.04.21 (화) — 26.04.27 (월)</p>
+              </div>
+            </div>
+
+            <div class="step pend">
+              <span class="step-dot"></span>
+              <div class="step-body">
+                <div class="step-h"><span class="step-no num">⑩⑪</span><span class="step-nm" style="color:var(--text-dim)">최종 합격 · 입과</span></div>
+                <p class="step-t">아직 확인된 날짜가 없어요.<br>지난 두 번은 신검 뒤 <b style="color:var(--accent-dark)">4~6주</b> 만에 최종 합격이 났습니다.</p>
+              </div>
+            </div>
+
+            <div class="tl-sum">
+              <p>접수 시작부터 수영·신검까지 <b>77일</b>.</p>
+              <p>가장 촉박했던 구간은 <b>서류 결과 → 영상 마감 5일</b>이에요.</p>
+            </div>
+
+            <button class="tl-cta">이 흐름으로 내 준비 일정 만들기</button>
+            <p class="tl-close">접기 ⌃</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ 설명 ═══════════ -->
+<section class="why">
+  <h2>왜 이렇게 제안하는지</h2>
+
+  <h3>1. 연도 → 상/하반기 칸으로 나누지 않습니다</h3>
+  <p>대한항공은 마침 연 2회라 상·하반기가 맞아떨어지지만, 제주항공·티웨이·에어부산은 연 3~4회를 뽑는 해도 있고 한 번도 안 뽑는 해도 있습니다. 칸을 미리 만들어 두면 <b>빈 칸이 "채용이 없었다"인지 "우리가 아직 안 채웠다"인지 구분되지 않습니다.</b> 사이트 원칙(상태를 단정하지 않기)과도 어긋납니다.</p>
+  <p>대신 <b>공채 회차</b>를 단위로 쌓고, 접수 시작 월을 그대로 이름으로 씁니다 — "2026년 2월 공채". 정렬은 접수 시작일 하나로 끝나고, 항공사마다 회차 수가 달라도 화면이 안 깨집니다. 연도로 좁혀 보고 싶으면 픽커에 '연도'를 하나 더 두면 됩니다.</p>
+
+  <h3>2. 날짜만 나열하면 표에 그칩니다 — 간격을 계산해서 보여줍니다</h3>
+  <p>학생이 정말 궁금한 건 "3월 6일에 발표"가 아니라 <b>"얼마나 기다리나 / 얼마나 촉박한가"</b>입니다. 그래서 단계 사이마다 며칠인지 자동 계산해서 넣었습니다. 세 회차 모두 <b>서류 결과가 뜨는 날 영상면접이 바로 시작</b>됐고, 촬영 가능 기간은 5일 · 8일 · 5일이었습니다. 이 한 줄이 "발표 기다리지 말고 미리 준비해야 한다"를 숫자로 증명해 줍니다.</p>
+  <p>배지·요약 문구는 <b>사람이 쓰는 게 아니라 날짜에서 자동으로 뽑습니다.</b> 서류 결과일 = 영상면접 시작일이면 배지가 붙고, 회차가 쌓이면 "3회 연속"이 자동으로 올라갑니다. 자료를 넣을 때 문구를 따로 안 써도 됩니다.</p>
+
+  <h3>3. 상세를 새 페이지로 만들지 않습니다</h3>
+  <p>연구실은 <b>서가 4종을 <code>lab-shelf.html</code> 한 파일이 그리는</b> 구조입니다. 회차마다 페이지를 만들면 그 원칙이 깨집니다. 카드를 누르면 그 자리에서 펼쳐지게 하면 파일도 안 늘고, 뒤로가기 문제도 없고, 회차 두 개를 동시에 펼쳐 비교할 수도 있습니다.</p>
+
+  <h3>4. 데이터는 파일이 아니라 표로 넣습니다</h3>
+  <p>지금 채용 캘린더는 다른 서가와 같은 <code>lab_resources</code>(파일 목록)를 쓰게 돼 있는데, 타임라인은 파일이 아니라 날짜입니다. 파일로 올리면 위의 자동 계산이 전부 불가능합니다. 회차 표 하나가 필요합니다.</p>
+  <table>
+    <tr><th>칸</th><th>담는 값</th></tr>
+    <tr><td><b>airline</b></td><td>kal · asiana … (뉴스·자료실과 같은 슬러그를 씁니다)</td></tr>
+    <tr><td><b>title</b></td><td>2026년 2월 공채</td></tr>
+    <tr><td><b>started_on</b></td><td>2026-02-09 — 정렬·간격 계산의 기준</td></tr>
+    <tr><td><b>stages</b></td><td>단계 배열 — 이름 · 시작일 · 종료일 · 마감시각 · 메모. 나머지 숫자는 전부 여기서 계산합니다.</td></tr>
+    <tr><td><b>is_public</b></td><td>작성 중인 회차를 감춥니다</td></tr>
+  </table>
+  <p>관리는 admin '연구실' 탭 안에 회차 편집 화면 하나를 더하면 됩니다. 단계는 이름·날짜만 채우는 반복 입력이라 대한항공 한 회차에 2~3분입니다.</p>
+
+  <h3>5. 다음에 결정하실 것</h3>
+  <ul>
+    <li><b>값</b> — 무료로 열어 유입 자료로 쓸지, 자료실처럼 값을 붙일지. (개인적으로는 무료 추천 — 검색으로 들어오는 문이 되고, 유료는 '기출·자료'가 이미 맡고 있습니다.)</li>
+    <li><b>맨 아래 버튼</b> — 목업의 '내 준비 일정 만들기'를 실제로 만들지, 아니면 챌린지·특강 안내로 보낼지.</li>
+    <li><b>다른 항공사 자료를 어디까지 채울지</b> — 화면은 1회차부터 정상 동작하지만, "이렇게 움직였어요" 요약은 3회차부터 의미가 생깁니다.</li>
+  </ul>
+</section>
+
+</body>
+</html>
