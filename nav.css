@@ -264,14 +264,31 @@
    ⚠️ 색만으로는 안 된다. 주력 항목(`.nav-feature`, 지금은 챌린지)은 어느 페이지에서든
       항상 --accent-ink 굵게라, 색 규칙만 넓히면 그 항목이 늘 '현재 위치'로 읽힌다.
       그래서 색과 별개인 왼쪽 막대를 쓴다 — 색각 이상에서도 구분된다(원칙 4).
-      데스크톱에는 같은 이유로 밑줄 막대가 있다(위 '현재 위치 표시' 절). */
+      데스크톱에는 같은 이유로 밑줄 막대가 있다(위 '현재 위치 표시' 절).
+   ⚠️⚠️ **막대는 글자를 밀지 않는다 — 왼쪽 여백(#mobileMenu 패딩 24px 안)에 그린다**
+      (2026-08-04 오너 지적 "모바일에서 저 선 위치가 삐뚤어졌잖아"). 구 방식은
+      `inset 3px` + `padding-left:12px` 이라 **현재 줄만 글자가 안쪽으로 밀렸고**,
+      하위 줄에서는 자기 테두리(레일 2px) 안쪽에 막대가 그려져 **상위 줄 막대와 2px 어긋난 채
+      레일과 겹쳐** 층이 진 선으로 보였다(실측: 상위 x=24, 하위 x=26, 글자 38 vs 형제 40).
+      지금은 상위 줄 막대가 왼쪽 여백(x=12)에 서고, 글자는 어느 줄도 안 움직인다.
+   ⚠️⚠️ **하위 줄 막대는 여백에 못 그린다 — `.mm-acc-panel` 이 `overflow:hidden`**(펼침
+      전환이 max-height 라 필수)**이라 패널 왼쪽 밖은 잘려서 아예 안 보인다.** 계산상
+      x=12 로 맞춰 놓고 화면에 안 나온 자리다 — 값만 재고 눈으로 안 봤으면 놓친다.
+      그래서 하위 줄은 **원래 있는 세로 레일(`.mm-sub` 의 border-left 2px) 위에 겹쳐** 긋는다:
+      레일과 왼쪽 끝이 같고 1px 만 굵어, 회색 레일이 그 구간만 네이비로 바뀐 것처럼 보인다. */
 #mobileMenu ul > li > a[aria-current="page"],
 #mobileMenu .mm-acc-btn[aria-current="page"],
 #mobileMenu .mm-acc-panel a[aria-current="page"] {
-  box-shadow: inset 3px 0 0 var(--action);
-  padding-left: 12px;
+  position: relative;
   color: var(--accent-ink);
 }
+#mobileMenu ul > li > a[aria-current="page"]::before,
+#mobileMenu .mm-acc-btn[aria-current="page"]::before,
+#mobileMenu .mm-acc-panel a[aria-current="page"]::before {
+  content: ''; position: absolute; left: -12px; top: 3px; bottom: 3px;
+  width: 3px; border-radius: 2px; background: var(--action);
+}
+#mobileMenu .mm-acc-panel a[aria-current="page"]::before { left: -2px; top: 2px; bottom: 2px; }
 #mobileMenu .mm-acc-btn[aria-current="page"] { font-weight: 800; }
 
 /* 아코디언(승준노트·챌린지) — 탭 한 번에 하위 항목을 펼쳐 바로 이동.
