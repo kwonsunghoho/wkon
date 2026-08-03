@@ -1993,13 +1993,12 @@
 
       // 답변노트(완료/작성중)
       const catOf = q => (window.SOJAE && window.SOJAE.CAT_LABEL[(q || {}).category]) || '소재 발굴';
-      const fmtDay = s => { const d = new Date(s); return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`; };
       const ansHtml = (answers && answers.length) ? answers.map(a => {
         const q = a.questions || {};
         const isDraft = (a.status || 'final') === 'draft';
         return `<details class="note-adm ${isDraft ? 'draft' : ''}">
           <summary>
-            <div class="na-top"><span class="na-cat">${esc(catOf(q))}</span><span>${fmtDay(a.updated_at)}<span class="na-badge ${isDraft ? 'draft' : 'final'}">${isDraft ? '작성중' : '완료'}</span></span></div>
+            <div class="na-top"><span class="na-cat">${esc(catOf(q))}</span><span>${fmtDate(a.updated_at)}<span class="na-badge ${isDraft ? 'draft' : 'final'}">${isDraft ? '작성중' : '완료'}</span></span></div>
             <div class="na-q">${esc(q.content || '(문제 정보 없음)')}</div>
           </summary>
           <div class="na-body">${esc(a.content || '(작성 전)')}</div>
@@ -2696,7 +2695,7 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
-            <div class="ri-sub">모집 ${r.recruit_start || '미정'} ~ ${r.recruit_end || '미정'}${r.program_start ? ' · 시작 ' + r.program_start : ''}</div>
+            <div class="ri-sub">모집 ${fmtDay(r.recruit_start)} ~ ${fmtDay(r.recruit_end)}${r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${r.id}">수정</button>
@@ -3078,7 +3077,7 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + l.lecture_date : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + (l.recruit_start || '?') + '~' + (l.recruit_end || '?') : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + fmtDay(l.lecture_date) : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + fmtDay(l.recruit_start) + '~' + fmtDay(l.recruit_end) : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
@@ -3172,6 +3171,17 @@
       if (dayDiff === 1) return '어제 ' + hm;
       if (d.getFullYear() === now.getFullYear()) return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
       return d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + '.';
+    }
+    /* 시각 없이 **날짜만** 있는 값(모집 시작·특강 진행일 등 `YYYY-MM-DD`)용.
+       ⚠️ 위 fmtDate 를 그대로 쓰면 안 된다 — 시각이 0시라 '오늘 09:00' 같은 없는 시각을 지어낸다.
+       ⚠️ new Date('2026-08-03') 은 **UTC 자정**으로 읽혀 시간대에 따라 하루가 밀린다.
+          그래서 Date 를 만들지 않고 문자열을 그대로 자른다. */
+    function fmtDay(v) {
+      if (!v) return '미정';
+      const m = String(v).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (!m) return String(v);
+      const y = +m[1], mo = +m[2], d = +m[3];
+      return y === new Date().getFullYear() ? mo + '월 ' + d + '일' : y + '. ' + mo + '. ' + d + '.';
     }
     function chSummary(challenges) {
       if (!Array.isArray(challenges)) return '';
