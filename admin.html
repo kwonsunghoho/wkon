@@ -1382,17 +1382,28 @@
       </div>
       <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
 
-      <!-- 열람 이력 — 유출이 의심될 때 '어떤 자료를 누가 열었는지' 보는 곳.
-           자료 행의 [이력] 버튼이 이 목록을 그 자료로 좁힌다. -->
-      <h3 style="margin:26px 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span id="lrLogTitle">열람 이력</span>
-        <button class="btn" type="button" id="lrLogAll" hidden style="border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:700;">전체 보기</button>
-      </h3>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
-        <b>받기</b>는 파일을 내려받은 기록, <b>열람</b>은 화면으로 본 기록, <b>비번 실패</b>는 비밀번호를 틀린 기록이에요.
-        자료별로 보려면 위 목록에서 <b>[이력]</b>을 누르세요.
-      </p>
-      <div class="round-list" id="labLogList"><div class="loading">불러오는 중…</div></div>
+      <!-- 열람 이력 — **평소엔 접어 둔다**(2026-08-03 오너: "저작권 때문에 남기는 거라 솔직히
+           내가 모니터링은 안 하는 거고 기록만 해놓으면 되거든?"). 기록은 계속 쌓되, 화면은
+           자료가 퍼진 것 같을 때만 편다. 접이 머리에 건수·마지막 날짜를 적어 두어 펴지 않고도
+           '쌓이고 있다'는 것은 확인된다.
+           ⚠️ 자료 행의 [이력] 버튼은 이 접이를 **열고** 그 자료로 좁힌다 — 안 열면 눌러도 아무 일이
+              없어 보인다.
+           ⚠️ [전체 보기]는 summary 밖에 둔다 — summary 안 버튼은 클릭이 펴기/접기와 겹친다. -->
+      <details class="adm-fold" id="labLogFold" style="margin-top:26px;padding-top:8px;border-top:1px solid var(--border-soft);">
+        <summary>
+          <h3 style="font-size:15px;font-weight:800;"><span id="lrLogTitle">열람 이력</span></h3>
+          <span class="adm-help-v" id="lrLogSum">불러오는 중…</span>
+        </summary>
+        <p style="font-size:13px;color:var(--text-muted);margin:6px 0 10px;line-height:1.6;">
+          기록은 <b>자동으로 계속 쌓입니다</b> — 자료가 퍼진 것 같을 때 누가 받아 갔는지 확인하는 자리예요.<br>
+          <b>받기</b>는 파일을 내려받은 기록, <b>열람</b>은 화면으로 본 기록, <b>비번 실패</b>는 비밀번호를 틀린 기록이에요.
+          자료별로 보려면 위 목록에서 <b>[이력]</b>을 누르세요.
+        </p>
+        <p style="margin-bottom:10px;">
+          <button class="btn" type="button" id="lrLogAll" hidden style="border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:700;">전체 보기</button>
+        </p>
+        <div class="round-list" id="labLogList"><div class="loading">불러오는 중…</div></div>
+      </details>
     </div>
   </div>
 
@@ -4103,6 +4114,15 @@
     let _labCount = {};         // 자료별 열람 집계 {id: {download, view, fail}}
     let _labSales = {};         // 자료별 판매 집계 {id: {purchase_count, revenue, download_count}}
     let _labLogs = [];
+    /* 열람 이력은 **화면만 끊어 그린다**(2026-08-03 · 오너 "꼭 저렇게 길어지게 쌓아야 하냐").
+       전에는 최근 500건을 통째로 그려서 두 가지가 같이 났다:
+       ① 연구실 탭이 이력만큼 계속 길어지고
+       ② 500건을 넘는 순간 목록이 말없이 끊겼다 — 그때 _labCount(자료 행의 '받기 N · 열람 N')도
+          같이 틀린다. 회원·크레딧 목록과 같은 규칙: **조회·집계는 전량, 화면만 끊는다.**
+       ⚠️ 선언은 renderLabLogs 위에 둔다(아래에 두면 초기 로드가 TDZ 로 터진다 — 크레딧 전례). */
+    const LAB_LOG_PAGE = 20;
+    let _labLogShown = LAB_LOG_PAGE;
+    let _labLogTrunc = false;   // FETCH_CAP 초과 — 조용히 자르지 않고 화면에 적는다
     let _labEditId = null;      // 수정 중인 자료 id (null 이면 새로 올리기)
 
     async function loadLabFiles() {
@@ -4230,8 +4250,12 @@
       // 이 자료의 열람 이력만 보기
       listEl.querySelectorAll('.lab-log').forEach(b => b.addEventListener('click', () => {
         _labLogFor = b.dataset.id;
+        _labLogShown = LAB_LOG_PAGE;   // 보는 대상이 바뀌면 표시 수도 처음으로
         renderLabLogs();
-        document.getElementById('labLogList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 이력은 평소 접혀 있다 — 열어 주지 않으면 [이력]을 눌러도 아무 일이 없어 보인다
+        const fold = document.getElementById('labLogFold');
+        if (fold) fold.open = true;
+        document.getElementById('labLogFold').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }));
 
       // 가격 고치기 — 값은 언제든 바꾼다(재배포 불필요).
@@ -4295,23 +4319,30 @@
     async function loadLabLogs() {
       const el = document.getElementById('labLogList');
       if (!el) return;
-      const { data, error } = await MONC.sb.from('lab_downloads')
+      /* ⚠️ fetchAll — 열람·받기·비번 실패가 한 번에 한 줄씩 쌓여 **가장 빨리 1000행을 넘기는 표**다.
+         구 코드의 .limit(500) 은 목록을 끊었을 뿐 아니라 자료 행의 열람 집계까지 500건 기준으로
+         만들어, 그 위로는 '받기 2' 같은 숫자가 조용히 거짓이 됐다. */
+      const { data, error, truncated } = await fetchAll(() => MONC.sb.from('lab_downloads')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(500);
+        .order('created_at', { ascending: false }));
       if (error) {
-        _labLogs = []; _labCount = {};
+        _labLogs = []; _labCount = {}; _labLogTrunc = false;
         el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
           + (error.code === 'PGRST205' ? '기록 테이블이 아직 없어요.' : '기록을 읽지 못했어요: ' + esc(error.message))
           + '</div>';
+        // 접힌 머리도 사실대로 — '아직 없음'으로 두면 실패를 '기록 0건'으로 읽는다
+        const sumEl = document.getElementById('lrLogSum');
+        if (sumEl) sumEl.textContent = '읽지 못함';
         return;
       }
       _labLogs = data || [];
+      _labLogTrunc = !!truncated;
       _labCount = {};
       _labLogs.forEach(l => {
         const c = _labCount[l.resource_id] || (_labCount[l.resource_id] = {});
         c[l.kind] = (c[l.kind] || 0) + 1;
       });
+      _labLogShown = LAB_LOG_PAGE;
       renderLabLogs();
     }
 
@@ -4321,43 +4352,99 @@
       const allBtn = document.getElementById('lrLogAll');
       if (!el) return;
 
-      const target = _labLogFor ? _labRows.filter(r => r.id === _labLogFor)[0] : null;
-      const logs = _labLogFor ? _labLogs.filter(l => l.resource_id === _labLogFor) : _labLogs;
+      // 자료 id → 제목·서가. 거르는 데도 쓰므로 필터보다 먼저 만든다
+      const titleOf = {}, shelfOf = {};
+      _labRows.forEach(r => { titleOf[r.id] = r.title; shelfOf[r.id] = r.shelf; });
 
-      titleEl.textContent = target ? ('열람 이력 — ' + target.title) : '열람 이력';
-      allBtn.hidden = !_labLogFor;
+      const target = _labLogFor ? _labRows.filter(r => r.id === _labLogFor)[0] : null;
+
+      /* 이력도 **위 서가 칩을 따른다**(2026-08-03 · 오너 "자료실 열람기록이 기출문제에 뭐하러 뜨냐고").
+         자료실·기출문제·영상관 기록이 한 목록에 섞여 나오면 무엇을 보고 있는지 알 수 없다.
+         우선순위: 자료별([이력] 버튼) > 서가 칩 > 전체. */
+      let logs = _labLogs, goneN = 0;
+      if (_labLogFor) {
+        logs = _labLogs.filter(l => l.resource_id === _labLogFor);
+      } else if (_labShelf !== 'all') {
+        logs = _labLogs.filter(l => shelfOf[l.resource_id] === _labShelf);
+        // 지운 자료의 기록은 서가를 알 수 없다 — 조용히 없애지 말고 몇 건인지 적는다
+        goneN = _labLogs.filter(l => !shelfOf[l.resource_id]).length;
+      }
+
+      const shelfName = LAB_SHELF_LABEL[_labShelf] || _labShelf;
+      titleEl.textContent = target ? ('열람 이력 — ' + target.title)
+        : (_labShelf === 'all' ? '열람 이력' : ('열람 이력 — ' + shelfName));
+      // 좁혀 보는 중이면 푸는 길을 항상 열어 둔다(서가 칩은 목록 위에 있어 이 자리에서 안 보인다)
+      allBtn.hidden = !_labLogFor && _labShelf === 'all';
+
+      /* 접이 머리 요약 — **펴지 않고도 '쌓이고 있다'가 보여야 한다.** 오너는 이 목록을 평소에
+         보지 않으므로(저작권 근거로 남기는 기록), 접힌 채로 확인되는 건 이 한 줄뿐이다. */
+      const sumEl = document.getElementById('lrLogSum');
+      if (sumEl) {
+        sumEl.textContent = !logs.length ? '아직 없음'
+          : logs.length.toLocaleString() + '건 · 마지막 '
+            + new Date(logs[0].created_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+      }
 
       if (!logs.length) {
         el.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">'
-          + (_labLogFor ? '이 자료를 아직 아무도 열지 않았습니다.' : '아직 열람 기록이 없습니다.')
+          + (_labLogFor ? '이 자료를 아직 아무도 열지 않았습니다.'
+            : _labShelf === 'all' ? '아직 열람 기록이 없습니다.'
+            : esc(shelfName) + ' 자료를 아직 아무도 열지 않았습니다.')
+          + (goneN ? '<br>지운 자료의 기록 ' + goneN + '건은 [전체 보기]에서 볼 수 있어요.' : '')
           + '</div>';
         return;
       }
 
-      const titleOf = {};
-      _labRows.forEach(r => { titleOf[r.id] = r.title; });
       const nameOf = {}, mailOf = {};
       (typeof members !== 'undefined' && members ? members : []).forEach(m => {
         nameOf[m.id] = m.name || ''; mailOf[m.id] = m.email || '';
       });
 
-      el.innerHTML = logs.map(l => {
+      // 화면은 최근 LAB_LOG_PAGE 건까지만 — 나머지는 [더 보기]로 이어 붙인다
+      const shown = logs.slice(0, _labLogShown);
+
+      el.innerHTML = shown.map(l => {
         const nm = nameOf[l.user_id], mail = mailOf[l.user_id];
         const who = nm || mail || (String(l.user_id).slice(0, 8) + '…');
         const sub = (nm && mail) ? mail : '';
         const when = new Date(l.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        // 자료별로 좁혀 볼 땐 제목을 반복하지 않는다 — 누가 언제인지가 주인공이다
+        /* 어느 자료인지 — 자료별로 좁혀 볼 땐 제목을 반복하지 않는다(누가 언제인지가 주인공이다).
+           서가를 안 좁혔을 땐 제목 앞에 **서가 이름**을 적는다 — 제목만으론 자료실인지 기출문제인지
+           구분이 안 된다. 서가를 좁혔으면 화면 전체가 그 서가라 다시 적지 않는다. */
+        const where = _labLogFor ? ''
+          : !titleOf[l.resource_id] ? '(삭제된 자료) · '
+          : (_labShelf === 'all' && LAB_SHELF_LABEL[shelfOf[l.resource_id]]
+              ? esc(LAB_SHELF_LABEL[shelfOf[l.resource_id]]) + ' · ' : '')
+            + esc(titleOf[l.resource_id]) + ' · ';
         return '<div class="round-item' + (l.kind === 'fail' ? ' is-off' : '') + '">'
           + '<div>'
             + '<div class="ri-main">' + esc(who) + ' · ' + esc(LAB_KIND[l.kind] || l.kind) + '</div>'
             + '<div class="ri-sub">'
-              + (_labLogFor ? '' : esc(titleOf[l.resource_id] || '(삭제된 자료)') + ' · ')
+              + where
               + (sub ? esc(sub) + ' · ' : '')
               + esc(when)
             + '</div>'
           + '</div>'
         + '</div>';
-      }).join('');
+      }).join('')
+        /* 꼬리 — '몇 건 중 몇 건'을 적는다. 이 줄이 없으면 목록이 그냥 끝나 버려
+           '여기까지가 전부'인지 '잘린 것'인지 구분이 안 된다(오너가 겪은 증상). */
+        + (logs.length > shown.length
+            ? '<div class="mmore"><span>' + shown.length.toLocaleString() + ' / '
+              + logs.length.toLocaleString() + '건 표시</span>'
+              + '<button class="btn btn-ghost btn-sm" type="button" id="labLogMoreBtn">더 보기</button></div>'
+            : '')
+        + (goneN
+            ? '<div class="mmore"><span>지운 자료의 기록 ' + goneN.toLocaleString()
+              + '건은 서가를 알 수 없어 [전체 보기]에서만 보여요.</span></div>'
+            : '')
+        + (_labLogTrunc
+            ? '<div class="mmore"><span style="color:var(--st-alert);flex-basis:100%">'
+              + '기록이 너무 많아 일부만 불러왔습니다 — 목록·집계가 실제보다 적습니다.</span></div>'
+            : '');
+
+      const lm = document.getElementById('labLogMoreBtn');
+      if (lm) lm.addEventListener('click', () => { _labLogShown += LAB_LOG_PAGE; renderLabLogs(); });
     }
 
     // 서가 칩 — 다시 그려도 살아 있도록 위임으로 받는다(기출 은행 필터와 같은 방식)
@@ -4365,11 +4452,18 @@
       const b = e.target.closest('[data-shelf]');
       if (!b) return;
       _labShelf = b.dataset.shelf;
-      renderLabShelfBar(); renderLabList();
+      /* ⚠️ 자료별 좁히기는 푼다 — 다른 서가의 자료를 보고 있던 상태로 서가만 바뀌면
+         '기출문제' 칩을 눌렀는데 이력엔 자료실 자료가 그대로 남는다(오너가 본 그 화면이다). */
+      _labLogFor = null;
+      _labLogShown = LAB_LOG_PAGE;
+      renderLabShelfBar(); renderLabList(); renderLabLogs();
     });
 
+    /* [전체 보기] — 자료별·서가별 좁히기를 **둘 다** 푼다.
+       서가를 푸는 이상 위 자료 목록·칩도 같이 되돌려야 화면이 서로 다른 말을 하지 않는다. */
     document.getElementById('lrLogAll').addEventListener('click', () => {
-      _labLogFor = null; renderLabLogs();
+      _labLogFor = null; _labShelf = 'all'; _labLogShown = LAB_LOG_PAGE;
+      renderLabShelfBar(); renderLabList(); renderLabLogs();
     });
 
     /* ── 수정 ──────────────────────────────────────────────────────────────

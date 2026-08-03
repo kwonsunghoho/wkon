@@ -144,11 +144,11 @@ A 할 일 먼저 / B 숫자 접기 / C 최소 수정)을 393px 목업으로 만�
 | 크레딧 탭 여는 시간 | **968ms**(DOM 32,883) | **32ms**(DOM 3,886) |
 
 - **`fetchAll(build)`** 하나로 모았다 — `range()` 로 1000행씩 끝까지 받는다.
-  적용: `members` · `applications` · `challenge_waitlist` · `reviews`.
+  적용: `members` · `applications` · `challenge_waitlist` · `reviews` · `credit_ledger` · `lab_downloads`.
   ⚠️ **`build` 는 매번 새 쿼리를 만들어 돌려주는 함수**여야 한다(supabase-js 쿼리 객체는 재사용 불가).
   ⚠️ `FETCH_CAP`(20,000)을 넘기면 `truncated:true` 를 돌려준다 — **부르는 쪽이 화면에 사실대로 적는다.**
   회원·신청 목록에 빨간 한 줄로 나온다. 조용히 자르는 코드를 다시 만들지 말 것.
-- **목록은 끊어 그린다**: 회원·크레딧 `M_PAGE=100`, 신청 카드 `A_PAGE=50` + '더 보기'.
+- **목록은 끊어 그린다**: 회원·크레딧 `M_PAGE=100`, 신청 카드 `A_PAGE=50`, 연구실 열람 이력 `LAB_LOG_PAGE=20` + '더 보기'.
   ⚠️ **계산은 전량으로 한다** — 건수·중복 검사·CSV·'오늘' 숫자는 `members`/`_apps` 전체를 그대로 쓴다.
   화면만 끊는 것이지 데이터를 끊는 게 아니다.
   ⚠️ 조건(검색·필터)이 바뀌면 표시 수를 `_mShown`/`_aShown`/`_credShown` 처음으로 되돌린다 —
