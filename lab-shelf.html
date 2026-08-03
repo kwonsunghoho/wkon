@@ -217,6 +217,83 @@
   .gv-sub { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
   @media (hover: hover) { .gv:hover .gv-tit { color: var(--accent-ink); } }
 
+  /* ══ 04 채용 캘린더 — 회차 목록·패턴 요약·타임라인 (2026-08-04) ══════════════
+     ⚠️ 화면 문자열에 `→` 를 쓰지 말 것 — SUIT 에 그 글자가 없어 폴백 글리프가 '>' 처럼
+        보인다(2026-08-04 실측). '처음부터'·'뒤'·'다음' 처럼 우리말로 쓴다.
+     이 서가만 파일이 아니라 날짜(recruit_rounds)를 그린다. 값의 알맹이는 날짜 자체가
+     아니라 **단계 사이가 며칠인가**라서, 카드와 타임라인 둘 다 그 숫자를 앞세운다.
+     ⚠️ 회차 상세를 새 페이지로 만들지 말 것 — 카드를 그 자리에서 편다(한 파일 원칙).
+     ⚠️ 항공사끼리 평균을 내지 말 것 — 전형 수가 달라 숫자가 뜻을 잃는다. 패턴 요약은
+        보이는 회차가 전부 한 항공사일 때만 그린다. */
+  .pat { margin-top: 16px; border-radius: var(--radius-sm); background: var(--surface);
+    border: 1px solid var(--border); padding: 15px 16px 14px; box-shadow: var(--shadow); }
+  .pat-top { font-size: 15px; font-weight: 800; }
+  .pat-hero { margin-top: 11px; padding: 11px 12px; border-radius: var(--radius-xs);
+    background: #FBE9E7; border: 1px solid rgba(178,59,46,0.22); }
+  .pat-hero p { font-size: 13px; font-weight: 700; line-height: 1.55; color: #B23B2E; }
+  .pat-hero b { font-weight: 800; }
+  .pat-grid { display: grid; gap: 1px; margin-top: 12px; background: var(--border-soft);
+    border-radius: var(--radius-xs); overflow: hidden; }
+  .pat-cell { background: var(--surface); padding: 10px 8px; text-align: center; }
+  .pat-cell .v { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: var(--accent-dark); }
+  .pat-cell .v em { font-style: normal; font-size: 12.5px; font-weight: 700; margin-left: 1px; }
+  .pat-cell .k { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+  .pat-foot { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--text-dim); line-height: 1.55; }
+
+  .rd { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    margin-top: 10px; box-shadow: 0 1px 3px rgba(20,44,82,0.06); overflow: hidden; }
+  /* 카드 머리는 진짜 button 이다 — div+click 을 쓰면 키보드·낭독기에서 열 수 없다(원칙 14) */
+  .rd-hd { display: block; width: 100%; padding: 15px 16px 14px; background: none; border: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .rd-hd:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; border-radius: var(--radius-sm); }
+  @media (hover: hover) { .rd-hd:hover { background: rgba(27,58,107,0.035); } }
+  .rd-top { display: flex; align-items: center; gap: 8px; }
+  .rd-air { font-size: 12px; font-weight: 800; color: var(--accent-ink);
+    border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 1px 6px; }
+  .rd-state { margin-left: auto; font-size: 12px; font-weight: 800; padding: 2px 8px;
+    border-radius: 999px; background: var(--surface2); color: var(--text-dim); }
+  .rd-tit { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; margin-top: 9px; }
+  .rd-range { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 4px; }
+  /* 미니 막대 — 카드에서 회차 전체 흐름이 한 줄로 읽힌다 */
+  .mini { display: flex; gap: 2px; margin-top: 11px; }
+  .mini i { flex: 1; height: 6px; border-radius: 2px; background: var(--action); }
+  .rd-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px;
+    font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+  .rd-open { display: flex; align-items: center; justify-content: space-between; margin-top: 12px;
+    padding-top: 11px; border-top: 1px solid var(--border-soft);
+    font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+  .rd-open .cv { transition: transform .18s; }
+  .rd-hd[aria-expanded="true"] .rd-open .cv { transform: rotate(90deg); }
+
+  .tl { padding: 0 16px 16px; }
+  .tl-note { padding: 10px 12px; border-radius: var(--radius-xs); background: rgba(27,58,107,0.05);
+    border: 1px solid rgba(27,58,107,0.14); font-size: 12.5px; font-weight: 600;
+    line-height: 1.55; color: var(--accent-ink); margin-bottom: 14px; }
+  .step { position: relative; padding-left: 34px; }
+  .step::before { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: var(--accent-tint); }
+  .step:last-child::before { bottom: auto; height: 14px; }
+  .step-dot { position: absolute; left: 2px; top: 9px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--surface); border: 2.5px solid var(--action); z-index: 1; }
+  .step.fill .step-dot { background: var(--action); }
+  .step-body { padding: 6px 0 14px; }
+  .step-h { display: flex; align-items: baseline; gap: 7px; }
+  .step-no { font-size: 12px; font-weight: 800; color: var(--text-dim); }
+  .step-nm { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+  .step-d { font-size: 14px; font-weight: 700; color: var(--accent-dark); margin-top: 4px; line-height: 1.5; }
+  .step-t { font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+  .step-t b { color: #B23B2E; font-weight: 800; }
+  /* 단계 사이 '며칠' — 이 화면의 알맹이다. 날짜보다 간격이 궁금해서 들어온다. */
+  .gap { position: relative; padding-left: 34px; margin: -6px 0 -2px; }
+  .gap::before { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: var(--accent-tint); }
+  .gap span { display: inline-block; font-size: 12px; font-weight: 700; color: var(--text-dim);
+    background: var(--bg); border: 1px solid var(--border-soft); border-radius: 999px; padding: 2px 9px; }
+  .gap.tight span { color: #B23B2E; border-color: rgba(178,59,46,0.3); background: #FBE9E7; font-weight: 800; }
+  .tl-sum { margin-top: 6px; padding: 13px 14px; border-radius: var(--radius-xs);
+    background: var(--action-tint); border: 1px solid rgba(27,58,107,0.18); }
+  .tl-sum p { font-size: 13px; font-weight: 700; line-height: 1.6; color: var(--accent-ink); }
+  .tl-sum p + p { margin-top: 5px; }
+  @media (prefers-reduced-motion: reduce) { .rd-open .cv { transition: none; } }
+
   .empty { margin-top: 26px; padding: 26px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
   .empty p { font-size: 14px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
   .skel { height: 74px; border-radius: var(--radius-xs); background: linear-gradient(90deg, rgba(38,34,28,.05), rgba(38,34,28,.09), rgba(38,34,28,.05)); margin-top: 12px; }
@@ -426,7 +503,9 @@
     // 영상관도 항공사별로 올린다(2026-08-01 오너) — 항공사·주제 두 축으로 고른다
     video:    { idx: '02 — 영상관',   name: '영상관',       desc: '보고 싶은 항공사와 주제를 골라 보세요.',            noun: '영상',   unit: '편', airline: true,  type: '주제' },
     report:   { idx: '03 — 리포트',   name: '현장 리포트',   desc: '면접 다녀온 회원들의 기록.',                        noun: '리포트', unit: '편', airline: true,  type: '유형' },
-    calendar: { idx: '04 — 캘린더',   name: '채용 캘린더',   desc: '항공사별 채용이 언제 있었는지 흐름을 한눈에.',       noun: '채용',   unit: '곳', airline: true,  type: '상태' }
+    /* ⚠️ 이 서가만 lab_resources 를 안 쓴다 — recruit_rounds(회차·단계 날짜)를 그린다.
+       파일이 아니라 날짜라서 단위도 '건'이 아니라 '회'다. 아래 loadCalendar/renderCal 참조. */
+    calendar: { idx: '04 — 캘린더',   name: '채용 캘린더',   desc: '항공사별 채용이 언제 있었는지, 단계 사이가 며칠이었는지 한눈에.', noun: '공채',   unit: '회', airline: true,  type: '상태', rounds: true }
   };
 
   /* 항공사 라벨 — news.html 과 같은 슬러그를 쓴다(자료를 등록할 때도 이 값으로) */
@@ -509,6 +588,7 @@
         실행할 때까지 미적용 구간이 생긴다. 자료가 목록 규모라 두 번 호출이 더 싸다. */
   function load() {
     if (!window.MONC || !window.MONC.sb) { fail('연결이 준비되지 않았어요.'); return; }
+    if (SH.rounds) { loadCalendar(); return; }   // 채용 캘린더는 파일이 아니라 회차를 받는다
     Promise.all(SHELF_LIST.map(function (k) {
       return window.MONC.sb.rpc('lab_resource_list', { p_shelf: k, p_airline: null });
     }))
@@ -533,6 +613,240 @@
     $('shMeta').innerHTML = '<i class="live"></i>' + esc(msg);
     $('shEmpty').hidden = false;
     $('shEmptyMsg').textContent = msg;
+  }
+
+  /* ══ 채용 캘린더 — 회차(recruit_rounds) ═══════════════════════════════════
+     ⚠️ 목록 RPC 를 거치지 않고 표를 그대로 읽는다 — 감출 것이 없는 무료·공개 자료다
+        (lab_resources 를 RPC 뒤에 숨기는 이유는 password_hash·storage_path 때문이다).
+        공개 전 회차는 RLS 의 `using (published)` 가 막는다.
+     ⚠️ select('*') 로 받는다 — 컬럼을 나열하면 마이그레이션 미적용 환경에서 400 이 난다. */
+  function loadCalendar() {
+    window.MONC.sb.from('recruit_rounds').select('*').order('started_on', { ascending: false })
+      .then(function (res) {
+        $('shSkel').hidden = true;
+        if (res.error) {
+          fail(res.error.code === 'PGRST205' ? '채용 캘린더 준비가 아직 안 됐어요.' : '자료를 불러오지 못했어요.');
+          return;
+        }
+        rows = (res.data || []).filter(function (r) { return Array.isArray(r.stages) && r.stages.length; });
+        buildOpts();     // 항공사 픽커 — 자료에 실제로 있는 회사만(1곳뿐이면 픽커를 감춘다)
+        render();
+      })
+      .catch(function () { $('shSkel').hidden = true; fail('자료를 불러오지 못했어요.'); });
+  }
+
+  var calD  = function (s) { var m = String(s || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+  var calN  = function (a, b) { return Math.round((b - a) / 864e5); };
+  var calEnd = function (s) { return s.end || s.start; };
+  /* 발표 다음 단계가 같은 날 시작하는가 — 이 화면의 핵심 사실.
+     ⚠️ 단계 '이름'이 아니라 '역할(key)'로 짝을 찾는다. 그래야 대한항공(서류 결과 → 영상 면접)과
+        1차/2차 구조 항공사(서류 발표 → 1차 실무면접)를 같은 코드가 잡는다. */
+  function calSameDay(st) {
+    var out = [];
+    for (var i = 0; i < st.length - 1; i++) {
+      var s = st[i], nx = st[i + 1];
+      if (s.key !== 'result' || !s.start || !nx.start || nx.start !== s.start) continue;
+      var a = calD(nx.start), b = calD(calEnd(nx));
+      out.push({ from: s.name, to: nx.name, span: (a && b) ? calN(a, b) + 1 : null });
+    }
+    return out;
+  }
+  /* 조사 고르기 — 단계 이름은 admin 에서 손으로 적는 자유 문장이라 받침을 미리 알 수 없다.
+     '서류 결과이 뜬 날' 같은 문장이 나오던 자리(2026-08-04). 한글이 아니면 받침 없는 쪽을 쓴다. */
+  function josa(word, withJong, noJong) {
+    var s = String(word || '').trim();
+    if (!s) return noJong;
+    var c = s.charCodeAt(s.length - 1);
+    var hangul = c >= 0xAC00 && c <= 0xD7A3;
+    return (hangul && (c - 0xAC00) % 28 !== 0) ? withJong : noJong;
+  }
+
+  function calFmt(iso) {
+    var d = calD(iso); if (!d) return '';
+    var w = ['일','월','화','수','목','금','토'][d.getDay()];
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return String(d.getFullYear()).slice(2) + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate()) + ' (' + w + ')';
+  }
+
+  /* 이 항공사는 이렇게 움직였다 — 보이는 회차가 **전부 한 항공사일 때만** 그린다.
+     ⚠️ 전형 수가 다른 회사끼리 평균을 내면 숫자가 뜻을 잃는다. */
+  function calPattern(list) {
+    if (!list.length) return '';
+    var air = list[0].airline;
+    if (!list.every(function (r) { return r.airline === air; })) return '';
+
+    var spans = [], hitRounds = 0, docGaps = [], totals = [];
+    list.forEach(function (r) {
+      var st = r.stages, hits = calSameDay(st);
+      if (hits.length) hitRounds++;
+      hits.forEach(function (h) { if (h.span) spans.push(h.span); });
+      // 접수 마감 → 첫 발표
+      var ap = null, fr = null;
+      for (var i = 0; i < st.length; i++) {
+        if (!ap && st[i].key === 'apply') ap = st[i];
+        else if (ap && !fr && st[i].key === 'result') fr = st[i];
+      }
+      if (ap && fr) { var a = calD(calEnd(ap)), b = calD(fr.start); if (a && b) docGaps.push(calN(a, b)); }
+      // 접수 시작 → 최종 합격
+      var ps = st.filter(function (s) { return s.key === 'pass'; })[0];
+      if (ps && st[0]) { var s0 = calD(st[0].start), p0 = calD(ps.start); if (s0 && p0) totals.push(calN(s0, p0)); }
+    });
+    var avg = function (a) { return a.length ? Math.round(a.reduce(function (x, y) { return x + y; }, 0) / a.length) : null; };
+
+    var cells = [];
+    if (spans.length)  cells.push([avg(spans), '일', '발표 당일 시작한<br>전형의 준비 기간']);
+    if (docGaps.length) cells.push([avg(docGaps), '일', '접수 마감 뒤<br>첫 발표까지']);
+    if (totals.length) cells.push([Math.round(avg(totals) / 30), '개월', '접수 시작부터<br>최종 합격까지']);
+
+    // ⚠️ 'N회 연속'은 회차가 2개 이상일 때만 쓴다 — 1회짜리를 패턴이라 부르지 않는다
+    var hero = '';
+    if (hitRounds >= 2 && hitRounds === list.length) {
+      hero = '<div class="pat-hero"><p>최근 <b>' + hitRounds + '회 연속</b>으로 <b>발표가 뜨는 날 다음 전형이 바로 시작</b>됐어요.'
+        + (spans.length ? ' 발표를 보고 준비하면 평균 <b>' + avg(spans) + '일</b>밖에 없습니다.' : '') + '</p></div>';
+    } else if (hitRounds === 1 && list.length === 1 && spans.length) {
+      hero = '<div class="pat-hero"><p>이 공채는 <b>발표가 뜨는 날 다음 전형이 바로 시작</b>됐어요 — 준비 기간 <b>' + spans[0] + '일</b>.</p></div>';
+    }
+
+    // 지난 공채 간격 — 오래된 순으로 세워 앞뒤 차를 낸다
+    var starts = list.map(function (r) { return calD(r.started_on); }).filter(Boolean).sort(function (a, b) { return a - b; });
+    var foot = [];
+    if (starts.length > 1) {
+      var gaps = [];
+      for (var i = 1; i < starts.length; i++) gaps.push(calN(starts[i - 1], starts[i]));
+      foot.push('지난 공채 간격 ' + gaps.join('일 · ') + '일');
+    }
+    if (starts.length) {
+      var since = calN(starts[starts.length - 1], new Date());
+      if (since >= 0) foot.push('마지막 접수 시작 ' + since + '일 전');
+    }
+
+    return '<section class="pat">'
+      + '<p class="pat-top">' + esc(AIRLINE_LABEL[air] || air) + '은 이렇게 움직였어요</p>'
+      + hero
+      + (cells.length
+          ? '<div class="pat-grid" style="grid-template-columns:repeat(' + cells.length + ',1fr);">'
+            + cells.map(function (c) {
+                return '<div class="pat-cell"><p class="v num">' + c[0] + '<em>' + c[1] + '</em></p><p class="k">' + c[2] + '</p></div>';
+              }).join('') + '</div>'
+          : '')
+      + (foot.length ? '<p class="pat-foot num">' + esc(foot.join(' · ')) + '</p>' : '')
+      + '</section>';
+  }
+
+  /* 회차 하나의 타임라인. 단계 사이 '며칠'이 알맹이라 칸마다 끼워 넣는다.
+     ⚠️ note 가 원장인 단계가 있다(면접일이 띄엄띄엄일 때) — start·end 는 처음·마지막 날일 뿐이다. */
+  function calTimeline(r, i) {
+    var st = r.stages, out = [];
+    var tight = [];   // '촉박했던' 판정 기준 — 이 회차 안 간격들의 중앙값보다 짧으면 빨갛게
+    for (var k = 1; k < st.length; k++) {
+      var pa = calD(calEnd(st[k - 1])), cb = calD(st[k].start);
+      tight.push(pa && cb ? calN(pa, cb) : null);
+    }
+    var nums = tight.filter(function (n) { return n != null; }).slice().sort(function (a, b) { return a - b; });
+    var mid = nums.length ? nums[Math.floor(nums.length / 2)] : 0;
+
+    st.forEach(function (s, k) {
+      if (k > 0) {
+        var g = tight[k - 1];
+        if (g != null) {
+          var txt = g === 0 ? '같은 날 · 기다림 없음' : g + '일 뒤';
+          out.push('<div class="gap' + ((g === 0 || g < mid) ? ' tight' : '') + '"><span class="num">' + txt + '</span></div>');
+        }
+      }
+      var isResult = s.key === 'result' || s.key === 'pass';
+      var d = calFmt(s.start) + (s.end && s.end !== s.start ? ' — ' + calFmt(s.end) : '');
+      var t = [];
+      if (s.time) t.push(esc(s.time));
+      if (s.end && s.end !== s.start) {
+        var a = calD(s.start), b = calD(s.end);
+        if (a && b) t.push('기간 ' + (calN(a, b) + 1) + '일');
+      }
+      out.push('<div class="step' + (isResult ? ' fill' : '') + '">'
+        + '<span class="step-dot"></span>'
+        + '<div class="step-body">'
+        + '<div class="step-h"><span class="step-no num">' + (k + 1) + '</span><span class="step-nm">' + esc(s.name) + '</span></div>'
+        + '<p class="step-d num">' + esc(d) + '</p>'
+        + (t.length ? '<p class="step-t num">' + t.join(' · ') + '</p>' : '')
+        + (s.note ? '<p class="step-t num">' + esc(s.note) + '</p>' : '')
+        + '</div></div>');
+    });
+
+    // 맺음 — 총 소요와 가장 촉박했던 구간. 사실만 적는다.
+    var sum = [];
+    var first = calD(st[0].start), last = calD(calEnd(st[st.length - 1]));
+    if (first && last) sum.push('처음부터 마지막 단계까지 <b>' + calN(first, last) + '일</b>.');
+    var hits = calSameDay(st);
+    if (hits.length && hits[0].span) {
+      var h0 = hits[0];
+      sum.push('<b>' + esc(h0.from) + '</b>' + josa(h0.from, '이', '가') + ' 뜬 날 <b>' + esc(h0.to) + '</b>'
+        + josa(h0.to, '이', '가') + ' 시작돼, 준비할 수 있는 날이 <b>' + h0.span + '일</b>이었어요.');
+    }
+    if (!r.complete) sum.push('아직 확인되지 않은 뒷 단계가 있어요 — 확인되는 대로 채웁니다.');
+
+    return '<div class="tl" id="tl-' + i + '">'
+      + '<p class="tl-note">단계 사이 숫자는 <b>앞 단계가 끝난 날부터 센 날수</b>예요.</p>'
+      + out.join('')
+      + (sum.length ? '<div class="tl-sum">' + sum.map(function (s) { return '<p>' + s + '</p>'; }).join('') + '</div>' : '')
+      + '</div>';
+  }
+
+  function renderCal() {
+    var list = visible(), total = rows.length;
+
+    $('shMeta').innerHTML = '<i class="live"></i>' + (total > 0
+      ? SH.noun + ' <b class="num">' + total + '</b>' + SH.unit
+      : SH.noun + ' 준비 중');
+    $('shCount').hidden = !(total > 0);
+    $('shCount').textContent = (fAir !== 'all')
+      ? list.length + SH.unit + ' / 전체 ' + total + SH.unit
+      : total + SH.unit + ' · 최신순';
+    $('shFoot').hidden = total === 0;
+    $('shFoot').innerHTML = '공고와 합격자 제보를 바탕으로 연구진이 기록합니다.<br>항공사 공식 발표와 다를 수 있어요.';
+
+    if (!list.length) {
+      $('shList').innerHTML = '';
+      $('shEmpty').hidden = false;
+      $('shEmptyMsg').textContent = total === 0
+        ? '아직 올라온 공채 기록이 없어요. 연구진이 준비하는 대로 채워집니다.'
+        : '고른 항공사의 공채 기록이 아직 없어요.';
+      return;
+    }
+    $('shEmpty').hidden = true;
+
+    $('shList').innerHTML = calPattern(list) + list.map(function (r, i) {
+      var st = r.stages;
+      var first = calD(st[0].start), last = calD(calEnd(st[st.length - 1]));
+      var sub = [];
+      if (first && last) sub.push('전체 <b class="num">' + calN(first, last) + '일</b>');
+      var ps = st.filter(function (s) { return s.key === 'pass'; })[0];
+      if (ps && first) { var p0 = calD(ps.start); if (p0) sub.push('최종 합격까지 <b class="num">' + calN(first, p0) + '일</b>'); }
+
+      return '<div class="rd">'
+        + '<button class="rd-hd" type="button" aria-expanded="false" aria-controls="tl-' + i + '">'
+        + '<span class="rd-top"><span class="rd-air">' + esc(AIRLINE_LABEL[r.airline] || r.airline) + '</span>'
+        + '<span class="rd-state">' + (r.complete ? '기록 완료' : '기록 진행 중') + '</span></span>'
+        + '<span class="rd-tit" style="display:block;">' + esc(r.title || '') + '</span>'
+        + '<span class="rd-range num" style="display:block;">' + esc(calFmt(r.started_on)) + ' 접수 시작 · ' + st.length + '단계'
+        + (r.note ? ' · ' + esc(r.note) : '') + '</span>'
+        + '<span class="mini">' + st.map(function () { return '<i></i>'; }).join('') + '</span>'
+        + (sub.length ? '<span class="rd-sub num">' + sub.join('<span style="opacity:.4">·</span>') + '</span>' : '')
+        + '<span class="rd-open">단계별로 보기<span class="cv" aria-hidden="true">›</span></span>'
+        + '</button>'
+        + calTimeline(r, i)
+        + '</div>';
+    }).join('');
+
+    // 펼치기 — 카드 머리가 진짜 button 이라 키보드·낭독기가 그냥 동작한다
+    Array.prototype.forEach.call($('shList').querySelectorAll('.tl'), function (el) { el.hidden = true; });
+    $('shList').querySelectorAll('.rd-hd').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var tl = document.getElementById(b.getAttribute('aria-controls'));
+        var open = b.getAttribute('aria-expanded') === 'true';
+        b.setAttribute('aria-expanded', String(!open));
+        tl.hidden = open;
+        b.querySelector('.rd-open').firstChild.nodeValue = open ? '단계별로 보기' : '접기';
+      });
+    });
   }
 
   /* ── 갈래(자료·기출) ── 합친 서가에만 있는 줄. 건수를 단추 안에 적어 눌러 보기 전에
@@ -685,6 +999,7 @@
   }
 
   function render() {
+    if (SH.rounds) { renderCal(); return; }   // 채용 캘린더는 파일 목록이 아니라 회차를 그린다
     var list = visible();
     var total = rows.length;
     var last = rows.reduce(function (m, r) { return (!m || r.published_at > m) ? r.published_at : m; }, null);
