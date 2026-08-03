@@ -84,12 +84,13 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 - 로컬 프리뷰: `python -m http.server 5500` → `http://localhost:5500/` (`.claude/launch.json` 의 `wkon-static`).
 - 배포: `git push origin main` — 푸시가 곧 배포다(1~2분 전파).
+- **`node` 는 앞에 로더를 붙여야 잡힌다**(2026-08-03 nvm 으로 설치, v24.18.1): `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; node scripts/<파일>.mjs`. nvm 은 `~/.zshrc` 에만 설정을 넣는데 자동 실행 셸(플러그인 훅·스크립트)은 그 파일을 안 읽는다 — 로더 없이 `node` 만 치면 `command not found` 가 뜨지만 **미설치가 아니다. 다시 깔라고 안내하지 말 것.** `python3` 는 `/usr/bin/python3` 라 그냥 쓴다. **`deno` 는 아직 없다.**
 - **전체 lint·build·테스트 시스템이 없다. 존재하지 않는 lint/build 명령을 만들지 말 것.** 검증 수단은 아래가 전부다.
   - **브라우저 렌더 확인 — 375px 우선**(트래픽 99%가 모바일). 올리기 전 필수.
   - AI킬러 규칙: `node scripts/ai-killer-dryrun.mjs` — 기준선 비교('사람이 잘 쓴 글' 0곳 유지 확인).
   - 항공사 문항 매칭: `node scripts/ai-killer-qmatch.mjs` — 임계값·유사도 식 변경 시.
-  - 뉴스 필터: `python3 scripts/verify-news-rules.py` — 실데이터 RSS 에 대고 '버린 목록'을 눈으로 확인(`--old` 는 기준선). 오너 맥엔 node 가 없어 dry-run 대신 이걸 쓴다.
-  - 답변 프로그램: `node scripts/answer-program-tests.mjs` + `deno check supabase/functions/answer-program/index.ts` + 375px 브라우저 실측.
+  - 뉴스 필터: `python3 scripts/verify-news-rules.py` — 실데이터 RSS 에 대고 '버린 목록'을 눈으로 확인(`--old` 는 기준선).
+  - 답변 프로그램: `node scripts/answer-program-tests.mjs`(2026-08-03 실측 68 통과/0 실패) + `deno check supabase/functions/answer-program/index.ts`(**deno 미설치 — 현재 못 돌린다**) + 375px 브라우저 실측.
 
 ### ⚠️ 어디에 푸시할까 — 오너 확정(2026-07-30)
 **눈으로 보고 판단하는 수정(레이아웃·문구·색·애니메이션)은 `main` 직행.** 브랜치를 거치지 말 것 — GitHub Pages 가 `main` 만 서빙해서 **브랜치는 오너가 폰으로 미리 볼 방법이 없다.** 확인이 어차피 합친 뒤에 일어나므로 브랜치는 단계만 늘리고, 실제로 "왜 적용이 안 되냐"는 사고가 났다(오너가 라이브를 보고 있는데 작업은 브랜치에 있었다). 되돌리기는 `git revert` + 푸시로 1~2분이면 되니 브랜치 여부와 무관하다.
