@@ -72,18 +72,23 @@
        ⚠️ `justify-content:flex-end` 로 바꾸지 말 것 — 대화가 길어지면 위쪽 메시지가
           스크롤로 못 닿게 잘리는 브라우저가 있다. margin-top:auto 는 넘치는 순간 0이 된다. */
     .chat > :first-child { margin-top: auto; }
-    /* 키보드가 올라와 있는 동안만 공용 메뉴를 접는다(57px 을 대화에 넘긴다).
-       글을 쓰는 중이라 메뉴를 쓸 일이 없고, 되돌아갈 길은 바로 아래 '< 소재 발굴'이 맡는다.
-       ⚠️ 인앱 안내(.iab)도 같이 접는다 — 자리를 차지하는 .iab-space 가 56px 을 또 먹는다.
-          안내는 키보드를 내리면 다시 보인다(파일 받기·로그인은 어차피 그때 누른다). */
+    /* ── 키보드가 올라와 있는 동안(body.kb-open) = 카톡 채팅창 ──────────────────
+       화면에 남는 고정 요소는 **상단 바와 입력 한 줄뿐**이다. 나머지는 전부 접는다.
+       그래야 대화가 산다 — 키보드가 열리면 쓸 수 있는 높이가 415 인데, 접기 전에는
+       공용 메뉴 57 + 상단 68 + 단계 30 + 다듬기 CTA·값 108 + 도움 버튼·힌트 74 +
+       입력부 116 = 453 이라 대화에 17px 밖에 안 남았다(2026-08-04 오너 신고 3차
+       "두 번만 물어봐도 채팅창이 없어진다").
+       ⚠️ 접은 것은 **전송하는 순간 전부 돌아온다** — send() 가 입력칸을 blur 해서
+          키보드를 내린다. AI 답이 도착할 때 화면은 대화 전체 + CTA 다.
+          이 blur 를 지우면 다듬기 CTA 를 영영 못 보는 사람이 생긴다(확정 7 가드). */
     body.kb-open { padding-top: 0; }
     body.kb-open #navbar, body.kb-open .iab, body.kb-open .iab-space { display: none; }
-    /* 입력칸 아래 보조 줄도 같이 접는다(입력부 214→157) — 대화 115→172 가 되어야
-       실제 기출 길이의 질문(165)이 안 잘린다. 둘 다 지금 당장 쓸 일이 없는 줄이다:
-       'Shift+Enter 줄바꿈'은 폰에서 누를 수 없고, 다듬기 링크는 글을 다 쓴 뒤에 누른다.
-       ⚠️ #refineCta('모은 이야기로 다듬어볼까요')는 절대 여기에 넣지 말 것 —
-          두 번째 답변부터 항상 열려 있어야 하는 이탈 가드다(sojae v2 확정 7). */
+    body.kb-open .stepbar { display: none; }
+    body.kb-open #refineCta, body.kb-open #refineNote { display: none !important; }
+    body.kb-open .pillrow, body.kb-open .hint { display: none; }
     body.kb-open .foot, body.kb-open #quickfix-mount { display: none; }
+    /* 상단 바는 남기되 얇게 — 되돌아갈 길과 유형은 계속 보여야 한다. 44px 터치는 유지. */
+    body.kb-open .appbar { padding-top: 6px; padding-bottom: 6px; }
     .who { display: flex; align-items: center; gap: 6px; font-size: 12px;
       color: var(--accent-ink); font-weight: 700; margin-bottom: 5px; }
     /* 아바타 이니셜 한 글자 — 20px 원 안의 표식이지 읽는 활자가 아니다(12px 하한 예외).
@@ -473,6 +478,12 @@
     let _ready = false;   // 오늘의 문제 로드 완료 전 전송 방지
     function send(){
       const v = ta.value.trim(); if(!v || _busy || !_ready) return;
+      /* 보내면 키보드를 내린다 — 접혀 있던 단계·다듬기 CTA·도움 버튼이 전부 돌아오고,
+         AI 답이 도착할 때 화면은 대화 전체가 된다. 어차피 답이 올 때까지 다시 못 보내므로
+         (_busy) 키보드를 붙잡고 있을 이유가 없다.
+         ⚠️ 지우지 말 것 — 키보드가 계속 열려 있으면 다듬기 CTA 를 영영 못 보는
+            사람이 생긴다(sojae v2 확정 7 이탈 가드). */
+      ta.blur();
       me(v); ta.value=''; grow(); toggle();
       userMsgCount++;
       moncTrack('sojae_turn', { turn: userMsgCount });
