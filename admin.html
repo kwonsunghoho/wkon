@@ -4604,7 +4604,14 @@
        같은 폼을 재사용한다 — _labEditId 가 있으면 insert 대신 update.
        ⚠️ 파일은 새로 고르지 않으면 그대로 둔다(교체하면 옛 파일을 지운다).
        ⚠️ 비밀번호 칸은 수정 모드에서 비워 둔다 — 해시라 되읽을 수 없다. 비운 채 저장하면
-          기존 비밀번호가 유지된다(바꾸거나 없애려면 행의 [비밀번호] 버튼). */
+          기존 비밀번호가 유지된다(바꾸거나 없애려면 행의 [비밀번호] 버튼).
+       ⚠️ 저장 버튼 글자는 반드시 labSyncLabel() 로만 바꾼다. guardSubmit 은 핸들러 **시작 시점의**
+          글자를 기억했다가 finally 에서 되돌리므로, 핸들러 안에서 textContent 를 직접 고치면
+          수정 저장 직후 폼은 '새로 올리기'인데 버튼만 '수정 저장'으로 남는다(채용 캘린더와 같은 함정). */
+    function labSyncLabel() {
+      document.getElementById('lrSubmit').textContent = _labEditId ? '수정 저장' : '자료 올리기';
+    }
+
     function labEditStart(id) {
       const r = _labRows.filter(x => x.id === id)[0];
       if (!r) return;
@@ -4631,7 +4638,7 @@
       document.getElementById('lrEditBar').hidden = false;
       document.getElementById('lrEditWho').textContent = '수정 중 — ' + r.title;
       document.getElementById('lrFileHint').hidden = false;
-      document.getElementById('lrSubmit').textContent = '수정 저장';
+      labSyncLabel();
       lrSay('', '');
       F.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -4648,7 +4655,7 @@
       if (flBox) { flBox.hidden = true; flBox.innerHTML = ''; }
       document.getElementById('lrEditBar').hidden = true;
       document.getElementById('lrFileHint').hidden = true;
-      document.getElementById('lrSubmit').textContent = '자료 올리기';
+      labSyncLabel();
       labMultiSync();          // 파일 안내·제목 칸 잠금을 원래대로
       lrSay('', '');
     }
@@ -5045,6 +5052,8 @@
         : (isVideo ? '영상을 등록했어요'
         : (multiCount > 1 ? `파일 ${multiCount}개를 한 자료로 올렸어요` : '자료를 올렸어요')));
       labEditCancel();       // 폼을 비우고 '새로 올리기' 상태로 되돌린다
+      // ⚠️ guardSubmit 의 finally 가 이 뒤에 옛 글자를 되돌린다 — 그 뒤에 다시 맞춘다(위 labSyncLabel 주석)
+      setTimeout(labSyncLabel, 0);
       loadLabFiles();
     });
 
