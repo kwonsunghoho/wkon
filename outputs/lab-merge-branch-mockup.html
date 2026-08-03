@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>항공사 자료실 + 기출문제 합치기 — 갈래 장치 3안</title>
+<!-- 라이브와 같은 글꼴(SUIT 조각)로 재야 알약 라벨 잘림 실측이 맞는다. 토큰 값도 원본을 쓴다. -->
+<link rel="stylesheet" href="../tokens.css" />
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   연구실 서가 합치기 — 갈래(자료/기출) 장치 비교 · 2026-08-03 목업
+   오너: "항공사 자료실이랑 기출문제가 따로있을 이유가없어보여서.
+          둘이 합치되 효율적으로 구분할 수 있는 장치를 만들면 좋아보이는데"
+
+   합치는 방식은 B안 확정 — 원장 서가 카드는 '항공사 자료실' 한 장, DB 의 shelf
+   값(airline/question)은 그대로 두고 상세 화면에서 두 갈래로 고른다.
+   여기서 고르는 건 '갈래를 무엇으로 고르게 할 것인가' 한 가지다.
+
+   A안 = 갈래 세그먼트 한 줄 (픽커 줄 위, 종이 면)
+   B안 = 갈래도 픽커로 (알약 3개 한 줄)
+   C안 = 다크 머리 안 탭 (종이 면의 고르는 줄은 2개 그대로)
+
+   폭·활자·색·간격은 라이브(lab-shelf.html)와 같은 값이다. 다른 건 갈래 장치뿐.
+   목록 줄(.doc)·픽커(.pick)·다크 머리(.hd)는 라이브 CSS 를 그대로 옮겼다.
+   각 안의 '고르는 영역이 잡아먹는 세로'와 라벨 잘림은 아래 JS 가 실제 렌더값으로 찍는다.
+   ══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #E9E4D8; color: #26221C;
+  -webkit-font-smoothing: antialiased; word-break: keep-all;
+  padding: 30px 14px 72px;
+}
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+/* 라이브 토큰(발췌 — tokens.css 와 같은 값) */
+:root {
+  --bg: #F4F1EA; --surface: #FFFFFF; --paper: #F4F1EA;
+  --text: #26221C; --text-muted: #5F574B; --text-dim: #857C6E;
+  --border: rgba(38,34,28,0.16); --border-soft: rgba(38,34,28,0.09);
+  --accent-ink: #1B3A6B; --accent-dark: #142C52; --accent-tint: rgba(27,58,107,0.08);
+  --action: #1B3A6B; --action-ink: #FFFFFF; --action-tint: #E5E9F1; --action-on-dark: #A8C7F0;
+  --radius: 20px; --radius-sm: 12px; --radius-xs: 8px;
+  --shadow: 0 4px 20px rgba(36,26,18,0.10);
+  --serif: 'SUIT Variable', SUIT, sans-serif;
+}
+
+/* ── 목업 껍데기 ── */
+.page-head { max-width: 1580px; margin: 0 auto 30px; }
+.page-head h1 { font-family: var(--serif); font-size: 23px; font-weight: 800; letter-spacing: -0.01em; }
+.page-head p { font-size: 14px; font-weight: 500; line-height: 1.65; color: #5A5245; margin-top: 9px; max-width: 62ch; }
+.page-head .rule { font-size: 13.5px; font-weight: 600; line-height: 1.6; color: var(--accent-ink); margin-top: 12px; padding: 11px 13px; background: rgba(27,58,107,0.06); border-radius: var(--radius-xs); max-width: 62ch; }
+
+.row { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; align-items: flex-start; max-width: 1580px; margin: 0 auto; }
+.col { width: 375px; }
+.cap { margin-bottom: 11px; }
+.cap b { display: block; font-size: 15.5px; font-weight: 800; letter-spacing: -0.01em; }
+.cap span { display: block; font-size: 13px; font-weight: 500; line-height: 1.55; color: #5A5245; margin-top: 4px; }
+.frame { width: 375px; background: var(--bg); border-radius: 14px; overflow: hidden; box-shadow: 0 6px 26px rgba(36,26,18,0.13); }
+.wrap { padding: 18px 20px 26px; }          /* 라이브와 같은 좌우 20px */
+.note { margin-top: 11px; font-size: 12.5px; font-weight: 600; line-height: 1.6; color: #5A5245; }
+.note.warn { color: #9A2C2C; }
+.mm { margin-top: 8px; font-size: 12px; font-weight: 700; line-height: 1.6; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.mm.bad { color: #9A2C2C; }
+
+/* ── 폰에서 보기 — 오너는 폰으로 목업을 본다(가로 4칸은 폰에서 아무것도 안 보인다) ──
+   틀은 375px 고정이라야 실측이 실측이다. 그래서 폭을 줄이지 않고 페이지 좌우 여백을
+   0 으로 내려 틀이 화면에 딱 맞게 두고, 설명 글에만 여백을 준다.
+   ⚠️ 375px 보다 좁은 기기(360px 등)는 아래 JS 가 틀만 비례 축소한다 — 틀을 줄이면
+      실측이 무너지므로 CSS 폭이 아니라 transform 이다. */
+@media (max-width: 880px) {
+  body { padding: 22px 0 64px; }
+  .page-head { padding: 0 16px; }
+  .row { gap: 36px; }
+  .col { width: 375px; max-width: 100%; }
+  .cap, .note, .mm { padding: 0 16px; }
+  .frame { border-radius: 0; }
+}
+
+/* ── 다크 머리 — 라이브 .hd ── */
+.hd {
+  border-radius: var(--radius); padding: 20px 20px 17px;
+  background: linear-gradient(180deg, #1E4079, #142C52);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow);
+}
+.hd.tabbed { padding-bottom: 0; }
+.hd-idx { font-size: 12px; font-weight: 800; letter-spacing: 0.18em; color: var(--action-on-dark); }
+.hd h2 { font-family: var(--serif); font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.01em; margin-top: 7px; }
+.hd-desc { font-size: 13.5px; font-weight: 500; line-height: 1.55; color: rgba(245,241,232,0.8); margin-top: 6px; }
+.hd-meta {
+  display: flex; align-items: center; gap: 7px; margin-top: 13px; padding-top: 11px;
+  border-top: 1px dashed rgba(245,241,232,0.3);
+  font-size: 12.5px; font-weight: 600; color: rgba(245,241,232,0.78);
+}
+.hd-meta b { color: #FFFFFF; font-weight: 800; }
+
+/* ── A안 · 갈래 세그먼트 ──
+   종이 면 위 한 덩어리. 고른 칸만 흰 면으로 떠오른다(다크 머리와 대비가 확실하다). */
+.seg {
+  display: flex; gap: 4px; margin-top: 16px; padding: 4px;
+  background: var(--action-tint); border-radius: 999px;
+}
+/* ⚠️ 44px 하한 — 4px 안쪽 여백이 있어도 '누르는 것'은 이 단추다(40px 로 내리지 말 것) */
+.seg button {
+  flex: 1; min-height: 44px; padding: 0 6px; border: 0; border-radius: 999px;
+  background: none; font: inherit; font-size: 14px; font-weight: 700; color: var(--accent-ink);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+.seg button.on { background: var(--surface); font-weight: 800; box-shadow: 0 1px 3px rgba(20,44,82,0.16); }
+.seg button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+/* ⚠️ 건수도 읽는 글자다 — opacity .62 는 틴트 면 위에서 3.40:1(4.5:1 미달)이라 .8 로 올렸다(5.48:1) */
+.seg .n { font-size: 12px; font-weight: 700; opacity: .8; font-variant-numeric: tabular-nums; }
+
+/* ── C안 · 다크 머리 안 탭 ──
+   서가 정체의 일부로 읽힌다. 종이 면의 고르는 줄은 픽커 2개 그대로. */
+.dtabs { display: flex; gap: 18px; margin-top: 14px; border-top: 1px solid rgba(245,241,232,0.16); }
+.dtabs button {
+  position: relative; min-height: 46px; padding: 0 1px; border: 0; background: none;
+  font: inherit; font-size: 14px; font-weight: 700; color: rgba(245,241,232,0.72);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.dtabs button.on { color: #FFFFFF; font-weight: 800; }
+.dtabs button.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--action-on-dark); }
+.dtabs button:focus-visible { outline: 3px solid var(--action-on-dark); outline-offset: -3px; }
+/* ⚠️ 다크 면 위 건수 — opacity .7 은 4.10:1 이라 미달, .88 로 올렸다(5.32:1) */
+.dtabs .n { font-size: 12px; font-weight: 700; opacity: .88; font-variant-numeric: tabular-nums; }
+
+/* ── 픽커 — 라이브 .pick 그대로 ── */
+.pickrow { display: flex; gap: 8px; margin-top: 16px; }
+.pick {
+  flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 44px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pick.set { background: var(--action-tint); border-color: var(--accent-dark); color: var(--accent-ink); font-weight: 800; }
+.pick .cv { font-size: 10px; opacity: .55; flex: none; }
+.pk-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── 목록 — 라이브 .doc 그대로 ── */
+.count { margin-top: 18px; font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+.doc-list { margin-top: 4px; }
+.doc {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%;
+  padding: 16px 2px 15px; border-bottom: 1px solid var(--border-soft);
+  background: none; border-left: 0; border-right: 0; border-top: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.doc:last-child { border-bottom: 1.5px solid var(--border); }
+.doc-ico {
+  flex: none; width: 38px; height: 38px; border-radius: 10px;
+  background: var(--accent-tint); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center;
+}
+/* 기출 줄은 아이콘 면을 채워 갈래가 줄마다 읽히게 한다(태그 없이도 구분된다) */
+.doc-ico.q { background: var(--accent-dark); color: #FFFFFF; }
+.doc-txt { min-width: 0; flex: 1; }
+.doc-tit { display: block; font-size: 15px; font-weight: 700; line-height: 1.45; }
+.doc-sum { display: block; font-size: 13px; font-weight: 500; line-height: 1.5; color: var(--text-muted); margin-top: 3px; }
+.doc-sub { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.tag {
+  font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent-ink);
+  border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 1px 6px;
+}
+.tag.new { background: var(--action); color: var(--action-ink); border-color: transparent; }
+.tag.pay { background: var(--accent-dark); color: var(--action-ink); border-color: transparent; }
+.doc-mark { flex: none; margin-top: 9px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>항공사 자료실 + 기출문제 — 갈래 장치 3안</h1>
+  <p>합치는 방식은 정해졌습니다(원장 서가 카드 한 장, DB 의 서가 값은 그대로). 여기서 고를 것은 <b>화면에서 두 갈래를 어떻게 고르게 할지</b> 하나입니다. 폭·활자·색·간격은 지금 라이브와 같은 값이고, 다른 것은 갈래 장치뿐입니다.</p>
+  <p class="rule">줄 단위 구분은 3안 공통입니다 — <b>기출은 아이콘 면을 네이비로 채웁니다.</b> 그리고 <b>'전체'일 때만</b> 줄에 <span class="tag" style="display:inline-block">기출</span> 태그를 답니다(기출만 보고 있으면 화면 전체가 기출이라 반복하지 않습니다 — admin 열람 이력과 같은 규칙).</p>
+</div>
+
+<div class="row" id="row"></div>
+
+<script>
+/* ── 예시 자료 — 자료 갈래(doc) + 기출 갈래(q) 를 섞었다.
+   기출 갈래엔 '모음 파일'과 '낱개 질문'이 둘 다 들어간다(오너 확인: 둘 다 섞임). */
+var ROWS = [
+  { k:'doc', tit:'대한항공 인재상 한 장 요약', sum:'채용 공고·인재상·최근 이슈를 A4 한 장으로 정리했어요.', air:'대한항공', type:'한 장 요약', meta:'PDF 1.2MB', date:'8. 2.', isNew:true },
+  { k:'q',   tit:'2026 상반기 1차 면접 기출 모음', sum:'실제 응시자 제보를 항공사별로 묶었어요.', air:'대한항공', type:'1차 면접', meta:'파일 3개', pay:'4,900원', date:'8. 1.' },
+  { k:'q',   tit:'왜 우리 항공사에 지원했나요?', sum:'2026 상반기 1차 면접에서 3명이 받은 질문.', air:'아시아나항공', type:'기업 이해', meta:'질문', date:'7. 30.' },
+  { k:'doc', tit:'유니폼·이미지 가이드', sum:'면접장 복장 기준과 사진 예시.', air:'아시아나항공', type:'이미지·유니폼', meta:'PDF 4.8MB', date:'7. 28.' },
+  { k:'q',   tit:'동료와 갈등이 생기면 어떻게 하시겠어요?', sum:'2025 하반기 임원 면접에서 5명이 받은 질문.', air:'진에어', type:'상황', meta:'질문', date:'7. 26.' }
+];
+
+var ICON_DOC = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>';
+/* 기출 아이콘 — 면접장에서 받은 '질문'이라 말풍선 안 물음표 */
+var ICON_Q   = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.6c0 1.7-2.5 2-2.5 3.5"/><path d="M12 16.6h.01"/></svg>';
+var ICON_CV  = '<span class="cv" aria-hidden="true">▾</span>';
+var ICON_ARR = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+
+var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+/* 목록 한 줄. showKind=true 면 '전체' 상태라 기출 줄에 태그를 단다. */
+function docRow(r, showKind) {
+  var bits = [r.air, r.type, r.meta].filter(Boolean).map(esc).join(' · ');
+  var tags =
+    (r.isNew ? '<span class="tag new">NEW</span>' : '') +
+    (showKind && r.k === 'q' ? '<span class="tag">기출</span>' : '') +
+    (r.pay ? '<span class="tag pay">' + esc(r.pay) + '</span>' : '');
+  return '<button class="doc" type="button">' +
+    '<span class="doc-ico' + (r.k === 'q' ? ' q' : '') + '">' + (r.k === 'q' ? ICON_Q : ICON_DOC) + '</span>' +
+    '<span class="doc-txt">' +
+      '<span class="doc-tit">' + esc(r.tit) + '</span>' +
+      '<span class="doc-sum">' + esc(r.sum) + '</span>' +
+      '<span class="doc-sub">' + tags + bits + ' · <span class="num">' + esc(r.date) + '</span></span>' +
+    '</span>' +
+    '<span class="doc-mark">' + ICON_ARR + '</span>' +
+  '</button>';
+}
+
+/* 건수 줄 — 라이브와 같은 문장(좁히면 'N건 / 전체 M건').
+   ⚠️ 합치면 단위를 하나로 정해야 한다: 자료실은 '건', 기출문제는 '개'였다. '건'으로 통일했다. */
+var TOTAL = ROWS.length;
+function list(kind) {
+  var rows = kind === 'all' ? ROWS : ROWS.filter(function (r) { return r.k === kind; });
+  var txt = kind === 'all' ? TOTAL + '건' : rows.length + '건 / 전체 ' + TOTAL + '건';
+  return '<p class="count num">' + txt + '</p>' +
+    '<div class="doc-list">' + rows.map(function (r) { return docRow(r, kind === 'all'); }).join('') + '</div>';
+}
+var N_ALL = TOTAL,
+    N_DOC = ROWS.filter(function (r) { return r.k === 'doc'; }).length,
+    N_Q   = ROWS.filter(function (r) { return r.k === 'q'; }).length;
+
+/* 다크 머리 — 세 안이 같은 값을 쓴다(C안만 아래에 탭이 붙는다) */
+function head(tabsHtml) {
+  return '<section class="hd' + (tabsHtml ? ' tabbed' : '') + '">' +
+    '<p class="hd-idx">01 — 자료실</p>' +
+    '<h2>항공사 자료실</h2>' +
+    '<p class="hd-desc">항공사를 고르면 그 회사 자료와 기출을 모아 보여드려요.</p>' +
+    '<p class="hd-meta"><b class="num">' + N_ALL + '건</b><span>· 최근 등록 8. 2.</span></p>' +
+    (tabsHtml || '') +
+  '</section>';
+}
+
+function pick(label, set, id) {
+  return '<button class="pick' + (set ? ' set' : '') + '" type="button"' + (id ? ' id="' + id + '"' : '') + '>' +
+    '<span class="pk-label">' + esc(label) + '</span>' + ICON_CV + '</button>';
+}
+
+var FRAMES = [
+  {
+    key: 'a',
+    name: 'A안 — 갈래 단추 한 줄',
+    desc: '픽커 줄 위에 [전체 | 자료 | 기출]. 고른 칸만 흰 면으로 떠오릅니다. 건수를 단추 안에 적어 눌러 보기 전에 어느 쪽이 두꺼운지 압니다.',
+    body:
+      head() +
+      '<div class="seg" data-seg>' +
+        '<button class="on" type="button">전체 <span class="n num">' + N_ALL + '</span></button>' +
+        '<button type="button">자료 <span class="n num">' + N_DOC + '</span></button>' +
+        '<button type="button">기출 <span class="n num">' + N_Q + '</span></button>' +
+      '</div>' +
+      '<div class="pickrow" data-pickrow>' + pick('항공사') + pick('자료 유형') + '</div>' +
+      list('all'),
+    note: '고르는 줄이 2줄이 됩니다(갈래 48px + 픽커 44px). 대신 갈래가 가장 큰 글씨로 먼저 읽힙니다.'
+  },
+  {
+    key: 'b',
+    name: 'B안 — 갈래도 픽커로',
+    desc: '알약 3개가 한 줄에 섭니다. 고르는 줄이 한 줄로 끝나고 세 축이 같은 모양이라 규칙이 하나입니다.',
+    body:
+      head() +
+      '<div class="pickrow" data-pickrow data-three>' + pick('갈래') + pick('아시아나항공', true, 'bAir') + pick('기업 이해', true, 'bType') + '</div>' +
+      list('all'),
+    note: '항공사를 고른 상태로 그렸습니다 — 실제로 고르고 나면 라벨이 길어지는 자리라 잘림을 봐야 합니다.',
+    warn: true
+  },
+  {
+    key: 'c',
+    name: 'C안 — 다크 머리 안 탭',
+    desc: '갈래를 서가 정체의 일부로 다룹니다. 종이 면의 고르는 줄은 지금처럼 픽커 2개 그대로입니다.',
+    body:
+      head(
+        '<div class="dtabs" data-tabs>' +
+          '<button class="on" type="button">전체 <span class="n num">' + N_ALL + '</span></button>' +
+          '<button type="button">자료 <span class="n num">' + N_DOC + '</span></button>' +
+          '<button type="button">기출 <span class="n num">' + N_Q + '</span></button>' +
+        '</div>'
+      ) +
+      '<div class="pickrow" data-pickrow>' + pick('항공사') + pick('자료 유형') + '</div>' +
+      list('all'),
+    note: '다크 머리가 46px 길어집니다. 갈래를 바꾸면 머리의 건수·설명도 같이 바뀌게 됩니다.'
+  },
+  {
+    key: 'a2',
+    name: 'A안 · 기출을 고른 뒤',
+    desc: '갈래를 고르면 유형 픽커의 이름이 바뀝니다(자료 유형 → 질문 유형). 목록이 전부 기출이라 줄의 기출 태그는 뗍니다.',
+    body:
+      head() +
+      '<div class="seg" data-seg>' +
+        '<button type="button">전체 <span class="n num">' + N_ALL + '</span></button>' +
+        '<button type="button">자료 <span class="n num">' + N_DOC + '</span></button>' +
+        '<button class="on" type="button">기출 <span class="n num">' + N_Q + '</span></button>' +
+      '</div>' +
+      '<div class="pickrow" data-pickrow>' + pick('항공사') + pick('질문 유형') + '</div>' +
+      list('q'),
+    note: '유형 목록이 갈래에 따라 갈리는 것이 합치기의 실익입니다 — 한 픽커에 12종을 몰아넣지 않습니다.'
+  }
+];
+
+document.getElementById('row').innerHTML = FRAMES.map(function (f) {
+  return '<div class="col" data-key="' + f.key + '">' +
+    '<div class="cap"><b>' + esc(f.name) + '</b><span>' + esc(f.desc) + '</span></div>' +
+    '<div class="frame"><div class="wrap">' + f.body + '</div></div>' +
+    '<p class="note' + (f.warn ? ' warn' : '') + '">' + esc(f.note) + '</p>' +
+    '<p class="mm" data-mm></p>' +
+  '</div>';
+}).join('');
+
+/* 375px 보다 좁은 기기에서만 틀을 비례 축소한다(틀 자체는 375px 그대로 그린다).
+   transform 은 자리를 안 줄이므로 줄어든 만큼 아래 여백을 당겨 준다. */
+function fitFrames() {
+  /* ⚠️ innerWidth 가 아니라 clientWidth 다 — 배치가 실제로 쓰는 폭이 이쪽이고,
+     둘이 어긋나면(폰 확대·에뮬레이션) innerWidth 기준은 축소를 걸지 않아 가로가 넘친다. */
+  var vw = document.documentElement.clientWidth || window.innerWidth;
+  var s = Math.min(1, vw / 375);
+  document.querySelectorAll('.frame').forEach(function (f) {
+    f.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+    f.style.transformOrigin = 'top left';
+    f.style.marginBottom = s < 1 ? -(f.offsetHeight * (1 - s)) + 'px' : '';
+  });
+}
+/* ⚠️ 축소를 걸기 전에 잰다 — getBoundingClientRect 는 transform 이 걸린 값을 돌려주므로
+   먼저 축소하면 좁은 기기에서 실측값이 배율만큼 틀어진다(폰으로 보는 화면의 숫자가 거짓이 된다). */
+
+/* ── 실측 — 고르는 영역이 잡아먹는 세로, 픽커 폭, 라벨 잘림, 가로 넘침 ── */
+FRAMES.forEach(function (f) {
+  var col = document.querySelector('[data-key="' + f.key + '"]');
+  var frame = col.querySelector('.frame');
+  var hd = col.querySelector('.hd');
+  var pickrow = col.querySelector('[data-pickrow]');
+  var count = col.querySelector('.count');
+  var out = [];
+
+  /* 머리 꼭대기부터 첫 자료 줄까지 — 자료가 화면에 나타나기까지의 세로 */
+  var toList = Math.round(count.getBoundingClientRect().top - hd.getBoundingClientRect().top);
+  /* 다크 머리 아래부터 목록까지 = 갈래+픽커가 쓰는 세로 */
+  var chooser = Math.round(count.getBoundingClientRect().top - hd.getBoundingClientRect().bottom);
+  out.push('머리~목록 ' + toList + 'px · 고르는 영역 ' + chooser + 'px');
+
+  var picks = pickrow.querySelectorAll('.pick');
+  out.push('픽커 ' + picks.length + '개 · 폭 ' + Math.round(picks[0].getBoundingClientRect().width) + 'px');
+
+  /* 라벨 잘림 — 알약이 좁아 말줄임이 걸리는지 */
+  var cut = [];
+  col.querySelectorAll('.pk-label').forEach(function (el) {
+    if (el.scrollWidth > el.clientWidth + 1) cut.push(el.textContent);
+  });
+  var bad = cut.length > 0;
+  out.push(bad ? '라벨 잘림: ' + cut.join(', ') : '라벨 잘림 없음');
+
+  /* 가로 넘침 — 375px 안에 들어오는지 */
+  var over = frame.scrollWidth > frame.clientWidth;
+  if (over) { bad = true; out.push('가로 넘침 ' + (frame.scrollWidth - frame.clientWidth) + 'px'); }
+  else out.push('가로 넘침 0');
+
+  var mm = col.querySelector('[data-mm]');
+  mm.textContent = '실측 ' + out.join(' · ');
+  if (bad) mm.classList.add('bad');
+});
+
+/* 재고 나서 축소를 건다(위 주의 참조) */
+fitFrames();
+window.addEventListener('resize', fitFrames);
+</script>
+
+</body>
+</html>
