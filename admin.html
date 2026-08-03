@@ -601,6 +601,28 @@
     .rc-prev b { font-weight: 800; }
     .rc-prev .warn { display: block; margin-top: 6px; color: var(--st-danger); }
 
+    /* ── 받은 제보(recruit_tips) — 학생 화면 아래 '일정 알려주기'로 들어온다 ──
+       회차 폼 바로 위에 둔다: 읽고 그 자리에서 고치는 것이 이 화면의 일이다.
+       ⚠️ 안 읽은 것이 있을 때만 눈에 띄게 한다(0건이면 조용한 회색 줄). */
+    .rc-tips { margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface); overflow: hidden; }
+    .rc-tips.hot { border-color: var(--action); }
+    .rc-tips-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 11px 13px; background: var(--surface2); font-size: 14px; font-weight: 800; }
+    /* 체크박스도 누르는 것이다 — 이 줄만 44px 로 키운다(.lr-opt 전역을 건드리지 않는다) */
+    .rc-tips-h .lr-opt { display: inline-flex; align-items: center; min-height: 44px; }
+    .rc-tips.hot .rc-tips-h { background: var(--action-tint); color: var(--accent-ink); }
+    .rc-tip { padding: 12px 13px; border-top: 1px solid var(--border-soft); }
+    .rc-tip.done { opacity: .62; }
+    .rc-tip-m { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+    .rc-tip-air { padding: 2px 8px; border-radius: 999px; background: var(--action-tint);
+      color: var(--accent-ink); font-size: 12px; font-weight: 800; }
+    .rc-tip-b { margin-top: 7px; font-size: 14px; font-weight: 600; line-height: 1.65;
+      color: var(--text); white-space: pre-wrap; word-break: break-word; }
+    .rc-tip-s { margin-top: 5px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); word-break: break-all; }
+    .rc-tip-a { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
+
     /* ── 지우는 버튼은 다르게 보여야 한다(2026-08-02) ──
        연구실 자료 행은 버튼이 여섯이고 '삭제'가 '수정·이력·가격'과 똑같이 생겼다.
        모바일에서 두 줄로 접히면 오눌림이 실제로 난다. 되돌릴 수 없는 것만 이 색을 쓴다. */
@@ -1466,6 +1488,17 @@
             아무에게도 안 보여요(작성 중일 때 꺼 두세요).</p>
         </div>
       </details>
+
+      <!-- 받은 제보 — 학생 화면(lab-shelf.html?shelf=calendar) 아래 '일정 알려주기'로 들어온다.
+           ⚠️ 제보는 '확인 전 주장'이다. 회차로 자동 반영하지 않는다 — 읽고 아래 폼에서 손으로 고친다. -->
+      <section class="rc-tips" id="rcTips" hidden>
+        <div class="rc-tips-h">
+          <span id="rcTipHead">받은 제보</span>
+          <label class="lr-opt" style="margin-left:auto;font-size:13px;font-weight:700;">
+            <input type="checkbox" id="rcTipAll"> 확인한 것도 보기</label>
+        </div>
+        <div id="rcTipList"></div>
+      </section>
 
       <form class="round-form" id="recForm" style="grid-template-columns:1fr;">
         <!-- ⚠️ display:flex 를 인라인에 두지 말 것 — 인라인 display 는 [hidden] 을 이겨 늘 보인다 -->
@@ -2616,6 +2649,14 @@
           .select('id', { count: 'exact', head: true }).eq('state', 'review_requested');
         review = error ? 0 : (count || 0);
       } catch (_) { review = 0; }
+      // 채용 캘린더 제보 — recruit_tips(관리자 RLS). 표가 없으면 0으로 조용히.
+      // ⚠️ 여기서 세지 않으면 제보함은 '캘린더 탭을 열어야만 보이는 상자'가 된다.
+      let tips = 0;
+      try {
+        const { count, error } = await sb().from('recruit_tips')
+          .select('id', { count: 'exact', head: true }).eq('status', 'new');
+        tips = error ? 0 : (count || 0);
+      } catch (_) { tips = 0; }
 
       tdSet('tdUnpaid', unpaid.length);
       tdSet('tdWaitlist', wl.length);
@@ -2627,7 +2668,7 @@
       tdSet('tdReview', review);
 
       // 헤드라인 — 오늘 신청·입금 순으로 가장 급한 사실 한 문장
-      const todo = unpaid.length + wl.length + review;
+      const todo = unpaid.length + wl.length + review + tips;
       let head;
       if (todayApps && unpaid.length) head = `오늘 신청 ${todayApps}건, <mark>확인할 입금 ${unpaid.length}건</mark>이 있습니다.`;
       else if (todayApps)             head = `오늘 신청 ${todayApps}건, 확인할 입금은 없습니다.`;
@@ -2654,6 +2695,9 @@
       }
       if (review) {
         todos.push({ html: `<b>답변 검수 ${review}건.</b> 검수 데스크에 올라와 있습니다.`, href: 'review-desk.html', label: '검수 데스크 →' });
+      }
+      if (tips) {
+        todos.push({ html: `<b>채용 캘린더 제보 ${tips}건.</b> 학생이 알려준 일정입니다. 읽고 회차에 반영해 주세요.`, go: 'reccal', label: '채용 캘린더 열기 →' });
       }
       document.getElementById('tbTodoTitle').textContent = todos.length ? `지금 처리 · ${todos.length}건` : '지금 처리';
       document.getElementById('tbTodos').innerHTML = todos.length ? todos.map(t => `
@@ -5257,8 +5301,73 @@
     rcEl('rcCancel').addEventListener('click', rcExitEdit);
     rcRenderStages();   // 첫 그림 — 비어 있을 때의 안내('아직 단계가 없어요')도 여기서 나온다
 
+    /* ── 받은 제보(recruit_tips) ────────────────────────────────────────────
+       학생 화면 아래 '일정 알려주기'로 들어온다. ⚠️ 자동 반영은 없다 — 읽고 아래 폼에서
+       손으로 고친다(제보는 확인 전 주장, 회차는 연구진이 확인한 기록).
+       ⚠️ 표가 없어도 조용히 접는다(PGRST205) — 캘린더 탭 전체가 멈추면 안 된다. */
+    let _rcTips = [], _rcTipShowDone = false;
+
+    async function loadRecTips() {
+      const { data, error } = await MONC.sb.from('recruit_tips')
+        .select('*').order('created_at', { ascending: false }).limit(200);
+      if (error) { rcEl('rcTips').hidden = true; return; }
+      _rcTips = data || [];
+      rcRenderTips();
+    }
+
+    function rcRenderTips() {
+      const box = rcEl('rcTips'), listEl = rcEl('rcTipList');
+      const nNew = _rcTips.filter(t => t.status !== 'done').length;
+      // 제보가 하나도 없으면 칸 자체를 감춘다 — 늘 비어 있는 상자는 화면만 먹는다
+      box.hidden = _rcTips.length === 0;
+      box.classList.toggle('hot', nNew > 0);
+      rcEl('rcTipHead').textContent = nNew > 0 ? `받은 제보 ${nNew}건` : '받은 제보 — 새 것 없음';
+
+      const rows = _rcTipShowDone ? _rcTips : _rcTips.filter(t => t.status !== 'done');
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="rc-tip" style="color:var(--text-dim);font-size:13.5px;font-weight:600;">확인 안 한 제보가 없어요.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(t => `
+        <div class="rc-tip${t.status === 'done' ? ' done' : ''}">
+          <div class="rc-tip-m">
+            <span class="rc-tip-air">${esc(t.airline ? (LAB_AIR_LABEL[t.airline] || t.airline) : '항공사 안 밝힘')}</span>
+            <span>${esc(fmtDay(t.created_at))}</span>
+            ${t.member_id ? '<span>회원</span>' : '<span>비회원</span>'}
+            ${t.status === 'done' ? '<span>확인함</span>' : ''}
+          </div>
+          <div class="rc-tip-b">${esc(t.body || '')}</div>
+          ${t.source ? `<div class="rc-tip-s">출처: ${esc(t.source)}</div>` : ''}
+          <div class="rc-tip-a">
+            <button class="ri-edit rct-do" data-id="${t.id}">${t.status === 'done' ? '다시 안 읽음으로' : '확인함'}</button>
+            <button class="ri-del is-danger rct-rm" data-id="${t.id}">삭제</button>
+          </div>
+        </div>`).join('');
+
+      listEl.querySelectorAll('.rct-do').forEach(btn => btn.addEventListener('click', async () => {
+        const t = _rcTips.find(x => String(x.id) === btn.dataset.id); if (!t) return;
+        const done = t.status !== 'done';
+        const { error } = await MONC.sb.from('recruit_tips')
+          .update({ status: done ? 'done' : 'new', handled_at: done ? new Date().toISOString() : null })
+          .eq('id', t.id);
+        if (error) { alert('바꾸기 실패: ' + error.message); return; }
+        t.status = done ? 'done' : 'new';
+        rcRenderTips();
+      }));
+      listEl.querySelectorAll('.rct-rm').forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('이 제보를 삭제할까요?')) return;
+        const { error } = await MONC.sb.from('recruit_tips').delete().eq('id', btn.dataset.id);
+        if (error) { alert('삭제 실패: ' + error.message); return; }
+        _rcTips = _rcTips.filter(x => String(x.id) !== btn.dataset.id);
+        rcRenderTips();
+      }));
+    }
+
+    rcEl('rcTipAll').addEventListener('change', e => { _rcTipShowDone = e.target.checked; rcRenderTips(); });
+
     // ── 목록 ──
     async function loadRecCal() {
+      loadRecTips();          // 제보함은 회차 목록과 따로 뜬다 — 한쪽이 실패해도 다른 쪽은 그린다
       const listEl = rcEl('rcList');
       const { data, error } = await MONC.sb.from('recruit_rounds')
         .select('*').order('started_on', { ascending: false });

@@ -300,6 +300,37 @@
 
   .foot-note { margin-top: 34px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--text-dim); line-height: 1.6; }
 
+  /* ── 제보함 — 채용 캘린더 서가에만 나온다(2026-08-04) ──
+     회차는 연구진이 손으로 채우는데, 날짜를 가장 먼저 아는 사람은 그 전형을 방금 치른
+     학생이다. 접힌 상태는 두 줄 + 단추 하나로 둔다(오너: "크게말고 심플하게"). */
+  .tip { margin-top: 18px; padding: 16px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--surface); }
+  .tip-t { font-size: 14.5px; font-weight: 800; color: var(--text); line-height: 1.5; }
+  .tip-d { margin-top: 5px; font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
+  .tip-open { margin-top: 12px; width: 100%; min-height: 46px; border-radius: 999px;
+    border: 1.5px solid var(--action); background: var(--surface); color: var(--accent-ink);
+    font: inherit; font-size: 14.5px; font-weight: 800; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; }
+  .tip-form { margin-top: 14px; }
+  .tip-l { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 800; color: var(--text-muted); }
+  /* ⚠️ 활자 16px — 그 아래면 iOS 사파리가 칸을 누를 때 화면을 확대한다(원칙: 입력칸 16px+) */
+  .tip-in { display: block; width: 100%; min-height: 46px; margin-bottom: 12px; padding: 11px 13px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-xs); background: var(--bg);
+    font: inherit; font-size: 16px; font-weight: 600; color: var(--text); }
+  textarea.tip-in { min-height: 106px; line-height: 1.6; resize: vertical; }
+  .tip-fine { margin: -4px 0 12px; font-size: 12px; font-weight: 600; color: var(--text-dim); line-height: 1.6; }
+  .tip-go { width: 100%; min-height: 48px; border: 0; border-radius: 999px;
+    background: var(--action); color: var(--action-ink); font: inherit; font-size: 15px;
+    font-weight: 800; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .tip-go[disabled] { opacity: .5; cursor: default; }
+  .tip-open:focus-visible, .tip-go:focus-visible, .tip-in:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .tip-msg { margin-top: 10px; padding: 11px 13px; border-radius: var(--radius-xs);
+    font-size: 13.5px; font-weight: 700; line-height: 1.6; }
+  .tip-msg.ok  { background: var(--action-tint); color: var(--accent-ink); }
+  .tip-msg.bad { background: rgba(192,52,44,.09); color: #A33028; }
+  /* 자동 등록 봇용 미끼 칸 — 사람 눈·낭독기에는 없는 칸이다. 채워져 오면 조용히 버린다. */
+  .tip-pot { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
   /* ── 바텀시트(픽커 선택 · 비밀번호 입력 공용 뼈대) ── */
   .scrim { position: fixed; inset: 0; z-index: 205; background: rgba(38,34,28,.45); opacity: 0; transition: opacity .22s; }
   .scrim.open { opacity: 1; }
@@ -429,6 +460,34 @@
   <div class="empty" id="shEmpty" hidden><p id="shEmptyMsg">아직 올라온 자료가 없어요.</p></div>
 
   <p class="foot-note" id="shFoot" hidden>무료 자료는 로그인 후, 값이 붙은 자료는 구매 후 열 수 있어요. 받은 파일에는 받으신 분 정보가 표시됩니다.</p>
+
+  <!-- 제보함 — 채용 캘린더 서가에서만 켠다(JS). 회차가 0건일 때도 보인다(그때가 가장 필요하다).
+       ⚠️ 이름·연락처 칸을 만들지 않는다 — 일정만 받는다. 로그인 상태면 계정만 조용히 붙는다. -->
+  <section class="tip" id="shTip" hidden>
+    <p class="tip-t">날짜가 다르거나, 빠진 공채가 있나요?</p>
+    <p class="tip-d">알고 계신 일정을 알려주시면 연구진이 확인해 채웁니다.</p>
+    <button class="tip-open" type="button" id="tipOpen" aria-expanded="false" aria-controls="tipForm">일정 알려주기</button>
+
+    <form class="tip-form" id="tipForm" hidden>
+      <label class="tip-l" for="tipAir">항공사</label>
+      <select class="tip-in" id="tipAir"></select>
+
+      <label class="tip-l" for="tipBody">알고 계신 일정</label>
+      <textarea class="tip-in" id="tipBody" rows="4" maxlength="1000"
+        placeholder="예: 2026년 3월 공채 — 서류 접수 3/4~3/13, 서류 발표 3/20, 1차 면접 3/25"></textarea>
+
+      <label class="tip-l" for="tipSrc">어디서 아셨나요 <span style="font-weight:600;">(선택)</span></label>
+      <input class="tip-in" id="tipSrc" maxlength="300" autocomplete="off"
+        placeholder="예: 채용 공고 / 제가 지원했어요">
+
+      <!-- 미끼 칸 — 사람은 보지 못한다 -->
+      <input class="tip-pot" id="tipPot" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+      <p class="tip-fine">이름·연락처 같은 개인정보는 적지 마세요. 보내주신 내용은 연구진만 봅니다.</p>
+      <button class="tip-go" type="submit" id="tipGo">보내기</button>
+      <p class="tip-msg" id="tipMsg" hidden></p>
+    </form>
+  </section>
 
 </main>
 
@@ -721,7 +780,9 @@
     }
 
     return '<section class="pat">'
-      + '<p class="pat-top">' + esc(AIRLINE_LABEL[air] || air) + '은 이렇게 움직였어요</p>'
+      // ⚠️ 받침에 따라 은/는 — '진에어은'이 되던 자리(2026-08-04, 항공사가 둘 이상 쌓이면 바로 보인다)
+      + '<p class="pat-top">' + esc(AIRLINE_LABEL[air] || air)
+      + josa(AIRLINE_LABEL[air] || air, '은', '는') + ' 이렇게 움직였어요</p>'
       + hero
       + (cells.length
           ? '<div class="pat-grid" style="grid-template-columns:repeat(' + cells.length + ',1fr);">'
@@ -819,7 +880,14 @@
       var sub = [];
       if (first && last) sub.push('전체 <b class="num">' + calN(first, last) + '일</b>');
       var ps = st.filter(function (s) { return s.key === 'pass'; })[0];
-      if (ps && first) { var p0 = calD(ps.start); if (p0) sub.push('최종 합격까지 <b class="num">' + calN(first, p0) + '일</b>'); }
+      // ⚠️ 최종 합격이 마지막 단계면 '전체'와 같은 날수다 — 같은 숫자를 두 번 쓰지 않는다
+      //    (입과가 뒤에 붙는 회차만 두 값이 갈린다).
+      if (ps && first && last) {
+        var p0 = calD(ps.start);
+        if (p0 && calN(first, p0) !== calN(first, last)) {
+          sub.push('최종 합격까지 <b class="num">' + calN(first, p0) + '일</b>');
+        }
+      }
 
       return '<div class="rd">'
         + '<button class="rd-hd" type="button" aria-expanded="false" aria-controls="tl-' + i + '">'
@@ -1359,6 +1427,81 @@
     });
   }
 
+  /* ══ 제보함 — 채용 캘린더 서가에서만 (2026-08-04) ═══════════════════════════
+     회차는 연구진이 손으로 채운다. 날짜가 틀리거나 빠진 공채를 가장 먼저 아는 사람은
+     그 전형을 방금 치른 학생이라, 목록 바로 아래에서 한 줄로 받는다.
+
+     ⚠️ 넣기 전용 창구다(RLS: insert 는 누구나, select 는 관리자만). 여기에 제보를
+        읽어 오는 코드를 만들지 말 것 — 검수 전 주장이 화면에 뜨는 순간 사실이 된다.
+     ⚠️ 이름·연락처를 묻지 않는다. 로그인 상태면 member_id 만 조용히 붙인다(되물을 용도).
+     ⚠️ 미적용 환경(PGRST205)에서도 화면은 멀쩡해야 한다 — 보낼 때만 안내가 뜬다. */
+  var TIP_MAX = 5;          // 한 번 열린 화면에서 받는 개수(장난 등록 완화 — 진짜 방어는 RLS·길이 제약)
+  var tipBusy = false, tipSent = 0;
+
+  function initTip() {
+    $('shTip').hidden = false;
+    $('tipAir').innerHTML = '<option value="">모르겠어요 / 목록에 없어요</option>'
+      + AIRLINE_ORDER.map(function (s) {
+          return '<option value="' + esc(s) + '">' + esc(AIRLINE_LABEL[s]) + '</option>';
+        }).join('');
+
+    $('tipOpen').addEventListener('click', function () {
+      var open = $('tipOpen').getAttribute('aria-expanded') === 'true';
+      $('tipOpen').setAttribute('aria-expanded', String(!open));
+      $('tipForm').hidden = open;
+      $('tipOpen').textContent = open ? '일정 알려주기' : '접기';
+      // 픽커에서 고른 회사를 그대로 이어받는다 — 방금 보던 화면이 곧 제보 대상이다
+      if (!open && fAir !== 'all') $('tipAir').value = fAir;
+    });
+
+    $('tipForm').addEventListener('submit', function (e) { e.preventDefault(); sendTip(); });
+  }
+
+  function tipSay(msg, ok) {
+    var p = $('tipMsg');
+    p.className = 'tip-msg ' + (ok ? 'ok' : 'bad');
+    p.textContent = msg;
+    p.hidden = false;
+  }
+
+  function sendTip() {
+    if (tipBusy) return;
+    var body = $('tipBody').value.trim();
+    if (body.length < 5) { tipSay('알고 계신 일정을 조금만 더 적어 주세요.', false); $('tipBody').focus(); return; }
+    // 미끼 칸이 채워졌다 = 사람이 아니다. 티 내지 않고 버린다.
+    if ($('tipPot').value) { $('tipBody').value = ''; tipSay('고맙습니다. 연구진이 확인한 뒤 반영할게요.', true); return; }
+    if (tipSent >= TIP_MAX) { tipSay('오늘 받을 수 있는 만큼 다 받았어요. 고맙습니다.', true); return; }
+
+    tipBusy = true;
+    $('tipGo').disabled = true; $('tipGo').textContent = '보내는 중…';
+    var air = $('tipAir').value || null, src = $('tipSrc').value.trim() || null;
+
+    // 로그인은 조건이 아니다 — 세션이 있으면 붙이고, 없거나 실패하면 그냥 비회원 제보로 보낸다
+    window.MONC.getSession().catch(function () { return null; }).then(function (s) {
+      return window.MONC.sb.from('recruit_tips').insert({
+        airline: air, body: body, source: src,
+        member_id: (s && s.user && s.user.id) || null
+      });
+    }).then(function (res) {
+      tipBusy = false;
+      $('tipGo').disabled = false; $('tipGo').textContent = '보내기';
+      if (res && res.error) {
+        var c = res.error.code;
+        tipSay(c === 'PGRST205' ? '제보함 준비가 아직 안 됐어요. 잠시 뒤 다시 시도해 주세요.'
+             : c === '23514'    ? '내용이 너무 길어요. 1000자 안으로 줄여 주세요.'
+             : '보내지 못했어요. 잠시 뒤 다시 시도해 주세요.', false);
+        return;
+      }
+      tipSent++;
+      $('tipBody').value = ''; $('tipSrc').value = '';
+      tipSay('고맙습니다. 연구진이 확인한 뒤 반영할게요.', true);
+    }).catch(function () {
+      tipBusy = false;
+      $('tipGo').disabled = false; $('tipGo').textContent = '보내기';
+      tipSay('보내지 못했어요. 잠시 뒤 다시 시도해 주세요.', false);
+    });
+  }
+
   /* ── 이벤트 ── */
   /* 썸네일 폴백 — maxresdefault 가 없는 영상이 많다(유튜브가 404 를 준다).
      ⚠️ error 이벤트는 버블링하지 않으므로 캡처 단계로 받는다. */
@@ -1410,6 +1553,7 @@
   $('shScrim').addEventListener('click', closeSheet);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sheetKind) closeSheet(); });
 
+  if (SH.rounds) initTip();   // 제보함은 채용 캘린더 서가에만
   load();
   resumePay();   // 모바일 결제창에서 돌아온 경우에만 동작한다
 })();
