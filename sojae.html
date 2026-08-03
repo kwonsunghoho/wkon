@@ -2,7 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- interactive-widget=resizes-content — 키보드가 열리면 화면(레이아웃)까지 줄여 달라는 뜻.
+       안드로이드 크롬은 이 한 마디로 끝나고, 아이폰은 안 먹어서 아래 fitShell() 이 대신 한다. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="color-scheme" content="light" />
   <title>소재 발굴 — MONC 몬크</title>
   <meta name="description" content="대화하며 내 경험에서 면접 답변 소재를 찾아내는 몬크 소재 발굴." />
@@ -64,6 +66,12 @@
     /* 대화 영역 (스크롤) */
     .chat { flex: 1 1 auto; overflow-y: auto; padding: 4px 16px 8px;
       display: flex; flex-direction: column; gap: 12px; }
+    /* 메시지를 입력칸 쪽(아래)에서부터 쌓는다 — 카톡·아이메시지와 같은 방향.
+       ⚠️ 이 한 줄이 없으면 메시지가 위에 붙어 아래로 441px(393×852 실측)가 비고,
+          키보드가 열리는 순간 화면에 그 빈 곳만 남아 질문이 안 보인다(2026-08-04 오너 신고).
+       ⚠️ `justify-content:flex-end` 로 바꾸지 말 것 — 대화가 길어지면 위쪽 메시지가
+          스크롤로 못 닿게 잘리는 브라우저가 있다. margin-top:auto 는 넘치는 순간 0이 된다. */
+    .chat > :first-child { margin-top: auto; }
     .who { display: flex; align-items: center; gap: 6px; font-size: 12px;
       color: var(--accent-ink); font-weight: 700; margin-bottom: 5px; }
     /* 아바타 이니셜 한 글자 — 20px 원 안의 표식이지 읽는 활자가 아니다(12px 하한 예외).
@@ -409,6 +417,26 @@
       el.innerHTML = '<div class="who"><span class="ava">R</span>연구원</div>' + html;
       chat.scrollTop = chat.scrollHeight;
       transcript.push({ role: 'researcher', content: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() });
+    }
+
+    /* ── 키보드가 열려도 화면이 밀려 올라가지 않게 ──────────────────────────────
+       아이폰은 키보드가 올라와도 페이지 높이(100svh)를 그대로 둔다. 대신 입력칸을
+       키보드 위로 올리려고 **페이지 전체를 밀어 올린다** — 상단 바·단계 표시·질문이
+       화면 밖으로 나가고, 남은 자리엔 대화의 빈 꼬리만 보인다(2026-08-04 오너 신고).
+       그래서 지금 실제로 보이는 높이(visualViewport)를 셸 높이로 그대로 받아쓴다.
+       ⚠️ 사용자가 위쪽 대화를 읽는 중이면 끌어내리지 않는다 — 바닥에 붙어 있을 때만 따라간다. */
+    const vv = window.visualViewport;
+    if (vv) {
+      const atBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
+      const fitShell = () => {
+        const stick = atBottom();
+        document.body.style.height = vv.height + 'px';
+        if (window.scrollY) window.scrollTo(0, 0);   // 이미 밀려 올라갔으면 되돌린다
+        if (stick) chat.scrollTop = chat.scrollHeight;
+      };
+      vv.addEventListener('resize', fitShell);
+      vv.addEventListener('scroll', fitShell);
+      fitShell();
     }
 
     // ── 입력/전송 ──
