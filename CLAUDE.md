@@ -216,6 +216,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 승준노트 카드 권한 배지(`.bf-badge`)·'첫 1회 무료' 같은 회원별 상태 문구 (briefing.md)
 - 뉴스 필터 칩 나열 sticky 바·리본 북마크·라벨 없는 스크랩 아이콘 (news.md)
 - 투명 nav(`nav-transparent`)·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
+- nav 강조의 깜빡이는 점(`bfPulse`) — 챌린지는 모집 0인 기간이 있어 '새 것' 신호의 근거가 없다(2026-08-03 삭제). 승준노트를 nav 4번으로 내리는 것도 기각 (nav.md)
 - 히어로 스크롤 구동·창 통과 줌·로고 흩날림 안·하단바 '몬크 더 알아보기' 상태 (home.md)
 - 특강 카드 커버 가격 배지·backdrop-filter 유리 패널·클라이언트 잔여석 update (lectures.md)
 - 블라인드 퀴즈를 상세 페이지나 두 곳 이상에 싣기 — challenges.html 하단 한 곳 확정 (home.md)

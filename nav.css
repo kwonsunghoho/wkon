@@ -64,9 +64,26 @@
   line-height: 1; text-decoration: none; transition: color .2s;
 }
 #navbar .nav-links a:hover { color: var(--primary); }
-/* 현재 위치 표시 — 하위 페이지(뉴스·상세 등)에 있어도 상위 메뉴에 표시가 남는다 */
+/* 현재 위치 표시 — 하위 페이지(뉴스·상세 등)에 있어도 상위 메뉴에 표시가 남는다.
+   ⚠️⚠️ **색만으로는 안 된다 — 밑줄 막대를 지우지 말 것**(2026-08-03 추가, 모바일 왼쪽
+      막대와 같은 개념). 주력 항목(.nav-feature, 지금은 챌린지)은 어느 페이지에서든 항상
+      --accent-ink 굵게라, 현재 위치까지 색·굵기로만 말하면 **챌린지가 늘 '현재 위치'로
+      읽히고 정작 챌린지 페이지에 있을 때와 구분이 안 된다.** 색과 별개인 표식이라
+      색각 이상에서도 구분된다(원칙 4). 모바일은 #mobileMenu 쪽에 같은 장치가 있다.
+   ⚠️ 막대는 ::after 로 겹쳐 그린다 — 흐름에 자리를 차지하면 다섯 항목의 세로 줄 맞춤
+      (잉크 중심 33px)과 바 높이 66px 이 틀어진다. bottom 값만 만지고 height 를 키우지 말 것.
+   ⚠️ 드롭다운 버튼은 화살표(gap 6 + svg 15 = 21px)를 빼고 글자 폭에만 긋는다 — 안 빼면
+      화살표 밑까지 밑줄이 삐져나와 옆 항목과의 간격(24px)이 절반으로 보인다. */
 #navbar .nav-links a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
 #navbar .nav-dd-btn[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
+#navbar .nav-links a[aria-current="page"],
+#navbar .nav-dd-btn[aria-current="page"] { position: relative; }
+#navbar .nav-links a[aria-current="page"]::after,
+#navbar .nav-dd-btn[aria-current="page"]::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -7px;
+  height: 2px; border-radius: 2px; background: var(--action);
+}
+#navbar .nav-dd-btn[aria-current="page"]::after { right: 21px; }
 
 /* 드롭다운(승준노트·챌린지) — 호버·포커스는 CSS, 클릭은 nav.js.
    ⚠️ 클릭은 토글이 아니다(2026-07-31) — 한 번 누르면 목차, 한 번 더 누르면 허브로 이동.
@@ -100,27 +117,20 @@
 #navbar .nav-dd-menu a b { display: block; font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.015em; }
 #navbar .nav-dd-menu a span { display: block; margin-top: 3px; font-size: 14px; font-weight: 500; color: var(--text-dim); }
 
-/* 승준노트 — 주력 콘텐츠 조용한 강조(2026-07-22).
+/* 주력 항목 조용한 강조 — 지금은 **챌린지**(2026-08-03 오너 확정. 2026-07-22~08-03 은 승준노트).
+   ⚠️ 클래스 이름이 `.nav-briefing` 이었다가 `.nav-feature` 로 바뀌었다 — 어느 항목이 주력인지는
+      바뀔 수 있으니 이름에 페이지를 박지 않는다. nav.js 의 버튼 클래스와 한 쌍이다.
+   ⚠️⚠️ **깜빡이는 점(bfPulse)은 삭제했다 — 되살리지 말 것.** 점의 뜻은 '새 것·살아있음'인데,
+      승준노트에선 뉴스가 3시간마다 실제로 갱신돼 근거가 있었지만 챌린지는 모집이 0인 기간이
+      있다. 모집 상태를 확인하지 않고 계속 깜빡이면 홈에서 지운 가짜 'DAY 7/14' 칩과 같은
+      거짓 신호가 된다(index.html 주석 참조). 점을 다시 붙이려면 모집 수를 조회해서 켜야 한다.
    ⚠️ 코랄 알약·광택 스윕(오너 "혼자 튀어서 조화 안 맞음")과 창문 아이콘(오너 "로고같지도
-   않다" — 10px 에선 정체불명 캡슐 테두리)은 폐기됐다. 지금 표식은 펄스 점 하나뿐이다. */
-#navbar .nav-briefing, #mobileMenu .nav-briefing {
-  display: inline-flex; align-items: center; gap: 8px;
-  vertical-align: middle;   /* 점이 첫 요소면 기준선이 점 하단으로 잡혀 3px 뜬다 — middle로 보정 */
-}
-#navbar .nav-links a.nav-briefing { color: var(--accent-ink); font-weight: 700; }
-#navbar .nav-links a.nav-briefing:hover { color: var(--accent-dark); }
-/* ⚠️ gap 7px 은 .nav-briefing(8px, 점↔글자)과 .nav-dd-btn(6px, 글자↔화살표)의 절충값 */
-#navbar .nav-dd-btn.nav-briefing { color: var(--accent-ink); font-weight: 700; gap: 7px; }
-#navbar .nav-dd-btn.nav-briefing:hover { color: var(--accent-dark); }
-/* 펄스 점 — '새 것·살아있음' 관습 기호. 글자는 --accent-ink(4.5:1)지만 점은 장식이라 밝은 --action */
-#navbar .nav-briefing::before, #mobileMenu .nav-briefing::before {
-  content: ''; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--action); flex-shrink: 0;
-  animation: bfPulse 2.6s ease-in-out infinite;
-}
-@keyframes bfPulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+      않다" — 10px 에선 정체불명 캡슐 테두리)도 앞서 폐기됐다. 지금 표식은 색·굵기뿐이다. */
+#navbar .nav-links a.nav-feature,
+#navbar .nav-dd-btn.nav-feature { color: var(--accent-ink); font-weight: 700; }
+#navbar .nav-links a.nav-feature:hover,
+#navbar .nav-dd-btn.nav-feature:hover { color: var(--accent-dark); }
 @media (prefers-reduced-motion: reduce) {
-  #navbar .nav-briefing::before, #mobileMenu .nav-briefing::before { animation: none; }
   #navbar .nav-dd-btn svg { transition: none; }
 }
 
@@ -225,12 +235,16 @@
   font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
 }
 #mobileMenu ul a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
-#mobileMenu .mm-acc-btn .nav-briefing { color: var(--accent-ink); font-weight: 700; }
+/* 주력 항목 강조 — 데스크톱과 같은 클래스(.nav-feature). 지금은 챌린지.
+   ⚠️ 구 `.mm-acc-btn .nav-briefing` 은 점을 담으려고 버튼 안에 <span> 을 한 겹 두던
+      구조였다. 점을 없애면서 span 도 없앴으니 클래스는 버튼에 바로 붙인다. */
+#mobileMenu .mm-acc-btn.nav-feature { color: var(--accent-ink); font-weight: 700; }
 
 /* ── '지금 여기' 표시 (2026-08-02 C-3) ────────────────────────────────────────
-   ⚠️ 색만으로는 안 된다. `.nav-briefing`(승준노트)은 어느 페이지에서든 항상
-      --accent-ink 굵게라, 색 규칙만 넓히면 승준노트가 늘 '현재 위치'로 읽힌다.
-      그래서 색과 별개인 왼쪽 막대를 쓴다 — 색각 이상에서도 구분된다(원칙 4). */
+   ⚠️ 색만으로는 안 된다. 주력 항목(`.nav-feature`, 지금은 챌린지)은 어느 페이지에서든
+      항상 --accent-ink 굵게라, 색 규칙만 넓히면 그 항목이 늘 '현재 위치'로 읽힌다.
+      그래서 색과 별개인 왼쪽 막대를 쓴다 — 색각 이상에서도 구분된다(원칙 4).
+      데스크톱에는 같은 이유로 밑줄 막대가 있다(위 '현재 위치 표시' 절). */
 #mobileMenu ul > li > a[aria-current="page"],
 #mobileMenu .mm-acc-btn[aria-current="page"],
 #mobileMenu .mm-acc-panel a[aria-current="page"] {

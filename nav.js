@@ -195,6 +195,13 @@
       '<span class="mm-go">' + (hint.role === 'admin' ? '관리자 페이지 가기 →' : '마이페이지 가기 →') + '</span></span>';
   }
 
+  /* ── 항목 순서: 챌린지 · 승준노트 · 연구실 · 특강 · 후기 (2026-08-03 오너 확정) ──
+     인스타로 처음 들어온 학생에게 주력 상품인 챌린지를 먼저 보이려고 1번으로 올렸다.
+     ⚠️ 승준노트는 **2번을 유지한다.** 오너 최초 안은 4번이었으나, 회원이 매일 쓰는 도구
+        6개가 전부 이 안에 있어 재방문 동선이 가장 길어지고, 같은 날 강조 표시까지 챌린지로
+        옮겨 눈에 띄는 수단이 하나도 안 남는다(무료 도구 미발견 문제는 2026-08-02 에 홈
+        클로징 직접 링크로 한 번 손본 적이 있다). 챌린지는 2번에 둬도 맨 앞이라 목적은 같다.
+     ⚠️ 데스크톱 .nav-links 와 아래 모바일 아코디언은 **항상 같은 순서**로 둔다. */
   var navHtml =
     /* 본문 바로가기 (2026-08-02 D-12) — 37개 페이지 전부에 없었다. 데스크톱 키보드
        사용자는 매 페이지 nav 링크 9개를 지나야 본문에 닿는다.
@@ -206,12 +213,12 @@
         '<a class="logo" href="' + logoHref + '"><img src="' + LOGO + '" alt="MONC" /></a>' +
         '<ul class="nav-links">' +
           '<li class="nav-dd">' +
-            '<button class="nav-dd-btn nav-briefing" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('briefing') + '>승준노트' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(BRIEFING_SUB) + '</div>' +
+            '<button class="nav-dd-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
+            '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
           '<li class="nav-dd">' +
-            '<button class="nav-dd-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
+            '<button class="nav-dd-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('briefing') + '>승준노트' + CHEV + '</button>' +
+            '<div class="nav-dd-menu">' + ddMenu(BRIEFING_SUB) + '</div>' +
           '</li>' +
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
@@ -233,14 +240,14 @@
         : '') +
       '<ul>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('briefing') + '><span class="nav-briefing">승준노트</span>' +
-          '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
-          '<div class="mm-acc-panel" id="mmBriefing">' + accPanel(BRIEFING_SUB) + '</div>' +
-        '</li>' +
-        '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-controls="mmChallenges"' + cur('challenge') + '>챌린지' +
+          '<button class="mm-acc-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-controls="mmChallenges"' + cur('challenge') + '>챌린지' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
+        '</li>' +
+        '<li class="mm-acc">' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('briefing') + '>승준노트' +
+          '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
+          '<div class="mm-acc-panel" id="mmBriefing">' + accPanel(BRIEFING_SUB) + '</div>' +
         '</li>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-controls="mmLab"' + cur('lab') + '>연구실' +
