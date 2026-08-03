@@ -86,6 +86,15 @@
   var want = 0;
   try { want = parseInt(sessionStorage.getItem(KEY), 10) || 0; } catch (e) {}
 
+  /* ⚠️ 브라우저도 제 나름대로 스크롤을 되돌린다 — 그 값이 **새로고침 직전 위치, 즉 0** 이다.
+     그대로 두면 우리가 옮겨 놓은 뒤에 브라우저가 0 으로 다시 끌어내린다. 라이브 실측에서
+     같은 페이지가 어떤 값에선 되고(우리 이동이 늦어 나중에 이김) 어떤 값에선 0 이 됐다
+     (2026-08-04). 되돌릴 자리가 있다고 판단한 순간부터는 우리가 전담한다.
+     ⚠️ 이 줄은 브라우저가 되돌리기를 실행하기 전에 돌아야 한다 — 태그에 defer 를 붙이지 않는 이유가 하나 더 있다. */
+  if (backish && want >= MIN) {
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+  }
+
   var done = false;
   function letGo() { done = true; }
 
