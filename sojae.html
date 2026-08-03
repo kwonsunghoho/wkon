@@ -72,6 +72,12 @@
        ⚠️ `justify-content:flex-end` 로 바꾸지 말 것 — 대화가 길어지면 위쪽 메시지가
           스크롤로 못 닿게 잘리는 브라우저가 있다. margin-top:auto 는 넘치는 순간 0이 된다. */
     .chat > :first-child { margin-top: auto; }
+    /* 키보드가 올라와 있는 동안만 공용 메뉴를 접는다(57px 을 대화에 넘긴다).
+       글을 쓰는 중이라 메뉴를 쓸 일이 없고, 되돌아갈 길은 바로 아래 '< 소재 발굴'이 맡는다.
+       ⚠️ 인앱 안내(.iab)도 같이 접는다 — 자리를 차지하는 .iab-space 가 56px 을 또 먹는다.
+          안내는 키보드를 내리면 다시 보인다(파일 받기·로그인은 어차피 그때 누른다). */
+    body.kb-open { padding-top: 0; }
+    body.kb-open #navbar, body.kb-open .iab, body.kb-open .iab-space { display: none; }
     .who { display: flex; align-items: center; gap: 6px; font-size: 12px;
       color: var(--accent-ink); font-weight: 700; margin-bottom: 5px; }
     /* 아바타 이니셜 한 글자 — 20px 원 안의 표식이지 읽는 활자가 아니다(12px 하한 예외).
@@ -427,10 +433,16 @@
        ⚠️ 사용자가 위쪽 대화를 읽는 중이면 끌어내리지 않는다 — 바닥에 붙어 있을 때만 따라간다. */
     const vv = window.visualViewport;
     if (vv) {
+      const baseH = vv.height;   // 키보드가 없는 상태의 높이 — 열림 판정 기준
       const atBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
       const fitShell = () => {
         const stick = atBottom();
         document.body.style.height = vv.height + 'px';
+        /* 키보드가 올라오면 남는 높이가 427px 수준이라, 고정 요소(공용 메뉴 57 + 상단 바 68
+           + 단계 30 + 입력부 214)만으로 369를 먹어 대화에 58밖에 안 남는다 — 질문 말풍선(96)이
+           잘린다(2026-08-04 오너 신고 2차). 그동안만 공용 메뉴를 접어 그 자리를 대화에 준다.
+           ⚠️ 50px 남짓은 주소창이 접힐 때도 줄어드니 120 이상 줄었을 때만 키보드로 본다. */
+        document.body.classList.toggle('kb-open', vv.height < baseH - 120);
         if (window.scrollY) window.scrollTo(0, 0);   // 이미 밀려 올라갔으면 되돌린다
         if (stick) chat.scrollTop = chat.scrollHeight;
       };
