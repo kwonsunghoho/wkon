@@ -132,7 +132,11 @@
     @keyframes mi-fade{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
 
     .mi-figure{ width:100%; }
-    .mi-photo{ position:relative; width:100%; aspect-ratio:4/5; border-radius:var(--radius); overflow:hidden; background:var(--accent); border:1px solid var(--border); }
+    /* ⚠️ 사진 자리의 바탕은 **연한 틴트**다(2026-08-03 오너 "사진 뜨기 전에 네이비 배경이 깜빡한다").
+       예전엔 --accent(딥 네이비)라 사진과 대비가 최대여서 로딩 한 틱이 크게 번쩍였다.
+       네이비는 **로드 실패 대체**(.mi-mono 이니셜)에만 남긴다 — 거긴 흰 글자를 얹는 자리라 필요하다.
+       연구실 허브(lab.html .ppl img)도 같은 사진에 같은 --accent-tint 를 쓴다. 맞춰 둘 것. */
+    .mi-photo{ position:relative; width:100%; aspect-ratio:4/5; border-radius:var(--radius); overflow:hidden; background:var(--accent-tint); border:1px solid var(--border); }
     .mi-photo img{ width:100%; height:100%; object-fit:cover; object-position:center 18%; display:block; }
     /* 고은지 사진은 가로 구도 → 인물이 오른쪽 중앙, 가로 60% 지점으로 크롭 */
     #mi-panel-koh .mi-photo img{ object-position:60% 50%; }
@@ -304,7 +308,11 @@
         return `
         <article class="mi-panel" id="mi-panel-${r.id}" role="tabpanel" aria-labelledby="mi-tab-${r.id}" tabindex="0">
           <aside class="mi-figure">
-            <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" loading="lazy" decoding="async" data-initial="${miInitial(r.name)}"></div>
+            <!-- ⚠️ loading="lazy" 금지 — 패널이 display:none 이라 **탭을 누르기 전엔 아예 안 받는다.**
+                 그래서 연구원을 바꿀 때마다 사진 자리가 먼저 비고 뒤늦게 채워졌다(2026-08-03 오너 지적).
+                 사진 6장 합계 299KB 이고, 연구실 허브(lab.html)가 같은 파일을 먼저 받아 두는 길이
+                 대부분이라 실제로 더 받는 양은 거의 없다. lab.html 도 같은 이유로 lazy 를 뺐다. -->
+            <div class="mi-photo"><img src="${r.photo}" alt="${r.name} ${r.role}" decoding="async" data-initial="${miInitial(r.name)}"></div>
             <p class="mi-role">${r.role}</p>
             <h3 class="mi-name">${r.name}</h3>
             <p class="mi-position">${r.position}</p>
