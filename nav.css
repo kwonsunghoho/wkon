@@ -73,12 +73,16 @@
    ⚠️ 막대는 ::after 로 겹쳐 그린다 — 흐름에 자리를 차지하면 다섯 항목의 세로 줄 맞춤
       (잉크 중심 33px)과 바 높이 66px 이 틀어진다. bottom 값만 만지고 height 를 키우지 말 것.
    ⚠️ 드롭다운 버튼은 화살표(gap 6 + svg 15 = 21px)를 빼고 글자 폭에만 긋는다 — 안 빼면
-      화살표 밑까지 밑줄이 삐져나와 옆 항목과의 간격(24px)이 절반으로 보인다. */
+      화살표 밑까지 밑줄이 삐져나와 옆 항목과의 간격(24px)이 절반으로 보인다.
+   ⚠️⚠️ 선택자를 `> li >` 로 **상단 항목에만** 묶는다(2026-08-04 오너 지적 "선이 너무 아래라
+      밑 카테고리로 오해된다"). 드롭다운 하위 링크도 `.nav-links` 안의 <a> 라 그냥 두면
+      이 규칙을 같이 물려받는데, `bottom:-7px` 는 항목 상자 **바깥 7px 아래** = 다음 줄
+      제목에서 5px 떨어진 자리라 아래 항목의 선으로 읽힌다(실측). 하위 링크 규칙은 아래 별도. */
 #navbar .nav-links a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
 #navbar .nav-dd-btn[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
-#navbar .nav-links a[aria-current="page"],
+#navbar .nav-links > li > a[aria-current="page"],
 #navbar .nav-dd-btn[aria-current="page"] { position: relative; }
-#navbar .nav-links a[aria-current="page"]::after,
+#navbar .nav-links > li > a[aria-current="page"]::after,
 #navbar .nav-dd-btn[aria-current="page"]::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -7px;
   height: 2px; border-radius: 2px; background: var(--action);
@@ -116,6 +120,22 @@
 #navbar .nav-dd-menu a:hover { background: var(--bg2); }
 #navbar .nav-dd-menu a b { display: block; font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.015em; }
 #navbar .nav-dd-menu a span { display: block; margin-top: 3px; font-size: 14px; font-weight: 500; color: var(--text-dim); }
+/* 목차 안 '지금 여기'(2026-08-04 오너 지적 "선이 너무 아래쪽이라 밑 카테고리로 오해된다").
+   ⚠️ 선은 **자기 줄 설명글 바로 밑 3px**에 붙인다 — 항목 사이 틈은 위아래 패딩 12+12 = 24px 인데,
+      그 틈의 아래쪽에 그리면 다음 줄 제목이 5px 앞이라 아래 항목의 선으로 읽힌다(구 -7px).
+      지금은 제 글자에서 3px, 다음 제목에서 19px — 어디 소속인지 거리로 말한다.
+   ⚠️ 폭도 **글자 폭**이다(140px, 항목 상자는 254px). 상자 폭 전체로 그으면 길이 때문에
+      또 구분선으로 읽힌다 — 상단 항목 밑줄을 글자 폭에만 긋는 것과 같은 이유다.
+   ⚠️ `width:fit-content` 로 줄인다 — `display:inline-block` 으로 줄이면 줄 상자에 기준선
+      여백이 붙어 그 항목만 57→57.5px 로 부푼다(실측). 흐름을 안 건드리는 쪽을 쓴다.
+   ⚠️ 제목 색도 같이 바꾼다 — `a b` 가 --text 를 직접 칠해서 `a` 쪽 색 규칙이 안 먹는다.
+      (모바일 아코디언은 b 에 색이 없어 이미 --accent-ink 로 보인다. 그쪽과 짝을 맞춘 것.) */
+#navbar .nav-dd-menu a[aria-current="page"] b { color: var(--accent-ink); }
+#navbar .nav-dd-menu a[aria-current="page"] span { position: relative; width: fit-content; }
+#navbar .nav-dd-menu a[aria-current="page"] span::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -3px;
+  height: 2px; border-radius: 2px; background: var(--action);
+}
 
 /* 주력 항목 조용한 강조 — 지금은 **챌린지**(2026-08-03 오너 확정. 2026-07-22~08-03 은 승준노트).
    ⚠️ 클래스 이름이 `.nav-briefing` 이었다가 `.nav-feature` 로 바뀌었다 — 어느 항목이 주력인지는
