@@ -43,7 +43,10 @@
     return Math.round(window.pageYOffset || document.documentElement.scrollTop || 0);
   }
 
+  var frozen = false;
+
   function save() {
+    if (frozen) return;
     try { sessionStorage.setItem(KEY, String(now())); } catch (e) {}
   }
 
@@ -52,6 +55,21 @@
   window.addEventListener('pagehide', save);
   // 안드로이드는 pagehide 없이 탭만 숨겼다 되살릴 때가 있어 숨는 시점에도 적어 둔다.
   document.addEventListener('visibilitychange', function () { if (document.hidden) save(); });
+
+  /* ⚠️⚠️ 이 파일에서 제일 조심할 곳 (2026-08-03 2차 — 1차가 폰에서 안 먹은 이유가 여기다).
+     뒤로 오면 순서가 이렇다:
+       ① 떠날 때 pagehide → 900 적음 ✓
+       ② 뒤로 → bfcache 가 화면을 되살림(pageshow persisted) → 페이지가 곧바로 통째 새로고침
+       ③ **그 새로고침의 pagehide 가 또 적는다** — 되살아난 위치가 아직 안 잡혔으면 0 을 적는다
+       ④ 새로 뜬 화면은 '적어 둔 자리 = 0' 을 읽어 맨 위에 선다
+     ①에서 적은 값이 우리가 쓸 전부다. **되살아난 뒤로는 아무것도 적지 않는다.**
+     ⚠️ 이 처리가 먹으려면 이 파일이 페이지의 reload 처리보다 **먼저** 실행돼야 한다 —
+        그래서 태그에 defer 를 붙이지 않는다(붙이면 본문 인라인 스크립트가 먼저 잡는다). */
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    frozen = true;
+    setTimeout(function () { frozen = false; }, 2000);   // 새로고침이 안 오는 페이지를 위한 안전망
+  });
 
   // ── 되돌릴 자리가 있는 방문인가 ─────────────────────────────────────────
   var kind = '';
@@ -107,7 +125,12 @@
 
   /* 되돌리기 시점을 페이지가 정해야 하는 곳은 태그에 data-manual 을 달고 직접 부른다
      (admin — 탭을 먼저 되살린 뒤가 아니면 다른 탭에서 적어 둔 자리로 간다). */
-  window.moncScrollKeep = { save: save, restore: restore, backish: backish, want: want };
+  /* frozen() — 페이지가 따로 적어 두는 것이 있으면(admin 의 '보던 탭') 같이 잠가야 한다.
+     되살아난 직후의 새로고침에서 다시 적으면 옛 값이 현재 화면 값으로 덮인다. */
+  window.moncScrollKeep = {
+    save: save, restore: restore, backish: backish, want: want,
+    frozen: function () { return frozen; }
+  };
 
   var tag = document.currentScript;
   if (!tag || !tag.hasAttribute('data-manual')) restore();
