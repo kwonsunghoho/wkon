@@ -27,8 +27,9 @@
       걸린 페이지에서 그냥 scrollTo 하면 화면이 주르륵 흘러내린다 — 잠깐 auto 로 바꿔서 옮긴다.
    ⚠️ 기록은 sessionStorage(탭 하나·닫으면 사라짐). localStorage 로 바꾸지 말 것 —
       공용 기기에서 다음 사람이 남의 마지막 위치를 물려받는다.
-   ⚠️ admin.html 에는 일부러 안 붙였다. 뒤로 오면 탭이 '오늘'로 돌아가는데 스크롤만
-      되살리면 **다른 탭에서 적어 둔 자리**로 가 버린다(원칙 11 — 상태를 단정하지 않기).
+   ⚠️ admin.html 은 `data-manual` 로 붙인다. 뒤로 오면 탭이 '오늘'로 돌아가므로,
+      **탭을 먼저 되살린 뒤**가 아니면 다른 탭에서 적어 둔 자리로 가 버린다
+      (원칙 11 — 상태를 단정하지 않기). 되돌리는 시점은 admin 이 직접 정한다.
    ══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -52,7 +53,7 @@
   // 안드로이드는 pagehide 없이 탭만 숨겼다 되살릴 때가 있어 숨는 시점에도 적어 둔다.
   document.addEventListener('visibilitychange', function () { if (document.hidden) save(); });
 
-  // ── 여기서부터는 '되돌릴 자리가 있는 방문'인지 판정 ─────────────────────
+  // ── 되돌릴 자리가 있는 방문인가 ─────────────────────────────────────────
   var kind = '';
   try {
     var e0 = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
@@ -60,18 +61,15 @@
     else if (performance.navigation) kind = (performance.navigation.type === 2) ? 'back_forward'
                                          : (performance.navigation.type === 1) ? 'reload' : 'navigate';
   } catch (e) {}
-  if (kind !== 'reload' && kind !== 'back_forward') return;   // 새로 눌러 들어온 방문 — 맨 위가 맞다
+  var backish = (kind === 'reload' || kind === 'back_forward');   // 새로 눌러 들어온 방문(navigate)은 맨 위가 맞다
 
+  /* ⚠️ 되돌릴 값은 **지금 읽어 둔다.** 나중에 읽으면 안 된다 — 아직 그리는 중에 사용자가
+     앱을 내리면 위 visibilitychange 가 현재 위치(0)로 덮어써서 되돌릴 자리를 잃는다. */
   var want = 0;
   try { want = parseInt(sessionStorage.getItem(KEY), 10) || 0; } catch (e) {}
-  if (want < MIN) return;
 
   var done = false;
   function letGo() { done = true; }
-  ['wheel', 'touchstart', 'keydown'].forEach(function (t) {
-    try { window.addEventListener(t, letGo, { passive: true }); }
-    catch (e) { window.addEventListener(t, letGo); }
-  });
 
   function jump(top) {
     done = true;
@@ -82,15 +80,35 @@
     finally { el.style.scrollBehavior = prev; }
   }
 
-  var t0 = Date.now();
-  (function tick() {
-    if (done) return;
-    var max = document.documentElement.scrollHeight - window.innerHeight;
-    if (max >= want) { jump(want); return; }                 // 그 자리가 생겼다
-    if (Date.now() - t0 > WAIT) {                            // 끝내 안 길어지면(자료가 줄었다) 갈 수 있는 데까지
-      if (max > MIN) jump(max);
-      return;
-    }
-    setTimeout(tick, STEP);
-  })();
+  /* wait: 페이지가 길어지길 기다리는 한도(ms). admin 처럼 화면을 켜기까지 조회가 여러 번인
+     곳은 넉넉히 준다. 되돌릴 방문이 아니거나 적어 둔 자리가 없으면 아무 일도 안 한다. */
+  function restore(opts) {
+    if (!backish || want < MIN || done) return;
+    var limit = (opts && opts.wait) || WAIT;
+
+    // 사용자가 먼저 움직였으면 그만둔다 — 읽고 있는 사람을 끌어당기지 않는다
+    ['wheel', 'touchstart', 'keydown'].forEach(function (t) {
+      try { window.addEventListener(t, letGo, { passive: true }); }
+      catch (e) { window.addEventListener(t, letGo); }
+    });
+
+    var t0 = Date.now();
+    (function tick() {
+      if (done) return;
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      if (max >= want) { jump(want); return; }               // 그 자리가 생겼다
+      if (Date.now() - t0 > limit) {                         // 끝내 안 길어지면(자료가 줄었다) 갈 수 있는 데까지
+        if (max > MIN) jump(max);
+        return;
+      }
+      setTimeout(tick, STEP);
+    })();
+  }
+
+  /* 되돌리기 시점을 페이지가 정해야 하는 곳은 태그에 data-manual 을 달고 직접 부른다
+     (admin — 탭을 먼저 되살린 뒤가 아니면 다른 탭에서 적어 둔 자리로 간다). */
+  window.moncScrollKeep = { save: save, restore: restore, backish: backish, want: want };
+
+  var tag = document.currentScript;
+  if (!tag || !tag.hasAttribute('data-manual')) restore();
 })();
