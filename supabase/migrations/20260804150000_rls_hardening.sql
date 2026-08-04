@@ -94,6 +94,16 @@ grant execute on function public.refund_credit_for(uuid, text, text) to service_
 --    않는다(service_role 은 RLS 를 통과). apply.html·lecture.html 이 보내는 payload 는
 --    name·phone·challenges·total_price·member_id·lecture_id·slot_id 뿐이라 그대로 통과한다.
 -- ⚠️ payment_status 는 기본값 'pending' 이 채워진 뒤에 검사된다(RLS 는 최종 행을 본다).
+--
+-- ⚠️⚠️ **콘솔에서 손으로 만든 `anyone can apply` 를 반드시 지운다**(2026-08-04 실측으로
+--    확인 — 살아 있었다). WITH CHECK 이 `true` 라 아래 제한과 OR 로 합쳐져 **제한이
+--    통째로 무효**가 된다. 정책은 하나라도 통과하면 통과다. 되살리지 말 것.
+--    나머지 둘은 아래 정책과 같은 내용의 중복본이라 지워도 동작이 안 바뀐다
+--    (레포가 정책의 단일 소스가 되도록 정리한다).
+drop policy if exists "anyone can apply"              on public.applications;
+drop policy if exists "admin manage applications"     on public.applications;
+drop policy if exists "member reads own applications" on public.applications;
+
 drop policy if exists applications_insert_public on public.applications;
 create policy applications_insert_public on public.applications
   for insert
@@ -119,6 +129,10 @@ comment on table public.applications is
 -- 화면들은 이미 .eq('visible', true) 로 거르므로 using (visible) 이 보이는 결과를 바꾸지 않는다.
 alter table public.reviews enable row level security;
 
+-- 콘솔에서 손으로 만든 중복본 — 아래 두 정책과 같은 내용이라 지워도 동작이 안 바뀐다.
+drop policy if exists "admin manage reviews"        on public.reviews;
+drop policy if exists "public read visible reviews" on public.reviews;
+
 drop policy if exists reviews_read_public on public.reviews;
 drop policy if exists reviews_admin_all   on public.reviews;
 
@@ -139,6 +153,10 @@ create policy reviews_admin_all on public.reviews
 -- admin '챌린지' 탭은 upsert(insert+update)·delete 를 쓴다 → for all 하나로 덮는다.
 alter table public.challenge_rounds enable row level security;
 
+-- 콘솔에서 손으로 만든 중복본 — 아래 두 정책과 같은 내용이라 지워도 동작이 안 바뀐다.
+drop policy if exists "admin write rounds" on public.challenge_rounds;
+drop policy if exists "public read rounds" on public.challenge_rounds;
+
 drop policy if exists challenge_rounds_read_public on public.challenge_rounds;
 drop policy if exists challenge_rounds_admin_all   on public.challenge_rounds;
 
@@ -154,10 +172,10 @@ create policy challenge_rounds_admin_all on public.challenge_rounds
 -- =============================================================================
 -- 적용 확인
 -- =============================================================================
--- ⚠️ 이 파일은 **이름이 다른 기존 정책을 지우지 못한다.** reviews·challenge_rounds 는
---    콘솔에서 만든 표라 손으로 붙인 정책이 남아 있을 수 있고, 그게 더 헐거우면
---    (정책은 OR 로 합쳐진다) 여기서 조인 제한이 무의미해진다. 아래 2번으로 확인하고
---    모르는 정책이 있으면 drop 한다.
+-- 2026-08-04 실측으로 확인한 것: 콘솔에서 손으로 만든 정책 7개가 남아 있었고, 그중
+-- `anyone can apply`(applications INSERT · with check true)가 **위 2번의 제한을 통째로
+-- 무효화**하고 있었다(정책은 OR 로 합쳐진다). 위 drop 들이 그 7개를 정리한다.
+-- 앞으로도 콘솔에서 정책을 손으로 만들지 말 것 — 레포가 안 보는 정책이 조용히 이긴다.
 --
 -- 1) 표별 RLS 상태 — rls_켜짐 이 false 인 줄이 없어야 한다
 -- select c.relname as 테이블, c.relrowsecurity as rls_켜짐,

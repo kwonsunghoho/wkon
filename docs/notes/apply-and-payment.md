@@ -8,7 +8,9 @@
 
 **남는 것**: 정원 소모는 완전히 막히지 않는다. 비회원 계좌이체 신청이 자리를 잡는 건 정상 동작이라, 완전 차단은 '특강 신청 로그인 필수' 같은 제품 결정이 필요하다(오너 판단 대기).
 
-**같이 하드닝한 콘솔 생성 표**: `reviews`(공개 읽기는 `visible` 인 것만·쓰기 관리자만) · `challenge_rounds`(공개 읽기 전체·쓰기 관리자만). 둘 다 콘솔에서 만든 표라 레포에 RLS 선언이 없었다 — `applications` 가 2026-07-11 에 같은 이유로 하드닝된 전례. ⚠️ 마이그레이션은 **이름이 다른 기존 정책을 지우지 못한다** — 적용 후 `pg_policies` 로 모르는 정책이 남아 있는지 확인한다(파일 하단 '적용 확인' 2번).
+**같이 하드닝한 콘솔 생성 표**: `reviews`(공개 읽기는 `visible` 인 것만·쓰기 관리자만) · `challenge_rounds`(공개 읽기 전체·쓰기 관리자만). 둘 다 콘솔에서 만든 표라 레포에 RLS 선언이 없었다 — `applications` 가 2026-07-11 에 같은 이유로 하드닝된 전례.
+
+**⚠️ 콘솔에서 정책을 손으로 만들지 말 것**(2026-08-04 실측). `pg_policies` 를 떠 보니 콘솔에서 붙인 정책 7개가 남아 있었고, 그중 **`anyone can apply`**(applications INSERT · `with check true`)가 위 제한을 통째로 무효화하고 있었다 — **정책은 OR 로 합쳐지므로 헐거운 쪽이 이긴다.** 마이그레이션은 이름을 아는 정책만 지울 수 있어서, 레포가 모르는 정책은 조용히 살아남는다. 지운 7개: `anyone can apply` · `admin manage applications` · `member reads own applications` · `admin write rounds` · `public read rounds` · `admin manage reviews` · `public read visible reviews`(뒤 6개는 레포 정책과 같은 내용의 중복본). 정책을 손볼 일이 생기면 마이그레이션 파일로 한다.
 
 ## ⚠️ 챌린지 피드백은 '중간 점검 1회'다 — 과장 문구 재도입 금지 (2026-08-02 오너 확인)
 
