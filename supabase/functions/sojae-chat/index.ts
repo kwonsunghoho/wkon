@@ -14,8 +14,9 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const FN_VERSION = "2026-07-30a";
-const FN_FEATURES = ["ask_v2", "refine_v2", "materials", "playbook"];
+const FN_VERSION = "2026-08-04a";
+// refund_server = 환급을 service_role 전용 refund_credit_for 로 이동(2026-08-04 보안)
+const FN_FEATURES = ["ask_v2", "refine_v2", "materials", "playbook", "refund_server"];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -268,9 +269,8 @@ function legacyMessage(card: any, skeleton: any): string {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   // ⚠️ 차감해 놓고 결과를 못 주면 반드시 되돌려야 한다 → catch 에서도 보이도록 try 밖.
-  let charged: { ref: string } | null = null;
-  // deno-lint-ignore no-explicit-any
-  let supaRef: any = null;
+  //    member 를 같이 들고 다닌다 — 환급은 service_role 로 부르므로 auth.uid() 가 없다.
+  let charged: { ref: string; member: string } | null = null;
   try {
     // deno-lint-ignore no-explicit-any
     const body: any = await req.json();
@@ -310,7 +310,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: req.headers.get("Authorization")! } } },
     );
-    supaRef = supa;
     const { data: { user } } = await supa.auth.getUser();
     if (!user) return json({ error: "로그인이 필요합니다" }, 401);
 
@@ -391,7 +390,7 @@ Deno.serve(async (req) => {
       }
       spent = (spentRaw ?? null) as Wallet | null;
       // 'already' 는 이번 호출이 깎은 게 아니다 → 실패해도 환급하면 안 된다.
-      if (spent?.used !== "already") charged = { ref: payRef };
+      if (spent?.used !== "already") charged = { ref: payRef, member: user.id };
     }
 
     // ── 프롬프트 조립 + 호출 ────────────────────────────────────────────────
@@ -492,9 +491,19 @@ Deno.serve(async (req) => {
       daily_left: spent?.daily_left,
     }, 200);
   } catch (e) {
-    // ⚠️ 차감했는데 결과를 못 준 경우 반드시 되돌린다(v1 그대로).
-    if (charged && supaRef) {
-      const { error } = await supaRef.rpc("refund_credit", {
+    // ⚠️ 차감했는데 결과를 못 준 경우 반드시 되돌린다.
+    // ⚠️ 환급은 **service_role 로만** 부른다(2026-08-04). 사용자 JWT 로 부르던 구 방식은
+    //    같은 RPC 를 브라우저에도 열어 둬야 해서, 학생이 결과를 받은 뒤 스스로 환급해
+    //    유료 기능을 공짜로 쓸 수 있었다. 대상 회원은 charged.member 가 들고 있다.
+    // ⚠️ 마이그레이션 20260804150000 이 먼저 적용돼 있어야 한다 — 없으면 환급이 실패해
+    //    학생이 크레딧을 잃는다(로그로만 남는다).
+    if (charged) {
+      const adminRef = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { error } = await adminRef.rpc("refund_credit_for", {
+        p_member: charged.member,
         p_tool: "sojae",
         p_ref: charged.ref,
       });

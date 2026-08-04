@@ -126,7 +126,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 결제 후 실패(특강 정원 마감 `MC001`·중복 신청 `MC002`·이용권 중복 등)는 **전액 자동 환불 + HTTP 200** 으로 응답한다(non-2xx 면 supabase-js 가 본문을 감춰 브라우저가 환불 안내를 못 띄운다). 크레딧 부족·실패도 HTTP 200 + `code`.
 - 환불(cancel-payment)에서 포트원 취소 성공 + DB 기록 실패는 `ok:true + warning` — 실패로 바꾸면 관리자가 다시 눌러 **이중 환불**이 난다.
 - **돈이 걸린 판정은 전부 DB 가 원장이다**: 잔여석·중복 신청·답변 프로그램 세션 상태는 DB 트리거(+`for update` 행 잠금·advisory lock), 크레딧 잔액은 **원장(`credit_ledger`) 합계**(잔액 컬럼 금지). 브라우저 검사·클라이언트 update 로 대체 금지. 브라우저가 보낸 `answerId`·금액·슬롯도 서버가 소유·소속을 재확인.
-- **크레딧 공통 규칙**: 저장은 언제나 **무료·무제한**(글이 저장소로 들어오는 세 길 — 직접 쓰기·소재 발굴·킬러 자동 저장 — 어느 것도 막지 말 것). 단가는 소재 2 / 킬러 3 / 첨삭 10(**가치 기준** — 원가 비율로 되돌리지 말 것). **하루 무료 5는 지급량 조절값이 아니라 '첨삭 잠금장치'** — 첨삭 단가(10) 이상이 되는 순간 첨삭이 매일 공짜가 된다. 후하게 줄 땐 `grant_credit` 일괄 지급. 차감 키는 `<대상 id>#<묶음>` 패턴(재전송·허용된 재검사가 무차감). 유료 기능은 기록 테이블 count 실패 시 **차감 전에 `not_ready`** 로 멈춘다(무시하면 영구 무료 결함 — polish p-1 전례).
+- **크레딧 공통 규칙**: 저장은 언제나 **무료·무제한**(글이 저장소로 들어오는 세 길 — 직접 쓰기·소재 발굴·킬러 자동 저장 — 어느 것도 막지 말 것). 단가는 소재 2 / 킬러 3 / 첨삭 10(**가치 기준** — 원가 비율로 되돌리지 말 것). **하루 무료 5는 지급량 조절값이 아니라 '첨삭 잠금장치'** — 첨삭 단가(10) 이상이 되는 순간 첨삭이 매일 공짜가 된다. 후하게 줄 땐 `grant_credit` 일괄 지급. 차감 키는 `<대상 id>#<묶음>` 패턴(재전송·허용된 재검사가 무차감). 유료 기능은 기록 테이블 count 실패 시 **차감 전에 `not_ready`** 로 멈춘다(무시하면 영구 무료 결함 — polish p-1 전례). **환급은 서버 전용 `refund_credit_for`(service_role)로만 부른다** — 대상을 `auth.uid()` 로 정하는 RPC 를 `authenticated` 에 열면 학생이 결과를 받은 뒤 자기 차감을 되돌려 유료 기능이 통째로 공짜가 된다(2026-08-04 점검에서 발견·차단).
 - **유료 콘텐츠 비공개**: 답변 프로그램 기출은 회원 전체 읽기인 `questions` 에 넣지 않는다 — 비공개 `interview_questions` + `ap_program_view()` RPC 만. `program_enrollments` 에 회원 자가 INSERT 정책 금지(**체험판·무료 등록 없음** — 오너 확정). `airline_profiles`·`ai_killer_terms`·`sojae_playbook` RLS 는 일반 회원에게 닫혀 있다.
 
 ## 디자인 공통
@@ -217,6 +217,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
 - 모집일정 구글시트 CSV 폴백(`RECRUIT_CSV`) (apply-and-payment.md)
 - `members.sojae_enabled` 권한 스위치 방식 — 소재는 크레딧으로 통제 (credits.md)
+- 환급 RPC(`refund_credit`)를 `authenticated` 에 다시 grant — 학생이 결과를 받은 뒤 스스로 환급해 유료 기능이 공짜가 된다 (credits.md)
+- `applications` INSERT 정책에서 결제 컬럼 제약 빼기 — 누구나 '입금 완료' 행을 넣고 특강 정원을 먹는다 (apply-and-payment.md)
 - 승준노트 카드 권한 배지(`.bf-badge`)·'첫 1회 무료' 같은 회원별 상태 문구 (briefing.md)
 - 뉴스 필터 칩 나열 sticky 바·리본 북마크·라벨 없는 스크랩 아이콘 (news.md)
 - 투명 nav(`nav-transparent`)·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
