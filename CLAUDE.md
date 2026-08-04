@@ -146,7 +146,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 영역 | 핵심 파일 | 어기면 안 되는 것 한 줄 | 상세 문서 |
 |---|---|---|---|
 | 홈 랜딩·히어로·챌린지 허브 | `index.html`·`index.css`·`challenges.html`·`blind-quiz.js` | 섹션 서사·히어로 상수·카드 규격은 전부 실측 기반 — 값 수정 전 문서 필독 | `docs/notes/home.md` |
-| 공용 nav | `nav.js`·`nav.css` | 활자·정렬 값은 실측 합의값 — 임의 변경 금지 | `docs/notes/nav.md` |
+| 공용 nav | `nav.js`·`nav.css` | 활자·정렬 값은 실측 합의값 — 임의 변경 금지, 소셜 링크는 모바일=햄버거·데스크톱=푸터(상단 바 금지) | `docs/notes/nav.md` |
 | 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로 | `docs/notes/apply-and-payment.md` |
 | 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
 | 승준노트 허브 | `briefing.html` | 이름은 화면 글자만 '승준노트'(파일·클래스명 유지), 카드에 회원별 상태 문구 금지 | `docs/notes/briefing.md` |
