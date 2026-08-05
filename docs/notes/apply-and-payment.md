@@ -6,7 +6,7 @@
 
 **고친 방식**(migration `20260804150000_rls_hardening.sql`): WITH CHECK 에 `paid=false · refunded=false · refunded_amount=0 · payment_id is null · paid_amount is null · payment_status='pending'` 을 강제. `apply.html`·`lecture.html` 이 보내는 payload 는 이 컬럼들을 안 건드리므로 정상 신청은 그대로 통과하고, **카드 결제 행은 verify-payment 가 service_role 로 넣으므로 영향이 없다.**
 
-**특강 정원 소모 차단(2026-08-05 오너 확정 — '로그인해야 신청')**: 위의 '남는 것'을 닫았다. 특강(`lecture_id` 있는 신청)은 로그인한 본인만 넣을 수 있다. 화면·verify-payment·RLS 세 겹 방어이고 상세는 `docs/notes/lectures.md` 맨 위 절. 챌린지는 종전대로 비회원 신청 유지. migration `20260805130000_lecture_login_required.sql`.
+**특강 정원 소모 차단(2026-08-05 오너 확정 — '로그인해야 신청')**: 위의 '남는 것'을 닫았다. 특강(`lecture_id` 있는 신청)은 로그인한 본인만 넣을 수 있다. 화면·verify-payment·RLS 세 겹 방어이고 상세는 `docs/notes/lectures.md` 맨 위 절. 챌린지는 종전대로 비회원 신청 유지. migration `20260805140000_lecture_login_required.sql`.
 
 **같이 하드닝한 콘솔 생성 표**: `reviews`(공개 읽기는 `visible` 인 것만·쓰기 관리자만) · `challenge_rounds`(공개 읽기 전체·쓰기 관리자만). 둘 다 콘솔에서 만든 표라 레포에 RLS 선언이 없었다 — `applications` 가 2026-07-11 에 같은 이유로 하드닝된 전례.
 
