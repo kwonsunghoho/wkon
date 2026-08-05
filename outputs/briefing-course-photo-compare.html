@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코스 카드 사진 비교 — 승준노트 허브</title>
+<style>
+  /* 실제 briefing.html 의 토큰·카드 CSS 를 그대로 옮겨 왔다(값 수정 금지 — 비교가 어긋난다). */
+  :root{
+    --bg:#F4F1EA; --surface:#FFFFFF; --text:#26221C; --text-muted:#5F574B;
+    --border-soft:rgba(38,34,28,0.09);
+    --accent:#1B3A6B; --accent-tint:#E5E9F1; --accent-ink:#1B3A6B;
+    --action:#1B3A6B; --action-ink:#FFFFFF;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+
+  .wrap{max-width:600px;margin:0 auto;padding:20px 0 60px}
+  .wrap > .lead, .wrap > .verdict, .case > .case-h, .case > .case-note{padding-left:20px;padding-right:20px}
+  .lead{font-size:14px;line-height:1.6;color:var(--text-muted);margin:0 0 4px}
+  .lead b{color:var(--text)}
+
+  .case{margin-top:34px}
+  .case-h{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+  .case-h b{font-size:17px;font-weight:800}
+  .case-h span{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--accent-ink);
+    background:var(--accent-tint);border-radius:999px;padding:3px 9px}
+  .case-note{font-size:13px;line-height:1.6;color:var(--text-muted);margin:6px 0 0}
+
+  /* 375px 실폭 그대로 재현 — 좌우 20px 은 허브의 열 여백이다.
+     테두리·안쪽 여백을 더 주면 카드 폭이 163px 에서 줄어 비교가 어긋난다. */
+  .phone{width:375px;max-width:100%;margin:14px auto 0;padding:16px 20px 22px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .sec-t{margin:0;text-align:center}
+  .sec-t b{font-size:19px;font-weight:800}
+  .sec-t span{display:block;font-size:15px;color:var(--text-muted);margin-top:5px}
+
+  /* ── briefing.html 원본 카드 CSS ── */
+  .cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  .cs-card{appearance:none;font-family:inherit;text-align:left;cursor:pointer;
+    background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;
+    overflow:hidden;padding:0;box-shadow:0 2px 10px rgba(38,34,28,.05);
+    -webkit-tap-highlight-color:transparent}
+  .cs-q{display:flex;align-items:center;min-height:52px;padding:9px 10px;
+    background:var(--accent-tint);color:var(--accent-ink);
+    font-size:13px;font-weight:800;line-height:1.35}
+  .cs-card[aria-expanded="true"]{border-color:var(--action);
+    box-shadow:0 0 0 1px var(--action) inset,0 2px 10px rgba(38,34,28,.05)}
+  .cs-card[aria-expanded="true"] .cs-q{background:var(--action);color:var(--action-ink)}
+  .cs-ph{aspect-ratio:4/3.2;background:var(--accent-tint);display:flex;
+    align-items:center;justify-content:center;overflow:hidden}
+  .cs-ph img,.cs-ph svg{width:100%;height:100%;object-fit:cover;display:block}
+  .cs-ph>span{font-size:12px;font-weight:800;letter-spacing:.18em;color:var(--accent-ink);opacity:.55}
+  .cs-nm{display:flex;align-items:center;justify-content:space-between;gap:6px;
+    padding:9px 10px 10px;font-size:13px;font-weight:800;color:var(--text-muted)}
+  .cs-nm i{font-style:normal;color:var(--accent-ink)}
+  .cs-card[aria-expanded="true"] .cs-nm{color:var(--text)}
+  .cs-card[aria-expanded="true"] .cs-nm i{transform:rotate(180deg)}
+
+  .dummy-tag{margin:10px 0 0;font-size:12px;color:var(--text-muted);text-align:center}
+
+  .verdict{margin-top:38px;background:var(--surface);border:1px solid var(--border-soft);
+    border-radius:18px;padding:18px 16px}
+  .verdict h2{font-size:16px;margin:0 0 10px}
+  .verdict ul{margin:0;padding-left:18px}
+  .verdict li{font-size:14px;line-height:1.7;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="lead"><b>코스 카드 4장 — 사진 없음 vs 사진 있음</b></p>
+  <p class="lead">375px 실폭. 카드 CSS 는 briefing.html 원본 그대로다. 첫 카드는 실제 화면과 같이 선택된 상태(네이비)로 뒀다.</p>
+
+  <!-- ─────────── A. 사진 없음 (현행) ─────────── -->
+  <section class="case">
+    <div class="case-h"><b>A. 사진 없음</b><span>현행</span></div>
+    <p class="case-note">사진 자리에 틴트 판 + 코스 코드 글자. 카드 높이 219px 중 128px 이 색면이다.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="cs-grid" id="gridA"></div>
+    </div>
+  </section>
+
+  <!-- ─────────── B. 사진 있음 (더미) ─────────── -->
+  <section class="case">
+    <div class="case-h"><b>B. 사진 있음</b><span>더미</span></div>
+    <p class="case-note">같은 자리에 사진을 얹었다. 아래 사진은 <b>자리·톤을 보기 위한 더미</b>이지 최종 사진안이 아니다.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="cs-grid" id="gridB"></div>
+      <p class="dummy-tag">↑ 더미 사진(SVG 생성) — 실사진 아님</p>
+    </div>
+  </section>
+
+  <div class="verdict">
+    <h2>보실 때 이 세 가지를 비교해 주세요</h2>
+    <ul>
+      <li><b>구분 속도</b> — 4장이 서로 다른 길로 읽히나요, 아니면 색만 다른 같은 카드로 보이나요.</li>
+      <li><b>글자 가독성</b> — 사진이 들어가도 질문 줄과 코스 이름이 먼저 읽히나요.</li>
+      <li><b>톤</b> — 사진이 웜 페이퍼 + 딥 네이비와 같은 화면처럼 보이나요, 따로 노나요.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+/* 코스 4종 — 실제 briefing.html COURSES 와 같은 문구 */
+var COURSES = [
+  { code:'beginner',  q:'승무원 준비가<br>처음이에요?',   name:'비기너 코스' },
+  { code:'practical', q:'면접이 당장<br>코앞이라면?',     name:'실전 코스'   },
+  { code:'spurt',     q:'자소서·영상면접<br>준비가 시급?', name:'스퍼트 코스' },
+  { code:'daily',     q:'루틴을 잃고<br>싶지 않다면?',    name:'데일리 코스' }
+];
+
+/* ── 더미 사진 4장 ──
+   실사진이 없어 SVG 로 만든 자리 채움이다. 사진 한 장이 들어왔을 때의
+   '무게'와 글자와의 경쟁만 보면 된다. 색은 브랜드 팔레트 안에서 골랐다. */
+function grain(id){
+  return '<filter id="g'+id+'"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3"/>'
+       + '<feColorMatrix type="saturate" values="0"/></filter>';
+}
+var PHOTOS = {
+  /* 비기너 — 기내 창 너머 아침 하늘 */
+  beginner:
+    '<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#9FB8DC"/><stop offset="55%" stop-color="#D9E2F0"/>'
+    + '<stop offset="100%" stop-color="#F2E7D6"/></linearGradient>' + grain(1) + '</defs>'
+    + '<rect width="200" height="160" fill="url(#sk)"/>'
+    + '<circle cx="146" cy="52" r="19" fill="#FBF3E4" opacity=".95"/>'
+    + '<ellipse cx="58" cy="96" rx="52" ry="15" fill="#FFFFFF" opacity=".55"/>'
+    + '<ellipse cx="126" cy="112" rx="60" ry="13" fill="#FFFFFF" opacity=".4"/>'
+    + '<path d="M0 132 Q100 118 200 134 L200 160 L0 160Z" fill="#1B3A6B" opacity=".18"/>'
+    + '<rect width="200" height="160" filter="url(#g1)" opacity=".07"/></svg>',
+
+  /* 실전 — 면접 대기 복도 */
+  practical:
+    '<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="hl" x1="0" y1="0" x2="1" y2="1">'
+    + '<stop offset="0" stop-color="#EFE7DA"/><stop offset="100%" stop-color="#CBBFAD"/></linearGradient>'
+    + grain(2) + '</defs>'
+    + '<rect width="200" height="160" fill="url(#hl)"/>'
+    + '<rect x="18" y="26" width="46" height="102" rx="4" fill="#1B3A6B" opacity=".13"/>'
+    + '<rect x="126" y="18" width="58" height="118" rx="4" fill="#1B3A6B" opacity=".2"/>'
+    + '<rect x="74" y="86" width="24" height="42" rx="3" fill="#1B3A6B" opacity=".32"/>'
+    + '<rect x="104" y="86" width="24" height="42" rx="3" fill="#1B3A6B" opacity=".26"/>'
+    + '<rect y="128" width="200" height="32" fill="#8E7F6C" opacity=".28"/>'
+    + '<rect width="200" height="160" filter="url(#g2)" opacity=".08"/></svg>',
+
+  /* 스퍼트 — 밤에 화면 앞, 마감 앞둔 책상 */
+  spurt:
+    '<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="nt" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#2C3E5E"/><stop offset="100%" stop-color="#16233A"/></linearGradient>'
+    + '<radialGradient id="lp" cx="50%" cy="58%" r="46%">'
+    + '<stop offset="0" stop-color="#F6E3BE" stop-opacity=".85"/>'
+    + '<stop offset="100%" stop-color="#F6E3BE" stop-opacity="0"/></radialGradient>' + grain(3) + '</defs>'
+    + '<rect width="200" height="160" fill="url(#nt)"/>'
+    + '<rect width="200" height="160" fill="url(#lp)"/>'
+    + '<path d="M62 60 L138 60 L150 112 L50 112 Z" fill="#E8EDF5" opacity=".9"/>'
+    + '<rect x="44" y="112" width="112" height="7" rx="3" fill="#C9D3E2" opacity=".9"/>'
+    + '<rect x="72" y="70" width="56" height="4" rx="2" fill="#1B3A6B" opacity=".45"/>'
+    + '<rect x="72" y="80" width="42" height="4" rx="2" fill="#1B3A6B" opacity=".33"/>'
+    + '<rect x="72" y="90" width="50" height="4" rx="2" fill="#1B3A6B" opacity=".33"/>'
+    + '<rect width="200" height="160" filter="url(#g3)" opacity=".1"/></svg>',
+
+  /* 데일리 — 아침 책상, 커피와 노트 */
+  daily:
+    '<svg viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="dk" x1="0" y1="0" x2="1" y2="1">'
+    + '<stop offset="0" stop-color="#F7F0E4"/><stop offset="100%" stop-color="#DCCEB8"/></linearGradient>'
+    + grain(4) + '</defs>'
+    + '<rect width="200" height="160" fill="url(#dk)"/>'
+    + '<rect x="16" y="44" width="96" height="98" rx="6" fill="#FFFFFF" opacity=".92"/>'
+    + '<rect x="30" y="62" width="66" height="4" rx="2" fill="#1B3A6B" opacity=".3"/>'
+    + '<rect x="30" y="76" width="52" height="4" rx="2" fill="#1B3A6B" opacity=".2"/>'
+    + '<rect x="30" y="90" width="60" height="4" rx="2" fill="#1B3A6B" opacity=".2"/>'
+    + '<rect x="30" y="104" width="40" height="4" rx="2" fill="#1B3A6B" opacity=".2"/>'
+    + '<circle cx="152" cy="82" r="27" fill="#FFFFFF" opacity=".95"/>'
+    + '<circle cx="152" cy="82" r="19" fill="#7A5A3C" opacity=".8"/>'
+    + '<ellipse cx="152" cy="118" rx="30" ry="6" fill="#8E7F6C" opacity=".2"/>'
+    + '<rect width="200" height="160" filter="url(#g4)" opacity=".07"/></svg>'
+};
+
+function card(c, withPhoto, first){
+  var inner = withPhoto ? PHOTOS[c.code] : '<span>' + c.code.toUpperCase() + '</span>';
+  return '<button class="cs-card" type="button" aria-expanded="' + (first ? 'true' : 'false') + '">'
+       +   '<span class="cs-q">' + c.q + '</span>'
+       +   '<span class="cs-ph">' + inner + '</span>'
+       +   '<span class="cs-nm">' + c.name + '<i aria-hidden="true">▾</i></span>'
+       + '</button>';
+}
+function fill(id, withPhoto){
+  document.getElementById(id).innerHTML =
+    COURSES.map(function(c,i){ return card(c, withPhoto, i === 0); }).join('');
+}
+fill('gridA', false);
+fill('gridB', true);
+</script>
+</body>
+</html>
