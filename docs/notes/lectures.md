@@ -1,5 +1,16 @@
 # 특강(special_lectures) 시스템 — 상세 기록
 
+## ⚠️ 특강 신청은 로그인 필수 (2026-08-05 오너 확정)
+
+챌린지는 비회원 신청을 유지하지만 **특강은 로그인한 회원만** 신청한다. 비회원이 계좌이체 신청으로 정원을 대량으로 먹어 실제 신청을 막는 구멍을 닫았다(2026-08-04 RLS 점검에서 '남는 자리'로 남겨 뒀던 것).
+
+방어 세 겹 — 하나만 고치지 말 것:
+- **화면(`lecture.html`)**: 비로그인이면 신청 폼 대신 '로그인하고 신청하기'(`showLoginGate()` · `_loginGated`). 하단 고정바 버튼도 로그인으로 보낸다. `readApplicant()` 도 `_memberId` 없으면 로그인으로 튕긴다(게이트가 그려지기 전 클릭 방어).
+- **서버(`verify-payment`)**: `lectureId` 결제에 JWT 를 요구한다. 비로그인이 결제까지 오면 실결제(PAID)는 **전액 자동 환불** 후 `login_required` 로 거절(돈만 나간 상태를 안 남긴다). `member_id` 는 body 가 아니라 **JWT(caller) 로 정한다** — 특강은 항상 caller 명의, 챌린지는 body 값이 caller 와 일치할 때만 적는다.
+- **DB(`20260805130000_lecture_login_required.sql`)**: `applications_insert_public` 에 `(lecture_id is null or member_id = auth.uid())` 추가. anon 은 `auth.uid()` 가 NULL 이라 특강 행을 못 넣는다. 카드 결제 특강은 verify-payment 가 service_role 로 넣어 이 정책과 무관.
+
+⚠️ **verify-payment 배포 확인 신호가 바뀌었다**: 로그인 없는 프로브(`{paymentId:'probe', lectureId:'0000…'}`, anon key)는 이제 `lecture_not_found` 가 아니라 **`login_required`** 를 돌려준다(JWT 확인이 특강 조회보다 먼저다). `login_required`=로그인 필수 버전, `lecture_not_found`=그 이전 버전, `bad_request`=특강 이전 구버전, 404=미배포.
+
 ## 승.자.각 ↔ 답변 프로그램 = 단계로 나눈다 (2026-08-02 오너 확정)
 
 두 상품이 "하루 하나씩 답변 완성"이라는 **같은 약속**을 해서 서로를 잡아먹고 있었다. 자리를 이렇게 가른다.
@@ -50,7 +61,7 @@
   - **`lecture.html`**: `SLOTS`/`_slotId` 전역. 슬롯 있으면 신청 폼 위에 라디오 카드(`#slotPicker`, 마감 타임은 disabled+흐림), **미선택 시 `readApplicant()`가 차단**. 타임이 **하나뿐이면 자동 선택**하고 여럿이면 절대 임의 선택하지 않는다(되돌리기 어려운 선택). 품절 판정은 `SLOTS.every(slotFull)`. 신청이 닫힌 상태(예정·마감)에선 폼이 없어 시간대를 볼 데가 없으므로 본문에 읽기전용 목록을 따로 그린다. 모바일 결제 복귀용 `sessionStorage`에도 `slotId`를 함께 담는다(페이지가 새로 뜨므로).
   - **`lecture-common.js`**: `fmtTime/slotWhen/slotShort/slotFull/sortSlots/attachSlots`. 카드는 `l._slots`가 붙어 있을 때만 `7월 24일(금) · 3개 타임`(날짜가 갈리면 `… 외 · N개 타임`). ⚠️ `attachSlots`가 **별도 조회**인 이유: `select('*,lecture_slots(*)')` 조인은 마이그레이션 미적용 환경에서 **목록 조회 전체를 400**으로 만든다. 실패하면 조용히 넘어가 카드가 진행일 한 줄로 그려진다.
   - **admin '특강' 탭**: 폼 안에 시간대 편집기(행: 날짜·시작·종료·정원·메모 + 잔여 표시). 저장은 `특강 저장 → saveSlotRows(삭제→수정→추가)` 순이고, **새 특강은 insert에 `.select('id')`를 붙여 id를 받아야** 슬롯을 붙일 수 있다. ⚠️ `exitLectureEdit()`에서 **`_slotRemoved`를 반드시 비울 것** — 안 비우면 '수정 중 시간대 삭제 → 취소 → 새 특강 추가'에서 남은 id로 **남의 시간대를 지운다**. `admin.html`은 이걸 위해 `lecture-common.js`를 로드한다.
-  - **`verify-payment`**: `slotId`를 받아 **그 특강 소속인지 서버가 재확인**(다른 특강의 시간대를 밀어넣어 남의 자리를 잡는 걸 막는다). 신청자 현황 표시용으로 `challenges[].slot`도 서버가 채운다.
+  - **`verify-payment`**: `slotId`를 받아 **그 특강 소속인지 서버가 재확인**(다른 특강의 시간대를 밀어넣어 남의 자리를 잡는 걸 막는다). 신청자 현황 표시용으로 `challenges[].slot`도 서버가 채운다. ⚠️ **`member_id` 는 body 가 아니라 JWT(caller)로 정한다**(2026-08-05) — 특강은 로그인 필수라 항상 caller 명의로 적고, 챌린지는 body 값이 caller 와 일치할 때만 적는다(남의 계정에 신청을 거는 위장 차단). 비로그인 특강 결제는 전액 환불 후 `login_required`.
   - **슬롯을 전부 지우면** 롤업이 `v_cnt=0`이라 손대지 않아 마지막 합계 정원이 남는다(입력칸은 다시 열리므로 관리자가 수정하면 된다).
   - 미적용 시 degrade: 조회가 실패해 편집기·선택 UI가 안 뜨고 종전 '일정 하나짜리 특강'으로 동작.
 - **⚠️ 법적 필수**: 상세 신청 폼의 `#appConsent`(만14세+개인정보 수집·이용) 미체크 시 `readApplicant()`가 차단 — 삭제·완화 금지(apply.html과 동일 규정).

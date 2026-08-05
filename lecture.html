@@ -84,8 +84,10 @@
     .lc-apply h2 { font-family: var(--serif); font-size: 21px; font-weight: 700; margin-bottom: 4px; }
     .lc-apply .hint { font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; }
     .member-badge { display: none; background: var(--accent-tint); color: var(--accent-ink); font-size: 13.5px; font-weight: 700; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
-    .guest-nudge { display: none; font-size: 13px; color: var(--text-muted); background: var(--surface2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
-    .guest-nudge a { color: var(--accent-ink); font-weight: 700; }
+    /* 로그인 게이트(2026-08-05 특강 신청 로그인 필수) — 비회원에겐 폼 대신 이 안내 */
+    .lc-logingate { text-align: center; padding: 10px 0 2px; }
+    .lc-logingate .t { font-size: 15px; font-weight: 700; color: var(--text-muted); line-height: 1.6; margin: 0; }
+    .lc-loginbtn { display: block; width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; text-align: center; text-decoration: none; box-sizing: border-box; }
     .lc-field { margin-bottom: 12px; }
     /* 인라인 오류 (2026-08-02) — alert 는 어느 칸이 틀렸는지 못 알려주고 닫으면 사라진다.
        apply.html .field-err 와 같은 규칙. */
@@ -350,7 +352,6 @@
         + '<h2>신청하기</h2>'
         + '<p class="hint">' + (SLOTS.length ? '원하는 시간대를 고르고 ' : '') + '이름·연락처를 남기면 신청이 접수돼요.</p>'
         + '<div class="member-badge" id="memberBadge"><span data-name></span>님, 회원으로 신청해요. (마이페이지에서 내역 확인)</div>'
-        + '<div class="guest-nudge" id="guestNudge"><a href="' + (window.moncLoginHref ? window.moncLoginHref() : 'login.html') + '">회원가입</a>하면 신청 내역과 성장 기록이 계정에 남아요.</div>'
         + slotPicker
         + '<div class="lc-field" id="rowName"><label>이름</label><input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name" maxlength="20" aria-describedby="lcErrName"><p class="lc-err" id="lcErrName"></p></div>'
         + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric" maxlength="20" aria-describedby="lcErrPhone"><p class="lc-err" id="lcErrPhone"></p></div>'
@@ -425,6 +426,8 @@
       placeSticky();   // 바가 방금 그려졌으니 위치를 한 번 맞춘다
       const sticky = document.getElementById('stickyGo');
       if (sticky) sticky.addEventListener('click', () => {
+        // 로그인 게이트 상태면 폼이 없다 — 스크롤 대신 바로 로그인으로
+        if (_loginGated) { location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html'; return; }
         document.getElementById('applyBox').scrollIntoView({ behavior: 'smooth' });
         setTimeout(() => { const n = document.getElementById('appName'); if (n) n.focus(); }, 400);
       });
@@ -482,6 +485,7 @@
 
     /* ── 회원 연동 ── */
     async function initMember() {
+      _loginGated = false;
       let profile = null;
       try { profile = await window.MONC.getMyProfile(); } catch (e) {}
       if (profile && profile.id) {
@@ -492,9 +496,25 @@
         if (profile.name)  { const n = document.getElementById('appName');  if (n) { n.value = profile.name;  document.getElementById('rowName').style.display = 'none'; } }
         if (profile.phone) { const p = document.getElementById('appPhone'); if (p) { p.value = profile.phone; document.getElementById('rowPhone').style.display = 'none'; } }
       } else {
-        const g = document.getElementById('guestNudge'); if (g) g.style.display = 'block';
+        showLoginGate();
       }
       await markAlreadyApplied();
+    }
+
+    /* ── 로그인 게이트(2026-08-05 오너 확정 — 특강 신청은 로그인 필수) ──
+       화면 잠금은 안내일 뿐, 최종 방어는 RLS(20260805130000)와 verify-payment 다.
+       ⚠️ 열린 신청 폼일 때만 바꾼다 — 마감·예정 안내(lc-closednote)를 덮으면 안 된다. */
+    let _loginGated = false;
+    function showLoginGate() {
+      const box = document.getElementById('applyBox');
+      if (!box || !box.querySelector('#appConsent')) return;
+      _loginGated = true;
+      const href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
+      box.innerHTML = '<h2>신청하기</h2>'
+        + '<div class="lc-logingate"><p class="t">특강 신청은 로그인 후 이용할 수 있어요.<br>신청 내역이 계정에 남아 마이페이지에서 확인할 수 있어요.</p>'
+        + '<a class="lc-loginbtn" href="' + href + '">로그인하고 신청하기</a></div>';
+      const sticky = document.getElementById('stickyGo');
+      if (sticky) sticky.textContent = '로그인하고 신청하기';
     }
 
     /* ── 중복 신청 차단 ──
@@ -561,6 +581,12 @@
       e.classList.toggle('on', !!message);
     }
     function readApplicant() {
+      // 특강 신청은 로그인 필수(2026-08-05) — 게이트가 그려지기 전의 클릭도 여기서 막는다
+      if (!_memberId) {
+        alert('특강 신청은 로그인 후 이용할 수 있어요.');
+        location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
+        return null;
+      }
       // 시간대가 있는 특강은 반드시 하나를 골라야 한다(정원·마감이 타임마다 따로라서)
       if (SLOTS.length && !_slotId) {
         // 오류는 고를 대상 바로 아래 인라인 — alert 은 닫으면 문구가 사라진다(진단 D-6)
@@ -753,6 +779,13 @@
           await rememberApplied();
           return false;
         }
+        // RLS 가 막은 경우(세션 만료 등 비로그인) — 20260805130000 특강 로그인 필수
+        if (e && (e.code === '42501' || String(e.message || '').includes('row-level security'))) {
+          hideBankModal();
+          alert('로그인이 만료되어 신청이 접수되지 않았어요.\n로그인 후 다시 신청해 주세요.');
+          location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
+          return false;
+        }
         console.error('신청 저장 실패', e);
         alert('오류가 발생했어요. 다시 시도해주세요.');
         return false;
@@ -819,6 +852,14 @@
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
         body: { paymentId, lectureId: LECTURE_ID, slotId: slotId || null, applicant },
       });
+      // 로그인 없이 결제까지 간 경우(결제 도중 세션 만료 등) — 서버가 전액 자동 환불한다
+      if (data && data.error === 'login_required') {
+        alert('로그인이 만료되어 신청이 접수되지 않았어요.\n\n' + (data.refunded
+          ? '결제하신 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+          : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+        location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
+        return false;
+      }
       // 결제 승인과 신청 저장 사이에 중복이 확인된 경우 — 서버가 전액 자동 환불한다
       if (data && data.error === 'duplicate_application') {
         alert('이미 신청하신 특강이에요.\n\n' + (data.refunded
