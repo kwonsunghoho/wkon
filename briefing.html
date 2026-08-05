@@ -552,22 +552,40 @@ async function startCourse(code) {
     }
     var ok = await saveCourse(session.user.id, code);
     if (!ok) {
-      showStartErr('지금은 코스 저장이 안 돼요. 잠시 뒤 다시 눌러 주세요.');
+      showStartErr(lastSaveErr);
       if (btn) { btn.disabled = false; btn.textContent = '이 코스로 시작하기'; }
       return;
     }
-    /* 상태 분기를 단순하게 — 저장 뒤엔 통째로 다시 그린다(입력값 없는 화면이라 부작용 없음) */
-    window.location.reload();
+    /* 저장 뒤엔 통째로 다시 그린다(입력값 없는 화면이라 부작용 없음).
+       ⚠️ `reload()` 가 아니라 `replace()` 다 — 2026-08-06 오너 신고 "코스를 선택하면
+          이동이 안 된다". 목록을 항상 띄우게 바꾼 뒤로 새로고침해도 화면이 그대로여서
+          아무 일도 안 일어난 것처럼 보였다. reload 는 scroll-keep 이 '되돌릴 방문'으로
+          보고 보던 자리(목록)로 다시 내려 버린다. replace 는 새 방문('navigate')이라
+          맨 위에서 시작해 개인화된 카드가 먼저 보인다. 기록도 안 늘어난다. */
+    window.location.replace('briefing.html');
   } catch (e) {
-    showStartErr('지금은 코스 저장이 안 돼요. 잠시 뒤 다시 눌러 주세요.');
+    showStartErr(lastSaveErr);
     if (btn) { btn.disabled = false; btn.textContent = '이 코스로 시작하기'; }
   }
 }
 
+/* 실패 이유를 화면에 다르게 적는다 — 폰에서는 콘솔을 못 보므로, 원인을 글자로 남겨야
+   "왜 안 되냐"를 추적할 수 있다(2026-08-06). 기본값은 일시적 장애 문구다. */
+var lastSaveErr = '지금은 코스 저장이 안 돼요. 잠시 뒤 다시 눌러 주세요.';
+
 async function saveCourse(uid, code) {
+  lastSaveErr = '지금은 코스 저장이 안 돼요. 잠시 뒤 다시 눌러 주세요.';
   try {
     var res = await MONC.sb.from('members').update({ course: code }).eq('id', uid);
-    if (res.error) { console.warn('코스 저장 실패(마이그레이션 미적용?)', res.error.message); return false; }
+    if (res.error) {
+      var c = res.error.code || '';
+      if (c === '23514')      lastSaveErr = '코스 설정이 아직 서버에 반영되지 않았어요. (코드 23514)';
+      else if (c === '42501') lastSaveErr = '로그인이 풀렸어요. 다시 로그인한 뒤 눌러 주세요. (코드 42501)';
+      else if (c === '42703' || c === 'PGRST204') lastSaveErr = '서버에 코스 칸이 아직 없어요. (코드 ' + c + ')';
+      else if (c)             lastSaveErr = '지금은 코스 저장이 안 돼요. (코드 ' + c + ')';
+      console.warn('코스 저장 실패', res.error);
+      return false;
+    }
     try { localStorage.setItem(HINT_KEY, JSON.stringify({ uid: uid, course: code })); } catch (e) {}
     return true;
   } catch (e) { return false; }
