@@ -591,7 +591,11 @@
       userMsgCount++;
       moncTrack('sojae_turn', { turn: userMsgCount });
       if (userMsgCount >= 2) showRefine();
-      saveDraftAnswer();   // 첫 전송부터 answers 초안 행 생성 → 마이페이지 '작성 중'에 노출
+      /* ⚠️ 여기서 answers 초안 행을 만들지 않는다(2026-08-05 오너 지적 — "아무것도 안 썼는데
+         답변노트에 저장된다"). 예전엔 첫 전송부터 빈 행을 만들어 마이페이지 '작성 중'에
+         띄웠는데, 대화만 하다 나가면 내용 없는 항목이 노트에 남았다. 이어쓰기는 그 행이
+         없어도 된다 — 대화·뼈대는 discovery_sessions 가 들고 있고, 진입 화면이 그 문제에
+         '이어쓰기' 를 붙여 준다. 노트에는 학생이 실제로 쓴 글이 생겼을 때만 들어간다. */
       _busy = true;
       const p = aiPending();
       askAI(false).then(html => { aiFill(p, html); _busy = false; syncServer(); });
@@ -660,14 +664,17 @@
     // 답변 초안: answers 에 status='draft' 로 upsert(문제당 1행). 완료본이면 final 유지(다운그레이드 방지).
     async function saveDraftAnswer(){
       if (_restoring || !currentQuestion) return;
+      const text = document.getElementById('finalTa').value;
+      // 빈 글로 새 행을 만들지 않는다 — 노트에 내용 없는 '작성 중'이 쌓인다.
+      // 단 이미 저장된 행이면 지운 것도 저장한다(글을 다 지운 것도 학생의 편집이다).
+      if (!text.trim() && !_answerStatus) return;
       let session;
       try { session = await MONC.getSession(); } catch (_) { return; }
       if (!session) return;
       try {
         const status = _answerStatus === 'final' ? 'final' : 'draft';
         const { error } = await MONC.sb.from('answers').upsert(
-          { member_id: session.user.id, question_id: currentQuestion.id,
-            content: document.getElementById('finalTa').value, status },
+          { member_id: session.user.id, question_id: currentQuestion.id, content: text, status },
           { onConflict: 'member_id,question_id' });
         if (!error) _answerStatus = status;
       } catch (_) {}
