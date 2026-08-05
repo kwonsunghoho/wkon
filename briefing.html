@@ -439,6 +439,24 @@ COURSES.forEach(function (c) { COURSE_BY[c.code] = c; });
 
 var HINT_KEY    = 'monc_course_v1';          /* 그리기용 기기 기억(권한 아님) */
 var PENDING_KEY = 'monc_pending_course';     /* 로그인하러 갔다 오는 동안만 — sessionStorage */
+var BF_VER      = 'v6';                      /* 화면에 보이는 판 번호 — 고칠 때마다 올린다 */
+
+/* 기기에 저장된 supabase 토큰에서 회원 id 를 바로 읽는다(동기 — 기다림 없음).
+   ⚠️ getSession() 은 탭 간 잠금(navigator.locks) 이 꼬이면 응답 없이 매달릴 수 있다 —
+      '저장 중…' 멈춤의 유력 원인. 저장은 어차피 요청에 실린 토큰(JWT)으로 서버(RLS)가
+      본인 여부를 판정하므로, id 는 로컬 토큰에서 읽어도 안전하다(권한이 아니라 주소일 뿐). */
+function localUid() {
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i) || '';
+      if (/^sb-[a-z0-9]+-auth-token$/.test(k)) {
+        var t = JSON.parse(localStorage.getItem(k) || 'null');
+        if (t && t.user && t.user.id) return t.user.id;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
 
 function esc(s) {
   return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) {
@@ -505,7 +523,9 @@ function paintDetail(code) {
     recoRow(c) +
     '<div class="cs-meta">' + esc(c.time) + '</div>' +
     '<button class="cs-cta" type="button" id="btnStart">이 코스로 시작하기</button>' +
-    '<p class="cs-note">코스는 계정에 저장돼요 · 언제든 바꿀 수 있어요</p>' +
+    /* 판 버전 — 폰이 캐시된 옛 파일을 보고 있는지 한눈에 가리는 표식.
+       고칠 때마다 BF_VER 를 올린다(안 올리면 "고쳤는데 그대로" 논쟁이 반복된다). */
+    '<p class="cs-note">코스는 계정에 저장돼요 · 언제든 바꿀 수 있어요 · ' + BF_VER + '</p>' +
     '<p class="cs-err" id="startErr" hidden></p>';
   var rows = document.querySelectorAll('.cs-row');
   [].forEach.call(rows, function (b) {
@@ -533,10 +553,12 @@ document.getElementById('csList').addEventListener('click', function (e) {
 /* ── 코스 저장 ─────────────────────────────────────────────────────────────
    ⚠️ 실패를 조용히 넘기지 않는다 — 마이그레이션 미적용이면 화면에 말하고 그 자리에 머문다.
       (성공한 척 B로 넘어가면 다음 방문에 코스가 사라져 있다) */
-function showStartErr(msg) {
+function showStartErr(msg, progress) {
   var el = document.getElementById('startErr');
   if (!el) return;
   el.textContent = msg; el.hidden = false;
+  /* 진행 안내는 빨강이 아니라 회색으로 — 오류처럼 읽히면 안 된다 */
+  el.style.color = progress ? 'var(--text-muted)' : '';
 }
 
 /* 응답이 안 오면 기다리다 굳는다 — 단계마다 시간 상한을 둔다.
@@ -555,21 +577,28 @@ function withTimeout(p, ms, tag) {
 async function startCourse(code) {
   var btn = document.getElementById('btnStart');
   if (btn) { btn.disabled = true; btn.textContent = '저장 중…'; }
+  /* 누르자마자 화면에 진행 글자를 남긴다 — '아무 일도 안 일어난' 상태를 없앤다.
+     이 글자조차 안 뜨면 이 코드가 아예 안 도는 것(캐시된 옛 파일)이다. */
+  showStartErr('저장하고 있어요… (' + BF_VER + ')', true);
   /* 어떤 갈래로 끝나든 버튼은 반드시 되돌린다 */
   var restore = function () {
     if (btn) { btn.disabled = false; btn.textContent = '이 코스로 시작하기'; }
   };
   try {
-    var session = window.MONC
-      ? await withTimeout(MONC.getSession(), 6000, 'session')
-      : null;
-    if (!session) {
+    /* id 는 로컬 토큰에서 바로(기다림 없음). 없을 때만 getSession 을 6초 상한으로 시도. */
+    var uid = localUid();
+    if (!uid && window.MONC) {
+      try {
+        var session = await withTimeout(MONC.getSession(), 6000, 'session');
+        if (session && session.user) uid = session.user.id;
+      } catch (e2) { /* 아래 비회원 갈래로 */ }
+    }
+    if (!uid) {
       /* 비회원 — 고른 코스를 들고 로그인하러 갔다 온다. sessionStorage 고정(공용 기기). */
       try { sessionStorage.setItem(PENDING_KEY, code); } catch (e) {}
       window.location.href = 'login.html?returnTo=' + encodeURIComponent('briefing.html');
       return;
     }
-    var uid = session.user.id;
     var row = await saveCourse(uid, code);
     if (!row) { showStartErr(lastSaveErr); restore(); return; }
     /* ⚠️ 저장 뒤 페이지를 다시 부르지 않는다(2026-08-06 오너 신고 "그냥 그대로
