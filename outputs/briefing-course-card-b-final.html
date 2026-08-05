@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코스 카드 B안 확정형 — 상황(메인) + 안내(서브)</title>
+<style>
+  /* 토큰은 tokens.css 실값 그대로 */
+  :root{
+    --bg:#F4F1EA; --surface:#FFFFFF; --text:#26221C; --text-muted:#5F574B;
+    --border-soft:rgba(38,34,28,0.09);
+    --accent:#1B3A6B; --accent-tint:#E5E9F1; --accent-ink:#1B3A6B;
+    --action:#1B3A6B; --action-ink:#FFFFFF;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  .wrap{max-width:600px;margin:0 auto;padding:20px 0 60px}
+  .lead{font-size:14px;line-height:1.6;color:var(--text-muted);margin:0 0 4px;padding:0 20px}
+  .lead b{color:var(--text)}
+
+  .phone{width:375px;max-width:100%;margin:20px auto 0;padding:16px 20px 22px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .sec-t{margin:0 0 16px;text-align:center}
+  .sec-t b{font-size:19px;font-weight:800}
+  .sec-t span{display:block;font-size:15px;color:var(--text-muted);margin-top:5px}
+
+  button{appearance:none;font-family:inherit;text-align:left;cursor:pointer;padding:0;
+    background:var(--surface);border:1px solid var(--border-soft);
+    -webkit-tap-highlight-color:transparent}
+  button:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+
+  /* B안 확정형 — 칩(단계) + 상황(메인) + 안내(서브) */
+  .b-list{display:flex;flex-direction:column;gap:8px}
+  .b-row{display:flex;align-items:center;gap:12px;width:100%;
+    border-radius:14px;padding:12px 12px 12px 10px;box-shadow:0 2px 10px rgba(38,34,28,.05)}
+  .b-lv{flex:0 0 62px;align-self:stretch;min-height:56px;border-radius:10px;
+    background:var(--accent-tint);display:flex;align-items:center;justify-content:center;
+    font-size:21px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink)}
+  .b-tx{flex:1;min-width:0}
+  .b-tx b{display:block;font-size:15px;font-weight:800;line-height:1.4}
+  .b-tx span{display:block;font-size:12.5px;color:var(--text-muted);margin-top:3px;line-height:1.45}
+  .b-row i{font-style:normal;color:var(--accent-ink);font-size:14px;flex:0 0 auto}
+  .b-row[aria-expanded="true"]{border-color:var(--action);
+    box-shadow:0 0 0 1px var(--action) inset,0 2px 10px rgba(38,34,28,.05)}
+  .b-row[aria-expanded="true"] .b-lv{background:var(--action);color:var(--action-ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="lead"><b>B안 확정형 — 칩(단계) + 상황(메인) + 안내(서브)</b></p>
+  <p class="lead">'코스' 표기는 뺐다. 메인은 지금 상황, 서브는 무엇부터 하면 되는지. 첫 줄이 선택된 상태다. 초급 외 문구는 가안이다.</p>
+
+  <div class="phone">
+    <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+    <div class="b-list" id="list"></div>
+  </div>
+</div>
+
+<script>
+/* 초급 문구는 오너 제시 원문. 나머지 셋은 같은 결의 가안 — 확정 필요 */
+var LEVELS = [
+  { big:'초급', main:'승무원 준비가 처음이라면',
+    sub:'답변, 보이스, 이미지메이킹부터 잡고가세요!' },
+  { big:'중급', main:'기출 답변을 쌓아갈 시기라면',
+    sub:'소재 발굴로 내 경험을 답변으로 만들어 보세요!' },
+  { big:'고급', main:'답변 완성도를 올리고 싶다면',
+    sub:'첨삭과 AI킬러로 문장을 다듬어 보세요!' },
+  { big:'실전', main:'면접이 당장 코앞이라면',
+    sub:'뉴스 스크랩과 기출 점검으로 마무리하세요!' }
+];
+document.getElementById('list').innerHTML = LEVELS.map(function(c,i){
+  return '<button class="b-row" type="button" aria-expanded="'+(i===0)+'">'
+    + '<span class="b-lv">'+c.big+'</span>'
+    + '<span class="b-tx"><b>'+c.main+'</b><span>'+c.sub+'</span></span>'
+    + '<i aria-hidden="true">▾</i>'
+    + '</button>';
+}).join('');
+</script>
+</body>
+</html>
