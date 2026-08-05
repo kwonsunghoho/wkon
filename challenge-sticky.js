@@ -71,7 +71,7 @@
       '.ch-sticky .info{flex:1 1 auto;min-width:0;}',
       '.ch-sticky .p{font-size:17px;font-weight:900;color:var(--text,#1E2229);line-height:1.25;}',
       '.ch-sticky .p .won{font-size:13px;font-weight:800;margin-left:1px;}',
-      '.ch-sticky .s{font-size:12px;color:var(--text-muted,#5C564C);line-height:1.4;',
+      '.ch-sticky .s{font-size:12px;color:var(--text-muted,#545C68);line-height:1.4;',
       '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.ch-sticky .go{flex:0 0 auto;min-height:44px;padding:13px 24px;border:none;border-radius:999px;',
       '  background:var(--action,#1B3A6B);color:var(--action-ink,#fff);font-size:15px;font-weight:900;',
@@ -85,7 +85,7 @@
       '.ch-coach-in{max-width:760px;margin:0 auto;padding:0 20px;}',
       '.ch-coach h2{font-size:clamp(21px,4.6vw,27px);font-weight:800;letter-spacing:-.02em;',
       '  margin:0 0 8px;color:var(--text,#1E2229);}',
-      '.ch-coach .lead{margin:0 0 20px;font-size:15px;line-height:1.7;color:var(--text-muted,#5C564C);}',
+      '.ch-coach .lead{margin:0 0 20px;font-size:15px;line-height:1.7;color:var(--text-muted,#545C68);}',
       '.ch-coach ul{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:12px;}',
       '@media (min-width:640px){.ch-coach ul{grid-template-columns:1fr 1fr;}}',
       '.ch-coach li{display:flex;align-items:center;gap:12px;padding:12px 14px;',
@@ -97,7 +97,7 @@
          ("권성호보이스·스피치·표현력 전문가" — 2026-08-02 실측에서 잡음). */
       '.ch-coach .who{min-width:0;display:block;}',
       '.ch-coach .nm{display:block;font-size:15px;font-weight:800;color:var(--text,#1E2229);line-height:1.35;}',
-      '.ch-coach .po{display:block;margin-top:2px;font-size:12.5px;color:var(--text-muted,#5C564C);line-height:1.45;}',
+      '.ch-coach .po{display:block;margin-top:2px;font-size:12.5px;color:var(--text-muted,#545C68);line-height:1.45;}',
       /* 담당 코치 한 줄만 강조 — 나머지는 조용한 행으로 남긴다(원칙 6: 강조는 하나) */
       '.ch-coach li.is-lead{border-color:var(--accent-dark,#142C52);background:var(--action-tint,#E5E9F1);}',
       '.ch-coach li.is-lead img{width:52px;height:52px;flex:0 0 52px;}',
