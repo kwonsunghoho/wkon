@@ -54,11 +54,16 @@
   .b-step em{display:block;font-style:normal;font-size:15px;font-weight:700}
   .b-step small{display:block;font-size:13px;color:var(--text-muted);margin-top:1px}
   .b-step > u{flex:0 0 auto;text-decoration:none;color:var(--accent-ink);opacity:.6}
-  /* 챌린지 스텝 표시 — 상시 도구와 구분. 모집 여부는 단정하지 않는다 */
-  .b-tag{display:inline-block;vertical-align:2px;margin-left:6px;padding:2px 7px;border-radius:999px;
-    background:var(--accent-tint);color:var(--accent-ink);font-size:12px;font-weight:800}
-  .b-pfoot{padding:10px 2px 8px;font-size:12px;color:var(--text-muted);
-    border-top:1px solid var(--border-soft)}
+  /* 챌린지 추천 칸 — 스텝(번호)과 구분되는 별도 자리. 모집 여부는 단정하지 않고
+     챌린지 페이지로 보낸다(판단은 그 페이지가 한다). */
+  .b-reco{display:flex;align-items:center;gap:11px;margin:8px 0 6px;padding:12px;
+    background:var(--accent-tint);border-radius:12px;text-decoration:none;color:var(--text)}
+  .b-reco > span{flex:1 1 auto;min-width:0}
+  .b-reco em{display:block;font-style:normal;font-size:12px;font-weight:800;
+    letter-spacing:.06em;color:var(--accent-ink)}
+  .b-reco b{display:block;font-size:14px;font-weight:700;margin-top:3px;line-height:1.4}
+  .b-reco small{display:block;font-size:12.5px;color:var(--text-muted);margin-top:2px}
+  .b-reco > u{flex:0 0 auto;text-decoration:none;color:var(--accent-ink);font-weight:800;font-size:13px}
 </style>
 </head>
 <body>
@@ -74,17 +79,18 @@
 
 <script>
 /* 초급 문구는 오너 제시 원문. 나머지 셋과 스텝 구성은 가안 — 맨 마지막에 확정.
-   ch:true = 챌린지 스텝(2주 기수제). 초급 서브의 답변·보이스·이미지메이킹이
-   그대로 승자각·보신각·영합각이다. 모집 여부는 여기서 단정하지 않는다. */
+   스텝은 상시 도구만 넣는다(코스가 막히지 않게). 챌린지는 스텝이 아니라
+   패널 하단 추천 칸 하나 — 모집 여부는 챌린지 페이지가 판단한다. */
 var LEVELS = [
   { big:'초급', main:'승무원 준비가 처음이라면',
     sub:'답변, 보이스, 이미지메이킹부터 잡고가세요!',
     steps:[
-      { t:'답변 소재 발굴',    d:'내 경험에서 답변 소재부터 찾아요' },
-      { t:'승.자.각 챌린지',   d:'뻔한 답변 → 나만 할 수 있는 답변', ch:true },
-      { t:'보.신.각 챌린지',   d:'떨리는 목소리 → 신뢰가 실리는 목소리', ch:true },
-      { t:'영.합.각 챌린지',   d:'굳은 표정 → 카메라 앞에서도 자연스럽게', ch:true }
-    ] },
+      { t:'답변 소재 발굴',      d:'내 경험에서 답변 소재부터 찾아요' },
+      { t:'필수 기출 하루 한 개', d:'매일 한 문항씩 근거 있게 완성해요' },
+      { t:'초급 기출 준비',      d:'소재 문제는 초급 난이도부터 골라요' }
+    ],
+    reco:{ names:'승.자.각 · 보.신.각 · 영.합.각',
+           d:'답변·보이스·이미지메이킹을 2주씩 같이 잡아요' } },
   { big:'중급', main:'기출 답변을 쌓아갈 시기라면',
     sub:'소재 발굴로 내 경험을 답변으로 만들어 보세요!', steps:[] },
   { big:'고급', main:'답변 완성도를 올리고 싶다면',
@@ -103,12 +109,18 @@ document.getElementById('list').innerHTML = LEVELS.map(function(c,i){
     row += '<div class="b-panel">' + c.steps.map(function(s,n){
       return '<a class="b-step" href="#">'
         + '<b>'+(n+1)+'</b>'
-        + '<span><em>'+s.t+(s.ch?'<span class="b-tag">2주 챌린지</span>':'')+'</em>'
-        + '<small>'+s.d+'</small></span>'
+        + '<span><em>'+s.t+'</em><small>'+s.d+'</small></span>'
         + '<u aria-hidden="true">→</u>'
         + '</a>';
     }).join('')
-    + '<div class="b-pfoot">챌린지는 기수제예요 — 모집 일정은 챌린지 페이지에서 확인해요</div>'
+    + (c.reco
+      ? '<a class="b-reco" href="../challenges.html">'
+        + '<span><em>함께하면 좋은 챌린지</em>'
+        + '<b>'+c.reco.names+'</b>'
+        + '<small>'+c.reco.d+'</small></span>'
+        + '<u aria-hidden="true">모집 일정 →</u>'
+        + '</a>'
+      : '')
     + '</div>';
   }
   return row;
