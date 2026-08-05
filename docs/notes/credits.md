@@ -15,6 +15,8 @@
 
 **⚠️ 배포 순서**(어기면 학생이 크레딧을 잃는다): ① migration `20260804150000_rls_hardening.sql` → ② 두 함수 재배포(프로브 `features` 에 `refund_server` 확인) → ③ migration `20260804160000_refund_credit_lockdown.sql`(구 RPC 회수). ②를 건너뛰고 ③을 먼저 하면 AI 호출 실패 시 환급이 권한 없음으로 죽는다.
 
+**2026-08-04 세 단계 모두 완료.** 권한표 실측 — `refund_credit` authenticated=false, `refund_credit_for` service_role=true, AI킬러 검사 1회로 차감 정상. `refund_credit` 의 service_role 은 true 로 남는데 정상이다(`revoke ... from public` 은 service_role 에 준 권한을 회수하지 않는다 — 서버 전용 키라 브라우저에 안 나간다).
+
 `spend_credit` 은 그대로 `authenticated` 에 열어 둔다 — 직접 불러 봐야 자기 크레딧만 깎이고, 환급 길이 막히면 얻는 게 없다.
 
 ## 이름 정리 (2026-08-02 오너 승인 — 화면 글자만, 파일·테이블명 유지)
