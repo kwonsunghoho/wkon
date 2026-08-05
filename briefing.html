@@ -215,15 +215,14 @@
     #heroMine, #todayCard { display: none; }
     body.has-course #heroPublic { display: none; }
     body.has-course #heroMine { display: block; }
-    body.has-course #pickSection { display: none; }
-    body.has-course.changing #pickSection { display: block; }
+    /* ⚠️ **코스 목록(#pickSection)은 어떤 상태에서도 감추지 않는다**(2026-08-06 오너 지시).
+       코스를 고르면 목록을 숨겼더니 "승준노트 허브가 안 나온다"는 신고가 반복됐다 —
+       뒤로가기로도 못 돌아오고(저장 뒤 reload 라 기록이 없다) nav 로 다시 들어와도
+       같은 화면이라 되돌릴 길이 사실상 버튼 하나뿐이었다. 숨기지 말 것. */
     /* ⚠️ '오늘 이어서' 카드는 **내용이 채워진 뒤에만** 보인다(`.course-ready`).
        기기 기억은 화면 배치만 정할 뿐 데이터가 아니라서, 서버 조회가 실패하면
        제목·스텝·CTA 가 전부 빈 카드가 그대로 남았다(2026-08-06 오너 신고). */
     body.has-course.course-ready #todayCard { display: block; }
-    /* '코스 바꾸기'를 누르면 카드를 치우고 그 자리에 목록을 보여 준다 — 카드를 남기면
-       목록이 '밑에 딸려 나온' 것처럼 보인다(오너 신고). */
-    body.has-course.changing #todayCard { display: none; }
 
     /* 320px 실측 대응 — 활자는 12px 하한이라 못 줄이므로 여백만 좁힌다 */
     @media (max-width: 360px) {
@@ -340,7 +339,8 @@
 
     <!-- ── A: 코스 고르기 ── -->
     <section id="pickSection" aria-labelledby="pickHd">
-      <div class="sec-t"><b id="pickHd">연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <!-- 코스를 고른 뒤에는 제목·부제가 '코스 바꾸기'로 바뀐다(paintMine). 목록 자체는 항상 있다. -->
+      <div class="sec-t"><b id="pickHd">연구진이 추천하는 코스예요</b><span id="pickSub">지금 상황에 맞는 길부터 골라 보세요</span></div>
 
       <!-- 코스 줄 4개 — 마크업은 스크립트가 COURSES 로 그린다(한 곳에서 고치게) -->
       <div class="cs-list" id="csList"></div>
@@ -583,6 +583,10 @@ function paintMine(name, code) {
     esc(name || '회원') + ' 님은<br><i>‘' + esc(c.name) + '’</i>를 선택하셨어요.';
   document.getElementById('todaySub').innerHTML =
     '<b>' + esc(c.name) + '</b> · 번호 순서대로 하나씩 하면 돼요';
+  /* 아래 목록은 코스를 고른 뒤에도 그대로 있다 — 무엇을 쓰고 있는지, 바꿀 수 있다는 걸 말해 준다 */
+  var ph = document.getElementById('pickHd'), ps = document.getElementById('pickSub');
+  if (ph) ph.textContent = '코스 바꾸기';
+  if (ps) ps.innerHTML = '지금은 <b>' + esc(c.name) + '</b>예요 · 다른 코스를 눌러 바꿀 수 있어요';
   document.getElementById('todaySteps').innerHTML = stepRows(c);
   var cta = document.getElementById('todayCta');
   cta.href = c.cta.href;
@@ -594,7 +598,6 @@ function paintMine(name, code) {
   if (fs) fs.textContent = '코스 순서 말고 다른 게 필요할 때';
   document.body.classList.add('has-course');
   document.body.classList.add('course-ready');   /* 내용이 채워졌다 — 이제 카드를 보여도 된다 */
-  document.body.classList.remove('changing');
 }
 
 /* 코스 화면을 포기하고 '고르기'로 되돌린다 — 서버 값을 못 읽었을 때의 안전망.
@@ -602,18 +605,17 @@ function paintMine(name, code) {
       전부 빈 카드가 떠 있었고, 승준노트를 다시 눌러도 같은 화면이었다 — 기기 기억 때문). */
 function fallbackToPick(dropHint) {
   if (dropHint) { try { localStorage.removeItem(HINT_KEY); } catch (e) {} }
-  document.body.classList.remove('has-course', 'course-ready', 'changing');
+  document.body.classList.remove('has-course', 'course-ready');
 }
 
 /* '코스 바꾸기' — 고르는 화면을 다시 펴 준다. 저장된 코스는 새 코스의 [시작하기]를
    누를 때만 바뀐다(안 고르고 떠나면 그대로). */
+/* 목록은 늘 아래에 있으므로, 이 버튼은 '거기로 데려다주는' 역할만 한다 */
 document.getElementById('btnChange').addEventListener('click', function () {
-  document.body.classList.add('changing');   /* 카드는 감춰지고 그 자리에 목록이 온다 */
   /* 지금 쓰는 코스를 펴 놓고 시작한다 — 남의 코스(기본값)부터 보여 주면 뭘 바꾸는지 헷갈린다 */
   if (myCourse) paintDetail(myCourse);
   var sec = document.getElementById('pickSection');
-  /* 화면 맨 위부터 보여 준다 — 카드를 치운 자리에 목록이 올라오므로 '허브로 돌아온' 것처럼 읽힌다 */
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
   var cur = sec.querySelector('.cs-row[aria-expanded="true"]') || sec.querySelector('.cs-row');
   if (cur) cur.focus({ preventScroll: true });
 });
