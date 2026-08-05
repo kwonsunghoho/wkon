@@ -223,6 +223,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 환급 RPC(`refund_credit`)를 `authenticated` 에 다시 grant — 학생이 결과를 받은 뒤 스스로 환급해 유료 기능이 공짜가 된다 (credits.md)
 - `applications` INSERT 정책에서 결제 컬럼 제약 빼기 — 누구나 '입금 완료' 행을 넣고 특강 정원을 먹는다 (apply-and-payment.md)
 - 승준노트 카드 권한 배지(`.bf-badge`)·'첫 1회 무료' 같은 회원별 상태 문구 (briefing.md)
+- 승준노트 B 머리의 기록 칩(`답변·대화 중·스크랩`)과 '마이페이지에서 자세히' 링크 — 누를 수 없는 숫자 + 코스와 무관한 값 + 시작하라는 화면 맨 위에서 밖으로 빼는 문(2026-08-06 삭제) (briefing.md)
 - 승준노트 매거진 목차 6줄(`.ix-item`)·루트맵 룰렛(`.d-route`)·강조 세 자리(01 판·06 소인·03 '처음 추천' 배지) — 2026-08-05 코스형 개편으로 폐지 (briefing.md)
 - 뉴스 필터 칩 나열 sticky 바·리본 북마크·라벨 없는 스크랩 아이콘 (news.md)
 - 투명 nav(`nav-transparent`)·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
