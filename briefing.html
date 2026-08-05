@@ -321,8 +321,9 @@
       <!-- 코스 줄 4개 — 마크업은 스크립트가 COURSES 로 그린다(한 곳에서 고치게) -->
       <div class="cs-list" id="csList"></div>
 
-      <!-- 코스 상세 — 패널 하나를 재사용. 스크립트가 펼친 줄 바로 아래로 옮긴다(아코디언) -->
-      <div class="cs-detail" id="csDetail" tabindex="-1"></div>
+      <!-- 코스 상세 — 패널 하나를 재사용. 스크립트가 펼친 줄 바로 아래로 옮긴다(아코디언).
+           ⚠️ 처음엔 넷 다 접힌 상태로 시작한다(2026-08-06 오너 확정) — hidden 을 지우지 말 것. -->
+      <div class="cs-detail" id="csDetail" tabindex="-1" hidden></div>
     </section>
 
     <!-- ── A·B 공통: 자유 선택 ── -->
@@ -422,7 +423,7 @@ function esc(s) {
 (function paintRows() {
   document.getElementById('csList').innerHTML = COURSES.map(function (c, i) {
     return '<button class="cs-row" type="button" data-code="' + c.code + '"' +
-             ' aria-expanded="' + (i === 0 ? 'true' : 'false') + '" aria-controls="csDetail">' +
+             ' aria-expanded="false" aria-controls="csDetail">' +
              '<span class="cs-lv" aria-hidden="true">' + esc(c.big) + '</span>' +
              '<span class="cs-tx"><b>' + esc(c.main) + '</b><span>' + esc(c.sub) + '</span></span>' +
              '<i aria-hidden="true">▾</i>' +
@@ -430,8 +431,10 @@ function esc(s) {
   }).join('');
 })();
 
-/* ── 코스 상세 패널(하나를 재사용 — 펼친 줄 바로 아래로 옮긴다) ── */
-var picked = COURSES[0].code;     /* 지금 패널이 보여 주는 코스 */
+/* ── 코스 상세 패널(하나를 재사용 — 펼친 줄 바로 아래로 옮긴다) ──
+   ⚠️ 처음엔 넷 다 접혀 있다(2026-08-06 오너 확정). picked=null 이 '접힘' 상태다.
+      기본으로 하나를 펴 두면 그 코스가 추천처럼 읽히고, 첫 화면에서 리스트가 잘린다. */
+var picked = null;                /* 지금 펼친 코스. null = 넷 다 접힘 */
 
 function stepRows(c) {
   return c.steps.map(function (s, i) {
@@ -454,10 +457,22 @@ function recoRow(c) {
          '</a>';
 }
 
+/* 접기 — 패널을 비우고 감춘다(줄 넷은 모두 aria-expanded=false) */
+function collapseDetail() {
+  picked = null;
+  var panel = document.getElementById('csDetail');
+  panel.hidden = true;
+  panel.innerHTML = '';
+  [].forEach.call(document.querySelectorAll('.cs-row'), function (b) {
+    b.setAttribute('aria-expanded', 'false');
+  });
+}
+
 function paintDetail(code) {
   var c = COURSE_BY[code]; if (!c) return;
   picked = code;
   var panel = document.getElementById('csDetail');
+  panel.hidden = false;
   panel.innerHTML =
     stepRows(c) +
     recoRow(c) +
@@ -477,12 +492,16 @@ function paintDetail(code) {
 
 document.getElementById('csList').addEventListener('click', function (e) {
   var btn = e.target.closest('.cs-row'); if (!btn) return;
+  /* 펼쳐 둔 줄을 다시 누르면 접는다 — 초점은 누른 줄에 남긴다(패널이 사라지므로) */
+  if (btn.dataset.code === picked) {
+    collapseDetail();
+    btn.focus({ preventScroll: true });
+    return;
+  }
   paintDetail(btn.dataset.code);
   /* 화면 낭독기·키보드 사용자가 '내용이 바뀐 곳'으로 따라가게 초점을 옮긴다 */
   document.getElementById('csDetail').focus({ preventScroll: true });
 });
-
-paintDetail(picked);
 
 /* ── 코스 저장 ─────────────────────────────────────────────────────────────
    ⚠️ 실패를 조용히 넘기지 않는다 — 마이그레이션 미적용이면 화면에 말하고 그 자리에 머문다.
