@@ -59,6 +59,8 @@
 | `20260804150000_rls_hardening` | **RLS 하드닝 3종**(2026-08-04 보안 점검) — ① 서버 전용 환급 `refund_credit_for(uuid,text,text)`(service_role 만) ② `applications` INSERT 를 '결제 전 상태'로 제한(paid·payment_status·payment_id·paid_amount·refunded 고정) ③ 콘솔 생성 표 `reviews`·`challenge_rounds` RLS + 정책 + **콘솔에서 손으로 만든 옛 정책 7개 drop** | **실행 완료(2026-08-04 오너 실행)** — 권한표 실측으로 확인. ⚠️ **실측에서 드러난 것**: 콘솔에서 붙인 정책 7개가 남아 있었고 그중 `anyone can apply`(applications INSERT · `with check true`)가 ②의 제한을 **통째로 무효화**하고 있었다(정책은 OR 로 합쳐져 헐거운 쪽이 이긴다). 파일에 drop 을 넣어 정리했다 — **앞으로 정책은 콘솔에서 손으로 만들지 말 것** |
 | `20260804160000_refund_credit_lockdown` | 구 `refund_credit(text,text)` 의 `authenticated` 실행 권한 회수 | **실행 완료(2026-08-04 오너 실행)** — 권한표 실측: `refund_credit` authenticated=false, `refund_credit_for` service_role=true. AI킬러 검사 1회로 차감 정상 확인. ⚠️ `refund_credit` 의 **service_role 은 true 로 남는다** — `revoke ... from public` 이 service_role 에 준 권한까지 회수하지는 않는다(정상. service_role 은 브라우저에 안 나간다) |
 
+| `20260805130000_answer_revisions` | **답변 수정 이력** — `answer_revisions`(answer_id·member_id·content) + `answers` UPDATE 트리거 `trg_answers_revision`(본문이 바뀔 때 **이전 본문**을 스냅샷) + 본인 읽기·지우기 RLS | **owner 실행 필요(2026-08-05 작성)** — 미적용이면 답변노트 카드에 '수정 이력' 접이가 안 뜨고 나머지는 그대로 돈다(조회 실패를 조용히 삼킨다). ⚠️ **10분 묶기가 핵심이다** — 소재 발굴이 0.8초 디바운스로 자동 저장해서, 묶지 않으면 한 번 고쳐 쓰는 동안 이력이 수백 개로 불어난다. 답변당 20개 상한. ⚠️ 트리거로 남기는 이유는 본문을 고치는 곳이 넷이고(소재 발굴·AI킬러 저장·첨삭 반영·답변 프로그램 확정) **AI킬러·첨삭은 서버 함수가 service role 로 직접 update** 하기 때문 — 브라우저 코드로는 못 잡는다 |
+
 ## 브랜치
 
 - `claude/rehearsal-wip` — 모의면접(리허설) 자산 전체. **`rehearsal.html` 은 main 에 없다** — 승준노트 숨김 카드(`display:none`)를 켜기 전에 이 브랜치부터 병합할 것(안 하면 404).

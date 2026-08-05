@@ -181,6 +181,8 @@
     .v2-chip.is-ok { background: var(--action-tint); color: var(--action); border-color: transparent; }
     .v2-chip.is-bad { background: color-mix(in srgb, var(--v2-bad) 11%, var(--surface)); color: var(--v2-bad); border-color: transparent; }
     .v2-chip.is-done { background: #eaf6ec; color: #1a7f37; border-color: transparent; }
+    /* '대화 중' — 소재 발굴에서 되묻기만 하고 답변은 아직 안 쓴 문제(2026-08-05) */
+    .v2-chip.is-chat { background: var(--accent-tint); color: var(--accent-ink); border-color: transparent; }
 
     /* 코치 코멘트 — 배지를 문장 위 별도 줄로 (문장 끝 배지가 '아/쉬움'으로 잘리던 결함의 수정) */
     .v2-cmt-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 6px; }
@@ -649,6 +651,37 @@
       syncTodayQ();
     }
 
+    // ── 대화 중인 문제 (2026-08-05 오너 요청) ────────────────────────────────
+    // 소재 발굴에서 되묻기만 하고 답변은 아직 안 쓴 문제. 예전엔 첫 메시지부터 빈 answers
+    // 행을 만들어 '작성 중'으로 띄웠는데, 내용 없는 항목이 노트에 남아 그 방식을 걷어냈다.
+    // 그래서 이어서 대화할 자리를 여기서 따로 보여준다 — 원장은 discovery_sessions 다.
+    // ⚠️ answered 에 있는 문제는 제외하고 넘겨받는다(호출부에서 거른다).
+    async function loadOpenChats(memberId, answered) {
+      try {
+        const { data, error } = await MONC.sb.from('discovery_sessions')
+          .select('id, question_id, stage, updated_at, questions(content, category)')
+          .eq('member_id', memberId).order('updated_at', { ascending: false });
+        if (error || !data) return [];
+        const open = data.filter(s => s.stage !== 'done' && !answered.has(s.question_id)).slice(0, 2);
+        if (!open.length) return [];
+
+        // 마지막으로 내가 쓴 말 한 줄 — 무슨 이야기를 하다 멈췄는지 알아보게.
+        // ⚠️ 세션마다 쿼리를 돌리지 않는다. 두 세션 것을 한 번에 받아 세션별 최신 하나만 쓴다.
+        try {
+          const { data: msgs } = await MONC.sb.from('discovery_messages')
+            .select('session_id, content, created_at')
+            .eq('member_id', memberId).eq('role', 'user')
+            .in('session_id', open.map(s => s.id))
+            .order('created_at', { ascending: false }).limit(40);
+          (msgs || []).forEach(m => {
+            const s = open.find(x => x.id === m.session_id);
+            if (s && !s.last) s.last = m.content;      // 최신순이라 먼저 온 것이 마지막 말
+          });
+        } catch (_) { /* 미리보기 없이 제목만 보여준다 */ }
+        return open;
+      } catch (_) { return []; }
+    }
+
     // ── 내 답변노트 접이 (answers + questions 조인, RLS 상 내 것만) ──
     async function loadAnswerNotes(memberId) {
       const el = document.getElementById('answerNotes');
@@ -663,7 +696,13 @@
             .select('*').eq('member_id', memberId).order('updated_at', { ascending: false }));
         }
         if (error) throw error;
-        if (!data || !data.length) return;          // 접이 자체를 안 연다 — 빈 껍데기 금지
+        data = data || [];
+
+        // 대화 중인 문제 — 답변 행이 아직 없는 되묻기 세션. answers 에 있는 문제는 아래
+        // '작성 중'·'완료'로 이미 보이므로 제외한다(같은 문제가 두 줄로 뜨지 않게).
+        const chats = await loadOpenChats(memberId,
+          new Set(data.filter(a => a.question_id).map(a => a.question_id)));
+        if (!data.length && !chats.length) return;  // 접이 자체를 안 연다 — 빈 껍데기 금지
 
         // ⚠️ 유형·제목은 두 곳에서 온다 — 소재 발굴 답변은 questions, 직접 쓴 답변은 answers 자신.
         //    answers 쪽을 먼저 본다. answers.html 과 **같은 규칙**이어야 한다(한쪽만 고치면 자유 글이 제목 없이 뜬다).
@@ -693,13 +732,33 @@
             </a></li>`;
         };
 
-        // 접이 안엔 미리보기 3개만(작성 중 우선). 전체는 answers.html — 쌓여도 이 접이 길이는 고정.
+        // 되묻기만 하고 멈춘 문제. 답변이 아니라 '이어서 대화할 자리'라 맨 위에 둔다.
+        const chatCard = s => {
+          const q = s.questions || {};
+          const meta = [(window.SOJAE && window.SOJAE.CAT_LABEL[q.category]) || '', fmtDot(s.updated_at)]
+            .filter(Boolean).join(' · ');
+          const last = (s.last || '').trim();
+          const preview = last
+            ? esc(last.slice(0, 60)) + (last.length > 60 ? '…' : '')
+            : '되묻기를 하다 멈춘 문제예요';
+          return `<li><a class="v2-item" href="sojae.html?q=${encodeURIComponent(s.question_id)}">
+              <span class="v2-note-top"><span class="v2-chip is-chat">대화 중</span><span class="v2-note-meta">${esc(meta)}</span></span>
+              <span class="v2-note-t">${esc(q.content || '소재 발굴 문제')}</span>
+              <span class="v2-note-p">${preview}</span>
+            </a></li>`;
+        };
+
+        // 접이 안엔 미리보기 3개만(대화 중 → 작성 중 → 완료 순). 전체는 answers.html.
+        // ⚠️ '대화 중'은 최대 2줄 — 세 자리를 다 먹으면 정작 쓴 답변이 안 보인다.
         const PREVIEW = 3;
-        const pickDrafts = drafts.slice(0, PREVIEW);
-        const pickFinals = finals.slice(0, Math.max(0, PREVIEW - pickDrafts.length));
-        el.innerHTML = pickDrafts.map(draftCard).join('') + pickFinals.map(finalCard).join('');
+        const pickChats = chats.slice(0, 2);
+        const pickDrafts = drafts.slice(0, Math.max(0, PREVIEW - pickChats.length));
+        const pickFinals = finals.slice(0, Math.max(0, PREVIEW - pickChats.length - pickDrafts.length));
+        el.innerHTML = pickChats.map(chatCard).join('')
+          + pickDrafts.map(draftCard).join('') + pickFinals.map(finalCard).join('');
         document.getElementById('ansCount').textContent = data.length
-          + (drafts.length ? ' · 작성 중 ' + drafts.length : '');
+          + (drafts.length ? ' · 작성 중 ' + drafts.length : '')
+          + (chats.length ? ' · 대화 중 ' + chats.length : '');
         document.getElementById('ansMore').textContent = '저장소 전체 ' + data.length + '개 →';
         document.getElementById('sec-answers').style.display = '';
       } catch (_) { /* 접이 숨김 유지 */ }

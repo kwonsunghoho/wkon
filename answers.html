@@ -85,11 +85,10 @@
     .note[open] .note-more { color: var(--text-muted); }
     .note-a { font-size: 15px; color: var(--text); line-height: 1.7; white-space: pre-wrap;
       border-top: 1px dashed var(--border-soft); margin: 0 15px; padding: 13px 0 16px; }
-    .note-draft { display: block; padding: 15px; text-decoration: none; color: inherit;
-      border-left: 3px solid var(--action); }
-    .note-draft:hover { background: var(--surface2); }
+    /* 초안 카드 — 예전엔 카드 전체가 이어쓰기 링크였다. 삭제 버튼이 들어오면서
+       링크를 아래 버튼 줄로 내렸다(a 안에 button 을 넣을 수 없다). */
+    .note-draft { padding: 15px; border-left: 3px solid var(--action); }
     .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
-    .note-draft .note-more { color: var(--action-dark); }
     mark { background: var(--action-tint); color: var(--accent-ink); padding: 0 2px; border-radius: 3px; }
 
     .empty { text-align: center; color: var(--text-muted); font-size: 15px; padding: 50px 20px; }
@@ -131,6 +130,42 @@
       margin-top: 12px; border: 1.5px solid var(--text); border-radius: 999px; background: transparent;
       font: inherit; font-size: 15px; font-weight: 800; color: var(--text); text-decoration: none; }
     .hist-cta:hover { background: var(--text); color: #fff; }
+
+    /* ── 수정 이력(2026-08-05) — 두 겹 접이 ──
+       바깥은 '수정 이력 N개', 안쪽은 버전마다 날짜만. 본문은 펼칠 때 받아 온다.
+       ⚠️ 지난 본문을 펼치지 않은 채로 늘어놓지 말 것 — 카드가 원문 더미가 된다(오너 지시). */
+    .rev { border-top: 1px dashed var(--border-soft); margin: 0 15px; padding: 13px 0 16px; }
+    .rev-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline;
+      justify-content: space-between; gap: 8px; min-height: 24px; }
+    .rev-fold > summary::-webkit-details-marker { display: none; }
+    .rev-t { font-size: 15px; font-weight: 800; }
+    .rev-n { font-size: 14px; font-weight: 700; color: var(--accent-ink); }
+    .rev-lead { margin: 8px 0 2px; font-size: 14px; color: var(--text-dim); }
+    .rev-item { margin-top: 8px; background: var(--bg2); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xs); }
+    .rev-item > summary { list-style: none; cursor: pointer; display: flex; align-items: center;
+      gap: 10px; min-height: 48px; padding: 0 12px; }
+    .rev-item > summary::-webkit-details-marker { display: none; }
+    .rev-item[open] { border-color: var(--accent-dark); }
+    .rev-d { font-size: 14px; color: var(--text-muted); }
+    .rev-go { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
+    .rev-item[open] .rev-go { color: var(--text-muted); }
+    .rev-body { font-size: 15px; line-height: 1.7; white-space: pre-wrap; color: var(--text);
+      border-top: 1px dashed var(--border-soft); margin: 0 12px; padding: 11px 0 14px; }
+
+    /* ── 카드 안 버튼 줄(이어서 작성 · 삭제) ──
+       삭제는 되돌릴 수 없어 먼저 눈에 띄면 안 된다 — 테두리 없는 약한 글자 버튼으로 두되
+       터치 44px 은 지킨다(작게 만들면 옆 버튼을 잘못 누른다). */
+    .note-acts { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .note-acts-end { margin: 0 15px; padding-bottom: 14px; }
+    .note-act { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+      padding: 0 14px; font: inherit; font-size: 14px; font-weight: 800; border-radius: 999px;
+      border: 1px solid transparent; background: transparent; cursor: pointer; text-decoration: none; }
+    .note-act-go { color: var(--action-dark); border-color: var(--border); }
+    .note-act-go:hover { border-color: var(--accent-dark); }
+    .note-act-del { margin-left: auto; color: #9E3B34; }
+    .note-act-del:hover { background: #9E3B34; color: #fff; }
+    .note-act-del[disabled] { opacity: .6; cursor: default; }
 
     /* ── 답변 추가 — 저장소의 주인공. 무료·무제한 ──
        ⚠️ 소재 발굴을 거치지 않고 바로 쓰는 길이다(2026-07-25 오너 지시).
@@ -369,10 +404,18 @@
       return escaped.replace(new RegExp('(' + esc(t) + ')', 'gi'), '<mark>$1</mark>');
     }
     const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
+    // 수정 이력은 하루에 여러 번 쌓일 수 있어 시각까지 보여준다(날짜만 쓰면 같은 줄이 여럿 보인다).
+    const fmtT = s => {
+      const d = new Date(s), p = n => String(n).padStart(2, '0');
+      return fmt(s) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    };
 
     let ROWS = [];              // 전체 답변(최신순)
     let CHECKS = new Map();     // answer_id → 검사 이력(최신순)
     let POLISHES = new Map();   // answer_id → 첨삭 이력(최신순) — 킬러 검사와 나란한 1:N
+    // answer_id → 수정 이력(최신순). ⚠️ **본문은 안 들고 온다** — 답변마다 최대 20벌이라
+    //    전부 받으면 목록 한 번에 수백 KB 가 된다. 본문은 그 버전을 펼칠 때 한 행만 받는다.
+    let REVS = new Map();
     let filter = { status: 'all', cat: 'all', q: '' };
     let ME = null;
 
@@ -430,18 +473,23 @@
         if (isDraft(a)) {
           const body = (a.content || '').trim();
           const preview = body ? hi(esc(body.slice(0, 70)), rawTerm) + (body.length > 70 ? '…' : '')
-            : '아직 작성 전 — 눌러서 이어쓰기';
+            : '아직 작성 전';
           // 소재 발굴에서 온 초안만 이어쓰기로 보낸다(직접 쓴 글은 그 화면이 없다)
           const href = a.question_id ? 'sojae.html?q=' + encodeURIComponent(a.question_id) : null;
-          const inner = `${top}<div class="note-q">${qText}</div><div class="note-preview">${preview}</div>`;
-          return href
-            ? `<a class="note note-draft" href="${href}">${inner}<span class="note-more">이어서 작성 →</span></a>`
-            : `<div class="note note-draft">${inner}</div>`;
+          // ⚠️ 카드 전체를 링크로 두지 않는다 — 삭제 버튼이 링크 안에 들어가기 때문이다
+          //    (a 안의 button 은 마크업이 깨지고 탭 이동도 엉킨다). 링크를 버튼 줄로 내렸다.
+          return `<div class="note note-draft">${top}<div class="note-q">${qText}</div>
+            <div class="note-preview">${preview}</div>
+            <div class="note-acts">
+              ${href ? `<a class="note-act note-act-go" href="${href}">이어서 작성 →</a>` : ''}
+              ${delBtn(a)}
+            </div></div>`;
         }
         return `<details class="note"><summary>${top}<div class="note-q">${qText}</div>
           ${metaHtml(a)}<span class="note-more">답변 보기 ▾</span></summary>
           <div class="note-a">${hi(esc(a.content), rawTerm)}</div>
-          ${histHtml(a)}</details>`;
+          ${histHtml(a)}${revHtml(a)}
+          <div class="note-acts note-acts-end">${delBtn(a)}</div></details>`;
       }).join('');
     }
 
@@ -495,6 +543,87 @@
       </div>`;
     }
 
+    // 펼친 답변 아래 — 수정 이력(2026-08-05).
+    // ⚠️ 두 겹으로 접는다. 바깥 접이는 '수정 이력 N개', 그 안에서 버전마다 또 접혀 있어
+    //    날짜만 보인다 — 지난 본문을 그대로 늘어놓으면 카드가 원문 더미가 된다(오너 지시).
+    // ⚠️ 본문은 여기서 그리지 않는다. 버전을 펼치는 순간 그 한 행만 받아 온다(loadRev).
+    function revHtml(a) {
+      const list = REVS.get(a.id) || [];
+      if (!list.length) return '';
+      return `<div class="rev"><details class="rev-fold">
+        <summary><span class="rev-t">수정 이력</span><span class="rev-n">${list.length}개 ▾</span></summary>
+        <p class="rev-lead">고치기 전 본문이에요. 최신순으로 남습니다.</p>
+        ${list.map(r => `<details class="rev-item" data-rev="${esc(r.id)}">
+          <summary><span class="rev-d">${fmtT(r.created_at)}</span>
+            <span class="rev-go">본문 보기 ▾</span></summary>
+          <div class="rev-body">불러오는 중…</div></details>`).join('')}
+      </details></div>`;
+    }
+
+    // 머리말 숫자 — 첫 로드와 삭제 뒤에 같은 문구를 쓴다.
+    function syncCount() {
+      const nDraft = ROWS.filter(isDraft).length;
+      document.getElementById('hSub').textContent = ROWS.length
+        ? (ROWS.length + '개' + (nDraft ? ' · 작성 중 ' + nDraft : ''))
+        : '써 둔 답변을 모아 두고, 언제든 다시 검사해요';
+    }
+
+    function delBtn(a) {
+      return `<button type="button" class="note-act note-act-del" data-del="${esc(a.id)}">삭제</button>`;
+    }
+
+    // 목록 안에서 일어나는 일 두 가지 — 버전 펼치기(본문 가져오기) · 답변 삭제.
+    // render() 가 목록을 통째로 다시 그리므로 카드마다 달지 않고 컨테이너 한 곳에 위임한다.
+    function wireList() {
+      const listEl = document.getElementById('list');
+
+      // toggle 은 버블링하지 않는다 — 캡처 단계로 받아야 위임이 먹는다.
+      listEl.addEventListener('toggle', e => {
+        const d = e.target;
+        if (!d.classList || !d.classList.contains('rev-item') || !d.open) return;
+        if (d.dataset.loaded) return;
+        d.dataset.loaded = '1';
+        loadRev(d);
+      }, true);
+
+      listEl.addEventListener('click', async e => {
+        const btn = e.target.closest('[data-del]');
+        if (!btn) return;
+        e.preventDefault();
+        const id = btn.dataset.del;
+        const a = ROWS.find(x => x.id === id);
+        if (!a) return;
+        if (!confirm('이 답변을 지울까요?\n수정 이력도 같이 사라지고, 되돌릴 수 없어요.')) return;
+        btn.disabled = true; btn.textContent = '지우는 중…';
+        try {
+          // member_id 조건은 RLS 와 겹치지만 남겨 둔다 — 실수로 남의 id 가 들어와도 0건이 된다.
+          const { error } = await MONC.sb.from('answers').delete().eq('id', id).eq('member_id', ME);
+          if (error) throw error;
+        } catch (_) {
+          btn.disabled = false; btn.textContent = '삭제';
+          alert('지우지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+          return;
+        }
+        ROWS = ROWS.filter(x => x.id !== id);
+        CHECKS.delete(id); POLISHES.delete(id); REVS.delete(id);
+        buildChips(); render(); syncCount();
+      });
+    }
+
+    // 버전 하나의 본문을 그때 받아 그린다(목록 전송량을 아끼는 자리).
+    async function loadRev(d) {
+      const box = d.querySelector('.rev-body');
+      try {
+        const { data, error } = await MONC.sb.from('answer_revisions')
+          .select('content').eq('id', d.dataset.rev).single();
+        if (error || !data) throw error || new Error('empty');
+        box.textContent = data.content;
+      } catch (_) {
+        box.textContent = '이 버전을 불러오지 못했어요.';
+        d.dataset.loaded = '';        // 다시 펼치면 한 번 더 시도한다
+      }
+    }
+
     function buildChips() {
       // 실제로 존재하는 분류만 칩으로 (없는 카테고리를 눌러 빈 화면을 보는 일이 없게)
       const cats = [];
@@ -505,12 +634,20 @@
       if (nDraft && nDraft < ROWS.length) defs.push({ k: 'status', v: 'final', label: '완료 ' + (ROWS.length - nDraft) });
       cats.forEach(c => defs.push({ k: 'cat', v: c, label: window.SOJAE.CAT_LABEL[c] || c }));
 
+      // 켜져 있던 칩이 사라졌으면(마지막 초안을 지운 경우) 조건도 같이 푼다 — 안 그러면 빈 목록만 남는다.
+      if (!defs.some(d => d.k === 'status' && d.v === filter.status)) filter.status = 'all';
+      if (filter.cat !== 'all' && !defs.some(d => d.k === 'cat' && d.v === filter.cat)) filter.cat = 'all';
+      const isOn = d => (d.k === 'status' ? filter.status === d.v : filter.cat === d.v);
+
       const box = document.getElementById('chips');
       box.innerHTML = defs.map(d =>
-        `<button type="button" class="chip${(d.k === 'status' && d.v === 'all') ? ' on' : ''}" ` +
-        `data-k="${d.k}" data-v="${esc(d.v)}" aria-pressed="${(d.k === 'status' && d.v === 'all')}">${esc(d.label)}</button>`
+        `<button type="button" class="chip${isOn(d) ? ' on' : ''}" ` +
+        `data-k="${d.k}" data-v="${esc(d.v)}" aria-pressed="${isOn(d)}">${esc(d.label)}</button>`
       ).join('');
 
+      // ⚠️ 다시 그릴 때마다 붙이면 클릭 한 번이 두 번 처리된다(삭제 뒤 칩을 다시 만든다).
+      if (buildChips.wired) return;
+      buildChips.wired = true;
       box.addEventListener('click', e => {
         const btn = e.target.closest('.chip');
         if (!btn) return;
@@ -769,6 +906,19 @@
         });
       } catch (_) { /* 첨삭 마이그레이션 전 — 이력 없이 그린다 */ }
 
+      // 수정 이력 — 답변마다 1:N. 테이블 미적용(20260805130000 전)이면 접이가 안 뜬다.
+      // ⚠️ content 를 안 받는다(본문은 펼칠 때 loadRev 가 한 행씩). 목록 전송량 예산.
+      try {
+        const { data: rv } = await MONC.sb.from('answer_revisions')
+          .select('id, answer_id, created_at')
+          .eq('member_id', me).order('created_at', { ascending: false });
+        (rv || []).forEach(r => {
+          if (!r.answer_id) return;
+          if (!REVS.has(r.answer_id)) REVS.set(r.answer_id, []);
+          REVS.get(r.answer_id).push(r);
+        });
+      } catch (_) { /* answer_revisions 미생성 — 수정 이력 없이 그린다 */ }
+
       // 소재 서랍 — 테이블 미생성(v2 마이그레이션 전)이면 탭 자체를 숨긴다(degrade).
       try {
         let { data: ms, error: mErr } = await MONC.sb.from('sojae_materials')
@@ -791,13 +941,10 @@
         if (location.hash === '#materials') showTab('materials');
       } catch (_) { /* sojae_materials 미생성 — 탭 없이 종전 화면 그대로 */ }
 
-      const nDraft = ROWS.filter(isDraft).length;
-      document.getElementById('hSub').textContent = ROWS.length
-        ? (ROWS.length + '개' + (nDraft ? ' · 작성 중 ' + nDraft : ''))
-        : '써 둔 답변을 모아 두고, 언제든 다시 검사해요';
-
+      syncCount();
       buildChips();
       render();
+      wireList();
 
       let t;
       document.getElementById('q').addEventListener('input', e => {
