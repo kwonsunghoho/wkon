@@ -191,7 +191,7 @@
     /* 기출 은행 목록 필터 — 유형 칩(개수 배지). 칩 자체는 신청자 현황과 같은 .af-chip 을 쓴다. */
     .apq-filter { margin: 4px 0 12px; }
     .apq-flabel { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    #apqFilter b, #lrShelfBar b, #qLevelFilter b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
+    #apqFilter b, #lrShelfBar b, #qLevelFilter b, #qCatFilter b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .rounds-wrap { padding: 24px; max-width: 900px; }
@@ -1311,13 +1311,17 @@
               <option value="advanced">고급</option>
               <option value="deep">심화</option>
             </select></div>
-          <div class="field"><label for="qfAirline">항공사(선택)</label><input id="qfAirline" placeholder="예: 대한항공"></div>
+          <!-- 항공사 칸은 2026-08-05 삭제(오너 "항공사는 의미가 없다") — 소재 문제는 전 항공사 공통이다.
+               DB `questions.airline` 컬럼은 남겨 뒀다(구 데이터 보존). 다시 만들지 말 것. -->
           <div class="field field-date"><label for="qfDate">오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
           <button class="btn btn-action" type="submit" id="qfSubmit">추가</button>
           <button class="btn btn-ghost" type="button" id="qfCancel" style="display:none;">취소</button>
         </div>
       </form>
-      <!-- 난이도 필터(2026-08-05) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip) -->
+      <!-- 유형·난이도 필터(2026-08-05) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip).
+           둘은 겹쳐서 걸린다. 그래서 각 칩의 개수는 '상대 필터를 적용한 뒤'의 건수다
+           (안 그러면 3이라 적힌 칩을 눌렀는데 목록이 0건이 된다). -->
+      <div class="apq-filter"><span class="apq-flabel">유형별 보기</span><div class="af-row" id="qCatFilter"></div></div>
       <div class="apq-filter"><span class="apq-flabel">난이도별 보기</span><div class="af-row" id="qLevelFilter"></div></div>
       <div class="round-list" id="questionList"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -4057,12 +4061,11 @@
     const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
     const Q_LV = window.SOJAE.LEVEL_LABEL;  // 난이도 라벨(초급/중급/고급/심화)
     const todayStr = window.SOJAE.todayStr; // KST 기준 — sojae/mypage와 동일
-    let _questions = [], _editQid = null, _qLevelF = '';
+    let _questions = [], _editQid = null, _qLevelF = '', _qCatF = '';
 
     function resetQForm() {
       _editQid = null;
       document.getElementById('qfContent').value = '';
-      document.getElementById('qfAirline').value = '';
       document.getElementById('qfDate').value = '';
       document.getElementById('qfCategory').value = 'experience';
       document.getElementById('qfLevel').value = window.SOJAE.DEFAULT_LEVEL;
@@ -4099,11 +4102,24 @@
     function renderQuestions() {
       const listEl = document.getElementById('questionList');
       const S = window.SOJAE;
-      // 난이도 칩 — 개수는 숨김 문제까지 센다(여기는 관리 화면이라 전체가 기준)
-      const chip = (v, label, cnt) =>
-        `<button type="button" class="af-chip${_qLevelF === v ? ' on' : ''}" data-qlf="${esc(v)}">${esc(label)}<b>${cnt}</b></button>`;
-      document.getElementById('qLevelFilter').innerHTML = chip('', '전체', _questions.length)
-        + S.LEVELS.map(lv => chip(lv, Q_LV[lv], _questions.filter(q => S.levelOf(q) === lv).length)).join('');
+      // 유형·난이도 칩 — 개수는 숨김 문제까지 센다(여기는 관리 화면이라 전체가 기준).
+      // ⚠️ 두 필터는 겹쳐 걸리므로 각 칩의 개수는 '상대 필터를 적용한 뒤'의 건수다.
+      const byCat   = _qCatF   ? _questions.filter(q => (q.category || '') === _qCatF) : _questions;
+      const byLevel = _qLevelF ? _questions.filter(q => S.levelOf(q) === _qLevelF) : _questions;
+      const chip = (attr, cur, v, label, cnt) =>
+        `<button type="button" class="af-chip${cur === v ? ' on' : ''}" ${attr}="${esc(v)}">${esc(label)}<b>${cnt}</b></button>`;
+      // 5유형은 항상 세운다(0건이어도 어떤 유형이 있는지 보여야 한다). 표에 없는 옛 코드는 뒤에 덧붙인다 —
+      // 안 붙이면 그 문제가 '전체' 말고는 어느 칩에도 안 잡혀 조용히 사라진다.
+      const catCodes = Object.keys(Q_CAT)
+        .concat([...new Set(_questions.map(q => q.category).filter(c => c && !Q_CAT[c]))]);
+      document.getElementById('qCatFilter').innerHTML =
+        chip('data-qcf', _qCatF, '', '전체', byLevel.length)
+        + catCodes.map(c => chip('data-qcf', _qCatF, c, Q_CAT[c] || c,
+            byLevel.filter(q => (q.category || '') === c).length)).join('');
+      document.getElementById('qLevelFilter').innerHTML =
+        chip('data-qlf', _qLevelF, '', '전체', byCat.length)
+        + S.LEVELS.map(lv => chip('data-qlf', _qLevelF, lv, Q_LV[lv],
+            byCat.filter(q => S.levelOf(q) === lv).length)).join('');
 
       if (!_questions.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 문제가 없습니다. 위에서 추가하세요.</div>'; return; }
       const today = todayStr();
@@ -4111,9 +4127,10 @@
       // ⚠️ 난이도마다 하나씩이라 '오늘 노출 중'은 최대 네 줄이다(학생이 고른 난이도의 것이 나간다).
       const effIds = new Set();
       S.LEVELS.forEach(lv => { const e = S.pickEffective(_questions, lv); if (e) effIds.add(e.id); });
-      const rows = _qLevelF ? _questions.filter(q => S.levelOf(q) === _qLevelF) : _questions;
+      const rows = _questions.filter(q =>
+        (!_qLevelF || S.levelOf(q) === _qLevelF) && (!_qCatF || (q.category || '') === _qCatF));
       if (!rows.length) {
-        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">이 난이도에는 문제가 없습니다.</div>';
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">고른 조건에 맞는 문제가 없습니다.</div>';
         return;
       }
       listEl.innerHTML = rows.map(q => {
@@ -4125,7 +4142,7 @@
         <div class="round-item${q.active ? '' : ' is-off'}" data-id="${q.id}" style="${isEffective ? 'box-shadow:inset 3px 0 0 var(--action);' : ''}">
           <div>
             <div class="ri-main">${esc(q.content)}</div>
-            <div class="ri-sub">${liveTag}${esc(Q_LV[lv])} · ${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
+            <div class="ri-sub">${liveTag}${esc(Q_LV[lv])} · ${esc(Q_CAT[q.category] || q.category)} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
           </div>
           <div class="ri-actions">
             <select class="q-lv" data-id="${q.id}" aria-label="난이도 바꾸기">${
@@ -4180,7 +4197,6 @@
         document.getElementById('qfContent').value = q.content || '';
         document.getElementById('qfCategory').value = q.category || 'experience';
         document.getElementById('qfLevel').value = window.SOJAE.levelOf(q);
-        document.getElementById('qfAirline').value = q.airline || '';
         document.getElementById('qfDate').value = q.scheduled_date || '';
         document.getElementById('qfSubmit').textContent = '수정 저장';
         document.getElementById('qfCancel').style.display = '';
@@ -4204,7 +4220,6 @@
         content,
         category: document.getElementById('qfCategory').value,
         level: document.getElementById('qfLevel').value,
-        airline: document.getElementById('qfAirline').value.trim() || null,
         scheduled_date: document.getElementById('qfDate').value || null,
       };
       const error = await qSave(row, _editQid);
@@ -4213,10 +4228,15 @@
       resetQForm(); loadQuestions();
     });
     document.getElementById('qfCancel').addEventListener('click', resetQForm);
-    // 난이도 필터 — 목록만 다시 그린다(재조회 없음)
+    // 유형·난이도 필터 — 목록만 다시 그린다(재조회 없음). 둘은 같이 걸린다.
     document.getElementById('qLevelFilter').addEventListener('click', e => {
       const b = e.target.closest('[data-qlf]'); if (!b) return;
       _qLevelF = b.dataset.qlf;
+      renderQuestions();
+    });
+    document.getElementById('qCatFilter').addEventListener('click', e => {
+      const b = e.target.closest('[data-qcf]'); if (!b) return;
+      _qCatF = b.dataset.qcf;
       renderQuestions();
     });
 

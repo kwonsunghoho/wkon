@@ -230,4 +230,5 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - AI킬러 일반 텍스트 응답·규칙 엔진 모듈 분리 (ai-killer 스펙)
 - 첨삭(polish) 제출 전 프로브 게이트 삭제 (polish.md)
 - 소재 발굴을 답변 저장의 관문으로 만들기·다듬기 버튼을 AI 판정 뒤로 숨기기 (sojae 스펙)
+- admin 소재 문제의 항공사 칸(`#qfAirline`) — 소재 문제는 전 항공사 공통이라 2026-08-05 삭제. 답변 프로그램 기출 은행의 항공사는 그대로 (admin.md)
 - 연구진 전원=챌린지 코치 전제 문구 — 현형빈은 챌린지 미지도 (pages.md)
