@@ -205,6 +205,27 @@
     .today-sub { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
     .today-sub b { font-weight: 800; color: var(--accent-ink); }
 
+    /* '하다 만 대화' — 소재 발굴 스텝에 딸린 줄(2026-08-06 오너 확정 B안).
+       ⚠️ 번호 목록 **위**로 올리지 말 것(A안 기각) — 이 카드의 규칙은 '번호 순서대로 하나씩'
+          이라, 번호 없는 줄이 1번 위에 오면 순서가 깨져 '0번'처럼 읽힌다. 스텝 안의 갈래로 둔다.
+       ⚠️ 0개·조회 실패면 줄 자체를 안 그린다(빈 껍데기 금지).
+       .st-wrap 이 스텝과 딸린 줄을 한 덩어리로 묶고 밑줄을 대신 갖는다. */
+    .st-wrap { border-bottom: 1px solid var(--border-soft); }
+    .st-wrap .cs-step { border-bottom: 0; }
+    /* margin-left 39px = 번호 칸 26 + 간격 11 — 스텝 제목과 왼쪽이 맞는다.
+       padding 13 + line-height 18 = 44px(터치 하한). 9px 로 줄이면 36px 이 된다. */
+    .rs-sub { display: flex; align-items: center; gap: 8px; margin: 0 2px 12px 39px;
+      padding: 13px 12px; background: var(--accent-tint); border-radius: 10px;
+      text-decoration: none; color: var(--accent-ink); font-size: 13px; font-weight: 800; line-height: 18px; }
+    /* 코스에 소재 발굴 스텝이 없을 때(실전 코스) — 스텝 밖에 붙으므로 들여쓰기를 없앤다.
+       이때 마지막 스텝은 `.cs-step:last-of-type` 이 안 걸려 밑줄이 남는데, 번호 목록과
+       이 줄을 가르는 구분선이 되므로 그대로 둔다(없애려고 손대지 말 것). */
+    .rs-sub.is-loose { margin: 12px 2px 0 2px; }
+    .rs-sub i { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--action); }
+    .rs-sub b { flex: 1 1 auto; min-width: 0; font-weight: 800; }
+    .rs-sub u { flex: 0 0 auto; text-decoration: none; opacity: .75; }
+    .rs-sub:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+
     .bf-foot { max-width: 600px; margin: 0 auto; padding: 0 0 80px; }
 
     /* ══ 상태 전환 — 기본은 A(코스 선택 전). B 요소는 감춰 두고 클래스로 켠다.
@@ -626,6 +647,7 @@ async function startCourse(code) {
     document.body.classList.remove('pick-mode');
     try { history.pushState({ bf: 'mine' }, '', 'briefing.html'); } catch (e) {}
     paintMine(row.name, row.course || code);
+    loadOpenChat(uid);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   } catch (e) {
@@ -757,6 +779,56 @@ window.addEventListener('popstate', function () {
 /* ⚠️ 기록 숫자를 세던 loadStats() 는 2026-08-06 삭제했다(칩·링크와 한 벌).
    같은 숫자가 필요하면 마이페이지에서 본다 — 이 화면에 다시 붙이지 말 것. */
 
+/* ── 하다 만 대화 ─────────────────────────────────────────────────────────────
+   소재 발굴에서 되묻기만 하고 답변까지 안 간 문제. **누를 수 있는 줄로만** 보여 준다 —
+   숫자만 띄우는 칩으로 되돌리지 말 것(그래서 지운 자리다).
+   ⚠️ '하다 만'의 정의는 마이페이지와 같아야 한다: `discovery_sessions.stage !== 'done'`
+      **그리고** `answers` 에 없는 문제. 한쪽만 고치면 두 화면의 숫자가 어긋난다. */
+async function loadOpenChat(uid) {
+  try {
+    var a = await MONC.sb.from('answers').select('question_id').eq('member_id', uid);
+    if (a.error || !a.data) return;                 /* 조회 실패 — 아무것도 안 그린다 */
+    var answered = {};
+    a.data.forEach(function (r) { if (r.question_id) answered[r.question_id] = 1; });
+
+    var s = await MONC.sb.from('discovery_sessions')
+      .select('question_id, stage, updated_at')
+      .eq('member_id', uid).order('updated_at', { ascending: false });
+    if (s.error || !s.data) return;
+
+    var open = s.data.filter(function (r) {
+      return r.stage !== 'done' && r.question_id && !answered[r.question_id];
+    });
+    if (!open.length) return;                       /* 0개 — 줄을 안 그린다 */
+    paintOpenChat(open.length, open[0].question_id);
+  } catch (e) {}
+}
+
+/* 줄을 소재 발굴 스텝 아래에 끼운다. 여러 개면 **가장 최근에 하던 것**으로 바로 들어간다
+   (목록을 한 겹 더 두면 이 화면의 할 일이 둘이 된다). 주소는 마이페이지와 같은 sojae.html?q=. */
+function paintOpenChat(n, qid) {
+  var box = document.getElementById('todaySteps');
+  if (!box || box.querySelector('.rs-sub')) return;              /* 두 번 그리지 않는다 */
+  var row = '<a class="rs-sub" href="sojae.html?q=' + encodeURIComponent(qid) + '">' +
+              '<i aria-hidden="true"></i><b>하다 만 대화 ' + n + '개 이어서 하기</b>' +
+              '<u aria-hidden="true">→</u></a>';
+
+  /* 소재 발굴로 가는 첫 스텝을 찾는다 — 대화가 거기서 생긴 것이라 그 자리가 제집이다 */
+  var steps = box.querySelectorAll('.cs-step'), target = null;
+  for (var i = 0; i < steps.length; i++) {
+    if ((steps[i].getAttribute('href') || '').indexOf('sojae.html') === 0) { target = steps[i]; break; }
+  }
+  if (!target) {                                                 /* 실전 코스엔 소재 스텝이 없다 */
+    box.insertAdjacentHTML('beforeend', row.replace('rs-sub', 'rs-sub is-loose'));
+    return;
+  }
+  var wrap = document.createElement('div');
+  wrap.className = 'st-wrap';
+  target.parentNode.insertBefore(wrap, target);
+  wrap.appendChild(target);
+  wrap.insertAdjacentHTML('beforeend', row);
+}
+
 /* ── 부팅 ──────────────────────────────────────────────────────────────────
    기기 기억으로 이미 A/B 를 그려 놨다. 여기서 서버 값으로 바로잡는다.
    ⚠️ **어느 갈래로 빠지든 빈 카드를 남기지 않는다** — 못 채우면 fallbackToPick() 으로
@@ -800,6 +872,8 @@ window.addEventListener('popstate', function () {
   if (code && COURSE_BY[code]) {
     try { localStorage.setItem(HINT_KEY, JSON.stringify({ uid: uid, course: code })); } catch (e) {}
     paintMine(row.name, code);
+    /* 허브 모드에서는 카드가 안 보이니 조회도 하지 않는다(쓸데없는 요청 2개) */
+    if (!PICK_MODE) loadOpenChat(uid);
     /* 허브 모드로 들어왔으면 지금 쓰는 코스를 펴 놓는다 — 뭘 바꾸는지 보이게 */
     if (PICK_MODE) paintDetail(code);
   } else if (row) {
