@@ -122,7 +122,7 @@
       border: 1.5px solid var(--accent-dark); color-scheme: light; }
     /* 다듬기는 이 화면의 다음 단계라 채운 알약(사이트 CTA 규칙) */
     .chip-go { background: var(--action); color: var(--action-ink); border-color: transparent; }
-    /* 되묻기가 무료라는 사실 — 다듬기 칩이 생기기 전(1턴)에 그 자리에 선다 */
+    /* 충전 안내 전용(크레딧 모자랄 때 '충전하기' 링크) — 상시 안내 문구는 2026-08-05 삭제 */
     .chip-note { font-size: 13px; color: var(--text-muted); }
     .chip-note a { color: var(--accent-ink); font-weight: 700; text-decoration: underline; }
     /* 재료 게이지 — 다듬기 칩과 같은 줄(좁으면 줄바꿈). 대화 꼬리라 스크롤과 함께 움직인다 */
@@ -215,6 +215,12 @@
     .pickview { display: none; flex: 1 1 auto; overflow-y: auto;
       padding: 4px 16px calc(24px + env(safe-area-inset-bottom)); }
     body.picking .pickview { display: block; }
+    /* 부트 전에는 어느 화면도 안 보여준다(2026-08-05 오너 신고 — "들어갈 때 채팅창이
+       깜빡인다"). 기본 마크업이 채팅 UI 라, 로그인 확인·문제 조회가 끝나 난이도 화면으로
+       갈리기 전까지 빈 채팅창이 먼저 비쳤다. booting 은 갈림길(난이도 화면 켜기 또는
+       대화 시작)에서 뗀다. ⚠️ picking 규칙보다 뒤에 있어야 booting 이 이긴다. */
+    body.booting .chat, body.booting .composer, body.booting .stepbar,
+    body.booting .pickview { display: none; }
     .pv-h { font-size: 17px; font-weight: 800; line-height: 1.5; word-break: keep-all; margin-bottom: 4px; }
     .pv-sub { font-size: 13px; color: var(--text-muted); line-height: 1.55; word-break: keep-all; }
     /* 네 난이도를 한 줄에 — 순서(초급→심화)가 한눈에 보여야 고르는 기준이 선다.
@@ -256,7 +262,7 @@
     .pv-item.is-today { border-color: var(--accent-dark); border-width: 1.5px; }
   </style>
 </head>
-<body data-nav-offset>
+<body data-nav-offset class="booting">
   <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
        태그를 h1 으로 바꾸면 조판이 깨진다. 낭독기·검색엔진용으로만 둔다.
        ⚠️ 지우지 말 것: h1 이 없으면 낭독기 사용자가 "여기가 어디인지"를 못 듣는다. -->
@@ -300,7 +306,8 @@
         <button class="chip chip-go" id="refineCta" type="button" style="display:none;">다듬기</button>
       </div>
       <div class="mm-detail" id="mmDetail" hidden></div>
-      <span class="chip-note" id="refineNote">되묻기 대화는 무료예요</span>
+      <!-- 충전 안내 전용 — '되묻기 대화는 무료예요' 상시 문구는 2026-08-05 오너 지시로 삭제 -->
+      <span class="chip-note" id="refineNote" style="display:none;"></span>
     </div>
   </div>
 
@@ -483,7 +490,7 @@
     /* 다듬기 칩을 켠다. 값(무료 남은 횟수·크레딧)은 **칩 글자 안에** 싣는다 —
        예전엔 전폭 버튼 + 그 아래 안내 줄로 두 덩어리였는데, 세로로 쌓이면서
        키보드가 열릴 때 대화를 다 잡아먹었다(2026-08-04). 값을 다시 딴 줄로 빼지 말 것.
-       옆의 '되묻기 대화는 무료' 문구는 이 칩이 생기면 자리를 내준다(칩 줄은 한 줄이다). */
+       #refineNote 는 충전 안내 전용이다('되묻기 무료' 상시 문구는 2026-08-05 오너 지시로 삭제). */
     function showRefine() {
       const cta = document.getElementById('refineCta');
       const note = document.getElementById('refineNote');
@@ -510,7 +517,7 @@
       }
     }
     // 되묻기가 끝났으면(다듬기로 넘어감) 대화 꼬리의 도구도 같이 걷는다 — 최종 작성 화면에
-    // '되묻기 대화는 무료예요'가 남아 있으면 지나간 단계의 말이 대화에 섞인다.
+    // 게이지·다듬기 칩이 남아 있으면 지나간 단계의 말이 대화에 섞인다.
     function hideRefine() {
       document.getElementById('refineWrap').style.display = 'none';
     }
@@ -979,6 +986,7 @@
 
     // ── 대화 시작(문제 확정 후) ──
     async function startChat(q) {
+      document.body.classList.remove('booting');   // 갈림길 도착 — 대화 화면을 켠다
       if (q) {
         currentQuestion = q;
         if (CAT_LABEL[q.category]) category = q.category;
@@ -1001,6 +1009,9 @@
       resetIdle();
     }
 
+    /* booting 안전핀 — 부트가 예기치 못한 곳에서 멎어도(리다이렉트 지연 등) 화면이
+       영영 비지 않게 4초 뒤에는 무조건 연다. 정상 부트에서는 이미 떼어져 no-op. */
+    setTimeout(() => document.body.classList.remove('booting'), 4000);
     (async () => {
       const session = await MONC.requireSession();   // 미로그인 → login 으로 이동
       if (session && !(await MONC.requireConsent())) return;  // 약관 동의(가입 시 1회) 미완료 → 동의 게이트
@@ -1016,6 +1027,7 @@
       // (진입 화면만 띄우면 학생이 아무것도 못 하고 막힌다).
       if (!_pool.length) { startChat(null); return; }
       document.body.classList.add('picking');
+      document.body.classList.remove('booting');   // 갈림길 도착 — 난이도 화면을 켠다
       try {
         const { data } = await MONC.sb.from('discovery_sessions')
           .select('question_id, stage').eq('member_id', session.user.id);
