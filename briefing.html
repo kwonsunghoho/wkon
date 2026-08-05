@@ -193,13 +193,18 @@
       padding: 16px; margin-top: 20px; box-shadow: 0 2px 12px rgba(23,42,71,.06); }
     .today-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .today-hd b { font-size: 15px; font-weight: 800; }
-    /* 글자는 작게 두되 누를 자리는 넓힌다(음수 마진으로 보이는 크기는 그대로).
-       ⚠️ line-height 를 적어야 44px 이 된다 — 버튼은 body 의 행간을 물려받지 않아
+    /* '코스 바꾸기' — ⚠️ 밑줄 글자로 두지 말 것(2026-08-06 오너 신고: 못 찾아서 뒤로가기를
+       눌렀고 그대로 사이트를 빠져나갔다). 테두리 있는 알약이라야 '누르는 것'으로 읽힌다.
+       ⚠️ line-height 를 적어야 44px 이 된다 — 버튼은 body 행간을 물려받지 않아
           기본값(약 16px)으로 계산되면 40px 에서 멈춘다(실측). */
-    .today-hd button { appearance: none; background: none; border: 0; font-family: inherit; cursor: pointer;
-      font-size: 13px; line-height: 20px; font-weight: 700; color: var(--text-dim); text-decoration: underline;
-      padding: 12px 8px; margin: -12px -8px; }
-    .today-hd button:focus-visible { outline: 3px solid var(--action); outline-offset: 0; border-radius: 8px; }
+    .today-hd button { appearance: none; font-family: inherit; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--action); border-radius: 999px;
+      font-size: 13px; line-height: 20px; font-weight: 800; color: var(--action);
+      padding: 11px 14px; white-space: nowrap; }
+    .today-hd button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    /* 카드가 무엇에 대한 것인지 — 지금 코스 이름과 '순서대로'라는 안내 한 줄 */
+    .today-sub { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+    .today-sub b { font-weight: 800; color: var(--accent-ink); }
 
     .bf-foot { max-width: 600px; margin: 0 auto; padding: 0 0 80px; }
 
@@ -318,6 +323,9 @@
         <b id="todayHd">오늘 이어서</b>
         <button type="button" id="btnChange">코스 바꾸기</button>
       </div>
+      <!-- 지금 코스 이름 + 무엇을 누르면 되는지 한 줄(2026-08-06 오너 신고: 카드가 뭘
+           말하는지, 뭘 눌러야 하는지 몰랐다). 스크립트가 코스 이름을 채운다. -->
+      <p class="today-sub" id="todaySub"></p>
       <div id="todaySteps"></div>
       <a class="cs-cta" id="todayCta" href="sojae.html" style="text-align:center;text-decoration:none;"></a>
     </section>
@@ -336,7 +344,10 @@
 
     <!-- ── A·B 공통: 자유 선택 ── -->
     <section aria-labelledby="freeHd">
-      <div class="sec-t"><b id="freeHd">내 입맛대로 골라서 준비해요</b><span>코스 없이 필요한 도구만 바로</span></div>
+      <!-- ⚠️ 부제는 상태에 따라 다르다(2026-08-06 오너 신고: 코스를 고른 뒤에도 이 섹션이
+           그대로 나와 '뭘 눌러야 하는지' 헷갈렸다). B 에서는 '코스 순서 말고'라고 말해
+           위 카드와 역할을 갈라 준다 — 스크립트가 paintMine 에서 바꾼다. -->
+      <div class="sec-t"><b id="freeHd">내 입맛대로 골라서 준비해요</b><span id="freeSub">코스 없이 필요한 도구만 바로</span></div>
       <div class="fr-grid">
         <a class="fr-c" href="news.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-news"/></svg></span>뉴스 스크랩</a>
         <a class="fr-c" href="sojae.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-dig"/></svg></span>소재 발굴</a>
@@ -562,10 +573,17 @@ function paintMine(name, code) {
   myCourse = code;
   document.getElementById('meTitle').innerHTML =
     esc(name || '회원') + ' 님은<br><i>‘' + esc(c.name) + '’</i>를 선택하셨어요.';
+  document.getElementById('todaySub').innerHTML =
+    '<b>' + esc(c.name) + '</b> · 번호 순서대로 하나씩 하면 돼요';
   document.getElementById('todaySteps').innerHTML = stepRows(c);
   var cta = document.getElementById('todayCta');
   cta.href = c.cta.href;
-  cta.textContent = '오늘 이어서: ' + c.cta.label;
+  /* 아래 네이비 바는 '1번 스텝을 지금 시작'이라는 뜻이다 — 번호를 적어 스텝과 이어 준다
+     (2026-08-06 오너 신고: 바가 뭔지 몰라 헷갈렸다) */
+  cta.textContent = '1번부터 시작하기 · ' + c.cta.label;
+  /* 코스를 고른 뒤엔 아래 도구 섹션이 '코스 말고 다른 것'이라는 걸 말해 준다 */
+  var fs = document.getElementById('freeSub');
+  if (fs) fs.textContent = '코스 순서 말고 다른 게 필요할 때';
   document.body.classList.add('has-course');
   document.body.classList.remove('changing');
 }
