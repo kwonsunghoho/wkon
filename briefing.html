@@ -482,7 +482,7 @@ COURSES.forEach(function (c) { COURSE_BY[c.code] = c; });
 
 var HINT_KEY    = 'monc_course_v1';          /* 그리기용 기기 기억(권한 아님) */
 var PENDING_KEY = 'monc_pending_course';     /* 로그인하러 갔다 오는 동안만 — sessionStorage */
-var BF_VER      = 'v10';                     /* 화면에 보이는 판 번호 — 고칠 때마다 올린다 */
+var BF_VER      = 'v11';                     /* 화면에 보이는 판 번호 — 고칠 때마다 올린다 */
 
 /* 허브 모드 — '코스 바꾸기'로 들어온 주소(?pick=1). 저장된 코스가 있어도 고르는 화면을 편다. */
 var PICK_MODE = /[?&]pick=1/.test(window.location.search);
@@ -644,8 +644,12 @@ async function startCourse(code) {
       } catch (e2) { /* 아래 비회원 갈래로 */ }
     }
     if (!uid) {
-      /* 비회원 — 고른 코스를 들고 로그인하러 갔다 온다. sessionStorage 고정(공용 기기). */
-      try { sessionStorage.setItem(PENDING_KEY, code); } catch (e) {}
+      /* 비회원 — 고른 코스를 들고 로그인하러 갔다 온다. sessionStorage 고정(공용 기기).
+         ⚠️ **시각을 같이 적는다** — 이 값은 다음 방문에 자동으로 저장되는데, 탭이 살아 있는
+            한 sessionStorage 도 살아 있어서 몇 시간 전에 눌러 둔 코스가 뒤늦게 적용됐다
+            (2026-08-06 오너 신고 "승준노트를 눌렀는데 고급 코스가 그냥 선택돼 있었어").
+            로그인 왕복은 몇 분이면 끝나므로 오래된 값은 버린다(아래 boot 참조). */
+      try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ c: code, at: Date.now() })); } catch (e) {}
       window.location.href = 'login.html?returnTo=' + encodeURIComponent('briefing.html');
       return;
     }
@@ -872,14 +876,18 @@ function paintOpenChat(n, qid) {
   if (!session) { fallbackToPick(true); return; }
   var uid = session.user.id;
 
-  /* 로그인하러 갔다 온 사람 — 들고 간 코스를 지금 저장한다 */
+  /* 로그인하러 갔다 온 사람이 들고 온 코스. **여기서는 읽고 지우기만 한다** —
+     실제 저장은 계정 조회 뒤에, 코스가 아직 없을 때만 한다(아래).
+     ⚠️ 먼저 지우는 게 핵심이다. 저장을 시도한 뒤에 지우면, 그 사이에 실패·이탈이 나면
+        값이 남아 다음 방문에 또 적용된다. */
   var pending = null;
-  try { pending = sessionStorage.getItem(PENDING_KEY); } catch (e) {}
-  if (pending && COURSE_BY[pending]) {
-    var saved = await saveCourse(uid, pending);   /* 바뀐 행 또는 null */
-    try { sessionStorage.removeItem(PENDING_KEY); } catch (e) {}
-    if (!saved) { paintDetail(pending); showStartErr(lastSaveErr); }
-  }
+  try {
+    var raw = sessionStorage.getItem(PENDING_KEY);
+    sessionStorage.removeItem(PENDING_KEY);
+    var p = raw ? JSON.parse(raw) : null;              /* 구 형식(문자열)은 파싱에서 걸러 버린다 */
+    /* 로그인 왕복은 몇 분이면 끝난다. 15분이 넘었으면 '지금 고른 것'이 아니다. */
+    if (p && COURSE_BY[p.c] && Date.now() - Number(p.at || 0) < 15 * 60 * 1000) pending = p.c;
+  } catch (e) {}
 
   /* ⚠️ select('*') — course 컬럼 미적용 환경에서도 조회가 깨지지 않게(사이트 관례).
         공용 getMyProfile() 셀렉트에는 course 를 넣지 않는다(major·agreed_at 전례). */
@@ -890,6 +898,19 @@ function paintOpenChat(n, qid) {
   } catch (e) {}
 
   var code = row && row.course;
+
+  /* 로그인하러 갔다 온 사람이 들고 온 코스는 **계정에 코스가 아직 없을 때만** 저장한다.
+     ⚠️⚠️ **이미 고른 코스를 덮어쓰지 말 것**(2026-08-06 오너 신고 "승준노트를 눌렀는데
+        고급 코스가 그냥 선택돼 있었어"). 이 저장은 버튼을 누른 적도 없고 화면에 아무 표시도
+        없이 계정 값을 바꾼다 — 무엇이 언제 바꿨는지 알 길이 없다. 원래 목적은 '비회원이
+        고른 코스를 가입 직후 이어 주는 것' 하나뿐이므로, 이미 코스가 있으면 버린다.
+        (세션 조회가 느려 로그인한 사람이 비회원으로 잘못 갈린 경우가 이 자리로 흘러든다.) */
+  if (pending && row && !code) {
+    var saved = await saveCourse(uid, pending);
+    if (saved) code = saved.course || pending;
+    else { paintDetail(pending); showStartErr(lastSaveErr); }
+  }
+
   if (code && COURSE_BY[code]) {
     try { localStorage.setItem(HINT_KEY, JSON.stringify({ uid: uid, course: code })); } catch (e) {}
     paintMine(row.name, code);
