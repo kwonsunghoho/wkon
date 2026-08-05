@@ -33,7 +33,11 @@
     'border-top-color:#1B3A6B;animation:mprSpin .9s linear infinite;}' +
     '@keyframes mprSpin{to{transform:rotate(360deg);}}' +
     '.mpr-t{margin:0;font-size:16px;font-weight:800;color:#1B3A6B;line-height:1.5;}' +
-    '.mpr-s{margin:0;font-size:13px;font-weight:600;color:#5F574B;line-height:1.6;}' +
+    /* ⚠️ 웜그레이(#5F574B)로 되돌리지 말 것 — 2026-08-05 순백 팔레트로 바꾸면서 배경은
+       흰색이 됐는데 이 줄만 남아, 결제 복귀 화면 글자만 누렇게 떴다(2026-08-06 감사).
+       이 파일은 CSS 를 문자열로 들고 있어 tokens.css 를 안 타므로 값을 직접 적는다
+       — tokens 의 --text-muted 와 같은 값으로 맞춘다. */
+    '.mpr-s{margin:0;font-size:13px;font-weight:600;color:#545C68;line-height:1.6;}' +
     /* 움직임을 줄이는 설정에서는 회전 대신 정지한 고리 — 상태는 문구가 말한다 */
     '@media (prefers-reduced-motion: reduce){.mpr-ring{animation:none;border-top-color:#1B3A6B;}}';
 

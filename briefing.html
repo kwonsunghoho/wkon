@@ -131,8 +131,14 @@
       padding: 6px 14px 14px; box-shadow: 0 2px 12px rgba(23,42,71,.06); }
     .cs-detail:focus { outline: none; }
     .cs-step { display: flex; gap: 11px; align-items: center; padding: 12px 2px; text-decoration: none;
-      color: var(--text); border-bottom: 1px solid var(--border-soft); }
-    .cs-step:last-of-type { border-bottom: 0; }
+      color: var(--text); }
+    /* 구분선은 **스텝과 스텝 사이에만** 긋는다.
+       ⚠️ `border-bottom` + `:last-of-type{border:0}` 으로 되돌리지 말 것(2026-08-06 감사) —
+          코스 상세 패널은 스텝 뒤에 챌린지 추천 칸(.cs-reco)이 붙는데 그것도 <a> 라서,
+          `:last-of-type` 이 마지막 스텝이 아니라 추천 칸에 걸린다. 그래서 스텝 셋 다 밑줄이
+          남아 추천 칸 위에 줄이 하나 더 그어졌다(추천 칸이 없는 '오늘 이어서' 카드에서는
+          같은 규칙이 정상 동작해서, 같은 부품이 두 자리에서 다르게 보였다). */
+    .cs-step + .cs-step { border-top: 1px solid var(--border-soft); }
     .cs-step:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: 10px; }
     .cs-step > b { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; background: var(--accent-tint);
       color: var(--accent-ink); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
@@ -712,9 +718,14 @@ function paintMine(name, code) {
     esc(name || '회원') + ' 님은<br><i>‘' + esc(c.name) + '’</i>를 선택하셨어요.';
   document.getElementById('todaySub').innerHTML =
     '<b>' + esc(c.name) + '</b> · 번호 순서대로 하나씩 하면 돼요';
-  /* 허브 모드에서는 지금 쓰는 코스가 무엇인지 목록 위에 적어 준다 */
+  /* 허브 모드에서는 지금 쓰는 코스가 무엇인지 목록 위에 적어 준다.
+     ⚠️ `PICK_MODE` 조건을 다시 걸지 말 것(2026-08-06 감사에서 실측) — 이 줄은 고르는 화면에서만
+        보이지만, **코스를 저장하는 순간에는 이미 PICK_MODE 가 false 다**(내 코스 화면으로 넘긴
+        뒤에 paintMine 이 돈다). 조건을 걸면 뒤로가기로 고르는 화면에 돌아왔을 때 이 줄만
+        이전 코스 이름으로 남아, 한 화면에서 위아래가 서로 다른 코스를 말한다.
+        안 보이는 동안에도 값은 맞춰 둔다. */
   var ps = document.getElementById('pickSub');
-  if (ps && PICK_MODE) ps.innerHTML = '지금은 <b>' + esc(c.name) + '</b>예요 · 다른 코스를 눌러 바꿀 수 있어요';
+  if (ps) ps.innerHTML = '지금은 <b>' + esc(c.name) + '</b>예요 · 다른 코스를 눌러 바꿀 수 있어요';
   document.getElementById('todaySteps').innerHTML = stepRows(c);
   var cta = document.getElementById('todayCta');
   cta.href = c.cta.href;
