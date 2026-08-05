@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코스 카드 4안 — 한글 큰 글자 · 모바일 최적화</title>
+<style>
+  /* 토큰은 tokens.css 실값 그대로(수정 금지 — 비교가 어긋난다) */
+  :root{
+    --bg:#F4F1EA; --surface:#FFFFFF; --text:#26221C; --text-muted:#5F574B;
+    --border-soft:rgba(38,34,28,0.09);
+    --accent:#1B3A6B; --accent-tint:#E5E9F1; --accent-ink:#1B3A6B;
+    --action:#1B3A6B; --action-ink:#FFFFFF;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  .wrap{max-width:600px;margin:0 auto;padding:20px 0 60px}
+  .lead{font-size:14px;line-height:1.6;color:var(--text-muted);margin:0 0 4px;padding:0 20px}
+  .lead b{color:var(--text)}
+
+  .case{margin-top:36px}
+  .case-h{display:flex;align-items:baseline;gap:8px;padding:0 20px}
+  .case-h b{font-size:17px;font-weight:800}
+  .case-h span{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--accent-ink);
+    background:var(--accent-tint);border-radius:999px;padding:3px 9px}
+  .case-note{font-size:13px;line-height:1.6;color:var(--text-muted);margin:6px 0 0;padding:0 20px}
+
+  /* 375px 실폭 프레임(허브 열 여백 20px 포함) */
+  .phone{width:375px;max-width:100%;margin:14px auto 0;padding:16px 20px 22px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .sec-t{margin:0 0 16px;text-align:center}
+  .sec-t b{font-size:19px;font-weight:800}
+  .sec-t span{display:block;font-size:15px;color:var(--text-muted);margin-top:5px}
+
+  button{appearance:none;font-family:inherit;text-align:left;cursor:pointer;padding:0;
+    background:var(--surface);border:1px solid var(--border-soft);
+    -webkit-tap-highlight-color:transparent}
+  button:focus-visible{outline:3px solid var(--action);outline-offset:2px}
+
+  /* ═══ A안 — 현행 구조 유지, 판에 한글 큰 글자 ═══ */
+  .a-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .a-card{border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,28,.05)}
+  .a-q{display:flex;align-items:center;min-height:52px;padding:9px 10px;
+    background:var(--accent-tint);color:var(--accent-ink);
+    font-size:13px;font-weight:800;line-height:1.35}
+  .a-ph{aspect-ratio:4/3.2;background:var(--accent-tint);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px}
+  .a-ph b{font-size:34px;font-weight:800;letter-spacing:.06em;color:var(--accent-ink)}
+  .a-ph span{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--accent-ink);opacity:.5}
+  .a-nm{display:flex;align-items:center;justify-content:space-between;gap:6px;
+    padding:9px 10px 10px;font-size:13px;font-weight:800;color:var(--text-muted)}
+  .a-nm i{font-style:normal;color:var(--accent-ink)}
+  .a-card[aria-expanded="true"]{border-color:var(--action);
+    box-shadow:0 0 0 1px var(--action) inset,0 2px 10px rgba(38,34,28,.05)}
+  .a-card[aria-expanded="true"] .a-q{background:var(--action);color:var(--action-ink)}
+  .a-card[aria-expanded="true"] .a-nm{color:var(--text)}
+
+  /* ═══ B안 — 가로 줄 4개(리스트형) ═══ */
+  .b-list{display:flex;flex-direction:column;gap:8px}
+  .b-row{display:flex;align-items:center;gap:12px;width:100%;
+    border-radius:14px;padding:10px 12px 10px 10px;box-shadow:0 2px 10px rgba(38,34,28,.05)}
+  .b-lv{flex:0 0 66px;height:58px;border-radius:10px;background:var(--accent-tint);
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink)}
+  .b-tx{flex:1;min-width:0}
+  .b-tx b{display:block;font-size:14px;font-weight:800;line-height:1.35}
+  .b-tx span{display:block;font-size:12.5px;color:var(--text-muted);margin-top:2px;line-height:1.4}
+  .b-row i{font-style:normal;color:var(--accent-ink);font-size:14px}
+  .b-row[aria-expanded="true"]{border-color:var(--action);
+    box-shadow:0 0 0 1px var(--action) inset,0 2px 10px rgba(38,34,28,.05)}
+  .b-row[aria-expanded="true"] .b-lv{background:var(--action);color:var(--action-ink)}
+
+  /* ═══ C안 — 단계 사다리형(01→04 세로 배너) ═══ */
+  .c-list{display:flex;flex-direction:column;gap:8px}
+  .c-bar{position:relative;display:flex;align-items:center;gap:12px;width:100%;
+    border-radius:14px;padding:14px 14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,28,.05)}
+  .c-no{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent-ink);opacity:.6;
+    flex:0 0 auto}
+  .c-bar b{font-size:22px;font-weight:800;letter-spacing:.04em;flex:0 0 auto;color:var(--text)}
+  .c-bar small{flex:1;font-size:12.5px;color:var(--text-muted);line-height:1.4;text-align:right}
+  .c-bar i{font-style:normal;color:var(--accent-ink)}
+  .c-bar[aria-expanded="true"]{background:var(--action);border-color:var(--action)}
+  .c-bar[aria-expanded="true"] .c-no{color:var(--action-ink);opacity:.7}
+  .c-bar[aria-expanded="true"] b,.c-bar[aria-expanded="true"] small,
+  .c-bar[aria-expanded="true"] i{color:var(--action-ink)}
+
+  /* ═══ D안 — 컴팩트 타일 2×2(사진 자리 삭제) ═══ */
+  .d-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .d-tile{border-radius:14px;padding:16px 12px 14px;min-height:118px;
+    display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 10px rgba(38,34,28,.05)}
+  .d-tile b{font-size:26px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink)}
+  .d-tile span{font-size:12.5px;color:var(--text-muted);line-height:1.45;flex:1}
+  .d-tile i{font-style:normal;font-size:13px;font-weight:800;color:var(--accent-ink)}
+  .d-tile[aria-expanded="true"]{background:var(--action);border-color:var(--action)}
+  .d-tile[aria-expanded="true"] b,.d-tile[aria-expanded="true"] span,
+  .d-tile[aria-expanded="true"] i{color:var(--action-ink)}
+
+  .m{margin-top:10px;font-size:12px;color:var(--text-muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="lead"><b>코스 카드 — 한글 큰 글자(초급·중급·고급·실전) · 모바일 4안</b></p>
+  <p class="lead">375px 실폭. 각 안의 첫 카드는 선택된 상태다. 질문 문구는 자리 표시용 가안이다.</p>
+
+  <!-- ═══ A안 ═══ -->
+  <section class="case">
+    <div class="case-h"><b>A안 — 현행 틀 유지</b><span>2×2 · 큰 글자 판</span></div>
+    <p class="case-note">지금 구조 그대로, 사진 자리에 영어 대신 한글 큰 글자. 바꾸는 양이 가장 적다.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="a-grid" id="gridA"></div>
+    </div>
+  </section>
+
+  <!-- ═══ B안 ═══ -->
+  <section class="case">
+    <div class="case-h"><b>B안 — 가로 줄 리스트</b><span>한 손 스크롤</span></div>
+    <p class="case-note">위에서 아래로 읽는 한 줄 리스트. 전체 높이가 가장 짧고, 엄지 도달이 쉽다.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="b-list" id="listB"></div>
+    </div>
+  </section>
+
+  <!-- ═══ C안 ═══ -->
+  <section class="case">
+    <div class="case-h"><b>C안 — 단계 사다리</b><span>01→04 진행감</span></div>
+    <p class="case-note">번호를 붙여 '올라가는 길'로 읽힌다. 초급→실전이라는 이름과 잘 맞는 형태.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="c-list" id="listC"></div>
+    </div>
+  </section>
+
+  <!-- ═══ D안 ═══ -->
+  <section class="case">
+    <div class="case-h"><b>D안 — 컴팩트 타일</b><span>2×2 · 절반 높이</span></div>
+    <p class="case-note">사진 자리를 없애고 글자만. 2×2 는 유지하되 카드 높이가 현행의 절반쯤이다.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="d-grid" id="gridD"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* 4단계 — 한글 큰 글자. 질문·설명은 가안(확정 문구 아님) */
+var LEVELS = [
+  { big:'초급', name:'초급 코스', q:'승무원 준비가<br>처음이에요?',    d:'승무원 준비가 처음이라면' },
+  { big:'중급', name:'중급 코스', q:'기출 답변을<br>만들기 시작했다면?', d:'기출 답변을 만들기 시작했다면' },
+  { big:'고급', name:'고급 코스', q:'답변을 더<br>다듬고 싶다면?',     d:'답변을 더 날카롭게 다듬고 싶다면' },
+  { big:'실전', name:'실전 코스', q:'면접이 당장<br>코앞이라면?',      d:'면접이 당장 코앞이라면' }
+];
+var EN = ['BASIC','INTERMEDIATE','ADVANCED','REAL'];
+
+function sel(i){ return i===0 ? ' aria-expanded="true"' : ' aria-expanded="false"'; }
+
+/* A안 */
+document.getElementById('gridA').innerHTML = LEVELS.map(function(c,i){
+  return '<button class="a-card" type="button"'+sel(i)+'>'
+    + '<span class="a-q">'+c.q+'</span>'
+    + '<span class="a-ph"><b>'+c.big+'</b><span>COURSE</span></span>'
+    + '<span class="a-nm">'+c.name+'<i aria-hidden="true">▾</i></span>'
+    + '</button>';
+}).join('');
+
+/* B안 */
+document.getElementById('listB').innerHTML = LEVELS.map(function(c,i){
+  return '<button class="b-row" type="button"'+sel(i)+'>'
+    + '<span class="b-lv">'+c.big+'</span>'
+    + '<span class="b-tx"><b>'+c.name+'</b><span>'+c.d+'</span></span>'
+    + '<i aria-hidden="true">▾</i>'
+    + '</button>';
+}).join('');
+
+/* C안 */
+document.getElementById('listC').innerHTML = LEVELS.map(function(c,i){
+  return '<button class="c-bar" type="button"'+sel(i)+'>'
+    + '<span class="c-no">0'+(i+1)+'</span>'
+    + '<b>'+c.big+'</b>'
+    + '<small>'+c.d+'</small>'
+    + '<i aria-hidden="true">▾</i>'
+    + '</button>';
+}).join('');
+
+/* D안 */
+document.getElementById('gridD').innerHTML = LEVELS.map(function(c,i){
+  return '<button class="d-tile" type="button"'+sel(i)+'>'
+    + '<b>'+c.big+'</b>'
+    + '<span>'+c.d+'</span>'
+    + '<i aria-hidden="true">코스 보기 ▾</i>'
+    + '</button>';
+}).join('');
+</script>
+</body>
+</html>
