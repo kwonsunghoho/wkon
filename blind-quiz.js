@@ -30,7 +30,7 @@
   font-size: var(--fs-h2); line-height: 1.28; letter-spacing: -0.01em;
   color: var(--action-on-dark); margin-bottom: 14px; word-break: keep-all;
 }
-.bq-desc { font-size: var(--fs-body, 17px); color: rgba(245,241,232,.6); line-height: 1.7; }
+.bq-desc { font-size: var(--fs-body, 17px); color: rgba(241,244,248,.6); line-height: 1.7; }
 .bq-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: #FFFFFF; color: var(--accent-ink); border: none; cursor: pointer;
@@ -87,7 +87,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .bq-scene-badge {
-  font-size: 12.5px; font-weight: 800; color: #F3EFE7;
+  font-size: 12.5px; font-weight: 800; color: #F1F4F8;
   background: rgba(16,18,26,.62); border: 1px solid rgba(255,255,255,.18);
   padding: 4px 11px; border-radius: 99px;
   display: inline-flex; align-items: center; gap: 6px;
@@ -100,11 +100,11 @@
 .bq-dots i.on { background: var(--action-on-dark); }
 .bq-scene-tag {
   position: absolute; z-index: 1; left: 14px; bottom: 12px;
-  font-size: 12.5px; font-weight: 800; color: #F3EFE7;
+  font-size: 12.5px; font-weight: 800; color: #F1F4F8;
   background: rgba(25,65,146,.72); padding: 4px 11px; border-radius: 99px;
 }
 .bq-console { padding: 18px 18px 22px; }
-.bq-round-num { font-size: 12px; font-weight: 800; color: rgba(245,241,232,.72); letter-spacing: .04em; margin-bottom: 10px; }
+.bq-round-num { font-size: 12px; font-weight: 800; color: rgba(241,244,248,.72); letter-spacing: .04em; margin-bottom: 10px; }
 .bq-clips { display: flex; flex-direction: column; gap: 10px; }
 .bq-clip {
   display: flex; align-items: center; gap: 12px;
@@ -128,7 +128,7 @@
 .bq-clip-name { font-size: 15px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .bq-clip-check { font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }
 .bq-clip-badge { font-size: 12.5px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
-.bq-clip-badge.is-before { background: rgba(36,26,18,.1); color: var(--primary); }
+.bq-clip-badge.is-before { background: rgba(20,32,52,.1); color: var(--primary); }
 .bq-clip-badge.is-after { background: var(--action); color: var(--action-ink); }
 .bq-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
 .bq-eq i { width: 3px; height: 30%; border-radius: 2px; background: var(--accent); opacity: .35; }
@@ -137,7 +137,7 @@
 .bq-clip.playing .bq-eq i:nth-child(3) { animation-delay: .24s; }
 .bq-clip.playing .bq-eq i:nth-child(4) { animation-delay: .36s; }
 @keyframes bq-eq { from { height: 25%; } to { height: 100%; } }
-.bq-clip-bar { display: block; height: 4px; border-radius: 99px; background: rgba(38,34,28,.12); overflow: hidden; }
+.bq-clip-bar { display: block; height: 4px; border-radius: 99px; background: rgba(23,42,71,.12); overflow: hidden; }
 .bq-clip-fill { display: block; height: 100%; width: 0%; background: var(--accent-dark); border-radius: 99px; transition: width .1s linear; }
 .bq-question { margin-top: 20px; text-align: center; }
 .bq-q-text { font-size: 15px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; }

@@ -65,7 +65,7 @@
     /* 라벨은 원본 라벨의 색·굵기를 그대로 물려받는다(비포=흐림 / 애프터=네이비) */
     + '.ba-tx{min-width:0;font-size:12px;font-weight:800;letter-spacing:.06em;'
     +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
-    + '.ba-pg{height:3px;background:rgba(38,34,28,.12);}'
+    + '.ba-pg{height:3px;background:rgba(23,42,71,.12);}'
     + '.ba-pg i{display:block;height:100%;width:0;background:var(--action,#1B3A6B);transition:width .15s linear;}'
     + '.ba-err{padding:10px;font-size:12px;font-weight:700;color:#B3261E;}'
     /* 모바일 탭 잔류 강조 방지 — hover 는 마우스 있는 기기에서만 */

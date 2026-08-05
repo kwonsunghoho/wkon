@@ -39,14 +39,14 @@
   /* 스타일 — 상세 4종의 기존 토큰(--surface·--border·--accent-ink)만 쓴다.
      새 색을 만들지 않는다(팔레트 규칙). 카드는 목록 페이지의 인용 카드와 같은 성격. */
   var CSS = ''
-    + '.ch-rv{padding:64px 20px;background:var(--bg2,#F5F0E8);}'
+    + '.ch-rv{padding:64px 20px;background:var(--bg2,#F4F7FC);}'
     + '.ch-rv[hidden]{display:none;}'
     + '.ch-rv-in{max-width:960px;margin:0 auto;}'
     + '.ch-rv-head{text-align:center;margin-bottom:28px;}'
     + '.ch-rv-grid{display:grid;gap:14px;grid-template-columns:1fr;}'
     + '@media(min-width:760px){.ch-rv-grid{grid-template-columns:repeat(3,1fr);}}'
     + '.ch-rv-card{display:flex;flex-direction:column;gap:12px;margin:0;padding:20px 18px;'
-    +   'background:var(--surface,#fff);border:1px solid var(--border,#e3ddd3);'
+    +   'background:var(--surface,#fff);border:1px solid var(--border,#dae0e8);'
     +   'border-radius:16px;box-shadow:var(--shadow,0 2px 10px rgba(16,43,86,.06));}'
     + '.ch-rv-badge{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;'
     +   'padding:4px 10px;border-radius:999px;background:var(--action-tint,#EEF2F9);'

@@ -50,9 +50,9 @@
       /* ⚠️ 배경을 반투명으로 되돌리지 말 것 (2026-08-02 오너 신고) — 바 밑을 지나가는
          글자가 비쳐 **가로로 잘린 것처럼** 보인다. 불투명 + 또렷한 경계선이어야 한다. */
       '.ch-sticky{position:fixed;left:0;right:0;bottom:0;z-index:90;',
-      '  background:var(--bg,#F4F1EA);',
-      '  border-top:1px solid var(--border-strong,rgba(38,34,28,.52));',
-      '  box-shadow:0 -6px 18px rgba(36,26,18,.10);',
+      '  background:var(--bg,#FFFFFF);',
+      '  border-top:1px solid var(--border-strong,rgba(23,42,71,.52));',
+      '  box-shadow:0 -6px 18px rgba(20,32,52,.10);',
       /* 여백 (2026-08-02 오너 3차 "아이폰15pro 하단부가 너무 타이트해").
          구 10/10 은 45px 알약이 66px 바 안에 위아래 10px 만 남기고 꽉 찼다 — 답답하다.
          아래를 위보다 크게 준다: 화면 맨 아래(사파리 주소창·홈 인디케이터)와 맞닿는
@@ -69,7 +69,7 @@
       '.ch-sticky.on{transform:translateY(calc(-1 * var(--vv-gap, 0px)));}',
       '.ch-sticky-in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:14px;}',
       '.ch-sticky .info{flex:1 1 auto;min-width:0;}',
-      '.ch-sticky .p{font-size:17px;font-weight:900;color:var(--text,#26221C);line-height:1.25;}',
+      '.ch-sticky .p{font-size:17px;font-weight:900;color:var(--text,#1E2229);line-height:1.25;}',
       '.ch-sticky .p .won{font-size:13px;font-weight:800;margin-left:1px;}',
       '.ch-sticky .s{font-size:12px;color:var(--text-muted,#5C564C);line-height:1.4;',
       '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
@@ -84,19 +84,19 @@
       '.ch-coach{padding:40px 0;}',
       '.ch-coach-in{max-width:760px;margin:0 auto;padding:0 20px;}',
       '.ch-coach h2{font-size:clamp(21px,4.6vw,27px);font-weight:800;letter-spacing:-.02em;',
-      '  margin:0 0 8px;color:var(--text,#26221C);}',
+      '  margin:0 0 8px;color:var(--text,#1E2229);}',
       '.ch-coach .lead{margin:0 0 20px;font-size:15px;line-height:1.7;color:var(--text-muted,#5C564C);}',
       '.ch-coach ul{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:12px;}',
       '@media (min-width:640px){.ch-coach ul{grid-template-columns:1fr 1fr;}}',
       '.ch-coach li{display:flex;align-items:center;gap:12px;padding:12px 14px;',
-      '  background:var(--surface,#fff);border:1px solid var(--border-soft,rgba(38,34,28,.10));',
+      '  background:var(--surface,#fff);border:1px solid var(--border-soft,rgba(23,42,71,.10));',
       '  border-radius:14px;}',
       '.ch-coach img{width:44px;height:44px;flex:0 0 44px;border-radius:50%;object-fit:cover;',
-      '  object-position:center 18%;background:var(--bg2,#FBF9F5);}',
+      '  object-position:center 18%;background:var(--bg2,#F4F7FC);}',
       /* ⚠️ .nm/.po 는 span 이라 display:block 이 없으면 이름과 직함이 한 줄에 붙는다
          ("권성호보이스·스피치·표현력 전문가" — 2026-08-02 실측에서 잡음). */
       '.ch-coach .who{min-width:0;display:block;}',
-      '.ch-coach .nm{display:block;font-size:15px;font-weight:800;color:var(--text,#26221C);line-height:1.35;}',
+      '.ch-coach .nm{display:block;font-size:15px;font-weight:800;color:var(--text,#1E2229);line-height:1.35;}',
       '.ch-coach .po{display:block;margin-top:2px;font-size:12.5px;color:var(--text-muted,#5C564C);line-height:1.45;}',
       /* 담당 코치 한 줄만 강조 — 나머지는 조용한 행으로 남긴다(원칙 6: 강조는 하나) */
       '.ch-coach li.is-lead{border-color:var(--accent-dark,#142C52);background:var(--action-tint,#E5E9F1);}',

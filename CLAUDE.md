@@ -133,7 +133,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 - **UI 원칙 15개와 현행 팔레트 상세 = `docs/design-principles.md`**(2026-08-02 재검토로 구 '9대 원칙'을 대체). 요지: 활자 12px+·**입력칸 16px+** · 터치 44px+·**간격 8px** · 대비 4.5:1·**경계선 3:1** · 라운드·계층·여백·그룹핑 · **상태를 단정하지 않기** · **결정 화면에 값·버튼·근거** · **전송량 예산** · **포커스와 키보드**(div+click 금지 — role·tabindex·Enter/Space 가 한 벌) · **값에는 그것이 무엇인지 붙이기**(카드 구석 '1기' 처럼 값만 남으면 오타로 읽힌다).
 - **375px 눈검사만으로는 절반이 통과한다**(2026-08-02 교훈 — 입력칸 15px·전송량 3.8MB·경계 대비 1.38:1·320px 잘림이 전부 그렇게 통과했다). 올리기 전 재는 항목표가 design-principles.md '적용 방법'에 있다.
-- 팔레트는 **딥 네이비 on 웜 페이퍼**(2026-07-29 오렌지 전면 폐지): `--action`=`--accent`=`--accent-ink`=`#1B3A6B`, `--action-ink`=흰색. **다크 면 위 강조는 `--action-on-dark`, 다크 위 CTA 는 흰 알약+네이비 글씨.** 새 색을 자리마다 만들지 말 것. 기능색(에러 빨강·항공사 CI·브랜드색)은 통일 대상이 아니다.
+- 팔레트는 **딥 네이비 on 쿨 화이트**(2026-07-29 오렌지 폐지 → 2026-08-05 웜 페이퍼 폐지): `--action`=`--accent`=`--accent-ink`=`#1B3A6B`, `--action-ink`=흰색. **다크 면 위 강조는 `--action-on-dark`, 다크 위 CTA 는 흰 알약+네이비 글씨.** 새 색을 자리마다 만들지 말 것. 기능색(에러 빨강·항공사 CI·브랜드색)은 통일 대상이 아니다.
+- **배경은 순백(`--bg #FFFFFF`) + 쿨 그레이**(2026-08-05 오너 "누리끼리해서 사기가 저하된다 / 완전히 백색, 시원시원하게"). 베이지·아이보리(`#F4F1EA`·`#FBF9F5`·`#F4F0E8`·`#E9E4D8`·`#FCF9F1→#F3EEE1`)로 되돌리지 말 것 — nav 바 반투명(`rgba(255,255,255,.92)`)·잉크/회색(`--text`·`--text-muted`·`--text-dim`)·그림자(`rgba(20,32,52,…)`)·테두리(`rgba(23,42,71,…)`)가 한 벌이다. **순백 위에서는 카드가 밝기 차가 아니라 `--border-soft`(0.12)와 `--shadow` 로 뜬다 — 이 둘을 낮추면 흰 카드가 배경에 녹는다.** 상세는 design-principles.md '현행 팔레트'.
 - **`tokens.css` 맨 아래 '팔레트 오버라이드' 블록 삭제 금지**(실사고 — CSS 변수는 미정의여도 에러 없이 글자만 사라진다). 큰 블록을 지웠으면 `var(--x)` 미정의 사용처를 훑는다. `background-clip:text` 로 글자를 칠하지 말 것(실패 모드가 '글자 없음').
 - CSS 를 크게 손댔으면 **주석 짝(`/* */`) 균형을 센다** — 주석 안 클래스 나열의 별표+슬래시가 규칙 하나를 조용히 삼킨 실사고 2건.
 - **nav 는 `nav.js`+`nav.css` 전 페이지 공용** — 페이지에 nav 마크업 복사 금지(admin·login·onboarding 은 일부러 제외). 메뉴 항목·현재 위치는 `nav.js` 의 배열·표에서만 고친다.
@@ -213,6 +214,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 각 항목의 배경·실측은 괄호의 문서에 있다.
 
+- 웜 페이퍼 배경(`--bg #F4F1EA`·`--bg2 #FBF9F5`·`--surface2 #F4F0E8`·nav 바 `rgba(255,250,243,·)`·레터프레스 `#FCF9F1→#F3EEE1`)과 웜그레이 잉크(`#26221C`·`#5F574B`) — 2026-08-05 순백+쿨 그레이로 전면 교체 (design-principles.md)
 - `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 패턴 (apply-and-payment.md)
 - 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
 - 모집일정 구글시트 CSV 폴백(`RECRUIT_CSV`) (apply-and-payment.md)

@@ -42,16 +42,16 @@
 
     var css = ''
       + '.iab{position:fixed;left:0;right:0;z-index:90;top:' + top + 'px;'
-      + 'padding:8px 48px 9px 14px;background:#FFFDF6;color:#26221C;'
+      + 'padding:8px 48px 9px 14px;background:#F3F8FF;color:#1E2229;'
       + 'border-bottom:1px solid rgba(27,58,107,.18);box-shadow:0 4px 14px rgba(20,28,44,.08);'
       + "font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;"
       + 'word-break:keep-all;-webkit-font-smoothing:antialiased;}'
       + '.iab-t{margin:0;font-size:12.5px;font-weight:700;line-height:1.45;color:#1B3A6B;}'
-      + '.iab-s{margin:2px 0 0;font-size:12px;font-weight:600;line-height:1.45;color:#8A8578;}'
+      + '.iab-s{margin:2px 0 0;font-size:12px;font-weight:600;line-height:1.45;color:#5C6675;}'
       + '.iab.go{cursor:pointer;}'
       + '.iab.go .iab-s{color:#1B3A6B;text-decoration:underline;text-underline-offset:2px;}'
       + '.iab-x{position:absolute;top:50%;right:2px;transform:translateY(-50%);'
-      + 'width:44px;height:44px;border:0;background:transparent;color:#8A8578;'
+      + 'width:44px;height:44px;border:0;background:transparent;color:#5C6675;'
       + 'font-size:18px;line-height:1;cursor:pointer;}';
     var st = document.createElement('style');
     st.textContent = css;

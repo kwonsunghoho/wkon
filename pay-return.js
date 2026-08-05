@@ -26,7 +26,7 @@
   var css =
     '.mpr{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;' +
     'align-items:center;justify-content:center;gap:14px;padding:24px;' +
-    'background:rgba(244,241,234,.97);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);' +
+    'background:rgba(255,255,255,.97);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);' +
     "font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;" +
     'text-align:center;word-break:keep-all;}' +
     '.mpr-ring{width:38px;height:38px;border-radius:50%;border:3px solid rgba(27,58,107,.2);' +
