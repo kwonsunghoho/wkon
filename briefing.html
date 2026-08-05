@@ -63,14 +63,17 @@
        기록: docs/notes/briefing.md
 
        구 화면(매거진 목차 6줄 `.ix-item` + 루트맵 룰렛 `.d-route`, 2026-07-31)은
-       폐기했다. 오너 목업 4장에서 온 구조다.
-         · 화면 A(코스 선택 전) = 히어로 → 코스 카드 4장 → 코스 상세 → 자유 선택 서클
+       폐기했다. 2026-08-06 오너 지시로 2×2 카드를 **세로 리스트(B안)**로 바꿨다:
+       칩(초급~실전 큰 글자) + 상황(메인) + 안내(서브), 펼친 줄 아래에 아코디언 패널.
+         · 화면 A(코스 선택 전) = 히어로 → 코스 줄 4개(+펼친 줄 아래 패널) → 자유 선택 서클
          · 화면 B(선택 후)      = 개인화 헤더 → '오늘 이어서' → (서클·맛보기는 A와 동일)
-       ⚠️ 코스 상세는 **패널 하나를 카드 탭으로 교체**한다(4개 세로 나열 금지 — 모바일 길이).
+       ⚠️ 코스 상세는 **패널 하나를 재사용**한다 — 펼친 줄 바로 아래로 옮겨 다닌다
+          (4개 세로 나열 금지 — 모바일 길이).
        ⚠️ 카드·서클에 **회원별 상태 문구('첫 1회 무료' 등)·근거 없는 표시('인기'·'NEW')를
           달지 말 것**(2026-07-25·07-31 오너 기각). 무료 안내는 각 도구 페이지가 잔액을 읽어 말한다.
-       ⚠️ 코스 스텝은 **지금도 참인 경로만.** 챌린지는 모집 0인 기간이 있어 스텝 문구가
-          모집 여부를 단정하지 않는다(challenges.html 로 보내고 판단은 그 페이지가 한다).
+       ⚠️ 스텝은 **상시 도구만**(2026-08-06 오너 확정 — 코스가 모집 대기에 막히면 안 된다).
+          챌린지는 스텝이 아니라 패널 하단 **추천 칸 하나**(.cs-reco)로만 — 모집 여부를
+          단정하지 않고 challenges.html 로 보낸다(판단은 그 페이지가 한다).
        ══════════════════════════════════════════════════════════════════════ */
 
     /* ── 머리 영역(A·B 공통 여백) ── */
@@ -103,36 +106,32 @@
     .sec-t b { font-size: 19px; font-weight: 800; }
     .sec-t span { display: block; font-size: var(--fs-body-sm, 15px); color: var(--text-muted); margin-top: 5px; }
 
-    /* ── 코스 카드 4장(2×2) ── */
-    .cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-    .cs-card { appearance: none; font-family: inherit; text-align: left; cursor: pointer;
+    /* ── 코스 줄 4개(세로 리스트 · 2026-08-06 B안) ──
+       칩(큰 글자) + 상황(메인) + 안내(서브). 사진 자리는 폐지 — 한글 칩이 구분을 맡는다. */
+    .cs-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .cs-row { appearance: none; font-family: inherit; text-align: left; cursor: pointer;
+      display: flex; align-items: center; gap: 12px; width: 100%;
       background: var(--surface); border: 1px solid var(--border-soft); border-radius: 14px;
-      overflow: hidden; padding: 0; box-shadow: 0 2px 10px rgba(38,34,28,.05);
+      padding: 12px 12px 12px 10px; box-shadow: 0 2px 10px rgba(38,34,28,.05);
       -webkit-tap-highlight-color: transparent; }
-    .cs-card:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
-    .cs-q { display: flex; align-items: center; min-height: 52px; padding: 9px 10px;
-      background: var(--accent-tint); color: var(--accent-ink);
-      font-size: 13px; font-weight: 800; line-height: 1.35; }
-    .cs-card[aria-expanded="true"] { border-color: var(--action); box-shadow: 0 0 0 1px var(--action) inset, 0 2px 10px rgba(38,34,28,.05); }
-    .cs-card[aria-expanded="true"] .cs-q { background: var(--action); color: var(--action-ink); }
-    /* 사진 자리 — 사진이 없어도 성립하게 틴트 판 + 코드 글자. 사진이 들어와도 높이가
-       그대로라 레이아웃이 흔들리지 않는다(aspect-ratio 고정). */
-    .cs-ph { aspect-ratio: 4 / 3.2; background: var(--accent-tint); display: flex;
-      align-items: center; justify-content: center; overflow: hidden; }
-    .cs-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .cs-ph span { font-size: 12px; font-weight: 800; letter-spacing: .18em; color: var(--accent-ink); opacity: .55; }
-    .cs-nm { display: flex; align-items: center; justify-content: space-between; gap: 6px;
-      padding: 9px 10px 10px; font-size: 13px; font-weight: 800; color: var(--text-muted); }
-    .cs-nm i { font-style: normal; color: var(--accent-ink); transition: transform .2s ease; }
-    .cs-card[aria-expanded="true"] .cs-nm { color: var(--text); }
-    .cs-card[aria-expanded="true"] .cs-nm i { transform: rotate(180deg); }
+    .cs-row:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .cs-lv { flex: 0 0 62px; align-self: stretch; min-height: 56px; border-radius: 10px;
+      background: var(--accent-tint); display: flex; align-items: center; justify-content: center;
+      font-size: 21px; font-weight: 800; letter-spacing: .04em; color: var(--accent-ink); }
+    .cs-tx { flex: 1 1 auto; min-width: 0; }
+    .cs-tx b { display: block; font-size: 15px; font-weight: 800; line-height: 1.4; }
+    .cs-tx span { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.45; }
+    .cs-row > i { font-style: normal; color: var(--accent-ink); font-size: 14px; flex: 0 0 auto;
+      transition: transform .2s ease; }
+    .cs-row[aria-expanded="true"] { border-color: var(--action);
+      box-shadow: 0 0 0 1px var(--action) inset, 0 2px 10px rgba(38,34,28,.05); }
+    .cs-row[aria-expanded="true"] .cs-lv { background: var(--action); color: var(--action-ink); }
+    .cs-row[aria-expanded="true"] > i { transform: rotate(180deg); }
 
-    /* ── 코스 상세 패널(하나를 재사용) ── */
-    .cs-detail { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 18px;
-      padding: 18px 16px 16px; margin-top: 12px; box-shadow: 0 2px 12px rgba(38,34,28,.06); }
+    /* ── 코스 상세 패널(하나를 재사용) — 펼친 줄 바로 아래로 옮겨 다닌다(아코디언) ── */
+    .cs-detail { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 14px;
+      padding: 6px 14px 14px; box-shadow: 0 2px 12px rgba(38,34,28,.06); }
     .cs-detail:focus { outline: none; }
-    .cs-eb { font-size: 12px; font-weight: 800; letter-spacing: .14em; color: var(--accent-ink); }
-    .cs-h { font-size: 17px; font-weight: 800; margin-top: 6px; }
     .cs-step { display: flex; gap: 11px; align-items: center; padding: 12px 2px; text-decoration: none;
       color: var(--text); border-bottom: 1px solid var(--border-soft); }
     .cs-step:last-of-type { border-bottom: 0; }
@@ -143,6 +142,17 @@
     .cs-step em { display: block; font-style: normal; font-size: var(--fs-body-sm, 15px); font-weight: 700; }
     .cs-step small { display: block; font-size: 13px; color: var(--text-dim); margin-top: 1px; }
     .cs-step > u { flex: 0 0 auto; text-decoration: none; color: var(--accent-dark); opacity: .6; }
+    /* 챌린지 추천 칸 — 스텝(번호)과 구분되는 별도 자리(2026-08-06 오너 확정: 추천 형식).
+       ⚠️ CTA 는 '모집 일정' — 신청을 약속하지 않는다. 모집 여부 판단은 챌린지 페이지가 한다. */
+    .cs-reco { display: flex; align-items: center; gap: 11px; margin-top: 8px; padding: 12px;
+      background: var(--accent-tint); border-radius: 12px; text-decoration: none; color: var(--text); }
+    .cs-reco:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .cs-reco > span { flex: 1 1 auto; min-width: 0; }
+    .cs-reco em { display: block; font-style: normal; font-size: 12px; font-weight: 800;
+      letter-spacing: .06em; color: var(--accent-ink); }
+    .cs-reco b { display: block; font-size: 14px; font-weight: 700; margin-top: 3px; line-height: 1.4; }
+    .cs-reco small { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+    .cs-reco > u { flex: 0 0 auto; text-decoration: none; color: var(--accent-ink); font-weight: 800; font-size: 13px; }
     /* ⚠️ 시간만 적는다 — 금액을 여기 적지 말 것(2026-08-05 오너 확정). 단가·잔액은 각 도구
        페이지가 말한다. 여기에 숫자를 적으면 단가·팩 가격이 바뀔 때마다 두 곳이 어긋난다. */
     .cs-meta { margin-top: 10px; padding: 10px 12px; background: var(--accent-tint); border-radius: 12px;
@@ -188,12 +198,13 @@
     /* 320px 실측 대응 — 활자는 12px 하한이라 못 줄이므로 여백만 좁힌다 */
     @media (max-width: 360px) {
       .container { padding: 0 12px; }
-      .cs-grid, .fr-grid { gap: 8px; }
-      .cs-q { padding: 8px 8px; font-size: 12.5px; }
-      .cs-nm { padding: 8px 8px 9px; font-size: 12.5px; }
+      .fr-grid { gap: 8px; }
+      .cs-row { gap: 10px; padding: 10px 10px 10px 8px; }
+      .cs-lv { flex-basis: 56px; font-size: 19px; }
+      .cs-tx b { font-size: 14px; }
       .fr-c { font-size: 12px; }
     }
-    @media (prefers-reduced-motion: reduce) { .cs-nm i { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .cs-row > i { transition: none; } }
   </style>
 </head>
 <body>
@@ -250,10 +261,10 @@
     <section id="pickSection" aria-labelledby="pickHd">
       <div class="sec-t"><b id="pickHd">연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
 
-      <!-- 카드 4장 — 마크업은 스크립트가 COURSES 로 그린다(한 곳에서 고치게) -->
-      <div class="cs-grid" id="csGrid"></div>
+      <!-- 코스 줄 4개 — 마크업은 스크립트가 COURSES 로 그린다(한 곳에서 고치게) -->
+      <div class="cs-list" id="csList"></div>
 
-      <!-- 코스 상세 — 카드를 누르면 이 패널의 내용만 바뀐다 -->
+      <!-- 코스 상세 — 패널 하나를 재사용. 스크립트가 펼친 줄 바로 아래로 옮긴다(아코디언) -->
       <div class="cs-detail" id="csDetail" tabindex="-1"></div>
     </section>
 
@@ -282,52 +293,61 @@
   </main>
 
 <script>
-/* ── 코스 4종 ────────────────────────────────────────────────────────────────
+/* ── 코스 4단계(초급→실전 · 2026-08-06 B안) ─────────────────────────────────
    ⚠️ code 는 DB(members.course)의 체크 제약과 짝이다 — 이름을 바꾸려면 마이그레이션도 같이.
-      (supabase/migrations/20260805160000_member_course.sql)
-   ⚠️ 스텝은 '지금도 참인 경로'만 넣는다. 없는 기능·미출시 도구를 넣지 말 것.
-   ⚠️ 사진은 오너 제공 대기 — photo 에 경로를 넣으면 카드에 얹힌다(없으면 틴트 판).
-      넣을 때 webp + 카드 크기에 맞는 해상도로(전송량 예산). */
+      (20260805160000_member_course.sql → 20260806090000_member_course_levels.sql)
+   ⚠️ 스텝은 '지금도 참인 상시 도구'만 넣는다(코스가 모집 대기에 막히면 안 된다 — 오너 확정).
+      챌린지는 스텝이 아니라 reco(추천 칸) 하나로만 — 모집 여부를 단정하지 않는다.
+   ⚠️ main·sub·스텝·reco 문구는 가안 — 오너가 맨 마지막에 확정한다(초급 sub 만 오너 원문). */
 var COURSES = [
-  { code: 'beginner', name: '비기너 코스', tag: 'BEGINNER', photo: '',
-    q: '승무원 준비가<br>처음이에요?',
-    head: '승무원 준비가 처음인 친구라면?',
+  { code: 'basic', big: '초급', name: '초급 코스',
+    main: '승무원 준비가 처음이라면',
+    sub: '답변, 보이스, 이미지메이킹부터 잡고가세요!',
     time: '투자 시간 하루 10~15분',
     cta: { label: '답변 소재 발굴', href: 'sojae.html' },
     steps: [
-      ['답변 소재 발굴', '내 경험에서 소재 찾기 — 세 번만 해 보세요', 'sojae.html'],
+      ['답변 소재 발굴', '내 경험에서 답변 소재부터 찾아요', 'sojae.html'],
       ['필수 기출 하루 한 개', '매일 한 문항씩 근거 있게 완성해요', 'programs.html'],
       ['초급 기출 준비', '소재 문제는 초급 난이도부터 골라요', 'sojae.html']
-    ] },
-  { code: 'practical', name: '실전 코스', tag: 'PRACTICAL', photo: '',
-    q: '면접이 당장<br>코앞이라면?',
-    head: '면접이 코앞이라면?',
+    ],
+    reco: { names: '승.자.각 · 보.신.각 · 영.합.각',
+            desc: '답변·보이스·이미지메이킹을 2주씩 같이 잡아요' } },
+  { code: 'mid', big: '중급', name: '중급 코스',
+    main: '기출 답변을 쌓아갈 시기라면',
+    sub: '소재 발굴로 내 경험을 답변으로 만들어 보세요!',
+    time: '투자 시간 하루 10~15분',
+    cta: { label: '답변 소재 발굴', href: 'sojae.html' },
+    steps: [
+      ['답변 소재 발굴', '중급 난이도 문제로 소재를 넓혀요', 'sojae.html'],
+      ['필수 기출 하루 한 개', '매일 한 문항씩 답변을 쌓아요', 'programs.html'],
+      ['나만의 노트 정리', '쌓인 답변을 한곳에서 다듬어요', 'answers.html']
+    ],
+    reco: { names: '승.자.각',
+            desc: '뻔한 답변 → 나만 할 수 있는 답변, 2주 집중' } },
+  { code: 'advanced', big: '고급', name: '고급 코스',
+    main: '답변 완성도를 올리고 싶다면',
+    sub: '첨삭과 AI킬러로 문장을 다듬어 보세요!',
     time: '투자 시간 하루 15~20분',
     cta: { label: '답변 첨삭', href: 'polish.html' },
     steps: [
       ['답변 첨삭', "쓴 답변을 '지금 → 이렇게'로 다듬어요", 'polish.html'],
-      ['지원 항공사 뉴스', '면접장에서 물어볼 소식부터 챙겨요', 'news.html'],
+      ['AI킬러 검사', 'AI 같은 표현을 찾아 밑줄로 짚어 드려요', 'ai-killer.html'],
       ['고급·심화 기출', '소재 문제 난이도를 올려서 연습해요', 'sojae.html']
-    ] },
-  { code: 'spurt', name: '스퍼트 코스', tag: 'SPURT', photo: '',
-    q: '자소서·영상면접<br>준비가 시급?',
-    head: '자소서·영상면접 준비가 시급하다면?',
-    time: '챌린지 기간에 집중',
-    cta: { label: 'AI킬러로 자소서 검사', href: 'ai-killer.html' },
+    ],
+    reco: { names: '스.피.닝',
+            desc: '딱딱한 말투 → 귀에 감기는 말투, 2주 집중' } },
+  { code: 'practical', big: '실전', name: '실전 코스',
+    main: '면접이 당장 코앞이라면',
+    sub: '뉴스 스크랩과 기출 점검으로 마무리하세요!',
+    time: '투자 시간 하루 15~20분',
+    cta: { label: '지원 항공사 뉴스', href: 'news.html' },
     steps: [
-      /* ⚠️ 모집 여부를 단정하지 않는다 — 챌린지는 모집이 없는 기간이 있다. 판단은 허브가. */
-      ['보.신.각 · 영.합.각 챌린지', '2주 집중 코스 — 모집 일정을 확인해요', 'challenges.html'],
-      ['AI킬러로 자소서 다듬기', 'AI 같은 표현을 찾아 밑줄로 짚어 드려요', 'ai-killer.html']
-    ] },
-  { code: 'daily', name: '데일리 코스', tag: 'DAILY', photo: '',
-    q: '루틴을 잃고<br>싶지 않다면?',
-    head: '루틴을 잃고 싶지 않다면?',
-    time: '투자 시간 하루 5~10분',
-    cta: { label: '뉴스 스크랩', href: 'news.html' },
-    steps: [
-      ['뉴스 스크랩', '오늘 항공사 소식을 훑고 담아 둬요', 'news.html'],
-      ['필수 기출 하루 한 개', '하루 한 문항씩 답변을 쌓아요', 'programs.html']
-    ] }
+      ['지원 항공사 뉴스', '면접장에서 물어볼 소식부터 챙겨요', 'news.html'],
+      ['필수 기출 점검', '자주 나오는 문항부터 다시 훑어요', 'programs.html'],
+      ['답변 첨삭 마무리', '완성된 답변을 마지막으로 다듬어요', 'polish.html']
+    ],
+    reco: { names: '보.신.각 · 영.합.각',
+            desc: '면접 전 목소리·표정을 2주로 잡아요' } }
 ];
 var COURSE_BY = {};
 COURSES.forEach(function (c) { COURSE_BY[c.code] = c; });
@@ -341,22 +361,19 @@ function esc(s) {
   });
 }
 
-/* ── 코스 카드 4장 ── */
-(function paintCards() {
-  document.getElementById('csGrid').innerHTML = COURSES.map(function (c, i) {
-    var photo = c.photo
-      ? '<img src="' + esc(c.photo) + '" alt="" loading="lazy" decoding="async">'
-      : '<span aria-hidden="true">' + esc(c.tag) + '</span>';
-    return '<button class="cs-card" type="button" data-code="' + c.code + '"' +
+/* ── 코스 줄 4개 ── */
+(function paintRows() {
+  document.getElementById('csList').innerHTML = COURSES.map(function (c, i) {
+    return '<button class="cs-row" type="button" data-code="' + c.code + '"' +
              ' aria-expanded="' + (i === 0 ? 'true' : 'false') + '" aria-controls="csDetail">' +
-             '<span class="cs-q">' + c.q + '</span>' +
-             '<span class="cs-ph">' + photo + '</span>' +
-             '<span class="cs-nm">' + esc(c.name) + '<i aria-hidden="true">▾</i></span>' +
+             '<span class="cs-lv" aria-hidden="true">' + esc(c.big) + '</span>' +
+             '<span class="cs-tx"><b>' + esc(c.main) + '</b><span>' + esc(c.sub) + '</span></span>' +
+             '<i aria-hidden="true">▾</i>' +
            '</button>';
   }).join('');
 })();
 
-/* ── 코스 상세 패널(하나를 재사용) ── */
+/* ── 코스 상세 패널(하나를 재사용 — 펼친 줄 바로 아래로 옮긴다) ── */
 var picked = COURSES[0].code;     /* 지금 패널이 보여 주는 코스 */
 
 function stepRows(c) {
@@ -369,25 +386,40 @@ function stepRows(c) {
   }).join('');
 }
 
+/* 챌린지 추천 칸 — CTA 는 '모집 일정'(신청을 약속하지 않는다 — 모집 0인 기간이 있다) */
+function recoRow(c) {
+  if (!c.reco) return '';
+  return '<a class="cs-reco" href="challenges.html">' +
+           '<span><em>함께하면 좋은 챌린지</em>' +
+           '<b>' + esc(c.reco.names) + '</b>' +
+           '<small>' + esc(c.reco.desc) + '</small></span>' +
+           '<u aria-hidden="true">모집 일정 →</u>' +
+         '</a>';
+}
+
 function paintDetail(code) {
   var c = COURSE_BY[code]; if (!c) return;
   picked = code;
-  document.getElementById('csDetail').innerHTML =
-    '<div class="cs-eb">' + esc(c.name) + '</div>' +
-    '<h3 class="cs-h">' + esc(c.head) + '</h3>' +
+  var panel = document.getElementById('csDetail');
+  panel.innerHTML =
     stepRows(c) +
+    recoRow(c) +
     '<div class="cs-meta">' + esc(c.time) + '</div>' +
     '<button class="cs-cta" type="button" id="btnStart">이 코스로 시작하기</button>' +
     '<p class="cs-note">코스는 계정에 저장돼요 · 언제든 바꿀 수 있어요</p>' +
     '<p class="cs-err" id="startErr" hidden></p>';
-  [].forEach.call(document.querySelectorAll('.cs-card'), function (b) {
+  var rows = document.querySelectorAll('.cs-row');
+  [].forEach.call(rows, function (b) {
     b.setAttribute('aria-expanded', String(b.dataset.code === code));
   });
+  /* 패널을 펼친 줄 바로 아래로 — 리스트의 gap 이 위아래 간격을 맡는다 */
+  var cur = document.querySelector('.cs-row[data-code="' + code + '"]');
+  if (cur) cur.insertAdjacentElement('afterend', panel);
   document.getElementById('btnStart').addEventListener('click', function () { startCourse(code); });
 }
 
-document.getElementById('csGrid').addEventListener('click', function (e) {
-  var btn = e.target.closest('.cs-card'); if (!btn) return;
+document.getElementById('csList').addEventListener('click', function (e) {
+  var btn = e.target.closest('.cs-row'); if (!btn) return;
   paintDetail(btn.dataset.code);
   /* 화면 낭독기·키보드 사용자가 '내용이 바뀐 곳'으로 따라가게 초점을 옮긴다 */
   document.getElementById('csDetail').focus({ preventScroll: true });
@@ -462,7 +494,7 @@ document.getElementById('btnChange').addEventListener('click', function () {
   if (myCourse) paintDetail(myCourse);
   var sec = document.getElementById('pickSection');
   sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  var cur = sec.querySelector('.cs-card[aria-expanded="true"]') || sec.querySelector('.cs-card');
+  var cur = sec.querySelector('.cs-row[aria-expanded="true"]') || sec.querySelector('.cs-row');
   if (cur) cur.focus({ preventScroll: true });
 });
 
