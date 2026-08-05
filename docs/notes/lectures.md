@@ -9,6 +9,8 @@
 - **서버(`verify-payment`)**: `lectureId` 결제에 JWT 를 요구한다. 비로그인이 결제까지 오면 실결제(PAID)는 **전액 자동 환불** 후 `login_required` 로 거절(돈만 나간 상태를 안 남긴다). `member_id` 는 body 가 아니라 **JWT(caller) 로 정한다** — 특강은 항상 caller 명의, 챌린지는 body 값이 caller 와 일치할 때만 적는다.
 - **DB(`20260805140000_lecture_login_required.sql`)**: `applications_insert_public` 에 `(lecture_id is null or member_id = auth.uid())` 추가. anon 은 `auth.uid()` 가 NULL 이라 특강 행을 못 넣는다. 카드 결제 특강은 verify-payment 가 service_role 로 넣어 이 정책과 무관.
 
+**2026-08-05 세 겹 모두 적용 완료**(오너 실행 — RLS SQL + verify-payment 재배포, `lecture.html` 은 main 병합으로 라이브 반영).
+
 ⚠️ **verify-payment 배포 확인 신호가 바뀌었다**: 로그인 없는 프로브(`{paymentId:'probe', lectureId:'0000…'}`, anon key)는 이제 `lecture_not_found` 가 아니라 **`login_required`** 를 돌려준다(JWT 확인이 특강 조회보다 먼저다). `login_required`=로그인 필수 버전, `lecture_not_found`=그 이전 버전, `bad_request`=특강 이전 구버전, 404=미배포.
 
 ## 승.자.각 ↔ 답변 프로그램 = 단계로 나눈다 (2026-08-02 오너 확정)
