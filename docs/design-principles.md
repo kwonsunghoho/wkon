@@ -26,13 +26,13 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
     - 그래서 **전체 폭 밴드를 전부 걷어내고 순백으로 통일**했다: 홈 `.msn`·`.nums`·`footer`, 상세 4종 인라인 섹션·푸터, `challenges`·`researchers` 푸터, 챌린지 후기 `.ch-rv`. **되돌리지 말 것.** 섹션 리듬은 여백·카드 테두리·섹션 라벨이 낸다.
     - 밴드가 없어진 뒤 푸터를 나누는 건 `border-top` 하나뿐이라 홈 푸터는 `--border-soft` → `--border` 로 한 단계 올렸다.
   - **기능색은 오렌지·빨강 그대로 유지**(브랜드색이 아니라 의미색이라 통일 대상이 아니다): admin 에러(`#A33D14`·`#c0392b`), AI킬러 지적 강조(`--k-cliche`)·등급색(`#8C4318`/`#9E3B34`), 항공사 CI(`--air-*`), 카카오·구글 브랜드색, 상세 페이지 아바타 이니셜 원 그라디언트, 노을·창문 SVG 일러스트.
-  - 에이브로우 = `--accent-ink`(`.section-label`, tokens 오버라이드 `!important`). 인트로 태그라인 M·O·N·C 강조는 `--ht-mark #A8C7F0` — **창밖이 노을이라 어두운 색은 못 쓴다**(구 `#FFB27A`는 노을과 같은 색상각이라 배경에 녹았다).
+  - 에이브로우 = `--accent-ink`(`.section-label`, tokens 오버라이드 `!important`). 인트로 태그라인 M·O·N·C 강조는 `index.css` 의 `.hi-l.is-mark` = `font-weight:800` + `var(--accent)`(순백 오버라이드 `#1B3A6B`) 하나뿐이다. ⚠️ **구 토큰 `--ht-mark #A8C7F0` 을 되살리지 말 것** — `.ht-hl` 규칙과 함께 2026-07-29 히어로 전면 교체(c69c10f)에서 삭제됐고, CSS·HTML·JS 어디에도 남아 있지 않다. '창밖이 노을이라 어두운 색은 못 쓴다'는 전제도 그때 끝났다(현행 배경은 창+하늘 합본 사진).
   - **⚠️⚠️ `tokens.css` 맨 아래 '팔레트 오버라이드' 블록을 지우지 말 것 — 2026-07-29 히어로 교체 커밋(c69c10f)에서 실제로 통째로 날아갔고, 하루 뒤 오너가 "흰 바탕에 흰 글씨"로 신고했다.** 그 블록이 `--accent-ink`·`--serif`·`--fs-h2`·`h2.section-title` 조판·`.section-label` 단색화를 전부 들고 있어서, 사라지자 **두 이름을 쓰는 20개 파일이 조용히 깨졌다.** 특히 상세 4종의 그라디언트 텍스트(`background:linear-gradient(...,var(--accent-ink))` + `background-clip:text` + `-webkit-text-fill-color:transparent`)는 **변수 하나가 미정의면 background 선언 전체가 무효**가 되어 글자가 통째로 사라진다 — 챌린지명·오버뷰 숫자(2주/10강/30초)·섹션 라벨이 전부 안 보였다.
     - **교훈 둘.** ① CSS 변수는 미정의여도 **에러가 안 난다** — 콘솔이 조용하니 눈으로 보기 전엔 모른다. 큰 블록을 지웠으면 `var(--x)` 사용처 중 정의가 없는 것을 한 번 훑을 것(정규식 한 줄이면 된다). ② **`background-clip:text` 로 글자를 칠하지 말 것** — 실패 모드가 '색이 틀림'이 아니라 '글자가 없음'이다. 색 한 값으로 칠하면 최악이 검은 글씨라 읽히기는 한다. 그래서 상세 4종의 `.gradient-text` 는 단색으로 바꿨고 `index.css` 의 같은 규칙은 삭제했다(쓰는 자리가 없었다).
   - **`--radius-md`(=20px, `--radius` 별칭)** — briefing.html·lecture.html 이 폴백 없이 참조하는데 정의가 없어 카드 모서리가 0 이었다(같은 사고의 작은 판). 이름을 지우지 말 것.
 - **타이포:** 섹션 제목은 `h2.section-title`에 `var(--serif)`(=SUIT, 이름만 명조 시절 흔적) 800 + `--fs-h2 clamp(30px,4.2vw,46px)` (tokens.css 오버라이드, h2 접두 특이도로 `index.css`의 `.section-title` 규칙을 이김).
 - **UI 9대 원칙**(docs/design-principles.md): 가독성 12pt+ / 터치 44px+ / 대비 4.5:1 / 아이콘 통일 / 라운드 / 계층 / 여백 / 그룹핑 / 큼직. **375px 우선 검증.**
-- Typography(`--fs-*`)·spacing(`--space-*`, 8px)·radius(8/14/20/24)·섹션 배경 리듬 전부 토큰화 — 하드코딩보다 토큰 우선. **`--fs-body-sm: 15px`(2026-07-25 신설)는 본문 17과 캡션 14 사이의 '카드 설명줄' 칸** — 캡션 14px는 보조 정보용이라 카드의 유일한 설명 줄에는 작다(승준노트 `.bf-desc`·홈 `.bp-desc`가 쓴다). ⚠️ 별도 파일에서 쓸 땐 `var(--fs-body-sm, 15px)` 폴백을 붙일 것(캐시 분리 대비 — 위 briefing.html 항목 참조).
+- Typography(`--fs-*`)·spacing(`--space-*`, 8px)·radius(8/14/20/24)·섹션 배경 리듬 전부 토큰화 — 하드코딩보다 토큰 우선. **`--fs-body-sm: 15px`(2026-07-25 신설)는 본문 17과 캡션 14 사이의 '카드 설명줄' 칸** — 캡션 14px는 보조 정보용이라 카드의 유일한 설명 줄에는 작다(홈 `.msn-lead`·`.dr-ds`, 챌린지 허브 `.chb-sub`, 상세 4종 `.lesson-item`·`.benefit-desc` 가 쓴다 — 구 예시 `.bf-desc`·`.bp-desc` 는 승준노트 코스형·홈 스토리형 개편으로 라이브에서 사라졌고 `outputs/` 목업에만 남아 있다). ⚠️ 별도 파일에서 쓸 땐 `var(--fs-body-sm, 15px)` 폴백을 붙일 것(캐시 분리 대비 — 위 briefing.html 항목 참조).
 - 아이콘 = `<body>` 상단 `<symbol>` 스프라이트(`currentColor` 리컬러). 하단 스티키 CTA바 `.mobile-cta-bar`(index 전용, **2026-07-22부터 전 화면폭** — 넓은 화면은 `max-width:460px; margin:auto`로 가운데 알약. 클래스명은 구 이름 유지).
 
 ### 2026-07-14 목업 리디자인
@@ -108,7 +108,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 **입력칸·버튼·탭의 경계선과 선택·활성 상태 표시는 배경 대비 3:1**(WCAG 1.4.11).
 비활성 처리는 opacity 로 블록 전체를 흐리게 하지 말고, '왜 못 쓰는지' 문구는 대비를 유지한다.
 - **경계선 조항이 구 원칙에 없어서** `--border`(1.38:1)가 입력칸·고스트 버튼에 그대로 쓰였다.
-  경계선이 유일한 식별 수단인 자리는 **`--border-strong`**(종이 위 3.25:1 · 흰 카드 위 3.43:1).
+  경계선이 유일한 식별 수단인 자리는 **`--border-strong`**(순백 위 3.23:1 · `--bg2` 위 3.17:1 — tokens.css 실측 주석). 구 수치(종이 3.25:1 · 흰 카드 3.43:1)는 웜 페이퍼 시절 값이다. 2026-08-05 순백 전환으로 `--bg`·`--surface` 가 둘 다 흰색이 돼 '종이'와 '흰 카드'를 나눠 잴 이유가 없어졌다.
   ⚠️ `--border` 자체를 올리지 말 것 — 카드·구분선까지 진해져 사이트가 표처럼 보인다.
 - **확인**: 상대휘도 공식으로 직접 계산한다. 그라디언트·사진 배경은 스크린샷 픽셀로 잰다.
 - ⚠️ **APCA / WCAG 3.0 으로 갈아타지 말 것**(2026-08-02 판단): WCAG 3.0 은 아직 Working Draft 이고

@@ -20,9 +20,13 @@
 쓰는 법: `<div id="quickfix-mount" data-source="…"></div>` + `<script src="quickfix.js" defer></script>`.
 티저 한 줄 → 탭하면 바텀시트(입력 → 결과 '지금/이렇게' + 짚은 표현 + 퍼널 링크).
 
-- **싣는 곳 3**: `answers.html`(addbar 아래) · `ai-killer.html`(**입력 화면 안** — 결과 화면은 dock 이
-  주인공이라 안 싣는다) · `sojae.html`(composer 끝, **`data-compact`** 글자 링크형).
-  ⚠️ sojae 는 100svh 앱셸이라 카드형 티저를 넣으면 채팅 영역이 눌린다 — compact 유지.
+- **싣는 곳 2**: `answers.html`(addbar 아래) · `ai-killer.html`(**입력 화면 안** — 결과 화면은 dock 이
+  주인공이라 안 싣는다).
+  ⚠️ **`sojae.html`·`briefing.html` 에 다시 달지 말 것** — sojae 는 2026-08-04, 승준노트는
+  2026-08-06 오너 지시로 뺐다(두 파일에 같은 금지 주석이 있다). 승준노트는 코스 선택 전·후·
+  바꾸기 세 상태 모두에 떠서 전 화면에 붙어 다녔다.
+- `data-compact`(글자 링크형) 코드는 `quickfix.js` 에 남아 있지만 **현재 쓰는 화면은 없다** —
+  sojae 전용이었다(2026-08-04 제거).
 - ⚠️ **시트 등장에서 투명도를 애니메이션하지 말 것** — waitlist.js 에서 실측으로 두 번 밟은 자리
   (백그라운드 탭이면 첫 프레임(투명)에 멈춰 안 보인다). 배경막은 처음부터 불투명, 움직임은 상자 위치만.
 - ⚠️ **수집 고지 한 줄**("남긴 문장은 몬크 연구진이 검사 기준을 다듬는 데 써요")을 지우지 말 것 —
@@ -73,6 +77,7 @@ polish 와 같은 이유: 인증·감점 사전 로드·프롬프트 재료가 �
 ## 배포·degrade
 
 - migration `20260731120000_expression_reports.sql` — **owner 실행 필요.**
-- ai-killer 함수 재배포 필요 — `FN_VERSION 2026-07-31b`(a 는 타입 정리만). 프로브
-  `POST {probe:true}` 의 `features` 에 `quickfix`, `quickfix_table` 숫자면 완료.
+- ai-killer 함수 **배포 완료** — 레포·콘솔 모두 `FN_VERSION 2026-08-04a`(2026-08-04 확인,
+  환급 service_role 이동과 같은 배포에 올라갔다). 프로브 `POST {probe:true}` 의 `features` 에
+  `quickfix`, `quickfix_table` 숫자면 완료.
 - 미배포/미적용 degrade: 시트가 '준비 중'으로만 뜬다 — 페이지·킬러·첨삭·소재 영향 없음.

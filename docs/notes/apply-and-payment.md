@@ -32,7 +32,7 @@
 > 본문 속 '위/아래 ○○ 절 참조'는 구 CLAUDE.md 기준 표현이라, 그 절은 docs/notes/ 의 다른 문서에 있을 수 있다.
 
 ### Application flow — `apply.html` is the source of truth
-All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Bank account, curriculum, and the submit schema live in apply.html** — edit there. **⚠️ 챌린지 공통 참가비는 admin에서 관리(2026-07-24):** `site_config.challenge_price`(jsonb 숫자, admin '챌린지' 탭 상단 입력)가 단일 소스. apply.html은 `loadChallengePrice()`로 읽어 `let PRICE`에 넣고 **카드 가격·요약 라벨·FAQ·결제 금액 전부 이 값에서** 파생(하드코딩 "3만원" 금지 — 숫자 `toLocaleString()+'원'` 표기). **미설정 시 30000 폴백.** 4개 챌린지 공통 단일가(챌린지별 다른 가격 아님). **⚠️ verify-payment(서버)도 같은 `site_config.challenge_price`를 읽어 금액 검증** — 값을 바꾸면 함수 재배포가 돼 있어야 토스결제 금액이 맞는다(계좌이체는 apply.html 계산이라 무관). 특강 가격은 `special_lectures.price`(특강별). **⚠️ 보증금·환급 제도는 2026-07-20 전면 폐지**(PG 간편결제 심사에서 '보증금 환급' 문구가 승인 거절 사유). 보증금·환급 워딩을 공개 페이지에 재도입하지 말 것(admin·mypage의 '환급' UI는 기존 신청자 보증금 반환 관리용으로만 잔존).
+All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.html?c=<recruit-id>` to preselect). **Bank account, curriculum, and the submit schema live in apply.html** — edit there. **⚠️ 챌린지 공통 참가비는 admin에서 관리(2026-07-24):** `site_config.challenge_price`(jsonb 숫자, admin '챌린지' 탭 상단 입력)가 단일 소스. apply.html은 `loadChallengePrice()`로 읽어 `let PRICE`에 넣고 **카드 가격·요약 라벨·FAQ·결제 금액 전부 이 값에서** 파생(하드코딩 "3만원" 금지 — 숫자 `toLocaleString()+'원'` 표기). **⚠️ 폴백은 두 곳이고 값이 다르다**(2026-08-02 오너 지시로 브라우저만 33,000 으로 올렸다): 브라우저는 `apply.html`의 `let PRICE = 33000`, 서버는 `verify-payment/index.ts`의 `PRICE_PER_CHALLENGE_FALLBACK = 30000`. **둘 다 DB 를 못 읽었을 때만 쓰인다** — `site_config.challenge_price`가 설정돼 있으면 양쪽 다 그 값을 쓰므로 어긋나지 않는다. 4개 챌린지 공통 단일가(챌린지별 다른 가격 아님). **⚠️ verify-payment(서버)도 같은 `site_config.challenge_price`를 읽어 금액 검증** — 값을 바꾸면 함수 재배포가 돼 있어야 토스결제 금액이 맞는다(계좌이체는 apply.html 계산이라 무관). 특강 가격은 `special_lectures.price`(특강별). **⚠️ 보증금·환급 제도는 2026-07-20 전면 폐지**(PG 간편결제 심사에서 '보증금 환급' 문구가 승인 거절 사유). 보증금·환급 워딩을 공개 페이지에 재도입하지 말 것(admin·mypage의 '환급' UI는 기존 신청자 보증금 반환 관리용으로만 잔존).
 - **⚠️ `application-modal.js`(자기 주입 신청 모달, 진입점 `.app-modal-btn`)는 2026-07-30 삭제 — 되살리지 말 것.** 상세 4종이 `<script>`로 싣고는 있었지만 **네 페이지 어디에도 `.app-modal-btn`이 없어** 381줄·20KB를 받아만 놓고 아무 일도 안 했다(신청은 2026-07-14부터 `apply.html`이 전부 담당). 게다가 로드되는 것만으로 `#applicationModal` CSS를 상세 페이지에 주입하고 있었다. 신청 흐름을 상세 안에서 처리하고 싶어지면 `lecture.html`(특강 상세 안 인라인 폼)이 정본 패턴이다.
 - The old inline modal in `index.html` (its markup + CSS + `openApplicationModal`/`submitApplication`/`copyAccount` + `?openModal=true`) was **removed 2026-07-14** in a dead-code cleanup.
 
@@ -42,7 +42,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 
 ### recruit.js (challenges + 상세 4종 + index 공유)
 `loadRecruitData()`(Supabase `challenge_rounds` 단일 소스), `applyIndexRecruit()`(`.ch-card` 상태 칩·흑백·`monc:recruitready` 디스패치 — **2026-07-29부터 카드가 challenges.html에 있어 사실상 그 페이지용**, 이름은 구명 유지), `applyDetailRecruit(id)`(상세 + 마감 시 `.apply-btn` 비활성), `loadChallengeStatuses()`(`window._challengeStatuses`), `applyGlobalRecruitCta()`(index 하단 고정 CTA 바 D-day 뱃지 — index에서 호출하는 유일한 함수). 챌린지 정체성 = `data-recruit-id`(`voice`/`expression`/`spinning`/`answer`), 카드·폴백 전반 일관.
-- **⚠️ 데이터 소스는 Supabase `challenge_rounds` 단일(2026-07-23 구글 시트 CSV 폴백 완전 제거 — admin 단일 관리):** `loadRecruitData()`는 `loadRecruitDataFromSupabase()`만 부른다. Supabase에 미등록인 챌린지(예: voice·spinning)나 조회 실패는 그 자리를 비워 두고, 각 호출부(`applyIndexRecruit`/`applyDetailRecruit`/`loadChallengeStatuses`/`applyGlobalRecruitCta`)가 카드의 `data-recruit-start/-end` 어트리뷰트나 `RECRUIT_FALLBACKS`로 폴백한다(전부 null-safe: `data ? data[id] : null` → 폴백). ⚠️ 그래서 Supabase에 일부 기수만 등록된 상태(예: expression·answer만 4기, voice·spinning 미등록)에선 **미등록 챌린지는 하드코딩 날짜로 뜬다 — 올바른 날짜는 admin '챌린지' 탭에서 기수를 등록하면 자동 반영**(코드가 아니라 데이터 문제). **구글 시트/CSV 폴백을 재도입하지 말 것.**
+- **⚠️ 데이터 소스는 Supabase `challenge_rounds` 단일(2026-07-23 구글 시트 CSV 폴백 제거 · 2026-08-02 하드코딩 날짜 폴백도 제거 — admin 단일 관리):** `loadRecruitData()`는 `loadRecruitDataFromSupabase()`만 부른다. **날짜 폴백이 없다** — 모르면 칩을 아예 안 그린다. `RECRUIT_FALLBACKS`·`data-recruit-start/-end` 는 레포 코드에 남아 있지 않다(문서 안 언급은 전부 과거 사고 기록). 각 호출부(`applyIndexRecruit`/`applyDetailRecruit`/`loadChallengeStatuses`/`applyGlobalRecruitCta`)는 **'안 한다'와 '모른다'를 가른다**: 조회 성공 + 그 챌린지 행 없음이면 `'none'`(다음 기수 준비 중 · 신청 닫힘 → 오픈 알림), 조회 실패(`loadRecruitDataFromSupabase()` 가 `null` 반환)면 상태 키를 안 넣고 '불러오지 못했어요'만 띄운 채 **버튼은 살려 둔다**(최종 판정은 DB 트리거·verify-payment). ⚠️ 그래서 일부 기수만 등록된 상태에선 **미등록 챌린지가 '다음 기수 준비 중'으로 뜬다 — admin '챌린지' 탭에서 기수를 등록하면 자동 반영**(코드가 아니라 데이터 문제). 상태 상세는 아래 '⚠️ 모집 상태 네 갈래' 절. **구글 시트/CSV 폴백도, 하드코딩 날짜 폴백도 재도입하지 말 것.**
 - **⚠️ `applyDetailRecruit`는 로딩 중 날짜를 숨긴다(2026-07-23 오너 "새로고침마다 날짜가 다르게 보인다"):** 구 버전은 `await loadRecruitData()` **전에** HTML 하드코딩 날짜가 그려진 채였다가 원격 도착 후 교체돼, 새로고침 타이밍마다 하드코딩값↔원격값 플래시가 보였다(캐시·최적화 문제 아님, 렌더 순서 문제). 지금은 함수 진입 즉시 chip을 `'모집기간 확인 중…'`(opacity .55)로 덮고, **데이터가 온 뒤에만** 실제 기간을 그린다. ⚠️ 로딩 표시로 chip의 `<strong>`이 사라지므로 도착 후엔 **항상 `innerHTML`을 새로 조립**(구 버전은 `open && dday` 조합에서만 재구성해, 그 외 엣지에서 빈 chip이 됐다). 하드코딩 날짜를 곧바로 표시하는 방식으로 되돌리지 말 것.
 
 ### 오픈 알림 대기 명단 (`waitlist.js` + `challenge_waitlist`) — 2026-07-30 신설
@@ -93,7 +93,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 "Backend" = **Google Apps Script + published Google Sheets** and **Supabase**, called from the browser.
 
 1. **Applications & reviews (legacy Apps Script)** — `APPLICATION_API_URL`. `POST {action:"application"}` **always appends a new row** to the **학생현황** sheet (dup phone irrelevant; phone stored with a leading apostrophe to keep the `0`). `GET ?action=reviews` returns the **후기** sheet. **Owned/edited in Google's console, not this repo** — changes need the owner to redeploy a new version.
-2. **Recruitment dates** — **Supabase `challenge_rounds`(admin '챌린지' 탭에서 CRUD — 구명 '모집일정', 2026-07-30 개편)가 단일 소스.** `recruit.js`가 읽어 모집중/예정/마감 + D-day chips를 그린다. 미등록 챌린지·조회 실패는 페이지별 하드코딩 폴백(`data-recruit-*` / `RECRUIT_FALLBACKS`)으로 떨어진다. **⚠️ 구 published Sheet CSV(`RECRUIT_CSV`·`loadRecruitDataFromCsv`)는 2026-07-23 완전 제거 — 구글 시트 폴백 재도입 금지(admin 단일 관리).**
+2. **Recruitment dates** — **Supabase `challenge_rounds`(admin '챌린지' 탭에서 CRUD — 구명 '모집일정', 2026-07-30 개편)가 단일 소스.** `recruit.js`가 읽어 모집중/예정/마감 + D-day chips를 그린다. **날짜 폴백은 없다**(2026-08-02 제거) — 미등록 챌린지는 `'none'`(다음 기수 준비 중), 조회 실패는 상태 키 없음('불러오지 못했어요' + 버튼 유지)으로 간다. **⚠️ 구 published Sheet CSV(`RECRUIT_CSV`·`loadRecruitDataFromCsv`)는 2026-07-23 완전 제거 — 구글 시트 폴백도, 하드코딩 날짜 폴백(`data-recruit-*`·`RECRUIT_FALLBACKS`)도 재도입 금지(admin 단일 관리).**
 3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`, `news_articles`, `news_scraps`. **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
 4. **뉴스 수집기 (GitHub Actions)** — 예외적으로 **브라우저 밖에서 도는 유일한 코드**. `scripts/fetch-news.mjs`가 3시간마다 구글뉴스 RSS를 긁어 `news_articles`에 쓴다(service role 키는 GitHub Secrets). 아래 '항공 뉴스 수집 파이프라인' 참조.
 
@@ -116,8 +116,10 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - `.inp` **font-size 16px 하한** — iOS 는 15px 이하 입력칸에서 화면을 확대하고 안 되돌린다.
   같은 조건이던 onboarding·news 2곳·answers 도 같이 올렸다. **15px 로 되돌리지 말 것.**
 - **전화번호 검증** — 구 검증은 `if (!name || !phone)` 이 전부라 '1' 한 글자도 통과했다.
-  규칙은 `waitlist.js:171-174`(오픈 알림)와 **같은 값**(이름 2자·숫자 10자리)으로 맞춘다.
-  한쪽을 바꾸면 다른 쪽도 바꾼다.
+  ⚠️ 여기 있던 '이름 2자·숫자 10자리' 규칙은 2026-08-02(오후) **`phone-check.js` 한 곳으로
+  옮겨졌다**(아래 '전화번호 양식 검증' 절의 표가 현행). `waitlist.js` 도 `window.MONC_PHONE`
+  을 부르고, 그 안의 `length >= 10` 은 파일이 없을 때만 쓰는 폴백이다.
+  **페이지끼리 값을 맞추는 게 아니라 `phone-check.js` 하나만 고친다.**
 - **오류는 인라인**(`.field-err`) — alert 은 어느 칸이 틀렸는지 못 알려주고 닫으면 사라진다.
   제출 3경로 전부 교체.
 - **로그인 링크 returnTo** — 자동 리다이렉트는 이미 붙이는데 사람이 누르는 링크에만 빠져
