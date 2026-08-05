@@ -249,11 +249,40 @@ Deno.serve(async (req) => {
 
     // 결제 대상 판별: lectureId 가 있으면 '특강 1건', 없으면 기존 '챌린지 N개'.
     // ⚠️ 금액은 브라우저를 믿지 않고 서버가 DB(특강)·상수(챌린지)에서 다시 계산한다.
+    // 호출자 확인 — 특강은 로그인 필수, 챌린지는 member_id 검증에 쓴다(아래 참조).
+    const callerAuth = req.headers.get('Authorization') || ''
+    const asCaller = createClient(
+      Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: callerAuth } } },
+    )
+    const { data: { user: caller } } = await asCaller.auth.getUser()
+
     let expected: number
     let list: unknown[]
     let lectureIdCol: string | null = null
     let slotIdCol: string | null = null
     if (lectureId) {
+      // ⚠️ 특강 신청은 로그인 필수(2026-08-05 오너 확정) — 대상은 body 가 아니라 JWT 가 정한다.
+      //    UI 게이트·RLS(20260805140000)를 우회해 로그인 없이 결제까지 온 경우,
+      //    돈만 나간 상태를 남기지 않는다: 실결제(PAID)면 전액 환불 후 거절.
+      //    프로브({paymentId:'probe'})는 결제 조회가 실패해 환불 없이 거절만 된다 —
+      //    이 응답(login_required)이 곧 '로그인 필수 버전' 배포 확인 신호다.
+      if (!caller) {
+        let refunded = false
+        try {
+          const s0 = Deno.env.get('PORTONE_API_SECRET')
+          const pr = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
+            headers: { Authorization: `PortOne ${s0}` },
+          })
+          if (pr.ok) {
+            const pp = await pr.json()
+            if (pp.status === 'PAID' && Number(pp?.amount?.total) > 0) {
+              refunded = await refundAll(supa, paymentId, pp.amount.total, '특강 비로그인 결제 · 자동 환불')
+            }
+          }
+        } catch (_) { /* 조회 실패 — 거절만 한다 */ }
+        return json({ ok: false, error: 'login_required', refunded })
+      }
       const { data: lec, error: lecErr } = await supa
         .from('special_lectures').select('id, title, price').eq('id', lectureId).single()
       if (lecErr || !lec) return json({ ok: false, error: 'lecture_not_found' }, 400)
@@ -316,7 +345,14 @@ Deno.serve(async (req) => {
     }
     if (lectureIdCol) payload.lecture_id = lectureIdCol
     if (slotIdCol) payload.slot_id = slotIdCol
-    if (applicant.member_id) payload.member_id = applicant.member_id
+    // member_id 는 body 가 아니라 JWT 가 정한다(2026-08-05).
+    //   특강: 로그인 필수라 caller 가 반드시 있다 — 항상 caller 명의로 적는다.
+    //   챌린지: 비회원 결제가 있어 로그인은 선택 — body 의 member_id 는 본인 JWT 와
+    //           일치할 때만 적는다(남의 계정에 신청을 걸어 두는 위장 차단).
+    if (lectureIdCol) payload.member_id = caller!.id
+    else if (applicant.member_id && caller && applicant.member_id === caller.id) {
+      payload.member_id = applicant.member_id
+    }
 
     const { error } = await supa.from('applications').insert(payload)
     if (error) {
