@@ -214,9 +214,16 @@
           서버 확인을 기다렸다가 켜면 A→B 로 화면이 한 번 뒤집혀 깜빡인다. ══ */
     #heroMine, #todayCard { display: none; }
     body.has-course #heroPublic { display: none; }
-    body.has-course #heroMine, body.has-course #todayCard { display: block; }
+    body.has-course #heroMine { display: block; }
     body.has-course #pickSection { display: none; }
     body.has-course.changing #pickSection { display: block; }
+    /* ⚠️ '오늘 이어서' 카드는 **내용이 채워진 뒤에만** 보인다(`.course-ready`).
+       기기 기억은 화면 배치만 정할 뿐 데이터가 아니라서, 서버 조회가 실패하면
+       제목·스텝·CTA 가 전부 빈 카드가 그대로 남았다(2026-08-06 오너 신고). */
+    body.has-course.course-ready #todayCard { display: block; }
+    /* '코스 바꾸기'를 누르면 카드를 치우고 그 자리에 목록을 보여 준다 — 카드를 남기면
+       목록이 '밑에 딸려 나온' 것처럼 보인다(오너 신고). */
+    body.has-course.changing #todayCard { display: none; }
 
     /* 320px 실측 대응 — 활자는 12px 하한이라 못 줄이므로 여백만 좁힌다 */
     @media (max-width: 360px) {
@@ -586,17 +593,27 @@ function paintMine(name, code) {
   var fs = document.getElementById('freeSub');
   if (fs) fs.textContent = '코스 순서 말고 다른 게 필요할 때';
   document.body.classList.add('has-course');
+  document.body.classList.add('course-ready');   /* 내용이 채워졌다 — 이제 카드를 보여도 된다 */
   document.body.classList.remove('changing');
+}
+
+/* 코스 화면을 포기하고 '고르기'로 되돌린다 — 서버 값을 못 읽었을 때의 안전망.
+   ⚠️ 빈 카드를 남기느니 고르는 화면을 보여 준다(2026-08-06 오너 신고: 이름·스텝·버튼이
+      전부 빈 카드가 떠 있었고, 승준노트를 다시 눌러도 같은 화면이었다 — 기기 기억 때문). */
+function fallbackToPick(dropHint) {
+  if (dropHint) { try { localStorage.removeItem(HINT_KEY); } catch (e) {} }
+  document.body.classList.remove('has-course', 'course-ready', 'changing');
 }
 
 /* '코스 바꾸기' — 고르는 화면을 다시 펴 준다. 저장된 코스는 새 코스의 [시작하기]를
    누를 때만 바뀐다(안 고르고 떠나면 그대로). */
 document.getElementById('btnChange').addEventListener('click', function () {
-  document.body.classList.add('changing');
+  document.body.classList.add('changing');   /* 카드는 감춰지고 그 자리에 목록이 온다 */
   /* 지금 쓰는 코스를 펴 놓고 시작한다 — 남의 코스(기본값)부터 보여 주면 뭘 바꾸는지 헷갈린다 */
   if (myCourse) paintDetail(myCourse);
   var sec = document.getElementById('pickSection');
-  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /* 화면 맨 위부터 보여 준다 — 카드를 치운 자리에 목록이 올라오므로 '허브로 돌아온' 것처럼 읽힌다 */
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   var cur = sec.querySelector('.cs-row[aria-expanded="true"]') || sec.querySelector('.cs-row');
   if (cur) cur.focus({ preventScroll: true });
 });
@@ -635,17 +652,25 @@ async function loadStats(uid) {
 }
 
 /* ── 부팅 ──────────────────────────────────────────────────────────────────
-   기기 기억으로 이미 A/B 를 그려 놨다. 여기서 서버 값으로 바로잡는다. */
-(async function boot() {
-  if (!window.MONC || !MONC.getSession) return;
-  var session = null;
-  try { session = await MONC.getSession(); } catch (e) { return; }
+   기기 기억으로 이미 A/B 를 그려 놨다. 여기서 서버 값으로 바로잡는다.
+   ⚠️ **어느 갈래로 빠지든 빈 카드를 남기지 않는다** — 못 채우면 fallbackToPick() 으로
+      고르는 화면을 보여 준다(2026-08-06 오너 신고). 예전엔 실패 경로가 그냥 return 이라
+      기기 기억이 그려 둔 빈 껍데기가 영영 남았고, 다시 들어와도 같은 화면이었다. */
+(function bootGuard() {
+  /* 스크립트가 아예 못 도는 경우(라이브러리 차단·네트워크 지연)까지 덮는 안전망.
+     4초 안에 카드가 안 채워지면 고르는 화면으로 되돌린다. 기억은 지우지 않는다 —
+     일시적 장애일 수 있고, 다음 방문에 서버 값을 다시 읽으면 복구된다. */
+  setTimeout(function () {
+    if (!document.body.classList.contains('course-ready')) fallbackToPick(false);
+  }, 4000);
+})();
 
-  if (!session) {
-    try { localStorage.removeItem(HINT_KEY); } catch (e) {}
-    document.body.classList.remove('has-course');
-    return;
-  }
+(async function boot() {
+  if (!window.MONC || !MONC.getSession) { fallbackToPick(false); return; }
+  var session = null;
+  try { session = await MONC.getSession(); } catch (e) { fallbackToPick(false); return; }
+
+  if (!session) { fallbackToPick(true); return; }
   var uid = session.user.id;
 
   /* 로그인하러 갔다 온 사람 — 들고 간 코스를 지금 저장한다 */
@@ -670,9 +695,12 @@ async function loadStats(uid) {
     try { localStorage.setItem(HINT_KEY, JSON.stringify({ uid: uid, course: code })); } catch (e) {}
     paintMine(row.name, code);
     loadStats(uid);
+  } else if (row) {
+    /* 계정에 코스가 없다(또는 모르는 코드다) — 기억을 지우고 고르는 화면으로 */
+    fallbackToPick(true);
   } else {
-    try { localStorage.removeItem(HINT_KEY); } catch (e) {}
-    document.body.classList.remove('has-course');
+    /* 조회 자체가 실패했다 — 코스가 없다고 단정하지 않는다(기억은 남기고 화면만 되돌린다) */
+    fallbackToPick(false);
   }
 })();
 </script>
