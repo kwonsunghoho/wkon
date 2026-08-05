@@ -14,7 +14,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const FN_VERSION = "2026-08-04a";
+const FN_VERSION = "2026-08-05a";   // 4문답 상한 + 충분 시 새 질문 금지(다듬기 권유)
 // refund_server = 환급을 service_role 전용 refund_credit_for 로 이동(2026-08-04 보안)
 const FN_FEATURES = ["ask_v2", "refine_v2", "materials", "playbook", "refund_server"];
 
@@ -54,7 +54,8 @@ const FB_ASK_CORE = `너는 승무원 면접 지원자의 소재 발굴을 돕�
   부드럽게 마무리.
 
 [멈춤]
-- 재료가 충분히 모였으면 더 묻지 말고 멈춰. 잘 나와도 6번 주고받기 안에서 멈춰(지치지 않게).`;
+- 재료가 충분히 모였으면 더 묻지 말고 멈춰. 잘 나와도 4번 주고받기 안에서 멈춰
+  (2026-08-05 오너 확정 — "경험 추출만 하다가 지친다", 6→4로 단축).`;
 
 const FB_ASK_TYPES: Record<string, string> = {
   experience: `[이 유형 파고들기 — 과거경험검증형]
@@ -109,7 +110,10 @@ const ASK_FORMAT = `
 - missing: 아직 안 모인 재료. scene(언제·어디서의 장면) / action(무엇을 어떤 순서로 했나)
   / judgment(왜 그렇게 판단했나) / result(결과·상대 반응) / feeling(그때 감정 한 줄) 중에서.
   materials_sufficient 가 true 면 빈 배열.
-- 판정은 횟수가 아니라 재료 기준으로. 다만 대화가 6번을 넘겼으면 모인 것으로 정리하고 멈춰.`;
+- 판정은 횟수가 아니라 재료 기준으로. 다만 문답이 4번을 넘겼으면 더 캐묻지 말고
+  모인 재료만으로 정리하고 멈춰(2026-08-05 오너 확정 — 학생이 지치지 않게).
+- materials_sufficient 가 true 면 새 질문을 하지 마 — 모인 재료를 한 줄로 짚어 주고
+  '다듬기'로 넘어가자고 권해.`;
 
 const REFINE_FORMAT = `
 [출력 형식 — 반드시 지켜]
