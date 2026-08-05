@@ -710,10 +710,15 @@
   };
 
   /* ── 계측 — page_events(있으면 기록, 없으면 조용히) ─────────────────────── */
+  /* ⚠️ 컬럼은 `event` 다 — `name` 으로 보내면 컬럼이 없어 insert 가 통째로 실패한다.
+     비콘은 실패를 무시하도록 짜여 있어 화면에 아무 표시가 없고, 그래서 답변 프로그램
+     계측(ap_*)이 한 건도 안 쌓이고 있었다(2026-08-05 발견·수정). 실패는 여전히 무시한다. */
   function logEvent(name, meta) {
     try {
       if (demoOn() || !window.MONC || !window.MONC.sb) return;
-      window.MONC.sb.from('page_events').insert({ name: name, meta: meta || {} }).then(function () {});
+      window.MONC.sb.from('page_events')
+        .insert({ event: name, path: '/program', meta: meta || {} })
+        .then(function () {}, function () {});
     } catch (e) {}
   }
 
