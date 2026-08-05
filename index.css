@@ -202,6 +202,24 @@
       position: absolute; inset: 0; display: block;
       width: 100%; height: 100%; object-fit: cover; object-position: center;
     }
+    /* ── 히어로 → 다음 섹션 이음매 (2026-08-05) ──────────────────────────────
+       사진 하단 벽(밝기 ~231)과 아래 `.msn`(밝기 ~246) 사이에 가로선 하나가 생겨서
+       지운다. 구 웜 페이퍼 팔레트에선 배경도 94% 라 사진과 이어져 보였는데, 배경을
+       순백+쿨 그레이로 바꾸면서 드러난 자리다. 사진을 더 밝혀 없애는 방법도 있지만
+       창문 주변 은은한 글로우가 납작해져서 CSS 로 처리한다(사진 원본을 안 건드린다).
+
+       ⚠️ 도착색은 `--bg` 가 아니라 **`--bg2`** 다 — 히어로 바로 아래 `.msn` 이 `--bg2`
+          를 깐다. `.msn` 배경을 바꾸면 여기도 같이 볼 것(안 그러면 이음매가 되돌아온다).
+       ⚠️ 마크업 위치가 규칙의 일부다: `<picture>` 바로 뒤 · `.hero-mid` 앞.
+          z-index 없이 DOM 순서로만 로고·스크롤 신호 아래에 깔린다(z-index 를 주면
+          `.hero-mid` 안 조립 애니메이션까지 새 쌓임 맥락에 갇힌다).
+       ⚠️ 높이 104px 는 스크롤 신호(`.hero-cue`, 아래에서 156px 를 쓴다)보다 낮게 잡은
+          값이다 — 더 키우면 신호 글자 뒤가 통째로 단색 판이 되어 사진에서 떨어져 보인다. */
+    .hero-fade {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 104px;
+      background: linear-gradient(to bottom, transparent 0%, var(--bg2) 92%);
+      pointer-events: none;
+    }
     /* ⚠️ top 은 폴백값이다 — 실제 자리는 JS(fitWindow)가 배경 이미지의 개구부를 실측해
        px 로 덮어쓴다. 배경이 cover 로 잘리는 양에 따라 창의 세로 위치가 달라져서
        퍼센트로는 못 맞춘다(2026-07-30 오너 "위치도 중앙이 아니다"). */
