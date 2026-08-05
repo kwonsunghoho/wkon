@@ -57,7 +57,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-07-31b'   // b = quickfix 분기 추가(a 는 타입 정리만 — 동작 무변경)
+const FN_VERSION = '2026-08-04a'   // a = 환급을 service_role 전용 RPC 로 이동(보안)
 const FN_FEATURES = [
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
@@ -68,6 +68,7 @@ const FN_FEATURES = [
   'polish',           // 첨삭 — mode:'polish' 로 강점·보완점·문장 첨삭 리포트(2026-07-30)
   'coach_terms',      // 감점 사전의 연구진(coach) 표현을 첨삭 AI 감점 기준으로 주입(2026-07-30b)
   'quickfix',         // 미니 다듬기 — mode:'quickfix' 무료 한 구간 고침 + 표현 수집(2026-07-31)
+  'refund_server',    // 환급을 service_role 전용 refund_credit_for 로 이동(2026-08-04)
 ]
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
@@ -805,7 +806,8 @@ Deno.serve(async (req) => {
     })
   }
 
-  let charged: { tool: string; ref: string } | null = null
+  // member 를 같이 들고 다닌다 — 환급은 service_role 로 부르므로 auth.uid() 가 없다.
+  let charged: { tool: string; ref: string; member: string } | null = null
   let supa: SB | null = null
 
   try {
@@ -1059,7 +1061,7 @@ Deno.serve(async (req) => {
         console.error('spend_credit failed (polish)', msg)
         return json({ error: '첨삭을 시작하지 못했어요', code: 'spend_failed' }, 500)
       }
-      charged = { tool: 'polish', ref: polishRef }
+      charged = { tool: 'polish', ref: polishRef, member: user.id }
 
       // ── p-2. 사전·항공사 프로필 로드 + AI 호출 ─────────────────────────
       // 사전은 한 번만 읽어 두 군데(코치 기준 주입 + 자기 출력 재검사)에 쓴다.
@@ -1172,7 +1174,7 @@ Deno.serve(async (req) => {
       console.error('spend_credit failed', msg)
       return json({ error: '검사를 시작하지 못했어요', code: 'spend_failed' }, 500)
     }
-    charged = { tool: 'ai_killer', ref: payRef }
+    charged = { tool: 'ai_killer', ref: payRef, member: user.id }
 
     // ── 4. 규칙 검사 ──────────────────────────────────────────────────────
     // 사전은 비공개 테이블이라 service role 로만 읽힌다(이게 규칙을 서버에 둔 이유).
@@ -1327,8 +1329,19 @@ Deno.serve(async (req) => {
   } catch (e) {
     // ⚠️ 차감했는데 결과를 못 준 경우 반드시 되돌린다.
     //    유료는 refund 행 추가, 무료는 free_use 행 삭제(한도 복구) — RPC 가 알아서 나눈다.
-    if (charged && supa) {
-      const { error } = await supa.rpc('refund_credit', { p_tool: charged.tool, p_ref: charged.ref })
+    // ⚠️ 환급은 **service_role 로만** 부른다(2026-08-04). 사용자 JWT 로 부르던 구 방식은
+    //    같은 RPC 를 브라우저에도 열어 둬야 해서, 학생이 결과를 받은 뒤 스스로 환급해
+    //    유료 기능을 공짜로 쓸 수 있었다. 대상 회원은 charged.member 가 들고 있다.
+    // ⚠️ 마이그레이션 20260804150000 이 먼저 적용돼 있어야 한다 — 없으면 환급이 실패해
+    //    학생이 크레딧을 잃는다(로그로만 남는다).
+    if (charged) {
+      const adminRef = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      )
+      const { error } = await adminRef.rpc('refund_credit_for', {
+        p_member: charged.member, p_tool: charged.tool, p_ref: charged.ref,
+      })
       if (error) console.error('refund failed', error.message, charged.ref)
     }
     const msg = String((e as Error)?.message || '')

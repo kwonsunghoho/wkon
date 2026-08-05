@@ -1,5 +1,17 @@
 # 신청·결제·모집일정·오픈 알림 — 상세 기록
 
+## ⚠️ 브라우저가 넣는 신청은 '결제 전' 상태만 (2026-08-04 보안 점검)
+
+**구멍**: `applications_insert_public` 이 `member_id` 만 검사했다. 비회원 신청 때문에 anon INSERT 가 열려 있는데 컬럼 제약이 없어, 누구나 anon key 로 `paid=true`·`payment_status='paid'`·`paid_amount` 를 임의로 채운 행을 넣을 수 있었다 — **admin 신청 목록에 입금 완료로 뜬다.** 특강이면 `lecture_id`·`slot_id` 를 넣어 정원까지 먹는다(정원 가드가 결제 여부를 안 보고 행 수만 센다).
+
+**고친 방식**(migration `20260804150000_rls_hardening.sql`): WITH CHECK 에 `paid=false · refunded=false · refunded_amount=0 · payment_id is null · paid_amount is null · payment_status='pending'` 을 강제. `apply.html`·`lecture.html` 이 보내는 payload 는 이 컬럼들을 안 건드리므로 정상 신청은 그대로 통과하고, **카드 결제 행은 verify-payment 가 service_role 로 넣으므로 영향이 없다.**
+
+**남는 것**: 정원 소모는 완전히 막히지 않는다. 비회원 계좌이체 신청이 자리를 잡는 건 정상 동작이라, 완전 차단은 '특강 신청 로그인 필수' 같은 제품 결정이 필요하다(오너 판단 대기).
+
+**같이 하드닝한 콘솔 생성 표**: `reviews`(공개 읽기는 `visible` 인 것만·쓰기 관리자만) · `challenge_rounds`(공개 읽기 전체·쓰기 관리자만). 둘 다 콘솔에서 만든 표라 레포에 RLS 선언이 없었다 — `applications` 가 2026-07-11 에 같은 이유로 하드닝된 전례.
+
+**⚠️ 콘솔에서 정책을 손으로 만들지 말 것**(2026-08-04 실측). `pg_policies` 를 떠 보니 콘솔에서 붙인 정책 7개가 남아 있었고, 그중 **`anyone can apply`**(applications INSERT · `with check true`)가 위 제한을 통째로 무효화하고 있었다 — **정책은 OR 로 합쳐지므로 헐거운 쪽이 이긴다.** 마이그레이션은 이름을 아는 정책만 지울 수 있어서, 레포가 모르는 정책은 조용히 살아남는다. 지운 7개: `anyone can apply` · `admin manage applications` · `member reads own applications` · `admin write rounds` · `public read rounds` · `admin manage reviews` · `public read visible reviews`(뒤 6개는 레포 정책과 같은 내용의 중복본). 정책을 손볼 일이 생기면 마이그레이션 파일로 한다.
+
 ## ⚠️ 챌린지 피드백은 '중간 점검 1회'다 — 과장 문구 재도입 금지 (2026-08-02 오너 확인)
 
 사실: 2주(14일) 기간 · 주중 매일 미션 · **총 10회차(DAY 1~10)** · 코치 **중간 점검 1회**.
