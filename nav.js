@@ -105,6 +105,31 @@
   var section = SECTION_OF[here] || '';
   var onHome = (here === 'index.html' || here === '');
 
+  /* ── 한 파일이 ?파라미터로 갈래를 겸하는 화면 (2026-08-05) ────────────────────
+     `reviews-list.html?kind=` 처럼 파일 하나가 여러 갈래를 그리는 화면이 있다.
+     curFile() 이 파일명만 비교하던 동안 **챌린지 후기·상담 후기 두 줄에 현재 표시가
+     같이 남았다**(오너 신고 "상담후기를 눌렀는데 왜 챌린지후기에 줄이 생기니").
+     · QUERY_DEFAULT = 주소에 값이 없을 때 그 화면이 그리는 갈래(그 페이지의 기본값과
+       같은 값을 적는다 — reviews-list.html 의 `KIND` 폴백이 'challenge').
+     · 아래 QUERY_VALUES 는 메뉴에 실린 값 목록이다. 주소에 이상한 값(`?kind=zzz`)이
+       와도 페이지는 기본 갈래를 그리므로 표시도 기본 갈래로 맞춘다.
+     ⚠️ `?`로 갈래가 갈리는 하위 항목을 새로 넣으면 QUERY_DEFAULT 에도 한 줄 넣는다 —
+        빠뜨리면 그 화면에서 현재 표시가 아무 줄에도 안 붙는다. */
+  var QUERY_DEFAULT = { 'reviews-list.html': { kind: 'challenge' } };
+  var QUERY_VALUES = {};   // 'reviews-list.html|kind' → ['challenge','consult']
+  [BRIEFING_SUB, CHALLENGE_SUB, LAB_SUB, REVIEW_SUB].forEach(function (list) {
+    list.forEach(function (it) {
+      var p = String(it[0]).split('#')[0].split('?');
+      if (!p[1]) return;
+      var file = p[0].toLowerCase();
+      new URLSearchParams(p[1]).forEach(function (v, k) {
+        var key = file + '|' + k;
+        (QUERY_VALUES[key] = QUERY_VALUES[key] || []).push(v);
+      });
+    });
+  });
+  var hereQuery = new URLSearchParams(location.search);
+
   function esc(s) {
     return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -112,9 +137,22 @@
   }
   function cur(key) { return section === key ? ' aria-current="page"' : ''; }
   /* 하위 항목(드롭다운·아코디언)은 '섹션'이 아니라 '이 파일'인지로 표시한다 —
-     펼쳤을 때 지금 보고 있는 줄이 어디인지 알 수 있어야 한다(2026-08-02 C-3). */
+     펼쳤을 때 지금 보고 있는 줄이 어디인지 알 수 있어야 한다(2026-08-02 C-3).
+     ⚠️ 파일명만 비교하지 말 것 — `?kind=` 로 갈래가 갈리는 화면에서 두 줄에 동시에
+        표시가 남는다(위 QUERY_DEFAULT 주석). 항목이 들고 있는 파라미터는 주소와 값이
+        같아야 하고, 주소에 없거나 모르는 값이면 그 화면의 기본 갈래로 본다. */
   function curFile(href) {
-    return (String(href).split(/[?#]/)[0].toLowerCase() === here) ? ' aria-current="page"' : '';
+    var p = String(href).split('#')[0].split('?');
+    var file = p[0].toLowerCase();
+    if (file !== here) return '';
+    var ok = true;
+    new URLSearchParams(p[1] || '').forEach(function (want, key) {
+      var got = hereQuery.get(key);
+      var known = QUERY_VALUES[file + '|' + key] || [];
+      if (got === null || known.indexOf(got) < 0) got = (QUERY_DEFAULT[file] || {})[key];
+      if (got !== want) ok = false;
+    });
+    return ok ? ' aria-current="page"' : '';
   }
   var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
