@@ -64,6 +64,17 @@
 | `20260805160000_member_course` | **승준노트 허브 코스** — `members.course`(beginner/practical/spurt/daily · null=미선택) + 체크 제약. 새 RLS 없음(기존 `members_update_own` 이 덮는다) | **실행 완료(2026-08-05 오너 실행·자기보고)** — 화면도 2026-08-06 에 main 배포 완료(아래 브랜치 절). 이 마이그레이션의 체크 제약은 뒤이은 `20260806090000_member_course_levels` 가 교체했다 |
 | `20260806090000_member_course_levels` | **코스 4단계 개편(초급~실전)** — 체크 제약을 `basic/mid/advanced/practical` 로 교체 + 구 값 이동(beginner→basic·daily→mid·spurt→advanced) | **실행 완료(2026-08-06 오너 실행)** — 제약 실측으로 확인: `pg_get_constraintdef` 가 `course = ANY (ARRAY['basic','mid','advanced','practical'])` 를 돌려준다. 미적용이었다면 [이 코스로 시작하기] 가 코드 23514 로 실패한다(성공한 척 넘어가지 않는다). ⚠️ **다시 확인할 일이 생기면 오너 기억에 묻지 말고 제약을 직접 읽어라** — `select pg_get_constraintdef(oid) from pg_constraint where conrelid='public.members'::regclass and conname='members_course_check'`. 이 파일은 재실행해도 안전하다(drop if exists → update → add) |
 | `20260805130000_answer_revisions` | **답변 수정 이력** — `answer_revisions`(answer_id·member_id·content) + `answers` UPDATE 트리거 `trg_answers_revision`(본문이 바뀔 때 **이전 본문**을 스냅샷) + 본인 읽기·지우기 RLS | **실행 완료(2026-08-05 오너 실행)** — anon 프로브로 확인(`/rest/v1/answer_revisions` → HTTP 200 `[]`. 미생성이면 404 `PGRST205` 다). 미적용이면 답변노트 카드에 '수정 이력' 접이가 안 뜨고 나머지는 그대로 돈다(조회 실패를 조용히 삼킨다). ⚠️ **10분 묶기가 핵심이다** — 소재 발굴이 0.8초 디바운스로 자동 저장해서, 묶지 않으면 한 번 고쳐 쓰는 동안 이력이 수백 개로 불어난다. 답변당 20개 상한. ⚠️ 트리거로 남기는 이유는 본문을 고치는 곳이 넷이고(소재 발굴·AI킬러 저장·첨삭 반영·답변 프로그램 확정) **AI킬러·첨삭은 서버 함수가 service role 로 직접 update** 하기 때문 — 브라우저 코드로는 못 잡는다 |
+| `20260806120000_credit_free_limit_fallback` | **총량 무료 폴백 정리** — `credit_free_limit()` 의 폴백을 `ai_killer→2` 에서 `polish→1, 그 외 0` 으로 | **⚠️ 실행 보류(2026-08-06 오너 결정: "일단 둘게, 비용관련된건 나중에 한번에 대대적으로 잡자") — 임의로 실행하지 말 것.** 지금 상태: 회원마다 AI킬러 **첫 2회가 총량 무료**로 나가고 그 위에 하루 무료 5가 또 붙는다(검사 3크레딧 × 2 = 회원당 6크레딧). 20260725180000 이 설정에서 `ai_killer` 를 뺐지만 함수 안 폴백이 대신 2를 돌려주기 때문이다(프로덕션 실측: `credit_free_limits` = `{"polish": 1}`). `spend_credit` 은 `v_free_lim > 0` 만 보고 분기를 열어 `p_free_ref: null` 로도 안 막힌다. **기능은 정상이고 돈만 더 나간다** — 그래서 급하지 않다. 원인·조치 상세는 `docs/notes/credits.md` '총량 무료 폴백' 절 |
+
+## ⏸ 비용 일괄 점검 — 나중에 한 번에(오너 결정 2026-08-06)
+
+오너 지시: *"일단 둘게, 비용관련된건 나중에 한번에 대대적으로 잡자"*.
+**비용·과금 관련 수정은 모아 뒀다가 한 번에 본다** — 하나씩 고치면 무료 정책이 조각나고,
+그때마다 학생이 받는 양이 달라진다. 아래가 그때 같이 볼 목록이다(발견되면 여기에 더한다).
+
+- `20260806120000_credit_free_limit_fallback` — AI킬러 총량 무료 2회가 아직 나간다(위 표).
+- `credit_free_limit()` 폴백에 `rehearsal → 1` 도 남아 있다. 리허설은 아직 출시 전이라
+  지금은 무해하지만, 켤 때 같이 정리하지 않으면 같은 방식으로 새 나간다.
 
 ## 브랜치
 
