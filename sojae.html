@@ -55,7 +55,13 @@
       min-height: 44px; }
     .appbar .back svg { width: 18px; height: 18px; }
     .badge { display: inline-flex; align-items: center; background: var(--accent-tint);
-      color: var(--accent-ink); font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; }
+      color: var(--accent-ink); font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+      border: none; font-family: inherit; cursor: pointer; position: relative; color-scheme: light; }
+    /* 알약 자체는 22px 이라 터치 하한(44px)에 못 미친다 — 보이는 크기는 두고 누를 자리만 넓힌다.
+       appbar 의 back 이 이미 44px 이라 줄 높이는 그대로다. */
+    .badge::before { content: ''; position: absolute; inset: -11px -8px; }
+    /* ⚠️ display:inline-flex 가 [hidden] 을 이기므로 명시한다(문제 확정 전에는 안 보여야 한다) */
+    .badge[hidden] { display: none; }
 
     /* 진행 단계 */
     .stepbar { display: flex; align-items: center; gap: 6px; padding: 0 16px 12px;
@@ -190,6 +196,55 @@
     .sk-close { margin-top: 8px; font-size: 14px; color: var(--text-muted); }
     /* 첨삭과 같은 규칙 — (괄호 빈칸)은 학생이 제 사실로 채울 자리 */
     .blank { background: var(--action-tint); border-radius: 4px; padding: 0 2px; font-weight: 700; }
+
+    /* ── 진입 화면: 난이도 고르기 (2026-08-05) ──────────────────────────────
+       들어오면 대화가 아니라 이 화면이 먼저다. 문제 풀 전체가 한 줄로 순환하던 때는
+       학생이 자기 수준을 고를 수 없었다(오너 지적 "기초 문제만 계속 나온다").
+       ⚠️ 대화(.chat)·입력부(.composer)와 **같은 자리를 쓰는 화면**이라 셋이 동시에
+          뜨지 않는다(body.picking 이 가른다). 키보드가 없는 화면이라 kb-open 과 무관. */
+    body.picking .chat, body.picking .composer, body.picking .stepbar { display: none; }
+    .pickview { display: none; flex: 1 1 auto; overflow-y: auto;
+      padding: 4px 16px calc(24px + env(safe-area-inset-bottom)); }
+    body.picking .pickview { display: block; }
+    .pv-h { font-size: 17px; font-weight: 800; line-height: 1.5; word-break: keep-all; margin-bottom: 4px; }
+    .pv-sub { font-size: 13px; color: var(--text-muted); line-height: 1.55; word-break: keep-all; }
+    /* 네 난이도를 한 줄에 — 순서(초급→심화)가 한눈에 보여야 고르는 기준이 선다.
+       375px 에서 칸 하나가 79px 이라 라벨 2글자 + 문제 수가 들어간다. */
+    .pv-levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 12px; }
+    .pv-lv { min-height: 60px; padding: 8px 4px; border-radius: 14px; cursor: pointer;
+      background: var(--surface); border: 1.5px solid var(--border); color: var(--text);
+      font: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; color-scheme: light; }
+    .pv-lv-t { font-size: 15px; font-weight: 800; }
+    .pv-lv-n { font-size: 12px; color: var(--text-muted); }
+    .pv-lv[aria-pressed="true"] { background: var(--action); border-color: transparent; color: var(--action-ink); }
+    .pv-lv[aria-pressed="true"] .pv-lv-n { color: var(--action-ink); opacity: .85; }
+    .pv-desc { font-size: 13px; color: var(--text-muted); line-height: 1.55; word-break: keep-all;
+      margin-bottom: 12px; }
+    .pv-card { border: 1.5px solid var(--accent-dark); border-radius: 14px; padding: 14px;
+      background: var(--surface); }
+    .pv-cap { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--accent-ink); }
+    .pv-q { font-size: 16px; font-weight: 700; line-height: 1.55; margin-top: 6px; word-break: keep-all; }
+    .pv-meta { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .pv-go { display: block; width: 100%; margin-top: 12px; min-height: 48px; padding: 14px;
+      background: var(--action); color: var(--action-ink); border: none; border-radius: 14px;
+      font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; color-scheme: light; }
+    .pv-go:disabled { opacity: .55; cursor: default; }
+    .pv-empty { font-size: 14px; color: var(--text-muted); line-height: 1.6; word-break: keep-all; }
+    /* '다른 문제 보기' — 기본은 접혀 있고, 펼치면 그 난이도 문제가 전부 나온다 */
+    .pv-more { margin-top: 16px; border-top: 1px solid var(--border-soft); }
+    .pv-more > summary { list-style: none; cursor: pointer; min-height: 44px; display: flex;
+      align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--accent-ink); }
+    .pv-more > summary::-webkit-details-marker { display: none; }
+    .pv-more > summary::after { content: '▾'; font-size: 12px; }
+    .pv-more[open] > summary::after { content: '▴'; }
+    .pv-item { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; text-align: left; min-height: 52px; padding: 10px 12px; margin-bottom: 8px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      font: inherit; cursor: pointer; color: var(--text); color-scheme: light; }
+    .pv-item-t { font-size: 14px; line-height: 1.5; word-break: keep-all; }
+    .pv-item-s { font-size: 12px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+    .pv-item.is-today { border-color: var(--accent-dark); border-width: 1.5px; }
   </style>
 </head>
 <body data-nav-offset>
@@ -202,7 +257,22 @@
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       소재 발굴
     </a>
-    <span class="badge" id="catBadge">과거경험검증형</span>
+    <!-- 지금 푸는 문제의 난이도·유형. 누르면 난이도 고르는 화면으로 돌아간다
+         (대화는 서버에 저장돼 있어 같은 문제로 다시 들어오면 그대로 이어진다). -->
+    <button class="badge" id="catBadge" type="button" hidden aria-label="난이도·문제 바꾸기"></button>
+  </div>
+
+  <!-- 진입 화면 — 난이도를 먼저 고른다(2026-08-05). ?q=<문제id> 로 들어오면 건너뛴다. -->
+  <div class="pickview" id="pickView">
+    <div class="pv-h">오늘은 어떤 난이도로 해볼까요?</div>
+    <div class="pv-sub">고른 난이도에서 오늘의 문제가 나옵니다. 난이도는 언제든 바꿀 수 있어요.</div>
+    <div class="pv-levels" id="pvLevels"></div>
+    <div class="pv-desc" id="pvDesc"></div>
+    <div id="pvToday"></div>
+    <details class="pv-more" id="pvMore" hidden>
+      <summary>다른 문제 보기</summary>
+      <div id="pvList"></div>
+    </details>
   </div>
 
   <div class="stepbar">
@@ -248,7 +318,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="sojae-common.js"></script>
+  <script src="sojae-common.js?v=2"></script>
   <script>
     // ── 문제 유형 코드 → 라벨 (questions.category 와 매칭) ──
     const CAT_LABEL = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
@@ -769,6 +839,90 @@
         return data || null;
       } catch (_) { return null; }
     }
+    // ── 진입 화면: 난이도 고르기 (2026-08-05) ─────────────────────────────────
+    // ?q= 없이 들어오면 대화가 아니라 이 화면이 먼저다. 문제를 고르면 ?q= 를 붙여
+    // 화면을 다시 연다 — 대화 상태(대화·뼈대·초안)를 손으로 지우지 않아 되돌릴 자리가 없다.
+    const LEVEL_LABEL = window.SOJAE.LEVEL_LABEL;
+    let _pool = [];         // 활성 문제 전체(난이도별로 갈라 쓴다)
+    let _sessions = {};     // question_id → stage. 이어쓰기·완료 표시용
+    let _pickLevel = window.SOJAE.getLevel();
+
+    function pvGo(id) { location.href = 'sojae.html?q=' + encodeURIComponent(id); }
+    function pvState(q) {
+      const s = _sessions[q.id];
+      return s ? (s === 'done' ? '완료' : '이어쓰기') : '';
+    }
+    function renderPick() {
+      const S = window.SOJAE;
+      // 난이도 칩 — 숫자에 '문제'를 붙여 둔다(값만 남으면 무엇을 센 수인지 모른다)
+      document.getElementById('pvLevels').innerHTML = S.LEVELS.map(lv =>
+        '<button class="pv-lv" type="button" data-lv="' + lv + '" aria-pressed="' + (lv === _pickLevel) + '">'
+        + '<span class="pv-lv-t">' + LEVEL_LABEL[lv] + '</span>'
+        + '<span class="pv-lv-n">' + S.poolOf(_pool, lv).length + '문제</span></button>').join('');
+      document.getElementById('pvDesc').textContent = S.LEVEL_DESC[_pickLevel] || '';
+
+      const pool = S.poolOf(_pool, _pickLevel);
+      const today = S.pickEffective(_pool, _pickLevel);
+      const wrap = document.getElementById('pvToday');
+      if (!today) {
+        wrap.innerHTML = '<div class="pv-card"><div class="pv-empty">이 난이도에는 아직 문제가 없어요. '
+          + '다른 난이도를 골라 주세요.</div></div>';
+      } else {
+        const st = pvState(today);
+        wrap.innerHTML = '<div class="pv-card">'
+          + '<div class="pv-cap">' + LEVEL_LABEL[_pickLevel] + ' · 오늘의 문제</div>'
+          + '<div class="pv-q">' + esc(today.content) + '</div>'
+          + '<div class="pv-meta">' + esc(CAT_LABEL[today.category] || '')
+          + (today.airline ? ' · ' + esc(today.airline) : '') + (st ? ' · ' + st : '') + '</div>'
+          + '</div>'
+          + '<button class="pv-go" type="button" id="pvStart">'
+          + (st === '이어쓰기' ? '이어서 쓰기' : '이 문제로 시작하기') + '</button>';
+        document.getElementById('pvStart').addEventListener('click', () => pvGo(today.id));
+      }
+      // '다른 문제 보기' — 그 난이도 문제 전체. 문제가 하나뿐이면 펼칠 것이 없다.
+      const more = document.getElementById('pvMore'), list = document.getElementById('pvList');
+      more.hidden = pool.length < 2;
+      list.innerHTML = pool.map(q => {
+        const isT = today && q.id === today.id, st = isT ? '오늘' : pvState(q);
+        return '<button class="pv-item' + (isT ? ' is-today' : '') + '" type="button" data-q="' + esc(q.id) + '">'
+          + '<span class="pv-item-t">' + esc(q.content) + '</span>'
+          + '<span class="pv-item-s">' + st + '</span></button>';
+      }).join('');
+      list.querySelectorAll('.pv-item').forEach(b =>
+        b.addEventListener('click', () => pvGo(b.dataset.q)));
+    }
+    document.getElementById('pvLevels').addEventListener('click', e => {
+      const b = e.target.closest('.pv-lv'); if (!b) return;
+      _pickLevel = b.dataset.lv;
+      window.SOJAE.setLevel(_pickLevel);           // 다음 방문·마이페이지가 같은 난이도로 열린다
+      moncTrack('sojae_level_pick', { level: _pickLevel });
+      renderPick();
+    });
+
+    // ── 대화 시작(문제 확정 후) ──
+    async function startChat(q) {
+      if (q) {
+        currentQuestion = q;
+        if (CAT_LABEL[q.category]) category = q.category;
+        window.SOJAE.setLevel(window.SOJAE.levelOf(q));   // 이어쓰기로 연 문제의 난이도를 기억
+      }
+      const level = window.SOJAE.levelOf(q || {});
+      const badge = document.getElementById('catBadge');
+      badge.hidden = false;
+      badge.textContent = LEVEL_LABEL[level] + ' · ' + CAT_LABEL[category] + ' ▾';
+      badge.addEventListener('click', () => { location.href = 'sojae.html'; });
+      // 저장돼 있으면 대화·뼈대·초안 복원 → 복원되면 인사말 생략(중복 방지)
+      const restored = await restoreSession();
+      if (!restored) {
+        const content = q ? q.content : FALLBACK_QUESTION;
+        ai('안녕하세요. 오늘 문제는 <b>' + esc(content) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
+      }
+      moncTrack('sojae_start', { category, level });
+      _ready = true;                       // 문제 확정 후에만 전송 허용
+      setTimeout(pulse, 1800);             // 인사말이 뜬 뒤에 넛지 시작
+      resetIdle();
+    }
+
     (async () => {
       const session = await MONC.requireSession();   // 미로그인 → login 으로 이동
       if (session && !(await MONC.requireConsent())) return;  // 약관 동의(가입 시 1회) 미완료 → 동의 게이트
@@ -777,19 +931,20 @@
       //    들어와 되묻기(무료)를 하고, 값은 다듬기에서만 받는다. 권한 게이트 재도입 금지.
       await loadWallet();
       const qid = new URLSearchParams(location.search).get('q');
-      const q = qid ? await fetchQuestionById(qid) : await window.SOJAE.fetchTodayQuestion(MONC.sb);
-      if (q) { currentQuestion = q; if (CAT_LABEL[q.category]) category = q.category; }
-      document.getElementById('catBadge').textContent = CAT_LABEL[category];
-      // 저장돼 있으면 대화·뼈대·초안 복원 → 복원되면 인사말 생략(중복 방지)
-      const restored = await restoreSession();
-      if (!restored) {
-        const content = q ? q.content : FALLBACK_QUESTION;
-        ai('안녕하세요. 오늘 문제는 <b>' + esc(content) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
-      }
-      moncTrack('sojae_start', { category });
-      _ready = true;                       // 문제 확정 후에만 전송 허용
-      setTimeout(pulse, 1800);             // 인사말이 뜬 뒤에 넛지 시작
-      resetIdle();
+      if (qid) { startChat(await fetchQuestionById(qid)); return; }
+
+      _pool = await window.SOJAE.fetchQuestionPool(MONC.sb);
+      // 문제 풀이 비었거나 조회가 실패하면 고를 것이 없다 — 폴백 문제로 바로 대화를 연다
+      // (진입 화면만 띄우면 학생이 아무것도 못 하고 막힌다).
+      if (!_pool.length) { startChat(null); return; }
+      document.body.classList.add('picking');
+      try {
+        const { data } = await MONC.sb.from('discovery_sessions')
+          .select('question_id, stage').eq('member_id', session.user.id);
+        (data || []).forEach(s => { _sessions[s.question_id] = s.stage; });
+      } catch (_) {}
+      renderPick();
+      moncTrack('sojae_pick_open', { level: _pickLevel });
     })();
   </script>
 </body>

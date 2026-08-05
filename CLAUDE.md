@@ -154,7 +154,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 뉴스 | `news.html`·`scripts/fetch-news.mjs` | 필터는 픽커+바텀시트(칩 나열 회귀 금지), 규칙 수정 시 verify-news-rules.py | `docs/notes/news.md` |
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 구조화 출력·한 파일 유지, 감점 사전은 admin 탭(DB) | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer 의 `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
-| 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB) | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
+| 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB), **난이도 4단계는 `questions.level`(basic/mid/advanced/deep) 한 곳 — 코드명 변경 금지·`.eq('level')` 금지(미적용 환경 400)**, 진입은 난이도 고르는 화면이 먼저(`?q=` 는 건너뜀) | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
 | 답변 저장소·크레딧 | `answers.html`·`mypage.html` | 저장 무료·무제한, answers/mypage 는 같이 고친다 | `docs/notes/credits.md` |
 | 마이페이지 | `mypage.html` | '오늘 한 칸'엔 사이트가 아는 사실만(제출 여부 문장 금지), 접이는 데이터 있는 줄만 | `docs/notes/mypage.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer 의 `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |

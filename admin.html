@@ -191,7 +191,7 @@
     /* 기출 은행 목록 필터 — 유형 칩(개수 배지). 칩 자체는 신청자 현황과 같은 .af-chip 을 쓴다. */
     .apq-filter { margin: 4px 0 12px; }
     .apq-flabel { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    #apqFilter b, #lrShelfBar b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
+    #apqFilter b, #lrShelfBar b, #qLevelFilter b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .rounds-wrap { padding: 24px; max-width: 900px; }
@@ -294,6 +294,11 @@
        모바일에서 본문 아래로 내리는 규칙(아래 960px 블록)이 이 클래스를 기준으로 걸린다. */
     /* 인접 표적 8px(원칙 2) — 이 줄엔 '삭제'가 끼어 있어 오눌림의 대가가 크다. */
     .ri-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    /* 목록에서 바로 난이도를 바꾼다(2026-08-05) — 문제가 80개 넘게 쌓여 있어
+       하나씩 '수정' 폼을 열어 고치면 재분류가 끝나지 않는다. 모양은 .ri-del 과 같은 알약. */
+    .ri-actions .q-lv { font-size: 12px; font-family: inherit; color: var(--action-dark);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+      padding: 6px 10px; cursor: pointer; }
     .ri-edit { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
     .ri-edit:hover { background: var(--action-tint); }
     .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
@@ -1280,7 +1285,9 @@
     <div class="rounds-wrap">
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
         평소엔 <b>활성 문제가 매일 자동으로 순환</b>됩니다(자정에 교체·전원 동일). 특정 날짜에 원하는 문제를 내보내려면
-        <b>오늘 지정</b> 버튼이나 날짜를 지정해 <b>고정</b>하세요. 목록에서 <b style="color:var(--action)">▶ 오늘 노출 중</b>이 지금 나가는 문제예요.
+        <b>오늘 지정</b> 버튼이나 날짜를 지정해 <b>고정</b>하세요. 목록에서 <b style="color:var(--action)">▶ 오늘 노출 중</b>이 지금 나가는 문제예요.<br>
+        <b>순환은 난이도별로 따로 돕니다</b> — 초급·중급·고급·심화 각각 오늘의 문제가 하나씩 있고,
+        학생이 소재 발굴에서 고른 난이도의 문제가 나갑니다. 목록의 난이도 칸을 바꾸면 바로 저장돼요.
       </p>
       <form class="round-form" id="questionForm" style="grid-template-columns:1fr;">
         <div class="field"><label for="qfContent">문제 내용</label>
@@ -1296,12 +1303,22 @@
               <option value="company">기업관심도형</option>
               <option value="personal">개인신상형</option>
             </select></div>
+          <!-- 난이도(2026-08-05) — 학생 화면이 이 값으로 갈린다. 라벨은 sojae-common.js LEVEL_LABEL -->
+          <div class="field"><label for="qfLevel">난이도</label>
+            <select id="qfLevel">
+              <option value="basic">초급</option>
+              <option value="mid">중급</option>
+              <option value="advanced">고급</option>
+              <option value="deep">심화</option>
+            </select></div>
           <div class="field"><label for="qfAirline">항공사(선택)</label><input id="qfAirline" placeholder="예: 대한항공"></div>
           <div class="field field-date"><label for="qfDate">오늘의 문제 날짜(선택)</label><input id="qfDate" type="date"></div>
           <button class="btn btn-action" type="submit" id="qfSubmit">추가</button>
           <button class="btn btn-ghost" type="button" id="qfCancel" style="display:none;">취소</button>
         </div>
       </form>
+      <!-- 난이도 필터(2026-08-05) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip) -->
+      <div class="apq-filter"><span class="apq-flabel">난이도별 보기</span><div class="af-row" id="qLevelFilter"></div></div>
       <div class="round-list" id="questionList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
@@ -1793,7 +1810,7 @@
   <script src="supabase-config.js"></script>
   <!-- 회원 번호 상태 판정에 쓴다 — 가입·신청 창구가 쓰는 것과 **같은 규칙**이어야 한다(2026-08-03) -->
   <script src="phone-check.js"></script>
-  <script src="sojae-common.js"></script>
+  <script src="sojae-common.js?v=2"></script>
   <script src="lecture-common.js"></script>
   <!-- 녹음 미리듣기 동시 재생 차단(전역) -->
   <script src="ba-audio.js" defer></script>
@@ -4038,8 +4055,9 @@
 
     // ── 기출문제(questions) CRUD ──
     const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
+    const Q_LV = window.SOJAE.LEVEL_LABEL;  // 난이도 라벨(초급/중급/고급/심화)
     const todayStr = window.SOJAE.todayStr; // KST 기준 — sojae/mypage와 동일
-    let _questions = [], _editQid = null;
+    let _questions = [], _editQid = null, _qLevelF = '';
 
     function resetQForm() {
       _editQid = null;
@@ -4047,8 +4065,24 @@
       document.getElementById('qfAirline').value = '';
       document.getElementById('qfDate').value = '';
       document.getElementById('qfCategory').value = 'experience';
+      document.getElementById('qfLevel').value = window.SOJAE.DEFAULT_LEVEL;
       document.getElementById('qfSubmit').textContent = '추가';
       document.getElementById('qfCancel').style.display = 'none';
+    }
+
+    // ⚠️ level 은 마이그레이션(20260805120000) 미적용 환경에 아직 없는 컬럼이다.
+    //    없는 컬럼을 보내면 저장 전체가 실패하므로, 그때만 level 을 빼고 다시 보낸다
+    //    (조회는 select('*') 라 원래 안전하다 — 사이트 관례).
+    async function qSave(row, id) {
+      const run = r => id ? MONC.sb.from('questions').update(r).eq('id', id)
+                          : MONC.sb.from('questions').insert(r);
+      let { error } = await run(row);
+      if (error && (error.code === '42703' || error.code === 'PGRST204') && /level/i.test(error.message || '')) {
+        const rest = Object.assign({}, row); delete rest.level;
+        ({ error } = await run(rest));
+        if (!error) alert('난이도는 저장되지 않았어요. 마이그레이션 20260805120000_sojae_levels.sql 을 먼저 실행해 주세요.');
+      }
+      return error;
     }
 
     async function loadQuestions() {
@@ -4059,22 +4093,44 @@
         .order('created_at', { ascending: false });
       if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       _questions = data || [];
+      renderQuestions();
+    }
+
+    function renderQuestions() {
+      const listEl = document.getElementById('questionList');
+      const S = window.SOJAE;
+      // 난이도 칩 — 개수는 숨김 문제까지 센다(여기는 관리 화면이라 전체가 기준)
+      const chip = (v, label, cnt) =>
+        `<button type="button" class="af-chip${_qLevelF === v ? ' on' : ''}" data-qlf="${esc(v)}">${esc(label)}<b>${cnt}</b></button>`;
+      document.getElementById('qLevelFilter').innerHTML = chip('', '전체', _questions.length)
+        + S.LEVELS.map(lv => chip(lv, Q_LV[lv], _questions.filter(q => S.levelOf(q) === lv).length)).join('');
+
       if (!_questions.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 문제가 없습니다. 위에서 추가하세요.</div>'; return; }
       const today = todayStr();
-      // 오늘 실제 노출되는 문제 — 선정 로직은 공용 sojae-common.js(sojae/mypage와 100% 동일)
-      const eff = window.SOJAE.pickEffective(_questions);
-      const effectiveId = eff ? eff.id : null;
-      listEl.innerHTML = _questions.map(q => {
-        const isEffective = q.id === effectiveId;
+      // 오늘 실제 노출되는 문제 — 선정 로직은 공용 sojae-common.js(sojae/mypage와 100% 동일).
+      // ⚠️ 난이도마다 하나씩이라 '오늘 노출 중'은 최대 네 줄이다(학생이 고른 난이도의 것이 나간다).
+      const effIds = new Set();
+      S.LEVELS.forEach(lv => { const e = S.pickEffective(_questions, lv); if (e) effIds.add(e.id); });
+      const rows = _qLevelF ? _questions.filter(q => S.levelOf(q) === _qLevelF) : _questions;
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">이 난이도에는 문제가 없습니다.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(q => {
+        const isEffective = effIds.has(q.id), lv = S.levelOf(q);
         const pin = q.scheduled_date ? (q.scheduled_date === today ? '오늘 고정' : ('예정 고정 ' + q.scheduled_date)) : '자동 순환';
+        // 어느 난이도의 오늘 문제인지는 바로 뒤에 오는 난이도 글자가 말한다(라벨을 겹쳐 쓰지 않는다)
         const liveTag = isEffective ? '<b style="color:var(--action)">▶ 오늘 노출 중</b> · ' : '';
         return `
         <div class="round-item${q.active ? '' : ' is-off'}" data-id="${q.id}" style="${isEffective ? 'box-shadow:inset 3px 0 0 var(--action);' : ''}">
           <div>
             <div class="ri-main">${esc(q.content)}</div>
-            <div class="ri-sub">${liveTag}${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
+            <div class="ri-sub">${liveTag}${esc(Q_LV[lv])} · ${esc(Q_CAT[q.category] || q.category)}${q.airline ? ' · ' + esc(q.airline) : ''} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
           </div>
           <div class="ri-actions">
+            <select class="q-lv" data-id="${q.id}" aria-label="난이도 바꾸기">${
+              S.LEVELS.map(v => `<option value="${v}"${v === lv ? ' selected' : ''}>${esc(Q_LV[v])}</option>`).join('')
+            }</select>
             <button class="ri-del q-today" data-id="${q.id}" style="color:var(--action-dark);border-color:var(--action)">오늘 지정</button>
             <button class="ri-del q-active" data-id="${q.id}">${q.active ? '숨기기' : '노출'}</button>
             <button class="ri-del q-edit" data-id="${q.id}">수정</button>
@@ -4083,11 +4139,23 @@
         </div>`;
       }).join('');
 
+      // 목록에서 바로 난이도 바꾸기 — 재분류가 잦아 '수정' 폼을 열지 않아도 되게 한다
+      listEl.querySelectorAll('.q-lv').forEach(s => s.addEventListener('change', async () => {
+        const err = await qSave({ level: s.value }, s.dataset.id);
+        if (err) { alert('변경 실패: ' + err.message); loadQuestions(); return; }
+        toast('난이도 변경됨'); loadQuestions();
+      }));
+
       // 오늘의 문제로 지정 (다른 문제의 오늘 날짜는 먼저 비워 유일성 보장)
       listEl.querySelectorAll('.q-today').forEach(b => b.addEventListener('click', async () => {
         const id = b.dataset.id, today = todayStr();
-        // 다른 문제의 오늘 고정을 먼저 비워 유일성 확보(비원자 2-step — 관리자 동시조작은 드묾)
-        await MONC.sb.from('questions').update({ scheduled_date: null }).eq('scheduled_date', today).neq('id', id);
+        const lv = S.levelOf(_questions.find(x => x.id === id) || {});
+        // 같은 난이도의 오늘 고정만 비워 유일성 확보(비원자 2-step — 관리자 동시조작은 드묾).
+        // ⚠️ 다른 난이도의 오늘 고정은 그대로 둔다 — 난이도마다 오늘의 문제가 하나씩이다.
+        // ⚠️ .eq('level', …)로 거르지 않는다(마이그레이션 미적용 환경에서 400) — 로컬 목록에서 고른다.
+        const clash = _questions
+          .filter(x => x.id !== id && x.scheduled_date === today && S.levelOf(x) === lv).map(x => x.id);
+        if (clash.length) await MONC.sb.from('questions').update({ scheduled_date: null }).in('id', clash);
         const { error } = await MONC.sb.from('questions').update({ scheduled_date: today, active: true }).eq('id', id);
         if (error) {
           // 23505 = unique_violation: 다른 관리자가 방금 오늘 문제를 잡은 경우
@@ -4111,6 +4179,7 @@
         _editQid = q.id;
         document.getElementById('qfContent').value = q.content || '';
         document.getElementById('qfCategory').value = q.category || 'experience';
+        document.getElementById('qfLevel').value = window.SOJAE.levelOf(q);
         document.getElementById('qfAirline').value = q.airline || '';
         document.getElementById('qfDate').value = q.scheduled_date || '';
         document.getElementById('qfSubmit').textContent = '수정 저장';
@@ -4134,17 +4203,22 @@
       const row = {
         content,
         category: document.getElementById('qfCategory').value,
+        level: document.getElementById('qfLevel').value,
         airline: document.getElementById('qfAirline').value.trim() || null,
         scheduled_date: document.getElementById('qfDate').value || null,
       };
-      const { error } = _editQid
-        ? await MONC.sb.from('questions').update(row).eq('id', _editQid)
-        : await MONC.sb.from('questions').insert(row);
+      const error = await qSave(row, _editQid);
       if (error) { alert('저장 실패: ' + error.message); return; }
       toast(_editQid ? '수정됨' : '추가됨');
       resetQForm(); loadQuestions();
     });
     document.getElementById('qfCancel').addEventListener('click', resetQForm);
+    // 난이도 필터 — 목록만 다시 그린다(재조회 없음)
+    document.getElementById('qLevelFilter').addEventListener('click', e => {
+      const b = e.target.closest('[data-qlf]'); if (!b) return;
+      _qLevelF = b.dataset.qlf;
+      renderQuestions();
+    });
 
     // ── 감점 사전(ai_killer_terms) CRUD — AI킬러 검출의 본체 (2026-07-30) ──
     // ⚠️ RLS 가 관리자에게만 열려 있다(일반 회원은 읽기도 불가 — 경쟁사 복제 방지).
