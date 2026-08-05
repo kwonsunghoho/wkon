@@ -149,7 +149,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 공용 nav | `nav.js`·`nav.css` | 활자·정렬 값은 실측 합의값 — 임의 변경 금지, 소셜 링크는 모바일=햄버거·데스크톱=푸터(상단 바 금지) | `docs/notes/nav.md` |
 | 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로 | `docs/notes/apply-and-payment.md` |
 | 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
-| 승준노트 허브 | `briefing.html` | 이름은 화면 글자만 '승준노트'(파일·클래스명 유지), **코스형 두 상태**(선택 전=코스 카드 4장+상세 패널 하나 / 선택 후=개인화 헤더+'오늘 이어서', 저장은 `members.course`), 카드에 회원별 상태 문구·금액 금지 | `docs/notes/briefing.md` |
+| 승준노트 허브 | `briefing.html` | 이름은 화면 글자만 '승준노트'(파일·클래스명 유지), 카드에 회원별 상태 문구 금지 | `docs/notes/briefing.md` |
 | 연구실 | `lab.html`(허브)·`lab-archive.html`(원장)·`lab-shelf.html`(서가 4종 공용)·`researchers-data.js` | 허브는 카드 두 장·원장은 카드형·상세는 `?shelf=` 한 파일(서가별 HTML 금지), 기출문제는 항공사 자료실 안의 갈래(2026-08-03 합침 — DB shelf 값은 그대로), 자료 파일은 비공개 버킷 + lab-file 서명 URL 로만(공개 URL 금지), 숫자는 `lab_shelf_counts()` 실측값만, **값은 자료마다 `lab_resources.price`(0=무료) — 자료 테이블을 새로 만들지 말 것**, 단 **채용 캘린더만 예외로 `recruit_rounds`**(파일이 아니라 날짜 · 무료 확정 · 상/하반기 칸 금지) | `docs/notes/lab.md` |
 | 뉴스 | `news.html`·`scripts/fetch-news.mjs` | 필터는 픽커+바텀시트(칩 나열 회귀 금지), 규칙 수정 시 verify-news-rules.py | `docs/notes/news.md` |
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 구조화 출력·한 파일 유지, 감점 사전은 admin 탭(DB) | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
@@ -220,7 +220,6 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 환급 RPC(`refund_credit`)를 `authenticated` 에 다시 grant — 학생이 결과를 받은 뒤 스스로 환급해 유료 기능이 공짜가 된다 (credits.md)
 - `applications` INSERT 정책에서 결제 컬럼 제약 빼기 — 누구나 '입금 완료' 행을 넣고 특강 정원을 먹는다 (apply-and-payment.md)
 - 승준노트 카드 권한 배지(`.bf-badge`)·'첫 1회 무료' 같은 회원별 상태 문구 (briefing.md)
-- 승준노트 매거진 목차 6줄(`.ix-item`)·루트맵 룰렛(`.d-route`)·강조 세 자리(01 판·06 소인·03 '처음 추천' 배지) — 2026-08-05 코스형 개편으로 폐지 (briefing.md)
 - 뉴스 필터 칩 나열 sticky 바·리본 북마크·라벨 없는 스크랩 아이콘 (news.md)
 - 투명 nav(`nav-transparent`)·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
 - nav 강조의 깜빡이는 점(`bfPulse`) — 챌린지는 모집 0인 기간이 있어 '새 것' 신호의 근거가 없다(2026-08-03 삭제). 승준노트를 nav 4번으로 내리는 것도 기각 (nav.md)
