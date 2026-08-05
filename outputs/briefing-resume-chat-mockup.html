@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>‘오늘 이어서’ 카드 — 하다 만 대화 넣는 자리 4안</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'SUIT Variable',-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  .wrap{max-width:620px;margin:0 auto;padding:22px 0 70px}
+  .lead{font-size:14px;line-height:1.65;color:var(--text-muted);margin:0 0 6px;padding:0 20px}
+  .lead b{color:var(--text)}
+  .case{margin-top:34px}
+  .case-h{display:flex;align-items:baseline;gap:8px;padding:0 20px;flex-wrap:wrap}
+  .case-h b{font-size:17px;font-weight:800}
+  .case-h span{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink);
+    background:var(--accent-tint);border-radius:999px;padding:3px 9px}
+  .case-note{font-size:13px;line-height:1.65;color:var(--text-muted);margin:6px 0 0;padding:0 20px}
+  .case-note b{color:var(--text)}
+  .case-note .no{color:#B3261E;font-weight:700}
+  /* 375px 실폭 — 페이지의 .container 좌우 여백 20px 을 그대로 준다 */
+  .phone{width:375px;max-width:100%;margin:12px auto 0;padding:14px 20px 20px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+
+  /* ── 실제 briefing.html 의 카드 CSS 를 그대로 옮긴 것(값 바꾸지 말 것) ── */
+  .today{background:var(--surface);border:1px solid var(--border-soft);border-radius:18px;
+    padding:16px;box-shadow:0 2px 12px rgba(23,42,71,.06)}
+  .today-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .today-hd b{font-size:15px;font-weight:800}
+  .today-hd button{appearance:none;font-family:inherit;cursor:pointer;background:var(--surface);
+    border:1px solid var(--action);border-radius:999px;font-size:13px;line-height:20px;
+    font-weight:800;color:var(--action);padding:11px 14px;white-space:nowrap}
+  .today-sub{margin-top:4px;font-size:13px;color:var(--text-muted)}
+  .today-sub b{font-weight:800;color:var(--accent-ink)}
+  .cs-step{display:flex;gap:11px;align-items:center;padding:12px 2px;text-decoration:none;
+    color:var(--text);border-bottom:1px solid var(--border-soft)}
+  .cs-step:last-of-type{border-bottom:0}
+  .cs-step>b{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--accent-tint);
+    color:var(--accent-ink);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .cs-step>span{flex:1 1 auto;min-width:0}
+  .cs-step em{display:block;font-style:normal;font-size:15px;font-weight:700}
+  .cs-step small{display:block;font-size:13px;color:var(--text-dim);margin-top:1px}
+  .cs-step>u{flex:0 0 auto;text-decoration:none;color:var(--accent-dark);opacity:.6}
+  .cs-cta{display:block;width:100%;margin-top:12px;padding:14px 0;border:0;border-radius:999px;
+    background:var(--action);color:var(--action-ink);font-size:15px;font-weight:800;
+    font-family:inherit;cursor:pointer;text-align:center;text-decoration:none}
+
+  /* ── A안 — 스텝 위 '이어서' 띠 ── */
+  .rs-band{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;
+    background:var(--accent-tint);border-radius:12px;text-decoration:none;color:var(--accent-ink)}
+  .rs-band .dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--action)}
+  .rs-band span{flex:1 1 auto;min-width:0;font-size:14px;font-weight:800;line-height:1.4}
+  .rs-band span small{display:block;font-size:12.5px;font-weight:600;color:var(--accent-dark);
+    opacity:.85;margin-top:2px}
+  .rs-band u{flex:0 0 auto;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap}
+
+  /* ── B안 — 1번 스텝에 딸린 줄 ── */
+  .st-wrap{border-bottom:1px solid var(--border-soft)}
+  .st-wrap .cs-step{border-bottom:0}
+  /* padding 13 + line-height 18 = 44px — 터치 하한을 지킨다(9px 로 두면 36px) */
+  .rs-sub{display:flex;align-items:center;gap:8px;margin:0 2px 12px 39px;padding:13px 12px;
+    background:var(--accent-tint);border-radius:10px;text-decoration:none;color:var(--accent-ink);
+    font-size:13px;font-weight:800;line-height:18px}
+  .rs-sub .dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--action)}
+  .rs-sub b{flex:1 1 auto;min-width:0;font-weight:800}
+  .rs-sub u{flex:0 0 auto;text-decoration:none;opacity:.75}
+
+  /* ── C안 — 메인 버튼을 바꾼다 ── */
+  .cs-cta.alt{background:var(--action)}
+  /* padding 13 + line-height 18 = 44px */
+  .rs-second{display:block;margin-top:6px;text-align:center;font-size:13px;line-height:18px;
+    font-weight:700;color:var(--accent-ink);text-decoration:none;padding:13px 8px}
+
+  /* ── D안 — 카드 밖 띠(미니 다듬기 띠와 같은 결) ── */
+  .rs-strip{display:flex;align-items:center;gap:10px;margin-top:12px;padding:14px 14px;
+    background:var(--accent-tint);border-radius:14px;text-decoration:none;color:var(--accent-ink)}
+  .rs-strip span{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:700;line-height:1.45}
+  .rs-strip u{flex:0 0 auto;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap}
+  .qf-strip{display:flex;align-items:center;gap:10px;margin-top:12px;padding:14px;
+    background:var(--surface2, #F1F4F8);border-radius:14px;color:var(--text);
+    font-size:13.5px;font-weight:700;text-decoration:none}
+  .qf-strip span{flex:1 1 auto}
+  .qf-strip u{flex:0 0 auto;text-decoration:none;color:var(--accent-ink);font-weight:800;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="lead"><b>‘오늘 이어서’ 카드에 “하다 만 대화”를 넣는 자리 — 현행 + 4안</b></p>
+  <p class="lead">375px 실폭. 카드 CSS 는 라이브 값을 그대로 옮겼다. 숫자 2 는 예시다.</p>
+  <p class="lead">공통 규칙: <b>0개면 아예 안 그린다</b>(빈 껍데기 금지). 조회 실패도 안 그린다.</p>
+
+  <!-- ────────────────────────────── 현행 ────────────────────────────── -->
+  <section class="case">
+    <div class="case-h"><b>현행</b><span>지금 라이브(v8)</span></div>
+    <p class="case-note">하다 만 대화가 있어도 화면에 아무 표시가 없다.</p>
+    <div class="phone">
+      <div class="today">
+        <div class="today-hd"><b>오늘 이어서</b><button type="button">코스 바꾸기</button></div>
+        <p class="today-sub"><b>초급 코스</b> · 번호 순서대로 하나씩 하면 돼요</p>
+        <a class="cs-step" href="#"><b>1</b><span><em>답변 소재 발굴</em><small>내 경험에서 답변 소재부터 찾아요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>2</b><span><em>필수 기출 하루 한 개</em><small>매일 한 문항씩 근거 있게 완성해요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>3</b><span><em>초급 기출 준비</em><small>소재 문제는 초급 난이도부터 골라요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-cta" href="#">1번부터 시작하기 · 답변 소재 발굴</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── A안 ────────────────────────────── -->
+  <section class="case">
+    <div class="case-h"><b>A안</b><span>스텝 위 띠</span></div>
+    <p class="case-note">코스 이름 줄 바로 아래, 번호 목록보다 위. <b>제일 먼저 눈에 들어온다.</b><br>
+      대신 1·2·3 순서보다 위에 끼어서, 처음 온 사람에게는 “0번”처럼 읽힐 수 있다.</p>
+    <div class="phone">
+      <div class="today">
+        <div class="today-hd"><b>오늘 이어서</b><button type="button">코스 바꾸기</button></div>
+        <p class="today-sub"><b>초급 코스</b> · 번호 순서대로 하나씩 하면 돼요</p>
+        <a class="rs-band" href="#">
+          <i class="dot"></i>
+          <span>하다 만 대화 2개<small>답변까지 안 간 소재 대화가 남아 있어요</small></span>
+          <u>이어서 →</u>
+        </a>
+        <a class="cs-step" href="#"><b>1</b><span><em>답변 소재 발굴</em><small>내 경험에서 답변 소재부터 찾아요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>2</b><span><em>필수 기출 하루 한 개</em><small>매일 한 문항씩 근거 있게 완성해요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>3</b><span><em>초급 기출 준비</em><small>소재 문제는 초급 난이도부터 골라요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-cta" href="#">1번부터 시작하기 · 답변 소재 발굴</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── B안 ────────────────────────────── -->
+  <section class="case">
+    <div class="case-h"><b>B안</b><span>1번 스텝에 딸린 줄</span></div>
+    <p class="case-note">대화는 <b>소재 발굴에서 생긴 것</b>이라 1번 자리에 붙인다. 번호 순서를 안 깨뜨린다.<br>
+      대신 스크롤을 조금 내려야 보이고, 줄이 한 단 들어가 있어 A안보다 약하게 읽힌다.</p>
+    <div class="phone">
+      <div class="today">
+        <div class="today-hd"><b>오늘 이어서</b><button type="button">코스 바꾸기</button></div>
+        <p class="today-sub"><b>초급 코스</b> · 번호 순서대로 하나씩 하면 돼요</p>
+        <div class="st-wrap">
+          <a class="cs-step" href="#"><b>1</b><span><em>답변 소재 발굴</em><small>내 경험에서 답변 소재부터 찾아요</small></span><u aria-hidden="true">→</u></a>
+          <a class="rs-sub" href="#"><i class="dot"></i><b>하다 만 대화 2개 이어서 하기</b><u aria-hidden="true">→</u></a>
+        </div>
+        <a class="cs-step" href="#"><b>2</b><span><em>필수 기출 하루 한 개</em><small>매일 한 문항씩 근거 있게 완성해요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>3</b><span><em>초급 기출 준비</em><small>소재 문제는 초급 난이도부터 골라요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-cta" href="#">1번부터 시작하기 · 답변 소재 발굴</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── C안 ────────────────────────────── -->
+  <section class="case">
+    <div class="case-h"><b>C안</b><span>메인 버튼 교체</span></div>
+    <p class="case-note">하다 만 게 있으면 <b>네이비 바가 그것부터</b> 가리킨다. 누를 곳이 계속 하나다.<br>
+      <span class="no">단점이 크다</span> — 코스를 시작하는 버튼이 사라져서, 다음에 들어와도 계속 “이어서”만 보인다. 대화를 안 끝내면 코스가 시작이 안 된 채로 머문다.</p>
+    <div class="phone">
+      <div class="today">
+        <div class="today-hd"><b>오늘 이어서</b><button type="button">코스 바꾸기</button></div>
+        <p class="today-sub"><b>초급 코스</b> · 번호 순서대로 하나씩 하면 돼요</p>
+        <a class="cs-step" href="#"><b>1</b><span><em>답변 소재 발굴</em><small>내 경험에서 답변 소재부터 찾아요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>2</b><span><em>필수 기출 하루 한 개</em><small>매일 한 문항씩 근거 있게 완성해요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>3</b><span><em>초급 기출 준비</em><small>소재 문제는 초급 난이도부터 골라요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-cta alt" href="#">하다 만 대화 2개 이어서 하기</a>
+        <a class="rs-second" href="#">처음부터 1번 하기 · 답변 소재 발굴</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── D안 ────────────────────────────── -->
+  <section class="case">
+    <div class="case-h"><b>D안</b><span>카드 밖 띠</span></div>
+    <p class="case-note">카드는 그대로 두고 아래에 띠를 하나 더 놓는다. 만들기 제일 쉽다.<br>
+      <span class="no">단점</span> — 바로 밑 ‘미니 다듬기’ 띠와 생김새가 같아서 <b>띠가 두 줄로 쌓인다.</b> 카드 밖이라 못 보고 지나치기도 쉽다.</p>
+    <div class="phone">
+      <div class="today">
+        <div class="today-hd"><b>오늘 이어서</b><button type="button">코스 바꾸기</button></div>
+        <p class="today-sub"><b>초급 코스</b> · 번호 순서대로 하나씩 하면 돼요</p>
+        <a class="cs-step" href="#"><b>1</b><span><em>답변 소재 발굴</em><small>내 경험에서 답변 소재부터 찾아요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>2</b><span><em>필수 기출 하루 한 개</em><small>매일 한 문항씩 근거 있게 완성해요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-step" href="#"><b>3</b><span><em>초급 기출 준비</em><small>소재 문제는 초급 난이도부터 골라요</small></span><u aria-hidden="true">→</u></a>
+        <a class="cs-cta" href="#">1번부터 시작하기 · 답변 소재 발굴</a>
+      </div>
+      <a class="rs-strip" href="#"><span>하다 만 대화 2개, 이어서 마무리할까요?</span><u>이어서 →</u></a>
+      <a class="qf-strip" href="#"><span>AI 느낌이 나는 구간, 붙여넣으면 다듬어드려요</span><u>무료 →</u></a>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
