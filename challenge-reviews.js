@@ -39,7 +39,7 @@
   /* 스타일 — 상세 4종의 기존 토큰(--surface·--border·--accent-ink)만 쓴다.
      새 색을 만들지 않는다(팔레트 규칙). 카드는 목록 페이지의 인용 카드와 같은 성격. */
   var CSS = ''
-    + '.ch-rv{padding:64px 20px;background:var(--bg2,#F4F7FC);}'
+    + '.ch-rv{padding:64px 20px;}'   /* 배경 없음 — 전체 폭 밴드 폐지(2026-08-05) */
     + '.ch-rv[hidden]{display:none;}'
     + '.ch-rv-in{max-width:960px;margin:0 auto;}'
     + '.ch-rv-head{text-align:center;margin-bottom:28px;}'

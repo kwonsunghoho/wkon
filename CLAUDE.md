@@ -215,6 +215,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 각 항목의 배경·실측은 괄호의 문서에 있다.
 
+- 전체 폭 섹션 밴드(`background: var(--bg2)` 를 화면 폭 섹션·푸터에 깔기) — 순백과 만나는 가로선이 생긴다. `--bg2` 는 **흰 카드 안 옅은 판 전용** (design-principles.md)
 - 웜 페이퍼 배경(`--bg #F4F1EA`·`--bg2 #FBF9F5`·`--surface2 #F4F0E8`·nav 바 `rgba(255,250,243,·)`·레터프레스 `#FCF9F1→#F3EEE1`)과 웜그레이 잉크(`#26221C`·`#5F574B`) — 2026-08-05 순백+쿨 그레이로 전면 교체 (design-principles.md)
 - `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 패턴 (apply-and-payment.md)
 - 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
