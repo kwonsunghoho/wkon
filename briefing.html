@@ -481,7 +481,15 @@ var COURSE_BY = {};
 COURSES.forEach(function (c) { COURSE_BY[c.code] = c; });
 
 var HINT_KEY    = 'monc_course_v1';          /* 그리기용 기기 기억(권한 아님) */
-var BF_VER      = 'v13';                     /* 화면에 보이는 판 번호 — 고칠 때마다 올린다 */
+/* 판 번호 — 배포된 파일이 새 것인지 가리는 표식. **화면에는 안 띄운다**(2026-08-06 오너
+   지시 — 학생에게는 뜻 없는 글자다. 구 '코스는 계정에 저장돼요 · … · v12' 꼬리표 폐지).
+   확인은 `<body data-bf>` 로 한다: 개발자도구 없이도 페이지 소스에서 보이고,
+   콘솔이 있으면 `document.body.dataset.bf` 한 줄이면 된다.
+   ⚠️ 화면 로직을 고칠 때마다 이 값을 올린다 — GitHub Pages 가 HTML 을 10분 캐시해서
+      "고쳤는데 그대로다" 논쟁이 반복됐다(2026-08-06: 라이브와 로컬이 바이트까지 같은데도
+      폰은 옛 화면이었다). */
+var BF_VER      = 'v14';
+try { document.body.dataset.bf = BF_VER; } catch (e) {}
 
 /* ⚠️⚠️ **코스를 저장하는 길은 [이 코스로 시작하기] 버튼 하나뿐이다. 두 번째 길을 만들지 말 것.**
    (2026-08-06 오너 확정 — "이 저장하는게 굉장히 문제가 많거든? 이거 꼭 필요해?")
@@ -609,9 +617,10 @@ function paintDetail(code) {
     recoRow(c) +
     '<div class="cs-meta">' + esc(c.time) + '</div>' +
     '<button class="cs-cta" type="button" id="btnStart">이 코스로 시작하기</button>' +
-    /* 판 버전 — 폰이 캐시된 옛 파일을 보고 있는지 한눈에 가리는 표식.
-       고칠 때마다 BF_VER 를 올린다(안 올리면 "고쳤는데 그대로" 논쟁이 반복된다). */
-    '<p class="cs-note">코스는 계정에 저장돼요 · 언제든 바꿀 수 있어요 · ' + BF_VER + '</p>' +
+    /* ⚠️ 여기에 판 번호(BF_VER)를 다시 붙이지 말 것 — 2026-08-06 오너 지시로 뺐다.
+       학생에게는 뜻 없는 글자이고, 값만 남은 꼬리표는 오타로 읽힌다(design-principles
+       '값에는 그것이 무엇인지 붙이기'). 배포 확인은 `<body data-bf>` 로 한다. */
+    '<p class="cs-note">코스는 계정에 저장돼요 · 언제든 바꿀 수 있어요</p>' +
     '<p class="cs-err" id="startErr" hidden></p>';
   var rows = document.querySelectorAll('.cs-row');
   [].forEach.call(rows, function (b) {
@@ -665,7 +674,7 @@ async function startCourse(code) {
   if (btn) { btn.disabled = true; btn.textContent = '저장 중…'; }
   /* 누르자마자 화면에 진행 글자를 남긴다 — '아무 일도 안 일어난' 상태를 없앤다.
      이 글자조차 안 뜨면 이 코드가 아예 안 도는 것(캐시된 옛 파일)이다. */
-  showStartErr('저장하고 있어요… (' + BF_VER + ')', true);
+  showStartErr('저장하고 있어요…', true);
   /* 어떤 갈래로 끝나든 버튼은 반드시 되돌린다 */
   var restore = function () {
     if (btn) { btn.disabled = false; btn.textContent = '이 코스로 시작하기'; }
