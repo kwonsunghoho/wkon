@@ -213,6 +213,24 @@ alert 은 닫는 순간 문구가 사라지고, 모바일에서 **어디를 고�
 
 ### 검증(재현 가능)
 `challenge_rounds` 를 목으로 갈아끼워 세 경우를 각각 연다 — `scratchpad/recruit-gate.mjs`.
+
+## 선착순 기수 — `challenge_rounds.start_mode` (2026-08-06 오너 요청)
+
+날짜 마감 외에 **"인원이 모이면 바로 시작"하는 선착순 기수**를 열 수 있다.
+마이그레이션 `20260806170000_challenge_rounds_fcfs.sql`(`start_mode` 'scheduled'/'fcfs' + `recruit_end` nullable).
+
+- **판정**: `start_mode='fcfs'** 면 `recruit_end` 가 null 이어도 정상 기수다. `getStatus()` 는
+  마감 없음 = 시작했으면 계속 `open`. 마감(닫기)은 admin 이 수정(마감일 입력·개강일 지정 전환)·삭제로 한다.
+- **화면 문구**: 허브 카드 띠 '모집 중 · 선착순' + 메타 '선착순 모집 8/6~', 상세 칩
+  '선착순 모집 중 · 인원이 모이면 바로 시작', 하단 CTA 뱃지는 날짜 D-day 가 하나도 없을 때만 '선착순 모집 중'.
+  D-day 는 없다(마감이 날짜가 아니다).
+- **⚠️ null 마감을 'none' 으로 떨어뜨리지 말 것** — `loadChallengeStatuses`/`applyIndexRecruit`/
+  `applyDetailRecruit`/`applyGlobalRecruitCta`/`challenge-sticky.js` 다섯 곳 모두
+  `(!end && !fcfs)` 일 때만 미등록 취급한다. 선착순 행이 '다음 기수 준비 중'으로 보이면 이 조건이 깨진 것.
+- **⚠️ `loadRecruitDataFromSupabase` 는 `select('*')`** — `start_mode` 를 나열하면 마이그레이션
+  미적용 환경에서 조회 전체가 400 난다. 미적용이면 `fcfs=false` 로 떨어져 기존 동작 그대로.
+- 서버는 모집 기간을 안 본다(중복·정원만 판정) — 선착순이라고 verify-payment 를 고칠 일은 없다.
+- 검증: `scratchpad/recruit-fcfs-test.mjs`(node 16검사) + admin 검사대·상세/허브 목 주입 실측(2026-08-06).
 1. **기수 0건**: 상태 `none` · 칩/버튼 '다음 기수 준비 중' · 버튼을 눌러도 **apply.html 로 안 감** ·
    오픈 알림 시트가 열림 · 신청 페이지 카드 4개 전부 비활성 + '준비 중' + 오픈 알림 버튼.
 2. **보이스만 모집 중**: voice 만 열림, 나머지 3개는 '준비 중'.

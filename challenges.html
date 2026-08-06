@@ -463,14 +463,17 @@
       const d = data ? data[id] : null;
       const start = (d && d.start) || card.dataset.recruitStart;
       const end   = (d && d.end)   || card.dataset.recruitEnd;
+      const fcfs  = !!(d && d.fcfs);   // 선착순 — 마감일이 없어도 그린다
       const meta = card.querySelector('.ch-meta');
-      if (!meta || !start || !end) return;
+      if (!meta || !start || (!end && !fcfs)) return;
       const status = getStatus(start, end);
       if (status === 'closed') { meta.textContent = ''; return; }
       const round = window._challengeRounds && window._challengeRounds[id];
       /* 기간은 압축형(7/28~8/6) — 카드 하단 한 줄 고정(.ch-meta nowrap)과 한 쌍.
-         '모집' 라벨은 유지한다(원칙 15 — 없으면 챌린지 진행 기간으로 읽힌다). */
-      meta.textContent = [round ? round + '기' : null, '모집 ' + fmtPeriod(start, end).replace(/ /g, '')]
+         '모집' 라벨은 유지한다(원칙 15 — 없으면 챌린지 진행 기간으로 읽힌다).
+         선착순은 '선착순 모집 8/6~' — 마감이 날짜가 아니라 인원이라는 것만 말한다. */
+      meta.textContent = [round ? round + '기' : null,
+        (fcfs ? '선착순 모집 ' : '모집 ') + fmtPeriod(start, end).replace(/ /g, '')]
         .filter(Boolean).join(' · ');
     });
   });
