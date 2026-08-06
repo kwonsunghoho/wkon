@@ -23,13 +23,17 @@
 
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
 
-  /* 하위 항목 — 승준노트는 briefing.html 카드와, 챌린지는 challenges.html 카드와 같은 목록.
-     ⚠️ 실전 모의면접(rehearsal)은 배포 보류라 briefing.html 에서도 숨겨져 있다 — 넣지 말 것.
+  /* 승준코스 — 드롭다운 없는 단독 링크(특강과 같은 형). 2026-08-06 오너 확정으로
+     승준노트를 '승준코스(briefing.html)'와 '승준 도구(tools.html)' 둘로 분리했다.
+     ⚠️ 파일명은 briefing.html 그대로다(계측·외부 링크) — 화면 이름만 승준코스. */
+  var COURSE_LINK = 'briefing.html';
+  /* 하위 항목 — 승준 도구는 tools.html 격자와, 챌린지는 challenges.html 카드와 같은 목록.
+     ⚠️ 실전 모의면접(rehearsal)은 배포 보류 — 넣지 말 것.
      ⚠️ 맨 앞에 있던 '승준노트 한눈에'·'챌린지 한눈에'(허브 링크)는 2026-07-31 오너 지시로 뺐다.
         허브로 가는 길은 아래 HUB 상수 + 상위 버튼 '한 번 더 누르기'가 대신한다(wire() 참조) —
         목록 맨 위에 다시 넣지 말 것. */
-  var BRIEFING_HUB = 'briefing.html';
-  var BRIEFING_SUB = [
+  var TOOLS_HUB = 'tools.html';
+  var TOOLS_SUB = [
     /* ⚠️ 1번 항목은 저장소(answers.html) 직행 — 구 mypage.html#sec-answers 는 저장 답변이
        0건이면 접이가 아예 안 그려져 '눌렀는데 아무것도 없음'이 됐다(2026-08-02 오너
        "접힌 칸으로 안 가게 해야지"). 마이페이지 접이로 되돌리지 말 것. */
@@ -77,9 +81,11 @@
   /* 어느 메뉴가 '현재 위치'인지 — 하위 페이지에 있어도 상위 메뉴에 표시가 남아야
      '내가 어디에 있는지'를 알 수 있다(오너가 불편해한 지점의 절반이 이것이다). */
   var SECTION_OF = {
-    'briefing.html': 'briefing', 'news.html': 'briefing', 'sojae.html': 'briefing',
-    'ai-killer.html': 'briefing', 'answers.html': 'briefing', 'polish.html': 'briefing',
-    'programs.html': 'briefing', 'program.html': 'briefing', 'experiences.html': 'briefing',
+    /* 승준코스는 단독 링크라 자기 파일 하나뿐. 도구 페이지들은 '승준 도구' 소속 표시 */
+    'briefing.html': 'course',
+    'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
+    'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
+    'programs.html': 'tools', 'program.html': 'tools', 'experiences.html': 'tools',
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',
@@ -117,7 +123,7 @@
         빠뜨리면 그 화면에서 현재 표시가 아무 줄에도 안 붙는다. */
   var QUERY_DEFAULT = { 'reviews-list.html': { kind: 'challenge' } };
   var QUERY_VALUES = {};   // 'reviews-list.html|kind' → ['challenge','consult']
-  [BRIEFING_SUB, CHALLENGE_SUB, LAB_SUB, REVIEW_SUB].forEach(function (list) {
+  [TOOLS_SUB, CHALLENGE_SUB, LAB_SUB, REVIEW_SUB].forEach(function (list) {
     list.forEach(function (it) {
       var p = String(it[0]).split('#')[0].split('?');
       if (!p[1]) return;
@@ -159,10 +165,11 @@
   /* ── 소셜 링크 (2026-08-04 오너 지시) ────────────────────────────────────────
      자리를 기기별로 나눈다 — **모바일은 햄버거 메뉴 하단, 데스크톱은 푸터.**
      ⚠️⚠️ **상단 바에는 넣지 말 것.** 두 가지 이유가 겹친다:
-        ① 769~1059px 폴백은 메뉴 gap 을 16px 까지 좁혀 **겨우 넘침 0** 이다(nav.css 실측
-           주석). '후기'가 드롭다운이 되며 21px 늘었을 때 1000px 에서 우측 블록을 3px
-           침범한 전례가 있다 — 아이콘 두 개(약 60px)면 그 구간이 다시 깨진다.
-        ② 768px 이하에서 `.nav-right` 가 통째로 숨는다(모바일 상단은 로고+햄버거뿐).
+        ① 881~1059px 폴백은 메뉴 gap 을 16px 까지 좁혀 **겨우 넘침 0** 이다(nav.css 실측
+           주석 — 6항목 분리로 하한이 769→881 로 올라간 경위 포함). '후기'가 드롭다운이 되며
+           21px 늘었을 때 1000px 에서 우측 블록을 3px 침범한 전례가 있다 —
+           아이콘 두 개(약 60px)면 그 구간이 다시 깨진다.
+        ② 880px 이하에서 `.nav-right` 가 통째로 숨는다(모바일 상단은 로고+햄버거뿐).
            트래픽 99%가 모바일이라 상단 바는 **대부분의 학생이 못 보는 자리**다.
      ⚠️ 아이콘만 두지 말 것 — 글자를 같이 붙인다(원칙 15 '값에는 그것이 무엇인지 붙이기').
         라벨 없는 아이콘은 뉴스 스크랩에서 같은 이유로 폐기됐다.
@@ -260,12 +267,12 @@
       '<span class="mm-go">' + (hint.role === 'admin' ? '관리자 페이지 가기 →' : '마이페이지 가기 →') + '</span></span>';
   }
 
-  /* ── 항목 순서: 챌린지 · 승준노트 · 연구실 · 특강 · 후기 (2026-08-03 오너 확정) ──
-     인스타로 처음 들어온 학생에게 주력 상품인 챌린지를 먼저 보이려고 1번으로 올렸다.
-     ⚠️ 승준노트는 **2번을 유지한다.** 오너 최초 안은 4번이었으나, 회원이 매일 쓰는 도구
-        6개가 전부 이 안에 있어 재방문 동선이 가장 길어지고, 같은 날 강조 표시까지 챌린지로
-        옮겨 눈에 띄는 수단이 하나도 안 남는다(무료 도구 미발견 문제는 2026-08-02 에 홈
-        클로징 직접 링크로 한 번 손본 적이 있다). 챌린지는 2번에 둬도 맨 앞이라 목적은 같다.
+  /* ── 항목 순서: 챌린지 · 승준코스 · 승준 도구 · 연구실 · 특강 · 후기 (2026-08-06 분리) ──
+     2026-08-03 확정 순서(챌린지·승준노트·연구실·특강·후기)에서 승준노트 자리를 코스·도구
+     둘로 나눴다 — 코스를 밀기 위한 분리(오너 확정)라 코스가 도구보다 앞이다.
+     인스타로 처음 들어온 학생에게 주력 상품인 챌린지를 먼저 보이는 1번 규칙은 그대로다.
+     ⚠️ 구 '승준노트 2번 유지' 근거(매일 쓰는 도구 6개의 재방문 동선)는 이제 '승준 도구'가
+        이어받는다 — 도구 드롭다운을 4번 뒤로 내리지 말 것.
      ⚠️ 데스크톱 .nav-links 와 아래 모바일 아코디언은 **항상 같은 순서**로 둔다. */
   var navHtml =
     /* 본문 바로가기 (2026-08-02 D-12) — 37개 페이지 전부에 없었다. 데스크톱 키보드
@@ -281,9 +288,10 @@
             '<button class="nav-dd-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
+          '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준코스</a></li>' +
           '<li class="nav-dd">' +
-            '<button class="nav-dd-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('briefing') + '>승준노트' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(BRIEFING_SUB) + '</div>' +
+            '<button class="nav-dd-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('tools') + '>승준 도구' + CHEV + '</button>' +
+            '<div class="nav-dd-menu">' + ddMenu(TOOLS_SUB) + '</div>' +
           '</li>' +
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
@@ -309,10 +317,11 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
+        '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준코스</a></li>' +
         '<li class="mm-acc">' +
-          '<button class="mm-acc-btn" type="button" data-hub="' + BRIEFING_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('briefing') + '>승준노트' +
+          '<button class="mm-acc-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('tools') + '>승준 도구' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
-          '<div class="mm-acc-panel" id="mmBriefing">' + accPanel(BRIEFING_SUB) + '</div>' +
+          '<div class="mm-acc-panel" id="mmBriefing">' + accPanel(TOOLS_SUB) + '</div>' +
         '</li>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-controls="mmLab"' + cur('lab') + '>연구실' +
@@ -413,14 +422,14 @@
 
   function wire() {
     /* ── 드롭다운 ──
-       ⚠️ 드롭다운이 여럿이라(승준노트·챌린지·연구실) 하나를 열면 나머지는 닫는다 — 같이 열리면 메뉴가 겹쳐 뜬다.
+       ⚠️ 드롭다운이 여럿이라(승준 도구·챌린지·연구실·후기) 하나를 열면 나머지는 닫는다 — 같이 열리면 메뉴가 겹쳐 뜬다.
        ⚠️ 누름 횟수는 **마우스 유무로 갈린다**(2026-08-02 오너 "웹에서는 두번 클릭해야 허브로
           이동하잖아? 한번 클릭으로 바꿔줘 … 모바일은 한번에 이동하면 하위탭이 의미가 없잖아").
           · 마우스가 있는 기기 → **한 번에 허브로 이동.** 목차는 CSS 의 `:hover`/`:focus-within`
             이 이미 열어 주므로(nav.css) '여는 클릭'이 하는 일이 없었다.
-          · 마우스가 없는 넓은 화면(터치 태블릿 ≥769px) → **예전대로 두 번.** 여기서 한 번에
+          · 마우스가 없는 넓은 화면(터치 태블릿 ≥881px) → **예전대로 두 번.** 여기서 한 번에
             보내면 드롭다운을 열 방법이 아예 사라진다.
-          · 모바일(≤768px)은 이 코드가 아니라 아래 햄버거 아코디언이고 거기는 두 번 유지.
+          · 모바일(≤880px)은 이 코드가 아니라 아래 햄버거 아코디언이고 거기는 두 번 유지.
        ⚠️ 폭(미디어쿼리)이 아니라 `(hover: hover)` 로 가른다 — 같은 1024px 라도 노트북과
           아이패드는 필요한 동작이 다르다. 클릭 시점에 물어봐서 기기 상태가 바뀌어도 따라간다.
           (구 규칙은 '어디서나 두 번'이었고, 그때 쓰던 `:hover` **상태** 판정은 여전히 금지 —
