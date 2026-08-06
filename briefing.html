@@ -244,7 +244,7 @@
        2026-08-06 실측 사고: `body.has-course.course-ready #pickSection{display:none}` 은
        클래스가 둘이라 `body.pick-mode #pickSection{display:block}`(클래스 하나)을 이긴다.
        CSS 는 뒤에 썼다고 이기는 게 아니라 특이도가 높은 쪽이 이긴다. 그래서 '코스 바꾸기'로
-       ?pick=1 에 들어가도 **코스 목록이 안 뜨고 내 코스 카드만 남아 있었다**(허브로 안 감).
+       허브로 넘어가도 **코스 목록이 안 뜨고 내 코스 카드만 남아 있었다**(허브로 안 감).
        두 규칙을 특이도로 겨루게 두지 말고, 허브 모드에서는 아예 안 걸리게 만든다. */
     body.has-course:not(.pick-mode) #heroPublic { display: none; }
     body.has-course:not(.pick-mode) #heroMine { display: block; }
@@ -254,9 +254,9 @@
     body.has-course.course-ready:not(.pick-mode) #todayCard { display: block; }
     /* 코스를 고른 뒤에는 **내 코스만 남긴다**(2026-08-06 오너 확정) — 다른 코스 목록과
        '내 입맛대로' 도구는 감춘다. 화면에 길이 여러 개면 뭘 눌러야 할지 헷갈린다.
-       ⚠️ 다만 **돌아갈 길이 반드시 있어야 한다** — '코스 바꾸기'가 `?pick=1` 로 이동하고,
-          그 주소에서는 아래 pick-mode 규칙이 허브(고르는 화면)를 되살린다. 이 두 규칙은
-          한 쌍이다. 한쪽만 지우면 코스를 바꿀 길이 사라진다(같은 사고를 이미 냈다). */
+       ⚠️ 다만 **돌아갈 길이 반드시 있어야 한다** — '코스 바꾸기'와 뒤로가기가 `pick-mode` 를
+          켜서 아래 규칙으로 허브(고르는 화면)를 되살린다. 이 두 규칙은 한 쌍이다.
+          한쪽만 지우면 코스를 바꿀 길이 사라진다(같은 사고를 이미 냈다). */
     body.has-course.course-ready:not(.pick-mode) #pickSection,
     body.has-course.course-ready:not(.pick-mode) #freeSection { display: none; }
 
@@ -481,7 +481,7 @@ var COURSE_BY = {};
 COURSES.forEach(function (c) { COURSE_BY[c.code] = c; });
 
 var HINT_KEY    = 'monc_course_v1';          /* 그리기용 기기 기억(권한 아님) */
-var BF_VER      = 'v12';                     /* 화면에 보이는 판 번호 — 고칠 때마다 올린다 */
+var BF_VER      = 'v13';                     /* 화면에 보이는 판 번호 — 고칠 때마다 올린다 */
 
 /* ⚠️⚠️ **코스를 저장하는 길은 [이 코스로 시작하기] 버튼 하나뿐이다. 두 번째 길을 만들지 말 것.**
    (2026-08-06 오너 확정 — "이 저장하는게 굉장히 문제가 많거든? 이거 꼭 필요해?")
@@ -498,15 +498,33 @@ var WANT_COURSE = (function () {
   var m = /[?&]c=([a-z]+)/.exec(window.location.search);
   var c = m && COURSE_BY[m[1]] ? m[1] : null;
   /* 한 번 쓰고 주소에서 뗀다(새로고침에 다시 펴지지 않게). 기록은 안 쌓는다. */
-  if (c) { try { history.replaceState(null, '', 'briefing.html' + (/[?&]pick=1/.test(location.search) ? '?pick=1' : '')); } catch (e) {} }
+  if (c) { try { history.replaceState(null, '', 'briefing.html'); } catch (e) {} }
   return c;
 })();
 
-/* 허브 모드 — '코스 바꾸기'로 들어온 주소(?pick=1). 저장된 코스가 있어도 고르는 화면을 편다. */
-var PICK_MODE = /[?&]pick=1/.test(window.location.search);
-/* 들어올 때의 주소는 따로 기억한다 — PICK_MODE 는 화면을 따라 바뀌지만, '이 사람이 코스를
-   바꾸러 들어온 것인지'는 처음 주소로만 알 수 있다(아래 paintMine 의 되돌리기가 쓴다). */
-var ENTERED_PICK = PICK_MODE;
+/* ══ 어느 화면으로 열 것인가 — **방문 기록(history.state)** 이 정한다 ═══════════
+   ⚠️⚠️ **승준노트를 눌러 새로 들어오면 언제나 허브(코스 목록)다.** 코스를 골라 뒀다고
+   내 코스 화면으로 열지 말 것(2026-08-06 오너 확정 — *"내가 초급을 선택했다고 승준노트
+   눌렀을때 초급코스가 보이는걸 하지말라는거야. 그 화면에 있으면 안된다고"*).
+
+   다만 **도구에서 뒤로 돌아오는 것은 다르다** — 그때는 보던 화면(내 코스)으로 돌아와야 한다.
+   둘을 가르는 표식이 `history.state.bf` 다. 주소로 가르지 않는 이유는 두 화면의 주소가
+   같아야 하기 때문이다(`?pick=1` 은 이 판에서 폐지 — 주소에 화면 상태를 실으면 그 주소가
+   공유·새로고침으로 되살아나 "왜 내 코스가 안 뜨냐"가 다시 생긴다).
+
+   - 새로 들어옴(nav·링크·주소창) → `history.state` 없음 → **허브**
+   - 코스 선택 → `pushState({bf:'mine'})` → 내 코스 화면. **뒤로가기 = 허브**
+   - 도구에 갔다 뒤로 → 그 기록 칸의 state 가 `{bf:'mine'}` → **내 코스 화면으로 복귀**
+     (state 는 새로고침을 넘어 살아남으므로 맨 아래 bfcache reload 뒤에도 유지된다) ══ */
+var VIEW = (function () {
+  var s = null;
+  try { s = history.state; } catch (e) {}
+  var v = (s && s.bf === 'mine') ? 'mine' : 'hub';
+  /* 표식이 없는 칸(새로 들어옴)에도 'hub' 를 박아 둔다 — popstate 가 돌아올 자리를 알게. */
+  if (!s || !s.bf) { try { history.replaceState({ bf: v }, ''); } catch (e) {} }
+  return v;
+})();
+var PICK_MODE = (VIEW !== 'mine');     /* true = 허브(고르는 화면)를 보여 준다 */
 if (PICK_MODE) document.body.classList.add('pick-mode');
 
 /* 기기에 저장된 supabase 토큰에서 회원 id 를 바로 읽는다(동기 — 기다림 없음).
@@ -673,14 +691,14 @@ async function startCourse(code) {
     /* ⚠️ 저장 뒤 페이지를 다시 부르지 않는다(2026-08-06 오너 신고 "그냥 그대로
        새로고침된다"). 다시 부르면 화면이 다시 서버를 읽어야 하고, 그 읽기가 실패하면
        새로고침만 되고 화면은 그대로다. 방금 저장된 행을 그대로 받아서 바로 그린다. */
-    /* 고르는 화면 → 내 코스 화면. 주소에서 pick 을 떼고 **기록을 한 칸 쌓는다**(pushState).
+    /* 허브 → 내 코스 화면. **기록을 한 칸 쌓는다**(pushState) — 그래야 뒤로가기가 허브다.
        ⚠️ replaceState 로 되돌리지 말 것(2026-08-06 오너 신고) — 화면은 넘어갔는데 기록이
-          안 쌓이면 뒤로가기가 승준노트 밖으로 나가 버린다. 게다가 '코스 바꾸기'로 들어온
-          경우에만 기록이 한 칸 있어서, 같은 뒤로가기가 상황마다 다르게 동작했다.
-          돌아오는 길은 아래 popstate 가 맡는다. */
+          안 쌓이면 뒤로가기가 승준노트 밖으로 나가 버린다.
+       ⚠️ **주소는 그대로 둔다**(세 번째 인자 없음). 두 화면은 주소가 같고, 어느 화면인지는
+          state 가 말한다 — 주소에 실으면 그 주소가 공유·새로고침으로 되살아난다. */
     PICK_MODE = false;
     document.body.classList.remove('pick-mode');
-    try { history.pushState({ bf: 'mine' }, '', 'briefing.html'); } catch (e) {}
+    try { history.pushState({ bf: 'mine' }, ''); } catch (e) {}
     paintMine(row.name, row.course || code);
     loadOpenChat(uid);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -766,14 +784,10 @@ function paintMine(name, code) {
   if (fs) fs.textContent = '코스 순서 말고 다른 게 필요할 때';
   document.body.classList.add('has-course');
   document.body.classList.add('course-ready');   /* 내용이 채워졌다 — 이제 카드를 보여도 된다 */
-  /* 4초 안전망(bootGuard)이 먼저 터져 고르는 화면으로 돌려놨다가, 조회가 뒤늦게 성공한 경우 —
-     원래 주소가 허브(?pick=1)가 아니었다면 내 코스 화면으로 되돌린다. 안 되돌리면 코스가
-     있는데도 고르는 화면에 갇힌다(느린 회선에서 실제로 일어난다). */
-  if (!ENTERED_PICK && PICK_MODE) {
-    PICK_MODE = false;
-    document.body.classList.remove('pick-mode');
-    try { history.replaceState(null, '', 'briefing.html'); } catch (e) {}
-  }
+  /* ⚠️ **여기서 화면을 내 코스로 넘기지 말 것.** 이 함수는 허브에 있을 때도 돈다(내용만
+     미리 채워 둔다 — 나중에 넘어갈 때 즉시 그려지게). 어느 화면을 볼지는 오직 `VIEW`
+     (방문 기록)가 정한다. 전에는 여기서 '늦게 성공한 조회'를 이유로 화면을 넘겼는데,
+     그 때문에 승준노트를 새로 눌러도 내 코스 화면이 떴다(오너 신고). */
 }
 
 /* 코스 화면을 포기하고 '고르기'로 되돌린다 — 서버 값을 못 읽었을 때의 안전망.
@@ -782,35 +796,39 @@ function paintMine(name, code) {
 function fallbackToPick(dropHint) {
   if (dropHint) { try { localStorage.removeItem(HINT_KEY); } catch (e) {} }
   document.body.classList.remove('has-course', 'course-ready');
-  /* 고르는 화면이면 주소도 고르는 화면(?pick=1)이어야 한다 — 화면과 주소를 한 벌로 묶어야
-     뒤로가기가 한 단계씩 움직인다. 여기서 안 맞춰 두면 코스를 고를 때 쌓는 기록이
-     '같은 주소 두 칸'이 되어 뒤로가기를 눌러도 화면이 안 바뀐다.
-     ⚠️ replace 다(기록을 쌓지 않는다) — 이 화면은 넘어온 화면이 아니라 첫 화면이다. */
+  /* 지금 칸의 표식도 허브로 맞춘다(기록은 안 쌓는다 — 넘어온 화면이 아니라 첫 화면이다).
+     안 맞추면 새로고침·뒤로 복귀 때 이 칸이 다시 '내 코스'로 열린다. */
   if (!PICK_MODE) {
     PICK_MODE = true;
     document.body.classList.add('pick-mode');
-    try { history.replaceState(null, '', 'briefing.html?pick=1'); } catch (e) {}
+    try { history.replaceState({ bf: 'hub' }, ''); } catch (e) {}
   }
   /* 로그인하고 돌아온 사람이 고른 코스를 펴 준다 — **펴 주기만 한다.**
      저장은 [이 코스로 시작하기] 를 눌러야 일어난다(위 WANT_COURSE 주석). 한 번 쓰고 비운다. */
   if (WANT_COURSE) { paintDetail(WANT_COURSE); WANT_COURSE = null; }
 }
 
-/* '코스 바꾸기' — 고르는 화면을 다시 펴 준다. 저장된 코스는 새 코스의 [시작하기]를
-   누를 때만 바뀐다(안 고르고 떠나면 그대로). */
-/* '코스 바꾸기' — 허브 주소로 **이동**한다(2026-08-06 오너 확정).
-   ⚠️ 같은 화면에서 목록을 펴는 방식으로 되돌리지 말 것 — 카드 아래에 목록이 딸려 나오는
-      꼴이라 "허브로 안 간다"는 신고가 났다. 이동이라 뒤로가기로 내 코스 화면에 돌아온다. */
+/* '코스 바꾸기' — 허브로 넘어간다. 저장된 코스는 새 코스의 [시작하기]를 누를 때만 바뀐다
+   (안 고르고 떠나면 그대로). 기록을 한 칸 쌓으므로 **뒤로가기로 내 코스 화면에 돌아온다.**
+   ⚠️ 페이지를 다시 부르지 않는다(구 `location.href='briefing.html?pick=1'`) — 다시 부르면
+      서버를 또 읽고, 느린 회선에서 그 사이 화면이 한 번 비었다. 화면 전환만 하면 된다.
+   ⚠️ 카드 아래에 목록을 딸려 내보내는 방식으로 되돌리지 말 것 — "허브로 안 간다"는 신고가
+      났던 자리다. 여기서는 카드를 감추고 목록만 남긴다(pick-mode). */
 document.getElementById('btnChange').addEventListener('click', function () {
-  window.location.href = 'briefing.html?pick=1';
+  try { history.pushState({ bf: 'hub' }, ''); } catch (e) {}
+  PICK_MODE = true;
+  document.body.classList.add('pick-mode');
+  if (myCourse) paintDetail(myCourse);          /* 뭘 바꾸는지 보이게 지금 코스를 펴 준다 */
+  window.scrollTo({ top: 0, behavior: 'instant' });
 });
 
 /* 뒤로/앞으로 — 주소를 다시 읽어 화면을 맞춘다.
    같은 문서 안에서 쌓은 기록(위 pushState)은 새로고침 없이 이 이벤트만 온다.
    ⚠️ 다른 페이지에서 뒤로 들어오는 경우는 여기가 아니라 맨 아래 bfcache 새로고침이 맡는다
       — 그때는 파일을 다시 받아 주소대로 처음부터 그린다. */
-window.addEventListener('popstate', function () {
-  var wantPick = /[?&]pick=1/.test(window.location.search);
+window.addEventListener('popstate', function (e) {
+  /* ⚠️ 주소가 아니라 **그 기록 칸의 표식**을 본다 — 두 화면은 주소가 같다. */
+  var wantPick = !(e.state && e.state.bf === 'mine');
   if (wantPick === PICK_MODE) return;
   PICK_MODE = wantPick;
   document.body.classList.toggle('pick-mode', wantPick);
