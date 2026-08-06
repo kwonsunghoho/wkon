@@ -1226,8 +1226,21 @@
         <button class="btn btn-action" type="submit" id="cbSubmit">기수 전원에게 지급</button>
       </form>
 
-      <h3 style="font-size:15px;font-weight:800;margin:22px 0 8px;">최근 원장 (50건)</h3>
-      <div class="round-list" id="credLog"><div class="loading">불러오는 중…</div></div>
+      <!-- 최근 원장 — **평소엔 접어 둔다**(2026-08-06 오너: "원장이 쓸데없이 길다").
+           원장은 무료 사용 한 번마다 한 줄씩 쌓이는 자리라 펼쳐 두면 화면 대부분을 먹고,
+           정작 볼 충전·관리자 지급·환불이 그 사이에 묻힌다. 연구실 '열람 이력'과 같은 부품이다.
+           ⚠️ 접이 머리에 건수·마지막 날짜를 적어 둔다 — 펴지 않고도 '쌓이고 있다'는 보여야 한다.
+           ⚠️ 무료 사용 줄은 기본으로 뺀다(오너 확정) — 체크로 다시 켠다. 잔액은 원장 **전체** 합이라
+              이 체크와 무관하다(목록만 좁힌다). -->
+      <details class="adm-fold" id="credLogFold" style="margin-top:22px;padding-top:8px;border-top:1px solid var(--border-soft);">
+        <summary>
+          <h3 style="font-size:15px;font-weight:800;">최근 원장</h3>
+          <span class="adm-help-v" id="credLogSum">불러오는 중…</span>
+        </summary>
+        <label class="lr-opt" style="min-height:44px;font-size:13px;font-weight:600;color:var(--text-muted);">
+          <input type="checkbox" id="credLogFree"> 무료 사용 줄도 보기</label>
+        <div class="round-list" id="credLog"><div class="loading">불러오는 중…</div></div>
+      </details>
 
       <!-- 설정 두 벌 — 자주 안 건드리는 값이라 접어 둔다. 값 로드는 접혀 있어도 그대로 된다. -->
       <details class="adm-help" style="margin-top:22px;">
@@ -5721,6 +5734,8 @@
             + '<b>20260725130000_credits.sql</b> 을 실행해 주세요.</div>'
           : '<div class="empty err">크레딧을 불러오지 못했습니다 — ' + esc(error.message) + '</div>';
         document.getElementById('credLog').innerHTML = '';
+        // 접힌 머리도 사실대로 — '아직 없음'으로 두면 실패를 '기록 0건'으로 읽는다
+        document.getElementById('credLogSum').textContent = '읽지 못함';
         return;
       }
       _credRows = data || [];
@@ -5782,25 +5797,63 @@
       if (cm) cm.addEventListener('click', () => { _credShown += M_PAGE; renderCredList(); });
     }
 
-    const CRED_REASON = { purchase:'충전', admin_grant:'관리자', use:'사용', free_use:'무료 사용', refund:'환불' };
+    const CRED_REASON = { purchase:'충전', admin_grant:'관리자 지급', use:'사용', free_use:'무료 사용', refund:'환불' };
+    const CRED_LOG_PAGE = 15;    // 펴도 15줄까지 — 나머지는 [더 보기]로 이어 붙인다
+    let _credLogShown = CRED_LOG_PAGE;
     function renderCredLog() {
       const byId = new Map(members.map(m => [m.id, m.name || m.email || '(알 수 없음)']));
       const el = document.getElementById('credLog');
-      if (!_credRows.length) { el.innerHTML = '<div class="empty">아직 기록이 없어요.</div>'; return; }
-      el.innerHTML = _credRows.slice(0, 50).map(r => {
-        const d = new Date(r.created_at);
-        const when = (d.getMonth() + 1) + '/' + d.getDate() + ' '
-          + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        const sign = r.delta > 0 ? '+' + r.delta : String(r.delta);
+      const sumEl = document.getElementById('credLogSum');
+      /* 무료 사용(delta 0)은 지갑을 움직이지 않는 줄인데 원장에서 가장 빨리 쌓인다 —
+         기본으로 빼고 체크로 켠다. **잔액 계산은 _credBal 이 이미 전량으로 했다**(여기는 목록만). */
+      const withFree = document.getElementById('credLogFree').checked;
+      const rows = withFree ? _credRows : _credRows.filter(r => r.reason !== 'free_use');
+
+      // 접이 머리 요약 — 펴지 않고도 '쌓이고 있다'가 보여야 한다(연구실 열람 이력과 같은 규칙)
+      if (sumEl) {
+        sumEl.textContent = rows.length
+          ? (withFree ? '' : '무료 제외 ') + rows.length.toLocaleString() + '건 · 마지막 ' + fmtLogDate(rows[0].created_at)
+          : (_credRows.length ? '무료 사용만 ' + _credRows.length.toLocaleString() + '건' : '아직 없음');
+      }
+      if (!rows.length) {
+        el.innerHTML = '<div class="empty">' + (_credRows.length
+          ? '충전·지급·사용 기록이 아직 없어요. 무료 사용만 있습니다.'
+          : '아직 기록이 없어요.') + '</div>';
+        return;
+      }
+
+      const shown = rows.slice(0, _credLogShown);
+      el.innerHTML = shown.map(r => {
+        /* ⚠️ 인라인 display:flex 금지(2026-08-01 규칙) — 전에는 이 줄이 인라인 flex 5조각이라
+           폰에서 제멋대로 접혔다. .round-item 기본 구조(주 줄 + 보조 줄)로 맞춘다. */
+        const amt = r.delta > 0 ? '+' + r.delta + '개' : (r.delta < 0 ? r.delta + '개' : '무료 1회');
         const color = r.delta > 0 ? 'var(--accent-ink)' : (r.delta < 0 ? 'var(--text-muted)' : 'var(--text-dim)');
-        return '<div class="round-item" style="font-size:13px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;">'
-          + '<span style="color:var(--text-dim);min-width:64px;">' + when + '</span>'
-          + '<b style="min-width:100px;">' + esc(byId.get(r.member_id) || '알 수 없음') + '</b>'
-          + '<span style="color:var(--text-muted);">' + (CRED_REASON[r.reason] || r.reason) + '</span>'
-          + '<b style="color:' + color + ';">' + sign + '</b>'
-          + (r.ref ? '<span style="color:var(--text-dim);">' + esc(String(r.ref).slice(0, 28)) + '</span>' : '')
-          + '</div>';
-      }).join('');
+        /* ref 는 사유에 따라 뜻이 다르다 — 관리자 지급만 '사유'라서 읽을 값이고,
+           나머지(결제 키·사용처 id)는 관리자에게 의미 없는 긴 문자열이라 뺀다. */
+        const note = (r.reason === 'admin_grant' && r.ref) ? ' · ' + esc(String(r.ref).slice(0, 40)) : '';
+        return '<div class="round-item' + (r.reason === 'free_use' ? ' is-off' : '') + '">'
+          + '<div style="min-width:0;">'
+          +   '<div class="ri-main">' + esc(byId.get(r.member_id) || '알 수 없음')
+          +     ' <span style="color:' + color + ';">' + amt + '</span></div>'
+          +   '<div class="ri-sub">' + (CRED_REASON[r.reason] || esc(r.reason))
+          +     ' · ' + fmtLogDate(r.created_at, true) + note + '</div>'
+          + '</div></div>';
+      }).join('')
+        // 꼬리 — '몇 건 중 몇 건'. 없으면 여기까지가 전부인지 잘린 것인지 구분이 안 된다.
+        + (rows.length > shown.length
+            ? '<div class="mmore"><span>' + shown.length.toLocaleString() + ' / '
+              + rows.length.toLocaleString() + '건 표시</span>'
+              + '<button class="btn btn-ghost btn-sm" type="button" id="credLogMoreBtn">더 보기</button></div>'
+            : '');
+      const lm = document.getElementById('credLogMoreBtn');
+      if (lm) lm.addEventListener('click', () => { _credLogShown += CRED_LOG_PAGE; renderCredLog(); });
+    }
+    function fmtLogDate(iso, withTime) {
+      const d = new Date(iso);
+      const day = (d.getMonth() + 1) + '/' + d.getDate();
+      return withTime
+        ? day + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+        : day;
     }
 
     async function giveCredit(memberId, amount, note) {
@@ -5940,6 +5993,10 @@
     const credReset = () => { _credShown = M_PAGE; renderCredList(); };
     document.getElementById('credSearch').addEventListener('input', credReset);
     document.getElementById('credHasOnly').addEventListener('change', credReset);
+    // 원장도 같은 규칙 — 보는 범위가 바뀌면 표시 수를 처음으로
+    document.getElementById('credLogFree').addEventListener('change', () => {
+      _credLogShown = CRED_LOG_PAGE; renderCredLog();
+    });
     document.getElementById('credList').addEventListener('click', async (e) => {
       const g = e.target.closest('[data-grant]'), v = e.target.closest('[data-revoke]');
       const id = g ? g.dataset.grant : (v ? v.dataset.revoke : null);
