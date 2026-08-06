@@ -1,27 +1,33 @@
-# [1/2] Pages 배포 방식 전환 — 이 커밋은 '설정만' 바꾼다(배포는 안 한다)
+# GitHub Pages 배포 — 대기 한도만 늘린 자체 워크플로
 #
-# ⚠️ 왜 두 단계로 나눴나(2026-08-06)
-#   Pages 배포 ID 는 커밋 SHA 그대로다. 그래서 한 커밋에 대해 배포를 만드는 워크플로가
-#   둘이면 같은 ID 를 두고 서로 취소시킨다 — 이날 사고의 재현이다.
-#   지금은 GitHub 자동 워크플로('pages build and deployment')가 배포를 맡고 있어서,
-#   전환 커밋에서 우리 워크플로까지 배포를 만들면 정확히 그 충돌이 난다.
-#   그래서 이 커밋은 **설정만 바꾸고**, 배포 단계는 다음 커밋에서 넣는다.
-#   설정이 GitHub Actions 로 넘어가는 순간 자동 워크플로는 더 이상 돌지 않으므로
-#   다음 커밋부터는 우리 워크플로 하나만 남는다.
+# ⚠️ 왜 만들었나(2026-08-06 실사고)
+#   그전까지는 GitHub 이 자동 생성하는 'pages build and deployment'(레포에 파일 없음)가
+#   배포를 맡았다. 그 워크플로의 배포 대기 한도는 **10분 고정이고 우리가 못 고친다.**
+#   이날 저녁 Pages 배포 큐가 느려지면서(0.5분 → 1.7 → 2.4 → 4.7 → 5.2분) 10분을 넘겼고,
+#   한도를 넘긴 액션이 **대기 중이던 배포를 스스로 취소**했다. 게다가 배포 ID 가 커밋 SHA
+#   그대로라, 한 번 취소된 커밋은 **재시도해도 5초 만에 'Deployment cancelled.'** 로 되받는다
+#   (그 커밋은 영영 못 올린다 — 새 커밋을 만들어야 한다).
+#   그래서 한도를 30분으로 연다. 큐가 느려도 기다렸다 올린다.
 #
-# 전환 중에도 라이브는 안 끊긴다 — 마지막으로 성공한 배포가 그대로 서빙된다.
+# ⚠️ 이 파일이 도는 조건: Settings → Pages → Source 가 **GitHub Actions** 여야 한다.
+#   'Deploy from a branch' 로 되돌리면 이 파일은 배포 단계에서 실패한다(둘 중 하나만 쓴다).
+#   커스텀 도메인(monc.ai.kr)은 레포 루트 CNAME 파일이 소스라 그대로 유지된다.
+#
+# 하는 일은 자동 워크플로와 똑같다: 레포 전체를 그대로 올린다(빌드 단계 없는 정적 사이트).
 name: Pages 배포
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch: {}
+    branches: [main]      # main 이 곧 라이브 — 푸시가 배포다
+  workflow_dispatch: {}   # Actions 탭에서 손으로 다시 걸 때
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 배포는 한 번에 하나만. ⚠️ cancel-in-progress 는 false 로 둔다 —
+# 큐가 느릴 때 true 면 뒤에 온 푸시가 대기 중이던 배포를 죽여 같은 사고가 반복된다.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -29,11 +35,21 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45     # 아래 timeout(30분)보다 넉넉히 크게 — 잡이 먼저 죽으면 의미 없다
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # enablement: true → Pages 빌드 방식을 'Deploy from a branch' 에서
-      # 'GitHub Actions' 로 바꾼다. 오너가 Settings 화면에서 누르는 것과 같은 동작이다.
-      # ⚠️ 커스텀 도메인(monc.ai.kr)은 레포 루트 CNAME 파일이 소스라 전환해도 유지된다.
+      - uses: actions/checkout@v4
+
       - uses: actions/configure-pages@v5
+
+      # path: . → 레포 루트 전체. .git 과 .github 는 액션이 알아서 뺀다(실측 24MB).
+      - uses: actions/upload-pages-artifact@v3
         with:
-          enablement: true
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 1800000   # 30분(ms). 기본 600000(10분)이 짧아서 사고가 났다 — 줄이지 말 것
