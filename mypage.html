@@ -255,6 +255,29 @@
       font-family: inherit; text-decoration: none; cursor: pointer; }
     .v2-empty-line { margin: 2px 2px 14px; font-size: 12px; line-height: 1.6; color: var(--text-dim); word-break: keep-all; }
 
+    /* ── 시작 안내(비참여자 전용, 2026-08-06 오너) — 챌린지 권유 카드가 비참여자에게
+       존재감이 과했다. 조용한 줄 두 개로 낮추고, 배지는 '모집 중일 때만' 붙는다.
+       특강 줄은 모집 중인 특강이 있을 때만 그린다(항상 펼쳐 두지 않는다). */
+    .v2-go { padding: 4px 16px; }
+    .v2-go-row { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 0;
+      text-decoration: none; color: var(--text); min-width: 0; }
+    .v2-go-row + .v2-go-row { border-top: 1px solid var(--border-soft); }
+    .v2-go-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .v2-go-body b { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+    .v2-go-body em { font-style: normal; font-size: 12px; color: var(--text-muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .v2-go-ar { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-dim); }
+    /* 알람 배지 — 풍선처럼 살짝 떠오른다. 색은 전역 팔레트(--action)만 쓴다. */
+    .v2-go-badge { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 999px; background: var(--action); color: var(--action-ink);
+      font-size: 12px; font-weight: 800; white-space: nowrap;
+      animation: v2Float 2.4s ease-in-out infinite; }
+    .v2-go-badge::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
+    /* ⚠️ hidden 속성의 UA display:none 은 위 inline-flex 에 진다 — 명시로 눌러야 배지가 정말 숨는다(2026-08-06 실측) */
+    .v2-go-badge[hidden] { display: none; }
+    @keyframes v2Float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    @media (prefers-reduced-motion: reduce) { .v2-go-badge { animation: none; } }
+
     .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
 
     /* ── 크레딧 지갑 (2026-08-02 "재구매도 만들어줘라") ──
@@ -381,6 +404,28 @@
             자세한 내용은 <a href="terms.html" target="_blank" rel="noopener">이용약관 제5조</a>를 참고해 주세요.</p>
         </div>
         <div class="v2-w-notice" id="wNotice" style="display:none;"></div>
+      </div>
+
+      <!-- 시작 안내(비참여자 전용) — 2026-08-06 오너 "챌린지 권유가 비참여자에게 너무 크다".
+           챌린지 줄은 항상(조용한 한 줄), 배지는 challenge_rounds 가 '모집 중'일 때만.
+           특강 줄은 모집 중인 특강이 있을 때만 그린다. 채우는 곳은 setupGoCard(). -->
+      <div class="v2-card v2-go" id="goCard" style="display:none;">
+        <a class="v2-go-row" id="goCh" href="apply.html">
+          <span class="v2-go-body">
+            <b>2주 챌린지</b>
+            <em id="goChD">모집 일정 보기</em>
+          </span>
+          <span class="v2-go-badge" id="goChBadge" hidden>모집 중</span>
+          <svg class="v2-go-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+        <a class="v2-go-row" id="goLec" href="lectures.html" style="display:none;">
+          <span class="v2-go-body">
+            <b>하루 특강</b>
+            <em id="goLecD">지금 신청받는 특강이 있어요</em>
+          </span>
+          <span class="v2-go-badge">모집 중</span>
+          <svg class="v2-go-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
       </div>
 
       <!-- 내 기록: 데이터가 있는 줄만 보인다. 빈 껍데기 섹션을 쌓지 않는 게 이 개편의 핵심. -->
@@ -574,6 +619,8 @@
           지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
   <script src="pay-return.js"></script>
   <script src="sojae-common.js?v=2"></script>
+  <!-- 모집 상태 판정(challenge_rounds) — 시작 안내 줄의 '모집 중' 배지용. 함수만 정의하는 파일이라 부작용 없음. -->
+  <script src="recruit.js"></script>
   <!-- 비포/애프터 음성 동시 재생 차단(전역). 이 화면엔 .ba-cell 이 없어 UI 는 그대로다 -->
   <script src="ba-audio.js" defer></script>
   <script>
@@ -812,6 +859,42 @@
         document.getElementById('labDocCount').textContent = rows.length;
         document.getElementById('sec-labdocs').style.display = '';
       } catch (_) { /* 접이 숨김 유지 */ }
+    }
+
+    // ── 시작 안내(비참여자 전용) — 모집 상태를 확인해 배지·특강 줄을 채운다(2026-08-06 오너).
+    //    챌린지: recruit.js(challenge_rounds 단일 소스). 조회 실패('모름')면 배지 없이 조용한
+    //    줄만 남긴다 — 링크는 살아 있으니 최종 판정은 apply 화면과 서버가 한다.
+    //    특강: 모집 기간 내 + 정원 남음(visible=true)인 특강이 있을 때만 줄 자체를 그린다.
+    async function setupGoCard() {
+      document.getElementById('goCard').style.display = '';
+      try {
+        const data = await loadRecruitData();
+        let best = null;   // 모집 중인 챌린지 중 마감 임박 순
+        Object.values(data || {}).forEach(d => {
+          if (!d || !d.start || !d.end) return;
+          if (getStatus(d.start, d.end) !== 'open') return;
+          const dd = getDday(d.start, d.end, 'open');
+          const num = dd === 'D-Day' ? 0 : dd ? parseInt(dd.replace('D-', ''), 10) : 99;
+          if (!best || num < best.num) best = { num, dd };
+        });
+        if (best) {
+          const b = document.getElementById('goChBadge');
+          b.textContent = best.dd === 'D-Day' ? '오늘 마감' : '모집 중';
+          b.hidden = false;
+          document.getElementById('goChD').textContent = '지금 신청할 수 있어요';
+        }
+      } catch (_) { /* 배지 없이 조용한 줄 유지 */ }
+      try {
+        // select('*') — seats_left 마이그레이션 미적용 환경에서도 조회가 깨지지 않게(lectures.html 과 동일)
+        const { data } = await MONC.sb.from('special_lectures').select('*').eq('visible', true);
+        const open = (data || []).filter(l =>
+          l.seats_left !== 0 && getStatus(l.recruit_start, l.recruit_end) === 'open');
+        if (open.length) {
+          document.getElementById('goLecD').textContent =
+            open.length === 1 ? (open[0].title || '지금 신청받는 특강이 있어요') : '신청받는 특강 ' + open.length + '개';
+          document.getElementById('goLec').style.display = '';
+        }
+      } catch (_) { /* 특강 줄 숨김 유지 */ }
     }
 
     // ── 내 특강 → '다가오는 일정' 카드(예정만). 지난 특강은 신청·결제 내역 접이에 남는다. ──
@@ -1194,18 +1277,16 @@
       const nextQ = document.getElementById('todayNextQ');
 
       if (phase === 'tools' || phase === 'lecture') {
-        tagEl.innerHTML = TAG_PLUS + '먼저 할 일';
-        headEl.textContent = '2주 챌린지부터 시작해 보세요';
-        descEl.textContent = '코치와 함께하는 2주예요. 주중 매일 미션을 올리고, 진행 중간에 1:1 점검을 받습니다.';
-        ctaTEl.textContent = '모집 일정 보기';
-        ctaEl.href = 'apply.html';
-        nextL.textContent = '특강';
-        nextQ.textContent = '먼저 하루짜리 특강부터 둘러보기';
-        delete nextQ.dataset.role;
-        nextEl.href = 'lectures.html';
+        // 2026-08-06 오너 — 챌린지 권유 카드('2주 챌린지부터 시작해 보세요')는 비참여자에게
+        // 존재감이 과했다. 카드를 통째로 접고 ① '내 기록'을 신원 줄 바로 아래(대시보드)로,
+        // ② 모집 안내는 아래 조용한 줄(#goCard — 모집 중일 때만 배지)로 낮춘다.
+        document.querySelector('.v2-today').style.display = 'none';
+        const wrapEl = document.querySelector('.v2-wrap');
+        wrapEl.insertBefore(document.querySelector('.v2-folds'), document.querySelector('.v2-today'));
         document.getElementById('sojaeCard').style.display = '';
         document.getElementById('foldsHint').textContent = '활동이 쌓이면 여기에 생깁니다';
         document.getElementById('emptyLine').style.display = '';
+        setupGoCard();
       } else {
         tagEl.innerHTML = TAG_CLOCK + '오늘 할 일';
         dateEl.style.display = '';
