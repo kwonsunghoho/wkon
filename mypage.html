@@ -410,6 +410,16 @@
            챌린지 줄은 항상(조용한 한 줄), 배지는 challenge_rounds 가 '모집 중'일 때만.
            특강 줄은 모집 중인 특강이 있을 때만 그린다. 채우는 곳은 setupGoCard(). -->
       <div class="v2-card v2-go" id="goCard" style="display:none;">
+        <!-- 승준 코스 줄 — '뭐부터 할지'가 시작 안내의 첫 질문이라 맨 위(2026-08-06 오너
+             "마이페이지에서도 승준 코스로 보내는 자리"). 코스를 골라 뒀으면 부제가
+             '지금은 ○○ 코스예요'로 바뀐다(setupGoCard — 조회 실패는 기본 문구 유지). -->
+        <a class="v2-go-row" id="goCourse" href="briefing.html">
+          <span class="v2-go-body">
+            <b>승준 코스</b>
+            <em id="goCourseD">내 상황에 맞는 준비 순서 정하기</em>
+          </span>
+          <svg class="v2-go-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
         <a class="v2-go-row" id="goCh" href="apply.html">
           <span class="v2-go-body">
             <b>2주 챌린지</b>
@@ -865,8 +875,20 @@
     //    챌린지: recruit.js(challenge_rounds 단일 소스). 조회 실패('모름')면 배지 없이 조용한
     //    줄만 남긴다 — 링크는 살아 있으니 최종 판정은 apply 화면과 서버가 한다.
     //    특강: 모집 기간 내 + 정원 남음(visible=true)인 특강이 있을 때만 줄 자체를 그린다.
-    async function setupGoCard() {
+    async function setupGoCard(uid) {
       document.getElementById('goCard').style.display = '';
+      // 승준 코스 줄 — 골라 둔 코스가 있으면 부제를 사실로 바꾼다(사이트가 아는 사실만).
+      // course 는 공용 getMyProfile() 셀렉트에 없다(미적용 환경 400 방지 규칙) — select('*') 별도 조회.
+      // 조회 실패·코스 없음·모르는 코드면 기본 문구('준비 순서 정하기') 유지.
+      try {
+        const COURSE_NAME = { basic: '초급 코스', mid: '중급 코스', advanced: '고급 코스', practical: '실전 코스' };
+        const r = uid ? await MONC.sb.from('members').select('*').eq('id', uid).single() : null;
+        const code = r && r.data && r.data.course;
+        if (code && COURSE_NAME[code]) {
+          document.getElementById('goCourseD').textContent =
+            '지금은 ' + COURSE_NAME[code] + '예요 · 이어서 준비하기';
+        }
+      } catch (_) { /* 기본 문구 유지 */ }
       try {
         const data = await loadRecruitData();
         let best = null;   // 모집 중인 챌린지 중 마감 임박 순
@@ -1286,7 +1308,7 @@
         document.getElementById('sojaeCard').style.display = '';
         document.getElementById('foldsHint').textContent = '활동이 쌓이면 여기에 생깁니다';
         document.getElementById('emptyLine').style.display = '';
-        setupGoCard();
+        setupGoCard(me);
       } else {
         tagEl.innerHTML = TAG_CLOCK + '오늘 할 일';
         dateEl.style.display = '';

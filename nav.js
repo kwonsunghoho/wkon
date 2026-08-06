@@ -23,9 +23,9 @@
 
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
 
-  /* 승준코스 — 드롭다운 없는 단독 링크(특강과 같은 형). 2026-08-06 오너 확정으로
-     승준노트를 '승준코스(briefing.html)'와 '승준 도구(tools.html)' 둘로 분리했다.
-     ⚠️ 파일명은 briefing.html 그대로다(계측·외부 링크) — 화면 이름만 승준코스. */
+  /* 승준 코스 — 드롭다운 없는 단독 링크(특강과 같은 형). 2026-08-06 오너 확정으로
+     승준노트를 '승준 코스(briefing.html)'와 '승준 도구(tools.html)' 둘로 분리했다.
+     ⚠️ 파일명은 briefing.html 그대로다(계측·외부 링크) — 화면 이름만 승준 코스. */
   var COURSE_LINK = 'briefing.html';
   /* 하위 항목 — 승준 도구는 tools.html 격자와, 챌린지는 challenges.html 카드와 같은 목록.
      ⚠️ 실전 모의면접(rehearsal)은 배포 보류 — 넣지 말 것.
@@ -81,7 +81,7 @@
   /* 어느 메뉴가 '현재 위치'인지 — 하위 페이지에 있어도 상위 메뉴에 표시가 남아야
      '내가 어디에 있는지'를 알 수 있다(오너가 불편해한 지점의 절반이 이것이다). */
   var SECTION_OF = {
-    /* 승준코스는 단독 링크라 자기 파일 하나뿐. 도구 페이지들은 '승준 도구' 소속 표시 */
+    /* 승준 코스는 단독 링크라 자기 파일 하나뿐. 도구 페이지들은 '승준 도구' 소속 표시 */
     'briefing.html': 'course',
     'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
     'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
@@ -267,7 +267,7 @@
       '<span class="mm-go">' + (hint.role === 'admin' ? '관리자 페이지 가기 →' : '마이페이지 가기 →') + '</span></span>';
   }
 
-  /* ── 항목 순서: 챌린지 · 승준코스 · 승준 도구 · 연구실 · 특강 · 후기 (2026-08-06 분리) ──
+  /* ── 항목 순서: 챌린지 · 승준 코스 · 승준 도구 · 연구실 · 특강 · 후기 (2026-08-06 분리) ──
      2026-08-03 확정 순서(챌린지·승준노트·연구실·특강·후기)에서 승준노트 자리를 코스·도구
      둘로 나눴다 — 코스를 밀기 위한 분리(오너 확정)라 코스가 도구보다 앞이다.
      인스타로 처음 들어온 학생에게 주력 상품인 챌린지를 먼저 보이는 1번 규칙은 그대로다.
@@ -288,7 +288,7 @@
             '<button class="nav-dd-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
-          '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준코스</a></li>' +
+          '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' +
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('tools') + '>승준 도구' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(TOOLS_SUB) + '</div>' +
@@ -317,7 +317,7 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
-        '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준코스</a></li>' +
+        '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('tools') + '>승준 도구' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
