@@ -77,6 +77,20 @@
 - `credit_free_limit()` 폴백에 `rehearsal → 1` 도 남아 있다. 리허설은 아직 출시 전이라
   지금은 무해하지만, 켤 때 같이 정리하지 않으면 같은 방식으로 새 나간다.
 
+## Pages 배포(라이브 반영) — 2026-08-06 사고 기록
+
+**현행: GitHub 자동 배포 하나뿐이다**(`pages build and deployment` — 레포에 파일 없음, Settings → Pages 의 Source 가 `main` 브랜치). 푸시가 곧 배포다.
+
+이날 11:33~13:21 사이 배포가 연속 실패했다(`5157df5`·`1504530`·`3f5db5e`·`6e6ec59`·`05fd8f4`). 시작은 Pages 배포 큐가 느려져 자동 워크플로의 **10분 대기 한도**를 넘긴 것이다. 그걸 늘리려고 자체 워크플로 `.github/workflows/pages.yml` 을 만들었는데, 아래 두 가지가 사실과 달라 상황이 더 나빠졌다. **같은 시도를 다시 하지 말 것.**
+
+- **⚠️ `actions/deploy-pages` 의 `timeout` 은 10분을 못 넘긴다.** 소스에 `MAX_TIMEOUT = 600000` 이 있고 `Math.min(입력, MAX_TIMEOUT)` 으로 자른다. `timeout: 1800000`(30분)을 줘도 실행 로그에 `timeout value is greater than the allowed maximum - timeout set to the maximum of 600000 milliseconds` 경고만 찍히고 10분에 끊긴다(2026-08-06 실측). **대기 한도를 늘려서 푸는 방법은 없다** — 필요하면 재시도 로직을 따로 짜야 한다.
+  - **⚠️ `v5` 로 올려도 똑같다**(2026-08-06 소스 확인 — v4·v5 둘 다 `MAX_TIMEOUT = 600000`, 기본값도 `600000` 그대로). 같은 날 다른 세션이 "v4 가 timeout 을 무시한다"고 보고 v4→v5 로 올렸는데(`6842915`), 무시한 게 아니라 **상한이 있는 것**이라 버전을 올려도 안 바뀐다. 이 커밋은 워크플로를 지우면서 같이 사라졌다.
+- **⚠️ `actions/configure-pages` 는 Source 를 못 바꾼다.** `build_type: 'workflow'` 는 **Pages 사이트가 아예 없을 때 새로 만들면서만** 넣는다(`if (!pageObject && enablement)`). 이미 있는 사이트의 설정은 읽기만 한다. Source 전환은 **Settings → Pages 에서 손으로** 해야 한다.
+- 그래서 Source 가 브랜치 배포인 채 **배포기가 둘**이 됐다. 배포 ID 가 커밋 SHA 그대로라 둘이 같은 ID 를 두고 서로 취소시킨다(자동 워크플로도 같이 실패했다).
+- **2026-08-06 오너 결정: `pages.yml` 삭제, 자동 배포로 복귀.** 자체 워크플로에 이점이 없다(한도가 똑같이 10분인데 충돌만 는다).
+
+⚠️ **한 번 취소된 커밋 SHA 는 재시도해도 안 올라간다**(배포 ID 가 SHA 라 `Deployment cancelled.` 로 즉시 되받는다). 그 커밋을 살리려면 **새 커밋**을 만들어야 한다(빈 커밋도 된다).
+
 ## 브랜치
 
 - ~~`claude/briefing-course-hub`~~ / `claude/content-discovery-feature-a4bfdf` — **승준노트 허브 코스형 개편. 2026-08-06 오너 지시로 main 병합·배포 완료.** (2026-08-05 에는 배포 보류였다 — 한 번 올렸다 되돌린 이력 `7d0edec`→`83fcb26`. 되살릴 일이 있으면 revert **뒤** 커밋으로 병합해야 한다. 옛 커밋으로 되돌려 병합하면 git 이 '이미 합쳐졌다'고 보아 아무것도 안 바뀐다.)
