@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소재 발굴 — B안 확정 조합(게이지 연출 + 강조 안내 말풍선)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'SUIT Variable',-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  .wrap{max-width:620px;margin:0 auto;padding:22px 0 70px}
+  h1{font-size:19px;font-weight:800;margin:0 0 8px;padding:0 20px;color:var(--ink)}
+  .lead{font-size:14px;line-height:1.65;color:var(--text-muted);margin:0 0 6px;padding:0 20px}
+  .lead b{color:var(--text)}
+  .case{margin-top:38px}
+  .case-h{display:flex;align-items:baseline;gap:8px;padding:0 20px;flex-wrap:wrap}
+  .case-h b{font-size:17px;font-weight:800}
+  .case-h span{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink);
+    background:var(--accent-tint);border-radius:999px;padding:3px 9px}
+  .case-note{font-size:13px;line-height:1.65;color:var(--text-muted);margin:6px 0 0;padding:0 20px}
+  .case-note b{color:var(--text)}
+  .phone{width:375px;max-width:100%;margin:12px auto 0;padding:14px 16px 18px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .replay{display:block;margin:10px auto 0;min-height:44px;padding:0 18px;border-radius:999px;
+    border:1.5px solid var(--accent-dark);background:var(--surface);color:var(--accent-ink);
+    font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+
+  /* ── 실제 sojae.html 채팅 CSS 그대로(값 바꾸지 말 것) ── */
+  .chat{display:flex;flex-direction:column;gap:12px}
+  .who{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-ink);
+    font-weight:700;margin-bottom:5px}
+  .ava{width:20px;height:20px;border-radius:50%;background:var(--accent-ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .bub{max-width:84%;font-size:15px;line-height:1.55;padding:11px 13px;border-radius:16px}
+  .bub b{font-weight:700}
+  .ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border-soft);
+    border-bottom-left-radius:6px;color:var(--text)}
+  .me{align-self:flex-end;background:var(--action);color:var(--action-ink);
+    border-bottom-right-radius:6px}
+  .refinewrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .mmrow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;
+    border-radius:999px;cursor:pointer;font:inherit;font-size:14px;font-weight:700;
+    white-space:nowrap;background:var(--surface);color:var(--accent-ink);
+    border:1.5px solid var(--accent-dark)}
+  .chip-go{background:var(--action);color:var(--action-ink);border-color:transparent}
+  .chip-go b{font-weight:800}
+  .mm-dots{display:inline-flex;gap:4px;margin-right:2px}
+  .mm-dots i{width:7px;height:7px;border-radius:50%;background:rgba(27,58,107,.18)}
+
+  /* ── 강조 안내 말풍선(E안 채택) — 질문·대답 말풍선과 다른 세 번째 문법 ──
+     시스템(진행) 안내 전용: 네이비 틴트 배경 + 왼쪽 4px 네이비 띠 + 'R 연구원' 머리 없음.
+     ⚠️ 질문·대답에는 쓰지 않는다 — 자주 나오면 강조가 죽는다. */
+  .bub-sys{align-self:flex-start;max-width:84%;font-size:15px;line-height:1.55;
+    padding:11px 13px 11px 15px;border-radius:16px;border-bottom-left-radius:6px;
+    background:var(--action-tint);border:1px solid var(--accent-dark);
+    border-left:4px solid var(--action);color:var(--text)}
+  .bub-sys b{font-weight:800;color:var(--accent-ink)}
+
+  /* ═══ 등장 연출(확정 B안) ═══ */
+  @keyframes popIn{0%{opacity:0;transform:translateY(10px) scale(.96)}
+    60%{opacity:1;transform:translateY(-2px) scale(1.01)}100%{opacity:1;transform:none}}
+  @keyframes ring{0%{box-shadow:0 0 0 0 rgba(27,58,107,.45)}
+    70%{box-shadow:0 0 0 11px rgba(27,58,107,0)}100%{box-shadow:0 0 0 0 rgba(27,58,107,0)}}
+  @keyframes dotPop{0%{transform:scale(.4);background:rgba(27,58,107,.18)}
+    60%{transform:scale(1.5)}100%{transform:scale(1);background:var(--accent-ink)}}
+  @keyframes dotWhite{to{background:rgba(255,255,255,.92)}}
+  @keyframes mmFlip{to{background:var(--action);color:var(--action-ink);border-color:transparent}}
+  .stage .late{opacity:0}
+  .stage.play .late{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) forwards}
+  /* ① 점이 하나씩 차오른다(0.05~0.65s) → ② 0.95s 에 알약 반전 + 점 흰색 + 링 */
+  .stage.play .mm-dots i{animation:dotPop .35s ease forwards, dotWhite .3s ease .95s forwards}
+  .stage.play .mm-dots i:nth-child(1){animation-delay:.05s,.95s}
+  .stage.play .mm-dots i:nth-child(2){animation-delay:.2s,.95s}
+  .stage.play .mm-dots i:nth-child(3){animation-delay:.35s,.95s}
+  .stage.play .mm-dots i:nth-child(4){animation-delay:.5s,.95s}
+  .stage.play .mm-dots i:nth-child(5){animation-delay:.65s,.95s}
+  .stage.play .mm{animation:mmFlip .3s ease .95s forwards, ring 1s ease-out 1.05s 1}
+  /* ③ 1.25s — 강조 말풍선 ④ 1.45s — 다듬기 칩 */
+  .stage.play .bub-sys.late{animation-delay:1.25s}
+  .stage.play .chip-go.late{animation-delay:1.45s}
+
+  /* '다듬고 있습니다' 진행 말풍선 — 점 3개가 순서대로 깜빡인다 */
+  .dots3{display:inline-flex;gap:3px;margin-left:4px;vertical-align:baseline}
+  .dots3 i{width:5px;height:5px;border-radius:50%;background:var(--accent-ink);opacity:.25;
+    animation:blink 1.2s ease-in-out infinite}
+  .dots3 i:nth-child(2){animation-delay:.2s}
+  .dots3 i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,100%{opacity:.25}40%{opacity:1}}
+
+  @media (prefers-reduced-motion:reduce){
+    .stage.play *,.dots3 i{animation-duration:.01s !important;animation-delay:0s !important;
+      animation-iteration-count:1 !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>확정 조합 — B안 게이지 연출 + 강조 안내 말풍선</h1>
+  <p class="lead">오너 확정: <b>B안(게이지 완성 연출)</b>으로 가되, 안내는 일반 질문·대답 말풍선이 아니라 <b>E안의 강조 말풍선</b>(네이비 틴트 + 왼쪽 띠, 연구원 머리 없음)으로 띄운다. ‘다듬고 있습니다’ 같은 진행 안내도 같은 말풍선을 쓴다. 판 1에서 <b>다듬기 칩을 실제로 눌러보면</b> 판 2 상태로 이어집니다.</p>
+
+  <!-- ═══════════ 판 1 — 재료 5/5 순간 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>판 1</span><b>재료 5/5 — 게이지가 차오르고 강조 말풍선이 안내한다</b></div>
+    <p class="case-note">순서: ① 점 5개가 하나씩 차오름 → ② 알약이 네이비로 반전 + 링 1회 → ③ <b>강조 말풍선</b> “재료가 5개 다 모였어요…” → ④ 다듬기 칩 등장. 안내가 흰 말풍선(대화)과 다른 문법이라 지나칠 수 없다.</p>
+    <div class="phone">
+      <div class="chat stage" id="st1">
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub ai"><div class="who"><span class="ava">R</span>연구원</div>좋아요, 그 침착함이 결과로 이어졌군요. 여기까지면 충분해요.</div>
+        <div class="bub-sys late" id="sysMsg1">재료가 <b>5개 다 모였어요.</b> 이 정도면 30초 분량 답변을 만들 수 있어요 — 다듬기로 뼈대를 잡아보세요.</div>
+        <div class="refinewrap">
+          <div class="mmrow">
+            <button class="chip mm" type="button"><span class="mm-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>재료 <b>5/5</b></button>
+            <button class="chip chip-go late" id="goRefine" type="button">다듬기 · 오늘 <b>2번</b> 무료</button>
+          </div>
+        </div>
+      </div>
+      <button class="replay" data-for="st1" type="button">다시 보기 ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ 판 2 — 다듬는 중 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>판 2</span><b>다듬기를 누른 뒤 — ‘다듬고 있습니다’ 진행 안내</b></div>
+    <p class="case-note">다듬기를 누르면 게이지·칩이 걷히고 같은 <b>강조 말풍선</b>으로 “모인 재료로 답변 뼈대를 다듬고 있습니다”가 뜬다(점 3개 깜빡임). 결과(소재 카드 + 뼈대)가 오면 이 말풍선이 결과로 바뀐다. 진행 안내까지 강조 말풍선 한 문법으로 통일 — <b>시스템이 말할 때는 항상 이 모양</b>이라는 규칙이 선다.</p>
+    <div class="phone">
+      <div class="chat" id="st2">
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub ai"><div class="who"><span class="ava">R</span>연구원</div>좋아요, 그 침착함이 결과로 이어졌군요. 여기까지면 충분해요.</div>
+        <div class="bub-sys">재료가 <b>5개 다 모였어요.</b> 이 정도면 30초 분량 답변을 만들 수 있어요 — 다듬기로 뼈대를 잡아보세요.</div>
+        <div class="bub-sys">모인 재료로 <b>답변 뼈대를 다듬고 있습니다</b><span class="dots3" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="lead" style="margin-top:40px">실제 반영 시 규칙: ① 연출은 <b>다 모인 첫 순간 한 번만</b>(이후 대화를 이어가도 반복 안 함) ② 강조 말풍선은 시스템 안내 전용 — 질문·대답에 쓰지 않는다 ③ ‘다 모였어요’ 문구는 transcript(다듬기 재료)에 넣지 않는다 ④ <code>prefers-reduced-motion</code> 이면 최종 상태만 ⑤ 게이지를 눌러 펼치던 재료 상세(모인·남은 재료)는 그대로 둔다.</p>
+</div>
+<script>
+  // 다시 보기 — 판 1을 처음 상태로 되돌리고 재생
+  document.querySelectorAll('.replay').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var st = document.getElementById(btn.getAttribute('data-for'));
+      // 눌러서 바뀐 '다듬는 중' 상태를 원복
+      var prog = st.querySelector('.bub-prog'); if (prog) prog.remove();
+      var wrap = st.querySelector('.refinewrap'); if (wrap) wrap.style.display = '';
+      st.classList.remove('play');
+      void st.offsetWidth;
+      st.classList.add('play');
+    });
+  });
+  // 판 1에서 다듬기를 누르면 → 게이지·칩을 걷고 '다듬고 있습니다' 말풍선을 붙인다(실동작 미리보기)
+  document.getElementById('goRefine').addEventListener('click', function(){
+    var st = document.getElementById('st1');
+    if (st.querySelector('.bub-prog')) return;
+    st.querySelector('.refinewrap').style.display = 'none';
+    var d = document.createElement('div');
+    d.className = 'bub-sys bub-prog';
+    d.style.opacity = '1';
+    d.innerHTML = '모인 재료로 <b>답변 뼈대를 다듬고 있습니다</b><span class="dots3" aria-hidden="true"><i></i><i></i><i></i></span>';
+    st.appendChild(d);
+  });
+  // 화면에 들어오면 한 번 자동 재생
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('play'); io.unobserve(e.target); }
+    });
+  }, {threshold:.6});
+  document.querySelectorAll('.stage').forEach(function(s){ io.observe(s); });
+</script>
+</body>
+</html>
