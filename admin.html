@@ -213,6 +213,12 @@
        한 트랙에 넣으면 접히지 않고 삐져나온다(크로미움은 date 가 좁아 재현 안 됨 — 눈검사로 못 잡는다).
        ⚠️ 새 날짜 입력을 만들면 감싸는 .field 에 field-date 를 같이 단다. */
     .round-form .field-date, .field-date { grid-column: span 2; min-width: 170px; }
+    /* '4개 한번에' 줄 — 인라인 display 금지([hidden] 짝 규칙, 2026-08-06). */
+    #rfAllRow { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; padding: 10px 0; }
+    #rfAllRow[hidden] { display: none; }
+    #rfAllRow input { width: 24px; height: 24px; accent-color: var(--action); flex: none; }
+    #rfAllHint { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin-top: -6px; }
+    #rfAllHint[hidden] { display: none; }
     /* ⚠️⚠️ 날짜 입력은 **네이티브 위젯 렌더링을 끈다**(`appearance:none`).
        2026-08-02 오너가 같은 자리를 세 번 지적했다 — 칸을 넓혀도(span 2) 계속 삐져나왔다.
        원인: iOS 사파리는 `input[type=date]` 를 **네이티브 컨트롤**로 그려서 우리 테두리·배경을
@@ -961,9 +967,22 @@
             <option value="answer">승자각(답변)</option>
           </select></div>
         <div class="field"><label for="rfRound">기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
+        <!-- 시작 방식 — 개강일을 정해 두거나, 선착순(인원이 모이면 바로 시작). start_mode 컬럼. -->
+        <div class="field"><label for="rfMode">시작 방식</label>
+          <select id="rfMode">
+            <option value="scheduled">개강일 지정</option>
+            <option value="fcfs">선착순 — 인원이 모이면 시작</option>
+          </select></div>
         <div class="field field-date"><label for="rfStart">모집 시작</label><input id="rfStart" type="date"></div>
-        <div class="field field-date"><label for="rfEnd">모집 마감</label><input id="rfEnd" type="date"></div>
-        <div class="field field-date"><label for="rfProgram">프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
+        <div class="field field-date"><label for="rfEnd" id="rfEndLabel">모집 마감</label><input id="rfEnd" type="date"></div>
+        <div class="field field-date"><label for="rfProgram" id="rfProgramLabel">프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
+        <!-- 4개 한번에 — 같은 날짜로 4개 챌린지 기수를 한 번에 등록(오너 요청 2026-08-06).
+             기수는 챌린지마다 '기존 최고 기수 + 1' 로 자동 매긴다(아래 안내 줄이 미리 보여 준다). -->
+        <label id="rfAllRow">
+          <input type="checkbox" id="rfAll">
+          4개 챌린지 한번에 등록 — 같은 일정으로
+        </label>
+        <div id="rfAllHint" hidden></div>
         <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
       <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
@@ -2780,6 +2799,53 @@
           오너가 학생 문의를 받고 어느 챌린지인지 admin 에서 다시 번역해야 했다. */
     const CH_LABEL = { voice:'보신각', expression:'영합각', spinning:'스피닝', answer:'승자각' };
     let editingRoundId = null;   // null=추가 모드, 값=그 id 기수를 수정 중
+    let _roundsData = [];        // loadRounds 가 채운다 — '한번에 등록'의 다음 기수 계산용
+
+    // 다음 기수 = 그 챌린지의 기존 최고 기수 + 1 (하나도 없으면 1기)
+    function nextRound(ch) {
+      const rs = _roundsData.filter(r => r.challenge === ch).map(r => r.round || 0);
+      return rs.length ? Math.max.apply(null, rs) + 1 : 1;
+    }
+
+    /* '4개 한번에' 토글 — 켜면 챌린지·기수 칸을 잠그고, 무엇이 만들어질지 미리 보여 준다.
+       기수를 하나로 통일하지 않는 이유: 챌린지마다 진행 기수가 다르다(보신각 4기 vs 승자각 2기).
+       같은 숫자로 밀면 학생에게 틀린 기수가 보인다. */
+    function updateBulkUi() {
+      const on = document.getElementById('rfAll').checked && !editingRoundId;
+      document.getElementById('rfChallenge').disabled = on || !!editingRoundId;
+      document.getElementById('rfRound').disabled = on || !!editingRoundId;
+      const hint = document.getElementById('rfAllHint');
+      hint.hidden = !on;
+      if (on) hint.textContent =
+        Object.keys(CH_LABEL).map(ch => CH_LABEL[ch] + ' ' + nextRound(ch) + '기').join(' · ') + ' 로 등록됩니다';
+    }
+    document.getElementById('rfAll').addEventListener('change', updateBulkUi);
+
+    // 시작 방식 토글 — 선착순이면 마감은 선택이 되고, 개강일 칸은 잠근다(인원이 모이면 시작이라 날짜가 없다)
+    function updateModeUi() {
+      const fcfs = document.getElementById('rfMode').value === 'fcfs';
+      document.getElementById('rfEndLabel').textContent = fcfs ? '모집 마감(선택)' : '모집 마감';
+      const prog = document.getElementById('rfProgram');
+      prog.disabled = fcfs;
+      if (fcfs) prog.value = '';
+      document.getElementById('rfProgramLabel').textContent = fcfs ? '프로그램 시작(선착순은 미정)' : '프로그램 시작(선택)';
+    }
+    document.getElementById('rfMode').addEventListener('change', updateModeUi);
+
+    /* start_mode 컬럼 미적용 환경 대응(CLAUDE.md 데이터 안전 규칙 — 조용히 degrade).
+       개강일 지정이면 컬럼 없이 재시도해 구 스키마에서도 저장이 계속 된다.
+       선착순은 컬럼 없이는 뜻이 사라지므로 마이그레이션 안내로 멈춘다. */
+    async function writeRound(mode, run, payload) {
+      const withMode = Array.isArray(payload)
+        ? payload.map(r => Object.assign({}, r, { start_mode: mode }))
+        : Object.assign({}, payload, { start_mode: mode });
+      let { error } = await run(withMode);
+      if (error && /start_mode|recruit_end/.test(error.message || '')) {
+        if (mode === 'fcfs') return { message: '선착순 모드는 아직 DB에 없어요. challenge_rounds 마이그레이션(start_mode)을 SQL Editor에서 실행한 뒤 다시 저장하세요.' };
+        ({ error } = await run(payload));   // 구 스키마 — 모드 없이 저장
+      }
+      return error;
+    }
 
     // 기존 기수를 폼에 불러와 수정 모드로. 챌린지·기수는 잠그고(바꾸면 다른 기수가 됨) 날짜만 고친다.
     function enterRoundEdit(r) {
@@ -2788,9 +2854,14 @@
       const rn = document.getElementById('rfRound');
       ch.value = r.challenge; ch.disabled = true;
       rn.value = r.round;     rn.disabled = true;
+      document.getElementById('rfMode').value = r.start_mode === 'fcfs' ? 'fcfs' : 'scheduled';
+      updateModeUi();
       document.getElementById('rfStart').value   = r.recruit_start || '';
       document.getElementById('rfEnd').value     = r.recruit_end || '';
-      document.getElementById('rfProgram').value = r.program_start || '';
+      if (r.start_mode !== 'fcfs') document.getElementById('rfProgram').value = r.program_start || '';
+      document.getElementById('rfAll').checked = false;
+      document.getElementById('rfAllRow').hidden = true;   // 수정은 한 기수만 — 한번에 등록과 섞지 않는다
+      updateBulkUi();
       document.getElementById('roundEditingLabel').textContent =
         (CH_LABEL[r.challenge] || r.challenge) + ' ' + r.round + '기 수정 중 — 날짜를 바꾸고 저장하세요';
       document.getElementById('roundEditing').hidden = false;
@@ -2803,6 +2874,9 @@
       document.getElementById('rfChallenge').disabled = false;
       document.getElementById('rfRound').disabled = false;
       document.getElementById('roundForm').reset();
+      document.getElementById('rfAllRow').hidden = false;
+      updateModeUi();
+      updateBulkUi();
       document.getElementById('roundEditing').hidden = true;
       document.getElementById('roundSubmitBtn').textContent = '추가/수정';
     }
@@ -2912,12 +2986,16 @@
       const { data, error } = await MONC.sb.from('challenge_rounds')
         .select('*').order('challenge').order('round');
       if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      _roundsData = data || [];
+      updateBulkUi();   // 기수가 바뀌었으니 '한번에 등록' 안내의 다음 기수도 다시 계산
       if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 기수가 없습니다.</div>'; return; }
       listEl.innerHTML = data.map(r => `
         <div class="round-item">
           <div>
             <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
-            <div class="ri-sub">모집 ${fmtDay(r.recruit_start)} ~ ${fmtDay(r.recruit_end)}${r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : ''}</div>
+            <div class="ri-sub">${r.start_mode === 'fcfs'
+              ? '선착순 · 모집 ' + fmtDay(r.recruit_start) + ' ~' + (r.recruit_end ? ' ' + fmtDay(r.recruit_end) : '') + ' · 인원이 모이면 시작'
+              : '모집 ' + fmtDay(r.recruit_start) + ' ~ ' + fmtDay(r.recruit_end) + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : '')}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${r.id}">수정</button>
@@ -2939,38 +3017,43 @@
 
     guardSubmit('roundForm', async e => {
       e.preventDefault();
+      const mode    = document.getElementById('rfMode').value;   // 'scheduled' | 'fcfs'
       const start   = document.getElementById('rfStart').value;
-      const end     = document.getElementById('rfEnd').value;
-      const program = document.getElementById('rfProgram').value || null;
+      const end     = document.getElementById('rfEnd').value || null;
+      const program = mode === 'fcfs' ? null : (document.getElementById('rfProgram').value || null);
 
-      // 수정 모드: 챌린지·기수는 잠겨 있고 날짜만 그 행(id)에 반영
+      if (!start) { alert('모집 시작을 입력하세요.'); return; }
+      // 선착순만 마감 없이 열 수 있다 — 개강일 지정에서 마감이 비면 '언제까지 모집인지' 아무도 모른다
+      if (mode !== 'fcfs' && !end) { alert('모집 마감을 입력하세요. 마감 없이 열려면 시작 방식을 선착순으로 바꾸세요.'); return; }
+      const dates = { recruit_start: start, recruit_end: end, program_start: program };
+
+      // 수정 모드: 챌린지·기수는 잠겨 있고 날짜·시작 방식만 그 행(id)에 반영
       if (editingRoundId) {
-        if (!start || !end) { alert('모집 시작·마감을 입력하세요.'); return; }
-        const { error } = await MONC.sb.from('challenge_rounds')
-          .update({ recruit_start: start, recruit_end: end, program_start: program })
-          .eq('id', editingRoundId);
+        const error = await writeRound(mode,
+          upd => MONC.sb.from('challenge_rounds').update(upd).eq('id', editingRoundId), dates);
         if (error) { alert('수정 실패: ' + error.message); return; }
         toast('수정됨'); exitRoundEdit(); loadRounds();
         return;
       }
 
       // 추가 모드(같은 챌린지+기수면 upsert가 덮어씀)
-      const row = {
-        challenge: document.getElementById('rfChallenge').value,
-        round: parseInt(document.getElementById('rfRound').value, 10),
-        recruit_start: start,
-        recruit_end: end,
-        program_start: program,
-      };
-      if (!row.round || !row.recruit_start || !row.recruit_end) { alert('기수·모집 시작·마감을 입력하세요.'); return; }
-      const { error } = await MONC.sb.from('challenge_rounds')
-        .upsert(row, { onConflict: 'challenge,round' });
+      let rows;
+      if (document.getElementById('rfAll').checked) {
+        // 4개 한번에 — 챌린지마다 다음 기수로. 어떤 기수가 되는지는 rfAllHint 가 미리 보여 줬다.
+        rows = Object.keys(CH_LABEL).map(ch => Object.assign({ challenge: ch, round: nextRound(ch) }, dates));
+      } else {
+        const round = parseInt(document.getElementById('rfRound').value, 10);
+        if (!round) { alert('기수를 입력하세요.'); return; }
+        rows = [Object.assign({ challenge: document.getElementById('rfChallenge').value, round }, dates)];
+      }
+      const error = await writeRound(mode,
+        payload => MONC.sb.from('challenge_rounds').upsert(payload, { onConflict: 'challenge,round' }), rows);
       if (error) { alert('저장 실패: ' + error.message); return; }
-      toast('저장됨');
-      document.getElementById('rfRound').value = '';
-      document.getElementById('rfStart').value = '';
-      document.getElementById('rfEnd').value = '';
-      document.getElementById('rfProgram').value = '';
+      toast(rows.length > 1 ? '4개 챌린지 모두 저장됨' : '저장됨 — 날짜는 남겨 뒀어요');
+      /* ⚠️ 날짜·방식은 비우지 않는다(2026-08-06 오너 "일정 복사가 안 되네").
+         챌린지만 바꿔 다시 저장하면 같은 일정이 복사된다. 실수로 두 번 눌러도
+         같은 챌린지+기수는 upsert 가 덮어써서 중복 행이 안 생긴다. */
+      if (rows.length > 1) document.getElementById('rfAll').checked = false;   // 한 번 더 누르면 다음 기수가 또 생기는 것만 막는다
       loadRounds();
     });
 

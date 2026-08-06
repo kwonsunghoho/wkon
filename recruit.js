@@ -20,9 +20,11 @@
    → 하드코딩 날짜 폴백 금지는 그대로. 대신 '모른다'와 '안 한다'를 반드시 가른다. */
 async function loadRecruitDataFromSupabase() {
   if (!window.MONC || !window.MONC.sb) return null;
+  // ⚠️ select('*') 유지 — start_mode 등 컬럼을 나열하면 마이그레이션 미적용 환경에서
+  //    조회 전체가 400 난다(CLAUDE.md 데이터 안전 공통 규칙).
   const { data, error } = await window.MONC.sb
     .from('challenge_rounds')
-    .select('challenge, round, recruit_start, recruit_end')
+    .select('*')
     .order('recruit_end', { ascending: true });
   if (error || !data) { console.warn('[MONC 모집] Supabase 조회 실패:', error); return null; }
 
@@ -32,10 +34,15 @@ async function loadRecruitDataFromSupabase() {
 
   const out = {};
   Object.entries(byChallenge).forEach(([ch, rounds]) => {
-    // 현재 기수 = recruit_end >= 오늘 중 가장 이른 것, 없으면 가장 최근(마지막) 것
-    const upcoming = rounds.filter(r => new Date(r.recruit_end) >= today);
+    // 현재 기수 = recruit_end >= 오늘 중 가장 이른 것, 없으면 가장 최근(마지막) 것.
+    // 선착순(마감 없음 = recruit_end null)은 항상 '아직 안 끝난 것'으로 친다.
+    const upcoming = rounds.filter(r => !r.recruit_end || new Date(r.recruit_end) >= today);
     const chosen = upcoming.length ? upcoming[0] : rounds[rounds.length - 1];
-    out[ch] = { start: chosen.recruit_start, end: chosen.recruit_end, round: chosen.round };
+    out[ch] = {
+      start: chosen.recruit_start, end: chosen.recruit_end, round: chosen.round,
+      // 선착순 — 개강일 대신 '인원이 모이면 시작'. 미적용 환경엔 컬럼이 없어 false 로 떨어진다.
+      fcfs: chosen.start_mode === 'fcfs',
+    };
   });
   console.log('[MONC 모집] Supabase 데이터:', out);
   return out;
@@ -70,17 +77,21 @@ function parseDate(str) {
 function getStatus(start, end) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const s = parseDate(start);
-  const e = parseDate(end);
-  if (!s || !e) { console.warn('[MONC 모집] 날짜 오류 — start:', start, 'end:', end); return 'upcoming'; }
-  e.setHours(23, 59, 59, 999);
+  if (!s) { console.warn('[MONC 모집] 날짜 오류 — start:', start, 'end:', end); return 'upcoming'; }
   if (today < s) return 'upcoming';
+  // 마감 없음(선착순) — 시작했으면 계속 모집 중. 마감은 admin 이 기수를 수정·삭제할 때 난다.
+  if (!end) return 'open';
+  const e = parseDate(end);
+  if (!e) { console.warn('[MONC 모집] 날짜 오류 — start:', start, 'end:', end); return 'upcoming'; }
+  e.setHours(23, 59, 59, 999);
   if (today > e) return 'closed';
   return 'open';
 }
 
 function fmtPeriod(start, end) {
   const f = d => { const dt = parseDate(d); return dt ? `${dt.getMonth()+1}/${dt.getDate()}` : '?'; };
-  return `${f(start)} ~ ${f(end)}`;
+  // 마감 없음(선착순)은 '8/6 ~' 로 연다 — '?' 를 찍으면 오류처럼 읽힌다
+  return end ? `${f(start)} ~ ${f(end)}` : `${f(start)} ~`;
 }
 
 /* D-day 계산
@@ -131,9 +142,10 @@ async function applyIndexRecruit() {
        카드는 흑백 처리도 안 하고 클릭도 열려 있다. 파일 맨 위 실사고 기록 참조. */
     const start = d && d.start;
     const end   = d && d.end;
+    const fcfs  = !!(d && d.fcfs);   // 선착순 — 마감일 없이 열려 있을 수 있다
     /* ⚠️ 조회 성공 + 기수 미등록('none')과 조회 실패(모름)를 가른다.
        미등록이면 '다음 기수 준비 중'이라고 말한다 — 모르는 게 아니라 안 하는 것이다. */
-    if (!start || !end) {
+    if (!start || (!end && !fcfs)) {
       if (!data) return;                       // 조회 실패 — 칩을 안 그린다(구 동작 유지)
       window._challengeStatuses = window._challengeStatuses || {};
       window._challengeStatuses[id] = 'none';
@@ -167,6 +179,10 @@ async function applyIndexRecruit() {
          '마감'보다 '다음이 있다'를 말하는 편이 기다리는 사람에게 쓸모 있다. */
       chip.textContent = '다음 기수 준비 중';
       chip.className = 'ch-st is-closed';
+    } else if (fcfs && !end) {
+      // 선착순 — D-day 가 없다. 마감이 날짜가 아니라 인원이라는 것만 말한다.
+      chip.textContent = '모집 중 · 선착순';
+      chip.className = 'ch-st is-open';
     } else {
       const dday = getDday(start, end, status); // 'D-3' | 'D-Day' | null
       chip.textContent = dday ? ('모집 중 · ' + (dday === 'D-Day' ? '오늘 마감' : dday)) : '모집 중';
@@ -199,7 +215,8 @@ async function loadChallengeStatuses() {
   window._recruitLoadFailed = !data;
   CHALLENGE_IDS.forEach(id => {
     const d = data ? data[id] : null;
-    if (!d || !d.start || !d.end) {
+    // 선착순(d.fcfs)은 마감일이 없어도 정상 기수다 — 'none' 으로 떨어뜨리면 안 된다.
+    if (!d || !d.start || (!d.end && !d.fcfs)) {
       /* ⚠️⚠️ 여기서 '모른다'와 '모집을 안 한다'를 갈라야 한다(2026-08-02 실사고).
          조회가 **성공**했는데 그 챌린지 행이 없다 = admin 에 기수를 안 만들었다
          = **지금 모집하지 않는다.** 신청을 열면 안 된다.
@@ -236,11 +253,12 @@ async function applyDetailRecruit(challengeId) {
      '모집 마감 6/1 ~ 6/28' 을 **확정 문구로** 출력했다(2026-08-02 실사고). 파일 맨 위 참조. */
   const start = d && d.start;
   const end   = d && d.end;
+  const fcfs  = !!(d && d.fcfs);   // 선착순 — 마감·개강일 대신 '인원이 모이면 시작'
   /* status 세 갈래를 구분한다 —
        'open'/'upcoming'/'closed' : 기수가 있고 기간을 안다
        'none'                     : 조회 성공 + 이 챌린지 기수가 없다 = 모집 안 함
        null                       : 조회 실패 = 정말 모른다(버튼 살려 둠) */
-  const status = (start && end) ? getStatus(start, end) : (data ? 'none' : null);
+  const status = (start && (end || fcfs)) ? getStatus(start, end) : (data ? 'none' : null);
   const dday   = (status && status !== 'none') ? getDday(start, end, status) : null;
 
   if (chip) {
@@ -255,9 +273,12 @@ async function applyDetailRecruit(challengeId) {
       chip.textContent = '다음 기수 준비 중';
       chip.style.background = 'rgba(120,120,120,.1)';
     } else if (status === 'open') {
-      chip.innerHTML = dday
-        ? `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`
-        : `모집 <strong>${fmtPeriod(start, end)}</strong>`;
+      chip.innerHTML = (fcfs && !end)
+        // 선착순 — 기간 대신 마감 방식을 말한다(날짜가 없는데 '~ ?' 를 찍으면 오류처럼 읽힌다)
+        ? `선착순 모집 중 · <strong>인원이 모이면 바로 시작</strong>`
+        : dday
+          ? `모집 <strong>${fmtPeriod(start, end)}</strong> ${makeDdayChip(dday, status)}`
+          : `모집 <strong>${fmtPeriod(start, end)}</strong>`;
       chip.style.background = '';
     } else {
       chip.innerHTML = (status === 'upcoming' ? '모집 예정 ' : '모집 마감 ') + fmtPeriod(start, end);
@@ -290,19 +311,23 @@ async function applyGlobalRecruitCta() {
   if (!data) return;   // 모르면 뱃지를 안 띄운다(hidden 유지) — 하드코딩 날짜 폴백 금지
   let best = null;
   Object.values(data).forEach(d => {
-    if (!d || !d.start || !d.end) return;
+    if (!d || !d.start || (!d.end && !d.fcfs)) return;
     const st = getStatus(d.start, d.end);
     const dd = getDday(d.start, d.end, st);
-    if (!dd) return;
-    const num = dd === 'D-Day' ? 0 : parseInt(dd.replace('D-', ''), 10);
+    /* 선착순(마감 없음)은 D-day 가 없다 — 날짜 마감보다 덜 급한 것으로 치고(num 최대),
+       날짜 기수가 하나도 없을 때만 '선착순 모집 중'이 뜬다. */
+    if (!dd && !(st === 'open' && d.fcfs && !d.end)) return;
+    const num = !dd ? 9999 : (dd === 'D-Day' ? 0 : parseInt(dd.replace('D-', ''), 10));
     const rank = st === 'open' ? 0 : (st === 'upcoming' ? 1 : 2);
     if (!best || rank < best.rank || (rank === best.rank && num < best.num)) {
-      best = { rank, num, dday: dd, status: st };
+      best = { rank, num, dday: dd, status: st, fcfs: !dd };
     }
   });
   if (!best || best.status === 'closed') return;
-  const label = best.status === 'open'
-    ? (best.dday === 'D-Day' ? '오늘 마감' : `모집 중 · ${best.dday} 마감`)
-    : (best.dday === 'D-Day' ? '오늘 오픈' : `다음 모집 ${best.dday}`);
+  const label = best.fcfs
+    ? '선착순 모집 중'
+    : best.status === 'open'
+      ? (best.dday === 'D-Day' ? '오늘 마감' : `모집 중 · ${best.dday} 마감`)
+      : (best.dday === 'D-Day' ? '오늘 오픈' : `다음 모집 ${best.dday}`);
   badges.forEach(el => { el.textContent = label; el.hidden = false; });
 }

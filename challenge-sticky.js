@@ -252,7 +252,8 @@
     var data = null;
     try { data = await loadRecruitData(); } catch (e) {}
     var d = data && data[CH];
-    if (!d || !d.start || !d.end) return;    // 모르면 '신청하기' 그대로 — 막지 않는다(A-1 규칙)
+    // 모르면 '신청하기' 그대로 — 막지 않는다(A-1 규칙). 선착순(d.fcfs)은 마감일이 없어도 판정한다.
+    if (!d || !d.start || (!d.end && !d.fcfs)) return;
     var stt = getStatus(d.start, d.end);
     if (stt === 'upcoming') go.textContent = '오픈 알림 받기';
     else if (stt === 'closed') go.textContent = '오픈 알림 받기';
