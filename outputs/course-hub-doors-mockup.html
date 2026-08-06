@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코스 허브 × 네 개의 문 문법 — 3안 비교</title>
+<!-- 실제 사이트 폰트(SUIT Variable)·팔레트를 그대로 쓴다(../tokens.css).
+     사진·초점(object-position)은 전부 가안 — 오너가 맨 마지막에 지정한다. -->
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'SUIT Variable',SUIT,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  .wrap{max-width:600px;margin:0 auto;padding:20px 0 60px}
+  .wrap > .lead, .case > .case-h, .case > .case-note{padding-left:20px;padding-right:20px}
+  .lead{font-size:14px;line-height:1.65;color:var(--text-muted);margin:0 0 4px}
+  .lead b{color:var(--text)}
+
+  .case{margin-top:38px}
+  .case-h{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+  .case-h b{font-size:17px;font-weight:800}
+  .case-h span{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--accent-ink);
+    background:var(--accent-tint);border-radius:999px;padding:3px 9px}
+  .case-note{font-size:13px;line-height:1.65;color:var(--text-muted);margin:6px 0 0}
+  .case-note b{color:var(--text)}
+
+  /* 375px 실폭 재현 — 좌우 20px 은 허브의 열 여백 */
+  .phone{width:375px;max-width:100%;margin:14px auto 0;padding:16px 20px 26px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .sec-t{margin:0;text-align:center}
+  .sec-t b{font-size:19px;font-weight:800}
+  .sec-t span{display:block;font-size:15px;color:var(--text-muted);margin-top:5px}
+
+  button{appearance:none;font-family:inherit;text-align:left;cursor:pointer;padding:0;
+    background:none;border:0;-webkit-tap-highlight-color:transparent}
+
+  /* ══ A안: 홈 챌린지 문 문법 그대로 — 전폭 포스터 4장 ══ */
+  .pa-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+  .pa-card{position:relative;display:block;overflow:hidden;width:100%;min-height:300px;
+    border-radius:16px;border:1px solid var(--border-soft);box-shadow:0 2px 10px rgba(23,42,71,.05)}
+  .pa-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  /* 홈보다 포스터가 낮아(300px) 스크림을 한 단 위까지 올린다 — 라벨이 사진에 묻히지 않게 */
+  .pa-card::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to top, rgba(18,28,46,.97) 0%, rgba(18,28,46,.8) 34%, rgba(18,28,46,.3) 62%, rgba(18,28,46,0) 82%)}
+  .pa-tx{position:absolute;z-index:2;left:18px;right:18px;bottom:16px}
+  .pa-lb{display:block;font-size:12px;font-weight:800;letter-spacing:.14em;
+    color:var(--action-on-dark);text-shadow:0 1px 3px rgba(0,0,0,.45)}
+  .pa-tt{display:block;font-family:var(--serif);font-weight:800;font-size:22px;line-height:1.35;
+    letter-spacing:-.01em;margin-top:7px;color:#fff;word-break:keep-all;text-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .pa-ds{display:block;margin-top:6px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);word-break:keep-all}
+  .pa-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;min-height:44px;
+    padding:0 18px;border-radius:999px;background:#fff;color:var(--accent-dark);
+    font-size:14px;font-weight:800}
+
+  /* ══ B안(추천): 같은 문법을 절반 높이 배너로 압축 ══ */
+  .pb-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .pb-card{position:relative;display:block;overflow:hidden;width:100%;height:140px;
+    border-radius:14px;border:1px solid var(--border-soft);box-shadow:0 2px 10px rgba(23,42,71,.05)}
+  .pb-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .pb-card::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to right, rgba(18,28,46,.94) 0%, rgba(18,28,46,.82) 46%, rgba(18,28,46,.28) 78%, rgba(18,28,46,.08) 100%)}
+  .pb-tx{position:absolute;z-index:2;left:16px;right:44px;top:50%;transform:translateY(-50%)}
+  .pb-lv{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.12em;
+    color:var(--action-on-dark)}
+  .pb-tt{display:block;font-family:var(--serif);font-weight:800;font-size:18px;line-height:1.35;
+    letter-spacing:-.01em;margin-top:5px;color:#fff;word-break:keep-all;text-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .pb-ds{display:block;margin-top:4px;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.88);word-break:keep-all}
+  .pb-ar{position:absolute;z-index:2;right:16px;top:50%;transform:translateY(-50%);
+    color:#fff;font-style:normal;font-size:14px;opacity:.9;transition:transform .2s ease}
+  .pb-card[aria-expanded="true"]{box-shadow:0 0 0 2px var(--action), 0 2px 10px rgba(23,42,71,.05)}
+  .pb-card[aria-expanded="true"] .pb-ar{transform:translateY(-50%) rotate(180deg)}
+
+  /* 아코디언 패널 — briefing.html 현행 그대로(포스터 줄 아래 흰 패널) */
+  .cs-detail{background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;
+    padding:6px 14px 14px;box-shadow:0 2px 12px rgba(23,42,71,.06)}
+  .cs-step{display:flex;gap:11px;align-items:center;padding:12px 2px;text-decoration:none;color:var(--text)}
+  .cs-step + .cs-step{border-top:1px solid var(--border-soft)}
+  .cs-step > b{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--accent-tint);
+    color:var(--accent-ink);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .cs-step > span{flex:1 1 auto;min-width:0}
+  .cs-step em{display:block;font-style:normal;font-size:15px;font-weight:700}
+  .cs-step small{display:block;font-size:13px;color:var(--text-dim);margin-top:1px}
+  .cs-step > u{flex:0 0 auto;text-decoration:none;color:var(--accent-dark);opacity:.6}
+  .cs-reco{display:flex;align-items:center;gap:11px;margin-top:8px;padding:12px;
+    background:var(--accent-tint);border-radius:12px;text-decoration:none;color:var(--text)}
+  .cs-reco > span{flex:1 1 auto;min-width:0}
+  .cs-reco em{display:block;font-style:normal;font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--accent-ink)}
+  .cs-reco b{display:block;font-size:14px;font-weight:700;margin-top:3px;line-height:1.4}
+  .cs-reco small{display:block;font-size:12.5px;color:var(--text-muted);margin-top:2px}
+  .cs-reco > u{flex:0 0 auto;text-decoration:none;color:var(--accent-ink);font-weight:800;font-size:13px}
+  .cs-meta{margin-top:10px;padding:10px 12px;background:var(--accent-tint);border-radius:12px;
+    font-size:13px;font-weight:700;color:var(--accent-ink)}
+  .cs-cta{display:block;width:100%;margin-top:12px;padding:14px 0;border:0;border-radius:999px;
+    background:var(--action);color:var(--action-ink);font-size:15px;font-weight:800;text-align:center}
+
+  /* ══ C안: 대표 포스터 1장 + 현행 줄 유지 ══ */
+  .pc-hero{position:relative;overflow:hidden;width:100%;min-height:190px;border-radius:16px;
+    border:1px solid var(--border-soft);box-shadow:0 2px 10px rgba(23,42,71,.05)}
+  /* 파노라마가 좌우 대칭이라 가운데를 피한다(이음새가 보인다) */
+  .pc-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:22% 45%;display:block}
+  .pc-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to top, rgba(18,28,46,.9) 0%, rgba(18,28,46,.55) 38%, rgba(18,28,46,.08) 75%)}
+  .pc-tx{position:absolute;z-index:2;left:18px;right:18px;bottom:16px}
+
+  /* 현행 코스 줄(briefing.html 원본 CSS) */
+  .cs-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .cs-row{display:flex;align-items:center;gap:12px;width:100%;
+    background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;
+    padding:12px 12px 12px 10px;box-shadow:0 2px 10px rgba(23,42,71,.05)}
+  .cs-lv{flex:0 0 62px;align-self:stretch;min-height:56px;border-radius:10px;
+    background:var(--accent-tint);display:flex;align-items:center;justify-content:center;
+    font-size:21px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink)}
+  .cs-tx{flex:1 1 auto;min-width:0}
+  .cs-tx b{display:block;font-size:15px;font-weight:800;line-height:1.4}
+  .cs-tx span{display:block;font-size:12.5px;color:var(--text-muted);margin-top:3px;line-height:1.45}
+  .cs-row > i{font-style:normal;color:var(--accent-ink);font-size:14px;flex:0 0 auto}
+
+  .verdict{margin:44px 20px 0;padding:16px;border:1px solid var(--border-soft);border-radius:14px;
+    background:var(--surface);font-size:14px;line-height:1.7}
+  .verdict b{color:var(--accent-ink)}
+
+  /* ?only=a|b|c — 촬영용(그 시안만 남긴다) */
+  body[data-only="a"] .lead, body[data-only="a"] #caseB, body[data-only="a"] #caseC, body[data-only="a"] .verdict{display:none}
+  body[data-only="b"] .lead, body[data-only="b"] #caseA, body[data-only="b"] #caseC, body[data-only="b"] .verdict{display:none}
+  body[data-only="c"] .lead, body[data-only="c"] #caseA, body[data-only="c"] #caseB, body[data-only="c"] .verdict{display:none}
+  body[data-only] .case{margin-top:6px}
+</style>
+</head>
+<body>
+<script>
+  var m = location.search.match(/only=([abc])/);
+  if (m) document.body.dataset.only = m[1];
+</script>
+<div class="wrap">
+  <p class="lead"><b>코스 허브를 홈 '네 개의 문' 문법으로 바꾸는 3안.</b><br>
+  홈의 문은 '이동'이고 이 화면은 '비교해서 하나 고르기'라 역할이 다릅니다.
+  포스터를 그대로 옮기면(A) 목록이 길어져 비교가 어려워지고,
+  문법만 압축해 가져오면(B) 둘 다 살릴 수 있습니다.
+  사진 4장·초점은 전부 가안입니다.</p>
+
+  <!-- ══════════ A안 ══════════ -->
+  <section class="case" id="caseA">
+    <div class="case-h"><b>홈 포스터 그대로 4장</b><span>A안</span></div>
+    <p class="case-note">통일감은 가장 강합니다. 대신 줄 4개 360px → 포스터 4장 약 1,300px —
+    <b>폰 한 화면에 코스 하나</b>라 넷을 비교하려면 스크롤을 오르내려야 합니다.
+    홈은 챌린지 하나만 포스터라 강조가 살았는데, 넷 다 포스터면 강조도 사라집니다.</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="pa-list">
+        <button class="pa-card"><img src="../images/door-briefing.webp" alt="" style="object-position:center 30%">
+          <span class="pa-tx"><span class="pa-lb">초급 코스</span>
+            <span class="pa-tt">승무원 준비가<br>처음이라면</span>
+            <span class="pa-ds">답변, 보이스, 이미지메이킹부터 잡고가세요!</span>
+            <span class="pa-cta">코스 살펴보기 ▾</span></span></button>
+        <button class="pa-card"><img src="../images/hero-answer.webp" alt="" style="object-position:center 22%">
+          <span class="pa-tx"><span class="pa-lb">중급 코스</span>
+            <span class="pa-tt">기출 답변을<br>쌓아갈 시기라면</span>
+            <span class="pa-ds">소재 발굴로 내 경험을 답변으로 만들어 보세요!</span>
+            <span class="pa-cta">코스 살펴보기 ▾</span></span></button>
+        <button class="pa-card"><img src="../images/hero-voice.webp" alt="" style="object-position:center 20%">
+          <span class="pa-tx"><span class="pa-lb">고급 코스</span>
+            <span class="pa-tt">답변 완성도를<br>올리고 싶다면</span>
+            <span class="pa-ds">첨삭과 AI킬러로 문장을 다듬어 보세요!</span>
+            <span class="pa-cta">코스 살펴보기 ▾</span></span></button>
+        <button class="pa-card"><img src="../images/hero-expression.webp" alt="" style="object-position:25% 25%">
+          <span class="pa-tx"><span class="pa-lb">실전 코스</span>
+            <span class="pa-tt">면접이 당장<br>코앞이라면</span>
+            <span class="pa-ds">뉴스 스크랩과 기출 점검으로 마무리하세요!</span>
+            <span class="pa-cta">코스 살펴보기 ▾</span></span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ B안(추천) ══════════ -->
+  <section class="case" id="caseB">
+    <div class="case-h"><b>배너 포스터 4장 — 문법만 압축</b><span>B안 · 추천</span></div>
+    <p class="case-note">같은 문법(사진+그라데이션+흰 글씨)을 높이 140px로 압축 —
+    <b>한 화면 반 안에 넷이 다 보여</b> 비교가 유지됩니다.
+    사진은 홈에서 이미 받은 파일 재사용이라 추가 전송량이 없고,
+    누르면 지금처럼 흰 패널이 줄 아래로 펼쳐집니다(중급에 펼침 예시).</p>
+    <div class="phone">
+      <div class="sec-t"><b>연구진이 추천하는 코스예요</b><span>지금 상황에 맞는 길부터 골라 보세요</span></div>
+      <div class="pb-list">
+        <button class="pb-card"><img src="../images/door-briefing.webp" alt="" style="object-position:72% 28%">
+          <span class="pb-tx"><span class="pb-lv">초급</span>
+            <span class="pb-tt">승무원 준비가 처음이라면</span>
+            <span class="pb-ds">답변, 보이스, 이미지메이킹부터 잡고가세요!</span></span>
+          <i class="pb-ar">▾</i></button>
+        <button class="pb-card" aria-expanded="true"><img src="../images/hero-answer.webp" alt="" style="object-position:62% 22%">
+          <span class="pb-tx"><span class="pb-lv">중급</span>
+            <span class="pb-tt">기출 답변을 쌓아갈 시기라면</span>
+            <span class="pb-ds">소재 발굴로 내 경험을 답변으로 만들어 보세요!</span></span>
+          <i class="pb-ar">▾</i></button>
+        <div class="cs-detail">
+          <a class="cs-step"><b>1</b><span><em>답변 소재 발굴</em><small>중급 난이도 문제로 소재를 넓혀요</small></span><u>→</u></a>
+          <a class="cs-step"><b>2</b><span><em>필수 기출 하루 한 개</em><small>매일 한 문항씩 답변을 쌓아요</small></span><u>→</u></a>
+          <a class="cs-step"><b>3</b><span><em>나만의 노트 정리</em><small>쌓인 답변을 한곳에서 다듬어요</small></span><u>→</u></a>
+          <a class="cs-reco"><span><em>함께하면 좋은 챌린지</em><b>승.자.각</b><small>뻔한 답변 → 나만 할 수 있는 답변, 2주 집중</small></span><u>모집 일정</u></a>
+          <div class="cs-meta">투자 시간 하루 10~15분</div>
+          <span class="cs-cta">이 코스로 시작하기</span>
+        </div>
+        <button class="pb-card"><img src="../images/hero-voice.webp" alt="" style="object-position:58% 18%">
+          <span class="pb-tx"><span class="pb-lv">고급</span>
+            <span class="pb-tt">답변 완성도를 올리고 싶다면</span>
+            <span class="pb-ds">첨삭과 AI킬러로 문장을 다듬어 보세요!</span></span>
+          <i class="pb-ar">▾</i></button>
+        <button class="pb-card"><img src="../images/hero-expression.webp" alt="" style="object-position:70% 25%">
+          <span class="pb-tx"><span class="pb-lv">실전</span>
+            <span class="pb-tt">면접이 당장 코앞이라면</span>
+            <span class="pb-ds">뉴스 스크랩과 기출 점검으로 마무리하세요!</span></span>
+          <i class="pb-ar">▾</i></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ C안 ══════════ -->
+  <section class="case" id="caseC">
+    <div class="case-h"><b>대표 포스터 1장 + 현행 줄 유지</b><span>C안</span></div>
+    <p class="case-note">오늘 오전에 확정한 '사진 대신 한글 칩' 줄은 그대로 두고,
+    맨 위에 대표 포스터 한 장으로 문 느낌만 얹는 안. 비교 기능이 완전히 유지되고 작업량이 가장 적습니다.
+    대신 줄 자체는 지금과 같아서 "문처럼 바뀌었다"는 인상은 약합니다.</p>
+    <div class="phone">
+      <div class="pc-hero"><img src="../images/hero-sky-sunset.webp" alt="">
+        <div class="pc-tx"><span class="pa-lb">MONC COURSE</span>
+          <span class="pa-tt" style="font-size:20px">연구진이 추천하는 코스예요</span>
+          <span class="pa-ds">지금 상황에 맞는 길부터 골라 보세요</span></div>
+      </div>
+      <div class="cs-list">
+        <button class="cs-row"><span class="cs-lv">초급</span>
+          <span class="cs-tx"><b>승무원 준비가 처음이라면</b><span>답변, 보이스, 이미지메이킹부터 잡고가세요!</span></span><i>▾</i></button>
+        <button class="cs-row"><span class="cs-lv">중급</span>
+          <span class="cs-tx"><b>기출 답변을 쌓아갈 시기라면</b><span>소재 발굴로 내 경험을 답변으로 만들어 보세요!</span></span><i>▾</i></button>
+        <button class="cs-row"><span class="cs-lv">고급</span>
+          <span class="cs-tx"><b>답변 완성도를 올리고 싶다면</b><span>첨삭과 AI킬러로 문장을 다듬어 보세요!</span></span><i>▾</i></button>
+        <button class="cs-row"><span class="cs-lv">실전</span>
+          <span class="cs-tx"><b>면접이 당장 코앞이라면</b><span>뉴스 스크랩과 기출 점검으로 마무리하세요!</span></span><i>▾</i></button>
+      </div>
+    </div>
+  </section>
+
+  <p class="verdict"><b>추천 = B안.</b> 문 문법의 시각 통일과 '넷을 나란히 비교해 고르기'를 둘 다 지킵니다.
+  참고: 오늘 오전 '사진 4장 대신 한글 큰 글자' 확정을 뒤집는 방향입니다 —
+  그때 비교한 건 흰 줄 안의 작은 사진이었고, 이번은 문처럼 사진 위에 글자를 얹는 문법이라 다른 안이긴 합니다.
+  확정하시면 briefing.md 결정 기록도 같이 갱신합니다.</p>
+</div>
+</body>
+</html>
