@@ -934,11 +934,13 @@
       }
       // 크레딧 숫자만으로는 값이 읽히지 않는다 — **무엇을 몇 번 할 수 있는지**를 같이 적는다.
       // (학원 자소서 첨삭이 문항당 2~5만 원이라는 기준점은 아래 charge-note 가 말한다.)
+      // ⚠️ 상품 이름은 저장된 label 이 아니라 개수로 짓는다(2026-08-06). 예전 label 이
+      //    '30회'라서 바로 아래 '검사 10회'와 단위가 겹쳤다 — 뜻이 다른 두 숫자다.
       const cost = Number(_wallet?.costs?.ai_killer) || 3;
       el.innerHTML = _packs.map((p) => {
         const n = Number(p.count) || 0;
         return '<button class="pack" type="button" data-pack="' + esc(p.id) + '">'
-          + '<span class="n">' + esc(p.label || (n + '크레딧'))
+          + '<span class="n">' + n + '크레딧'
           + '<em class="pack-can">검사 ' + Math.floor(n / cost) + '회</em></span>'
           + '<span class="p">' + Number(p.price).toLocaleString() + '원</span></button>';
       }).join('');
@@ -963,7 +965,7 @@
 
         const res = await window.PortOne.requestPayment({
           storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
-          paymentId, orderName: '몬크 AI킬러 ' + (pack.label || pack.count + '회'),
+          paymentId, orderName: '몬크 AI킬러 크레딧 ' + (Number(pack.count) || 0) + '개',
           totalAmount: Number(pack.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
           redirectUrl,
         });

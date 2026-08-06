@@ -1219,8 +1219,8 @@
       <form class="round-form" id="creditBulkForm">
         <div class="field"><label for="cbCohort">기수 일괄 지급</label>
           <select id="cbCohort"><option value="">기수 선택…</option></select></div>
-        <div class="field"><label for="cbAmount">지급 횟수</label>
-          <input id="cbAmount" type="number" min="1" step="1" placeholder="예: 3"></div>
+        <div class="field"><label for="cbAmount">지급 크레딧(개)</label>
+          <input id="cbAmount" type="number" min="1" step="1" placeholder="예: 30"></div>
         <div class="field"><label for="cbNote">사유(기록에 남아요)</label>
           <input id="cbNote" placeholder="예: 3기 오픈 기념"></div>
         <button class="btn btn-action" type="submit" id="cbSubmit">기수 전원에게 지급</button>
@@ -1259,7 +1259,7 @@
           <!-- 가입 축하 크레딧 — 회원당 1회(migration 20260802100000). 0 이면 지급 중단.
                ⚠️ 하루 무료와 성격이 다르다: 이건 인당 1회라 비용 상한이 고정이고,
                   하루 무료는 매일 반복된다. 후하게 풀 땐 여기를 올릴 것. -->
-          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfSignup">가입 축하(1회)</label>
+          <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cfSignup">가입 축하 크레딧</label>
             <input id="cfSignup" type="number" min="0" step="1" placeholder="15" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
           <button class="btn btn-action cf-save" id="cfSave" type="button">저장</button>
         </div>
@@ -1269,8 +1269,8 @@
       <!-- 충전 상품 — site_config.credit_packs. ⚠️ verify-payment 가 결제 금액을 검증할 때
            같은 값을 읽는다. 여기서 바꾸면 즉시 반영(함수 재배포 불필요). -->
       <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
-        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cpCount">충전 횟수</label>
-          <input id="cpCount" type="number" min="1" step="1" placeholder="10" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
+        <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cpCount">충전 크레딧(개)</label>
+          <input id="cpCount" type="number" min="1" step="1" placeholder="30" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
         <div class="field" style="flex:1 1 140px;min-width:140px;max-width:220px;"><label for="cpPrice">가격(원)</label>
           <input id="cpPrice" type="number" min="0" step="100" placeholder="9900" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;"></div>
         <button class="btn btn-action cf-save" id="cpSave" type="button">충전 상품 저장</button>
@@ -5764,11 +5764,11 @@
           +   '<b>' + esc(m.name || '이름 없음') + '</b>'
           +   '<span style="color:var(--text-muted);font-size:13px;"> · ' + esc(m.email || '') + '</span>'
           +   '<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">'
-          +     '잔액 <b style="color:var(--accent-ink);">' + bal + '회</b> · 무료 사용 ' + free + '회</div>'
+          +     '잔액 <b style="color:var(--accent-ink);">' + bal + '개</b> · 무료 사용 ' + free + '회</div>'
           + '</div>'
           + '<div class="ri-actions">'
           + '<input type="number" min="1" step="1" value="1" data-amt="' + m.id + '" '
-          +   'aria-label="' + esc(m.name || '이름 없음') + ' 지급·회수 횟수" '
+          +   'aria-label="' + esc(m.name || '이름 없음') + ' 지급·회수 크레딧(개)" '
           +   'style="width:64px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;">'
           + '<button class="btn btn-action btn-sm" data-grant="' + m.id + '" type="button">지급</button>'
           + '<button class="btn btn-ghost btn-sm" data-revoke="' + m.id + '" type="button">회수</button>'
@@ -5912,7 +5912,7 @@
     document.getElementById('cpSave').addEventListener('click', async () => {
       const count = Math.floor(Number(document.getElementById('cpCount').value) || 0);
       const price = Math.floor(Number(document.getElementById('cpPrice').value) || 0);
-      if (count < 1) { toast('충전 횟수는 1 이상이어야 해요'); return; }
+      if (count < 1) { toast('충전 크레딧은 1개 이상이어야 해요'); return; }
       /* ⚠️ 0원 팩을 막는다(2026-08-02 5차 · P1). 전에는 `price < 0` 만 봐서 가격 칸을 비우면
          Number('')||0 = 0 이 그대로 저장됐고, verify-payment 가 같은 값을 읽으므로
          **충전이 공짜가 된다.** */
@@ -5926,7 +5926,11 @@
       if (cur.error) { toast('저장 실패: 기존 상품을 못 읽었어요 — ' + cur.error.message); return; }
       const keep = (Array.isArray(cur.data && cur.data.value) ? cur.data.value : [])
         .filter(x => x && x.tool !== 'ai_killer');
-      const packs = keep.concat([{ id: 'ai10', tool: 'ai_killer', count, price, label: count + '회' }]);
+      /* ⚠️ 상품 이름을 따로 저장하지 않는다(2026-08-06 오너 지적 — "충전을 회라고 하니 어감이 안 맞는다").
+         전에는 `label: count + '회'` 를 같이 넣었는데, 충전 화면이 그 이름 바로 아래에
+         '검사 N회' 환산을 붙여서 뜻이 다른 두 숫자가 같은 단위로 붙어 있었다(30회 / 검사 10회).
+         이름은 화면이 개수로 지어 쓴다 — 여기서 저장하면 예전에 저장된 '회' 이름도 같이 지워진다. */
+      const packs = keep.concat([{ id: 'ai10', tool: 'ai_killer', count, price }]);
       const { error } = await sb().from('site_config')
         .upsert({ key: 'credit_packs', value: packs }, { onConflict: 'key' });
       toast(error ? '저장 실패: ' + error.message : '저장됨');
@@ -5944,7 +5948,7 @@
       const n = Math.floor(Number(input && input.value) || 0);
       if (n < 1) { toast('1 이상을 넣어 주세요'); return; }
       const ok = await giveCredit(id, g ? n : -n, g ? '관리자 지급' : '관리자 회수');
-      if (ok) { toast(g ? n + '회 지급' : n + '회 회수'); await loadCredits(); }
+      if (ok) { toast(g ? n + '개 지급' : n + '개 회수'); await loadCredits(); }
     });
 
     guardSubmit('creditBulkForm', async (e) => {
@@ -5953,10 +5957,10 @@
       const n = Math.floor(Number(document.getElementById('cbAmount').value) || 0);
       const note = document.getElementById('cbNote').value.trim();
       if (!cid) { toast('기수를 골라 주세요'); return; }
-      if (n < 1) { toast('지급 횟수를 넣어 주세요'); return; }
+      if (n < 1) { toast('지급 크레딧을 넣어 주세요'); return; }
       const targets = members.filter(m => m.cohort_id === cid);
       if (!targets.length) { toast('그 기수에 회원이 없어요'); return; }
-      if (!confirm(targets.length + '명에게 ' + n + '회씩 지급할까요?')) return;
+      if (!confirm(targets.length + '명에게 ' + n + '개씩 지급할까요?')) return;
       const btn = document.getElementById('cbSubmit');
       btn.disabled = true; btn.textContent = '지급 중…';
       let done = 0;
