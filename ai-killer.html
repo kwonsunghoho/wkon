@@ -88,6 +88,25 @@
     @media (max-width: 768px) { nav { top: 57px; } }
 
     /* ── 입력 ── */
+    /* 무대 머리(2026-08-06 구분 개편 — 스펙 docs/superpowers/specs/2026-08-06-killer-polish-distinction-design.md).
+       찾기(킬러)는 다크 무대, 고치기(첨삭)는 순백 — 쌍둥이던 두 입력 화면을 색으로 가른다.
+       ⚠️ 다크 위 제목은 색을 여기 명시한다 — 전역 h1{color:var(--ink)} 가 이겨서
+          제목이 배경에 사라진다(apply 배너 전례). */
+    .stage { margin-top: 14px; padding: 16px 16px 18px; border-radius: var(--radius-sm);
+             background: var(--bg-dark); color: var(--text-on-dark); }
+    .stage .in-head { margin-top: 12px; color: #fff; }
+    .stage .in-sub { color: rgba(241,244,248,.8); }
+    .stage .in-sub a { color: var(--action-on-dark); font-weight: 800; text-decoration: underline;
+                       text-underline-offset: 2px; }
+    /* 순서 띠 — ①찾기→②고치기. 지금 화면 알약은 흰 알약+네이비 글씨(다크 위 CTA 규칙),
+       반대쪽은 실제 <a>(포커스·키보드 원칙) + 흰 테두리. polish.html 과 한 쌍. */
+    .steps { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .step { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+            border-radius: 999px; font-size: 13px; font-weight: 800; text-decoration: none; }
+    .step.on { background: #fff; color: var(--accent-dark); }
+    a.step { border: 1px solid rgba(255,255,255,.42); color: rgba(255,255,255,.88); }
+    a.step:hover { background: rgba(255,255,255,.1); }
+    .steps .arr { color: rgba(255,255,255,.55); font-size: 14px; }
     .in-head { font-family: var(--serif); font-size: clamp(24px,5vw,30px); font-weight: 700;
                line-height: 1.3; margin-top: 22px; }
     .in-sub { margin-top: 8px; font-size: 15px; color: var(--text-muted); }
@@ -349,8 +368,17 @@
   <main class="container">
     <!-- ══ 입력 ══ -->
     <section id="inputView">
-      <h1 class="in-head">어디가 AI처럼<br>읽히는지</h1>
-      <p class="in-sub">문장을 하나씩 짚어요. 왜 그렇게 읽히는지, 어떻게 고칠지까지.</p>
+      <!-- 무대 머리 — 첨삭(polish.html)과 한 쌍. 문구를 고치면 저쪽 부제의 상호 링크도 같이 본다 -->
+      <div class="stage">
+        <!-- ⚠️ <nav> 를 쓰지 말 것 — 이 페이지의 nav 요소 규칙(sticky·흰 배경)이 붙어 제목을 덮는다(실측) -->
+        <div class="steps" role="navigation" aria-label="찾기·고치기 순서">
+          <span class="step on" aria-current="page">① 찾기 · AI킬러</span>
+          <span class="arr" aria-hidden="true">→</span>
+          <a class="step" href="polish.html">② 고치기 · 첨삭</a>
+        </div>
+        <h1 class="in-head">어디가 AI처럼<br>읽히는지 찾아드려요</h1>
+        <p class="in-sub">AI 같은 문장을 밑줄로 짚어요. 고치는 건 <a href="polish.html">② 첨삭</a>이 해요.</p>
+      </div>
 
       <div class="in-box">
         <!-- ⚠️ 구 '붙여넣기 / 답변노트에서' 탭은 2026-07-25 제거. 글이 어디서 왔든 검사는
@@ -394,7 +422,7 @@
         <span class="in-free-go" id="freeGo">고르기 →</span>
       </button>
 
-      <button class="in-cta" id="goBtn" type="button" disabled>KILL AI</button>
+      <button class="in-cta" id="goBtn" type="button" disabled>KILL AI — AI 같은 문장 찾기</button>
       <p class="in-left" id="leftMsg"></p>
       <div id="inNotice"></div>
 
@@ -642,7 +670,7 @@
       c.classList.toggle('over', n > MAX);
       $('goBtn').disabled = _busy || n < MIN || n > MAX;
       $('goBtn').textContent = _busy ? '검사 중…'
-        : (n > 0 && n < MIN ? (MIN - n) + '자 더 필요해요' : 'KILL AI');
+        : (n > 0 && n < MIN ? (MIN - n) + '자 더 필요해요' : 'KILL AI — AI 같은 문장 찾기');
     }
 
     // ── 저장한 답변 ───────────────────────────────────────────────────
