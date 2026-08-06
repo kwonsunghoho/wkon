@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소재 발굴 — 재료 5/5 ‘다듬기 등장’ 연출 5안</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'SUIT Variable',-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+  .wrap{max-width:620px;margin:0 auto;padding:22px 0 70px}
+  h1{font-size:19px;font-weight:800;margin:0 0 8px;padding:0 20px;color:var(--ink)}
+  .lead{font-size:14px;line-height:1.65;color:var(--text-muted);margin:0 0 6px;padding:0 20px}
+  .lead b{color:var(--text)}
+  .case{margin-top:38px}
+  .case-h{display:flex;align-items:baseline;gap:8px;padding:0 20px;flex-wrap:wrap}
+  .case-h b{font-size:17px;font-weight:800}
+  .case-h span{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink);
+    background:var(--accent-tint);border-radius:999px;padding:3px 9px}
+  .case-note{font-size:13px;line-height:1.65;color:var(--text-muted);margin:6px 0 0;padding:0 20px}
+  .case-note b{color:var(--text)}
+  .case-note .no{color:#B3261E;font-weight:700}
+  /* 375px 실폭 — sojae.html 의 좌우 여백 16px 그대로 */
+  .phone{width:375px;max-width:100%;margin:12px auto 0;padding:14px 16px 18px;
+    border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+  .replay{display:block;margin:10px auto 0;min-height:44px;padding:0 18px;border-radius:999px;
+    border:1.5px solid var(--accent-dark);background:var(--surface);color:var(--accent-ink);
+    font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+
+  /* ── 실제 sojae.html 채팅 CSS 를 그대로 옮긴 것(값 바꾸지 말 것) ── */
+  .chat{display:flex;flex-direction:column;gap:12px}
+  .who{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-ink);
+    font-weight:700;margin-bottom:5px}
+  .ava{width:20px;height:20px;border-radius:50%;background:var(--accent-ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .bub{max-width:84%;font-size:15px;line-height:1.55;padding:11px 13px;border-radius:16px}
+  .bub b{font-weight:700}
+  .ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border-soft);
+    border-bottom-left-radius:6px;color:var(--text)}
+  .me{align-self:flex-end;background:var(--action);color:var(--action-ink);
+    border-bottom-right-radius:6px}
+  .refinewrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .mmrow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;
+    border-radius:999px;cursor:pointer;font:inherit;font-size:14px;font-weight:700;
+    white-space:nowrap;background:var(--surface);color:var(--accent-ink);
+    border:1.5px solid var(--accent-dark)}
+  .chip-go{background:var(--action);color:var(--action-ink);border-color:transparent}
+  .chip-go b{font-weight:800}
+  .mm-dots{display:inline-flex;gap:4px;margin-right:2px}
+  .mm-dots i{width:7px;height:7px;border-radius:50%;background:rgba(27,58,107,.18)}
+  .mm-dots i.on{background:var(--accent-ink)}
+  .mm.mm-full{background:var(--action-tint)}
+  .mm-detail{font-size:13px;line-height:1.5;color:var(--text-muted);text-align:center;
+    padding:0 8px;word-break:keep-all}
+  .mm-detail b{color:var(--accent-ink)}
+
+  /* ═══════════════ 공통 등장 애니메이션(안별로 조합만 다르다) ═══════════════ */
+  @keyframes popIn{0%{opacity:0;transform:translateY(10px) scale(.96)}
+    60%{opacity:1;transform:translateY(-2px) scale(1.01)}100%{opacity:1;transform:none}}
+  @keyframes ring{0%{box-shadow:0 0 0 0 rgba(27,58,107,.45)}
+    70%{box-shadow:0 0 0 11px rgba(27,58,107,0)}100%{box-shadow:0 0 0 0 rgba(27,58,107,0)}}
+  @keyframes dotPop{0%{transform:scale(.4);background:rgba(27,58,107,.18)}
+    60%{transform:scale(1.5)}100%{transform:scale(1);background:var(--accent-ink)}}
+  @keyframes sweep{0%{transform:translateX(-130%) skewX(-18deg)}
+    100%{transform:translateX(280%) skewX(-18deg)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  /* 등장 전에는 감춰 두고, .play 가 붙으면 순서대로 나온다 */
+  .stage .late{opacity:0}
+  .stage.play .late{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) forwards}
+
+  /* ── A안 — 반전 말풍선(연구원 쪽인데 네이비) ── */
+  .bub-turn{align-self:flex-start;background:var(--action);color:var(--action-ink);
+    border-bottom-left-radius:6px;border:0;max-width:84%;font-size:15px;line-height:1.55;
+    padding:12px 13px;border-radius:16px;border-bottom-left-radius:6px}
+  .bub-turn .who{color:rgba(255,255,255,.85)}
+  .bub-turn .ava{background:rgba(255,255,255,.2)}
+  .bub-turn b{font-weight:800}
+  /* 다크 면 위 CTA = 흰 알약 + 네이비 글씨(사이트 규칙) */
+  .bub-turn .in-cta{display:inline-flex;align-items:center;gap:6px;min-height:44px;
+    margin-top:10px;padding:0 16px;border-radius:999px;border:0;background:#fff;
+    color:var(--accent-ink);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+  .stage.play .bub-turn.late{animation:popIn .5s cubic-bezier(.2,.9,.3,1.2) forwards}
+
+  /* ── B안 — 게이지가 주인공(점이 차오르고 알약이 반전) ── */
+  /* 점이 하나씩 차오른 뒤(0.65s), 알약이 반전될 때(0.95s) 점도 흰색으로 —
+     dotWhite 가 없으면 네이비 점이 네이비 알약에 묻혀 보이지 않는다 */
+  .stage-b.play .mm-dots i{animation:dotPop .35s ease forwards, dotWhite .3s ease .95s forwards}
+  .stage-b.play .mm-dots i:nth-child(1){animation-delay:.05s,.95s}
+  .stage-b.play .mm-dots i:nth-child(2){animation-delay:.2s,.95s}
+  .stage-b.play .mm-dots i:nth-child(3){animation-delay:.35s,.95s}
+  .stage-b.play .mm-dots i:nth-child(4){animation-delay:.5s,.95s}
+  .stage-b.play .mm-dots i:nth-child(5){animation-delay:.65s,.95s}
+  @keyframes dotWhite{to{background:rgba(255,255,255,.92)}}
+  /* 다 찬 순간 알약 자체가 네이비로 반전 + 링 1회 */
+  .stage-b.play .mm{animation:mmFlip .3s ease .95s forwards, ring 1s ease-out 1.05s 1}
+  @keyframes mmFlip{to{background:var(--action);color:var(--action-ink);border-color:transparent}}
+  .stage-b.play .late{animation-delay:1.15s}
+
+  /* ── C안 — 전폭 완료 카드 + 샤인 스윕 ── */
+  .donecard{align-self:stretch;position:relative;overflow:hidden;background:var(--action-tint);
+    border:1.5px solid var(--accent-dark);border-radius:14px;padding:13px 14px}
+  .donecard-t{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;
+    color:var(--accent-ink);word-break:keep-all}
+  .donecard-t svg{flex:0 0 auto;width:20px;height:20px}
+  .donecard-s{font-size:13px;line-height:1.55;color:var(--text-muted);margin-top:4px;word-break:keep-all}
+  .donecard .row{display:flex;align-items:center;gap:8px;margin-top:11px}
+  .donecard .chip-go{min-height:44px}
+  .donecard .shine{position:absolute;top:0;bottom:0;width:56px;pointer-events:none;
+    background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.65),rgba(255,255,255,0))}
+  .stage.play .donecard .shine{animation:sweep .9s ease .55s 1 both}
+  /* 체크 원이 그려지는 연출 */
+  .stage.play .donecard .ckc{stroke-dasharray:60;stroke-dashoffset:60;animation:draw .5s ease .5s forwards}
+  .stage.play .donecard .ckm{stroke-dasharray:20;stroke-dashoffset:20;animation:draw .35s ease .85s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+
+  /* ── D안 — 단계가 바뀌는 경계선(카톡 날짜 구분선 자리) ── */
+  .stageline{align-self:stretch;display:flex;align-items:center;gap:10px;margin:2px 0}
+  .stageline::before,.stageline::after{content:'';flex:1 1 auto;height:1px;background:var(--accent-dark);opacity:.35}
+  .stageline span{flex:0 0 auto;font-size:12px;font-weight:800;letter-spacing:.04em;
+    color:var(--accent-ink);background:var(--accent-tint);border:1px solid var(--accent-dark);
+    border-radius:999px;padding:5px 12px}
+  .stage.play .stageline{opacity:0;animation:fadeIn .4s ease .15s forwards}
+  .stage.play .stageline span{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) .15s both}
+  .stage-d.play .late{animation-delay:.55s}
+  .stage-d.play .chip-go{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) .55s both, ring 1s ease-out 1.1s 2}
+
+  /* ── E안 — 말풍선은 강조 테두리, 칩은 숨쉬는 글로우 ── */
+  .bub-mark{align-self:flex-start;max-width:84%;font-size:15px;line-height:1.55;
+    padding:11px 13px 11px 15px;border-radius:16px;border-bottom-left-radius:6px;
+    background:var(--action-tint);border:1px solid var(--accent-dark);
+    border-left:4px solid var(--action);color:var(--text)}
+  .bub-mark b{font-weight:800;color:var(--accent-ink)}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(27,58,107,.0);transform:scale(1)}
+    50%{box-shadow:0 0 0 7px rgba(27,58,107,.14);transform:scale(1.03)}}
+  .stage-e.play .chip-go{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) .5s both, breathe 1.6s ease-in-out 1.1s 3}
+  .stage-e.play .late{animation-delay:.5s}
+  .arrowb{display:inline-block;animation:none}
+  .stage-e.play .arrowb{animation:nudge 1.2s ease 1.2s 3}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+
+  @media (prefers-reduced-motion:reduce){
+    .stage.play .late,.stage.play *{animation-duration:.01s !important;animation-delay:0s !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>재료 5/5 — ‘다듬기 등장’ 연출 5안</h1>
+  <p class="lead">지금은 재료가 다 모여도 게이지 알약 배경만 옅게 바뀌고 안내 문구·다듬기 칩이 <b>일반 대화와 같은 색으로 조용히</b> 붙습니다. 아래 5안은 그 순간을 눈에 띄게 만드는 안입니다. 색은 전부 현행 팔레트(네이비·틴트) 안에서만 씁니다. <b>각 판의 ‘다시 보기’를 누르면 등장 애니메이션이 재생됩니다.</b></p>
+
+  <!-- ═══════════ A안 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>A안</span><b>반전 말풍선 — 연구원이 네이비로 말한다</b></div>
+    <p class="case-note">‘다 모였어요’ 알림을 <b>내 말풍선처럼 네이비를 채운 말풍선</b>으로 연구원 쪽에 띄운다. 대화 내내 흰 카드만 보다가 왼쪽에 처음 나타나는 진한 면이라 바로 눈에 걸린다. CTA 는 다크 위 규칙대로 <b>흰 알약 + 네이비 글씨</b>로 말풍선 안에 넣는다. 주의: 반전 말풍선은 <span class="no">이 한 번만</span> 써야 힘이 유지된다.</p>
+    <div class="phone">
+      <div class="chat stage stage-a" id="stA">
+        <div class="bub me">승객이 갑자기 화를 내셔서 제가 먼저 다가가 이유를 여쭤봤어요.</div>
+        <div class="bub ai"><div class="who"><span class="ava">R</span>연구원</div>그 순간 어떤 마음이었는지도 궁금해요. 긴장됐나요, 오히려 침착해졌나요?</div>
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub-turn late">
+          <div class="who"><span class="ava">R</span>연구원</div>
+          재료가 <b>5개 다 모였어요!</b> 이 정도면 30초 분량 답변을 만들 수 있어요. 이제 뼈대를 잡아볼까요?
+          <br><button class="in-cta" type="button">다듬기 · 오늘 <b>&nbsp;2번&nbsp;</b> 무료 →</button>
+        </div>
+      </div>
+      <button class="replay" data-for="stA" type="button">다시 보기 ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ B안 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>B안</span><b>게이지 완성 연출 — 점이 차오르고 알약이 반전</b></div>
+    <p class="case-note">새 요소 없이 <b>지금 있는 재료 게이지가 주인공</b>이 되는 안. 점 5개가 하나씩 통통 차오르고, 다 찬 순간 알약 전체가 네이비로 반전되며 링이 한 번 퍼진다. 그 다음에 다듬기 칩이 떠오른다. 화면 문법이 하나도 안 늘어서 가장 조용한 안 — 대신 말풍선 자체는 그대로라 <span class="no">대화만 보던 학생은 지나칠 수 있다.</span></p>
+    <div class="phone">
+      <div class="chat stage stage-b" id="stB">
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub ai"><div class="who"><span class="ava">R</span>연구원</div>좋아요, 그 침착함이 결과로 이어졌군요. 여기까지면 충분해요.</div>
+        <div class="refinewrap">
+          <div class="mmrow">
+            <button class="chip mm" type="button"><span class="mm-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="mmlabel">재료 <b>5/5</b></span></button>
+            <button class="chip chip-go late" type="button">다듬기 · 오늘 <b>2번</b> 무료</button>
+          </div>
+          <div class="mm-detail late">재료가 다 모였어요 — 이 정도면 <b>30초 분량 답변</b>을 만들 수 있어요.</div>
+        </div>
+      </div>
+      <button class="replay" data-for="stB" type="button">다시 보기 ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ C안 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>C안</span><b>전폭 완료 카드 — 체크가 그려지고 빛이 한 번 지나간다</b></div>
+    <p class="case-note">전구 확인 카드처럼 <b>폭을 꽉 채운 카드</b>로 띄우되, 체크 원이 그려지는 연출 + 흰 빛이 한 번 쓸고 지나가는 샤인으로 ‘완료’ 를 말한다. 말풍선(최대 84%)과 폭부터 달라 대화와 안 섞인다. 다듬기 버튼과 값이 카드 안에 같이 있어 <b>결정 화면에 값·버튼·근거</b> 규칙에도 맞는다. 주의: 전구 확인 카드(.askcard)와 같은 톤이라 <span class="no">전구를 쓴 직후엔 비슷한 카드 두 장이 연달아 보일 수 있다.</span></p>
+    <div class="phone">
+      <div class="chat stage stage-c" id="stC">
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub ai"><div class="who"><span class="ava">R</span>연구원</div>좋아요, 그 침착함이 결과로 이어졌군요. 여기까지면 충분해요.</div>
+        <div class="donecard late">
+          <div class="donecard-t">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ckc" cx="12" cy="12" r="9.2"/><path class="ckm" d="M8.3 12.4l2.5 2.5 4.9-5.4"/></svg>
+            재료가 다 모였어요 · 5/5
+          </div>
+          <div class="donecard-s">장면·행동·판단·결과·감정 — 30초 분량 답변을 만들 재료가 준비됐어요.</div>
+          <div class="row"><button class="chip chip-go" type="button">다듬기 · 오늘 <b>2번</b> 무료 →</button></div>
+          <span class="shine" aria-hidden="true"></span>
+        </div>
+      </div>
+      <button class="replay" data-for="stC" type="button">다시 보기 ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ D안 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>D안</span><b>단계 경계선 — ‘되묻기 끝’ 을 카톡 날짜 구분선처럼</b></div>
+    <p class="case-note">대화 사이에 <b>가로 구분선 + 가운데 배지</b>를 긋는다(카톡 날짜 구분선 자리). ‘여기서 되묻기 단계가 끝났다’ 는 구조가 화면에 그대로 보이고, 위 상단 스텝바(1 되묻기 › 2 다듬기)와 문법이 이어진다. 선 아래로 다듬기 칩이 링을 두 번 울리며 떠오른다. 주의: 배지는 정보가 아니라 경계 표시라 <span class="no">누르는 자리로 오해하지 않게 버튼 모양을 피해야 한다.</span></p>
+    <div class="phone">
+      <div class="chat stage stage-d" id="stD">
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub ai"><div class="who"><span class="ava">R</span>연구원</div>좋아요, 그 침착함이 결과로 이어졌군요. 여기까지면 충분해요.</div>
+        <div class="stageline"><span>재료 5/5 · 되묻기 끝</span></div>
+        <div class="refinewrap late">
+          <button class="chip chip-go" type="button">다듬기 · 오늘 <b>2번</b> 무료 →</button>
+          <div class="mm-detail">이제 모인 재료로 <b>답변 뼈대</b>를 잡아요.</div>
+        </div>
+      </div>
+      <button class="replay" data-for="stD" type="button">다시 보기 ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ E안 ═══════════ -->
+  <div class="case">
+    <div class="case-h"><span>E안</span><b>강조 말풍선 + 숨쉬는 칩 — 가장 작은 손질</b></div>
+    <p class="case-note">알림 말풍선을 <b>네이비 틴트 배경 + 왼쪽 4px 네이비 띠</b>로만 구분하고(전구 카드보다 약하고 일반 말풍선보다 진한 중간 톤), 다듬기 칩이 3번 <b>숨쉬듯 부풀며 글로우</b>를 낸다. 화살표도 세 번 살짝 민다. 구조 변화가 없어서 지금 코드에 CSS 몇 줄로 얹을 수 있는 안. 대신 다섯 안 중 <span class="no">시각적 임팩트는 가장 약하다.</span></p>
+    <div class="phone">
+      <div class="chat stage stage-e" id="stE">
+        <div class="bub me">떨렸는데, 막상 눈을 마주치니까 차분해졌어요.</div>
+        <div class="bub-mark late"><div class="who"><span class="ava">R</span>연구원</div>재료가 <b>5개 다 모였어요.</b> 이 정도면 30초 분량 답변을 만들 수 있어요 — 다듬기로 뼈대를 잡아보세요.</div>
+        <div class="refinewrap late">
+          <button class="chip chip-go" type="button">다듬기 · 오늘 <b>2번</b> 무료 <span class="arrowb">→</span></button>
+        </div>
+      </div>
+      <button class="replay" data-for="stE" type="button">다시 보기 ↻</button>
+    </div>
+  </div>
+
+  <p class="lead" style="margin-top:40px">공통 규칙: 어느 안이든 ① 연출은 <b>다 모인 첫 순간 한 번만</b> 재생(이후 스크롤로 다시 보여도 반복 안 함) ② <code>prefers-reduced-motion</code> 이면 애니메이션 없이 최종 상태만 ③ 색은 현행 네이비 팔레트 밖으로 나가지 않는다.</p>
+</div>
+<script>
+  // 다시 보기 — .play 를 뗐다 붙여 애니메이션 재생
+  document.querySelectorAll('.replay').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var st = document.getElementById(btn.getAttribute('data-for'));
+      st.classList.remove('play');
+      void st.offsetWidth;              // 리플로우 강제 — 없으면 재생 안 됨
+      st.classList.add('play');
+    });
+  });
+  // 처음 화면에 들어오면 한 번 자동 재생
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('play'); io.unobserve(e.target); }
+    });
+  }, {threshold:.6});
+  document.querySelectorAll('.stage').forEach(function(s){ io.observe(s); });
+</script>
+</body>
+</html>
