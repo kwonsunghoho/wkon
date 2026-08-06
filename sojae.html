@@ -104,6 +104,21 @@
       border-bottom-left-radius: 6px; color: var(--text); }
     .me { align-self: flex-end; background: var(--action); color: var(--action-ink);
       border-bottom-right-radius: 6px; }
+    /* 강조 안내 말풍선 — 시스템(진행·완료) 안내 전용 세 번째 문법(2026-08-06 오너 확정).
+       네이비 틴트 + 왼쪽 4px 띠, 'R 연구원' 머리 없음. ⚠️ 질문·대답 말풍선에 쓰지 말 것 —
+       자주 나오면 강조가 죽는다. transcript 에도 넣지 않는다(sysBubble 주석 참조). */
+    .bub-sys { align-self: flex-start; max-width: 84%; font-size: 15px; line-height: 1.55;
+      padding: 11px 13px 11px 15px; border-radius: 16px; border-bottom-left-radius: 6px;
+      background: var(--action-tint); border: 1px solid var(--accent-dark);
+      border-left: 4px solid var(--action); color: var(--text); }
+    .bub-sys b { font-weight: 800; color: var(--accent-ink); }
+    /* '다듬고 있습니다' 진행 점 3개 — 순서대로 깜빡인다 */
+    .dots3 { display: inline-flex; gap: 3px; margin-left: 4px; vertical-align: baseline; }
+    .dots3 i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-ink);
+      opacity: .25; animation: blink 1.2s ease-in-out infinite; }
+    .dots3 i:nth-child(2) { animation-delay: .2s; }
+    .dots3 i:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%, 100% { opacity: .25; } 40% { opacity: 1; } }
 
     /* 하단 입력부 */
     .composer { flex: 0 0 auto; padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
@@ -134,7 +149,34 @@
     .mm-dots { display: inline-flex; gap: 4px; margin-right: 2px; }
     .mm-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(27,58,107,.18); }
     .mm-dots i.on { background: var(--accent-ink); }
-    .mm.mm-full { background: var(--action-tint); }
+    /* 다 모인 게이지는 네이비 알약 — B안 반전 연출의 끝 상태와 재렌더(복원·다음 턴)가
+       같은 모양이어야 한다. action-tint 로 되돌리면 연출 뒤 다음 턴에 색이 빠져 보인다. */
+    .mm.mm-full { background: var(--action); color: var(--action-ink); border-color: transparent; }
+    .mm.mm-full .mm-dots i.on { background: rgba(255,255,255,.92); }
+    /* ── 재료 5/5 첫 순간 연출(B안 게이지 완성 + 강조 말풍선 — 2026-08-06 오너 확정) ──
+       ① 점 5개가 하나씩 차오름(0.05~0.65s) → ② 0.95s 알약 네이비 반전 + 링 1회
+       → ③ 1.25s 강조 말풍선 → ④ 1.45s 다듬기 칩(이 턴에 처음 켜질 때만).
+       재생은 다 모인 첫 순간 한 번뿐(updateMeter 의 _matCheered). */
+    @keyframes popIn { 0% { opacity: 0; transform: translateY(10px) scale(.96); }
+      60% { opacity: 1; transform: translateY(-2px) scale(1.01); } 100% { opacity: 1; transform: none; } }
+    @keyframes dotPop { 0% { transform: scale(.4); background: rgba(27,58,107,.18); }
+      60% { transform: scale(1.5); } 100% { transform: scale(1); background: var(--accent-ink); } }
+    @keyframes dotWhite { to { background: rgba(255,255,255,.92); } }
+    @keyframes mmFlip { to { background: var(--action); color: var(--action-ink); border-color: transparent; } }
+    .mm.mm-arrive .mm-dots i { animation: dotPop .35s ease forwards, dotWhite .3s ease .95s forwards; }
+    .mm.mm-arrive .mm-dots i:nth-child(1) { animation-delay: .05s, .95s; }
+    .mm.mm-arrive .mm-dots i:nth-child(2) { animation-delay: .2s, .95s; }
+    .mm.mm-arrive .mm-dots i:nth-child(3) { animation-delay: .35s, .95s; }
+    .mm.mm-arrive .mm-dots i:nth-child(4) { animation-delay: .5s, .95s; }
+    .mm.mm-arrive .mm-dots i:nth-child(5) { animation-delay: .65s, .95s; }
+    .mm.mm-arrive { animation: mmFlip .3s ease .95s forwards, ring 1s ease-out 1.05s 1; }
+    .sys-arrive { opacity: 0; animation: popIn .45s cubic-bezier(.2,.9,.3,1.2) 1.25s forwards; }
+    .chip-arrive { opacity: 0; animation: popIn .45s cubic-bezier(.2,.9,.3,1.2) 1.45s forwards; }
+    @media (prefers-reduced-motion: reduce) {
+      .mm.mm-arrive, .mm.mm-arrive .mm-dots i, .sys-arrive, .chip-arrive, .dots3 i {
+        animation-duration: .01s !important; animation-delay: 0s !important;
+        animation-iteration-count: 1 !important; }
+    }
     .mm-detail { font-size: 13px; line-height: 1.5; color: var(--text-muted);
       text-align: center; padding: 0 8px; word-break: keep-all; }
     .mm-detail b { color: var(--accent-ink); }
@@ -418,9 +460,11 @@
                   category, help: !!help, history: transcript },
         });
         if (error || !data || !data.message) throw error || new Error('빈 응답');
-        // AI가 "재료가 충분히 모였어요"([멈춤] 신호)라고 판단하면 다듬기 버튼 노출
+        // AI가 "재료가 충분히 모였어요"([멈춤] 신호)라고 판단하면 다듬기 버튼 노출.
+        // 칩이 이 턴에 처음 켜지는지를 updateMeter 가 알아야 등장 연출을 붙일지 정한다.
+        const ctaWasHidden = document.getElementById('refineCta').style.display === 'none';
         if (data.materials_sufficient) showRefine();
-        updateMeter(data);                           // 재료 게이지 갱신(missing 실측 기반)
+        updateMeter(data, ctaWasHidden);             // 재료 게이지 갱신(missing 실측 기반)
         return esc(data.message).replace(/\n/g, '<br>');
       } catch (_) { return cannedAsk(help); }
     }
@@ -497,6 +541,9 @@
     function showRefine() {
       const cta = document.getElementById('refineCta');
       const note = document.getElementById('refineNote');
+      // 등장 연출 클래스는 한 번 쓰고 뗀다 — 단 채로 display 가 토글되면(다듬기 실패
+      // 복귀·다음 턴) popIn 이 다시 재생돼 칩이 1.45초 사라진다.
+      cta.classList.remove('chip-arrive');
       const cost = refineCost();
       const bal = Number(_wallet && _wallet.balance) || 0;
       const freeLeft = Math.floor((Number(_wallet && _wallet.daily_left) || 0) / cost);
@@ -543,23 +590,43 @@
       return (got.length ? '<b>모인 재료</b> ' + got.join('·') : '이야기를 시작하면 재료가 쌓여요')
         + (miss.length ? ' &nbsp;·&nbsp; <b>남은 재료</b> ' + miss.join('·') : '');
     }
-    function updateMeter(d) {
+    function updateMeter(d, ctaWasHidden) {
       if (!d || !Array.isArray(d.missing)) return;   // 구버전 함수 — 게이지 없이 기존 흐름
       _mat = { ok: !!d.materials_sufficient, missing: d.missing.filter(k => MAT_KEYS.includes(k)) };
       const got = _mat.ok ? 5 : Math.max(0, MAT_KEYS.length - _mat.missing.length);
+      /* 다 모인 첫 순간만 연출(B안 — 2026-08-06 오너 확정): 점을 비운 채 그리고
+         mm-arrive 애니메이션이 차오르게 한다. 이후 턴·복원은 연출 없이 끝 상태로만. */
+      const firstFull = _mat.ok && !_matCheered;
+      matMeter.classList.remove('mm-arrive');
       matMeter.innerHTML = '<span class="mm-dots" aria-hidden="true">'
-        + MAT_KEYS.map((_, i) => '<i' + (i < got ? ' class="on"' : '') + '></i>').join('')
+        + MAT_KEYS.map((_, i) => '<i' + (i < got && !firstFull ? ' class="on"' : '') + '></i>').join('')
         + '</span>재료 <b>' + got + '/5</b>';
       matMeter.setAttribute('aria-label', '답변 재료 ' + got + '/5 — 눌러서 자세히 보기');
-      matMeter.classList.toggle('mm-full', _mat.ok);
+      matMeter.classList.toggle('mm-full', _mat.ok && !firstFull);
       matMeter.hidden = false;
-      if (_mat.ok && !_matCheered) {
-        _matCheered = true;                          // 다 모인 순간 안내를 한 번 펼쳐 준다
-        mmDetail.innerHTML = matDetailHtml(); mmDetail.hidden = false;
-        chat.scrollTop = chat.scrollHeight;
-      } else if (!mmDetail.hidden) {
-        mmDetail.innerHTML = matDetailHtml();        // 펼쳐 둔 상태면 내용만 갱신
+      if (firstFull) {
+        _matCheered = true;
+        matMeter.classList.add('mm-arrive');
+        // 안내는 게이지 아래 펼침(mm-detail)이 아니라 강조 말풍선으로(E안 문법 채택).
+        sysBubble('재료가 <b>5개 다 모였어요.</b> 이 정도면 30초 분량 답변을 만들 수 있어요 — 다듬기로 뼈대를 잡아보세요.', 'sys-arrive');
+        // 다듬기 칩은 이 턴에 처음 켜졌을 때만 ④ 등장 연출 — 이전 턴부터 떠 있던 칩을
+        // 사라졌다 다시 띄우면 "버튼이 없어졌다"가 된다.
+        if (ctaWasHidden) document.getElementById('refineCta').classList.add('chip-arrive');
+        // 연출이 끝나면 끝 상태로 굳힌다 — ① mm-arrive 를 단 채로 display 가 토글되면
+        // (다듬기 실패 복귀 등) 애니메이션이 처음부터 다시 튀고 ② sys-arrive·chip-arrive 는
+        // opacity:0 에서 시작하므로 애니메이션이 끝까지 못 돌면(탭이 백그라운드로 가는 등)
+        // 말풍선·칩이 안 보인 채 남는다. 클래스를 떼면 어느 경우든 끝 상태가 보장된다.
+        setTimeout(() => {
+          matMeter.classList.remove('mm-arrive');
+          if (_mat && _mat.ok) {
+            matMeter.classList.add('mm-full');
+            matMeter.querySelectorAll('.mm-dots i').forEach(el => el.classList.add('on'));
+          }
+          document.querySelectorAll('.sys-arrive').forEach(el => el.classList.remove('sys-arrive'));
+          document.getElementById('refineCta').classList.remove('chip-arrive');
+        }, 2100);                                    // 마지막 연출(칩 1.45+0.45s·링 2.05s) 뒤
       }
+      if (!mmDetail.hidden) mmDetail.innerHTML = matDetailHtml();   // 펼쳐 둔 상태면 내용만 갱신
     }
     matMeter.addEventListener('click', () => {
       if (!_mat) return;
@@ -589,6 +656,16 @@
     function me(text){
       bubble('me', esc(text));
       transcript.push({ role: 'user', content: text });
+    }
+    /* 강조 안내 말풍선(시스템 전용 — .bub-sys) — ⚠️ transcript 에 넣지 않는다.
+       대화 재료가 아니라 화면 장치라, 넣으면 다듬기 프롬프트의 {collected_materials}
+       와 서버 저장본이 오염된다(전구 확인 말풍선과 같은 규칙). */
+    function sysBubble(html, cls){
+      const d = document.createElement('div');
+      d.className = 'bub-sys' + (cls ? ' ' + cls : '');
+      d.innerHTML = html;
+      chat.appendChild(d); tailTools(); chat.scrollTop = chat.scrollHeight;
+      return d;
     }
     // 지원자가 꺼낸 재료만 모아 텍스트로 (Edge Function 에 {collected_materials} 로 주입)
     function collectedMaterials(){
@@ -856,9 +933,11 @@
       document.getElementById('askMode').style.display = 'none';
       document.getElementById('step1').classList.remove('on');
       document.getElementById('step2').classList.add('on');
-      ai('좋아요, 지금까지 꺼낸 이야기로 뼈대를 잡아볼게요.');
-      const p = aiPending();
+      // 진행 안내도 강조 말풍선 한 문법으로(2026-08-06 오너 확정) — 예전의 연구원
+      // 말풍선("좋아요, 뼈대를 잡아볼게요") + '생각 중…' 두 덩어리를 이것 하나가 대체한다.
+      const p = sysBubble('모인 재료로 <b>답변 뼈대를 다듬고 있습니다</b><span class="dots3" aria-hidden="true"><i></i><i></i><i></i></span>');
       refineAI().then(r => {
+        p.className = 'bub ai';   // 결과·오류는 대화(연구원 말풍선)로 — 강조 말풍선은 시스템 안내 전용
         // ⚠️ 크레딧이 모자라거나 실패하면 다음 단계로 넘기면 안 된다 — 되묻기 화면으로
         //    되돌려 이어서 대화하거나 충전할 수 있게 한다(대화는 무료라 잃는 게 없다).
         if (r.err) {
