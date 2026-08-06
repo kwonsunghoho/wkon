@@ -286,12 +286,28 @@
       .cs-row.ph-l::after { right: auto; left: 80px; }
       .cs-row.ph-l .cs-tx { left: 132px; right: 16px; }
     }
-    /* 넓은 화면은 목록 폭을 폰과 같게 잠근다(오너 지시 "모바일 비율로") — 600px 열에
-       그대로 늘리면 제목이 한 줄로 끝나 네이비 여백만 남는다. 카드 335px = 375px 폰 실폭.
+    /* 넓은 화면은 **모바일 비율을 유지한 채 약 1.43배로 키운다**(오너 확정 경로:
+       600px 그대로 → 여백 과다 기각 → 335px 모바일 폭 → 작다고 기각 → 480px 스케일).
+       카드 480×200(실전 272), 사진 판 200 정사각(실전 181 — 2:3), 활자 21/14/13.
        패널(#csDetail)은 펼친 줄 뒤(#csList 안)로 옮겨 다니므로 같이 좁아진다.
-       ⚠️ 줄 높이를 낮추는 방식(108/150)은 기각 — 오너가 원한 건 폭이었다. */
+       ⚠️ 줄 높이만 낮추는 방식(108/150)도 기각 — 비율이 목표다. 값을 바꿀 땐 세트로:
+       blend 63 = 44×1.43, ::after right = 사진폭−63, .cs-tx 안쪽 = 사진폭+16. */
     @media (min-width: 560px) {
-      .cs-list { max-width: 335px; margin-left: auto; margin-right: auto; }
+      .cs-list { max-width: 480px; margin-left: auto; margin-right: auto; }
+      .cs-row { height: 200px; }
+      .cs-ph { width: 200px; }
+      .cs-row::after { right: 137px; width: 63px; }
+      .cs-tx { left: 22px; right: 216px; }
+      .cs-lv { font-size: 13px; }
+      .cs-tx b { font-size: 21px; }
+      .cs-ds { font-size: 14px; margin-top: 6px; }
+      .cs-row > i { width: 30px; height: 30px; right: 12px; bottom: 12px; font-size: 14px; }
+      .cs-row.ph-l::after { right: auto; left: 137px; }
+      .cs-row.ph-l .cs-tx { left: 216px; right: 22px; }
+      .cs-row[data-code="practical"] { height: 272px; }
+      .cs-row[data-code="practical"] .cs-ph { width: 181px; }
+      .cs-row[data-code="practical"]::after { right: 118px; }
+      .cs-row[data-code="practical"] .cs-tx { right: 197px; }
     }
     @media (prefers-reduced-motion: reduce) { .cs-row > i { transition: none; } }
   </style>
@@ -450,7 +466,7 @@ var HINT_KEY    = 'monc_course_v1';          /* 그리기용 기기 기억(권�
    ⚠️ 화면 로직을 고칠 때마다 이 값을 올린다 — GitHub Pages 가 HTML 을 10분 캐시해서
       "고쳤는데 그대로다" 논쟁이 반복됐다(2026-08-06: 라이브와 로컬이 바이트까지 같은데도
       폰은 옛 화면이었다). */
-var BF_VER      = 'v20';   /* v20 — 데스크톱 목록 폭 335px(모바일 비율) + 판 색 로고 네이비 */
+var BF_VER      = 'v21';   /* v21 — 데스크톱 480px 스케일(모바일 비율 1.43배) */
 try { document.body.dataset.bf = BF_VER; } catch (e) {}
 
 /* ⚠️⚠️ **코스를 저장하는 길은 [이 코스로 시작하기] 버튼 하나뿐이다. 두 번째 길을 만들지 말 것.**
