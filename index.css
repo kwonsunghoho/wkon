@@ -337,7 +337,7 @@
     }
 
     /* ═══════════════════════════════════════════════════
-       왜 몬크인가(.msn #home) + 세 개의 문(.doors) + 마무리(.closing)
+       왜 몬크인가(.msn #home) + 네 개의 문(.doors · 2026-08-06 넷으로) + 마무리(.closing)
        — 2026-07-29 스토리형 개편(오너 스케치 + outputs/homepage-story-mockup.html v4).
        구 #pillars·히어로 챌린지 목록(.hero-scene · .hs- · .ch- 계열)은 삭제 —
        카드 4장은 challenges.html로 이사(카드 CSS도 그 파일 인라인).
@@ -459,12 +459,13 @@
       .sc, .sc i { transition: none; }
     }
 
-    /* ── 세 개의 문 — 테두리 있는 사진 카드 ──
-       글 옆에 사진이 좌우로 번갈아 붙는 리듬(door-2만 rev)은 유지.
+    /* ── 네 개의 문 — 테두리 있는 사진 카드(2026-08-06 챌린지만 포스터로 승격) ──
+       분할 문 셋(코스·도구·특강)은 글 옆에 사진이 좌우로 번갈아 붙는 리듬(도구 문만 rev) 유지.
        ⚠️ 2026-07-29 오너 요청으로 **테두리 있는 흰 카드**가 됐다(목업 B안). 이전의
           '모바일에서 사진이 화면 끝까지 나가 잘리는 블리드 + 카드마다 다른 높이'는
           카드 박스와 양립할 수 없어 함께 폐지 — 블리드로 되돌리지 말 것.
-          세 개가 같은 급의 '문'으로 묶여 보이는 것이 이 요청의 목적이다.
+          (챌린지 포스터는 이 규칙의 예외가 아니라 **오너가 지정한 단 하나의 강조 문법**이다 —
+           다른 문까지 포스터로 바꾸면 강조가 죽는다.)
        ⚠️ 카드 자리는 사진이다 — 텍스트 목록·미니 UI 덩어리로 되돌리지 말 것(오너 2회 기각). */
     .doors { background: var(--bg); padding: 40px 20px 76px; overflow: clip; }
     /* ── 타임라인 마커 (2026-07-30 C안) — 문 위에 '언제'를 얹어 나열을 순서로 바꾼다.
@@ -531,8 +532,10 @@
           lecture(1.30) 은 가로가 꽉 차고 **세로가** 잘리므로 x 값이 쓰이지 않는다.
           가로가 잘리는 건 challenge(1.78) 뿐이고 그건 안 건드렸다.
        ⚠️ 사진을 교체하면 이 두 값을 다시 잡을 것(주인공이 가운데 있는 사진이면 지워도 된다). */
-    .door-1 .dr-card img { object-position: 66% 30%; }
-    .door-3 .dr-card img { object-position: 72% 30%; }
+    /* 2026-08-06 네 개의 문 개편으로 번호 클래스(door-1/2/3) 대신 이름 클래스를 쓴다 —
+       초점값은 사진에 딸린 값이라 사진이 옮겨 간 문을 따라간다(door-briefing.webp→도구 문). */
+    .door-tools .dr-card img { object-position: 66% 30%; }
+    .door-lecture .dr-card img { object-position: 72% 30%; }
     /* ── 사진 위 라벨 = 스크림 + 대시 (2026-07-30 오너가 목업 4안 중 C안 선택 —
           `outputs/door-chip-mockup.html` 이 결정 기록, 기각안 A·B·D 도 그 파일에 보존).
        ⚠️⚠️ **상자(배경·테두리·border-radius)를 다시 씌우지 말 것.** 오너 신고
@@ -576,6 +579,44 @@
     }
     .dr-chip::before { content: "— "; color: var(--action-on-dark); font-weight: 800; }
     .dr-chip b { color: var(--action-on-dark); font-weight: 800; }
+
+    /* ── 챌린지 포스터 문(2026-08-06 오너 확정 — 목업 A안, outputs/home-four-doors-mockup.html) ──
+       챌린지가 메인이라 1번 문만 다른 문법: 사진이 카드 전체, 글은 하단 그라데이션 위.
+       ⚠️ 제목·라벨은 **자기 규칙에 흰색을 명시**한다 — tokens.css 의 h3{color:var(--ink)} 와
+          .section-label 의 네이비가 부모 흰색을 이긴다(apply 배너 전례).
+       ⚠️ CTA 는 다크 위 규칙 그대로 **흰 알약 + 네이비 글씨.** 통째로 <a> 안이라 버튼이 아니라
+          모양만 알약이다(중첩 링크 금지).
+       ⚠️ 스크림(.96/.72/0 62%)은 흰 글자·하늘색 강조의 대비 손잡이다 — 사진이 어둡다고
+          낮추지 말 것(dr-chip 스크림과 같은 규칙). pointer-events:none 필수(카드가 <a>). */
+    .door-poster { position: relative; display: block; overflow: hidden;
+      max-width: 560px; margin: 0 auto; min-height: 340px;
+      border-radius: var(--radius); border: 1px solid var(--border-soft);
+      box-shadow: 0 2px 10px rgba(23,42,71,.05); }
+    .door-poster img { position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; object-position: center 22%; display: block; }
+    .door-poster::after { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to top,
+        rgba(18,28,46,.96) 0%, rgba(18,28,46,.72) 30%, rgba(18,28,46,0) 62%);
+      pointer-events: none; }
+    .dp-chip { position: absolute; top: 12px; left: 14px; z-index: 2;
+      font-size: 12px; font-weight: 700; line-height: 1.35; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+    .dp-chip::before { content: "— "; color: var(--action-on-dark); font-weight: 800; }
+    .dp-chip b { color: var(--action-on-dark); font-weight: 800; }
+    .dp-tx { position: absolute; left: 18px; right: 18px; bottom: 16px; z-index: 2; display: block; }
+    /* ⚠️ !important 는 tokens.css 팔레트 오버라이드(.section-label 네이비 !important) 대응 —
+       다크 스크림 위에서 네이비는 1.4:1 로 사라진다. 대시(::before)도 같은 이유로 같이 바꾼다. */
+    .door-poster .section-label { color: var(--action-on-dark) !important;
+      -webkit-text-fill-color: var(--action-on-dark) !important; margin-bottom: 0; }
+    .door-poster .section-label::before { background: var(--action-on-dark); }
+    .dp-title { font-family: var(--serif); font-weight: 800; font-size: 22px; line-height: 1.35;
+      letter-spacing: -.01em; margin: 7px 0 0; color: #fff; word-break: keep-all;
+      text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+    .dp-ds { display: block; margin-top: 6px; font-size: 14px; line-height: 1.55;
+      color: rgba(255,255,255,.86); word-break: keep-all; }
+    .dp-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+      min-height: 44px; padding: 0 18px; border-radius: 999px;
+      background: #fff; color: var(--accent-ink); font-size: 14px; font-weight: 800; }
     /* 데스크톱 — 컬럼이 화면 폭보다 좁아 '끝까지 붙는' 블리드가 성립하지 않으므로
        카드 폭을 넓힌다. ⚠️ 폭의 주인은 이제 .tl-step 이다(문이 타임라인 칸 안에 들어갔다) —
        .door 는 칸을 꽉 채우기만 하면 된다. 둘 다 max-width 를 갖고 있으면 좁은 쪽이 이겨
@@ -782,6 +823,13 @@
       .dr-card { min-height: 240px; border-radius: 16px; }
       /* ⚠️ padding 은 없다 — 상자가 아니라 사진 위에 얹은 글자다(위 .dr-chip 주석 참조). */
       .dr-chip { left: 14px; right: 14px; bottom: 12px; font-size: 14px; }
+      /* 챌린지 포스터 — 넓은 화면에선 높이·글자를 같이 키운다(카드만 커지고 글이 작으면 비어 보인다) */
+      .door-poster { max-width: 100%; min-height: 430px; border-radius: 16px; }
+      .dp-tx { left: 26px; right: 26px; bottom: 24px; }
+      .dp-chip { top: 16px; left: 20px; font-size: 14px; }
+      .dp-title { font-size: 30px; }
+      .dp-ds { font-size: 16px; margin-top: 8px; }
+      .dp-cta { font-size: 15px; margin-top: 16px; }
 
       .closing { padding: 112px 0; }
       .closing-title { font-size: 38px; }
