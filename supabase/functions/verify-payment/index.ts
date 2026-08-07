@@ -8,7 +8,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const PRICE_PER_CHALLENGE_FALLBACK = 30000 // site_config.challenge_price 미설정 시 기본값
+// 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
+const FN_VERSION = '2026-08-07a'
+
+// site_config.challenge_price 미설정 시 기본값.
+// ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
+//    금액과 서버가 검증하는 기준가가 달라진다(2026-08-02 오너 지시 33,000원 — 구 30,000원).
+const PRICE_PER_CHALLENGE_FALLBACK = 33000
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 
 const CORS = {
@@ -55,10 +61,24 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId, resourceId } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId, resourceId, probe } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    // ── 배포 확인용 프로브 ────────────────────────────────────────────────
+    // 결제를 건드리지 않고 버전과 기준가만 돌려준다(anon key 로 호출 가능).
+    // 이 한 번으로 ① 새 코드가 배포됐나 ② DB 에 참가비가 설정돼 있나 ③ 폴백이 화면과 맞나 확인된다.
+    if (probe === true) {
+      const { data: cfg } = await supa.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle()
+      const raw = cfg?.value
+      const price = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
+      return json({
+        ok: true, fn: 'verify-payment', version: FN_VERSION,
+        challengePrice: Number.isFinite(price) ? price : null,
+        priceFallback: PRICE_PER_CHALLENGE_FALLBACK,
+      })
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // 크레딧 충전 (2026-07-25) — 신청 저장이 아니라 원장에 크레딧을 넣는다.

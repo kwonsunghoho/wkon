@@ -9,6 +9,9 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
+const FN_VERSION = '2026-08-07a'
+
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 
 const CORS = {
@@ -24,7 +27,12 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { applicationId, amount, reason } = await req.json()
+    const { applicationId, amount, reason, probe } = await req.json()
+
+    // 배포 확인용 프로브 — 환불을 건드리지 않고 버전만 돌려준다(anon key 로 호출 가능).
+    // admin 확인보다 앞에 둔다: 배포 여부는 로그인 없이도 확인할 수 있어야 한다.
+    if (probe === true) return json({ ok: true, fn: 'cancel-payment', version: FN_VERSION })
+
     const amt = Number(amount)
     if (!applicationId || !Number.isInteger(amt) || amt <= 0) {
       return json({ ok: false, error: 'bad_request' }, 400)
