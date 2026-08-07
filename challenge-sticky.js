@@ -71,6 +71,10 @@
       '.ch-sticky .info{flex:1 1 auto;min-width:0;}',
       '.ch-sticky .p{font-size:17px;font-weight:900;color:var(--text,#1E2229);line-height:1.25;}',
       '.ch-sticky .p .won{font-size:13px;font-weight:800;margin-left:1px;}',
+      /* 취소선 정가(site_config.challenge_list_price) — 판매가 왼쪽에 작게. 12px 하한(원칙 1). */
+      '.ch-sticky .p .was{font-size:13px;font-weight:800;color:var(--text-muted,#545C68);',
+      '  margin-right:5px;text-decoration:line-through;text-decoration-thickness:1.5px;}',
+      '.ch-sticky .p .was .won{font-size:12px;}',
       '.ch-sticky .s{font-size:12px;color:var(--text-muted,#545C68);line-height:1.4;',
       '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.ch-sticky .go{flex:0 0 auto;min-height:44px;padding:13px 24px;border:none;border-radius:999px;',
@@ -228,16 +232,21 @@
     window.location.href = 'apply.html?c=' + encodeURIComponent(CH);
   });
 
-  /* ── 금액 (site_config.challenge_price) ──────────────────────────────── */
+  /* ── 금액 (site_config.challenge_price · 취소선 정가는 challenge_list_price) ────────
+     ⚠️ 폴백 금액을 넘기지 않는다(null) — 못 읽으면 아래 '참가비 안내'로 떨어져야 한다.
+     ⚠️ 앵커 판정(정가 ≤ 판매가면 안 그린다)은 MONC.loadChallengePricing 안에 있다. 여기 복사 금지. */
   (async function price() {
     var el = document.getElementById('chStickyPrice');
-    if (!window.MONC || !window.MONC.sb) { el.textContent = '참가비 안내'; return; }
+    if (!window.MONC || !window.MONC.sb || !window.MONC.loadChallengePricing) { el.textContent = '참가비 안내'; return; }
     try {
-      var r = await window.MONC.sb.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle();
-      var v = r && r.data && r.data.value;
-      var n = typeof v === 'number' ? v : parseInt(v, 10);
-      if (Number.isFinite(n) && n >= 0) {
-        el.innerHTML = n.toLocaleString('ko-KR') + '<span class="won">원</span>';
+      var p = await window.MONC.loadChallengePricing(null);
+      if (p && Number.isFinite(p.price) && p.price >= 0) {
+        var won = '<span class="won">원</span>';
+        /* 취소선은 시각 효과라 낭독기가 안 읽는다 — 무엇이 정가고 무엇이 낼 돈인지 말해 준다. */
+        el.innerHTML =
+          (p.list == null ? '' : '<s class="was"><span class="sr-only">정가 </span>' + p.list.toLocaleString('ko-KR') + won + '</s>') +
+          '<span class="now">' + (p.list == null ? '' : '<span class="sr-only">할인가 </span>') +
+          p.price.toLocaleString('ko-KR') + won + '</span>';
         return;
       }
     } catch (err) {}

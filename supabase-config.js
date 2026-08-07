@@ -238,6 +238,37 @@
     } catch (e) { return null; }
   }
 
+  // 챌린지 참가비 — 청구가(challenge_price)와 취소선용 정가(challenge_list_price)를 한 번에 읽는다.
+  // ⚠️ 앵커(취소선) 판정은 여기 한 곳이다. apply.html·challenge-sticky.js 에 규칙을 복사하지 말 것 —
+  //    한쪽만 고쳐지면 화면마다 다른 할인율이 뜬다.
+  // ⚠️ 정가가 없거나 청구가 이하면 list 를 null 로 돌린다. 없는 할인을 그리는 것보다 안 그리는 편이
+  //    안전하다(표시광고법 — 취소선은 '원래 그 값에 팔던 가격'이라는 주장이다).
+  // ⚠️ 정가는 표시 전용이다 — 실제 청구·검증 금액은 언제나 challenge_price 다(verify-payment 무관).
+  // ⚠️ select('*') 인 이유: 두 행을 in() 으로 받으려면 key 를 같이 받아야 하고, 컬럼을 나열하면
+  //    site_config 스키마가 다른 환경에서 조회 전체가 400 이 된다.
+  async function loadChallengePricing(fallbackPrice) {
+    const num = (v) => {
+      const n = typeof v === 'number' ? v : parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    };
+    const fb = num(fallbackPrice);
+    const out = { price: fb, list: null, off: 0 };
+    try {
+      const { data, error } = await sb.from('site_config').select('*')
+        .in('key', ['challenge_price', 'challenge_list_price']);
+      if (error || !data) return out;
+      const row = (k) => data.filter(r => r && r.key === k)[0];
+      const paid = num(row('challenge_price') && row('challenge_price').value);
+      const list = num(row('challenge_list_price') && row('challenge_list_price').value);
+      if (paid != null && paid >= 0) out.price = paid;
+      if (list != null && out.price != null && list > out.price) {
+        out.list = list;
+        out.off = Math.round((1 - out.price / list) * 100);
+      }
+    } catch (e) { /* 조회 실패 시 폴백 금액 유지 · 앵커 없음 */ }
+    return out;
+  }
+
   // private 버킷 파일의 재생용 signed URL (기본 1시간)
   async function getSignedUrl(storagePath, expiresIn) {
     if (!storagePath) return null;
@@ -253,7 +284,7 @@
     sb, TOTAL_DAYS, LOGIN_PAGE, TERMS_VERSION,
     signInWithProvider, signInWithGoogle, signInWithKakao,
     signOut, getSession, requireSession,
-    getMyProfile, requireAdmin, getSignedUrl,
+    getMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
     getConsent, recordConsent, hasConsented, requireConsent, deleteMyAccount,
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
   };

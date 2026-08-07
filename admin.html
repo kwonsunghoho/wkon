@@ -951,8 +951,14 @@
           <label for="chPrice">챌린지 공통 참가비(원)</label>
           <input id="chPrice" type="number" min="0" step="1000" placeholder="33000" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;">
         </div>
+        <div class="field" style="flex:1;min-width:150px;">
+          <label for="chListPrice">정가(취소선 표시용, 원)</label>
+          <input id="chListPrice" type="number" min="0" step="1000" placeholder="비우면 표시 안 함" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;">
+        </div>
         <button class="btn btn-action" id="chPriceSave" type="button">참가비 저장</button>
         <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">4개 챌린지 모두에 적용돼요. 저장하면 신청 페이지·결제 금액에 바로 반영됩니다(특강 가격은 옆 '특강' 탭에서 따로).</span>
+        <!-- 정가는 표시 전용이다 — 실제 청구·서버 검증 금액은 언제나 위 참가비다. -->
+        <span style="font-size:12px;color:var(--text-muted);flex-basis:100%;">정가는 신청 페이지·상세 하단 바에서 <s>취소선</s>으로만 보여요(청구 금액은 바뀌지 않습니다). <b>비우거나 참가비보다 낮으면 아예 안 나옵니다.</b> 실제로 그 가격에 판매한 적 없는 금액을 적으면 표시광고법 문제가 될 수 있어요.</span>
       </div>
       <div class="round-editing" id="roundEditing" hidden>
         <span id="roundEditingLabel"></span>
@@ -3057,19 +3063,32 @@
       loadRounds();
     });
 
-    // ── 챌린지 공통 참가비(site_config.challenge_price) ──
+    // ── 챌린지 공통 참가비(site_config.challenge_price) + 취소선 정가(challenge_list_price) ──
+    // ⚠️ 정가는 화면 표시 전용이다. 결제 금액 검증은 verify-payment 가 challenge_price 로만 한다.
     async function loadChallengePrice() {
-      const { data } = await MONC.sb.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle();
-      const v = data && data.value;
-      const n = typeof v === 'number' ? v : parseInt(v, 10);
-      document.getElementById('chPrice').value = Number.isFinite(n) ? n : 33000;
+      const num = v => { const n = typeof v === 'number' ? v : parseInt(v, 10); return Number.isFinite(n) ? n : null; };
+      const { data } = await MONC.sb.from('site_config').select('*')
+        .in('key', ['challenge_price', 'challenge_list_price']);
+      const val = k => { const r = (data || []).filter(x => x && x.key === k)[0]; return r ? num(r.value) : null; };
+      const price = val('challenge_price');
+      const list  = val('challenge_list_price');
+      document.getElementById('chPrice').value = price != null ? price : 33000;
+      document.getElementById('chListPrice').value = list != null && list > 0 ? list : '';
     }
     document.getElementById('chPriceSave').addEventListener('click', async () => {
       const n = parseInt(document.getElementById('chPrice').value, 10);
       if (!Number.isFinite(n) || n < 0) { alert('참가비를 0 이상 숫자로 입력하세요.'); return; }
-      const { error } = await MONC.sb.from('site_config').upsert({ key: 'challenge_price', value: n }, { onConflict: 'key' });
+      // 빈 칸 = 앵커 끄기(0 으로 저장한다 — 화면 쪽 판정이 '참가비 이하면 안 그림'이라 자연히 꺼진다).
+      const rawList = document.getElementById('chListPrice').value.trim();
+      const list = rawList === '' ? 0 : parseInt(rawList, 10);
+      if (!Number.isFinite(list) || list < 0) { alert('정가는 비우거나 0 이상 숫자로 입력하세요.'); return; }
+      if (list > 0 && list <= n) { alert('정가가 참가비보다 높아야 취소선이 표시됩니다. (정가 ' + list.toLocaleString() + '원 ≤ 참가비 ' + n.toLocaleString() + '원)'); return; }
+      const { error } = await MONC.sb.from('site_config').upsert([
+        { key: 'challenge_price', value: n },
+        { key: 'challenge_list_price', value: list }
+      ], { onConflict: 'key' });
       if (error) { alert('저장 실패: ' + error.message); return; }
-      toast('참가비 저장됨 (' + n.toLocaleString() + '원)');
+      toast('참가비 저장됨 (' + n.toLocaleString() + '원' + (list > 0 ? ' · 정가 ' + list.toLocaleString() + '원' : ' · 정가 표시 안 함') + ')');
     });
 
     // ── 특강(special_lectures) CRUD ──
