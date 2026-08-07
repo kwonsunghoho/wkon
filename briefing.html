@@ -286,28 +286,39 @@
       .cs-row.ph-l::after { right: auto; left: 80px; }
       .cs-row.ph-l .cs-tx { left: 132px; right: 16px; }
     }
-    /* 넓은 화면은 **모바일 비율을 유지한 채 약 1.43배로 키운다**(오너 확정 경로:
-       600px 그대로 → 여백 과다 기각 → 335px 모바일 폭 → 작다고 기각 → 480px 스케일).
-       카드 480×200(실전 272), 사진 판 200 정사각(실전 181 — 2:3), 활자 21/14/13.
-       패널(#csDetail)은 펼친 줄 뒤(#csList 안)로 옮겨 다니므로 같이 좁아진다.
-       ⚠️ 줄 높이만 낮추는 방식(108/150)도 기각 — 비율이 목표다. 값을 바꿀 땐 세트로:
-       blend 63 = 44×1.43, ::after right = 사진폭−63, .cs-tx 안쪽 = 사진폭+16. */
+    /* 넓은 화면은 **모바일 비율을 유지한 채 약 1.79배로 키운다**(오너 확정 경로:
+       600px 그대로 → 여백 과다 기각 → 335px 모바일 폭 → 작다고 기각 → 480px 스케일
+       → 2026-08-07 "아직도 좀 작다" → **600px 스케일**).
+       카드 600×250(실전 340), 사진 판 250 정사각(실전 226 — 2:3), 활자 26/17/16.
+       열 600px 은 이 페이지의 다른 열(main.container > section · .today · .bf-foot)과 같은 값이라
+       히어로·카드·푸터가 한 줄로 정렬된다. 패널(#csDetail)은 펼친 줄 뒤(#csList 안)로
+       옮겨 다니므로 같이 넓어진다.
+       ⚠️ 구 '600px 그대로' 기각(여백 과다)과 헷갈리지 말 것 — 그건 줄 높이를 모바일(140px)에
+          둔 채 폭만 600 으로 늘린 판이라 네이비 면이 비었다. 여기는 **폭·높이·사진·활자를
+          한 벌로** 곱한다. 줄 높이만 낮추는 방식(108/150)도 기각 — 비율이 목표다. 세트 규칙:
+       blend 79 = 44×1.79, ::after right = 사진폭−79, .cs-tx 안쪽 = 사진폭+20.
+       ⚠️ 사진 원본(images/course-*.webp)은 420²·380×570 이라 250px 표시에서 2x 화면 기준
+          약 84% 해상도다. 여기서 더 키우려면 사진을 다시 뽑아야 한다(원본 PNG 는 미커밋). */
     @media (min-width: 560px) {
-      .cs-list { max-width: 480px; margin-left: auto; margin-right: auto; }
-      .cs-row { height: 200px; }
-      .cs-ph { width: 200px; }
-      .cs-row::after { right: 137px; width: 63px; }
-      .cs-tx { left: 22px; right: 216px; }
-      .cs-lv { font-size: 13px; }
-      .cs-tx b { font-size: 21px; }
-      .cs-ds { font-size: 14px; margin-top: 6px; }
-      .cs-row > i { width: 30px; height: 30px; right: 12px; bottom: 12px; font-size: 14px; }
-      .cs-row.ph-l::after { right: auto; left: 137px; }
-      .cs-row.ph-l .cs-tx { left: 216px; right: 22px; }
-      .cs-row[data-code="practical"] { height: 272px; }
-      .cs-row[data-code="practical"] .cs-ph { width: 181px; }
-      .cs-row[data-code="practical"]::after { right: 118px; }
-      .cs-row[data-code="practical"] .cs-tx { right: 197px; }
+      /* 줄 제목이 26px 이 되면서 섹션 제목(19px)이 그 아래 항목보다 작아졌다 —
+         제목이 항목보다 작으면 무엇이 묶음의 이름인지 안 읽힌다(계층). 같이 올린다. */
+      .sec-t b { font-size: 24px; }
+      .sec-t span { font-size: 16px; margin-top: 7px; }
+      .cs-list { max-width: 600px; gap: 10px; margin-left: auto; margin-right: auto; margin-top: 20px; }
+      .cs-row { height: 250px; border-radius: 16px; }
+      .cs-ph { width: 250px; }
+      .cs-row::after { right: 171px; width: 79px; }
+      .cs-tx { left: 28px; right: 270px; }
+      .cs-lv { font-size: 16px; }
+      .cs-tx b { font-size: 26px; }
+      .cs-ds { font-size: 17px; margin-top: 8px; }
+      .cs-row > i { width: 38px; height: 38px; right: 15px; bottom: 15px; font-size: 17px; }
+      .cs-row.ph-l::after { right: auto; left: 171px; }
+      .cs-row.ph-l .cs-tx { left: 270px; right: 28px; }
+      .cs-row[data-code="practical"] { height: 340px; }
+      .cs-row[data-code="practical"] .cs-ph { width: 226px; }
+      .cs-row[data-code="practical"]::after { right: 147px; }
+      .cs-row[data-code="practical"] .cs-tx { right: 246px; }
     }
     @media (prefers-reduced-motion: reduce) { .cs-row > i { transition: none; } }
   </style>
@@ -466,7 +477,7 @@ var HINT_KEY    = 'monc_course_v1';          /* 그리기용 기기 기억(권�
    ⚠️ 화면 로직을 고칠 때마다 이 값을 올린다 — GitHub Pages 가 HTML 을 10분 캐시해서
       "고쳤는데 그대로다" 논쟁이 반복됐다(2026-08-06: 라이브와 로컬이 바이트까지 같은데도
       폰은 옛 화면이었다). */
-var BF_VER      = 'v21';   /* v21 — 데스크톱 480px 스케일(모바일 비율 1.43배) */
+var BF_VER      = 'v22';   /* v22 — 데스크톱 600px 스케일(모바일 비율 1.79배) */
 try { document.body.dataset.bf = BF_VER; } catch (e) {}
 
 /* ⚠️⚠️ **코스를 저장하는 길은 [이 코스로 시작하기] 버튼 하나뿐이다. 두 번째 길을 만들지 말 것.**
