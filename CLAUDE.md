@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **이 문서에는 매 작업에 공통인 핵심 규칙만 남긴다.** 기능별 상세 규칙·실측값·과거 의사결정은 아래 '기능별 문서' 표의 해당 문서가 원장이다 — **기능을 고치기 전에 그 문서를 먼저 읽는다.**
 
+⚠️ **파일을 지우거나 이름·주소·설정을 바꿨으면, 그 이름을 `CLAUDE.md` 와 `docs/` 에서 검색해 같이 고친다.** 2026-08-03 감사에서 나온 문서 오류 5건 중 3건이 이 누락이었다 — 지워진 파일이 '편집 금지'로 남아 있었고, 라이브 도메인과 프리뷰 설정이 바뀐 채 옛 값으로 적혀 있었다. 문서가 틀리면 다음 작업이 틀린 전제로 시작한다.
+
 ## 한국어 응답 문체
 
 사용자에게 답변할 때 짧고 자연스러운 실무 문체를 사용한다.
@@ -30,24 +32,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 컨설팅 보고서처럼 거창하게 표현하지 않는다.
 - 실제 실무자가 업무 내용을 정리해 전달하는 방식으로 작성한다.
 
-### 피해야 할 표현
-다음과 같은 표현을 사용하지 않는다.
-- 이 판이 낫다
-- 구멍이 크다
-- 남는 물건이 다르다
-- 팔 거리가 된다
-- 전부 무너진다
-- 본질은 이것이다
-- 핵심은 단 하나다
-- 정확히 짚으셨습니다
-- 아주 좋은 판단입니다
-- 완전히 맞습니다
-
-평범하고 정확한 표현으로 바꾼다. 예시:
-- "구멍이 크다" → "이 부분은 수정이 필요합니다."
-- "이 판이 낫다" → "이 방향이 더 적합합니다."
-- "팔 거리가 된다" → "상품의 차별점으로 활용할 수 있습니다."
-- "전부 무너진다" → "기존 원칙과 충돌할 수 있습니다."
+특히 걸리는 두 부류: 과장된 비유("전부 무너진다"·"구멍이 크다")와 맞장구("정확히 짚으셨습니다"·"아주 좋은 판단입니다"). 평범하고 정확한 서술로 바꾼다 — "이 부분은 수정이 필요합니다", "이 방향이 더 적합합니다".
 
 ### 답변 구성
 기본적으로 다음 순서를 따른다.
@@ -57,19 +42,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 내용이 간단하면 제목이나 목록 없이 바로 답한다.
 
-### 출력 전 점검
-답변을 출력하기 전에 다음을 확인한다.
-- 더 짧게 줄일 수 있는 문장이 있는가?
-- 같은 내용을 반복했는가?
-- 없어도 이해되는 문장이 들어갔는가?
-- 한국인이 잘 쓰지 않는 표현이 있는가?
-- 불필요한 칭찬이나 공감 표현이 있는가?
-
-문제가 있으면 삭제하거나 간결하게 수정한 뒤 최종 답변만 출력한다.
-
 ## 프로젝트 구조
 
-MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 도구 사이트. **정적 사이트, 빌드 단계 없음.** GitHub Pages 가 `main` 을 그대로 서빙한다(https://kwonsunghoho.github.io/wkon/). 프레임워크·번들러·package.json·테스트 스위트 없음 — 손으로 쓴 HTML/CSS/JS.
+MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 도구 사이트. **정적 사이트, 빌드 단계 없음.** GitHub Pages 가 `main` 을 그대로 서빙하고, **라이브 주소는 `CNAME` 의 커스텀 도메인 https://monc.ai.kr** 이다(github.io 주소는 이리로 넘어온다 — 오너·계측이 보는 곳은 언제나 monc.ai.kr). 프레임워크·번들러·package.json·테스트 스위트 없음 — 손으로 쓴 HTML/CSS/JS.
 
 서버는 없고, "백엔드"는 브라우저가 부르는 외부 서비스다.
 
@@ -82,7 +57,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 ## 명령·검증
 
-- 로컬 프리뷰: `python -m http.server 5500` → `http://localhost:5500/` (`.claude/launch.json` 의 `wkon-static`).
+- 로컬 프리뷰: `.claude/launch.json` 의 **`wkon-mirror`**(포트 5761)를 `preview_start` 로 띄운다. ⚠️ **레포를 직접 서빙하지 못한다** — 프리뷰가 띄운 파이썬은 macOS 권한 때문에 `~/Documents` 를 못 읽어 전부 404 다. 스크래치패드에 rsync 미러를 만들어 그걸 서빙하는 구조라 **세션이 바뀌면 `runtimeArgs` 경로가 죽는다**(미러·`server.py` 재생성 후 경로 갱신). 소스를 고치면 rsync 를 다시 돌려야 화면에 반영된다.
 - 배포: `git push origin main` — 푸시가 곧 배포다(1~2분 전파).
 - **`node` 는 앞에 로더를 붙여야 잡힌다**(2026-08-03 nvm 으로 설치, v24.18.1): `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; node scripts/<파일>.mjs`. nvm 은 `~/.zshrc` 에만 설정을 넣는데 자동 실행 셸(플러그인 훅·스크립트)은 그 파일을 안 읽는다 — 로더 없이 `node` 만 치면 `command not found` 가 뜨지만 **미설치가 아니다. 다시 깔라고 안내하지 말 것.** `python3` 는 `/usr/bin/python3` 라 그냥 쓴다. **`deno` 는 아직 없다.**
 - **전체 lint·build·테스트 시스템이 없다. 존재하지 않는 lint/build 명령을 만들지 말 것.** 검증 수단은 아래가 전부다.
@@ -101,7 +76,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 - **마이그레이션은 레포가 소스지만, 오너가 Supabase SQL Editor 에서 실행해야 반영된다.** 미적용 상태에서도 조용히 degrade 해야 한다: 목록 조회는 `select('*')`(컬럼 나열 시 미적용 환경에서 400), 신규 컬럼은 `getMyProfile()` 같은 공용 셀렉트에 넣지 않는다(`major`·`agreed_at`·`refunded_amount` 전례).
 - **SQL·마이그레이션 본문은 파일 경로가 아니라 대화창에 ```sql 코드로 붙여넣는다.** 오너는 콘솔 SQL Editor 에 붙여넣는다(경로를 bash 블록으로 주면 Run 버튼이 터미널을 연다).
-- **Edge Function 배포는 Supabase 콘솔에서 한다**(오너 PC 에 CLI 없음 — `supabase functions deploy` 안내 금지). 함수는 **한 파일 유지**(콘솔 붙여넣기 배포라 모듈로 쪼개면 배포 불가). 코드를 고치면 `FN_VERSION` 도 같이 올리고, **배포 여부는 anon key 프로브로 확인한다 — 관리자에게 SQL 을 시키지 말 것.**
+- **Edge Function 배포는 Supabase 콘솔에서 한다**(오너 PC 에 CLI 없음 — `supabase functions deploy` 안내 금지). 함수는 **한 파일 유지**(콘솔 붙여넣기 배포라 모듈로 쪼개면 배포 불가). 코드를 고치면 `FN_VERSION` 도 같이 올리고, **배포 여부는 anon key 프로브로 확인한다 — 관리자에게 SQL 을 시키지 말 것.** **새 함수를 만들면 `FN_VERSION` 과 `probe:true` 분기를 처음부터 넣는다** — 인증 검사보다 **앞에** 둔다(배포 여부는 로그인 없이 확인할 수 있어야 한다). 현재 6개 함수 전부 있다.
 - 테이블 미생성 판정은 `42P01` 이 아니라 **`PGRST205`** 다.
 - 함수 배포·마이그레이션 적용 같은 **시점 상태는 `docs/notes/implementation-status.md`** 에서 확인·갱신한다.
 - Dead code 는 남기지 말고 제거한다. 타임스탬프 백업 파일 커밋 금지. 커밋 메시지·코드 주석은 한국어.
@@ -122,7 +97,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 ## 결제·유료 기능 — 판정은 서버·DB 가 한다
 
-- 결제는 **포트원 V2 단일 경로**, 신청·충전·이용권 저장은 **verify-payment Edge Function 경유.** **금액은 브라우저를 믿지 않고 서버가 DB 에서 재확인**(`site_config.challenge_price`·`special_lectures.price`·`site_config.credit_packs`·`answer_programs.price`), **지급 대상은 body 가 아니라 JWT.**
+- 결제는 **포트원 V2 단일 경로**, 신청·충전·이용권 저장은 **verify-payment Edge Function 경유.** **금액은 브라우저를 믿지 않고 서버가 DB 에서 재확인**(`site_config.challenge_price`·`special_lectures.price`·`site_config.credit_packs`·`answer_programs.price`), **지급 대상은 body 가 아니라 JWT.** ⚠️ **DB 를 못 읽었을 때 쓰는 폴백 금액은 화면과 서버 두 곳에 있다 — 한쪽만 고치지 말 것**(`apply.html` 의 `PRICE` ↔ `verify-payment` 의 `PRICE_PER_CHALLENGE_FALLBACK`). 2026-08-02 참가비 인상 때 서버만 30,000 에 남아, `site_config` 를 못 읽는 순간 화면 33,000 · 서버 30,000 으로 갈리는 상태였다(2026-08-03 정정).
 - 결제 후 실패(특강 정원 마감 `MC001`·중복 신청 `MC002`·이용권 중복 등)는 **전액 자동 환불 + HTTP 200** 으로 응답한다(non-2xx 면 supabase-js 가 본문을 감춰 브라우저가 환불 안내를 못 띄운다). 크레딧 부족·실패도 HTTP 200 + `code`.
 - 환불(cancel-payment)에서 포트원 취소 성공 + DB 기록 실패는 `ok:true + warning` — 실패로 바꾸면 관리자가 다시 눌러 **이중 환불**이 난다.
 - **돈이 걸린 판정은 전부 DB 가 원장이다**: 잔여석·중복 신청·답변 프로그램 세션 상태는 DB 트리거(+`for update` 행 잠금·advisory lock), 크레딧 잔액은 **원장(`credit_ledger`) 합계**(잔액 컬럼 금지). 브라우저 검사·클라이언트 update 로 대체 금지. 브라우저가 보낸 `answerId`·금액·슬롯도 서버가 소유·소속을 재확인.
@@ -138,8 +113,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - **제목 색은 `--ink #1C2A3A`** — `tokens.css` 의 `h1, h2, h3 { color: var(--ink) }` 가 전 페이지 기본값(2026-08-05 전역화 — 그전엔 홈만 네이비, 나머지는 먹빛이었다). ⚠️ **다크 배경 위 제목은 자기 규칙에 색을 명시할 것** — 이 요소 규칙이 부모에게서 물려받은 흰색을 이겨서 제목이 배경에 사라진다(apply 배너 전례).
 - **`tokens.css` 맨 아래 '팔레트 오버라이드' 블록 삭제 금지**(실사고 — CSS 변수는 미정의여도 에러 없이 글자만 사라진다). 큰 블록을 지웠으면 `var(--x)` 미정의 사용처를 훑는다. `background-clip:text` 로 글자를 칠하지 말 것(실패 모드가 '글자 없음').
 - CSS 를 크게 손댔으면 **주석 짝(`/* */`) 균형을 센다** — 주석 안 클래스 나열의 별표+슬래시가 규칙 하나를 조용히 삼킨 실사고 2건.
-- **nav 는 `nav.js`+`nav.css` 전 페이지 공용** — 페이지에 nav 마크업 복사 금지(admin·login·onboarding·review-desk 는 일부러 제외 — review-desk 는 admin 처럼 단독 화면이라 자체 헤더를 쓴다). 메뉴 항목·현재 위치는 `nav.js` 의 배열·표에서만 고친다.
-- **`inapp.js` 도 전 페이지 공용(login 포함) — 지우지 말 것.** 인앱 브라우저(인스타·카톡)는 **파일 다운로드를 막고 구글 OAuth 를 거부한다**(2026-08-01 실사고 — 인스타 유입 학생이 무료 자료를 못 받았다). 인앱이면 **nav 아래 상단 한 줄 안내**(오너 확정 — 전체 화면 덮개는 기각 "장난치냐? 그냥 상단 설명으로 바꿔"). 형태 규칙 셋: ① `position:fixed` + `top=#navbar 실측 높이`(흐름 안 배너 금지 — nav 와 글자가 겹쳐 깨진 실사고) ② **화면 문자열은 전부 `\uXXXX` 이스케이프**(생성기 주석 참조 — 한글 리터럴 직접 넣기 금지) ③ 파일을 고치면 **`?v=` 캐시 버스터도 같이 올린다**(인앱 웹뷰가 캐시를 안 버려 깨진 옛 화면이 계속 보인 실사고). 자동 이동 없음 — 버튼을 눌렀을 때만 안드로이드 크롬 인텐트 / 아이폰 주소 복사. **인스타가 유입 1위라 이 자리가 막히면 유입 전체가 막힌다.** 새 페이지를 만들면 `nav.js` 옆에 같이 넣는다. ⚠️ **비동기 응답 뒤 `window.open` 으로 파일을 열지 말 것**(인앱이 조용히 막는다 — 받기는 `location.href`).
+- **nav 는 `nav.js`+`nav.css` 전 페이지 공용** — 페이지에 nav 마크업 복사 금지(admin·login·onboarding·review-desk 는 일부러 제외 — review-desk 는 admin 처럼 단독 화면이라 자체 헤더를 쓴다). 메뉴 항목·현재 위치는 `nav.js` 의 배열·표에서만 고친다. **`lab-*.html` 5개(airline·calendar·question·report·video)는 세지 않는다** — `lab-shelf.html?shelf=` 로 즉시 넘겨보내는 34줄짜리 안내판이라 nav·inapp 둘 다 없는 게 맞다(2026-08-07 실측).
+- **`inapp.js` 도 공용 — 지우지 말 것.** **login 에도 들어간다**(구글 OAuth 가 인앱에서 거부되는 바로 그 화면이다). 제외는 admin·onboarding·review-desk 셋뿐 — 인앱 유입이 닿지 않는 화면이다(2026-08-07 실측). 인앱 브라우저(인스타·카톡)는 **파일 다운로드를 막고 구글 OAuth 를 거부한다**(2026-08-01 실사고 — 인스타 유입 학생이 무료 자료를 못 받았다). 인앱이면 **nav 아래 상단 한 줄 안내**(오너 확정 — 전체 화면 덮개는 기각 "장난치냐? 그냥 상단 설명으로 바꿔"). 형태 규칙 셋: ① `position:fixed` + `top=#navbar 실측 높이`(흐름 안 배너 금지 — nav 와 글자가 겹쳐 깨진 실사고) ② **화면 문자열은 전부 `\uXXXX` 이스케이프**(생성기 주석 참조 — 한글 리터럴 직접 넣기 금지) ③ 파일을 고치면 **`?v=` 캐시 버스터도 같이 올린다**(인앱 웹뷰가 캐시를 안 버려 깨진 옛 화면이 계속 보인 실사고). 자동 이동 없음 — 버튼을 눌렀을 때만 안드로이드 크롬 인텐트 / 아이폰 주소 복사. **인스타가 유입 1위라 이 자리가 막히면 유입 전체가 막힌다.** 새 페이지를 만들면 `nav.js` 옆에 같이 넣는다. ⚠️ **비동기 응답 뒤 `window.open` 으로 파일을 열지 말 것**(인앱이 조용히 막는다 — 받기는 `location.href`).
 - **새 페이지를 만들면 `<title>` 아래 og·twitter 메타 블록을 복사해 넣는다**(다른 페이지 head 에서 그대로 가져와 url·title·description만 교체). 카톡·DM 링크 미리보기용이라 **크롤러가 JS 를 안 돌린다 — nav 처럼 스크립트로 심으면 무효**다. 빠지면 로고 없이 제목만 뜬다(2026-08-01 실사고 — index 말고 28개 페이지 전부 비어 있었다).
 - **제목 꼬리표는 `[페이지 이름] — MONC 몬크` 하나뿐**(2026-08-03 오너 확정 — 홈 `index.html` 만 브랜드 문장 `MONC 몬크 — 승무원 준비의 새로운 기준` 예외). 사이트가 챌린지보다 넓어졌는데 꼬리표가 손으로 적히다 6가지로 갈렸고, **자료실·뉴스·약관까지 '몬크 챌린지'로 떠서 오너가 지적했다.** `· MONC`·`| MONC`·`— MONC`·`MONC 로그인` 같은 변형을 다시 만들지 말 것. **`<title>`·`og:title`·`twitter:title` 세 값은 항상 같다** — 미리보기는 og 를, 주소창·검색 결과는 `<title>` 을 읽어서 한 곳만 고치면 화면마다 다른 이름이 뜬다. 페이지 이름의 부제는 가운뎃점으로 붙인다(`보.신.각 · 보이스 신분상승 각 — MONC 몬크`). ⚠️ **`document.title` 을 다시 쓰는 페이지도 같이 고친다**(`lab-shelf.html`·`program.html`·`story.html`·`reviews-list.html`).
 
@@ -167,6 +142,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
 | 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
 
+> 끝난 작업의 **계획서는 `docs/archive/plans/`** 에 있다 — 현행 규칙이 아니다. 설계 문서(`docs/superpowers/specs/`)도 위 표가 가리키는 둘(ai-killer·sojae-v2) 말고는 설계 시점 기록이라, 값이 notes 와 다르면 notes 가 맞다.
+
 ## 매일 답변 프로그램
 
 ### MONC 답변 프로그램 개발 원칙 (오너 지시 원문 · 2026-07-30)
@@ -193,7 +170,11 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 9. 데이터베이스 변경에는 마이그레이션을 작성한다.
 10. 구현 후 타입 검사, 테스트, 린트, 빌드를 실행한다.
 
+> ⚠️ **10번의 이 레포 대응**(오너 원문은 그대로 둔다): 이 레포엔 린트·빌드·타입 검사 시스템이 **없다**(위 '명령·검증'). 없는 명령을 지어내지 말고 `node scripts/answer-program-tests.mjs` · `deno check supabase/functions/answer-program/index.ts` · 375px 브라우저 실측 셋으로 대신한다.
+
 #### 작업 방식
+
+> 이 절은 **답변 프로그램 작업에 한한다.** 아래 '구현 계획만 작성하고 종료하지 않는다'는 착수한 일을 계획서만 남기고 덮지 말라는 뜻이지, 큰 작업 전에 오너에게 방향을 확인하는 것까지 막는 규칙이 아니다.
 
 - 먼저 기존 저장소 구조를 분석한다.
 - 저장소에서 확인 가능한 내용은 사용자에게 다시 묻지 않는다.
@@ -234,7 +215,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 블라인드 퀴즈를 상세 페이지나 두 곳 이상에 싣기 — challenges.html 하단 한 곳 확정 (home.md)
 - admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격(상품>답변 프로그램 서브탭 유지 — 오너 확정) (admin.md)
 - `rehearsal.html` 카드 숨김 해제 — 코드가 main 에 없어 404 난다(`claude/rehearsal-wip` 먼저 병합) (implementation-status.md)
-- `challenge-express.html`·`challenge-speech.html` — 2026-07-14(072c937) 삭제된 고아 파일, 되살리지 말 것 (pages.md)
+- `challenge-express.html`·`challenge-speech.html` 되살리기 — 2026-07-14 커밋 `072c937` 에서 고아 파일로 제거됐다. 상세는 voice·expression·spinning·answer 4종뿐(2026-08-07 실측) (pages.md)
 - AI킬러 일반 텍스트 응답·규칙 엔진 모듈 분리 (ai-killer 스펙)
 - 첨삭(polish) 제출 전 프로브 게이트 삭제 (polish.md)
 - 소재 발굴을 답변 저장의 관문으로 만들기·다듬기 버튼을 AI 판정 뒤로 숨기기 (sojae 스펙)
