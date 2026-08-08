@@ -23,6 +23,10 @@
 
   var ua = navigator.userAgent || '';
   var IN_APP = /Instagram|FBAN|FBAV|FB_IAB|FBIOS|KAKAOTALK|Line\/|NAVER\(inapp|NAVER |DaumApps|everytime|band|Snapchat|Twitter|TikTok/i.test(ua);
+  /* 인앱 판정 단일 소스 — login.html 이 구글 버튼 잠금에 쓴다(2026-08-08).
+     UA 목록을 다른 파일에 복사하지 말 것. 배너를 닫아도(sessionStorage) 판정은 참이어야
+     하므로 아래 early return 들보다 먼저 내보낸다. */
+  window.MONC_INAPP = IN_APP;
   if (!IN_APP) return;
 
   var HIDE_KEY = 'monc_inapp_off';
