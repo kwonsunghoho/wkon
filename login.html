@@ -40,7 +40,7 @@
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — ⚠️ 로그인 페이지엔 특히 중요하다:
        구글이 인앱 웹뷰 OAuth 를 아예 거부한다(disallowed_useragent). nav 가 없는
        페이지라 nav.js 옆이 아니라 여기에 직접 넣는다. -->
-  <script src="inapp.js?v=9" defer></script>
+  <script src="inapp.js?v=10" defer></script>
   <!-- 뒤로 왔을 때 보던 자리로 되돌리기 — 위 bfcache 새로고침이 스크롤을 버리는 걸 메운다 -->
   <script src="scroll-keep.js?v=3"></script>
   <!-- 이미 로그인된 사람에겐 로그인 버튼을 그리기 전에 가린다(2026-08-03 오너 신고) —
@@ -107,17 +107,17 @@
     .note b { font-weight: 800; color: var(--text); }
     /* 최초 1회 동의 게이트 */
     .gate-h { margin-top: 24px; font-size: 15px; font-weight: 800; color: var(--text); }
-    /* 중복 가입 차단 상자 — 흰 카드 안 옅은 판(--bg2 용도 그대로). 법적 고지 아님이지만 12px 하한 준수 */
-    .dup-box { margin-top: 14px; padding: 14px; text-align: left; background: var(--bg2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
-    .dup-t { font-size: 14px; font-weight: 800; color: var(--text); }
-    .dup-d { margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
-    .dup-d b { font-weight: 800; color: var(--text); }
-    .dup-btn {
-      margin-top: 12px; width: 100%; min-height: 44px; padding: 12px 14px; font-size: 14px; font-weight: 700;
+    /* 중복 가입 차단 — 선택 강제 단계. 답하기 전엔 동의 폼(체크박스·버튼·삭제 링크)을 감춘다 */
+    .dup-t { margin-top: 18px; font-size: 15px; font-weight: 800; color: var(--text); }
+    .dup-t b { color: var(--action-dark); }
+    .dup-alt {
+      margin-top: 10px; width: 100%; min-height: 48px; padding: 13px 14px; font-size: 15px; font-weight: 700;
       cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm);
-      background: var(--surface); color: var(--action-dark);
+      background: var(--surface); color: var(--text);
     }
-    .dup-btn:disabled { opacity: .5; cursor: default; }
+    .dup-alt:disabled { opacity: .5; cursor: default; }
+    #consentView.choosing .gate-h, #consentView.choosing .consent, #consentView.choosing #consentGo,
+    #consentView.choosing #consentNo, #consentView.choosing #consentLater, #consentView.choosing #consentNote { display: none; }
     /* 파괴적 동작 안내 — 법적 고지 활자 하한 12px 준수 */
     .gate-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
     .a-btn {
@@ -179,11 +179,6 @@
         <span>카카오로 로그인</span>
       </button>
 
-      <!-- 인앱 브라우저에서만 보인다(아래 인앱 분기) — 구글 버튼을 잠근 이유를 그 자리에서 말한다.
-           마지막 줄은 중복 가입 예방 — 구글 회원이 카카오로 시작하면 별개 새 계정이 생긴다
-           (카카오는 이메일을 안 받아 서버가 같은 사람인지 알 수 없다). -->
-      <p class="note" id="inappNote" hidden><b>앱 안 브라우저에서는 구글 로그인이 막혀 있어요.</b><br>카카오로 시작하거나, 화면 위 안내를 눌러 브라우저에서 열어 주세요.<br><b>구글로 가입했던 분</b>은 브라우저에서 열어 구글로 로그인해 주세요 — 카카오로 시작하면 새 계정이 만들어져요.</p>
-
       <p class="note">처음 로그인하면 약관 동의 절차가 <b>한 번</b> 진행됩니다. 이미 동의하셨다면 바로 들어갑니다.</p>
     </div>
 
@@ -193,11 +188,14 @@
       <!-- 중복 가입 차단 (2026-08-08 오너 지시) — 카카오로 '방금 새 계정'이 만들어진 사람에게만
            보인다(아래 showConsentGate 분기). 카카오는 이메일을 안 받아(KOE205 회피, supabase-config.js)
            서버가 기존 구글 계정과 같은 사람인지 알 수 없다 — 그래서 자동 대조가 아니라
-           동의(=가입 확정) 전에 본인에게 묻는 방식이다. 동의가 끝난 뒤엔 늦다. -->
-      <div class="dup-box" id="dupBox" hidden>
-        <p class="dup-t">혹시 예전에 <b>구글로 가입</b>하셨나요?</p>
-        <p class="dup-d">지금 로그인한 카카오 계정은 <b>별개의 새 계정</b>입니다. 이대로 진행하면 기존 기록(크레딧·저장한 답변)이 없는 계정이 하나 더 생겨요.</p>
-        <button class="dup-btn" id="dupSwitch">이 계정 만들지 않고 구글로 로그인하기</button>
+           동의(=가입 확정) 전에 본인에게 묻는다. 동의가 끝난 뒤엔 늦다.
+           ⚠️ 안내문+선택 버튼(수동 상자)으로 되돌리지 말 것 — "아무리 친절하게 설명해도
+              안 읽는다"(오너). 답하기 전엔 동의 폼이 안 보이는 '선택 강제' 구조가 핵심이다. -->
+      <div id="dupChoice" hidden>
+        <p class="dup-t">몬크에 <b>처음</b> 가입하시나요?</p>
+        <button class="a-btn" id="dupNew">네, 처음이에요</button>
+        <button class="dup-alt" id="dupGoogle">아니요, 구글로 가입한 적 있어요</button>
+        <p class="gate-note">구글로 가입했던 분이 카카오로 계속하면 기록 없는 새 계정이 생겨요.</p>
       </div>
       <label class="consent" for="agreeChk">
         <input type="checkbox" id="agreeChk">
@@ -242,8 +240,9 @@
     const consentNo = document.getElementById('consentNo');
     const consentLater = document.getElementById('consentLater');
     const consentNote = document.getElementById('consentNote');
-    const dupBox = document.getElementById('dupBox');
-    const dupSwitch = document.getElementById('dupSwitch');
+    const dupChoice = document.getElementById('dupChoice');
+    const dupNew = document.getElementById('dupNew');
+    const dupGoogle = document.getElementById('dupGoogle');
     function setStatus(t, isErr) { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!isErr); }
 
     /* head 의 has-session 가림을 푼다 — 토큰은 있었는데 실제 세션이 없던 경우(만료 등).
@@ -261,10 +260,10 @@
     window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
     /* 인앱 브라우저(인스타·카톡 등) — 구글이 웹뷰 로그인을 정책으로 거부한다(disallowed_useragent).
-       버튼을 그대로 두면 눌렀다가 구글 오류 화면에서 끝난다(우리 화면이 아니라 안내도 못 한다).
-       그래서 카카오를 위로 올리고 구글은 이유를 밝힌 채 잠근다.
+       카카오를 첫 버튼으로 올린다. 구글 버튼은 잠그지도 숨기지도 않는다 — 잠금+설명문은
+       "안 읽고 그냥 안 된다고 생각한다"(2026-08-08 오너)로 기각. 대신 아래 클릭 핸들러가
+       누르는 순간 브라우저로 열어 준다(안드로이드) / 여는 법 한 줄을 띄운다(아이폰).
        ⚠️ 구글 버튼을 숨기지 말 것 — 구글로 가입한 기존 회원이 "내 로그인이 없어졌다"가 된다.
-          잠금 + 이유 + 브라우저로 여는 길(상단 inapp.js 배너)이 한 벌이다.
        ⚠️ 판정은 inapp.js 의 window.MONC_INAPP 단일 소스(UA 목록 복사 금지). inapp.js 가 defer 라
           플래그는 DOMContentLoaded 시점에야 있다 — 이 리스너보다 앞에서 읽으면 항상 undefined.
        실패 방향은 '평소 화면': 플래그가 없으면(구버전 캐시·로드 실패) 아무것도 안 바꾼다. */
@@ -272,13 +271,23 @@
       try {
         if (!window.MONC_INAPP) return;
         loginView.insertBefore(kbtn, btn);                    // 카카오를 첫 버튼으로
-        btn.disabled = true;
-        btn.setAttribute('aria-describedby', 'inappNote');
-        document.getElementById('inappNote').hidden = false;
         const sub = document.querySelector('.sub');
         if (sub && !sub.hidden) sub.innerHTML = '2주 챌린지 결과 확인은<br>카카오 계정으로 로그인하세요.';
       } catch (e) { /* 어떤 실패든 로그인 화면은 평소대로 남는다 */ }
     });
+
+    /* 인앱에서 '구글로 로그인'을 눌렀을 때 — OAuth 로 보내면 구글 오류 화면에서 끝난다.
+       안드로이드: 크롬 인텐트로 이 페이지를 바로 연다(inapp.js 의 MONC_INAPP_OPEN — 배너와 같은 길).
+       아이폰: 프로그램으로 못 열므로 그 자리에서 alert 한 줄(누른 순간의 안내는 읽는다).
+       반환 true = OAuth 로 넘어가면 안 된다는 뜻. */
+    function inappGoogleDetour() {
+      if (!window.MONC_INAPP) return false;
+      if (window.MONC_INAPP_OPEN && window.MONC_INAPP_OPEN(location.origin + location.pathname)) return true;
+      alert('앱 안 브라우저에서는 구글 로그인이 막혀 있어요.\n\n'
+        + (window.MONC_INAPP_HOWTO || '브라우저에서 열어 주세요.')
+        + '\n\n또는 카카오로 로그인하세요.');
+      return true;
+    }
 
     /* 동의 게이트 (2026-07-15) — 구조가 바뀐 이유:
        구 방식은 로그인 버튼을 체크박스에 묶어 '로그인할 때마다' 동의를 다시 받았다.
@@ -317,46 +326,59 @@
       }
       consentView.dataset.returning = isReturning ? '1' : '';
 
-      /* 중복 가입 차단(2026-08-08 오너 지시) — '방금 카카오로 새 계정이 만들어진 사람'에게만
-         구글 기존 계정 여부를 묻는다. 판정 재료는 둘: ① isReturning=false(동의 기록 없음 = 사실상
-         빈 계정) ② provider=kakao. 자동 대조가 불가능한 이유는 위 HTML 주석 참조(카카오 무이메일).
-         실패 방향은 '상자 없음' — 판정이 안 되면 평소 게이트 그대로다. */
-      dupBox.hidden = true;
+      /* 중복 가입 차단(2026-08-08 오너 지시) — '방금 카카오로 새 계정이 만들어진 사람'에게는
+         동의 폼 대신 "처음 가입하시나요?" 선택을 먼저 강제한다(안내문은 안 읽는다 — 오너).
+         판정 재료는 둘: ① isReturning=false(동의 기록 없음 = 사실상 빈 계정) ② provider=kakao.
+         자동 대조가 불가능한 이유는 위 HTML 주석 참조(카카오 무이메일).
+         실패 방향은 '평소 게이트' — 판정이 안 되면 선택 단계 없이 동의 폼이 바로 보인다. */
+      dupChoice.hidden = true;
+      consentView.classList.remove('choosing');
       try {
         const provider = session && session.user && session.user.app_metadata && session.user.app_metadata.provider;
-        if (!isReturning && provider === 'kakao') dupBox.hidden = false;
+        if (!isReturning && provider === 'kakao') {
+          dupChoice.hidden = false;
+          consentView.classList.add('choosing');
+        }
       } catch (e) {}
     }
     agree.addEventListener('change', () => { consentGo.disabled = !agree.checked; });
 
-    /* '이 계정 만들지 않고 구글로 로그인하기' — 방금 만들어진 빈 카카오 계정을 지우고
-       로그인 화면으로 되돌린다. 삭제는 동의 게이트의 거부 흐름과 같은 MONC.deleteMyAccount()
-       재사용(두 벌 금지 — B-2 와 같은 이유).
-       ⚠️ MONC.signOut() 을 부르지 말 것 — 홈으로 이동해 버린다. 여기선 이 화면에서 곧장
-          구글로 이어가야 하므로 세션만 끝내고(sb.auth.signOut) 로그인 뷰를 되살린다.
-       ⚠️ 인앱이면 구글 버튼이 잠겨 있다(위 인앱 분기) — 되살릴 때도 잠금을 유지하고,
-          안내를 '브라우저에서 연 다음 구글 로그인'으로 바꾼다. */
-    dupSwitch.addEventListener('click', async () => {
-      if (!window.confirm('방금 만들어진 카카오 계정을 삭제하고 로그인 화면으로 돌아갈까요?\n\n구글로 가입했던 기존 계정은 그대로 남아 있습니다.')) return;
-      dupSwitch.disabled = true; consentGo.disabled = true; consentNo.disabled = true; consentLater.disabled = true;
+    /* '네, 처음이에요' — 선택 단계를 걷고 평소 동의 폼을 보인다 */
+    dupNew.addEventListener('click', () => {
+      dupChoice.hidden = true;
+      consentView.classList.remove('choosing');
+    });
+
+    /* '아니요, 구글로 가입한 적 있어요' — 방금 만들어진 빈 카카오 계정을 지우고
+       구글로 로그인할 수 있는 곳으로 보낸다. 삭제는 동의 게이트의 거부 흐름과 같은
+       MONC.deleteMyAccount() 재사용(두 벌 금지 — B-2 와 같은 이유).
+       ⚠️ MONC.signOut() 을 부르지 말 것 — 홈으로 이동해 버린다. 여기선 곧장 구글로
+          이어가야 하므로 세션만 끝내고(sb.auth.signOut) 로그인 뷰를 되살린다.
+       인앱이면 구글 OAuth 가 안 되므로 inappGoogleDetour() 와 같은 길: 안드로이드는
+       크롬으로 이 페이지를 바로 열고, 아이폰은 여는 법 한 줄을 alert 로 띄운다. */
+    dupGoogle.addEventListener('click', async () => {
+      if (!window.confirm('방금 만들어진 카카오 계정을 정리하고 구글 로그인으로 돌아갈까요?\n\n구글로 가입했던 기존 계정은 그대로 남아 있습니다.')) return;
+      dupGoogle.disabled = true; dupNew.disabled = true;
       setStatus('방금 만들어진 계정을 정리하는 중…');
       const r = await MONC.deleteMyAccount();
       if (r === 'failed') {
         setStatus('계정 정리에 실패했습니다. 잠시 후 다시 시도해 주세요.', true);
-        dupSwitch.disabled = false; consentNo.disabled = false; consentLater.disabled = false;
-        consentGo.disabled = !agree.checked;   // 원래 규칙대로 — 체크돼 있으면 다시 열린다
+        dupGoogle.disabled = false; dupNew.disabled = false;
         return;
       }
       await MONC.sb.auth.signOut();
       consentView.hidden = true;
+      consentView.classList.remove('choosing');
       loginView.hidden = false;
       const sub = document.querySelector('.sub');
       if (sub) sub.hidden = false;
-      btn.disabled = !!window.MONC_INAPP;   // 인앱 잠금 유지
-      kbtn.disabled = false;
-      setStatus(window.MONC_INAPP
-        ? '화면 위 안내를 눌러 브라우저에서 연 다음, 구글로 로그인해 주세요.'
-        : '이제 구글로 로그인해 주세요.');
+      btn.disabled = false; kbtn.disabled = false;
+      if (window.MONC_INAPP) {
+        setStatus('브라우저에서 연 다음, 구글로 로그인해 주세요.');
+        inappGoogleDetour();   // 안드로이드: 크롬으로 즉시 열림 / 아이폰: 여는 법 alert
+      } else {
+        setStatus('이제 구글로 로그인해 주세요.');
+      }
     });
 
     consentGo.addEventListener('click', async () => {
@@ -382,12 +404,12 @@
         : '계정을 삭제할까요?\n\n방금 만들어진 계정 정보(이름·이메일)를 즉시 삭제합니다.\n되돌릴 수 없습니다.';
       if (!window.confirm(msg)) return;
 
-      consentNo.disabled = true; consentGo.disabled = true; consentLater.disabled = true; dupSwitch.disabled = true;
+      consentNo.disabled = true; consentGo.disabled = true; consentLater.disabled = true; dupGoogle.disabled = true;
       setStatus('동의를 거부하셨습니다. 계정 정보를 삭제하는 중…');
       const r = await MONC.deleteMyAccount();
       if (r === 'failed') {
         setStatus('계정 정보 삭제에 실패했습니다. moveownnextcreate@gmail.com 으로 알려주시면 즉시 파기하겠습니다.', true);
-        consentNo.disabled = false; consentLater.disabled = false; dupSwitch.disabled = false;
+        consentNo.disabled = false; consentLater.disabled = false; dupGoogle.disabled = false;
         return;                     // 파기 실패를 숨긴 채 내보내지 않는다
       }
       await MONC.signOut();         // 세션 종료 후 홈으로
@@ -398,7 +420,7 @@
           다시 만나고, 회원 페이지는 requireConsent() 가 계속 막는다. 미동의 상태로
           서비스를 쓰게 두는 길이 아니라, 결정을 미루는 길이다. */
     consentLater.addEventListener('click', async () => {
-      consentLater.disabled = true; consentNo.disabled = true; consentGo.disabled = true; dupSwitch.disabled = true;
+      consentLater.disabled = true; consentNo.disabled = true; consentGo.disabled = true; dupGoogle.disabled = true;
       setStatus('로그아웃하는 중…');
       await MONC.signOut();
     });
@@ -465,19 +487,19 @@
     const returnHere = () => window.location.origin + window.location.pathname;
 
     btn.addEventListener('click', async () => {
+      if (inappGoogleDetour()) return;   // 인앱: OAuth 대신 브라우저로 여는 길
       btn.disabled = true; kbtn.disabled = true;
       setStatus('구글 로그인 창으로 이동 중…');
       // 로그인 후 이 페이지로 돌아오면 아래 부트스트랩이 동의 여부를 보고 분기
       const { error } = await MONC.signInWithGoogle(returnHere());
-      // 실패 복구 때 인앱 잠금은 유지 — false 로 풀면 위 인앱 분기가 잠근 구글이 되살아난다
-      if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = !!window.MONC_INAPP; kbtn.disabled = false; }
+      if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = false; kbtn.disabled = false; }
     });
 
     kbtn.addEventListener('click', async () => {
       btn.disabled = true; kbtn.disabled = true;
       setStatus('카카오 로그인 창으로 이동 중…');
       const { error } = await MONC.signInWithKakao(returnHere());
-      if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = !!window.MONC_INAPP; kbtn.disabled = false; }
+      if (error) { setStatus('로그인 오류: ' + error.message, true); btn.disabled = false; kbtn.disabled = false; }
     });
 
     // 이미 로그인돼 있으면(또는 방금 로그인하고 돌아왔으면) 동의 여부에 따라 분기.

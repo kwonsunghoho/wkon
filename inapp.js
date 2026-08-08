@@ -29,9 +29,6 @@
   window.MONC_INAPP = IN_APP;
   if (!IN_APP) return;
 
-  var HIDE_KEY = 'monc_inapp_off';
-  try { if (sessionStorage.getItem(HIDE_KEY) === '1') return; } catch (e) {}
-
   var isAndroid = /Android/i.test(ua);
   var isKakao = /KAKAOTALK/i.test(ua);
   var appName = /Instagram/i.test(ua) ? "\uc778\uc2a4\ud0c0\uadf8\ub7a8"
@@ -39,6 +36,24 @@
     : /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua) ? "\ud398\uc774\uc2a4\ubd81"
     : null;
   var pageUrl = location.href;
+
+  /* 외부 브라우저 탈출 — login.html 구글 버튼이 쓴다(2026-08-08 오너 "설명해도 안 읽는다").
+     글로 안내하는 대신 누르는 순간 처리한다: 안드로이드는 크롬 인텐트로 열고 true,
+     아이폰은 프로그램으로 못 열므로 false 를 돌려주고 호출부가 HOWTO 한 줄을 띄운다.
+     (배너 닫힘 sessionStorage 와 무관하게 살아야 하므로 아래 HIDE_KEY return 보다 앞) */
+  window.MONC_INAPP_OPEN = function (url) {
+    if (!isAndroid) return false;
+    location.href = 'intent://' + String(url || pageUrl).replace(/^https?:\/\//, '')
+      + '#Intent;scheme=https;package=com.android.chrome;end';
+    return true;
+  };
+  var HOWTO = isKakao
+    ? "\uc624\ub978\ucabd \uc544\ub798 Safari \uc544\uc774\ucf58\uc73c\ub85c \uc5f4\uc5b4 \uc8fc\uc138\uc694."
+    : "\uc624\ub978\ucabd \uc704 \u22ef \u2192 \u2018\uc678\ubd80 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \uc5f4\uae30\u2019\ub85c \uc5f4\uc5b4 \uc8fc\uc138\uc694.";
+  window.MONC_INAPP_HOWTO = HOWTO;
+
+  var HIDE_KEY = 'monc_inapp_off';
+  try { if (sessionStorage.getItem(HIDE_KEY) === '1') return; } catch (e) {}
 
   function mount() {
     var nav = document.getElementById('navbar');
