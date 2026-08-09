@@ -131,7 +131,8 @@
    * ============================================================================= */
   // v2(2026-07-30): 데모가 '필수 기출(공통)' 프로그램으로 바뀌어 키를 올렸다 —
   // 구 키를 그대로 쓰면 이전 체험자의 localStorage 에 옛 제주항공 데모가 남아 보인다.
-  var DEMO_STATE_KEY = 'ap_demo_state_v2';
+  // v3(2026-08-09): '일문일답' 개명 — 캐시에 남은 옛 제목이 계속 보이지 않게 같은 이유로 키를 올렸다.
+  var DEMO_STATE_KEY = 'ap_demo_state_v3';
 
   function demoSeed() {
     var today = kstToday();
@@ -140,7 +141,7 @@
       programs: [{
         // 1차 상품 방향(2026-07-30 오너): 필수 기출(전 항공사 공통) 먼저 — airline null=공통.
         // 체험판 없이 유료(price 양수) — 데모 계정은 이용권이 미리 지급된 상태로 시작한다.
-        id: 'demo-prog-7c', airline: null, title: '필수 기출 루틴 (데모)',
+        id: 'demo-prog-7c', airline: null, title: '일문일답 (데모)',
         subtitle: '어느 항공사든 무조건 나오는 문제부터', description: '개발 확인용 데모 — 실제 기출 은행이 아니라 예시 문항입니다.',
         total_days: 5, reveal_policy: 'daily', price: 99000, visible: true
       }],
@@ -614,7 +615,7 @@
       if (sess.question_id) {
         // 질문 본문은 RPC 로만 오지만, 제목은 extra 로 전달받는다(비공개 표 직접 조회 불가).
       }
-      var title = (extra && extra.question_title) || '매일 답변 프로그램';
+      var title = (extra && extra.question_title) || '일문일답';
       var row = {
         member_id: this.userId, title: title.slice(0, 200), content: text,
         category: (extra && extra.category) || null, doc_kind: 'interview',

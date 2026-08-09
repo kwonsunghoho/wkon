@@ -1,5 +1,11 @@
 # 공용 nav — 상세 기록
 
+## '필수 기출 하루 한 개' → '일문일답' 라벨 교체 (2026-08-09 오너 "상단 네비도 일문일답으로")
+
+- 2026-08-07 aa63f8c 개명이 programs.html 제목만 바꿔, nav 등 다른 자리에 옛 이름이 남아 있었다. 한 번에 교체한 자리: `nav.js` TOOLS_SUB 라벨 · tools.html 타일+설명 메타 3곳 · challenge-answer '다음 단계' 링크 · program.html(sr-only h1 · 상단 제목 기본값 · 결제 주문명 '몬크 일문일답 · ' · 확정본 제목 폴백) · mypage 접이 제목·폴백 · program-common.js 데모 제목(캐시 키 v2→v3).
+- 하위 설명 줄 '하루 한 개, 내 경험으로'는 유지. **드롭다운 하위 항목이라 상단 바 폭과 무관** — 6항목 866px 계산은 상위 항목 기준이라 재측정 불필요(라벨도 12자→4자로 짧아졌다).
+- DB `answer_programs.title` 은 레포 밖 — 상품을 열 때 오너가 admin 상품>답변 프로그램에서 제목을 일문일답 기준으로 맞춘다. 시스템 이름('매일 답변 프로그램'·admin 탭·마이그레이션 주석)은 개명 대상이 아니다.
+
 ## 승준노트 → 승준 코스 + 승준 도구 분리, 햄버거 상한 768→880 (2026-08-06 오너 확정)
 
 - **바뀐 것**: 상단 2번 '승준노트'(드롭다운)를 **'승준 코스'(단독 링크 briefing.html) + '승준 도구'(드롭다운, 허브 tools.html)** 둘로 나눴다 — 코스를 더 밀기 위한 분리(오너 지시). 순서: 챌린지 · 승준 코스 · 승준 도구 · 연구실 · 특강 · 후기(6항목). `BRIEFING_HUB/BRIEFING_SUB` 는 `COURSE_LINK`·`TOOLS_HUB/TOOLS_SUB` 가 됐고, `SECTION_OF` 는 briefing→`course`, 도구 페이지 8곳(tools·news·sojae·ai-killer·answers·polish·programs·program·experiences)→`tools`.

@@ -42,7 +42,8 @@
     ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
     ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"],
     ['ai-killer.html', 'AI킬러', 'AI 같은 표현 찾아 밑줄로'],
-    ['programs.html', '필수 기출 하루 한 개', '하루 한 개, 내 경험으로']
+    /* 2026-08-07 개명 '필수 기출 하루 한 개' → '일문일답' — programs.html 제목·tools.html 타일과 한 벌 */
+    ['programs.html', '일문일답', '하루 한 개, 내 경험으로']
   ];
   var CHALLENGE_HUB = 'challenges.html';
   var CHALLENGE_SUB = [
