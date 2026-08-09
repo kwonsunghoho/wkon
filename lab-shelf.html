@@ -1318,7 +1318,11 @@
     restore();
   });
 
-  function verifyPay(paymentId, resourceId) {
+  /* 서버 확인. 돌려주는 값: { ok: 자료가 내 것이 됐는가, done: 확답을 받았는가 }.
+     ⚠️ done=false(네트워크 등 확인 불가)면 부르는 쪽이 미결 기록(PAY_KEY)을 지우면 안 된다 —
+        다음 방문의 resumePay 가 조용히 다시 확인한다(자가 회복 · 2026-08-09).
+     quiet 는 그 자가 회복 경로 — 결제 직후가 아니므로 실패 안내를 띄우지 않는다. */
+  function verifyPay(paymentId, resourceId, quiet) {
     return window.MONC.sb.functions.invoke('verify-payment', {
       body: { paymentId: paymentId, resourceId: resourceId }
     }).then(function (r) {
@@ -1328,19 +1332,26 @@
         alert('이미 구매하신 자료예요.\n\n' + (d.refunded
           ? '중복 결제분은 전액 자동 환불했어요.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
           : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주세요.'));
-        return true;   // 자료는 이미 있으니 화면은 열어 준다
+        return { ok: true, done: true };   // 자료는 이미 있으니 화면은 열어 준다
       }
-      if ((r && r.error) || !d.ok) {
-        if (d.error === 'grant_failed') {
-          alert('결제는 승인됐지만 자료 지급에 문제가 생겨\n' + (d.refunded
-            ? '전액 자동 환불했어요. 잠시 뒤 다시 시도해 주세요.'
-            : '환불도 실패했어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
-        } else {
-          alert('결제는 완료됐지만 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
-        }
-        return false;
+      if (d.ok) return { ok: true, done: true };
+      if (d.error === 'grant_failed') {
+        alert('결제는 승인됐지만 자료 지급에 문제가 생겨\n' + (d.refunded
+          ? '전액 자동 환불했어요. 잠시 뒤 다시 시도해 주세요.'
+          : '환불도 실패했어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+        return { ok: false, done: true };
       }
-      return true;
+      // 결제가 실제로 안 됐다(창만 열고 이탈 등) — 미결 기록만 접으면 된다.
+      if (d.error === 'not_paid') {
+        if (!quiet) alert('결제가 완료되지 않았어요. 다시 시도해 주세요.');
+        return { ok: false, done: true };
+      }
+      // 확답을 못 받았다(네트워크·서버 오류) — 미결로 남겨 다음에 다시 확인한다.
+      if (!quiet) alert('결제는 완료됐지만 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
+      return { ok: false, done: false };
+    }).catch(function () {
+      if (!quiet) alert('결제는 완료됐지만 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
+      return { ok: false, done: false };
     });
   }
 
@@ -1363,8 +1374,14 @@
         paymentId: paymentId, resourceId: row.id, shelf: shelfKey
       }));
     } catch (e) {}
-    var rp = new URLSearchParams(location.search); rp.set('payresult', '1');
-    var redirectUrl = location.origin + location.pathname + '?' + rp.toString();
+    /* ⚠️ 복귀 주소는 지금 주소창이 아니라 **진짜 화면 파일**로 만든다(2026-08-09 실사고).
+       syncUrl() 이 주소를 안내판 주소(lab-airline.html 등)로 바꿔 둬서, 주소창 기준으로 만들면
+       결제 후 안내판으로 돌아오고 안내판의 location.replace 가 ?payresult·paymentId 를 버렸다 —
+       결제 확인이 한 번도 못 돌아 돈만 나가고 lab_purchases 는 비어 있었다(서가 합치기 회귀). */
+    var redirectUrl = location.origin + location.pathname.replace(/[^\/]*$/, 'lab-shelf.html')
+      + '?shelf=' + encodeURIComponent(shelfKey)
+      + (branch !== 'all' ? '&kind=' + encodeURIComponent(branch) : '')
+      + '&payresult=1';
 
     Promise.resolve(window.MONC.getMyProfile ? window.MONC.getMyProfile() : null)
       .catch(function () { return null; })
@@ -1380,15 +1397,19 @@
       })
       .then(function (res) {
         // 여기부터 PC(팝업) 경로 — 모바일은 위에서 페이지가 떠나 도달하지 않는다.
-        try { sessionStorage.removeItem(PAY_KEY); } catch (e) {}
         if (res && res.code) {
+          // 결제 자체가 안 됐다(취소·실패) — 미결 아님, 기록을 지운다.
+          try { sessionStorage.removeItem(PAY_KEY); } catch (e) {}
           alert('결제가 완료되지 않았어요.\n' + (res.message || res.code));
           payRestore = null; restore(); return;
         }
         btn.textContent = '결제 확인 중…';
-        return verifyPay(paymentId, row.id).then(function (ok) {
+        return verifyPay(paymentId, row.id).then(function (v) {
+          // ⚠️ 확답(done)일 때만 미결 기록을 지운다 — 확인이 네트워크로 끊겼으면
+          //    다음 방문의 resumePay 가 조용히 이어서 확인한다(자가 회복).
+          if (v.done) { try { sessionStorage.removeItem(PAY_KEY); } catch (e) {} }
           payRestore = null; busy = false;
-          if (!ok) { btn.disabled = false; btn.textContent = '동의하고 결제하기'; return; }
+          if (!v.ok) { btn.disabled = false; btn.textContent = '동의하고 결제하기'; return; }
           closeSheet();
           toast('구매가 완료됐어요. 자료를 열어 드릴게요.', 2600);
           load();                                   // 목록의 '구매함' 표시를 갱신
@@ -1402,26 +1423,34 @@
       });
   }
 
-  // 모바일 결제 복귀 — 주소창에 붙어 온 결과를 지우고 서버 확인만 이어서 한다.
+  /* 모바일 결제 복귀 + 자가 회복 — 미결 결제(PAY_KEY)가 남아 있으면 서버 확인을 이어서 한다.
+     ⚠️ location.search 를 다시 읽지 말 것(2026-08-09 실사고): syncUrl() 이 주소를 안내판 주소로
+        바꾸며 파라미터를 먼저 지운다. 여기서 주소창을 읽으면 payresult 가 안 보여 확인이 통째로
+        건너뛰어졌다 — 돈은 나가고 lab_purchases 는 빈 채, 결제창이 계속 뜬 원인.
+        진입 때 떠 둔 params 스냅샷(주소 바꾸기 전 값)을 쓴다. 주소 정리도 syncUrl 몫이라 여기선 안 한다.
+     payresult 없이 미결 기록만 있는 경우(복귀가 끊겼거나 확인이 실패했던 방문)는 조용히 확인한다 —
+     성공·미결제 확답이면 기록을 지우고, 확인 자체가 실패하면 남겨서 다음 방문에 또 시도한다. */
   function resumePay() {
-    var p = new URLSearchParams(location.search);
-    if (!p.get('payresult')) return;
-    var code = p.get('code'), message = p.get('message');
-    ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId']
-      .forEach(function (k) { p.delete(k); });
-    history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p.toString() : ''));
-
     var raw = null;
-    try { raw = sessionStorage.getItem(PAY_KEY); sessionStorage.removeItem(PAY_KEY); } catch (e) {}
-    if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
+    try { raw = sessionStorage.getItem(PAY_KEY); } catch (e) {}
     if (!raw) return;
-    var pending; try { pending = JSON.parse(raw); } catch (e) { return; }
-    if (!pending || pending.shelf !== shelfKey) return;   // 다른 서가의 복귀면 무시
+    var pending; try { pending = JSON.parse(raw); } catch (e) { pending = null; }
+    if (!pending || pending.shelf !== shelfKey) return;   // 다른 서가의 복귀면 그 서가가 처리한다
 
-    toast('결제를 확인하는 중…', 9000);
-    verifyPay(pending.paymentId, pending.resourceId).then(function (ok) {
-      $('shToast').hidden = true;
-      if (!ok) return;
+    var came = !!params.get('payresult');   // 결제창에서 방금 돌아온 방문인가(스냅샷 기준)
+    var code = params.get('code');
+    if (came && code) {
+      // PG 가 실패를 달아 보냈다 — 결제가 안 됐으니 미결 기록만 지운다.
+      try { sessionStorage.removeItem(PAY_KEY); } catch (e) {}
+      alert('결제가 완료되지 않았어요.\n' + (params.get('message') || code));
+      return;
+    }
+
+    if (came) toast('결제를 확인하는 중…', 9000);
+    verifyPay(pending.paymentId, pending.resourceId, !came).then(function (v) {
+      if (v.done) { try { sessionStorage.removeItem(PAY_KEY); } catch (e) {} }
+      if (came) $('shToast').hidden = true;
+      if (!v.ok) return;
       toast('구매가 완료됐어요.', 2600);
       load();
     });
