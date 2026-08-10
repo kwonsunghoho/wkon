@@ -417,9 +417,9 @@
   .fl-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; line-height: 1.45; }
   .fl-meta { flex: none; font-size: 12px; font-weight: 600; color: var(--text-dim); }
 
-  /* 처리 중·안내 토스트 */
+  /* 처리 중·안내 토스트 — z 는 읽기 화면(lab-viewer, 900) 위: 뷰어의 '저장' 안내가 여기로 뜬다 */
   .toast {
-    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 240;
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 950;
     max-width: min(92%, 420px); padding: 12px 16px; border-radius: 999px;
     background: var(--bg-dark); color: var(--text-on-dark);
     font-size: 13.5px; font-weight: 600; line-height: 1.5; text-align: center;
@@ -1186,7 +1186,7 @@
         var meta = [];
         if (f.ext) meta.push(String(f.ext).toUpperCase());
         if (f.size) meta.push(fmtSize(f.size));
-        return '<button class="fl-item" type="button" data-fid="' + esc(f.id) + '">' +
+        return '<button class="fl-item" type="button" data-fid="' + esc(f.id) + '" data-ext="' + esc(String(f.ext || '')) + '">' +
           '<span class="fl-name">' + esc(f.label) + '</span>' +
           (meta.length ? '<span class="fl-meta num">' + esc(meta.join(' · ')) + '</span>' : '') +
         '</button>';
@@ -1239,20 +1239,80 @@
     if (!w) location.href = url;
   }
 
+  /* ── 읽기 화면(뷰어) — PDF 는 받기 전에 화면에서 먼저 읽는다 (2026-08-10 오너 확정) ──
+     부품(lab-viewer.js + vendor/pdfjs)은 뷰어를 처음 여는 순간에만 받는다.
+     구형 폰·로드 실패·그리기 실패는 전부 현행 경로(openUrl/받기)로 조용히 돌아간다.
+     ⚠️ lab-viewer.js 를 고치면 아래 ?v= 도 같이 올린다. */
+  var VIEWER_SRC = 'lab-viewer.js?v=1';
+  var viewerLoad = null;
+  function viewerSupported() {
+    return !!(window.IntersectionObserver && window.Promise &&
+      window.HTMLScriptElement && ('noModule' in HTMLScriptElement.prototype));
+  }
+  function ensureViewer() {
+    if (window.MONC_LAB_VIEWER) return Promise.resolve(window.MONC_LAB_VIEWER);
+    if (viewerLoad) return viewerLoad;
+    viewerLoad = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.type = 'module'; s.src = VIEWER_SRC;
+      var t = setTimeout(fail, 8000);
+      function fail() { clearTimeout(t); viewerLoad = null; reject(new Error('viewer_load')); }
+      s.onerror = fail;
+      s.onload = function () {
+        clearTimeout(t);
+        if (window.MONC_LAB_VIEWER) resolve(window.MONC_LAB_VIEWER); else fail();
+      };
+      document.head.appendChild(s);
+    });
+    return viewerLoad;
+  }
+
+  /* 뷰어의 '저장' — 받기 경로는 현행과 완전히 같다(mode:'download' → location.href).
+     ⚠️ 인앱(인스타·카톡)은 파일 저장을 조용히 막는다 — 시도 대신 안내한다. */
+  var saveBusy = false;
+  function saveDoc(row, fileId) {
+    if (window.MONC_INAPP) {
+      toast('인스타·카톡 브라우저에서는 저장이 막혀요. 오른쪽 위 메뉴의 ‘다른 브라우저로 열기’를 눌러 주세요.', 4600);
+      return;
+    }
+    if (saveBusy) return;
+    saveBusy = true;
+    toast('파일을 준비하는 중…', 8000);
+    window.MONC.sb.functions.invoke('lab-file', {
+      body: { resourceId: row.id, mode: 'download', password: lastPw || '', fileId: fileId || '' }
+    }).then(function (res) {
+      saveBusy = false;
+      var d = (res && res.data) || {};
+      if (!d.ok || !d.url) { toast(d.error || '파일을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.'); return; }
+      location.href = d.url;
+      toast(d.watermarked ? '받으신 분 정보가 표시된 파일이에요.' : '파일 받기를 시작했어요.', 3200);
+    }).catch(function () {
+      saveBusy = false;
+      toast('파일을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+    });
+  }
+
   var fileTarget = null;
   // 비밀번호 자료가 파일까지 여러 개면, 파일을 고른 뒤 다시 부를 때 또 물어보면 안 된다.
   // 방금 통과한 비밀번호를 들고 있다가 같이 보낸다(자료를 바꾸면 지운다).
   var lastPw = '';
-  function openDoc(row, password, fileId) {
+  function openDoc(row, password, fileId, o) {
     if (busy) return;
     busy = true;
     if (password) lastPw = password;
     toast('자료를 준비하는 중…', 8000);
 
+    // 뷰어 대상: 링크가 아니고 PDF 일 때(ext 는 목록 행 또는 파일 고르기 시트에서 안다).
+    // ext 를 모르는 레거시 행과 direct(뷰어 실패 후 재시도)는 현행 경로로 간다.
+    var direct = !!(o && o.direct);
+    var ext = String((o && o.ext) || row.file_ext || '').toLowerCase();
+    var useViewer = !direct && !row.is_link && ext === 'pdf' && viewerSupported();
+
     window.MONC.sb.functions.invoke('lab-file', {
       body: {
         resourceId: row.id,
-        mode: (row.is_link || row.delivery === 'view') ? 'view' : 'download',
+        mode: useViewer ? 'view'
+          : ((row.is_link || row.delivery === 'view') ? 'view' : 'download'),
         password: password || '',
         fileId: fileId || ''
       }
@@ -1310,6 +1370,24 @@
 
       $('shToast').hidden = true;
       if (sheetKind === 'pw' || sheetKind === 'file') closeSheet();
+
+      // 읽기 화면 — 성공하면 여기서 끝난다. 실패는 현행 경로로 재시도(direct).
+      // ⚠️ 'closed'(로딩 중 사용자가 뒤로가기로 취소)는 실패가 아니다 — 재시도하지 않는다.
+      if (useViewer && d.mode === 'view' && !d.external) {
+        ensureViewer().then(function (v) {
+          return v.open({
+            url: d.url,
+            title: (d.title || row.title) + (d.fileLabel ? ' — ' + d.fileLabel : ''),
+            canSave: row.delivery !== 'view',
+            onSave: function () { saveDoc(row, fileId || ''); }
+          });
+        }).catch(function (e) {
+          if (e && e.message === 'closed') return;
+          openDoc(row, lastPw, fileId, { direct: true, ext: ext });
+        });
+        return;
+      }
+
       openUrl(d.url, d.mode === 'view' || d.external === true);
       if (d.watermarked) toast('받으신 분 정보가 표시된 파일이에요.', 3200);
       else if (d.mode !== 'view') toast('파일 받기를 시작했어요.', 2600);
@@ -1658,7 +1736,8 @@
   $('shFileList').addEventListener('click', function (e) {
     var b = e.target.closest('.fl-item');
     if (!b || !fileTarget) return;
-    openDoc(fileTarget, lastPw, b.getAttribute('data-fid'));
+    // ext 를 같이 넘긴다 — 상·하편에서 PDF 만 읽기 화면으로 간다
+    openDoc(fileTarget, lastPw, b.getAttribute('data-fid'), { ext: b.getAttribute('data-ext') || '' });
   });
 
   $('pkAir').addEventListener('click', function () { openSheet('air'); });
