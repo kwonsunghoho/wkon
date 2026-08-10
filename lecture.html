@@ -190,6 +190,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
+  <script src="pay-pending.js?v=1"></script>
   <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
   <script src="phone-check.js"></script>
   <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
@@ -815,8 +817,9 @@
       try {
         const total = LECTURE.price;
         const paymentId = 'monc-lec-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
-        // 모바일은 결제사 페이지로 이동했다가 redirectUrl로 복귀 → sessionStorage에 주문 보관.
-        sessionStorage.setItem('monc_pending_lecture_pay', JSON.stringify({ paymentId, applicant, lectureId: LECTURE.id, slotId: _slotId }));
+        // 미결 기록은 결제창을 열기 전에 남기고 확답 전엔 지우지 않는다(pay-pending.js —
+        // sessionStorage 는 탭 단위라 인앱 복귀에서 유실돼 돈만 나가는 사고가 났다).
+        moncPends.add('monc_pending_lecture_pay', { paymentId, applicant, lectureId: LECTURE.id, slotId: _slotId });
         const rp = new URLSearchParams(location.search); rp.set('payresult', '1');
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
 
@@ -828,8 +831,11 @@
           redirectUrl,
         });
         // 여기부터 PC(팝업) 경로. 모바일은 위에서 페이지가 떠나 도달하지 않는다.
-        sessionStorage.removeItem('monc_pending_lecture_pay');
-        if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
+        if (res && res.code) {
+          // 결제 자체가 안 됐다(취소·실패) — 미결 아님, 기록을 지운다.
+          moncPends.drop('monc_pending_lecture_pay', paymentId);
+          alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return;
+        }
         btn.textContent = '결제 확인 중…';
         const ok = await completePayment(paymentId, applicant, _slotId);
         if (ok) afterApplied(null, true);
@@ -852,16 +858,26 @@
       restore();
     });
 
-    async function completePayment(paymentId, applicant, slotId) {
+    /* quiet = 자가 회복 경로 — 결제 직후가 아니므로 '확인 실패' 알림·로그인 이동은 하지 않는다.
+       확답(200 본문)일 때만 미결 기록을 지운다(pay-pending.js 규칙).
+       ⚠️ lectureId 는 기록의 것을 쓴다 — 다른 특강 화면에서 회복해도 맞는 특강에 접수되게. */
+    async function completePayment(paymentId, applicant, slotId, lectureId, quiet) {
+      // 시도 표시(n)를 먼저 남긴다 — 서버가 접수한 뒤 응답만 유실되면, 다음 확인이
+      // '재확인'으로 취급돼 appsRetrySafe() 가드를 타야 한다(구버전 서버의 MC002 오환불 방지).
+      const _rec = moncPends.load('monc_pending_lecture_pay').filter(r => r.paymentId === paymentId)[0];
+      if (_rec) { _rec.n = (_rec.n || 0) + 1; moncPends.drop('monc_pending_lecture_pay', paymentId); moncPends.add('monc_pending_lecture_pay', _rec); }
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
-        body: { paymentId, lectureId: LECTURE_ID, slotId: slotId || null, applicant },
+        body: { paymentId, lectureId: lectureId || LECTURE_ID, slotId: slotId || null, applicant },
       });
+      if (data) moncPends.drop('monc_pending_lecture_pay', paymentId);
       // 로그인 없이 결제까지 간 경우(결제 도중 세션 만료 등) — 서버가 전액 자동 환불한다
       if (data && data.error === 'login_required') {
-        alert('로그인이 만료되어 신청이 접수되지 않았어요.\n\n' + (data.refunded
-          ? '결제하신 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
-          : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
-        location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
+        if (!quiet) {
+          alert('로그인이 만료되어 신청이 접수되지 않았어요.\n\n' + (data.refunded
+            ? '결제하신 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
+            : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
+          location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
+        }
         return false;
       }
       // 결제 승인과 신청 저장 사이에 중복이 확인된 경우 — 서버가 전액 자동 환불한다
@@ -882,7 +898,7 @@
       }
       if (error || !data || !data.ok) {
         console.error('결제 검증 실패', error, data);
-        alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
+        if (!quiet) alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
         return false;
       }
       await maybeSavePhone(applicant);
@@ -890,21 +906,42 @@
       return true;
     }
 
-    /* 모바일 결제 복귀 처리 */
+    /* 모바일 결제 복귀 + 자가 회복 — 미결 기록(pay-pending.js) 전부를 확인한다.
+       ⚠️ 주문정보(이름·전화·시간대)는 주소로 복원할 수 없다(개인정보를 주소에 싣지 않는다) —
+          기록이 localStorage 인 이유. **재확인은 appsRetrySafe() 가 true 일 때만** —
+          구버전 서버는 재확인을 중복신청(MC002)으로 읽어 정상 결제를 환불한다.
+       ⚠️ 조용한 회복은 로그인 상태에서만 — 로그아웃 확인은 서버가 '비로그인 결제'로 보고
+          미접수 결제를 환불해 버린다. 로그인한 방문에서 잇는 쪽이 맞다. */
     async function handlePayReturn() {
       const p = new URLSearchParams(location.search);
-      if (p.get('payresult') !== '1') return;
+      const came = p.get('payresult') === '1';
       const code = p.get('code'), message = p.get('message');
-      ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId'].forEach(k => p.delete(k));
-      history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : ''));
-      const raw = sessionStorage.getItem('monc_pending_lecture_pay');
-      sessionStorage.removeItem('monc_pending_lecture_pay');
-      if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
-      if (!raw) return;
-      let pending; try { pending = JSON.parse(raw); } catch (e) { return; }
-      // 모바일은 결제사 페이지를 다녀오며 페이지가 새로 뜨므로 시간대도 보관해둔 값을 쓴다
-      const ok = await completePayment(pending.paymentId, pending.applicant, pending.slotId);
-      if (ok) afterApplied(null, true);
+      const urlPid = p.get('paymentId');
+      if (came) {
+        ['payresult', 'paymentId', 'code', 'message', 'pgCode', 'pgMessage', 'transactionType', 'txId'].forEach(k => p.delete(k));
+        history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : ''));
+        if (code) {
+          if (urlPid) moncPends.drop('monc_pending_lecture_pay', urlPid);
+          alert('결제가 완료되지 않았어요.\n' + (message || code)); return;
+        }
+      }
+      const pends = moncPends.load('monc_pending_lecture_pay');
+      if (!pends.length) return;
+      let retryOk = null, hasSession = null;   // 프로브·세션 확인은 필요할 때 한 번만
+      for (const rec of pends) {
+        const loud = came && (!urlPid || rec.paymentId === urlPid);
+        if (!loud) {
+          if (hasSession === null) hasSession = !!(await window.MONC.getSession().catch(() => null));
+          if (!hasSession) continue;
+        }
+        if (rec.n) {   // 이미 한 번 보낸 결제 — 재확인 가드(시도 표시는 completePayment 가 남긴다)
+          if (retryOk === null) retryOk = await moncPends.appsRetrySafe();
+          if (!retryOk) continue;   // 서버가 아직 구버전 — 기록은 남겨 두고 다음에 본다
+        }
+        // 모바일은 결제사 페이지를 다녀오며 페이지가 새로 뜨므로 시간대도 보관해 둔 값을 쓴다
+        const ok = await completePayment(rec.paymentId, rec.applicant, rec.slotId, rec.lectureId, !loud);
+        if (ok && (!rec.lectureId || rec.lectureId === LECTURE_ID)) afterApplied(null, true);
+      }
     }
 
     async function maybeSavePhone(applicant) {

@@ -524,6 +524,8 @@
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
+  <script src="pay-pending.js?v=1"></script>
   <!-- 긴 글 임시 보관(2026-08-02 D-10) — data-keep 붙은 칸을 sessionStorage 에.
        ⚠️ localStorage 로 바꾸지 말 것(공용 기기에 학생 글이 남는다). -->
   <script src="draft-keep.js" defer></script>
@@ -989,9 +991,12 @@
       _payRestore = () => { if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; } };
       try {
         const paymentId = 'monc-cr-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
-        // 모바일은 결제사 페이지로 이동했다가 redirectUrl 로 복귀 → sessionStorage 에 보관
-        sessionStorage.setItem(PENDING_KEY, JSON.stringify({ paymentId, packId }));
-        const rp = new URLSearchParams(location.search); rp.set('payresult', '1');
+        // 미결 기록은 결제창을 열기 전에 남긴다(pay-pending.js — sessionStorage 는 인앱
+        // 복귀에서 유실돼 돈만 나가는 사고가 났다). 확답 전엔 지우지 않는다.
+        moncPends.add(PENDING_KEY, { paymentId, packId });
+        // 복귀 주소에 pk(팩 id)도 실어 둔다 — 저장소가 다 날아가도 주소의
+        // paymentId(포트원이 붙임)+pk 만으로 확인이 되게.
+        const rp = new URLSearchParams(location.search); rp.set('payresult', '1'); rp.set('pk', packId);
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
 
         const res = await window.PortOne.requestPayment({
@@ -1001,8 +1006,11 @@
           redirectUrl,
         });
         // 여기부터 PC(팝업) 경로. 모바일은 위에서 페이지가 떠나 도달하지 않는다.
-        sessionStorage.removeItem(PENDING_KEY);
-        if (res && res.code) { alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return; }
+        if (res && res.code) {
+          // 결제 자체가 안 됐다(취소·실패) — 미결 아님, 기록을 지운다.
+          moncPends.drop(PENDING_KEY, paymentId);
+          alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return;
+        }
         btn.textContent = '충전 확인 중…';
         await completeCharge(paymentId, packId);
       } catch (e) {
@@ -1014,14 +1022,20 @@
       }
     }
 
-    async function completeCharge(paymentId, packId) {
+    /* quiet = 자가 회복 경로(결제 직후가 아님) — 실패 문구를 띄우지 않고 기록만 남긴다.
+       확답(200 본문)을 받았을 때만 미결 기록을 지운다 — 네트워크로 끊긴 확인은 남겨서
+       다음 방문이 이어서 확인한다(pay-pending.js 규칙). */
+    async function completeCharge(paymentId, packId, quiet) {
       try {
         const { data, error } = await MONC.sb.functions.invoke('verify-payment', {
           body: { paymentId, creditPack: packId },
         });
+        if (data) moncPends.drop(PENDING_KEY, paymentId);
         if (error || !data || !data.ok) {
-          $('inNotice').innerHTML = '<div class="notice warn">결제는 됐는데 충전 확인에 실패했어요. '
-            + '잠시 뒤 새로고침해 보시고, 그래도 안 되면 알려 주세요(결제번호 ' + esc(paymentId) + ').</div>';
+          if (!quiet) {
+            $('inNotice').innerHTML = '<div class="notice warn">결제는 됐는데 충전 확인에 실패했어요. '
+              + '잠시 뒤 새로고침해 보시고, 그래도 안 되면 알려 주세요(결제번호 ' + esc(paymentId) + ').</div>';
+          }
           return false;
         }
         await loadBalance();
@@ -1030,25 +1044,34 @@
         onInput();
         return true;
       } catch (_) {
-        $('inNotice').innerHTML = '<div class="notice warn">충전 확인에 실패했어요. 새로고침해 주세요.</div>';
+        if (!quiet) $('inNotice').innerHTML = '<div class="notice warn">충전 확인에 실패했어요. 새로고침해 주세요.</div>';
         return false;
       }
     }
 
-    // 모바일 결제 복귀 처리
+    /* 모바일 결제 복귀 + 자가 회복 — 미결 기록 전부를 확인한다. 저장소가 다 날아간
+       복귀(인앱 새 탭)여도 주소의 paymentId+pk 로 기록을 되살린다. */
     async function handlePayReturn() {
       const p = new URLSearchParams(location.search);
-      if (p.get('payresult') !== '1') return;
+      const came = p.get('payresult') === '1';
       const code = p.get('code'), message = p.get('message');
-      ['payresult','paymentId','code','message','pgCode','pgMessage','transactionType','txId']
-        .forEach((k) => p.delete(k));
-      history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : ''));
-      const raw = sessionStorage.getItem(PENDING_KEY);
-      sessionStorage.removeItem(PENDING_KEY);
-      if (code) { alert('결제가 완료되지 않았어요.\n' + (message || code)); return; }
-      if (!raw) return;
-      let pending; try { pending = JSON.parse(raw); } catch (_) { return; }
-      await completeCharge(pending.paymentId, pending.packId);
+      const urlPid = p.get('paymentId'), urlPk = p.get('pk');
+      if (came) {
+        ['payresult','paymentId','code','message','pgCode','pgMessage','transactionType','txId','pk']
+          .forEach((k) => p.delete(k));
+        history.replaceState(null, '', location.origin + location.pathname + (p.toString() ? '?' + p.toString() : ''));
+        if (code) {
+          if (urlPid) moncPends.drop(PENDING_KEY, urlPid);
+          alert('결제가 완료되지 않았어요.\n' + (message || code)); return;
+        }
+        if (urlPid && urlPk) moncPends.add(PENDING_KEY, { paymentId: urlPid, packId: urlPk });
+      }
+      const pends = moncPends.load(PENDING_KEY);
+      for (const rec of pends) {
+        // 방금 돌아온 그 결제만 소리 내어 확인한다 — 나머지는 조용한 자가 회복
+        const loud = came && (!urlPid || rec.paymentId === urlPid);
+        await completeCharge(rec.paymentId, rec.packId, !loud);
+      }
     }
 
     window.addEventListener('pageshow', (e) => {

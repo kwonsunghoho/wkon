@@ -9,7 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-08-10a'
+const FN_VERSION = '2026-08-10b'
 
 // site_config.challenge_price 미설정 시 기본값.
 // ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
@@ -287,6 +287,19 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: callerAuth } } },
     )
     const { data: { user: caller } } = await asCaller.auth.getUser()
+
+    // 0) 같은 결제ID 재검증(복귀 재시도·이중 호출) — 이미 접수된 결제면 그대로 성공.
+    // ⚠️ 이 사전 확인이 없으면 재확인이 중복신청 트리거(MC002)에 먼저 걸려 **정상 결제를
+    //    전액 환불**해 버린다 — 트리거는 payment_id 를 보지 않아, 첫 확인이 성공하고
+    //    응답만 유실된 경우의 재확인이 '중복 신청'으로 읽힌다(2026-08-10 점검에서 발견).
+    // ⚠️ 특강의 비로그인(login_required) 환불 분기보다 **앞**에 둔다 — 뒤에 두면 접수까지
+    //    끝난 결제를 로그아웃 상태의 재확인이 환불해 버린다.
+    //    브라우저 자가 회복(pay-pending.js)은 이 판(2026-08-10b+)을 프로브로 확인한 뒤에만 재확인한다.
+    if (paymentId) {
+      const { data: dupApp } = await supa.from('applications')
+        .select('id').eq('payment_id', paymentId).maybeSingle()
+      if (dupApp) return json({ ok: true, duplicate: true })
+    }
 
     let expected: number
     let list: unknown[]
