@@ -1384,10 +1384,14 @@
            화면 한 판을 통째로 먹고 첫 입력칸 앞을 막고 있었다. 매번 읽을 글이 아니라
            헷갈릴 때 펴 보는 글이다. 새 안내를 추가할 땐 이 안에 넣을 것. -->
       <details class="adm-help">
-        <summary>이 화면 설명 · 주의할 점 <span class="adm-help-v">화면 버전 2026-08-02b</span></summary>
+        <summary>이 화면 설명 · 주의할 점 <span class="adm-help-v">화면 버전 2026-08-10a</span></summary>
         <div class="adm-help-body">
           <p><b>파일은 비공개 저장소</b>에 들어가고, 회원이 열 때마다 <b>60초짜리 임시 링크</b>가
             새로 발급돼요. 링크를 퍼뜨려도 1분이면 끊깁니다.</p>
+          <p><b>관리자 계정은 유료 자료도 결제 없이 열립니다</b>(2026-08-10). 학생 화면에서
+            내용 확인용으로 눌러도 결제창이 안 떠요.</p>
+          <p><b>돈은 냈는데 자료가 안 열리는 회원</b>은 목록 아래 <b>'자료 직접 지급'</b>으로
+            살리세요 — 포트원 결제 내역에서 이름·금액을 확인한 뒤 그 회원에게 지급하면 됩니다.</p>
           <p><b>PDF 는 받는 사람 정보(이메일·회원번호·날짜)가 자동으로 찍힙니다.</b>
             열람 방식을 <b>화면 열람</b>으로 두면 파일 받기 버튼 없이 새 창에서 열려요.</p>
           <p><b>가격을 넣으면 유료 자료가 됩니다</b>(0 이면 무료 — 로그인만 하면 열려요).
@@ -1506,6 +1510,19 @@
         <div class="af-row" id="lrShelfBar"></div>
       </div>
       <div class="round-list" id="labList"><div class="loading">불러오는 중…</div></div>
+
+      <!-- 자료 직접 지급(2026-08-10 오너 "이미 낸 사람은 어쩌라고") — 결제는 됐는데
+           lab_purchases 가 빈 회원 구제 + 증정용. 유료 자료만 고른다(무료는 로그인이면 열린다).
+           이용권 지급(apEnr)과 같은 부품(apMemberHits)을 쓴다. -->
+      <div style="margin-top:26px;padding-top:14px;border-top:1px solid var(--border-soft);">
+        <p style="font-size:13.5px;font-weight:800;color:var(--accent-ink);margin:0 0 2px;">자료 직접 지급</p>
+        <p style="font-size:13px;color:var(--text-muted);margin:0 0 8px;">결제는 됐는데 기록이 안 남은 회원을 살리거나, 유료 자료를 증정할 때 씁니다.</p>
+        <div class="round-form" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end;">
+          <div class="field"><label for="labGrantSearch">회원 검색(이름·이메일)</label><input id="labGrantSearch" placeholder="2자 이상"></div>
+          <div class="field"><label for="labGrantRes">유료 자료</label><select id="labGrantRes"></select></div>
+        </div>
+        <div id="labGrantHits" style="margin-top:6px;"></div>
+      </div>
 
       <!-- 열람 이력 — **평소엔 접어 둔다**(2026-08-03 오너: "저작권 때문에 남기는 거라 솔직히
            내가 모니터링은 안 하는 거고 기록만 해놓으면 되거든?"). 기록은 계속 쌓되, 화면은
@@ -4658,6 +4675,16 @@
       }
       _labRows = data || [];
 
+      // 직접 지급 대상 — 유료 자료만(무료는 로그인만으로 열린다)
+      const grantSel = document.getElementById('labGrantRes');
+      if (grantSel) {
+        const paidRows = _labRows.filter(r => Number(r.price) > 0);
+        grantSel.innerHTML = paidRows.length
+          ? paidRows.map(r => '<option value="' + r.id + '">' + esc(r.title) + ' · '
+              + Number(r.price).toLocaleString('ko-KR') + '원</option>').join('')
+          : '<option value="">유료 자료가 없어요</option>';
+      }
+
       // 판매 현황 — 유료 마이그레이션 전이면 조용히 건너뛴다(가격 칸만 안 보인다)
       _labSales = {};
       try {
@@ -4670,6 +4697,37 @@
       renderLabList();
       lrTypeSync(document.getElementById('lrShelf').value);   // 이미 쓴 주제를 목록에 채운다
     }
+
+    /* 자료 직접 지급(2026-08-10 오너 "이미 낸 사람은 어쩌라고") — 이용권 지급(apEnr)과 같은 부품.
+       ⚠️ 결제 복구 겸용이라 기록할 금액을 묻는다 — 돈을 낸 회원이면 낸 금액을 적어야
+          판매 집계(lab_sales_summary)가 사실이 된다. 증정은 0. payment_id 는 비워 둔다
+          (부분 유니크 인덱스라 null 허용) — 포트원 쪽 대사는 이름·금액으로 한다. */
+    document.getElementById('labGrantSearch').addEventListener('input', () =>
+      apMemberHits('labGrantSearch', 'labGrantHits', async (memberId, who) => {
+        const rid = document.getElementById('labGrantRes').value;
+        if (!rid) { alert('지급할 유료 자료가 없어요.'); return; }
+        const res = _labRows.filter(r => r.id === rid)[0] || {};
+        // 검색 결과를 누르는 순간 바로 지급되면 안 된다 — 누구에게 무엇을 얼마로 적는지 확인한다(apEnr 전례)
+        const v = prompt(
+          who + '\n\n「' + (res.title || '') + '」 지급 — 기록할 결제액(원)을 넣으세요.\n'
+          + '실제로 돈을 낸 회원이면 낸 금액, 그냥 증정이면 0.',
+          String(Number(res.price) || 0));
+        if (v === null) return;
+        const amount = Math.floor(Number(String(v).replace(/[^0-9]/g, '')) || 0);
+        const { error } = await MONC.sb.from('lab_purchases').insert({
+          resource_id: rid, user_id: memberId, amount: amount
+        });
+        if (error) {
+          alert(error.code === '23505' ? '이미 이 자료를 가진 회원이에요.'
+            : error.code === 'PGRST205' ? '유료 마이그레이션(20260801160000)을 먼저 실행하세요.'
+            : '지급 실패: ' + error.message);
+          return;
+        }
+        toast('자료를 지급했어요');
+        document.getElementById('labGrantSearch').value = '';
+        document.getElementById('labGrantHits').innerHTML = '';
+        loadLabFiles();
+      }));
 
     /* 서가 칩 — 각 칩에 그 서가의 자료 수를 적는다(빈 서가도 보여야 '없다'를 안다) */
     function renderLabShelfBar() {

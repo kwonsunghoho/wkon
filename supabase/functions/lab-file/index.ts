@@ -18,8 +18,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb, degrees } from "npm:pdf-lib@1.17.1";
 
-const FN_VERSION = "2026-08-01f";
-const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid", "multi_file"];
+const FN_VERSION = "2026-08-10a";
+const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid", "multi_file", "admin_free"];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -148,21 +148,28 @@ Deno.serve(async (req) => {
     // ⚠️ 조회 자체가 실패하면(테이블 미생성 등) 열어 주지 말고 멈춘다 —
     //    여기서 통과시키면 유료 자료가 영구 무료가 된다(프로젝트 공통 규칙).
     if (Number(res.price) > 0) {
-      const { data: buy, error: buyErr } = await admin
-        .from("lab_purchases")
-        .select("id")
-        .eq("resource_id", res.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // 관리자는 값을 묻지 않는다(2026-08-10 오너 "관리자는 자료 그냥 무료로 받게").
+      // ⚠️ 조회 실패는 관리자 아님으로 본다 — 잠그는 쪽이 안전하다(영구 무료 결함 규칙).
+      const { data: me } = await admin
+        .from("members").select("role").eq("id", user.id).maybeSingle();
 
-      if (buyErr) return json({ error: "자료실 준비가 아직 안 됐어요.", code: "not_ready" });
-      if (!buy) {
-        return json({
-          error: "구매하시면 바로 보실 수 있어요.",
-          code: "need_purchase",
-          price: Number(res.price),
-          title: res.title,
-        });
+      if (me?.role !== "admin") {
+        const { data: buy, error: buyErr } = await admin
+          .from("lab_purchases")
+          .select("id")
+          .eq("resource_id", res.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (buyErr) return json({ error: "자료실 준비가 아직 안 됐어요.", code: "not_ready" });
+        if (!buy) {
+          return json({
+            error: "구매하시면 바로 보실 수 있어요.",
+            code: "need_purchase",
+            price: Number(res.price),
+            title: res.title,
+          });
+        }
       }
     }
 
