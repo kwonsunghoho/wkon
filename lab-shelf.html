@@ -1460,9 +1460,10 @@
           totalAmount: Number(row.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
           customer: (profile && profile.name)
             ? { fullName: profile.name, phoneNumber: profile.phone || undefined } : undefined,
-          // 결제를 연 계정 표식 — verify-payment 가 지급 전에 대조한다(복귀 주소가
-          // 새어도 남의 계정으로 확인해 가로채지 못하게 · 2026-08-10).
-          customData: uid ? JSON.stringify({ uid: uid }) : undefined,
+          // 결제를 연 계정 표식 + 주문 맥락 — verify-payment 가 지급 전에 uid 를 대조하고
+          // (복귀 주소가 새어도 가로채기 불가), 웹훅(portone-webhook)이 브라우저 없이도
+          // k·rid 로 지급을 끝낸다(2026-08-10).
+          customData: JSON.stringify({ k: 'lab', uid: uid, rid: row.id }),
           redirectUrl: redirectUrl
         });
       })

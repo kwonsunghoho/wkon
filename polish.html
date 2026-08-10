@@ -706,10 +706,13 @@
         const rp = new URLSearchParams(location.search); rp.set('payresult', '1'); rp.set('pk', packId);
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
 
+        // 주문 맥락 — 웹훅(portone-webhook)이 브라우저 없이도 충전을 끝내는 데 쓴다.
+        const sess = await MONC.getSession().catch(() => null);
         const res = await window.PortOne.requestPayment({
           storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
           paymentId, orderName: '몬크 크레딧 ' + (Number(pack.count) || 0) + '개',
           totalAmount: Number(pack.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
+          customData: JSON.stringify({ k: 'credit', uid: (sess && sess.user && sess.user.id) || null, pk: packId }),
           redirectUrl,
         });
         if (res && res.code) {

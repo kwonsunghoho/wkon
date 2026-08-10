@@ -1119,12 +1119,16 @@
         var redirectUrl = location.origin + location.pathname + '?' + rp.toString();
         var profile = null;
         try { profile = await MONC.getMyProfile(); } catch (e) {}
+        // 주문 맥락 — 웹훅(portone-webhook)이 브라우저 없이도 지급을 끝내는 데 쓴다.
+        var sess = null;
+        try { sess = await MONC.getSession(); } catch (e) {}
         var res = await window.PortOne.requestPayment({
           storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
           paymentId: paymentId, orderName: '몬크 일문일답 · ' + VIEW.program.title,
           totalAmount: price, currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
           customer: (profile && profile.name)
             ? { fullName: profile.name, phoneNumber: profile.phone || undefined } : undefined,
+          customData: JSON.stringify({ k: 'program', uid: (sess && sess.user && sess.user.id) || null, pid: PID }),
           redirectUrl: redirectUrl,
         });
         // 여기부터 PC(팝업) 경로 — 모바일은 위에서 페이지가 떠나 도달하지 않는다.
