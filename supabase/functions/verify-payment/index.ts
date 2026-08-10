@@ -9,7 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-08-07a'
+const FN_VERSION = '2026-08-10a'
 
 // site_config.challenge_price 미설정 시 기본값.
 // ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
@@ -232,9 +232,14 @@ Deno.serve(async (req) => {
       }
 
       // 같은 결제로 두 번 기록 방지(재시도·모바일 복귀 중복 호출 방어).
+      // ⚠️ 남의 기록이면 성공으로 답하지 않는다 — 브라우저가 '구매 완료'를 띄우고도
+      //    자료가 안 열리는 상태가 된다. wrong_account 는 HTTP 200 + code(공통 규칙).
       const { data: dupBuy } = await supa.from('lab_purchases')
-        .select('id').eq('payment_id', paymentId).maybeSingle()
-      if (dupBuy) return json({ ok: true, already: true })
+        .select('id, user_id').eq('payment_id', paymentId).maybeSingle()
+      if (dupBuy) {
+        if (dupBuy.user_id === user.id) return json({ ok: true, already: true })
+        return json({ ok: false, error: 'wrong_account' })
+      }
 
       const rSecret = Deno.env.get('PORTONE_API_SECRET')
       const rRes = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
@@ -246,6 +251,12 @@ Deno.serve(async (req) => {
       if (rPay?.amount?.total !== resPrice) {
         return json({ ok: false, error: 'amount_mismatch', paid: rPay?.amount?.total, expected: resPrice }, 402)
       }
+      // 결제를 연 계정 표식(customData.uid) 대조 — 복귀 주소(paymentId·rid)가 새어도
+      // 남의 계정으로 확인해 자료를 가로채지 못하게(2026-08-10). 표식 없는 옛 결제는 통과.
+      try {
+        const cd = JSON.parse(String(rPay?.customData ?? '') || '{}')
+        if (cd && cd.uid && cd.uid !== user.id) return json({ ok: false, error: 'wrong_account' })
+      } catch (_) { /* 표식이 JSON 이 아니면 옛 형식 — 통과 */ }
 
       // 검증 통과 → 구매 기록. unique(resource_id, user_id) 가 최종 방어다.
       const { error: buyErr } = await supa.from('lab_purchases').insert({
