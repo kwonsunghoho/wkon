@@ -174,6 +174,20 @@
 - 받기일 때 '파일 받기를 시작했어요' 토스트를 띄운다 — 화면이 안 바뀌면 실패한 줄 안다.
 - 값의 기준선·함정 전체는 `docs/superpowers/specs/2026-08-01-lab-paid-materials-design.md`.
 
+### 읽기 화면(뷰어) — PDF 는 받기 전에 화면에서 먼저 읽는다 (2026-08-10 오너 확정)
+
+오너: "읽기랑 다운 둘 중 선택이 아니라, 그냥 읽기로 화면에 띄우고 저장하는 기능을 따로 거기에 넣자." 설계 승인 기록은 `docs/superpowers/specs/2026-08-10-lab-viewer-design.md`.
+
+- **PDF(비링크) 자료를 누르면 delivery 와 무관하게 `mode:'view'` 로 열어 `lab-viewer.js` 전체 덮개로 읽는다.** 판별은 `!is_link && ext==='pdf'` — ext 는 목록 행(`file_ext`) 또는 상·하편 파일 시트의 `data-ext`. **ext 를 모르는 레거시 행은 현행 경로**(받기/새 탭).
+- **저장 버튼은 `delivery !== 'view'` 자료에만.** 누르면 `mode:'download'` 재호출 → `location.href`(워터마크·`lab_downloads` 기록·파일명 전부 현행 받기와 동일). 화면 전용 자료는 버튼이 없고 서버 차단(`view_only`)도 그대로 — **서버(lab-file)는 이 작업에서 무변경.**
+- **실패는 전부 조용히 현행 경로로**: 모듈 미지원 구형 폰(로더 8초 타임아웃)·pdf.js 로드/파싱/렌더 실패 → `direct` 플래그로 openDoc 재호출(서명 URL 60초 만료 대비 새로 발급). ⚠️ **reject 가 'closed' 면 재시도하지 않는다** — 로딩 중 사용자가 뒤로가기로 '취소'한 것이라, 재시도하면 취소가 안 먹는다.
+- **뒤로가기 = 뷰어만 닫힘**(`pushState`+`popstate`). Esc·X 도 같은 길로 통일(back 경유). 열람 기록 `kind:'view'` 는 서버가 이미 남기므로 환불 판정(열었는지) 근거는 그대로.
+- **인앱(인스타·카톡)에서 읽기는 새로 가능해졌다**(이 작업의 덤 — 종전엔 팝업/다운로드 차단으로 통째 막히던 자리). 저장만 막히므로 저장 클릭 시 시도 대신 안내 토스트(`window.MONC_INAPP`).
+- **z-index 는 한 벌**: 뷰어 900 < `#shToast` 950(뷰어의 저장 안내가 토스트로 뜬다). 토스트 z 를 240 으로 되돌리면 뷰어 뒤로 숨는다.
+- **부품은 `vendor/pdfjs/`(pdfjs-dist 4.10.38 legacy, 갱신법은 그 안 README)** — 뷰어를 처음 여는 순간에만 로드라 다른 페이지 전송량 영향 0. 실측(gzip): 코어 114KB + 워커 416KB ≈ 530KB, `cmaps/`·`standard_fonts/`는 필요한 PDF 만 낱개로. **`lab-viewer.js` 를 고치면 lab-shelf 의 `VIEWER_SRC` `?v=` 도 같이 올린다.**
+- 뷰어 내부 규칙: 지연 렌더(IntersectionObserver, root=lvBody)·dpr≤2·**캔버스 LRU 16장**(구형 폰 메모리 — 자리는 높이로 유지)·`disableRange:true`(서명 URL 60초 — range 재요청이 만료를 밟는다)·리사이즈(회전) 시 재배치.
+- 실측(2026-08-10, 미러+한글 6쪽 PDF): 375·320·1280px 렌더 선명, 닫기/저장 44px, 열림 포커스는 닫기 버튼, 저장→`mode:'download'` 호출, 폴백 재시도, 인앱 가드, 뒤로가기 닫기 후 목록·스크롤 원복. ⚠️ **pdf.js 는 rAF 로 그리기를 이어가므로 숨긴 프리뷰 팬에서는 렌더가 안 끝난다** — 미러 검증 때 rAF 를 타이머로 패치해 쟀다(실폰은 뷰어가 항상 보이는 상태라 무관).
+
 ## 상세 페이지 — lab-shelf.html (①안 서류철, 2026-08-01 오너 확정 "1안으로 진행")
 
 **한 파일이 서가 4종을 다 그린다**: `lab-shelf.html?shelf=airline|video|report|calendar`(기출은 자료실 안의 갈래 — 위 '서가 합치기' 절). 특강 `lecture.html?id=` 와 같은 사상 — 페이지를 나누면 머리 모양 한 번 고칠 때 그 수만큼 고쳐야 한다. **서가를 늘릴 땐 파일 안 `SHELVES` 표에 한 줄만 더한다**(idx·name·desc·noun·unit·airline·type).

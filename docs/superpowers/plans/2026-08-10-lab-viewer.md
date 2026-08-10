@@ -30,10 +30,10 @@
 **Interfaces:**
 - Produces: Task 2 가 `import('./vendor/pdfjs/pdf.min.mjs')` 로 쓰는 정적 파일들. workerSrc = `vendor/pdfjs/pdf.worker.min.mjs`, cMapUrl = `vendor/pdfjs/cmaps/`, standardFontDataUrl = `vendor/pdfjs/standard_fonts/`.
 
-- [ ] **Step 1: npm 레지스트리에서 tarball 받기(스크래치패드)** — `curl -sL https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-4.10.38.tgz` → `tar -xzf`. legacy 빌드를 쓴다(구형 폰 폭 넓힘).
-- [ ] **Step 2: 파일 배치** — `package/legacy/build/pdf.min.mjs`·`pdf.worker.min.mjs` → `vendor/pdfjs/`, `package/cmaps` → `vendor/pdfjs/cmaps`, `package/standard_fonts` → `vendor/pdfjs/standard_fonts`, `package/LICENSE` → `vendor/pdfjs/LICENSE`. README.md 에 버전 4.10.38·출처·갱신법 3줄.
-- [ ] **Step 3: 크기 실측 기록** — `du -sh vendor/pdfjs` + 파일별 크기. gzip 전송 추정(`gzip -c | wc -c`)을 README 에 적는다.
-- [ ] **Step 4: 커밋** — `git add vendor/pdfjs && git commit`
+- [x] **Step 1: npm 레지스트리에서 tarball 받기(스크래치패드)** — `curl -sL https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-4.10.38.tgz` → `tar -xzf`. legacy 빌드를 쓴다(구형 폰 폭 넓힘).
+- [x] **Step 2: 파일 배치** — `package/legacy/build/pdf.min.mjs`·`pdf.worker.min.mjs` → `vendor/pdfjs/`, `package/cmaps` → `vendor/pdfjs/cmaps`, `package/standard_fonts` → `vendor/pdfjs/standard_fonts`, `package/LICENSE` → `vendor/pdfjs/LICENSE`. README.md 에 버전 4.10.38·출처·갱신법 3줄.
+- [x] **Step 3: 크기 실측 기록** — `du -sh vendor/pdfjs` + 파일별 크기. gzip 전송 추정(`gzip -c | wc -c`)을 README 에 적는다.
+- [x] **Step 4: 커밋** — `git add vendor/pdfjs && git commit`
 
 ### Task 2: `lab-viewer.js` 뷰어 모듈
 
@@ -46,7 +46,7 @@
   - `opts = { url:string(서명 URL), title:string, canSave:boolean, onSave:function|null }`
   - `open()` 은 **첫 페이지 렌더 완료 시 resolve**, 로드·파싱·첫 렌더 실패 시 reject(호출 쪽 폴백 신호)
 
-- [ ] **Step 1: 파일 작성** — 아래 코드 전문 그대로(설계 포인트: 덮개 DOM·CSS 자체 생성 / IntersectionObserver 지연 렌더 / dpr≤2 / 렌더 캔버스 LRU 16장(메모리) / `disableRange:true`(서명 URL 60초 — 다중 range 요청이 만료를 밟는다) / pushState+popstate 뒤로가기 닫기 / Esc·X 닫기 / body 스크롤 잠금 / resize 재배치):
+- [x] **Step 1: 파일 작성** — 아래 코드 전문 그대로(설계 포인트: 덮개 DOM·CSS 자체 생성 / IntersectionObserver 지연 렌더 / dpr≤2 / 렌더 캔버스 LRU 16장(메모리) / `disableRange:true`(서명 URL 60초 — 다중 range 요청이 만료를 밟는다) / pushState+popstate 뒤로가기 닫기 / Esc·X 닫기 / body 스크롤 잠금 / resize 재배치):
 
 ```js
 /* 연구실 자료 읽기 화면 — lab-shelf.html 위 전체 덮개 (2026-08-10)
@@ -298,10 +298,10 @@
 })();
 ```
 
-- [ ] **Step 2: 미러 재구축** — 스크래치패드에 `site/` rsync 미러 + `server.py`(기존 패턴) 생성, `.claude/launch.json` 의 `wkon-mirror` `runtimeArgs` 경로를 이 세션 스크래치패드로 갱신(죽은 옛 경로 교체).
-- [ ] **Step 3: 한글 테스트 PDF 생성** — 스크래치패드 venv 에 `fpdf2` 설치, `/System/Library/Fonts/Supplemental/AppleGothic.ttf` 임베드로 6쪽 한글 PDF → 미러 `site/sample.pdf` (레포에 커밋하지 않는다).
-- [ ] **Step 4: 단독 검증 페이지** — 미러 전용 `site/viewer-test.html`(레포 밖): `lab-viewer.js` 모듈 로드 후 버튼 3개 — ①열기(canSave:true, onSave→화면에 '저장 눌림' 표시) ②열기(canSave:false) ③깨진 URL(reject 확인). 375px 로 렌더·저장 버튼·Esc·뒤로가기 닫기·실패 reject 실측.
-- [ ] **Step 5: 커밋** — `git add lab-viewer.js && git commit`
+- [x] **Step 2: 미러 재구축** — 스크래치패드에 `site/` rsync 미러 + `server.py`(기존 패턴) 생성, `.claude/launch.json` 의 `wkon-mirror` `runtimeArgs` 경로를 이 세션 스크래치패드로 갱신(죽은 옛 경로 교체).
+- [x] **Step 3: 한글 테스트 PDF 생성** — 스크래치패드 venv 에 `fpdf2` 설치, `/System/Library/Fonts/Supplemental/AppleGothic.ttf` 임베드로 6쪽 한글 PDF → 미러 `site/sample.pdf` (레포에 커밋하지 않는다).
+- [x] **Step 4: 단독 검증 페이지** — 미러 전용 `site/viewer-test.html`(레포 밖): `lab-viewer.js` 모듈 로드 후 버튼 3개 — ①열기(canSave:true, onSave→화면에 '저장 눌림' 표시) ②열기(canSave:false) ③깨진 URL(reject 확인). 375px 로 렌더·저장 버튼·Esc·뒤로가기 닫기·실패 reject 실측.
+- [x] **Step 5: 커밋** — `git add lab-viewer.js && git commit`
 
 ### Task 3: `lab-shelf.html` 연결
 
@@ -312,7 +312,7 @@
 - Consumes: `window.MONC_LAB_VIEWER.open(opts)` (Task 2), lab-file 응답 `{ok,url,mode,title,fileLabel,watermarked,code,...}`
 - Produces: 없음(말단 화면)
 
-- [ ] **Step 1: 뷰어 로더·저장 헬퍼 추가** — `openUrl` 함수 아래에 삽입:
+- [x] **Step 1: 뷰어 로더·저장 헬퍼 추가** — `openUrl` 함수 아래에 삽입:
 
 ```js
 /* ── 읽기 화면(뷰어) — PDF 는 받기 전에 화면에서 먼저 읽는다 (2026-08-10 오너 확정) ──
@@ -369,7 +369,7 @@ function saveDoc(row, fileId) {
 ```
 (인앱 안내 문구는 inapp.js 규칙대로 `\uXXXX` 이스케이프 — 위 예시가 그 형태다.)
 
-- [ ] **Step 2: openDoc 라우팅** — 시그니처 `function openDoc(row, password, fileId, o)`. 함수 서두에:
+- [x] **Step 2: openDoc 라우팅** — 시그니처 `function openDoc(row, password, fileId, o)`. 함수 서두에:
 
 ```js
 var direct = !!(o && o.direct);
@@ -399,19 +399,19 @@ if (useViewer && d.mode === 'view' && !d.external) {
 }
 ```
 
-- [ ] **Step 3: 상·하편 ext 전달** — 파일 목록 버튼에 `data-ext` 추가(1189행 근처): `'<button class="fl-item" type="button" data-fid="' + esc(f.id) + '" data-ext="' + esc(String(f.ext || '')) + '">'`. 클릭(1658행): `openDoc(fileTarget, lastPw, b.getAttribute('data-fid'), { ext: b.getAttribute('data-ext') || '' });`
-- [ ] **Step 4: 토스트 z-index 확인** — `#shToast` 가 뷰어(z 5000) 위에 오도록(저장 안내가 뷰어 위에 떠야 한다). 낮으면 `#shToast` 만 5100 으로 올린다.
-- [ ] **Step 5: 미러 통합 실측** — rsync 재동기화 후 `lab-shelf.html?shelf=archive` 를 375px 로 열고, 콘솔에서 `MONC.sb.functions.invoke` 를 가짜 응답(`{data:{ok:true,url:'/sample.pdf',mode:'view',title:'테스트 자료'}}`)으로 바꿔 실제 클릭 → 뷰어 열림·저장 버튼(딜리버리별 노출)·저장 클릭 시 mode:'download' 호출·뒤로가기/X/Esc 닫기·폴백(`url:'/broken.pdf'` → 현행 openUrl 경로 진입)을 확인.
-- [ ] **Step 6: 커밋**
+- [x] **Step 3: 상·하편 ext 전달** — 파일 목록 버튼에 `data-ext` 추가(1189행 근처): `'<button class="fl-item" type="button" data-fid="' + esc(f.id) + '" data-ext="' + esc(String(f.ext || '')) + '">'`. 클릭(1658행): `openDoc(fileTarget, lastPw, b.getAttribute('data-fid'), { ext: b.getAttribute('data-ext') || '' });`
+- [x] **Step 4: 토스트 z-index 확인** — `#shToast` 가 뷰어(z 5000) 위에 오도록(저장 안내가 뷰어 위에 떠야 한다). 낮으면 `#shToast` 만 5100 으로 올린다.
+- [x] **Step 5: 미러 통합 실측** — rsync 재동기화 후 `lab-shelf.html?shelf=archive` 를 375px 로 열고, 콘솔에서 `MONC.sb.functions.invoke` 를 가짜 응답(`{data:{ok:true,url:'/sample.pdf',mode:'view',title:'테스트 자료'}}`)으로 바꿔 실제 클릭 → 뷰어 열림·저장 버튼(딜리버리별 노출)·저장 클릭 시 mode:'download' 호출·뒤로가기/X/Esc 닫기·폴백(`url:'/broken.pdf'` → 현행 openUrl 경로 진입)을 확인.
+- [x] **Step 6: 커밋**
 
 ### Task 4: 375px 실측 검증 마무리
 
 **Files:** (수정 발견 시 해당 파일)
 
-- [ ] **Step 1: 렌더 품질** — 375px·320px·데스크톱(1280px)에서 한글 PDF 6쪽 선명도(dpr2)·스크롤·페이지 간격. 세로→가로 회전(리사이즈 재배치).
-- [ ] **Step 2: 조작 실측** — 닫기 44px, 저장 44px, 제목 말줄임, Esc, 뒤로가기(뷰어만 닫히고 목록 유지), 스크롤 잠금(뒤 목록이 안 움직이는지), 뷰어 위 토스트 노출.
-- [ ] **Step 3: 접근성** — 열릴 때 포커스가 닫기로, 닫으면 원래 자리로. role=dialog.
-- [ ] **Step 4: 발견 수정 반영 + 커밋, 스크린샷 확보**
+- [x] **Step 1: 렌더 품질** — 375px·320px·데스크톱(1280px)에서 한글 PDF 6쪽 선명도(dpr2)·스크롤·페이지 간격. 세로→가로 회전(리사이즈 재배치).
+- [x] **Step 2: 조작 실측** — 닫기 44px, 저장 44px, 제목 말줄임, Esc, 뒤로가기(뷰어만 닫히고 목록 유지), 스크롤 잠금(뒤 목록이 안 움직이는지), 뷰어 위 토스트 노출.
+- [x] **Step 3: 접근성** — 열릴 때 포커스가 닫기로, 닫으면 원래 자리로. role=dialog.
+- [x] **Step 4: 발견 수정 반영 + 커밋, 스크린샷 확보**
 
 ### Task 5: 문서·배포
 
@@ -419,9 +419,9 @@ if (useViewer && d.mode === 'view' && !d.external) {
 - Modify: `docs/notes/lab.md`(뷰어 절 신설 — 규칙·폴백 표·전송량 실측), 필요 시 `CLAUDE.md` 연구실 행 한 줄
 - 배포: `main` 병합 + push
 
-- [ ] **Step 1: lab.md 에 '읽기 화면(뷰어)' 절 추가** — 판별 규칙, delivery 별 저장 버튼, degrade 표, `?v=` 버스터 규칙(lab-viewer.js 수정 시 VIEWER_SRC 버전 동반), vendor 갱신법, 전송량 실측치.
-- [ ] **Step 2: 커밋 → main 병합 → push(=배포)** — 결제 흐름 파일을 건드렸으므로 브랜치에서 검증을 끝낸 뒤 병합한다(CLAUDE.md 규칙).
-- [ ] **Step 3: 오너 확인 안내** — 라이브에서 실제 자료(서명 URL·워터마크)로 1회 확인 요청. 배포 직후엔 강력 새로고침.
+- [x] **Step 1: lab.md 에 '읽기 화면(뷰어)' 절 추가** — 판별 규칙, delivery 별 저장 버튼, degrade 표, `?v=` 버스터 규칙(lab-viewer.js 수정 시 VIEWER_SRC 버전 동반), vendor 갱신법, 전송량 실측치.
+- [x] **Step 2: 커밋 → main 병합 → push(=배포)** — 결제 흐름 파일을 건드렸으므로 브랜치에서 검증을 끝낸 뒤 병합한다(CLAUDE.md 규칙).
+- [x] **Step 3: 오너 확인 안내** — 라이브에서 실제 자료(서명 URL·워터마크)로 1회 확인 요청. 배포 직후엔 강력 새로고침.
 
 ## Self-Review 결과
 
