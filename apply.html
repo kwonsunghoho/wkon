@@ -337,6 +337,8 @@
     padding: 12px 20px calc(22px + env(safe-area-inset-bottom));
     transform: translateY(100%); transition: transform .28s cubic-bezier(.2,.8,.2,1);
     box-shadow: 0 -10px 40px rgba(20,32,52,.24);
+    /* 환불 계좌 칸이 붙어 시트가 길어졌다 — 작은 화면에서는 시트 안에서 스크롤 */
+    max-height: 88vh; max-height: 88dvh; overflow-y: auto;
   }
   .bt-modal.open .bt-sheet { transform: translateY(0); }
   .bt-handle { width: 40px; height: 4px; border-radius: 99px; background: var(--border); margin: 0 auto 12px; }
@@ -347,6 +349,14 @@
   .bt-amount .l { font-size: 13px; font-weight: 700; color: var(--text-muted); }
   .bt-amount .v { font-size: 22px; font-weight: 900; color: var(--action-dark); }
   .bt-sheet .bank { margin-top: 0; }
+  /* 환불 계좌 입력(필수) — 계좌이체는 카드처럼 자동 취소가 없어, 환불할 일이 생기면
+     이 계좌로 보낸다. 신청 시점에 받아야 환불 때 따로 연락해 물어볼 일이 없다(2026-08-11 오너). */
+  .bt-refund { margin-top: 12px; }
+  .bt-refund .h { font-size: 12px; font-weight: 800; color: var(--action-dark); margin-bottom: 8px; }
+  .bt-refund .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bt-refund .cell.wide { grid-column: 1 / -1; }
+  .bt-refund .cell label { display: block; font-size: 12.5px; font-weight: 800; margin-bottom: 5px; }
+  .bt-refund .hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
   .bt-confirm { width: 100%; margin-top: 16px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
   .bt-confirm:active { transform: scale(.99); }
   .bt-confirm:disabled { opacity: .7; cursor: default; }
@@ -505,7 +515,7 @@
         <input type="checkbox" id="appConsent">
         <span class="txt">
           <b>[필수]</b> 만 14세 이상이며, 개인정보 수집·이용에 동의합니다.
-          <span class="detail">수집 항목: 이름·휴대전화번호 / 목적: 신청 접수·본인 확인·안내 연락 / 보유 기간: 챌린지 종료 후 지체 없이 파기 · <a href="privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보처리방침</a></span>
+          <span class="detail">수집 항목: 이름·휴대전화번호·환불 계좌(계좌이체 신청 시) / 목적: 신청 접수·본인 확인·안내 연락·환불 처리 / 보유 기간: 챌린지 종료 후 지체 없이 파기 · <a href="privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보처리방침</a></span>
         </span>
       </label>
       <p class="field-err" id="errConsent"></p>
@@ -546,6 +556,17 @@
         <div>예금주: 박새암(몬크)</div>
       </div>
       <div class="note">위 계좌로 입금하신 뒤 아래 버튼을 눌러주세요. 확인 후 안내드리겠습니다.</div>
+    </div>
+    <!-- 환불 계좌(필수) — 계좌이체는 자동 취소가 없어 환불 시 이 계좌로 보낸다 -->
+    <div class="bt-refund">
+      <div class="h">환불받으실 계좌 (필수)</div>
+      <div class="grid">
+        <div class="cell"><label for="rfBank">은행</label><input class="inp" id="rfBank" placeholder="예: 하나" autocomplete="off"></div>
+        <div class="cell"><label for="rfHolder">예금주</label><input class="inp" id="rfHolder" placeholder="예금주 이름" autocomplete="off"></div>
+        <div class="cell wide"><label for="rfAcct">계좌번호</label><input class="inp" id="rfAcct" placeholder="숫자만 입력" inputmode="numeric" autocomplete="off"></div>
+      </div>
+      <p class="field-err" id="errRefund"></p>
+      <div class="hint">환불이 필요할 때 이 계좌로 보내드려요. 챌린지 종료 후 지체 없이 파기합니다.</div>
     </div>
     <button type="button" class="bt-confirm" id="btConfirm" onclick="confirmBankTransfer()">입금 완료 · 신청하기</button>
   </div>
@@ -1113,10 +1134,36 @@ async function openBankModal() {
   if (await dupBlocked(ids)) return;
 
   document.getElementById('btAmount').textContent = (ids.length * PRICE).toLocaleString();
+  // 예금주는 신청자 이름으로 미리 채운다(부모님 계좌 등이면 고쳐 쓴다)
+  const holderInp = document.getElementById('rfHolder');
+  if (!holderInp.value.trim()) holderInp.value = name;
   const modal = document.getElementById('bankModal');
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+}
+
+/* 환불 계좌 검증 — 통과하면 "은행 계좌번호 예금주" 문자열, 실패면 인라인 오류 표시 후 null.
+   모달 안이라 오류를 모달 밖으로 보낼 필요가 없다(#errRefund 가 바로 보인다). */
+function readRefundAccount() {
+  const elBank = document.getElementById('rfBank');
+  const elHolder = document.getElementById('rfHolder');
+  const elAcct = document.getElementById('rfAcct');
+  const bank = elBank.value.trim();
+  const holder = elHolder.value.trim();
+  const digits = elAcct.value.replace(/\D/g, '');
+  const err = document.getElementById('errRefund');
+
+  let msg = '', bad = null;
+  if (!bank) { msg = '환불받으실 은행을 입력해주세요.'; bad = elBank; }
+  else if (digits.length < 8 || digits.length > 16) { msg = '계좌번호를 확인해주세요. 숫자만 8자리 이상 입력해주세요.'; bad = elAcct; }
+  else if (holder.length < 2) { msg = '예금주 이름을 입력해주세요.'; bad = elHolder; }
+
+  [elBank, elAcct, elHolder].forEach(el => el.classList.toggle('is-err', el === bad));
+  err.textContent = msg;
+  err.classList.toggle('on', !!msg);
+  if (bad) { bad.focus(); return null; }
+  return bank + ' ' + digits + ' ' + holder;
 }
 // 실제 닫기 동작. closeBankModal 은 신청 처리 중(_isSubmitting) 사용자가 닫는 걸 막으므로,
 // 코드가 강제로 닫아야 하는 경우(접수 완료·중복 차단)엔 이쪽을 직접 부른다.
@@ -1146,6 +1193,9 @@ async function confirmBankTransfer() {
   // ⚠️ 인라인 오류는 모달 뒤에 가려 안 보인다 — 먼저 닫고 나서 표시·스크롤한다.
   if (!validateOrder({ noScroll: true })) { closeBankModal(); validateOrder(); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+  // 환불 계좌(필수) — 계좌이체는 자동 취소가 없어 여기서 받아 둬야 환불 때 따로 연락할 일이 없다
+  const refundAccount = readRefundAccount();
+  if (!refundAccount) return;
 
   _isSubmitting = true;
   const btn = document.getElementById('btConfirm');
@@ -1168,11 +1218,16 @@ async function confirmBankTransfer() {
   });
   const totalPrice = ids.length * PRICE;
 
-  const payload = { name: name, phone: phone, challenges: challenges, total_price: totalPrice };
+  const payload = { name: name, phone: phone, challenges: challenges, total_price: totalPrice, refund_account: refundAccount };
   if (_memberId) payload.member_id = _memberId; // 회원이면 계정 연동 → 마이페이지 '내 신청내역'
 
   try {
-    const { error } = await window.MONC.sb.from('applications').insert(payload);
+    let { error } = await window.MONC.sb.from('applications').insert(payload);
+    // refund_account 컬럼이 없는 환경(PGRST204)이면 계좌 없이 재시도 — 신청 접수가 우선이다
+    if (error && error.code === 'PGRST204') {
+      delete payload.refund_account;
+      ({ error } = await window.MONC.sb.from('applications').insert(payload));
+    }
     if (error) throw error;
     rememberApplied(challenges);   // 이 세션에서 같은 걸 또 넣지 못하게 카드 잠금
     // 회원이 전화를 새로 입력했으면 프로필에도 저장(다음 신청부터 자동 채움 + 연동)
@@ -1183,6 +1238,7 @@ async function confirmBankTransfer() {
       ? '신청이 완료되었습니다! 확인 후 안내드리겠습니다.\n마이페이지에서 신청 내역을 확인할 수 있어요.'
       : '신청이 완료되었습니다! 확인 후 안내드리겠습니다.\n회원가입하시면 2주간의 성장을 매일 기록할 수 있어요.');
     document.getElementById('appConsent').checked = false;
+    ['rfBank', 'rfAcct', 'rfHolder'].forEach(id => { document.getElementById(id).value = ''; });
     if (!_memberId) { document.getElementById('appName').value = ''; document.getElementById('appPhone').value = ''; }
     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected', 'curr-open'));
     updateSummary();
