@@ -67,6 +67,8 @@
       --k-cliche: #A33D14;  --k-cliche-bg: rgba(242,121,69,.20);
       --k-struct: #1F5F6B;  --k-struct-bg: rgba(31,95,107,.15);
       --k-vague:  #6E4B8F;  --k-vague-bg:  rgba(110,75,143,.10);
+      /* 그린 플래그(인간미 보존 · 2026-08-12b) — 흰 배경 대비 4.5:1 이상 확인값 */
+      --k-green:  #2E7D4F;  --k-green-bg:  rgba(46,125,79,.12);
       /* 문맥(ctx)만 -bg 짝이 없다 — 이 갈래는 바탕을 칠하지 않고 점선으로 표시하기
          때문이다. 형제와 모양을 맞추려고 --k-ctx-bg 를 다시 만들지 말 것
          (2026-08-06 정리: 참조 0건이라 삭제. 나머지 세 -bg 는 각각 4곳에서 쓴다). */
@@ -244,6 +246,19 @@
     /* 2026-08-12 종합 판정의 '과도한 중립' 갈래(neutral→v) — 구 판정에선 v(구체성)가
        문단 단위라 밑줄 스타일이 없었다. 새 판정은 문장 밑줄로 오므로 스타일이 필요하다. */
     .mk.v { background: var(--k-vague-bg); border-bottom: 2px solid var(--k-vague); }
+    /* 인간미 보존 영역(Green Flag · 2026-08-12b 오너 지침) — 긍정 기능색이라 팔레트 통일 대상 아님.
+       그린 밑줄은 누르는 대상이 아니라 button 이 아닌 span 이고 번호도 없다(dock 은 고칠 곳 전용). */
+    .mk.g { background: var(--k-green-bg); border-bottom: 2px solid var(--k-green); }
+    .greens { margin: 14px 0 0; }
+    .greens-h { font-size: 14px; font-weight: 800; color: var(--k-green); margin-bottom: 8px; }
+    .green-card { background: var(--surface); border: 1px solid rgba(46,125,79,.35);
+                  border-left: 4px solid var(--k-green); border-radius: var(--radius-sm);
+                  padding: 12px 14px; }
+    .green-card + .green-card { margin-top: 8px; }
+    .green-card em { font-style: normal; background: var(--k-green-bg); padding: 1px 3px;
+                     border-radius: 3px; font-size: 14px; line-height: 1.7; }
+    .green-card p { margin-top: 6px; font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .lg.g { color: var(--k-green); } .lg.g i { background: var(--k-green); }
     .mk .n { display: inline-flex; align-items: center; justify-content: center;
              min-width: 18px; height: 18px; margin-left: 4px; border-radius: 5px;
              font-size: 12px; font-weight: 800; color: #fff; vertical-align: 1px;
@@ -492,6 +507,13 @@
           </div>
         </div>
         <div class="rs-legend" id="legend"></div>
+      </div>
+
+      <!-- 인간미 보존 영역(Green Flag · 2026-08-12b 오너 지침) — 살릴 문장을 초록으로 짚는다.
+           고칠 곳(dock·카드)과는 별개 목록이라 개수·이동에 안 섞인다. -->
+      <div class="greens hidden" id="greenBox">
+        <div class="greens-h">인간미 보존 영역 — 이대로 살리세요</div>
+        <div id="greenList"></div>
       </div>
 
       <div id="origWrap"><div class="orig" id="orig"></div></div>
@@ -778,11 +800,14 @@
     }
 
     // ── 결과 그리기 ───────────────────────────────────────────────────
-    function origHtml(text, hits) {
+    function origHtml(text, hits, greens) {
       // 문단으로 쪼갠 뒤, 각 문단 안에서 밑줄 span 을 심는다.
       // ⚠️ 위치(start/end)는 서버가 계산한 값이다 — 화면이 다시 찾지 않는다.
-      const marks = hits.filter((h) => h.start >= 0 && h.kind !== 'vague')
-                        .sort((a, b) => a.start - b.start);
+      //    그린 플래그(살릴 문장)는 번호 없는 span — dock 이동은 고칠 곳 전용이라 섞지 않는다.
+      const marks = [
+        ...hits.filter((h) => h.start >= 0 && h.kind !== 'vague'),
+        ...(greens || []).filter((g) => g.start >= 0).map((g) => ({ ...g, _green: true })),
+      ].sort((a, b) => a.start - b.start);
       const paras = hits.filter((h) => h.kind === 'vague' && h.start >= 0);
       let out = '', cur = 0;
       const seg = (from, to) => {
@@ -790,9 +815,11 @@
         for (const m of marks) {
           if (m.start < from || m.end > to) continue;
           s += esc(text.slice(cur, m.start));
-          s += '<button class="mk ' + KCLS[m.kind] + '" data-n="' + m.n + '" type="button">'
-            + esc(text.slice(m.start, m.end))
-            + '<span class="n">' + m.n + '</span></button>';
+          s += m._green
+            ? '<span class="mk g">' + esc(text.slice(m.start, m.end)) + '</span>'
+            : '<button class="mk ' + KCLS[m.kind] + '" data-n="' + m.n + '" type="button">'
+              + esc(text.slice(m.start, m.end))
+              + '<span class="n">' + m.n + '</span></button>';
           cur = m.end;
         }
         s += esc(text.slice(cur, to));
@@ -856,8 +883,21 @@
         .map((k) => '<span class="lg ' + (KCLS[k] || 'c') + '"><i></i>' + KLABEL[k] + ' ' + by[k] + '</span>')
         .join('');
 
+      // 인간미 보존 영역(Green Flag · 2026-08-12b) — 고칠 곳과 별개 목록. 없으면 통째로 숨긴다.
+      const greens = r.greens || [];
+      if (greens.length) {
+        $('greenBox').classList.remove('hidden');
+        $('greenList').innerHTML = greens.map((g) =>
+          '<div class="green-card"><em>' + esc(g.quote) + '</em><p>' + esc(g.why) + '</p></div>').join('');
+        $('legend').innerHTML += '<span class="lg g"><i></i>인간미 보존 ' + greens.length + '</span>';
+      } else {
+        $('greenBox').classList.add('hidden');
+        $('greenList').innerHTML = '';
+      }
+
       if (!r.hits || !r.hits.length) {
-        $('orig').innerHTML = '<p>' + esc(r._text).replace(/\n/g, '<br>') + '</p>';
+        // 고칠 곳이 없어도 그린 밑줄(살릴 문장)은 그린다
+        $('orig').innerHTML = origHtml(r._text, [], greens);
         $('cardList').innerHTML = '';
         // ⚠️ dock 을 통째로 숨기지 않는다 — 저장소 보기·새 검사가 그 안에 있어 숨기면 닿을 데가 없다.
         $('dock').classList.remove('hidden');
@@ -874,7 +914,7 @@
           : '<div class="notice info"><b>AI 같은 표현은 없어요 — 표현은 통과예요.</b><br>'
             + '내용이 면접관에게 통할지는 별개예요. 강점과 고칠 방향은 아래 첨삭이 짚어 드려요.</div>';
       } else {
-        $('orig').innerHTML = origHtml(r._text, r.hits);
+        $('orig').innerHTML = origHtml(r._text, r.hits, greens);
         $('cardList').innerHTML = r.hits.map(cardHtml).join('');
         $('dock').classList.remove('hidden');
         document.body.classList.remove('no-hits');
@@ -1211,6 +1251,7 @@
             showResult({
               ok: true, id: data.id, grade: data.grade, hits,
               probability: (!Array.isArray(rs) && typeof rs.p === 'number') ? rs.p : null,
+              greens: Array.isArray(rs) ? [] : (rs.greens || []),
               spot_count: hits.length, occurrences: data.hit_count,
               char_count: data.char_count, truncated: 0, _text: data.content,
             });

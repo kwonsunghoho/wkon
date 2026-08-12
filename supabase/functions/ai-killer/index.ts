@@ -64,9 +64,10 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-08-12a'   // a = 킬러 판정을 오너 지침 종합 판정(의심 지수 %)으로 전면 교체
+const FN_VERSION = '2026-08-12b'   // b = 점수 보정 + 그린 플래그(인간미 보존 영역) 지침 추가
 const FN_FEATURES = [
   'holistic',         // 킬러 판정 = 오너 지침 4기준 종합 + AI 의심 지수 %(2026-08-12 전면 교체)
+  'green_flags',      // 인간미 보존 영역(Green Flag) — 점수 보정 + 살릴 문장 짚기(2026-08-12b)
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
   'airline_profiles', // 항공사별 합격 패턴 참조
@@ -93,6 +94,8 @@ const EFFORT = 'high'
 // 그보다 많으면 밑줄밭이 되어 원문이 안 읽힌다(구 규칙 판정 MAX_HITS=24 의 실측 교훈).
 // 상한에 걸려 자른 개수는 응답 truncated 로 알린다 — 조용히 자르지 않는다.
 const MAX_FINDINGS = 10
+// 그린 플래그(인간미 보존 영역) 상한 — 인간의 흔적 세 갈래에 하나씩 잡혀도 4면 넉넉하다.
+const MAX_GREENS = 4
 
 // ⚠️ 한 답변을 몇 번까지 **추가 차감 없이** 다시 검사할 수 있나(2026-07-25 오너: 한시적 2회,
 //    나중에 1회로). 고치고 다시 확인하는 게 이 도구의 핵심 루프라 재검사에 매번 받으면
@@ -228,8 +231,20 @@ const KILLER_SCHEMA = {
         additionalProperties: false,
       },
     },
+    green_flags: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          quote: { type: 'string' },
+          why: { type: 'string' },
+        },
+        required: ['quote', 'why'],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ['probability', 'findings'],
+  required: ['probability', 'findings', 'green_flags'],
   additionalProperties: false,
 }
 
@@ -269,12 +284,21 @@ const KILLER_VOICE = `너는 지금부터 텍스트가 AI에 의해 작성되었
 3. 진단 및 분석 (Why) 발췌한 부분이 왜 어색하고 작위적인지 실무 코치의 시선에서 날카롭게 분석한다. 특히 본인의 진짜 경험이나 감정이 아닌, 기업의 최신 동향이나 스펙을 문맥 없이 욱여넣어 글의 흐름을 깨는 부분을 집중적으로 짚어준다.
 4. 인간미 부여 솔루션 (Fix) 적발된 문장을 어떻게 고쳐야 '진짜 사람의 말'처럼 들릴지 구체적인 수정 방향을 제시한다. 모범 답안을 떠먹여 주지 말고, 학생이 자신의 진짜 경험을 꺼내어 구어체로 표현할 수 있도록 유도하는 가이드를 준다.
 
+[점수 보정 및 긍정 피드백 기준] 텍스트에 뻔한 서론이나 기업 분석이 포함되어 있더라도, 본론에 아래 세 가지 '인간의 흔적' 중 하나 이상이 뚜렷하게 존재한다면 AI 의심 지수를 대폭(최소 20% ~ 최대 50%) 차감한다. 또한 리포트에 '인간미 보존 영역(Green Flag)'을 추가하여 지원자의 노력을 인정하고 살려야 할 부분을 짚어준다.
+
+1. 미세한 행동 디테일과 물리적 시행착오 개념적인 단어로 뭉뚱그리지 않고, 지원자가 실제로 고민하며 손발을 움직인 흔적이 있는가? (예: '효과적으로 전달했습니다' 대신 '근로자가 보기 편하게 표지의 글씨 크기와 색상을 조정했습니다' 등)
+2. 불완전함의 인정과 날것의 감정 처음부터 완벽한 영웅 서사가 아니라, 본인의 편견, 부끄러움, 당연하게 여겼던 오만함 등을 솔직하게 고백하고 깨우쳐가는 과정이 담겨 있는가? (예: '처음에는 누구나 아는 내용이라 생각해 간과할 뻔했지만~')
+3. 검색으로 찾을 수 없는 현장감 단순한 명언 인용이 아니라, 땀 냄새가 나는 실무 현장에서 누군가와 직접 부딪히며 나눈 생생한 구어체 대화가 묘사되어 있는가?
+
 [칸 규칙 — 위 4단계를 아래 JSON 칸에 담는다]
-- probability: 1번 AI 의심 지수. 0~100 정수.
+- probability: 1번 AI 의심 지수. 0~100 정수. **점수 보정 기준을 적용한 뒤의 값**을 낸다.
 - findings: 2~4번을 한 건씩 묶은 목록. 각 건은 quote(2번 인용) · crit(걸린 기준 번호 1~4) ·
   why(3번 진단) · fix(4번 솔루션).
-- quote 는 학생 글에 **있는 그대로** 등장하는 문자열이어야 한다. 한 글자도 바꾸지 말고,
-  따옴표나 말줄임표를 덧붙이지 마라.
+- green_flags: '인간미 보존 영역(Green Flag)' 목록. 각 건은 quote(인간의 흔적이 보이는 원문
+  문장) · why(무엇이 인간의 흔적이고 왜 살려야 하는지 한두 문장). 없으면 빈 배열 —
+  빈말 칭찬으로 채우지 마라.
+- quote 는(findings·green_flags 모두) 학생 글에 **있는 그대로** 등장하는 문자열이어야 한다.
+  한 글자도 바꾸지 말고, 따옴표나 말줄임표를 덧붙이지 마라.
 - 지목할 곳이 정말 없는 사람의 글이면 findings 를 비우고 probability 만 낮게 내라 —
   억지로 채우지 마라.
 - 인사말·맺음말·총평 문단은 쓰지 않는다. 칸만 채운다.
@@ -378,6 +402,7 @@ async function airlineBrief(
 }
 
 type KFinding = { quote: string; crit: number; why: string; fix: string }
+type GFinding = { quote: string; why: string }
 
 /** 의심 지수 → 등급 — 화면·DB 호환용 구간. 구 규칙 판정의 3등급 이름을 그대로 쓴다. */
 function gradeOfProbability(p: number): 'human' | 'slight' | 'heavy' {
@@ -436,13 +461,14 @@ async function judgeText(
     .map((b: { text: string }) => b.text).join('').trim()
   if (!raw) throw new Error('ai_empty')
 
-  let parsed: { probability?: number; findings?: KFinding[] }
+  let parsed: { probability?: number; findings?: KFinding[]; green_flags?: GFinding[] }
   try { parsed = JSON.parse(raw) } catch { throw new Error('ai_bad_json') }
   return {
     // 스키마는 정수만 보장한다 — 범위는 서버가 죈다(0~100 밖이면 화면 다이얼이 깨진다)
     probability: Math.max(0, Math.min(100, Math.round(Number(parsed.probability) || 0))),
     // 검증(원문 일치)에서 일부 탈락할 수 있어 여유를 두고 받는다 — 최종 상한은 호출부가 죈다
     findings: (Array.isArray(parsed.findings) ? parsed.findings : []).slice(0, MAX_FINDINGS * 2),
+    greens: (Array.isArray(parsed.green_flags) ? parsed.green_flags : []).slice(0, MAX_GREENS * 2),
     usage: data.usage ?? {},
   }
 }
@@ -1076,7 +1102,10 @@ Deno.serve(async (req) => {
     //   ① 지수는 높은데 인용이 전부 원문 밖 — 근거 없는 지수는 반쪽짜리 결과다
     //   ② 우리 문장에 상투어 — 학생 글을 재는 잣대로 우리 말도 잰다(4겹 고삐 ③)
     {
-      const mine = judged.findings.flatMap((f) => [f.why ?? '', f.fix ?? '']).join(' ')
+      const mine = [
+        ...judged.findings.flatMap((f) => [f.why ?? '', f.fix ?? '']),
+        ...judged.greens.map((f) => f.why ?? ''),
+      ].join(' ')
       const bad = clicheOnly.filter((t) => mine.includes(t))
       const quotesLost = judged.findings.length > 0 && hits.length === 0 && judged.probability >= 40
       if (bad.length > 0 || quotesLost) {
@@ -1098,6 +1127,23 @@ Deno.serve(async (req) => {
     hits.forEach((h, i) => { h.n = i + 1 })
     const probability = judged.probability
 
+    // 그린 플래그(인간미 보존 영역) — 레드 플래그와 같은 검증: 원문에 실존하는 문자열만,
+    // 밑줄끼리 겹치면 버린다(레드가 우선 — 고칠 곳을 짚는 게 이 도구의 본업이다).
+    const gTaken: Array<[number, number]> = hits.map((h) => [h.start, h.end] as [number, number])
+    const greens: Array<{ quote: string; why: string; start: number; end: number }> = []
+    for (const f of judged.greens) {
+      if (greens.length >= MAX_GREENS) break
+      const q = (f.quote || '').trim()
+      if (q.length < 4) continue
+      const i = text.indexOf(q)
+      if (i < 0) continue
+      const j = i + q.length
+      if (overlaps(gTaken, i, j)) continue
+      gTaken.push([i, j])
+      greens.push({ quote: q, why: typeof f.why === 'string' ? f.why : '', start: i, end: j })
+    }
+    greens.sort((a, b) => a.start - b.start)
+
     // ── 7. 저장 + 반환 ────────────────────────────────────────────────────
     // ⚠️ result 는 { p, hits } 로 저장한다 — 새 컬럼 없이 의심 지수를 남기는 방법이라
     //    마이그레이션이 필요 없다. 구 기록은 배열 그대로라, 화면 복원이 두 모양을 다 읽는다.
@@ -1106,7 +1152,7 @@ Deno.serve(async (req) => {
     const saveErr = await saveCheck(admin, {
       id: checkId, member_id: user.id, source, answer_id: targetAnswer, content: text,
       question: question || null, doc_kind: docKind,
-      result: { p: probability, hits }, grade: g, hit_count: hits.length, char_count: len,
+      result: { p: probability, hits, greens }, grade: g, hit_count: hits.length, char_count: len,
       input_tokens: u.input_tokens ?? 0, output_tokens: u.output_tokens ?? 0,
     })
     // 저장이 실패해도 검사는 이미 끝났다 — 결과는 돌려주고 환급은 하지 않는다
@@ -1130,7 +1176,7 @@ Deno.serve(async (req) => {
     }
 
     return json({
-      ok: true, id: checkId, grade: g, probability, hits,
+      ok: true, id: checkId, grade: g, probability, hits, greens,
       spot_count: hits.length, char_count: len,
       // 상한(MAX_FINDINGS)에 걸려 잘렸으면 알린다 — 조용히 자르지 않는다
       truncated, answerId: targetAnswer, autoSaved,
