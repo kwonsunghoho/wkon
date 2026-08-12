@@ -69,6 +69,9 @@
       --k-vague:  #6E4B8F;  --k-vague-bg:  rgba(110,75,143,.10);
       /* 그린 플래그(인간미 보존 · 2026-08-12b) — 흰 배경 대비 4.5:1 이상 확인값 */
       --k-green:  #2E7D4F;  --k-green-bg:  rgba(46,125,79,.12);
+      /* 고칠 곳 공통색(2026-08-12 포커스 모드) — 원문 밑줄·풀이 라벨은 갈래와 무관하게 이 한 색.
+         갈래별 색(--k-cliche 등)은 이제 '전체 목록' 카드와 구 기록 복원에만 남는다 */
+      --k-flag:   #C4491D;  --k-flag-bg:   rgba(242,121,69,.13);
       /* 문맥(ctx)만 -bg 짝이 없다 — 이 갈래는 바탕을 칠하지 않고 점선으로 표시하기
          때문이다. 형제와 모양을 맞추려고 --k-ctx-bg 를 다시 만들지 말 것
          (2026-08-06 정리: 참조 0건이라 삭제. 나머지 세 -bg 는 각각 4곳에서 쓴다). */
@@ -234,42 +237,39 @@
     .lg.v { color: var(--k-vague); }  .lg.v i { background: var(--k-vague); }
     .lg.x { color: var(--k-ctx); }    .lg.x i { background: none; border-top: 3px dotted var(--k-ctx); height: 0; }
 
-    /* ── 원문 + 밑줄 ── */
+    /* ── 원문 + 밑줄 — 2026-08-12 오너 확정 '포커스 모드'(목업 ②) ──
+       색은 둘뿐: 고칠 곳 = 주황 밑줄(--k-flag), 살릴 곳 = 옅은 초록 배경(--k-green).
+       갈래(기준) 이름은 원문에 칠하지 않고 풀이 카드의 라벨로만 말한다 — 갈래마다 다른
+       밑줄·배경을 원문에 섞으면 화면이 어지러워진다(오너 "너무 지저분해").
+       ⚠️ 밑줄은 button 이 아니라 span[role=button] — button 은 글줄에서 쪼개지지 않는
+       통짜 상자라 문장이 제멋대로 줄바꿈되고 덩어리로 보인다(2026-08-12 실측). */
     .orig { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
             padding: 16px; font-size: 15px; line-height: 2.0; }
     .orig .pg + .pg { margin-top: 14px; }
-    .mk { cursor: pointer; border: 0; background: transparent; font: inherit; padding: 0 1px;
-          color: inherit; border-radius: 3px; }
-    .mk.c { background: var(--k-cliche-bg); border-bottom: 2px solid var(--k-cliche); }
-    .mk.s { background: var(--k-struct-bg); border-bottom: 3px double var(--k-struct); }
-    .mk.x { border-bottom: 2px dotted var(--k-ctx); }
-    /* 2026-08-12 종합 판정의 '과도한 중립' 갈래(neutral→v) — 구 판정에선 v(구체성)가
-       문단 단위라 밑줄 스타일이 없었다. 새 판정은 문장 밑줄로 오므로 스타일이 필요하다. */
-    .mk.v { background: var(--k-vague-bg); border-bottom: 2px solid var(--k-vague); }
-    /* 인간미 보존 영역(Green Flag · 2026-08-12b 오너 지침) — 긍정 기능색이라 팔레트 통일 대상 아님.
-       그린 밑줄은 누르는 대상이 아니라 button 이 아닌 span 이고 번호도 없다(dock 은 고칠 곳 전용). */
-    .mk.g { background: var(--k-green-bg); border-bottom: 2px solid var(--k-green); }
-    .greens { margin: 14px 0 0; }
-    .greens-h { font-size: 14px; font-weight: 800; color: var(--k-green); margin-bottom: 8px; }
-    .green-card { background: var(--surface); border: 1px solid rgba(46,125,79,.35);
-                  border-left: 4px solid var(--k-green); border-radius: var(--radius-sm);
-                  padding: 12px 14px; }
-    .green-card + .green-card { margin-top: 8px; }
-    .green-card em { font-style: normal; background: var(--k-green-bg); padding: 1px 3px;
-                     border-radius: 3px; font-size: 14px; line-height: 1.7; }
-    .green-card p { margin-top: 6px; font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-    .lg.g { color: var(--k-green); } .lg.g i { background: var(--k-green); }
-    .mk .n { display: inline-flex; align-items: center; justify-content: center;
-             min-width: 18px; height: 18px; margin-left: 4px; border-radius: 5px;
-             font-size: 12px; font-weight: 800; color: #fff; vertical-align: 1px;
-             font-variant-numeric: tabular-nums; padding: 0 3px; }
-    .mk.c .n { background: var(--k-cliche); } .mk.s .n { background: var(--k-struct); }
-    .mk.x .n { background: var(--k-ctx); } .mk.v .n { background: var(--k-vague); }
-    .mk.hit { outline: 3px solid var(--action); outline-offset: 2px; }
-    /* 구체성 = 문단 단위(밑줄 아님) */
-    .pv { border-left: 3px solid var(--k-vague); background: var(--k-vague-bg);
+    .orig, .mk, .mk .n { transition: color .25s ease, background-color .25s ease, border-color .25s ease; }
+    .mk { cursor: pointer; border: 0; background: none; font: inherit; text-align: inherit;
+          padding: 0 0 1px; color: inherit; display: inline;
+          border-bottom: 2px solid var(--k-flag); }
+    .mk .n { font-size: 10.5px; font-weight: 800; color: #fff; background: var(--k-flag);
+             border-radius: 4px; padding: 1px 4px; margin-left: 2px; vertical-align: 6px;
+             font-variant-numeric: tabular-nums; }
+    .mk.g { border-bottom: 0; background: var(--k-green-bg); border-radius: 3px; }
+    .mk.g .n { background: var(--k-green); }
+    /* 포커스 — 하나가 열려 있는 동안만 나머지가 옅어지고, 닫으면 원래대로(오너 확정) */
+    .orig.focusing { color: rgba(51,58,69,.32); }
+    .orig.focusing .mk { border-bottom-color: rgba(196,73,29,.20); }
+    .orig.focusing .mk .n { background: rgba(196,73,29,.30); }
+    .orig.focusing .mk.g { background: rgba(46,125,79,.05); }
+    .orig.focusing .mk.g .n { background: rgba(46,125,79,.30); }
+    .orig.focusing .mk.sel { color: var(--text); border-bottom-color: var(--k-flag);
+                             background: var(--k-flag-bg); border-radius: 3px; }
+    .orig.focusing .mk.sel .n { background: var(--k-flag); }
+    .orig.focusing .mk.g.sel { color: var(--text); background: rgba(46,125,79,.15); }
+    .orig.focusing .mk.g.sel .n { background: var(--k-green); }
+    /* 구체성 = 문단 단위(구 규칙 판정 기록 복원 전용) */
+    .pv { border-left: 3px solid var(--k-vague); background: var(--k-vague-bg); cursor: pointer;
           padding: 8px 10px 8px 12px; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; }
-    .pv.hit { outline: 3px solid var(--action); outline-offset: 2px; }
+    .pv.sel { outline: 3px solid var(--action); outline-offset: 2px; }
     .pv-tag { display: block; font-size: 14px; font-weight: 800; color: var(--k-vague);
               margin-bottom: 3px; line-height: 1.4; }
 
@@ -328,13 +328,21 @@
        밑줄을 누르면 **그 문단 바로 아래**에서 진단·해결이 펼쳐진다. 원문 문단(.pg)이
        p 가 아니라 div 인 이유가 이것 — p 안의 div 는 HTML 파서가 문단을 쪼개 버린다. */
     .orig-hint { margin: 12px 0 -4px; font-size: 13px; color: var(--text-dim); }
-    .acc { display: none; margin: 12px 0 6px; padding: 12px 14px; font-size: 14px; line-height: 1.65;
-           background: var(--bg2); border: 1px solid var(--border);
-           border-left: 4px solid var(--k-cliche); border-radius: var(--radius-xs); }
+    /* 풀이 카드 — 흰 카드 + 왼쪽 막대(고칠 곳 주황 / 살릴 곳 초록). 갈래 이름은 라벨 알약으로.
+       포커스 흐림의 영향을 받지 않도록 색을 직접 정한다. */
+    .acc { display: none; margin: 10px 0 6px; padding: 13px 14px; font-size: 14px; line-height: 1.6;
+           color: var(--text); background: var(--surface); border: 1px solid var(--border);
+           border-left: 4px solid var(--k-flag); border-radius: var(--radius-xs);
+           box-shadow: 0 4px 14px rgba(20,32,52,.06); }
     .acc.open { display: block; }
-    .acc.s { border-left-color: var(--k-struct); } .acc.v { border-left-color: var(--k-vague); }
-    .acc.x { border-left-color: var(--k-ctx); }
-    .acc.g { border-left-color: var(--k-green); border-color: rgba(46,125,79,.35); }
+    .acc.g { border-left-color: var(--k-green); border-color: rgba(46,125,79,.3); }
+    .acc-tag { display: inline-block; font-size: 12px; font-weight: 800; color: var(--k-flag);
+               background: var(--k-flag-bg); border-radius: 999px; padding: 3px 9px; }
+    .acc.g .acc-tag { color: var(--k-green); background: var(--k-green-bg); }
+    .acc-why { margin-top: 9px; font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+    .acc-fix { margin-top: 9px; padding-top: 9px; border-top: 1px dashed var(--border-soft);
+               font-size: 14px; line-height: 1.65; }
+    .acc-fix b { color: var(--accent-ink); }
 
     /* 저장 줄 — dock 이 하단을 차지하므로 sticky 가 아니라 본문 끝에 둔다 */
     .d-save { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
@@ -506,13 +514,8 @@
         <div class="rs-legend" id="legend"></div>
       </div>
 
-      <!-- 인간미 보존 영역(Green Flag · 2026-08-12b 오너 지침) — 살릴 문장을 초록으로 짚는다.
-           고칠 곳(dock·카드)과는 별개 목록이라 개수·이동에 안 섞인다. -->
-      <div class="greens hidden" id="greenBox">
-        <div class="greens-h">인간미 보존 영역 — 이대로 살리세요</div>
-        <div id="greenList"></div>
-      </div>
-
+      <!-- 인간미 보존(Green Flag)의 별도 목록 구역은 2026-08-12 포커스 모드 확정으로 제거 —
+           살릴 문장은 원문 안 초록 표시 + 같은 제자리 펼침으로 합쳤다(개수는 요약 부제에). -->
       <p class="orig-hint hidden" id="origHint">밑줄을 누르면 그 자리에서 풀이와 고칠 방향이 열려요.</p>
       <div id="origWrap"><div class="orig" id="orig"></div></div>
       <div class="cards" id="cardList"></div>
@@ -789,45 +792,42 @@
     }
 
     // ── 결과 그리기 ───────────────────────────────────────────────────
-    // 갈래 → 색 변수 이름(펼침 카드·목록 카드가 같이 쓴다)
-    const KVAR = { cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx', neutral: 'vague', rhythm: 'ctx' };
-
-    // 펼침 카드 한 장 — 밑줄을 눌렀을 때 그 문단 아래에서 열리는 내용. 인용은 반복하지
-    // 않는다(바로 위 밑줄이 그 인용이다 — 2026-08-12 오너 확정 제자리 펼침).
+    // 펼침 카드 한 장 — 밑줄을 눌렀을 때 그 자리에서 열리는 내용. 인용은 반복하지 않는다
+    // (바로 위 밑줄이 그 인용이다). 갈래 이름은 여기 라벨로만 — 원문에는 색을 섞지 않는다.
     function accHtml(m) {
       if (m._green) {
         return '<div class="acc g" id="acc-g-' + m._gi + '">'
-          + '<span class="cd-k" style="color:var(--k-green)">인간미 보존 — 이대로 살리세요</span>'
-          + '<div class="cd-r">' + esc(m.why) + '</div></div>';
+          + '<span class="acc-tag">인간미 보존 — 이대로 살리세요</span>'
+          + '<div class="acc-why">' + esc(m.why) + '</div></div>';
       }
-      return '<div class="acc ' + (KCLS[m.kind] || '') + '" id="acc-n-' + m.n + '">'
-        + '<div class="cd-h"><span class="cd-n" style="background:var(--k-' + KVAR[m.kind] + ')">' + m.n + '</span>'
-        + '<span class="cd-k" style="color:var(--k-' + KVAR[m.kind] + ')">' + KLABEL[m.kind] + '</span></div>'
-        + '<div class="cd-r">' + esc(m.why) + '</div>'
-        + '<div class="cd-f">' + esc(m.fix) + '</div></div>';
+      return '<div class="acc" id="acc-n-' + m.n + '">'
+        + '<span class="acc-tag">' + KLABEL[m.kind] + '</span>'
+        + '<div class="acc-why">' + esc(m.why) + '</div>'
+        + '<div class="acc-fix"><b>이렇게</b> — ' + esc(m.fix) + '</div></div>';
     }
 
     function origHtml(text, hits, greens) {
-      // 문단으로 쪼갠 뒤, 각 문단 안에 밑줄을 심고 **문단 끝에 펼침 카드를 미리 넣어 둔다**
-      // (클릭은 .open 만 켠다). ⚠️ 위치(start/end)는 서버가 계산한 값 — 화면이 다시 찾지 않는다.
+      // 문단으로 쪼갠 뒤 밑줄을 심고, 펼침 카드는 **밑줄 바로 뒤**에 숨겨 둔다(클릭은 .open 만
+      // 켠다 — 열리면 그 자리에서 줄이 갈라진다, 오너 확정 목업 그대로).
+      // ⚠️ 위치(start/end)는 서버가 계산한 값 — 화면이 다시 찾지 않는다.
       const marks = [
         ...hits.filter((h) => h.start >= 0 && h.kind !== 'vague'),
         ...(greens || []).filter((g) => g.start >= 0).map((g, gi) => ({ ...g, _green: true, _gi: gi })),
       ].sort((a, b) => a.start - b.start);
       const paras = hits.filter((h) => h.kind === 'vague' && h.start >= 0);
       let out = '', cur = 0;
-      let inPara = [];   // 지금 그리는 문단에 속한 밑줄들
       const seg = (from, to) => {
         let s = '';
         for (const m of marks) {
           if (m.start < from || m.end > to) continue;
-          inPara.push(m);
           s += esc(text.slice(cur, m.start));
           s += m._green
-            ? '<button class="mk g" data-g="' + m._gi + '" type="button">' + esc(text.slice(m.start, m.end)) + '</button>'
-            : '<button class="mk ' + KCLS[m.kind] + '" data-n="' + m.n + '" type="button">'
+            ? '<span class="mk g" data-g="' + m._gi + '" role="button" tabindex="0">'
+              + esc(text.slice(m.start, m.end)) + '<span class="n">살림</span></span>'
+            : '<span class="mk" data-n="' + m.n + '" role="button" tabindex="0">'
               + esc(text.slice(m.start, m.end))
-              + '<span class="n">' + m.n + '</span></button>';
+              + '<span class="n">' + m.n + '</span></span>';
+          s += accHtml(m);
           cur = m.end;
         }
         s += esc(text.slice(cur, to));
@@ -840,13 +840,11 @@
         const start = text.indexOf(raw, idx); idx = start + raw.length;
         if (!raw.trim()) continue;
         cur = start;
-        inPara = [];
         const inner = seg(start, start + raw.length).replace(/\n/g, '<br>');
-        const accs = inPara.map(accHtml).join('');
         const v = paras.find((p) => p.start === start);
         out += v
-          ? '<div class="pv pg" data-n="' + v.n + '"><span class="pv-tag">구체성 · 문단 전체</span><p>' + inner + '</p>' + accs + accHtml(v) + '</div>'
-          : '<div class="pg">' + inner + accs + '</div>';
+          ? '<div class="pv pg" data-n="' + v.n + '" role="button" tabindex="0"><span class="pv-tag">구체성 · 문단 전체</span><div>' + inner + '</div>' + accHtml(v) + '</div>'
+          : '<div class="pg">' + inner + '</div>';
       }
       return out;
     }
@@ -867,12 +865,14 @@
 
       const g = GRADE[r.grade] || GRADE.human;
       $('gradeText').textContent = g.t;
+      const greens = r.greens || [];
       // 2026-08-12 종합 판정 — 다이얼은 AI 의심 지수(%)를 그린다. probability 가 없는 응답은
       // 구 규칙 판정 시절 기록(이력 '보기' 복원)이라 예전 방식(고칠 곳 수 + 등급 눈금)으로 그린다.
       const hasP = typeof r.probability === 'number';
       if (hasP) {
         const p = Math.max(0, Math.min(100, Math.round(r.probability)));
-        $('gradeSub').textContent = 'AI 의심 지수 ' + p + '% · 고칠 곳 ' + r.spot_count + '곳';
+        $('gradeSub').textContent = 'AI 의심 지수 ' + p + '% · 고칠 곳 ' + r.spot_count
+          + (greens.length ? ' · 살릴 곳 ' + greens.length : '');
         $('dialNum').textContent = p + '%';
         // '87%'는 '87'보다 길다 — 원 안에 들어가게 활자를 살짝 줄인다(복원 화면은 11로 되돌린다)
         $('dialNum').setAttribute('font-size', '9.5');
@@ -886,23 +886,19 @@
         $('dialArc').setAttribute('stroke-dashoffset', String(Math.round(97.4 * (1 - g.arc))));
       }
 
-      const by = {};
-      (r.hits || []).forEach((h) => { by[h.kind] = (by[h.kind] || 0) + 1; });
-      $('legend').innerHTML = ['cliche', 'structure', 'neutral', 'rhythm', 'vague', 'context']
-        .filter((k) => by[k])
-        .map((k) => '<span class="lg ' + (KCLS[k] || 'c') + '"><i></i>' + KLABEL[k] + ' ' + by[k] + '</span>')
-        .join('');
-
-      // 인간미 보존 영역(Green Flag · 2026-08-12b) — 고칠 곳과 별개 목록. 없으면 통째로 숨긴다.
-      const greens = r.greens || [];
-      if (greens.length) {
-        $('greenBox').classList.remove('hidden');
-        $('greenList').innerHTML = greens.map((g) =>
-          '<div class="green-card"><em>' + esc(g.quote) + '</em><p>' + esc(g.why) + '</p></div>').join('');
-        $('legend').innerHTML += '<span class="lg g"><i></i>인간미 보존 ' + greens.length + '</span>';
+      // 갈래 범례는 구 기록 복원에만 그린다 — 새 판정은 갈래 이름을 풀이 카드 라벨로만 말한다
+      // (오너 확정 목업 — 요약 머리는 지수·고칠 곳·살릴 곳 세 수만).
+      if (hasP) {
+        $('legend').innerHTML = '';
+        $('legend').style.display = 'none';
       } else {
-        $('greenBox').classList.add('hidden');
-        $('greenList').innerHTML = '';
+        const by = {};
+        (r.hits || []).forEach((h) => { by[h.kind] = (by[h.kind] || 0) + 1; });
+        $('legend').innerHTML = ['cliche', 'structure', 'neutral', 'rhythm', 'vague', 'context']
+          .filter((k) => by[k])
+          .map((k) => '<span class="lg ' + (KCLS[k] || 'c') + '"><i></i>' + KLABEL[k] + ' ' + by[k] + '</span>')
+          .join('');
+        $('legend').style.display = 'flex';
       }
 
       if (!r.hits || !r.hits.length) {
@@ -932,12 +928,9 @@
         $('resNotice').innerHTML = r.truncated > 0
           ? '<div class="notice info">지적이 많아 앞의 ' + r.spot_count + '곳만 표시했어요(' + r.truncated + '곳 더 있어요).</div>'
           : '';
-        // 첫 지적은 펼쳐서 시작 — '눌러야 열린다'를 몰라 그냥 지나치는 걸 막는다
-        const first = document.getElementById('acc-n-' + r.hits[0].n);
-        if (first) first.classList.add('open');
-        const fm = document.querySelector('#origWrap [data-n="' + r.hits[0].n + '"]');
-        if (fm) fm.classList.add('hit');
       }
+      // 시작은 아무것도 안 열린 상태 — 포커스도 없다(오너 확정: 열려 있는 동안만 흐림)
+      closeAcc();
       // 밑줄 안내 줄 — 누를 밑줄(지적이든 그린이든)이 있을 때만
       $('origHint').classList.toggle('hidden', !((r.hits && r.hits.length) || greens.length));
 
@@ -967,14 +960,24 @@
     if (window.ResizeObserver) new ResizeObserver(syncDockPad).observe($('dock'));
     window.addEventListener('resize', syncDockPad);
 
-    // ── 제자리 펼침 — 밑줄을 누르면 그 문단 아래 펼침 카드(.acc)를 켜고 끈다 ──
-    // 구 dock(하단 시트 + 이전/다음 순회)은 2026-08-12 오너 확정으로 폐지됐다.
-    function toggleAcc(accId, mark) {
-      const acc = document.getElementById(accId);
+    // ── 제자리 펼침(포커스 모드 · 2026-08-12 오너 확정) ──
+    // 언제나 **하나만** 열린다. 열려 있는 동안만 나머지 원문이 옅어지고(focusing),
+    // 같은 밑줄을 다시 누르면 닫히면서 원래대로 돌아온다. 구 dock 시트·순회는 폐지됐다.
+    let _open = null;   // 'n-3' | 'g-0' | null
+    function closeAcc() {
+      _open = null;
+      document.querySelectorAll('.acc.open').forEach((el) => el.classList.remove('open'));
+      document.querySelectorAll('.sel').forEach((el) => el.classList.remove('sel'));
+      $('orig').classList.remove('focusing');
+    }
+    function openAcc(key, mark) {
+      closeAcc();
+      const acc = document.getElementById('acc-' + key);
       if (!acc) return;
-      const open = acc.classList.toggle('open');
-      document.querySelectorAll('.hit').forEach((el) => el.classList.remove('hit'));
-      if (open && mark) mark.classList.add('hit');
+      _open = key;
+      acc.classList.add('open');
+      if (mark) mark.classList.add('sel');
+      $('orig').classList.add('focusing');
     }
 
     // ── 검사 실행 ─────────────────────────────────────────────────────
@@ -1218,17 +1221,32 @@
       if (card) {  // 목록에서 카드를 누르면 원문으로 돌아가 그 자리를 편다
         document.body.classList.remove('show-list');
         $('dToggle').textContent = '전체 목록';
-        const acc = document.getElementById('acc-n-' + card.dataset.n);
-        if (acc) acc.classList.add('open');
-        document.querySelectorAll('.hit').forEach((el) => el.classList.remove('hit'));
         const t = document.querySelector('#origWrap [data-n="' + card.dataset.n + '"]');
-        if (t) { t.classList.add('hit'); t.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+        openAcc('n-' + card.dataset.n, t);
+        if (t) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
-      const gk = e.target.closest('#origWrap [data-g]');   // 그린 밑줄(인간미 보존)
-      if (gk) { toggleAcc('acc-g-' + gk.dataset.g, gk); return; }
-      const mk = e.target.closest('#origWrap [data-n]');   // 지적 밑줄
-      if (mk && _res) toggleAcc('acc-n-' + mk.dataset.n, mk);
+      const gk = e.target.closest('#origWrap [data-g]');   // 살릴 곳(인간미 보존)
+      if (gk) {
+        if (_open === 'g-' + gk.dataset.g) closeAcc();
+        else openAcc('g-' + gk.dataset.g, gk);
+        return;
+      }
+      const mk = e.target.closest('#origWrap [data-n]');   // 고칠 곳 밑줄
+      if (mk && _res) {
+        if (_open === 'n-' + mk.dataset.n) closeAcc();
+        else openAcc('n-' + mk.dataset.n, mk);
+      }
+    });
+    // 키보드 — 밑줄이 span[role=button]이라 Enter/Space 를 직접 이어 준다(원칙 14:
+    // role·tabindex·키가 한 벌. button 을 못 쓰는 이유는 .mk 스타일 주석 참조).
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const m = e.target && e.target.closest
+        ? e.target.closest('#origWrap [data-n], #origWrap [data-g]') : null;
+      if (!m) return;
+      e.preventDefault();
+      m.click();
     });
 
     // ── 저장소에서 들어온 경우 ────────────────────────────────────────
