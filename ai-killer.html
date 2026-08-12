@@ -303,7 +303,18 @@
     .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; background: var(--surface);
             border-top: 1px solid var(--border); box-shadow: 0 -6px 20px rgba(23,42,71,.10); }
     .dock-in { max-width: 720px; margin: 0 auto; }
-    .dock-sheet { padding: 14px 16px 4px; border-bottom: 1px solid var(--border-soft); }
+    /* ⚠️ 2026-08-12b 판정은 진단·솔루션이 서너 문장이다(구 판정은 한 문장). 시트 높이를
+       안 막으면 dock 이 화면을 통째로 덮는다(오너 신고 "보기가 너무 어렵네") — 32vh 에서
+       자르고 시트 안에서 스크롤한다. 원문 절반은 언제나 보여야 한다. */
+    .dock-sheet { padding: 14px 16px 4px; border-bottom: 1px solid var(--border-soft);
+                  max-height: 32vh; overflow-y: auto; overscroll-behavior: contain; }
+    /* 더 있음 신호 — 시트 아래 가장자리에 붙어 다니는 흐림. 탭을 막지 않게 pointer-events 끔 */
+    .dock-sheet::after { content: ''; display: block; position: sticky; bottom: 0; height: 22px;
+                         margin-top: -22px; pointer-events: none;
+                         background: linear-gradient(rgba(255,255,255,0), var(--surface)); }
+    /* 시트 안 인용은 2줄까지 — 같은 순간 원문 쪽 밑줄이 강조되므로 전문 반복이 필요 없다 */
+    .dock-sheet .cd-q { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                        overflow: hidden; }
     .dock-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border); margin: 9px auto 0; }
     /* 첨삭 CTA — 진단(결과) 직후가 처방이 팔리는 자리다(2026-07-30).
        ⚠️ 회색 3칸에 4번째 칸으로 넣지 말 것 — 375px 에서 칸당 80px 라
