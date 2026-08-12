@@ -22,7 +22,7 @@
 | 항공사 자산 | `airline_profiles`(code=ke/lj/7c/tw/ze/yp/rf, questions/style/keywords/notes). RLS 비공개(서비스롤+관리자만) |
 | 관리자 | `admin.html` 단일 페이지, `.tabbtn`/`.tab-panel(#panel-<tab>)` 탭 10개, `.round-form`/`.round-item` 폼·목록 관례 |
 | 계측 | `page_events`(name, meta) 직접 insert, 실패 무시 |
-| 테스트 | 프레임워크 없음. 관례: node 검증 스크립트(`scripts/ai-killer-dryrun.mjs` 등) + 브라우저 375px 실측 |
+| 테스트 | 프레임워크 없음. 관례: node 검증 스크립트(`scripts/ai-killer-qmatch.mjs` 등) + 브라우저 375px 실측 |
 | 개인정보 | 가입 시 1회 동의(`agreed_at`), 거부 시 즉시 파기(`delete_my_account`), 계정별 로컬 캐시. **모델 학습 동의는 없음(신설 필요)** |
 
 ## 2. 재사용하는 것 (복제 금지)

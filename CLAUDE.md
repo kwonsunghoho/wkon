@@ -62,8 +62,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - **`node` 는 앞에 로더를 붙여야 잡힌다**(2026-08-03 nvm 으로 설치, v24.18.1): `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; node scripts/<파일>.mjs`. nvm 은 `~/.zshrc` 에만 설정을 넣는데 자동 실행 셸(플러그인 훅·스크립트)은 그 파일을 안 읽는다 — 로더 없이 `node` 만 치면 `command not found` 가 뜨지만 **미설치가 아니다. 다시 깔라고 안내하지 말 것.** `python3` 는 `/usr/bin/python3` 라 그냥 쓴다. **`deno` 는 아직 없다.**
 - **전체 lint·build·테스트 시스템이 없다. 존재하지 않는 lint/build 명령을 만들지 말 것.** 검증 수단은 아래가 전부다.
   - **브라우저 렌더 확인 — 375px 우선**(트래픽 99%가 모바일). 올리기 전 필수.
-  - AI킬러 규칙: `node scripts/ai-killer-dryrun.mjs` — 기준선 비교('사람이 잘 쓴 글' 0곳 유지 확인).
-  - 항공사 문항 매칭: `node scripts/ai-killer-qmatch.mjs` — 임계값·유사도 식 변경 시.
+  - 항공사 문항 매칭: `node scripts/ai-killer-qmatch.mjs` — 임계값·유사도 식 변경 시(첨삭이 쓴다). 구 `ai-killer-dryrun.mjs` 는 2026-08-12 규칙 판정 폐지와 함께 삭제됐다.
   - 뉴스 필터: `python3 scripts/verify-news-rules.py` — 실데이터 RSS 에 대고 '버린 목록'을 눈으로 확인(`--old` 는 기준선).
   - 답변 프로그램: `node scripts/answer-program-tests.mjs`(2026-08-03 실측 68 통과/0 실패) + `deno check supabase/functions/answer-program/index.ts`(**deno 미설치 — 현재 못 돌린다**) + 375px 브라우저 실측.
 
@@ -131,7 +130,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 승준 코스·승준 도구 | `briefing.html`(코스)·`tools.html`(도구) | 2026-08-06 분리(구 승준노트 — 파일·클래스명 유지, 화면 글자만 교체). 코스는 **두 상태**(선택 전=코스 줄 4개+패널 하나 / 선택 후=개인화 헤더+'오늘 이어서', 저장은 `members.course`), 도구는 격자 6종 허브. 카드·타일에 회원별 상태 문구·금액 금지. nav 는 코스(단독)+도구(드롭다운) 두 항목 — 6항목이라 햄버거 상한 880px | `docs/notes/briefing.md` |
 | 연구실 | `lab.html`(허브)·`lab-archive.html`(원장)·`lab-shelf.html`(서가 4종 공용)·`lab-viewer.js`(PDF 읽기 화면)·`researchers-data.js` | 허브는 카드 두 장·원장은 카드형·상세는 `?shelf=` 한 파일(서가별 HTML 금지), 기출문제는 취업 자료실 안의 갈래(2026-08-03 합침 — DB shelf 값은 그대로), 자료 파일은 비공개 버킷 + lab-file 서명 URL 로만(공개 URL 금지), **PDF 는 읽기 화면(lab-viewer)이 먼저 열리고 저장 버튼은 `delivery!=='view'` 만 — 화면 전용 차단은 서버가 유지, `lab-viewer.js` 수정 시 `VIEWER_SRC` `?v=` 동반**, 숫자는 `lab_shelf_counts()` 실측값만, **값은 자료마다 `lab_resources.price`(0=무료) — 자료 테이블을 새로 만들지 말 것**, 단 **채용 캘린더만 예외로 `recruit_rounds`**(파일이 아니라 날짜 · 무료 확정 · 상/하반기 칸 금지) | `docs/notes/lab.md` |
 | 뉴스 | `news.html`·`scripts/fetch-news.mjs` | 필터는 픽커+바텀시트(칩 나열 회귀 금지), 규칙 수정 시 verify-news-rules.py | `docs/notes/news.md` |
-| AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 구조화 출력·한 파일 유지, 감점 사전은 admin 탭(DB) | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
+| AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | **판정은 오너 지침 프롬프트(4기준+의심 지수 %) — 2026-08-12 전면 교체, 사전·밀도 규칙 판정으로 되돌리지 말 것.** 구조화 출력·한 파일 유지, 감점 사전은 admin 탭(DB — 이제 자기 출력 재검사·첨삭용) | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer 의 `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB), **난이도 4단계는 `questions.level`(basic/mid/advanced/deep) 한 곳 — 코드명 변경 금지·`.eq('level')` 금지(미적용 환경 400)**, 진입은 난이도 고르는 화면이 먼저(`?q=` 는 건너뜀) | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
 | 답변 저장소·크레딧 | `answers.html`·`mypage.html` | 저장 무료·무제한, answers/mypage 는 같이 고친다 | `docs/notes/credits.md` |
@@ -218,7 +217,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격(상품>답변 프로그램 서브탭 유지 — 오너 확정) (admin.md)
 - `rehearsal.html` 카드 숨김 해제 — 코드가 main 에 없어 404 난다(`claude/rehearsal-wip` 먼저 병합) (implementation-status.md)
 - `challenge-express.html`·`challenge-speech.html` 되살리기 — 2026-07-14 커밋 `072c937` 에서 고아 파일로 제거됐다. 상세는 voice·expression·spinning·answer 4종뿐(2026-08-07 실측) (pages.md)
-- AI킬러 일반 텍스트 응답·규칙 엔진 모듈 분리 (ai-killer 스펙)
+- AI킬러 일반 텍스트 응답(칸 없는 자유 출력)·함수 모듈 분리 (ai-killer 스펙)
+- AI킬러 규칙 엔진 판정(사전 매칭·어미 반복·밀도 등급) — 2026-08-12 오너 지시 "너무 기계적으로 판단한다"로 폐지, 판정은 오너 지침 종합 판정 (ai-killer 스펙)
 - 첨삭(polish) 제출 전 프로브 게이트 삭제 (polish.md)
 - 소재 발굴을 답변 저장의 관문으로 만들기·다듬기 버튼을 AI 판정 뒤로 숨기기 (sojae 스펙)
 - admin 소재 문제의 항공사 칸(`#qfAirline`) — 소재 문제는 전 항공사 공통이라 2026-08-05 삭제. 답변 프로그램 기출 은행의 항공사는 그대로 (admin.md)

@@ -23,10 +23,17 @@
 //   20260725170000_answers_meta.sql   ← 답변 분류 3종
 //   20260725180000_credit_costs.sql   ← 도구별 단가 + 하루 무료 리셋
 //
-// 처리 순서(확정본 '서버' 절 그대로)
-//   1 로그인 확인 → 2 길이 검증 → 3 무료분 판정+차감 → 4 규칙 검사
-//   → 5 Claude 호출(칸만 채움) → 6 자기 출력 재검사 → 7 저장+반환
+// 처리 순서(2026-08-12 판정 교체 이후)
+//   1 로그인 확인 → 2 길이 검증 → 3 무료분 판정+차감 → 4 사전 로드(자기 출력 재검사용)
+//   → 5 Claude 종합 판정(오너 지침 4기준 · 의심 지수 %) → 6 인용 검증+자기 출력 재검사
+//   → 7 저장+반환
 //   ⚠️ 3번에서 막히면 아래로 안 간다. 5~7 중 실패하면 반드시 환급(refund_credit).
+//
+// ⚠️ 2026-08-12 판정 방식 전면 교체(오너 지시 "너무 기계적으로 판단한다"):
+//    사전 매칭·어미 반복·길이 균일·구체성 결여·밀도 등급의 '규칙 엔진 판정'을 폐지했다.
+//    판정은 KILLER_VOICE 의 오너 지침 원문(4가지 기준 + 4단계 출력)을 AI 가 종합 적용한다.
+//    규칙 판정으로 되돌리지 말 것. 사전(ai_killer_terms)은 판정이 아니라
+//    ①킬러·첨삭·다듬기의 자기 출력 재검사 ②첨삭 coach 기준 주입에만 쓴다.
 // =============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -57,8 +64,9 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-08-04a'   // a = 환급을 service_role 전용 RPC 로 이동(보안)
+const FN_VERSION = '2026-08-12a'   // a = 킬러 판정을 오너 지침 종합 판정(의심 지수 %)으로 전면 교체
 const FN_FEATURES = [
+  'holistic',         // 킬러 판정 = 오너 지침 4기준 종합 + AI 의심 지수 %(2026-08-12 전면 교체)
   'context',          // 문항·종류 맥락
   'airline',          // 지망 항공사
   'airline_profiles', // 항공사별 합격 패턴 참조
@@ -75,14 +83,16 @@ const FN_FEATURES = [
 // 저장소의 다른 함수도 이미 Claude 5 계열(sojae-chat: sonnet-5 / haiku-4-5).
 const MODEL = 'claude-opus-5'
 // ⚠️ Opus 5 는 thinking 이 기본 ON 이고 max_tokens 가 **thinking + 응답을 합쳐** 자른다.
-//    칸 10개 채우는 데 출력은 1천 토큰이면 족하지만 여유를 크게 준다(잘리면 통째로 실패).
-const MAX_TOKENS = 8000
-// 원가 조절 손잡이. 자리는 규칙이 이미 확정했고 AI 는 정해진 칸만 채우므로 medium 으로 시작한다.
-// ⑤단계 원가 실측에서 말투 품질이 모자라면 'high' 로 올릴 것(ai_killer_checks 의 토큰 기록 참조).
-const EFFORT = 'medium'
+//    종합 판정은 thinking 이 길어질 수 있어 첨삭과 같은 여유를 준다(잘리면 통째로 실패).
+const MAX_TOKENS = 16000
+// 2026-08-12 판정 교체 후에는 판정의 질이 곧 상품이다 — 첨삭과 같은 high.
+// 원가가 문제되면 여기를 medium 으로 내린다(ai_killer_checks 의 토큰 기록으로 실측).
+const EFFORT = 'high'
 
-// AI 가 추가로 지목할 수 있는 '문맥' 자리 상한(확정본: 최대 3곳)
-const MAX_CONTEXT_EXTRA = 3
+// 레드 플래그(인용 지적) 상한 — 오너 지침은 '최소 2~3가지'다. 1,500자에 10곳이면 충분하고,
+// 그보다 많으면 밑줄밭이 되어 원문이 안 읽힌다(구 규칙 판정 MAX_HITS=24 의 실측 교훈).
+// 상한에 걸려 자른 개수는 응답 truncated 로 알린다 — 조용히 자르지 않는다.
+const MAX_FINDINGS = 10
 
 // ⚠️ 한 답변을 몇 번까지 **추가 차감 없이** 다시 검사할 수 있나(2026-07-25 오너: 한시적 2회,
 //    나중에 1회로). 고치고 다시 확인하는 게 이 도구의 핵심 루프라 재검사에 매번 받으면
@@ -97,12 +107,6 @@ const AIRLINES: Record<string, string> = {
   ke: '대한항공', lj: '진에어', '7c': '제주항공', tw: '티웨이항공',
   ze: '이스타항공', yp: '에어프레미아', rf: '에어로케이',
 }
-
-// ⚠️ 화면에 그릴 지적 상한. 371자 실측에서 15곳이 나왔으므로 1,500자면 60곳까지 가능하다 —
-//    밑줄 60개는 원문이 안 읽히고, AI 에게 채우라고 할 칸도 60개가 되어 원가가 튄다.
-//    **등급은 자른 게 아니라 실제 개수로 매긴다**(자르고 등급까지 낮추면 거짓말이 된다).
-//    자른 경우 응답에 truncated 를 실어 화면이 "많아서 앞의 N곳만" 이라고 말할 수 있게 한다.
-const MAX_HITS = 24
 
 // =============================================================================
 // 첨삭(polish) 상수 — mode:'polish' (2026-07-30)
@@ -182,246 +186,99 @@ const QF_VOICE = `너는 승무원 면접·자소서를 10년 넘게 첨삭한 �
 - 원문에 AI스러운 데가 없으면 spotted 를 비우고, fixed 는 거의 그대로 두되 어색한 곳만 만져라.
 - 인사말·맺음말·설명을 붙이지 마라. 칸만 채운다.`
 
-type Kind = 'cliche' | 'structure' | 'vague' | 'context'
+// kind — 화면 색 갈래. neutral(과도한 중립)·rhythm(리듬·인간미)은 2026-08-12 오너 4기준의 ③④.
+// vague·context 는 구 규칙 판정 시절 값 — 지난 검사 기록 복원과 사전(ai_killer_terms.kind)에 남는다.
+type Kind = 'cliche' | 'structure' | 'vague' | 'context' | 'neutral' | 'rhythm'
 type Term = { term: string; kind: Kind; why: string | null }
 type Hit = { n: number; kind: Kind; quote: string; start: number; end: number; why?: string; fix?: string }
 
 // =============================================================================
-// 규칙 엔진 (④단계) — 자리는 규칙이 찍고, 말은 AI 가 한다
+// 인용 검증 보조 — AI 가 발췌한 인용을 서버가 원문 위치로 바꿀 때 쓴다
 // =============================================================================
-// ⚠️ AI 에게 자리까지 고르게 두면 없는 걸 지어낸다(4겹 고삐 ②).
-//    아래에서 확정한 span 만 AI 에게 넘기고, AI 는 why/fix 칸만 채운다.
-//    예외는 '문맥' 한 종류뿐이고 그마저 **원문에 실제로 있는 문자열인지 서버가 검증**한다.
+// ⚠️ 구 '규칙 엔진'(사전 매칭·어미 반복·길이 균일·구체성 결여·밀도 등급)이 이 자리에
+//    있었다 — 2026-08-12 오너 지시로 폐지. 판정은 아래 KILLER_VOICE 가 한다. 되살리지 말 것.
 
 /** 겹치는 밑줄 방지 — 이미 잡힌 구간과 겹치면 버린다(밑줄이 포개지면 화면이 깨진다) */
 function overlaps(taken: Array<[number, number]>, s: number, e: number) {
   return taken.some(([a, b]) => s < b && e > a)
 }
 
-/**
- * 사전 기반 탐색 — 한국어는 단어 경계가 없어 indexOf 로 전부 훑는다.
- *
- * ⚠️ **밑줄과 개수를 분리한다**(2026-07-25 dry-run 에서 발견한 구조적 문제).
- *   - 밑줄(Hit): 같은 표현이 일곱 번 나와도 **처음 한 번만** 긋는다. 다 그으면 밑줄밭이 된다.
- *   - 개수(occurrences): **나온 만큼 전부 센다.** "~을 통해"가 일곱 번인 글은 한 번인 글보다
- *     실제로 더 AI스럽기 때문이다.
- *   둘을 묶어 두면 글이 길수록 밀도가 인위적으로 낮아져, 통짜 AI 자소서 1,500자가
- *   '조금 티남'으로 나온다(실측 확인). 밑줄은 화면 문제, 개수는 측정 문제 — 같이 두면 안 된다.
- */
-function findTerms(text: string, terms: Term[], taken: Array<[number, number]>) {
-  const out: Hit[] = []
-  let occurrences = 0
-  for (const t of terms) {
-    if (!t.term) continue
-    let from = 0
-    let first = true
-    for (;;) {
-      const i = text.indexOf(t.term, from)
-      if (i < 0) break
-      const j = i + t.term.length
-      from = j
-      if (overlaps(taken, i, j)) continue
-      // 모든 등장을 taken 에 넣는다 — 짧은 표현이 긴 표현 안쪽을 다시 세는 걸 막는다
-      taken.push([i, j])
-      occurrences++
-      if (first) {
-        out.push({ n: 0, kind: t.kind, quote: t.term, start: i, end: j, why: t.why ?? undefined })
-        first = false
-      }
-    }
-  }
-  return { hits: out, occurrences }
-}
-
-/** 문장 분리 — 마침표/물음표/느낌표 + 줄바꿈. 구조 판정의 기본 단위 */
-function splitSentences(text: string) {
-  const out: Array<{ text: string; start: number }> = []
-  let start = 0
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]
-    const isEnd = c === '.' || c === '!' || c === '?' || c === '\n'
-    if (!isEnd) continue
-    const seg = text.slice(start, i + 1)
-    if (seg.trim().length > 0) out.push({ text: seg.trim(), start })
-    start = i + 1
-  }
-  const tail = text.slice(start)
-  if (tail.trim().length > 0) out.push({ text: tail.trim(), start })
-  return out
-}
-
-/**
- * 어미 반복 — 모든 문장이 같은 소리로 끝나는가.
- * 사람 글과 AI 글의 가장 뚜렷한 차이 중 하나(확정본 '정형 구조').
- * 문장 끝 4글자(마침표 제외)를 키로 세고, 4문장 이상에서 절반 넘게 같으면 잡는다.
- */
-function findEndingRepeat(sents: Array<{ text: string; start: number }>, taken: Array<[number, number]>): Hit | null {
-  if (sents.length < 4) return null
-  const counts = new Map<string, number[]>()
-  sents.forEach((s, idx) => {
-    const body = s.text.replace(/[.!?\s]+$/, '')
-    if (body.length < 5) return
-    const key = body.slice(-4)
-    if (!counts.has(key)) counts.set(key, [])
-    counts.get(key)!.push(idx)
-  })
-  let best: { key: string; idxs: number[] } | null = null
-  for (const [key, idxs] of counts) if (!best || idxs.length > best.idxs.length) best = { key, idxs }
-  if (!best || best.idxs.length < 3 || best.idxs.length * 2 <= sents.length) return null
-
-  // 밑줄은 첫 번째 등장 문장의 어미에만 긋는다(전부 그으면 글이 밑줄밭이 된다)
-  const s = sents[best.idxs[0]]
-  const body = s.text.replace(/[.!?\s]+$/, '')
-  const off = s.start + s.text.indexOf(body) + body.length - best.key.length
-  const end = off + best.key.length
-  if (overlaps(taken, off, end)) return null
-  taken.push([off, end])
-  return {
-    n: 0, kind: 'structure', quote: best.key, start: off, end,
-    why: `어미 '${best.key}'가 ${best.idxs.length}번 반복돼요. 모든 문장이 같은 소리로 끝나면 듣는 내내 단조롭게 들려요.`,
-  }
-}
-
-/**
- * 문장 길이 균일성 — 길이가 지나치게 고르면 사람이 쓴 글이 아니다.
- * ⚠️ 밑줄 그을 자리가 없는 판정이라 문단이 아니라 **글 전체**에 붙는 지적으로 돌려준다
- *    (start/end = -1). 화면은 이걸 카드로만 그린다.
- */
-function findUniformLength(sents: Array<{ text: string; start: number }>): Hit | null {
-  if (sents.length < 5) return null
-  const lens = sents.map((s) => s.text.replace(/\s/g, '').length).filter((n) => n > 5)
-  if (lens.length < 5) return null
-  const mean = lens.reduce((a, b) => a + b, 0) / lens.length
-  if (mean < 12) return null
-  const sd = Math.sqrt(lens.reduce((a, b) => a + (b - mean) ** 2, 0) / lens.length)
-  if (sd / mean > 0.22) return null   // 편차가 충분하면 사람 글
-  return {
-    n: 0, kind: 'structure', quote: '문장 길이가 고름', start: -1, end: -1,
-    why: `${lens.length}문장의 길이가 거의 같아요(평균 ${Math.round(mean)}자). 사람은 이렇게 고르게 쓰지 않아요.`,
-  }
-}
-
-/**
- * 구체성 결여 — 숫자·시기·장소가 하나도 없는 문단.
- * ⚠️ 밑줄이 아니라 **문단 단위** 지적이다(확정본).
- * ⚠️ 여기가 오탐이 가장 잘 나는 자리다. 합격자 레퍼런스로 규칙을 깎기 전까지
- *    기준을 느슨하게(=덜 잡게) 둔다 — 멀쩡한 문단에 밑줄을 긋는 게 못 잡는 것보다 나쁘다.
- */
-const TIME_PLACE = /(작년|올해|지난|이번|매일|매주|하루|첫날|당시|학기|방학|여름|겨울|봄|가을|아침|저녁|주말|년|개월|주간|시간|분|초|명|번|회|개|잔|건|층|호|점|월|일)/
-function findVagueParagraphs(text: string): Hit[] {
-  const out: Hit[] = []
-  let cursor = 0
-  for (const raw of text.split(/\n{1,}/)) {
-    const start = text.indexOf(raw, cursor)
-    cursor = start + raw.length
-    const body = raw.trim()
-    if (body.replace(/\s/g, '').length < 60) continue   // 짧은 문단은 판정하지 않는다
-    if (/\d/.test(body)) continue                        // 숫자가 하나라도 있으면 통과
-    if (TIME_PLACE.test(body)) continue                  // 시기·수량 표현이 있으면 통과
-    out.push({
-      n: 0, kind: 'vague', quote: body.slice(0, 24), start, end: start + raw.length,
-      why: '숫자·시기·장소가 하나도 없어서 누구 이야기여도 말이 되는 문단이에요.',
-      fix: '언제, 어디서, 몇 명이었는지 딱 하나만 넣어도 장면이 살아나요.',
-    })
-  }
-  return out
-}
-
-/** 등급 — 확정본 결정 5. 100자당 밀도로 판정한다(200자의 3곳과 1000자의 3곳은 다르다) */
-function grade(hits: number, chars: number): 'human' | 'slight' | 'heavy' {
-  const d = (hits / Math.max(chars, 1)) * 100
-  if (d < 1.0) return 'human'
-  if (d <= 2.5) return 'slight'
-  return 'heavy'
-}
 
 // =============================================================================
-// Claude 호출 (⑤단계) — AI 는 '칸'만 채운다
+// Claude 호출 — 종합 판정 (2026-08-12 오너 지침)
 // =============================================================================
-// ⚠️ 4겹 고삐 ②를 프롬프트가 아니라 **API 스키마로 강제**한다.
-//    구조화 출력(output_config.format)이라 인사말·맺음말이 들어갈 자리가 물리적으로 없다.
-const SLOT_SCHEMA = {
+// ⚠️ 출력은 여전히 **API 스키마로 강제**한다(구조화 출력 — 인사말·맺음말이 들어갈 자리가
+//    물리적으로 없다. '일반 텍스트 응답 금지'는 그대로다). 바뀐 것은 판정의 주체다:
+//    규칙이 자리를 찍던 방식을 버리고, AI 가 오너 지침 4기준으로 글 전체를 종합 판정한다.
+const KILLER_SCHEMA = {
   type: 'object',
   properties: {
-    slots: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          n: { type: 'integer' },
-          why: { type: 'string' },
-          fix: { type: 'string' },
-        },
-        required: ['n', 'why', 'fix'],
-        additionalProperties: false,
-      },
-    },
-    context_extra: {
+    probability: { type: 'integer' },
+    findings: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           quote: { type: 'string' },
+          crit: { type: 'integer' },
           why: { type: 'string' },
           fix: { type: 'string' },
         },
-        required: ['quote', 'why', 'fix'],
+        required: ['quote', 'crit', 'why', 'fix'],
         additionalProperties: false,
       },
     },
   },
-  required: ['slots', 'context_extra'],
+  required: ['probability', 'findings'],
   additionalProperties: false,
 }
 
-// ⚠️ 말투 지침 — 4겹 고삐 ①.
-//    "자연스럽게 써"라고 지시하지 말 것. 그 지시 자체가 AI스러운 결과를 낳는다.
-//    지금은 연구진 첨삭 자료(오너 자료 2)가 없어 '흉내낼 원본' 대신 규칙으로 버틴다.
-//    ⑧단계에서 실제 첨삭 문장을 통째로 넣고 "이 사람처럼 써라"로 바꿀 것 — 이 상수가 그 자리다.
-const VOICE = `너는 승무원 면접을 10년 넘게 가르친 코치다. 학생 글에서 'AI 같은 표현'을 짚어 준다.
+// ⚠️ 오너 지침 원문(2026-08-12) — 판정 기준과 출력 4단계, 두 덩어리를 **그대로** 싣는다.
+//    다듬거나 요약해 넣지 말 것: "니가 만든 법칙이 아니라 내가 하고자 하는 것"이 지시였다.
+//    맨 아래 [칸 규칙] 만 우리가 붙인 운영 규칙이다(4단계를 JSON 칸에 싣는 법 + 인용 원문 일치).
+const KILLER_VOICE = `너는 지금부터 텍스트가 AI에 의해 작성되었는지 판별하는 최고 수준의 검열관, 'AI 킬러'야. 글의 논리력이나 문장력이 아닌, 아래에 제시된 AI 특유의 기계적이고 작위적인 언어 패턴을 바탕으로 텍스트를 철저하게 해부해야 해. 다음과 같은 특징들이 복합적으로 나타나는지 검사하고, AI 작성 확률을 분석해.
 
-[네가 채우는 칸]
-- why: 왜 별로인지. 반드시 **한 문장**. '~요'로 끝낸다.
-- fix: 어떻게 고칠지. 반드시 **한 문장**. 구체적인 행동으로.
+1. 기계적인 구조와 강박적인 요약
 
-[지켜야 할 것]
-- 인사말·맺음말·요약·번호매기기를 쓰지 마라. 칸만 채운다.
-- 한 문장은 60자를 넘기지 마라.
-- 학생을 나무라지 마라. 문제는 표현이지 사람이 아니다.
-- "다양한", "첫째/둘째", "~하시길 바랍니다", "~을 통해", "매우", "중요합니다" 같은 말을
-  **네 문장에도 쓰지 마라.** 학생 글을 재는 잣대로 네 말도 잰다.
-- 모범답안을 대신 써 주지 마라. 학생이 스스로 고칠 방향만 준다.
+* 서론, 본론, 결론의 구조가 눈에 보일 정도로 지나치게 뚜렷함
+* 글의 마지막에 '결론적으로', '요약하자면', '이처럼' 등의 단어를 쓰며 불필요하게 내용을 재탕함
+* 첫 문장에서 사용자가 제시한 질문이나 주제의 전제를 앵무새처럼 반복하며 시작함
 
-[문항이 주어졌을 때]
-- 문항은 **맥락일 뿐이다.** fix 를 그 문항에 맞게 쓰는 데만 써라.
-  (예: 지원동기 문항이면 "왜 하필 이 항공사인지 한 줄", 갈등 경험 문항이면 "그때 실제로 한 말")
-- **답변이 문항에 맞는지는 판정하지 마라.** 동문서답·분량·구성은 네 일이 아니다.
-  네 일은 AI 같은 표현을 짚는 것 하나뿐이다.
+2. AI 특유의 상투적 어휘 및 번역투 남용
 
-[글 종류가 주어졌을 때]
-- **면접 답변**이면 소리 내어 하는 '말'이다. '첫째/둘째' 나열과 '또한·더불어' 같은 문어체
-  접속부사는 외운 원고로 들리니 그 점을 짚어라. fix 는 **어떻게 말할지**로 준다.
-- **자소서**면 눈으로 읽는 '글'이다. 문단을 정리하는 나열까지 나무라지 마라 —
-  글에서는 어색하지 않다. fix 는 **어떤 사실을 문장에 넣을지**로 준다.
-- 종류 칸이 없으면 둘 다에서 어색한 것만 짚어라. "말할 때는", "글에서는" 같은
-  **한쪽을 전제한 표현을 쓰지 마라.**
+* 태피스트리, 여정, 등대, 촉매제, 얽혀있는, 원활한, 혁신적인 등 거창하고 비유적인 단어를 맥락 없이 사용함
+* '~에 대해 깊이 파헤쳐 보겠습니다', '~의 세계로 들어가 보겠습니다' 등 안내자 역할을 자처하는 작위적인 서술
+* 영어식 수동태 표현이나 번역기를 돌린 듯한 무미건조한 문장 구조
 
-[지망 항공사가 주어졌을 때]
-- 그 항공사에 맞춰 **fix 의 방향만** 잡아라. 항공사 이름을 굳이 문장에 넣지 마라.
-- **없는 사실을 지어내지 마라** — "이 항공사는 이런 인재를 원한다"는 식의 단정은 금지다.
+3. 과도한 중립성과 방어적 태도
 
-[⚠️ 참고자료를 다루는 법 — 가장 중요하다]
-- 아래 '지난 채용 합격 글에서 관찰한 것'은 **참고지 정답이 아니다.**
-  **자소서 문항은 채용마다 바뀐다.** 지난 채용 기준으로 이번 글을 재면 학생을 틀린 방향으로
-  끌고 간다.
-- **학생 글이 자료와 다르면 학생 글이 옳다.** "이 항공사는 이렇게 쓰지 않는다",
-  "이 문항은 이렇게 답해야 한다" 같은 단정을 하지 마라. 자료에 없는 형식이라는 이유로
-  지적하지 마라.
-- 자료는 **빠진 것을 묻는 데만** 쓴다. 예: "이 회사 이야기가 한 줄도 없어요."
-  형식을 강요하는 데 쓰지 마라.
-- 자료에 "문항에 대한 판단은 하지 마라"는 줄이 있으면 **그 지시가 우선한다.**
-- ⚠️ **합격자 문장을 흉내 내라고 하지 마라.** 그러면 지원자들의 글이 전부 같아진다 —
-  우리가 잡으려는 AI스러움을 우리가 만드는 꼴이다.`
+* 단정적인 표현을 극도로 피하고 '~할 수 있습니다', '~하는 것이 중요합니다', '~라는 점을 명심해야 합니다' 같은 훈계형, 방어적 어미를 자주 사용함
+* 상반된 두 가지 의견을 기계적으로 모두 제시하며 억지로 균형을 맞추려 함 (반면에, 그럼에도 불구하고 등)
+
+4. 인간적인 결함과 리듬감의 부재
+
+* 모든 문장의 길이가 지나치게 균일하여 글의 호흡이나 리듬감이 느껴지지 않음
+* 감정의 기복, 극히 개인적인 경험담, 의도적인 말줄임표, 미세한 논리적 비약 등 인간의 글에서 나타나는 자연스러운 틈이나 결함이 전혀 없음
+
+분석 대상 텍스트를 입력받으면, 위의 4가지 기준을 엄격하게 적용하여 AI 작성 확률을 퍼센트(%)로 제시해. 그리고 어떤 구체적인 문장이나 단어에서 기계적인 흔적을 느꼈는지 그 근거를 직접 인용하여 명확하게 짚어내.
+
+결과물은 반드시 아래의 4단계 구조로 출력한다. 기계적인 위로(예: 좋은 경험입니다만, 훌륭한 글입니다)나 상투적인 접속사는 절대 사용하지 않는다. 냉철한 실무 코치의 톤을 유지한다.
+
+1. AI 의심 지수 (퍼센트) 텍스트의 작위성, 기계적 구조, 감정의 부재 등을 종합하여 AI 작성 확률을 0~100% 사이로 제시한다.
+2. 적발된 기계적 패턴 (레드 플래그) 학생의 글에서 AI가 쓴 것 같은 문장, 억지스러운 전개, 또는 소리 내어 말하기 벅찬 문어체 표현을 최소 2~3가지 발췌하여 그대로 인용한다.
+3. 진단 및 분석 (Why) 발췌한 부분이 왜 어색하고 작위적인지 실무 코치의 시선에서 날카롭게 분석한다. 특히 본인의 진짜 경험이나 감정이 아닌, 기업의 최신 동향이나 스펙을 문맥 없이 욱여넣어 글의 흐름을 깨는 부분을 집중적으로 짚어준다.
+4. 인간미 부여 솔루션 (Fix) 적발된 문장을 어떻게 고쳐야 '진짜 사람의 말'처럼 들릴지 구체적인 수정 방향을 제시한다. 모범 답안을 떠먹여 주지 말고, 학생이 자신의 진짜 경험을 꺼내어 구어체로 표현할 수 있도록 유도하는 가이드를 준다.
+
+[칸 규칙 — 위 4단계를 아래 JSON 칸에 담는다]
+- probability: 1번 AI 의심 지수. 0~100 정수.
+- findings: 2~4번을 한 건씩 묶은 목록. 각 건은 quote(2번 인용) · crit(걸린 기준 번호 1~4) ·
+  why(3번 진단) · fix(4번 솔루션).
+- quote 는 학생 글에 **있는 그대로** 등장하는 문자열이어야 한다. 한 글자도 바꾸지 말고,
+  따옴표나 말줄임표를 덧붙이지 마라.
+- 지목할 곳이 정말 없는 사람의 글이면 findings 를 비우고 probability 만 낮게 내라 —
+  억지로 채우지 마라.
+- 인사말·맺음말·총평 문단은 쓰지 않는다. 칸만 채운다.
+- 문항·글 종류·지망 항공사가 주어지면 why·fix 문장을 그 맥락에 맞춘다(판정 기준은 위 4가지 그대로).`
 
 /**
  * 문항이 우리가 아는 그 문항인가 — 학생이 넣은 문항과 프로필의 문항을 견준다.
@@ -520,30 +377,35 @@ async function airlineBrief(
   }
 }
 
-async function fillSlots(
+type KFinding = { quote: string; crit: number; why: string; fix: string }
+
+/** 의심 지수 → 등급 — 화면·DB 호환용 구간. 구 규칙 판정의 3등급 이름을 그대로 쓴다. */
+function gradeOfProbability(p: number): 'human' | 'slight' | 'heavy' {
+  if (p <= 30) return 'human'
+  if (p <= 65) return 'slight'
+  return 'heavy'
+}
+
+/** 오너 4기준 번호 → 화면 색 갈래(kind). 구 kind(vague·context)는 지난 기록 복원에만 남는다. */
+const CRIT_KIND: Record<number, Kind> = { 1: 'structure', 2: 'cliche', 3: 'neutral', 4: 'rhythm' }
+
+async function judgeText(
   apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
-  airline: string, airBrief: string, hits: Hit[], regenNote: string,
+  airline: string, regenNote: string,
 ) {
-  // 항공사 — 'all'(만능)은 특정 항공사가 아니라 "어디에나 통해야 한다"는 제약이다.
+  // 맥락 3종 — 판정 기준은 오너 4기준 그대로고, why·fix 문장이 향할 방향에만 쓴다.
   const airLine = airline === 'all'
     ? '특정 항공사를 정하지 않았다(만능) — 어느 항공사에도 통할 답변이어야 한다'
-    : (AIRLINES[airline] ? `${AIRLINES[airline]} 지망${airBrief}` : '')
-  // 종류에 따라 '전형적인 문구'의 기준이 다르다 — 면접 답변에서 걸리는 건 외운 티다.
+    : (AIRLINES[airline] ? `${AIRLINES[airline]} 지망` : '')
   const kindLine = docKind === 'interview'
-    ? '면접 답변 — 소리 내어 말하는 말이다'
+    ? '면접 답변 — 소리 내어 말하는 말이다. 소리 내어 말하기 벅찬 문어체가 특히 레드 플래그다.'
     : docKind === 'essay' ? '자소서 문항 — 눈으로 읽는 글이다' : ''
-  // ⚠️ 미지정일 때 '자소서'라고 말하지 않는다 — 면접 답변이었으면 기준이 어긋난 채 지목한다.
-  const extraWord = docKind === 'interview' ? '외운 원고처럼 들리는 문구'
-    : docKind === 'essay' ? '전형적인 자소서 문구' : '전형적인 지원자 문구'
-  const listed = hits
-    .map((h) => `${h.n}. [${h.kind}] "${h.quote}"${h.why ? ` (규칙 메모: ${h.why})` : ''}`)
-    .join('\n')
 
   const body = {
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    output_config: { effort: EFFORT, format: { type: 'json_schema', schema: SLOT_SCHEMA } },
-    system: [{ type: 'text', text: VOICE + regenNote, cache_control: { type: 'ephemeral' } }],
+    output_config: { effort: EFFORT, format: { type: 'json_schema', schema: KILLER_SCHEMA } },
+    system: [{ type: 'text', text: KILLER_VOICE + regenNote, cache_control: { type: 'ephemeral' } }],
     messages: [{
       role: 'user',
       content:
@@ -552,10 +414,7 @@ async function fillSlots(
         (kindLine ? `[글 종류]\n${kindLine}\n\n` : '') +
         (airLine ? `[지망 항공사]\n${airLine}\n\n` : '') +
         (question ? `[학생이 받은 문항]\n${question}\n\n` : '') +
-        `[학생이 쓴 글]\n${text}\n\n` +
-        `[규칙이 이미 찍은 자리 — 이 번호들의 why/fix 칸을 채워라]\n${listed}\n\n` +
-        `[추가로 지목할 수 있는 것]\ncontext_extra 에 ${extraWord}를 최대 ${MAX_CONTEXT_EXTRA}곳까지 넣어라. ` +
-        `quote 는 위 글에 **있는 그대로** 등장하는 문자열이어야 한다(한 글자도 바꾸지 마라). 없으면 빈 배열.`,
+        `[분석 대상 텍스트 — 학생이 쓴 글]\n${text}`,
     }],
   }
 
@@ -577,11 +436,13 @@ async function fillSlots(
     .map((b: { text: string }) => b.text).join('').trim()
   if (!raw) throw new Error('ai_empty')
 
-  let parsed: { slots?: Array<{ n: number; why: string; fix: string }>; context_extra?: Array<{ quote: string; why: string; fix: string }> }
+  let parsed: { probability?: number; findings?: KFinding[] }
   try { parsed = JSON.parse(raw) } catch { throw new Error('ai_bad_json') }
   return {
-    slots: parsed.slots ?? [],
-    extra: (parsed.context_extra ?? []).slice(0, MAX_CONTEXT_EXTRA),
+    // 스키마는 정수만 보장한다 — 범위는 서버가 죈다(0~100 밖이면 화면 다이얼이 깨진다)
+    probability: Math.max(0, Math.min(100, Math.round(Number(parsed.probability) || 0))),
+    // 검증(원문 일치)에서 일부 탈락할 수 있어 여유를 두고 받는다 — 최종 상한은 호출부가 죈다
+    findings: (Array.isArray(parsed.findings) ? parsed.findings : []).slice(0, MAX_FINDINGS * 2),
     usage: data.usage ?? {},
   }
 }
@@ -625,7 +486,7 @@ const POLISH_SCHEMA = {
   additionalProperties: false,
 }
 
-// ⚠️ 첨삭의 선 — 킬러 VOICE 와 같은 4겹 고삐 철학이되, 처방 도구라 한 줄이 더 붙는다:
+// ⚠️ 첨삭의 선 — 4겹 고삐 철학(구조화 출력·자기 출력 재검사)이되, 처방 도구라 한 줄이 더 붙는다:
 //    **학생이 쓴 사실만 재료로 쓴다.** fix 가 없는 일화·숫자를 지어내면 학생이 그 거짓을
 //    면접장까지 들고 간다 — 이 도구가 낼 수 있는 최악의 사고다.
 const POLISH_VOICE = `너는 승무원 면접·자소서를 10년 넘게 첨삭한 코치다. 학생의 글을 첨삭한다.
@@ -1176,124 +1037,76 @@ Deno.serve(async (req) => {
     }
     charged = { tool: 'ai_killer', ref: payRef, member: user.id }
 
-    // ── 4. 규칙 검사 ──────────────────────────────────────────────────────
-    // 사전은 비공개 테이블이라 service role 로만 읽힌다(이게 규칙을 서버에 둔 이유).
+    // ── 4. 사전 로드 — **판정이 아니라 자기 출력 재검사용**(2026-08-12 판정 교체) ─────
+    // 우리 문장(why/fix)에 상투어가 섞이면 학생에게 금지한 말을 우리가 쓰는 꼴이라,
+    // 사전의 cliche 를 AI 출력에 돌려 걸리면 한 번 다시 쓰게 한다(첨삭·다듬기와 같은 장치).
     const { data: termRows } = await admin
-      .from('ai_killer_terms').select('term, kind, why').eq('active', true)
-    // ⚠️ 연구진 표현(coach)이 일반 상투어(general)보다 먼저 자리를 잡도록 긴 표현부터 훑는다
-    //    (짧은 표현이 먼저 잡으면 긴 표현이 겹침 판정에 걸려 사라진다).
-    const terms: Term[] = ((termRows ?? []) as Term[]).sort((a, b) => b.term.length - a.term.length)
+      .from('ai_killer_terms').select('term, kind').eq('active', true)
+    const clicheOnly = ((termRows ?? []) as Array<{ term: string; kind: string }>)
+      .filter((t) => t.kind === 'cliche' && t.term && t.term.length >= 3)
+      .map((t) => t.term)
 
-    const taken: Array<[number, number]> = []
-    const sents = splitSentences(text)
-    // ⚠️ 각 판정은 **한 번만** 부른다. findEndingRepeat 은 taken 을 변경하므로
-    //    두 번 부르면 두 번째 호출이 자기가 만든 겹침에 걸려 null 을 돌려준다.
-    const termFound = findTerms(text, terms, taken)
-    const ending = findEndingRepeat(sents, taken)
-    const uniform = findUniformLength(sents)
-    const vague = findVagueParagraphs(text)
-    const hits: Hit[] = [
-      ...termFound.hits,
-      ...(ending ? [ending] : []),
-      ...(uniform ? [uniform] : []),
-      ...vague,
-    ]
-    hits.sort((a, b) => (a.start < 0 ? 1 : b.start < 0 ? -1 : a.start - b.start))
+    // ── 5. 종합 판정(오너 지침 4기준 · 의심 지수 %) + 인용 검증 ──────────────
+    // ⚠️ 인용(quote)은 **원문에 실제로 있는 문자열일 때만** 밑줄이 된다 — AI 가 문장을
+    //    지어내면 밑줄이 엉뚱한 자리에 그어진다. 위치(start/end)는 서버가 계산한다.
+    const buildHits = (found: KFinding[]): Hit[] => {
+      const taken: Array<[number, number]> = []
+      const out: Hit[] = []
+      for (const f of found) {
+        const q = (f.quote || '').trim()
+        if (q.length < 4) continue
+        const i = text.indexOf(q)
+        if (i < 0) continue
+        const j = i + q.length
+        if (overlaps(taken, i, j)) continue
+        taken.push([i, j])
+        out.push({
+          n: 0, kind: CRIT_KIND[f.crit] ?? 'cliche', quote: q, start: i, end: j,
+          why: typeof f.why === 'string' ? f.why : '', fix: typeof f.fix === 'string' ? f.fix : '',
+        })
+      }
+      out.sort((a, b) => a.start - b.start)
+      return out
+    }
 
-    // ⚠️ 두 개의 수를 구분한다 — 섞으면 화면도 등급도 틀린다.
-    //    occurrences : 표현이 **나온 총 횟수**. 등급(밀도)의 분자이자 DB 에 남기는 값.
-    //                  char_count 와 함께 있으면 임계값이 바뀌어도 과거 등급을 다시 계산할 수 있다.
-    //    hits.length : **밑줄 자리 수**(같은 표현은 한 자리). 화면이 "고칠 곳 N"으로 보여줄 값.
-    const occurrences = termFound.occurrences + (ending ? 1 : 0) + (uniform ? 1 : 0) + vague.length
-    const truncated = Math.max(hits.length - MAX_HITS, 0)
-    if (truncated > 0) hits.length = MAX_HITS
+    let judged = await judgeText(apiKey, text, question, docKind, airline, '')
+    let hits = buildHits(judged.findings)
+
+    // ── 6. 다시 쓰게 하는 조건 둘(1회) ────────────────────────────────────
+    //   ① 지수는 높은데 인용이 전부 원문 밖 — 근거 없는 지수는 반쪽짜리 결과다
+    //   ② 우리 문장에 상투어 — 학생 글을 재는 잣대로 우리 말도 잰다(4겹 고삐 ③)
+    {
+      const mine = judged.findings.flatMap((f) => [f.why ?? '', f.fix ?? '']).join(' ')
+      const bad = clicheOnly.filter((t) => mine.includes(t))
+      const quotesLost = judged.findings.length > 0 && hits.length === 0 && judged.probability >= 40
+      if (bad.length > 0 || quotesLost) {
+        const notes: string[] = []
+        if (quotesLost) notes.push('방금 quote 가 전부 원문에 없는 문자열이었다. 학생 글에 있는 그대로의 문장만 발췌하라.')
+        if (bad.length > 0) {
+          notes.push(`방금 네 문장에 ${bad.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
+            '학생에게 쓰지 말라는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 써라.')
+        }
+        console.log('self-check hit, regenerating:', notes.join(' / '))
+        judged = await judgeText(apiKey, text, question, docKind, airline,
+          `\n\n[다시 쓰는 이유]\n${notes.join(' ')}`)
+        hits = buildHits(judged.findings)
+      }
+    }
+
+    const truncated = Math.max(hits.length - MAX_FINDINGS, 0)
+    if (truncated > 0) hits.length = MAX_FINDINGS
     hits.forEach((h, i) => { h.n = i + 1 })
-
-    // 걸린 게 하나도 없으면 AI 를 부르지 않는다 — 원가를 아끼고 결과도 정확하다
-    if (hits.length === 0) {
-      await saveCheck(admin, {
-        id: checkId, member_id: user.id, source, answer_id: targetAnswer, content: text,
-        question: question || null, doc_kind: docKind,
-        result: [], grade: 'human', hit_count: 0, char_count: len,
-      })
-      return json({
-        ok: true, id: checkId, grade: 'human', hits: [],
-        spot_count: 0, occurrences: 0, char_count: len, truncated: 0,
-        answerId: targetAnswer, autoSaved,
-        recheck_left: Math.max(MAX_RECHECK - (prevChecks % MAX_RECHECK) - 1, 0),
-        used: spent?.used, cost: spent?.cost, balance: spent?.balance, daily_left: spent?.daily_left,
-      })
-    }
-
-    // ── 5·6. Claude 호출 + 자기 출력 재검사 (4겹 고삐 ③) ──────────────────
-    // 우리가 만든 상투어 사전을 **AI 가 쓴 문장에도 똑같이 돌려** 걸리면 한 번 다시 쓰게 한다.
-    const clicheOnly = terms.filter((t) => t.kind === 'cliche').map((t) => t.term)
-    const selfCheck = (out: { slots: Array<{ why: string; fix: string }>; extra: Array<{ why: string; fix: string }> }) => {
-      const mine = [...out.slots, ...out.extra].flatMap((s) => [s.why ?? '', s.fix ?? '']).join(' ')
-      return clicheOnly.filter((t) => t.length >= 3 && mine.includes(t))
-    }
-
-    // 항공사 프로필 — 그 항공사만의 형식·고유 소재(비공개 표, service role 로만 읽힌다).
-    // ⚠️ 학생이 넣은 문항을 함께 넘겨 **이번 채용 문항이 우리 자료와 같은지** 서버가 판정한다.
-    //    다르면 문항별 조언은 빠지고 잘 안 바뀌는 것(회사 소재·형식)만 남는다.
-    const { brief: airBrief, qMatched } = await airlineBrief(admin, airline, question)
-    // 불일치가 쌓이면 그 항공사 문항이 바뀌었다는 신호다 — 오너가 프로필을 갱신할 근거.
-    if (qMatched === false) console.log('airline question mismatch:', airline, '|', question.slice(0, 60))
-
-    let filled = await fillSlots(apiKey, text, question, docKind, airline, airBrief, hits, '')
-    const bad = selfCheck(filled)
-    if (bad.length > 0) {
-      console.log('self-check hit, regenerating:', bad.join(', '))
-      filled = await fillSlots(apiKey, text, question, docKind, airline, airBrief, hits,
-        `\n\n[다시 쓰는 이유]\n방금 네 답변에 ${bad.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
-        `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
-    }
-
-    // 규칙이 찍은 자리에 AI 의 칸을 얹는다. AI 가 빠뜨린 칸은 규칙 메모로 메운다.
-    // ⚠️ 메우는 문구도 종류를 따른다 — 면접 답변에 "자소서에서 흔히 보이는"이라고 하면
-    //    학생이 "이건 말인데?" 하고 신뢰를 잃는다. 미지정이면 한쪽을 전제하지 않는 말로 둔다.
-    const fbWhy = docKind === 'interview'
-      ? '지원자들이 자주 쓰는 표현이라 면접관 귀에 남지 않아요.'
-      : docKind === 'essay' ? '자소서에서 흔히 보이는 표현이라 눈에 남지 않아요.'
-      : '너무 자주 쓰이는 표현이라 인상에 남지 않아요.'
-    const fbFix = docKind === 'interview'
-      ? '이 표현을 빼고 그때 겪은 장면을 그대로 말해 보세요.'
-      : '이 표현을 빼고 겪은 장면을 그대로 써 보세요.'
-    const byN = new Map(filled.slots.map((s) => [s.n, s]))
-    for (const h of hits) {
-      const s = byN.get(h.n)
-      if (s?.why) h.why = s.why
-      if (s?.fix) h.fix = s.fix
-      if (!h.fix) h.fix = fbFix
-      if (!h.why) h.why = fbWhy
-    }
-
-    // ⚠️ '문맥' 추가 지목은 **원문에 실제로 있는 문자열일 때만** 받는다.
-    //    AI 가 span 을 지어내면 화면의 밑줄이 엉뚱한 자리에 그어진다 — 위치는 서버가 계산한다.
-    let added = 0
-    for (const e of filled.extra) {
-      const q = (e.quote || '').trim()
-      if (q.length < 4) continue
-      const i = text.indexOf(q)
-      if (i < 0) continue
-      const j = i + q.length
-      if (overlaps(taken, i, j)) continue
-      taken.push([i, j])
-      hits.push({ n: 0, kind: 'context', quote: q, start: i, end: j, why: e.why, fix: e.fix })
-      added++
-    }
-    hits.sort((a, b) => (a.start < 0 ? 1 : b.start < 0 ? -1 : a.start - b.start))
-    hits.forEach((h, i) => { h.n = i + 1 })
+    const probability = judged.probability
 
     // ── 7. 저장 + 반환 ────────────────────────────────────────────────────
-    // 등급의 분자 = 규칙이 센 총 등장 + AI 가 추가 지목해 서버가 검증한 것
-    const total = occurrences + added
-    const g = grade(total, len)
-    const u = filled.usage as { input_tokens?: number; output_tokens?: number }
+    // ⚠️ result 는 { p, hits } 로 저장한다 — 새 컬럼 없이 의심 지수를 남기는 방법이라
+    //    마이그레이션이 필요 없다. 구 기록은 배열 그대로라, 화면 복원이 두 모양을 다 읽는다.
+    const g = gradeOfProbability(probability)
+    const u = judged.usage as { input_tokens?: number; output_tokens?: number }
     const saveErr = await saveCheck(admin, {
       id: checkId, member_id: user.id, source, answer_id: targetAnswer, content: text,
       question: question || null, doc_kind: docKind,
-      result: hits, grade: g, hit_count: total, char_count: len,
+      result: { p: probability, hits }, grade: g, hit_count: hits.length, char_count: len,
       input_tokens: u.input_tokens ?? 0, output_tokens: u.output_tokens ?? 0,
     })
     // 저장이 실패해도 검사는 이미 끝났다 — 결과는 돌려주고 환급은 하지 않는다
@@ -1317,10 +1130,9 @@ Deno.serve(async (req) => {
     }
 
     return json({
-      ok: true, id: checkId, grade: g, hits,
-      // 화면이 "고칠 곳 N"으로 쓸 값(= hits.length). occurrences 는 등급 근거라 따로 준다.
-      spot_count: hits.length, occurrences: total, char_count: len,
-      // 자리가 상한에 걸려 잘렸으면 알린다 — 조용히 자르지 않는다
+      ok: true, id: checkId, grade: g, probability, hits,
+      spot_count: hits.length, char_count: len,
+      // 상한(MAX_FINDINGS)에 걸려 잘렸으면 알린다 — 조용히 자르지 않는다
       truncated, answerId: targetAnswer, autoSaved,
       // 이 답변에 남은 무차감 재검사 횟수(화면이 "마지막 무차감 검사예요"를 말할 근거)
       recheck_left: Math.max(MAX_RECHECK - (prevChecks % MAX_RECHECK) - 1, 0),

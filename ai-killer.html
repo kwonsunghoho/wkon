@@ -241,12 +241,15 @@
     .mk.c { background: var(--k-cliche-bg); border-bottom: 2px solid var(--k-cliche); }
     .mk.s { background: var(--k-struct-bg); border-bottom: 3px double var(--k-struct); }
     .mk.x { border-bottom: 2px dotted var(--k-ctx); }
+    /* 2026-08-12 종합 판정의 '과도한 중립' 갈래(neutral→v) — 구 판정에선 v(구체성)가
+       문단 단위라 밑줄 스타일이 없었다. 새 판정은 문장 밑줄로 오므로 스타일이 필요하다. */
+    .mk.v { background: var(--k-vague-bg); border-bottom: 2px solid var(--k-vague); }
     .mk .n { display: inline-flex; align-items: center; justify-content: center;
              min-width: 18px; height: 18px; margin-left: 4px; border-radius: 5px;
              font-size: 12px; font-weight: 800; color: #fff; vertical-align: 1px;
              font-variant-numeric: tabular-nums; padding: 0 3px; }
     .mk.c .n { background: var(--k-cliche); } .mk.s .n { background: var(--k-struct); }
-    .mk.x .n { background: var(--k-ctx); }
+    .mk.x .n { background: var(--k-ctx); } .mk.v .n { background: var(--k-vague); }
     .mk.hit { outline: 3px solid var(--action); outline-offset: 2px; }
     /* 구체성 = 문단 단위(밑줄 아님) */
     .pv { border-left: 3px solid var(--k-vague); background: var(--k-vague-bg);
@@ -400,7 +403,7 @@
           <a class="seg-off" href="polish.html"><span class="t1">답변 첨삭</span><span class="t2">고친 문장 받기</span></a>
         </div>
         <h1 class="in-head">어디가 AI처럼<br>읽히는지 찾아드려요</h1>
-        <p class="in-sub">AI 같은 문장을 밑줄로 짚어요. 고치는 건 <a href="polish.html">답변 첨삭</a>이 해요.</p>
+        <p class="in-sub">AI 의심 지수(%)를 매기고 AI 같은 문장을 밑줄로 짚어요. 고치는 건 <a href="polish.html">답변 첨삭</a>이 해요.</p>
       </div>
 
       <div class="in-box">
@@ -561,8 +564,14 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     const MIN = 100, MAX = 1500;                       // ⚠️ 중계 함수와 같은 값
-    const KCLS = { cliche: '', structure: 's', vague: 'v', context: 'x' };
-    const KLABEL = { cliche: '상투어', structure: '정형 구조', vague: '구체성', context: '문맥' };
+    // 2026-08-12 종합 판정 — kind 는 오너 4기준의 갈래. vague·context 는 구 판정 시절 값이라
+    // 지난 검사 기록 복원에만 나온다(지우면 이력 '보기'가 깨진다).
+    // ⚠️ cliche 클래스는 'c' — ''(빈 값)로 되돌리면 .mk.c 가 안 붙어 상투어 밑줄이 안 보인다.
+    const KCLS = { cliche: 'c', structure: 's', neutral: 'v', rhythm: 'x', vague: 'v', context: 'x' };
+    const KLABEL = {
+      cliche: '상투어·번역투', structure: '기계적 구조', neutral: '과도한 중립', rhythm: '리듬·인간미',
+      vague: '구체성', context: '문맥',
+    };
     const GRADE = {
       human:  { t: '사람 같음',       arc: .18 },
       slight: { t: '조금 티남',       arc: .55 },
@@ -819,18 +828,28 @@
 
       const g = GRADE[r.grade] || GRADE.human;
       $('gradeText').textContent = g.t;
-      // ⚠️ 화면에는 **한 개의 수**만 보여준다 — 다이얼·부제·dock 이 전부 같은 수(고칠 곳)여야 한다.
-      //    등급의 분자인 occurrences(같은 표현이 몇 번 나왔나)는 서버·DB 의 측정값이라
-      //    화면에 같이 띄우면 "6곳인데 왜 7번?"이 된다. 밀도만 등급 근거로 덧붙인다.
-      const density = r.char_count ? (r.occurrences / r.char_count * 100).toFixed(1) : '0.0';
-      $('gradeSub').textContent = '고칠 곳 ' + r.spot_count + '곳 · '
-        + r.char_count.toLocaleString() + '자 기준 100자당 ' + density + '번';
-      $('dialNum').textContent = String(r.spot_count);
-      $('dialArc').setAttribute('stroke-dashoffset', String(Math.round(97.4 * (1 - g.arc))));
+      // 2026-08-12 종합 판정 — 다이얼은 AI 의심 지수(%)를 그린다. probability 가 없는 응답은
+      // 구 규칙 판정 시절 기록(이력 '보기' 복원)이라 예전 방식(고칠 곳 수 + 등급 눈금)으로 그린다.
+      const hasP = typeof r.probability === 'number';
+      if (hasP) {
+        const p = Math.max(0, Math.min(100, Math.round(r.probability)));
+        $('gradeSub').textContent = 'AI 의심 지수 ' + p + '% · 고칠 곳 ' + r.spot_count + '곳';
+        $('dialNum').textContent = p + '%';
+        // '87%'는 '87'보다 길다 — 원 안에 들어가게 활자를 살짝 줄인다(복원 화면은 11로 되돌린다)
+        $('dialNum').setAttribute('font-size', '9.5');
+        $('dialArc').setAttribute('stroke-dashoffset', String(Math.round(97.4 * (1 - p / 100))));
+      } else {
+        const density = r.char_count ? (r.occurrences / r.char_count * 100).toFixed(1) : '0.0';
+        $('gradeSub').textContent = '고칠 곳 ' + r.spot_count + '곳 · '
+          + r.char_count.toLocaleString() + '자 기준 100자당 ' + density + '번';
+        $('dialNum').textContent = String(r.spot_count);
+        $('dialNum').setAttribute('font-size', '11');
+        $('dialArc').setAttribute('stroke-dashoffset', String(Math.round(97.4 * (1 - g.arc))));
+      }
 
       const by = {};
       (r.hits || []).forEach((h) => { by[h.kind] = (by[h.kind] || 0) + 1; });
-      $('legend').innerHTML = ['cliche', 'structure', 'vague', 'context']
+      $('legend').innerHTML = ['cliche', 'structure', 'neutral', 'rhythm', 'vague', 'context']
         .filter((k) => by[k])
         .map((k) => '<span class="lg ' + (KCLS[k] || 'c') + '"><i></i>' + KLABEL[k] + ' ' + by[k] + '</span>')
         .join('');
@@ -846,8 +865,12 @@
         //    '글이 좋다'가 아니다 — 사람이 쓴 어설픈 글일수록 0곳이 나오는데, 그 학생이
         //    이 문구를 승인으로 읽고 나가면 정작 필요한 첨삭(내용 진단)을 놓친다.
         //    킬러는 표현을, 첨삭은 내용을 본다 — 문구가 그 경계를 말해야 한다.
-        $('resNotice').innerHTML = '<div class="notice info"><b>AI 같은 표현은 없어요 — 표현은 통과예요.</b><br>'
-          + '내용이 면접관에게 통할지는 별개예요. 강점과 고칠 방향은 아래 첨삭이 짚어 드려요.</div>';
+        // 종합 판정에서 지수만 높고 인용이 하나도 안 남는 드문 경우 — '통과'라고 말하면 거짓이 된다
+        $('resNotice').innerHTML = (hasP && r.probability > 50)
+          ? '<div class="notice info"><b>의심 지수는 높은데 문장 단위로는 못 짚었어요.</b><br>'
+            + '한 번 더 검사하면 근거 문장이 잡히는 경우가 많아요.</div>'
+          : '<div class="notice info"><b>AI 같은 표현은 없어요 — 표현은 통과예요.</b><br>'
+            + '내용이 면접관에게 통할지는 별개예요. 강점과 고칠 방향은 아래 첨삭이 짚어 드려요.</div>';
       } else {
         $('orig').innerHTML = origHtml(r._text, r.hits);
         $('cardList').innerHTML = r.hits.map(cardHtml).join('');
@@ -894,9 +917,9 @@
       const cls = KCLS[h.kind] || '';
       $('dockSheet').innerHTML =
         '<div class="cd-h"><span class="cd-n" style="background:var(--k-'
-          + ({ cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx' })[h.kind] + ')">'
+          + ({ cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx', neutral: 'vague', rhythm: 'ctx' })[h.kind] + ')">'
           + h.n + '</span><span class="cd-k" style="color:var(--k-'
-          + ({ cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx' })[h.kind] + ')">'
+          + ({ cliche: 'cliche', structure: 'struct', vague: 'vague', context: 'ctx', neutral: 'vague', rhythm: 'ctx' })[h.kind] + ')">'
           + KLABEL[h.kind] + '</span></div>'
         + '<div class="cd-q ' + cls + '"><em>' + esc(h.quote) + '</em></div>'
         + '<div class="cd-r">' + esc(h.why) + '</div>'
@@ -1180,9 +1203,13 @@
             if (data.doc_kind) setKind(data.doc_kind);
             $('qIn').value = data.question || '';
             _answerId = data.answer_id || null;
+            // result 는 두 모양이 있다 — 구 규칙 판정은 배열, 2026-08-12 종합 판정은 { p, hits }.
+            const rs = data.result || [];
+            const hits = Array.isArray(rs) ? rs : (rs.hits || []);
             showResult({
-              ok: true, id: data.id, grade: data.grade, hits: data.result || [],
-              spot_count: (data.result || []).length, occurrences: data.hit_count,
+              ok: true, id: data.id, grade: data.grade, hits,
+              probability: (!Array.isArray(rs) && typeof rs.p === 'number') ? rs.p : null,
+              spot_count: hits.length, occurrences: data.hit_count,
               char_count: data.char_count, truncated: 0, _text: data.content,
             });
             return true;
