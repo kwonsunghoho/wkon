@@ -44,7 +44,7 @@
 | `20260730130000_answer_polishes` | 첨삭 기록 + 리허설 단가 15 선반영 | **owner 실행 필요** 표기(단 `credit_free_limits.polish` 는 'DB 적용 완료'로 기록 — 어긋나 보이면 프로브 `polish_table` 로 확인) |
 | `20260730150000_answer_program` | 답변 프로그램 전체(롤백 포함) | 실행 완료(프로브 확인) |
 | `20260731120000_expression_reports` | 미니 다듬기(quickfix) 수집함 | **owner 실행 필요**(마이그레이션만 남았다 — **ai-killer 재배포는 2026-08-04 에 완료**). 미적용이면 위젯이 '준비 중'으로만 뜬다 |
-| `20260813120000_ai_killer_feedback` | AI킬러 판정 피드백(만족/보통/불만족) 표 + RLS | **owner 실행 필요(2026-08-13 작성 — SQL 은 대화창으로 전달됨).** 미적용이어도 정상: 결과 화면 피드백 줄이 스스로 숨고, admin 'AI킬러' 탭 계기판은 안내 문구만 띄운다. 함수 재배포는 필요 없다 |
+| `20260813120000_ai_killer_feedback` | AI킬러 판정 피드백(만족/보통/불만족) 표 + RLS | **적용됨(2026-08-13 오너 실행 — 익명 프로브 실측: select `[]`, insert 42501 로 RLS 잠금 확인).** 함수 재배포 불필요 |
 | `20260801120000_lab_resources` | 연구실 자료(비공개 버킷 `lab-files` + `lab_resources`·`lab_downloads` + 목록/집계/비밀번호 RPC) | **실행 완료(2026-08-01)** — anon RPC 프로브로 확인(`lab_shelf_counts`·`lab_resource_list` 정상 응답) |
 | `20260801130000_lab_resources_admin` | 위 보완 — `is_admin()` 에게만 자료 전권·열람기록 조회·`lab-files` 버킷·`lab_set_password` 개방 | **실행 완료(2026-08-01)** — anon 프로브로 확인(자료 등록 시도가 RLS 로 거부·`lab_set_password` 42501) |
 | `20260801140000_lab_video` | 영상관 유튜브 링크 — `external_url`·`duration_sec` 추가, `storage_path` nullable, 목록 RPC 재생성 | **실행 완료(2026-08-01)** — 영상 등록·조회 확인 |
