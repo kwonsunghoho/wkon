@@ -2,14 +2,14 @@
 
 > 2026-07-31 신설. 결정 기록: `docs/superpowers/specs/2026-07-31-quickfix-collector-design.md`
 > 관련 파일: `quickfix.js`(공용 위젯) · `supabase/functions/ai-killer/index.ts`(`mode:'quickfix'` 분기)
-> · `supabase/migrations/20260731120000_expression_reports.sql` · admin '감점 사전' 탭 '회원 제보'
+> · `supabase/migrations/20260731120000_expression_reports.sql` · admin 'AI킬러' 탭(구 감점 사전) '회원 제보'
 
 ## 무엇인가
 
 "AI 느낌이 나는 구간(300자), 붙여넣으면 다듬어드려요" — 회원 무료, 하루 3회.
 사용자에겐 미니 도구지만 실체는 **"사용자가 AI 같다고 느낀 표현"을 모으는 수집 창구**다
 (오너 지시: *"대놓고 모집하기보단 … 자연스럽게 녹여져야 해"*). 서버가 고침과 함께
-`spotted [{term, kind, why}]` 를 뽑아 `expression_reports` 에 쌓고, admin '감점 사전' 탭의
+`spotted [{term, kind, why}]` 를 뽑아 `expression_reports` 에 쌓고, admin 'AI킬러' 탭(구 감점 사전)의
 **'회원 제보'가 표현별 빈도 순위**로 집계한다 — 위로 올라올수록 학생들이 공통으로 싫어하는 표현이다.
 
 - 고객의 소리(VoC) 위젯은 같은 회의에서 **오너가 삭제 지시** — 되살리려면 별도 확정부터.
@@ -67,7 +67,7 @@ polish 와 같은 이유: 인증·감점 사전 로드·프롬프트 재료가 �
 - `expression_reports`: member_id·page·content·fixed·spotted(jsonb)·토큰. RLS 는
   **쓰기 service role 만·읽기 관리자만** — 회원 insert 를 열면 하루 한도를 화면 밖에서
   우회하고 가짜 spotted 로 사전 후보를 오염시킬 수 있다. 회원 정책을 만들지 말 것.
-- admin '감점 사전' 탭 하단 '회원 제보': 최근 500건을 브라우저에서 집계(표현별 제보 수·회원 수·
+- admin 'AI킬러' 탭 하단 '회원 제보': 최근 500건을 브라우저에서 집계(표현별 제보 수·회원 수·
   종류 최빈값) — **이 규모에 서버 집계를 만들지 말 것.** 원문 보기 토글로 content→fixed 확인.
 - **⚠️ [사전 등록]은 자동 insert 가 아니라 위 폼 채우기다** — 어미를 공통 어간으로 다듬을
   기회를 남긴다("최선을 다하겠습니다" 그대로 넣으면 변형이 안 잡힌다). 사전(coach)은 첨삭
