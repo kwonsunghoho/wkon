@@ -831,7 +831,9 @@
     <button class="tabbtn" data-tab="approgram"><svg aria-hidden="true" class="ic"><use href="#i-pen"/></svg>답변 프로그램</button>
     <div class="sn-glabel">콘텐츠</div>
     <button class="tabbtn" data-tab="reviews"><svg aria-hidden="true" class="ic"><use href="#i-star"/></svg>후기 관리</button>
-    <button class="tabbtn" data-tab="terms"><svg aria-hidden="true" class="ic"><use href="#i-book"/></svg>감점 사전</button>
+    <!-- 2026-08-13 '감점 사전' → 'AI킬러'로 개명(오너) — 판정 피드백 계기판이 탭의 본체가 됐다.
+         data-tab="terms" 는 그대로 둔다(보던 탭 복원 키·로더 연결이 이 값을 쓴다). -->
+    <button class="tabbtn" data-tab="terms"><svg aria-hidden="true" class="ic"><use href="#i-book"/></svg>AI킬러</button>
     <button class="tabbtn" data-tab="questions"><svg aria-hidden="true" class="ic"><use href="#i-q"/></svg>소재 문제</button>
     <button class="tabbtn" data-tab="labfiles"><svg aria-hidden="true" class="ic"><use href="#i-folder"/></svg>연구실 자료</button>
     <!-- 연구실 04 서가지만 표가 다르다(recruit_rounds — 파일이 아니라 날짜). 그래서 '연구실 자료'
@@ -1659,20 +1661,38 @@
     </div>
   </div>
 
-  <!-- ══ 감점 사전 (ai_killer_terms) — AI킬러 검출의 본체 (2026-07-30 신설) ══
-       ⚠️ 이 표가 이 도구의 유일한 자산이다(비공개 — 일반 회원은 못 읽는다).
-       서버가 매 요청마다 DB 에서 읽으므로 여기서 고치면 **재배포 없이 즉시** 반영된다.
-       '연구진 기준(coach)' 표현은 첨삭(polish) AI 의 감점 기준으로도 주입된다. -->
+  <!-- ══ AI킬러 탭 (구 감점 사전 · 2026-08-13 개명) ══
+       ① 판정 피드백(ai_killer_feedback) — 만족/보통/불만족 계기판. 탭의 본체.
+       ② 감점 사전(ai_killer_terms) — 2026-08-12 판정 교체로 킬러 판정에는 더 안 쓰인다.
+          지금 쓰임: 킬러·첨삭 자기 출력 재검사 + 첨삭(coach) 감점 기준 + 미니 다듬기.
+          비공개(일반 회원은 못 읽는다) · 여기서 고치면 재배포 없이 즉시 반영.
+       ③ 회원 제보(expression_reports) — 미니 다듬기 수집함 집계. -->
   <div class="tab-panel" id="panel-terms">
     <div class="rounds-wrap">
+      <!-- ── 판정 피드백(ai_killer_feedback) — 종합 판정 검증 계기판 (2026-08-13) ──
+           지적(밑줄)마다 누른 만족/보통/불만족. 판정·사전·첨삭 프롬프트에 자동 반영되지 않는다 —
+           지침(KILLER_VOICE)을 어디를 손볼지 사람이 보고 정하는 참고 데이터다(오너 합의). -->
+      <div id="kfbWrap" style="margin-bottom:32px;">
+        <h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">판정 피드백 — 새 판정, 만족스러운가</h3>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px;">
+          AI킬러 결과의 지적마다 누른 <b>만족/보통/불만족</b>이 쌓여요.
+          <b>'불만족'이 몰리는 갈래</b>가 판정 지침을 손볼 자리예요.
+          자동 반영은 없어요 — 만족도에는 '틀린 지적'과 '아픈 지적'이 섞여 있어서,
+          지침 수정은 이 표를 보고 사람이 정해요.</p>
+        <div id="kfbSummary" style="font-size:13px;line-height:1.7;margin-bottom:10px;"></div>
+        <div class="round-list" id="kfbList"><div class="loading">불러오는 중…</div></div>
+      </div>
+
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:6px;">감점 사전 — 이제 첨삭·미니 다듬기용</h3>
       <!-- ⚠️ 가장 중요한 한 줄은 summary 에 남긴다(항상 보임). 나머지는 접는다 —
            구 문단은 393px 에서 166px 였다(2026-08-02). -->
       <details class="adm-help">
         <summary>표현은 <b>글에 그대로 나오는 문자열</b>로 · 짧고 흔한 말은 넣지 마세요</summary>
         <div class="adm-help-body">
-          <p>AI킬러가 밑줄을 긋는 <b>감점 표현 사전</b>입니다 — 이 목록이 검출의 본체예요.
-            추가·수정하면 <b>재배포 없이 바로</b> 반영됩니다.
-            <b>연구진 기준</b>으로 넣은 표현은 첨삭 AI 도 감점 기준으로 참고해요.</p>
+          <p>2026-08-12 판정 교체로 <b>킬러 판정에는 더 안 쓰여요.</b> 지금 쓰임은 셋:
+            ① 킬러·첨삭 AI 가 자기 진단 문장에 상투어를 쓰면 다시 쓰게 하는 재검사
+            ② <b>연구진 기준</b> 표현은 첨삭 AI 의 감점 기준
+            ③ 미니 다듬기 검출. 추가·수정하면 <b>재배포 없이 바로</b> 반영됩니다.</p>
           <p>어미 변형까지 잡으려면 공통 어간만 넣습니다 — 예: "최선을 다하겠습니다" 대신
             <b>"최선을 다하"</b>.</p>
           <p>너무 짧거나 흔한 말(예: "저는")은 멀쩡한 글에도 밑줄이 그어지니 넣지 마세요 —
@@ -2636,7 +2656,7 @@
       lectures:  () => loadLectures(),
       reviews:   async () => { await loadReviewsAdmin(); await loadStoriesAdmin(); },
       questions: () => loadQuestions(),
-      terms:     () => loadTerms(),
+      terms:     async () => { await loadTerms(); loadKfb(); },   // 사전 + 판정 피드백 계기판
       labfiles:  () => loadLabFiles(),
       reccal:    () => loadRecCal(),
       approgram: () => loadApProgram(),
@@ -4523,10 +4543,65 @@
       renderQuestions();
     });
 
-    // ── 감점 사전(ai_killer_terms) CRUD — AI킬러 검출의 본체 (2026-07-30) ──
+    // ── 감점 사전(ai_killer_terms) CRUD (2026-07-30 신설 · 2026-08-12 용도 변경) ──
+    // ⚠️ 킬러 판정에는 더 안 쓰인다(판정은 오너 지침 종합 판정). 지금 쓰임:
+    //    자기 출력 재검사 + 첨삭(coach) 감점 기준 + 미니 다듬기 검출.
     // ⚠️ RLS 가 관리자에게만 열려 있다(일반 회원은 읽기도 불가 — 경쟁사 복제 방지).
-    //    서버(ai-killer)가 매 요청마다 이 표를 읽으므로 저장 즉시 검출에 반영된다.
-    //    'coach'(연구진 기준)는 첨삭 AI 의 감점 기준으로도 주입된다(FN 2026-07-30b+).
+    // ── 판정 피드백(ai_killer_feedback) 집계 — 종합 판정 검증 계기판 (2026-08-13) ──
+    // 자동 반영 없음(오너 합의) — '불만족'이 몰리는 갈래를 보고 지침(KILLER_VOICE)을 사람이 고친다.
+    // 표 미적용(마이그레이션 20260813120000 전)이면 안내 문구만 — 다른 기능은 정상.
+    const KFB_LABEL = { cliche: '상투어·번역투', structure: '기계적 구조', neutral: '과도한 중립', rhythm: '리듬·인간미' };
+    async function loadKfb() {
+      const list = document.getElementById('kfbList'), sum = document.getElementById('kfbSummary');
+      try {
+        const { data, error } = await MONC.sb.from('ai_killer_feedback')
+          .select('check_id, hit_n, verdict, quote, kind, created_at')
+          .order('created_at', { ascending: false }).limit(300);
+        if (error) throw error;
+        const rows = data || [];
+        if (!rows.length) {
+          sum.textContent = '';
+          list.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">아직 피드백이 없어요 — AI킬러 결과에서 지적을 펼치면 버튼이 보여요.</div>';
+          return;
+        }
+        const V = { good: '만족', neutral: '보통', bad: '불만족' };
+        const tot = { good: 0, neutral: 0, bad: 0 }; const byKind = {};
+        rows.forEach((r) => {
+          const v = V[r.verdict] ? r.verdict : 'neutral';
+          tot[v]++;
+          const k = r.kind || '기타';
+          byKind[k] = byKind[k] || { good: 0, neutral: 0, bad: 0 };
+          byKind[k][v]++;
+        });
+        sum.innerHTML = '최근 ' + rows.length + '건 — 만족 <b>' + tot.good + '</b> · 보통 <b>' + tot.neutral
+          + '</b> · 불만족 <b style="color:#B3261E;">' + tot.bad + '</b><br>'
+          + Object.keys(byKind).map((k) =>
+              (KFB_LABEL[k] || esc(k)) + ' <b>' + byKind[k].good + '</b>:<b>' + byKind[k].neutral
+              + '</b>:<b style="color:#B3261E;">' + byKind[k].bad + '</b>'
+            ).join(' · ') + ' <span style="color:var(--text-muted);">(만족:보통:불만족)</span>';
+        list.innerHTML = rows.slice(0, 60).map((r) => {
+          const d = new Date(r.created_at);
+          const when = (d.getMonth() + 1) + '/' + d.getDate();
+          const pill = r.verdict === 'good'
+            ? 'background:rgba(46,125,79,.12);color:#2E7D4F;'
+            : r.verdict === 'bad'
+              ? 'background:rgba(179,38,30,.1);color:#B3261E;'
+              : 'background:rgba(23,42,71,.08);color:var(--text-muted);';
+          return '<div class="round-item" style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">'
+            + '<span style="flex:0 0 auto;font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;'
+            + pill + '">' + (V[r.verdict] || '보통') + '</span>'
+            + '<span style="flex:1;min-width:180px;font-size:13px;line-height:1.6;">'
+            + '<em style="font-style:normal;">“' + esc(r.quote || '(인용 없음)') + '”</em>'
+            + '<span style="color:var(--text-muted);"> — ' + (KFB_LABEL[r.kind] || esc(r.kind || '기타')) + ' · ' + when + '</span></span>'
+            + '<a href="ai-killer.html?check=' + encodeURIComponent(r.check_id) + '" target="_blank" rel="noopener"'
+            + ' style="flex:0 0 auto;font-size:12px;color:var(--accent-ink);">검사 보기</a></div>';
+        }).join('');
+      } catch (_) {
+        sum.textContent = '';
+        list.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">표가 아직 없어요 — 마이그레이션(20260813120000)을 실행하면 여기 쌓여요.</div>';
+      }
+    }
+
     const TERM_KIND = { cliche: '상투어', structure: '정형 구조', context: '문맥' };
     let _terms = [], _editTermId = null;
 
