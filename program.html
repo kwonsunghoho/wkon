@@ -1285,13 +1285,22 @@
         if (bb) bb.addEventListener('click', function () { payWithPortOne(bb); });
         return;
       }
+      if (VIEW.staff && !VIEW.enrolled) {
+        // 운영진 확인용 통로 — 이용권 없이 전 일차가 열린다(뷰·세션 트리거 모두 관리자 면제,
+        // 2026-08-15 오너 지시). 학생 화면과 헷갈리지 않게 한 줄로 밝힌다.
+        $('demoBar').innerHTML = '<div class="notice"><b>운영진 확인용으로 열려 있어요.</b> ' +
+          '이용권 없이 모든 일차를 진행할 수 있어요 — 학생에게는 이용권이 있어야 열려요.</div>';
+      }
       renderDays();
       // 기본 일차: URL ?day → 없으면 '열려 있고 아직 완성 아님' 중 마지막, 없으면 최댓값
+      // (운영진 확인용은 전 일차가 열려 '마지막'이 30일차가 돼 버린다 — 1일차부터 본다)
       var want = Number(new URLSearchParams(location.search).get('day') || 0);
       if (!want) {
         var open = VIEW.days.filter(function (d) { return d.unlocked; });
         var todo = open.filter(function (d) { return !d.session || d.session.state !== 'finalized'; });
-        want = (todo.length ? todo[todo.length - 1] : open[open.length - 1] || { day_no: 1 }).day_no;
+        var pickFirst = VIEW.staff && !VIEW.enrolled;
+        want = (todo.length ? todo[pickFirst ? 0 : todo.length - 1]
+                            : open[pickFirst ? 0 : open.length - 1] || { day_no: 1 }).day_no;
       }
       openDay(want);
     })();

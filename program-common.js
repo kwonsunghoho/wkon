@@ -493,8 +493,10 @@
 
     async listPrograms() {
       var out = [];
+      // visible 필터는 RLS 몫 — 학생·비로그인 정책은 visible=true 만 돌려주고,
+      // 관리자는 비공개 상품도 받아 오픈 전에 이용권 없이 확인한다(카드에 '비공개' 표시).
       var progs = await MONC.sb.from('answer_programs').select('*')
-        .eq('visible', true).order('sort_order').order('created_at');
+        .order('sort_order').order('created_at');
       if (progs.error) { if (isMissingTable(progs.error)) return { notReady: true }; return out; }
       var mine = {};
       if (this.userId) {
