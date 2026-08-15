@@ -23,7 +23,7 @@
 타입 검사: `deno check supabase/functions/answer-program/index.ts` ✅ 통과.
 문법 검사: `node --check program-common.js nav.js` ✅.
 
-## 2. 브라우저 실측 (✅ 2026-07-30 · 데모 모드, 375×812 + 1280×800)
+## 2. 브라우저 실측 (✅ 2026-07-30 · 데모 모드, 375×812 + 1280×800 · **2026-08-15 재실측 통과** — 개명·bfcache·pay-pending 커밋 이후 회귀 없음: 허브→경험 선택(AI 추천 fit)→문답→초안 자동 저장→첨삭(두 버전·지표·누락 안내)→다듬기→말하기 분할→확정(답변노트 합류·use_count 집계) 전 단계, 가로 넘침 0. 확정 confirm 창은 히든 프리뷰가 자동 취소한다 — `window.confirm=()=>true` 로 통과시켜 잰다)
 
 패널 미표시 상태라 스크린샷 캡처는 불가(이 프리뷰의 알려진 제약) — 텍스트·지오메트리로 실측.
 
@@ -39,14 +39,16 @@
 
 1. [ ] 마이그레이션 실행 → 적용 확인 쿼리 전부 true
 2. [ ] seed-demo.sql 실행 → admin 탭에 예시 기출 10·'필수 기출 30일 루틴'(비공개) 보임
-3. [ ] answer-program probe + **verify-payment 재배포** 후 프로브(`{"paymentId":"probe","programId":"000…0"}` → `program_not_found`)
+3. [x] answer-program probe + **verify-payment 재배포** 후 프로브(`{"paymentId":"probe","programId":"000…0"}` → **`not_authenticated` 가 신버전 응답**이다 — JWT 확인이 프로그램 조회보다 앞이라 `program_not_found` 까지 안 간다. 구버전이면 `bad_request`) — ✅ 2026-08-15 실측: answer-program `2026-07-30b`(questions 99·programs 1) · verify-payment `not_authenticated`
 4. [ ] 일반 계정: admin '이용권 지급'으로 열기(또는 가격을 낮춰 실결제 1건 → 지급 확인 → **환불은 포트원 콘솔에서 취소** — admin [환불] 버튼은 신청서(applications) 전용이라 프로그램 구매엔 안 뜬다) → 오늘 1일차만 열림, 2일차 잠김. 구매 화면에 가격·결제 버튼 표시 확인
-5. [ ] 실제 초안 → AI 첨삭(Opus) → 문장 근거·unsupported·지표 확인 → 하루 4번째 첨삭에 daily_cap
+5. [ ] 실제 초안 → AI 첨삭(Opus) → 문장 근거·unsupported·지표 확인 → 하루 4번째 첨삭에 daily_cap — **관리자 계정이면 이용권 지급 없이 바로 가능**(2026-08-15 관리자 확인용 통로, admin-guide '자주 물을 것')
 6. [ ] 확정 → mypage 답변노트에 보임 → 그 답변으로 KILL AI 실행됨(기존 상품 연결)
 7. [ ] 검수 요청 → 연구원 계정(admin 탭 지정) review-desk 처리 → 학생 화면 반영
-8. [ ] 비연구원 계정으로 review-desk 접근 차단 / interview_questions 직접 select 0행(RLS)
+8. [ ] 비연구원 계정으로 review-desk 접근 차단 — 서버 쪽 절반은 ✅ 2026-08-15 anon 실측: interview_questions select `[]`(0행) · program_enrollments 자가 INSERT 42501 거부 · `ap_program_view` 는 이용권 없으면(비로그인 포함) 문항 내용을 응답에 안 싣는다(공개 전환 뒤에도 기출 안 샘)
 9. [ ] AI 품질 스팟체크: 초안에 없는 수치 요구("30% 올랐다고 써줘"를 문답에 지시로 입력) → 답변에 반영되지 않거나 unsupported 표시
 10. [ ] 기존 회귀: sojae·AI킬러·첨삭·답변노트 정상(이 브랜치는 해당 코드 미변경 — briefing 카드·nav 항목만 추가)
+
+추가(2026-08-15 코드 실측): 7/30 이후 결제 공통화가 프로그램 결제도 덮었다 — `program.html` requestPayment 에 `customData {k:'program', uid, pid}` 탑재 · portone-webhook `kind==='program'` 분기(중복 차단·DB 금액 재확인·멱등) · pay-pending 미결 기록 포함. 라이브 실측: 비공개 상태 `programs.html` 은 "아직 공개된 프로그램이 없어요" 로 정상 degrade.
 
 ## 알려진 한계
 
