@@ -69,6 +69,8 @@
 | `20260806170000_challenge_rounds_fcfs` | **챌린지 선착순 모드** — `challenge_rounds.start_mode`('scheduled'/'fcfs' · 기본 scheduled) + 체크 제약 + `recruit_end` nullable | **owner 실행 필요(2026-08-06 작성)** — 미적용이면 화면은 전부 기존 그대로 돈다(조회는 `select('*')` 라 400 없음, `fcfs=false` 로 떨어짐). admin 저장은 '개강일 지정'이면 `start_mode` 없이 재시도해 계속 되고, **선착순만** '마이그레이션 먼저' 안내로 멈춘다. 다른 표를 안 건드리므로 실행 순서 무관. 상세는 `docs/notes/apply-and-payment.md` '선착순 기수' 절 |
 | `20260806120000_credit_free_limit_fallback` | **총량 무료 폴백 정리** — `credit_free_limit()` 의 폴백을 `ai_killer→2` 에서 `polish→1, 그 외 0` 으로 | **⚠️ 실행 보류(2026-08-06 오너 결정: "일단 둘게, 비용관련된건 나중에 한번에 대대적으로 잡자") — 임의로 실행하지 말 것.** 지금 상태: 회원마다 AI킬러 **첫 2회가 총량 무료**로 나가고 그 위에 하루 무료 5가 또 붙는다(검사 3크레딧 × 2 = 회원당 6크레딧). 20260725180000 이 설정에서 `ai_killer` 를 뺐지만 함수 안 폴백이 대신 2를 돌려주기 때문이다(프로덕션 실측: `credit_free_limits` = `{"polish": 1}`). `spend_credit` 은 `v_free_lim > 0` 만 보고 분기를 열어 `p_free_ref: null` 로도 안 막힌다. **기능은 정상이고 돈만 더 나간다** — 그래서 급하지 않다. 원인·조치 상세는 `docs/notes/credits.md` '총량 무료 폴백' 절 |
 
+| `20260816120000_community_config` | **커뮤니티 오픈챗 설정** — `community_config`(key·value jsonb) + RLS(**select 는 authenticated 만** — anon 정책 없음, 쓰기는 admin) | **owner 실행 필요(2026-08-16 작성)** — 미적용이면 카드(서가·뉴스·도구 허브 하단)가 회원 클릭에 '아직 준비 중' 안내로 멈춘다(`PGRST205`). ⚠️ **주소·참여코드 값은 마이그레이션에 없다**(공개 레포 반입 금지) — 값 upsert SQL 은 대화창으로 별도 전달, 이 파일 실행 뒤에 돌린다. anon select 를 열지 말 것(회원 전용이 이 표의 존재 이유) |
+
 ## ⏸ 비용 일괄 점검 — 나중에 한 번에(오너 결정 2026-08-06)
 
 오너 지시: *"일단 둘게, 비용관련된건 나중에 한번에 대대적으로 잡자"*.
