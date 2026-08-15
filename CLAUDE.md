@@ -50,7 +50,7 @@ MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 �
 
 1. **Google Apps Script**(레거시 신청·후기 시트) — 이 레포가 아니라 구글 콘솔에서 수정·재배포한다. 신청은 항상 새 행 append.
 2. **Supabase**(`supabase-config.js`, `MONC.sb`) — 회원·신청·후기·site_config·계측·도구 테이블 전부. 테이블·RLS·컬럼은 오너가 콘솔에서 만든다.
-3. **모집일정 = Supabase `challenge_rounds` 단일 소스**(admin '챌린지' 탭에서 CRUD). 구 구글시트 CSV 폴백은 완전 제거 — 재도입 금지.
+3. **모집일정 = Supabase `challenge_rounds` 단일 소스**(admin '챌린지' 탭에서 CRUD — CSV 폴백 금지는 아래 '절대 되살리면 안 되는 것').
 4. **뉴스 수집기**(GitHub Actions 3시간 주기, `scripts/fetch-news.mjs`) — 유일하게 브라우저 밖에서 도는 코드.
 
 The repo is sometimes edited from a git **worktree** under `.claude/worktrees/...` on a `claude/*` branch; the canonical checkout is the repo root on `main`.
@@ -86,7 +86,6 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - **동의 3대 함정**(되돌리면 법적 리스크): ① 로컬 동의 캐시는 **계정별 키** `monc_consent_v1:<uid>` ② **거부 = 즉시 파기**(`MONC.deleteMyAccount()` — 로그아웃만 하면 미동의자 개인정보 잔존) ③ **회원 페이지 전부 `MONC.requireConsent()` 가드**(한 곳 빠지면 주소창 우회).
 - 신청·명단 폼의 필수 동의 체크(`apply.html #appConsent` · `lecture.html` · `waitlist.js #wlAgree`)는 미체크 시 제출 차단 — **삭제·완화 금지.** 법적 고지 활자도 12px 하한.
 - **개인정보·학원 자산 반입 금지**: 합격 자소서 원문, 정규반 교재의 기출·가이던스, 소재 노하우(`sojae_playbook`)는 레포·공개 테이블 어디에도 넣지 않는다(비공개 테이블 + SQL 대화창 전달). **합격자 문장을 AI 프롬프트 예시로 주지 않는다.** 자료는 파일명이 아니라 본문 출처로 확인.
-- **보증금·환급 워딩을 공개 페이지에 재도입하지 말 것**(2026-07-20 폐지 — PG 심사 거절 사유).
 - **전화번호로 남을 조회할 창구를 만들지 않는다** — 비회원 중복 신청 사전 조회, 오픈 알림 명단 본인 조회를 일부러 안 연 이유(번호만으로 신청·관심 여부가 캐진다).
 - **bfcache**: 뒤로/앞으로 가면 크롬은 **떠날 때 그리던 화면을 그대로 되살린다**(파일도 데이터도 새로 받지 않는다). 2026-08-03 오너 지적("옛 디자인이 깜빡인다")으로 **입력값 없는 화면 전부에 `pageshow` + `e.persisted` → `location.reload()`** 를 달았다(20개 — `scroll-keep.js` 를 단 페이지와 같은 집합, 2026-08-06 실측). **새 페이지를 만들면 같이 단다.** 예외 셋만 기억하면 된다: ① **홈 `index.html`·챌린지 허브 `challenges.html`** — 되돌아온 화면이 리셋되는 게 낡은 화면보다 거슬린다며 오너가 뺐다(홈은 히어로 애니메이션이, 챌린지 허브는 하단 블라인드 퀴즈가 처음부터 다시 시작한다) ② **입력값 있는 화면**(sojae·experiences·review-desk·onboarding) — 쓰던 글이 날아간다 ③ **결제로 나갔다 오는 화면**(apply·lecture·program·ai-killer·polish·lab-shelf) — 통째 reload 대신 **버튼만 복원**(복귀 흐름을 건드린다). 남는 한 가지: GitHub Pages 가 HTML 에 강제하는 `max-age=600` 은 레포에서 못 없앤다 — **배포 직후 확인은 강력 새로고침**으로 한다.
 - **위 reload 를 다는 화면에는 `scroll-keep.js` 를 반드시 같이 단다**(2026-08-03 오너 신고 "영상관 갔다 나오니까 맨 위로 뚝 끊기면서 올라간다"). reload 는 브라우저가 되살려 주던 **스크롤 위치까지 같이 버린다.** 게다가 목록을 Supabase 에서 받아 그리는 화면은 다시 받는 순간 페이지가 짧아, 브라우저가 되돌아갈 자리를 못 찾고 맨 위에 멈춘다(후기 목록 실측 4000px → 0px). `scroll-keep.js` 는 떠날 때 위치를 sessionStorage 에 적어 두고, 페이지가 충분히 길어지는 순간 그 자리로 옮긴다. **되돌리는 건 `reload`·`back_forward` 방문뿐** — 새로 눌러 들어온 `navigate` 는 맨 위에서 시작하는 게 맞다(이 판정을 빼면 메뉴로 들어와도 중간부터 보인다). 사용자가 먼저 움직이면 그만두고, 옮길 땐 `scroll-behavior:smooth` 를 잠깐 꺼서 순간이동한다. **`admin.html` 은 `data-manual`** — 뒤로 오면 탭이 '오늘'로 돌아가므로 **탭을 먼저 되살린 뒤에** 스크롤을 옮겨야 한다(순서가 바뀌면 '오늘' 화면이 연구실 자료에서 적어 둔 자리로 내려간다). 저장 키 `monc_admin_tab_v1` + `restoreDesk()`(revealAdmin 뒤 호출 — 화면을 켜기 전에는 높이가 없다), 대기는 6초(탭 데이터를 그때 받는다). 기록은 sessionStorage 고정(**localStorage 금지** — 공용 기기에서 다음 사람이 남의 마지막 위치를 물려받는다).
@@ -187,10 +186,8 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 - **파일**: `programs.html`(허브) · `program.html`(작성 흐름) · `experiences.html`(경험 창고) · `review-desk.html`(연구원 검수 — `reviews.html` 후기와 다른 파일) · admin '답변 프로그램' 탭 · `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음) · migration `20260730150000_answer_program.sql`.
 - **근거 없는 문장 차단이 이 상품의 핵심**: 서버 `apValidateSentences` 가 근거 id 실존·자료에 없는 숫자를 검사해 unsupported 를 붙인다(화면 빨간 표시·'이 버전으로 다듬기' 제외). 이 검증을 우회하는 코드 금지.
-- **유료 기출 비공개**: `questions`(회원 전체 읽기) 반입 금지 — 비공개 `interview_questions` + `ap_program_view()` RPC 만. 교재 원문·기출 SQL 은 공개 리포 커밋 금지.
-- **이용권은 서버가 지급**: verify-payment `programId` 분기(JWT 지급·`answer_programs.price` 재확인·중복 구매 전액 환불) 또는 admin '이용권 지급' 둘뿐. 자가 INSERT·체험판·무료 등록 없음.
+- **유료 기출 비공개·이용권 서버 지급**: 위 '결제·유료 기능' 절의 규칙이 그대로 적용된다(`interview_questions` 비공개·verify-payment `programId` 분기·자가 INSERT 없음). 교재 원문·기출 SQL 은 공개 리포 커밋 금지(위 '개인정보·학원 자산 반입 금지').
 - **확정본은 `answers` 자유 글로 합류**(title=문항·doc_kind=interview) — 킬러·첨삭·답변노트가 무수정으로 붙는 연결을 끊지 말 것.
-- **전용 검증 명령**: `node scripts/answer-program-tests.mjs` · `deno check supabase/functions/answer-program/index.ts` · 375px 브라우저 실측.
 - **상세 문서**: 데이터 모델·화면 흐름·AI 파이프라인·테스트·구현 현황은 `docs/monc-answer-program/`(구현 상태는 `implementation-status.md`). 오너 원본 요구사항은 `docs/monc-answer-program-spec.md`.
 
 ## 절대 되살리면 안 되는 것(요지)
@@ -200,7 +197,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 전체 폭 섹션 밴드(`background: var(--bg2)` 를 화면 폭 섹션·푸터에 깔기) — 순백과 만나는 가로선이 생긴다. `--bg2` 는 **흰 카드 안 옅은 판 전용** (design-principles.md)
 - 웜 페이퍼 배경(`--bg #F4F1EA`·`--bg2 #FBF9F5`·`--surface2 #F4F0E8`·nav 바 `rgba(255,250,243,·)`·레터프레스 `#FCF9F1→#F3EEE1`)과 웜그레이 잉크(`#26221C`·`#5F574B`) — 2026-08-05 순백+쿨 그레이로 전면 교체 (design-principles.md)
 - `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 패턴 (apply-and-payment.md)
-- 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
+- 보증금·환급 워딩(공개 페이지) — 2026-07-20 폐지, PG 심사 거절 사유 (apply-and-payment.md)
 - 모집일정 구글시트 CSV 폴백(`RECRUIT_CSV`) (apply-and-payment.md)
 - `members.sojae_enabled` 권한 스위치 방식 — 소재는 크레딧으로 통제 (credits.md)
 - 환급 RPC(`refund_credit`)를 `authenticated` 에 다시 grant — 학생이 결과를 받은 뒤 스스로 환급해 유료 기능이 공짜가 된다 (credits.md)

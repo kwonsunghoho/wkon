@@ -110,7 +110,7 @@
   마이그레이션 `20260806090000_member_course_levels` 는 **2026-08-06 실행 완료**(제약 실측 확인 — 위 표).
   ⚠️ **남은 것**: 코스 문구·스텝 구성 확정(현재 가안 — 초급 서브만 오너 원문).
 - `claude/rehearsal-wip` — 모의면접(리허설) 자산 전체. **`rehearsal.html` 은 main 에 없다** — 리허설을 켤 때 이 브랜치부터 병합할 것(안 하면 404). ⚠️ 승준노트의 숨김 카드는 코스형 브랜치에서 마크업째 삭제됐다 — 그 브랜치가 배포되면 서클·코스 스텝에 새로 넣는다.
-- `airline-interview-program-mvp` — 매일 답변 프로그램. **main 미병합**(테스트 후 병합 예정 — 상세는 `docs/monc-answer-program/implementation-status.md`).
+- ~~`airline-interview-program-mvp`~~ — 매일 답변 프로그램. **2026-07-30 main 병합·반영 완료, 브랜치 삭제됨**(상세는 `docs/monc-answer-program/implementation-status.md`).
 
 ## 대기 중인 자산·데이터
 

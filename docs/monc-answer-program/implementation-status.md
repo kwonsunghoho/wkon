@@ -1,15 +1,15 @@
-# 매일 답변 프로그램 — 구현 상태 (2026-07-30 · 브랜치 airline-interview-program-mvp)
+# 매일 답변 프로그램 — 구현 상태 (2026-07-30 작성 · 구 브랜치 airline-interview-program-mvp — main 병합 완료)
 
 기준: 오너 원본 스펙 `docs/monc-answer-program-spec.md` (참고용 원문 보존본).
-⚠️ **main 미푸시** — 테스트 후 병합 예정. 라이브 배포 전 3가지는 전부 해소(2026-07-30 프로브·코드 확인): ① 마이그레이션 실행 ✅(프로브 sessions_table:true) ② answer-program 함수 배포 ✅(version 2026-07-30b) ③ privacy.html 고지 갱신 ✅(이 브랜치 — 병합 시 반영). 프로브 기준 questions 99개(시드 10 + 오너 등록분) · programs 1개.
+**main 병합 완료**(2026-07-30 반영·브랜치 삭제됨 — 정정 2026-08-15). 라이브 배포 전 3가지는 전부 해소(2026-07-30 프로브·코드 확인): ① 마이그레이션 실행 ✅(프로브 sessions_table:true) ② answer-program 함수 배포 ✅(version 2026-07-30b) ③ privacy.html 고지 갱신 ✅(이 브랜치 — 병합 시 반영). 프로브 기준 questions 99개(시드 10 + 오너 등록분) · programs 1개.
 
 ## 완료 조건(스펙 28항) 대조
 
 | # | 조건 | 상태 |
 |---|---|---|
 | 1~2 | 분석·명세·아키텍처 문서 | ✅ docs/monc-answer-program/ 8종 + 원본 스펙 보존 |
-| 3 | 마이그레이션 | ✅ `20260730150000_answer_program.sql`(롤백 포함) — **owner 실행 대기** |
-| 4~5 | 프로그램 생성·이용권 연결 | ✅ admin 탭 ②③ + **포트원 결제 구매**(verify-payment `programId` 분기 — owner 재배포 필요). 체험판·무료 자가 등록 없음(2026-07-30 오너) |
+| 3 | 마이그레이션 | ✅ `20260730150000_answer_program.sql`(롤백 포함) — **실행 완료**(프로브 sessions_table:true — 현행 시점 상태는 `docs/notes/implementation-status.md`) |
+| 4~5 | 프로그램 생성·이용권 연결 | ✅ admin 탭 ②③ + **포트원 결제 구매**(verify-payment `programId` 분기 — 2026-07-30 배포 완료). 체험판·무료 자가 등록 없음(2026-07-30 오너) |
 | 6~10 | 오늘 문제·경험 카드·선택·추가 질문·초안 저장 | ✅ 데모 E2E 실측 통과 |
 | 11~13 | 확인된 사실만 첨삭·문장-근거 연결·근거 없는 문장 표시 | ✅ 서버 검증(no_evidence/new_number) + 화면 빨간 표시·시트, 버전 선택 시 제외 |
 | 14~15 | 두 버전·품질 지표 | ✅ 말투 유지형/전달력 강화형 + 7항목(경험 근거는 서버 측정) |
@@ -33,7 +33,7 @@
 |---|---|
 | airlines/interview_stages 별도 테이블 | 사이트 전역이 코드 상수(LEC.AIRLINES)라 컬럼으로 통일 — 테이블 이원화가 오히려 충돌 |
 | 음성 답변 입력 | 보류(구조는 experience_facts.source='voice' 자리) — 업로드·전사 인프라가 사이트에 없음 |
-| 결제(유료 프로그램) | ✅ 구현으로 전환(2026-07-30 오너 "체험판 없이 바로 유료") — verify-payment `programId` 분기(JWT 지급·DB 금액 재확인·중복/지급실패 전액 환불) + program.html 구매 패널. **owner 재배포 필요** |
+| 결제(유료 프로그램) | ✅ 구현으로 전환(2026-07-30 오너 "체험판 없이 바로 유료") — verify-payment `programId` 분기(JWT 지급·DB 금액 재확인·중복/지급실패 전액 환불) + program.html 구매 패널. **2026-07-30 배포 완료** |
 | 이력서 대조 일관성 검사 | 이력서 데이터 자체가 없음 — 경험 중복(use_count)·사실 충돌(conflicts)만 구현 |
 | 분석 대시보드 | 원자료는 전부 쌓임(세션 상태·버전·page_events ap_*) — 집계 화면은 admin ⑥ 진행률 최소판 |
 | 연구원 화면 3패널 | 2패널(자료/편집)로 — 720~1080px 현실 폭에서 3열은 각 열이 9대 원칙 활자 하한을 깨뜨림. 근거·경고는 자료 패널에 인라인 |
@@ -62,6 +62,7 @@
 ## CLAUDE.md 이관 메모 (2026-07-30 시점)
 
 > 아래는 CLAUDE.md 다이어트(2026-07-30) 때 원문 그대로 옮긴 운영 기록이다. 위 본문과 겹치면 아래(더 최근 기록)가 우선.
+> ⚠️ 2026-08-15 정정: 아래 원문의 'main 미병합'·'owner 실행 필요'는 옛 상태다 — 2026-07-30 main 반영, 마이그레이션·verify-payment `programId` 분기 모두 적용·배포 완료. 원문은 기록이라 그대로 둔다(현행 시점 상태는 `docs/notes/implementation-status.md`).
 
 ### 매일 답변 프로그램 (2026-07-30 신설 · 브랜치 airline-interview-program-mvp — main 미병합)
 **"매일 한 문제씩, 내 경험으로 완성하는 항공사 면접답변 프로그램."** 오너 원본 요구사항은 `docs/monc-answer-program-spec.md`(참고용 원문), 구현 원장은 `docs/monc-answer-program/`(analysis·spec·architecture·data-model·ai-pipeline·privacy·admin-guide·test-plan·implementation-status). 페이지: `programs.html`(허브)·`program.html`(작성 흐름)·`experiences.html`(경험 창고)·`review-desk.html`(연구원 검수 — ⚠️ `reviews.html` 후기와 다른 파일) + admin '답변 프로그램' 탭 + 승준노트 카드 '매일 기출'. 서버: `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음), migration `20260730150000_answer_program.sql`(**owner 실행 필요** — 미적용 시 전부 '준비 중' degrade).
