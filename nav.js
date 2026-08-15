@@ -184,20 +184,33 @@
     /* 네이버 블로그 (2026-08-09 오너 지시) — N 마크도 currentColor(브랜드 초록 금지 규칙 동일) */
     ['https://blog.naver.com/mtccm', '네이버 블로그',
       '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.273 12.845 7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845Z"/></svg>'],
+    /* 오픈채팅 커뮤니티 (2026-08-16 오너 "모바일 햄버거에 좀 추가하면 어떨까") — 오픈챗
+       직링크가 아니라 **도구 허브의 회원 게이트 카드(tools.html#community)로 가는 문**이다.
+       방 주소는 레포에 못 싣는다(회원 전용 — community-card.js·pages.md). 내부 링크라
+       target=_blank 를 붙이지 않는다(socialHtml 이 http 여부로 가른다).
+       넷째 원소 'row2' = 모바일 햄버거에서 여기부터 둘째 줄(카카오 짝) — 아래 socialHtml 참조. */
+    ['tools.html#community', '오픈채팅 커뮤니티',
+      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+      'row2'],
     /* 카카오톡 문의 (2026-08-09 오너 "문의를 좀 바로 할 수 있게") — 앞 셋은 채널이고 이것만
        문의 창구라 라벨을 '문의'로 구분한다. ⚠️ 주소에 **`/chat` 을 붙일 것** — 채널 홈이
        비공개라 홈 주소는 '페이지를 찾을 수 없습니다'가 뜬다(pages.md).
        ⚠️ 아이콘은 여기서도 currentColor 다 — 노랑은 결제 화면 버튼(.kakao-ask) 몫이고,
-          이 줄은 넷이 같은 회색으로 서야 목록으로 읽힌다(브랜드색 금지 규칙 그대로). */
+          이 줄은 다섯이 같은 회색으로 서야 목록으로 읽힌다(브랜드색 금지 규칙 그대로). */
     ['https://pf.kakao.com/_iajxnX/chat', '카카오톡 문의',
       '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.2c0 2.5 1.7 4.7 4.2 6l-1 3.6c-.1.3.3.6.6.4l4.3-2.8c.4 0 .7.1 1.1.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z"/></svg>']
   ];
   /* ⚠️ `rel` 에 noopener 는 필수 — target=_blank 로 연 창이 opener 로 이 페이지를 조작할 수 있다.
      ⚠️ 이름은 <span> 으로 감싼다 — 데스크톱 푸터에서 글자만 숨기고 싶어질 때를 위해서가
         아니라, 아이콘(svg)과 글자의 세로 정렬을 flex 로 잡기 위해서다. */
-  function socialHtml() {
+  /* splitRows=true(모바일 햄버거)면 'row2' 표시 항목 앞에 줄바꿈 조각(.sbreak)을 넣어
+     "채널 셋 / 카카오 둘" 두 줄로 갈라 세운다(2026-08-16 오너 "카톡문의만 동떨어져 보인다").
+     푸터(데스크톱)는 한 줄 그대로. 내부 링크(http 아님)에는 target=_blank 를 안 붙인다. */
+  function socialHtml(splitRows) {
     return SOCIAL.map(function (s) {
-      return '<a href="' + s[0] + '" target="_blank" rel="noopener">' + s[2] +
+      var ext = /^https?:/i.test(s[0]);
+      return (splitRows && s[3] === 'row2' ? '<i class="sbreak" aria-hidden="true"></i>' : '') +
+        '<a href="' + s[0] + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + s[2] +
         '<span>' + esc(s[1]) + '</span></a>';
     }).join('');
   }
@@ -353,7 +366,7 @@
       '</div>' +
       /* 소셜 — 모바일은 여기가 담당(데스크톱 몫은 아래 mountFooterSocial 의 푸터).
          ⚠️ CTA 버튼 **아래**에 둔다. 위에 두면 신청하기까지 가는 길에 외부 링크가 끼어든다. */
-      '<div class="mm-social">' + socialHtml() + '</div>' +
+      '<div class="mm-social">' + socialHtml(true) + '</div>' +
     '</div>';
 
   function mount() {
