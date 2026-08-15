@@ -37,7 +37,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // ⚠️ 코드를 고치면 여기도 올린다 — 배포 상태를 밖에서 아는 유일한 길(ai-killer 관례).
-const FN_VERSION = '2026-08-16a'   // 소재 창고 개명 — 응답 문구·근거 라벨의 '경험 카드' 교체
+const FN_VERSION = '2026-08-16b'   // 16a: 소재 창고 개명 문구 / 16b: card_from_chat(소재 발굴 대화→소재 카드)
 const FN_FEATURES = [
   'recommend',        // 질문에 맞는 경험 카드 추천
   'followup',         // 부족한 사실을 묻는 추가 질문
@@ -48,6 +48,7 @@ const FN_FEATURES = [
   'tone_profile',     // 말투 프로필 반영
   'airline_profiles', // 항공사 합격 패턴 참조(레퍼런스≠정답 규칙 포함)
   'fit_gate',         // 동문서답이면 다듬지 않고 되돌린다(2026-07-30b — 오너 신고)
+  'card_from_chat',   // 소재 발굴 대화에서 소재 카드 추출(2026-08-16 오너 — 무과금·하루 상한)
 ]
 const PROMPT_VERSION = 'ap-2026-08-16a'   // answer_versions.meta 에 기록 — 학습 데이터 추적용(16a: 자료 라벨 '경험 카드'→'소재 카드' 명칭만)
 
@@ -66,6 +67,7 @@ const MAX_REVISE_PER_DAY = 3     // 세션당 하루 첨삭 횟수
 const MAX_SPEAK_PER_DAY = 3      // 세션당 하루 말하기 정리 횟수
 const MAX_FOLLOWUP_PAIRS = 8     // 세션당 추가 질문 문답 수(넘으면 enough 강제)
 const MAX_RECOMMEND_PER_DAY = 10 // 회원당 하루 추천 호출
+const MAX_CARD_FROM_CHAT_PER_DAY = 10 // 회원당 하루 '대화→소재 카드' 추출(무과금이라 이 상한이 원가 잠금)
 const MIN_DRAFT_CHARS = 60       // 이보다 짧으면 첨삭이 아니라 대필이 된다 — 거절
 const MAX_DRAFT_CHARS = 2000
 const MAX_SOURCE_CHARS = 6000    // 자료(카드·사실·문답) 총량 상한 — 프롬프트 원가 잠금
@@ -467,6 +469,80 @@ Deno.serve(async (req) => {
       const candidates = (p.candidates ?? []).filter((c) => own.has(c.card_id)).slice(0, 3)
       console.log('recommend', { session: session.id, cards: cards.length, out: candidates.length, usage })
       return json({ ok: true, candidates, new_card_hint: p.new_card_hint ?? '' })
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // action: card_from_chat — 소재 발굴 대화에서 소재 카드 추출(2026-08-16 오너
+    //   "소재 발굴 대화를 소재 창고로 연동"). 학생(user) 발화의 사실만 칸에 담아
+    //   origin='sojae' 카드로 저장하고 id 를 돌려준다 — 화면은 곧장 수정 폼을 연다.
+    //   무과금(저장은 무료 원칙 — credits.md) — 대신 하루 상한이 원가를 잠근다.
+    //   ⚠️ 카드는 초안(status=draft)일 뿐, 답변에 쓰일 때는 기존 근거 검증이 다시 돈다.
+    // ═════════════════════════════════════════════════════════════════════
+    if (action === 'card_from_chat') {
+      const today = apKstToday()
+      const dayStartIso = new Date(Date.parse(today + 'T00:00:00+09:00')).toISOString()
+      const { count, error: capErr } = await admin.from('experience_cards')
+        .select('id', { count: 'exact', head: true })
+        .eq('member_id', user.id).eq('origin', 'sojae').gte('created_at', dayStartIso)
+      if (capErr) return json({ error: '소재 창고 준비가 안 됐어요.', code: 'not_ready' }, 200)
+      if ((count ?? 0) >= MAX_CARD_FROM_CHAT_PER_DAY) {
+        return json({ error: '대화 옮기기는 하루 ' + MAX_CARD_FROM_CHAT_PER_DAY + '번까지예요. 내일 다시 열려요.', code: 'daily_cap' }, 200)
+      }
+
+      const msgs = Array.isArray(reqBody.messages)
+        ? (reqBody.messages as Array<{ role?: string; content?: string }>) : []
+      const userSaid = msgs.filter((m) => String(m.role) === 'user')
+        .map((m) => String(m.content || '').trim()).filter(Boolean)
+      if (userSaid.join('').length < 40) {
+        return json({ error: '옮길 이야기가 아직 부족해요 — 대화를 조금 더 나눠 주세요.', code: 'too_short' }, 200)
+      }
+      const transcriptBlock = msgs
+        .map((m) => (String(m.role) === 'user' ? '학생: ' : '코치: ') + String(m.content || '').trim())
+        .filter((l) => l.length > 4).join('\n').slice(0, 12000)
+      const qText = String(reqBody.questionText || '').slice(0, 300)
+
+      const FIELD_KEYS = ['title', 'exp_type', 'period_text', 'duration_text', 'place_type', 'role', 'people',
+        'situation', 'problem', 'action', 'action_reason', 'alternatives', 'hardest',
+        'result', 'others_reaction', 'feeling', 'change_after', 'strengths']
+      const SCHEMA = {
+        type: 'object',
+        properties: Object.fromEntries(FIELD_KEYS.map((k) => [k, { type: 'string' }])),
+        required: FIELD_KEYS,
+        additionalProperties: false,
+      }
+
+      const { parsed, usage } = await callClaude(apiKey, {
+        model: MODEL_SPEAK, max_tokens: SPEAK_MAX_TOKENS,
+        output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+        system: [{ type: 'text', text: BASE_RULES + `
+
+[할 일]
+소재 발굴 대화에서 학생의 경험을 소재 카드 칸에 나눠 담는다.
+- 사실의 출처는 '학생:' 발화뿐이다. '코치:' 발화의 제안·예시·요약을 사실처럼 옮기지 마라.
+- 학생이 말하지 않은 칸은 빈 문자열 "" 로 둔다. 채우려고 지어내는 것이 최악이다.
+- 각 칸은 학생이 쓴 표현을 살려 1~3문장. 새 숫자·새 결과를 만들지 마라.
+- title: 무슨 일이었는지 한 줄(학생의 소재가 드러나게, 40자 안).
+- exp_type: 아르바이트/동아리·학회/봉사/학업·프로젝트/직장/여행·생활/기타 중 하나, 모르면 "".`, cache_control: { type: 'ephemeral' } }],
+        messages: [{
+          role: 'user',
+          content: (qText ? '[대화가 다룬 문제]\n' + qText + '\n\n' : '')
+            + '[자료 — 소재 발굴 대화 원문]\n' + transcriptBlock
+            + '\n\n위 대화의 학생 발화에서만 사실을 추려 칸에 담아라.',
+        }],
+      })
+
+      const p = parsed as Record<string, string>
+      const row: Record<string, unknown> = { member_id: user.id, origin: 'sojae', status: 'draft' }
+      FIELD_KEYS.forEach((k) => { const v = String(p[k] || '').trim(); if (v) row[k] = v })
+      if (!row.title) row.title = userSaid[0].slice(0, 40)   // 제목은 비울 수 없다(not null)
+      const { data: ins, error: insErr } = await admin.from('experience_cards')
+        .insert(row).select('id').single()
+      if (insErr || !ins) {
+        console.error('card_from_chat insert', insErr)
+        return json({ error: '카드를 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.', code: 'save_failed' }, 200)
+      }
+      console.log('card_from_chat', { member: user.id, card: ins.id, msgs: msgs.length, usage })
+      return json({ ok: true, card_id: ins.id })
     }
 
     // ═════════════════════════════════════════════════════════════════════

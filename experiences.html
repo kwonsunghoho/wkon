@@ -310,7 +310,21 @@
           if (c) openEdit(c);
         });
       });
+
+      // ?edit=<id> — 소재 발굴 '소재 창고에 담기'가 만든 카드를 바로 연다(첫 로드 한 번만).
+      // 추출은 AI 요약이라 학생 확인이 절차의 일부다 — 훑어보고 고치라는 안내를 붙인다.
+      if (!_editParamDone) {
+        _editParamDone = true;
+        var eid = new URLSearchParams(location.search).get('edit');
+        var ec = eid && cards.filter(function (x) { return x.id === eid; })[0];
+        if (ec) {
+          openEdit(ec);
+          $('editNote').innerHTML = '<div class="notice"><b>소재 발굴 대화에서 추려 온 카드예요.</b> ' +
+            '이미 저장돼 있어요 — 칸을 훑어보고 사실과 다르면 고쳐 주세요. 지어낸 것보다 빈칸이 나아요.</div>';
+        }
+      }
     }
+    var _editParamDone = false;
 
     function openEdit(c) {
       editingId = c ? c.id : null;

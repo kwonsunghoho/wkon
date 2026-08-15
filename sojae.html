@@ -349,6 +349,9 @@
         <!-- 재료 게이지 — 서버가 매 턴 실측한 재료 체크리스트. 서버 응답이 없으면 안 뜬다 -->
         <button class="chip mm" id="matMeter" type="button" hidden></button>
         <button class="chip chip-go" id="refineCta" type="button" style="display:none;">다듬기</button>
+        <!-- 대화 → 소재 창고(일문일답 재료) 옮기기 — 2026-08-16 오너 "대화를 창고로 연동".
+             무과금 · 서버가 학생 발화의 사실만 추려 카드로 저장 · 구버전 함수면 안내로 degrade -->
+        <button class="chip" id="toWhCta" type="button" style="display:none;">소재 창고에 담기</button>
       </div>
       <div class="mm-detail" id="mmDetail" hidden></div>
       <!-- 충전 안내 전용 — '되묻기 대화는 무료예요' 상시 문구는 2026-08-05 오너 지시로 삭제 -->
@@ -558,6 +561,7 @@
                 : '다듬기 · 충전 필요'));
       document.getElementById('refineWrap').style.display = '';
       cta.style.display = 'inline-flex';
+      document.getElementById('toWhCta').style.display = 'inline-flex';   // 다듬기와 같은 시점(2번째 답변부터)
       // 크레딧이 모자랄 때만 충전 길을 아래에 남긴다(그 외엔 값이 칩에 다 들어가 있다)
       if (_wallet !== null && freeLeft <= 0 && bal < cost) {
         // AI킬러 준비중(2026-08-11) 동안 충전은 마이페이지 지갑으로 — 다시 열면 ai-killer.html 로 되돌린다
@@ -923,6 +927,43 @@
       _restoring = false;
       return true;
     }
+
+    // ── 대화 → 소재 창고 옮기기(2026-08-16 오너 "대화를 창고로 연동") ──────
+    //    서버(answer-program card_from_chat)가 학생 발화의 사실만 추려 카드로 저장하고,
+    //    소재 창고의 수정 폼을 바로 연다(학생이 훑어보고 고치는 게 확인 절차).
+    //    무과금이라 프로브 게이트는 안 둔다 — 구버전 함수면 bad_action 안내로 끝난다.
+    document.getElementById('toWhCta').addEventListener('click', async () => {
+      const btn = document.getElementById('toWhCta');
+      if (btn.disabled) return;
+      let session = null;
+      try { session = await MONC.getSession(); } catch (_) {}
+      if (!session) {
+        location.href = 'login.html?returnTo=' + encodeURIComponent('sojae.html' + location.search);
+        return;
+      }
+      moncTrack('sojae_to_warehouse', { turns: userMsgCount });
+      btn.disabled = true; const oldLabel = btn.textContent; btn.textContent = '옮기는 중…';
+      let out = null;
+      try {
+        const r = await MONC.sb.functions.invoke('answer-program', {
+          body: {
+            action: 'card_from_chat',
+            questionText: (currentQuestion && currentQuestion.content) || '',
+            messages: transcript.map(t => ({ role: t.role === 'user' ? 'user' : 'ai', content: t.content })),
+          },
+        });
+        out = r.error ? null : r.data;
+      } catch (_) {}
+      btn.disabled = false; btn.textContent = oldLabel;
+      if (!out) { sysBubble('서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.'); return; }
+      if (out.error || !out.ok) {
+        sysBubble(out.code === 'bad_action'
+          ? '이 기능은 준비 중이에요 — 곧 열려요.'
+          : esc(out.error || '옮기지 못했어요. 잠시 뒤 다시 시도해 주세요.'));
+        return;
+      }
+      location.href = 'experiences.html?edit=' + encodeURIComponent(out.card_id);
+    });
 
     // ── 다듬기 진입 → 최종 작성 모드 ──
     document.getElementById('refineCta').addEventListener('click', () => {

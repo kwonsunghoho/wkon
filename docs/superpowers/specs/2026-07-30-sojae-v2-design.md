@@ -96,6 +96,10 @@
 - 원가 통제 불변: `effort: medium`, `max_tokens 8192`, 재료 상한 `MAX_MATERIALS_CHARS 4000` 유지.
 - 응답에 기존 `message` 필드(뼈대 텍스트 병합본)를 유지해 **구버전 화면도 안 깨진다.**
 
+## 소재 창고 연동 (2026-08-16 추가)
+
+- 대화 꼬리(다듬기 칩 옆)에 **[소재 창고에 담기]** — 2번째 답변부터, 무과금. answer-program `card_from_chat` 이 학생 발화만으로 `experience_cards`(origin='sojae') 카드를 만들고 `experiences.html?edit=<id>` 수정 폼을 연다. 구버전 함수면 '준비 중' 시스템 말풍선으로 degrade. 상세: `docs/monc-answer-program/implementation-status.md`.
+
 ## 소재 서랍
 
 - 새 테이블 **`sojae_materials`**: `id, member_id, question_id(유래 문제, null 허용),
