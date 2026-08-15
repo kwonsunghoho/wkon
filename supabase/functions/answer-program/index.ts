@@ -37,7 +37,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // ⚠️ 코드를 고치면 여기도 올린다 — 배포 상태를 밖에서 아는 유일한 길(ai-killer 관례).
-const FN_VERSION = '2026-07-30b'
+const FN_VERSION = '2026-08-16a'   // 소재 창고 개명 — 응답 문구·근거 라벨의 '경험 카드' 교체
 const FN_FEATURES = [
   'recommend',        // 질문에 맞는 경험 카드 추천
   'followup',         // 부족한 사실을 묻는 추가 질문
@@ -49,7 +49,7 @@ const FN_FEATURES = [
   'airline_profiles', // 항공사 합격 패턴 참조(레퍼런스≠정답 규칙 포함)
   'fit_gate',         // 동문서답이면 다듬지 않고 되돌린다(2026-07-30b — 오너 신고)
 ]
-const PROMPT_VERSION = 'ap-2026-07-30a'   // answer_versions.meta 에 기록 — 학습 데이터 추적용
+const PROMPT_VERSION = 'ap-2026-08-16a'   // answer_versions.meta 에 기록 — 학습 데이터 추적용(16a: 자료 라벨 '경험 카드'→'소재 카드' 명칭만)
 
 // 모델 — 첨삭 본체는 상품의 질이 곧 가치라 Opus(첨삭 polish 와 동일 기준).
 // 추천·추가질문은 판단이 가볍고 횟수가 많아 Haiku(소재발굴 되묻기와 동일 기준).
@@ -235,7 +235,7 @@ function buildSources(
   cards.forEach((c, ci) => {
     for (const [f, label] of CARD_FIELDS) {
       const v = String(c[f] || '').trim()
-      if (v) out.push({ id: 'c' + (ci + 1) + ':' + f, text: v, label: `경험 카드 "${c.title}" — ${label}` })
+      if (v) out.push({ id: 'c' + (ci + 1) + ':' + f, text: v, label: `소재 카드 "${c.title}" — ${label}` })
     }
   })
   facts.forEach((f, i) => {
@@ -404,14 +404,14 @@ Deno.serve(async (req) => {
       const { data: allCards, error: cardErr } = await admin.from('experience_cards')
         .select('*').eq('member_id', user.id).neq('status', 'archived')
         .order('updated_at', { ascending: false }).limit(20)
-      if (cardErr) return json({ error: '경험 창고 준비가 안 됐어요.', code: 'not_ready' }, 200)
+      if (cardErr) return json({ error: '소재 창고 준비가 안 됐어요.', code: 'not_ready' }, 200)
       const cards = (allCards ?? []) as Array<Record<string, unknown>>
       if (!cards.length) {
         return json({
           ok: true, candidates: [],
-          new_card_hint: '아직 경험 카드가 없어요. 이 질문에는 '
+          new_card_hint: '아직 소재 카드가 없어요. 이 질문에는 '
             + ((question.good_exp_types as string[] | null)?.join(', ') || '실제 겪은 일')
-            + ' 경험이 어울려요 — 경험 창고에서 첫 카드를 만들어 보세요.',
+            + ' 경험이 어울려요 — 소재 창고에서 첫 소재 카드를 만들어 보세요.',
         })
       }
 

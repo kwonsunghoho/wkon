@@ -176,7 +176,7 @@
     .qa-a::before { content: '내 답 · '; font-weight: 800; color: var(--accent-ink); }
     .qa-input { width: 100%; min-height: 74px; margin-top: 10px; padding: 10px;
                 border: 1px solid var(--border); border-radius: var(--radius-xs);
-                font: inherit; font-size: 15px; line-height: 1.6; resize: vertical; background: var(--surface); }
+                font: inherit; font-size: 16px; line-height: 1.6; resize: vertical; background: var(--surface); }
     .qa-btns { display: flex; gap: 8px; margin-top: 8px; }
     .qa-btns button { flex: 1; min-height: 44px; border-radius: 999px; font-size: 14px;
                       font-weight: 800; border: 1px solid var(--border); background: var(--surface); }
@@ -185,7 +185,7 @@
     /* 3단계 — 초안 */
     .draft-ta { width: 100%; min-height: 220px; margin-top: 12px; padding: 12px;
                 border: 1px solid var(--border); border-radius: var(--radius-sm);
-                font: inherit; font-size: 15px; line-height: 1.8; resize: vertical; background: var(--surface); }
+                font: inherit; font-size: 16px; line-height: 1.8; resize: vertical; background: var(--surface); }
     .draft-foot { display: flex; justify-content: space-between; align-items: center;
                   margin-top: 8px; font-size: 13px; color: var(--text-dim);
                   font-variant-numeric: tabular-nums; }
@@ -237,7 +237,7 @@
     /* 편집 */
     .edit-ta { width: 100%; min-height: 200px; margin-top: 12px; padding: 12px;
                border: 1px solid var(--border); border-radius: var(--radius-sm);
-               font: inherit; font-size: 15px; line-height: 1.8; resize: vertical; background: var(--surface); }
+               font: inherit; font-size: 16px; line-height: 1.8; resize: vertical; background: var(--surface); }
 
     /* 근거 바텀시트 */
     .sheet-mask { position: fixed; inset: 0; z-index: 80; background: rgba(23,42,71,.45);
@@ -363,11 +363,11 @@
       if (!sel.length) return '';
       var names = sel.map(function (id) {
         var c = CARDS.filter(function (x) { return x.id === id; })[0];
-        return c ? c.title : '경험';
+        return c ? c.title : '소재';
       });
-      return '<div class="selexp"><span>이 경험으로 답해요 — ' +
+      return '<div class="selexp"><span>이 소재로 답해요 — ' +
         names.map(function (n) { return '<b>' + esc(n) + '</b>'; }).join(', ') + '</span>' +
-        (withChange ? '<button type="button" id="btnChangeExp">경험 바꾸기</button>' : '') + '</div>';
+        (withChange ? '<button type="button" id="btnChangeExp">소재 바꾸기</button>' : '') + '</div>';
     }
     function wireChangeExp(box) {
       var b = box.querySelector('#btnChangeExp');
@@ -465,7 +465,7 @@
 
     function flowIntro(box) {
       box.innerHTML = '<div class="blk"><div class="blk-t">오늘의 한 문제, 시작해 볼까요?</div>' +
-        '<div class="blk-s">순서는 세 걸음이에요 — ① 내 경험 찾기 ② 직접 쓰기 ③ 근거 있게 다듬기.<br>' +
+        '<div class="blk-s">순서는 세 걸음이에요 — ① 내 소재 찾기 ② 직접 쓰기 ③ 근거 있게 다듬기.<br>' +
         'AI가 대신 써 주지 않아요. 내가 겪은 사실이 재료예요.</div>' +
         '<button class="cta" id="btnStart">시작하기</button></div>';
       box.querySelector('#btnStart').addEventListener('click', async function () {
@@ -476,20 +476,20 @@
 
     /* 1단계 — 경험 고르기 */
     async function flowSelect(box) {
-      box.innerHTML = '<div class="blk"><div class="blk-t">이 질문에 쓸 내 경험 고르기</div>' +
-        '<div class="blk-s">경험 창고에서 골라요(최대 2개). 어떤 게 맞을지 모르겠으면 AI 추천을 받아 보세요.</div>' +
-        '<div id="expList"><div class="loading">경험 카드 불러오는 중…</div></div>' +
+      box.innerHTML = '<div class="blk"><div class="blk-t">이 질문에 쓸 내 소재 고르기</div>' +
+        '<div class="blk-s">소재 창고에서 골라요(최대 2개). 어떤 게 맞을지 모르겠으면 AI 추천을 받아 보세요.</div>' +
+        '<div id="expList"><div class="loading">소재 카드 불러오는 중…</div></div>' +
         '<div class="row2"><button class="cta ghost sub" id="btnRec">AI 추천 받기</button>' +
         '<a class="cta ghost sub" style="display:flex;align-items:center;justify-content:center;text-decoration:none;" ' +
-        'href="experiences.html?return=' + encodeURIComponent('program.html?p=' + PID + '&day=' + DAY.day_no) + '">경험 새로 만들기</a></div>' +
+        'href="experiences.html?return=' + encodeURIComponent('program.html?p=' + PID + '&day=' + DAY.day_no) + '">새 소재 카드 만들기</a></div>' +
         '<div id="recNote"></div>' +
-        '<button class="cta" id="btnNext" disabled>이 경험으로 계속</button>' +
-        '<button class="cta ghost sub" id="btnSkip">경험 없이 바로 쓰기</button></div>';
+        '<button class="cta" id="btnNext" disabled>이 소재로 계속</button>' +
+        '<button class="cta ghost sub" id="btnSkip">소재 없이 바로 쓰기</button></div>';
 
       var selected = (SESS.selected_cards || []).slice();
       var cards = await AP.store.listCards();
       if (cards.notReady) {
-        box.querySelector('#expList').innerHTML = '<div class="notice">경험 창고가 아직 준비되지 않았어요.</div>';
+        box.querySelector('#expList').innerHTML = '<div class="notice">소재 창고가 아직 준비되지 않았어요.</div>';
         cards = [];
       }
       var recMap = {};
@@ -497,7 +497,7 @@
       function paint() {
         var el = box.querySelector('#expList');
         if (!cards.length) {
-          el.innerHTML = '<div class="notice">아직 경험 카드가 없어요. <b>경험 새로 만들기</b>로 첫 카드를 만들어 보세요.</div>';
+          el.innerHTML = '<div class="notice">아직 소재 카드가 없어요. <b>새 소재 카드 만들기</b>로 첫 카드를 만들어 보세요.</div>';
         } else {
           el.innerHTML = cards.map(function (c) {
             var sel = selected.indexOf(c.id) >= 0;
@@ -636,7 +636,7 @@
         '<div class="draft-foot"><span id="draftCnt">0자</span><span id="draftSaved"></span></div>' +
         '<div id="draftNote"></div>' +
         '<button class="cta" id="btnRevise">AI 첨삭 받기 — 내가 쓴 사실만으로</button>' +
-        '<button class="cta ghost sub" id="btnBackSel">경험 다시 고르기</button></div>';
+        '<button class="cta ghost sub" id="btnBackSel">소재 다시 고르기</button></div>';
 
       var ta = box.querySelector('#draftTa');
       ta.value = SESS.draft || '';
@@ -736,13 +736,13 @@
         (fs.confirmed.length ? '<div class="blk-s">' + fs.confirmed.map(function (f) { return '· ' + esc(f.text); }).join('<br>') + '</div>' : '<div class="blk-s">정리된 사실이 없어요.</div>') +
         (fs.missing && fs.missing.length ? '<div class="notice">아직 확인 안 된 것 — ' + fs.missing.map(esc).join(' / ') + '<br>이 부분은 답변에 넣지 않았어요. 채우려면 <b>사실 더 모으기</b>로.</div>' : '') +
         (fs.conflicts && fs.conflicts.length ? '<div class="notice warn">서로 어긋나는 내용 — ' + fs.conflicts.map(esc).join(' / ') + '</div>' : '') +
-        ((R.fit_check && R.fit_check.fits === false) ? '<div class="notice warn">이 경험이 질문과 잘 안 맞을 수 있어요 — ' + esc(R.fit_check.note || '') + '</div>' : '') +
+        ((R.fit_check && R.fit_check.fits === false) ? '<div class="notice warn">이 소재가 질문과 잘 안 맞을 수 있어요 — ' + esc(R.fit_check.note || '') + '</div>' : '') +
         '</div>';
 
       var flags = R.flags || {};
       var warnHtml = '';
       if (flags.overused_cards && flags.overused_cards.length) {
-        warnHtml += '<div class="notice warn">이미 여러 답변에 쓴 경험이에요(' +
+        warnHtml += '<div class="notice warn">이미 여러 답변에 쓴 소재예요(' +
           flags.overused_cards.map(function (c) { return esc(c.title); }).join(', ') + '). 면접에서 겹칠 수 있어요.</div>';
       }
       if (flags.cliches_left && flags.cliches_left.length) {

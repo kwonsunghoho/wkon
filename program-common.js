@@ -48,7 +48,7 @@
 
   var STATES = {
     not_started:          { label: '시작 전',        step: 1 },
-    experience_selecting: { label: '경험 고르는 중', step: 1 },
+    experience_selecting: { label: '소재 고르는 중', step: 1 },
     fact_gathering:       { label: '사실 모으는 중', step: 2 },
     student_drafting:     { label: '초안 쓰는 중',   step: 3 },
     ai_revised:           { label: 'AI 첨삭 도착',   step: 4 },
@@ -334,7 +334,7 @@
           missing: good ? [] : ['그때 실제로 한 말', '상대의 반응']
         };
       }).slice(0, 3);
-      return { ok: true, candidates: candidates, new_card_hint: candidates.length ? '' : '이 질문에는 실제 겪은 장면이 필요해요 — 경험 창고에서 첫 카드를 만들어 보세요.' };
+      return { ok: true, candidates: candidates, new_card_hint: candidates.length ? '' : '이 질문에는 실제 겪은 장면이 필요해요 — 소재 창고에서 첫 소재 카드를 만들어 보세요.' };
     },
 
     async aiFollowup(sessionId) {

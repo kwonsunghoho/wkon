@@ -184,7 +184,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 ### 작업 규칙 요약
 
-- **파일**: `programs.html`(허브) · `program.html`(작성 흐름) · `experiences.html`(경험 창고) · `review-desk.html`(연구원 검수 — `reviews.html` 후기와 다른 파일) · admin '답변 프로그램' 탭 · `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음) · migration `20260730150000_answer_program.sql`.
+- **파일**: `programs.html`(허브) · `program.html`(작성 흐름) · `experiences.html`(소재 창고 — 구 경험 창고, 2026-08-16 오너 개명·파일명 유지) · `review-desk.html`(연구원 검수 — `reviews.html` 후기와 다른 파일) · admin '답변 프로그램' 탭 · `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음) · migration `20260730150000_answer_program.sql`.
 - **근거 없는 문장 차단이 이 상품의 핵심**: 서버 `apValidateSentences` 가 근거 id 실존·자료에 없는 숫자를 검사해 unsupported 를 붙인다(화면 빨간 표시·'이 버전으로 다듬기' 제외). 이 검증을 우회하는 코드 금지.
 - **유료 기출 비공개·이용권 서버 지급**: 위 '결제·유료 기능' 절의 규칙이 그대로 적용된다(`interview_questions` 비공개·verify-payment `programId` 분기·자가 INSERT 없음). 교재 원문·기출 SQL 은 공개 리포 커밋 금지(위 '개인정보·학원 자산 반입 금지').
 - **확정본은 `answers` 자유 글로 합류**(title=문항·doc_kind=interview) — 킬러·첨삭·답변노트가 무수정으로 붙는 연결을 끊지 말 것.
