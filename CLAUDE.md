@@ -184,7 +184,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 ### 작업 규칙 요약
 
-- **파일**: `programs.html`(허브) · `program.html`(작성 흐름) · `experiences.html`(소재 창고 — 구 경험 창고, 2026-08-16 오너 개명·파일명 유지) · `review-desk.html`(연구원 검수 — `reviews.html` 후기와 다른 파일) · admin '답변 프로그램' 탭 · `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음) · migration `20260730150000_answer_program.sql`.
+- **파일**: `programs.html`(허브) · `program.html`(작성 흐름) · `experiences.html`(소재 창고 — 구 경험 창고, 2026-08-16 오너 개명·파일명 유지) · `review-desk.html`(연구원 검수 — `reviews.html` 후기와 다른 파일) · admin '일문일답' 탭(구 답변 프로그램 — 2026-08-16 오너 개명, data-tab=approgram 유지) · `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음) · migration `20260730150000_answer_program.sql`.
 - **근거 없는 문장 차단이 이 상품의 핵심**: 서버 `apValidateSentences` 가 근거 id 실존·자료에 없는 숫자를 검사해 unsupported 를 붙인다(화면 빨간 표시·'이 버전으로 다듬기' 제외). 이 검증을 우회하는 코드 금지.
 - **유료 기출 비공개·이용권 서버 지급**: 위 '결제·유료 기능' 절의 규칙이 그대로 적용된다(`interview_questions` 비공개·verify-payment `programId` 분기·자가 INSERT 없음). 교재 원문·기출 SQL 은 공개 리포 커밋 금지(위 '개인정보·학원 자산 반입 금지').
 - **확정본은 `answers` 자유 글로 합류**(title=문항·doc_kind=interview) — 킬러·첨삭·답변노트가 무수정으로 붙는 연결을 끊지 말 것.
@@ -211,7 +211,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 히어로 스크롤 구동·창 통과 줌·로고 흩날림 안·하단바 '몬크 더 알아보기' 상태 (home.md)
 - 특강 카드 커버 가격 배지·backdrop-filter 유리 패널·클라이언트 잔여석 update (lectures.md)
 - 블라인드 퀴즈를 상세 페이지나 두 곳 이상에 싣기 — challenges.html 하단 한 곳 확정 (home.md)
-- admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격(상품>답변 프로그램 서브탭 유지 — 오너 확정) (admin.md)
+- admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격(상품>일문일답(구 답변 프로그램) 서브탭 유지 — 오너 확정) (admin.md)
 - `rehearsal.html` 카드 숨김 해제 — 코드가 main 에 없어 404 난다(`claude/rehearsal-wip` 먼저 병합) (implementation-status.md)
 - `challenge-express.html`·`challenge-speech.html` 되살리기 — 2026-07-14 커밋 `072c937` 에서 고아 파일로 제거됐다. 상세는 voice·expression·spinning·answer 4종뿐(2026-08-07 실측) (pages.md)
 - AI킬러 일반 텍스트 응답(칸 없는 자유 출력)·함수 모듈 분리 (ai-killer 스펙)
