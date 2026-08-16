@@ -76,8 +76,12 @@
   var REVIEW_HUB = 'reviews.html';
   var REVIEW_SUB = [
     ['reviews-list.html?kind=challenge', '챌린지 후기', '2주를 마친 학생들의 기록'],
-    ['reviews-list.html?kind=consult', '상담 후기', '1:1 상담을 받아 본 이야기'],
-    ['stories.html', '합격 수기', '합격까지의 과정을 긴 글로']
+    ['reviews-list.html?kind=consult', '상담 후기', '1:1 상담을 받아 본 이야기']
+    /* ⚠️ 합격 수기 잠시 내림(2026-08-16 오너 지시 "상담 후기 먼저 채워넣고 그다음 오픈").
+       '허브 카드와 같은 세 갈래' 규칙은 양쪽을 같이 줄여 유지한다 — reviews.html 의
+       STORIES_OPEN·stories.html/story.html 리다이렉트와 한 벌(docs/notes/pages.md 참조).
+       다시 열 때 아래 줄을 되살린다.
+    ['stories.html', '합격 수기', '합격까지의 과정을 긴 글로'] */
   ];
 
   /* 어느 메뉴가 '현재 위치'인지 — 하위 페이지에 있어도 상위 메뉴에 표시가 남아야
