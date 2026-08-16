@@ -138,6 +138,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
 | admin | `admin.html` | 좌측 사이드바 셸(운영/상품/콘텐츠 그룹) + '오늘' 브리핑 — 탭을 추가하면 어느 그룹인지부터 정한다 | `docs/notes/admin.md` |
 | 후기(허브·챌린지·상담·합격 수기) | `reviews.html`(허브)·`reviews-list.html`(목록 공용)·`stories.html`·`story.html` | 목록은 `?kind=` 한 파일(종류별 HTML 금지), 자료 0건인 종류는 카드를 안 그린다, **상담 후기는 실명 미노출** | `docs/notes/pages.md` |
+| 1:1 상담·네이버 예약 | `consult.html` | **네이버 예약 주소 정본은 consult.html 한 곳** — 다른 자리는 이 페이지로 보낸다. 진입점 3곳 고정(상담 후기 목록 CTA·index 푸터·사이트 밖), **홈 본문·nav 메뉴·플로팅 금지**, 초록 버튼은 진한 글씨(흰 글씨 대비 미달) | `docs/notes/pages.md` |
 | 기타 페이지(연구진·상세 4종·오디오) | `researchers.html`·`challenge-*.html` | 상세 4종 인라인 공통 CSS 는 네 파일을 같이 고친다 | `docs/notes/pages.md` |
 | 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
 | 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
