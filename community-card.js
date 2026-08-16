@@ -65,7 +65,9 @@
       +     '<span class="cmc-ico" aria-hidden="true">' + KAKAO_SVG + '</span>'
       +     '<span class="cmc-txt">'
       +       '<span class="cmc-tit">승무원 준비생 커뮤니티</span>'
-      +       '<span class="cmc-sub">채용 소식 · 정보 교류 · 몬크 답변 — 회원 전용</span>'
+      /* 부제 교체(2026-08-16 오너 "몬크가 운영하는 승무원 채용관련 채팅방으로 바꾸자") —
+         '— 회원 전용' 꼬리는 게이트 예고라 남긴다. 띄어쓰기만 맞춤법대로('채용 관련'). */
+      +       '<span class="cmc-sub">몬크가 운영하는 승무원 채용 관련 채팅방 — 회원 전용</span>'
       +     '</span>'
       +     '<button type="button" class="cmc-btn">입장</button>'
       +   '</div>'
