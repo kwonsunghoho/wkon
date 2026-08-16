@@ -188,10 +188,13 @@
        직링크가 아니라 **도구 허브의 회원 게이트 카드(tools.html#community)로 가는 문**이다.
        방 주소는 레포에 못 싣는다(회원 전용 — community-card.js·pages.md). 내부 링크라
        target=_blank 를 붙이지 않는다(socialHtml 이 http 여부로 가른다).
-       넷째 원소 'row2' = 모바일 햄버거에서 여기부터 둘째 줄(카카오 짝) — 아래 socialHtml 참조. */
+       넷째 원소 = 표시 플래그: 'row2'(모바일 햄버거에서 여기부터 둘째 줄 — 카카오 짝),
+       'promo'(**카카오 노랑 알약** — 같은 날 오너 "카톡문의랑 같은 느낌이라 클릭률 떨어질 것
+       같다, 더 강조해줘". 노랑은 이 사이트에서 '카카오로 가는 행동' 색이다: .kakao-ask·카드
+       입장 버튼과 같은 문법. 채널 아이콘 브랜드색 금지 규칙과 별개 — 그건 그대로다). */
     ['tools.html#community', '오픈채팅 커뮤니티',
       '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
-      'row2'],
+      'row2 promo'],
     /* 카카오톡 문의 (2026-08-09 오너 "문의를 좀 바로 할 수 있게") — 앞 셋은 채널이고 이것만
        문의 창구라 라벨을 '문의'로 구분한다. ⚠️ 주소에 **`/chat` 을 붙일 것** — 채널 홈이
        비공개라 홈 주소는 '페이지를 찾을 수 없습니다'가 뜬다(pages.md).
@@ -205,12 +208,15 @@
         아니라, 아이콘(svg)과 글자의 세로 정렬을 flex 로 잡기 위해서다. */
   /* splitRows=true(모바일 햄버거)면 'row2' 표시 항목 앞에 줄바꿈 조각(.sbreak)을 넣어
      "채널 셋 / 카카오 둘" 두 줄로 갈라 세운다(2026-08-16 오너 "카톡문의만 동떨어져 보인다").
-     푸터(데스크톱)는 한 줄 그대로. 내부 링크(http 아님)에는 target=_blank 를 안 붙인다. */
+     푸터(데스크톱)는 한 줄 그대로. 내부 링크(http 아님)에는 target=_blank 를 안 붙인다.
+     'promo' 표시 항목은 .s-promo(카카오 노랑 알약) — 모바일·푸터 양쪽 공통. */
   function socialHtml(splitRows) {
     return SOCIAL.map(function (s) {
       var ext = /^https?:/i.test(s[0]);
-      return (splitRows && s[3] === 'row2' ? '<i class="sbreak" aria-hidden="true"></i>' : '') +
-        '<a href="' + s[0] + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + s[2] +
+      var flags = s[3] || '';
+      return (splitRows && flags.indexOf('row2') >= 0 ? '<i class="sbreak" aria-hidden="true"></i>' : '') +
+        '<a href="' + s[0] + '"' + (flags.indexOf('promo') >= 0 ? ' class="s-promo"' : '') +
+        (ext ? ' target="_blank" rel="noopener"' : '') + '>' + s[2] +
         '<span>' + esc(s[1]) + '</span></a>';
     }).join('');
   }
