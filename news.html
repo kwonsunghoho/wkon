@@ -44,6 +44,8 @@
   <script src="nav.js" defer></script>
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — 파일 받기·로그인이 막히는 자리 -->
   <script src="inapp.js?v=10" defer></script>
+  <!-- bfcache 복원 자리 지키기 — 아래 pageshow reload 와 한 벌(defer 금지 · CLAUDE.md bfcache 절) -->
+  <script src="scroll-keep.js?v=3"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* ⚠️ hidden 속성은 UA 스타일의 display:none 이라 저자 CSS 의 display 에 진다.
@@ -924,13 +926,10 @@
       if (bm && !wasDrag(e)) { await toggleScrap(bm); renderScraps(); }
     });
 
-    // 뒤로가기로 돌아오면(bfcache) 이 스크립트가 다시 돌지 않아 스크랩 상태가 낡은 채로 남는다.
-    // 다른 탭·기기에서 바뀐 것도 못 따라가므로 복원 시에는 다시 읽는다.
-    window.addEventListener('pageshow', e => {
-      if (!e.persisted || !session) return;
-      scrapsReady = loadMyScraps();
-      if (!document.getElementById('nwScrapView').hidden) scrapsReady.then(renderScraps);
-    });
+    // 뒤로가기(bfcache)는 떠날 때 화면을 그대로 되살린다 — 입력값 없는 화면 공통 규칙대로
+    // 통째로 새로고침한다(스크랩 상태 갱신도 이걸로 해결 · 자리는 scroll-keep.js 가 지킨다).
+    // ?tab=scraps 는 주소에 있어 새로고침에도 보던 탭이 유지된다.
+    window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
     (async () => {
       session = await MONC.getSession();
