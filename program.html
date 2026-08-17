@@ -377,8 +377,10 @@
     /* ── 유틸 ── */
     function setSave(msg) { $('snSave').textContent = msg || ''; }
     function editKey() { return 'ap_edit_' + (SESS ? SESS.id : ''); }
-    function loadEdit() { try { return localStorage.getItem(editKey()) || ''; } catch (e) { return ''; } }
-    function saveEdit(t) { try { localStorage.setItem(editKey(), t); } catch (e) {} }
+    /* ⚠️ sessionStorage 다. localStorage 로 바꾸지 말 것 — 공용 기기에 학생 글이 남는다
+       (draft-keep.js·ai-killer·polish·answers·experiences 와 같은 전역 규칙, 2026-08-17 합류). */
+    function loadEdit() { try { return sessionStorage.getItem(editKey()) || ''; } catch (e) { return ''; } }
+    function saveEdit(t) { try { sessionStorage.setItem(editKey(), t); } catch (e) {} }
     function Q() { return DAY && DAY.question ? DAY.question : null; }
     function debounce(fn, ms) {
       var t; return function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); };
