@@ -805,7 +805,7 @@
       function verHtml(list, key) {
         var un = list.filter(function (s) { return s.unsupported; }).length;
         return '<div class="ver-body" data-ver="' + key + '">' + list.map(function (s, i) {
-          return '<span class="sent' + (s.unsupported ? ' bad' : '') + '" data-i="' + i + '" data-ver="' + key + '">' + esc(s.text) + '</span> ';
+          return '<span class="sent' + (s.unsupported ? ' bad' : '') + '" role="button" tabindex="0" data-i="' + i + '" data-ver="' + key + '">' + esc(s.text) + '</span> ';
         }).join('') + '</div>' +
         '<div class="ev-hint">문장을 누르면 어떤 사실에서 왔는지 보여드려요.' +
         (un ? '<br><b>빨간 밑줄 ' + un + '문장</b>은 내가 준 사실에 근거가 없어요 — 그대로 쓰지 마세요.' : '') + '</div>';
@@ -842,6 +842,9 @@
           : '';
         box.querySelectorAll('.sent').forEach(function (el) {
           el.addEventListener('click', function () { openEvidence(Number(el.dataset.i), el.dataset.ver); });
+          el.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); el.click(); }
+          });
         });
         box.querySelectorAll('.ver-tabs button').forEach(function (b) {
           b.classList.toggle('on', b.dataset.v === chosen);
@@ -1064,6 +1067,10 @@
       document.body.classList.add('sheet-on');
     }
     $('sheetMask').addEventListener('click', function () { document.body.classList.remove('sheet-on'); });
+    /* 마스크 클릭이 유일한 닫기면 키보드로는 못 닫는다 — Escape 로도 닫는다(ai-killer·polish 패턴). */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.body.classList.contains('sheet-on')) document.body.classList.remove('sheet-on');
+    });
 
     /* ── 이용권 구매 (포트원 · lecture.html 패턴) ─────────────────────────
        체험판 없이 바로 유료(2026-07-30 오너). 금액 검증·지급은 verify-payment 의
