@@ -711,7 +711,7 @@ function renderCards() {
   root.innerHTML = CHALLENGES.map(c => `
     <div class="card" data-id="${c.id}">
       <div class="card-head" data-role="select">
-        <div class="card-check">✓</div>
+        <div class="card-check" aria-hidden="true">✓</div>
         <div class="card-main">
           <div class="card-name">${c.name}<span class="tag">${c.tag}</span><span class="status-tag" data-status></span></div>
           <div class="card-sub">${c.sub}</div>
@@ -732,8 +732,17 @@ function renderCards() {
 
   root.querySelectorAll('.card').forEach(card => {
     const id = card.dataset.id;
-    card.querySelector('[data-role="select"]').addEventListener('click', () => toggleSelect(id));
-    card.querySelector('[data-role="curr"]').addEventListener('click', (e) => { e.stopPropagation(); card.classList.toggle('curr-open'); });
+    const head = card.querySelector('[data-role="select"]');
+    const curr = card.querySelector('[data-role="curr"]');
+    /* div+click 만으로는 키보드로 신청을 시작할 수 없다 — 상세 4종 아코디언과 같은 패턴으로
+       role·tabindex 를 마크업이 아니라 여기서 단다. Space 는 기본 동작이 스크롤이라 preventDefault. */
+    const keyable = (el) => el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); el.click(); }
+    });
+    head.setAttribute('role', 'button'); head.setAttribute('tabindex', '0'); keyable(head);
+    curr.setAttribute('role', 'button'); curr.setAttribute('tabindex', '0'); keyable(curr);
+    head.addEventListener('click', () => toggleSelect(id));
+    curr.addEventListener('click', (e) => { e.stopPropagation(); card.classList.toggle('curr-open'); syncCardsA11y(); });
     // ⚠️ stopPropagation 필수 — 안 하면 카드 선택 토글까지 같이 돈다(마감 카드라 무시되긴 하지만
     //    모집예정 카드에서 커리큘럼이 접혔다 펴지는 등 엉뚱한 반응이 난다).
     card.querySelector('[data-role="waitlist"]').addEventListener('click', (e) => {
@@ -752,12 +761,21 @@ function renderFaq() {
   const root = document.getElementById('faq');
   root.innerHTML = FAQ.map(f => `
     <div class="faq-item">
-      <div class="faq-q">${f.q}<span class="pm">+</span></div>
+      <div class="faq-q">${f.q}<span class="pm" aria-hidden="true">+</span></div>
       <div class="faq-a">${f.a.replace('{price}', priceLabel()).replace('{listNote}', listNote())}</div>
     </div>
   `).join('');
   root.querySelectorAll('.faq-item').forEach(item => {
-    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+    const q = item.querySelector('.faq-q');
+    q.setAttribute('role', 'button'); q.setAttribute('tabindex', '0'); q.setAttribute('aria-expanded', 'false');
+    const toggle = () => {
+      item.classList.toggle('open');
+      q.setAttribute('aria-expanded', item.classList.contains('open') ? 'true' : 'false');
+    };
+    q.addEventListener('click', toggle);
+    q.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
+    });
   });
 }
 
@@ -809,6 +827,20 @@ function toggleSelect(id) {
   updateSummary();
 }
 
+/* 카드의 선택·열림·잠김 상태를 보조기술에 알린다. 상태를 바꾸는 곳이 다섯 군데라
+   일일이 따라다니지 않고, 모든 경로가 부르는 updateSummary() 끝에서 한 번에 맞춘다. */
+function syncCardsA11y() {
+  document.querySelectorAll('.card').forEach(card => {
+    const head = card.querySelector('[data-role="select"]');
+    const curr = card.querySelector('[data-role="curr"]');
+    if (head) {
+      head.setAttribute('aria-pressed', card.classList.contains('selected') ? 'true' : 'false');
+      head.setAttribute('aria-disabled', card.classList.contains('disabled') ? 'true' : 'false');
+    }
+    if (curr) curr.setAttribute('aria-expanded', card.classList.contains('curr-open') ? 'true' : 'false');
+  });
+}
+
 function selectedIds() {
   return Array.from(document.querySelectorAll('.card.selected')).map(c => c.dataset.id);
 }
@@ -854,6 +886,7 @@ function updateSummary() {
   document.getElementById('stickyTotal').textContent = total.toLocaleString();
   document.getElementById('stickyCount').textContent = n === 0 ? '챌린지를 선택하세요' : ('선택 ' + n + '개');
   bar.classList.toggle('empty', n === 0);
+  syncCardsA11y();
 }
 
 /* ── 모집 상태 반영 (마감/모집예정 카드 비활성) ── */
