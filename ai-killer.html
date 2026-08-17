@@ -693,9 +693,9 @@
       }
       $('balBadge').textContent = bal > 0 ? '크레딧 ' + bal : '';
       $('leftMsg').innerHTML = freeLeft > 0
-        ? '오늘 <b>' + freeLeft + '회</b> 무료로 검사할 수 있어요'
+        ? '오늘 <b>' + freeLeft + '회</b> 무료로 검사할 수 있어요 · 매일 새로 채워져요'
         : (bal > 0 ? '크레딧 <b>' + bal + '개</b> · 검사에 ' + (Number(_wallet?.costs?.ai_killer) || 3) + '개가 쓰여요'
-                   : '오늘 무료분을 다 썼어요 · 충전하면 이어서 할 수 있어요');
+                   : '오늘 무료분을 다 썼어요 · 자정에 다시 채워져요 — 충전하면 지금 이어서 할 수 있어요');
       // 쓸 수 있는 게 하나도 없을 때만 충전함을 펼친다 — 있을 땐 검사가 주인공이라 접어 둔다
       if (bal <= 0 && freeLeft <= 0) $('chargeBox').classList.add('open');
       return { bal, freeLeft };
@@ -1181,6 +1181,7 @@
         // 미결 기록은 결제창을 열기 전에 남긴다(pay-pending.js — sessionStorage 는 인앱
         // 복귀에서 유실돼 돈만 나가는 사고가 났다). 확답 전엔 지우지 않는다.
         moncPends.add(PENDING_KEY, { paymentId, packId });
+        if (window.moncBeacon) moncBeacon('pay_open', { k: 'credit' }); // 결제 시도 계측(퍼널)
         // 복귀 주소에 pk(팩 id)도 실어 둔다 — 저장소가 다 날아가도 주소의
         // paymentId(포트원이 붙임)+pk 만으로 확인이 되게.
         const rp = new URLSearchParams(location.search); rp.set('payresult', '1'); rp.set('pk', packId);

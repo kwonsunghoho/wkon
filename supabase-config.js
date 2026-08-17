@@ -289,3 +289,74 @@
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
   };
 })();
+
+/* =============================================================================
+ * 방문·전환 퍼널 비콘 (2026-08-17) — page_events 에 쌓는다. 마이그레이션 불필요
+ * (표·CHECK 제약은 기존 그대로 — 이벤트명 규칙은 docs/notes/home.md '계측 비콘' 절).
+ *   visit     탭 세션의 첫 페이지에서 1회. meta { member, ret_days, ref?, src? }.
+ *             ret_days = 직전 방문일과의 날짜 차(null=이 기기 첫 방문, 0=같은 날
+ *             재세션, 1 이상=재방문) — 재방문율의 원천.
+ *   page_view 세션 안에서 처음 밟는 경로마다 1회 — apply 도달률 등 페이지별 분모.
+ *   pay_open  결제창을 연 순간 — 각 결제 페이지가 moncBeacon 으로 직접 쏜다.
+ * 기기에 남기는 것은 마지막 방문 '날짜' 한 조각뿐(개인정보 없음 — 공용 기기의
+ * 위치·글 잔존 규칙과는 다른 자리다). 실패는 전부 조용히 무시(비콘이 화면을
+ * 방해하면 안 된다). 가입·결제 '완료'는 비콘이 아니라 DB 가 원장이다
+ * (members.created_at·applications·credit_ledger — 퍼널은 둘을 나란히 읽는다).
+ * ============================================================================= */
+(function () {
+  if (!window.MONC || !window.MONC.sb) return;
+  const path = window.location.pathname || '/';
+
+  // 공용 비콘 — 페이지 인라인 계측도 앞으로는 이걸 쓴다(insert 코드 복사 금지)
+  window.moncBeacon = function (event, meta) {
+    try {
+      window.MONC.sb.from('page_events')
+        .insert({ event: event, path: path, meta: meta || {} })
+        .then(function () {}, function () {});
+    } catch (e) {}
+  };
+
+  // 운영 화면은 계측하지 않는다 — 오너 방문이 분모를 흐린다
+  if (/(?:admin|review-desk)\.html$/.test(path)) return;
+
+  let seen = [];
+  try { seen = JSON.parse(sessionStorage.getItem('monc_pv_v1') || '[]'); } catch (e) {}
+  if (!Array.isArray(seen)) seen = [];
+  const firstOfSession = seen.length === 0;
+
+  // 경로별 1회 — bfcache 통째 reload 가 다시 실행돼도 가드가 남아 이중 집계 없음
+  if (seen.indexOf(path) === -1) {
+    seen.push(path);
+    try { sessionStorage.setItem('monc_pv_v1', JSON.stringify(seen)); } catch (e) {}
+    window.moncBeacon('page_view', {});
+  }
+
+  if (!firstOfSession) return;
+
+  // 재방문 판정 — 날짜는 방문자 기기의 로컬 기준(생활 시간).
+  const z = (n) => (n < 10 ? '0' : '') + n;
+  const now = new Date();
+  const today = now.getFullYear() + '-' + z(now.getMonth() + 1) + '-' + z(now.getDate());
+  let prev = null;
+  try { prev = localStorage.getItem('monc_seen_v1'); } catch (e) {}
+  try { localStorage.setItem('monc_seen_v1', today); } catch (e) {}
+  let retDays = null;
+  if (prev && /^\d{4}-\d{2}-\d{2}$/.test(prev)) {
+    retDays = Math.round((Date.parse(today) - Date.parse(prev)) / 864e5);
+  }
+
+  const meta = { ret_days: retDays };
+  try {
+    const ref = document.referrer ? new URL(document.referrer).hostname : '';
+    if (ref && ref !== window.location.hostname) meta.ref = ref.slice(0, 80); // 외부 유입만
+  } catch (e) {}
+  try {
+    const src = new URLSearchParams(window.location.search).get('utm_source');
+    if (src) meta.src = String(src).slice(0, 40);
+  } catch (e) {}
+
+  window.MONC.sb.auth.getSession().then(
+    function (r) { meta.member = !!(r && r.data && r.data.session); window.moncBeacon('visit', meta); },
+    function () { meta.member = false; window.moncBeacon('visit', meta); }
+  );
+})();

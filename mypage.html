@@ -980,7 +980,7 @@
       freeEl.textContent = !_wallet ? ''
         : dailyLeft > 0
           ? '오늘 무료: 소재 다듬기 ' + Math.floor(dailyLeft / walletCost('sojae'))
-            + '회 또는 검사 ' + Math.floor(dailyLeft / walletCost('ai_killer')) + '회'
+            + '회 또는 검사 ' + Math.floor(dailyLeft / walletCost('ai_killer')) + '회 · 매일 새로 채워져요'
           : '오늘 무료분을 다 썼어요 · 자정에 다시 채워져요';
       document.getElementById('wCostNote').textContent = '1회에 소재 다듬기 ' + walletCost('sojae')
         + ' · AI킬러 검사 ' + walletCost('ai_killer') + ' · 첨삭 ' + walletCost('polish') + '크레딧이 쓰여요.';
@@ -1046,6 +1046,7 @@
         // 미결 기록은 결제창을 열기 전에 남기고 확답 전엔 지우지 않는다(pay-pending.js —
         // sessionStorage 는 인앱 복귀에서 유실돼 돈만 나가는 사고가 났다).
         moncPends.add(PENDING_KEY, { paymentId, packId });
+        if (window.moncBeacon) moncBeacon('pay_open', { k: 'credit' }); // 결제 시도 계측(퍼널)
         // 주문 맥락 — 웹훅(portone-webhook)이 브라우저 없이도 충전을 끝내는 데 쓴다.
         const sess = await MONC.getSession().catch(() => null);
         const res = await window.PortOne.requestPayment({

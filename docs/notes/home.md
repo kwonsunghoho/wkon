@@ -11,6 +11,17 @@ anon INSERT 는 **열어 둔다.** 측정 대상이 로그아웃 방문자의 �
 - ⚠️ **한계**: RLS 로는 방문자별 속도 제한이 안 된다(anon 은 신원이 없고 IP 를 정책에서 못 본다). 위 상한은 전역이라 '테이블이 커지는 것'은 막아도 '그동안 정상 계측이 거절되는 것'은 못 막는다. 실제 공격이 오면 답은 **Edge Function 비콘 + IP 제한**이지 DB 가 아니다.
 - ⚠️ **컬럼은 `event` 다.** `program-common.js` 가 `name` 으로 보내고 있어 **답변 프로그램 계측(ap_*)이 한 건도 안 쌓이고 있었다**(2026-08-05 발견·수정). 새 비콘을 달 때 컬럼명을 확인할 것 — 실패가 조용해서 눈으로는 안 잡힌다.
 
+### 전환 퍼널 이벤트 — `supabase-config.js` 공용 비콘 (2026-08-17)
+
+방문→가입→apply 도달→결제 시도의 분모를 만드는 비콘. `supabase-config.js` 맨 아래 IIFE 라 **그 파일을 싣는 32개 페이지 전부에 자동으로 붙는다**(페이지별 코드 없음). 표·CHECK 는 기존 그대로 — 마이그레이션 불필요.
+
+- `visit` — 탭 세션의 첫 페이지에서 1회. meta `{ member, ret_days, ref?, src? }`. **`ret_days` 가 재방문율의 원천**: 직전 방문일과의 날짜 차(기기 localStorage `monc_seen_v1` 에 마지막 방문 '날짜' 문자열 하나만 남긴다 — 개인정보 없음. 공용 기기 잔존 규칙과 다른 자리). null=이 기기 첫 방문 · 0=같은 날 재세션 · 1 이상=다른 날 재방문. `ref` 는 외부 유입 도메인(내부 이동 제외), `src` 는 `utm_source`.
+- `page_view` — 세션에서 처음 밟는 경로마다 1회(sessionStorage `monc_pv_v1` 가드). apply·lecture 도달률 등 페이지별 분모. bfcache 통째 reload 가 다시 실행돼도 가드가 남아 이중 집계 없음.
+- `pay_open` — 결제창을 연 순간. 여섯 결제 지점(apply `k:challenge` · lecture `k:lecture` · ai-killer/mypage/polish `k:credit` · program `k:program`)이 `moncBeacon('pay_open',{k})` 로 직접 쏜다. **복귀 복원·재기록(drop 후 add·URL 복원) 자리에는 심지 않았다 — 이중 집계 방지. 새 결제 흐름을 만들면 결제창 열기 직전 한 곳에만 심는다.**
+- 공용 함수 `window.moncBeacon(event, meta)` — 앞으로 페이지 인라인 계측도 이걸 쓴다(insert 코드 복사 금지. 기존 moncTrack·개별 insert 는 잔존 — 통합은 선택).
+- **admin·review-desk 는 계측 제외**(운영자 방문이 분모를 흐린다). supabase-config 를 안 싣는 **privacy·researchers·lab-* 안내판 5개는 비콘이 없다**(알려진 공백 — researchers 를 재려면 supabase 로드부터).
+- 가입·결제 '완료'는 비콘이 아니라 **DB 가 원장**(members.created_at·applications·credit_ledger·program_enrollments) — 퍼널은 비콘 분모와 DB 분자를 나란히 읽는다.
+
 ## 히어로 정체 한 줄 — `.hc-tag` (2026-08-02 오너 "스크롤도 승무원 넣어보고")
 
 - 첫 화면에 '승무원'이 한 글자도 없어 인스타 유입이 여기가 뭐 하는 곳인지 못 읽던 것 보완. 스크롤 신호(#heroCue) 맨 위에 **"승무원 준비 온라인 플랫폼"** 한 줄(13.5px·800). cue 안이라 등장(1.8s)·스크롤 숨김(is-gone)을 그대로 따르고, 창 개구부 아래 자리라 로고 실측 상수(fitWindow/fitKor)와 무관하다. `.hc-label`(아래로 스크롤)은 opacity .78 로 한 단계 눌렀다(대비 여전히 4.5:1 이상).

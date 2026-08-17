@@ -993,6 +993,7 @@
         // 미결 기록은 결제창을 열기 전에 남기고 확답 전엔 지우지 않는다(pay-pending.js —
         // sessionStorage 는 인앱 복귀에서 유실돼 돈만 나가는 사고가 났다).
         moncPends.add(PENDING_KEY, { paymentId, packId });
+        if (window.moncBeacon) moncBeacon('pay_open', { k: 'credit' }); // 결제 시도 계측(퍼널)
         // 복귀 주소에 pk(팩 id)도 실어 둔다 — 저장소가 다 날아가도 주소만으로 확인되게.
         const rp = new URLSearchParams(location.search); rp.set('payresult', '1'); rp.set('pk', packId);
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
