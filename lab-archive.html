@@ -146,6 +146,9 @@
     font-size: 13px; font-weight: 500; color: var(--text-muted);
     white-space: nowrap; overflow: hidden;
   }
+  /* ⚠️ 위 display:flex 가 UA 의 [hidden]{display:none} 을 이겨서, 이 한 줄이 없으면
+     데이터가 오기 전·실패 시 값 없는 '최신' 칩이 빈 채로 보인다(2026-08-17 실측). */
+  .sh-foot[hidden] { display: none; }
   .sh-tag {
     flex: none; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--accent-ink);
     border: 1px solid rgba(27,58,107,0.28); border-radius: 4px; padding: 2px 6px;
@@ -178,8 +181,9 @@
   <!-- 숫자는 lab_shelf_counts() 가 채운다. 아래 값은 스크립트가 못 돌 때만 잠깐 보이는 자리다. -->
   <div class="st-strip">
     <span class="st-live"><i class="live"></i>연구 진행 중</span>
-    <span class="st-sep"></span>
-    <span class="st-item num" id="stTotal"></span>
+    <!-- 숫자가 채워지기 전에는 구분선도 숨긴다 — 값 없이 선만 남으면 고아 조각이 된다 -->
+    <span class="st-sep" id="stSep1" hidden></span>
+    <span class="st-item num" id="stTotal" hidden></span>
     <span class="st-sep" id="stSep2" hidden></span>
     <span class="st-item" id="stFresh" hidden></span>
   </div>
@@ -335,6 +339,8 @@
     });
 
     document.getElementById('stTotal').innerHTML = '자료 <b>' + total + '</b>건';
+    document.getElementById('stTotal').hidden = false;
+    document.getElementById('stSep1').hidden = false;
     if (last) {
       document.getElementById('stFresh').innerHTML = '갱신 <b>' + relTime(last) + '</b>';
       document.getElementById('stFresh').hidden = false;
