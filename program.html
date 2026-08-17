@@ -379,7 +379,22 @@
     function editKey() { return 'ap_edit_' + (SESS ? SESS.id : ''); }
     /* ⚠️ sessionStorage 다. localStorage 로 바꾸지 말 것 — 공용 기기에 학생 글이 남는다
        (draft-keep.js·ai-killer·polish·answers·experiences 와 같은 전역 규칙, 2026-08-17 합류). */
-    function loadEdit() { try { return sessionStorage.getItem(editKey()) || ''; } catch (e) { return ''; } }
+    function loadEdit() {
+      try {
+        /* 전환 전 배포가 localStorage 에 남긴 글 청소 — 이번 세션 것은 이어받고 나머지는 지운다
+           (sessionStorage 전환 뒤로는 어차피 안 읽는 잔존물이라 남겨 두면 공용 기기에 글만 남는다). */
+        var mine = null;
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('ap_edit_') === 0) {
+            if (k === editKey()) mine = localStorage.getItem(k);
+            localStorage.removeItem(k);
+          }
+        }
+        if (mine != null && !sessionStorage.getItem(editKey())) sessionStorage.setItem(editKey(), mine);
+        return sessionStorage.getItem(editKey()) || '';
+      } catch (e) { return ''; }
+    }
     function saveEdit(t) { try { sessionStorage.setItem(editKey(), t); } catch (e) {} }
     function Q() { return DAY && DAY.question ? DAY.question : null; }
     function debounce(fn, ms) {

@@ -92,8 +92,11 @@
   }
 
   function toLogin() {
-    /* lab-shelf.html 의 기존 로그인 유도와 같은 꼴 — login 이 returnTo 로 되돌려 보낸다 */
-    location.href = 'login.html?returnTo=' + encodeURIComponent(location.pathname + location.search);
+    /* ⚠️ 절대경로가 아니라 파일명만 쓴다(supabase-config 의 pageRef 와 같은 꼴) —
+       login.html 의 safeReturnTo() 가 앞에 / 가 붙은 값을 통째로 버려서, pathname 을
+       그대로 보내면 로그인 뒤 이 카드로 못 돌아온다(2026-08-17 수정). */
+    var page = location.pathname.split('/').pop() || 'index.html';
+    location.href = 'login.html?returnTo=' + encodeURIComponent(page + location.search + location.hash);
   }
 
   async function onEnter() {

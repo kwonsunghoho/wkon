@@ -702,6 +702,13 @@
     const allView = [countEl, listEl, emptyEl, moreBtn.parentElement, skelEl];
     function switchTab(tab) {
       curTab = tab;
+      /* 보던 탭을 주소(?tab=)에 남긴다 — bfcache 복원이 통째 reload 라서(아래 pageshow)
+         주소가 유일한 상태 저장소다. mypage '전체 보기' 진입 규약(?tab=scraps)과 같은 키. */
+      try {
+        const u = new URL(location.href);
+        if (tab === 'scraps') u.searchParams.set('tab', 'scraps'); else u.searchParams.delete('tab');
+        history.replaceState(history.state, '', u);
+      } catch (e) {}
       document.querySelectorAll('.nw-tab').forEach(b => {
         const on = b.dataset.tab === tab;
         b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on));
@@ -928,7 +935,7 @@
 
     // 뒤로가기(bfcache)는 떠날 때 화면을 그대로 되살린다 — 입력값 없는 화면 공통 규칙대로
     // 통째로 새로고침한다(스크랩 상태 갱신도 이걸로 해결 · 자리는 scroll-keep.js 가 지킨다).
-    // ?tab=scraps 는 주소에 있어 새로고침에도 보던 탭이 유지된다.
+    // 보던 탭은 switchTab() 이 주소(?tab=)에 적어 둬 새로고침에도 유지된다.
     window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
     (async () => {

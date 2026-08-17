@@ -41,3 +41,4 @@
 - 삭제는 `deleteIds()`로 **100개씩 청크**(uuid 36자를 URL에 나열하므로 500개면 18KB로 414를 맞는다). 90일 정리·참사 청소 **둘 다 스크랩된 기사는 남긴다** — cascade로 회원 재료함이 날아가므로.
 - ⚠️ 공개 리포는 **60일간 커밋이 없으면 GitHub가 스케줄을 자동 중지**한다(메일 통지 → 버튼으로 재활성).
 - **화면(news.html)의 bfcache 는 2026-08-17 부터 공통 규칙에 합류** — `pageshow`+`persisted` → 통째 `location.reload()` + `scroll-keep.js?v=3`(defer 없이). 그전에는 스크랩 상태만 재조회하는 자체 pageshow 핸들러가 있었는데, 낡은 화면이 되살아나는 본 문제는 못 잡았다. 보던 탭은 `?tab=scraps` 가 주소에 있어 reload 후에도 유지된다.
+  - 한계: 스크랩 탭 여부는 `switchTab()` 이 `?tab=` 으로 주소에 남겨 reload 후에도 유지되지만, '더 보기'로 깊이 내려간 목록 길이는 reload 가 첫 페이지(20건)로 되돌린다 — scroll-keep 이 3초 안에 그 높이를 못 만나면 복원을 포기한다(reviews-list 와 같은 트레이드).
