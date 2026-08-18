@@ -304,6 +304,9 @@
       background: var(--surface); }
     .pv-cap { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--accent-ink); }
     .pv-q { font-size: 16px; font-weight: 700; line-height: 1.55; margin-top: 6px; word-break: keep-all; }
+    /* 예시 한 줄(2026-08-19) — 추상적인 문제가 어렵다는 피드백. questions.hint 가 있을 때만 */
+    .pv-hint { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.5;
+      word-break: keep-all; }
     .pv-meta { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
     .pv-go { display: block; width: 100%; margin-top: 12px; min-height: 48px; padding: 14px;
       background: var(--action); color: var(--action-ink); border: none; border-radius: 14px;
@@ -1187,6 +1190,7 @@
         wrap.innerHTML = '<div class="pv-card">'
           + '<div class="pv-cap">' + LEVEL_LABEL[_pickLevel] + ' · 오늘의 문제</div>'
           + '<div class="pv-q">' + esc(today.content) + '</div>'
+          + (today.hint ? '<div class="pv-hint">예시: ' + esc(today.hint) + '</div>' : '')
           /* ⚠️ 항공사 이름을 여기 다시 붙이지 말 것 — 소재 문제는 전 항공사 공통이라
              2026-08-05 에 admin 의 항공사 칸을 지웠다. 구 데이터에 남은 questions.airline 을
              학생 화면만 계속 보여 주고 있었다(2026-08-06 감사). 관리자는 이제 그 값을
@@ -1238,7 +1242,10 @@
       const restored = await restoreSession();
       if (!restored) {
         const content = q ? q.content : FALLBACK_QUESTION;
-        ai('안녕하세요. 오늘 문제는 <b>' + esc(content) + '</b>이에요. 혹시 떠오르는 순간이 있나요?');
+        // 예시(questions.hint)가 있으면 인사말에 같이 싣는다(2026-08-19 피드백 —
+        // "추상적인 질문이 어렵다"). 값 입력은 admin '소재 문제' 탭.
+        const hint = q && q.hint ? ' 예를 들면 ' + esc(q.hint) + ' 같은 것도 좋아요.' : '';
+        ai('안녕하세요. 오늘 문제는 <b>' + esc(content) + '</b>이에요.' + hint + ' 혹시 떠오르는 순간이 있나요?');
       }
       moncTrack('sojae_start', { category, level });
       _ready = true;                       // 문제 확정 후에만 전송 허용

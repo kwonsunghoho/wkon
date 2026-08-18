@@ -1357,6 +1357,12 @@
           <textarea id="qfContent" rows="2" placeholder="예: 예상치 못한 문제를 침착하게 해결했던 경험"
             style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;font-family:inherit;resize:vertical;"></textarea>
         </div>
+        <!-- 예시 한 줄(2026-08-19) — 추상적인 문제가 어렵다는 학생 피드백. 학생 화면의
+             고르기 카드('예시: …')와 첫 인사말('예를 들면 …')에 나간다. 비우면 안 보인다.
+             ⚠️ 합격자 실제 문장 금지(공개 questions 테이블 — CLAUDE.md '개인정보·학원 자산') -->
+        <div class="field"><label for="qfHint">예시 한 줄(선택) — 학생에게 "예를 들면 …"으로 보여요</label>
+          <input id="qfHint" placeholder="예: 매주 빠지지 않던 봉사 활동, 아르바이트에서 지킨 나만의 원칙">
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;align-items:end;">
           <div class="field"><label for="qfCategory">유형</label>
             <select id="qfCategory">
@@ -4384,6 +4390,7 @@
     function resetQForm() {
       _editQid = null;
       document.getElementById('qfContent').value = '';
+      document.getElementById('qfHint').value = '';
       document.getElementById('qfDate').value = '';
       document.getElementById('qfCategory').value = 'experience';
       document.getElementById('qfLevel').value = window.SOJAE.DEFAULT_LEVEL;
@@ -4391,17 +4398,28 @@
       document.getElementById('qfCancel').style.display = 'none';
     }
 
-    // ⚠️ level 은 마이그레이션(20260805120000) 미적용 환경에 아직 없는 컬럼이다.
-    //    없는 컬럼을 보내면 저장 전체가 실패하므로, 그때만 level 을 빼고 다시 보낸다
+    // ⚠️ level(20260805)·hint(20260819) 는 마이그레이션 미적용 환경에 아직 없는 컬럼이다.
+    //    없는 컬럼을 보내면 저장 전체가 실패하므로, 그 컬럼만 빼고 다시 보낸다
     //    (조회는 select('*') 라 원래 안전하다 — 사이트 관례).
+    const Q_OPT_COLS = { level: '20260805120000_sojae_levels.sql', hint: '20260819120000_sojae_question_hint.sql' };
     async function qSave(row, id) {
       const run = r => id ? MONC.sb.from('questions').update(r).eq('id', id)
                           : MONC.sb.from('questions').insert(r);
-      let { error } = await run(row);
-      if (error && (error.code === '42703' || error.code === 'PGRST204') && /level/i.test(error.message || '')) {
-        const rest = Object.assign({}, row); delete rest.level;
-        ({ error } = await run(rest));
-        if (!error) alert('난이도는 저장되지 않았어요. 마이그레이션 20260805120000_sojae_levels.sql 을 먼저 실행해 주세요.');
+      const payload = Object.assign({}, row);
+      let { error } = await run(payload);
+      const dropped = [];
+      // 둘 다 미적용이면 에러가 한 컬럼씩 나온다 — 지목된 컬럼만 빼며 재시도
+      while (error && (error.code === '42703' || error.code === 'PGRST204')) {
+        const col = Object.keys(Q_OPT_COLS)
+          .find(c => c in payload && (error.message || '').toLowerCase().includes(c));
+        if (!col) break;
+        delete payload[col]; dropped.push(col);
+        ({ error } = await run(payload));
+      }
+      if (!error && dropped.length) {
+        const label = { level: '난이도', hint: '예시' };
+        alert(dropped.map(c => label[c]).join('·') + '는 저장되지 않았어요. 마이그레이션 '
+          + dropped.map(c => Q_OPT_COLS[c]).join(' · ') + ' 을 먼저 실행해 주세요.');
       }
       return error;
     }
@@ -4460,6 +4478,7 @@
         <div class="round-item${q.active ? '' : ' is-off'}" data-id="${q.id}" style="${isEffective ? 'box-shadow:inset 3px 0 0 var(--action);' : ''}">
           <div>
             <div class="ri-main">${esc(q.content)}</div>
+            ${q.hint ? `<div class="ri-sub" style="color:var(--text-muted)">예시: ${esc(q.hint)}</div>` : ''}
             <div class="ri-sub">${liveTag}${esc(Q_LV[lv])} · ${esc(Q_CAT[q.category] || q.category)} · ${esc(pin)}${q.active ? '' : ' · 숨김'}</div>
           </div>
           <div class="ri-actions">
@@ -4513,6 +4532,7 @@
         const q = _questions.find(x => x.id === b.dataset.id); if (!q) return;
         _editQid = q.id;
         document.getElementById('qfContent').value = q.content || '';
+        document.getElementById('qfHint').value = q.hint || '';
         document.getElementById('qfCategory').value = q.category || 'experience';
         document.getElementById('qfLevel').value = window.SOJAE.levelOf(q);
         document.getElementById('qfDate').value = q.scheduled_date || '';
@@ -4536,6 +4556,7 @@
       if (!content) { alert('문제 내용을 입력하세요.'); return; }
       const row = {
         content,
+        hint: document.getElementById('qfHint').value.trim() || null,
         category: document.getElementById('qfCategory').value,
         level: document.getElementById('qfLevel').value,
         scheduled_date: document.getElementById('qfDate').value || null,
