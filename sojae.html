@@ -234,7 +234,20 @@
       color: var(--action-ink); border: none; border-radius: 14px; padding: 14px; font-size: 15px;
       font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
     #saveBtn:disabled { opacity: .7; cursor: default; }
+    /* 저장이 끝나면 '다시 저장'은 한 단계 물러난다 — 아래 '다음 문제' 버튼이 주 행동이 된다
+       (같은 급 버튼 두 개를 쌓으면 어디를 눌러야 할지 알 수 없다). */
+    #saveBtn.is-saved { background: var(--surface); color: var(--accent-ink);
+      border: 1.5px solid var(--border); padding: 12.5px 14px; }
     #saveFoot { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted); min-height: 16px; }
+    /* ── 저장 완료 → 다음 문제 잇기(2026-08-19 사용자 피드백 "저장한 뒤 두 번째 문제가
+       연결되지 않는다 / 초급편을 한번에 쭉 풀고 싶다"). 저장을 막다른 길로 두지 않는다. ── */
+    #nextStep { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+    .ns-prog { font-size: 13px; font-weight: 700; }
+    .ns-next { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5;
+      word-break: keep-all; }
+    .ns-go { display: block; width: 100%; margin-top: 10px; background: var(--action);
+      color: var(--action-ink); border: none; border-radius: 14px; padding: 14px; font: inherit;
+      font-size: 15px; font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
 
     /* ── v2: 소재 카드 + 뼈대 렌더 ── */
     .mcard { border: 1.5px solid var(--accent-dark); border-radius: 12px; padding: 12px 13px;
@@ -387,7 +400,14 @@
       <div class="wlabel">최종 답변 — 위 뼈대를 보고 내 말로 완성하세요. <b>작성 중인 내용은 자동 저장돼요.</b></div>
       <div class="field"><textarea id="finalTa" rows="4" placeholder="내 말로 최종 답변을 작성하세요"></textarea></div>
       <button id="saveBtn">답변집에 저장(완료)</button>
-      <div id="saveFoot"></div>
+      <div id="saveFoot" aria-live="polite"></div>
+      <!-- 저장 완료 뒤에만 보인다 — 진행(몇 문제 중 몇 개 완료) + 다음 문제로 잇는 버튼.
+           2026-08-19 사용자 피드백: 저장하면 끝이라 두 번째 문제로 갈 길이 없었다. -->
+      <div id="nextStep" hidden>
+        <div class="ns-prog" id="nsProg"></div>
+        <div class="ns-next" id="nsNext"></div>
+        <button class="ns-go" id="nsGo" type="button"></button>
+      </div>
     </div>
   </div>
   </main>
@@ -930,6 +950,12 @@
       if (inWrite) {
         showWriteMode();
         if (answer && answer.content) document.getElementById('finalTa').value = answer.content;
+        // 이미 완료한 문제로 돌아온 경우 — 여기서도 다음 문제로 가는 길을 연다
+        // (완료 화면이 막다른 길이면 두 번째 문제로 이어지지 않는다. 2026-08-19 피드백)
+        if ((sess && sess.stage === 'done') || _answerStatus === 'final') {
+          document.getElementById('saveBtn').textContent = '다시 저장';
+          showNextStep();
+        }
       }
       _restoring = false;
       return true;
@@ -1042,10 +1068,78 @@
           moncTrack('sojae_save_final');
           btn.textContent = '다시 저장';
           syncServer('done');   // 되묻기 대화도 서버에 마저 기록 + 세션 완료 표시
+          showNextStep();       // 저장을 막다른 길로 두지 않는다 — 다음 문제로 잇기
         }
       } catch (e) { footEl.textContent = '저장 실패: ' + e.message; }
       btn.disabled = false;
     });
+
+    // ── 저장 완료 → 다음 문제 잇기(2026-08-19 사용자 피드백) ─────────────────
+    //    같은 난이도에서 아직 완료 안 한 문제를 골라 버튼 하나로 잇는다. 진행(몇 개 완료)도
+    //    같이 보여 '초급편 완주'가 목표로 잡히게 한다. 조회가 실패하면 블록 자체를 안 띄운다
+    //    (지어낸 숫자를 보여주지 않는다 — 저장 흐름은 이 블록 없이도 그대로 성립).
+    let _nsPool = null;   // 문제 풀 캐시 — 다시 저장을 눌러도 조회는 한 번
+    async function showNextStep(){
+      if (!currentQuestion) return;
+      const S = window.SOJAE;
+      try {
+        if (!_nsPool || !_nsPool.length) _nsPool = await S.fetchQuestionPool(MONC.sb);
+        const level = S.levelOf(currentQuestion);
+        const pool = S.poolOf(_nsPool, level);
+        if (!pool.length) return;
+        // 완료 여부는 고르기 화면과 같은 원장(discovery_sessions.stage)으로 판정.
+        // 조회 실패면 done=null — 진행 숫자는 숨기고 '다음 문제' 버튼만 남긴다.
+        let done = null;
+        try {
+          const session = await MONC.getSession();
+          if (session) {
+            const { data, error } = await MONC.sb.from('discovery_sessions')
+              .select('question_id, stage').eq('member_id', session.user.id);
+            if (!error && data) {
+              done = {};
+              data.forEach(s => { if (s.stage === 'done') done[s.question_id] = true; });
+            }
+          }
+        } catch (_) {}
+        // 방금 저장한 문제는 완료로 친다 — syncServer('done') 반영 전에 조회해도 어긋나지 않게
+        if (done) done[currentQuestion.id] = true;
+        // 다음 문제: 지금 문제 다음 자리부터 한 바퀴 돌며 완료 아닌 첫 문제
+        const idx = Math.max(0, pool.findIndex(q => q.id === currentQuestion.id));
+        let next = null;
+        for (let i = 1; i <= pool.length; i++) {
+          const q = pool[(idx + i) % pool.length];
+          if (q.id === currentQuestion.id) continue;
+          if (done && done[q.id]) continue;
+          next = q; break;
+        }
+        const label = LEVEL_LABEL[level] || '';
+        const progEl = document.getElementById('nsProg');
+        if (done) {
+          const n = pool.filter(q => done[q.id]).length;
+          progEl.textContent = next
+            ? label + ' ' + pool.length + '문제 중 ' + n + '개 완료'
+            : label + ' 문제 ' + pool.length + '개를 모두 완료했어요!';
+        } else progEl.textContent = '';
+        const goBtn = document.getElementById('nsGo');
+        if (next) {
+          document.getElementById('nsNext').textContent = '다음 문제 — ' + next.content;
+          goBtn.textContent = '다음 문제 이어서 풀기';
+          goBtn.onclick = () => {
+            moncTrack('sojae_next_q', { level });
+            location.href = 'sojae.html?q=' + encodeURIComponent(next.id);
+          };
+        } else {
+          document.getElementById('nsNext').textContent = '';
+          goBtn.textContent = '다른 난이도 골라보기';
+          goBtn.onclick = () => {
+            moncTrack('sojae_next_q', { level, all_done: true });
+            location.href = 'sojae.html';
+          };
+        }
+        document.getElementById('nextStep').hidden = false;
+        document.getElementById('saveBtn').classList.add('is-saved');
+      } catch (_) {}
+    }
 
     // ── 진입: 로그인 가드 → 문제 확정(오늘 또는 ?q=) → 복원 또는 첫 되묻기 ──
     // ?q=<문제id> 로 오면 그 문제를 열어 이어쓰기(오늘 문제에 안 묶임 → 날짜 넘어가도 복원).
@@ -1070,11 +1164,16 @@
     }
     function renderPick() {
       const S = window.SOJAE;
-      // 난이도 칩 — 숫자에 '문제'를 붙여 둔다(값만 남으면 무엇을 센 수인지 모른다)
-      document.getElementById('pvLevels').innerHTML = S.LEVELS.map(lv =>
-        '<button class="pv-lv" type="button" data-lv="' + lv + '" aria-pressed="' + (lv === _pickLevel) + '">'
-        + '<span class="pv-lv-t">' + LEVEL_LABEL[lv] + '</span>'
-        + '<span class="pv-lv-n">' + S.poolOf(_pool, lv).length + '문제</span></button>').join('');
+      // 난이도 칩 — 숫자에 '문제'를 붙여 둔다(값만 남으면 무엇을 센 수인지 모른다).
+      // 하나라도 완료했으면 '완료 M/N'로 진행을 보여준다(2026-08-19 피드백 "초급편 완주" 목표감).
+      document.getElementById('pvLevels').innerHTML = S.LEVELS.map(lv => {
+        const lvPool = S.poolOf(_pool, lv);
+        const dn = lvPool.filter(q => _sessions[q.id] === 'done').length;
+        return '<button class="pv-lv" type="button" data-lv="' + lv + '" aria-pressed="' + (lv === _pickLevel) + '">'
+          + '<span class="pv-lv-t">' + LEVEL_LABEL[lv] + '</span>'
+          + '<span class="pv-lv-n">' + (dn ? '완료 ' + dn + '/' + lvPool.length : lvPool.length + '문제')
+          + '</span></button>';
+      }).join('');
       document.getElementById('pvDesc').textContent = S.LEVEL_DESC[_pickLevel] || '';
 
       const pool = S.poolOf(_pool, _pickLevel);
@@ -1096,7 +1195,10 @@
           + (st ? ' · ' + st : '') + '</div>'
           + '</div>'
           + '<button class="pv-go" type="button" id="pvStart">'
-          + (st === '이어쓰기' ? '이어서 쓰기' : '이 문제로 시작하기') + '</button>';
+          /* 완료한 문제에 '시작하기'가 떠 있으면 "오늘 할 건 끝났다"로 읽힌다(2026-08-19 피드백).
+             완료면 '다시 보기'로 바꿔, 새 문제는 아래 '다른 문제 보기'에서 고르게 안내한다. */
+          + (st === '이어쓰기' ? '이어서 쓰기' : st === '완료' ? '완료한 답변 다시 보기' : '이 문제로 시작하기')
+          + '</button>';
         document.getElementById('pvStart').addEventListener('click', () => pvGo(today.id));
       }
       // '다른 문제 보기' — 그 난이도 문제 전체. 문제가 하나뿐이면 펼칠 것이 없다.
