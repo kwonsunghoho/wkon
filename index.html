@@ -338,8 +338,11 @@
     <p class="closing-title reveal">국내 최초 온라인 승준 플랫폼,<br><em>몬크ON</em> 시작하기</p>
     <div class="reveal">
       <div class="closing-tabs">
-        <a class="btn closing-btn" href="challenges.html" data-pillar="challenge">온라인 챌린지 시작하기</a>
-        <a class="btn closing-btn is-ghost" href="briefing.html" data-pillar="briefing">내 승준 코스 정하기</a>
+        <!-- 계측: 2026-08-19 부터 문 카드(data-pillar)와 분리해 data-closing 으로 센다 —
+             "맨 아래 버튼이 실제로 쓰이나"가 홈 시작 버튼 위치 결정의 근거라서다.
+             그 전 pillar_challenge/briefing 숫자에는 이 버튼 클릭이 섞여 있다. -->
+        <a class="btn closing-btn" href="challenges.html" data-closing="challenge">온라인 챌린지 시작하기</a>
+        <a class="btn closing-btn is-ghost" href="briefing.html" data-closing="briefing">내 승준 코스 정하기</a>
       </div>
       <!-- 무료 도구로 가는 직접 링크 (2026-08-02 C-5) — 홈의 링크 8개 중 도구·연구실·후기로
            가는 것이 0개였다. 인스타 유입 학생은 햄버거를 열고 아코디언을 펼쳐야만 무료
@@ -427,6 +430,9 @@
       });
     }
     beacon('[data-pillar]', el => 'pillar_' + el.dataset.pillar);
+    // 마무리 CTA 두 개(2026-08-19 분리) — 문 카드와 이름을 갈라야
+    // "맨 아래 버튼까지 가서 누르는 사람이 얼마나 되나"를 따로 셀 수 있다.
+    beacon('[data-closing]', el => 'closing_' + el.dataset.closing);
   })();
 
   /* ── ④ 숫자 카운트업(뷰포트 진입 시 묶음별 1회) ──
@@ -1149,10 +1155,11 @@
 })();
 </script>
 
-<!-- 계측 비콘: 첫 방문자의 히어로(#home) 도달률 측정 (page_events 테이블 — 마이그레이션
+<!-- 계측 비콘: 첫 방문자의 스크롤 깊이 측정 (page_events 테이블 — 마이그레이션
      20260712120000_page_events.sql, 오너 실행 전엔 insert 실패를 조용히 무시).
-     intro_view(로드) 대비 hero_reached(#home 뷰포트 진입) 비율로 인트로 이탈을 판단 —
-     러웨이 조정은 이 수치로만 논의. 첫 방문 세션(위 인라인 스냅샷)만, 앵커 딥링크 제외. -->
+     intro_view(로드) 대비 hero_reached(#home 뷰포트 진입)로 인트로 이탈을,
+     closing_reached(.closing 진입 · 2026-08-19)로 '맨 아래 CTA까지 내려간 비율'을 판단 —
+     러웨이·시작 버튼 위치는 이 수치로만 논의. 첫 방문 세션(위 인라인 스냅샷)만, 앵커 딥링크 제외. -->
 <script>
 (function () {
   if (!window.__moncIntroFirstVisit) return;  // 재방문·플래그 보유 세션은 측정 제외
@@ -1167,17 +1174,33 @@
     } catch (e) {}
   }
   send('intro_view');
+  if (!('IntersectionObserver' in window)) return;
   var home = document.getElementById('home');
-  if (!home || !('IntersectionObserver' in window)) return;
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (entry) {
-      if (entry.isIntersecting) {
-        send('hero_reached');
-        io.disconnect();
-      }
-    });
-  }, { threshold: 0.3 });
-  io.observe(home);
+  if (home) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          send('hero_reached');
+          io.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+    io.observe(home);
+  }
+  // 맨 아래 CTA 도달(2026-08-19) — "시작 버튼까지 스크롤이 너무 길다"는 피드백의 실측.
+  // intro_view 대비 closing_reached 비율이 '끝까지 내려간 첫 방문자' 비율이다.
+  var closing = document.querySelector('.closing');
+  if (closing) {
+    var io2 = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          send('closing_reached');
+          io2.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+    io2.observe(closing);
+  }
 })();
 </script>
 </body>
