@@ -51,6 +51,8 @@
       '.lv-page{position:relative;margin:0 auto 10px;background:#fff;border-radius:6px;' +
         'overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.35);}' +
       '.lv-page canvas{display:block;width:100%;height:auto;}' +
+      '.lv-links{position:absolute;inset:0;pointer-events:none;}' +
+      '.lv-links a{position:absolute;pointer-events:auto;}' +
       '.lv-page.err::after{content:"이 페이지를 그리지 못했어요";' +
         'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' +
         'color:#8a94a5;font-size:13px;}' +
@@ -116,6 +118,54 @@
     }
   }
 
+  /* PDF 안 하이퍼링크 — 캔버스는 그림일 뿐이라 링크 주석(annotation)을 <a> 로 따로 얹는다.
+     좌표는 scale 1 뷰포트의 백분율 — 리사이즈로 캔버스가 다시 그려져도 그대로 맞는다.
+     캔버스가 LRU 로 비워져도 층은 남고, 재렌더 때 지우고 다시 얹는다(중복 방지). */
+  function drawLinks(w, page, annots) {
+    var old = w.querySelector('.lv-links'); if (old) old.remove();
+    var links = (annots || []).filter(function (a) {
+      return a.subtype === 'Link' && (a.url || a.dest);
+    });
+    if (!links.length) return;
+    var vp = page.getViewport({ scale: 1 });
+    var lay = document.createElement('div');
+    lay.className = 'lv-links';
+    links.forEach(function (an) {
+      var r = vp.convertToViewportRectangle(an.rect);
+      var el = document.createElement('a');
+      el.style.left = (Math.min(r[0], r[2]) / vp.width * 100) + '%';
+      el.style.top = (Math.min(r[1], r[3]) / vp.height * 100) + '%';
+      el.style.width = (Math.abs(r[2] - r[0]) / vp.width * 100) + '%';
+      el.style.height = (Math.abs(r[3] - r[1]) / vp.height * 100) + '%';
+      if (an.url) {
+        /* 바깥 주소 — 새 탭. 사용자가 직접 누르는 <a> 라 인앱 팝업 차단에 안 걸린다. */
+        el.href = an.url; el.target = '_blank'; el.rel = 'noopener noreferrer';
+        el.title = an.url;
+      } else {
+        /* 문서 안 이동(목차 등) — 해당 쪽으로 스크롤 */
+        el.href = '#';
+        el.setAttribute('aria-label', '문서 안 해당 위치로 이동');
+        el.addEventListener('click', function (e) { e.preventDefault(); goDest(an.dest); });
+      }
+      lay.appendChild(el);
+    });
+    w.appendChild(lay);
+  }
+
+  function goDest(dest) {
+    if (!S.doc) return;
+    var gen = S.gen;
+    (typeof dest === 'string' ? S.doc.getDestination(dest) : Promise.resolve(dest))
+      .then(function (d) {
+        if (gen !== S.gen || !d || !d[0]) return;
+        return S.doc.getPageIndex(d[0]).then(function (idx) {
+          if (gen !== S.gen) return;
+          var t = S.wraps[idx];
+          if (t) body.scrollTop += t.getBoundingClientRect().top - body.getBoundingClientRect().top - 12;
+        });
+      }).catch(function () {});
+  }
+
   function renderPage(n) {
     var gen = S.gen;
     var w = S.wraps[n - 1];
@@ -139,7 +189,12 @@
           w.classList.remove('err');
           if (S.live.indexOf(n) < 0) S.live.push(n);
           evictFar(n);
-          page.cleanup();
+          return page.getAnnotations({ intent: 'display' })
+            .catch(function () { return []; })   // 링크를 못 읽어도 본문 읽기는 막지 않는다
+            .then(function (annots) {
+              if (gen === S.gen) drawLinks(w, page, annots);
+              page.cleanup();
+            });
         });
     }).catch(function (err) {
       if (gen !== S.gen) return;
