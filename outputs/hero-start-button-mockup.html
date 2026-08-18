@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>홈 히어로 시작 버튼 — 3안 목업</title>
+<title>홈 히어로 시작 버튼 — 새 5안 목업</title>
 <!-- 결정 기록(2026-08-19): 계측 실측 — 첫 방문 95명 중 45명(47%)이 인트로 화면에서 이탈,
-     첫 화면에는 누를 수 있는 행동이 하나도 없었다(스크롤 신호뿐). 사용자 피드백
-     "몬크ON 시작하기까지 스크롤을 너무 내려야 한다"의 실체가 이 숫자다.
-     행선지는 챌린지 허브(challenges.html) — 홈 클릭 1위(42%) + 마무리 CTA 주 버튼과 동일.
-     ⚠️ 이 목업은 자리·모양 판단용 근사치다. 실제 구현은 로고 실측 배치(fitWindow)와
-     등장 타이밍(스크롤 신호와 같은 1.8초), reduced-motion 규칙을 따른다. -->
+     첫 화면에는 누를 수 있는 행동이 하나도 없었다.
+     1차 3안 중 A안(네이비 알약)을 골라 라이브 반영했으나 **오너 반려("완전 별로") — 즉시 되돌림**
+     (커밋 9886b0b → revert 11bdd29). 무거운 단색 알약이 씬 위에 스티커처럼 떠 보인 것이 원인으로 추정.
+     아래 새 5안은 전부 그보다 가볍거나(고스트·흰·반투명·글줄), 씬 밖(상단 바)으로 뺀 안이다.
+     행선지는 전부 챌린지 허브(challenges.html).
+     ⚠️ 다음 반영 절차: 고른 안을 바로 공개하지 않고 숨김 상태로 올려 주소 뒤에 ?cta=on 을
+     붙였을 때만 보이게 한 뒤, 오너가 라이브 실물을 확인하고 나서 전체 공개한다. -->
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:-apple-system,BlinkMacSystemFont,'SUIT','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -22,16 +24,20 @@
   .lead b { color:#1B3A6B; }
   .note { font-size:12.5px; color:#5A6A80; background:#fff; border:1px solid #E3E8F0;
     border-radius:12px; padding:10px 12px; margin:14px 0 30px; }
+  .note b { color:#1C2A3A; }
 
   .case { margin-bottom:44px; }
   .cap { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
   .cap h2 { font-size:17px; }
   .badge { font-size:11.5px; font-weight:800; color:#fff; background:#1B3A6B;
     border-radius:999px; padding:3px 10px; }
+  .badge.gray { background:#8A97A8; }
   .desc { font-size:13.5px; color:#3A4A60; margin-bottom:12px; }
   .pros { font-size:12.5px; color:#5A6A80; margin-top:12px; }
   .pros b { color:#1C2A3A; }
   .pros li { margin:3px 0 3px 18px; }
+  .sect { font-size:15px; font-weight:800; color:#5A6A80; margin:40px 0 18px;
+    border-top:1px solid #E3E8F0; padding-top:22px; }
 
   /* 폰 틀 — 375×740 근사 */
   .ph { position:relative; width:min(375px,100%); height:740px; margin:0 auto;
@@ -43,8 +49,11 @@
     justify-content:space-between; padding:0 18px; z-index:3;
     border-bottom:1px solid rgba(23,42,71,.06); }
   .tb-logo { font-weight:900; font-size:19px; letter-spacing:.02em; color:#1B3A6B; }
+  .tb-right { display:flex; align-items:center; gap:14px; }
   .tb-menu { width:22px; }
   .tb-menu span { display:block; height:2.5px; background:#1C2A3A; border-radius:2px; margin:4.5px 0; }
+  .tb-btn { background:#1B3A6B; color:#fff; font-size:13px; font-weight:700;
+    border-radius:999px; padding:10px 16px; }
 
   .stack { position:absolute; left:0; right:0; top:49%; transform:translateY(-50%);
     text-align:center; z-index:2; }
@@ -60,33 +69,41 @@
     background:linear-gradient(#1C2A3A 0%, rgba(28,42,58,.25) 100%); border-radius:2px; }
   .cue .ar { color:#1C2A3A; font-size:11px; }
 
-  /* A안 — 스크롤 신호 위 네이비 알약 */
-  .pill { position:absolute; left:50%; transform:translateX(-50%); bottom:172px; z-index:2;
-    background:#1B3A6B; color:#fff; font-size:15px; font-weight:700;
-    padding:14px 30px; border-radius:999px; white-space:nowrap;
+  /* 버튼 공통 자리(신호 위) */
+  .cta { position:absolute; left:50%; transform:translateX(-50%); bottom:180px; z-index:2;
+    font-size:15px; font-weight:700; padding:14px 30px; border-radius:999px; white-space:nowrap; }
+  /* D안 — 고스트(테두리) */
+  .v-ghost { border:1.5px solid #1B3A6B; color:#1B3A6B; background:transparent; }
+  /* E안 — 흰 알약 */
+  .v-white { background:#fff; color:#1B3A6B; border:1px solid rgba(23,42,71,.10);
+    box-shadow:0 8px 20px rgba(20,32,52,.14); }
+  /* F안 — 반투명 캡슐 */
+  .v-glass { background:rgba(255,255,255,.72); color:#1B3A6B;
+    border:1px solid rgba(255,255,255,.95); box-shadow:0 8px 20px rgba(20,32,52,.10); }
+  /* G안 — 서브라인 아래 글줄 링크 */
+  .v-inline { display:inline-block; margin-top:24px; font-size:14px; font-weight:800;
+    color:#1B3A6B; letter-spacing:.02em; }
+  .v-inline .arr { font-weight:900; }
+  /* 반려된 1차 A안(기록 보존용) */
+  .v-navy { background:#1B3A6B; color:#fff; box-shadow:0 10px 24px rgba(20,32,52,.22); }
+  .v-navy2 { display:inline-block; margin-top:26px; background:#1B3A6B; color:#fff;
+    font-size:15px; font-weight:700; padding:14px 30px; border-radius:999px;
     box-shadow:0 10px 24px rgba(20,32,52,.22); }
-  .pill small { display:block; font-size:0; }
-  /* B안 — 로고 덩어리 아래 알약 */
-  .pill-in { position:static; display:inline-block; transform:none; margin-top:26px;
-    background:#1B3A6B; color:#fff; font-size:15px; font-weight:700;
-    padding:14px 30px; border-radius:999px; white-space:nowrap;
-    box-shadow:0 10px 24px rgba(20,32,52,.22); }
-  /* C안 — 텍스트 링크 */
-  .tlink { position:absolute; left:50%; transform:translateX(-50%); bottom:186px; z-index:2;
-    font-size:14px; font-weight:800; color:#1B3A6B; white-space:nowrap;
-    border-bottom:2px solid #1B3A6B; padding-bottom:2px; }
+  .v-tlink { position:absolute; left:50%; transform:translateX(-50%); bottom:190px; z-index:2;
+    font-size:14px; font-weight:800; color:#1B3A6B; border-bottom:2px solid #1B3A6B;
+    padding-bottom:2px; white-space:nowrap; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>홈 첫 화면 시작 버튼 — 3안</h1>
-  <p class="lead">근거: 첫 방문 95명 중 <b>45명(47%)이 인트로에서 이탈</b>(8/17~19 실측). 첫 화면에는 누를 수 있는 것이 없어, 이들은 버튼을 하나도 못 보고 떠납니다.</p>
-  <div class="note">셋 다 행선지는 <b>챌린지 허브</b>(홈 클릭 1위·마무리 CTA와 동일)입니다. 버튼은 로고 조립이 끝나고 스크롤 신호와 같이(1.8초) 떠서, 조립 연출은 그대로 유지됩니다. 목업 배치는 근사치이고 실제 구현은 로고 실측에 맞춥니다.</div>
+  <h1>홈 첫 화면 시작 버튼 — 새 5안</h1>
+  <p class="lead">1차 A안(네이비 알약)은 라이브 반려 후 되돌렸습니다. 아래 5안은 전부 그보다 <b>가볍거나, 씬 밖으로 뺀</b> 안입니다. 근거는 동일: 첫 방문 47%가 인트로에서 이탈, 첫 화면에 누를 것이 없음.</p>
+  <div class="note"><b>이번 반영 절차</b>: 고르신 안을 바로 공개하지 않습니다. 숨김 상태로 올린 뒤 <b>모드 주소(?cta=on)로 라이브 실물을 먼저 확인</b>받고, 좋다고 하시면 그때 전체 공개합니다.</div>
 
-  <!-- A안 -->
+  <!-- D안 -->
   <div class="case">
-    <div class="cap"><h2>A안 — 신호 위 알약 버튼</h2><span class="badge">추천</span></div>
-    <p class="desc">스크롤 신호 묶음 위, 화면 아래 여백에 네이비 알약 하나. 창문 씬(로고·하늘)은 그대로 두고 빈자리에만 앉습니다.</p>
+    <div class="cap"><h2>D안 — 고스트 알약(테두리만)</h2></div>
+    <p class="desc">네이비 테두리 + 네이비 글씨, 속은 비칩니다. '버튼은 맞는데 씬을 누르지 않는' 가장 절제된 버튼.</p>
     <div class="ph">
       <img class="bg" src="../images/hero-window-mob.webp" alt="">
       <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
@@ -94,7 +111,7 @@
         <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
         <div class="kor">새로운 커리어가<br>시작되는 순간</div>
       </div>
-      <div class="pill">챌린지 시작하기</div>
+      <div class="cta v-ghost">챌린지 시작하기</div>
       <div class="cue">
         <span class="tag">승무원 준비 온라인 플랫폼</span>
         <span class="lb">아래로 스크롤</span>
@@ -103,24 +120,23 @@
       </div>
     </div>
     <ul class="pros">
-      <li><b>장점</b>: 씬을 안 가리면서도 즉시 누를 수 있다. "내려서 더 보거나, 바로 시작하거나" 두 길이 나란히 선다.</li>
-      <li><b>단점</b>: 화면 아래가 신호까지 세 덩어리라 살짝 붐빈다.</li>
-      <li>규격: 높이 48px·흰 글씨 대비 10.3:1 충족.</li>
+      <li><b>장점</b>: 마무리 CTA 의 테두리 버튼과 같은 문법이라 사이트 안에서 낯설지 않다.</li>
+      <li><b>단점</b>: 채운 버튼보다 눈에 덜 띈다.</li>
     </ul>
   </div>
 
-  <!-- B안 -->
+  <!-- E안 -->
   <div class="case">
-    <div class="cap"><h2>B안 — 로고 바로 아래 알약</h2></div>
-    <p class="desc">로고·한글 서브라인 덩어리 밑에 붙입니다. 눈에 가장 잘 띄는 자리입니다.</p>
+    <div class="cap"><h2>E안 — 흰 알약 + 네이비 글씨</h2></div>
+    <p class="desc">창틀과 같은 흰색이라 씬에 녹아들고, 옅은 그림자로만 떠 보입니다.</p>
     <div class="ph">
       <img class="bg" src="../images/hero-window-mob.webp" alt="">
       <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
       <div class="stack">
         <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
         <div class="kor">새로운 커리어가<br>시작되는 순간</div>
-        <span class="pill-in">챌린지 시작하기</span>
       </div>
+      <div class="cta v-white">챌린지 시작하기</div>
       <div class="cue">
         <span class="tag">승무원 준비 온라인 플랫폼</span>
         <span class="lb">아래로 스크롤</span>
@@ -129,15 +145,15 @@
       </div>
     </div>
     <ul class="pros">
-      <li><b>장점</b>: 시선이 로고에서 버튼으로 바로 떨어진다 — 누르는 비율은 가장 높을 자리.</li>
-      <li><b>단점</b>: 창문 씬 한가운데 붙어 첫인상이 '광고 배너'에 가까워진다. 브랜드 연출 개입이 가장 크다.</li>
+      <li><b>장점</b>: 톤온톤이라 점잖다. 다크 위 '흰 알약 + 네이비 글씨' 문법의 밝은 판.</li>
+      <li><b>단점</b>: 흰 벽 위 흰 버튼이라 그림자·테두리가 옅으면 배경에 녹는다(값 조심).</li>
     </ul>
   </div>
 
-  <!-- C안 -->
+  <!-- F안 -->
   <div class="case">
-    <div class="cap"><h2>C안 — 밑줄 텍스트 링크</h2></div>
-    <p class="desc">버튼 대신 "바로 시작하기 →" 한 줄. 씬 개입이 가장 적은 소극적 안입니다.</p>
+    <div class="cap"><h2>F안 — 반투명 흰 캡슐</h2></div>
+    <p class="desc">흰색 72% 반투명이라 뒤 배경이 살짝 비칩니다. D와 E 의 중간 무게.</p>
     <div class="ph">
       <img class="bg" src="../images/hero-window-mob.webp" alt="">
       <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
@@ -145,7 +161,7 @@
         <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
         <div class="kor">새로운 커리어가<br>시작되는 순간</div>
       </div>
-      <div class="tlink">바로 시작하기 →</div>
+      <div class="cta v-glass">챌린지 시작하기</div>
       <div class="cue">
         <span class="tag">승무원 준비 온라인 플랫폼</span>
         <span class="lb">아래로 스크롤</span>
@@ -154,9 +170,123 @@
       </div>
     </div>
     <ul class="pros">
-      <li><b>장점</b>: 화면이 가장 깨끗하게 남는다.</li>
-      <li><b>단점</b>: 버튼으로 안 읽혀 효과가 약할 수 있다 — 47% 이탈을 잡자는 목적에는 가장 힘이 없다.</li>
+      <li><b>장점</b>: 존재감과 배경 존중의 절충.</li>
+      <li><b>단점</b>: 반투명 값이 흐릿하면 '눌리는 것'으로 안 읽힐 수 있다.</li>
     </ul>
+  </div>
+
+  <!-- G안 -->
+  <div class="case">
+    <div class="cap"><h2>G안 — 서브라인 아래 글줄 링크</h2></div>
+    <p class="desc">버튼 상자 없이 "새로운 커리어가 시작되는 순간" 아래에 글줄로 잇습니다. 타이포그래피의 일부처럼 보이는 안.</p>
+    <div class="ph">
+      <img class="bg" src="../images/hero-window-mob.webp" alt="">
+      <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
+      <div class="stack">
+        <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
+        <div class="kor">새로운 커리어가<br>시작되는 순간</div>
+        <span class="v-inline">챌린지로 시작하기 <span class="arr">→</span></span>
+      </div>
+      <div class="cue">
+        <span class="tag">승무원 준비 온라인 플랫폼</span>
+        <span class="lb">아래로 스크롤</span>
+        <span class="rail"></span>
+        <span class="ar">▼</span>
+      </div>
+    </div>
+    <ul class="pros">
+      <li><b>장점</b>: 씬에 새 물체를 안 놓는다 — 로고 묶음이 문장으로 끝난다.</li>
+      <li><b>단점</b>: 버튼보다 못 보고 지나칠 확률이 높다. 터치 영역은 구현 시 44px 확보.</li>
+    </ul>
+  </div>
+
+  <!-- H안 -->
+  <div class="case">
+    <div class="cap"><h2>H안 — 상단 바 미니 버튼</h2></div>
+    <p class="desc">첫 화면(창문 씬)은 아예 안 건드리고, 상단 바 오른쪽에 작은 시작 버튼을 둡니다. 스크롤 내내 따라다닙니다.</p>
+    <div class="ph">
+      <img class="bg" src="../images/hero-window-mob.webp" alt="">
+      <div class="topbar"><span class="tb-logo">MONC</span>
+        <span class="tb-right"><span class="tb-btn">시작하기</span><span class="tb-menu"><span></span><span></span><span></span></span></span>
+      </div>
+      <div class="stack">
+        <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
+        <div class="kor">새로운 커리어가<br>시작되는 순간</div>
+      </div>
+      <div class="cue">
+        <span class="tag">승무원 준비 온라인 플랫폼</span>
+        <span class="lb">아래로 스크롤</span>
+        <span class="rail"></span>
+        <span class="ar">▼</span>
+      </div>
+    </div>
+    <ul class="pros">
+      <li><b>장점</b>: 씬 무개입 + 인트로에서 떠나는 사람도, 스크롤 중인 사람도 항상 보인다.</li>
+      <li><b>단점</b>: 공용 메뉴(nav)를 고치는 일이라 홈 외 노출 범위를 정해야 한다(홈에서만 보이게 제한 가능). 데스크톱엔 이미 '신청하기' 버튼이 있어 모바일 전용.</li>
+    </ul>
+  </div>
+
+  <!-- 기각 기록 -->
+  <p class="sect">기각 기록 — 1차 3안 (2026-08-19)</p>
+
+  <div class="case">
+    <div class="cap"><h2>구 A안 — 네이비 알약</h2><span class="badge gray">선택 후 라이브 반려</span></div>
+    <p class="desc">1차에서 선택돼 라이브 반영했으나 실물 반려("완전 별로") — 즉시 되돌림. 단색 채움 알약이 씬 위에 무겁게 떠 보였다.</p>
+    <div class="ph">
+      <img class="bg" src="../images/hero-window-mob.webp" alt="">
+      <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
+      <div class="stack">
+        <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
+        <div class="kor">새로운 커리어가<br>시작되는 순간</div>
+      </div>
+      <div class="cta v-navy">챌린지 시작하기</div>
+      <div class="cue">
+        <span class="tag">승무원 준비 온라인 플랫폼</span>
+        <span class="lb">아래로 스크롤</span>
+        <span class="rail"></span>
+        <span class="ar">▼</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="case">
+    <div class="cap"><h2>구 B안 — 로고 아래 네이비 알약</h2><span class="badge gray">기각</span></div>
+    <p class="desc">창문 유리 위에 올라타 광고 배너처럼 보인다 — 1차에서 미선택.</p>
+    <div class="ph">
+      <img class="bg" src="../images/hero-window-mob.webp" alt="">
+      <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
+      <div class="stack">
+        <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
+        <div class="kor">새로운 커리어가<br>시작되는 순간</div>
+        <span class="v-navy2">챌린지 시작하기</span>
+      </div>
+      <div class="cue">
+        <span class="tag">승무원 준비 온라인 플랫폼</span>
+        <span class="lb">아래로 스크롤</span>
+        <span class="rail"></span>
+        <span class="ar">▼</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="case">
+    <div class="cap"><h2>구 C안 — 밑줄 텍스트 링크</h2><span class="badge gray">기각</span></div>
+    <p class="desc">신호 위 밑줄 링크 — 1차에서 미선택(새 G안이 위치를 바꿔 다시 다룬다).</p>
+    <div class="ph">
+      <img class="bg" src="../images/hero-window-mob.webp" alt="">
+      <div class="topbar"><span class="tb-logo">MONC</span><span class="tb-menu"><span></span><span></span><span></span></span></div>
+      <div class="stack">
+        <div class="logo">M&thinsp;O&thinsp;N&thinsp;C</div>
+        <div class="kor">새로운 커리어가<br>시작되는 순간</div>
+      </div>
+      <div class="v-tlink">바로 시작하기 →</div>
+      <div class="cue">
+        <span class="tag">승무원 준비 온라인 플랫폼</span>
+        <span class="lb">아래로 스크롤</span>
+        <span class="rail"></span>
+        <span class="ar">▼</span>
+      </div>
+    </div>
   </div>
 </div>
 </body>
