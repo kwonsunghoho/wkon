@@ -46,7 +46,9 @@
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — 파일 받기·로그인이 막히는 자리 -->
   <script src="inapp.js?v=10" defer></script>
   <!-- 글꼴은 tokens.css 의 @import(SUIT) 하나가 책임진다 — 페이지별 폰트 링크 없음(2026-07-29) -->
-  <link rel="stylesheet" href="index.css">
+  <!-- ?v= 는 2026-08-19 히어로 시작 버튼과 한 쌍 — 새 HTML 이 옛 캐시 CSS 와 만나면
+       버튼이 민짜 링크로 화면 꼭대기에 뜬다. .hero-cta 를 고치면 같이 올릴 것. -->
+  <link rel="stylesheet" href="index.css?v=20260819">
 </head>
 <body>
   <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
@@ -123,6 +125,13 @@
     <span class="hc-rail"></span>
     <svg class="hc-arrow" aria-hidden="true" width="17" height="10" viewBox="0 0 22 13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 9 9-9"/></svg>
   </div>
+  <!-- 시작 버튼(2026-08-19 · 목업 3안 중 A안 — outputs/hero-start-button-mockup.html 이 결정 기록).
+       근거: 첫 방문 95명 중 47%가 인트로에서 이탈(8/17~19 계측) — 첫 화면에 누를 것이 없었다.
+       행선지는 챌린지 허브(홈 클릭 1위 42% · 마무리 CTA 주 버튼과 동일).
+       ⚠️ 등장은 CSS 애니메이션(신호와 같은 1.8초대) — JS 타임라인(frame)에 넣지 말 것.
+          행동 요소라 JS 가 죽어도 떠야 한다. cue 의 is-gone(스크롤 숨김)도 일부러 안 따른다
+          (안내는 스크롤이 시작되면 소음이지만, 행동은 히어로가 보이는 동안 계속 유효하다). -->
+  <a class="hero-cta" href="challenges.html" data-herocta>챌린지 시작하기</a>
 </section>
 
 <script>
@@ -433,6 +442,8 @@
     // 마무리 CTA 두 개(2026-08-19 분리) — 문 카드와 이름을 갈라야
     // "맨 아래 버튼까지 가서 누르는 사람이 얼마나 되나"를 따로 셀 수 있다.
     beacon('[data-closing]', el => 'closing_' + el.dataset.closing);
+    // 히어로 시작 버튼(2026-08-19 신설) — 인트로 이탈 47% 대응의 효과 측정 자리
+    beacon('[data-herocta]', 'hero_cta');
   })();
 
   /* ── ④ 숫자 카운트업(뷰포트 진입 시 묶음별 1회) ──

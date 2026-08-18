@@ -336,6 +336,29 @@
       .hc-arrow { animation: none; opacity: 1; }
     }
 
+    /* ── 히어로 시작 버튼(2026-08-19 · 목업 A안 — outputs/hero-start-button-mockup.html 이
+       결정 기록). 첫 방문 47%가 인트로에서 이탈(계측) — 첫 화면의 유일한 행동 요소다.
+       ⚠️ 등장은 CSS 애니메이션 — JS 타임라인에 넣지 말 것(JS 가 죽어도 떠야 한다).
+       ⚠️ cue 의 is-gone 을 안 따른다 — 안내가 아니라 행동이다.
+       bottom 은 신호 묶음 위 — 짧은 화면(667px)은 자리가 57px 뿐이라 신호와의 간격을
+       지키는 쪽을 골랐다(버튼 위가 창틀 하단에 2px 걸치는 것은 실측상 티가 안 난다).
+       clamp 하한을 내리면 신호 글자에 붙는다 — 바꾸면 667·812 둘 다 잰다. */
+    .hero-cta {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      bottom: calc(clamp(166px, 22svh, 196px) + env(safe-area-inset-bottom, 0px));
+      display: inline-block; line-height: 1.4; padding: 14px 30px; border-radius: 999px;
+      background: var(--action); color: var(--action-ink); font-size: 15px; font-weight: 700;
+      text-decoration: none; white-space: nowrap;
+      box-shadow: 0 10px 24px rgba(20, 32, 52, .22);
+      opacity: 0; animation: heroCtaIn .5s ease-out 1.85s forwards;
+    }
+    @keyframes heroCtaIn { to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .hero-cta { animation: none; opacity: 1; } }
+    /* 데스크톱은 가로형 사진이라 창 유리가 화면 비율상 더 아래(약 74%)까지 내려온다 —
+       22svh 값이면 버튼이 유리 하단을 침범해서(1280×800 실측) 고정값으로 내린다.
+       152 는 유리 하단(≈591)과 신호 꼭대기(≈656) 사이 65px 띠의 가운데다. */
+    @media (min-width: 1024px) { .hero-cta { bottom: 152px; } }
+
     /* ═══════════════════════════════════════════════════
        왜 몬크인가(.msn #home) + 네 개의 문(.doors · 2026-08-06 넷으로) + 마무리(.closing)
        — 2026-07-29 스토리형 개편(오너 스케치 + outputs/homepage-story-mockup.html v4).
