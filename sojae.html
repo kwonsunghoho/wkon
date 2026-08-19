@@ -277,6 +277,13 @@
       padding: 12.5px 14px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
       min-height: 48px; color-scheme: light; }
     .ns-go[hidden] { display: none; }
+    /* 창고 담기는 세 번째 순위라 글줄 버튼 — 알약을 셋 쌓으면 어디를 눌러야 할지 모른다 */
+    .ns-wh { display: block; width: 100%; margin-top: 4px; background: none; border: none;
+      font: inherit; font-size: 13px; font-weight: 700; color: var(--accent-ink);
+      text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+      min-height: 44px; color-scheme: light; }
+    .ns-wh[hidden] { display: none; }
+    .ns-wh:disabled { opacity: .6; cursor: default; }
 
     /* ── v2: 소재 카드 + 뼈대 렌더 ── */
     .mcard { border: 1.5px solid var(--accent-dark); border-radius: 12px; padding: 12px 13px;
@@ -400,9 +407,9 @@
         <!-- 재료 게이지 — 서버가 매 턴 실측한 재료 체크리스트. 서버 응답이 없으면 안 뜬다 -->
         <button class="chip mm" id="matMeter" type="button" hidden></button>
         <button class="chip chip-go" id="refineCta" type="button" style="display:none;">다듬기</button>
-        <!-- 대화 → 소재 창고(일문일답 재료) 옮기기 — 2026-08-16 오너 "대화를 창고로 연동".
-             무과금 · 서버가 학생 발화의 사실만 추려 카드로 저장 · 구버전 함수면 안내로 degrade -->
-        <button class="chip" id="toWhCta" type="button" style="display:none;">소재 창고에 담기</button>
+        <!-- ⚠️ '소재 창고에 담기'를 여기(대화 꼬리)에 되살리지 말 것(2026-08-19 오너).
+             대화 도중 화면을 떠나는 문이라 마무리 전 이탈·대화 유실 사고가 났다 —
+             지금은 저장 완료 패널(#nextStep)에만 있다. -->
       </div>
       <div class="mm-detail" id="mmDetail" hidden></div>
       <!-- 충전 안내 전용 — '되묻기 대화는 무료예요' 상시 문구는 2026-08-05 오너 지시로 삭제 -->
@@ -440,6 +447,10 @@
         <div class="ns-next" id="nsNext"></div>
         <a class="ns-polish" id="nsPolish" hidden>이 답변 첨삭받기 →</a>
         <button class="ns-go" id="nsGo" type="button" hidden></button>
+        <!-- 대화 → 소재 창고 옮기기. 저장 완료 뒤에만 연다(2026-08-19 오너 "다 완성하기
+             전까지는 넣으면 안 되는 것 아니냐") — 대화 도중 여길 눌러 화면을 떠나면서
+             마무리가 끊기고 대화가 사라지는 사고가 났다. 되묻기 2번 미만이면 숨김. -->
+        <button class="ns-wh" id="toWhCta" type="button" hidden>이 대화를 소재 창고에도 담기 →</button>
       </div>
     </div>
   </div>
@@ -625,7 +636,7 @@
                 : no2 + '다듬기 · 충전 필요'));
       document.getElementById('refineWrap').style.display = '';
       cta.style.display = 'inline-flex';
-      document.getElementById('toWhCta').style.display = 'inline-flex';   // 다듬기와 같은 시점(2번째 답변부터)
+      // ('소재 창고에 담기'는 저장 완료 패널로 이사 — 2026-08-19. 여기서 켜지 말 것)
       // 크레딧이 모자랄 때만 충전 길을 아래에 남긴다(그 외엔 값이 칩에 다 들어가 있다)
       if (_wallet !== null && freeLeft <= 0 && bal < cost) {
         // AI킬러 준비중(2026-08-11) 동안 충전은 마이페이지 지갑으로 — 다시 열면 ai-killer.html 로 되돌린다
@@ -949,8 +960,23 @@
       if (r.ok) _answerStatus = status;
     }
     // 대화·뼈대: 세션 1행(문제당 unique) + 아직 안 올린 메시지만 추가 → 재방문해도 중복 없음.
+    /* 대화 저장이 계속 안 되면(2번 연속) 한 번만 알린다 — 예전엔 실패를 전부 조용히 삼켜서
+       학생이 허공에 대고 쓰다 화면을 떠나며 통째로 잃었다(2026-08-19 오너 "대화가 저장이
+       안 되더라, 계속 다시 썼다"). 문제 행이 없는 폴백 대화는 FK 때문에 아예 저장을 못 하는
+       상태라 같은 경고를 띄운다. 답변 자체는 writeAnswer 폴백이 따로 지킨다. */
+    let _syncFails = 0, _syncWarned = false;
+    function syncTrouble(){
+      _syncFails++;
+      if (_syncFails >= 2 && !_syncWarned) {
+        _syncWarned = true;
+        sysBubble('지금 <b>대화 기록이 저장되지 않고 있어요</b> — 이 화면을 벗어나면 대화가 사라질 수 있어요. '
+          + '이어서 최종 답변까지 완성해 <b>[답변집에 저장]</b>을 눌러 주세요. 답변 저장은 정상 동작해요.');
+        moncTrack('sojae_sync_fail', { fallback: !currentQuestion });
+      }
+    }
     async function syncServer(stage){
-      if (_restoring || !currentQuestion) return;
+      if (_restoring) return;
+      if (!currentQuestion) { if (userMsgCount >= 2) syncTrouble(); return; }
       let session;
       try { session = await MONC.getSession(); } catch (_) { return; }
       if (!session) return;
@@ -960,7 +986,7 @@
             .upsert({ member_id: session.user.id, question_id: currentQuestion.id, stage: stage || 'ask' },
                     { onConflict: 'member_id,question_id' })
             .select('id').single();
-          if (!data) return;
+          if (!data) { syncTrouble(); return; }
           _srvSession = data.id;
           const { count } = await MONC.sb.from('discovery_messages')
             .select('id', { count: 'exact', head: true }).eq('session_id', _srvSession);
@@ -976,9 +1002,11 @@
             content: m.content,
           }));
           const { error } = await MONC.sb.from('discovery_messages').insert(rows);
-          if (!error) _srvSynced = transcript.length;
+          if (error) { syncTrouble(); return; }
+          _srvSynced = transcript.length;
         }
-      } catch (_) {}
+        _syncFails = 0;   // 한 번 성공하면 경고 카운트 초기화(일시 끊김을 사고로 안 읽는다)
+      } catch (_) { syncTrouble(); }
     }
     // 저장된 대화를 화면+transcript 로 다시 그린다(복원).
     function replayTranscript(items){
@@ -1044,6 +1072,8 @@
     //    서버(answer-program card_from_chat)가 학생 발화의 사실만 추려 카드로 저장하고,
     //    소재 창고의 수정 폼을 바로 연다(학생이 훑어보고 고치는 게 확인 절차).
     //    무과금이라 프로브 게이트는 안 둔다 — 구버전 함수면 bad_action 안내로 끝난다.
+    //    ⚠️ 저장 완료 패널에서만 열린다(2026-08-19 오너) — 대화 도중의 문이었을 때
+    //    마무리가 끊기고 대화가 사라지는 사고가 났다. 떠나기 전에 남은 대화를 마저 밀어 둔다.
     document.getElementById('toWhCta').addEventListener('click', async () => {
       const btn = document.getElementById('toWhCta');
       if (btn.disabled) return;
@@ -1055,6 +1085,7 @@
       }
       moncTrack('sojae_to_warehouse', { turns: userMsgCount });
       btn.disabled = true; const oldLabel = btn.textContent; btn.textContent = '옮기는 중…';
+      await syncServer();   // 아직 안 올라간 대화가 있으면 화면을 떠나기 전에 마저 저장
       let out = null;
       try {
         const r = await MONC.sb.functions.invoke('answer-program', {
@@ -1166,6 +1197,8 @@
         pol.href = 'polish.html?answer=' + encodeURIComponent(_answerId);
         pol.hidden = false;
       }
+      // 창고 담기는 추려낼 학생 발화가 있을 때만(되묻기 2번부터 — 서버가 카드로 만들 재료)
+      document.getElementById('toWhCta').hidden = userMsgCount < 2;
       document.getElementById('nextStep').hidden = false;
       document.getElementById('saveBtn').classList.add('is-saved');
       if (!currentQuestion) return;   // 폴백 대화(자유 글 저장) — 다음 문제 계산은 문제 풀이 있어야

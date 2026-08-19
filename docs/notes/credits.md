@@ -38,7 +38,7 @@
 
 ## 이름 정리 (2026-08-02 오너 승인 — 화면 글자만, 파일·테이블명 유지)
 
-`answers.html` 제목/h1 = **나만의 승준노트**(nav 1번과 통일) · polish nav·허브 라벨 = **답변 첨삭**('연구실'은 lab 한 곳에만) · 소재 서랍 = **소재 모음**. ⚠️ 파일명(`answers.html`·`polish.html`)·클래스·테이블(`sojae_materials`)은 그대로다. ~~남은 과제였던~~ `experience_cards`(소재 창고)와 소재 발굴의 **연결은 2026-08-16 만들어졌다** — 단 소재 모음(`sojae_materials`) 카드가 아니라 **대화(discovery) 자체**를 옮긴다: sojae [소재 창고에 담기] 칩 → answer-program `card_from_chat`(무과금·하루 10회 — '저장은 무료' 원칙 준수) → `origin='sojae'` 카드. owner 의 answer-program 재배포 후 동작(구버전이면 '준비 중' 안내). 소재 모음 카드 → 소재 창고 변환은 여전히 후속.
+`answers.html` 제목/h1 = **나만의 승준노트**(nav 1번과 통일) · polish nav·허브 라벨 = **답변 첨삭**('연구실'은 lab 한 곳에만) · 소재 서랍 = **소재 모음**. ⚠️ 파일명(`answers.html`·`polish.html`)·클래스·테이블(`sojae_materials`)은 그대로다. ~~남은 과제였던~~ `experience_cards`(소재 창고)와 소재 발굴의 **연결은 2026-08-16 만들어졌다** — 단 소재 모음(`sojae_materials`) 카드가 아니라 **대화(discovery) 자체**를 옮긴다: sojae [소재 창고에 담기](2026-08-19부터 저장 완료 패널) → answer-program `card_from_chat`(무과금·하루 10회 — '저장은 무료' 원칙 준수) → `origin='sojae'` 카드. owner 의 answer-program 재배포 후 동작(구버전이면 '준비 중' 안내). 소재 모음 카드 → 소재 창고 변환은 여전히 후속.
 
 > 2026-07-30 CLAUDE.md 다이어트로 이관한 기능별 상세 기록·의사결정 원장이다.
 > 매 작업 공통 규칙은 CLAUDE.md 에 있고, 이 문서는 해당 기능을 고칠 때 읽는다.
