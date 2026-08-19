@@ -47,13 +47,6 @@
   <script src="inapp.js?v=10" defer></script>
   <!-- 글꼴은 tokens.css 의 @import(SUIT) 하나가 책임진다 — 페이지별 폰트 링크 없음(2026-07-29) -->
   <link rel="stylesheet" href="index.css">
-  <script>
-    /* 히어로 [시작하기] 미리보기 게이트(2026-08-19 2차) — ?cta=on 일 때만 단일 [시작하기]
-       (→ #doors 스크롤 착지)가 보이고 현행 스택(챌린지 주버튼+갈래 분할 바)은 숨는다.
-       오너가 라이브 실물을 확인하고 승인하면 게이트·구 스택을 걷어 공개한다.
-       스크립트가 죽으면 현행 스택 유지라 안전. */
-    if (/[?&]cta=on(&|$)/.test(location.search)) document.documentElement.classList.add('cta-preview');
-  </script>
 </head>
 <body>
   <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
@@ -115,25 +108,17 @@
          혼자 툭 튀어나오잖아") — 자간·줄바꿈은 JS(fitKor)가 로고 실측 폭에 맞춰 계산한다.
          .hi-kl 두 덩어리로 나눠 둔 것이 그 줄바꿈 지점이다(<br>은 두 줄 모드에서만 산다). -->
     <div class="hi-kor" id="hiKor"><span class="hi-kl">새로운 커리어가</span> <br class="hi-kbr"> <span class="hi-kl">시작되는 순간</span><!--
-      시작 버튼 스택(2026-08-19 · 근거: 첫 방문 47% 인트로 이탈 계측 · ?cta=on 미리보기로
-      5차 다듬은 뒤 오너 승인으로 같은 날 공개 — 과정은 docs/notes/home.md).
+      시작 버튼(2026-08-19 · 근거: 첫 방문 47% 인트로 이탈 계측 · ?cta=on 미리보기 절차로
+      1차 스택 → 2차 단일 [시작하기] 확정 — 과정은 docs/notes/home.md).
       ⚠️ .hi-kor 안에 두는 이유: 한글 줄이 absolute(흐름 밖)라 여기 붙어야 로고의 창 중앙
          배치가 안 밀린다. 등장도 한글 줄과 한 몸(타임라인이 kor 인라인 opacity 로 제어).
     --><div class="hi-cta">
-      <a class="hcta-main" href="challenges.html" data-herocta>챌린지 시작하기</a>
-      <!-- 세 갈래(2026-08-19 오너 "챌린지, 승준도구, 기출 자료실 3가지 띄우자") — 주버튼 아래
-           칩 2개. 챌린지가 클릭 1위(42%)라 주버튼 위계는 유지한다. 기출 주소는 합쳐진 취업
-           자료실의 기출 갈래(lab-question.html 스텁과 같은 목적지 — 리다이렉트 없이 직행). -->
-      <div class="hcta-row">
-        <a class="hcta-chip" href="tools.html" data-herocta2="tools">승준 도구</a>
-        <a class="hcta-chip" href="lab-shelf.html?shelf=airline&amp;kind=question" data-herocta2="lab">기출 자료실</a>
-      </div>
-      <!-- 단일 [시작하기](2026-08-19 2차 · ?cta=on 미리보기) — 오너 "조잡하다, 그냥
-           시작하기로 바꾸고 4개의 문에서 고르게". 레퍼런스 실측(넷플릭스·듀오링고·클래스101)
-           공통 문법: 히어로엔 동사 하나, 갈래 선택은 다음 화면(#doors)이 담당.
-           누르면 #doors 로 스크롤 착지(전역 scroll-behavior:smooth 가 태운다 — 별도 JS 없음).
-           승인 시 위 스택(주버튼+분할 바)을 걷고 이것만 남긴다. -->
-      <a class="hcta-main hcta-go" href="#doors" data-herocta>시작하기</a>
+      <!-- 단일 [시작하기](2026-08-19 2차 오너 확정 "조잡하다, 그냥 시작하기로 바꾸고
+           4개의 문에서 고르게") — 같은 날 공개했던 스택(챌린지 주버튼+갈래 분할 바)을 교체.
+           레퍼런스 실측(넷플릭스·듀오링고·클래스101) 공통 문법: 히어로엔 동사 하나,
+           갈래 선택은 다음 화면(#doors 네 개의 문)이 담당. 누르면 #doors 스크롤 착지
+           (전역 scroll-behavior:smooth + .doors scroll-margin — 별도 JS 없음). -->
+      <a class="hcta-main" href="#doors" data-herocta>시작하기</a>
     </div></div>
   </div>
   <!-- 스크롤 신호 — 2026-07-30 오너가 목업 4안 중 D안 선택(`outputs/hero-scroll-cue-mockup.html`).
@@ -460,9 +445,10 @@
     // 마무리 CTA 두 개(2026-08-19 분리) — 문 카드와 이름을 갈라야
     // "맨 아래 버튼까지 가서 누르는 사람이 얼마나 되나"를 따로 셀 수 있다.
     beacon('[data-closing]', el => 'closing_' + el.dataset.closing);
-    // 히어로 시작 버튼(2026-08-19 · 미리보기 게이트 상태) — 공개 후 인트로 이탈 47% 대응 효과 측정
+    // 히어로 [시작하기](2026-08-19) — 인트로 이탈 47% 대응 효과 측정.
+    // 2차 개편 후 의미는 '#doors 착지'다(문 클릭은 pillar_* 가 잇는다).
+    // 구 hero_cta_tools/lab(갈래 칩)은 같은 날 폐지 — 데이터는 공개 몇 시간분뿐.
     beacon('[data-herocta]', 'hero_cta');
-    beacon('[data-herocta2]', el => 'hero_cta_' + el.dataset.herocta2);   // tools · lab
   })();
 
   /* ── ④ 숫자 카운트업(뷰포트 진입 시 묶음별 1회) ──
@@ -1005,10 +991,9 @@
     mid.style.top = (oy + rh * (o.t + o.b) / 2 - korH / 2 - openH * LIFT).toFixed(1) + 'px';
     /* 가로 중심도 화면 정중앙이 아니라 개구부 중심이다(이미지상 창이 2px 오른쪽에 그려져 있다). */
     mid.style.transform = 'translate(' + (ox + rw * (o.l + o.r) / 2 - cw / 2).toFixed(1) + 'px, -50%)';
-    /* ── 시작 버튼 스택 폭 = 유리 실측 폭(2026-08-19 오너 "창문 안에 이쁘게 들어가게") ──
+    /* ── 시작 버튼 폭 상한 = 유리 실측 폭(2026-08-19 오너 "창문 안에 이쁘게 들어가게") ──
        구 280px 고정폭은 유리(모바일 ~150px)의 두 배라 창을 뚫고 나갔다. 로고(FIT)와 같은
-       기준으로 유리 폭을 CSS 변수로 내려 스택이 창 안에 앉는다. 게이트로 숨긴 상태면
-       korH 에 안 잡혀 기존 배치에 영향이 없다. */
+       기준으로 유리 폭을 CSS 변수로 내려 버튼이 창 안에 앉는다. */
     mid.style.setProperty('--glass-w', winW.toFixed(1) + 'px');
     /* ── 신호를 창틀 아래로(2026-08-19 오너 "아직도 스크롤 문구 창문에 있다") ──
        고정 bottom:34 는 인앱처럼 세로가 짧은 화면에서 창틀(FRAME_B)에 올라탄다. 창틀 하단
