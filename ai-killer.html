@@ -620,6 +620,8 @@
   <script src="supabase-config.js"></script>
   <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
   <script src="pay-pending.js?v=1"></script>
+  <!-- 결제수단(포트원 채널) 공용 창구 — 상점·채널 키는 이 파일 한 곳(2026-08-19) -->
+  <script src="pay-methods.js?v=1"></script>
   <!-- 긴 글 임시 보관(2026-08-02 D-10) — data-keep 붙은 칸을 sessionStorage 에.
        ⚠️ localStorage 로 바꾸지 말 것(공용 기기에 학생 글이 남는다). -->
   <script src="draft-keep.js" defer></script>
@@ -1136,8 +1138,7 @@
     // ── 충전(포트원) ──────────────────────────────────────────────────
     // ⚠️ 금액·횟수는 화면이 정하지 않는다. site_config.credit_packs 를 읽어 보여주기만 하고,
     //    실제 검증은 verify-payment 가 같은 설정을 다시 읽어서 한다(브라우저가 보낸 금액 불신).
-    const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
-    const PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59';
+    //    상점·채널 키는 pay-methods.js 한 곳(window.moncPay) — 결제수단 선택도 거기서.
     const PENDING_KEY = 'monc_pending_credit_pay';
     let _packs = [];
     let _payRestore = null;   // 결제사 페이지에서 뒤로 왔을 때 버튼을 되돌린다(bfcache)
@@ -1169,7 +1170,10 @@
     async function charge(packId) {
       const pack = _packs.find((p) => String(p.id) === String(packId));
       if (!pack) return;
-      if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.'); return; }
+      if (!window.PortOne || !window.moncPay) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.'); return; }
+      // 결제수단 선택(토스페이·카카오페이) — 버튼 잠금·미결 기록보다 앞. 닫으면 아무 일 없다.
+      const channelKey = await window.moncPay.choose();
+      if (!channelKey) return;
       const btn = document.querySelector('[data-pack="' + packId + '"]');
       const orig = btn.innerHTML;
       btn.disabled = true; btn.textContent = '결제 진행 중…';
@@ -1190,7 +1194,7 @@
         // 주문 맥락 — 웹훅(portone-webhook)이 브라우저 없이도 충전을 끝내는 데 쓴다.
         const sess = await MONC.getSession().catch(() => null);
         const res = await window.PortOne.requestPayment({
-          storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+          storeId: window.moncPay.storeId, channelKey,
           paymentId, orderName: '몬크 AI킬러 크레딧 ' + (Number(pack.count) || 0) + '개',
           totalAmount: Number(pack.price), currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
           customData: JSON.stringify({ k: 'credit', uid: (sess && sess.user && sess.user.id) || null, pk: packId }),

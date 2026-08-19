@@ -124,12 +124,14 @@
     .pay-total .a { font-size: 22px; font-weight: 900; }
     .pay-total .a small { font-size: 14px; font-weight: 700; }
     .btn-toss { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: #0064FF; color: #fff; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    /* 카카오페이(2026-08-19) — 노랑·먹색은 카카오 브랜드 기능색(팔레트 통일 대상 아님) */
+    .btn-kakao { width: 100%; margin-top: 8px; padding: 16px; border: none; border-radius: 12px; background: #FFEB00; color: #191919; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
     .btn-bank { width: 100%; margin-top: 10px; padding: 16px; border: 1.5px solid var(--accent-dark); border-radius: 12px; background: var(--surface); color: var(--accent-ink); font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
     .btn-free { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
     /* 카카오톡 문의 — 결제 버튼 아래 한 줄(2026-08-09 오너 확정 · apply.html 과 같은 모양). 노랑·먹색은 카카오 브랜드색(기능색). */
     .kakao-ask { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 10px; padding: 13px 16px; border-radius: 12px; background: #FEE500; color: #191919; font-size: 14.5px; font-weight: 700; text-decoration: none; letter-spacing: -0.015em; }
     .kakao-ask svg { flex: 0 0 auto; }
-    .btn-toss:disabled, .btn-bank:disabled, .btn-free:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
+    .btn-toss:disabled, .btn-kakao:disabled, .btn-bank:disabled, .btn-free:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
     .lc-refund { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-top: 14px; }
     .lc-refund a { color: var(--accent-ink); text-decoration: underline; }
     .lc-closednote { text-align: center; font-size: 15px; font-weight: 700; color: var(--text-muted); padding: 10px 0 2px; }
@@ -192,6 +194,8 @@
   <script src="supabase-config.js"></script>
   <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
   <script src="pay-pending.js?v=1"></script>
+  <!-- 결제수단(포트원 채널) 공용 창구 — 상점·채널 키는 이 파일 한 곳(2026-08-19) -->
+  <script src="pay-methods.js?v=1"></script>
   <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
   <script src="phone-check.js"></script>
   <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
@@ -202,9 +206,7 @@
   <!-- 포트원(PortOne) V2 결제 SDK -->
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script>
-    /* ── 포트원 채널(apply.html과 동일 공개 값) ── */
-    const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
-    const PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59';
+    /* ── 포트원 채널 — 상점·채널 키는 pay-methods.js 한 곳(window.moncPay) ── */
 
     const params = new URLSearchParams(location.search);
     const LECTURE_ID = params.get('id');
@@ -343,9 +345,12 @@
         return '<section class="lc-apply" id="applyBox"><div class="lc-closednote">' + msg + '</div></section>';
       }
       const free = !(l.price > 0);
+      // 카카오페이 버튼은 채널 키가 채워져 있을 때만 그린다(pay-methods.js · 2026-08-19)
+      const kakaoOn = window.moncPay && window.moncPay.kakaoReady();
       const payButtons = free
         ? '<button type="button" class="btn-free" id="freeBtn">무료로 신청하기</button>'
         : '<button type="button" class="btn-toss" id="tossBtn"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px;width:auto;display:block;"><span>로 결제하고 신청하기</span></button>'
+          + (kakaoOn ? '<button type="button" class="btn-kakao" id="kakaoBtn">카카오페이로 결제하고 신청하기</button>' : '')
           + '<button type="button" class="btn-bank" id="bankBtn">계좌이체로 신청하기</button>';
       // 시간대는 정원·마감이 타임마다 따로라, 이름·연락처보다 먼저 고르게 둔다
       const slotPicker = SLOTS.length
@@ -441,9 +446,11 @@
       wireSlots();
 
       const toss = document.getElementById('tossBtn');
+      const kakao = document.getElementById('kakaoBtn');
       const bank = document.getElementById('bankBtn');
       const free = document.getElementById('freeBtn');
-      if (toss) toss.addEventListener('click', payWithToss);
+      if (toss) toss.addEventListener('click', () => payEasy('toss'));
+      if (kakao) kakao.addEventListener('click', () => payEasy('kakao'));
       if (bank) bank.addEventListener('click', openBankModal);
       if (free) free.addEventListener('click', submitFree);
 
@@ -798,13 +805,14 @@
       }
     }
 
-    /* ── 토스 결제 → verify-payment(특강 금액 서버검증) → 접수 ── */
-    async function payWithToss() {
+    /* ── 간편결제(토스페이·카카오페이) → verify-payment(특강 금액 서버검증) → 접수 ──
+       provider = 'toss' | 'kakao' — 채널 키만 다르고 흐름은 같다(pay-methods.js). */
+    async function payEasy(provider) {
       if (_busy) return;
       const applicant = readApplicant(); if (!applicant) return;
-      if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+      if (!window.PortOne || !window.moncPay) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
       _busy = true;
-      const btn = document.getElementById('tossBtn'); const orig = btn.innerHTML;
+      const btn = document.getElementById(provider === 'kakao' ? 'kakaoBtn' : 'tossBtn'); const orig = btn.innerHTML;
       btn.disabled = true; btn.textContent = '결제 진행 중…';
       _payRestore = () => { _busy = false; if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = orig; } };
       // 결제창을 띄우기 전에 중복·잔여석을 확인 — 결제 후 막혀 환불하는 상황을 줄인다
@@ -825,7 +833,8 @@
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
 
         const res = await window.PortOne.requestPayment({
-          storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+          storeId: window.moncPay.storeId,
+          channelKey: window.moncPay.channels[provider] || window.moncPay.channels.toss,
           paymentId, orderName: '몬크 특강 · ' + LECTURE.title,
           totalAmount: total, currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
           customer: { fullName: applicant.name, phoneNumber: applicant.phone },

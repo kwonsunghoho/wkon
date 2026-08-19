@@ -524,7 +524,9 @@
       <!-- 결제 방법 -->
       <!-- 토스페이 간편결제(라이브, 2026-07-23 전환). 계좌이체와 함께 상시 노출. -->
       <div id="tossWrap">
-        <button type="button" id="tossBtn" onclick="payWithToss()" style="width:100%; margin-top:16px; padding:16px; border:none; border-radius:12px; background:#0064FF; color:#fff; font-size:16px; font-weight:900; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px; width:auto; display:block;"><span>로 결제하고 신청하기</span></button>
+        <button type="button" id="tossBtn" onclick="payEasy('toss')" style="width:100%; margin-top:16px; padding:16px; border:none; border-radius:12px; background:#0064FF; color:#fff; font-size:16px; font-weight:900; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px; width:auto; display:block;"><span>로 결제하고 신청하기</span></button>
+        <!-- 카카오페이(2026-08-19) — 채널 키가 비어 있으면 숨김 유지(pay-methods.js). 노랑·먹색은 카카오 브랜드 기능색 — 팔레트 통일 대상 아님 -->
+        <button type="button" id="kakaoBtn" onclick="payEasy('kakao')" hidden style="width:100%; margin-top:8px; padding:16px; border:none; border-radius:12px; background:#FFEB00; color:#191919; font-size:16px; font-weight:900; font-family:inherit; cursor:pointer;">카카오페이로 결제하고 신청하기</button>
         <div style="text-align:center; font-size:12px; color:var(--text-muted); margin:12px 0 2px;">— 또는 —</div>
       </div>
       <!-- 계좌이체: 클릭 시 계좌 안내 모달(바텀시트) 오픈 → 모달에서 실제 접수 -->
@@ -599,6 +601,8 @@
 <script src="supabase-config.js"></script>
 <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
 <script src="pay-pending.js?v=1"></script>
+<!-- 결제수단(포트원 채널) 공용 창구 — 상점·채널 키는 이 파일 한 곳(2026-08-19) -->
+<script src="pay-methods.js?v=1"></script>
 <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
 <script src="phone-check.js"></script>
   <!-- 결제 복귀 대기 화면 — ?payresult 가 있으면 스스로 뜬다(2026-08-02 D-7).
@@ -677,9 +681,9 @@ async function loadChallengePrice() {
   } catch (e) { /* 폴백 참가비 유지 · 앵커는 안 그린다 */ }
 }
 
-/* ── 포트원(PortOne) V2 — 토스페이 간편결제 채널 (공개 가능 값) ── */
-const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5';
-const PORTONE_CHANNEL_KEY = 'channel-key-8a96b8c5-494a-4f37-b111-2e3ac03c2b59'; // 토스페이(테스트 시크릿 연동). 라이브 전환 시 포트원 채널을 실연동으로 바꾸고 채널키 갱신
+/* ── 포트원(PortOne) V2 — 상점·채널 키는 pay-methods.js 한 곳(window.moncPay) ── */
+// 카카오페이 채널 키가 채워져 있으면 카카오페이 버튼을 켠다(2026-08-19).
+if (window.moncPay && window.moncPay.kakaoReady()) document.getElementById('kakaoBtn').hidden = false;
 
 /* ── FAQ 데이터 ── */
 const FAQ = [
@@ -1296,24 +1300,25 @@ async function confirmBankTransfer() {
   }
 }
 
-/* ── 토스페이 결제 → 서버 검증(verify-payment) → 신청 접수 ──
+/* ── 간편결제(토스페이·카카오페이) → 서버 검증(verify-payment) → 신청 접수 ──
+   provider = 'toss' | 'kakao' — 채널 키만 다르고 흐름은 같다(pay-methods.js).
    결제 성공 후 Supabase Edge Function이 포트원에 실제 결제·금액을 재확인한 뒤에만 저장한다. */
 let _isPaying = false;
 let _payRestore = null;   // 결제 중 '버튼 되돌리기'를 담아둔다 — 결제사 페이지에서 뒤로 왔을 때 쓴다(아래 pageshow)
-async function payWithToss() {
+async function payEasy(provider) {
   if (_isPaying) return;
   const name = document.getElementById('appName').value.trim();
   const phone = document.getElementById('appPhone').value.trim();
   const ids = selectedIds();
 
   if (!validateOrder()) return;
-  if (!window.PortOne) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
+  if (!window.PortOne || !window.moncPay) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
   // 결제창을 띄우기 전에 중복을 걸러낸다 — 결제 후 막히면 환불(verify-payment)까지 가야 한다
   if (await dupBlocked(ids)) return;
 
   _isPaying = true;
-  const btn = document.getElementById('tossBtn');
+  const btn = document.getElementById(provider === 'kakao' ? 'kakaoBtn' : 'tossBtn');
   const orig = btn.innerHTML;   // 버튼 안에 토스페이 로고(img)가 있어 textContent 로 되돌리면 로고가 사라진다
   btn.disabled = true; btn.textContent = '결제 진행 중...'; btn.style.opacity = '.7';
   _payRestore = () => { _isPaying = false; btn.disabled = false; btn.innerHTML = orig; btn.style.opacity = '1'; };
@@ -1341,8 +1346,8 @@ async function payWithToss() {
     const redirectUrl = location.origin + location.pathname + '?' + _rp.toString();
 
     const res = await window.PortOne.requestPayment({
-      storeId: PORTONE_STORE_ID,
-      channelKey: PORTONE_CHANNEL_KEY,
+      storeId: window.moncPay.storeId,
+      channelKey: window.moncPay.channels[provider] || window.moncPay.channels.toss,
       paymentId: paymentId,
       orderName: 'MONC 챌린지 ' + ids.length + '개',
       totalAmount: total,
