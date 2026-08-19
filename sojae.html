@@ -52,6 +52,14 @@
        ⚠️ min-height:0 이 없으면 안쪽 .chat 의 overflow 스크롤이 안 생긴다. */
     .mainflow { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; outline: none; }
 
+    /* ── 대화 화면 몰입 모드(2026-08-19 오너 "상단 네비 때문에 답변 볼 화면이 작다") ──
+       대화가 시작되면(chat-focus) 공용 nav 를 걷어 그 높이(57px)를 대화에 준다.
+       나가는 길은 상단 앱바(← 소재 발굴)와 난이도 알약이 맡는다 — admin·review-desk 처럼
+       단독 화면 문법. 고르기 화면(pickView)은 사이트 맥락이라 nav 를 유지한다.
+       ⚠️ 인앱 안내(.iab)도 같이 걷는다(kb-open 과 같은 취급) — 로그인을 이미 통과한 화면이다. */
+    body.chat-focus #navbar, body.chat-focus .iab, body.chat-focus .iab-space { display: none; }
+    body.chat-focus[data-nav-offset] { padding-top: 0; }
+
     /* 상단 바 */
     .appbar { display: flex; align-items: center; justify-content: space-between;
       padding: 12px 16px; gap: 10px; flex: 0 0 auto; }
@@ -228,8 +236,21 @@
        값이 붙어 있어야 한다(결정 화면에 값·버튼·근거). 값을 떼서 다른 줄로 빼지 말 것. */
     #refineCta b { font-weight: 800; }
     #refineNote a { color: var(--accent-ink); font-weight: 700; text-decoration: underline; }
+    /* ── 단계 번호 배지(2026-08-19 오너 "뭘 눌러야 할지 모르겠다 — 번호로 순서를") ──
+       스텝바(1 되묻기 › 2 다듬기 › 3 최종 작성)의 번호를 다음 행동에 그대로 붙인다.
+       ⚠️ 번호는 다듬기(②)와 최종 작성(③)에만 — '소재 창고에 담기'는 순서가 아니라
+       선택지라 번호를 주지 않는다(①② 로 나열하면 둘 다 눌러야 하는 걸로 읽힌다). */
+    .stepno { display: inline-flex; width: 19px; height: 19px; border-radius: 50%;
+      align-items: center; justify-content: center; background: rgba(255,255,255,.25);
+      font-size: 12px; font-weight: 800; font-style: normal; flex-shrink: 0; }
+    /* 재료 5/5 첫 순간 두 번만 콕콕 — 상시 깜빡임 금지(nav bfPulse 를 지운 이유와 같다) */
+    @keyframes stepPop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.45); } }
+    .stepno-pop { animation: stepPop .7s ease-in-out .5s 2; }
+    @media (prefers-reduced-motion: reduce) { .stepno-pop { animation: none; } }
     #writeMode .wlabel { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
-    #finalTa { min-height: 120px; max-height: none; overflow: auto; resize: vertical; }
+    /* 96px(약 4줄) — 120px 은 대화(뼈대) 영역을 지나치게 눌렀다(2026-08-19 오너
+       "쓰는 창이 너무 커서 답변 볼 화면이 작다"). 더 길게 쓰는 학생은 아래 손잡이로 늘린다. */
+    #finalTa { min-height: 96px; max-height: none; overflow: auto; resize: vertical; }
     #saveBtn { display: block; width: 100%; margin-top: 10px; background: var(--action);
       color: var(--action-ink); border: none; border-radius: 14px; padding: 14px; font-size: 15px;
       font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
@@ -245,9 +266,17 @@
     .ns-prog { font-size: 13px; font-weight: 700; }
     .ns-next { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5;
       word-break: keep-all; }
-    .ns-go { display: block; width: 100%; margin-top: 10px; background: var(--action);
-      color: var(--action-ink); border: none; border-radius: 14px; padding: 14px; font: inherit;
-      font-size: 15px; font-weight: 700; cursor: pointer; min-height: 48px; color-scheme: light; }
+    /* 저장 뒤 1순위는 첨삭 직행(2026-08-19 오너 "직행 버튼") — 채운 알약은 이 하나뿐.
+       '다음 문제'는 흰 버튼으로 한 단계 물러난다(같은 급 버튼 두 개를 쌓지 않는다). */
+    .ns-polish { display: block; width: 100%; margin-top: 10px; background: var(--action);
+      color: var(--action-ink); border-radius: 14px; padding: 14px; font-size: 15px;
+      font-weight: 700; text-align: center; text-decoration: none; min-height: 48px; }
+    .ns-polish[hidden] { display: none; }  /* display:block 이 [hidden] 을 이긴다 — .badge 와 같은 함정 */
+    .ns-go { display: block; width: 100%; margin-top: 8px; background: var(--surface);
+      color: var(--accent-ink); border: 1.5px solid var(--border); border-radius: 14px;
+      padding: 12.5px 14px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+      min-height: 48px; color-scheme: light; }
+    .ns-go[hidden] { display: none; }
 
     /* ── v2: 소재 카드 + 뼈대 렌더 ── */
     .mcard { border: 1.5px solid var(--accent-dark); border-radius: 12px; padding: 12px 13px;
@@ -400,16 +429,17 @@
     </div>
     <!-- 최종작성 모드 -->
     <div id="writeMode" style="display:none;">
-      <div class="wlabel">최종 답변 — 위 뼈대를 보고 내 말로 완성하세요. <b>작성 중인 내용은 자동 저장돼요.</b></div>
+      <div class="wlabel">③ 최종 답변 — 뼈대를 보고 내 말로 완성하세요. <b>자동 저장돼요.</b></div>
       <div class="field"><textarea id="finalTa" rows="4" placeholder="내 말로 최종 답변을 작성하세요"></textarea></div>
       <button id="saveBtn">답변집에 저장(완료)</button>
       <div id="saveFoot" aria-live="polite"></div>
-      <!-- 저장 완료 뒤에만 보인다 — 진행(몇 문제 중 몇 개 완료) + 다음 문제로 잇는 버튼.
-           2026-08-19 사용자 피드백: 저장하면 끝이라 두 번째 문제로 갈 길이 없었다. -->
+      <!-- 저장 완료 뒤에만 보인다 — 첨삭 직행(1순위) + 진행·다음 문제 잇기.
+           2026-08-19 오너: "저장하고 바로 첨삭으로 넘어가는 직행 버튼". -->
       <div id="nextStep" hidden>
         <div class="ns-prog" id="nsProg"></div>
         <div class="ns-next" id="nsNext"></div>
-        <button class="ns-go" id="nsGo" type="button"></button>
+        <a class="ns-polish" id="nsPolish" hidden>이 답변 첨삭받기 →</a>
+        <button class="ns-go" id="nsGo" type="button" hidden></button>
       </div>
     </div>
   </div>
@@ -442,6 +472,8 @@
     let _srvSession = null;    // discovery_sessions.id
     let _srvSynced = 0;        // 서버에 이미 저장된 메시지 수 → 재방문해도 중복 삽입 방지
     let _answerStatus = null;  // null | 'draft' | 'final' — 초안 저장이 완료본을 덮어쓰지 않게
+    let _answerId = null;      // 이 화면이 저장한 answers 행 id — 첨삭 직행(polish?answer=)에 쓴다
+    let _freeId = null;        // 자유 글 폴백으로 만든 answers 행 id(문제 행이 없을 때만)
     let _restoring = false;    // 복원 렌더 중엔 저장/서버동기 건너뜀
 
     // ── 되묻기 질문(가짜) — 유형별로 결이 다름. 실제로는 Haiku Edge Function이 생성 ──
@@ -582,13 +614,15 @@
       const freeLeft = Math.floor((Number(_wallet && _wallet.daily_left) || 0) / cost);
       // ⚠️ 무료는 '크레딧'이 아니라 '횟수'로 말한다 — 두 단위를 섞으면
       //    "3크레딧 남았는데 왜 안 되지"가 된다(AI킬러와 같은 규칙).
+      // 앞의 ② 는 스텝바 '2 다듬기'의 번호 — 다음 누를 것을 가르친다(2026-08-19).
+      const no2 = '<i class="stepno" aria-hidden="true">2</i>';
       cta.innerHTML = _wallet === null
-        ? '다듬기 →'
+        ? no2 + '다듬기 →'
         : (freeLeft > 0
-            ? '다듬기 · 오늘 <b>' + freeLeft + '번</b> 무료'
+            ? no2 + '다듬기 · 오늘 <b>' + freeLeft + '번</b> 무료'
             : (bal >= cost
-                ? '다듬기 · <b>' + cost + '크레딧</b>'
-                : '다듬기 · 충전 필요'));
+                ? no2 + '다듬기 · <b>' + cost + '크레딧</b>'
+                : no2 + '다듬기 · 충전 필요'));
       document.getElementById('refineWrap').style.display = '';
       cta.style.display = 'inline-flex';
       document.getElementById('toWhCta').style.display = 'inline-flex';   // 다듬기와 같은 시점(2번째 답변부터)
@@ -647,6 +681,9 @@
         // 다듬기 칩은 이 턴에 처음 켜졌을 때만 ④ 등장 연출 — 이전 턴부터 떠 있던 칩을
         // 사라졌다 다시 띄우면 "버튼이 없어졌다"가 된다.
         if (ctaWasHidden) document.getElementById('refineCta').classList.add('chip-arrive');
+        // ② 배지를 두 번 콕콕 — '다음 누를 것'을 이 순간에만 가르친다(상시 반복 금지)
+        const sn = document.querySelector('#refineCta .stepno');
+        if (sn) sn.classList.add('stepno-pop');
         // 연출이 끝나면 끝 상태로 굳힌다 — ① mm-arrive 를 단 채로 display 가 토글되면
         // (다듬기 실패 복귀 등) 애니메이션이 처음부터 다시 튀고 ② sys-arrive·chip-arrive 는
         // opacity:0 에서 시작하므로 애니메이션이 끝까지 못 돌면(탭이 백그라운드로 가는 등)
@@ -659,6 +696,8 @@
           }
           document.querySelectorAll('.sys-arrive').forEach(el => el.classList.remove('sys-arrive'));
           document.getElementById('refineCta').classList.remove('chip-arrive');
+          const sn2 = document.querySelector('#refineCta .stepno');
+          if (sn2) sn2.classList.remove('stepno-pop');
         }, 2100);                                    // 마지막 연출(칩 1.45+0.45s·링 2.05s) 뒤
       }
       if (!mmDetail.hidden) mmDetail.innerHTML = matDetailHtml();   // 펼쳐 둔 상태면 내용만 갱신
@@ -854,9 +893,50 @@
     }
 
     // ── 이어쓰기 저장/복원 (서버 단일 원천) ──────────────────────────────
-    // 답변 초안: answers 에 status='draft' 로 upsert(문제당 1행). 완료본이면 final 유지(다운그레이드 방지).
+    /* 답변 한 건을 서버에 쓴다 — 저장 버튼·자동 저장이 같이 쓰는 유일한 경로.
+       ① 문제 행이 있으면 (member,question) upsert — 문제당 1행, 재저장=수정.
+       ② 문제 행이 없으면(문제 조회 실패 폴백 대화) **자유 글(title=문항)로 저장한다.**
+          예전엔 이 경우 저장 버튼이 "문제 정보를 불러오지 못했어요"로 막히고 자동 저장도
+          조용히 건너뛰어, 학생이 답변을 다 쓰고도 '내 답변'에 아무것도 남지 않았다
+          (2026-08-19 오너 "답변을 작성하는데 내 답변으로 저장이 안된다").
+       ③ upsert 가 23503(문제 행이 방금 삭제됨 — admin 정리와 경합)이면 ②로 넘어가
+          학생이 쓴 글을 어떤 경우에도 살린다. 실패는 sojae_save_fail 로 계측. */
+    async function writeAnswer(session, content, status){
+      if (currentQuestion) {
+        try {
+          const { data, error } = await MONC.sb.from('answers').upsert(
+            { member_id: session.user.id, question_id: currentQuestion.id, content, status },
+            { onConflict: 'member_id,question_id' }).select('id').maybeSingle();
+          if (!error) { if (data) _answerId = data.id; return { ok: true }; }
+          if (error.code !== '23503') {
+            moncTrack('sojae_save_fail', { code: error.code || '' });
+            return { ok: false, error };
+          }
+          // 23503(문제 행 삭제 경합) → 아래 자유 글 폴백으로. 운영이 알아야 하는 신호라 남긴다.
+          moncTrack('sojae_save_fail', { code: '23503', recovered: true });
+        } catch (e) { moncTrack('sojae_save_fail', { code: 'net' }); return { ok: false, error: e }; }
+      }
+      try {
+        const title = ((currentQuestion && currentQuestion.content) || FALLBACK_QUESTION).slice(0, 200);
+        if (_freeId) {   // 이 화면에서 이미 만든 자유 글이 있으면 그 행만 고친다(중복 행 방지)
+          const { data, error } = await MONC.sb.from('answers')
+            .update({ content, status }).eq('id', _freeId).eq('member_id', session.user.id)
+            .select('id').maybeSingle();
+          if (!error && data) { _answerId = _freeId; return { ok: true }; }
+          if (error) { moncTrack('sojae_save_fail', { code: error.code || '' }); return { ok: false, error }; }
+          _freeId = null;   // 0행(다른 데서 삭제) — 아래에서 새로 만든다
+        }
+        const { data, error } = await MONC.sb.from('answers')
+          .insert({ member_id: session.user.id, title, content, status })
+          .select('id').single();
+        if (error) { moncTrack('sojae_save_fail', { code: error.code || '' }); return { ok: false, error }; }
+        _freeId = data.id; _answerId = data.id;
+        return { ok: true };
+      } catch (e) { moncTrack('sojae_save_fail', { code: 'net' }); return { ok: false, error: e }; }
+    }
+    // 답변 초안 자동 저장. 완료본이면 final 유지(다운그레이드 방지).
     async function saveDraftAnswer(){
-      if (_restoring || !currentQuestion) return;
+      if (_restoring) return;
       const text = document.getElementById('finalTa').value;
       // 빈 글로 새 행을 만들지 않는다 — 노트에 내용 없는 '작성 중'이 쌓인다.
       // 단 이미 저장된 행이면 지운 것도 저장한다(글을 다 지운 것도 학생의 편집이다).
@@ -864,13 +944,9 @@
       let session;
       try { session = await MONC.getSession(); } catch (_) { return; }
       if (!session) return;
-      try {
-        const status = _answerStatus === 'final' ? 'final' : 'draft';
-        const { error } = await MONC.sb.from('answers').upsert(
-          { member_id: session.user.id, question_id: currentQuestion.id, content: text, status },
-          { onConflict: 'member_id,question_id' });
-        if (!error) _answerStatus = status;
-      } catch (_) {}
+      const status = _answerStatus === 'final' ? 'final' : 'draft';
+      const r = await writeAnswer(session, text, status);
+      if (r.ok) _answerStatus = status;
     }
     // 대화·뼈대: 세션 1행(문제당 unique) + 아직 안 올린 메시지만 추가 → 재방문해도 중복 없음.
     async function syncServer(stage){
@@ -937,14 +1013,14 @@
           msgs = r.data || [];
         }
         const { data: a } = await MONC.sb.from('answers')
-          .select('content, status').eq('member_id', session.user.id).eq('question_id', currentQuestion.id).maybeSingle();
+          .select('id, content, status').eq('member_id', session.user.id).eq('question_id', currentQuestion.id).maybeSingle();
         answer = a || null;
       } catch (_) {}
       // 되살릴 게 아무것도 없으면 새 세션(인사말)로.
       if (!msgs.length && !(answer && answer.content)) return false;
       _restoring = true;
       if (sess) { _srvSession = sess.id; _srvSynced = msgs.length; }   // 이후 syncServer 가 새 메시지만 추가(중복 방지)
-      if (answer) _answerStatus = answer.status || 'draft';
+      if (answer) { _answerStatus = answer.status || 'draft'; _answerId = answer.id; }   // id 는 첨삭 직행용
       replayTranscript(msgs);
       userMsgCount = transcript.filter(t => t.role === 'user').length;
       if (userMsgCount >= 2) showRefine();
@@ -1056,24 +1132,24 @@
       const footEl = document.getElementById('saveFoot');
       const content = document.getElementById('finalTa').value.trim();
       if (!content) { footEl.textContent = '답변을 입력하세요.'; return; }
+      clearTimeout(_draftT);   // 대기 중인 자동 저장을 끊는다 — 자유 글 폴백에서 행이 둘 생기는 경합 방지
       btn.disabled = true; footEl.textContent = '저장 중…';
       try {
         const session = await MONC.getSession();
-        if (!session || !currentQuestion) {
-          footEl.textContent = '문제 정보를 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.';
+        if (!session) {
+          // ⚠️ 여기서 다른 화면으로 보내지 말 것 — 쓴 글은 이 화면에만 있다(이동=유실).
+          footEl.textContent = '로그인이 풀렸어요. 다른 탭에서 로그인한 뒤 다시 눌러 주세요 — 쓴 글은 화면에 남아 있어요.';
         } else {
-          const { error } = await MONC.sb.from('answers').upsert(
-            { member_id: session.user.id, question_id: currentQuestion.id, content, status: 'final' },
-            { onConflict: 'member_id,question_id' });
-          if (error) throw error;
+          const r = await writeAnswer(session, content, 'final');
+          if (!r.ok) throw (r.error || new Error('잠시 뒤 다시 시도해 주세요'));
           _answerStatus = 'final';               // 이후 자동 저장이 완료본을 draft 로 되돌리지 않게
           footEl.textContent = '답변집에 저장됐어요. (완료)';
           moncTrack('sojae_save_final');
           btn.textContent = '다시 저장';
           syncServer('done');   // 되묻기 대화도 서버에 마저 기록 + 세션 완료 표시
-          showNextStep();       // 저장을 막다른 길로 두지 않는다 — 다음 문제로 잇기
+          showNextStep();       // 저장을 막다른 길로 두지 않는다 — 첨삭 직행·다음 문제
         }
-      } catch (e) { footEl.textContent = '저장 실패: ' + e.message; }
+      } catch (e) { footEl.textContent = '저장 실패: ' + (e.message || e.code || '잠시 뒤 다시 시도해 주세요'); }
       btn.disabled = false;
     });
 
@@ -1083,7 +1159,16 @@
     //    (지어낸 숫자를 보여주지 않는다 — 저장 흐름은 이 블록 없이도 그대로 성립).
     let _nsPool = null;   // 문제 풀 캐시 — 다시 저장을 눌러도 조회는 한 번
     async function showNextStep(){
-      if (!currentQuestion) return;
+      // 첨삭 직행이 1순위(2026-08-19 오너 "저장하고 바로 첨삭으로") — 저장·복원이
+      // 잡아 둔 answers 행 id 를 그대로 물려 polish 가 이 답변을 불러온 채 열린다.
+      const pol = document.getElementById('nsPolish');
+      if (_answerId) {
+        pol.href = 'polish.html?answer=' + encodeURIComponent(_answerId);
+        pol.hidden = false;
+      }
+      document.getElementById('nextStep').hidden = false;
+      document.getElementById('saveBtn').classList.add('is-saved');
+      if (!currentQuestion) return;   // 폴백 대화(자유 글 저장) — 다음 문제 계산은 문제 풀이 있어야
       const S = window.SOJAE;
       try {
         if (!_nsPool || !_nsPool.length) _nsPool = await S.fetchQuestionPool(MONC.sb);
@@ -1139,18 +1224,23 @@
             location.href = 'sojae.html';
           };
         }
-        document.getElementById('nextStep').hidden = false;
-        document.getElementById('saveBtn').classList.add('is-saved');
+        goBtn.hidden = false;   // 풀 계산이 실패하면 빈 버튼을 안 보여준다(지어낸 값 금지와 같은 결)
       } catch (_) {}
     }
+    document.getElementById('nsPolish').addEventListener('click', () => moncTrack('sojae_to_polish'));
 
     // ── 진입: 로그인 가드 → 문제 확정(오늘 또는 ?q=) → 복원 또는 첫 되묻기 ──
     // ?q=<문제id> 로 오면 그 문제를 열어 이어쓰기(오늘 문제에 안 묶임 → 날짜 넘어가도 복원).
     async function fetchQuestionById(id) {
-      try {
-        const { data } = await MONC.sb.from('questions').select('*').eq('id', id).maybeSingle();
-        return data || null;
-      } catch (_) { return null; }
+      // 재시도 1회 — 모바일 순간 끊김 한 번으로 폴백 대화(자유 글 저장 경로)에
+      // 떨어지지 않게 한다. 진짜 없는 문제(삭제·잘못된 id)는 두 번 다 null 이라 그대로 폴백.
+      for (let i = 0; i < 2; i++) {
+        try {
+          const { data, error } = await MONC.sb.from('questions').select('*').eq('id', id).maybeSingle();
+          if (!error) return data || null;
+        } catch (_) {}
+      }
+      return null;
     }
     // ── 진입 화면: 난이도 고르기 (2026-08-05) ─────────────────────────────────
     // ?q= 없이 들어오면 대화가 아니라 이 화면이 먼저다. 문제를 고르면 ?q= 를 붙여
@@ -1228,6 +1318,7 @@
     // ── 대화 시작(문제 확정 후) ──
     async function startChat(q) {
       document.body.classList.remove('booting');   // 갈림길 도착 — 대화 화면을 켠다
+      document.body.classList.add('chat-focus');   // 몰입 모드 — 공용 nav 를 걷어 대화 높이 확보(2026-08-19)
       if (q) {
         currentQuestion = q;
         if (CAT_LABEL[q.category]) category = q.category;

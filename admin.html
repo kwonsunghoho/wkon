@@ -4661,10 +4661,24 @@
         document.getElementById('qfCancel').style.display = '';
         document.getElementById('questionForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }));
-      // 삭제
+      // 삭제 — ⚠️ questions 삭제는 FK cascade 로 학생들의 대화·저장 답변(answers)까지 지운다.
+      //         걸린 답변 수를 먼저 세서 보여주고, 있으면 [숨기기]를 권한다(2026-08-19).
       listEl.querySelectorAll('.q-del').forEach(b => b.addEventListener('click', async () => {
         const q = _questions.find(x => x.id === b.dataset.id);
-        if (!confirm(`'${esc((q && q.content || '').slice(0, 20))}…' 문제를 삭제할까요? 되돌릴 수 없어요.`)) return;
+        let n = 0;
+        try {
+          const { count, error } = await MONC.sb.from('answers')
+            .select('id', { count: 'exact', head: true }).eq('question_id', b.dataset.id);
+          if (error) throw error;
+          n = count || 0;
+        } catch (_) { n = -1; }   // 못 셌으면 0이라고 단정하지 않는다
+        const head = `'${(q && q.content || '').slice(0, 20)}…' 문제를 삭제할까요?`;
+        const warn = n > 0
+          ? `\n\n⚠️ 이 문제로 저장된 학생 답변 ${n}개가 함께 삭제됩니다(복구 불가).\n답변을 지키려면 삭제 대신 [숨기기]를 쓰세요.`
+          : n < 0
+            ? '\n\n⚠️ 학생 답변이 걸려 있는지 확인하지 못했어요 — 걸려 있으면 함께 삭제됩니다(복구 불가). 안전하게 가려면 [숨기기]를 쓰세요.'
+            : ' 되돌릴 수 없어요.';
+        if (!confirm(head + warn)) return;
         const { error } = await MONC.sb.from('questions').delete().eq('id', b.dataset.id);
         if (error) { alert('삭제 실패: ' + error.message); return; }
         toast('삭제됨'); loadQuestions();
