@@ -856,6 +856,9 @@
     landscape: { l: 0.4222, r: 0.5789, t: 0.2750, b: 0.7385 }
   };
   var FIT = 0.90;                       /* 개구부 폭 대비 로고 폭 — 유리 안쪽 곡선에 닿지 않을 만큼만 */
+  /* 창틀+그림자 하단(사진 높이 비율 · 캔버스 픽셀 실측 2026-08-19) — 스크롤 신호가 이 아래로
+     내려가야 한다(고정 bottom 은 화면 비율 따라 창틀에 올라탔다). 사진 교체 시 OPEN 처럼 재측정. */
+  var FRAME_B = { portrait: 0.704, landscape: 0.807 };
   var LIFT = 0.04;                      /* 개구부 높이 대비 시각 보정 — 정중앙은 눈에 낮게 읽힌다 */
   var PAD = 16;                         /* 문장이 화면 가장자리에 붙지 않게 남기는 좌우 여백 */
 
@@ -993,6 +996,23 @@
     mid.style.top = (oy + rh * (o.t + o.b) / 2 - korH / 2 - openH * LIFT).toFixed(1) + 'px';
     /* 가로 중심도 화면 정중앙이 아니라 개구부 중심이다(이미지상 창이 2px 오른쪽에 그려져 있다). */
     mid.style.transform = 'translate(' + (ox + rw * (o.l + o.r) / 2 - cw / 2).toFixed(1) + 'px, -50%)';
+    /* ── 시작 버튼 스택 폭 = 유리 실측 폭(2026-08-19 오너 "창문 안에 이쁘게 들어가게") ──
+       구 280px 고정폭은 유리(모바일 ~150px)의 두 배라 창을 뚫고 나갔다. 로고(FIT)와 같은
+       기준으로 유리 폭을 CSS 변수로 내려 스택이 창 안에 앉는다. 게이트로 숨긴 상태면
+       korH 에 안 잡혀 기존 배치에 영향이 없다. */
+    mid.style.setProperty('--glass-w', winW.toFixed(1) + 'px');
+    /* ── 신호를 창틀 아래로(2026-08-19 오너 "아직도 스크롤 문구 창문에 있다") ──
+       고정 bottom:34 는 인앱처럼 세로가 짧은 화면에서 창틀(FRAME_B)에 올라탄다. 창틀 하단
+       +8px 아래로 실측 배치하고, 그래도 자리가 없으면 cue-tight 로 세 조각 사이 여백만
+       30px 줄인다(세 조각 한 벌은 유지 — 그 아래 한계 화면은 최소 6px 로 최선). */
+    if (cue) {
+      var fb = oy + rh * (shot.naturalHeight > shot.naturalWidth ? FRAME_B.portrait : FRAME_B.landscape);
+      var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      cue.classList.remove('cue-tight');
+      var room = vh - fb - cue.offsetHeight - 8;
+      if (room < 8) { cue.classList.add('cue-tight'); room = vh - fb - cue.offsetHeight - 8; }
+      cue.style.setProperty('--cue-lift', Math.max(6, Math.min(34, room)).toFixed(1) + 'px');
+    }
   }   /* ⚠️ T.total 은 마지막 페이드(cueAt + 0.5 = 2.30)보다 커야 한다 — 모자라면 스크롤 신호가
          중간 투명도에서 얼어붙는다(구 3.4 로 뒀을 때 0.83 에서 멈췄다). 타임라인을 또 줄이면
          total 을 마지막 페이드 종료보다 뒤에 두는지 먼저 확인할 것. */
