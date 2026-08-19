@@ -296,17 +296,25 @@
           한 몸으로 탄다(타임라인 kor 인라인 opacity). 부모의 nowrap·JS 자간을 여기서 푼다. */
     .hi-cta { display: none; margin-top: 22px; white-space: normal; letter-spacing: 0; }
     html.cta-preview .hi-cta { display: block; }
+    /* 버튼 입체감(2026-08-19 오너 "클래스101 느낌이 없다, 그냥 박스다") — 새 색을 만들지 않고
+       토큰 네이비 위에 흰 광 그라데이션을 얹어 클래스101 주버튼의 볼륨감을 낸다. */
     .hcta-main {
-      display: block; width: min(250px, 72vw); margin: 0 auto;
-      padding: 15px 16px; border-radius: 13px;
-      background: var(--action); color: var(--action-ink);
-      font-size: 15px; font-weight: 700; line-height: 1.4; text-decoration: none;
-      box-shadow: 0 8px 20px rgba(20, 32, 52, .16);
+      display: block; width: min(280px, 78vw); margin: 0 auto;
+      padding: 16px 18px; border-radius: 14px;
+      background: var(--action);
+      background-image: linear-gradient(170deg, rgba(255, 255, 255, .20) 0%,
+        rgba(255, 255, 255, .05) 45%, rgba(0, 0, 0, .12) 100%);
+      color: var(--action-ink);
+      font-size: 16px; font-weight: 800; line-height: 1.35; letter-spacing: .01em;
+      text-decoration: none;
+      box-shadow: 0 12px 28px rgba(27, 58, 107, .32), inset 0 1px 0 rgba(255, 255, 255, .25);
       pointer-events: auto;   /* .hero-mid 의 pointer-events:none 해제 — 눌리는 요소는 여기뿐 */
     }
+    @media (hover: hover) { .hcta-main:hover { filter: brightness(1.07); } }
+    .hcta-main:active { transform: scale(.98); }
     .hcta-sub {
       display: inline-block; margin-top: 3px; padding: 14px 10px;   /* 터치 44px 확보용 여백 */
-      font-size: 13px; font-weight: 700; color: var(--accent-ink);
+      font-size: 13.5px; font-weight: 700; color: var(--accent-ink);
       text-decoration: none; pointer-events: auto;
     }
 
@@ -353,6 +361,16 @@
     /* ⚠️ 스크롤이 시작되면 숨긴다(오너 지시) — !important 인 이유는 타임라인 JS 가
        인라인 style.opacity 를 쓰기 때문이다. 저자 !important 가 인라인을 이긴다. */
     .hero-cue.is-gone { opacity: 0 !important; }
+    /* 데스크톱 낮은 창에서 신호가 창틀 하단을 침범(2026-08-19 오너 신고 "웹사이트에서 볼 땐
+       창문에 침범해 있고 엉망"). 창틀+그림자 하단은 가로형 사진 높이의 80.7%(캔버스 실측) —
+       창 높이가 808px 아래면 신호 꼭대기(vh−156)가 그 위로 올라간다. 세 조각 한 벌(라벨→레일→
+       화살표)은 유지하고 **사이 여백만 30px 줄여** 창틀 아래로 내린다(650~808px 창에서 해소). */
+    @media (min-aspect-ratio: 1/1) and (max-height: 849px) {
+      .hero-cue { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+      .hc-tag { margin-bottom: 4px; }
+      .hc-rail { margin-top: 6px; }
+      .hc-arrow { margin-top: 2px; }
+    }
     /* 움직임을 끈 사람에겐 흐름 대신 '도착한 상태'로 고정 — 크기·대비 개선은 그대로 남는다. */
     @media (prefers-reduced-motion: reduce) {
       .hc-rail::after { animation: none; top: 28px; }
