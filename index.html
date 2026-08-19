@@ -47,6 +47,12 @@
   <script src="inapp.js?v=10" defer></script>
   <!-- 글꼴은 tokens.css 의 @import(SUIT) 하나가 책임진다 — 페이지별 폰트 링크 없음(2026-07-29) -->
   <link rel="stylesheet" href="index.css">
+  <script>
+    /* 히어로 시작 버튼 미리보기 게이트(2026-08-19) — ?cta=on 일 때만 버튼 스택(.hi-cta)이
+       보인다. 오너가 라이브 실물을 확인하고 승인하면 이 게이트와 index.css 의 기본
+       display:none 을 걷어 전체 공개한다. 스크립트가 죽으면 기본값(숨김)이라 안전. */
+    if (/[?&]cta=on(&|$)/.test(location.search)) document.documentElement.classList.add('cta-preview');
+  </script>
 </head>
 <body>
   <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
@@ -107,7 +113,17 @@
     <!-- ⚠️ 한글 줄은 로고와 **양끝을 맞춘다**(오너 "서브타이틀 메인타이틀 양쪽 글자에 맞춰라,
          혼자 툭 튀어나오잖아") — 자간·줄바꿈은 JS(fitKor)가 로고 실측 폭에 맞춰 계산한다.
          .hi-kl 두 덩어리로 나눠 둔 것이 그 줄바꿈 지점이다(<br>은 두 줄 모드에서만 산다). -->
-    <div class="hi-kor" id="hiKor"><span class="hi-kl">새로운 커리어가</span> <br class="hi-kbr"> <span class="hi-kl">시작되는 순간</span></div>
+    <div class="hi-kor" id="hiKor"><span class="hi-kl">새로운 커리어가</span> <br class="hi-kbr"> <span class="hi-kl">시작되는 순간</span><!--
+      시작 버튼 스택(2026-08-19 · 레퍼런스 방향 '가' — 클래스101식: 헤드라인 아래 넓은
+      라운드 사각 주버튼 + 보조 텍스트 링크. 근거: 첫 방문 47% 인트로 이탈 계측).
+      ⚠️ 아직 비공개 — ?cta=on 주소에서만 보인다(head 의 게이트 스크립트). 오너 실물 확인 후
+         공개하려면 게이트와 CSS 의 기본 display:none 을 없애면 된다.
+      ⚠️ .hi-kor 안에 두는 이유: 한글 줄이 absolute(흐름 밖)라 여기 붙어야 로고의 창 중앙
+         배치가 안 밀린다. 등장도 한글 줄과 한 몸(타임라인이 kor 인라인 opacity 로 제어).
+    --><div class="hi-cta">
+      <a class="hcta-main" href="challenges.html" data-herocta>챌린지 시작하기</a>
+      <a class="hcta-sub" href="briefing.html" data-herocta-sub>나만의 승준 코스 보기 →</a>
+    </div></div>
   </div>
   <!-- 스크롤 신호 — 2026-07-30 오너가 목업 4안 중 D안 선택(`outputs/hero-scroll-cue-mockup.html`).
        구 안(11.5px 'SCROLL' + 1px 세로선)은 활자가 원칙 1번(12px), 대비 4.15:1 이 원칙 4번(4.5:1)에
@@ -433,6 +449,9 @@
     // 마무리 CTA 두 개(2026-08-19 분리) — 문 카드와 이름을 갈라야
     // "맨 아래 버튼까지 가서 누르는 사람이 얼마나 되나"를 따로 셀 수 있다.
     beacon('[data-closing]', el => 'closing_' + el.dataset.closing);
+    // 히어로 시작 버튼(2026-08-19 · 미리보기 게이트 상태) — 공개 후 인트로 이탈 47% 대응 효과 측정
+    beacon('[data-herocta]', 'hero_cta');
+    beacon('[data-herocta-sub]', 'hero_cta_sub');
   })();
 
   /* ── ④ 숫자 카운트업(뷰포트 진입 시 묶음별 1회) ──
