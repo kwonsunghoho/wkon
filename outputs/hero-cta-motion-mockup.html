@@ -1,0 +1,481 @@
+<!doctype html>
+<!-- 2026-08-19 결정 기록 — 히어로 [시작하기] 버튼 모션. 오너 "밋밋한거같은데"로 5안 제작,
+     오너가 1안(플로팅)+4안(샤인) 조합 확정("1+4로 가자"). index.css `.hi-cta`(플로팅)·
+     `.hcta-main::before`(샤인)에 반영 — 실장값·함정은 docs/notes/home.md '히어로 시작 버튼' 참조.
+     기각안 2(바운스)·3(펄스)·5(이륙)는 여기 보존. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시작하기 버튼 모션 5안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+</head>
+<body>
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --card: #FFFFFF;
+    --ink: #1E2A3E;
+    --ink-soft: #5A6679;
+    --line: #E3E7EC;
+    --accent: #2C4A7C;
+    --accent-ink: #2C4A7C;
+    --accent-soft: #EDF2F9;
+    --code-bg: #F1F3F6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11151D;
+      --card: #1A2030;
+      --ink: #E8ECF4;
+      --ink-soft: #9AA6BB;
+      --line: #2A3245;
+      --accent: #8FADD8;
+      --accent-ink: #A9C2E6;
+      --accent-soft: #232D42;
+      --code-bg: #141927;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11151D;
+    --card: #1A2030;
+    --ink: #E8ECF4;
+    --ink-soft: #9AA6BB;
+    --line: #2A3245;
+    --accent: #8FADD8;
+    --accent-ink: #A9C2E6;
+    --accent-soft: #232D42;
+    --code-bg: #141927;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 40px 18px 72px; }
+
+  /* ---------- page chrome ---------- */
+  .eyebrow {
+    font-family: "Montserrat", sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 0 0 10px;
+  }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 10px; text-wrap: balance; }
+  .intro { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 34px; max-width: 34em; }
+
+  .variant {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px 20px 18px;
+    margin-bottom: 22px;
+  }
+  .v-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .chip {
+    font-family: "Montserrat", sans-serif;
+    font-size: 11px; font-weight: 800; letter-spacing: .06em;
+    color: var(--accent-ink); background: var(--accent-soft);
+    border-radius: 999px; padding: 3px 10px;
+  }
+  .v-head h2 { font-size: 18px; font-weight: 700; margin: 0; }
+  .v-tag { font-size: 12px; color: var(--ink-soft); }
+  .desc { font-size: 14px; color: var(--ink); margin: 10px 0 14px; }
+  .points { margin: 12px 0 4px; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .points li {
+    font-size: 13px; color: var(--ink-soft);
+    padding-left: 16px; position: relative;
+  }
+  .points li::before {
+    content: ""; position: absolute; left: 2px; top: 8px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  }
+  details { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  summary {
+    font-size: 12.5px; font-weight: 500; color: var(--accent-ink);
+    cursor: pointer; user-select: none;
+  }
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  pre {
+    background: var(--code-bg); border-radius: 10px;
+    padding: 12px 14px; overflow-x: auto;
+    font-size: 11.5px; line-height: 1.55; margin: 10px 0 2px;
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ---------- 재현 씬 (실제 페이지와 동일하게 라이트 고정) ---------- */
+  .scene {
+    background: #EDEFF2;
+    border-radius: 14px;
+    padding: 34px 14px 38px;
+    display: grid; place-items: center;
+    overflow: hidden;
+  }
+  .porthole {
+    width: 214px; height: 296px;
+    border-radius: 94px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #EFF1F4 60%, #E6E9ED 100%);
+    box-shadow:
+      0 22px 44px rgba(58, 70, 92, .16),
+      0 5px 12px rgba(58, 70, 92, .08),
+      inset 0 2px 2px rgba(255,255,255,.9);
+    padding: 13px;
+  }
+  .ring {
+    width: 100%; height: 100%;
+    border-radius: 82px;
+    background: linear-gradient(180deg, #F7F9FB, #DDE1E6);
+    border: 1px solid #CBD1D8;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.9), 0 1px 3px rgba(90,100,116,.22);
+    padding: 9px;
+  }
+  .glass {
+    width: 100%; height: 100%;
+    border-radius: 72px;
+    overflow: hidden; position: relative;
+    background: linear-gradient(180deg, #8FB2D8 0%, #AFCAE6 30%, #D8E6F2 62%, #F5F9FC 100%);
+    box-shadow: inset 0 4px 10px rgba(66, 88, 116, .28), inset 0 -2px 6px rgba(255,255,255,.5);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0; padding-top: 8px;
+  }
+  .slot {
+    position: absolute; top: -4px; left: 50%;
+    transform: translateX(-50%);
+    width: 74%; height: 30px;
+    border-radius: 0 0 100px 100px / 0 0 44px 44px;
+    background: linear-gradient(180deg, #333F50, #55677D 70%, #7C8FA5);
+    box-shadow: inset 0 -3px 5px rgba(0,0,0,.28), 0 2px 3px rgba(255,255,255,.55);
+  }
+  .wordmark {
+    font-family: "Montserrat", sans-serif;
+    font-size: 33px; font-weight: 800;
+    letter-spacing: .03em;
+    color: #2A4677; margin: 0;
+  }
+  .tagline {
+    font-size: 10.5px; font-weight: 500;
+    letter-spacing: .32em; text-indent: .32em;
+    color: #3A567F; text-align: center;
+    line-height: 1.9; margin: 8px 0 0;
+  }
+  .btn-zone { position: relative; margin-top: 20px; }
+
+  .cta {
+    position: relative;
+    display: inline-block; border: 0;
+    font-family: "Noto Sans KR", sans-serif;
+    font-size: 16px; font-weight: 700; letter-spacing: .02em;
+    color: #FFFFFF;
+    background: linear-gradient(180deg, #36558B 0%, #27406C 100%);
+    border-radius: 14px;
+    padding: 15px 32px;
+    box-shadow: 0 10px 20px rgba(39, 64, 108, .32), inset 0 1px 0 rgba(255,255,255,.16);
+    cursor: pointer;
+    transition: transform .12s ease;
+  }
+  .cta:active { transform: scale(.95) !important; }
+
+  /* 1안 — 둥실 플로팅 */
+  @keyframes float-up {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-7px); }
+  }
+  @keyframes float-shadow {
+    0%, 100% { transform: translateX(-50%) scaleX(1); opacity: .5; }
+    50%      { transform: translateX(-50%) scaleX(.78); opacity: .28; }
+  }
+  .cta--float { animation: float-up 3.2s ease-in-out infinite; }
+  .float-shadow {
+    position: absolute; left: 50%; bottom: -13px;
+    width: 76%; height: 9px; border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(39,64,108,.38), rgba(39,64,108,0) 70%);
+    animation: float-shadow 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* 2안 — 통통 바운스 */
+  @keyframes bounce-pop {
+    0%, 52%  { transform: translateY(0) scale(1, 1); }
+    58%      { transform: translateY(6px) scale(1.05, .92); }
+    64%      { transform: translateY(-13px) scale(.97, 1.05); }
+    71%      { transform: translateY(0) scale(1.04, .95); }
+    78%      { transform: translateY(-4px) scale(.995, 1.01); }
+    85%, 100%{ transform: translateY(0) scale(1, 1); }
+  }
+  .cta--bounce { animation: bounce-pop 3.8s ease-in-out infinite; transform-origin: center bottom; }
+
+  /* 3안 — 펄스 글로우 */
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 10px 20px rgba(39,64,108,.32), 0 0 0 0 rgba(44,74,124,.4); }
+    70%  { box-shadow: 0 10px 20px rgba(39,64,108,.32), 0 0 0 16px rgba(44,74,124,0); }
+    100% { box-shadow: 0 10px 20px rgba(39,64,108,.32), 0 0 0 0 rgba(44,74,124,0); }
+  }
+  .cta--pulse { animation: pulse-ring 2.6s cubic-bezier(.4, 0, .4, 1) infinite; }
+
+  /* 4안 — 샤인 스윕 */
+  .cta--shine { overflow: hidden; }
+  .cta--shine::before {
+    content: ""; position: absolute;
+    top: -30%; bottom: -30%; width: 34%; left: -60%;
+    transform: skewX(-18deg);
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.5), rgba(255,255,255,0));
+    animation: shine-sweep 4s ease-in-out infinite;
+  }
+  @keyframes shine-sweep {
+    0%       { left: -60%; }
+    22%, 100%{ left: 135%; }
+  }
+
+  /* 5안 — 이륙 시그니처 */
+  @keyframes fly-off {
+    0%, 55% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+    60%     { transform: translate(14px, -4px) rotate(-4deg); opacity: 1; }
+    76%     { transform: translate(120px, -44px) rotate(-14deg); opacity: 1; }
+    86%, 100% { transform: translate(196px, -86px) rotate(-18deg); opacity: 0; }
+  }
+  @keyframes lift-nudge {
+    0%, 58%, 88%, 100% { transform: translateY(0) rotate(0deg); }
+    68%                { transform: translateY(-3px) rotate(-1.4deg); }
+    78%                { transform: translateY(-1px) rotate(-.6deg); }
+  }
+  .cta--takeoff { animation: lift-nudge 5.2s ease-in-out infinite; }
+  .plane {
+    position: absolute; left: -30px; bottom: 2px;
+    width: 22px; height: 22px;
+    animation: fly-off 5.2s ease-in-out infinite;
+    pointer-events: none; opacity: 0;
+  }
+
+  /* 접근성: 모션 최소화 설정 존중 */
+  @media (prefers-reduced-motion: reduce) {
+    .cta, .cta::before, .float-shadow, .plane { animation: none !important; }
+  }
+
+  /* ---------- 비교/추천 ---------- */
+  .compare {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 18px; padding: 22px 20px; margin-top: 34px;
+  }
+  .compare h2 { font-size: 18px; margin: 0 0 12px; }
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 430px; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11.5px; letter-spacing: .06em; color: var(--ink-soft); font-weight: 500; white-space: nowrap; }
+  td:first-child { font-weight: 700; white-space: nowrap; color: var(--accent-ink); }
+  tr:last-child td { border-bottom: 0; }
+  .reco {
+    margin-top: 16px; padding: 14px 16px;
+    background: var(--accent-soft); border-radius: 12px;
+    font-size: 13.5px;
+  }
+  .reco strong { color: var(--accent-ink); }
+  .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 22px; }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">MONC Landing &middot; CTA Motion</p>
+  <h1>시작하기 버튼 모션 5안</h1>
+  <p class="intro">실제 랜딩 페이지의 창문 히어로를 그대로 재현한 목업입니다. 다섯 가지 방향이 각각 살아 움직이고 있으니, 버튼을 눌러 누름 반응까지 함께 확인해 보세요. 모두 CSS만으로 구현되어 성능 부담이 없습니다.</p>
+
+  <!-- 1안 -->
+  <section class="variant">
+    <header class="v-head">
+      <span class="chip">1안</span>
+      <h2>둥실 플로팅</h2>
+      <span class="v-tag">잔잔함 · 고급감</span>
+    </header>
+    <div class="scene">
+      <div class="porthole"><div class="ring"><div class="glass">
+        <div class="slot"></div>
+        <p class="wordmark">MONC</p>
+        <p class="tagline">새로운 커리어가<br>시작되는 순간</p>
+        <div class="btn-zone">
+          <button class="cta cta--float">시작하기</button>
+          <div class="float-shadow"></div>
+        </div>
+      </div></div></div>
+    </div>
+    <p class="desc">구름 위에 떠 있는 것처럼 아주 천천히 오르내립니다. 아래 그림자가 함께 커졌다 작아져서 정말 떠 있는 듯한 깊이감이 생겨요.</p>
+    <ul class="points">
+      <li>움직임이 계속되지만 느리고 부드러워서 산만하지 않음</li>
+      <li>"하늘 위" 브랜드 무드와 가장 자연스럽게 어울리는 안</li>
+      <li>기본값으로 넣어두기 가장 무난한 1순위</li>
+    </ul>
+    <details><summary>적용 CSS 보기</summary><pre><code>@keyframes float-up {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.cta { animation: float-up 3.2s ease-in-out infinite; }
+/* 그림자는 별도 요소로 두고 반대로 scaleX(.78)까지 줄이기 */</code></pre></details>
+  </section>
+
+  <!-- 2안 -->
+  <section class="variant">
+    <header class="v-head">
+      <span class="chip">2안</span>
+      <h2>통통 바운스</h2>
+      <span class="v-tag">활발함 · 강한 클릭 유도</span>
+    </header>
+    <div class="scene">
+      <div class="porthole"><div class="ring"><div class="glass">
+        <div class="slot"></div>
+        <p class="wordmark">MONC</p>
+        <p class="tagline">새로운 커리어가<br>시작되는 순간</p>
+        <div class="btn-zone">
+          <button class="cta cta--bounce">시작하기</button>
+        </div>
+      </div></div></div>
+    </div>
+    <p class="desc">말씀하신 방향 그대로예요. 몇 초에 한 번씩 아래로 살짝 눌렸다가 통! 하고 튀어오릅니다. 눌리는 순간 옆으로 퍼지는 젤리 느낌을 줘서 생동감이 있어요.</p>
+    <ul class="points">
+      <li>다섯 안 중 시선을 끄는 힘이 가장 강함 — 전환율 최우선이면 이 안</li>
+      <li>쉬는 구간(약 2초)을 충분히 둬야 산만해지지 않음</li>
+      <li>차분한 브랜드 톤과는 살짝 결이 다를 수 있는 점만 고려</li>
+    </ul>
+    <details><summary>적용 CSS 보기</summary><pre><code>@keyframes bounce-pop {
+  0%, 52%   { transform: translateY(0) scale(1, 1); }
+  58%       { transform: translateY(6px) scale(1.05, .92); }  /* 눌림 */
+  64%       { transform: translateY(-13px) scale(.97, 1.05); } /* 점프 */
+  71%       { transform: translateY(0) scale(1.04, .95); }     /* 착지 */
+  85%, 100% { transform: translateY(0) scale(1, 1); }
+}
+.cta { animation: bounce-pop 3.8s ease-in-out infinite;
+       transform-origin: center bottom; }</code></pre></details>
+  </section>
+
+  <!-- 3안 -->
+  <section class="variant">
+    <header class="v-head">
+      <span class="chip">3안</span>
+      <h2>펄스 글로우</h2>
+      <span class="v-tag">차분함 · 신호등 같은 존재감</span>
+    </header>
+    <div class="scene">
+      <div class="porthole"><div class="ring"><div class="glass">
+        <div class="slot"></div>
+        <p class="wordmark">MONC</p>
+        <p class="tagline">새로운 커리어가<br>시작되는 순간</p>
+        <div class="btn-zone">
+          <button class="cta cta--pulse">시작하기</button>
+        </div>
+      </div></div></div>
+    </div>
+    <p class="desc">버튼은 가만히 있고, 네이비 빛이 물결처럼 바깥으로 퍼져 나갑니다. 관제탑 신호나 비콘 같은 항공 무드가 있으면서, 움직임 없이도 시선이 계속 갑니다.</p>
+    <ul class="points">
+      <li>버튼 자체가 안 움직여서 가장 점잖고 안정적인 안</li>
+      <li>텍스트 가독성에 전혀 영향이 없음</li>
+      <li>1안(플로팅)과 겹쳐 쓰면 시너지가 좋은 조합형 후보</li>
+    </ul>
+    <details><summary>적용 CSS 보기</summary><pre><code>@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(44,74,124,.4); }
+  70%  { box-shadow: 0 0 0 16px rgba(44,74,124,0); }
+  100% { box-shadow: 0 0 0 0 rgba(44,74,124,0); }
+}
+.cta { animation: pulse-ring 2.6s cubic-bezier(.4,0,.4,1) infinite; }
+/* 기존 그림자는 box-shadow 앞쪽에 쉼표로 같이 유지 */</code></pre></details>
+  </section>
+
+  <!-- 4안 -->
+  <section class="variant">
+    <header class="v-head">
+      <span class="chip">4안</span>
+      <h2>샤인 스윕</h2>
+      <span class="v-tag">프리미엄 · 은은한 반짝임</span>
+    </header>
+    <div class="scene">
+      <div class="porthole"><div class="ring"><div class="glass">
+        <div class="slot"></div>
+        <p class="wordmark">MONC</p>
+        <p class="tagline">새로운 커리어가<br>시작되는 순간</p>
+        <div class="btn-zone">
+          <button class="cta cta--shine">시작하기</button>
+        </div>
+      </div></div></div>
+    </div>
+    <p class="desc">창문으로 들어온 햇빛이 버튼 표면을 스치고 지나가는 반사광입니다. 몇 초에 한 번 사선으로 빛줄기가 지나가요. 명품·항공사 브랜드가 즐겨 쓰는 연출입니다.</p>
+    <ul class="points">
+      <li>버튼이 "만져지는 재질"처럼 보여서 고급감이 가장 큼</li>
+      <li>움직임이 아니라 빛이라 점잖으면서도 눈에 띔</li>
+      <li>창문 컨셉(햇빛)과 스토리가 자연스럽게 이어짐</li>
+    </ul>
+    <details><summary>적용 CSS 보기</summary><pre><code>.cta { position: relative; overflow: hidden; }
+.cta::before {
+  content: ""; position: absolute;
+  top: -30%; bottom: -30%; width: 34%; left: -60%;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg,
+    transparent, rgba(255,255,255,.5), transparent);
+  animation: shine-sweep 4s ease-in-out infinite;
+}
+@keyframes shine-sweep { 0% { left: -60%; } 22%, 100% { left: 135%; } }</code></pre></details>
+  </section>
+
+  <!-- 5안 -->
+  <section class="variant">
+    <header class="v-head">
+      <span class="chip">5안</span>
+      <h2>이륙 시그니처</h2>
+      <span class="v-tag">브랜드 시그니처 · 기억에 남는 한 방</span>
+    </header>
+    <div class="scene">
+      <div class="porthole"><div class="ring"><div class="glass">
+        <div class="slot"></div>
+        <p class="wordmark">MONC</p>
+        <p class="tagline">새로운 커리어가<br>시작되는 순간</p>
+        <div class="btn-zone">
+          <button class="cta cta--takeoff">시작하기</button>
+          <svg class="plane" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2.5 12.2 21.5 4l-7.3 9.4.8 6.6-3.4-5.2-9.1-2.6z" fill="#2A4677"/>
+            <path d="M14.2 13.4 21.5 4l-6.6 10.9-.7-1.5z" fill="#5B7BAC"/>
+          </svg>
+        </div>
+      </div></div></div>
+    </div>
+    <p class="desc">몇 초에 한 번, 작은 종이비행기가 버튼 옆에서 이륙해 하늘로 날아갑니다. 버튼도 그 순간 살짝 들리면서 기울어요. "새로운 커리어의 시작 = 이륙"이라는 카피와 정확히 맞물리는 MONC만의 시그니처 모션입니다.</p>
+    <ul class="points">
+      <li>다섯 안 중 가장 기억에 남고, 브랜드 스토리가 담김</li>
+      <li>주기를 5초 이상으로 길게 둬서 "가끔 일어나는 이벤트"처럼 연출</li>
+      <li>클릭 시 비행기가 날아가며 페이지 전환하는 연출로 확장 가능</li>
+    </ul>
+    <details><summary>적용 CSS 보기</summary><pre><code>@keyframes fly-off {
+  0%, 55%   { transform: translate(0,0); opacity: 0; }
+  60%       { transform: translate(14px,-4px) rotate(-4deg); opacity: 1; }
+  76%       { transform: translate(120px,-44px) rotate(-14deg); }
+  86%, 100% { transform: translate(196px,-86px) rotate(-18deg); opacity: 0; }
+}
+@keyframes lift-nudge {  /* 버튼이 살짝 들리는 반동 */
+  0%, 58%, 88%, 100% { transform: none; }
+  68% { transform: translateY(-3px) rotate(-1.4deg); }
+}</code></pre></details>
+  </section>
+
+  <!-- 비교 & 추천 -->
+  <section class="compare">
+    <h2>한눈에 비교</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>안</th><th>느낌</th><th>이럴 때 선택</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1안 플로팅</td><td>잔잔하고 고급스러움</td><td>브랜드 톤 유지가 우선일 때</td></tr>
+          <tr><td>2안 바운스</td><td>활발하고 직접적</td><td>클릭 유도가 최우선일 때</td></tr>
+          <tr><td>3안 펄스</td><td>차분한 존재감</td><td>움직임 없이 시선만 끌고 싶을 때</td></tr>
+          <tr><td>4안 샤인</td><td>프리미엄 반짝임</td><td>고급감을 한 단계 올리고 싶을 때</td></tr>
+          <tr><td>5안 이륙</td><td>기억에 남는 스토리</td><td>MONC만의 시그니처를 만들 때</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reco"><strong>2026-08-19 결정 — 1안+4안 조합 확정</strong>(오너 "1+4로 가자"). 기본 플로팅에 샤인을 얹는 조합으로 <code>index.css</code>(<code>.hi-cta</code> 플로팅 · <code>.hcta-main::before</code> 샤인)에 반영. 실장값·함정은 <code>docs/notes/home.md</code> '히어로 시작 버튼' 절 참조. 기각안 2(바운스)·3(펄스)·5(이륙)는 이 파일에 보존한다.</p>
+    <p class="note">다섯 안 모두 JS 없이 CSS keyframes만으로 구현되며, 시스템의 "동작 줄이기" 설정을 켠 사용자에게는 자동으로 멈추도록 처리했습니다. 적용할 안을 골라주시면 랜딩 페이지 코드에 바로 반영해 드릴게요.</p>
+  </section>
+</div>
+
+</body>
+</html>
