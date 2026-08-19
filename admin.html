@@ -3994,6 +3994,17 @@
       const d = MONC_PHONE.check(s).digits || MONC_PHONE.digits(s);
       return (d.length === 10 || d.length === 11) ? MONC_PHONE.format(d) : s;
     }
+    /* CSV 계좌번호 — 하이픈 없이 숫자만 적는 사람이 많다. 전화번호와 달리 자릿수 규칙이 없어
+       하이픈을 넣어 줄 수가 없는데, 그대로 두면 엑셀이 숫자로 읽어 `1002123456789` 를
+       `1E+12` 로, 앞 0 이 있으면 그것까지 버린다(2026-08-19 엑셀 실측).
+       그래서 **숫자만인 값에 한해** 엑셀 문자열 표기 `="…"` 로 감싼다(실측: 화면에 원래 숫자가
+       그대로 · 문자열로 열린다). 은행명이 섞인 대부분의 값은 이미 문자라 손대지 않는다.
+       ⚠️ 이 표기는 엑셀·구글 시트에서만 풀린다(메모장은 `="…"` 를 그대로 보여준다) — 그래서
+          전화번호에는 안 쓴다. 거기는 하이픈만으로 해결된다. */
+    function csvText(v) {
+      const s = String(v == null ? '' : v).trim();
+      return /^\d+$/.test(s) ? '="' + s + '"' : s;
+    }
     // CSV 저장 공통부 — 파일명에 현재 필터 tag 를 넣어, 여러 번 받아도 어느 목록인지 알 수 있게 한다
     function csvSave(head, rows, tag) {
       const csv = [head, ...rows].map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -4019,7 +4030,7 @@
       const rows = visibleApps().map(a => {
         const ms = appMembership(a, phoneSet);
         return [
-          new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), a.payment_id ? '간편결제' : (a.refund_account || ''),
+          new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), a.payment_id ? '간편결제' : csvText(a.refund_account),
           chSummary(a.challenges), a.total_price || 0, appFree(a) ? '무료' : (appPaid(a) ? 'Y':'N'), a.refunded ? 'Y' : ((a.refunded_amount||0) > 0 ? '부분' : 'N'),
           ms === 'guest' ? '비회원' : '회원',
           ms === 'linked' ? '연결됨' : (ms === 'phone' ? '전화매칭' : '-')
