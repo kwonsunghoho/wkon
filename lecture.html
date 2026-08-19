@@ -279,7 +279,8 @@
       }
       when = when || '추후 안내';
       const recruitPeriod = LEC.fmtPeriod(l.recruit_start, l.recruit_end);
-      const priceStr = l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료';
+      // 0원 특강은 관리자 문구(price_label — '상담 시 안내' 등)가 있으면 '무료' 대신 그걸 쓴다
+      const priceStr = LEC.priceText(l);
 
       const facts = [];
       facts.push(fact('일시', when));
@@ -349,10 +350,13 @@
         return '<section class="lc-apply" id="applyBox"><div class="lc-closednote">' + msg + '</div></section>';
       }
       const free = !(l.price > 0);
+      // 참가비를 상담에서 정하는 특강('상담 시 안내' 문구)은 접수 흐름은 무료와 같지만
+      // 버튼·문구에서 '무료'라는 말을 빼야 한다(공짜라고 오해하게 하면 안 된다).
+      const priceHeld = free && LEC.priceText(l) !== '무료';
       // 카카오페이 버튼은 채널 키가 채워져 있을 때만 그린다(pay-methods.js · 2026-08-19)
       const kakaoOn = window.moncPay && window.moncPay.kakaoReady();
       const payButtons = free
-        ? '<button type="button" class="btn-free" id="freeBtn">무료로 신청하기</button>'
+        ? '<button type="button" class="btn-free" id="freeBtn">' + (priceHeld ? '신청하기' : '무료로 신청하기') + '</button>'
         : '<button type="button" class="btn-toss" id="tossBtn"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px;width:auto;display:block;"><span>로 결제하고 신청하기</span></button>'
           + (kakaoOn ? '<button type="button" class="btn-kakao" id="kakaoBtn">카카오페이로 결제하고 신청하기</button>' : '')
           + '<button type="button" class="btn-bank" id="bankBtn">계좌이체로 신청하기</button>';
@@ -722,7 +726,10 @@
       const ok = !(await dupBlocked()) && (await ensureSeatOpen()) && await insertApplication(applicant);
       _busy = false;
       restoreBtn(btn, orig);
-      if (ok) afterApplied('무료 신청이 접수되었습니다! 확인 후 안내드릴게요.');
+      // '상담 시 안내' 같은 문구 특강은 공짜가 아니므로 접수 문구에서도 '무료'를 뺀다
+      if (ok) afterApplied(LEC.priceText(LECTURE) === '무료'
+        ? '무료 신청이 접수되었습니다! 확인 후 안내드릴게요.'
+        : '신청이 접수되었습니다! 확인 후 안내드릴게요.');
     }
 
     /* 마감으로 화면을 다시 그렸으면 버튼이 떨어져 나갔을 수 있다 */

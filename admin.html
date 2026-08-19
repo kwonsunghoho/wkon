@@ -1055,6 +1055,7 @@
         <div class="field"><label for="lfHigh">핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
           <div class="field"><label for="lfPrice">참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
+          <div class="field"><label for="lfPriceLabel">0원일 때 표시</label><input id="lfPriceLabel" type="text" maxlength="20" placeholder="무료 (예: 상담 시 안내)"></div>
           <div class="field"><label for="lfCapacity">정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
           <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
           <div class="field"><label for="lfSort">정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
@@ -3200,6 +3201,7 @@
       document.getElementById('lfDesc').value       = l.description || '';
       document.getElementById('lfHigh').value       = Array.isArray(l.highlights) ? l.highlights.join('\n') : '';
       document.getElementById('lfPrice').value      = (l.price != null ? l.price : '');
+      document.getElementById('lfPriceLabel').value = l.price_label || '';
       document.getElementById('lfCapacity').value   = (l.capacity != null ? l.capacity : '');
       document.getElementById('lfSort').value       = (l.sort_order != null ? l.sort_order : '');
       document.getElementById('lfRStart').value     = l.recruit_start || '';
@@ -3503,7 +3505,7 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${l.price > 0 ? Number(l.price).toLocaleString() + '원' : '무료'}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + fmtDay(l.lecture_date) : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + fmtDay(l.recruit_start) + '~' + fmtDay(l.recruit_end) : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${esc(LEC.priceText(l))}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + fmtDay(l.lecture_date) : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + fmtDay(l.recruit_start) + '~' + fmtDay(l.recruit_end) : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
@@ -3545,6 +3547,7 @@
         description:   lecVal('lfDesc') || null,
         highlights:    highlights.length ? highlights : null,
         price,
+        price_label:   lecVal('lfPriceLabel') || null,   // 0원일 때 '무료' 대신 보일 문구
         sort_order:    lecVal('lfSort') ? parseInt(lecVal('lfSort'), 10) : 0,
         recruit_start: lecVal('lfRStart') || null,
         recruit_end:   lecVal('lfREnd') || null,
@@ -3559,22 +3562,30 @@
       //    여기서 null 로 밀면 특강 전체 잔여석이 사라진다(다음 시간대 변경 전까지 복구 안 됨).
       if (!slotRows.length) row.capacity = lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null;
       let lectureId = editingLectureId;
-      // ⚠️ show_seats 는 마이그레이션(20260819130000) 미적용 환경에서 컬럼이 없다.
-      //    그것 때문에 특강 저장 자체가 막히면 안 되므로, 컬럼 없음이면 빼고 한 번 더 넣는다.
+      // ⚠️ show_seats·price_label 은 마이그레이션 미적용 환경에서 컬럼이 없다. 그것 때문에
+      //    특강 저장 자체가 막히면 안 되므로, 에러가 지목한 컬럼만 빼며 재시도한다(questions 저장과 같은 패턴).
+      const LEC_OPT_COLS = {
+        show_seats:  { label: '잔여석 공개 설정', mig: '20260819130000_lecture_show_seats.sql' },
+        price_label: { label: '0원 표시 문구',    mig: '20260819140000_lecture_price_label.sql' },
+      };
       const runLec = r => lectureId
         ? MONC.sb.from('special_lectures').update(r).eq('id', lectureId)
         // 시간대를 붙이려면 새 특강의 id 가 필요하다 → insert 결과를 돌려받는다
         : MONC.sb.from('special_lectures').insert(r).select('id').single();
-      let { data, error } = await runLec(row);
-      let seatsColMissing = false;
-      if (error && (error.code === '42703' || error.code === 'PGRST204') && /show_seats/.test(error.message || '')) {
-        seatsColMissing = true;
-        const retry = Object.assign({}, row); delete retry.show_seats;
-        ({ data, error } = await runLec(retry));
+      const payload = Object.assign({}, row);
+      let { data, error } = await runLec(payload);
+      const droppedCols = [];
+      while (error && (error.code === '42703' || error.code === 'PGRST204')) {
+        const col = Object.keys(LEC_OPT_COLS)
+          .find(c => c in payload && (error.message || '').toLowerCase().includes(c));
+        if (!col) break;
+        delete payload[col]; droppedCols.push(col);
+        ({ data, error } = await runLec(payload));
       }
       if (error) { alert((lectureId ? '수정 실패: ' : '저장 실패: ') + error.message); return; }
       lectureId = lectureId || (data && data.id);
-      if (seatsColMissing) alert('잔여석 공개 설정은 저장되지 않았어요.\n마이그레이션 20260819130000_lecture_show_seats.sql 을 SQL Editor 에서 실행한 뒤 다시 저장해 주세요.');
+      if (droppedCols.length) alert(droppedCols.map(c => LEC_OPT_COLS[c].label).join('·') + '은(는) 저장되지 않았어요.\n마이그레이션 '
+        + droppedCols.map(c => LEC_OPT_COLS[c].mig).join(' · ') + ' 을 SQL Editor 에서 실행한 뒤 다시 저장해 주세요.');
       // 특강을 저장한 뒤 시간대를 맞춘다. 여기서 실패해도 특강 자체는 이미 저장됐으므로
       // 그 사실을 분명히 알려 같은 폼을 다시 제출하지 않게 한다.
       try {

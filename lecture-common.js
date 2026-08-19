@@ -90,6 +90,15 @@
      show_seats 마이그레이션(20260819130000) 미적용이면 값이 undefined 라 지금까지처럼 보인다. */
   function seatsVisible(l) { return !l || l.show_seats !== false; }
 
+  /* 참가비 표시 문구 — 값이 있으면 금액, 0원이면 '무료' 또는 관리자가 넣은 문구('상담 시 안내' 등).
+     ⚠️ 문구(price_label)는 0원일 때만 쓴다 — 값이 있는 특강의 금액을 문구로 가리면
+        금액을 안 보고 결제하게 된다. 카드·상세·하단바가 전부 이 한 곳을 부른다. */
+  function priceText(l) {
+    if (l && l.price > 0) return Number(l.price).toLocaleString() + '원';
+    const label = l && l.price_label ? String(l.price_label).trim() : '';
+    return label || '무료';
+  }
+
   // 날짜 → 시각 → sort_order 순. DB 정렬과 같은 규칙을 클라이언트에서도 보장한다.
   function sortSlots(list) {
     return (list || []).slice().sort((a, b) =>
@@ -146,10 +155,11 @@
     const isOut = soldOut || st === 'closed';
     // 가격은 커버 배지가 아니라 정보부 맨 아래 한 줄로 말한다(2026-07-24 A안).
     // 무료도 이 줄 하나로만 — 배지와 두 번 말하지 않는다.
-    const free = !(l.price > 0);
+    // 초록 강조는 '무료'라는 단어에만 — '상담 시 안내' 같은 관리자 문구는 금액처럼 네이비.
+    const priceStr = priceText(l);
     const priceLine = '<div class="lx-price"><span class="l">참가비</span>'
-      + '<span class="v' + (free ? ' free' : '') + '">'
-      + (free ? '무료' : Number(l.price).toLocaleString() + '원') + '</span></div>';
+      + '<span class="v' + (priceStr === '무료' ? ' free' : '') + '">'
+      + esc(priceStr) + '</span></div>';
 
     let third = '';
     if (st === 'upcoming') third = mi(IC.seat, '신청 예정');
@@ -224,6 +234,6 @@
   window.LEC = {
     esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl,
     cardHtml, skeletonHtml,
-    fmtTime, slotWhen, slotShort, slotFull, seatsVisible, sortSlots, attachSlots,
+    fmtTime, slotWhen, slotShort, slotFull, seatsVisible, priceText, sortSlots, attachSlots,
   };
 })();
