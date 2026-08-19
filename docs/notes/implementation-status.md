@@ -78,7 +78,7 @@
 
 | `20260816120000_community_config` | **커뮤니티 오픈챗 설정** — `community_config`(key·value jsonb) + RLS(**select 는 authenticated 만** — anon 정책 없음, 쓰기는 admin) | **적용 완료(2026-08-16 오너 실행 — anon 프로브 실측: select `[]` HTTP 200, 표 존재 + 비회원 0건 차단. 다시 실행 안내 금지)** — 값(`open_chat` 행)의 존재는 anon 으로 안 보인다(그게 설계다) — 의심되면 회원 로그인으로 카드 '입장'을 눌러 본다(코드가 뜨면 값까지 들어간 것, '준비 중'이면 값 upsert 가 안 돈 것). ⚠️ **주소·참여코드 값은 마이그레이션에 없다**(공개 레포 반입 금지) — 값 upsert SQL 은 대화창으로 별도 전달. anon select 를 열지 말 것(회원 전용이 이 표의 존재 이유) |
 | `20260819130000_lecture_show_seats` | **특강 잔여석 숨기기 스위치** — `special_lectures.show_seats`(boolean · 기본 true). 표시 전용 컬럼이라 RLS·트리거는 안 건드린다 | **적용 완료(2026-08-19 오너 실행 — anon 프로브 실측: `select=show_seats` HTTP 200 + 값 읽힘, 스위치 끈 특강의 false 저장까지 확인)** |
-| `20260819140000_lecture_price_label` | **특강 0원 표시 문구** — `special_lectures.price_label`(text · NULL=무료 표기). '상담 시 안내' 같은 문구를 '무료' 대신 표시. 표시 전용 | **owner 실행 필요(2026-08-19 작성)** — 미적용이면 0원 특강이 지금처럼 '무료'로 뜨고, admin 에서 문구를 넣고 저장하면 특강은 저장되되 '0원 표시 문구는 저장되지 않았어요' 안내가 뜬다(`42703`/`PGRST204` 판정 후 그 칸만 빼고 재시도 — show_seats 와 같은 묶음). 목록 조회는 `select('*')` 라 400 이 안 난다. 다른 표를 안 건드리므로 실행 순서 무관 |
+| `20260819140000_lecture_price_label` | **특강 0원 표시 문구** — `special_lectures.price_label`(text · NULL=무료 표기). '상담 시 안내' 같은 문구를 '무료' 대신 표시. 표시 전용 | **적용 완료(2026-08-19 오너 실행 — anon 프로브 실측: `select=price_label` HTTP 200 + 값 읽힘. 다시 실행 안내 금지)** — 값은 admin '특강' 폼 '0원일 때 표시' 칸에서 특강마다 넣는다 |
 
 ## ⏸ 비용 일괄 점검 — 나중에 한 번에(오너 결정 2026-08-06)
 
