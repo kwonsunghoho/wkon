@@ -550,8 +550,11 @@
     .na-badge.draft { background: var(--action-tint); color: var(--action-dark); }
     .na-badge.final { background: var(--st-ok-bg); color: var(--st-ok); }
 
+    /* ⚠️ width:max-content + max-width 가 한 벌이다 — 기본값(auto)이면 `left:50%` 때문에 남는 폭이
+       화면 절반(375px 에서 188px)뿐이라, 조금만 길어도 알약이 3줄로 접힌다(2026-08-19 실측). */
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary);
-             color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50; }
+             color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50;
+             width: max-content; max-width: calc(100vw - 32px); text-align: center; }
     .toast.show { opacity: 1; }
     .loading { text-align: center; color: var(--text-dim); padding: 80px 0; }
 
@@ -4043,11 +4046,15 @@
         return;
       }
       const phoneSet = memberPhoneSet();
-      const head = ['신청일자','이름','전화','환불계좌','챌린지/기수','총액','입금','환불','회원여부','연결상태'];
+      /* '재학생' 칸은 입금 옆에 둔다 — 판정은 화면 토글과 같은 `payment_status='free'` 하나다
+         (appFree · 2026-08-19 오너 "재학생인지 아닌지 여부도 좀 봐주면 좋겠는데").
+         입금 칸의 '무료'와 같은 사실이지만, 문자·안내를 나눠 보낼 때 이 칸으로 바로 거른다. */
+      const head = ['신청일자','이름','전화','재학생','환불계좌','챌린지/기수','총액','입금','환불','회원여부','연결상태'];
       const rows = visibleApps().map(a => {
         const ms = appMembership(a, phoneSet);
         return [
-          new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), a.payment_id ? '간편결제' : csvText(a.refund_account),
+          new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), appFree(a) ? 'Y' : 'N',
+          a.payment_id ? '간편결제' : csvText(a.refund_account),
           chSummary(a.challenges), a.total_price || 0, appFree(a) ? '무료' : (appPaid(a) ? 'Y':'N'), a.refunded ? 'Y' : ((a.refunded_amount||0) > 0 ? '부분' : 'N'),
           ms === 'guest' ? '비회원' : '회원',
           ms === 'linked' ? '연결됨' : (ms === 'phone' ? '전화매칭' : '-')
