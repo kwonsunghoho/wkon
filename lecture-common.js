@@ -85,6 +85,11 @@
   // 이 타임이 꽉 찼는가 (정원 미설정이면 무제한)
   function slotFull(s) { return !!s && s.seats_left === 0; }
 
+  /* 남은 자리 수를 신청자에게 보여줄지 (admin '특강' 탭의 잔여석 공개 스위치).
+     ⚠️ 표시 판정일 뿐이다 — 마감 문구·정원 초과 차단은 이 값과 무관하게 그대로 돈다.
+     show_seats 마이그레이션(20260819130000) 미적용이면 값이 undefined 라 지금까지처럼 보인다. */
+  function seatsVisible(l) { return !l || l.show_seats !== false; }
+
   // 날짜 → 시각 → sort_order 순. DB 정렬과 같은 규칙을 클라이언트에서도 보장한다.
   function sortSlots(list) {
     return (list || []).slice().sort((a, b) =>
@@ -150,7 +155,8 @@
     if (st === 'upcoming') third = mi(IC.seat, '신청 예정');
     // 자리가 찬 것과 기간이 끝난 것은 다른 사정이라 문구를 나눈다(잔여석은 신청마다 자동 계산)
     else if (isOut) third = mi(IC.seat, soldOut ? '정원 마감' : '신청 마감');
-    else if (l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
+    // 잔여석 숨김 특강은 이 줄을 비운다(마감 문구는 위에서 이미 처리 — 숨겨도 마감은 말한다)
+    else if (seatsVisible(l) && l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
 
     // 시간대가 여럿이면 '7월 24일(금) · 3개 타임'(날짜가 갈리면 '… 외 · N개 타임').
     // 호출부가 l._slots 를 붙여줬을 때만 — 없으면 지금까지처럼 진행일 한 줄이다.
@@ -218,6 +224,6 @@
   window.LEC = {
     esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl,
     cardHtml, skeletonHtml,
-    fmtTime, slotWhen, slotShort, slotFull, sortSlots, attachSlots,
+    fmtTime, slotWhen, slotShort, slotFull, seatsVisible, sortSlots, attachSlots,
   };
 })();

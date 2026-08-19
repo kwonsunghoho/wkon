@@ -280,6 +280,10 @@
     .lf-seats { padding: 10px; border: 1px dashed var(--border); border-radius: var(--radius-xs);
                 font-size: 13px; line-height: 1.4; color: var(--text-dim); background: var(--surface2); min-height: 41px; }
     .lf-seats b { font-weight: 700; color: var(--text); font-size: 14px; }
+    /* 폼 안 체크박스 한 줄(잔여석 공개 스위치 등) — 터치 44px 확보 */
+    .round-form label.lf-check { display: flex; align-items: center; gap: 8px; min-height: 44px;
+                font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer; }
+    .lf-check input { width: 18px; height: 18px; }
     /* 시간대 편집기 — 행마다 날짜·시작·종료·정원·메모. 정원이 있으면 그 타임만 따로 마감된다. */
     .lf-slots { display: flex; flex-direction: column; gap: 8px; }
     .lf-slots:not(:empty) { margin-bottom: 8px; }
@@ -1054,6 +1058,10 @@
           <div class="field"><label for="lfCapacity">정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
           <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
           <div class="field"><label for="lfSort">정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
+        </div>
+        <div class="field">
+          <label class="lf-check"><input id="lfShowSeats" type="checkbox" checked> 신청 페이지에 잔여석 보이기</label>
+          <div class="lf-thumb-spec">끄면 카드·상세·시간대 목록에서 <b>남은 자리 수를 감춥니다</b>. 정원이 다 차면 '정원 마감'은 그대로 나오고, 정원 초과 신청 차단도 그대로예요.</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
           <div class="field field-date"><label for="lfRStart">신청 시작</label><input id="lfRStart" type="date"></div>
@@ -3201,6 +3209,8 @@
       document.getElementById('lfInstructor').value = l.instructor || '';
       document.getElementById('lfThumb').value      = l.thumb_url || '';
       document.getElementById('lfVisible').checked  = l.visible !== false;
+      // show_seats 마이그레이션(20260819130000) 미적용이면 값이 없다 → 지금까지처럼 '보이기'
+      document.getElementById('lfShowSeats').checked = l.show_seats !== false;
       syncThumbPreview();
     }
 
@@ -3265,6 +3275,7 @@
       editingLectureId = null;
       document.getElementById('lectureForm').reset();
       document.getElementById('lfVisible').checked = true;
+      document.getElementById('lfShowSeats').checked = true;   // 새 특강 기본값 = 잔여석 보이기
       document.getElementById('lecEditing').hidden = true;
       document.getElementById('lecSubmitBtn').textContent = '추가';
       renderSeatsInfo(null); // 잔여석은 div 라 form.reset() 이 못 지운다
@@ -3460,13 +3471,15 @@
       }
     }
 
-    // 목록 한 줄 요약용 잔여석 — 정원이 있으면 '잔여 7/20석'(자동), 없으면 구 수동값만
+    // 목록 한 줄 요약용 잔여석 — 정원이 있으면 '잔여 7/20석'(자동), 없으면 구 수동값만.
+    // 관리자에겐 숨김 특강도 실제 숫자를 그대로 보여주고, 대신 '학생에겐 숨김'을 덧붙인다.
     function seatsSummary(l) {
+      const hidden = l.show_seats === false ? '(학생에겐 숨김)' : '';
       if (l.capacity != null) {
         const left = (l.seats_left != null ? l.seats_left : l.capacity);
-        return ' · 잔여 ' + left + '/' + l.capacity + '석';
+        return ' · 잔여 ' + left + '/' + l.capacity + '석' + hidden;
       }
-      return l.seats_left != null ? ' · 잔여 ' + l.seats_left + '석' : '';
+      return l.seats_left != null ? ' · 잔여 ' + l.seats_left + '석' + hidden : '';
     }
 
     // 관리자 목록용 신청 상태 라벨(공개 페이지 lecture-common.js status와 동일 규칙)
@@ -3540,20 +3553,28 @@
         instructor:    lecVal('lfInstructor') || null,
         thumb_url:     lecVal('lfThumb') || null,
         visible:       document.getElementById('lfVisible').checked,
+        show_seats:    document.getElementById('lfShowSeats').checked,
       };
       // ⚠️ 시간대가 있으면 정원을 보내지 않는다 — 트리거가 시간대 합계로 롤업해둔 값을
       //    여기서 null 로 밀면 특강 전체 잔여석이 사라진다(다음 시간대 변경 전까지 복구 안 됨).
       if (!slotRows.length) row.capacity = lecVal('lfCapacity') ? parseInt(lecVal('lfCapacity'), 10) : null;
       let lectureId = editingLectureId;
-      if (lectureId) {
-        const { error } = await MONC.sb.from('special_lectures').update(row).eq('id', lectureId);
-        if (error) { alert('수정 실패: ' + error.message); return; }
-      } else {
+      // ⚠️ show_seats 는 마이그레이션(20260819130000) 미적용 환경에서 컬럼이 없다.
+      //    그것 때문에 특강 저장 자체가 막히면 안 되므로, 컬럼 없음이면 빼고 한 번 더 넣는다.
+      const runLec = r => lectureId
+        ? MONC.sb.from('special_lectures').update(r).eq('id', lectureId)
         // 시간대를 붙이려면 새 특강의 id 가 필요하다 → insert 결과를 돌려받는다
-        const { data, error } = await MONC.sb.from('special_lectures').insert(row).select('id').single();
-        if (error) { alert('저장 실패: ' + error.message); return; }
-        lectureId = data && data.id;
+        : MONC.sb.from('special_lectures').insert(r).select('id').single();
+      let { data, error } = await runLec(row);
+      let seatsColMissing = false;
+      if (error && (error.code === '42703' || error.code === 'PGRST204') && /show_seats/.test(error.message || '')) {
+        seatsColMissing = true;
+        const retry = Object.assign({}, row); delete retry.show_seats;
+        ({ data, error } = await runLec(retry));
       }
+      if (error) { alert((lectureId ? '수정 실패: ' : '저장 실패: ') + error.message); return; }
+      lectureId = lectureId || (data && data.id);
+      if (seatsColMissing) alert('잔여석 공개 설정은 저장되지 않았어요.\n마이그레이션 20260819130000_lecture_show_seats.sql 을 SQL Editor 에서 실행한 뒤 다시 저장해 주세요.');
       // 특강을 저장한 뒤 시간대를 맞춘다. 여기서 실패해도 특강 자체는 이미 저장됐으므로
       // 그 사실을 분명히 알려 같은 폼을 다시 제출하지 않게 한다.
       try {

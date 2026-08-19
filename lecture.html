@@ -287,7 +287,8 @@
       if (recruitPeriod) facts.push(fact('신청 기간', recruitPeriod));
       // 잔여석은 DB 트리거가 '정원 − 신청건수'로 자동 계산한 값(20260724150000 마이그레이션).
       // 시간대가 있으면 이 값은 모든 타임의 합계다(타임별 잔여석은 아래 선택 목록에 나온다).
-      if (l.seats_left != null) {
+      // 잔여석 숨김(admin 스위치)이면 숫자 대신 정원만 — 마감 여부는 배지·버튼이 말한다.
+      if (l.seats_left != null && LEC.seatsVisible(l)) {
         facts.push(fact(SLOTS.length > 1 ? '전체 잔여석' : '잔여석', soldOut ? '마감'
           : l.seats_left + '석' + (l.capacity ? ' / 정원 ' + l.capacity + '명' : '')));
       } else if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
@@ -327,8 +328,10 @@
     /* 시간대 한 줄. readOnly면 라디오 없이 안내용으로만 그린다(신청 예정·마감 상태). */
     function slotRowHtml(s, readOnly) {
       const full = LEC.slotFull(s);
-      const seat = full ? '정원 마감' : (s.seats_left != null ? '잔여 ' + s.seats_left + '석' : '');
-      const low = !full && s.seats_left != null && s.seats_left <= 5;
+      // 잔여석 숨김이어도 '정원 마감'은 남긴다 — 못 고르는 타임인 이유를 말해야 한다
+      const showLeft = LEC.seatsVisible(LECTURE) && s.seats_left != null;
+      const seat = full ? '정원 마감' : (showLeft ? '잔여 ' + s.seats_left + '석' : '');
+      const low = !full && showLeft && s.seats_left <= 5;
       const body = '<span class="txt"><span class="when">' + LEC.esc(LEC.slotWhen(s)) + '</span>'
         + (seat ? '<span class="seat' + (low || full ? ' low' : '') + '">' + LEC.esc(seat) + '</span>' : '')
         + '</span>';
