@@ -3056,10 +3056,10 @@
       if (!rows.length) { toast('내려받을 명단이 없어요'); return; }
       const head = ['챌린지', '이름', '전화번호', '신청일', '상태'];
       const body = rows.map(r => [
-        CH_LABEL[r.challenge] || r.challenge, r.name, r.phone,
+        CH_LABEL[r.challenge] || r.challenge, r.name, csvPhone(r.phone),
         (r.created_at || '').slice(0, 10), r.status === 'notified' ? '연락완료' : '연락전',
       ]);
-      // ⚠️ 전화번호 앞 0 이 엑셀에서 사라지지 않게 문자열로 강제한다(신청자 CSV 와 같은 처리).
+      // ⚠️ 전화번호는 csvPhone() 으로 하이픈을 넣어 내보낸다 — 따옴표만으로는 엑셀이 앞 0 을 버린다.
       const csv = [head, ...body].map(cols => cols.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
       const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
       const a = document.createElement('a');
@@ -3981,6 +3981,19 @@
       }));
     }
 
+    /* CSV 전화번호 — 엑셀은 큰따옴표를 '필드 구분'으로만 읽는다. `"01012345678"` 도 결국 숫자로
+       해석해 앞 0 을 버리고 `1012345678` 로 연다(2026-08-19 오너 신고 "10으로 보여서 문자를 못
+       보낸다"). 그래서 하이픈을 넣어 내보낸다 — 숫자로 읽힐 수 없는 값이 되어 010 이 그대로 남고,
+       문자 발송 서비스·연락처 붙여넣기도 이 형태를 그대로 받는다.
+       ⚠️ `="0101..."` 같은 엑셀 전용 수식 표기는 쓰지 않는다(구글 시트·메모장에서 그 문자열이
+          그대로 보인다). 형식 규칙은 phone-check.js 의 format 한 곳. */
+    function csvPhone(v) {
+      const s = String(v == null ? '' : v).trim();
+      if (!s || !window.MONC_PHONE) return s;
+      // check() 를 거치는 이유: 검증 도입(2026-08-02) 전 행에는 +82 표기가 섞여 있다 — 여기서 국내 형태로 되돌린다.
+      const d = MONC_PHONE.check(s).digits || MONC_PHONE.digits(s);
+      return (d.length === 10 || d.length === 11) ? MONC_PHONE.format(d) : s;
+    }
     // CSV 저장 공통부 — 파일명에 현재 필터 tag 를 넣어, 여러 번 받아도 어느 목록인지 알 수 있게 한다
     function csvSave(head, rows, tag) {
       const csv = [head, ...rows].map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -3996,7 +4009,7 @@
     function appsToCsv() {
       if (_appKind === 'lab') {   // '자료' 칩이 켜져 있으면 자료 결제를 그대로 내려받는다
         const rows = visibleAppLab().map(x => [
-          new Date(x.p.created_at).toLocaleString('ko-KR'), x.name, x.phone, x.title, x.p.amount || 0
+          new Date(x.p.created_at).toLocaleString('ko-KR'), x.name, csvPhone(x.phone), x.title, x.p.amount || 0
         ]);
         csvSave(['결제일자','이름','전화','자료','금액'], rows, '자료결제');
         return;
@@ -4006,7 +4019,7 @@
       const rows = visibleApps().map(a => {
         const ms = appMembership(a, phoneSet);
         return [
-          new Date(a.created_at).toLocaleString('ko-KR'), a.name, a.phone, a.payment_id ? '간편결제' : (a.refund_account || ''),
+          new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), a.payment_id ? '간편결제' : (a.refund_account || ''),
           chSummary(a.challenges), a.total_price || 0, appFree(a) ? '무료' : (appPaid(a) ? 'Y':'N'), a.refunded ? 'Y' : ((a.refunded_amount||0) > 0 ? '부분' : 'N'),
           ms === 'guest' ? '비회원' : '회원',
           ms === 'linked' ? '연결됨' : (ms === 'phone' ? '전화매칭' : '-')
