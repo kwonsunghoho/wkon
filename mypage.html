@@ -1336,9 +1336,24 @@
         const pc = window.MONC_PHONE ? MONC_PHONE.check(phone) : { ok: !!phone, message: '전화번호를 입력해 주세요.' };
         if (!pc.ok) { phoneMsg.textContent = pc.message; phoneInput.focus(); return; }
         phoneMsg.textContent = '저장 중…';
-        const { error } = await MONC.sb.from('members').update({ phone }).eq('id', me);
-        phoneMsg.textContent = error ? ('저장 실패: ' + error.message) : '저장됐어요.';
-        if (!error) contactC.textContent = phone ? maskPhone(phone) : '미등록';
+        /* 저장은 서버 RPC 한 곳(saveMyProfile · 2026-08-20) — 다른 계정(구글↔카카오 이중 가입)에
+           등록된 번호면 서버가 막는다. 저장형은 온보딩과 같은 하이픈 표준형. */
+        const canonical = (window.MONC_PHONE && pc.digits) ? MONC_PHONE.format(pc.digits) : phone;
+        const r = await MONC.saveMyProfile({ phone: canonical }) || {};
+        if (r.ok) {
+          phoneMsg.textContent = '저장됐어요.';
+          phoneInput.value = canonical;
+          contactC.textContent = maskPhone(canonical);
+        } else if (r.code === 'dup_phone') {
+          const pn = r.provider === 'google' ? '구글 로그인 ' : (r.provider === 'kakao' ? '카카오 로그인 ' : '다른 ');
+          phoneMsg.textContent = '이미 ' + pn + '계정에 등록된 번호예요.';
+        } else if (r.code === 'rate_limited') {
+          phoneMsg.textContent = '시도가 너무 많았어요. 24시간 뒤에 다시 해주세요.';
+        } else if (r.code === 'bad_phone') {
+          phoneMsg.textContent = '휴대전화번호 형식이 맞지 않아요. 예) 010-1234-5678';
+        } else {
+          phoneMsg.textContent = '저장 실패: ' + (r.message || '잠시 후 다시 시도해 주세요.');
+        }
       });
 
       // (legacy) Before / After 음성 — admin 이 회원당 한 쌍으로 올려 주던 옛 기록.

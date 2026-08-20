@@ -64,9 +64,20 @@
     .save-btn:hover { background: var(--action-hover); }
     .save-btn:active { transform: scale(.99); }
     .save-btn:disabled { opacity: .6; cursor: default; }
-    .skip { display: inline-block; margin-top: 16px; font-size: 13px; color: var(--text-muted); text-decoration: underline; background: none; border: none; cursor: pointer; min-height: 44px; }
     .status { margin-top: 14px; font-size: 13px; color: var(--text-muted); min-height: 18px; }
     .status.err { color: var(--action-dark); }
+    /* 중복 번호 선택 강제(2026-08-20) — login.html #dupChoice 와 같은 원칙:
+       안내문+버튼이 아니라, 답하기 전엔 입력 폼이 안 보이는 구조("안 읽는다" — 오너) */
+    #dupView .dup-t { font-size: 19px; font-weight: 900; margin-top: 18px; color: var(--ink); }
+    #dupView .dup-sub { margin-top: 10px; font-size: 14px; color: var(--text-muted); line-height: 1.65; word-break: keep-all; }
+    #dupView .dup-sub b { color: var(--text); }
+    .dup-alt {
+      width: 100%; margin-top: 10px; padding: 14px; border: 1.5px solid var(--border-strong);
+      border-radius: 12px; background: #fff; color: var(--text); font-size: 15px; font-weight: 800;
+      font-family: inherit; cursor: pointer; min-height: 44px;
+    }
+    .dup-alt:disabled { opacity: .6; cursor: default; }
+    #dupView .dup-note { margin-top: 12px; font-size: 12px; color: var(--text-dim); line-height: 1.6; word-break: keep-all; }
   </style>
 </head>
 <body>
@@ -85,7 +96,19 @@
 
       <button type="button" class="save-btn" id="saveBtn">저장하고 시작하기</button>
     </form>
-    <button type="button" class="skip" id="skipBtn">나중에 할게요</button>
+    <!-- ⚠️ '나중에 할게요'(건너뛰기)는 2026-08-20 오너 확정으로 폐지 — 되살리지 말 것.
+         전화번호는 구글·카카오 이중 가입을 잡는 유일한 공통 식별자라, 건너뛰기가 있으면
+         중복 차단(save_my_profile)이 통째로 우회된다. 회원 페이지 쪽은 requireConsent 가
+         번호 없는 계정을 이리로 보낸다(supabase-config.js 가입 완성 가드). -->
+
+    <!-- 같은 번호의 다른 계정 발견 시 — 선택 강제(입력 폼을 감춘다). login.html #dupChoice 와 같은 원칙. -->
+    <div id="dupView" hidden>
+      <p class="dup-t">이미 가입된 번호예요</p>
+      <p class="dup-sub" id="dupSub"></p>
+      <button type="button" class="save-btn" id="dupGo">기존 계정으로 로그인하기</button>
+      <button type="button" class="dup-alt" id="dupRetry">번호를 잘못 입력했어요</button>
+      <p class="dup-note" id="dupNote" hidden>이 번호를 지금 계정으로 옮기려면 moveownnextcreate@gmail.com 으로 알려주세요.</p>
+    </div>
     <div class="status" id="status"></div>
   </div>
 
@@ -100,8 +123,49 @@
     const phoneEl = document.getElementById('obPhone');
     const majorEl = document.getElementById('obMajor');
     const saveBtn = document.getElementById('saveBtn');
-    const skipBtn = document.getElementById('skipBtn');
-    const nextPage = () => new URLSearchParams(location.search).get('returnTo') || 'mypage.html';
+    const formEl = document.getElementById('onboardForm');
+    const titleEl = document.querySelector('h1');
+    const subEl = document.querySelector('.sub');
+    const dupView = document.getElementById('dupView');
+    const dupSub = document.getElementById('dupSub');
+    const dupGo = document.getElementById('dupGo');
+    const dupRetry = document.getElementById('dupRetry');
+    const dupNote = document.getElementById('dupNote');
+    // 열린 리다이렉트 방지 — login.html safeReturnTo 와 같은 규칙('파일명.html' 만, 자기 자신 제외)
+    const safeReturnTo = v => {
+      v = String(v || '');
+      return (/^[a-z0-9-]+\.html([?#][^\s]*)?$/i.test(v) && !/^(login|onboarding)\.html/i.test(v)) ? v : '';
+    };
+    const returnTo = () => safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
+    const nextPage = () => returnTo() || 'mypage.html';
+    // 로그인으로 되보낼 때도 가려던 화면(returnTo)을 이어 준다
+    const loginHref = () => {
+      const rt = returnTo();
+      return 'login.html' + (rt ? '?returnTo=' + encodeURIComponent(rt) : '');
+    };
+
+    /* 같은 번호의 다른 계정 발견 — 선택 강제 화면(입력 폼을 감춘다).
+       fresh(방금 60분 내 만들어진 계정) = 방금 계정을 지우고 기존 계정으로 로그인하는 흐름.
+       fresh 아님(예전에 번호 없이 가입해 쓰던 계정) = 삭제 없이 로그아웃만 — 몇 달치
+       기록이 있을 수 있는 계정을 지우면 사고다. 판정은 서버(save_my_profile)가 준다. */
+    let dupFresh = false;
+    function providerName(p) { return p === 'google' ? '구글' : (p === 'kakao' ? '카카오' : ''); }
+    function showDup(provider, fresh) {
+      dupFresh = !!fresh;
+      const pn = providerName(provider);
+      /* 줄은 <br> 로 고정한다(.sub 와 같은 방식) — 폰트 폴백 환경에서 어중간한 자리에서 꺾이지 않게 */
+      dupSub.innerHTML = (pn ? '이 번호는 <b>' + pn + ' 로그인</b>으로<br>가입된 계정이 있어요.'
+                             : '이 번호로 가입된 계정이 있어요.')
+        + (dupFresh ? '' : '<br>지금 로그인한 계정은 지워지지 않아요.');
+      dupNote.hidden = dupFresh;
+      titleEl.hidden = true; subEl.hidden = true; formEl.hidden = true;
+      dupView.hidden = false;
+    }
+    function hideDup() {
+      dupView.hidden = true;
+      titleEl.hidden = false; subEl.hidden = false; formEl.hidden = false;
+      phoneEl.classList.add('is-err'); phoneEl.focus();
+    }
 
     (async () => {
       if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
@@ -134,22 +198,57 @@
         phoneEl.classList.remove('is-err');
         saveBtn.disabled = true; setStatus('저장 중…');
 
-        // 전공 컬럼(major)이 아직 없을 수 있어, 실패하면 전공 빼고 재시도
-        let { error } = await MONC.sb.from('members').update({ name, phone, major }).eq('id', me);
-        if (error && /major/i.test(error.message || '')) {
-          ({ error } = await MONC.sb.from('members').update({ name, phone }).eq('id', me));
+        /* 저장은 하이픈 표준형(010-1234-5678)으로 통일 — 서버 중복 대조(숫자 정규화)와
+           표시·문자 발송이 한 형으로 맞는다. +82 붙여넣기도 여기서 국내형이 된다. */
+        const canonical = (window.MONC_PHONE && pc.digits) ? MONC_PHONE.format(pc.digits) : phone;
+        /* 중복 가입 차단(2026-08-20) — 저장은 서버 RPC 한 곳(supabase-config.js saveMyProfile).
+           같은 번호의 다른 계정(구글↔카카오 이중 가입)이 있으면 서버가 막는다. */
+        const r = await MONC.saveMyProfile({ name, phone: canonical, major }) || {};
+        if (r.ok) { location.replace(nextPage()); return; }
+        saveBtn.disabled = false;
+        if (r.code === 'dup_phone') { setStatus(''); showDup(r.provider, r.me_fresh); return; }
+        if (r.code === 'rate_limited') { setStatus('시도가 너무 많았어요. 24시간 뒤에 다시 시도해 주세요.', true); return; }
+        if (r.code === 'bad_phone') { setStatus('휴대전화번호 형식이 맞지 않아요. 예) 010-1234-5678', true); phoneEl.classList.add('is-err'); phoneEl.focus(); return; }
+        if (r.code === 'no_session') { location.replace(loginHref()); return; }
+        setStatus('저장 실패: ' + (r.message || '잠시 후 다시 시도해 주세요.'), true);
+      });
+
+      /* '기존 계정으로 로그인하기' —
+         방금 만든 계정(fresh): login.html #dupGoogle 흐름과 같은 정리 — deleteMyAccount()
+           재사용(두 벌 금지). 결제·신청 기록은 member_id 가 set null 이라 남는다.
+         쓰던 계정: 삭제 없이 세션만 끝낸다. */
+      dupGo.addEventListener('click', async () => {
+        const msg = dupFresh
+          ? '방금 만들어진 이 계정을 정리(삭제)하고, 기존 계정으로 다시 로그인할까요?\n\n기존 계정의 기록은 그대로 남아 있어요.'
+          : '로그아웃하고 기존 계정으로 다시 로그인할까요?\n\n지금 계정은 지워지지 않아요.';
+        if (!window.confirm(msg)) return;
+        dupGo.disabled = true; dupRetry.disabled = true;
+        if (dupFresh) {
+          setStatus('방금 만들어진 계정을 정리하는 중…');
+          const dr = await MONC.deleteMyAccount();
+          if (dr === 'failed') {
+            setStatus('계정 정리에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
+            dupGo.disabled = false; dupRetry.disabled = false;
+            return;
+          }
+        } else {
+          setStatus('로그아웃하는 중…');
         }
-        if (error) { setStatus('저장 실패: ' + error.message, true); saveBtn.disabled = false; return; }
-
-        try { localStorage.setItem('monc_onboard_done', '1'); } catch (e) {}
-        location.replace(nextPage());
+        /* MONC.signOut() 금지 — 홈으로 가 버린다. 곧장 다시 로그인해야 하므로 세션만 끝낸다(login.html dupGoogle 과 동일). */
+        await MONC.sb.auth.signOut();
+        location.replace(loginHref());
       });
 
-      skipBtn.addEventListener('click', () => {
-        try { localStorage.setItem('monc_onboard_done', '1'); } catch (e) {}
-        location.replace(nextPage());
-      });
+      dupRetry.addEventListener('click', hideDup);
     })();
+
+    /* 뒤로가기 복원(bfcache) — '정리하는 중…' 채로 얼어붙은 버튼을 되살린다.
+       입력값(이름·번호)이 있는 화면이라 통째 reload 는 하지 않는다(버튼만 복원 — apply 와 같은 규칙). */
+    window.addEventListener('pageshow', (e) => {
+      if (!e.persisted) return;
+      saveBtn.disabled = false; dupGo.disabled = false; dupRetry.disabled = false;
+      setStatus('');
+    });
   </script>
 </body>
 </html>

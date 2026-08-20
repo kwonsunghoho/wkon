@@ -163,10 +163,61 @@
 
   // 동의 미완료 회원을 로그인 페이지의 동의 게이트로 보낸다(회원 전용 페이지 가드).
   // 동의를 마치면 routeByRole 이 returnTo(가려던 화면)로 되돌린다.
+  // ── 가입 완성 가드(2026-08-20 오너 확정) ── 동의 다음에 전화번호를 본다:
+  //   번호가 없으면 온보딩으로 보낸다("번호를 안 써도 가입이 되잖아" — 건너뛰기 폐지).
+  //   전화번호는 구글·카카오 이중 가입을 잡는 유일한 공통 식별자라, 입력 없이 회원
+  //   기능을 열어 두면 중복 차단(save_my_profile)이 그냥 우회된다.
+  // ⚠️ 동의 게이트(법적 필수) 판정은 그대로다 — 아래 추가는 상품 규칙이며 별개.
+  // ⚠️ 실패 방향은 통과(fail-open): 조회 오류로 회원 전체가 잠기면 안 된다.
+  // ⚠️ 온보딩 자신은 제외 — 안 하면 온보딩→온보딩 무한 이동.
   async function requireConsent() {
-    if (await hasConsented()) return true;
-    window.location.replace(LOGIN_PAGE + '?consent=1&returnTo=' + encodeURIComponent(pageRef()));
-    return false;
+    if (!(await hasConsented())) {
+      window.location.replace(LOGIN_PAGE + '?consent=1&returnTo=' + encodeURIComponent(pageRef()));
+      return false;
+    }
+    if (/(^|\/)onboarding\.html$/i.test(window.location.pathname)) return true;
+    try {
+      const session = await getSession();
+      if (session) {
+        const { data, error } = await sb.from('members').select('phone').eq('id', session.user.id).single();
+        if (!error && data && !data.phone) {
+          window.location.replace('onboarding.html?returnTo=' + encodeURIComponent(pageRef()));
+          return false;
+        }
+      }
+    } catch (e) { /* 조회 실패 = 통과 */ }
+    return true;
+  }
+
+  // ── 프로필 저장(전화번호 중복 가입 차단 · 2026-08-20) ─────────────────────
+  // 저장은 서버 RPC(save_my_profile · migration 20260820170000) 한 곳 — 온보딩·마이페이지가
+  // 함께 쓴다. 같은 번호의 다른 계정이 있으면 서버가 막고
+  // { ok:false, code:'dup_phone', provider:'google'|'kakao'|…, me_fresh:boolean } 를 준다.
+  // 그 외 code: 'rate_limited'(24시간 10회 초과) · 'bad_phone' · 'no_session' · 'error'.
+  // name·major 는 빈 값이면 기존 값을 유지한다(마이페이지는 번호만 보낸다).
+  // ⚠️ 마이그레이션 미적용이면 RPC 부재를 감지해 구 방식(직접 update)으로 조용히
+  //    폴백한다(대조 없이 저장 — 사이트를 멈추지 않는다). 그때 { ok:true, degraded:true }.
+  async function saveMyProfile(fields) {
+    const session = await getSession();
+    if (!session) return { ok: false, code: 'no_session' };
+    const f = fields || {};
+    const { data, error } = await sb.rpc('save_my_profile', {
+      p_name: f.name || null, p_phone: f.phone || null, p_major: f.major || null,
+    });
+    if (!error) return data || { ok: false, code: 'error' };
+    const missing = error.code === 'PGRST202' || /save_my_profile/i.test(error.message || '');
+    if (!missing) return { ok: false, code: 'error', message: error.message };
+    // 폴백: 구 직접 update. major 컬럼 미생성 환경이면 major 만 빼고 재시도(온보딩 구 동작).
+    const row = {};
+    if (f.name)  row.name  = f.name;
+    if (f.phone) row.phone = f.phone;
+    if (f.major) row.major = f.major;
+    let { error: e2 } = await sb.from('members').update(row).eq('id', session.user.id);
+    if (e2 && row.major && /major/i.test(e2.message || '')) {
+      delete row.major;
+      ({ error: e2 } = await sb.from('members').update(row).eq('id', session.user.id));
+    }
+    return e2 ? { ok: false, code: 'error', message: e2.message } : { ok: true, degraded: true };
   }
 
   // ⚠️ 구 hasSojaeAccess()(members.sojae_enabled 기반 소재 발굴 권한 판정)는 2026-07-27
@@ -284,7 +335,7 @@
     sb, TOTAL_DAYS, LOGIN_PAGE, TERMS_VERSION,
     signInWithProvider, signInWithGoogle, signInWithKakao,
     signOut, getSession, requireSession,
-    getMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
+    getMyProfile, saveMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
     getConsent, recordConsent, hasConsented, requireConsent, deleteMyAccount,
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
   };
