@@ -753,7 +753,10 @@
       // 저장에 성공했으니 임시 보관(draft-keep)을 지운다 — 안 지우면 다음에 빈 폼을
       // 열었을 때 이미 저장한 글이 되살아나 '중복 저장'으로 이어진다.
       if (window.moncDraftClear) moncDraftClear('answers-body');
-      location.reload();   // 목록·필터·이력을 한 번에 다시 그린다
+      // 목록·필터·이력을 한 번에 다시 그린다. ⚠️ reload() 가 아니라 replace(pathname) —
+      // ?title=…#new(승자각 문항 프리필)를 그대로 물고 새로고침하면 채워진 폼이 또 열려
+      // 중복 저장처럼 보인다. 주소를 목록으로 되돌리며 새로 그린다.
+      location.replace(location.pathname);
     }
 
     // ── 내 소재(서랍) ─────────────────────────────────────────────────────
@@ -986,6 +989,13 @@
       // 추가 화면에서 뒤로가기를 누르면 목록으로(주소가 안 바뀌므로 브라우저가 페이지를 떠난다 —
       // 그 전에 화면 상태만 되돌린다)
       if (location.hash === '#new') showAdd(true);
+      // 승자각 제출 카드(mypage)가 문항 제목을 들고 온다 — ?title=…#new 면 제목을 채워서 연다.
+      // 제목 정확 일치가 '작성됨' 판정이라, 여기서 채워 주는 값이 곧 판정 키다(mypage ANSWER_DAYS 와 한 쌍).
+      const preTitle = new URLSearchParams(location.search).get('title');
+      if (preTitle && location.hash === '#new') {
+        const t = document.getElementById('fTitle');
+        if (!t.value) { t.value = preTitle.slice(0, 200); syncForm(); }
+      }
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';

@@ -79,6 +79,7 @@
 | `20260816120000_community_config` | **커뮤니티 오픈챗 설정** — `community_config`(key·value jsonb) + RLS(**select 는 authenticated 만** — anon 정책 없음, 쓰기는 admin) | **적용 완료(2026-08-16 오너 실행 — anon 프로브 실측: select `[]` HTTP 200, 표 존재 + 비회원 0건 차단. 다시 실행 안내 금지)** — 값(`open_chat` 행)의 존재는 anon 으로 안 보인다(그게 설계다) — 의심되면 회원 로그인으로 카드 '입장'을 눌러 본다(코드가 뜨면 값까지 들어간 것, '준비 중'이면 값 upsert 가 안 돈 것). ⚠️ **주소·참여코드 값은 마이그레이션에 없다**(공개 레포 반입 금지) — 값 upsert SQL 은 대화창으로 별도 전달. anon select 를 열지 말 것(회원 전용이 이 표의 존재 이유) |
 | `20260819130000_lecture_show_seats` | **특강 잔여석 숨기기 스위치** — `special_lectures.show_seats`(boolean · 기본 true). 표시 전용 컬럼이라 RLS·트리거는 안 건드린다 | **적용 완료(2026-08-19 오너 실행 — anon 프로브 실측: `select=show_seats` HTTP 200 + 값 읽힘, 스위치 끈 특강의 false 저장까지 확인)** |
 | `20260819140000_lecture_price_label` | **특강 0원 표시 문구** — `special_lectures.price_label`(text · NULL=무료 표기). '상담 시 안내' 같은 문구를 '무료' 대신 표시. 표시 전용 | **적용 완료(2026-08-19 오너 실행 — anon 프로브 실측: `select=price_label` HTTP 200 + 값 읽힘. 다시 실행 안내 금지)** — 값은 admin '특강' 폼 '0원일 때 표시' 칸에서 특강마다 넣는다 |
+| `20260820120000_challenge_submissions` | **챌린지 처음/끝 학생 직접 제출** — `challenge_submissions` 표(voice/expression/spinning × before/after) + `is_challenge_participant()`(참가 판정 — applications 원장) + 본인/admin RLS + `recordings` 버킷 본인 폴더 쓰기 정책 3종(패턴·참가 검사) + 버킷 50MB 상한. `daily_records` 는 **안 건드린다**(화면만 정리 — 데이터 보존) | **owner 실행 필요(2026-08-20 작성)** — 미적용이면 mypage 제출 카드의 슬롯이 '제출 준비 중'으로, admin '챌린지 제출물' 패널이 '마이그레이션 적용 전'으로 내려간다(승자각 답변 카드·나머지 화면은 정상). 다른 표를 안 건드리므로 실행 순서 무관 |
 
 ## ⏸ 비용 일괄 점검 — 나중에 한 번에(오너 결정 2026-08-06)
 

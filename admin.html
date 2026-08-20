@@ -506,25 +506,6 @@
     .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
     .btn-sm { padding: 8px 12px; font-size: 13px; }
 
-    /* 14일 편집 테이블 */
-    .drow { display: grid; grid-template-columns: 60px 220px 1fr 64px; gap: 10px; align-items: center;
-            padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
-    @media (max-width: 640px) {
-      .drow { grid-template-columns: 44px 1fr; row-gap: 8px; padding: 12px 0; }
-      .drow .d-comment, .drow .d-save { grid-column: 1 / -1; }
-      .seg button { padding: 10px 12px; }
-      .d-comment input { padding: 12px 10px; font-size: 15px; }
-    }
-    .drow .d-num { font-weight: 700; font-size: 14px; }
-    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
-    .seg button { border: 0; background: #fff; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); }
-    .seg button.on-ok { background: var(--st-ok); color: #fff; }
-    .seg button.on-no { background: var(--action); color: #fff; }
-    .seg button.on-clear { background: var(--text-dim); color: #fff; }
-    .d-comment input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
-    .d-save button { width: 100%; }
-    .drow.dirty { background: var(--st-note-bg); box-shadow: inset 3px 0 0 var(--action); }
-
     .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 560px) { .ba { grid-template-columns: 1fr; } }
     .ba .slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; }
@@ -746,7 +727,7 @@
       .apps-toolbar .search { flex-basis: 100%; }
       .apps-count { margin-right: auto; }
       .ri-edit, .ri-del, .ri-cancel { min-height: 44px; padding: 10px 16px; }
-      .ac-tg, .ac-del, .rv-btn, .rv-kf, .seg button { min-height: 44px; }
+      .ac-tg, .ac-del, .rv-btn, .rv-kf { min-height: 44px; }
       /* 위 목록은 '행 버튼'만 덮었다 — 정작 저장·추가·CSV 같은 **주 버튼과 모든 select** 가
          빠져 있어 36~38px 로 남아 있었다(2026-08-02 실측 30종). 폼 조작요소를 통째로 잡는다.
          .btn-sm 도 모바일에선 44px 다 — 좁은 화면에서 '작은 버튼'은 그냥 못 누르는 버튼이다. */
@@ -2273,12 +2254,15 @@
       // 신청 내역은 배지 판정과 '같은 소스·같은 기준'을 쓰려고 전역 _apps 를 재사용한다.
       // (예전엔 .or(phone.eq.<원문>) DB 쿼리라 하이픈 유무까지 정확히 같아야 매칭돼, 숫자정규화 배지와 어긋났다.)
       if (!_appsLoaded) await loadApplications();
-      const [{ data: records }, { data: recs }, answers] = await Promise.all([
-        sb().from('daily_records').select('day_number, status, comment').eq('member_id', id),
+      // 일차별 기록(daily_records)은 2026-08-20 화면에서 정리 — 데이터는 남아 있지만 더는 조회하지 않는다.
+      // 산출물은 챌린지별 처음/끝(challenge_submissions — 학생 직접 업로드)으로 본다.
+      const [subsRes, { data: recs }, answers] = await Promise.all([
+        sb().from('challenge_submissions').select('*').eq('member_id', id),
         sb().from('recordings').select('type, storage_path').eq('member_id', id),
         fetchAnswers(id),
       ]);
-      const byDay = {}; (records || []).forEach(r => byDay[r.day_number] = r);
+      const chSubs = subsRes.error ? [] : (subsRes.data || []);
+      const chSubsReady = !subsRes.error;   // 표 미생성(PGRST205 등)이면 패널에 사실대로 적는다
       const recMap = {}; (recs || []).forEach(r => recMap[r.type] = r.storage_path);
       // 이 회원 것: member_id 로 연결됐거나(로그인 신청), 전화번호 숫자가 회원 프로필과 일치(비로그인 신청).
       // 배지의 appMembership()/memberPhoneSet() 과 동일한 \D 정규화 → 두 화면 판정이 항상 일치.
@@ -2287,15 +2271,13 @@
         a.member_id === id || (!a.member_id && myDigits && (a.phone || '').replace(/\D/g, '') === myDigits)
       );
 
-      // 상단 요약 스탯(진행중/입금/환불 한눈에)
-      const okN = (records || []).filter(r => r.status === 'success').length;
-      const noN = (records || []).filter(r => r.status === 'fail').length;
+      // 상단 요약 스탯(제출물/입금/환불 한눈에)
       const anyPaid = appList.some(a => appPaid(a));
       const anyFree = appList.some(a => appFree(a));
       const anyRefund = appList.some(a => a.refunded || (a.refunded_amount || 0) > 0);
       const pendingPay = appList.some(a => !appPaid(a) && !appFree(a) && !a.refunded);
       const statsHtml = `<div class="mstats">
-        <span class="mstat">미션 <b>${okN + noN}</b>/${MONC.TOTAL_DAYS}일 · 성공 <b>${okN}</b> · 아쉬움 <b>${noN}</b></span>
+        <span class="mstat">제출물 <b>${chSubs.length}</b>건</span>
         <span class="mstat">신청 <b>${appList.length}</b>건</span>
         ${anyPaid ? '<span class="mstat paid">입금완료</span>' : ''}
         ${anyFree ? '<span class="mstat paid">무료(재학생)</span>' : ''}
@@ -2336,32 +2318,30 @@
       const cohortOpts = ['<option value="">(미배정)</option>']
         .concat(cohorts.map(c => `<option value="${c.id}" ${m.cohort_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
 
-      /* 미션 기록 요약 — 접힌 상태에서도 '무엇이 들어 있는지'가 보여야 한다(2026-08-03).
-         기록이 하나도 없으면 접어 둔다: 이 편집기가 회원 상세 4,416px 중 2,531px(57%)을 먹어
-         답변노트·음성이 한참 아래로 밀려 있었다. 출석은 카톡 오픈챗으로 운영해 대부분 비어 있다. */
-      const dayVals = Object.values(byDay);
-      const dOk = dayVals.filter(r => r.status === 'success').length;
-      const dNo = dayVals.filter(r => r.status === 'fail').length;
-      const daySum = (dOk || dNo)
-        ? `성공 ${dOk} · 아쉬움 ${dNo} · 미정 ${MONC.TOTAL_DAYS - dOk - dNo}`
-        : '기록 없음';
-
-      let daysHtml = '';
-      for (let d = 1; d <= MONC.TOTAL_DAYS; d++) {
-        const r = byDay[d] || {};
-        const st = r.status || '';
-        daysHtml += `
-        <div class="drow" data-day="${d}">
-          <div class="d-num">${d}일</div>
-          <div class="seg" data-status="${st}">
-            <button type="button" data-set="success" class="${st==='success'?'on-ok':''}">성공</button>
-            <button type="button" data-set="fail" class="${st==='fail'?'on-no':''}">아쉬움</button>
-            <button type="button" data-set="" class="${st===''?'on-clear':''}">미정</button>
-          </div>
-          <div class="d-comment"><input type="text" value="${esc(r.comment || '')}" placeholder="코멘트(선택)"></div>
-          <div class="d-save"><button type="button" class="btn btn-action btn-sm">저장</button></div>
-        </div>`;
-      }
+      /* 챌린지 제출물(처음/끝) — 학생이 mypage 에서 직접 올린다(2026-08-20).
+         admin 은 대신 올려 주는 예비 경로(학생이 못 올릴 때) + 확인용.
+         칸은 이 회원의 신청 챌린지(특강 제외) ∪ 이미 올라온 제출물의 챌린지. */
+      const subChs = [];
+      appList.forEach(a => (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+        if (c && !c.lecture_id && c.type !== 'lecture' && CH_SUB_ADM[c.challenge]
+          && subChs.indexOf(c.challenge) < 0) subChs.push(c.challenge);
+      }));
+      chSubs.forEach(s => {
+        if (CH_SUB_ADM[s.challenge] && subChs.indexOf(s.challenge) < 0) subChs.push(s.challenge);
+      });
+      const orderedChs = ['voice', 'expression', 'spinning'].filter(c => subChs.indexOf(c) >= 0);
+      const subOf = {}; chSubs.forEach(s => { subOf[s.challenge + '#' + s.type] = s; });
+      const subSum = !chSubsReady ? '마이그레이션 적용 전'
+        : chSubs.length ? chSubs.length + '건' : '아직 없음';
+      const chSubsHtml = !chSubsReady
+        ? '<div class="mini-empty">challenge_submissions 마이그레이션(20260820120000)이 아직 적용 전입니다. 적용하면 학생이 직접 올리고, 여기서도 관리됩니다.</div>'
+        : !orderedChs.length
+          ? '<div class="mini-empty">파일 제출 대상 챌린지 신청이 없습니다. (승자각은 파일 대신 답변노트로 확인)</div>'
+          : orderedChs.map(ch => `
+            <div style="margin-bottom:12px;">
+              <div style="font-size:13px;font-weight:700;margin-bottom:6px;">${CH_SUB_ADM[ch].label}</div>
+              <div class="ba">${chSubSlot(ch, 'before', subOf[ch + '#before'])}${chSubSlot(ch, 'after', subOf[ch + '#after'])}</div>
+            </div>`).join('');
 
       detail.innerHTML = `
         <div class="panel">
@@ -2393,9 +2373,9 @@
           <div id="appsInDetail">${appsHtml}</div>
         </div>
 
-        <details class="panel adm-fold"${(dOk || dNo) ? ' open' : ''}>
-          <summary><h3>날짜별 미션 (1~14일)</h3><span class="adm-help-v">${daySum}</span></summary>
-          <div id="daysEdit">${daysHtml}</div>
+        <details class="panel adm-fold"${chSubs.length ? ' open' : ''}>
+          <summary><h3>챌린지 제출물 (처음/끝)</h3><span class="adm-help-v">${subSum}</span></summary>
+          <div id="chSubsEdit">${chSubsHtml}</div>
         </details>
 
         <div class="panel">
@@ -2411,7 +2391,7 @@
           </div>
         </div>`;
 
-      wireDetail(id, recMap);
+      wireDetail(id, recMap, chSubs);
     }
 
     // 권한 필드: 오너에게만, 오너가 아닌 회원 대상으로 지정/강등 버튼을 보여준다.
@@ -2444,7 +2424,24 @@
       </div>`;
     }
 
-    function wireDetail(id, recMap) {
+    // 챌린지 제출물(처음/끝) — 학생 직접 업로드의 admin 확인·대리 업로드 칸 (2026-08-20)
+    const CH_SUB_ADM = {
+      voice:      { label: '보.신.각 · 보이스 (음성)', media: 'audio' },
+      expression: { label: '영.합.각 · 표현력 (영상)', media: 'video' },
+      spinning:   { label: '스.피.닝 · 스피치 (음성)', media: 'audio' },
+    };
+    function chSubSlot(ch, type, sub) {
+      const label = type === 'before' ? '처음 · 시작 무렵' : '끝 · 마칠 무렵';
+      return `<div class="slot ${type}">
+        <div class="tag">${label}</div>
+        <div id="cs-cur-${ch}-${type}" class="cur">${sub ? '등록됨: ' + esc(sub.storage_path) : '아직 없음'}</div>
+        <div id="cs-play-${ch}-${type}"></div>
+        <input type="file" id="cs-file-${ch}-${type}" accept="${CH_SUB_ADM[ch].media}/*" style="font-size:12px;margin-top:8px;width:100%">
+        <button class="btn btn-ghost btn-sm" data-csupload="${ch}" data-cstype="${type}" style="margin-top:8px">업로드</button>
+      </div>`;
+    }
+
+    function wireDetail(id, recMap, chSubs) {
       // 보관/해제(한 명) — 목록 일괄과 같은 함수를 쓴다(확인 문구·권한 제외 규칙이 한 벌)
       const arcBtn = document.getElementById('arcOne');
       if (arcBtn) arcBtn.addEventListener('click', async () => {
@@ -2453,46 +2450,50 @@
         if (document.getElementById('detail').style.display !== 'none') selectMember(id);
       });
 
-      // 상태 세그먼트 토글
-      document.querySelectorAll('#daysEdit .seg').forEach(seg => {
-        seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-          const val = b.dataset.set;
-          seg.dataset.status = val;
-          seg.querySelectorAll('button').forEach(x => x.classList.remove('on-ok','on-no','on-clear'));
-          b.classList.add(val === 'success' ? 'on-ok' : val === 'fail' ? 'on-no' : 'on-clear');
-          seg.closest('.drow').classList.add('dirty');
-        }));
-      });
-      document.querySelectorAll('#daysEdit .d-comment input').forEach(inp =>
-        inp.addEventListener('input', () => inp.closest('.drow').classList.add('dirty')));
-
-      // 날짜별 저장
-      document.querySelectorAll('#daysEdit .d-save button').forEach(btn => btn.addEventListener('click', async () => {
-        const row = btn.closest('.drow');
-        const day = parseInt(row.dataset.day, 10);
-        const status = row.querySelector('.seg').dataset.status;
-        const comment = row.querySelector('.d-comment input').value.trim() || null;
-        btn.disabled = true; btn.textContent = '…';
+      // 챌린지 제출물(처음/끝) — 대리 업로드. 학생 화면(mypage)과 같은 경로 규칙·같은 upsert 를 쓴다.
+      document.querySelectorAll('[data-csupload]').forEach(btn => btn.addEventListener('click', async () => {
+        const ch = btn.dataset.csupload, type = btn.dataset.cstype;
+        const file = document.getElementById(`cs-file-${ch}-${type}`).files[0];
+        if (!file) { alert('파일을 선택하세요.'); return; }
+        let ext = (file.name.indexOf('.') > 0 ? file.name.split('.').pop() : '')
+          .toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!ext || ext.length > 8) ext = CH_SUB_ADM[ch].media === 'video' ? 'mp4' : 'm4a';
+        const path = `${id}/${ch}-${type}.${ext}`;
+        btn.disabled = true; btn.textContent = '업로드 중…';
         try {
-          if (!status) {
-            /* 미정 → 기존 기록 삭제. ⚠️ 코멘트도 같이 사라진다(기록 행 자체가 없어진다).
-               전에는 말없이 지워 놓고 '저장됨'만 띄웠고 화면엔 코멘트가 그대로 남아 있었다(2026-08-03). */
-            if (comment && !confirm(day + '일차를 미정으로 되돌리면 적어 두신 코멘트도 같이 지워집니다.\n계속할까요?')) {
-              btn.disabled = false; btn.textContent = '저장'; return;
-            }
-            const { error } = await sb().from('daily_records').delete().eq('member_id', id).eq('day_number', day);
-            if (error) throw error;
-            const ci = row.querySelector('.d-comment input'); if (ci) ci.value = '';
-          } else {
-            const { error } = await sb().from('daily_records')
-              .upsert({ member_id: id, day_number: day, status, comment }, { onConflict: 'member_id,day_number' });
-            if (error) throw error;
+          const up = await sb().storage.from('recordings')
+            .upload(path, file, { upsert: true, contentType: file.type || undefined });
+          if (up.error) throw up.error;
+          const { error } = await sb().from('challenge_submissions').upsert(
+            { member_id: id, challenge: ch, type: type, storage_path: path },
+            { onConflict: 'member_id,challenge,type' });
+          if (error) throw error;
+          // 확장자가 바뀌었으면 옛 파일 정리(학생 화면과 같은 규칙 — 실패해도 무시)
+          const oldSub = (chSubs || []).find(s => s.challenge === ch && s.type === type);
+          if (oldSub && oldSub.storage_path && oldSub.storage_path !== path) {
+            try { await sb().storage.from('recordings').remove([oldSub.storage_path]); } catch (_) {}
           }
-          row.classList.remove('dirty');
-          toast(day + '일차 저장됨');
-        } catch (e) { alert('저장 실패: ' + e.message); }
-        btn.disabled = false; btn.textContent = '저장';
+          document.getElementById(`cs-cur-${ch}-${type}`).textContent = '등록됨: ' + path;
+          const url = await MONC.getSignedUrl(path);
+          document.getElementById(`cs-play-${ch}-${type}`).innerHTML = url
+            ? (CH_SUB_ADM[ch].media === 'video'
+              ? `<video controls src="${url}" style="width:100%"></video>`
+              : `<audio controls src="${url}"></audio>`)
+            : '';
+          toast('업로드 완료');
+        } catch (e) { alert('업로드 실패: ' + e.message); }
+        btn.disabled = false; btn.textContent = '업로드';
       }));
+
+      // 기존 제출물 미리보기 링크 생성
+      (chSubs || []).forEach(async s => {
+        const el = document.getElementById(`cs-play-${s.challenge}-${s.type}`);
+        if (!el) return;
+        const url = await MONC.getSignedUrl(s.storage_path);
+        if (url) el.innerHTML = (CH_SUB_ADM[s.challenge] || {}).media === 'video'
+          ? `<video controls preload="none" src="${url}" style="width:100%"></video>`
+          : `<audio controls preload="none" src="${url}"></audio>`;
+      });
 
       // 회원 정보 저장 (이름 + 연락처 + 전공 + 기수)
       document.getElementById('saveProfile').addEventListener('click', async () => {
