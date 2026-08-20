@@ -82,6 +82,30 @@
 - `SECTION_OF` 의 stories/story 줄과 admin CRUD·`success_stories` 표는 안 건드렸다 — 내림 상태에서도 수기를 미리 써서 쌓아 둘 수 있다.
 - 사이트맵엔 원래 stories/story 가 없어 손대지 않았다.
 
+### 회원 직접 제출 — `review-write.html` (2026-08-20 오너 확정 · 보상 없음)
+
+후기가 전부 admin 대신 업로드라 쌓이는 속도가 오너 손에 묶여 있었다. 결제한 참가자가 직접 쓴다.
+
+- **흐름**: mypage '내 챌린지 제출' 아래 [후기 쓰기] → `review-write.html`(로그인+동의 가드) →
+  챌린지 픽커(계정 연동·결제된 것만) · 표시 이름(기본 프로필 이름, 비우면 무명) · 내용 10~500자 ·
+  사진 선택(1080px 압축 — admin 업로드와 같은 규칙) → `submit_challenge_review()` RPC.
+- **판정은 서버**: RPC(security definer)가 `is_challenge_participant()` 로 결제·미환불 참가를 확인하고,
+  **기수도 브라우저가 아니라 신청 기록에서** 읽는다. `visible=false` 강제 — 즉시 공개 불가.
+  회원당 같은 챌린지·기수 1건(유니크 인덱스 → `already`). reviews 에 회원 INSERT 정책은 안 열었다
+  (쓰기는 관리자 정책 + 이 함수 한 길). migration `20260820160000_review_submissions.sql`.
+- **승인 = admin 후기 관리의 기존 노출 토글.** 필터 줄에 '승인 대기 N' 칩, 카드에 '회원 제출' 배지.
+  **보상(크레딧) 지급 없음 — 오너 확정. 지급 로직을 붙이지 말 것.**
+- 사진은 `reviews` 버킷(공개) `submissions/<uid>/` — 본인 폴더·이미지 확장자만(storage 정책).
+  RPC 도 image_path 가 본인 폴더인지 재확인한다.
+- **비회원 신청자는 제출 불가**가 맞다 — 가입 유도 + admin [이 회원에 연결] 뒤 본인이 쓴다
+  (챌린지 제출물과 같은 결정 · admin.md '회원 상세' 절).
+- degrade: RPC 미적용(404 PGRST202)이면 제출 전 프로브 게이트(polish 패턴)가 '준비 중' 화면으로 멈춘다.
+  `reviews.member_id` 미적용이면 admin 칩이 0으로 조용히 떨어진다.
+- 장비: bfcache 통째 reload + `scroll-keep.js?v=3` + `inapp.js?v=10` + `draft-keep`(내용 칸 `rw-quote`).
+  nav `SECTION_OF` 에 없음(메뉴 밖 — apply 와 같음), sitemap 미등재(회원 전용).
+- 실측(2026-08-20 · 스텁): 375/320px 오버플로 0 · 픽커 44px·제출 52px · 입력칸 16px ·
+  제출→완료 화면 전환 · notready/none/already 분기 · 콘솔 에러 0.
+
 ### 종류 구분 — `reviews.kind`
 `challenge`(기본) / `consult` 두 값. migration `20260801180000_reviews_kind.sql`(오너 실행). 기존 108건은 default 로 자동 `challenge` — 백필 update 가 없다.
 - **⚠️ 목록은 `select('*')` 뒤 JS 에서 거른다.** `.eq('kind', …)` 로 서버 필터하면 마이그레이션 미적용 환경에서 400 이 난다. 미적용이면 전부 `challenge` 로 떨어져 챌린지 목록은 그대로 돌고 상담 목록만 0건이 된다.

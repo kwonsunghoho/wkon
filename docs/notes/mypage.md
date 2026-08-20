@@ -20,6 +20,7 @@
 - **같은 날 화면에서 정리한 것(데이터는 보존)**: '2주 미션' 진행 바(progCard)·14일 격자(sec-days)·코치 코멘트(sec-comments)와
   admin 의 일차 입력 패널. `daily_records` 표·데이터는 그대로 있다 — 되살리려면 화면만 다시 붙이면 된다.
 - legacy `recordings`(회원당 한 쌍·admin 업로드)의 `sec-ba` 접이는 **행이 있을 때만** 보인다(옛 데이터 표시용).
+- 제출 카드 묶음 맨 아래에 **'챌린지 후기' 카드([후기 쓰기] → review-write.html)** — 참가자에게만 보인다(2026-08-20 · 상세는 pages.md '회원 직접 제출' 절).
 - `memberState()` 의 참여 폴백은 이제 daily_records 가 아니라 **결제한 챌린지 존재**다 — 기수(cohort) 미배정이어도
   결제만 돼 있으면 active 로 본다(제출이 기수 배정에 안 막히게).
 

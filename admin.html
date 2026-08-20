@@ -419,6 +419,9 @@
     .rv-kfilter { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 2px 12px; }
     .rv-kf { appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; min-height: 36px; padding: 6px 14px; border-radius: 999px; }
     .rv-kf.on { background: var(--action); color: #fff; border-color: transparent; }
+    /* 회원 직접 제출(review-write) 표시 — 승인 전 후기를 한눈에 */
+    .rv-sub-badge { display: inline-flex; align-items: center; font-size: 12px; font-weight: 800;
+      color: var(--action); background: var(--action-tint); border-radius: 999px; padding: 3px 9px; }
 
     /* 합격 수기 — 긴 글이라 카드 그리드가 아니라 줄 목록 + 펼침 편집 */
     .st-row { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
@@ -1217,6 +1220,8 @@
         <button class="rv-kf on" type="button" data-k="all">전체</button>
         <button class="rv-kf" type="button" data-k="challenge">챌린지 후기</button>
         <button class="rv-kf" type="button" data-k="consult">상담 후기</button>
+        <!-- 회원 직접 제출(review-write) — visible=false 로 들어와 여기서 승인(노출)한다(2026-08-20) -->
+        <button class="rv-kf" type="button" data-k="pending" id="rvPendingChip">승인 대기</button>
       </div>
       <!-- 검색(2026-08-03) — 후기가 100장을 넘으면 한 건을 고치려고 화면을 계속 내려야 했다.
            ⚠️ 이름은 `reviewer_name` 컬럼이다(`name` 아님 — 한 번 틀려서 이름이 안 붙은 전례). -->
@@ -4146,9 +4151,15 @@
       // kind 컬럼 마이그레이션(20260801180000) 전이면 undefined → 전부 챌린지로 취급
       /* 종류 필터 + 검색. ⚠️ 이름 컬럼은 `reviewer_name` 이다 — `name` 으로 읽어 이름이 한 번도
          안 붙었던 전례가 있다(2026-08-02 원칙 15 근거). */
+      // 회원 제출 승인 대기(review-write · 2026-08-20) — member_id 있고 아직 비공개인 것.
+      // member_id 컬럼 미적용(20260820160000 전)이면 undefined 라 0건으로 조용히 떨어진다.
+      const pendN = data.filter(r => r.member_id && !r.visible).length;
+      const pendChip = document.getElementById('rvPendingChip');
+      if (pendChip) pendChip.textContent = '승인 대기 ' + pendN;
       const rq = (document.getElementById('rvSearch').value || '').trim().toLowerCase();
       const rows = data.filter(r => {
-        if (rvKindFilter !== 'all' && (r.kind || 'challenge') !== rvKindFilter) return false;
+        if (rvKindFilter === 'pending') { if (!(r.member_id && !r.visible)) return false; }
+        else if (rvKindFilter !== 'all' && (r.kind || 'challenge') !== rvKindFilter) return false;
         if (!rq) return true;
         return [r.reviewer_name, r.quote, r.caption, r.challenge, r.cohort == null ? '' : (r.cohort + '기')]
           .some(v => String(v || '').toLowerCase().includes(rq));
@@ -4167,6 +4178,7 @@
             ? `<img src="${esc(rvUrl(r.image_path))}" alt="${esc(r.caption || '후기')}">`
             : `<div class="rv-noimg">${esc(r.quote || '(내용 없음)')}</div>`}
           <div class="rv-meta">
+            ${r.member_id ? `<div class="row"><span class="rv-sub-badge">회원 제출${r.visible ? '' : ' · 승인 대기'}</span></div>` : ''}
             <div class="row"><label class="rv-lb" style="flex:1">종류<select class="rv-kind" style="flex:1" aria-label="후기 종류 — 어느 목록에 실릴지 정합니다">${Object.keys(RV_KIND_LABEL).map(k => `<option value="${k}" ${(r.kind || 'challenge') === k ? 'selected' : ''}>${RV_KIND_LABEL[k]}</option>`).join('')}</select></label></div>
             <div class="row rv-cls" title="챌린지 후기 목록(reviews-list.html?kind=challenge) 기수·챌린지 필터에 쓰임">
               <label class="rv-lb" style="flex:1">챌린지<select class="rv-ch" style="flex:1" aria-label="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(미지정)'}</option>`).join('')}</select></label>
@@ -4197,6 +4209,8 @@
         const row = data.find(r => String(r.id) === String(id));
         if (row) Object.assign(row, patch);
         renderRvChSum(data);
+        // 승인(노출)하면 대기 숫자도 그 자리에서 줄어야 한다 — 통째 재렌더 없이 칩만 갱신
+        if (pendChip) pendChip.textContent = '승인 대기 ' + data.filter(r => r.member_id && !r.visible).length;
       };
       grid.querySelectorAll('.rv-kind').forEach(sel => sel.addEventListener('change', async () => {
         const id = sel.closest('.rv-item').dataset.id;

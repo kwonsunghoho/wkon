@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>챌린지 후기 쓰기 — MONC 몬크</title>
+  <meta name="description" content="참여한 몬크 챌린지 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
+  <!-- Open Graph / SNS 공유 — 크롤러는 JS 를 안 돌리므로 여기에 직접 둔다 -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://monc.ai.kr/review-write.html" />
+  <meta property="og:title"       content="챌린지 후기 쓰기 — MONC 몬크" />
+  <meta property="og:description" content="참여한 몬크 챌린지 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
+  <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale"      content="ko_KR" />
+  <meta property="og:site_name"   content="MONC 몬크" />
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="챌린지 후기 쓰기 — MONC 몬크" />
+  <meta name="twitter:description" content="참여한 몬크 챌린지 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
+  <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <meta name="theme-color" content="#102B56">
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴 — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 -->
+  <script src="inapp.js?v=10" defer></script>
+  <!-- 뒤로 왔을 때 보던 자리로 되돌리기 — 아래 bfcache 새로고침이 스크롤을 버리는 걸 메운다 -->
+  <script src="scroll-keep.js?v=3"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 24px 20px 80px; }
+    .pg-h { margin: 6px 0 4px; font-family: var(--serif); font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+    .pg-s { font-size: 14px; color: var(--text-muted); word-break: keep-all; }
+    .card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px; margin-top: 16px; }
+    .lb { display: block; font-size: 13px; font-weight: 800; color: var(--text); margin: 18px 0 8px; }
+    .lb:first-child { margin-top: 0; }
+    .lb em { font-style: normal; font-weight: 600; font-size: 12px; color: var(--text-dim); margin-left: 6px; }
+    /* 챌린지 픽커 — 결제한 것만 뜬다 */
+    .ch-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ch-pick button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--border);
+      border-radius: 999px; background: var(--surface); color: var(--text); font: inherit;
+      font-size: 14px; font-weight: 700; cursor: pointer; }
+    .ch-pick button.on { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+    .inp { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: var(--radius-xs); background: var(--surface); color: var(--text);
+      font-family: inherit; font-size: 16px; }
+    textarea.inp { min-height: 140px; resize: vertical; line-height: 1.65; }
+    .inp:focus { outline: 2px solid var(--action); outline-offset: -1px; }
+    .cnt { margin-top: 6px; font-size: 12px; color: var(--text-dim); text-align: right; font-variant-numeric: tabular-nums; }
+    .cnt.over { color: #B3261E; font-weight: 700; }
+    .hint { margin-top: 8px; font-size: 12px; color: var(--text-dim); line-height: 1.6; word-break: keep-all; }
+    /* 사진(선택) */
+    .ph-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ph-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+      padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-xs);
+      background: var(--surface); color: var(--text-muted); font: inherit; font-size: 14px;
+      font-weight: 700; cursor: pointer; }
+    .ph-btn:hover { border-color: var(--action); color: var(--action); }
+    .ph-thumb { position: relative; width: 84px; }
+    .ph-thumb img { width: 84px; height: 112px; object-fit: cover; border-radius: var(--radius-xs);
+      border: 1px solid var(--border-soft); display: block; }
+    .ph-del { margin-top: 6px; width: 100%; min-height: 32px; border: 1px solid var(--border);
+      border-radius: var(--radius-xs); background: var(--surface); color: var(--text-muted);
+      font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .submit { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px;
+      margin-top: 22px; border: 0; border-radius: var(--radius-sm); background: var(--action);
+      color: var(--action-ink); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+    .submit[disabled] { opacity: .55; cursor: default; }
+    .err { margin-top: 10px; font-size: 13px; font-weight: 700; color: #B3261E; min-height: 18px; word-break: keep-all; }
+    /* 상태 화면(로딩·비참가·준비 중·완료) */
+    .state { text-align: center; padding: 44px 16px; }
+    .state h2 { font-size: 19px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.01em; }
+    .state p { font-size: 14px; color: var(--text-muted); word-break: keep-all; }
+    .state .ic { width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 999px;
+      background: var(--action-tint); color: var(--action); display: flex; align-items: center; justify-content: center; }
+    .state .ic svg { width: 26px; height: 26px; }
+    .state-links { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+    .state-links a { display: flex; align-items: center; justify-content: center; min-height: 48px;
+      border-radius: var(--radius-xs); text-decoration: none; font-size: 15px; font-weight: 800; }
+    .state-links a.main { background: var(--action); color: var(--action-ink); }
+    .state-links a.sub { border: 1px solid var(--border); color: var(--text-muted); }
+    @media (min-width: 760px) {
+      .wrap { padding-top: 36px; }
+      .state-links a { max-width: 300px; margin: 0 auto; width: 100%; }
+    }
+  </style>
+</head>
+<body data-nav-offset>
+  <h1 class="sr-only">챌린지 후기 쓰기</h1>
+  <main class="wrap">
+    <p class="pg-h" aria-hidden="true">챌린지 후기 쓰기</p>
+    <p class="pg-s">참여한 챌린지의 후기를 남겨 주세요. 제출하면 바로 공개되지 않고, 검토 후 후기 페이지에 올라갑니다.</p>
+
+    <div class="card state" id="stLoading"><p>불러오는 중…</p></div>
+
+    <!-- 결제한 챌린지가 없을 때 -->
+    <div class="card state" id="stNone" style="display:none;">
+      <h2>남길 수 있는 후기가 아직 없어요</h2>
+      <p>후기는 결제 완료된 챌린지 참가자만 남길 수 있어요.<br>계정으로 신청한 챌린지가 없습니다.</p>
+      <div class="state-links">
+        <a class="main" href="apply.html">챌린지 신청하러 가기</a>
+        <a class="sub" href="mypage.html">마이페이지로</a>
+      </div>
+    </div>
+
+    <!-- 서버 준비 전(마이그레이션 미적용) -->
+    <div class="card state" id="stNotReady" style="display:none;">
+      <h2>후기 제출 준비 중이에요</h2>
+      <p>조금만 기다렸다가 다시 열어 주세요.</p>
+      <div class="state-links"><a class="sub" href="mypage.html">마이페이지로</a></div>
+    </div>
+
+    <!-- 작성 폼 -->
+    <div class="card" id="formCard" style="display:none;">
+      <span class="lb">어느 챌린지 후기인가요?</span>
+      <div class="ch-pick" id="chPick" role="group" aria-label="챌린지 선택"></div>
+
+      <label class="lb" for="rwName">표시 이름<em>후기에 그대로 보여요 — 비우면 이름 없이 게시</em></label>
+      <input class="inp" id="rwName" type="text" maxlength="40" autocomplete="name" placeholder="예: 박신우">
+
+      <label class="lb" for="rwQuote">후기 내용<em>10자 이상</em></label>
+      <!-- data-keep: 뒤로가기·새로고침에도 쓰던 글 보존(sessionStorage — draft-keep.js) -->
+      <textarea class="inp" id="rwQuote" maxlength="500" data-keep="rw-quote"
+        placeholder="2주 동안 어떤 점이 달라졌는지, 어떤 훈련이 기억에 남는지 적어 주세요."></textarea>
+      <div class="cnt" id="rwCnt">0 / 500자</div>
+
+      <span class="lb">사진<em>선택 — 인증샷·기록 화면 등</em></span>
+      <div class="ph-row" id="phRow">
+        <button type="button" class="ph-btn" id="phBtn">사진 고르기</button>
+      </div>
+      <p class="hint">제출한 후기는 몬크가 검토한 뒤 후기 페이지·챌린지 소개에 실려요. 개인정보(전화번호 등)가 찍힌 사진은 올리지 말아 주세요.</p>
+
+      <button type="button" class="submit" id="rwSubmit" disabled>후기 제출하기</button>
+      <p class="err" id="rwErr" role="alert"></p>
+    </div>
+
+    <!-- 제출 완료 -->
+    <div class="card state" id="stDone" style="display:none;">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <h2>후기가 제출됐어요</h2>
+      <p>검토가 끝나면 후기 페이지에 올라갑니다.<br>함께해 주셔서 감사해요!</p>
+      <div class="state-links">
+        <a class="main" href="mypage.html">마이페이지로</a>
+        <a class="sub" href="reviews.html">후기 모아보기</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <!-- 긴 글 임시 보관 — data-keep 칸을 sessionStorage 에. localStorage 로 바꾸지 말 것(공용 기기). -->
+  <script src="draft-keep.js" defer></script>
+  <script>
+    // bfcache: 뒤로 오면 낡은 화면이 되살아난다 — 통째 새로고침(쓰던 글은 draft-keep 이 지킨다).
+    window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
+
+    const esc = s => (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    // 챌린지 id ↔ 화면 라벨. reviews.challenge 한글값 변환은 서버(RPC)가 한다 — 여기서 하지 않는다.
+    const CH_LABEL = { voice: '보.신.각 · 보이스', expression: '영.합.각 · 표현력', spinning: '스.피.닝 · 스피치', answer: '승.자.각 · 답변' };
+    const CH_ORDER = ['voice', 'expression', 'spinning', 'answer'];
+
+    let ME = null, picked = '', photo = null;   // photo = { blob, type, ext }
+
+    function show(id) {
+      ['stLoading', 'stNone', 'stNotReady', 'formCard', 'stDone'].forEach(x =>
+        document.getElementById(x).style.display = (x === id ? '' : 'none'));
+    }
+
+    function syncSubmit() {
+      const n = document.getElementById('rwQuote').value.trim().length;
+      const c = document.getElementById('rwCnt');
+      c.textContent = n.toLocaleString() + ' / 500자';
+      c.classList.toggle('over', n > 500);
+      document.getElementById('rwSubmit').disabled = !(picked && n >= 10 && n <= 500);
+    }
+
+    /* 이미지 축소 — admin 후기 업로드와 같은 규칙(긴 변 1080 · WebP 0.82, 실패·역효과면 원본).
+       후기 카드 표시 폭이 최대 600px 대라 1080 이면 충분하다(전송량 예산). */
+    async function optimizeImage(file) {
+      const MAX_EDGE = 1080, QUALITY = 0.82;
+      let bitmap;
+      try { bitmap = await createImageBitmap(file); }
+      catch (e) { throw new Error('이미지를 읽지 못했어요(지원하지 않는 형식일 수 있어요)'); }
+      const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+      const w = Math.round(bitmap.width * scale), h = Math.round(bitmap.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+      if (bitmap.close) bitmap.close();
+      const toBlob = (type, q) => new Promise(res => canvas.toBlob(res, type, q));
+      let blob = await toBlob('image/webp', QUALITY), type = 'image/webp', ext = 'webp';
+      if (!blob || blob.type !== 'image/webp') { blob = await toBlob('image/jpeg', QUALITY); type = 'image/jpeg'; ext = 'jpg'; }
+      if (!blob || blob.size >= file.size) {
+        const oext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif'].indexOf(oext) < 0) throw new Error('jpg·png·webp 사진만 올릴 수 있어요');
+        return { blob: file, type: file.type || 'image/jpeg', ext: oext };
+      }
+      return { blob, type, ext };
+    }
+
+    function renderPhoto() {
+      const row = document.getElementById('phRow');
+      if (!photo) {
+        row.innerHTML = '<button type="button" class="ph-btn" id="phBtn">사진 고르기</button>';
+      } else {
+        const url = URL.createObjectURL(photo.blob);
+        row.innerHTML = `<div class="ph-thumb"><img src="${url}" alt="고른 사진 미리보기">
+          <button type="button" class="ph-del" id="phDel">빼기</button></div>
+          <button type="button" class="ph-btn" id="phBtn">다시 고르기</button>`;
+        document.getElementById('phDel').addEventListener('click', () => { photo = null; renderPhoto(); });
+      }
+      document.getElementById('phBtn').addEventListener('click', pickPhoto);
+    }
+
+    function pickPhoto() {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.addEventListener('change', async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) { alert('사진이 10MB 를 넘어요. 조금 줄여서 올려 주세요.'); return; }
+        try { photo = await optimizeImage(file); renderPhoto(); }
+        catch (e) { alert(e.message || '사진을 읽지 못했어요.'); }
+      });
+      input.click();
+    }
+
+    async function submitReview() {
+      const btn = document.getElementById('rwSubmit');
+      const errEl = document.getElementById('rwErr');
+      errEl.textContent = '';
+      btn.disabled = true; btn.textContent = '제출 중…';
+      try {
+        let imagePath = null;
+        if (photo) {
+          imagePath = 'submissions/' + ME + '/' + crypto.randomUUID() + '.' + photo.ext;
+          const up = await MONC.sb.storage.from('reviews')
+            .upload(imagePath, photo.blob, { contentType: photo.type });
+          if (up.error) throw new Error('사진 업로드에 실패했어요: ' + up.error.message);
+        }
+        const { data, error } = await MONC.sb.rpc('submit_challenge_review', {
+          p_challenge: picked,
+          p_quote: document.getElementById('rwQuote').value.trim(),
+          p_name: document.getElementById('rwName').value.trim() || null,
+          p_image_path: imagePath,
+        });
+        if (error) throw new Error(error.message || '제출에 실패했어요.');
+        if (!data || !data.ok) {
+          const code = (data || {}).code;
+          const MSG = {
+            already: '이 챌린지 기수의 후기는 이미 남기셨어요. 다른 챌린지 후기를 남겨 주세요.',
+            not_participant: '결제 확인된 참가자만 후기를 남길 수 있어요. 결제가 최근이면 잠시 뒤 다시 시도해 주세요.',
+            quote_short: '후기를 10자 이상 적어 주세요.',
+            quote_long: '후기는 500자까지예요.',
+            bad_image: '사진을 다시 골라 주세요.',
+            auth: '로그인이 풀렸어요. 다시 로그인해 주세요.',
+          };
+          errEl.textContent = MSG[code] || '제출하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+          return;
+        }
+        if (window.moncDraftClear) moncDraftClear('rw-quote');
+        show('stDone');
+        document.documentElement.scrollTop = 0;
+      } catch (e) {
+        errEl.textContent = e.message || '제출하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+      } finally {
+        btn.disabled = false; btn.textContent = '후기 제출하기';
+        syncSubmit();
+      }
+    }
+
+    (async () => {
+      const session = await MONC.requireSession();
+      if (!session) return;
+      if (!(await MONC.requireConsent())) return;
+      ME = session.user.id;
+
+      // 제출 전 프로브 게이트(polish 와 같은 패턴) — RPC 미적용이면 폼을 열지 않는다.
+      // 존재하면 bad_challenge 로 답하고, 미적용이면 404(PGRST202)가 난다.
+      try {
+        const probe = await MONC.sb.rpc('submit_challenge_review', { p_challenge: '__probe', p_quote: '' });
+        if (probe.error && String(probe.error.code || '').indexOf('PGRST2') === 0) { show('stNotReady'); return; }
+      } catch (_) { show('stNotReady'); return; }
+
+      // 결제한 챌린지(계정 연동 신청) — mypage 제출 카드와 같은 판정. 최종 판정은 서버가 한다.
+      const { data: myApps } = await MONC.sb.from('applications')
+        .select('challenges, paid, refunded, payment_status').eq('member_id', ME);
+      const part = {};
+      (myApps || []).forEach(a => {
+        const paidOk = (a.paid || a.payment_status === 'paid' || a.payment_status === 'free' || a.payment_status === 'partial_refunded');
+        if (!paidOk || a.refunded || a.payment_status === 'refunded') return;
+        (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+          if (!c || c.type === 'lecture' || c.lecture_id || !CH_LABEL[c.challenge]) return;
+          const r = Number(c.round) || null;
+          if (!(c.challenge in part) || (r && (!part[c.challenge] || r > part[c.challenge]))) part[c.challenge] = r;
+        });
+      });
+      const keys = CH_ORDER.filter(c => c in part);
+      if (!keys.length) { show('stNone'); return; }
+
+      // 챌린지 픽커 — 하나뿐이면 바로 골라 둔다
+      const pick = document.getElementById('chPick');
+      pick.innerHTML = keys.map(c =>
+        `<button type="button" data-ch="${c}">${esc(CH_LABEL[c])}${part[c] ? ' ' + part[c] + '기' : ''}</button>`).join('');
+      pick.addEventListener('click', e => {
+        const b = e.target.closest('button[data-ch]'); if (!b) return;
+        picked = b.dataset.ch;
+        pick.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+        syncSubmit();
+      });
+      if (keys.length === 1) { picked = keys[0]; pick.querySelector('button').classList.add('on'); }
+
+      // 표시 이름 기본값 = 프로필 이름(수정 가능)
+      try {
+        const profile = await MONC.getMyProfile();
+        if (profile && profile.name && !document.getElementById('rwName').value) {
+          document.getElementById('rwName').value = profile.name;
+        }
+      } catch (_) {}
+
+      document.getElementById('rwQuote').addEventListener('input', syncSubmit);
+      document.getElementById('rwSubmit').addEventListener('click', submitReview);
+      renderPhoto();
+      show('formCard');
+      syncSubmit();
+    })();
+  </script>
+</body>
+</html>
