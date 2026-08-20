@@ -23,7 +23,10 @@ admin upsert 를 깨지 않는 **순수 추가형**이라 미적용 환경 degra
   insert/update 의 with check 에 **`is_challenge_participant(challenge)`**(security definer —
   applications 에서 `member_id = auth.uid()` + 결제완료/무료 + 미환불 + challenges jsonb 에
   해당 챌린지 포함) — **참가 판정은 DB 가 한다.** `storage_path` 는 본인 폴더 강제.
-- 비회원 신청(전화 매칭)은 대상이 아니다 — member_id 연동 신청만. 그 경우는 admin 대리 업로드.
+- 비회원 신청(전화 매칭)은 대상이 아니다 — member_id 연동 신청만. **admin 대리 업로드는 없다**
+  (2026-08-20 오너 "직접 업로드하게끔 회원가입을 유도해. 내가 대신 올려주는 건 없어" —
+  1차 구현의 대리 업로드 칸을 같은 날 걷어냈다). 비회원 신청자는 ① apply 의 로그인 유도 강화
+  ② 가입 뒤 admin 신청 카드의 **[이 회원에 연결]**(applications.member_id 연결)로 직접 업로드 길을 연다.
 
 Storage(`recordings` 비공개 버킷 재사용):
 
@@ -52,9 +55,11 @@ Storage(`recordings` 비공개 버킷 재사용):
 ### admin.html — 회원 상세
 
 - '날짜별 미션 (1~14일)' 패널 + 관련 배선 제거(요약 스탯의 미션 줄 포함). 데이터는 보존.
-- '챌린지 제출물' 패널 신설: 신청한 챌린지 그룹별 처음/끝 — 학생이 올린 것 재생 +
-  admin 대리 업로드/교체(같은 경로 규칙·같은 upsert). 미적용 환경이면 안내 한 줄.
-- legacy 'Before / After 음성' 패널은 유지(옛 데이터·예비 경로).
+- '챌린지 제출물' 패널 신설: 신청한 챌린지 그룹별 처음/끝 — **확인(재생) 전용.**
+  업로드 칸 없음(오너 확정). 미적용 환경이면 안내 한 줄.
+- 신청 카드에 **[이 회원에 연결]**(member_id 없는 신청만) — 비회원 신청을 가입한 계정에 이어
+  학생이 직접 올리게 한다. 연결 전 confirm, 연결 후 상세 재렌더.
+- legacy 'Before / After 음성' 패널은 **데이터 있을 때만 + 확인 전용**(업로드 칸 제거).
 
 ### answers.html
 

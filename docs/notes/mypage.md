@@ -13,7 +13,7 @@
   답변 조회는 `loadAnswerNotes()` 의 promise 를 재사용한다(추가 요청 없음 — 함수가 data 를 return 하는 이유).
 - **참가 판정의 원장은 DB**: `challenge_submissions` RLS 의 `is_challenge_participant()`
   (applications 에서 member_id=auth.uid() + 결제/무료 + 미환불 + 그 챌린지 포함). 화면 partOf 는 카드를 그릴지만 정한다.
-  ⚠️ 비회원 신청(전화 매칭)은 대상이 아니다 — admin 대리 업로드로 커버(전화 조회 창구 금지 원칙 + 프로필 번호 바꿔 남 행세 차단).
+  ⚠️ 비회원 신청(전화 매칭)은 대상이 아니고 **admin 대리 업로드도 없다**(오너 "내가 대신 올려주는 건 없어") — apply 의 로그인 유도 강화 + 가입 뒤 admin [이 회원에 연결]로 직접 업로드 길을 연다(전화 조회 창구 금지 원칙 + 프로필 번호 바꿔 남 행세 차단은 그대로).
 - 업로드 경로 `<uid>/<챌린지>-<before|after>.<ext>`(storage 정책이 패턴·참가까지 검사). 확장자가 바뀐 재업로드는 옛 파일을 지운다.
   조회는 **`.eq('member_id', me)` 필수** — 빼면 admin 계정에서 전 회원 행이 내려온다(chsub_admin_all).
 - **degrade**: 표 미생성(PGRST205 등)이면 슬롯이 '제출 준비 중' 안내로 내려간다(업로드 버튼 없음). 승자각 카드는 무관하게 돈다.

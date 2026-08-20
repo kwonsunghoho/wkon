@@ -728,6 +728,7 @@ placeholder '비우면 회원 누구나'만 보고 **비운 채 저장을 반복
 챌린지 산출물이 학생 직접 업로드(mypage `#chSubs` · `challenge_submissions`)로 바뀌면서 회원 상세도 같이 정리했다. 상세는 mypage.md '챌린지 처음/끝' 절과 스펙(`2026-08-20-challenge-before-after-design.md`) 참조.
 
 - **'날짜별 미션 (1~14일)' 패널·배선 삭제** — `daily_records` 는 더 이상 조회·입력하지 않는다(표·데이터는 보존 — 마이그레이션에 drop 없음). 요약 스탯의 '미션 N/14일' 줄도 '제출물 N건'으로 교체.
-- **'챌린지 제출물 (처음/끝)' 패널 신설**(`#chSubsEdit` · 접이) — 칸은 이 회원의 신청 챌린지(특강 제외) ∪ 이미 올라온 제출물. 보신각·스피닝=음성, 영합각=영상. admin 대리 업로드는 **학생 화면과 같은 경로 규칙**(`<uid>/<챌린지>-<타입>.<ext>`)·같은 upsert(onConflict `member_id,challenge,type`) — admin 은 storage `recordings_bucket_admin_all` 정책으로 통과한다. 승자각은 파일이 아니라 답변노트 패널에서 확인.
+- **'챌린지 제출물 (처음/끝)' 패널 신설**(`#chSubsEdit` · 접이) — **확인(재생) 전용.** 칸은 이 회원의 신청 챌린지(특강 제외) ∪ 이미 올라온 제출물. 보신각·스피닝=음성, 영합각=영상. 승자각은 파일이 아니라 답변노트 패널에서 확인. ⚠️ **admin 대리 업로드 칸을 다시 만들지 말 것** — 같은 날 오너 확정 *"직접 업로드하게끔 회원가입을 유도해. 내가 대신 올려주는 건 없어"*(1차 구현의 업로드 칸을 그날 걷어냈다). apply 의 로그인 유도 문구 강화가 같은 결정의 짝이다(signup-banner·guestNudge — apply-and-payment 영역).
+- **신청 카드 [이 회원에 연결]**(member_id 없는 신청에만) — 비회원 신청을 가입한 계정에 잇는 버튼(`applications.member_id` update·confirm 후). 연결하면 학생 마이페이지에 신청 내역·제출 칸이 열려 **학생이 직접** 올린다. 전화 일치는 기존 '○ 전화매칭' 배지로 확인하고 누른다.
 - **degrade**: `challenge_submissions` 미생성이면 패널에 '마이그레이션 적용 전' 한 줄(단정 금지 원칙).
-- legacy 'Before / After 음성' 패널(회원당 한 쌍·`recordings`)은 유지 — 옛 데이터 표시 + 예비 경로.
+- legacy 'Before / After 음성' 패널(회원당 한 쌍·`recordings`)은 **데이터가 있을 때만 + 확인 전용**(업로드 칸 제거 — 위와 같은 결정).

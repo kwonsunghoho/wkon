@@ -2298,6 +2298,7 @@
             <button class="ac-tg ${a.paid ? 'on' : ''}" data-appfield="paid" data-app="${a.id}">입금 ${a.paid ? '✓' : ''}</button>
             <button class="ac-tg ${a.refunded ? 'on on-refund' : ''}" data-appfield="refunded" data-app="${a.id}">환불 ${a.refunded ? '✓' : ''}</button>
             <button class="ac-tg ${appFree(a) ? 'on' : ''}" data-appfield="free" data-app="${a.id}">무료(재학생) ${appFree(a) ? '✓' : ''}</button>`}
+            ${a.member_id ? '' : `<button class="ac-tg" data-applink="${a.id}">이 회원에 연결</button>`}
           </div>
         </div>`).join('') : '<div class="mini-empty">신청 내역이 없습니다.</div>';
 
@@ -2319,7 +2320,8 @@
         .concat(cohorts.map(c => `<option value="${c.id}" ${m.cohort_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
 
       /* 챌린지 제출물(처음/끝) — 학생이 mypage 에서 직접 올린다(2026-08-20).
-         admin 은 대신 올려 주는 예비 경로(학생이 못 올릴 때) + 확인용.
+         admin 은 확인(재생)만 — 대리 업로드 없음(오너 확정 "내가 대신 올려주는 건 없어").
+         비회원 신청자는 신청 카드의 [이 회원에 연결]로 계정만 이어 주면 된다.
          칸은 이 회원의 신청 챌린지(특강 제외) ∪ 이미 올라온 제출물의 챌린지. */
       const subChs = [];
       appList.forEach(a => (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
@@ -2334,7 +2336,7 @@
       const subSum = !chSubsReady ? '마이그레이션 적용 전'
         : chSubs.length ? chSubs.length + '건' : '아직 없음';
       const chSubsHtml = !chSubsReady
-        ? '<div class="mini-empty">challenge_submissions 마이그레이션(20260820120000)이 아직 적용 전입니다. 적용하면 학생이 직접 올리고, 여기서도 관리됩니다.</div>'
+        ? '<div class="mini-empty">challenge_submissions 마이그레이션(20260820120000)이 아직 적용 전입니다. 적용하면 학생이 직접 올리고, 여기서 확인됩니다.</div>'
         : !orderedChs.length
           ? '<div class="mini-empty">파일 제출 대상 챌린지 신청이 없습니다. (승자각은 파일 대신 답변노트로 확인)</div>'
           : orderedChs.map(ch => `
@@ -2383,13 +2385,14 @@
           <div id="answersInDetail">${ansHtml}</div>
         </div>
 
+        ${(recMap.before || recMap.after) ? `
         <div class="panel">
-          <h3>Before / After 음성</h3>
+          <h3>Before / After 음성 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 구 회원당 한 쌍 기록(확인 전용)</span></h3>
           <div class="ba">
             ${baSlot('before', recMap.before)}
             ${baSlot('after', recMap.after)}
           </div>
-        </div>`;
+        </div>` : ''}`;
 
       wireDetail(id, recMap, chSubs);
     }
@@ -2413,18 +2416,20 @@
       </div>`;
     }
 
+    /* legacy 회원당 한 쌍(recordings) — 2026-08-20 부터 확인 전용. 새 제출은 challenge_submissions
+       (학생 직접 업로드)로 들어오고, admin 대리 업로드는 없다(오너 확정). */
     function baSlot(type, path) {
       const label = type === 'before' ? 'Before · 입과 전' : 'After · 수료 후';
       return `<div class="slot ${type}">
         <div class="tag">${label}</div>
-        <div id="cur-${type}" class="cur">${path ? '등록됨: ' + esc(path) : '아직 없음'}</div>
+        <div class="cur">${path ? '등록됨: ' + esc(path) : '아직 없음'}</div>
         <div id="play-${type}"></div>
-        <input type="file" id="file-${type}" accept="audio/*" style="font-size:12px;margin-top:8px;width:100%">
-        <button class="btn btn-ghost btn-sm" data-upload="${type}" style="margin-top:8px">업로드</button>
       </div>`;
     }
 
-    // 챌린지 제출물(처음/끝) — 학생 직접 업로드의 admin 확인·대리 업로드 칸 (2026-08-20)
+    // 챌린지 제출물(처음/끝) — 확인(재생) 전용 (2026-08-20 오너 "내가 대신 올려주는 건 없어").
+    // 업로드는 학생이 mypage 에서 직접 한다. 비회원 신청자는 아래 '이 회원에 연결' 버튼으로
+    // 계정만 이어 주면 된다 — admin 이 파일을 받아 올리는 칸을 다시 만들지 말 것.
     const CH_SUB_ADM = {
       voice:      { label: '보.신.각 · 보이스 (음성)', media: 'audio' },
       expression: { label: '영.합.각 · 표현력 (영상)', media: 'video' },
@@ -2434,10 +2439,8 @@
       const label = type === 'before' ? '처음 · 시작 무렵' : '끝 · 마칠 무렵';
       return `<div class="slot ${type}">
         <div class="tag">${label}</div>
-        <div id="cs-cur-${ch}-${type}" class="cur">${sub ? '등록됨: ' + esc(sub.storage_path) : '아직 없음'}</div>
+        <div class="cur">${sub ? '등록됨: ' + esc(sub.storage_path) : '아직 없음'}</div>
         <div id="cs-play-${ch}-${type}"></div>
-        <input type="file" id="cs-file-${ch}-${type}" accept="${CH_SUB_ADM[ch].media}/*" style="font-size:12px;margin-top:8px;width:100%">
-        <button class="btn btn-ghost btn-sm" data-csupload="${ch}" data-cstype="${type}" style="margin-top:8px">업로드</button>
       </div>`;
     }
 
@@ -2450,42 +2453,23 @@
         if (document.getElementById('detail').style.display !== 'none') selectMember(id);
       });
 
-      // 챌린지 제출물(처음/끝) — 대리 업로드. 학생 화면(mypage)과 같은 경로 규칙·같은 upsert 를 쓴다.
-      document.querySelectorAll('[data-csupload]').forEach(btn => btn.addEventListener('click', async () => {
-        const ch = btn.dataset.csupload, type = btn.dataset.cstype;
-        const file = document.getElementById(`cs-file-${ch}-${type}`).files[0];
-        if (!file) { alert('파일을 선택하세요.'); return; }
-        let ext = (file.name.indexOf('.') > 0 ? file.name.split('.').pop() : '')
-          .toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (!ext || ext.length > 8) ext = CH_SUB_ADM[ch].media === 'video' ? 'mp4' : 'm4a';
-        const path = `${id}/${ch}-${type}.${ext}`;
-        btn.disabled = true; btn.textContent = '업로드 중…';
-        try {
-          const up = await sb().storage.from('recordings')
-            .upload(path, file, { upsert: true, contentType: file.type || undefined });
-          if (up.error) throw up.error;
-          const { error } = await sb().from('challenge_submissions').upsert(
-            { member_id: id, challenge: ch, type: type, storage_path: path },
-            { onConflict: 'member_id,challenge,type' });
-          if (error) throw error;
-          // 확장자가 바뀌었으면 옛 파일 정리(학생 화면과 같은 규칙 — 실패해도 무시)
-          const oldSub = (chSubs || []).find(s => s.challenge === ch && s.type === type);
-          if (oldSub && oldSub.storage_path && oldSub.storage_path !== path) {
-            try { await sb().storage.from('recordings').remove([oldSub.storage_path]); } catch (_) {}
-          }
-          document.getElementById(`cs-cur-${ch}-${type}`).textContent = '등록됨: ' + path;
-          const url = await MONC.getSignedUrl(path);
-          document.getElementById(`cs-play-${ch}-${type}`).innerHTML = url
-            ? (CH_SUB_ADM[ch].media === 'video'
-              ? `<video controls src="${url}" style="width:100%"></video>`
-              : `<audio controls src="${url}"></audio>`)
-            : '';
-          toast('업로드 완료');
-        } catch (e) { alert('업로드 실패: ' + e.message); }
-        btn.disabled = false; btn.textContent = '업로드';
+      /* 비회원 신청 → 이 회원 계정에 연결 (2026-08-20 오너 "직접 업로드하게끔 회원가입을 유도").
+         파일 대리 업로드는 없다 — 연결만 해 주면 제출·기록은 학생이 마이페이지에서 직접 한다.
+         전화 일치 여부는 신청 카드의 '○ 전화매칭' 배지가 이미 보여준다. */
+      document.querySelectorAll('#appsInDetail [data-applink]').forEach(btn => btn.addEventListener('click', async () => {
+        const appId = btn.dataset.applink;
+        const m = members.find(x => x.id === id);
+        if (!confirm('이 신청을 ' + ((m && m.name) || '이 회원') + ' 계정에 연결할까요?\n연결하면 학생의 마이페이지에 신청 내역과 챌린지 제출 칸이 열립니다.')) return;
+        btn.disabled = true;
+        const { error } = await sb().from('applications').update({ member_id: id }).eq('id', appId);
+        if (error) { alert('연결 실패: ' + error.message); btn.disabled = false; return; }
+        const cached = _apps.find(x => String(x.id) === String(appId));
+        if (cached) cached.member_id = id;
+        toast('계정에 연결했어요');
+        selectMember(id);   // 배지·연결 버튼 갱신
       }));
 
-      // 기존 제출물 미리보기 링크 생성
+      // 제출물 미리보기 링크 생성 (확인 전용 — 업로드는 학생이 mypage 에서)
       (chSubs || []).forEach(async s => {
         const el = document.getElementById(`cs-play-${s.challenge}-${s.type}`);
         if (!el) return;
@@ -2552,29 +2536,7 @@
         selectMember(id); // 상세 다시 그려 버튼 라벨 갱신
       });
 
-      // 음성 업로드
-      document.querySelectorAll('[data-upload]').forEach(btn => btn.addEventListener('click', async () => {
-        const type = btn.dataset.upload;
-        const file = document.getElementById('file-' + type).files[0];
-        if (!file) { alert('파일을 선택하세요.'); return; }
-        const ext = (file.name.split('.').pop() || 'mp3').toLowerCase();
-        const path = `${id}/${type}.${ext}`;
-        btn.disabled = true; btn.textContent = '업로드 중…';
-        try {
-          const up = await sb().storage.from('recordings').upload(path, file, { upsert: true });
-          if (up.error) throw up.error;
-          const { error } = await sb().from('recordings')
-            .upsert({ member_id: id, type, storage_path: path }, { onConflict: 'member_id,type' });
-          if (error) throw error;
-          document.getElementById('cur-' + type).textContent = '등록됨: ' + path;
-          const url = await MONC.getSignedUrl(path);
-          document.getElementById('play-' + type).innerHTML = url ? `<audio controls src="${url}"></audio>` : '';
-          toast((type === 'before' ? 'Before' : 'After') + ' 업로드 완료');
-        } catch (e) { alert('업로드 실패: ' + e.message); }
-        btn.disabled = false; btn.textContent = '업로드';
-      }));
-
-      // 기존 음성 미리듣기 링크 생성
+      // legacy 음성 미리듣기 링크 생성(확인 전용 — 업로드 칸은 2026-08-20 제거)
       ['before','after'].forEach(async type => {
         if (recMap[type]) {
           const url = await MONC.getSignedUrl(recMap[type]);
