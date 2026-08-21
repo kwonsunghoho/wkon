@@ -64,7 +64,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-08-14e'  // e = 직무 이름표 붙이기 차단 — 어긋나면 덮지 말고 짚게
+const FN_VERSION = '2026-08-21a'  // a = 첨삭 말하기 분량 옵션(targetSec 20/30/40초)
 const FN_FEATURES = [
   'holistic',         // 킬러 판정 = 오너 지침 4기준 종합 + AI 의심 지수 %(2026-08-12 전면 교체)
   'green_flags',      // 인간미 보존 영역(Green Flag) — 점수 보정 + 살릴 문장 짚기(2026-08-12b)
@@ -78,6 +78,7 @@ const FN_FEATURES = [
   'coach_terms',      // 감점 사전의 연구진(coach) 표현을 첨삭 AI 감점 기준으로 주입(2026-07-30b)
   'quickfix',         // 미니 다듬기 — mode:'quickfix' 무료 한 구간 고침 + 표현 수집(2026-07-31)
   'refund_server',    // 환급을 service_role 전용 refund_credit_for 로 이동(2026-08-04)
+  'polish_length',    // 첨삭 말하기 분량 — targetSec(20/30/40초)을 프롬프트 목표 분량으로(2026-08-21)
 ]
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
@@ -613,9 +614,13 @@ type PolishOut = {
   usage: { input_tokens?: number; output_tokens?: number }
 }
 
+// 말하기 분량(첨삭 옵션) — 화면(polish.html #lenRow)이 보내는 초. 이 세 값만 받는다.
+// 초→글자 환산은 면접 말하기 속도(분당 300~350자) 기준 — 값을 바꾸면 화면 안내 문구도 같이 본다.
+const POLISH_TARGET_CHARS: Record<number, string> = { 20: '100~120자', 30: '150~180자', 40: '200~230자' }
+
 async function polishFill(
   apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
-  airline: string, airBrief: string, coachBrief: string, regenNote: string,
+  targetSec: number, airline: string, airBrief: string, coachBrief: string, regenNote: string,
 ): Promise<PolishOut> {
   const airLine = airline === 'all'
     ? '특정 항공사를 정하지 않았다(만능) — 어느 항공사에도 통할 글이어야 한다'
@@ -623,6 +628,11 @@ async function polishFill(
   const kindLine = docKind === 'interview'
     ? '면접 답변 — 소리 내어 말하는 말이다'
     : docKind === 'essay' ? '자소서 문항 — 눈으로 읽는 글이다' : ''
+  // 목표 분량 — 있으면 진단(덜어낼 곳)과 fix(짧은 문장) 양쪽에 걸어 준다.
+  // ⚠️ system 이 아니라 user 메시지에 넣는다 — system 은 요청 간 프롬프트 캐시를 타는 자리다.
+  const lenLine = targetSec && POLISH_TARGET_CHARS[targetSec]
+    ? `면접에서 약 ${targetSec}초 안에 말할 답변이다 — 전체 ${POLISH_TARGET_CHARS[targetSec]} 안팎이 목표다.`
+    : ''
 
   const body = {
     model: MODEL,
@@ -636,6 +646,7 @@ async function polishFill(
       content:
         // ⚠️ 맥락 칸은 값이 있을 때만 — 빈 라벨을 주면 AI 가 문항·종류를 지어낸다(킬러와 동일).
         (kindLine ? `[글 종류]\n${kindLine}\n\n` : '') +
+        (lenLine ? `[목표 분량]\n${lenLine}\n\n` : '') +
         (airLine ? `[지망 항공사]\n${airLine}\n\n` : '') +
         (question ? `[학생이 받은 문항]\n${question}\n\n` : '') +
         `[학생이 쓴 글]\n${text}\n\n` +
@@ -651,7 +662,11 @@ async function polishFill(
         `단 '다시 구성'은 배열·표현을 바꾸는 것이지 없던 내용을 만드는 게 아니다. ` +
         `학생이 쓰지 않은 새 제안·새 업무를 만들어 넣지 마라(객실승무원 지원서다 — 게이트·수속·정비 업무 금지).\n` +
         `직무가 어긋나면 이름표("기내 서비스")를 붙여 맞춰 놓지 말고 improvements 에서 정면으로 짚어라.\n` +
-        `재료는 학생이 쓴 사실만 쓰고, 어휘와 정서는 학생 것을 남긴다.`,
+        `재료는 학생이 쓴 사실만 쓰고, 어휘와 정서는 학생 것을 남긴다.` +
+        // ⚠️ 마지막에 읽는 지시가 가장 세게 먹는다(2026-08-14b 교훈) — 분량 지시도 여기서 못 박는다.
+        (lenLine ? `\n목표 분량(약 ${targetSec}초)을 지켜라 — 글이 그보다 길면 improvements 에서 ` +
+          `어느 대목을 덜어낼지 짚고, fix 도 그 분량 감각으로 짧게 써라. ` +
+          `분량을 맞추려고 없던 내용을 만들거나 사실을 뭉개지 마라.` : ''),
     }],
   }
 
@@ -922,6 +937,11 @@ Deno.serve(async (req) => {
     // ⚠️ 'all'(만능)은 빈 값과 다르다: 만능은 "어디에나 통하게" 쪽으로 조언이 갈린다.
     const airline: string = typeof reqBody.airline === 'string'
       ? (AIRLINES[reqBody.airline] ? reqBody.airline : (reqBody.airline === 'all' ? 'all' : '')) : ''
+    // 말하기 목표 분량(첨삭 전용·선택) — 면접 답변일 때만 뜻이 있다. 아는 세 값만 받고
+    // 그 외(빈 값·이상값·자소서)는 0(자유) — 예전과 똑같이 동작한다.
+    const targetSec: number = docKind === 'interview'
+      && (reqBody.targetSec === 20 || reqBody.targetSec === 30 || reqBody.targetSec === 40)
+      ? reqBody.targetSec : 0
     const len = text.length
     if (len < MIN_CHARS) return json({ error: `${MIN_CHARS}자 이상 넣어 주세요`, code: 'too_short' }, 400)
     if (len > MAX_CHARS) return json({ error: `${MAX_CHARS}자까지 검사할 수 있어요`, code: 'too_long' }, 400)
@@ -1032,7 +1052,7 @@ Deno.serve(async (req) => {
       const { brief: airBrief2, qMatched: qm2 } = await airlineBrief(admin, airline, question)
       if (qm2 === false) console.log('airline question mismatch (polish):', airline, '|', question.slice(0, 60))
 
-      let rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2, coachBrief, '')
+      let rep = await polishFill(apiKey, text, question, docKind, targetSec, airline, airBrief2, coachBrief, '')
 
       // ── p-3. 자기 출력 재검사 — 상투어 사전을 첨삭 문장에도 돌린다(4겹 고삐 ③) ──
       // ⚠️ 첨삭에서 이게 더 절실하다: fix 는 학생이 **그대로 옮겨 쓸 수도 있는** 문장이라,
@@ -1048,7 +1068,7 @@ Deno.serve(async (req) => {
         const bad2 = cliche2.filter((t) => t.length >= 3 && mine.includes(t))
         if (bad2.length > 0) {
           console.log('self-check hit (polish), regenerating:', bad2.join(', '))
-          rep = await polishFill(apiKey, text, question, docKind, airline, airBrief2, coachBrief,
+          rep = await polishFill(apiKey, text, question, docKind, targetSec, airline, airBrief2, coachBrief,
             `\n\n[다시 쓰는 이유]\n방금 네 첨삭에 ${bad2.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
             `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
         }
@@ -1061,7 +1081,11 @@ Deno.serve(async (req) => {
       const { error: saveErr2 } = await admin.from('answer_polishes').insert({
         id: polishId, member_id: user.id, source, answer_id: targetAnswer, content: text,
         question: question || null, doc_kind: docKind, airline: airline || null,
-        result: { strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites },
+        // target_sec 은 result jsonb 안에 넣는다 — 컬럼을 늘리지 않고 이력 복원(?polish=)까지 살린다
+        result: {
+          strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites,
+          ...(targetSec ? { target_sec: targetSec } : {}),
+        },
         char_count: len, input_tokens: u2.input_tokens ?? 0, output_tokens: u2.output_tokens ?? 0,
       })
       // 저장이 실패해도 리포트는 이미 나왔다 — 결과는 돌려주고 환급하지 않는다(킬러와 동일)
@@ -1085,6 +1109,7 @@ Deno.serve(async (req) => {
         ok: true, id: polishId, mode: 'polish',
         strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites,
         char_count: len, answerId: targetAnswer, autoSaved,
+        target_sec: targetSec || undefined,   // 리포트 머리 '30초 분량 기준' 표시용(0=자유는 안 싣는다)
         used: spent2?.used, cost: spent2?.cost, balance: spent2?.balance, daily_left: spent2?.daily_left,
       })
     }

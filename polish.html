@@ -119,6 +119,8 @@
                       border-radius: var(--radius-xs); color: var(--text-muted); cursor: pointer; }
     .in-kind button.on { background: var(--surface); color: var(--text);
                          border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+    /* 말하기 분량(면접 답변 전용) — 종류 줄과 같은 문법의 버튼 줄 + 설명 한 줄 */
+    .in-len-cap { font-size: 13px; font-weight: 700; color: var(--text-muted); margin: 2px 2px 6px; }
     .in-pick { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px;
                padding: 0 13px; margin-bottom: 10px; border: 1px solid var(--border);
                background: var(--bg2); border-radius: var(--radius-xs); font: inherit;
@@ -391,6 +393,18 @@
           <button type="button" id="kindEssay" aria-pressed="false">자소서</button>
         </div>
 
+        <!-- 말하기 분량 — 면접 답변 전용. 서버(ai-killer)가 분량을 아는 버전(polish_length)일 때만
+             보인다(checkReady) — 구버전에 보내면 조용히 무시돼 "골랐는데 반영 안 됨"이 되기 때문. -->
+        <div id="lenRow" class="hidden">
+          <div class="in-len-cap">말하기 분량 — 고르면 그 초 안에 말할 분량 기준으로 첨삭해요</div>
+          <div class="in-kind" role="group" aria-label="말하기 분량">
+            <button type="button" class="on" data-sec="0" aria-pressed="true">자유</button>
+            <button type="button" data-sec="20" aria-pressed="false">20초</button>
+            <button type="button" data-sec="30" aria-pressed="false">30초</button>
+            <button type="button" data-sec="40" aria-pressed="false">40초</button>
+          </div>
+        </div>
+
         <button type="button" class="in-pick" id="airBtn">
           <span id="airLabel">지망 항공사 (선택)</span>
           <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -518,6 +532,8 @@
     let _answerTitle = '';
     let _kind = 'interview';    // interview | essay
     let _air = '';              // '' | 'all' | ke·lj·7c·tw·ze·yp·rf
+    let _sec = 0;               // 말하기 분량(초) — 0=자유. 면접 답변일 때만 서버로 간다
+    let _lenReady = false;      // 배포된 함수가 분량(polish_length)을 아는가 — 모르면 칸을 안 그린다
     let _wallet = null;         // credit_wallet() 결과
     let _ready = false;         // ⚠️ 프로브 게이트 — 배포된 함수가 첨삭을 아는가
     let _notes = [];
@@ -544,6 +560,9 @@
         const okFn = !!(data && Array.isArray(data.features) && data.features.includes('polish'));
         const okTable = !!(data && data.polish_table !== null && data.polish_table !== undefined);
         _ready = okFn && okTable;
+        // 분량 옵션은 함수가 아는 버전일 때만 노출 — 구버전이면 값이 조용히 무시되기 때문
+        _lenReady = !!(data && Array.isArray(data.features) && data.features.includes('polish_length'));
+        paintLen();
         if (!_ready) {
           console.warn('polish not ready — fn:', okFn, 'table:', okTable, 'version:', data && data.version);
           $('inNotice').innerHTML = '<div class="notice info">첨삭이 아직 준비 중이에요. 잠시 뒤 다시 들러 주세요.</div>';
@@ -596,6 +615,12 @@
       $('ta').placeholder = _kind === 'interview'
         ? '면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요.'
         : '자소서 한 문항을 넣어 주세요. 여러 문항을 섞으면 정확도가 떨어져요.';
+      paintLen();
+    }
+
+    // ── 말하기 분량 — 면접 답변 + 신버전 함수일 때만 보인다 ────────────
+    function paintLen() {
+      $('lenRow').classList.toggle('hidden', !(_lenReady && _kind === 'interview'));
     }
 
     // ── 지망 항공사 ───────────────────────────────────────────────────
@@ -775,6 +800,7 @@
       const when = r._when ? new Date(r._when) : new Date();
       $('rpSub').textContent = (r.char_count || 0).toLocaleString() + '자 · '
         + when.getFullYear() + '.' + (when.getMonth() + 1) + '.' + when.getDate()
+        + (r.target_sec ? ' · ' + r.target_sec + '초 분량 기준' : '')
         + (r._title ? ' · ' + r._title : '');
 
       // 글 전체 방향 — 접이식 줄(줄 = 지적, 펼치면 '이렇게 고쳐봐요')
@@ -929,6 +955,8 @@
             mode: 'polish',
             source: _answerId ? 'answer' : 'paste', text, answerId: _answerId,
             question: $('qIn').value.trim(), docKind: _kind, airline: _air,
+            // 말하기 분량(초) — 면접 답변일 때만. 0=자유(서버가 분량 지시를 아예 안 넣는다)
+            targetSec: _kind === 'interview' ? _sec : 0,
           },
         });
         if (error || !data) throw new Error('invoke_failed');
@@ -1093,6 +1121,16 @@
     $('goBtn').addEventListener('click', run);
     $('kindInterview').addEventListener('click', () => setKind('interview'));
     $('kindEssay').addEventListener('click', () => setKind('essay'));
+    $('lenRow').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-sec]');
+      if (!b) return;
+      _sec = Number(b.dataset.sec) || 0;
+      $('lenRow').querySelectorAll('[data-sec]').forEach((x) => {
+        const on = x === b;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    });
     $('againBtn').addEventListener('click', () => {
       $('resultView').classList.add('hidden');
       $('inputView').classList.remove('hidden');
@@ -1130,6 +1168,7 @@
             showResult({
               ok: true, strengths: r.strengths || [], improvements: r.improvements || [],
               rewrites: r.rewrites || [], char_count: data.char_count, _when: data.created_at,
+              target_sec: r.target_sec || 0,   // 분량 기준으로 받은 리포트면 머리에 표시
               _text: data.content || '',   // 기록된 원문 — 제자리 펼침 복원용
             });
             return true;
