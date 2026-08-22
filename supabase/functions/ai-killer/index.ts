@@ -654,16 +654,27 @@ async function polishFill(
   const kindLine = docKind === 'interview'
     ? '면접 답변 — 소리 내어 말하는 말이다'
     : docKind === 'essay' ? '자소서 문항 — 눈으로 읽는 글이다' : ''
-  // 목표 분량 — 있으면 진단(덜어낼 곳)과 fix(짧은 문장) 양쪽에 걸어 준다.
+  // 목표 분량 — 있으면 진단(덜어낼 곳)·fix(짧은 문장)·N초 버전(통째 재구성) 셋에 건다.
   // ⚠️ system 이 아니라 user 메시지에 넣는다 — system 은 요청 간 프롬프트 캐시를 타는 자리다.
-  const lenLine = targetSec && POLISH_TARGET_CHARS[targetSec]
-    ? `면접에서 약 ${targetSec}초 안에 말할 답변이다 — 전체 ${POLISH_TARGET_CHARS[targetSec]} 안팎이 목표다.`
+  const chars = POLISH_TARGET_CHARS[targetSec]
+  const lenLine = targetSec && chars
+    ? `면접에서 약 ${targetSec}초 안에 말할 답변이다 — 전체 ${chars} 안팎이 목표다.\n` +
+      `이 분량에 맞춰 short_version(통째로 다시 구성한 답변 하나)과 cuts(덜어낸 대목)를 채운다.\n` +
+      `- 남기는 순서: ① 질문에 대한 답 한 문장 ② 그걸 보여주는 행동·장면 하나 ③ 그 결과·배운 것 한 문장.\n` +
+      `- 먼저 빼는 것: 배경 설명, 같은 말의 반복, 수식어, 일화가 둘이면 하나.\n` +
+      `- short_version 은 학생 글에 있는 재료로만 쓴다 — 없는 숫자·일화 금지, 모자라면 (괄호 빈칸). ` +
+      `학생의 어휘와 정서를 남기고, 소리 내어 말하는 문장으로, 인사말·맺음말 없이 ${chars} 안에 쓴다.\n` +
+      `- 글이 이미 목표보다 짧으면 늘리지 마라 — 그 분량에서 다듬은 버전을 주고 cuts 는 빈 배열로 둔다.\n` +
+      `- cuts 는 덜어낸 대목 1~3개. quote 는 원문에 **있는 그대로**, why 는 왜 빼도 되는지 한 문장(60자 안, '~요').`
     : ''
 
   const body = {
     model: MODEL,
     max_tokens: POLISH_MAX_TOKENS,
-    output_config: { effort: POLISH_EFFORT, format: { type: 'json_schema', schema: POLISH_SCHEMA } },
+    output_config: {
+      effort: POLISH_EFFORT,
+      format: { type: 'json_schema', schema: lenLine ? POLISH_SCHEMA_LEN : POLISH_SCHEMA },
+    },
     // ⚠️ coachBrief(연구진 감점 기준)는 요청마다 같으므로 system 에 두어 프롬프트 캐시를 탄다.
     //    사전을 고치면 캐시가 한 번 깨질 뿐이다(드문 일). regenNote 는 재생성 때만 붙는다.
     system: [{ type: 'text', text: POLISH_VOICE + coachBrief + regenNote, cache_control: { type: 'ephemeral' } }],
@@ -690,9 +701,9 @@ async function polishFill(
         `직무가 어긋나면 이름표("기내 서비스")를 붙여 맞춰 놓지 말고 improvements 에서 정면으로 짚어라.\n` +
         `재료는 학생이 쓴 사실만 쓰고, 어휘와 정서는 학생 것을 남긴다.` +
         // ⚠️ 마지막에 읽는 지시가 가장 세게 먹는다(2026-08-14b 교훈) — 분량 지시도 여기서 못 박는다.
-        (lenLine ? `\n목표 분량(약 ${targetSec}초)을 지켜라 — 글이 그보다 길면 improvements 에서 ` +
-          `어느 대목을 덜어낼지 짚고, fix 도 그 분량 감각으로 짧게 써라. ` +
-          `분량을 맞추려고 없던 내용을 만들거나 사실을 뭉개지 마라.` : ''),
+        (lenLine ? `\n목표 분량(약 ${targetSec}초·${chars})을 지켜라 — short_version 은 ${chars} 안, ` +
+          `학생 재료만, 없던 내용 금지, 이미 짧으면 늘리지 마라. 글이 넘치면 improvements 에서 ` +
+          `어느 대목을 덜어낼지 짚고, fix 도 그 분량 감각으로 짧게 써라. cuts 의 quote 는 원문 그대로.` : ''),
     }],
   }
 
@@ -716,6 +727,9 @@ async function polishFill(
     strengths: (parsed.strengths ?? []).slice(0, MAX_POINTS),
     improvements: (parsed.improvements ?? []).slice(0, MAX_POINTS),
     rewrites: (parsed.rewrites ?? []).slice(0, MAX_REWRITES),
+    // 분량 리포트만 — 자유면 스키마에 칸이 없어 빈 값으로 떨어진다
+    short_version: lenLine ? String(parsed.short_version ?? '').trim() : '',
+    cuts: lenLine ? (parsed.cuts ?? []).slice(0, 3) : [],
     usage: data.usage ?? {},
   }
 }
@@ -1090,6 +1104,8 @@ Deno.serve(async (req) => {
           ...rep.strengths.map((s) => s.note),
           ...rep.improvements.flatMap((s) => [s.note, s.how]),
           ...rep.rewrites.flatMap((s) => [s.fix, s.why]),
+          rep.short_version,                       // N초 버전도 학생이 옮겨 쓸 수 있는 문장이다
+          ...rep.cuts.map((c) => c.why),
         ].join(' ')
         const bad2 = cliche2.filter((t) => t.length >= 3 && mine.includes(t))
         if (bad2.length > 0) {
@@ -1098,6 +1114,21 @@ Deno.serve(async (req) => {
             `\n\n[다시 쓰는 이유]\n방금 네 첨삭에 ${bad2.map((b) => `"${b}"`).join(', ')} 가 들어 있었다. ` +
             `학생에게 쓰지 말라고 하는 표현을 네가 쓰면 안 된다. 그 표현들을 빼고 다시 채워라.`)
         }
+      }
+      // ── p-3b. N초 버전 분량 검사 — 환산 상한의 1.3배를 넘으면 한 번만 다시 쓰게 한다 ──
+      //    그래도 넘치면 그대로 반환(실패·환급 아님 — 리포트 본체는 멀쩡하다). 로그만 남긴다.
+      if (targetSec && POLISH_TARGET_MAX[targetSec]) {
+        const cap = Math.round(POLISH_TARGET_MAX[targetSec] * POLISH_OVER_RATIO)
+        if (rep.short_version.length > cap) {
+          console.log('short_version over cap, regenerating:', rep.short_version.length, '>', cap)
+          rep = await polishFill(apiKey, text, question, docKind, targetSec, airline, airBrief2, coachBrief,
+            `\n\n[다시 쓰는 이유]\n방금 네 short_version 이 ${rep.short_version.length}자로 목표(${POLISH_TARGET_CHARS[targetSec]})를 ` +
+            `크게 넘었다. 같은 재료로 ${POLISH_TARGET_MAX[targetSec]}자 안에 다시 써라 — 없던 내용을 넣지 말고 덜어내라.`)
+          if (rep.short_version.length > cap) console.log('short_version still over cap:', rep.short_version.length)
+        }
+        // cuts 의 quote 가 원문에 없으면 그 항목만 버린다 — 화면이 없는 인용을 그리지 않게
+        rep.cuts = rep.cuts.filter((c) => c && typeof c.quote === 'string' && c.quote.trim().length >= 2
+          && text.includes(c.quote.trim()))
       }
       // 리포트가 통째로 비면 상품이 아니다 — 실패로 던져 환급한다
       if (rep.rewrites.length === 0 && rep.improvements.length === 0) throw new Error('ai_empty')
@@ -1110,7 +1141,10 @@ Deno.serve(async (req) => {
         // target_sec 은 result jsonb 안에 넣는다 — 컬럼을 늘리지 않고 이력 복원(?polish=)까지 살린다
         result: {
           strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites,
-          ...(targetSec ? { target_sec: targetSec } : {}),
+          ...(targetSec ? {
+            target_sec: targetSec, target_chars: POLISH_TARGET_CHARS[targetSec],
+            short_version: rep.short_version, cuts: rep.cuts,
+          } : {}),
         },
         char_count: len, input_tokens: u2.input_tokens ?? 0, output_tokens: u2.output_tokens ?? 0,
       })
@@ -1136,6 +1170,9 @@ Deno.serve(async (req) => {
         strengths: rep.strengths, improvements: rep.improvements, rewrites: rep.rewrites,
         char_count: len, answerId: targetAnswer, autoSaved,
         target_sec: targetSec || undefined,   // 리포트 머리 '30초 분량 기준' 표시용(0=자유는 안 싣는다)
+        target_chars: targetSec ? POLISH_TARGET_CHARS[targetSec] : undefined,
+        short_version: targetSec ? rep.short_version : undefined,   // N초 버전 카드(polish.html #verSec)
+        cuts: targetSec ? rep.cuts : undefined,
         used: spent2?.used, cost: spent2?.cost, balance: spent2?.balance, daily_left: spent2?.daily_left,
       })
     }
