@@ -375,7 +375,7 @@
          · 조건 줄 = 라벨 달린 셀렉트 `.af-select` + 체크박스 `.af-chk`
          · 요약 띠 `.apl-sum`(이름 + 수치 칸) · 목록 = 구분선 있는 한 판(.apl-list·.round-list)
          · 행 동작 = 네모 버튼(.ri-edit·.ri-del / 붙은 묶음 .apl-seg), 삭제만 테두리 없는 빨간 글자
-         · 상태 라벨 = radius 4 네모(.apl-tag·.badge·.mb·.na-badge·.mstat)
+         · 상태 라벨 = radius 4 네모(.apl-tag·.badge·.mb·.na-badge·.tier)
        ⚠️ 알약(border-radius:999px)을 admin 에 다시 들이지 말 것 — 지금 파일에 999px 는 한 곳도 없다. */
     .ad-srch { flex: 1; position: relative; display: flex; align-items: center; min-width: 160px; }
     .ad-srch svg { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
@@ -581,7 +581,10 @@
     /* ⚠️ #f2c9b8 은 2026-07-29 에 폐지된 오렌지 팔레트의 살구색이다 — 네이비 틴트 배경 위에
        살구 테두리가 남아 있었다(2026-08-03). 선택 표시는 액션색 테두리로. */
     .mitem.active { background: var(--action-tint); border-color: var(--action); }
-    .mitem .mn { font-weight: 600; font-size: 15px; }
+    /* 이름 줄 오른쪽에 '마지막 움직임' — 아래 줄(기수+현황 라벨)이 길어져도 줄바꿈되지 않게
+       날짜를 위로 뺐다(2026-08-22 실측: 뺐더니 7행 전부 같은 높이). */
+    .mitem .mn { font-weight: 600; font-size: 15px; display: flex; align-items: baseline; gap: 8px; }
+    .mitem .mn .seen { margin-left: auto; flex: none; font-size: 12px; color: var(--text-dim); font-weight: 600; }
     .mitem .me { font-size: 13px; color: var(--text-muted); }
     /* 목록 꼬리 — '몇 명 중 몇 명' + 더 보기(2026-08-03) */
     .mmore { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
@@ -602,7 +605,105 @@
     .m-arc-sub { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-top: 3px; max-width: 52ch; }
     .wl-tel { display: inline-flex; align-items: center; font-weight: 600; color: var(--action-dark); }
     .mitem .madm { font-size: 12px; color: var(--action); font-weight: 700; }
-    .side .newcohort { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
+
+    /* ══ 회원 관리 개편(2026-08-22) — 스펙 docs/superpowers/specs/2026-08-22-admin-members-crm-design.md ══
+       ⚠️ 알약 금지. 상태·태그 라벨은 radius 4, 행 동작은 네모 버튼(2026-08-22 전 탭 규칙). */
+
+    /* 회원 현황 라벨 — 한 사람에 하나만 붙는다(위에서부터 먼저 걸리는 것이 이긴다) */
+    .tier { font-size: 12px; font-weight: 800; border-radius: 4px; padding: 2px 8px;
+            border: 1px solid var(--border-soft); background: var(--surface2); color: var(--text-muted); white-space: nowrap; }
+    .tier.t-pay  { background: var(--st-ok-bg); border-color: var(--st-ok-line); color: var(--st-ok); }
+    .tier.t-use  { background: var(--surface2); border-color: var(--border); color: var(--accent-ink); }
+    .tier.t-warm { background: transparent; border-color: var(--border); color: var(--text-muted); }
+    .tier.t-new  { background: transparent; border-color: var(--border-soft); color: var(--text-dim); }
+    .tier.t-dead { background: transparent; border-color: var(--border-soft); border-style: dashed; color: var(--text-dim); }
+
+    /* 회원 현황 분포 — **읽기 전용**이다. 누르면 걸리게 만들지 말 것(고르기는 #mFilter 하나).
+       막대는 최대값 기준 비례다 — '가입만'이 압도적이면 그대로 보여야 한다. */
+    .dist { border: 1px solid var(--border-soft); border-radius: var(--radius-xs); background: var(--surface);
+            box-shadow: var(--shadow); padding: 10px 12px; margin-bottom: 12px; }
+    .dist h4 { font-size: 12px; font-weight: 800; color: var(--text-dim); letter-spacing: .03em; margin-bottom: 8px; }
+    .dist-row { display: grid; grid-template-columns: 58px 1fr 40px; align-items: center; gap: 8px; padding: 3px 0; }
+    .dist-row .lab { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    .dist-row .bar { height: 8px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+    .dist-row .bar i { display: block; height: 100%; background: var(--action); opacity: .28; }
+    .dist-row.d-pay .bar i { background: var(--st-ok); opacity: .55; }
+    .dist-row.d-use .bar i { background: var(--action); opacity: .55; }
+    .dist-row .n { font-size: 13px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .dist-row.d-dead .lab, .dist-row.d-dead .n { color: var(--text-dim); }
+    .dist-note { font-size: 12px; color: var(--text-dim); font-weight: 700; margin-top: 6px; }
+
+    /* 일괄 바는 고른 게 있을 때만 — 평소엔 회색 버튼 3개가 자리만 먹었다 */
+    .side .bulkwrap { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
+    .side .bulkwrap .bulk-bar { margin-bottom: 0; }
+
+    /* 사이드바 접이(기수 관리) */
+    .side details.sfold { border-top: 1px solid var(--border-soft); margin-top: 12px; padding-top: 10px; }
+    .side details.sfold > summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--action);
+            list-style: none; display: flex; align-items: center; gap: 6px; min-height: 44px; }
+    .side details.sfold > summary::-webkit-details-marker { display: none; }
+    .side details.sfold > summary::before { content: '\25B8'; font-size: 11px; color: var(--text-dim); }
+    .side details.sfold[open] > summary::before { content: '\25BE'; }
+
+    /* ── 회원 상세 머리 ── */
+    .mhead { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+             box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+    .mhead .mh-top { padding: 18px 20px 14px; }
+    .mhead .mh-nm { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .mhead .mh-nm b { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; }
+    .mhead .mh-meta { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 6px;
+                      display: flex; flex-wrap: wrap; gap: 6px 14px; }
+    .mhead .mh-meta a { color: var(--accent-ink); text-decoration: none; font-weight: 700; }
+    .mhead .mh-st { display: flex; border-top: 1px solid var(--border-soft); }
+    .mhead .mh-st div { flex: 1; padding: 12px 14px; border-left: 1px solid var(--border-soft);
+                        display: flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+    .mhead .mh-st div:first-child { border-left: 0; }
+    .mhead .mh-st b { font-size: 19px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .mhead .mh-st span { font-size: 12px; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
+    .mhead .mh-st .ok b { color: var(--st-ok); }
+
+    /* 회원 정보 폼 — 구 .prow(flex-wrap · 칸 폭 제각각)를 회원 상세에서만 2열 그리드로 바꾼다 */
+    .mform { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+    .mform .full { grid-column: 1 / -1; }
+    .mform .field input, .mform .field select { width: 100%; }
+    .mform-foot { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); display: flex; gap: 8px; }
+
+    /* 상세 접이(회원 정보 고치기·제출물·답변노트) */
+    details.mfold { border-top: 1px solid var(--border-soft); margin-top: 14px; padding-top: 12px; }
+    details.mfold:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+    details.mfold > summary { cursor: pointer; font-size: 16px; font-weight: 700; color: var(--ink);
+            list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+    details.mfold > summary::-webkit-details-marker { display: none; }
+    details.mfold > summary::before { content: '\25B8'; font-size: 12px; color: var(--text-dim); }
+    details.mfold[open] > summary::before { content: '\25BE'; }
+    details.mfold .mfold-body { padding-top: 12px; }
+
+    /* ── 활동 타임라인 ── */
+    .tl { list-style: none; position: relative; padding-left: 16px; }
+    .tl::before { content: ''; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--border-soft); }
+    .tl li { position: relative; padding: 8px 0 8px 12px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+    .tl li + li { border-top: 1px solid var(--border-soft); }
+    .tl li::before { content: ''; position: absolute; left: -16px; top: 15px; width: 7px; height: 7px;
+                     border-radius: 50%; background: var(--surface); border: 2px solid var(--border); }
+    .tl li.k-pay::before { background: var(--st-ok); border-color: var(--st-ok); }
+    .tl li.k-act::before { background: var(--action); border-color: var(--action); }
+    .tl .tl-d { font-size: 12px; color: var(--text-dim); font-weight: 700; width: 64px; flex: none; font-variant-numeric: tabular-nums; }
+    .tl .tl-k { font-size: 12px; font-weight: 800; border-radius: 4px; padding: 2px 8px; border: 1px solid var(--border-soft);
+                background: var(--surface2); color: var(--text-muted); flex: none; min-width: 76px; text-align: center; }
+    .tl li.k-pay .tl-k { background: var(--st-ok-bg); border-color: var(--st-ok-line); color: var(--st-ok); }
+    .tl li.k-act .tl-k { background: var(--surface2); border-color: var(--border); color: var(--accent-ink); }
+    .tl .tl-t { font-size: 13px; color: var(--text); min-width: 0; flex: 1; }
+    .tl .tl-t em { font-style: normal; color: var(--text-muted); }
+    .tl-more { margin-top: 10px; }
+    /* 못 읽은 갈래는 조용히 빼지 않고 사실대로 적는다(원칙 11) */
+    .tl-miss { font-size: 12px; color: var(--st-alert); font-weight: 700; margin-top: 10px; }
+
+    @media (max-width: 560px) {
+      .mform { grid-template-columns: 1fr; }
+      .mhead .mh-st { flex-wrap: wrap; }
+      .mhead .mh-st div { flex: 1 1 50%; border-top: 1px solid var(--border-soft); }
+      .tl .tl-d { width: 100%; }
+    }
 
     .main { padding: 24px; }
     /* ⚠️ `.empty` 는 38곳이 쓰는데 정의가 없었다(2026-08-02 5차) — 빈 목록·조회 실패 안내가
@@ -639,13 +740,6 @@
     .ba audio { width: 100%; margin: 8px 0; }
     .ba .slot .cur { font-size: 12px; color: var(--text-dim); word-break: break-all; }
 
-    /* 회원 상세 — 상단 요약 스탯 */
-    .mstats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-    .mstat { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
-    .mstat b { color: var(--text); }
-    .mstat.paid { background: var(--st-ok-bg); border-color: var(--st-ok-line); color: var(--st-ok); }
-    .mstat.wait { background: var(--action-tint); border-color: var(--action); color: var(--action-dark); }
-    .mstat.refund { background: var(--accent-tint); border-color: var(--accent-ink); color: var(--accent-ink); }
     /* 회원 상세 — 신청/답변 미니 리스트 */
     .mini-empty { color: var(--text-dim); font-size: 13px; padding: 8px 0; }
     .note-adm { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; background: var(--surface2); }
@@ -1031,20 +1125,40 @@
            가로로 잘려 '보관함'이 화면 밖에 숨는다. 좁은 칸에서 값이 많은 고르기는 셀렉트가 정본이다
            (신청자 현황 '기수' 칸과 같은 벌). ⚠️ 구 '미배정만' 체크박스를 '기수 미배정'이 대신한다. 두 벌로 두지 말 것.
            보관함은 '상태'가 아니라 '치워 둔 곳'이다 — 다른 값은 전부 보관된 회원을 뺀 결과다. -->
+      <!-- 2026-08-22 개편 — 한 셀렉트에 기준이 다른 7개가 섞여 있었다(현황 / 내가 할 일 / 치워 둔 곳).
+           묶음을 갈라 고를 때마다 기준이 바뀌지 않게 한다. ⚠️ '보기'만으로는 무엇을 고르는지
+           모른다 — 라벨은 '회원 보기'(원칙 15). 좁은 칸(300px)이라 밑줄 탭이 아니라 셀렉트가 정본이다. -->
       <div class="af-field" id="mFilterField">
-        <label for="mFilter">회원 상태</label>
+        <label for="mFilter">회원 보기</label>
         <select id="mFilter" class="af-select">
-          <option value="all">전체</option>
-          <option value="nophone">가입 미완료</option>
-          <option value="badphone">번호 확인 필요</option>
-          <option value="nocohort">기수 미배정</option>
-          <option value="active">신청 있음</option>
-          <option value="ghost">흔적 없음</option>
-          <option value="archived" id="mArcOpt">보관함</option>
+          <optgroup label="현황">
+            <option value="all">전체</option>
+            <option value="pay">고객</option>
+            <option value="use">참여</option>
+            <option value="warm">관심</option>
+            <option value="new">가입만</option>
+            <option value="ghost">흔적 없음</option>
+          </optgroup>
+          <optgroup label="확인 필요">
+            <option value="badphone">번호 확인 필요</option>
+            <option value="nocohort">기수 미배정</option>
+          </optgroup>
+          <!-- 3단계에서 저장한 조건이 여기 들어온다(#mSegGroup) -->
+          <optgroup label="저장한 조건" id="mSegGroup" hidden></optgroup>
+          <optgroup label="치워 둔 곳">
+            <option value="archived" id="mArcOpt">보관함</option>
+          </optgroup>
         </select>
       </div>
+
+      <!-- 회원 현황 분포 — **읽기 전용**이다(고르기는 위 셀렉트 하나. 같은 일을 두 벌로 두지 않는다). -->
+      <div class="dist" id="mDist" hidden>
+        <h4>회원 현황</h4>
+        <div id="mDistRows"></div>
+        <div class="dist-note" id="mDistNote" hidden></div>
+      </div>
       <!-- '흔적 없음' 이 무엇인지 · 지울 때 무엇을 알아야 하는지 -->
-      <details class="adm-help" id="mGhostHelp">
+      <details class="adm-help" id="mGhostHelp" hidden>
         <summary><b>흔적 없는 계정</b> <span class="adm-help-v" id="mGhostCount">–</span></summary>
         <div class="adm-help-body">
           <p><b>번호 없음 + 신청 없음 + 크레딧 사용 없음 + 가입 30일 지남</b> 인 계정입니다.
@@ -1058,26 +1172,35 @@
              회원 본인 화면·로그인·크레딧은 그대로고, 이 관리자 목록에서만 빠집니다.</p>
         </div>
       </details>
-      <div class="bulk-bar">
-        <label><input type="checkbox" id="selAll"> 전체</label>
-        <select id="bulkCohort" aria-label="일괄 배정할 기수"><option value="">기수 선택…</option></select>
-        <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
-        <!-- 보관/해제는 지금 보고 있는 목록에 따라 한 개만 나온다(둘 다 두면 잘못 누른다) -->
-        <button class="btn btn-ghost btn-sm" id="bulkArchive" disabled>보관</button>
-        <button class="btn btn-ghost btn-sm" id="bulkUnarchive" disabled hidden>보관 해제</button>
-        <span class="bulk-count" id="selCount"></span>
-      </div>
+      <!-- '전체' 체크는 목록 바로 위에 남는다 — 무엇을 고르는지 옆에 있어야 한다 -->
+      <label class="bulk-bar" style="margin-bottom:8px"><input type="checkbox" id="selAll"> 전체 고르기</label>
       <ul class="mlist" id="mlist"></ul>
       <!-- 몇 명 중 몇 명을 보고 있는지 + 더 보기(2026-08-03 · 3천 명 대비) -->
       <div class="mmore" id="mMore" hidden></div>
 
-      <div class="newcohort">
-        <h2>기수 추가</h2>
-        <div class="field" style="margin-bottom:8px;">
-          <input id="cohortName" placeholder="예: MONC 1기" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="새 기수 이름">
+      <!-- 2026-08-22 — 고른 게 있을 때만 나타난다. 전에는 아무것도 안 골랐을 때도
+           회색 버튼 3개가 목록 위 자리를 먹었다. -->
+      <div class="bulkwrap" id="mBulkWrap" hidden>
+        <div class="bulk-bar">
+          <select id="bulkCohort" aria-label="일괄 배정할 기수"><option value="">기수 선택…</option></select>
+          <button class="btn btn-action btn-sm" id="bulkAssign" disabled>배정</button>
+          <!-- 보관/해제는 지금 보고 있는 목록에 따라 한 개만 나온다(둘 다 두면 잘못 누른다) -->
+          <button class="btn btn-ghost btn-sm" id="bulkArchive" disabled>보관</button>
+          <button class="btn btn-ghost btn-sm" id="bulkUnarchive" disabled hidden>보관 해제</button>
+          <span class="bulk-count" id="selCount"></span>
         </div>
-        <button class="btn btn-ghost btn-sm" id="addCohortBtn">+ 기수 만들기</button>
       </div>
+
+      <!-- 기수 만들기는 매일 하는 일이 아니다 — 접이로 내린다(2026-08-22) -->
+      <details class="sfold">
+        <summary>기수 관리</summary>
+        <div style="padding-top:10px">
+          <div class="field" style="margin-bottom:8px;">
+            <input id="cohortName" placeholder="예: MONC 1기" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="새 기수 이름">
+          </div>
+          <button class="btn btn-ghost btn-sm" id="addCohortBtn">+ 기수 만들기</button>
+        </div>
+      </details>
     </aside>
 
     <main class="main">
@@ -2173,34 +2296,162 @@
     function buildAppIndex() {
       if (!_appsLoaded) return null;
       const byMember = new Map(), byPhone = new Map();
+      /* 등급 판정용 — **환불되지 않은** 입금·무료 신청만 '고객'으로 센다(2026-08-22).
+         ⚠️ appPaid() 는 payment_status='refunded' 도 true 로 본다(돈이 한 번은 움직였다는 뜻).
+            그대로 쓰면 전액 환불하고 떠난 사람이 '고객'에 남아 진성 숫자가 부푼다. */
+      const payByMember = new Map(), payByPhone = new Map();
+      // 마지막 움직임 계산용 — 신청 시각 중 가장 최근
+      const atByMember = new Map(), atByPhone = new Map();
+      const bump = (m1, m2, k, v) => { if (!m1.has(k) || m1.get(k) < v) m1.set(k, v); };
       for (const a of _apps) {
-        if (a.member_id) { byMember.set(a.member_id, (byMember.get(a.member_id) || 0) + 1); continue; }
+        const paid = (appPaid(a) || appFree(a)) && !a.refunded && a.payment_status !== 'refunded';
+        const t = a.created_at ? new Date(a.created_at).getTime() : 0;
+        if (a.member_id) {
+          byMember.set(a.member_id, (byMember.get(a.member_id) || 0) + 1);
+          if (paid) payByMember.set(a.member_id, (payByMember.get(a.member_id) || 0) + 1);
+          if (t) bump(atByMember, null, a.member_id, t);
+          continue;
+        }
         const d = (a.phone || '').replace(/\D/g, '');
-        if (d) byPhone.set(d, (byPhone.get(d) || 0) + 1);
+        if (!d) continue;
+        byPhone.set(d, (byPhone.get(d) || 0) + 1);
+        if (paid) payByPhone.set(d, (payByPhone.get(d) || 0) + 1);
+        if (t) bump(atByPhone, null, d, t);
       }
-      return { byMember, byPhone };
+      return { byMember, byPhone, payByMember, payByPhone, atByMember, atByPhone };
     }
-    function memberFlags(m, idx) {
+
+    /* ══ 회원 활동 색인 — 크레딧 원장에서 한 번에 뽑는다(2026-08-22) ══
+       '고객'(충전)과 '참여'(사용)를 가른다. ⚠️ admin_grant 는 오너가 준 것이라 충전이 아니다.
+       원장이 아직 안 왔으면 null 을 돌려준다 — 모르는 것을 '없다'로 말하지 않는다(원칙 11). */
+    function buildCreditIndex() {
+      if (!_credRows.length) return null;
+      const purchase = new Set(), used = new Set(), at = new Map();
+      for (const r of _credRows) {
+        const d = r.delta || 0;
+        if (d > 0 && r.reason === 'purchase') purchase.add(r.member_id);
+        /* ⚠️ free_use 는 **delta 0** 이다(20260725130000_credits.sql 의 check 제약 —
+           무료분은 지갑에 들어오지 않고 0짜리 한 행으로만 남는다). delta<0 만 '사용'으로 보면
+           무료 한도만 쓴 회원이 '참여'가 아니라 '흔적 없음'으로 떨어져 **보관 대상이 된다.**
+           구 ghost 규칙이 _credFree(무료 사용 횟수)로 지키던 자리다. */
+        if (d < 0 || r.reason === 'free_use') used.add(r.member_id);
+        const t = r.created_at ? new Date(r.created_at).getTime() : 0;
+        if (t && (!at.has(r.member_id) || at.get(r.member_id) < t)) at.set(r.member_id, t);
+      }
+      return { purchase, used, at };
+    }
+
+    /* ══ 활동 자료 — 제출물·답변은 '참여' 판정과 '마지막 움직임'에 쓴다(2026-08-22) ══
+       ⚠️ 목록용이라 **가벼운 컬럼만** 받는다(본문·파일 경로 없음). 상세 화면은 회원을 고를 때
+          따로 전량을 받으므로 여기서 겹쳐 받지 않는다.
+       ⚠️ 실패를 빈 배열과 구별해 둔다 — 못 읽은 갈래를 '없다'로 단정하면 진성 고객이
+          '가입만'으로 뒤바뀐다. */
+    let _actReady = false;
+    const _actMiss = [];                       // 못 읽은 갈래 이름
+    let _subCount = new Map(), _subAt = new Map();
+    let _ansCount = new Map(), _ansAt = new Map();
+    let _enrolled = new Set();
+    async function loadMemberActivity() {
+      _actMiss.length = 0;
+      const put = (cnt, at, key, t) => {
+        cnt.set(key, (cnt.get(key) || 0) + 1);
+        if (t && (!at.has(key) || at.get(key) < t)) at.set(key, t);
+      };
+      const ms = t => (t ? new Date(t).getTime() : 0);
+
+      const [subs, ans, enr] = await Promise.all([
+        fetchAll(() => sb().from('challenge_submissions').select('member_id, created_at')),
+        fetchAll(() => sb().from('answers').select('member_id, updated_at')),
+        fetchAll(() => sb().from('program_enrollments').select('member_id')),
+      ]);
+
+      _subCount = new Map(); _subAt = new Map();
+      if (subs.error) _actMiss.push('챌린지 제출물');
+      else (subs.data || []).forEach(r => put(_subCount, _subAt, r.member_id, ms(r.created_at)));
+
+      _ansCount = new Map(); _ansAt = new Map();
+      if (ans.error) _actMiss.push('저장한 답변');
+      else (ans.data || []).forEach(r => put(_ansCount, _ansAt, r.member_id, ms(r.updated_at)));
+
+      _enrolled = new Set();
+      if (enr.error) _actMiss.push('이용권');
+      else (enr.data || []).forEach(r => r.member_id && _enrolled.add(r.member_id));
+
+      _actReady = true;
+      renderMemberList();
+    }
+
+    /* ══ 회원 현황 5단 (2026-08-22 오너 확정) ══
+       **위에서부터 먼저 걸리는 것이 이긴다.** 한 사람은 한 등급만 갖는다.
+       ⚠️ 3번(관심)에 '신청 이력'을 넣은 것은 구 '흔적 없음' 규칙(noPhone && !apps && !usedCredit
+          && 30일)을 그대로 지키기 위해서다. 이게 없으면 **번호 없이 신청만 한 미입금 신청자가
+          '흔적 없음'으로 떨어져 보관 대상이 된다** — 지워도 되는 계정이 아니라 받아야 할 돈이다. */
+    const TIERS = [
+      { k: 'pay',   label: '고객',      cls: 't-pay'  },
+      { k: 'use',   label: '참여',      cls: 't-use'  },
+      { k: 'warm',  label: '관심',      cls: 't-warm' },
+      { k: 'new',   label: '가입만',    cls: 't-new'  },
+      { k: 'ghost', label: '흔적 없음', cls: 't-dead' },
+    ];
+    const TIER_BY = {}; TIERS.forEach(t => TIER_BY[t.k] = t);
+
+    function memberTier(m, idx, cidx) {
       const digits = (m.phone || '').replace(/\D/g, '');
-      const noPhone = !digits;
-      const badPhone = !noPhone && !(window.MONC_PHONE ? MONC_PHONE.check(m.phone).ok : true);
-      // 신청 이력 — 로그인 상태로 신청(member_id) 하거나 전화가 같으면 그 사람 것으로 본다.
-      const apps = idx
-        ? (idx.byMember.get(m.id) || 0) + (digits ? (idx.byPhone.get(digits) || 0) : 0)
-        : 0;
-      const usedCredit = _credRows.length > 0 && (_credFree.get(m.id) || 0) > 0;
+      const paidApps = idx ? ((idx.payByMember.get(m.id) || 0) + (digits ? (idx.payByPhone.get(digits) || 0) : 0)) : 0;
+      if (paidApps > 0) return 'pay';
+      if (cidx && cidx.purchase.has(m.id)) return 'pay';
+      if (_enrolled.has(m.id)) return 'pay';
+
+      if ((_subCount.get(m.id) || 0) > 0) return 'use';
+      if ((_ansCount.get(m.id) || 0) > 0) return 'use';
+      if (cidx && cidx.used.has(m.id)) return 'use';
+
+      const apps = idx ? ((idx.byMember.get(m.id) || 0) + (digits ? (idx.byPhone.get(digits) || 0) : 0)) : 0;
+      if (digits || apps > 0) return 'warm';
+
       const days = m.created_at ? (Date.now() - new Date(m.created_at).getTime()) / 86400000 : 0;
-      const ghost = !!idx && _credRows.length > 0
-        && noPhone && !apps && !usedCredit && days >= GHOST_DAYS;
-      return { noPhone, badPhone, apps, ghost };
+      return days >= GHOST_DAYS ? 'ghost' : 'new';
     }
+
+    /* 마지막 움직임 — 가입·신청·제출물·답변·크레딧 중 가장 최근. 목록 행과 상세 머리가 같은 값을 쓴다. */
+    function lastSeenAt(m, idx, cidx) {
+      const digits = (m.phone || '').replace(/\D/g, '');
+      let t = m.created_at ? new Date(m.created_at).getTime() : 0;
+      const cand = [
+        idx ? idx.atByMember.get(m.id) : 0,
+        (idx && digits) ? idx.atByPhone.get(digits) : 0,
+        _subAt.get(m.id), _ansAt.get(m.id),
+        cidx ? cidx.at.get(m.id) : 0,
+      ];
+      cand.forEach(v => { if (v && v > t) t = v; });
+      return t;
+    }
+
+    /* 등급 판정에 필요한 자료가 다 왔는가. 안 왔으면 등급을 단정하지 않는다(원칙 11).
+       신청(_appsLoaded)·크레딧 원장(_credRows)·활동(_actReady) 셋이 한 벌이다. */
+    function tierReady() { return _appsLoaded && _credRows.length > 0 && _actReady; }
+    /* 2026-08-22 — 구 noPhone/apps/ghost 는 현황 5단(memberTier)이 대신한다. 여기 남는 것은
+       '번호 확인 필요' 하나다(현황이 아니라 **고쳐야 할 값**이라 따로 둔다).
+       ⚠️ 번호 판정은 가입·신청 창구와 같은 규칙(phone-check.js)을 쓴다. 여기서 정규식을 따로
+          만들면 "가입은 통과했는데 admin 은 이상하다고 하는" 번호가 생긴다. */
+    function memberFlags(m) {
+      const digits = (m.phone || '').replace(/\D/g, '');
+      const badPhone = !!digits && !(window.MONC_PHONE ? MONC_PHONE.check(m.phone).ok : true);
+      return { badPhone };
+    }
+    /* 2026-08-22 — 구 7개(전체·가입 미완료·번호 확인 필요·기수 미배정·신청 있음·흔적 없음·보관함)를
+       **현황 5단 + 확인 필요 2 + 보관함**으로 갈랐다. 구 'nophone'(가입 미완료)은 현황의 '가입만'이,
+       구 'active'(신청 있음)는 '고객'·'참여'가 대신한다 — 두 벌로 두지 않는다.
+       ⚠️ 세 번째 인자 t 는 현황 등급 키다. 등급은 renderMemberList 가 한 번만 계산해 넘긴다. */
     const M_FILTERS = {
       all:      () => true,
-      nophone:  f => f.noPhone,
+      pay:      (f, m, t) => t === 'pay',
+      use:      (f, m, t) => t === 'use',
+      warm:     (f, m, t) => t === 'warm',
+      new:      (f, m, t) => t === 'new',
+      ghost:    (f, m, t) => t === 'ghost',
       badphone: f => f.badPhone,
       nocohort: (f, m) => !m.cohort_id,
-      active:   f => f.apps > 0,
-      ghost:    f => f.ghost,
       archived: () => true,   // 보관함은 아래 isArchived 로 따로 가른다
     };
     let _mFilter = 'all';
@@ -2214,15 +2465,57 @@
     const isArchived = m => !!m.archived_at;
     // 컬럼 존재 여부는 조회를 더 하지 않고 받아 둔 행에서 확인한다(members 는 select('*') 다).
     const archiveReady = () => members.length > 0 && Object.prototype.hasOwnProperty.call(members[0], 'archived_at');
-    // 목록 행에 붙는 상태 배지. ⚠️ 값만 남기지 않는다 — 무엇을 뜻하는지 글자로 적는다(원칙 15).
-    function mBadges(f, m) {
+    /* 목록 행 라벨(2026-08-22 개편) — **현황 라벨 하나**로 줄였다. 전에는 가입 미완료·번호 확인
+       필요·신청 n건·흔적 없음이 최대 넷까지 붙어 무엇을 보는 건지 읽히지 않았다.
+       예외 하나: '번호 확인 필요'는 **고쳐야 할 값**이라 빨간 라벨을 하나 더 단다.
+       ⚠️ 값만 남기지 않는다 — 무엇을 뜻하는지 글자로 적는다(원칙 15). */
+    function mBadges(f, m, tier) {
       let out = '';
       if (m && isArchived(m)) out += '<span class="mb mb-arc">보관됨</span>';
-      if (f.noPhone)  out += '<span class="mb mb-warn">가입 미완료</span>';
+      if (tier) {
+        const t = TIER_BY[tier];
+        if (t) out += '<span class="tier ' + t.cls + '">' + t.label + '</span>';
+      }
       if (f.badPhone) out += '<span class="mb mb-warn">번호 확인 필요</span>';
-      if (f.apps)     out += '<span class="mb">신청 ' + f.apps + '건</span>';
-      if (f.ghost)    out += '<span class="mb mb-ghost">흔적 없음</span>';
       return out;
+    }
+
+    /* 목록 행 오른쪽 위 날짜 — '마지막 움직임'.
+       ⚠️ 표기는 fmtDate 하나로 통일한다(오늘/어제/n월 n일). 여기서 따로 만들면 화면마다 다르게 적힌다. */
+    function seenLabel(t) { return t ? fmtDate(new Date(t).toISOString()) : ''; }
+
+    /* 회원 현황 분포 — 목록 위 읽기 전용 수치(2026-08-22 오너 "진성 고객이 누군지").
+       ⚠️ 누르면 걸리게 만들지 말 것 — 고르기는 #mFilter 하나다(같은 일을 두 벌로 두지 않는다).
+       ⚠️ 막대는 **최대값 기준 비례**다. '가입만'이 압도적이면 그대로 보여야 한다 —
+          보기 좋으라고 비율을 조작하면 화면이 거짓말한다. */
+    function renderTierDist(n) {
+      const box = document.getElementById('mDist');
+      const rows = document.getElementById('mDistRows');
+      const note = document.getElementById('mDistNote');
+      if (!box || !rows) return;
+      box.hidden = false;
+      if (!tierReady()) {
+        rows.innerHTML = '<div class="dist-note">판단할 자료를 받는 중입니다…</div>';
+        note.hidden = true;
+        return;
+      }
+      const max = Math.max(1, ...TIERS.map(t => n[t.k] || 0));
+      const cls = { pay: 'd-pay', use: 'd-use', ghost: 'd-dead' };
+      rows.innerHTML = TIERS.map(t => {
+        const v = n[t.k] || 0;
+        return '<div class="dist-row ' + (cls[t.k] || '') + '">'
+          + '<span class="lab">' + t.label + '</span>'
+          + '<span class="bar"><i style="width:' + Math.round(v / max * 100) + '%"></i></span>'
+          + '<span class="n">' + v.toLocaleString() + '</span></div>';
+      }).join('');
+      // 못 읽은 갈래가 있으면 사실대로 적는다 — 등급이 실제보다 낮게 잡혔을 수 있다
+      if (_actMiss.length) {
+        note.hidden = false;
+        note.style.color = 'var(--st-alert)';
+        note.textContent = _actMiss.join('·') + ' 을(를) 읽지 못했습니다 — 현황이 실제보다 낮게 잡혔을 수 있습니다.';
+      } else {
+        note.hidden = true;
+      }
     }
 
     function renderMemberList() {
@@ -2231,26 +2524,35 @@
       const pass = M_FILTERS[_mFilter] || M_FILTERS.all;
       const wantArc = _mFilter === 'archived';
       const appIdx = buildAppIndex();
-      const flagOf = new Map();
+      const credIdx = buildCreditIndex();
+      const flagOf = new Map(), tierOf = new Map(), seenOf = new Map();
+      /* 현황 분포는 **필터와 무관하게 전체 기준**으로 센다(보관은 뺀다 — 치운 것을 다시 세지 않는다).
+         ⚠️ 등급 계산은 회원마다 한 번뿐이다. _apps 를 회원마다 훑으면 3,000 × 1,500 = 450만 번이다. */
+      const tierN = { pay: 0, use: 0, warm: 0, new: 0, ghost: 0 };
       const list = members.filter(m => {
         // ⚠️ 보관한 회원은 '보관함'에서만 보인다 — '전체'를 포함해 다른 칩에는 안 섞인다.
         //    치워 놓은 것이 그대로 다시 나오면 치운 의미가 없다.
-        if (isArchived(m) !== wantArc) return false;
-        const f = memberFlags(m, appIdx); flagOf.set(m.id, f);
-        if (!pass(f, m)) return false;
+        const arc = isArchived(m);
+        const f = memberFlags(m); flagOf.set(m.id, f);
+        const t = memberTier(m, appIdx, credIdx); tierOf.set(m.id, t);
+        seenOf.set(m.id, lastSeenAt(m, appIdx, credIdx));
+        if (!arc && tierN[t] !== undefined) tierN[t]++;
+        if (arc !== wantArc) return false;
+        if (!pass(f, m, t)) return false;
         if (!q) return true;
         return (m.name && m.name.toLowerCase().includes(q))
           || (m.email && m.email.toLowerCase().includes(q))
           || (qd && (m.phone || '').replace(/\D/g, '').includes(qd));
       });
+      renderTierDist(tierN);
       const arcN = members.reduce((n, m) => n + (isArchived(m) ? 1 : 0), 0);
-      /* '흔적 없는 계정'은 필터와 무관하게 늘 전체 기준으로 센다(접이 머리에 붙는 숫자다).
-         ⚠️ 단 보관한 회원은 뺀다 — 이미 치운 것을 "정리할 게 남았다"고 계속 말하면 안 된다. */
-      const ghostN = members.reduce((n, m) =>
-        n + (!isArchived(m) && (flagOf.get(m.id) || memberFlags(m, appIdx)).ghost ? 1 : 0), 0);
-      const ghostReady = _appsLoaded && _credRows.length > 0;
+      /* '흔적 없는 계정' 설명은 **그 현황을 골랐을 때만** 목록 위에 뜬다(2026-08-22).
+         늘 떠 있을 이유가 없다 — 인원수는 위 분포가 늘 보여준다. */
+      const ghostReady = tierReady();
+      const gh = document.getElementById('mGhostHelp');
+      if (gh) gh.hidden = _mFilter !== 'ghost';
       const gc = document.getElementById('mGhostCount');
-      if (gc) gc.textContent = ghostReady ? ghostN.toLocaleString() + '명' : '확인 중';
+      if (gc) gc.textContent = ghostReady ? tierN.ghost.toLocaleString() + '명' : '확인 중';
       // 보관 수는 셀렉트 항목 글자에 붙인다(구 칩 안 <span id="mArcN"> 자리)
       const arcOpt = document.getElementById('mArcOpt');
       if (arcOpt) arcOpt.textContent = arcN ? '보관함 ' + arcN.toLocaleString() : '보관함';
@@ -2270,18 +2572,18 @@
           <input type="checkbox" class="mchk" data-id="${m.id}" ${selected.has(m.id) ? 'checked' : ''}
                  aria-label="${esc(m.name || '이름 없음')} 선택">
           <div class="minfo" data-id="${m.id}" role="button" tabindex="0">
-            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}</div>
+            <div class="mn">${esc(m.name || '(이름 없음)')} ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}<span class="seen">${esc(seenLabel(seenOf.get(m.id)))}</span></div>
             <div class="me">${esc(m.email || '이메일 없음')}</div>
             <div class="mc">${m.cohort_id
               ? esc(cohortName(m.cohort_id) || '기수 확인 중')
-              : '<span class="mc-none">기수 미배정</span>'}${mBadges(flagOf.get(m.id) || memberFlags(m, appIdx), m)}</div>
+              : '<span class="mc-none">기수 미배정</span>'}${mBadges(flagOf.get(m.id) || memberFlags(m), m, tierReady() ? tierOf.get(m.id) : null)}</div>
           </div>
         </li>`).join('')
         /* ⚠️ 근거를 아직 못 받았으면 '없다'고 말하지 않는다(원칙 11 · 2026-08-03).
            '흔적 없음'은 크레딧 원장이 있어야 판정되는데, 원장은 이 탭을 열 때 받는다.
            그 0.2초 사이에 칩을 누르면 전에는 "회원이 없습니다"가 떠서, 지울 대상이
            없는 것으로 읽혔다. */
-        || (_mFilter === 'ghost' && !ghostReady
+        || ((!ghostReady && _mFilter !== 'all' && _mFilter !== 'archived')
               ? '<li style="color:var(--text-dim);font-size:13px;padding:8px">판단할 자료를 받는 중입니다…</li>'
               : wantArc
               ? '<li style="color:var(--text-dim);font-size:13px;padding:8px">보관한 회원이 없습니다.</li>'
@@ -2324,6 +2626,9 @@
     // 선택 개수 → 카운트/배정버튼/전체선택 체크박스 상태 동기화
     function syncBulkUI() {
       const n = selected.size;
+      // 2026-08-22 — 고른 게 있을 때만 나타난다(전에는 회색 버튼 3개가 늘 자리를 먹었다)
+      const wrap = document.getElementById('mBulkWrap');
+      if (wrap) wrap.hidden = !n;
       document.getElementById('selCount').textContent = n ? (n + '명 선택') : '';
       document.getElementById('bulkAssign').disabled = !n;
       document.getElementById('selAll').checked = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
@@ -2394,11 +2699,24 @@
       if (!_appsLoaded) await loadApplications();
       // 일차별 기록(daily_records)은 2026-08-20 화면에서 정리 — 데이터는 남아 있지만 더는 조회하지 않는다.
       // 산출물은 챌린지별 처음/끝(challenge_submissions — 학생 직접 업로드)으로 본다.
-      const [subsRes, { data: recs }, answers] = await Promise.all([
+      const [subsRes, { data: recs }, answers, labRes] = await Promise.all([
         sb().from('challenge_submissions').select('*').eq('member_id', id),
         sb().from('recordings').select('type, storage_path').eq('member_id', id),
         fetchAnswers(id),
+        // 자료 받은 기록 — 타임라인에만 쓴다. 표가 없으면(PGRST205) 그 갈래만 빠진다.
+        sb().from('lab_downloads').select('*').eq('member_id', id).order('created_at', { ascending: false }),
       ]);
+      const labRows = labRes.error ? [] : (labRes.data || []);
+      /* 자료 제목은 lab_resources 에 있다. _labRows 는 '연구실 자료' 탭을 열어야 차므로
+         여기서 필요한 id 만 따로 받는다(받은 기록이 있을 때만 — 없으면 조회도 안 한다). */
+      const labTitle = new Map();
+      if (labRows.length) {
+        const ids = [...new Set(labRows.map(l => l.resource_id).filter(Boolean))];
+        if (ids.length) {
+          const { data: lrs } = await sb().from('lab_resources').select('id, title').in('id', ids);
+          (lrs || []).forEach(r => labTitle.set(r.id, r.title));
+        }
+      }
       const chSubs = subsRes.error ? [] : (subsRes.data || []);
       const chSubsReady = !subsRes.error;   // 표 미생성(PGRST205 등)이면 패널에 사실대로 적는다
       const recMap = {}; (recs || []).forEach(r => recMap[r.type] = r.storage_path);
@@ -2408,20 +2726,6 @@
       const appList = _apps.filter(a =>
         a.member_id === id || (!a.member_id && myDigits && (a.phone || '').replace(/\D/g, '') === myDigits)
       );
-
-      // 상단 요약 스탯(제출물/입금/환불 한눈에)
-      const anyPaid = appList.some(a => appPaid(a));
-      const anyFree = appList.some(a => appFree(a));
-      const anyRefund = appList.some(a => a.refunded || (a.refunded_amount || 0) > 0);
-      const pendingPay = appList.some(a => !appPaid(a) && !appFree(a) && !a.refunded);
-      const statsHtml = `<div class="mstats">
-        <span class="mstat">제출물 <b>${chSubs.length}</b>건</span>
-        <span class="mstat">신청 <b>${appList.length}</b>건</span>
-        ${anyPaid ? '<span class="mstat paid">입금완료</span>' : ''}
-        ${anyFree ? '<span class="mstat paid">무료(재학생)</span>' : ''}
-        ${pendingPay ? '<span class="mstat wait">입금대기</span>' : ''}
-        ${anyRefund ? '<span class="mstat refund">환불완료</span>' : ''}
-      </div>`;
 
       // 신청 내역(입금/환불 토글은 wireDetail 에서 연결)
       const appsHtml = appList.length ? appList.map(a => `
@@ -2483,29 +2787,90 @@
               <div class="ba">${chSubSlot(ch, 'before', subOf[ch + '#before'])}${chSubSlot(ch, 'after', subOf[ch + '#after'])}</div>
             </div>`).join('');
 
+      /* ══ 활동 타임라인(2026-08-22) — 이미 있는 데이터를 시간순으로 합친다. 새 표 없음 ══
+         ⚠️ applications 에 paid_at 컬럼이 **없다**(실측). 신청과 입금을 두 줄로 쪼개면 같은 시각에
+            두 줄이 찍혀 화면이 거짓말한다 — 한 줄로 두고 입금 여부를 그 줄에 적는다.
+         ⚠️ 못 읽은 갈래는 조용히 빼지 않고 패널 아래에 사실대로 적는다(원칙 11). */
+      const tlMiss = [];
+      if (labRes.error) tlMiss.push('자료 받은 기록');
+      if (subsRes.error) tlMiss.push('챌린지 제출물');
+      const tlRows = [];
+      const at = v => (v ? new Date(v).getTime() : 0);
+      if (m && m.created_at) tlRows.push({ t: at(m.created_at), cls: '', k: '가입', text: '회원 가입' });
+      appList.forEach(a => {
+        const paid = appPaid(a) && !a.refunded && a.payment_status !== 'refunded';
+        const free = appFree(a);
+        const money = (a.total_price || 0).toLocaleString() + '원';
+        const state = a.refunded || a.payment_status === 'refunded' ? '환불됨'
+          : free ? '무료(재학생)' : paid ? '입금 완료' : '아직 미입금';
+        tlRows.push({ t: at(a.created_at), cls: (paid || free) ? 'k-pay' : '', k: '신청',
+          text: esc(chSummary(a.challenges) || '(챌린지 미상)') + ' · ' + money + ' <em>· ' + state + '</em>' });
+      });
+      chSubs.forEach(sb2 => tlRows.push({ t: at(sb2.created_at), cls: 'k-act', k: '제출물',
+        text: esc((CH_SUB_ADM[sb2.challenge] || {}).label || sb2.challenge) + ' <em>· '
+          + (sb2.type === 'before' ? '처음' : '끝') + '</em>' }));
+      (answers || []).forEach(a => tlRows.push({ t: at(a.updated_at), cls: 'k-act', k: '답변',
+        text: '“' + esc(((a.questions || {}).content || '(문제 정보 없음)')).slice(0, 60) + '” 저장' }));
+      _credRows.filter(r => r.member_id === id).forEach(r => {
+        const d = r.delta || 0;
+        const word = r.reason === 'purchase' ? '충전' : r.reason === 'admin_grant' ? '지급받음'
+          : r.reason === 'refund' ? '환급' : r.reason === 'free_use' ? '무료 사용' : '사용';
+        tlRows.push({ t: at(r.created_at), cls: r.reason === 'purchase' ? 'k-pay' : 'k-act', k: '크레딧',
+          text: esc(r.tool || '') + ' ' + word + ' <em>' + (d > 0 ? '+' : '') + d + '</em>' });
+      });
+      labRows.forEach(l => tlRows.push({ t: at(l.created_at), cls: 'k-act', k: '자료',
+        text: esc(labTitle.get(l.resource_id) || '(제목 확인 안 됨)') + ' 받음' }));
+      tlRows.sort((x, y) => y.t - x.t);
+      const TL_PAGE = 20;
+      const tlHtml = tlRows.length
+        ? '<ul class="tl">' + tlRows.slice(0, TL_PAGE).map(r =>
+            '<li class="' + r.cls + '"><span class="tl-d">' + esc(fmtDate(r.t ? new Date(r.t).toISOString() : null))
+            + '</span><span class="tl-k">' + r.k + '</span><span class="tl-t">' + r.text + '</span></li>').join('')
+          + '</ul>'
+          + (tlRows.length > TL_PAGE
+              ? '<div class="tl-more"><button class="btn btn-ghost btn-sm" type="button" id="mlogMore">더 보기 ('
+                + (tlRows.length - TL_PAGE).toLocaleString() + '건 남음)</button></div>' : '')
+        : '<div class="mini-empty">아직 기록이 없습니다.</div>';
+      const tlMissHtml = tlMiss.length
+        ? '<div class="tl-miss">' + esc(tlMiss.join('·')) + ' 을(를) 읽지 못했습니다 — 이 목록에서 빠져 있습니다.</div>' : '';
+      // 상세 머리에 쓰는 값 — 목록 행과 **같은 함수**로 낸다(두 화면이 다른 말을 하면 안 된다)
+      const _ai = buildAppIndex(), _ci = buildCreditIndex();
+      const myTier = tierReady() ? TIER_BY[memberTier(m, _ai, _ci)] : null;
+      const mySeen = tlRows.length ? tlRows[0].t : lastSeenAt(m, _ai, _ci);
+      const myBal = _credBal.get(id);
+
+      /* ══ 상세 재배치(2026-08-22) ══
+         순서: 머리(누구인가) → 수치 칸 → 신청 내역(돈) → 활동 타임라인 → 접이 3(정보·제출물·답변)
+               → Before/After(있을 때만) → 보관(맨 아래 단독).
+         ⚠️ 회원 정보 폼은 **접이**다 — 매번 고치는 값이 아니다. 대신 이름·기수·연락처는 머리에
+            늘 보이므로 펴지 않아도 확인은 된다.
+         ⚠️ 구 .prow(flex-wrap · 칸 폭 제각각)를 .mform 2열 그리드로 바꿨다. 저장 버튼은 칸 옆이
+            아니라 줄 밖 아래다(폭에 따라 아무 데나 붙어 흐르던 자리).
+         ⚠️ 보관은 회원 정보 패널 안에 섞여 있었다 — 되돌리기 어려운 조작이라 맨 아래 단독으로 뗀다. */
       detail.innerHTML = `
-        <div class="panel">
-          <h3>회원 정보</h3>
-          ${statsHtml}
-          <div class="prow">
-            <div class="field"><label for="fName">이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
-            <div class="field"><label>이메일</label><input value="${esc(m.email || '')}" readonly></div>
-            <div class="field"><label for="fPhone">연락처</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></div>
-            <div class="field"><label for="fMajor">전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공(선택)"></div>
-            <div class="field"><label for="fCohort">기수</label><select id="fCohort">${cohortOpts}</select></div>
-            <div class="field"><label>권한</label>${roleField(m)}</div>
-            <button class="btn btn-action" id="saveProfile">정보 저장</button>
-          </div>
-          ${(m.is_owner || m.role === 'admin') ? '' : `
-          <div class="m-arc">
-            <div>
-              <b>${isArchived(m) ? '보관된 회원입니다' : '보관'}</b>
-              <div class="m-arc-sub">${isArchived(m)
-                ? esc(fmtDate(m.archived_at)) + '에 보관했습니다. 해제하면 회원 목록·회원 수에 다시 들어옵니다.'
-                : '연락이 안 되는 계정을 목록·회원 수에서 빼 둡니다. 삭제가 아니라서 회원 본인 화면·크레딧·저장한 답변은 그대로입니다.'}</div>
+        <div class="mhead">
+          <div class="mh-top">
+            <div class="mh-nm">
+              <b>${esc(m.name || '(이름 없음)')}</b>
+              ${myTier ? `<span class="tier ${myTier.cls}">${myTier.label}</span>` : ''}
+              ${m.is_owner ? '<span class="madm">오너</span>' : (m.role === 'admin' ? '<span class="madm">관리자</span>' : '')}
+              ${isArchived(m) ? '<span class="mb mb-arc">보관됨</span>' : ''}
             </div>
-            <button class="btn btn-ghost btn-sm" id="arcOne">${isArchived(m) ? '보관 해제' : '보관'}</button>
-          </div>`}
+            <div class="mh-meta">
+              <span>${m.cohort_id ? esc((cohorts.find(c => c.id === m.cohort_id) || {}).name || '기수 확인 중') : '기수 미배정'}</span>
+              ${m.major ? `<span>${esc(m.major)}</span>` : ''}
+              ${m.phone ? `<span><a href="tel:${esc(String(m.phone).replace(/[^0-9+]/g, ''))}">${esc(m.phone)}</a></span>`
+                        : '<span style="color:var(--st-alert);font-weight:700">연락처 없음</span>'}
+              <span>${esc(m.email || '이메일 없음')}</span>
+              ${mySeen ? `<span>마지막 움직임 ${esc(seenLabel(mySeen))}</span>` : ''}
+            </div>
+          </div>
+          <div class="mh-st">
+            <div class="${appList.length ? 'ok' : ''}"><b>${appList.length}</b><span>신청</span></div>
+            <div><b>${chSubsReady ? chSubs.length : '–'}</b><span>제출물</span></div>
+            <div><b>${(answers || []).length}</b><span>답변</span></div>
+            <div><b>${myBal === undefined ? '–' : myBal.toLocaleString()}</b><span>크레딧 잔액</span></div>
+          </div>
         </div>
 
         <div class="panel">
@@ -2513,14 +2878,37 @@
           <div id="appsInDetail">${appsHtml}</div>
         </div>
 
-        <details class="panel adm-fold"${chSubs.length ? ' open' : ''}>
-          <summary><h3>챌린지 제출물 (처음/끝)</h3><span class="adm-help-v">${subSum}</span></summary>
-          <div id="chSubsEdit">${chSubsHtml}</div>
-        </details>
+        <div class="panel">
+          <h3>활동 타임라인 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 이 사람이 무엇을 했는지 시간순</span></h3>
+          <div id="mlogBox">${tlHtml}</div>
+          ${tlMissHtml}
+        </div>
 
         <div class="panel">
-          <h3>답변노트 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 소재 발굴로 저장한 답변</span></h3>
-          <div id="answersInDetail">${ansHtml}</div>
+          <details class="mfold">
+            <summary>회원 정보 고치기</summary>
+            <div class="mfold-body">
+              <div class="mform">
+                <div class="field"><label for="fName">이름</label><input id="fName" value="${esc(m.name || '')}" placeholder="이름"></div>
+                <div class="field"><label for="fPhone">연락처</label><input id="fPhone" value="${esc(m.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></div>
+                <div class="field"><label for="fMajor">전공</label><input id="fMajor" value="${esc(m.major || '')}" placeholder="전공(선택)"></div>
+                <div class="field"><label for="fCohort">기수</label><select id="fCohort">${cohortOpts}</select></div>
+                <div class="field"><label>권한</label>${roleField(m)}</div>
+                <div class="field full"><label>이메일 (고칠 수 없음)</label><input value="${esc(m.email || '')}" readonly></div>
+              </div>
+              <div class="mform-foot"><button class="btn btn-action" id="saveProfile">정보 저장</button></div>
+            </div>
+          </details>
+
+          <details class="mfold"${chSubs.length ? ' open' : ''}>
+            <summary>챌린지 제출물 (처음/끝) <span class="adm-help-v">${subSum}</span></summary>
+            <div class="mfold-body" id="chSubsEdit">${chSubsHtml}</div>
+          </details>
+
+          <details class="mfold">
+            <summary>답변노트 <span class="adm-help-v">${(answers || []).length ? (answers || []).length + '건' : '없음'}</span></summary>
+            <div class="mfold-body" id="answersInDetail">${ansHtml}</div>
+          </details>
         </div>
 
         ${(recMap.before || recMap.after) ? `
@@ -2530,7 +2918,26 @@
             ${baSlot('before', recMap.before)}
             ${baSlot('after', recMap.after)}
           </div>
-        </div>` : ''}`;
+        </div>` : ''}
+
+        ${(m.is_owner || m.role === 'admin') ? '' : `
+        <div class="panel m-arc" style="margin-top:0">
+          <div>
+            <b>${isArchived(m) ? '보관된 회원입니다' : '보관'}</b>
+            <div class="m-arc-sub">${isArchived(m)
+              ? esc(fmtDate(m.archived_at)) + '에 보관했습니다. 해제하면 회원 목록·회원 수에 다시 들어옵니다.'
+              : '연락이 안 되는 계정을 목록·회원 수에서 빼 둡니다. 삭제가 아니라서 회원 본인 화면·크레딧·저장한 답변은 그대로입니다.'}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="arcOne">${isArchived(m) ? '보관 해제' : '보관'}</button>
+        </div>`}`;
+
+      // 타임라인 '더 보기' — 남은 것을 한 번에 마저 그린다(회원 한 명 몫이라 끊을 이유가 없다)
+      const tlMoreBtn = document.getElementById('mlogMore');
+      if (tlMoreBtn) tlMoreBtn.addEventListener('click', () => {
+        document.getElementById('mlogBox').innerHTML = '<ul class="tl">' + tlRows.map(r =>
+          '<li class="' + r.cls + '"><span class="tl-d">' + esc(fmtDate(r.t ? new Date(r.t).toISOString() : null))
+          + '</span><span class="tl-k">' + r.k + '</span><span class="tl-t">' + r.text + '</span></li>').join('') + '</ul>';
+      });
 
       wireDetail(id, recMap, chSubs);
     }
@@ -2778,7 +3185,9 @@
        ⚠️ 실패하면 표시를 되돌린다 — 다시 눌렀을 때 재시도돼야 한다.
        ⚠️ 여기 없는 탭(today·apps·waitlist)은 부팅 때 받는 것으로 이미 그려진다. */
     const TAB_DEPS = {
-      members:   ['credits'],
+      // ⚠️ 회원 관리는 크레딧 원장(흔적 없음·참여 판정)과 활동 자료(제출물·답변·이용권)가 있어야
+      //    현황 5단을 매길 수 있다. 셋이 한 벌이다 — 하나만 빼면 진성 고객이 '가입만'으로 뒤바뀐다.
+      members:   ['credits', 'mact'],
       credits:   ['credits'],
       rounds:    ['rounds'],
       lectures:  ['lectures'],
@@ -2791,6 +3200,7 @@
     };
     const TAB_LOADERS = {
       credits:   async () => { await loadCredits(); await loadCreditPacks(); await loadCreditConfig(); },
+      mact:      () => loadMemberActivity(),
       rounds:    async () => { await loadChallengePrice(); await loadRounds(); },
       lectures:  () => loadLectures(),
       reviews:   async () => { await loadReviewsAdmin(); await loadStoriesAdmin(); },
