@@ -64,7 +64,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-08-21a'  // a = 첨삭 말하기 분량 옵션(targetSec 20/30/40초)
+const FN_VERSION = '2026-08-22a'  // a = 첨삭 분량 전환 + N초 버전(short_version·cuts)
 const FN_FEATURES = [
   'holistic',         // 킬러 판정 = 오너 지침 4기준 종합 + AI 의심 지수 %(2026-08-12 전면 교체)
   'green_flags',      // 인간미 보존 영역(Green Flag) — 점수 보정 + 살릴 문장 짚기(2026-08-12b)
@@ -79,6 +79,7 @@ const FN_FEATURES = [
   'quickfix',         // 미니 다듬기 — mode:'quickfix' 무료 한 구간 고침 + 표현 수집(2026-07-31)
   'refund_server',    // 환급을 service_role 전용 refund_credit_for 로 이동(2026-08-04)
   'polish_length',    // 첨삭 말하기 분량 — targetSec(20/30/40초)을 프롬프트 목표 분량으로(2026-08-21)
+  'polish_length_version', // 분량 리포트에 N초 버전(short_version)·덜어낸 대목(cuts) 동봉(2026-08-22)
 ]
 
 // 모델 — 확정본 초안은 Opus 4.8 이었으나 **같은 가격($5/$25)의 상위 모델**인 Opus 5 를 쓴다.
@@ -513,6 +514,26 @@ const POLISH_SCHEMA = {
   additionalProperties: false,
 }
 
+// 분량(targetSec)이 있을 때만 쓰는 스키마 — N초 버전 본문 + 덜어낸 대목. 칸을 옵션으로 두지 않고
+// required 로 못 박는다(구조화 출력은 required 가 안전하고, 자유 리포트에는 빈 칸을 싣지 않는다).
+const POLISH_SCHEMA_LEN = {
+  ...POLISH_SCHEMA,
+  properties: {
+    ...POLISH_SCHEMA.properties,
+    short_version: { type: 'string' },
+    cuts: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { quote: { type: 'string' }, why: { type: 'string' } },
+        required: ['quote', 'why'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: [...POLISH_SCHEMA.required, 'short_version', 'cuts'],
+}
+
 // ⚠️ 첨삭의 선 — 4겹 고삐 철학(구조화 출력·자기 출력 재검사)이되, 처방 도구라 한 줄이 더 붙는다:
 //    **학생이 쓴 사실만 재료로 쓴다.** fix 가 없는 일화·숫자를 지어내면 학생이 그 거짓을
 //    면접장까지 들고 간다 — 이 도구가 낼 수 있는 최악의 사고다.
@@ -611,12 +632,17 @@ type PolishOut = {
   strengths: Array<{ quote: string; note: string }>
   improvements: Array<{ note: string; how: string }>
   rewrites: Array<{ quote: string; fix: string; why: string }>
+  short_version: string                          // 분량 리포트만 — 자유(0)면 ''
+  cuts: Array<{ quote: string; why: string }>    // 분량 리포트만 — 자유(0)면 []
   usage: { input_tokens?: number; output_tokens?: number }
 }
 
-// 말하기 분량(첨삭 옵션) — 화면(polish.html #lenRow)이 보내는 초. 이 세 값만 받는다.
+// 말하기 분량(첨삭 옵션) — 화면(polish.html #lenRow·#rsLen)이 보내는 초. 이 세 값만 받는다.
 // 초→글자 환산은 면접 말하기 속도(분당 300~350자) 기준 — 값을 바꾸면 화면 안내 문구도 같이 본다.
 const POLISH_TARGET_CHARS: Record<number, string> = { 20: '100~120자', 30: '150~180자', 40: '200~230자' }
+// 환산 상한(숫자) — short_version 이 이 값의 1.3배를 넘으면 한 번 다시 쓰게 한다(POLISH_OVER_RATIO)
+const POLISH_TARGET_MAX: Record<number, number> = { 20: 120, 30: 180, 40: 230 }
+const POLISH_OVER_RATIO = 1.3
 
 async function polishFill(
   apiKey: string, text: string, question: string, docKind: 'essay' | 'interview' | null,
