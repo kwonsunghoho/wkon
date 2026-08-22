@@ -698,6 +698,30 @@
     /* 못 읽은 갈래는 조용히 빼지 않고 사실대로 적는다(원칙 11) */
     .tl-miss { font-size: 12px; color: var(--st-alert); font-weight: 700; margin-top: 10px; }
 
+    /* ── 메모·태그(2026-08-22) — 내가 아는 것을 남기는 자리 ── */
+    .mtags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
+    .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+            border-radius: 4px; padding: 3px 6px 3px 9px; border: 1px solid var(--border);
+            background: var(--surface2); color: var(--accent-ink); }
+    /* 지우기는 빨간 글자(admin 공통 규칙 — 채운 빨간 버튼을 만들지 않는다) */
+    .mtag button { border: 0; background: none; cursor: pointer; font: inherit; font-size: 13px;
+                   line-height: 1; color: var(--st-danger); padding: 4px; min-width: 24px; min-height: 24px; }
+    .mtag-add { display: flex; gap: 6px; align-items: center; }
+    .mtag-add input { width: 116px; padding: 4px 8px; border: 1px solid var(--border);
+                      border-radius: 4px; font-size: 13px; font-family: inherit; }
+    .mnotes { list-style: none; }
+    .mnotes li { padding: 10px 0; border-top: 1px solid var(--border-soft); }
+    .mnotes li:first-child { border-top: 0; padding-top: 0; }
+    .mnotes .who { font-size: 12px; color: var(--text-dim); font-weight: 700; margin-bottom: 3px;
+                   display: flex; align-items: center; gap: 8px; }
+    .mnotes .who button { border: 0; background: none; cursor: pointer; font: inherit; font-size: 12px;
+                          font-weight: 700; color: var(--st-danger); padding: 4px; margin-left: auto; }
+    .mnotes .txt { font-size: 14px; color: var(--text); line-height: 1.65; white-space: pre-wrap; }
+    .mnote-form { margin-top: 12px; display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .mnote-form textarea { flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid var(--border);
+                           border-radius: var(--radius-xs); font-size: 14px; font-family: inherit;
+                           resize: vertical; min-height: 68px; }
+
     @media (max-width: 560px) {
       .mform { grid-template-columns: 1fr; }
       .mhead .mh-st { flex-wrap: wrap; }
@@ -2699,12 +2723,15 @@
       if (!_appsLoaded) await loadApplications();
       // 일차별 기록(daily_records)은 2026-08-20 화면에서 정리 — 데이터는 남아 있지만 더는 조회하지 않는다.
       // 산출물은 챌린지별 처음/끝(challenge_submissions — 학생 직접 업로드)으로 본다.
-      const [subsRes, { data: recs }, answers, labRes] = await Promise.all([
+      const [subsRes, { data: recs }, answers, labRes, noteRes, tagRes] = await Promise.all([
         sb().from('challenge_submissions').select('*').eq('member_id', id),
         sb().from('recordings').select('type, storage_path').eq('member_id', id),
         fetchAnswers(id),
         // 자료 받은 기록 — 타임라인에만 쓴다. 표가 없으면(PGRST205) 그 갈래만 빠진다.
         sb().from('lab_downloads').select('*').eq('member_id', id).order('created_at', { ascending: false }),
+        // 메모·태그(2026-08-22) — 표가 아직 없으면 패널이 '아직 안 켜짐'으로 degrade 한다
+        sb().from('member_notes').select('*').eq('member_id', id).order('created_at', { ascending: false }),
+        sb().from('member_tags').select('*').eq('member_id', id).order('created_at', { ascending: true }),
       ]);
       const labRows = labRes.error ? [] : (labRes.data || []);
       /* 자료 제목은 lab_resources 에 있다. _labRows 는 '연구실 자료' 탭을 열어야 차므로
@@ -2833,6 +2860,45 @@
         : '<div class="mini-empty">아직 기록이 없습니다.</div>';
       const tlMissHtml = tlMiss.length
         ? '<div class="tl-miss">' + esc(tlMiss.join('·')) + ' 을(를) 읽지 못했습니다 — 이 목록에서 빠져 있습니다.</div>' : '';
+      /* ══ 메모·태그(2026-08-22) ══
+         ⚠️ 표가 없을 때(PGRST205)와 '기록이 0건'일 때를 구별해 적는다 — 하나로 뭉치면
+            "아직 켜지지 않은 것"이 "적을 게 없는 것"으로 읽힌다(원칙 11).
+         ⚠️ 메모·태그는 사람이 쓴 글이다 — 반드시 esc() 로 넣는다. */
+      const crmMissing = r => r.error && (r.error.code === 'PGRST205'
+        || /could not find the table|does not exist/i.test(r.error.message || ''));
+      const notesOff = crmMissing(noteRes), tagsOff = crmMissing(tagRes);
+      const notes = noteRes.error ? [] : (noteRes.data || []);
+      const tags = tagRes.error ? [] : (tagRes.data || []);
+      const MIG_NOTE = '메모·태그가 아직 켜지지 않았습니다. Supabase SQL Editor 에서 '
+        + '<b>20260822170000_member_notes_tags.sql</b> 을 실행해 주세요.';
+      const nameOfAdmin = uid => {
+        const a = members.find(x => x.id === uid);
+        return a ? (a.name || a.email || '관리자') : '관리자';
+      };
+      // 관리자가 한 명뿐이면 이름을 적지 않는다 — 늘 같은 이름이라 자리만 먹는다
+      const manyAdmins = members.filter(x => x.is_owner || x.role === 'admin').length > 1;
+      const tagsHtml = tagsOff ? '' : `<div class="mtags" id="mtagList">
+        ${tags.map(t => `<span class="mtag">${esc(t.tag)}<button type="button" data-tagdel="${esc(t.tag)}" aria-label="${esc(t.tag)} 태그 지우기">&times;</button></span>`).join('')}
+        <span class="mtag-add">
+          <input id="mtagNew" placeholder="+ 태그" maxlength="20" aria-label="태그 추가">
+          <button class="btn btn-ghost btn-sm" type="button" id="mtagAdd">추가</button>
+        </span>
+      </div>`;
+      const notesHtml = notesOff || tagsOff
+        ? `<div class="mini-empty">${MIG_NOTE}</div>`
+        : (noteRes.error
+            ? `<div class="mini-empty" style="color:var(--st-alert)">메모를 읽지 못했습니다 — ${esc(noteRes.error.message)}</div>`
+            : (notes.length
+                ? `<ul class="mnotes">${notes.map(n => `<li>
+                     <div class="who">${esc(fmtDate(n.created_at))}${manyAdmins ? ' · ' + esc(nameOfAdmin(n.created_by)) : ''}
+                       <button type="button" data-notedel="${esc(n.id)}">지우기</button></div>
+                     <div class="txt">${esc(n.body)}</div></li>`).join('')}</ul>`
+                : '<div class="mini-empty">아직 메모가 없습니다.</div>'))
+          + (notesOff ? '' : `<div class="mnote-form">
+              <textarea id="mmemoBody" placeholder="상담 내용·특이사항을 적어 두면 다음에 볼 때 그대로 보입니다" aria-label="메모 내용"></textarea>
+              <button class="btn btn-action" type="button" id="mmemoSave">메모 저장</button>
+            </div>`);
+
       // 상세 머리에 쓰는 값 — 목록 행과 **같은 함수**로 낸다(두 화면이 다른 말을 하면 안 된다)
       const _ai = buildAppIndex(), _ci = buildCreditIndex();
       const myTier = tierReady() ? TIER_BY[memberTier(m, _ai, _ci)] : null;
@@ -2882,6 +2948,12 @@
           <h3>활동 타임라인 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 이 사람이 무엇을 했는지 시간순</span></h3>
           <div id="mlogBox">${tlHtml}</div>
           ${tlMissHtml}
+        </div>
+
+        <div class="panel">
+          <h3>메모·태그 <span style="font-size:13px;color:var(--text-muted);font-weight:400">· 내가 아는 것을 남기는 자리</span></h3>
+          ${tagsHtml}
+          <div id="mmemoBox">${notesHtml}</div>
         </div>
 
         <div class="panel">
@@ -2989,7 +3061,70 @@
       </div>`;
     }
 
+    /* 메모·태그 저장(2026-08-22). ⚠️ 실패를 전부 '마이그레이션 미적용'으로 단정하지 않는다 —
+       네트워크·권한 오류까지 "SQL 을 실행하세요"로 안내하면 엉뚱한 곳을 고치게 된다. */
+    function crmError(error, what) {
+      const missing = error.code === 'PGRST205'
+        || /could not find the table|does not exist/i.test(error.message || '');
+      alert(missing
+        ? '메모·태그가 아직 켜지지 않았습니다.\nSupabase SQL Editor 에서 20260822170000_member_notes_tags.sql 을 실행해 주세요.'
+        : what + ' 실패: ' + error.message);
+    }
+
+    function wireCrm(id) {
+      const box = document.getElementById('mmemoBox');
+      const save = document.getElementById('mmemoSave');
+      if (save) save.addEventListener('click', async () => {
+        const el = document.getElementById('mmemoBody');
+        const body = (el.value || '').trim();
+        if (!body) { el.focus(); return; }
+        save.disabled = true;
+        const { error } = await sb().from('member_notes')
+          .insert({ member_id: id, body, created_by: (myProfile || {}).id || null });
+        save.disabled = false;
+        if (error) { crmError(error, '메모 저장'); return; }
+        toast('메모를 저장했어요');
+        selectMember(id);
+      });
+
+      // 지우기는 되돌릴 수 없다 — 확인을 붙인다
+      (box ? box.querySelectorAll('[data-notedel]') : []).forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('이 메모를 지울까요? 되돌릴 수 없습니다.')) return;
+        const { error } = await sb().from('member_notes').delete().eq('id', btn.dataset.notedel);
+        if (error) { crmError(error, '메모 삭제'); return; }
+        toast('메모를 지웠어요');
+        selectMember(id);
+      }));
+
+      const addTag = async () => {
+        const el = document.getElementById('mtagNew');
+        const tag = (el.value || '').trim();
+        if (!tag) { el.focus(); return; }
+        if (tag.length > 20) { alert('태그는 20자까지입니다.'); return; }
+        const { error } = await sb().from('member_tags').insert({ member_id: id, tag });
+        // 같은 태그를 또 넣는 것은 실수지 오류가 아니다 — 조용히 넘긴다(기본키 중복)
+        if (error && error.code !== '23505') { crmError(error, '태그 추가'); return; }
+        el.value = '';
+        selectMember(id);
+      };
+      const addBtn = document.getElementById('mtagAdd');
+      if (addBtn) addBtn.addEventListener('click', addTag);
+      const newEl = document.getElementById('mtagNew');
+      // Enter 로도 들어간다 — 태그는 연달아 넣는 값이다
+      if (newEl) newEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addTag(); }
+      });
+
+      document.querySelectorAll('#mtagList [data-tagdel]').forEach(btn => btn.addEventListener('click', async () => {
+        const { error } = await sb().from('member_tags').delete()
+          .eq('member_id', id).eq('tag', btn.dataset.tagdel);
+        if (error) { crmError(error, '태그 삭제'); return; }
+        selectMember(id);
+      }));
+    }
+
     function wireDetail(id, recMap, chSubs) {
+      wireCrm(id);
       // 보관/해제(한 명) — 목록 일괄과 같은 함수를 쓴다(확인 문구·권한 제외 규칙이 한 벌)
       const arcBtn = document.getElementById('arcOne');
       if (arcBtn) arcBtn.addEventListener('click', async () => {
