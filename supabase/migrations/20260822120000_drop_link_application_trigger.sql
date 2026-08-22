@@ -1,0 +1,47 @@
+-- =============================================================================
+-- 신청 자동 전화연결 트리거 제거 — 비로그인 신청 42501 유실 수리 (2026-08-22)
+-- =============================================================================
+-- 실행: Supabase 대시보드 > SQL Editor 에 붙여넣고 Run. idempotent — 재실행 안전.
+-- 라이브 존재 실측: 2026-08-22 오너 pg_trigger 조회에서 trg_link_application_member 확인.
+--
+-- 왜 필요한가 ─────────────────────────────────────────────────────────────────
+--   2026-07-03 콘솔 시절 트리거(레포 마이그레이션엔 없음 — 계획서
+--   docs/archive/plans/2026-07-03-phase2-applications.md)가 applications INSERT 직전에
+--   member_id 를 전화번호 일치 회원으로 자동으로 채운다. 그런데 2026-08-04 RLS 하드닝
+--   이후의 INSERT 정책(applications_insert_public)은 `member_id is null or
+--   member_id = auth.uid()` 를 요구하고, Postgres 는 이 검사를 **트리거가 고친 최종
+--   행**에 적용한다. 그래서:
+--     · 기존 회원이 로그아웃 상태로(인스타 인앱은 구글 로그인이 거부돼 흔한 상황)
+--       apply.html 계좌이체 신청 → 트리거가 member_id 를 채움 → anon 의 auth.uid() 는
+--       null → 42501 → 신청이 일반 오류 문구로 유실된다.
+--     · 회원 전화번호와 같은 번호를 쓴 비회원 신청도 동일하게 유실.
+--     · 로그인 회원이라도 남의 계정 번호(가족 공용 등)와 일치하면 member_id 가 남의
+--       id 로 채워져 같은 이유로 거부된다.
+--   sojae_access(20260821 수리)와 같은 부류 — 코드·정책은 진화했는데 콘솔 시절
+--   DB 규칙이 옛 전제로 남아 정상 사용을 막았다.
+--
+-- 왜 '수정'이 아니라 '삭제'인가 ────────────────────────────────────────────────
+--   이 트리거가 남아서 할 수 있는 일이 이제 없다. 연결의 다른 경로가 전부 살아 있다:
+--     · 로그인 신청은 화면(apply.html·lecture.html)이 member_id 를 직접 넣는다.
+--     · 비회원 신청은 가입·전화 저장 시 trg_backfill_member_applications(members 쪽 —
+--       이 파일은 건드리지 않는다)가 과거 신청을 자동 연결한다.
+--     · admin 신청 카드의 '○ 전화매칭' 배지 + [이 회원에 연결](2026-08-20)이 수동 연결.
+--   verify-payment·webhook(service_role) 경로 행의 즉석 전화연결도 같이 사라지지만,
+--   위 백필·수동 경로가 같은 결과를 낸다 — 즉석이 아니어도 늦게 연결되면 충분하다.
+--
+-- ⚠️ normalize_phone() 은 지우지 않는다 — 백필 트리거가 쓴다.
+-- =============================================================================
+
+drop trigger if exists trg_link_application_member on public.applications;
+drop function if exists public.link_application_member();
+
+-- =============================================================================
+-- 적용 확인 — applications 의 트리거가 아래 3개만 남으면 정상
+--   applications_duplicate · applications_lecture_capacity · applications_lecture_seats
+-- =============================================================================
+-- select tgname from pg_trigger
+--  where tgrelid = 'public.applications'::regclass and not tgisinternal
+--  order by tgname;
+--
+-- 실동작 확인: 로그아웃 상태에서 apply.html 계좌이체 신청(가입된 번호로) → 접수 성공.
+-- =============================================================================
