@@ -351,6 +351,20 @@
     .af-sub .af-chip.on { font-weight: 700; }
     .apps-toolbar .search { flex: 1; min-width: 160px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; }
     .apps-count { font-size: 13px; color: var(--text-muted); }
+    /* 신청 묶음(2026-08-22 오너 "챌린지 항목별로 나눠서") — 목록은 챌린지·기수(특강은 특강)마다
+       접이 한 칸이다. 머리는 이름·인원·미입금 수, 펼치면 그 묶음의 신청 카드. 한 신청에 챌린지가
+       둘이면 두 묶음에 한 번씩 들어간다(필터와 같은 '항목 단위' 판정). 접힌 묶음은 카드를 안 그린다. */
+    .ag { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); margin-bottom: 10px; box-shadow: var(--shadow); }
+    .ag > summary { list-style: none; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-height: 48px; padding: 10px 14px; cursor: pointer; font-weight: 800; font-size: 15px; color: var(--text); }
+    .ag > summary::-webkit-details-marker { display: none; }
+    .ag > summary .ag-n { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+    .ag > summary .ag-unpaid { font-size: 12px; font-weight: 800; color: var(--st-alert); }
+    .ag > summary .ag-chev { margin-left: auto; width: 16px; height: 16px; color: var(--text-dim); transform: rotate(90deg); transition: transform .15s; flex: none; }
+    .ag[open] > summary .ag-chev { transform: rotate(-90deg); }
+    .ag-body { padding: 0 8px 8px; }   /* 옆 여백을 더 주면 375px 에서 카드 알약 줄이 좁아져 글자가 꺾인다 */
+    .ag-body .app-card { box-shadow: none; border-color: var(--border-soft); }
+    .ag-body .app-card:last-child { margin-bottom: 0; }
+    .ag-body .mmore { padding-top: 8px; }
     .app-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
     .app-card .ac-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
     .app-card .ac-name { font-weight: 800; font-size: 16px; }
@@ -366,11 +380,11 @@
     /* 같은 사람이 같은 프로그램을 두 번 신청한 행 — 지울 수 있게 눈에 띄게 */
     .app-card.is-dup { border-color: var(--action); background: var(--action-tint); }
     .app-card .ac-dup { font-size: 12px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
-    .app-card .ac-toggles { display: flex; gap: 8px; margin-top: 8px; }
-    .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
+    .app-card .ac-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }   /* 묶음 안에서 폭이 좁아지면 알약이 줄을 바꾼다 — 글자를 꺾지 않는다 */
+    .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); white-space: nowrap; }
     .app-card .ac-tg.on { background: var(--st-ok); color: #fff; border-color: var(--st-ok); }
     .app-card .ac-tg.on-refund { background: var(--action); color: #fff; border-color: var(--action); }
-    .app-card .ac-del { margin-left: auto; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--action-dark); }
+    .app-card .ac-del { margin-left: auto; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--action-dark); white-space: nowrap; }
     .app-card .ac-del:hover { background: var(--action-tint); }
 
     .reviews-wrap { padding: 20px; max-width: 900px; }
@@ -3658,7 +3672,11 @@
        행에도 lecture_id 를 남긴다. 둘 중 하나만 있어도 특강으로 친다(구 데이터 방어). */
     let _appKind = 'all', _appSub = '', _appRound = '', _appPay = 'all';
     const A_PAGE = 50;   // 신청 카드를 한 번에 그리는 수 — 계산은 _apps 전량으로 한다
-    let _aShown = A_PAGE;
+    let _aShown = A_PAGE;        // '자료' 목록(평면)의 표시 수
+    let _aShownBy = {};          // 신청 묶음별 표시 수(키 → 수). 없으면 A_PAGE
+    let _agOpen = new Map();     // 묶음 접이 상태(키 → 열림). 한 번 손댄 묶음은 다시 그려도 그대로
+    // 조건(종류·세부·기수·입금·검색)이 바뀌면 표시 수를 처음으로 — 안 그러면 3건짜리 결과에 '더 보기'가 남는다
+    function resetAppPage() { _aShown = A_PAGE; _aShownBy = {}; }
 
     function appIsLecture(a) {
       if (a.lecture_id) return true;
@@ -3751,6 +3769,46 @@
         && (!_appRound || String(c.round || '') === _appRound));
     }
 
+    /* ── 묶음(2026-08-22 오너 "챌린지 항목별로 나눠서") ──
+       신청 한 행이 들어갈 묶음 목록. 챌린지는 `챌린지+기수`, 특강은 특강 하나가 한 묶음.
+       한 행에 챌린지가 여럿이면 묶음마다 한 번씩 들어간다 — 세부·기수 필터와 같은 '항목 단위' 판정이라,
+       '승자각 3기'를 걸어 놓으면 같이 신청한 '스피닝 3기' 항목은 묶음을 만들지 않는다.
+       ⚠️ 행에 어느 항목도 없으면(구 데이터·깨진 jsonb) '종류 미상' 묶음 — 조용히 빠뜨리지 않는다(원칙 11). */
+    function appGroupKeys(a) {
+      const list = Array.isArray(a.challenges) ? a.challenges : [];
+      const out = new Map();   // key → label
+      if (appIsLecture(a)) {
+        const subLec = _appKind === 'lecture' ? _appSub : '';
+        const items = list.filter(c => c && (c.type === 'lecture' || c.lecture_id));
+        if (!items.length && a.lecture_id) items.push({ lecture_id: a.lecture_id, name: '특강' });   // challenges 가 빈 구 데이터
+        items.forEach(c => {
+          const k = appLectureKey(a, c);
+          if (subLec && k !== subLec) return;
+          out.set('lec:' + k, '📚 ' + (c.name || '특강'));
+        });
+      } else {
+        const subCh = _appKind === 'challenge' ? _appSub : '';
+        list.forEach(c => {
+          if (!c || !c.challenge) return;
+          if (subCh && c.challenge !== subCh) return;
+          if (_appRound && String(c.round || '') !== _appRound) return;
+          const r = c.round ? String(c.round) : '';
+          out.set('ch:' + c.challenge + ':' + r, (CH_LABEL[c.challenge] || c.challenge) + (r ? ' ' + r + '기' : ''));
+        });
+      }
+      if (!out.size) out.set('misc', '종류 미상');
+      return [...out.entries()];
+    }
+    // 보이는 목록(최신순)을 묶음으로 — 순서는 가장 최근 신청이 든 묶음부터(지금 모집 중인 기수가 위로 온다)
+    function appGroupList(list) {
+      const map = new Map();
+      list.forEach(a => appGroupKeys(a).forEach(([key, label]) => {
+        if (!map.has(key)) map.set(key, { key, label, apps: [] });
+        map.get(key).apps.push(a);
+      }));
+      return [...map.values()];   // list 가 최신순이라 Map 삽입 순서가 곧 '최근 신청 순'
+    }
+
     function renderSubFilter() {
       const el = document.getElementById('afSub');
       if (_appKind === 'all') { el.hidden = true; el.innerHTML = ''; return; }
@@ -3762,7 +3820,7 @@
             `<button type="button" class="af-chip${_appSub === k ? ' on' : ''}" data-sub="${esc(k)}">${esc(label)}</button>`).join('');
       el.querySelectorAll('.af-chip').forEach(b => b.addEventListener('click', () => {
         // 챌린지를 바꾸면 기수도 처음으로 — 기수 번호는 챌린지마다 따로라 그대로 두면 없는 조합이 남는다
-        _appSub = b.dataset.sub; _appRound = ''; _aShown = A_PAGE; renderApps();
+        _appSub = b.dataset.sub; _appRound = ''; resetAppPage(); renderApps();
       }));
     }
 
@@ -3791,7 +3849,7 @@
       el.innerHTML = `<button type="button" class="af-chip${_appRound ? '' : ' on'}" data-round="">전체</button>`
         + opts.map(r => `<button type="button" class="af-chip${_appRound === r ? ' on' : ''}" data-round="${esc(r)}">${esc(r)}기</button>`).join('');
       el.querySelectorAll('.af-chip').forEach(b => b.addEventListener('click', () => {
-        _appRound = b.dataset.round; _aShown = A_PAGE; renderApps();
+        _appRound = b.dataset.round; resetAppPage(); renderApps();
       }));
     }
 
@@ -3900,7 +3958,7 @@
 
     document.getElementById('afKind').addEventListener('click', e => {
       const b = e.target.closest('.af-chip'); if (!b) return;
-      _appKind = b.dataset.kind; _appSub = ''; _appRound = ''; _aShown = A_PAGE;
+      _appKind = b.dataset.kind; _appSub = ''; _appRound = ''; resetAppPage();
       document.querySelectorAll('#afKind .af-chip').forEach(x => x.classList.toggle('on', x === b));
       // '자료' 칩을 처음 눌렀을 때만 받는다. 실패 상태면 재시도 버튼이 다시 부른다.
       if (_appKind === 'lab' && !_appLabLoaded && !_appLabErr) loadAppLab();
@@ -3910,7 +3968,7 @@
     // 입금 필터. setAppPay 를 따로 둔 이유 — '오늘' 카드에서도 같은 길로 켜야 칩 표시가 같이 맞는다.
     function setAppPay(v) {
       _appPay = v || 'all';
-      _aShown = A_PAGE;   // 조건이 바뀌면 표시 수를 처음으로 — 안 그러면 3건짜리 결과에 '더 보기'가 남는다
+      resetAppPage();
       document.querySelectorAll('#afPay .af-chip').forEach(x => x.classList.toggle('on', x.dataset.pay === _appPay));
       if (_appsLoaded) renderApps();
     }
@@ -3934,11 +3992,15 @@
       if (!list.length) { body.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'; return; }
       const phoneSet = memberPhoneSet();
       const dups = dupIdSet();
-      /* ⚠️ 카드는 한 번에 A_PAGE 건만 그린다(2026-08-03) — 카드 하나가 약 200px 이라
-         수천 건을 통째로 그리면 탭을 열 때마다 멎는다. 위 건수·중복 검사·CSV 는
-         전량(_apps)을 그대로 쓰므로 숫자는 안 줄어든다. */
-      const shown = list.slice(0, _aShown);
-      body.innerHTML = shown.map(a => `
+      const q = (document.getElementById('appSearch').value || '').trim();
+      /* 묶음으로 나눈다(2026-08-22 오너 "챌린지 항목별로 나눠서"). 묶음 순서 = 가장 최근 신청이 들어온
+         묶음부터 — 지금 모집 중인 기수가 위로 온다. 접이 기본값: 맨 위 묶음만 열림, 묶음이 하나뿐이거나
+         검색 중이면 전부 열림. 한 번 손댄 묶음은 `_agOpen` 대로(입금 토글 뒤 다시 그려도 안 접힌다).
+         ⚠️ 카드는 **열린 묶음**에만, 묶음마다 A_PAGE 건씩 그린다(2026-08-03 규칙 계승 — 카드 하나가
+            약 200px 이라 수천 건을 통째로 그리면 탭을 열 때마다 멎는다). 위 건수·중복 검사·CSV 는
+            전량(_apps)을 그대로 쓰므로 숫자는 안 줄어든다. */
+      const groups = appGroupList(list);
+      const cardHtml = a => `
         <div class="app-card${dups.has(a.id) ? ' is-dup' : ''}" data-id="${a.id}">
           <div class="ac-top">
             <span class="ac-name">${esc(a.name)}${dups.has(a.id) ? '<span class="ac-dup">중복</span>' : ''}</span>
@@ -3958,16 +4020,36 @@
             <button class="ac-tg ${appFree(a) ? 'on' : ''}" data-field="free">무료(재학생) ${appFree(a) ? '✓' : ''}</button>`}
             <button class="ac-del is-danger">삭제</button>
           </div>
-        </div>`).join('')
-        + (list.length > shown.length
-            ? `<div class="mmore" id="appMore"><span>${shown.length.toLocaleString()} / ${list.length.toLocaleString()}건 표시</span>`
-              + `<button class="btn btn-ghost btn-sm" type="button" id="appMoreBtn">더 보기</button></div>`
-            : '')
+        </div>`;
+      body.innerHTML = groups.map((g, i) => {
+        const open = _agOpen.has(g.key) ? _agOpen.get(g.key) : (i === 0 || groups.length === 1 || !!q);
+        const unpaid = g.apps.filter(appIsUnpaid).length;
+        const cap = _aShownBy[g.key] || A_PAGE;
+        const shown = open ? g.apps.slice(0, cap) : [];
+        return `<details class="ag" data-group="${esc(g.key)}"${open ? ' open' : ''}>
+          <summary>${esc(g.label)} <span class="ag-n">${g.apps.length.toLocaleString()}명</span>`
+          + (unpaid ? `<span class="ag-unpaid">미입금 ${unpaid.toLocaleString()}</span>` : '')
+          + `<svg aria-hidden="true" class="ic ag-chev"><use href="#i-chev"/></svg></summary>`
+          + (open ? `<div class="ag-body">${shown.map(cardHtml).join('')}`
+              + (g.apps.length > shown.length
+                  ? `<div class="mmore"><span>${shown.length.toLocaleString()} / ${g.apps.length.toLocaleString()}건 표시</span>`
+                    + `<button class="btn btn-ghost btn-sm ag-more" type="button">더 보기</button></div>`
+                  : '')
+              + `</div>` : '')
+          + `</details>`;
+      }).join('')
         + (_appsTruncated
             ? '<div class="mmore"><span style="color:var(--st-alert)">신청이 너무 많아 일부만 불러왔습니다 — 건수·중복 표시가 실제보다 적습니다.</span></div>'
             : '');
-      const appMoreBtn = document.getElementById('appMoreBtn');
-      if (appMoreBtn) appMoreBtn.addEventListener('click', () => { _aShown += A_PAGE; renderApps(); });
+      // 접고 펼친 상태를 기억한다(토글 뒤 다시 그려도 그대로). 펼친 묶음의 카드는 그때 그린다.
+      body.querySelectorAll('details.ag').forEach(d => d.addEventListener('toggle', () => {
+        _agOpen.set(d.dataset.group, d.open);
+        if (d.open && !d.querySelector('.ag-body')) renderApps();   // 접힌 채 그려진 묶음 — 카드를 지금 그린다
+      }));
+      body.querySelectorAll('.ag-more').forEach(b => b.addEventListener('click', () => {
+        const k = b.closest('details.ag').dataset.group;
+        _aShownBy[k] = (_aShownBy[k] || A_PAGE) + A_PAGE; renderApps();
+      }));
       // 간편결제 환불 — cancel-payment Edge Function(관리자 검증) → 포트원 취소(원결제수단 자동 환불)
       body.querySelectorAll('.ac-refundbtn').forEach(btn => btn.addEventListener('click', async () => {
         const id = btn.closest('.app-card').dataset.id;
@@ -4106,7 +4188,7 @@
       csvSave(head, rows, appCsvTag());
     }
 
-    document.getElementById('appSearch').addEventListener('input', () => { _aShown = A_PAGE; renderApps(); });
+    document.getElementById('appSearch').addEventListener('input', () => { resetAppPage(); renderApps(); });
     // 새로고침 시 회원 목록도 다시 읽어, 그 사이 가입/전화등록한 사람이 '회원'으로 즉시 반영되게 한다.
     document.getElementById('appRefresh').addEventListener('click', async () => {
       await loadMembers(); await loadApplications();
