@@ -136,7 +136,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 마이페이지 | `mypage.html` | '오늘 한 칸'엔 사이트가 아는 사실만(제출 여부 문장 금지), 접이는 데이터 있는 줄만 | `docs/notes/mypage.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer 의 `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
-| admin | `admin.html` | 좌측 사이드바 셸(운영/상품/콘텐츠 그룹) + '오늘' 브리핑 — 탭을 추가하면 어느 그룹인지부터 정한다 | `docs/notes/admin.md` |
+| admin | `admin.html` | 좌측 사이드바 셸(운영/상품/콘텐츠 그룹) + '오늘' 브리핑 — 탭을 추가하면 어느 그룹인지부터 정한다. **UI 는 역할마다 모양이 다른 한 벌**(고르기=밑줄 탭·좁은 칸=라벨 셀렉트·행 동작=네모 버튼·삭제=빨간 글자·목록=구분선 한 판·상태=radius 4 라벨) — **알약 금지**(2026-08-22 전 탭 교체, `999px` 0곳) | `docs/notes/admin.md` |
 | 후기(허브·챌린지·상담·합격 수기) | `reviews.html`(허브)·`reviews-list.html`(목록 공용)·`stories.html`·`story.html`·`review-write.html`(참가자 직접 제출) | 목록은 `?kind=` 한 파일(종류별 HTML 금지), 자료 0건인 종류는 카드를 안 그린다, **상담 후기는 실명 미노출**. **회원 제출 후기는 서버(RPC)가 참가·기수를 판정해 `visible=false` 로 넣는다 — 즉시 공개 금지, 승인은 admin '승인 대기' 칩·보상 없음(오너 확정)**. **합격 수기는 2026-08-16 잠시 내림**(상담 후기가 찰 때까지 — `STORIES_OPEN=false`·stories/story 는 reviews 로 리다이렉트·nav 갈래 주석, 데이터·admin 칸은 유지. 복원 절차는 pages.md '합격 수기 잠시 내림') | `docs/notes/pages.md` |
 | 1:1 상담·네이버 예약 | `consult.html` | **네이버 예약 주소 정본은 consult.html 한 곳** — 다른 자리는 이 페이지로 보낸다. 진입점 3곳 고정(상담 후기 목록 CTA·index 푸터·사이트 밖), **홈 본문·nav 메뉴·플로팅 금지**, 초록 버튼은 진한 글씨(흰 글씨 대비 미달) | `docs/notes/pages.md` |
 | 커뮤니티 오픈챗 모집 카드 | `community-card.js` | **카드는 서가(lab-shelf)·뉴스·도구(tools) 3곳뿐**(2026-08-16 오너 "덕지덕지 오픈하진 말고" — 홈 금지는 유지), 문구·모양·동작은 이 한 파일(페이지 복사 금지, 수정 시 세 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절 — 회원만 `community_config` 에서 받는다), nav 소셜 줄 '오픈채팅 커뮤니티'는 방 직링크가 아니라 `tools.html#community` 착지 | `docs/notes/pages.md` |
@@ -214,6 +214,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 특강 카드 커버 가격 배지·backdrop-filter 유리 패널·클라이언트 잔여석 update (lectures.md)
 - 블라인드 퀴즈를 상세 페이지나 두 곳 이상에 싣기 — challenges.html 하단 한 곳 확정 (home.md)
 - admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격(상품>일문일답(구 답변 프로그램) 서브탭 유지 — 오너 확정) (admin.md)
+- admin 의 알약(`border-radius:999px` — 필터 칩·서브탭·행 버튼·상태 배지) — 2026-08-22 오너 "죄다 알약이야"로 역할별 모양 한 벌로 교체 (admin.md '알약 걷어내기')
 - `rehearsal.html` 카드 숨김 해제 — 코드가 main 에 없어 404 난다(`claude/rehearsal-wip` 먼저 병합) (implementation-status.md)
 - `challenge-express.html`·`challenge-speech.html` 되살리기 — 2026-07-14 커밋 `072c937` 에서 고아 파일로 제거됐다. 상세는 voice·expression·spinning·answer 4종뿐(2026-08-07 실측) (pages.md)
 - AI킬러 일반 텍스트 응답(칸 없는 자유 출력)·함수 모듈 분리 (ai-killer 스펙)

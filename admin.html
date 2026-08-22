@@ -68,11 +68,12 @@
     .brand-link { display: flex; align-items: center; text-decoration: none; min-height: 44px; padding-right: 8px; }
     .brand-link img { height: 20px; width: auto; display: block; }
     .brand-link:hover { opacity: .7; }
+    /* 상태 라벨은 네모(radius 4) — admin 의 라벨은 전부 이 모양이다(2026-08-22 알약 폐기). */
     .badge { font-size: 12px; font-weight: 800; color: #fff; background: var(--action);
-             border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+             border-radius: 4px; padding: 3px 9px; white-space: nowrap; }
     /* ⚠️ .snav 안이라 .smain/.side 의 경계선 규칙이 안 닿는다 — 여기만 --border 였다(1.37:1 · 실측) */
     .logout { font-size: 13px; color: var(--text-muted); background: #fff; border: 1px solid var(--border-strong);
-              border-radius: 999px; padding: 9px 14px; min-height: 44px; cursor: pointer; white-space: nowrap; }
+              border-radius: var(--radius-sm); padding: 9px 14px; min-height: 44px; cursor: pointer; white-space: nowrap; }
     .logout:hover { border-color: var(--action); color: var(--action); }
     .ic { width: 18px; height: 18px; flex: 0 0 auto; }
 
@@ -108,7 +109,7 @@
       .mt-cur { font-size: 16.5px; font-weight: 800; letter-spacing: -0.01em; margin-left: 2px; min-width: 0;
                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mt-menu { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; flex: 0 0 auto; min-height: 44px;
-                 border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 9px 14px;
+                 border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 9px 14px;
                  font-size: 13.5px; font-weight: 800; color: var(--text); font-family: inherit; cursor: pointer; }
       .mt-menu .ic { width: 16px; height: 16px; }
       body.navopen .mscrim { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(16, 27, 45, .42); }
@@ -191,22 +192,22 @@
       .tb-colA { padding-right: 0; border-right: 0; order: 2; }
       .tb-colB { padding-left: 0; order: 1; margin-bottom: 24px; }
     }
+    /* '최근 신청' 행은 누르면 그 사람 신청으로 간다 — 구분선 목록에선 테두리가 아니라 바탕으로 알린다
+       (2026-08-22 목록 개편 · 구 규칙은 카드 테두리 색을 바꿨는데 이제 행에 테두리가 없다). */
     .td-recent .round-item { cursor: pointer; }
-    .td-recent .round-item:hover { border-color: var(--accent-dark); }
+    .td-recent .round-item:hover { background: var(--bg2); }
+    .td-recent .round-item:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -2px; }
     .td-paystat { font-size: 12px; font-weight: 700; white-space: nowrap; }
     .td-paystat.ok { color: var(--st-ok); }
     .td-paystat.no { color: var(--st-alert); }
 
-    /* ── 답변 프로그램 서브탭 — 6절을 한 화면씩. 탭 알약과 같은 문법, 한 단계 작게 ── */
-    .ap-subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 16px; }
-    .ap-st { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; min-height: 44px; }
-    .ap-st:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
-    .ap-st.on { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
+    /* ── 답변 프로그램 서브탭 — 6절을 한 화면씩. 모양은 아래 '밑줄 탭' 한 벌이 그린다 ── */
+    .ap-subtabs { margin: 4px 0 16px; }
     .ap-sec[hidden] { display: none; }
-    /* 기출 은행 목록 필터 — 유형 칩(개수 배지). 칩 자체는 신청자 현황과 같은 .af-chip 을 쓴다. */
-    .apq-filter { margin: 4px 0 12px; }
-    .apq-flabel { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    #apqFilter b, #lrShelfBar b, #qLevelFilter b, #qCatFilter b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
+    /* 목록 필터 — 라벨 한 줄 + 밑줄 탭 줄(개수는 탭 글자 옆 <b>). 회원 상태·기출 유형·소재 유형/난이도·서가·항공사 공통. */
+    .apq-filter { margin: 4px 0 14px; }
+    .apq-flabel { display: block; font-size: 12px; font-weight: 700; color: var(--text-dim); margin-bottom: 2px; }
+    .apq-filter .af-row { margin-bottom: 0; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .rounds-wrap { padding: 24px; max-width: 900px; }
@@ -311,27 +312,49 @@
        안 읽힌다. 바탕만 눕히고 글자·버튼 대비는 그대로 둔다(2026-08-03). */
     .round-item.is-done, .round-item.is-off { background: var(--bg2); }
     .round-item.is-done .ri-main, .round-item.is-off .ri-main { color: var(--text-muted); }
-    .round-list { display: flex; flex-direction: column; gap: 8px; }
-    .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
+    /* ── 목록은 카드 나열이 아니라 구분선 있는 한 판(2026-08-22 신청자 현황 .apl-list 와 한 벌) ──
+       카드 8px 간격 나열은 행마다 테두리가 4줄씩 그어져 목록이 아니라 '상자 더미'로 보였다.
+       ⚠️ .panel 안에 들어가는 목록(이력·로그·피드백)은 판 안의 판이 되므로 테두리를 다시 벗긴다. */
+    .round-list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-soft);
+                  border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow); }
+    .panel .round-list, .side .round-list { border: 0; border-radius: 0; box-shadow: none; background: none; }
+    /* 아직 줄이 없을 때(불러오는 중·비었음)는 판을 그리지 않는다 — 글 한 줄을 큰 빈 카드가 감싸면
+       '무언가 로딩에 실패한 판'처럼 보인다. */
+    .round-list:has(> .loading:only-child), .round-list:has(> .empty:only-child) { border: 0; box-shadow: none; background: none; }
+    .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border-soft); }
+    .round-item:last-child { border-bottom: 0; }
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
     .round-item .ri-sub { font-size: 13px; color: var(--text-muted); }
     /* ⚠️ .round-item 자손으로만 정의하면 목록 밖에서 쓸 때 스타일이 하나도 안 먹는다
        (자료 파일 목록·이용권 지급 회원 고르기가 브라우저 기본 회색 사각 버튼으로 나왔다 — 2026-08-02 5차).
-       행 버튼은 어디서 쓰든 같은 모양이어야 한다. */
-    .ri-del { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
-    /* 행 버튼 묶음 — 목록 행의 버튼은 전부 이 클래스로 감싼다(인라인 flex 금지).
-       모바일에서 본문 아래로 내리는 규칙(아래 960px 블록)이 이 클래스를 기준으로 걸린다. */
-    /* 인접 표적 8px(원칙 2) — 이 줄엔 '삭제'가 끼어 있어 오눌림의 대가가 크다. */
-    .ri-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-    /* 목록에서 바로 난이도를 바꾼다(2026-08-05) — 문제가 80개 넘게 쌓여 있어
-       하나씩 '수정' 폼을 열어 고치면 재분류가 끝나지 않는다. 모양은 .ri-del 과 같은 알약. */
-    .ri-actions .q-lv { font-size: 12px; font-family: inherit; color: var(--action-dark);
-      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
-      padding: 6px 10px; cursor: pointer; }
-    .ri-edit { font-size: 12px; font-family: inherit; color: var(--action-dark); background: none; border: 1px solid var(--action); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
+       행 버튼은 어디서 쓰든 같은 모양이어야 한다.
+       ── 2026-08-22: 알약 → 네모 버튼(radius 8). 신청자 현황의 .apl-seg·.ad-sq 와 같은 모서리다.
+          삭제(.is-danger)만 테두리 없는 빨간 글자 버튼 — 같은 줄의 되돌릴 수 있는 버튼들과 무게가 다르다. */
+    .ri-del, .ri-edit, .ri-cancel {
+      font-size: 13px; font-family: inherit; font-weight: 700; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px;
+      cursor: pointer; white-space: nowrap; }
+    .ri-del:hover, .ri-cancel:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+    /* 목록에서 바로 난이도를 바꾸는 셀렉트(2026-08-05) — 문제가 80개 넘게 쌓여 있어
+       하나씩 '수정' 폼을 열어 고치면 재분류가 끝나지 않는다. 모서리는 행 버튼과 같다. */
+    .ri-actions .q-lv { font-size: 13px; font-family: inherit; font-weight: 700; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      min-height: 36px; padding: 0 8px; cursor: pointer; }
+    .ri-actions .q-lv:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+    /* 주 동작(수정·공개·연락 완료) — 남색 글씨로 구분한다.
+       ⚠️ 테두리 색은 아래 대비 규칙(.smain :is(…) → --border-strong !important)이 가져간다 — 여기서 지정해도 안 먹는다. */
+    .ri-edit { color: var(--accent-ink); }
     .ri-edit:hover { background: var(--action-tint); }
+    /* 삭제 — 테두리 없는 글자 버튼(신청자 명단의 .apl-txt 와 같은 문법).
+       ⚠️ .is-danger 의 border-color !important 는 남아도 폭이 0 이라 보이지 않는다. */
+    .ri-del.is-danger { border-width: 0; background: none; padding: 0 8px; }
+    .ri-del.is-danger:hover { background: rgba(179, 38, 30, .07); }
+    /* 행 버튼 묶음 — 목록 행의 버튼은 전부 이 클래스로 감싼다(인라인 flex 금지).
+       모바일에서 본문 아래로 내리는 규칙(아래 960px 블록)이 이 클래스를 기준으로 걸린다.
+       인접 표적 8px(원칙 2) — 이 줄엔 '삭제'가 끼어 있어 오눌림의 대가가 크다. */
+    .ri-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
     .round-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--action-tint); border: 1px solid var(--action); border-radius: var(--radius-xs); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--action-dark); }
-    .ri-cancel { font-size: 12px; font-family: inherit; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
     /* ⚠️ hidden 짝 규칙 — display 를 직접 주는 요소는 [hidden] 이 그 규칙에 진다(작성자 CSS > UA 스타일).
        챌린지·특강·연구실 자료의 편집 바가 빈 바 + '취소' 버튼인 채 항상 떠 있던 버그(2026-08-01 실측).
        display 있는 요소에 hidden 을 쓰면 아래처럼 [hidden] 짝을 같이 둘 것. */
@@ -340,37 +363,45 @@
 
     .apps-wrap { padding: 20px; max-width: 900px; }
     .apps-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-    /* 신청자 종류 필터 — 1줄: 전체/챌린지/특강, 2줄: 그 안의 세부(실존하는 값만) */
-    .apps-filter { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-    .af-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .af-chip { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; min-height: 38px; }
-    .af-chip:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
-    .af-chip.on { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
-    .af-sub { padding-left: 2px; }
-    .af-sub .af-chip { font-weight: 500; font-size: 12.5px; padding: 7px 12px; min-height: 34px; }
-    .af-sub .af-chip.on { font-weight: 700; }
+    /* 필터 줄(.af-row)은 아래 '밑줄 탭' 한 벌이 그린다 — 여기엔 자리만 잡는다.
+       구 .apps-filter·.af-sub 는 2026-08-22 범위 고르기 개편으로 쓰는 곳이 없어져 지웠다. */
+    .af-row { margin-bottom: 12px; }
     .apps-toolbar .search { flex: 1; min-width: 160px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 14px; }
     .apps-count { font-size: 13px; color: var(--text-muted); }
-    /* ── 신청자 현황 UI(2026-08-22 오너 "죄다 알약이야" → 목업 승인) ──
-       역할마다 모양이 다르다: 툴바(검색 + 네모 버튼) · 범위 탭(밑줄 — admin 상단 그룹 탭과 같은 문법) ·
-       조건 줄(라벨 달린 셀렉트 + 체크박스) · 요약 띠(범위 이름 + 수치 칸) · 명단(구분선 있는 한 판, 붙은 네모 버튼 3칸 + 글자 버튼).
-       ⚠️ 이 탭에 알약(.af-chip·.ac-tg 류)을 다시 들이지 말 것. 회원 상세(#appsInDetail)의 .app-card/.ac-tg 는 그대로다. */
-    .apl-srch { flex: 1; position: relative; display: flex; align-items: center; min-width: 160px; }
-    .apl-srch svg { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
-    .apl-srch .search { width: 100%; height: 44px; padding: 0 12px 0 38px; border-radius: var(--radius-sm); }
-    .apl-sq { height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm);
+    /* ══ admin 공용 UI 한 벌 — 2026-08-22 오너 "UXUI 를 보기 좋게 나눠라, 죄다 알약이야" ══
+       신청자 현황에서 목업 승인을 받은 문법을 그대로 admin 전체로 넓혔다. 역할마다 모양이 다르다:
+         · 검색칸 `.ad-srch`(돋보기 안쪽) · 툴바 버튼 `.ad-sq`(네모, 엑셀은 남색 테두리 `.xl`)
+         · 고르는 줄 = 밑줄 탭(.af-tabs·.af-row·.ap-subtabs·.rv-kfilter — 아래 절)
+         · 조건 줄 = 라벨 달린 셀렉트 `.af-select` + 체크박스 `.af-chk`
+         · 요약 띠 `.apl-sum`(이름 + 수치 칸) · 목록 = 구분선 있는 한 판(.apl-list·.round-list)
+         · 행 동작 = 네모 버튼(.ri-edit·.ri-del / 붙은 묶음 .apl-seg), 삭제만 테두리 없는 빨간 글자
+         · 상태 라벨 = radius 4 네모(.apl-tag·.badge·.mb·.na-badge·.mstat)
+       ⚠️ 알약(border-radius:999px)을 admin 에 다시 들이지 말 것 — 지금 파일에 999px 는 한 곳도 없다. */
+    .ad-srch { flex: 1; position: relative; display: flex; align-items: center; min-width: 160px; }
+    .ad-srch svg { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
+    .ad-srch .search { width: 100%; height: 44px; padding: 0 12px 0 38px; border-radius: var(--radius-sm); }
+    .ad-sq { height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm);
              display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
-    .apl-sq svg { width: 17px; height: 17px; flex: none; }
-    .apl-sq:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
-    .apl-sq.xl { color: var(--accent-ink); border-color: rgba(27, 58, 107, .35); }
-    .apl-sq .lg, .apl-sum .lg { display: none; }   /* 데스크톱에서만 — 폰은 아이콘(새로고침)·짧은 글자(엑셀)·첫 신청일만 */
-    .af-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
-    .af-tabs::-webkit-scrollbar { display: none; }
-    .af-tab { flex: none; appearance: none; border: 0; background: none; padding: 11px 12px 10px; min-height: 44px; font: inherit; font-size: 14px; font-weight: 700;
+    .ad-sq svg { width: 17px; height: 17px; flex: none; }
+    .ad-sq:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
+    .ad-sq.xl { color: var(--accent-ink); border-color: rgba(27, 58, 107, .35); }
+    .ad-sq .lg, .apl-sum .lg { display: none; }   /* 데스크톱에서만 — 폰은 아이콘(새로고침)·짧은 글자(엑셀)·첫 신청일만 */
+    /* ── 밑줄 탭 — admin 에서 '무엇을 볼지 고르는 줄'은 전부 이 모양(2026-08-22 전 탭 확대) ──
+       신청자 범위(.af-tabs) · 회원 상태/기출 유형/소재 유형·난이도/서가/항공사(.af-row)
+       · 일문일답 6절(.ap-subtabs) · 후기 종류(.rv-kfilter)가 같은 문법을 쓴다.
+       ⚠️ 알약(border-radius:999px)으로 되돌리지 말 것 — 고르는 줄과 누르는 버튼이 같은 모양이면
+          무엇이 상태이고 무엇이 동작인지 안 읽힌다(오너 2026-08-22 "죄다 알약이야").
+       좁은 화면에서는 줄바꿈이 아니라 가로 스크롤 — 탭 줄은 한 줄이어야 어디까지가 한 벌인지 보인다. */
+    .af-tabs, .af-row, .ap-subtabs, .rv-kfilter { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+    .af-tabs::-webkit-scrollbar, .af-row::-webkit-scrollbar,
+    .ap-subtabs::-webkit-scrollbar, .rv-kfilter::-webkit-scrollbar { display: none; }
+    .af-tab, .af-chip, .ap-st, .rv-kf { flex: none; appearance: none; border: 0; background: none; padding: 11px 12px 10px; min-height: 44px; font: inherit; font-size: 14px; font-weight: 700;
               color: var(--text-muted); border-bottom: 2.5px solid transparent; margin-bottom: -1px; white-space: nowrap; cursor: pointer; }
-    .af-tab:hover { color: var(--accent-ink); }
-    .af-tab.on { color: var(--accent-ink); border-bottom-color: var(--accent-ink); }
-    .af-tab:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -2px; }
+    .af-tab:hover, .af-chip:hover, .ap-st:hover, .rv-kf:hover { color: var(--accent-ink); }
+    .af-tab.on, .af-chip.on, .ap-st.on, .rv-kf.on { color: var(--accent-ink); border-bottom-color: var(--accent-ink); }
+    .af-tab:focus-visible, .af-chip:focus-visible, .ap-st:focus-visible, .rv-kf:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -2px; }
+    /* 개수 배지(유형 12 · 난이도 4 …) — 탭 글자 옆 흐린 숫자 */
+    .af-chip b, .rv-kf b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
     .af-cond { display: flex; gap: 10px 16px; align-items: flex-end; flex-wrap: wrap; padding: 12px 0 14px; }
     .af-field { display: flex; flex-direction: column; gap: 4px; }
     .af-field label { font-size: 12px; font-weight: 700; color: var(--text-dim); }
@@ -421,11 +452,11 @@
     .apl-txt:hover { color: var(--st-alert); }
     .apl-txt svg { width: 15px; height: 15px; }
     .apl-more { padding: 10px 14px; font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--border-soft); }
-    .apl-more .apl-sq { height: 36px; }
+    .apl-more .ad-sq { height: 36px; }
     .apl-note { padding: 10px 14px; font-size: 12.5px; color: var(--st-alert); border-top: 1px solid var(--border-soft); }
     @media (min-width: 961px) {
-      .apl-sq .lg, .apl-sum .lg { display: inline; }
-      .apl-sq .sm { display: none; }
+      .ad-sq .lg, .apl-sum .lg { display: inline; }
+      .ad-sq .sm { display: none; }
       .apl-sum .ttl b { font-size: 19px; }
       /* 데스크톱: 이름·전화 | 시각·챌린지 | 동작 세 칸 */
       .apl-row { grid-template-columns: 220px 1fr auto; grid-template-rows: auto auto; column-gap: 18px; align-items: center; padding: 12px 16px; }
@@ -450,13 +481,17 @@
     .app-card .ac-sub { font-weight: 400; color: var(--text-muted); }
     /* 같은 사람이 같은 프로그램을 두 번 신청한 행 — 지울 수 있게 눈에 띄게 */
     .app-card.is-dup { border-color: var(--action); background: var(--action-tint); }
-    .app-card .ac-dup { font-size: 12px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
-    .app-card .ac-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }   /* 묶음 안에서 폭이 좁아지면 알약이 줄을 바꾼다 — 글자를 꺾지 않는다 */
-    .app-card .ac-tg { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); white-space: nowrap; }
-    .app-card .ac-tg.on { background: var(--st-ok); color: #fff; border-color: var(--st-ok); }
-    .app-card .ac-tg.on-refund { background: var(--action); color: #fff; border-color: var(--action); }
-    .app-card .ac-del { margin-left: auto; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--action-dark); white-space: nowrap; }
-    .app-card .ac-del:hover { background: var(--action-tint); }
+    .app-card .ac-dup { font-size: 12px; font-weight: 800; color: #fff; background: var(--action-dark); border-radius: 4px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+    /* 상태 토글 — 신청자 명단의 .apl-seg 와 같은 네모·같은 켜짐 색(옅은 초록 / 환불은 옅은 주황).
+       ⚠️ 알약으로 되돌리지 말 것. 묶음 안에서 폭이 좁아지면 줄을 바꾼다 — 글자를 꺾지 않는다.
+       (구 .ac-del 규칙은 쓰는 마크업이 0곳이라 2026-08-22 삭제) */
+    .app-card .ac-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+    .app-card .ac-tg { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; min-height: 40px; padding: 0 14px;
+                       font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; color: var(--text-muted); white-space: nowrap;
+                       display: inline-flex; align-items: center; gap: 5px; }
+    .app-card .ac-tg:hover { background: var(--bg2); }
+    .app-card .ac-tg.on { background: var(--st-ok-bg); color: var(--st-ok); border-color: var(--st-ok-line); }
+    .app-card .ac-tg.on-refund { background: var(--st-alert-bg); color: var(--st-alert); border-color: var(--st-alert-line); }
 
     .reviews-wrap { padding: 20px; max-width: 900px; }
     .rv-upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -500,13 +535,11 @@
        ⚠️ 이 자리를 <img> 로 두면 image_path 가 null 인 행에서 깨진 이미지 아이콘이 뜬다. */
     .rv-noimg { aspect-ratio: 3/4; padding: 12px; background: var(--surface2); font-size: 12.5px; line-height: 1.55; color: var(--text); overflow: hidden; display: flex; align-items: center; text-align: center; }
     .rv-item.hidden .rv-noimg { opacity: .5; }
-    /* 종류 필터 — 108건이 한 줄에 섞이면 상담 후기를 찾을 수 없다 */
-    .rv-kfilter { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 2px 12px; }
-    .rv-kf { appearance: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; min-height: 36px; padding: 6px 14px; border-radius: 999px; }
-    .rv-kf.on { background: var(--action); color: #fff; border-color: transparent; }
+    /* 종류 필터 — 108건이 한 줄에 섞이면 상담 후기를 찾을 수 없다. 모양은 밑줄 탭 한 벌. */
+    .rv-kfilter { margin: 0 0 12px; }
     /* 회원 직접 제출(review-write) 표시 — 승인 전 후기를 한눈에 */
     .rv-sub-badge { display: inline-flex; align-items: center; font-size: 12px; font-weight: 800;
-      color: var(--action); background: var(--action-tint); border-radius: 999px; padding: 3px 9px; }
+      color: var(--action); background: var(--action-tint); border-radius: 4px; padding: 3px 9px; }
 
     /* 합격 수기 — 긴 글이라 카드 그리드가 아니라 줄 목록 + 펼침 편집 */
     .st-row { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
@@ -522,7 +555,8 @@
     .st-form textarea { min-height: 200px; line-height: 1.7; resize: vertical; }
     .rv-nm { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     .rv-btn { flex: 1; border: 1px solid var(--border); background: #fff; border-radius: var(--radius-xs); padding: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); }
-    .rv-btn.on { background: var(--st-ok); color: #fff; border-color: var(--st-ok); }
+    /* 켜짐 = 옅은 초록 + 초록 글씨(신청자 명단 .apl-seg·회원 상세 .ac-tg 와 같은 벌 — 2026-08-22) */
+    .rv-btn.on { background: var(--st-ok-bg); color: var(--st-ok); border-color: var(--st-ok-line); }
     .rv-del { color: var(--action-dark); border-color: var(--action); }
 
     .layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
@@ -530,6 +564,9 @@
 
     .side { background: var(--surface); border-right: 1px solid var(--border-soft); padding: 16px; }
     .side h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 10px; }
+    /* 사이드바의 라벨 달린 셀렉트(회원 상태) — 칸 폭을 다 쓴다(min-width 190px 기본값은 300px 칸에서 넘친다) */
+    .side .af-field { margin-bottom: 12px; }
+    .side .af-select { width: 100%; min-width: 0; }
     .search { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-xs);
               font-size: 14px; margin-bottom: 12px; }
     .mlist { list-style: none; display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
@@ -554,7 +591,7 @@
     .mitem .mc .mc-none { color: var(--text-dim); font-weight: 600; }
     /* 상태 배지(2026-08-03) — 기수 줄 옆에 붙는다. 값만 남기지 않고 뜻을 글자로 적는다. */
     .mitem .mc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-    .mb { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+    .mb { font-size: 12px; font-weight: 700; border-radius: 4px; padding: 2px 8px;
           border: 1px solid var(--border-strong); color: var(--text-muted); background: #fff; }
     .mb-warn { color: var(--st-alert); border-color: var(--st-alert-line); }
     .mb-ghost { color: #fff; background: var(--text-dim); border-color: var(--text-dim); }
@@ -604,7 +641,7 @@
 
     /* 회원 상세 — 상단 요약 스탯 */
     .mstats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-    .mstat { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+    .mstat { background: var(--surface2); border: 1px solid var(--border-soft); border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
     .mstat b { color: var(--text); }
     .mstat.paid { background: var(--st-ok-bg); border-color: var(--st-ok-line); color: var(--st-ok); }
     .mstat.wait { background: var(--action-tint); border-color: var(--action); color: var(--action-dark); }
@@ -619,14 +656,14 @@
     .note-adm .na-q { font-weight: 700; font-size: 14px; margin-top: 3px; }
     .note-adm .na-body { margin-top: 8px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: var(--text); border-top: 1px solid var(--border-soft); padding-top: 8px; }
     .note-adm.draft { border-left: 3px solid var(--action); }
-    .na-badge { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
+    .na-badge { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 4px; margin-left: 6px; }
     .na-badge.draft { background: var(--action-tint); color: var(--action-dark); }
     .na-badge.final { background: var(--st-ok-bg); color: var(--st-ok); }
 
     /* ⚠️ width:max-content + max-width 가 한 벌이다 — 기본값(auto)이면 `left:50%` 때문에 남는 폭이
        화면 절반(375px 에서 188px)뿐이라, 조금만 길어도 알약이 3줄로 접힌다(2026-08-19 실측). */
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary);
-             color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50;
+             color: #fff; padding: 10px 18px; border-radius: 12px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 50;
              width: max-content; max-width: calc(100vw - 32px); text-align: center; }
     .toast.show { opacity: 1; }
     .loading { text-align: center; color: var(--text-dim); padding: 80px 0; }
@@ -722,7 +759,7 @@
     .rc-tip.done { opacity: .62; }
     .rc-tip-m { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
       font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
-    .rc-tip-air { padding: 2px 8px; border-radius: 999px; background: var(--action-tint);
+    .rc-tip-air { padding: 2px 8px; border-radius: 4px; background: var(--action-tint);
       color: var(--accent-ink); font-size: 12px; font-weight: 800; }
     .rc-tip-b { margin-top: 7px; font-size: 14px; font-weight: 600; line-height: 1.65;
       color: var(--text); white-space: pre-wrap; word-break: break-word; }
@@ -785,16 +822,18 @@
        admin 의 입력칸·고스트 버튼·칩 384곳이 --border(흰 면 위 1.38:1)를 쓰고 있었다(실측).
        ⚠️ --border 자체를 올리지 말 것 — 카드·구분선까지 진해져 화면이 표처럼 보인다.
        ⚠️ !important 가 필요하다 — 입력칸 30곳이 style="border:1px solid var(--border)" 인라인이다.
-       ⚠️ .is-danger 는 제외한다(빨간 테두리가 이 규칙에 먹히면 삭제 버튼이 도로 평범해진다). */
-    .smain :is(input, select, textarea, .btn, .btn-ghost, .af-chip, .ri-edit, .ri-del, .ri-cancel,
-               .ac-tg, .ac-del, .rv-btn, .rv-kf, .rv-order, .rv-qt, .rv-ch, .rv-co, .rv-nm, .rv-kind,
-               .ap-st, .tb-more, .lf-slot-add, .search):not(.is-danger),
+       ⚠️ .is-danger 는 제외한다(빨간 테두리가 이 규칙에 먹히면 삭제 버튼이 도로 평범해진다).
+       ⚠️ 밑줄 탭(.af-chip·.rv-kf·.ap-st)은 2026-08-22 에 이 목록에서 뺐다 — 테두리가 없는 글자 탭인데
+          여기 걸려 있어 **투명해야 할 아래 테두리 2.5px 이 회색으로 칠해지고, 켜진 탭의 남색 밑줄까지
+          !important 에 먹혔다**(실측: 켜짐·꺼짐 둘 다 rgba(23,42,71,.52)). 탭의 식별 수단은 테두리가 아니라 밑줄 색이다. */
+    .smain :is(input, select, textarea, .btn, .btn-ghost, .ri-edit, .ri-del, .ri-cancel,
+               .ac-tg, .rv-btn, .rv-order, .rv-qt, .rv-ch, .rv-co, .rv-nm, .rv-kind,
+               .tb-more, .lf-slot-add, .search):not(.is-danger),
     .side :is(input, select, .btn-ghost):not(.is-danger),
     /* ⚠️ 누를 수 있게 만든 것은 테두리도 조작요소 기준이다(2026-08-03).
-       '오늘 · 최근 신청' 행은 role=button 을 달아 누르는 것이 됐는데 테두리는 카드용 --border
-       (1.19:1)라 어디까지가 한 칸인지 안 보였다. 모바일 '메뉴'도 같은 이유 — 폰에서 다른 탭으로
-       가는 유일한 문이라 여기가 흐리면 길이 막힌다. */
-    #tdRecent .round-item, .mt-menu {
+       모바일 '메뉴'는 폰에서 다른 탭으로 가는 유일한 문이라 여기가 흐리면 길이 막힌다.
+       ('오늘 · 최근 신청' 행은 2026-08-22 구분선 목록이 되면서 테두리 자체가 없어졌다 — 위 hover·focus 규칙이 대신한다.) */
+    .mt-menu {
       border-color: var(--border-strong) !important;
     }
 
@@ -815,7 +854,10 @@
       .apps-toolbar .search { flex-basis: 100%; }
       .apps-count { margin-right: auto; }
       .ri-edit, .ri-del, .ri-cancel { min-height: 44px; padding: 10px 16px; }
-      .ac-tg, .ac-del, .rv-btn, .rv-kf, .apl-seg button, .apl-txt { min-height: 44px; }
+      /* ⚠️ 선택자 무게를 맞춰 둘 것 — 2026-08-22 개편에서 두 규칙이 `.app-card .ac-tg`·`.ri-actions .q-lv`
+         (클래스 2개)로 정의돼, 클래스 1개짜리 이 줄이 져서 폰에서 40·36px 로 남았다(실측). */
+      .rv-btn, .rv-kf, .apl-seg button, .apl-txt { min-height: 44px; }
+      .app-card .ac-tg, .ri-actions .q-lv { min-height: 44px; }
       /* 위 목록은 '행 버튼'만 덮었다 — 정작 저장·추가·CSV 같은 **주 버튼과 모든 select** 가
          빠져 있어 36~38px 로 남아 있었다(2026-08-02 실측 30종). 폼 조작요소를 통째로 잡는다.
          .btn-sm 도 모바일에선 44px 다 — 좁은 화면에서 '작은 버튼'은 그냥 못 누르는 버튼이다. */
@@ -842,8 +884,10 @@
       .round-item { grid-template-columns: 1fr; }
       .ri-actions { justify-content: flex-start; }
       /* 인접 표적 사이 8px(원칙 2 — 크기만 지키면 촘촘한 버튼 줄이 통과한다).
-         실측 6px 쌍이 151개였다. 행 버튼은 '수정' 옆이 '삭제'라 오눌림의 대가가 크다. */
-      .af-row, .ri-actions, #rvKindFilter, .ap-subtabs { gap: 8px; }
+         실측 6px 쌍이 151개였다. 행 버튼은 '수정' 옆이 '삭제'라 오눌림의 대가가 크다.
+         ⚠️ 밑줄 탭 줄(.af-row·.ap-subtabs·#rvKindFilter)은 여기서 뺐다 — 탭은 서로 붙어 한 벌로 읽혀야 하고,
+            표적은 좌우 여백(12px)이 이미 벌려 놓는다. 2026-08-22 알약 폐기 전 규칙이다. */
+      .ri-actions { gap: 8px; }
       /* '지금 처리'의 다음 행동 링크가 16.5px 밖에 안 됐다 — 브리핑에서 유일하게 누르는 자리다. */
       .tb-link { display: inline-flex; align-items: center; min-height: 44px; }
       /* 오픈 알림 명단의 전화번호는 눌러서 바로 거는 자리인데 19px 이었다(WCAG 하한 24px 미만). */
@@ -983,20 +1027,21 @@
     <aside class="side">
       <h2>회원 (<span id="mCount">0</span>)</h2>
       <input class="search" id="search" placeholder="이름·이메일·전화 검색"  aria-label="회원 검색 — 이름·이메일·전화"/>
-      <!-- 상태 필터(2026-08-03) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip).
-           ⚠️ 구 '미배정만' 체크박스를 이 줄의 '기수 미배정' 칩이 대신한다. 두 벌로 두지 말 것. -->
-      <div class="apq-filter">
-        <span class="apq-flabel">회원 상태</span>
-        <div class="af-row" id="mFilter">
-          <button type="button" class="af-chip on" data-mf="all">전체</button>
-          <button type="button" class="af-chip" data-mf="nophone">가입 미완료</button>
-          <button type="button" class="af-chip" data-mf="badphone">번호 확인 필요</button>
-          <button type="button" class="af-chip" data-mf="nocohort">기수 미배정</button>
-          <button type="button" class="af-chip" data-mf="active">신청 있음</button>
-          <button type="button" class="af-chip" data-mf="ghost">흔적 없음</button>
-          <!-- 보관함은 '상태'가 아니라 '치워 둔 곳'이다 — 다른 칩은 전부 보관된 회원을 뺀 결과다. -->
-          <button type="button" class="af-chip" data-mf="archived">보관함 <span id="mArcN"></span></button>
-        </div>
+      <!-- 상태 필터(2026-08-03 · 2026-08-22 셀렉트로 교체) — 사이드바는 300px 라 밑줄 탭 7개가
+           가로로 잘려 '보관함'이 화면 밖에 숨는다. 좁은 칸에서 값이 많은 고르기는 셀렉트가 정본이다
+           (신청자 현황 '기수' 칸과 같은 벌). ⚠️ 구 '미배정만' 체크박스를 '기수 미배정'이 대신한다. 두 벌로 두지 말 것.
+           보관함은 '상태'가 아니라 '치워 둔 곳'이다 — 다른 값은 전부 보관된 회원을 뺀 결과다. -->
+      <div class="af-field" id="mFilterField">
+        <label for="mFilter">회원 상태</label>
+        <select id="mFilter" class="af-select">
+          <option value="all">전체</option>
+          <option value="nophone">가입 미완료</option>
+          <option value="badphone">번호 확인 필요</option>
+          <option value="nocohort">기수 미배정</option>
+          <option value="active">신청 있음</option>
+          <option value="ghost">흔적 없음</option>
+          <option value="archived" id="mArcOpt">보관함</option>
+        </select>
       </div>
       <!-- '흔적 없음' 이 무엇인지 · 지울 때 무엇을 알아야 하는지 -->
       <details class="adm-help" id="mGhostHelp">
@@ -1004,7 +1049,7 @@
         <div class="adm-help-body">
           <p><b>번호 없음 + 신청 없음 + 크레딧 사용 없음 + 가입 30일 지남</b> 인 계정입니다.
              로그인은 했지만 이름·번호를 넣는 화면에서 나간 사람이라, 연락할 방법이 없습니다.</p>
-          <p><b>정리하는 방법: 위 [흔적 없음] 을 누르고 → [전체] 체크 → [보관].</b>
+          <p><b>정리하는 방법: 위 [회원 상태] 에서 '흔적 없음' 을 고르고 → [전체] 체크 → [보관].</b>
              보관하면 이 목록·회원 수·검색에서 빠집니다. 되돌리려면 [보관함] 에서 [보관 해제] 를 누르세요.</p>
           <p>⚠️ <b>지우지는 마세요.</b> 회원 행만 지우면 로그인 계정이 남아, 그 사람이 다시 로그인해도
              프로필이 다시 만들어지지 않습니다(회원 행은 첫 로그인 때 한 번만 생깁니다).
@@ -1177,11 +1222,11 @@
   <div class="tab-panel" id="panel-apps">
     <div class="apps-wrap">
       <div class="apps-toolbar">
-        <label class="apl-srch"><svg aria-hidden="true"><use href="#i-search"/></svg><input type="text" class="search" id="appSearch" placeholder="이름·전화·챌린지 검색" aria-label="신청자 검색 — 이름·전화·챌린지"></label>
-        <button class="apl-sq" id="appRefresh" type="button" title="새로고침" aria-label="새로고침"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span class="lg">새로고침</span></button>
+        <label class="ad-srch"><svg aria-hidden="true"><use href="#i-search"/></svg><input type="text" class="search" id="appSearch" placeholder="이름·전화·챌린지 검색" aria-label="신청자 검색 — 이름·전화·챌린지"></label>
+        <button class="ad-sq" id="appRefresh" type="button" title="새로고침" aria-label="새로고침"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span class="lg">새로고침</span></button>
         <!-- 내려받기는 보조 행동이다 — 채움(btn-action)으로 두면 이 화면에서 가장 무거운 버튼이 된다(원칙 6 · 2026-08-02 5차).
              엑셀 = 챌린지·기수마다 시트 한 장(2026-08-22 오너) — 라이브러리를 못 받으면 CSV 폴백. -->
-        <button class="apl-sq xl" id="appCsv" type="button" title="챌린지·기수마다 시트 한 장"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="sm">엑셀</span><span class="lg">엑셀로 내려받기</span></button>
+        <button class="ad-sq xl" id="appCsv" type="button" title="챌린지·기수마다 시트 한 장"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="sm">엑셀</span><span class="lg">엑셀로 내려받기</span></button>
       </div>
       <!-- 범위 탭(2026-08-22 오너 A안 "챌린지 5개 고정 + 기수는 드롭다운" → 같은 날 "죄다 알약" 지적으로 밑줄 탭) — **7개 고정**
            (전체·챌린지 4·특강·자료). 기수·특강·자료는 아래 셀렉트 하나. 기수와 특강은 계속 쌓이므로 칩·아코디언으로
@@ -1223,21 +1268,25 @@
         다음 기수를 열면 여기 연락처로 안내하고 <b>[연락 완료]</b>를 눌러 두세요.
         <b>안내가 끝난 명단은 삭제</b>해 주세요(개인정보는 목적을 다하면 파기해야 합니다).
       </p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
-        <select id="wlFilter" style="padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="오픈 알림 명단 정렬">
-          <option value="">전체 챌린지</option>
-          <option value="voice">보신각(보이스)</option>
-          <option value="expression">영합각(표현력)</option>
-          <option value="spinning">스피닝</option>
-          <option value="answer">승자각(답변)</option>
-        </select>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" id="wlHideDone"> 연락 완료 숨기기
-        </label>
-        <span id="wlCount" style="font-size:13px;color:var(--text-muted);margin-right:auto;"></span>
-        <button class="btn btn-ghost" id="wlRefresh" type="button">새로고침</button>
-        <button class="btn btn-ghost" id="wlCsv" type="button" title="챌린지마다 시트 한 장">엑셀</button>
+      <!-- 조건 줄 — 신청자 현황과 같은 벌(라벨 달린 셀렉트 + 체크박스 + 네모 버튼). 2026-08-22 알약·회색 버튼 폐기.
+           명단 수는 아래 요약 띠(#wlSum)가 말한다 — 구 #wlCount 글줄은 버튼 사이에 끼어 어디를 보는 숫자인지 안 읽혔다. -->
+      <div class="af-cond">
+        <div class="af-field">
+          <label for="wlFilter">챌린지</label>
+          <select id="wlFilter" class="af-select" aria-label="오픈 알림 명단 챌린지 고르기">
+            <option value="">전체 챌린지</option>
+            <option value="voice">보신각(보이스)</option>
+            <option value="expression">영합각(표현력)</option>
+            <option value="spinning">스피닝</option>
+            <option value="answer">승자각(답변)</option>
+          </select>
+        </div>
+        <label class="af-chk"><input type="checkbox" id="wlHideDone"> 연락 완료 숨기기</label>
+        <span style="flex:1 1 auto"></span>
+        <button class="ad-sq" id="wlRefresh" type="button" title="새로고침" aria-label="새로고침"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span class="lg">새로고침</span></button>
+        <button class="ad-sq xl" id="wlCsv" type="button" title="챌린지마다 시트 한 장"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="sm">엑셀</span><span class="lg">엑셀로 내려받기</span></button>
       </div>
+      <div id="wlSum"></div>
       <div class="round-list" id="wlList"><div class="loading">불러오는 중…</div></div>
     </div>
   </div>
@@ -1474,7 +1523,7 @@
           <button class="btn btn-ghost" type="button" id="qfCancel" style="display:none;">취소</button>
         </div>
       </form>
-      <!-- 유형·난이도 필터(2026-08-05) — 칩 문법은 admin 정본(.apq-filter + .af-row + .af-chip).
+      <!-- 유형·난이도 필터(2026-08-05) — 고르는 줄 문법은 admin 정본(.apq-filter + .af-row + .af-chip = 밑줄 탭).
            둘은 겹쳐서 걸린다. 그래서 각 칩의 개수는 '상대 필터를 적용한 뒤'의 건수다
            (안 그러면 3이라 적힌 칩을 눌렀는데 목록이 0건이 된다). -->
       <div class="apq-filter"><span class="apq-flabel">유형별 보기</span><div class="af-row" id="qCatFilter"></div></div>
@@ -1613,7 +1662,7 @@
       </form>
 
       <!-- 서가 필터 — 다섯 서가가 한 목록에 섞이면 관리가 안 된다(오너 지적 2026-08-01).
-           ⚠️ 칩은 admin 정본 문법(.apq-filter + .af-row + .af-chip)만 쓴다 —
+           ⚠️ 고르는 줄은 admin 정본 문법(.apq-filter + .af-row + .af-chip = 밑줄 탭)만 쓴다 —
               news.html 의 .nw-chip 을 가져다 쓰면 admin 에 그 CSS 가 없어 민짜로 나온다. -->
       <div class="apq-filter" style="margin-top:22px;">
         <span class="apq-flabel">서가별 보기</span>
@@ -1921,7 +1970,7 @@
           style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;font-family:inherit;resize:vertical;" aria-label="기출 일괄 등록 — 탭으로 구분한 줄들"></textarea>
         <button class="btn btn-ghost" type="button" id="apqBulkBtn" style="margin-top:6px;">일괄 추가</button></details>
       <!-- 목록 필터 = 질문 유형(2026-07-31 오너 요청 — 구 항공사 select 대체).
-           실존하는 유형만 칩으로 세운다(신청자 현황 세부 필터와 같은 규칙). 항공사는 각 줄에 그대로 보인다. -->
+           실존하는 유형만 탭으로 세운다(신청자 현황 범위 탭과 같은 규칙). 항공사는 각 줄에 그대로 보인다. -->
       <div class="apq-filter"><span class="apq-flabel">유형별 보기</span><div class="af-row" id="apqFilter"></div></div>
       <div class="round-list" id="apqList"><div class="loading">불러오는 중…</div></div>
       </div><!-- /bank -->
@@ -2202,8 +2251,9 @@
       const ghostReady = _appsLoaded && _credRows.length > 0;
       const gc = document.getElementById('mGhostCount');
       if (gc) gc.textContent = ghostReady ? ghostN.toLocaleString() + '명' : '확인 중';
-      const arcChip = document.getElementById('mArcN');
-      if (arcChip) arcChip.textContent = arcN ? arcN.toLocaleString() : '';
+      // 보관 수는 셀렉트 항목 글자에 붙인다(구 칩 안 <span id="mArcN"> 자리)
+      const arcOpt = document.getElementById('mArcOpt');
+      if (arcOpt) arcOpt.textContent = arcN ? '보관함 ' + arcN.toLocaleString() : '보관함';
       visibleIds = list.map(m => m.id);
       // ⚠️ 회원 수는 **보관을 뺀 수**다 — 연락 닿는 사람이 몇 명인지를 이 숫자로 판단한다.
       document.getElementById('mCount').textContent = (members.length - arcN).toLocaleString();
@@ -2647,13 +2697,12 @@
     // ⚠️ 조건이 바뀌면 표시 수를 처음으로 되돌린다 — 안 그러면 검색 결과 3명인데 '더 보기'가 남는다.
     const mReset = () => { _mShown = M_PAGE; renderMemberList(); };
     document.getElementById('search').addEventListener('input', mReset);
-    document.getElementById('mFilter').addEventListener('click', e => {
-      const b = e.target.closest('.af-chip'); if (!b) return;
-      // ⚠️ 칩을 바꾸면 선택을 비운다 — 안 그러면 '전체'에서 고른 사람이 '보관함'으로 넘어가
+    document.getElementById('mFilter').addEventListener('change', e => {
+      const v = e.target.value;
+      // ⚠️ 상태를 바꾸면 선택을 비운다 — 안 그러면 '전체'에서 고른 사람이 '보관함'으로 넘어가
       //    [보관 해제] 대상에 섞인다(화면에는 안 보이는 채로).
-      if (_mFilter !== b.dataset.mf) selected.clear();
-      _mFilter = b.dataset.mf;
-      document.querySelectorAll('#mFilter .af-chip').forEach(x => x.classList.toggle('on', x === b));
+      if (_mFilter !== v) selected.clear();
+      _mFilter = v;
       mReset();
     });
     document.getElementById('selAll').addEventListener('change', e => {
@@ -3054,8 +3103,15 @@
       const listEl = document.getElementById('wlList');
       const rows = wlVisible();
       const waiting = rows.filter(r => r.status !== 'notified').length;
-      document.getElementById('wlCount').textContent =
-        rows.length ? `${rows.length}명 (연락 전 ${waiting}명)` : '';
+      // 요약 띠 — 신청자 현황과 같은 벌(범위 이름 + 수치 칸). '연락 완료 숨기기'가 켜져 있으면
+      // 완료 칸은 늘 0 이라 안 그린다(값만 남기지 않는다 · 원칙 15).
+      const chSel = document.getElementById('wlFilter').value;
+      const scope = chSel ? (CH_LABEL[chSel] || chSel) : '전체 챌린지';
+      const done = rows.length - waiting;
+      document.getElementById('wlSum').innerHTML = rows.length
+        ? apSummary(scope, '오픈 알림 명단', [[rows.length, '명단'], [waiting, '연락 전', 'al']]
+            .concat(done ? [[done, '연락 완료', 'ok']] : []))
+        : '';
       if (!rows.length) {
         listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">대기 중인 알림 신청이 없습니다.</div>';
         return;
@@ -3068,7 +3124,7 @@
           <div>
             <div class="ri-main">${esc(r.name)}
               <a class="wl-tel" href="tel:${esc((r.phone || '').replace(/[^0-9+]/g, ''))}">${esc(r.phone)}</a>
-              ${done ? '<span style="font-size:12px;font-weight:700;color:var(--st-ok);border:1px solid currentColor;border-radius:999px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
+              ${done ? '<span style="font-size:12px;font-weight:700;color:var(--st-ok);border:1px solid currentColor;border-radius:4px;padding:2px 8px;margin-left:6px;">연락 완료</span>' : ''}
             </div>
             <div class="ri-sub">${esc(CH_LABEL[r.challenge] || r.challenge)} · 신청 ${when}${r.member_id ? ' · 회원' : ''}</div>
           </div>
@@ -3110,7 +3166,7 @@
         listEl.innerHTML = '<div class="empty" style="padding:20px;line-height:1.7">' + (missing
           ? '아직 <b>오픈 알림</b> 테이블이 없어요.<br>Supabase SQL Editor 에서 <code>challenge_waitlist</code> 마이그레이션을 실행하면 이 목록이 켜집니다.'
           : '불러오기 실패: ' + esc(error.message)) + '</div>';
-        document.getElementById('wlCount').textContent = '';
+        document.getElementById('wlSum').innerHTML = '';
         return;
       }
       _wl = data || [];
@@ -4068,7 +4124,7 @@
         </div>`).join('')
         + (list.length > shown.length
             ? `<div class="apl-more"><span>${shown.length.toLocaleString()} / ${list.length.toLocaleString()}건 표시</span>`
-              + `<button class="apl-sq" type="button" id="appLabMoreBtn">더 보기</button></div>`
+              + `<button class="ad-sq" type="button" id="appLabMoreBtn">더 보기</button></div>`
             : '')
         + (_appLabTrunc ? '<div class="apl-note">결제가 너무 많아 일부만 불러왔습니다.</div>' : '')
         + '</div>';
@@ -4152,7 +4208,7 @@
         </div>`; }).join('')
         + (list.length > shown.length
             ? `<div class="apl-more"><span>${shown.length.toLocaleString()} / ${list.length.toLocaleString()}명 표시</span>`
-              + `<button class="apl-sq" type="button" id="appMoreBtn">더 보기</button></div>`
+              + `<button class="ad-sq" type="button" id="appMoreBtn">더 보기</button></div>`
             : '')
         + (_appsTruncated
             ? '<div class="apl-note">신청이 너무 많아 일부만 불러왔습니다 — 건수·중복 표시가 실제보다 적습니다.</div>'
@@ -4415,7 +4471,8 @@
       // member_id 컬럼 미적용(20260820160000 전)이면 undefined 라 0건으로 조용히 떨어진다.
       const pendN = data.filter(r => r.member_id && !r.visible).length;
       const pendChip = document.getElementById('rvPendingChip');
-      if (pendChip) pendChip.textContent = '승인 대기 ' + pendN;
+      // 개수는 <b> 로 — 밑줄 탭의 흐린 숫자 규칙(.rv-kf b · 2026-08-22)
+      if (pendChip) pendChip.innerHTML = '승인 대기<b>' + pendN + '</b>';
       const rq = (document.getElementById('rvSearch').value || '').trim().toLowerCase();
       const rows = data.filter(r => {
         if (rvKindFilter === 'pending') { if (!(r.member_id && !r.visible)) return false; }
@@ -4998,7 +5055,7 @@
               ? 'background:rgba(179,38,30,.1);color:#B3261E;'
               : 'background:rgba(23,42,71,.08);color:var(--text-muted);';
           return '<div class="round-item" style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">'
-            + '<span style="flex:0 0 auto;font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;'
+            + '<span style="flex:0 0 auto;font-size:12px;font-weight:800;padding:3px 8px;border-radius:4px;'
             + pill + '">' + (V[r.verdict] || '보통') + '</span>'
             + '<span style="flex:1;min-width:180px;font-size:13px;line-height:1.6;">'
             + '<em style="font-style:normal;">“' + esc(r.quote || '(인용 없음)') + '”</em>'
@@ -5062,7 +5119,7 @@
         <div class="round-item${t.active ? '' : ' is-off'}" data-id="${t.id}">
           <div>
             <div class="ri-main">“${esc(t.term)}”
-              <span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:1px;
+              <span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:4px;vertical-align:1px;
                 ${t.origin === 'coach' ? 'background:var(--action);color:#fff;' : 'background:var(--bg2);color:var(--text-muted);border:1px solid var(--border-soft);'}">
                 ${t.origin === 'coach' ? '연구진' : '일반'}</span></div>
             <div class="ri-sub">${esc(TERM_KIND[t.kind] || t.kind)}${t.active ? '' : ' · 꺼짐'}${t.why ? ' · ' + esc(t.why.slice(0, 70)) + (t.why.length > 70 ? '…' : '') : ' · (설명 없음 — AI가 채워요)'}</div>
@@ -5235,7 +5292,7 @@
         loadLabFiles();
       }));
 
-    /* 서가 칩 — 각 칩에 그 서가의 자료 수를 적는다(빈 서가도 보여야 '없다'를 안다) */
+    /* 서가 탭 — 각 탭에 그 서가의 자료 수를 적는다(빈 서가도 보여야 '없다'를 안다) */
     function renderLabShelfBar() {
       const bar = document.getElementById('lrShelfBar');
       if (!bar) return;
@@ -6498,7 +6555,7 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${i + 1}. “${esc(a.term)}”
-              ${dup ? '<span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--bg2);color:var(--text-muted);border:1px solid var(--border-soft);vertical-align:1px;">등록됨</span>' : ''}</div>
+              ${dup ? '<span style="font-size:12px;font-weight:800;padding:2px 8px;border-radius:4px;background:var(--bg2);color:var(--text-muted);border:1px solid var(--border-soft);vertical-align:1px;">등록됨</span>' : ''}</div>
             <div class="ri-sub">${esc(TERM_KIND[kind] || kind)} · 제보 ${a.count}건 · 회원 ${a.members.size}명${a.why ? ' · ' + esc(a.why.slice(0, 60)) : ''}</div>
           </div>
           <div class="ri-actions">
