@@ -1105,9 +1105,10 @@
         <input type="text" class="search" id="appSearch" placeholder="이름·전화·챌린지 검색" aria-label="신청자 검색 — 이름·전화·챌린지">
         <span class="apps-count" id="appCount"></span>
         <button class="btn btn-ghost btn-sm" id="appRefresh">새로고침</button>
-        <!-- CSV 는 보조 행동이다 — 채움(btn-action)으로 두면 이 화면에서 가장 무거운 버튼이 되고,
-             정작 매일 하는 일(입금 확인)은 카드 안 알약이라 무게가 뒤집힌다(원칙 6 · 2026-08-02 5차). -->
-        <button class="btn btn-ghost btn-sm" id="appCsv">CSV</button>
+        <!-- 내려받기는 보조 행동이다 — 채움(btn-action)으로 두면 이 화면에서 가장 무거운 버튼이 되고,
+             정작 매일 하는 일(입금 확인)은 카드 안 알약이라 무게가 뒤집힌다(원칙 6 · 2026-08-02 5차).
+             엑셀 = 챌린지·기수마다 시트 한 장(2026-08-22 오너) — 라이브러리를 못 받으면 CSV 폴백. -->
+        <button class="btn btn-ghost btn-sm" id="appCsv" title="챌린지·기수마다 시트 한 장">엑셀</button>
       </div>
       <!-- 종류 필터(전체/챌린지/특강) + 선택한 종류 안에서 세부 필터.
            세부 옵션은 실제 신청이 있는 것만 뜬다(신청자 0명인 특강은 안 뜸).
@@ -4161,31 +4162,100 @@
       if (q) parts.push('검색-' + q.slice(0, 12));
       return parts.join('_');
     }
-    // CSV 는 화면에 보이는 목록 그대로 내려받는다(특강 하나만 골라 놓고 받으면 그 특강만 나온다).
+    /* 내려받기 줄 한 벌 — 엑셀(시트)과 CSV(폴백)가 같은 줄을 쓴다.
+       '재학생' 칸은 입금 옆에 둔다 — 판정은 화면 토글과 같은 `payment_status='free'` 하나다
+       (appFree · 2026-08-19 오너 "재학생인지 아닌지 여부도 좀 봐주면 좋겠는데").
+       입금 칸의 '무료'와 같은 사실이지만, 문자·안내를 나눠 보낼 때 이 칸으로 바로 거른다.
+       ⚠️ 환불계좌: CSV 는 `csvText()`(엑셀이 숫자로 읽지 않게 `="…"`), 엑셀 파일은 문자열 셀이라 그대로. */
+    const APP_HEAD = ['신청일자','이름','전화','재학생','환불계좌','챌린지/기수','총액','입금','환불','회원여부','연결상태'];
+    const LAB_HEAD = ['결제일자','이름','전화','자료','금액'];
+    function appRow(a, phoneSet, forXlsx) {
+      const ms = appMembership(a, phoneSet);
+      return [
+        new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), appFree(a) ? 'Y' : 'N',
+        a.payment_id ? '간편결제' : (forXlsx ? String(a.refund_account || '') : csvText(a.refund_account)),
+        chSummary(a.challenges), a.total_price || 0, appFree(a) ? '무료' : (appPaid(a) ? 'Y':'N'), a.refunded ? 'Y' : ((a.refunded_amount||0) > 0 ? '부분' : 'N'),
+        ms === 'guest' ? '비회원' : '회원',
+        ms === 'linked' ? '연결됨' : (ms === 'phone' ? '전화매칭' : '-')
+      ];
+    }
+    function labRow(x) {
+      return [new Date(x.p.created_at).toLocaleString('ko-KR'), x.name, csvPhone(x.phone), x.title, x.p.amount || 0];
+    }
+    // CSV 폴백 — 화면에 보이는 목록 그대로(특강 하나만 골라 놓고 받으면 그 특강만 나온다). 한 신청 = 한 줄.
     function appsToCsv() {
       if (_appKind === 'lab') {   // '자료' 칩이 켜져 있으면 자료 결제를 그대로 내려받는다
-        const rows = visibleAppLab().map(x => [
-          new Date(x.p.created_at).toLocaleString('ko-KR'), x.name, csvPhone(x.phone), x.title, x.p.amount || 0
-        ]);
-        csvSave(['결제일자','이름','전화','자료','금액'], rows, appCsvTag());
+        csvSave(LAB_HEAD, visibleAppLab().map(labRow), appCsvTag());
         return;
       }
       const phoneSet = memberPhoneSet();
-      /* '재학생' 칸은 입금 옆에 둔다 — 판정은 화면 토글과 같은 `payment_status='free'` 하나다
-         (appFree · 2026-08-19 오너 "재학생인지 아닌지 여부도 좀 봐주면 좋겠는데").
-         입금 칸의 '무료'와 같은 사실이지만, 문자·안내를 나눠 보낼 때 이 칸으로 바로 거른다. */
-      const head = ['신청일자','이름','전화','재학생','환불계좌','챌린지/기수','총액','입금','환불','회원여부','연결상태'];
-      const rows = visibleApps().map(a => {
-        const ms = appMembership(a, phoneSet);
-        return [
-          new Date(a.created_at).toLocaleString('ko-KR'), a.name, csvPhone(a.phone), appFree(a) ? 'Y' : 'N',
-          a.payment_id ? '간편결제' : csvText(a.refund_account),
-          chSummary(a.challenges), a.total_price || 0, appFree(a) ? '무료' : (appPaid(a) ? 'Y':'N'), a.refunded ? 'Y' : ((a.refunded_amount||0) > 0 ? '부분' : 'N'),
-          ms === 'guest' ? '비회원' : '회원',
-          ms === 'linked' ? '연결됨' : (ms === 'phone' ? '전화매칭' : '-')
-        ];
-      });
-      csvSave(head, rows, appCsvTag());
+      csvSave(APP_HEAD, visibleApps().map(a => appRow(a, phoneSet, false)), appCsvTag());
+    }
+
+    /* ── 엑셀 내려받기(2026-08-22 오너 "엑셀 탭 나눠서 각 챌린지별로") ──
+       화면 묶음(appGroupList)과 같은 기준으로 **시트 한 장 = 챌린지·기수 하나**(특강은 특강 하나).
+       첫 시트 '전체'에는 보이는 목록 전부(한 신청 = 한 줄), 그 뒤 묶음 시트에는 그 항목을 신청한 줄만 —
+       챌린지 둘을 같이 신청한 줄은 두 시트에 한 번씩 들어간다(화면 묶음과 같다).
+       CSV 는 시트를 못 나눠서 SheetJS 를 쓴다 — 누를 때 처음 한 번만 CDN 에서 받고(admin 만 쓰는 화면이라
+       평소 페이지 무게에 안 붙인다), 못 받으면 CSV 폴백으로 같은 줄을 내려준다(조용히 실패하지 않는다).
+       엑셀 파일은 문자열 셀이 문자열로 열리므로 전화·계좌의 앞 0·지수 표기 문제가 없다(CSV 절의 우회가 필요 없다). */
+    const XLSX_SRC = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    let _xlsxLoad = null;
+    function loadXlsxLib() {
+      if (window.XLSX) return Promise.resolve(window.XLSX);
+      if (_xlsxLoad) return _xlsxLoad;
+      _xlsxLoad = new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = XLSX_SRC; s.async = true;
+        s.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error('XLSX 미정의'));
+        s.onerror = () => rej(new Error('엑셀 라이브러리 로드 실패'));
+        document.head.appendChild(s);
+      }).catch(e => { _xlsxLoad = null; throw e; });   // 실패는 기억하지 않는다 — 다음 클릭에 다시 시도
+      return _xlsxLoad;
+    }
+    // 엑셀 시트 이름 규칙: 31자 이하, []:*?/\ 금지, 같은 이름 금지 — 이모지(📚)도 뺀다
+    function xlsxSheetName(label, used) {
+      let base = String(label || '시트').replace(/[\[\]:*?\/\\]/g, ' ').replace(/[\u{1F000}-\u{1FFFF}☀-➿️]/gu, '').replace(/\s+/g, ' ').trim() || '시트';
+      base = base.slice(0, 28);
+      let name = base, n = 2;
+      while (used.has(name)) name = base + ' ' + (n++);
+      used.add(name);
+      return name;
+    }
+    function appsWorkbook(XLSX) {
+      const wb = XLSX.utils.book_new();
+      const used = new Set();
+      const add = (label, head, rows) => {
+        const ws = XLSX.utils.aoa_to_sheet([head, ...rows]);
+        ws['!cols'] = head.map((h, i) => ({ wch: i === 0 ? 20 : (h === '챌린지/기수' || h === '자료' ? 28 : h === '환불계좌' ? 24 : 12) }));
+        XLSX.utils.book_append_sheet(wb, ws, xlsxSheetName(label, used));
+        return rows.length;
+      };
+      if (_appKind === 'lab') {
+        const n = add('자료결제', LAB_HEAD, visibleAppLab().map(labRow));
+        return { wb, sheets: 1, rows: n };
+      }
+      const phoneSet = memberPhoneSet();
+      const list = visibleApps();
+      add('전체', APP_HEAD, list.map(a => appRow(a, phoneSet, true)));
+      const groups = appGroupList(list);
+      groups.forEach(g => add(g.label, APP_HEAD, g.apps.map(a => appRow(a, phoneSet, true))));
+      return { wb, sheets: 1 + groups.length, rows: list.length };
+    }
+    async function appsToXlsx() {
+      const btn = document.getElementById('appCsv');
+      btn.disabled = true;
+      try {
+        const XLSX = await loadXlsxLib();
+        const { wb, sheets, rows } = appsWorkbook(XLSX);
+        const tag = appCsvTag();
+        XLSX.writeFile(wb, `신청자_${tag.replace(/[\\/:*?"<>|]/g, '')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        toast(`${tag} · ${rows.toLocaleString()}건 · 시트 ${sheets}장 내려받음`);
+      } catch (e) {
+        console.error('엑셀 내려받기 실패', e);
+        toast('엑셀 라이브러리를 못 받아 CSV 로 내려받아요(시트 없음)');
+        appsToCsv();
+      } finally { btn.disabled = false; }
     }
 
     document.getElementById('appSearch').addEventListener('input', () => { resetAppPage(); renderApps(); });
@@ -4194,7 +4264,7 @@
       await loadMembers(); await loadApplications();
       if (_appLabLoaded || _appKind === 'lab') await loadAppLab();   // 자료 결제도 보고 있었으면 같이 새로
     });
-    document.getElementById('appCsv').addEventListener('click', appsToCsv);
+    document.getElementById('appCsv').addEventListener('click', appsToXlsx);   // 엑셀(묶음별 시트) — 라이브러리를 못 받으면 안에서 CSV 폴백
 
     // ── 후기 관리(reviews) ──
     // 종류(kind)는 챌린지/상담 둘뿐이다. 합격 수기는 이 표가 아니라 success_stories(아래 절).
