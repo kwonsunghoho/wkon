@@ -27,7 +27,7 @@
   짧으면 늘리지 마라**, cuts 규칙 + `[할 일]` 끝 재고지. 자기 재검사에 `short_version`·`cuts.why` 포함.
   `short_version` 이 `POLISH_TARGET_MAX × 1.3` 을 넘으면 **한 번** 재생성(그래도 넘치면 그대로 반환·로그). `cuts`
   는 원문에 없는 인용을 서버가 버린다. 저장은 `result` jsonb(`target_sec`·`target_chars`·`short_version`·`cuts`) —
-  컬럼 추가 없음. `FN_VERSION` **`2026-08-22a`**, features `polish_length_version`. 오너 콘솔 재배포 필요.
+  컬럼 추가 없음. `FN_VERSION` **`2026-08-22a`**, features `polish_length_version`. **2026-08-22 오너 배포 완료**(프로브 실측 — implementation-status.md).
 - 검증(2026-08-22 실측): 스텁 사본 `__polish-test.html?state=free|len30|wait|nocredit`(스크래치패드 `make-test.py`
   생성, 검증 후 삭제) 375/320px — 분량 줄 노출·이름표·받은 분량 즉시 전환(invoke 없음)·대기 중 버튼 4개+새 첨삭
   잠금·'받는 중' 표시·`no_credit` → 충전함 열림·N초 버전 카드(목표/지금 글자 수·덜어낸 대목 2곳)·자유 리포트엔
