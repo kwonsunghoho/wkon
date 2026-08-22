@@ -1168,7 +1168,7 @@
         </label>
         <span id="wlCount" style="font-size:13px;color:var(--text-muted);margin-right:auto;"></span>
         <button class="btn btn-ghost" id="wlRefresh" type="button">새로고침</button>
-        <button class="btn btn-ghost" id="wlCsv" type="button">CSV</button>
+        <button class="btn btn-ghost" id="wlCsv" type="button" title="챌린지마다 시트 한 장">엑셀</button>
       </div>
       <div class="round-list" id="wlList"><div class="loading">불러오는 중…</div></div>
     </div>
@@ -3052,20 +3052,50 @@
     document.getElementById('wlFilter').addEventListener('change', renderWaitlist);
     document.getElementById('wlHideDone').addEventListener('change', renderWaitlist);
     document.getElementById('wlRefresh').addEventListener('click', loadWaitlist);
-    document.getElementById('wlCsv').addEventListener('click', () => {
-      const rows = wlVisible();
-      if (!rows.length) { toast('내려받을 명단이 없어요'); return; }
-      const head = ['챌린지', '이름', '전화번호', '신청일', '상태'];
-      const body = rows.map(r => [
-        CH_LABEL[r.challenge] || r.challenge, r.name, csvPhone(r.phone),
-        (r.created_at || '').slice(0, 10), r.status === 'notified' ? '연락완료' : '연락전',
-      ]);
-      // ⚠️ 전화번호는 csvPhone() 으로 하이픈을 넣어 내보낸다 — 따옴표만으로는 엑셀이 앞 0 을 버린다.
-      const csv = [head, ...body].map(cols => cols.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    /* 오픈 알림 내려받기 — 엑셀(2026-08-22 오너 "오픈 알림 CSV 도 엑셀로 바꿔"). 신청자 현황과 같은 틀:
+       첫 시트 '전체' + 챌린지마다 시트 한 장(보이는 명단 기준 — 정렬 셀렉트·'연락 완료 숨기기'가 걸린 그대로).
+       라이브러리(loadXlsxLib)를 못 받으면 아래 CSV 폴백. 줄은 `wlRow` 한 벌을 둘이 같이 쓴다. */
+    const WL_HEAD = ['챌린지', '이름', '전화번호', '신청일', '상태'];
+    // ⚠️ 전화번호는 csvPhone() 으로 하이픈을 넣어 내보낸다 — CSV 는 따옴표만으로는 엑셀이 앞 0 을 버린다.
+    function wlRow(r) {
+      return [CH_LABEL[r.challenge] || r.challenge, r.name, csvPhone(r.phone),
+        (r.created_at || '').slice(0, 10), r.status === 'notified' ? '연락완료' : '연락전'];
+    }
+    function wlToCsv(rows) {
+      const csv = [WL_HEAD, ...rows.map(wlRow)].map(cols => cols.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
       const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
       const a = document.createElement('a');
       a.href = url; a.download = '오픈알림_' + new Date().toISOString().slice(0, 10) + '.csv';
       a.click(); URL.revokeObjectURL(url);
+    }
+    function wlWorkbook(XLSX, rows) {
+      const wb = XLSX.utils.book_new(), used = new Set();
+      const add = (label, list) => {
+        const ws = XLSX.utils.aoa_to_sheet([WL_HEAD, ...list.map(wlRow)]);
+        ws['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, xlsxSheetName(label, used));
+      };
+      add('전체', rows);
+      const byCh = new Map();   // 명단이 최신순이라 삽입 순서 = 최근 신청이 든 챌린지부터
+      rows.forEach(r => { const k = r.challenge || '기타'; if (!byCh.has(k)) byCh.set(k, []); byCh.get(k).push(r); });
+      byCh.forEach((list, k) => add(CH_LABEL[k] || k, list));
+      return { wb, sheets: 1 + byCh.size };
+    }
+    document.getElementById('wlCsv').addEventListener('click', async () => {
+      const rows = wlVisible();
+      if (!rows.length) { toast('내려받을 명단이 없어요'); return; }
+      const btn = document.getElementById('wlCsv');
+      btn.disabled = true;
+      try {
+        const XLSX = await loadXlsxLib();
+        const { wb, sheets } = wlWorkbook(XLSX, rows);
+        XLSX.writeFile(wb, '오픈알림_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+        toast(`${rows.length.toLocaleString()}명 · 시트 ${sheets}장 내려받음`);
+      } catch (e) {
+        console.error('오픈 알림 엑셀 실패', e);
+        toast('엑셀 라이브러리를 못 받아 CSV 로 내려받아요(시트 없음)');
+        wlToCsv(rows);
+      } finally { btn.disabled = false; }
     });
 
     async function loadRounds() {
