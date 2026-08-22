@@ -949,6 +949,15 @@
       box.querySelector('#btnFinal').addEventListener('click', async function () {
         var text = ta.value.trim();
         if (text.length < 60) { box.querySelector('#editNote').innerHTML = '<div class="notice warn">다듬은 글이 있어야 확정할 수 있어요.</div>'; return; }
+        // 답변노트 자유 글 1,500자 CHECK 짝 — 여기(편집칸이 있는 길)서만 막는다.
+        // ⚠️ doFinalize 에 넣지 말 것: 승인(approved) 화면은 줄일 편집기가 없어
+        //    1,500자 초과 승인본이 영영 확정 못 하는 막다른 길이 된다(2026-08-22 검증) —
+        //    그쪽은 확정하고, 합류 실패 시 완료 화면이 사실대로 말한다(answer_id 분기).
+        if (text.length > 1500) {
+          box.querySelector('#editNote').innerHTML = '<div class="notice warn">최종 답변은 1,500자까지 답변노트에 실려요. 지금 '
+            + text.length.toLocaleString() + '자 — 조금 줄여서 확정해 주세요. (말하기 기준 300~500자면 충분해요)</div>';
+          return;
+        }
         if (!confirm('이 글을 오늘의 최종 답변으로 확정할까요? 확정해도 이력은 남고 다시 열 수 있어요.')) return;
         await saveEditVersion(text);
         if (SESS.state !== 'student_editing') await setState('student_editing', true);
@@ -958,13 +967,9 @@
     }
 
     async function doFinalize(text) {
-      // 답변노트 자유 글은 1,500자 상한(DB CHECK) — 넘긴 채 확정하면 합류만 조용히
-      // 실패한다. 확정 전에 여기서 막는다(btnFinal·승인본 '이대로 확정' 둘 다 지나는 길).
-      if (text.length > 1500) {
-        alert('최종 답변은 1,500자까지예요. 지금 ' + text.length.toLocaleString()
-          + '자 — 조금 줄여서 확정해 주세요. (면접 답변은 말하기 기준 300~500자면 충분해요)');
-        return;
-      }
+      // ⚠️ 여기에 1,500자 차단을 넣지 말 것 — 길이 가드는 btnFinal(편집칸이 있는 길)에만.
+      //    승인본 확정 경로는 줄일 수단이 없어 차단하면 세션이 approved 에 갇힌다.
+      //    초과 승인본은 확정되고 answers 합류만 실패 — 완료 화면이 answer_id 로 사실을 말한다.
       var q = Q();
       var r = await AP.store.finalize(SESS.id, text, {
         question_title: q ? q.content : '일문일답',

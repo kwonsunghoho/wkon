@@ -36,7 +36,11 @@ $$;
 comment on function public.monc_applied_lecture(uuid) is
   '현재 로그인 회원이 이 특강에 신청 이력이 있는지. 숨김 특강을 신청자 본인에게 보여주는 select 정책용.';
 
--- 2. 본인이 등록된 프로그램인가 (ap_program_view 의 v_enr 판정과 같은 기준)
+-- 2. 본인이 등록된 프로그램인가 (ap_program_view 의 v_enr 판정과 같은 기준 — active 만)
+-- ⚠️ status='active' 로 좁힌다 — 전 상태를 인정하면 만료·환불 회원의 숨김 프로그램이
+--    허브에 카드로 뜨는데 RPC(active 만)는 not_found 를 돌려줘 막다른 카드가 된다.
+--    대가로 만료 이용권의 mypage 제목 조회는 숨김 프로그램에서 '일문일답' 폴백으로
+--    떨어진다 — 막다른 CTA 보다 낫다(제목 폴백은 원래 있는 방어).
 create or replace function public.monc_enrolled_program(p_program uuid)
 returns boolean
 language sql
@@ -47,11 +51,12 @@ as $$
   select auth.uid() is not null and exists (
     select 1 from public.program_enrollments e
      where e.program_id = p_program and e.member_id = auth.uid()
+       and e.status = 'active'
   );
 $$;
 
 comment on function public.monc_enrolled_program(uuid) is
-  '현재 로그인 회원이 이 답변 프로그램에 등록돼 있는지. 숨김 프로그램을 수강생 본인에게 보여주는 select 정책용.';
+  '현재 로그인 회원이 이 답변 프로그램의 active 이용권 소유자인지(ap_program_view 와 같은 기준). 숨김 프로그램을 수강생 본인에게 보여주는 select 정책용.';
 
 -- 정책 평가 때 조회자 권한으로 실행되므로 anon 에도 EXECUTE 가 있어야 한다
 -- (anon 은 auth.uid() null → 항상 false — 숨김이 비회원에게 열리지 않는다).

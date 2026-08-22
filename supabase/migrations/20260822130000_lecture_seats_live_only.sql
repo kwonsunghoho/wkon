@@ -93,7 +93,11 @@ begin
 end;
 $$;
 
--- 3. 신청 변경 → 슬롯·특강 재계산 (20260724160000 판과 같은 본문 — 이 파일이 최종) --
+-- 3. 신청 변경 → 슬롯·특강 재계산 ---------------------------------------------
+-- ⚠️ 잠금 순서는 반드시 **슬롯 → 특강**이다(구 20260724160000 판은 특강→슬롯이었다 —
+--    이 트리거가 환불(payment_status 변경)에도 돌게 되면서, 정원 가드(슬롯 for update →
+--    특강 for update)와 순서가 어긋나면 환불과 신규 결제가 겹칠 때 교착이 난다.
+--    2026-08-22 검증에서 실 DB 재현 — 순서를 가드와 맞춰 해소).
 create or replace function public.applications_lecture_seats_sync()
 returns trigger
 language plpgsql
@@ -102,20 +106,20 @@ set search_path = public
 as $$
 begin
   if tg_op = 'DELETE' then
-    perform public.lecture_seats_recount(old.lecture_id);
     perform public.lecture_slot_seats_recount(old.slot_id);
+    perform public.lecture_seats_recount(old.lecture_id);
     return old;
   end if;
 
-  perform public.lecture_seats_recount(new.lecture_id);
   perform public.lecture_slot_seats_recount(new.slot_id);
+  perform public.lecture_seats_recount(new.lecture_id);
 
   if tg_op = 'UPDATE' then
-    if old.lecture_id is distinct from new.lecture_id then
-      perform public.lecture_seats_recount(old.lecture_id);
-    end if;
     if old.slot_id is distinct from new.slot_id then
       perform public.lecture_slot_seats_recount(old.slot_id);
+    end if;
+    if old.lecture_id is distinct from new.lecture_id then
+      perform public.lecture_seats_recount(old.lecture_id);
     end if;
   end if;
   return new;

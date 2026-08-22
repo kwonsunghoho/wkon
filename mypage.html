@@ -884,14 +884,17 @@
     async function loadMyLectures(lectureIds) {
       if (!lectureIds.length) return [];
       try {
+        // ⚠️ select('*') — 구 컬럼 나열이 존재하지 않는 schedule 을 집어 조회 전체가 400,
+        //    '다가오는 일정' 카드가 아예 안 그려지고 있었다(2026-08-22 검증 발견 — 실제
+        //    컬럼명은 schedule_text). 나열로 되돌리지 말 것.
         const { data, error } = await MONC.sb.from('special_lectures')
-          .select('id, title, lecture_date, schedule, instructor').in('id', lectureIds);
+          .select('*').in('id', lectureIds);
         if (error || !data || !data.length) return [];
         const today = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
         const up = data.filter(l => l.lecture_date && String(l.lecture_date) >= today)
           .sort((a, b) => String(a.lecture_date) < String(b.lecture_date) ? -1 : 1);
         document.getElementById('upWrap').innerHTML = up.map(l => {
-          const meta = [fmtLecDate(l.lecture_date), l.schedule, l.instructor].filter(Boolean).join(' · ');
+          const meta = [fmtLecDate(l.lecture_date), l.schedule_text, l.instructor].filter(Boolean).join(' · ');
           const d = Math.round((Date.parse(l.lecture_date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
           return `<div class="v2-card"><div class="v2-up">
               <div class="v2-up-body">
