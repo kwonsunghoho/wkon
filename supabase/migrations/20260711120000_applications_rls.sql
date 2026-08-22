@@ -24,7 +24,8 @@ create table if not exists public.applications (
   created_at     timestamptz not null default now(),
   name           text not null,
   phone          text not null,
-  refund_account text not null,
+  refund_account text,   -- 2026-08-22 정정: 보증금 시절(07-11)엔 not null 이 맞았으나 07-20 폐지 뒤
+                         -- 특강·간편결제 insert 가 null 로 넣는다(운영 DB 도 nullable). not null 로 되돌리지 말 것.
   challenges     jsonb,
   total_price    integer,
   paid           boolean not null default false,

@@ -41,8 +41,8 @@
 | `20260724120000_special_lectures` | special_lectures + applications.lecture_id | owner 실행 필요 표기(특강이 운영 중이면 적용된 것) |
 | `20260724130000` | 특강 airline·seats_left 컬럼 | 미적용 시 브랜딩만 빠짐 |
 | `20260724140000_lecture_images_bucket` | Storage `lecture-images` 버킷 | **실행 완료(2026-07-24) — 다시 실행 안내 금지** |
-| `20260724150000_lecture_seat_counting` | 잔여석 트리거(MC001) | owner 실행 필요 표기 |
-| `20260724160000_lecture_slots` | 특강 시간대 | owner 실행 필요 표기 |
+| `20260724150000_lecture_seat_counting` | 잔여석 트리거(MC001) | owner 실행 필요 표기(특강 운영 중이면 적용된 것). ⚠️ **다시 실행하지 말 것 — 좌석 함수의 최종 정의는 `20260822130000`** 이다. 이 파일을 그 뒤에 실행하면 환불 필터와 슬롯(시간대) 정원 검사가 사라져 조용한 초과판매가 난다(복구 = 20260822130000 재실행) |
+| `20260724160000_lecture_slots` | 특강 시간대 | owner 실행 필요 표기(시간대 운영 중이면 적용된 것). ⚠️ **다시 실행하지 말 것 — 좌석 함수의 최종 정의는 `20260822130000`**(이 파일을 그 뒤에 실행하면 환불 필터가 사라진다) |
 | `20260725120000_duplicate_application_guard` | 중복 신청 트리거(MC002) | owner 실행 필요 표기 |
 | `20260725160000_ai_killer_context` | 검사 기록 문항·종류 컬럼 | 실행 대기(킬러 스펙 '오너 할 일' 기준 — 미적용이어도 검사 정상) |
 | `20260725170000`·`180000`·`190000` | 크레딧 분류 3종·단가·하루 무료·팩 3종 | **전부 적용 완료(2026-07-25)** |
@@ -81,8 +81,27 @@
 | `20260819140000_lecture_price_label` | **특강 0원 표시 문구** — `special_lectures.price_label`(text · NULL=무료 표기). '상담 시 안내' 같은 문구를 '무료' 대신 표시. 표시 전용 | **적용 완료(2026-08-19 오너 실행 — anon 프로브 실측: `select=price_label` HTTP 200 + 값 읽힘. 다시 실행 안내 금지)** — 값은 admin '특강' 폼 '0원일 때 표시' 칸에서 특강마다 넣는다 |
 | `20260820120000_challenge_submissions` | **챌린지 처음/끝 학생 직접 제출** — `challenge_submissions` 표(voice/expression/spinning × before/after) + `is_challenge_participant()`(참가 판정 — applications 원장) + 본인/admin RLS + `recordings` 버킷 본인 폴더 쓰기 정책 3종(패턴·참가 검사) + 버킷 50MB 상한. `daily_records` 는 **안 건드린다**(화면만 정리 — 데이터 보존) | **적용 완료(2026-08-20 오너 실행 — anon 프로브 실측: 표 select HTTP 200 `[]`(존재+RLS 잠금, 미적용이면 404 PGRST205), RPC `is_challenge_participant` anon 호출 401(존재+anon 차단 — 미적용이면 404 PGRST202). 다시 실행 안내 금지)** — admin 대리 업로드는 없다(같은 날 오너 확정 — admin.md '회원 상세' 절) |
 | `20260820160000_review_submissions` | **챌린지 후기 회원 직접 제출** — `reviews.member_id` + 회원당 챌린지·기수 1건 유니크 인덱스 + `submit_challenge_review()` RPC(참가·기수 서버 판정 · `visible=false` 강제 · authenticated 만) + `reviews` 버킷 `submissions/<uid>/` 회원 insert 정책. **보상 지급 없음(오너 확정)** | **적용 완료(2026-08-20 오너 실행 — anon 프로브 실측: `reviews?select=member_id` HTTP 200 값 반환, RPC `submit_challenge_review` anon 호출 401(존재+anon 차단 — 미적용이면 404 PGRST202). 다시 실행 안내 금지)** |
+| `20260822130000_lecture_seats_live_only` | **특강 잔여석·정원 — 환불 좌석 반환**(2026-08-22 감사 #4) — 좌석 카운트 4곳(특강·슬롯 재계산, 정원 가드, seats_init)에 `monc_app_live()` 필터(중복 가드와 한 기준 — 부분 환불도 자리 비움), 재계산 트리거를 `payment_status·refunded` 변경에도 돌게 확장, 말미에 전체 재계산으로 기환불 좌석 즉시 반환 | **⚠️ owner 실행 필요(2026-08-22 작성).** 미실행이면 환불 좌석이 계속 안 돌아온다(가짜 만석 → 결제 후 자동 환불 튕김 가능). ⚠️ **이 파일이 좌석 함수의 최종 정의** — 구 20260724150000·160000 을 이 뒤에 실행하면 환불 필터·슬롯 검사가 사라진다(복구는 이 파일 재실행) |
+| `20260822140000_participant_partial_refund` | **챌린지 참가 판정 — 부분 환불 포함**(감사 #2) — `is_challenge_participant()` 의 통과 목록에 `partial_refunded` 추가(전액 환불만 배제). 화면(mypage 제출 카드·review-write)과 한 기준이 된다. 다건 챌린지 결제 후 1건만 환불한 회원의 나머지 챌린지 제출 차단도 함께 풀린다 | **⚠️ owner 실행 필요(2026-08-22 작성).** 미실행이면 부분 환불(중도 해지) 회원의 제출 업로드가 42501, 후기가 not_participant 로 실패 |
+| `20260822150000_hidden_visible_enrolled` | **숨김 특강·프로그램을 신청·등록 본인에게는 보이게**(감사 #5) — definer 판정 함수 2개(`monc_applied_lecture`·`monc_enrolled_program`) + 두 select 정책에 `or 본인` 추가(ap_program_view RPC 와 같은 기준. anon 은 여전히 visible 만) | **⚠️ owner 실행 필요(2026-08-22 작성).** 미실행이면 판매 종료로 숨긴 특강·프로그램이 신청자·수강생 mypage·허브에서 조용히 사라진다(0행 — 에러 없음) |
 | `20260822120000_drop_link_application_trigger` | **비로그인 신청 42501 유실 수리** — 콘솔 시절 트리거 `trg_link_application_member`(신청 INSERT 때 전화 일치 회원으로 member_id 자동 채움) 삭제. 2026-08-04 RLS 하드닝 뒤로는 이 자동 채움이 anon 의 `member_id is null or = auth.uid()` 검사와 충돌해 **기존 회원의 로그아웃 신청·회원과 같은 번호의 비회원 신청이 42501 로 유실**되고 있었다(2026-08-22 감사 발견 · 오너 pg_trigger 실측으로 라이브 존재 확인). 연결은 백필 트리거(members 쪽)·admin [이 회원에 연결]이 계속 담당 | **⚠️ owner 실행 필요(2026-08-22 작성 — 실행 전까지 유실 계속).** 확인: pg_trigger 조회에서 applications 트리거가 3개(duplicate·lecture_capacity·lecture_seats)만 남으면 적용 |
 | `20260821120000_sojae_access_revert` | **소재 권한 게이트 잔재 제거(답변집 저장 사고 수리)** — `discovery_sessions`·`discovery_messages`·`answers` 의 `_own` 정책에서 `can_sojae()` 조건을 빼고 원래 정의(본인 행이면 CRUD)로 원복 + `can_sojae()` 함수·`members.sojae_enabled` 컬럼 삭제 | **⚠️ owner 실행 필요(2026-08-21 작성 — 학생이 실제로 막혀 있다).** 2026-07-27 폐지 때 화면·서버 검사만 지우고 **RLS 되돌리기가 빠져**, `sojae_enabled=false` 회원(폐지 뒤 가입자 전원 — 켜 줄 수단이 없다)은 답변집 저장이 42501 "row-level security policy for table \"answers\"" 로 계속 실패하고 목록도 빈 화면이다(2026-08-21 학생 캡처 실증). 실행 전까지는 그 회원들의 소재 발굴 저장·직접 쓰기·프로그램 확정본이 전부 막힌 상태. 실행 뒤 학생이 [답변집에 저장] 을 다시 누르면 바로 된다(재로그인 불필요) |
+
+### ⚠️ 동명 함수 재실행 경고 — 옛 파일을 다시 돌리면 새 정의가 조용히 사라진다 (2026-08-22 감사 #6)
+
+같은 함수를 여러 마이그레이션이 `create or replace` 로 재정의한 쌍이다. **나중에 실행한 쪽이
+이긴다**(lab 목록 RPC 150000/160000 전례와 같은 유형). 아래 옛 파일은 다시 실행하지 말고,
+의심되면 각 줄의 '최종' 파일만 다시 실행한다.
+
+- 특강 좌석 함수 2벌: `20260724150000`·`160000` → **최종 = `20260822130000`**(위 표 참조).
+- `lab_set_password`: `20260801120000` 을 재실행하면 `20260801130000` 의 is_admin 가드 판이
+  가드 없는 판으로 교체되고 revoke 까지 다시 돌아 admin 비밀번호 설정 RPC 가 권한 오류로 죽는다.
+- `handle_new_user`: `20260703120000` 을 재실행하면 `20260703140000` 의 카카오 이름 폴백이 사라진다.
+- `spend_credit`·`refund_credit`: `20260725130000` 을 재실행하면 `20260725180000` 의 도구별
+  단가·하루 무료 모델이 **회당 1크레딧 구판으로 조용히 교체**되고(시그니처 동일 — 오버로드 없이
+  덮인다), 같은 파일의 grant 가 **`refund_credit` 을 authenticated 에 다시 열어 `20260804160000`
+  보안 잠금까지 되돌린다**(학생 자가 환급 → 유료 기능 공짜 — CLAUDE.md '절대 되살리면 안 되는 것').
+  복구 = `20260725180000` + `20260804160000` 재실행.
 
 ## ⏸ 비용 일괄 점검 — 나중에 한 번에(오너 결정 2026-08-06)
 

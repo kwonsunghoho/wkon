@@ -842,7 +842,9 @@
         scoreHtml +
         '<div class="blk ' + (editing ? '' : 'hidden') + '" id="editBlk"><div class="blk-t">직접 다듬기</div>' +
         '<div class="blk-s">여기서 고친 글이 최종본이 돼요. 내가 실제로 말할 수 있는 문장인지 소리 내어 읽어 보세요.</div>' +
-        '<textarea class="edit-ta" id="editTa"></textarea>' +
+        // ⚠️ maxlength 1500 — 답변노트 자유 글 CHECK(20260725140000)와 한 쌍. 없으면 확정 시
+        //    answers 합류가 조용히 실패해 "답변노트에도 저장됐어요"가 거짓말이 된다.
+        '<textarea class="edit-ta" id="editTa" maxlength="1500"></textarea>' +
         '<div class="draft-foot"><span id="editCnt"></span><span id="editSec"></span></div>' +
         '<div id="editNote"></div>' +
         '<div class="row2"><button class="cta ghost sub" id="btnReRevise">다시 첨삭 받기</button>' +
@@ -956,6 +958,13 @@
     }
 
     async function doFinalize(text) {
+      // 답변노트 자유 글은 1,500자 상한(DB CHECK) — 넘긴 채 확정하면 합류만 조용히
+      // 실패한다. 확정 전에 여기서 막는다(btnFinal·승인본 '이대로 확정' 둘 다 지나는 길).
+      if (text.length > 1500) {
+        alert('최종 답변은 1,500자까지예요. 지금 ' + text.length.toLocaleString()
+          + '자 — 조금 줄여서 확정해 주세요. (면접 답변은 말하기 기준 300~500자면 충분해요)');
+        return;
+      }
       var q = Q();
       var r = await AP.store.finalize(SESS.id, text, {
         question_title: q ? q.content : '일문일답',
@@ -1031,8 +1040,10 @@
         ? deliv.meta.followup_practice : (q && q.followups) || [];
       var consented = await AP.store.getConsent('model_training');
 
+      // 답변노트 합류가 실패했으면(SESS.answer_id 없음) 저장됐다고 말하지 않는다 —
+      // 화면이 아는 사실만 말한다(mypage '오늘 한 칸'과 같은 규칙).
       box.innerHTML = '<div class="blk"><div class="blk-t">오늘의 답변 완성 ✓</div>' +
-        '<div class="blk-s">답변노트에도 저장됐어요. 확정 후에도 이력은 전부 남아요.</div>' +
+        '<div class="blk-s">' + (SESS.answer_id ? '답변노트에도 저장됐어요. ' : '') + '확정 후에도 이력은 전부 남아요.</div>' +
         '<div class="notice good">' + esc(fin ? fin.content : (SESS.draft || '')).replace(/\n/g, '<br>') + '</div>' +
         (speak ? '<div class="notice"><b>말하기용</b><br>' + speak.content.split('\n').map(function (l) { return '<div class="speak-line">' + esc(l) + '</div>'; }).join('') + '</div>' : '') +
         '<div class="row2">' +

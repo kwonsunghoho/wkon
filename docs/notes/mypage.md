@@ -12,7 +12,8 @@
 - **작성 판정은 답변 제목 정확 일치**(mypage `ANSWER_DAYS` ↔ answers.html 프리필이 한 쌍 — 한쪽만 바꾸면 판정이 깨진다).
   답변 조회는 `loadAnswerNotes()` 의 promise 를 재사용한다(추가 요청 없음 — 함수가 data 를 return 하는 이유).
 - **참가 판정의 원장은 DB**: `challenge_submissions` RLS 의 `is_challenge_participant()`
-  (applications 에서 member_id=auth.uid() + 결제/무료 + 미환불 + 그 챌린지 포함). 화면 partOf 는 카드를 그릴지만 정한다.
+  (applications 에서 member_id=auth.uid() + 결제/무료 + 전액 미환불 + 그 챌린지 포함). 화면 partOf 는 카드를 그릴지만 정한다.
+  ⚠️ **부분 환불(중도 해지)은 참가 유지다**(`20260822140000` — 그전엔 함수가 부분 환불을 배제해, 화면은 카드를 열어 주는데 업로드가 42501 로 죽었다. 다건 챌린지 결제 후 1건만 환불한 회원의 나머지 챌린지까지 막혔던 원인). 전액 환불만 배제 — 화면 partOf 와 같은 기준을 유지할 것.
   ⚠️ 비회원 신청(전화 매칭)은 대상이 아니고 **admin 대리 업로드도 없다**(오너 "내가 대신 올려주는 건 없어") — apply 의 로그인 유도 강화 + 가입 뒤 admin [이 회원에 연결]로 직접 업로드 길을 연다(전화 조회 창구 금지 원칙 + 프로필 번호 바꿔 남 행세 차단은 그대로).
 - 업로드 경로 `<uid>/<챌린지>-<before|after>.<ext>`(storage 정책이 패턴·참가까지 검사). 확장자가 바뀐 재업로드는 옛 파일을 지운다.
   조회는 **`.eq('member_id', me)` 필수** — 빼면 admin 계정에서 전 회원 행이 내려온다(chsub_admin_all).

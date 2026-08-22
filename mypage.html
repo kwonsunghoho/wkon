@@ -1081,8 +1081,12 @@
     const CL_REASON = { purchase: '충전', admin_grant: '지급', use: '사용', free_use: '무료 사용', refund: '환급' };
     async function loadCreditLedger() {
       try {
+        // ⚠️ .eq('member_id') 를 빼면 admin 계정에선 credit_admin_all 로 전 회원 원장이 섞인다
+        const s = await MONC.getSession();
+        if (!s) return;
         const { data, error } = await MONC.sb.from('credit_ledger')
-          .select('*').order('created_at', { ascending: false }).limit(30);
+          .select('*').eq('member_id', s.user.id)
+          .order('created_at', { ascending: false }).limit(30);
         if (error || !data || !data.length) return;
         document.getElementById('creditRows').innerHTML = data.slice(0, 10).map(r => {
           const d = Number(r.delta) || 0;
@@ -1101,8 +1105,12 @@
     // ── 답변 프로그램 이용권 접이 — 산 사람이 여기서 확인·재진입한다(2026-08-02). 0건이면 안 연다. ──
     async function loadMyPrograms() {
       try {
+        // ⚠️ .eq('member_id') 를 빼면 admin·연구원 계정에선 전 회원 이용권이 섞인다
+        const s = await MONC.getSession();
+        if (!s) return;
         const { data, error } = await MONC.sb.from('program_enrollments')
-          .select('*').order('started_at', { ascending: false });
+          .select('*').eq('member_id', s.user.id)
+          .order('started_at', { ascending: false });
         if (error || !data || !data.length) return;
         const titles = {};
         try {

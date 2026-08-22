@@ -662,8 +662,11 @@
 
     // ── 저장한 답변 ───────────────────────────────────────────────────
     async function loadNotes() {
+      // ⚠️ .eq('member_id') 를 빼면 admin 계정에선 answers_admin_all 로 전 회원 답변이 목록에 뜬다
+      const s = await MONC.getSession().catch(() => null);
+      if (!s) { _notes = []; return; }
       // ⚠️ select('*') — 분류 컬럼 미적용 환경에서도 조회가 통째로 깨지지 않게
-      const { data } = await MONC.sb.from('answers').select('*')
+      const { data } = await MONC.sb.from('answers').select('*').eq('member_id', s.user.id)
         .order('updated_at', { ascending: false }).limit(30);
       _notes = data || [];
       const qids = [...new Set(_notes.map((a) => a.question_id).filter(Boolean))];
