@@ -1181,6 +1181,38 @@
         <div id="mDistRows"></div>
         <div class="dist-note" id="mDistNote" hidden></div>
       </div>
+      <!-- 조건 만들기(2026-08-22 3단계) — 위 '회원 보기'(현황)와 **AND** 로 걸린다.
+           OR·괄호는 넣지 않는다: 넣는 순간 이 자리가 질의 편집기가 된다. -->
+      <details class="sfold" id="mSegFold" style="border-top:0;margin-top:0;padding-top:0">
+        <summary>조건 더 걸기 <span class="adm-help-v" id="mSegOn" hidden>켜짐</span></summary>
+        <div style="padding-top:10px;display:flex;flex-direction:column;gap:10px">
+          <div class="af-field" style="margin:0">
+            <label for="mSegCohort">기수</label>
+            <select id="mSegCohort" class="af-select"><option value="">전체</option></select>
+          </div>
+          <label class="bulk-bar" style="margin:0"><input type="checkbox" id="mSegUnpaid"> 미입금 있는 사람만</label>
+          <label class="bulk-bar" style="margin:0"><input type="checkbox" id="mSegNoSub"> 제출물 없는 사람만</label>
+          <div class="af-field" style="margin:0">
+            <label for="mSegIdle">무소식 일수 (이상)</label>
+            <input id="mSegIdle" type="number" min="0" step="1" placeholder="예: 30"
+                   style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%">
+          </div>
+          <div class="af-field" style="margin:0">
+            <label for="mSegTag">태그</label>
+            <input id="mSegTag" placeholder="예: 상담함"
+                   style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%">
+          </div>
+          <label class="bulk-bar" id="mSegFupWrap" style="margin:0" hidden>
+            <input type="checkbox" id="mSegFup"> '오늘' 할 일에 올리기
+          </label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" type="button" id="mSegSave">이 조건 저장…</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="mSegClear">조건 지우기</button>
+          </div>
+          <div id="mSegWarn" class="dist-note" hidden></div>
+        </div>
+      </details>
+
       <!-- '흔적 없음' 이 무엇인지 · 지울 때 무엇을 알아야 하는지 -->
       <details class="adm-help" id="mGhostHelp" hidden>
         <summary><b>흔적 없는 계정</b> <span class="adm-help-v" id="mGhostCount">–</span></summary>
@@ -2281,6 +2313,14 @@
           cohorts.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
         sel.value = keep;
       }
+      // 조건 만들기의 기수 칸도 같은 목록이다(2026-08-22)
+      const cs = document.getElementById('mSegCohort');
+      if (cs) {
+        const keep = cs.value;
+        cs.innerHTML = '<option value="">전체</option>' +
+          cohorts.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+        cs.value = keep;
+      }
     }
 
     /* ⚠️ 최근 가입이 맨 위다(2026-08-02 5차) — '오늘 새 회원 3명'을 눌러 들어갔는데
@@ -2324,15 +2364,20 @@
          ⚠️ appPaid() 는 payment_status='refunded' 도 true 로 본다(돈이 한 번은 움직였다는 뜻).
             그대로 쓰면 전액 환불하고 떠난 사람이 '고객'에 남아 진성 숫자가 부푼다. */
       const payByMember = new Map(), payByPhone = new Map();
+      // 조건 '미입금 있음' 용 — 무료(재학생)·환불 건은 받을 돈이 아니라 세지 않는다
+      const dueByMember = new Map(), dueByPhone = new Map();
       // 마지막 움직임 계산용 — 신청 시각 중 가장 최근
       const atByMember = new Map(), atByPhone = new Map();
       const bump = (m1, m2, k, v) => { if (!m1.has(k) || m1.get(k) < v) m1.set(k, v); };
       for (const a of _apps) {
-        const paid = (appPaid(a) || appFree(a)) && !a.refunded && a.payment_status !== 'refunded';
+        const refunded = !!a.refunded || a.payment_status === 'refunded';
+        const paid = (appPaid(a) || appFree(a)) && !refunded;
+        const due = !appPaid(a) && !appFree(a) && !refunded;
         const t = a.created_at ? new Date(a.created_at).getTime() : 0;
         if (a.member_id) {
           byMember.set(a.member_id, (byMember.get(a.member_id) || 0) + 1);
           if (paid) payByMember.set(a.member_id, (payByMember.get(a.member_id) || 0) + 1);
+          if (due) dueByMember.set(a.member_id, (dueByMember.get(a.member_id) || 0) + 1);
           if (t) bump(atByMember, null, a.member_id, t);
           continue;
         }
@@ -2340,9 +2385,10 @@
         if (!d) continue;
         byPhone.set(d, (byPhone.get(d) || 0) + 1);
         if (paid) payByPhone.set(d, (payByPhone.get(d) || 0) + 1);
+        if (due) dueByPhone.set(d, (dueByPhone.get(d) || 0) + 1);
         if (t) bump(atByPhone, null, d, t);
       }
-      return { byMember, byPhone, payByMember, payByPhone, atByMember, atByPhone };
+      return { byMember, byPhone, payByMember, payByPhone, dueByMember, dueByPhone, atByMember, atByPhone };
     }
 
     /* ══ 회원 활동 색인 — 크레딧 원장에서 한 번에 뽑는다(2026-08-22) ══
@@ -2375,6 +2421,7 @@
     let _subCount = new Map(), _subAt = new Map();
     let _ansCount = new Map(), _ansAt = new Map();
     let _enrolled = new Set();
+    let _memberTags = new Map(), _tagsOff = false;
     async function loadMemberActivity() {
       _actMiss.length = 0;
       const put = (cnt, at, key, t) => {
@@ -2383,10 +2430,12 @@
       };
       const ms = t => (t ? new Date(t).getTime() : 0);
 
-      const [subs, ans, enr] = await Promise.all([
+      const [subs, ans, enr, tg] = await Promise.all([
         fetchAll(() => sb().from('challenge_submissions').select('member_id, created_at')),
         fetchAll(() => sb().from('answers').select('member_id, updated_at')),
         fetchAll(() => sb().from('program_enrollments').select('member_id')),
+        // 태그는 조건('태그로 거르기')에만 쓴다. 표가 없으면 그 조건만 못 건다.
+        fetchAll(() => sb().from('member_tags').select('*')),
       ]);
 
       _subCount = new Map(); _subAt = new Map();
@@ -2400,6 +2449,13 @@
       _enrolled = new Set();
       if (enr.error) _actMiss.push('이용권');
       else (enr.data || []).forEach(r => r.member_id && _enrolled.add(r.member_id));
+
+      _memberTags = new Map();
+      _tagsOff = !!tg.error;
+      (tg.data || []).forEach(r => {
+        if (!_memberTags.has(r.member_id)) _memberTags.set(r.member_id, new Set());
+        _memberTags.get(r.member_id).add(r.tag);
+      });
 
       _actReady = true;
       renderMemberList();
@@ -2508,6 +2564,141 @@
        ⚠️ 표기는 fmtDate 하나로 통일한다(오늘/어제/n월 n일). 여기서 따로 만들면 화면마다 다르게 적힌다. */
     function seenLabel(t) { return t ? fmtDate(new Date(t).toISOString()) : ''; }
 
+    /* ══ 조건 저장(세그먼트) — 2026-08-22 3단계 ══
+       조건은 **AND 로 묶인 배열** 하나다: {"all":[{k,op,v},…]}. 거르기는 브라우저가 한다
+       (돈이 걸린 판정이 아니라 '목록을 어떻게 볼까'라서 서버가 소유할 이유가 없다).
+       ⚠️ 모르는 k 는 **조용히 무시하지 않는다** — 무시하면 명단이 실제보다 넓어지는데
+          화면은 조건이 다 걸린 것처럼 보인다. 몇 개를 못 걸었는지 적는다(원칙 11). */
+    const COND_KEYS = ['tier', 'cohort', 'unpaid', 'noSub', 'idleDays', 'tag'];
+    let _segs = [], _segsOff = false;
+    let _cond = { cohort: '', unpaid: false, noSub: false, idleDays: 0, tag: '' };
+
+    /* '오늘' 탭에 올릴 후속 조치 — followup 을 켠 조건에 걸린 인원.
+       ⚠️ 화면에 걸린 조건(_cond)을 건드리지 않는다. 여기서 applyRule 을 쓰면 사용자가 보고 있던
+          조건이 통째로 바뀐다 — 세는 것과 보는 것은 다른 일이다. */
+    function segFollowups() {
+      if (_segsOff || !_segs.length) return [];
+      const appIdx = buildAppIndex(), credIdx = buildCreditIndex();
+      const saved = _cond;
+      const out = [];
+      _segs.filter(x => x.followup).forEach(x => {
+        let tier = 'all';
+        const c = { cohort: '', unpaid: false, noSub: false, idleDays: 0, tag: '' };
+        ((x.rule && x.rule.all) || []).forEach(r => {
+          if (r.k === 'tier') tier = r.v;
+          else if (r.k === 'cohort') c.cohort = r.v;
+          else if (r.k === 'unpaid') c.unpaid = !!r.v;
+          else if (r.k === 'noSub') c.noSub = !!r.v;
+          else if (r.k === 'idleDays') c.idleDays = Number(r.v) || 0;
+          else if (r.k === 'tag') c.tag = r.v;
+        });
+        const pass = M_FILTERS[tier] || M_FILTERS.all;
+        _cond = c;   // condPass 가 읽는 값 — 아래 finally 자리에서 반드시 되돌린다
+        let n = 0;
+        const seenOf = new Map();
+        members.forEach(m => {
+          if (isArchived(m)) return;
+          seenOf.set(m.id, lastSeenAt(m, appIdx, credIdx));
+          if (!pass(memberFlags(m), m, memberTier(m, appIdx, credIdx))) return;
+          if (!condPass(m, { appIdx, seenOf })) return;
+          n++;
+        });
+        if (n) out.push({ id: x.id, name: x.name, n });
+      });
+      _cond = saved;
+      return out;
+    }
+
+    async function loadSegments() {
+      const { data, error } = await sb().from('member_segments').select('*').order('created_at', { ascending: true });
+      _segsOff = !!error;
+      _segs = error ? [] : (data || []);
+      renderSegOptions();
+      renderMemberList();
+    }
+
+    // 지금 화면에 걸린 조건을 rule 로. tier 는 '회원 보기' 셀렉트에서 온다.
+    function currentRule() {
+      const all = [];
+      const tier = _mFilter.indexOf('seg:') === 0 ? 'all' : _mFilter;
+      if (TIER_BY[tier]) all.push({ k: 'tier', v: tier });
+      if (_cond.cohort) all.push({ k: 'cohort', v: _cond.cohort });
+      if (_cond.unpaid) all.push({ k: 'unpaid', v: true });
+      if (_cond.noSub) all.push({ k: 'noSub', v: true });
+      if (_cond.idleDays > 0) all.push({ k: 'idleDays', op: '>=', v: _cond.idleDays });
+      if (_cond.tag) all.push({ k: 'tag', v: _cond.tag });
+      return { all };
+    }
+
+    // rule → 화면 컨트롤. 저장한 조건을 고르면 무엇이 걸렸는지 눈에 보여야 한다.
+    function applyRule(rule) {
+      _cond = { cohort: '', unpaid: false, noSub: false, idleDays: 0, tag: '' };
+      let tier = 'all', unknown = 0;
+      ((rule && rule.all) || []).forEach(c => {
+        if (COND_KEYS.indexOf(c.k) < 0) { unknown++; return; }
+        if (c.k === 'tier') tier = c.v;
+        else if (c.k === 'cohort') _cond.cohort = c.v;
+        else if (c.k === 'unpaid') _cond.unpaid = !!c.v;
+        else if (c.k === 'noSub') _cond.noSub = !!c.v;
+        else if (c.k === 'idleDays') _cond.idleDays = Number(c.v) || 0;
+        else if (c.k === 'tag') _cond.tag = c.v;
+      });
+      syncCondUI();
+      return { tier, unknown };
+    }
+
+    function syncCondUI() {
+      const g = id => document.getElementById(id);
+      if (!g('mSegCohort')) return;
+      g('mSegCohort').value = _cond.cohort;
+      g('mSegUnpaid').checked = _cond.unpaid;
+      g('mSegNoSub').checked = _cond.noSub;
+      g('mSegIdle').value = _cond.idleDays || '';
+      g('mSegTag').value = _cond.tag;
+      const on = !!(_cond.cohort || _cond.unpaid || _cond.noSub || _cond.idleDays || _cond.tag);
+      g('mSegOn').hidden = !on;
+      if (on) g('mSegFold').open = true;   // 걸려 있는데 접혀 있으면 왜 걸렸는지 모른다
+      /* '오늘에 올리기'는 **저장한 조건에만** 붙는다 — 저장 안 한 조건은 올릴 대상이 없다 */
+      const seg = _segs.find(x => 'seg:' + x.id === _mFilter);
+      g('mSegFupWrap').hidden = !seg;
+      g('mSegFup').checked = !!(seg && seg.followup);
+    }
+
+    /* 한 회원이 조건을 통과하는가. ctx 는 renderMemberList 가 한 번 만든 색인이다. */
+    function condPass(m, ctx) {
+      const c = _cond;
+      if (c.cohort && m.cohort_id !== c.cohort) return false;
+      if (c.unpaid) {
+        const digits = (m.phone || '').replace(/\D/g, '');
+        const due = ctx.appIdx
+          ? (ctx.appIdx.dueByMember.get(m.id) || 0) + (digits ? (ctx.appIdx.dueByPhone.get(digits) || 0) : 0) : 0;
+        if (!due) return false;
+      }
+      if (c.noSub && (_subCount.get(m.id) || 0) > 0) return false;
+      if (c.idleDays > 0) {
+        const seen = ctx.seenOf.get(m.id) || 0;
+        if (!seen) return false;
+        if ((Date.now() - seen) / 86400000 < c.idleDays) return false;
+      }
+      if (c.tag) {
+        const set = _memberTags.get(m.id);
+        if (!set || !set.has(c.tag)) return false;
+      }
+      return true;
+    }
+
+    /* 셀렉트의 '저장한 조건' 묶음 채우기. 인원수는 renderMemberList 가 세어 넣는다. */
+    function renderSegOptions() {
+      const g = document.getElementById('mSegGroup');
+      if (!g) return;
+      // 표가 없으면 묶음을 아예 안 그린다 — 빈 묶음은 '조건이 0개'로 읽혀 오해를 만든다
+      if (_segsOff) { g.hidden = true; g.innerHTML = ''; return; }
+      g.hidden = false;
+      g.innerHTML = _segs.map(x => `<option value="seg:${esc(x.id)}">${esc(x.name)}</option>`).join('')
+        + '<option value="seg:new">+ 지금 조건 저장…</option>'
+        + (_segs.length ? '<option value="seg:del">− 저장한 조건 지우기…</option>' : '');
+    }
+
     /* 회원 현황 분포 — 목록 위 읽기 전용 수치(2026-08-22 오너 "진성 고객이 누군지").
        ⚠️ 누르면 걸리게 만들지 말 것 — 고르기는 #mFilter 하나다(같은 일을 두 벌로 두지 않는다).
        ⚠️ 막대는 **최대값 기준 비례**다. '가입만'이 압도적이면 그대로 보여야 한다 —
@@ -2545,8 +2736,16 @@
     function renderMemberList() {
       const q = document.getElementById('search').value.trim().toLowerCase();
       const qd = q.replace(/\D/g, '');
-      const pass = M_FILTERS[_mFilter] || M_FILTERS.all;
-      const wantArc = _mFilter === 'archived';
+      /* 저장한 조건을 고르면 그 rule 이 현황(tier)과 나머지 조건을 **둘 다** 정한다.
+         ⚠️ 못 읽은 조건이 있으면 사실대로 적는다 — 조용히 넘기면 명단이 실제보다 넓어진다. */
+      let tierKey = _mFilter, unknownConds = 0;
+      if (_mFilter.indexOf('seg:') === 0) {
+        const seg = _segs.find(x => 'seg:' + x.id === _mFilter);
+        const applied = applyRule(seg ? seg.rule : null);
+        tierKey = applied.tier; unknownConds = applied.unknown;
+      }
+      const pass = M_FILTERS[tierKey] || M_FILTERS.all;
+      const wantArc = tierKey === 'archived';
       const appIdx = buildAppIndex();
       const credIdx = buildCreditIndex();
       const flagOf = new Map(), tierOf = new Map(), seenOf = new Map();
@@ -2563,12 +2762,25 @@
         if (!arc && tierN[t] !== undefined) tierN[t]++;
         if (arc !== wantArc) return false;
         if (!pass(f, m, t)) return false;
+        if (!condPass(m, { appIdx, seenOf })) return false;
         if (!q) return true;
         return (m.name && m.name.toLowerCase().includes(q))
           || (m.email && m.email.toLowerCase().includes(q))
           || (qd && (m.phone || '').replace(/\D/g, '').includes(qd));
       });
       renderTierDist(tierN);
+
+      /* 조건 경고 — ① 못 읽은 조건 ② 태그 표가 없는데 태그로 거르려는 경우.
+         둘 다 '명단이 실제와 다르다'는 뜻이라 화면에 적어야 한다. */
+      const warn = document.getElementById('mSegWarn');
+      if (warn) {
+        const msgs = [];
+        if (unknownConds) msgs.push('이 조건 중 ' + unknownConds + '개를 읽지 못했습니다 — 그만큼 명단이 넓습니다.');
+        if (_cond.tag && _tagsOff) msgs.push('태그 표가 아직 없어 태그 조건을 걸지 못했습니다.');
+        warn.hidden = !msgs.length;
+        warn.style.color = 'var(--st-alert)';
+        warn.textContent = msgs.join(' ');
+      }
       const arcN = members.reduce((n, m) => n + (isArchived(m) ? 1 : 0), 0);
       /* '흔적 없는 계정' 설명은 **그 현황을 골랐을 때만** 목록 위에 뜬다(2026-08-22).
          늘 떠 있을 이유가 없다 — 인원수는 위 분포가 늘 보여준다. */
@@ -3239,14 +3451,108 @@
     // ⚠️ 조건이 바뀌면 표시 수를 처음으로 되돌린다 — 안 그러면 검색 결과 3명인데 '더 보기'가 남는다.
     const mReset = () => { _mShown = M_PAGE; renderMemberList(); };
     document.getElementById('search').addEventListener('input', mReset);
-    document.getElementById('mFilter').addEventListener('change', e => {
+    document.getElementById('mFilter').addEventListener('change', async e => {
       const v = e.target.value;
+      // '+ 지금 조건 저장…' · '− 저장한 조건 지우기…' 는 보기 값이 아니라 명령이다
+      if (v === 'seg:new') { e.target.value = _mFilter; await saveSegment(); return; }
+      if (v === 'seg:del') { e.target.value = _mFilter; await deleteSegment(); return; }
       // ⚠️ 상태를 바꾸면 선택을 비운다 — 안 그러면 '전체'에서 고른 사람이 '보관함'으로 넘어가
       //    [보관 해제] 대상에 섞인다(화면에는 안 보이는 채로).
       if (_mFilter !== v) selected.clear();
+      /* 저장한 조건에서 **손 조건으로 돌아올 때**는 걸려 있던 조건을 비운다.
+         안 그러면 셀렉트는 '전체'인데 뒤에서 조건이 계속 걸려 있어, 왜 명단이 좁은지 알 수 없다. */
+      if (_mFilter.indexOf('seg:') === 0 && v.indexOf('seg:') !== 0) {
+        _cond = { cohort: '', unpaid: false, noSub: false, idleDays: 0, tag: '' };
+        syncCondUI();
+      }
       _mFilter = v;
       mReset();
     });
+
+    /* ── 조건 만들기(3단계) ── 손으로 조건을 바꾸면 셀렉트가 '저장한 조건'을 계속 가리키면
+       안 된다(저장된 것과 다른 조건이므로). 그 rule 의 현황 값으로 되돌린다. */
+    function condChanged() {
+      const g = id => document.getElementById(id);
+      _cond = {
+        cohort: g('mSegCohort').value,
+        unpaid: g('mSegUnpaid').checked,
+        noSub: g('mSegNoSub').checked,
+        idleDays: Math.max(0, parseInt(g('mSegIdle').value, 10) || 0),
+        tag: (g('mSegTag').value || '').trim(),
+      };
+      if (_mFilter.indexOf('seg:') === 0) {
+        const seg = _segs.find(x => 'seg:' + x.id === _mFilter);
+        const tier = ((seg && seg.rule && seg.rule.all) || []).filter(c => c.k === 'tier')[0];
+        _mFilter = (tier && tier.v) || 'all';
+        document.getElementById('mFilter').value = _mFilter;
+      }
+      const on = !!(_cond.cohort || _cond.unpaid || _cond.noSub || _cond.idleDays || _cond.tag);
+      document.getElementById('mSegOn').hidden = !on;
+      selected.clear();
+      mReset();
+    }
+    ['mSegCohort', 'mSegUnpaid', 'mSegNoSub', 'mSegIdle', 'mSegTag'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(el.tagName === 'INPUT' && el.type !== 'checkbox' ? 'input' : 'change', condChanged);
+    });
+    document.getElementById('mSegFup').addEventListener('change', async e => {
+      const seg = _segs.find(x => 'seg:' + x.id === _mFilter);
+      if (!seg) return;
+      const on = e.target.checked;
+      const { error } = await sb().from('member_segments').update({ followup: on }).eq('id', seg.id);
+      if (error) { e.target.checked = !on; segError(error, '설정 변경'); return; }
+      seg.followup = on;
+      toast(on ? "'오늘' 할 일에 올렸어요" : "'오늘' 할 일에서 내렸어요");
+      if (_appsLoaded) loadToday();   // 켠 즉시 '오늘'에 반영
+    });
+    document.getElementById('mSegClear').addEventListener('click', () => {
+      _cond = { cohort: '', unpaid: false, noSub: false, idleDays: 0, tag: '' };
+      syncCondUI();
+      if (_mFilter.indexOf('seg:') === 0) { _mFilter = 'all'; document.getElementById('mFilter').value = 'all'; }
+      selected.clear();
+      mReset();
+    });
+
+    function segError(error, what) {
+      const missing = error.code === 'PGRST205'
+        || /could not find the table|does not exist/i.test(error.message || '');
+      alert(missing
+        ? '조건 저장이 아직 켜지지 않았습니다.\nSupabase SQL Editor 에서 20260822180000_member_segments.sql 을 실행해 주세요.'
+        : what + ' 실패: ' + error.message);
+    }
+
+    async function saveSegment() {
+      const rule = currentRule();
+      if (!rule.all.length) { alert('저장할 조건이 없습니다. 위에서 현황이나 조건을 먼저 고르세요.'); return; }
+      const name = (prompt('이 조건의 이름을 적어 주세요.\n예: 3기 미입금 / 고객인데 30일 무소식', '') || '').trim();
+      if (!name) return;
+      if (name.length > 30) { alert('이름은 30자까지입니다.'); return; }
+      const { data, error } = await sb().from('member_segments')
+        .insert({ name, rule, created_by: (myProfile || {}).id || null }).select();
+      if (error) {
+        if (error.code === '23505') { alert('같은 이름의 조건이 이미 있습니다.'); return; }
+        segError(error, '조건 저장'); return;
+      }
+      await loadSegments();
+      const made = (data || [])[0];
+      if (made) { _mFilter = 'seg:' + made.id; document.getElementById('mFilter').value = _mFilter; mReset(); }
+      toast('조건을 저장했어요');
+    }
+
+    async function deleteSegment() {
+      if (!_segs.length) return;
+      const names = _segs.map((x, i) => (i + 1) + '. ' + x.name).join('\n');
+      const pick = prompt('지울 조건의 번호를 적어 주세요.\n\n' + names, '');
+      const i = parseInt(pick, 10) - 1;
+      if (!(i >= 0 && i < _segs.length)) return;
+      const target = _segs[i];
+      if (!confirm('"' + target.name + '" 조건을 지울까요? 되돌릴 수 없습니다.\n(회원은 지워지지 않습니다 — 보는 방법만 지웁니다)')) return;
+      const { error } = await sb().from('member_segments').delete().eq('id', target.id);
+      if (error) { segError(error, '조건 삭제'); return; }
+      if (_mFilter === 'seg:' + target.id) { _mFilter = 'all'; document.getElementById('mFilter').value = 'all'; }
+      await loadSegments();
+      toast('조건을 지웠어요');
+    }
     document.getElementById('selAll').addEventListener('change', e => {
       if (e.target.checked) visibleIds.forEach(id => selected.add(id));
       else visibleIds.forEach(id => selected.delete(id));
@@ -3305,6 +3611,13 @@
       if (btn) btn.click();
       if (!focus) return;
       if (name === 'apps' && focus === 'unpaid') { setAppKind('all'); setAppPay('unpaid'); }   // 카드 숫자는 전 범위 합 — 범위도 '전체'로
+      // '오늘'의 후속 조치 → 회원 관리 탭을 그 조건으로 연다(2026-08-22)
+      if (name === 'members' && focus && focus.indexOf('seg:') === 0) {
+        const sel = document.getElementById('mFilter');
+        if (sel && [...sel.options].some(o => o.value === focus)) {
+          sel.value = focus; _mFilter = focus; selected.clear(); _mShown = M_PAGE; renderMemberList();
+        }
+      }
       if (name === 'waitlist' && focus === 'waiting') {
         const cb = document.getElementById('wlHideDone');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
@@ -3335,7 +3648,7 @@
     };
     const TAB_LOADERS = {
       credits:   async () => { await loadCredits(); await loadCreditPacks(); await loadCreditConfig(); },
-      mact:      () => loadMemberActivity(),
+      mact:      async () => { await loadMemberActivity(); await loadSegments(); },
       rounds:    async () => { await loadChallengePrice(); await loadRounds(); },
       lectures:  () => loadLectures(),
       reviews:   async () => { await loadReviewsAdmin(); await loadStoriesAdmin(); },
@@ -3500,6 +3813,16 @@
       }
       if (tips) {
         todos.push({ html: `<b>채용 캘린더 제보 ${tips}건.</b> 학생이 알려준 일정입니다. 읽고 회차에 반영해 주세요.`, go: 'reccal', label: '채용 캘린더 열기 →' });
+      }
+      /* 저장한 조건 중 '후속 조치'를 켠 것(2026-08-22 3단계).
+         ⚠️ **기존 네 줄 아래**에 붙인다 — 돈(입금)·연락·검수가 먼저라는 순서를 바꾸지 않는다.
+         ⚠️ 세려면 회원 관리 탭의 자료(활동·크레딧)가 있어야 한다. 아직 안 왔으면 줄을 만들지
+            않는다 — 0명이라고 적으면 "할 일이 없다"는 거짓말이 된다(원칙 11). */
+      if (tierReady()) {
+        segFollowups().forEach(f => todos.push({
+          html: `<b>${esc(f.name)} ${f.n}명.</b> 저장해 둔 조건에 걸린 사람들입니다.`,
+          go: 'members', focus: 'seg:' + f.id, label: '명단 열기 →',
+        }));
       }
       document.getElementById('tbTodoTitle').textContent = todos.length ? `지금 처리 · ${todos.length}건` : '지금 처리';
       document.getElementById('tbTodos').innerHTML = todos.length ? todos.map(t => `
@@ -8045,6 +8368,15 @@
         await loadMembers();
         await loadApplications();
         await loadWaitlist();
+        /* 후속 조치(2026-08-22) — 조건 표만 먼저 받는다(조회 1회).
+           ⚠️ 걸린 인원을 세려면 회원 관리 탭 자료(크레딧·활동)가 필요하다. 그건 **'오늘에 올리기'를
+              켠 조건이 하나라도 있을 때만** 받는다 — 안 쓰면 진입 조회가 그대로다.
+           ⚠️ mact 로더는 loadSegments 를 또 부르므로 여기서는 loadMemberActivity 를 직접 부른다. */
+        await loadSegments();
+        if (_segs.some(x => x.followup)) {
+          if (!_tabLoaded['credits']) { _tabLoaded['credits'] = true; await TAB_LOADERS.credits(); }
+          if (!_tabLoaded['mact']) { _tabLoaded['mact'] = true; await loadMemberActivity(); }
+        }
         await loadToday();   // ⚠️ '오늘' 숫자가 _apps/_wl/members 를 재사용하므로 위 로드 뒤에
       } catch (err) {
         console.error('초기 로드 실패', err);
