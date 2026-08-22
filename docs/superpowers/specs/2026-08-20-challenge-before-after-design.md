@@ -46,6 +46,8 @@ Storage(`recordings` 비공개 버킷 재사용):
 - answer(승자각): DAY1~10 문항 목록 + 작성 상태 N/10. 문항 클릭 →
   `answers.html?title=DAY N. …#new`(제목 자동 채움) → 저장하면 '작성됨'.
   작성 판정은 본인 answers 의 title 정확 일치(우리가 제목을 채워 주므로 일치한다).
+  ※ 2026-08-23 이 판정을 폐기했다 — 학생이 저장소에서 제목을 고치면 놓쳤다. 현행은
+  번호·낱말로 읽는 `dayNoOf()`(mypage.md '내 챌린지 제출' 절이 원장).
 - 걷는 것: progCard(2주 미션 바)·sec-days(14일 격자)·sec-comments(코치 코멘트) 표시 +
   daily_records 조회. '오늘 할 일' 카드의 안내 문구도 제출 칸 기준으로 교체.
 - 남는 것: legacy `recordings`(회원당 한 쌍) 데이터가 있으면 기존 sec-ba 접이는 그대로 보인다.

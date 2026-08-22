@@ -1145,10 +1145,34 @@
     };
     const CH_SUB_ORDER = ['voice', 'expression', 'spinning', 'answer'];
     // 승자각 DAY 문항 — challenge-answer.html 커리큘럼(2026-07-12 오너 확정)과 같은 문구.
-    // 작성 여부를 답변 제목 정확 일치로 판정하므로 한쪽만 바꾸면 안 된다.
+    // 문항을 누를 때 answers.html 에 채워 주는 제목의 정본이다(answers.html 의 ?title= 프리필과 한 쌍).
     const ANSWER_DAYS = ['DAY 1. 자기소개', 'DAY 2. 지원동기', 'DAY 3. 장점/단점', 'DAY 4. 가치관',
       'DAY 5. 마지막 할 말', 'DAY 6. 서비스 경험', 'DAY 7. 갈등 해결', 'DAY 8. 팀워크',
       'DAY 9. 실패 경험', 'DAY 10. 체력관리'];
+    // 작성 판정용 낱말 — ANSWER_DAYS 와 순서가 한 쌍이다(2026-08-23).
+    // ⚠️ 종전에는 제목 정확 일치만 봤다. 학생이 저장소에서 제목을 고치면('자기소개'·'DAY1 자기소개')
+    //    이미 쓴 답변이 다시 '쓰기'로 보여 "썼는데 왜 안 뜨냐"가 됐다. 이제 dayNoOf() 가 읽는다.
+    const ANSWER_DAY_WORDS = [
+      ['자기소개'], ['지원동기', '지원이유', '지원한이유'], ['장점', '단점'], ['가치관'],
+      ['마지막할말', '마지막으로'], ['서비스경험', '서비스'], ['갈등'], ['팀워크', '협업'],
+      ['실패'], ['체력'],
+    ];
+    // 사이 공백·마침표·괄호를 걷어낸 비교용 문자열. 'DAY 1. 자기소개' → 'day1자기소개'
+    const normTitle = s => String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+    // 제목 → DAY 번호(1~10, 못 찾으면 0). ① 'DAY 3'·'3일차' 같은 번호가 있으면 그것 ② 없으면 낱말.
+    function dayNoOf(title) {
+      const t = normTitle(title);
+      if (!t) return 0;
+      const m = t.match(/day0*(\d{1,2})/) || t.match(/(\d{1,2})일차/);
+      if (m) {
+        const n = Number(m[1]);
+        if (n >= 1 && n <= ANSWER_DAYS.length) return n;
+      }
+      for (let i = 0; i < ANSWER_DAY_WORDS.length; i++) {
+        if (ANSWER_DAY_WORDS[i].some(w => t.indexOf(w) >= 0)) return i + 1;
+      }
+      return 0;
+    }
     const MAX_SUB_MB = 50;   // 버킷 file_size_limit(50MB)와 한 쌍 — 한쪽만 바꾸지 말 것
     let _chSubCtx = null;    // 업로드 뒤 다시 그릴 때 쓰는 재료
 
@@ -1169,12 +1193,16 @@
       const subOf = {};
       subs.forEach(s => { subOf[s.challenge + '#' + s.type] = s; });
 
-      // 승자각 작성 여부 — 답변노트 조회(loadAnswerNotes)를 재사용한다(추가 요청 없음)
-      const ansTitles = new Set();
+      // 승자각 작성 여부 — 답변노트 조회(loadAnswerNotes)를 재사용한다(추가 요청 없음).
+      // DAY 번호 → 그 답변의 제목. 목록이 최신순이라 먼저 걸린 것이 최신이다.
+      // ⚠️ 제목은 두 곳에서 온다 — 직접 쓴 글은 title, 소재 발굴 답변은 questions.content
+      //    (answers.html·답변노트 접이의 titleOf 와 같은 규칙).
+      const doneOf = {};
       if (keys.indexOf('answer') >= 0) {
         ((await ansLoad) || []).forEach(a => {
-          const t = (a.title || '').trim();
-          if (t) ansTitles.add(t);
+          const t = (a.title || '').trim() || ((a.questions || {}).content || '').trim();
+          const n = dayNoOf(t);
+          if (n && !(n in doneOf)) doneOf[n] = t;
         });
       }
 
@@ -1182,15 +1210,20 @@
         const meta = CH_SUB_META[c];
         const rTxt = partOf[c] ? partOf[c] + '기' : '';
         if (meta.media === 'answers') {
-          const doneN = ANSWER_DAYS.filter(d => ansTitles.has(d)).length;
+          const doneN = Object.keys(doneOf).length;
           return `<div class="v2-card">
             <div class="v2-cs-h"><span class="v2-cs-t">${meta.label}</span><span class="v2-cs-r">${rTxt ? esc(rTxt) + ' · ' : ''}답변 ${doneN}/${ANSWER_DAYS.length}</span></div>
             <p class="v2-cs-hint">문항을 누르면 나만의 승준노트에 답변을 쓸 수 있어요. 쓴 답변은 저장소에 남아 AI킬러·첨삭으로 이어져요.</p>
-            <ul class="v2-cs-days">${ANSWER_DAYS.map(d => `<li><a href="answers.html?title=${encodeURIComponent(d)}#new">
+            <ul class="v2-cs-days">${ANSWER_DAYS.map((d, i) => {
+              const done = doneOf[i + 1];
+              // 이미 쓴 문항은 저장소로 보낸다 — ?title=…#new 로 보내면 같은 제목의 빈 답변이 또 생긴다.
+              const href = done ? 'answers.html' : 'answers.html?title=' + encodeURIComponent(d) + '#new';
+              return `<li><a href="${href}">
                 <span class="q">${esc(d)}</span>
-                <span class="v2-chip${ansTitles.has(d) ? ' is-done' : ''}">${ansTitles.has(d) ? '작성됨' : '쓰기'}</span>
+                <span class="v2-chip${done ? ' is-done' : ''}">${done ? '작성됨' : '쓰기'}</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-              </a></li>`).join('')}</ul>
+              </a></li>`;
+            }).join('')}</ul>
           </div>`;
         }
         const slots = ['before', 'after']
@@ -1204,7 +1237,7 @@
         // 챌린지 후기 쓰기 — 참가자에게만 보이는 입구(2026-08-20 후기 직접 제출·review-write.html)
         + `<div class="v2-card">
           <div class="v2-cs-h"><span class="v2-cs-t">챌린지 후기</span></div>
-          <p class="v2-cs-hint">참여한 챌린지의 후기를 남겨 주세요 — 검토 후 후기 페이지에 올라가요.</p>
+          <p class="v2-cs-hint">참여한 챌린지의 후기를 남겨 주세요.</p>
           <a class="v2-outline" href="review-write.html" style="margin-top:12px;">후기 쓰기</a>
         </div>`;
       box.style.display = '';
