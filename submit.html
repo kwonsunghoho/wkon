@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>챌린지 제출 — MONC 몬크</title>
+  <meta name="description" content="챌린지 처음·끝 제출물을 올리는 곳이에요. 올리면 내 마이페이지에도 똑같이 기록돼요." />
+  <!-- Open Graph / SNS 공유 — 크롤러는 JS 를 안 돌리므로 여기에 직접 둔다 -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://monc.ai.kr/submit.html" />
+  <meta property="og:title"       content="챌린지 제출 — MONC 몬크" />
+  <meta property="og:description" content="챌린지 처음·끝 제출물을 올리는 곳이에요. 올리면 내 마이페이지에도 똑같이 기록돼요." />
+  <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale"      content="ko_KR" />
+  <meta property="og:site_name"   content="MONC 몬크" />
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="챌린지 제출 — MONC 몬크" />
+  <meta name="twitter:description" content="챌린지 처음·끝 제출물을 올리는 곳이에요. 올리면 내 마이페이지에도 똑같이 기록돼요." />
+  <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
+  <!-- 파비콘 -->
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
+  <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
+  <meta name="theme-color" content="#102B56">
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴 — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — 오픈챗 링크로 들어오는 페이지라 특히 필요하다(구글 로그인이 인앱에서 막힌다) -->
+  <script src="inapp.js?v=10" defer></script>
+  <!-- 뒤로 왔을 때 보던 자리로 되돌리기 — 아래 bfcache 새로고침이 스크롤을 버리는 걸 메운다 -->
+  <script src="scroll-keep.js?v=3"></script>
+  <style>
+    /* 챌린지 제출 전용 화면 (2026-08-24 오너 "링크 하나 주면 로그인해서 올리고, 마이페이지에도 남게")
+       저장하는 곳은 mypage 제출 카드와 완전히 같다(challenge_submissions·recordings 버킷·answers) —
+       이 페이지는 '오픈챗에 공유하는 입구'일 뿐이라, 여기로 올려도 마이페이지에 그대로 보인다.
+       칸 이름·규칙을 바꿀 땐 mypage.html·admin.html 과 같이 고친다(docs/notes/mypage.md). */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6;
+    }
+    .sb { padding: 24px 0 64px; }
+    .sb-wrap { max-width: 620px; margin: 0 auto; padding: 0 16px; }
+    .sb-head { padding: 4px 2px 6px; }
+    .sb-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+    .sb-sub { margin-top: 6px; font-size: 14px; color: var(--text-muted); word-break: keep-all; }
+    .sb-note { margin-top: 4px; font-size: 12.5px; color: var(--text-dim); word-break: keep-all; }
+    .loading { padding: 32px 0; text-align: center; font-size: 14px; color: var(--text-dim); }
+
+    .sb-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+      padding: 14px 16px; margin-top: 12px; box-shadow: var(--shadow); }
+    .sb-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+    .sb-t { font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; min-width: 0; }
+    .sb-r { font-size: 12px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .sb-hint { margin: 6px 0 0; font-size: 12px; color: var(--text-dim); line-height: 1.6; word-break: keep-all; }
+    .sb-slots { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .sb-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .sb-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+      padding: 0 18px; background: var(--action); color: var(--action-ink); border: 0;
+      border-radius: var(--radius-xs); font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; }
+    .sb-btn.ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); font-weight: 700; }
+    .sb-btn.ghost:hover { border-color: var(--action); color: var(--action); }
+    .sb-btn[disabled] { opacity: .6; cursor: default; }
+    .sb-slot { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; }
+    .sb-slot.after { outline: 2px solid var(--action); outline-offset: -2px; }
+    .sb-tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 8px; }
+    .sb-slot.after .sb-tag { color: var(--action); }
+    .sb-slot audio { width: 100%; }
+    .sb-slot video { width: 100%; max-height: 320px; border-radius: var(--radius-xs); background: #000; }
+    .sb-empty { font-size: 13px; color: var(--text-muted); }
+    .sb-chip { display: inline-flex; align-items: center; flex: 0 0 auto; white-space: nowrap; font-size: 12px;
+      font-weight: 800; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border-soft);
+      background: var(--surface); color: var(--text-muted); }
+    .sb-chip.is-done { background: var(--action-tint); color: var(--action); border-color: transparent; }
+
+    /* 승자각 — DAY 문항 목록 (mypage 제출 카드와 같은 모양) */
+    .sb-days { list-style: none; margin: 12px 0 0; display: flex; flex-direction: column; gap: 6px; }
+    .sb-days a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px;
+      background: var(--surface2); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+      text-decoration: none; color: var(--text); }
+    .sb-days a:hover { border-color: var(--accent-dark); }
+    .sb-days .q { flex: 1 1 auto; min-width: 0; font-size: 13.5px; font-weight: 600; line-height: 1.4; word-break: keep-all; }
+    .sb-days svg { flex: 0 0 auto; width: 14px; height: 14px; color: var(--text-dim); }
+
+    .sb-foot { margin-top: 20px; text-align: center; }
+    .sb-my { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px;
+      border: 1px solid var(--border); border-radius: var(--radius-xs); text-decoration: none;
+      font-size: 14px; font-weight: 700; color: var(--text-muted); }
+    .sb-my:hover { border-color: var(--action); color: var(--action); }
+    .sb-foot p { margin-top: 10px; font-size: 12px; color: var(--text-dim); word-break: keep-all; }
+  </style>
+</head>
+<!-- data-nav-offset: 고정 nav 높이만큼 본문을 내린다(nav.css) — 빼면 제목이 바에 가려진다 -->
+<body data-nav-offset>
+
+<main class="sb">
+  <div class="sb-wrap">
+    <header class="sb-head">
+      <h1 class="sb-title" id="sbTitle">챌린지 제출</h1>
+      <p class="sb-sub" id="sbSub">제출물을 올리는 곳이에요.</p>
+      <p class="sb-note">여기서 올리면 <strong>내 마이페이지에도 똑같이 기록</strong>돼요. 다시 올리면 교체됩니다.</p>
+    </header>
+    <div id="sbCards"><div class="loading">불러오는 중…</div></div>
+    <div class="sb-foot">
+      <a class="sb-my" href="mypage.html">마이페이지에서 확인하기</a>
+      <p>내가 신청한 챌린지가 안 보이면, 신청할 때 쓴 계정으로 로그인했는지 확인해 주세요.</p>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script>
+  /* bfcache 로 되살아나면 통째로 새로고침 — 입력값 없는 화면 공통 규칙(CLAUDE.md).
+     스크롤은 scroll-keep.js 가 되돌린다. */
+  window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
+
+  (function () {
+    'use strict';
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+      m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+    /* ── 칸 정의 — mypage 제출 카드와 한 벌(이름을 바꾸면 mypage.html·admin.html 도 같이) ── */
+    const CH_META = {
+      voice:      { label: '보.신.각 · 보이스', media: 'audio', accept: 'audio/*', what: '음성' },
+      expression: { label: '영.합.각 · 표현력', media: 'video', accept: 'video/*', what: '영상' },
+      spinning:   { label: '스.피.닝 · 스피치', media: 'audio', accept: 'audio/*', what: '음성' },
+      answer:     { label: '승.자.각 · 답변', media: 'answers' },
+    };
+    const CH_ORDER = ['voice', 'expression', 'spinning', 'answer'];
+    // 스피닝만 첫날 녹음 2개(before·before2) — 나머지는 처음/끝 한 쌍
+    const typesOf = ch => ch === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'];
+    const tagOf = (ch, type) => type === 'after' ? '끝 · 마칠 무렵'
+      : ch === 'spinning' ? (type === 'before' ? '첫날 ① · 첫 녹음본' : '첫날 ② · 다시 읽은 녹음본')
+        : '처음 · 시작 무렵';
+    const hintOf = ch => ch === 'spinning'
+      ? '첫날에 녹음 두 개를 올려 주세요 — ① 첫 녹음본, ② 발음을 신경 써서 다시 읽은 녹음본. 마지막 날엔 녹음본 하나예요.'
+      : `챌린지 ${CH_META[ch].what}을 직접 올려 주세요 — 시작 무렵 한 번, 마칠 무렵 한 번이면 됩니다.${CH_META[ch].media === 'video' ? ' 영상은 1~2분, 50MB 이하로 부탁해요.' : ''}`;
+    const MAX_MB = 50;   // recordings 버킷 file_size_limit(50MB)와 한 쌍
+
+    /* ── 링크 매개변수 — 오픈챗에 공유하는 주소가 여기를 정한다.
+       ?t=before(시작 무렵) / ?t=after(마칠 무렵) : 그 시기의 칸만 보여준다(없으면 전부).
+       ?ch=voice|expression|spinning|answer : 그 챌린지만(없으면 내가 참가한 전부).
+       기수는 링크에 안 싣는다 — 각자 신청에서 자동으로 붙는다(저장 시 round). ── */
+    const qs = new URLSearchParams(location.search);
+    const onlyCh = CH_META[qs.get('ch')] ? qs.get('ch') : '';
+    const onlyT = ['before', 'after'].indexOf(qs.get('t')) >= 0 ? qs.get('t') : '';
+
+    document.getElementById('sbSub').textContent =
+      onlyT === 'before' ? '시작 무렵(첫날) 제출물을 올리는 곳이에요.'
+      : onlyT === 'after' ? '마칠 무렵(마지막 날) 제출물을 올리는 곳이에요.'
+      : '챌린지 제출물을 올리는 곳이에요.';
+
+    /* ── 승자각 문항 — 정본은 challenge_lessons, 아래는 폴백(mypage 와 같은 규칙) ── */
+    let ANSWER_DAYS = ['DAY 1. 가치관', 'DAY 2. 좋은 서비스', 'DAY 3. 팀워크', 'DAY 4. 규정 상황 대처',
+      'DAY 5. 실패 경험', 'DAY 6. 항공사 장점', 'DAY 7. 실패 경험', 'DAY 8. 영어 자기소개',
+      'DAY 9. 승무원 자질', 'DAY 10. 마지막 할 말'];
+    const normTitle = s => String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+    const wordsOf = title => String(title || '').split(/[\/·,]/).map(x => normTitle(x)).filter(Boolean);
+    let ANSWER_DAY_WORDS = ANSWER_DAYS.map(d => wordsOf(d.replace(/^DAY\s*\d+\.\s*/, '')));
+    function dayNoOf(title) {
+      const t = normTitle(title);
+      if (!t) return 0;
+      const m = t.match(/day0*(\d{1,2})/) || t.match(/(\d{1,2})일차/);
+      if (m) { const n = Number(m[1]); if (n >= 1 && n <= ANSWER_DAYS.length) return n; }
+      for (let i = 0; i < ANSWER_DAY_WORDS.length; i++) {
+        if (ANSWER_DAY_WORDS[i].some(w => t.indexOf(w) >= 0)) return i + 1;
+      }
+      return 0;
+    }
+    async function loadAnswerLessons() {
+      try {
+        const { data, error } = await MONC.sb.from('challenge_lessons')
+          .select('day_no, title').eq('challenge', 'answer').order('day_no');
+        if (error || !data || !data.length) return;
+        ANSWER_DAYS = data.map(r => 'DAY ' + r.day_no + '. ' + r.title);
+        ANSWER_DAY_WORDS = data.map(r => wordsOf(r.title));
+      } catch (_) { /* 표 미생성 — 기본 문항으로 그린다 */ }
+    }
+
+    let ctx = null;   // 업로드 뒤 다시 그릴 재료 { me, partOf }
+
+    function slotHtml(ch, type, sub, notReady) {
+      let body;
+      if (sub) {
+        const day = String(sub.updated_at || sub.created_at || '').slice(0, 10).replace(/-/g, '.');
+        body = `<div id="sbPlay-${ch}-${type}"></div>
+          <div class="sb-row">
+            <button type="button" class="sb-btn ghost" data-cs="${ch}" data-type="${type}" data-old="${esc(sub.storage_path)}">다시 올리기</button>
+            ${day ? `<span class="sb-hint" style="margin:0;">${esc(day)} 올림</span>` : ''}
+          </div>`;
+      } else if (notReady) {
+        body = '<div class="sb-empty">제출 준비 중이에요. 조금만 기다려 주세요.</div>';
+      } else {
+        body = `<div class="sb-empty">아직 올린 파일이 없어요.</div>
+          <div class="sb-row"><button type="button" class="sb-btn" data-cs="${ch}" data-type="${type}">올리기</button></div>`;
+      }
+      return `<div class="sb-slot${type === 'after' ? ' after' : ''}"><div class="sb-tag">${tagOf(ch, type)}</div>${body}</div>`;
+    }
+
+    async function render(me, partOf) {
+      const box = document.getElementById('sbCards');
+      ctx = { me: me, partOf: partOf };
+      let keys = CH_ORDER.filter(c => c in partOf);
+      if (onlyCh) keys = keys.filter(c => c === onlyCh);
+
+      if (!keys.length) {
+        const want = onlyCh ? (CH_META[onlyCh].label + ' ') : '';
+        box.innerHTML = `<div class="sb-card">
+          <div class="sb-t">${esc(want)}신청 내역을 찾지 못했어요</div>
+          <p class="sb-hint">결제(무료 참여 포함)한 신청이 이 계정에 연결돼 있어야 올릴 수 있어요.
+          신청할 때 쓴 계정으로 다시 로그인해 보시고, 그래도 안 보이면 오픈챗으로 알려 주세요.</p>
+        </div>`;
+        return;
+      }
+
+      // 제출물 조회 — 표 미생성(PGRST205 등)이면 '준비 중'으로 조용히 내려간다.
+      let subs = [], notReady = false;
+      try {
+        const { data, error } = await MONC.sb.from('challenge_submissions')
+          .select('*').eq('member_id', me);
+        if (error) notReady = true; else subs = data || [];
+      } catch (_) { notReady = true; }
+      const subOf = {};
+      subs.forEach(s => { subOf[s.challenge + '#' + s.type] = s; });
+
+      // 승자각 작성 여부 — answers 에서 제목만 가볍게 받는다(select('*') 방어는 mypage 와 동일)
+      const doneOf = {};
+      if (keys.indexOf('answer') >= 0) {
+        await loadAnswerLessons();
+        try {
+          let { data, error } = await MONC.sb.from('answers')
+            .select('*, questions(content)').eq('member_id', me);
+          if (error) ({ data } = await MONC.sb.from('answers').select('*').eq('member_id', me));
+          (data || []).forEach(a => {
+            const t = (a.title || '').trim() || ((a.questions || {}).content || '').trim();
+            const n = dayNoOf(t);
+            if (n && !(n in doneOf)) doneOf[n] = t;
+          });
+        } catch (_) {}
+      }
+
+      box.innerHTML = keys.map(c => {
+        const meta = CH_META[c];
+        const rTxt = partOf[c] ? partOf[c] + '기' : '';
+        if (meta.media === 'answers') {
+          return `<div class="sb-card">
+            <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${rTxt ? esc(rTxt) + ' · ' : ''}답변 ${Object.keys(doneOf).length}/${ANSWER_DAYS.length}</span></div>
+            <p class="sb-hint">문항을 누르면 나만의 승준노트에 답변을 쓸 수 있어요. 쓴 답변은 마이페이지·저장소에 그대로 남아요.</p>
+            <ul class="sb-days">${ANSWER_DAYS.map((d, i) => {
+              const done = doneOf[i + 1];
+              const href = done ? 'answers.html' : 'answers.html?title=' + encodeURIComponent(d) + '#new';
+              return `<li><a href="${href}">
+                <span class="q">${esc(d)}</span>
+                <span class="sb-chip${done ? ' is-done' : ''}">${done ? '작성됨' : '쓰기'}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </a></li>`;
+            }).join('')}</ul>
+          </div>`;
+        }
+        // ?t= 로 시기를 좁힌다 — before 링크는 스피닝 첫날 ①·② 를 같이 보여준다
+        const types = typesOf(c).filter(t => !onlyT || (onlyT === 'after' ? t === 'after' : t !== 'after'));
+        const slots = types.map(t => slotHtml(c, t, subOf[c + '#' + t], notReady)).join('');
+        return `<div class="sb-card">
+          <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${esc(rTxt)}</span></div>
+          <p class="sb-hint">${hintOf(c)}</p>
+          <div class="sb-slots">${slots}</div>
+        </div>`;
+      }).join('');
+      wire(notReady);
+
+      // 올려 둔 파일 재생 — 서명 URL 은 비동기라 자리부터 그리고 나중에 채운다
+      subs.forEach(async s => {
+        const holder = document.getElementById('sbPlay-' + s.challenge + '-' + s.type);
+        if (!holder) return;
+        const url = await MONC.getSignedUrl(s.storage_path);
+        if (!url) { holder.innerHTML = '<div class="sb-empty">재생 링크를 불러오지 못했어요.</div>'; return; }
+        holder.innerHTML = (CH_META[s.challenge] || {}).media === 'video'
+          ? `<video controls preload="none" src="${url}"></video>`
+          : `<audio controls preload="none" src="${url}"></audio>`;
+      });
+    }
+
+    /* 업로드 — mypage 제출 카드와 같은 저장 경로·같은 표(그래서 마이페이지에 그대로 보인다).
+       허용 판정의 원장은 DB RLS(is_challenge_participant) — 화면을 속여도 서버가 거부한다. */
+    function wire(notReady) {
+      if (notReady) return;
+      document.querySelectorAll('#sbCards [data-cs]').forEach(btn => btn.addEventListener('click', () => {
+        const ch = btn.dataset.cs, type = btn.dataset.type, old = btn.dataset.old || '';
+        const meta = CH_META[ch];
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = meta.accept;
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          if (file.size > MAX_MB * 1024 * 1024) {
+            alert('파일이 ' + MAX_MB + 'MB 를 넘어요.\n' + (meta.media === 'video'
+              ? '1~2분 분량으로 잘라서 올려 주세요.' : '조금 줄여서 올려 주세요.'));
+            return;
+          }
+          // 형식이 명확히 다른 것만 막는다 — 폰이 type 을 비워 보내는 경우가 있어 빈 값은 통과
+          if (file.type && file.type.indexOf(meta.media + '/') !== 0) {
+            alert(meta.what + ' 파일을 올려 주세요.');
+            return;
+          }
+          const prev = btn.textContent;
+          btn.disabled = true; btn.textContent = '업로드 중…';
+          try {
+            let ext = (file.name.indexOf('.') > 0 ? file.name.split('.').pop() : '')
+              .toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!ext || ext.length > 8) ext = meta.media === 'video' ? 'mp4' : 'm4a';
+            const path = ctx.me + '/' + ch + '-' + type + '.' + ext;
+            const up = await MONC.sb.storage.from('recordings')
+              .upload(path, file, { upsert: true, contentType: file.type || undefined });
+            if (up.error) throw up.error;
+            const { error } = await MONC.sb.from('challenge_submissions').upsert({
+              member_id: ctx.me, challenge: ch, type: type,
+              round: ctx.partOf[ch] || null, storage_path: path,
+            }, { onConflict: 'member_id,challenge,type' });
+            if (error) throw error;
+            if (old && old !== path) { try { await MONC.sb.storage.from('recordings').remove([old]); } catch (_) {} }
+            await render(ctx.me, ctx.partOf);
+            return;   // 카드를 통째로 다시 그렸으니 버튼 복원 불필요(요소가 교체됐다)
+          } catch (e) {
+            alert('업로드하지 못했어요: ' + (e && e.message ? e.message : e));
+          }
+          btn.disabled = false; btn.textContent = prev;
+        });
+        input.click();
+      }));
+    }
+
+    (async () => {
+      const session = await MONC.requireSession();
+      if (!session) return;
+      // 약관 동의(가입 시 1회) 가드 — 회원 페이지 공통(한 곳 빠지면 주소창 우회가 된다)
+      if (!(await MONC.requireConsent())) return;
+      const me = session.user.id;
+
+      // 참가 판정 — mypage 와 같은 기준(결제완료·무료·부분 환불 유지, 같은 챌린지는 최신 기수)
+      const { data: myApps } = await MONC.sb.from('applications')
+        .select('created_at, challenges, total_price, paid, refunded, payment_status')
+        .eq('member_id', me).order('created_at', { ascending: false });
+      const stateOf = a =>
+        (a.refunded || a.payment_status === 'refunded') ? '환불' :
+        a.payment_status === 'partial_refunded' ? '부분' :
+        a.payment_status === 'free' ? '무료' :
+        (a.paid || a.payment_status === 'paid') ? '결제' : '대기';
+      const partOf = {};
+      (myApps || []).forEach(a => {
+        const st = stateOf(a);
+        if (st !== '결제' && st !== '무료' && st !== '부분') return;
+        (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+          if (!c || c.type === 'lecture' || c.lecture_id || !CH_META[c.challenge]) return;
+          const r = Number(c.round) || null;
+          if (!(c.challenge in partOf) || (r && (!partOf[c.challenge] || r > partOf[c.challenge]))) {
+            partOf[c.challenge] = r;
+          }
+        });
+      });
+
+      await render(me, partOf);
+    })();
+  })();
+</script>
+
+</body>
+</html>

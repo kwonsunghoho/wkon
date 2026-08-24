@@ -13,6 +13,12 @@
   어려운 발음 단어 표시 원고 사진·발음대로 적은 원고 사진 등 나머지 첫날 제출물은 **오픈챗 운영** — 사이트 칸은 녹음 2개만 받는다(사진 칸 만들지 말 것).
   `before2` 는 migration `20260824170000`(type check 스피닝 한정 + storage 파일명 패턴)이 열어 준다 — 미적용이면 첫날 ② 업로드만
   "업로드하지 못했어요"로 막히고 나머지는 그대로 돈다. admin 회원 상세·타임라인도 같은 이름표를 쓴다(두 화면을 같이 고칠 것).
+- **오픈챗 공유용 제출 입구 `submit.html`**(2026-08-24 오너 "링크 하나 주면 로그인해서 올리고, 올린 회원 마이페이지에도 남게") —
+  저장하는 곳이 mypage 제출 카드와 완전히 같아서(`challenge_submissions`·`recordings` 버킷·answers) **여기로 올려도 마이페이지에 그대로 보인다**(동기화 코드 없음 — 같은 표를 읽을 뿐).
+  링크 규칙: `?t=before`(시작 무렵)·`?t=after`(마칠 무렵)로 시기를 좁히고 `?ch=voice|expression|spinning|answer` 로 챌린지를 좁힌다 — 없으면 참가한 전부.
+  **기수는 링크에 안 싣는다** — 각자 신청에서 자동으로 붙는다(round). 승자각은 DAY 문항 목록으로 그린다(`answers.html?title=…#new` — mypage 카드와 같은 규칙).
+  미로그인은 requireSession 이 login 으로 보내고 **returnTo 가 쿼리까지 들고 돌아온다**(`safeReturnTo` 정규식이 `?…` 허용 — 실측). 비참가 계정은 안내 카드(신청 계정 재로그인 안내).
+  `data-nav-offset` 필수(빼면 제목이 고정 nav 에 가려진다 — 실측). **칸 이름·업로드 규칙을 바꿀 땐 mypage.html·admin.html·submit.html 세 곳을 같이 고친다.**
   승자각은 파일 대신 **DAY1~10 문항 목록 + 작성 N/10** — 문항 클릭 → `answers.html?title=…#new`(제목 자동 채움).
 - **문항 정본은 `challenge_lessons`**(2026-08-24 — admin '챌린지' 탭 → 승자각 DAY 문항). `renderChSubs` 가 판정 전에 `loadAnswerLessons()` 로 받아 `ANSWER_DAYS`·`ANSWER_DAY_WORDS` 를 덮어쓴다.
   ⚠️ 코드에 적힌 10줄은 **폴백**이다 — 표가 없거나 0줄이면 덮어쓰지 않는다(지우지 말 것).
