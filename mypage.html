@@ -1248,11 +1248,14 @@
             }).join('')}</ul>
           </div>`;
         }
-        const slots = ['before', 'after']
+        // 스피닝만 첫날 녹음 2개(before·before2) + 끝 — 나머지는 처음/끝 한 쌍(2026-08-24 오너)
+        const slots = (c === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'])
           .map(t => chSubSlotHtml(c, t, subOf[c + '#' + t], notReady)).join('');
         return `<div class="v2-card">
           <div class="v2-cs-h"><span class="v2-cs-t">${meta.label}</span><span class="v2-cs-r">${esc(rTxt)}</span></div>
-          <p class="v2-cs-hint">챌린지 ${meta.what}을 직접 올려 주세요 — 시작 무렵 한 번, 마칠 무렵 한 번이면 됩니다.${meta.media === 'video' ? ' 영상은 1~2분, 50MB 이하로 부탁해요.' : ''}</p>
+          <p class="v2-cs-hint">${c === 'spinning'
+            ? '챌린지 음성을 직접 올려 주세요 — 첫날에 녹음 두 개, 마칠 무렵에 한 개면 됩니다.'
+            : `챌린지 ${meta.what}을 직접 올려 주세요 — 시작 무렵 한 번, 마칠 무렵 한 번이면 됩니다.${meta.media === 'video' ? ' 영상은 1~2분, 50MB 이하로 부탁해요.' : ''}`}</p>
           <div class="v2-cs-slots">${slots}</div>
         </div>`;
       }).join('')
@@ -1278,7 +1281,10 @@
     }
 
     function chSubSlotHtml(challenge, type, sub, notReady) {
-      const tag = type === 'before' ? '처음 · 시작 무렵' : '끝 · 마칠 무렵';
+      // 스피닝은 첫날 녹음이 두 개라 처음 칸이 ①·② 로 갈린다(2026-08-24 오너)
+      const tag = type === 'after' ? '끝 · 마칠 무렵'
+        : challenge === 'spinning' ? (type === 'before' ? '처음 ① · 첫날' : '처음 ② · 첫날')
+          : '처음 · 시작 무렵';
       let body;
       if (sub) {
         const day = String(sub.updated_at || sub.created_at || '').slice(0, 10).replace(/-/g, '.');

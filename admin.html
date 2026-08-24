@@ -3079,7 +3079,8 @@
           : orderedChs.map(ch => `
             <div style="margin-bottom:12px;">
               <div style="font-size:13px;font-weight:700;margin-bottom:6px;">${CH_SUB_ADM[ch].label}</div>
-              <div class="ba">${chSubSlot(ch, 'before', subOf[ch + '#before'])}${chSubSlot(ch, 'after', subOf[ch + '#after'])}</div>
+              <div class="ba">${(ch === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'])
+                .map(t => chSubSlot(ch, t, subOf[ch + '#' + t])).join('')}</div>
             </div>`).join('');
 
       /* ══ 활동 타임라인(2026-08-22) — 이미 있는 데이터를 시간순으로 합친다. 새 표 없음 ══
@@ -3103,7 +3104,7 @@
       });
       chSubs.forEach(sb2 => tlRows.push({ t: at(sb2.created_at), cls: 'k-act', k: '제출물',
         text: esc((CH_SUB_ADM[sb2.challenge] || {}).label || sb2.challenge) + ' <em>· '
-          + (sb2.type === 'before' ? '처음' : '끝') + '</em>' }));
+          + ({ before: '처음', before2: '처음 ②', after: '끝' }[sb2.type] || sb2.type) + '</em>' }));
       (answers || []).forEach(a => tlRows.push({ t: at(a.updated_at), cls: 'k-act', k: '답변',
         text: '“' + esc(((a.questions || {}).content || '(문제 정보 없음)')).slice(0, 60) + '” 저장' }));
       _credRows.filter(r => r.member_id === id).forEach(r => {
@@ -3321,7 +3322,10 @@
       spinning:   { label: '스.피.닝 · 스피치 (음성)', media: 'audio' },
     };
     function chSubSlot(ch, type, sub) {
-      const label = type === 'before' ? '처음 · 시작 무렵' : '끝 · 마칠 무렵';
+      // 스피닝만 첫날 녹음 2개(before·before2) — mypage 제출 카드와 같은 이름표(2026-08-24 오너)
+      const label = type === 'after' ? '끝 · 마칠 무렵'
+        : ch === 'spinning' ? (type === 'before' ? '처음 ① · 첫날' : '처음 ② · 첫날')
+          : '처음 · 시작 무렵';
       return `<div class="slot ${type}">
         <div class="tag">${label}</div>
         <div class="cur">${sub ? '등록됨: ' + esc(sub.storage_path) : '아직 없음'}</div>
