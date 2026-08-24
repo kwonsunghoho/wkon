@@ -1146,13 +1146,13 @@
     const CH_SUB_ORDER = ['voice', 'expression', 'spinning', 'answer'];
     // 승자각 DAY 문항 — challenge-answer.html 커리큘럼(2026-07-12 오너 확정)과 같은 문구.
     // 문항을 누를 때 answers.html 에 채워 주는 제목의 정본이다(answers.html 의 ?title= 프리필과 한 쌍).
-    const ANSWER_DAYS = ['DAY 1. 자기소개', 'DAY 2. 지원동기', 'DAY 3. 장점/단점', 'DAY 4. 가치관',
+    let ANSWER_DAYS = ['DAY 1. 자기소개', 'DAY 2. 지원동기', 'DAY 3. 장점/단점', 'DAY 4. 가치관',
       'DAY 5. 마지막 할 말', 'DAY 6. 서비스 경험', 'DAY 7. 갈등 해결', 'DAY 8. 팀워크',
       'DAY 9. 실패 경험', 'DAY 10. 체력관리'];
     // 작성 판정용 낱말 — ANSWER_DAYS 와 순서가 한 쌍이다(2026-08-23).
     // ⚠️ 종전에는 제목 정확 일치만 봤다. 학생이 저장소에서 제목을 고치면('자기소개'·'DAY1 자기소개')
     //    이미 쓴 답변이 다시 '쓰기'로 보여 "썼는데 왜 안 뜨냐"가 됐다. 이제 dayNoOf() 가 읽는다.
-    const ANSWER_DAY_WORDS = [
+    let ANSWER_DAY_WORDS = [
       ['자기소개'], ['지원동기', '지원이유', '지원한이유'], ['장점', '단점'], ['가치관'],
       ['마지막할말', '마지막으로'], ['서비스경험', '서비스'], ['갈등'], ['팀워크', '협업'],
       ['실패'], ['체력'],
@@ -1173,6 +1173,23 @@
       }
       return 0;
     }
+    // 문항 정본은 challenge_lessons(admin '챌린지' 탭 → 승자각 DAY 문항)다(2026-08-24).
+    // ⚠️ 위 기본값은 **폴백**이다 — 표가 없거나 비면 덮어쓰지 않는다(지우지 말 것).
+    // ⚠️ 낱말이 비어 있으면 제목에서 만든다('장점/단점' → ['장점','단점']).
+    async function loadAnswerLessons() {
+      try {
+        const { data, error } = await MONC.sb.from('challenge_lessons')
+          .select('day_no, title, match_words').eq('challenge', 'answer').order('day_no');
+        if (error || !data || !data.length) return;
+        ANSWER_DAYS = data.map(r => 'DAY ' + r.day_no + '. ' + r.title);
+        ANSWER_DAY_WORDS = data.map(r => {
+          const w = (r.match_words || []).map(x => normTitle(x)).filter(Boolean);
+          return w.length ? w
+            : String(r.title || '').split(/[\/·,]/).map(x => normTitle(x)).filter(Boolean);
+        });
+      } catch (_) { /* 표 미생성 — 기본 문항으로 그린다 */ }
+    }
+
     const MAX_SUB_MB = 50;   // 버킷 file_size_limit(50MB)와 한 쌍 — 한쪽만 바꾸지 말 것
     let _chSubCtx = null;    // 업로드 뒤 다시 그릴 때 쓰는 재료
 
@@ -1199,6 +1216,7 @@
       //    (answers.html·답변노트 접이의 titleOf 와 같은 규칙).
       const doneOf = {};
       if (keys.indexOf('answer') >= 0) {
+        await loadAnswerLessons();   // 문항이 바뀌었을 수 있다 — 판정 전에 정본을 받는다
         ((await ansLoad) || []).forEach(a => {
           const t = (a.title || '').trim() || ((a.questions || {}).content || '').trim();
           const n = dayNoOf(t);

@@ -1473,8 +1473,27 @@ async function handlePayReturn() {
 /* ── 초기화 ── */
 // 챌린지 참가비를 먼저 읽어(site_config) 카드·요약·FAQ를 올바른 금액으로 그린다.
 // 카드에 의존하는 applyStatuses·preselectFromUrl은 renderCards 이후 이 안에서 실행(순서 보장).
+/* 승자각 DAY 문항 — challenge_lessons(admin '챌린지' 탭)이 정본이다(2026-08-24).
+   ⚠️ 위 CHALLENGES 의 answer.weeks 에 적힌 10줄은 **폴백**이다 — 지우지 말 것.
+      표가 없거나 조회에 실패하면 그대로 그린다(덮어쓰지 않는다).
+   ⚠️ renderCards() **앞에서** 부른다 — 카드를 다시 그리면 클릭 리스너가 날아간다. */
+async function loadAnswerLessons() {
+  if (!window.MONC || !MONC.sb) return;
+  try {
+    const { data, error } = await MONC.sb.from('challenge_lessons')
+      .select('day_no, title').eq('challenge', 'answer').order('day_no');
+    if (error || !data || !data.length) return;
+    const c = CHALLENGES.find(x => x.id === 'answer');
+    if (!c || !c.weeks || c.weeks.length < 2) return;
+    const line = r => 'DAY ' + r.day_no + ' \u2014 ' + r.title;
+    c.weeks[0].d = data.filter(r => r.day_no <= 5).map(line);
+    c.weeks[1].d = data.filter(r => r.day_no > 5).map(line);
+  } catch (_) { /* 표 미생성 — 적혀 있는 커리큘럼 그대로 */ }
+}
+
 (async function initPriceThenRender() {
   await loadChallengePrice();
+  await loadAnswerLessons();
   renderCards();
   renderFaq();
   updateSummary();
