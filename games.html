@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>역량검사 게임 연습 — MONC 몬크</title>
+  <!-- Open Graph / SNS 공유 — 크롤러는 JS 를 안 돌리므로 여기에 직접 둔다 -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://monc.ai.kr/games.html" />
+  <meta property="og:title"       content="역량검사 게임 연습 — MONC 몬크" />
+  <meta property="og:description" content="항공사 채용 AI역량검사의 전략게임 유형 9가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
+  <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale"      content="ko_KR" />
+  <meta property="og:site_name"   content="MONC 몬크" />
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="역량검사 게임 연습 — MONC 몬크" />
+  <meta name="twitter:description" content="항공사 채용 AI역량검사의 전략게임 유형 9가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
+  <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
+
+  <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xlu6nkv2uh");
+  </script>
+  <meta name="description" content="항공사 채용 AI역량검사의 전략게임 유형 9가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
+
+  <!-- 파비콘 -->
+  <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/MONC_Logo_Full_Package/assets/favicon/apple-touch-icon.png">
+  <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
+  <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
+  <meta name="theme-color" content="#102B56">
+
+  <link rel="stylesheet" href="tokens.css">
+  <!-- 공용 상단 메뉴 — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
+  <link rel="stylesheet" href="nav.css">
+  <script src="nav.js" defer></script>
+  <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 -->
+  <script src="inapp.js?v=10" defer></script>
+  <!-- 뒤로 왔을 때 보던 자리로 — ⚠️ defer 금지(CLAUDE.md), 아래 bfcache reload 보다 먼저 실행돼야 한다 -->
+  <script src="scroll-keep.js?v=3"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'SUIT Variable', SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; }
+    .container { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+    a { color: inherit; }
+    /* touch-action — 게임은 연타가 기본이라 더블탭 줌이 걸리면 화면이 튄다 */
+    button { font: inherit; color: inherit; touch-action: manipulation; }
+    .gm-board { user-select: none; -webkit-user-select: none; }
+
+    .bf-head { padding: 104px 0 4px; text-align: center; }
+    .bf-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
+    .bf-title { font-size: clamp(28px, 5vw, 42px); font-weight: 800; color: var(--accent); letter-spacing: -.6px; margin-top: 10px; }
+    .bf-sub { font-size: 15px; color: var(--text); opacity: .72; margin-top: 12px; max-width: 34em; margin-left: auto; margin-right: auto; text-wrap: balance; }
+    .bf-sub b { color: var(--action); font-weight: 800; white-space: nowrap; }
+
+    /* ── 안내 상자 — 자체 제작 고지(법적)·PC 응시 안내. 활자 12px 하한 준수 ── */
+    .gm-note { margin: 22px auto 0; max-width: 560px; padding: 12px 14px; background: var(--bg2);
+      border-radius: 12px; font-size: 12.5px; color: var(--text-muted); line-height: 1.65; text-align: left; }
+    .gm-note b { color: var(--text); font-weight: 700; }
+
+    /* ── 게임 목록(허브) — 2열 카드, 순백 배경 위라 테두리+그림자로 띄운다(밝기 차 아님) ── */
+    .gm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+    @media (min-width: 600px) { .gm-grid { grid-template-columns: repeat(3, 1fr); } }
+    .gm-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 108px;
+      padding: 14px 14px 12px; background: var(--surface); border: 1px solid var(--border-soft);
+      border-radius: 16px; box-shadow: var(--shadow); text-align: left; cursor: pointer; }
+    .gm-card:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    @media (hover: hover) { .gm-card:hover { border-color: rgba(23,42,71,.30); } }
+    .gm-card .ic { font-size: 24px; line-height: 1; margin-bottom: 6px; }
+    .gm-card .nm { font-size: 15px; font-weight: 800; color: var(--ink); }
+    .gm-card .ms { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+    .gm-card .bs { font-size: 12px; font-weight: 700; color: var(--accent-ink); margin-top: auto; padding-top: 6px; }
+
+    /* ── 게임 화면(스테이지) — 허브와 자리를 바꿔 그린다 ── */
+    .gm-stage { display: none; margin-top: 18px; }
+    .gm-stage.on { display: block; }
+    .gm-hubwrap.off { display: none; }
+
+    .gm-top { display: flex; align-items: center; gap: 10px; }
+    .gm-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px;
+      background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px;
+      font-size: 14px; font-weight: 700; cursor: pointer; }
+    .gm-back:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .gm-top h2 { font-size: 19px; font-weight: 800; }
+
+    /* 시작 전 소개 판 */
+    .gm-intro { margin-top: 14px; padding: 18px 16px 16px; background: var(--surface);
+      border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow); }
+    .gm-intro .meas { display: inline-block; font-size: 12.5px; font-weight: 700; color: var(--accent-ink);
+      background: var(--accent-tint); border-radius: 8px; padding: 3px 10px; }
+    .gm-intro ul { margin: 12px 0 0; padding-left: 18px; font-size: 14.5px; line-height: 1.7; }
+    .gm-intro details { margin-top: 12px; font-size: 13.5px; color: var(--text-muted); }
+    .gm-intro summary { cursor: pointer; font-weight: 700; color: var(--text); min-height: 44px; display: flex; align-items: center; }
+    .gm-start { display: block; width: 100%; margin-top: 14px; min-height: 52px; background: var(--action);
+      color: var(--action-ink); border: 0; border-radius: 12px; font-size: 16px; font-weight: 800;
+      cursor: pointer; box-shadow: var(--shadow-action); }
+    .gm-start:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; }
+
+    /* 진행 중 HUD — 값에는 이름을 붙인다(원칙 15) */
+    .gm-hud { display: none; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 14px;
+      background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; }
+    .gm-hud.on { display: flex; }
+    .gm-hud .hv { font-size: 13px; color: var(--text-muted); }
+    .gm-hud .hv b { display: block; font-size: 18px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .gm-hud .bar { flex: 1 1 auto; height: 8px; border-radius: 999px; background: var(--bg3); overflow: hidden; }
+    .gm-hud .bar i { display: block; height: 100%; width: 100%; background: var(--action); border-radius: 999px;
+      transition: width .2s linear; }
+
+    /* 게임 보드 공통 */
+    .gm-board { margin-top: 12px; padding: 16px 12px 18px; background: var(--surface);
+      border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow);
+      min-height: 300px; display: none; }
+    .gm-board.on { display: block; }
+    .gm-q { text-align: center; font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 12px; }
+    .gm-q .sub { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+
+    /* 결과 판 */
+    .gm-result { display: none; margin-top: 14px; padding: 24px 16px; background: var(--surface);
+      border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow); text-align: center; }
+    .gm-result.on { display: block; }
+    .gm-result .r-name { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+    .gm-result .r-score { font-size: 42px; font-weight: 800; color: var(--accent); line-height: 1.2; margin-top: 4px; }
+    .gm-result .r-score small { font-size: 16px; font-weight: 700; color: var(--text-muted); }
+    .gm-result .r-best { font-size: 13.5px; color: var(--text-muted); margin-top: 6px; }
+    .gm-result .r-best b { color: var(--accent-ink); }
+    .gm-result .r-new { display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 800;
+      color: var(--action-ink); background: var(--action); border-radius: 8px; padding: 3px 10px; }
+    .gm-result .r-btns { display: flex; gap: 10px; margin-top: 18px; }
+    .gm-result .r-btns button { flex: 1 1 0; min-height: 48px; border-radius: 12px; font-size: 15px;
+      font-weight: 800; cursor: pointer; }
+    .gm-again { background: var(--action); color: var(--action-ink); border: 0; box-shadow: var(--shadow-action); }
+    .gm-tohub { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); }
+    .r-btns button:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; }
+
+    /* ── 게임별 부품 ── */
+    /* 큰 선택 버튼(가위바위보·개수 비교) */
+    .gm-bigrow { display: flex; gap: 10px; justify-content: center; }
+    .gm-big { flex: 1 1 0; max-width: 150px; min-height: 76px; background: var(--surface);
+      border: 1.5px solid var(--border-strong); border-radius: 14px; font-size: 34px; cursor: pointer; }
+    .gm-big:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .gm-big:active { background: var(--accent-tint); }
+    .gm-oppo { text-align: center; font-size: 56px; line-height: 1.15; min-height: 66px; }
+    .gm-rule { text-align: center; }
+    .gm-rule b { display: inline-block; font-size: 22px; font-weight: 800; padding: 4px 18px; border-radius: 12px;
+      background: var(--accent-tint); color: var(--accent-ink); }
+
+    /* 정오 피드백 번쩍임 */
+    .gm-flash-ok { animation: gmok .25s; }
+    .gm-flash-no { animation: gmno .3s; }
+    @keyframes gmok { 0% { background: #E7F3EA; } 100% { background: transparent; } }
+    @keyframes gmno { 0%, 60% { background: #FBEBEA; } 100% { background: transparent; } }
+    .gm-shake { animation: gmshake .3s; }
+    @keyframes gmshake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+    /* 격자 보드(숫자 누르기·도형 순서) */
+    .gm-cells { display: grid; gap: 8px; margin: 0 auto; max-width: 340px; }
+    .gm-cell { aspect-ratio: 1/1; min-width: 0; border-radius: 12px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); font-size: 20px; font-weight: 800; color: var(--ink); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; }
+    .gm-cell:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    .gm-cell.done { border-color: var(--border-soft); background: var(--bg2); color: var(--text-dim); }
+    .gm-cell.lit { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+    .gm-cell.empty { border-color: transparent; background: transparent; cursor: default; }
+
+    /* 개수 비교 점판 */
+    .gm-dots { position: relative; flex: 1 1 0; aspect-ratio: 5/6; max-width: 170px; background: var(--bg2);
+      border: 1.5px solid var(--border-strong); border-radius: 14px; cursor: pointer; }
+    .gm-dots:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .gm-dots i { position: absolute; border-radius: 50%; background: var(--accent); }
+    .gm-dots .tag { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%);
+      font-size: 12px; font-weight: 800; font-style: normal; color: var(--action-ink); background: var(--action);
+      padding: 2px 12px; border-radius: 999px; }
+
+    /* 도형 회전 */
+    .gm-rot-target { display: flex; justify-content: center; margin-bottom: 14px; }
+    .gm-rot-opts { display: grid; grid-template-columns: repeat(2, minmax(0,150px)); gap: 10px; justify-content: center; }
+    .gm-shape { padding: 10px; background: var(--bg2); border: 1.5px solid var(--border-strong);
+      border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .gm-shape:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .gm-shape.target { background: var(--accent-tint); cursor: default; }
+
+    /* 길 만들기 */
+    .gm-path { display: grid; gap: 4px; margin: 0 auto; max-width: 340px; }
+    .gm-tile { aspect-ratio: 1/1; min-width: 0; border-radius: 10px; border: 1px solid var(--border-soft);
+      background: var(--bg2); cursor: pointer; padding: 0; position: relative; }
+    .gm-tile:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    .gm-tile svg { display: block; width: 100%; height: 100%; transition: transform .12s; }
+    .gm-tile.hot svg { stroke: var(--accent); }
+    .gm-pathmeta { display: flex; justify-content: center; gap: 14px; margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+
+    /* 고양이 술래잡기 — 육각 느낌의 어긋난 격자.
+       셀 40px + 간격 4px = 터치 피치 44px(터치 44px 원칙은 이 피치로 맞춘다 — 7×7이라 더 못 키운다) */
+    .gm-cat { margin: 0 auto; max-width: 340px; }
+    .gm-cat .row { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
+    .gm-cat .row.odd { transform: translateX(22px); }
+    .gm-hex { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-strong);
+      background: var(--surface); cursor: pointer; padding: 0; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center; font-size: 21px; line-height: 1; }
+    .gm-hex:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
+    .gm-hex.wall { background: var(--action); border-color: var(--action); cursor: default; }
+    .gm-hex.cat { border-color: var(--accent-dark); background: var(--accent-tint); cursor: default; }
+
+    /* 약속 정하기 */
+    .gm-say { max-width: 380px; margin: 0 auto 12px; display: flex; flex-direction: column; gap: 6px; }
+    .gm-say p { font-size: 14px; line-height: 1.55; background: var(--bg2); border-radius: 12px; padding: 8px 12px; }
+    .gm-say p b { color: var(--accent-ink); }
+    .gm-week { display: grid; grid-template-columns: 44px repeat(5, 1fr); gap: 5px; max-width: 380px; margin: 0 auto; }
+    .gm-week .hd { font-size: 12.5px; font-weight: 800; color: var(--text-muted); text-align: center; align-self: center; }
+    .gm-slot { min-height: 46px; border-radius: 10px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text-dim); }
+    .gm-slot:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+
+    /* 마법약 만들기 */
+    .gm-order { text-align: center; margin-bottom: 12px; }
+    .gm-order .pot { font-size: 15px; font-weight: 800; color: var(--ink); }
+    .gm-order .need { font-size: 24px; letter-spacing: 4px; margin-top: 4px; }
+    .gm-cauldron { min-height: 52px; max-width: 340px; margin: 0 auto 12px; padding: 8px 12px; font-size: 24px;
+      letter-spacing: 4px; text-align: center; background: var(--bg2); border: 1.5px dashed var(--border-strong); border-radius: 12px; }
+    .gm-ing { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 340px; margin: 0 auto; }
+    .gm-ing button { min-height: 52px; font-size: 26px; background: var(--surface);
+      border: 1.5px solid var(--border-strong); border-radius: 12px; cursor: pointer; }
+    .gm-ing button:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    .gm-potbtns { display: flex; gap: 8px; max-width: 340px; margin: 10px auto 0; }
+    .gm-potbtns button { flex: 1 1 0; min-height: 48px; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; }
+    .gm-brew { background: var(--action); color: var(--action-ink); border: 0; }
+    .gm-empty { background: var(--surface); border: 1px solid var(--border-strong); }
+    .gm-potbtns button:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; }
+
+    .gm-foot { padding: 44px 0 80px; }
+
+    @media (max-width: 360px) {
+      .container { padding: 0 12px; }
+      .gm-grid { gap: 8px; }
+      .gm-hex { width: 34px; height: 34px; font-size: 18px; }
+      .gm-cat .row.odd { transform: translateX(19px); }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="bf-head">
+    <div class="container">
+      <div class="bf-eyebrow">MONC GAMES</div>
+      <h1 class="bf-title">역량검사 게임 연습</h1>
+      <p class="bf-sub">항공사 채용에 들어온 AI역량검사, 게임 유형을 미리 손에 익히세요.<br><b>9가지 유형 · 무료 · 무제한</b></p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="gm-hubwrap" id="gmHub">
+      <div class="gm-grid" id="gmGrid" role="list" aria-label="연습 게임 목록"></div>
+      <div class="gm-note">
+        <b>안내</b> · 이 연습장은 MONC 가 직접 만든 자체 도구로, 역량검사 개발사(자인원·잡다)와 무관합니다.
+        실제 검사와 화면·규칙·난이도가 다를 수 있으며, 유형 감각을 익히는 용도로 쓰세요.
+        실제 검사는 보통 <b>PC(마우스·키보드)로 응시</b>합니다 — 폰으로 연습했다면 실전 전에 PC 환경도 한 번 경험해 보세요.
+      </div>
+    </div>
+
+    <div class="gm-stage" id="gmStage" aria-live="polite">
+      <div class="gm-top">
+        <button type="button" class="gm-back" id="gmBack">← 목록</button>
+        <h2 id="gmTitle"></h2>
+      </div>
+      <div class="gm-intro" id="gmIntro"></div>
+      <div class="gm-hud" id="gmHud">
+        <span class="hv">남은 시간<b id="gmTime">—</b></span>
+        <span class="bar" aria-hidden="true"><i id="gmTimeBar"></i></span>
+        <span class="hv">점수<b id="gmScore">0</b></span>
+      </div>
+      <div class="gm-board" id="gmBoard"></div>
+      <div class="gm-result" id="gmResult"></div>
+    </div>
+
+    <div class="gm-foot"></div>
+  </main>
+
+<script src="games.js?v=1" defer></script>
+<script>
+/* bfcache — 뒤로/앞으로 오면 크롬은 떠날 때 그리던 화면을 그대로 되살린다.
+   게임 타이머는 시각 기반이라 되살린 화면은 그대로 종료돼 버린 상태다 — 통째로 다시 받는다(CLAUDE.md 표준). */
+window.addEventListener('pageshow', function (e) { if (e.persisted) location.reload(); });
+</script>
+</body>
+</html>

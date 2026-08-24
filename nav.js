@@ -44,7 +44,9 @@
     /* 준비중(2026-08-11 오너 "잠깐 꺼놔") — 다시 열 때 부제를 'AI 같은 표현 찾아 밑줄로'로 되돌린다 */
     ['ai-killer.html', 'AI킬러', '지금은 준비 중이에요'],
     /* 2026-08-07 개명 '필수 기출 하루 한 개' → '일문일답' — programs.html 제목·tools.html 타일과 한 벌 */
-    ['programs.html', '일문일답', '하루 한 개, 내 경험으로']
+    ['programs.html', '일문일답', '하루 한 개, 내 경험으로'],
+    /* 역량검사 게임(2026-08-24 신설) — 무료·비회원 공개. tools.html 격자와 같은 목록 유지 */
+    ['games.html', '역량검사 게임', '검사 유형 9가지 무료 연습']
   ];
   var CHALLENGE_HUB = 'challenges.html';
   var CHALLENGE_SUB = [
@@ -92,6 +94,7 @@
     'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
     'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
     'programs.html': 'tools', 'program.html': 'tools', 'experiences.html': 'tools',
+    'games.html': 'tools',
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',
