@@ -504,6 +504,24 @@
     .apl-more { padding: 10px 14px; font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--border-soft); }
     .apl-more .ad-sq { height: 36px; }
     .apl-note { padding: 10px 14px; font-size: 12.5px; color: var(--st-alert); border-top: 1px solid var(--border-soft); }
+    .apl-note .ad-sq { height: 32px; margin-left: 8px; }
+    /* 제출물 접이(2026-08-24 오너 "신청자에서 제출 녹음본 바로") — 챌린지 탭(보신각·영합각·스피닝)의
+       회원 줄에만 붙는다. 무늬는 sfold 와 같은 ▸/▾, 재생 주소(서명 URL)는 펼칠 때 받는다. */
+    .apl-subs, .apl-subs-none { grid-column: 1 / -1; }
+    .apl-subs-none { font-size: 12.5px; color: var(--text-dim); }
+    .apl-subs > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+                          min-height: 40px; font-size: 12.5px; font-weight: 700; color: var(--action); }
+    .apl-subs > summary::-webkit-details-marker { display: none; }
+    .apl-subs > summary::before { content: '\25B8'; font-size: 11px; color: var(--text-dim); }
+    .apl-subs[open] > summary::before { content: '\25BE'; }
+    .apl-subs-body { border-top: 1px solid var(--border-soft); padding-top: 4px; }
+    .apl-slot { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; padding: 7px 0; }
+    .apl-slot + .apl-slot { border-top: 1px dashed var(--border-soft); }
+    .apl-slot-k { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--text-muted); min-width: 150px; }
+    .apl-slot-d { font-size: 12px; color: var(--text-dim); }
+    .apl-slot-play { flex: 1 1 220px; min-width: 0; }
+    .apl-slot-play audio { width: 100%; height: 36px; display: block; }
+    .apl-slot-play video { width: 100%; max-width: 360px; border-radius: 8px; display: block; }
     /* 제출 링크 패널(2026-08-24 오너 "각 챌린지 신청현황 아랫쪽에 링크") — 챌린지 탭에서만 목록 아래 */
     .sublink { margin-top: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
     .sublink-t { font-size: 13px; font-weight: 800; }
@@ -523,6 +541,8 @@
       .apl-row .ch { grid-column: 2; grid-row: 2; }
       .apl-row .act { grid-column: 3; grid-row: 1 / 3; margin: 0; justify-self: end; flex-wrap: nowrap; }
       .apl-row .apl-txt { margin-left: 4px; }
+      /* 제출물 접이는 세 칸 아래 한 줄 전체 */
+      .apl-row .apl-subs, .apl-row .apl-subs-none { grid-column: 1 / -1; grid-row: 3; }
     }
     .app-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
     .app-card .ac-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -3339,11 +3359,15 @@
       expression: { label: '영.합.각 · 표현력 (영상)', media: 'video' },
       spinning:   { label: '스.피.닝 · 스피치 (음성)', media: 'audio' },
     };
-    function chSubSlot(ch, type, sub) {
-      // 스피닝만 첫날 녹음 2개(before·before2) — mypage 제출 카드와 같은 이름표(2026-08-24 오너)
-      const label = type === 'after' ? '끝 · 마칠 무렵'
+    // 스피닝만 첫날 녹음 2개(before·before2) — mypage 제출 카드와 같은 이름표(2026-08-24 오너).
+    // 회원 상세와 신청자 현황 제출물 접이가 같이 쓴다 — 바꾸면 mypage·submit 도 같이(세 곳 한 벌).
+    function chSubTypeLabel(ch, type) {
+      return type === 'after' ? '끝 · 마칠 무렵'
         : ch === 'spinning' ? (type === 'before' ? '첫날 ① · 첫 녹음본' : '첫날 ② · 다시 읽은 녹음본')
           : '처음 · 시작 무렵';
+    }
+    function chSubSlot(ch, type, sub) {
+      const label = chSubTypeLabel(ch, type);
       return `<div class="slot ${type}">
         <div class="tag">${label}</div>
         <div class="cur">${sub ? '등록됨: ' + esc(sub.storage_path) : '아직 없음'}</div>
@@ -5249,12 +5273,100 @@
       }));
     }
 
+    /* ── 제출물 접이(2026-08-24 오너 "신청자에서 제출 녹음본 바로 볼 수 있게") ──
+       챌린지 탭(보신각·영합각·스피닝)의 회원 줄마다 접이 한 줄 — 펼치면 처음/끝 파일을 그 자리에서 재생.
+       승자각은 파일이 없어(답변노트) 대상이 아니고, 비회원 줄은 제출 계정 자체가 없어 안 그린다.
+       파일은 챌린지·칸마다 한 개(재업로드 = 교체)라 기수로 거르지 않는다 — 기수는 줄에 표시만.
+       표 전체를 챌린지 탭 첫 진입에 한 번 받는다(작은 표 — 진입 조회 다이어트는 탭 누른 뒤로 미룬 것으로 지킨다). */
+    let _chSubRows = [], _chSubReady = false, _chSubErr = '', _chSubLoading = false;
+    const isFileCh = k => !!CH_SUB_ADM[k];
+    async function loadChSubs() {
+      if (_chSubLoading) return;
+      _chSubLoading = true; _chSubErr = '';
+      // select('*') — 미적용 환경에서 컬럼 나열 400 을 피한다(데이터 안전 공통 규칙)
+      const { data, error } = await MONC.sb.from('challenge_submissions')
+        .select('*').order('created_at', { ascending: false });
+      _chSubLoading = false;
+      if (error) {
+        _chSubErr = error.code === 'PGRST205'
+          ? '제출물 표가 아직 없어요 — 마이그레이션(20260820120000_challenge_submissions.sql)을 실행하면 여기서 바로 재생됩니다.'
+          : (error.message || '알 수 없는 오류');
+      } else {
+        _chSubRows = data || []; _chSubReady = true;
+      }
+      if (isFileCh(_appKind)) renderApps();
+    }
+    // 전화 숫자만 → 회원 id (전화매칭 줄의 제출물 찾기 — appMembership 과 같은 \D 정규화)
+    function phoneMemberMap() {
+      const map = new Map();
+      members.forEach(m => {
+        const d = (m.phone || '').replace(/\D/g, '');
+        if (d && !map.has(d)) map.set(d, m.id);
+      });
+      return map;
+    }
+    function aplSubsHtml(a, phoneMap, subIdx) {
+      if (!isFileCh(_appKind) || !_chSubReady) return '';
+      const mid = a.member_id || phoneMap.get(String(a.phone || '').replace(/\D/g, '')) || '';
+      if (!mid) return '';   // 비회원 — '비회원' 태그가 이미 사정을 말해 준다
+      const media = (CH_SUB_ADM[_appKind] || {}).media || 'audio';
+      const slots = _appKind === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'];
+      const subs = slots.map(t => subIdx.get(mid + '#' + t));
+      const have = subs.filter(Boolean).length;
+      if (!have) return '<div class="apl-subs-none">제출물 아직 없음</div>';
+      return `<details class="apl-subs">
+        <summary>제출물 <b>${have}/${slots.length}</b></summary>
+        <div class="apl-subs-body">${slots.map((t, i) => {
+          const s = subs[i];
+          const k = `<span class="apl-slot-k">${chSubTypeLabel(_appKind, t)}</span>`;
+          return s
+            ? `<div class="apl-slot">${k}<span class="apl-slot-d">${fmtDate(s.created_at)}${s.round ? ' · ' + s.round + '기' : ''}</span>
+                <div class="apl-slot-play" data-path="${esc(s.storage_path)}" data-media="${media}"></div></div>`
+            : `<div class="apl-slot">${k}<span class="apl-slot-d">아직 없음</span></div>`;
+        }).join('')}</div>
+      </details>`;
+    }
+    // 펼칠 때만 서명 URL 을 받는다 — 명단 전체에 미리 받으면 요청이 줄 수만큼 나간다
+    function wireSubsFolds(root) {
+      root.querySelectorAll('details.apl-subs').forEach(d => d.addEventListener('toggle', () => {
+        if (!d.open) return;
+        d.querySelectorAll('.apl-slot-play:not([data-loaded])').forEach(async el => {
+          el.dataset.loaded = '1';
+          el.innerHTML = '<span class="apl-slot-d">여는 중…</span>';
+          const url = await MONC.getSignedUrl(el.dataset.path);
+          if (url) {
+            el.innerHTML = el.dataset.media === 'video'
+              ? `<video controls preload="none" src="${url}"></video>`
+              : `<audio controls preload="none" src="${url}"></audio>`;
+          } else {
+            // 실패를 성공처럼 두지 않는다 — 다시 열면 재시도하게 표시를 되돌린다
+            delete el.dataset.loaded;
+            el.innerHTML = '<span class="apl-slot-d">재생 주소를 못 받았어요 — 접었다 다시 펴 보세요</span>';
+          }
+        });
+      }));
+    }
+    function chSubNoteHtml() {
+      if (!isFileCh(_appKind) || !_chSubErr) return '';
+      return `<div class="apl-note">제출물을 표시하지 못했어요: ${esc(_chSubErr)}
+        <button type="button" class="ad-sq" id="chSubRetry">다시 불러오기</button></div>`;
+    }
+
     function renderApps() {
       // '자료' 탭이면 결제 목록을 그린다 — 입금 체크는 설 자리가 없어 숨긴다(죽은 필터 금지)
       const isLab = _appKind === 'lab';
       document.getElementById('afPayWrap').hidden = isLab;
       renderSubFilter();   // ⚠️ 목록을 계산하기 전에 — 고른 값이 옵션에서 사라졌으면 여기서 기본값으로 되돌린다
       if (isLab) { renderAppLab(); return; }
+      /* 제출물 접이 재료 — 챌린지 탭 첫 진입에 표를 한 번 받고, 도착하면 loadChSubs 가 다시 그린다 */
+      const showSubs = isFileCh(_appKind);
+      if (showSubs && !_chSubReady && !_chSubErr) loadChSubs();
+      const phoneMap = showSubs && _chSubReady ? phoneMemberMap() : new Map();
+      const subIdx = new Map();   // member_id#type → 제출 행(최신순 조회라 먼저 든 것이 최신)
+      if (showSubs && _chSubReady) _chSubRows.forEach(s => {
+        const k = s.member_id + '#' + s.type;
+        if (s.challenge === _appKind && !subIdx.has(k)) subIdx.set(k, s);
+      });
       const list = visibleApps();
       const body = document.getElementById('appsBody');
       if (!list.length) {
@@ -5317,6 +5429,7 @@
               <button type="button" class="apl-txt apl-del">${trash}삭제</button>
             </span>
           </div>
+          ${aplSubsHtml(a, phoneMap, subIdx)}
         </div>`; }).join('')
         + (list.length > shown.length
             ? `<div class="apl-more"><span>${shown.length.toLocaleString()} / ${list.length.toLocaleString()}명 표시</span>`
@@ -5325,9 +5438,13 @@
         + (_appsTruncated
             ? '<div class="apl-note">신청이 너무 많아 일부만 불러왔습니다 — 건수·중복 표시가 실제보다 적습니다.</div>'
             : '')
+        + chSubNoteHtml()   // 제출물 표를 못 읽었으면 사실대로 적는다(단정 금지)
         + '</div>'
         + chSubmitLinksHtml(_appKind);   // 챌린지 탭이면 목록 아래 제출 링크(오픈챗 공유용)
       wireCopyLinks(body);
+      wireSubsFolds(body);
+      const chSubRetry = document.getElementById('chSubRetry');
+      if (chSubRetry) chSubRetry.addEventListener('click', () => { _chSubErr = ''; loadChSubs(); });
       const appMoreBtn = document.getElementById('appMoreBtn');
       if (appMoreBtn) appMoreBtn.addEventListener('click', () => { _aShown += A_PAGE; renderApps(); });
       // 간편결제 환불 — cancel-payment Edge Function(관리자 검증) → 포트원 취소(원결제수단 자동 환불)
