@@ -4140,6 +4140,8 @@
 
     // ── 승자각 DAY 문항(challenge_lessons) — 상세·신청·마이페이지의 단일 소스 ──
     // ⚠️ 표가 없으면(PGRST205 등) 묶음을 숨긴다. 세 화면은 HTML 값으로 계속 돌아간다.
+    // ⚠️ 손으로 적던 '이렇게 써도 같은 문항' 칸은 2026-08-24 오너 지시로 없앴다("헷갈려").
+    //    마이페이지 작성 판정은 이제 **문항 이름에서 스스로 만든다**(mypage dayNoOf) — 다시 만들지 말 것.
     const LES_CH = 'answer';
     let _lessons = [];
 
@@ -4166,8 +4168,6 @@
             <input class="les-in" data-k="title" maxlength="60" value="${esc(r.title || '')}"></div>
           <div class="field"><label>설명 한 줄 <span>— 챌린지 상세 페이지에만 나와요</span></label>
             <textarea class="les-in les-ta" data-k="summary" maxlength="300">${esc(r.summary || '')}</textarea></div>
-          <div class="field"><label>이렇게 써도 같은 문항으로 봄 <span>— 쉼표로 구분, 비워도 돼요</span></label>
-            <input class="les-in" data-k="words" maxlength="120" value="${esc((r.match_words || []).join(', '))}"></div>
         </div>
       </div>`).join('');
     }
@@ -4177,10 +4177,7 @@
       const msg = document.getElementById('lesMsg');
       const rows = [...document.querySelectorAll('#lesList .les-item')].map(el => {
         const g = k => el.querySelector('[data-k="' + k + '"]').value.trim();
-        return {
-          id: el.dataset.id, title: g('title'), summary: g('summary') || null,
-          match_words: g('words').split(',').map(x => x.trim()).filter(Boolean),
-        };
+        return { id: el.dataset.id, title: g('title'), summary: g('summary') || null };
       });
       if (rows.some(r => !r.title)) { msg.textContent = '문항 이름은 비울 수 없어요.'; return; }
 
@@ -4189,16 +4186,14 @@
       _lessons.forEach(r => { was[r.id] = r; });
       const changed = rows.filter(r => {
         const o = was[r.id] || {};
-        return r.title !== (o.title || '')
-          || (r.summary || '') !== (o.summary || '')
-          || r.match_words.join('|') !== ((o.match_words || []).join('|'));
+        return r.title !== (o.title || '') || (r.summary || '') !== (o.summary || '');
       });
       if (!changed.length) { msg.textContent = '바뀐 게 없어요.'; return; }
 
       btn.disabled = true; msg.textContent = '저장 중…';
       for (const r of changed) {
         const { error } = await MONC.sb.from('challenge_lessons')
-          .update({ title: r.title, summary: r.summary, match_words: r.match_words })
+          .update({ title: r.title, summary: r.summary })
           .eq('id', r.id);
         if (error) { btn.disabled = false; msg.textContent = '저장 실패: ' + error.message; return; }
       }
