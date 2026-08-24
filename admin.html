@@ -5379,7 +5379,16 @@
       body.querySelectorAll('.apl-del').forEach(btn => btn.addEventListener('click', async () => {
         const id = btn.closest('.apl-row').dataset.id;
         const app = _apps.find(x => x.id === id);
-        if (!confirm(`'${app ? app.name : ''}' 신청을 삭제할까요? 되돌릴 수 없어요.`)) return;
+        /* 삭제 경고를 줄의 성격에 맞춘다(2026-08-24 실사고 — 환불 줄을 '중복'으로 알고 지웠다).
+           돈이 오간 줄(결제·환불)과 무료 참여 줄은 지우면 잃는 게 있다 — 문구로 먼저 알린다. */
+        const money = app && (app.payment_id || app.paid || app.refunded
+          || ['paid', 'refunded', 'partial_refunded'].indexOf(app.payment_status) >= 0);
+        const warn = app && appFree(app)
+          ? '\n⚠️ 무료 참여의 근거 줄이에요 — 지우면 이 회원 마이페이지에서 챌린지가 다시 사라져요.'
+          : money
+            ? '\n⚠️ 결제·환불 기록이 있는 줄이에요 — 지우면 장부에서 사라져요(포트원 콘솔에는 남아요).'
+            : '';
+        if (!confirm(`'${app ? app.name : ''}' 신청을 삭제할까요? 되돌릴 수 없어요.${warn}`)) return;
         const { error } = await MONC.sb.from('applications').delete().eq('id', id);
         if (error) { alert('삭제 실패: ' + error.message); return; }
         _apps = _apps.filter(x => x.id !== id); renderApps(); toast('삭제됨');
