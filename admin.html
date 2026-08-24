@@ -461,6 +461,10 @@
     .apl-tag { font-size: 12px; font-weight: 700; color: var(--st-ok); background: var(--st-ok-bg); border-radius: 4px; padding: 1px 6px; line-height: 1.5; white-space: nowrap; }
     .apl-tag.g { color: var(--text-muted); background: var(--bg2); }
     .apl-tag.dup { color: #fff; background: var(--st-alert); }
+    /* 블랙리스트 라벨 — 먹색 바탕(중복의 코랄과 구분). 관리자만 보는 화면이라 글자 그대로 '블랙'. */
+    .apl-tag.blk { color: #fff; background: var(--ink, #1C2A3A); }
+    /* 블랙 사유 줄 — 등록된 행에만 나타난다. 데스크톱 3열 그리드에서는 셋째 줄로 내려간다. */
+    .apl-row .blk-why { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); overflow-wrap: break-word; }
     .apl-row .dt { font-size: 12px; color: var(--text-dim); white-space: nowrap; padding-top: 3px; }
     .apl-row .ph { font-size: 14px; color: var(--text-muted); grid-column: 1 / -1; overflow-wrap: break-word; }
     .apl-row .ph b { color: var(--text); font-weight: 700; }
@@ -482,6 +486,10 @@
               display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
     .apl-txt:hover { color: var(--st-alert); }
     .apl-txt svg { width: 15px; height: 15px; }
+    /* 글자 버튼 둘(블랙·삭제)은 한 묶음으로 오른쪽 — 좁은 폭에서 줄바꿈될 때도 같이 움직인다
+       (묶지 않으면 auto 마진이 갈라져 삭제만 왼쪽에 홀로 떨어진다 — 375px 실측) */
+    .apl-txts { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+    .apl-txts .apl-txt { margin-left: 0; }
     .apl-more { padding: 10px 14px; font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--border-soft); }
     .apl-more .ad-sq { height: 36px; }
     .apl-note { padding: 10px 14px; font-size: 12.5px; color: var(--st-alert); border-top: 1px solid var(--border-soft); }
@@ -4791,12 +4799,29 @@
            : '<span class="ac-guest">○ 비회원</span>';
     }
 
+    /* ── 블랙리스트(관리자 전용 표 blacklist · 20260824150000) ──
+       전화번호 숫자만으로 신청 행과 맞춰 본다. 표가 없으면(PGRST205) 라벨 없이 조용히 돌고,
+       [블랙 등록]을 눌렀을 때만 실행 안내를 띄운다. 표시는 admin 신청자 현황뿐 —
+       신청·결제를 막지 않는다(자동 차단은 오너 지시가 있을 때 따로 설계). */
+    let _blk = [], _blkReady = false, _blkMissing = false;
+    const BLK_SQL_HINT = '블랙리스트가 아직 켜지지 않았습니다.\nSupabase SQL Editor 에서 20260824150000_blacklist.sql 을 실행해 주세요.';
+    async function loadBlacklist() {
+      const { data, error } = await MONC.sb.from('blacklist').select('*');
+      if (error) { _blkMissing = error.code === 'PGRST205'; _blkReady = false; return; }
+      _blk = data || []; _blkReady = true; _blkMissing = false;
+    }
+
     async function loadApplications() {
       const body = document.getElementById('appsBody');
       // ⚠️ fetchAll — 신청이 1000건을 넘으면 조용히 잘리던 자리다. 중복 검사·CSV·'오늘' 숫자가
       //    전부 이 배열을 세므로, 잘리면 그 결과가 전부 같이 틀어진다(2026-08-03).
-      const { data, error, truncated } = await fetchAll(() => MONC.sb.from('applications')
-        .select('*').order('created_at', { ascending: false }));
+      // 블랙리스트는 같이 받는다 — 실패해도 신청 목록은 그대로 그린다(라벨만 빠진다).
+      const [appsRes] = await Promise.all([
+        fetchAll(() => MONC.sb.from('applications')
+          .select('*').order('created_at', { ascending: false })),
+        loadBlacklist()
+      ]);
+      const { data, error, truncated } = appsRes;
       _appsTruncated = truncated;
       _loadErr['신청'] = !!error;
       if (error) { body.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
@@ -5147,6 +5172,8 @@
       }
       const phoneSet = memberPhoneSet();
       const dups = dupIdSet();
+      const blkMap = new Map(_blk.map(b => [b.phone, b]));   // 전화 숫자만 → 블랙 행
+      const blkOf = a => blkMap.get(String(a.phone || '').replace(/\D/g, ''));
       /* 범위 하나(영합각 4기 · 특강 하나 · 전체)를 평면으로 그린다(2026-08-22 오너 A안 — 아코디언·묶음 나열은
          기수가 쌓일수록 길어져 폐기). 머리 줄에 범위 이름·인원·미입금.
          ⚠️ 카드는 한 번에 A_PAGE 건만 그린다(2026-08-03) — 카드 하나가 약 200px 이라 수천 건을 통째로 그리면
@@ -5158,6 +5185,8 @@
       const stats = [[list.length, '신청'], [paid, '입금', 'ok']];
       if (free) stats.push([free, '무료']);
       if (unpaid) stats.push([unpaid, '미입금', 'al']);
+      const blkCount = _blkReady ? list.filter(a => blkOf(a)).length : 0;
+      if (blkCount) stats.push([blkCount, '블랙', 'al']);   // 0이면 칸을 안 그린다(무료·미입금과 같은 규칙)
       const shown = list.slice(0, _aShown);
       const trash = '<svg aria-hidden="true"><use href="#i-trash"/></svg>';
       body.innerHTML = apSummary(appScopeLabel(),
@@ -5172,12 +5201,14 @@
              그전 계좌이체 건·특강 건에는 값이 없으므로 빈 글을 적지 않는다. */
           const acct = !a.payment_id && a.refund_account ? ` · 환불계좌 ${esc(a.refund_account)}` : '';
           const payTxt = a.payment_id ? payLine(a) : '계좌이체';
+          const bk = blkOf(a);
           return `
         <div class="apl-row${dups.has(a.id) ? ' is-dup' : ''}" data-id="${a.id}">
-          <div class="nm">${esc(a.name)} ${tag}${dups.has(a.id) ? '<span class="apl-tag dup">중복</span>' : ''}</div>
+          <div class="nm">${esc(a.name)} ${tag}${dups.has(a.id) ? '<span class="apl-tag dup">중복</span>' : ''}${bk ? `<span class="apl-tag blk" title="${esc(bk.reason || '사유 미기록')}">블랙</span>` : ''}</div>
           <div class="dt">${fmtDate(a.created_at)}</div>
           <div class="ph"><b>${esc(a.phone)}</b>${acct}</div>
           <div class="ch">${esc(chSummary(a.challenges))} <em>· ${(a.total_price||0).toLocaleString()}원 · </em>${payTxt}</div>
+          ${bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : ''}
           <div class="act">
             ${a.payment_id
               ? (appPaid(a) && ((a.paid_amount||0) - (a.refunded_amount||0)) > 0 ? `<span class="apl-seg"><button type="button" class="apl-refundbtn">환불</button></span>` : '')
@@ -5186,7 +5217,10 @@
               <button type="button" class="${a.refunded ? 'on rf' : ''}" data-field="refunded">환불</button>
               <button type="button" class="${appFree(a) ? 'on' : ''}" data-field="free">무료(재학생)</button>
             </span>`}
-            <button type="button" class="apl-txt apl-del">${trash}삭제</button>
+            <span class="apl-txts">
+              <button type="button" class="apl-txt apl-blkbtn">${bk ? '블랙 해제' : '블랙 등록'}</button>
+              <button type="button" class="apl-txt apl-del">${trash}삭제</button>
+            </span>
           </div>
         </div>`; }).join('')
         + (list.length > shown.length
@@ -5254,6 +5288,39 @@
         _apps = _apps.filter(x => x.id !== id); renderApps(); toast('삭제됨');
         // 특강 신청이었다면 DB 트리거가 자리를 되돌려놨다 — 특강 탭의 잔여석도 새로 읽는다
         if (app && appIsLecture(app)) loadLectures();
+      }));
+      // 블랙 등록·해제 — 열쇠는 전화번호 숫자만이라 같은 번호의 다른 신청 행에도 라벨이 같이 붙는다
+      body.querySelectorAll('.apl-blkbtn').forEach(btn => btn.addEventListener('click', async () => {
+        const id = btn.closest('.apl-row').dataset.id;
+        const app = _apps.find(x => x.id === id);
+        if (!app) return;
+        if (_blkMissing) { alert(BLK_SQL_HINT); return; }
+        const digits = String(app.phone || '').replace(/\D/g, '');
+        if (!digits) { alert('전화번호가 없어 블랙 등록을 할 수 없어요.'); return; }
+        const cur = _blk.find(b => b.phone === digits);
+        if (cur) {
+          if (!confirm(`'${app.name}' (${app.phone}) 블랙 등록을 해제할까요?`
+            + (cur.reason ? `\n사유: ${cur.reason}` : ''))) return;
+          const { error } = await MONC.sb.from('blacklist').delete().eq('id', cur.id);
+          if (error) { alert('해제 실패: ' + error.message); return; }
+          _blk = _blk.filter(b => b.id !== cur.id);
+          renderApps(); toast('블랙 해제됨');
+          return;
+        }
+        const reason = prompt(`'${app.name}' (${app.phone})님을 블랙리스트에 올릴까요?`
+          + '\n사유를 적어 두면 명단에서 같이 보여요(선택 · 관리자만 봅니다).', '');
+        if (reason === null) return;
+        const { data: row, error } = await MONC.sb.from('blacklist')
+          .insert({ phone: digits, name: app.name || null, reason: reason.trim() || null })
+          .select().single();
+        if (error) {
+          if (error.code === 'PGRST205') { _blkMissing = true; alert(BLK_SQL_HINT); return; }
+          // 이미 등록돼 있던 번호(다른 화면에서 넣은 것) — 오류가 아니라 목록만 맞춘다
+          if (error.code === '23505') { await loadBlacklist(); renderApps(); return; }
+          alert('등록 실패: ' + error.message); return;
+        }
+        _blk.push(row);
+        renderApps(); toast('블랙 등록됨');
       }));
     }
 
