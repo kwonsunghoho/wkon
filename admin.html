@@ -493,6 +493,13 @@
     .apl-more { padding: 10px 14px; font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--border-soft); }
     .apl-more .ad-sq { height: 36px; }
     .apl-note { padding: 10px 14px; font-size: 12.5px; color: var(--st-alert); border-top: 1px solid var(--border-soft); }
+    /* 제출 링크 패널(2026-08-24 오너 "각 챌린지 신청현황 아랫쪽에 링크") — 챌린지 탭에서만 목록 아래 */
+    .sublink { margin-top: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .sublink-t { font-size: 13px; font-weight: 800; }
+    .sublink-hint { font-size: 12px; color: var(--text-dim); margin: 2px 0 8px; word-break: keep-all; }
+    .sublink-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 0; border-top: 1px solid var(--border-soft); margin-top: 8px; }
+    .sublink-k { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--text-muted); min-width: 92px; }
+    .sublink-url { flex: 1 1 200px; min-width: 0; font-size: 12px; color: var(--text-dim); word-break: break-all; }
     @media (min-width: 961px) {
       .ad-sq .lg, .apl-sum .lg { display: inline; }
       .ad-sq .sm { display: none; }
@@ -5161,6 +5168,40 @@
     }
     document.getElementById('afUnpaid').addEventListener('change', e => setAppPay(e.target.checked ? 'unpaid' : 'all'));
 
+    /* 제출 링크(submit.html) — 오픈챗에 붙여넣는 주소(2026-08-24 오너 "매번 링크를 저장해 놓을 수 없잖아").
+       챌린지 탭을 고르면 목록 아래에 뜬다. 주소는 언제나 라이브 도메인으로 준다(admin 을 어디서 열든
+       학생에게 줄 링크는 monc.ai.kr). 기수는 링크에 없다 — 각자 신청에서 자동으로 붙어 매 기수 재사용. */
+    const SUBMIT_BASE = 'https://monc.ai.kr/submit.html';
+    function chSubmitLinksHtml(kind) {
+      if (!isChKind(kind)) return '';
+      const rows = kind === 'answer'
+        ? [['문항 쓰기', SUBMIT_BASE + '?ch=answer']]
+        : [['시작 · 첫날', SUBMIT_BASE + '?ch=' + kind + '&t=before'],
+          ['끝 · 마지막 날', SUBMIT_BASE + '?ch=' + kind + '&t=after']];
+      return `<div class="sublink">
+        <div class="sublink-t">제출 링크 — 오픈챗에 붙여넣기</div>
+        <div class="sublink-hint">기수와 무관하게 늘 같은 주소예요(기수는 각자 신청에서 자동으로 붙어요). 학생이 로그인해 올리면 마이페이지에도 그대로 남아요.</div>
+        ${rows.map(([k, u]) => `<div class="sublink-row"><span class="sublink-k">${k}</span><span class="sublink-url">${u}</span><button type="button" class="ad-sq" data-copylink="${u}">복사</button></div>`).join('')}
+      </div>`;
+    }
+    function wireCopyLinks(root) {
+      root.querySelectorAll('[data-copylink]').forEach(btn => btn.addEventListener('click', async () => {
+        const url = btn.dataset.copylink;
+        let ok = false;
+        try { await navigator.clipboard.writeText(url); ok = true; } catch (_) {
+          // http·구형 웹뷰 폴백 — 임시 칸에 넣고 execCommand 로 복사
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = url; ta.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(ta); ta.select();
+            ok = document.execCommand('copy'); ta.remove();
+          } catch (e) { /* 아래 prompt 로 */ }
+        }
+        if (ok) toast('링크를 복사했어요');
+        else prompt('복사가 막혔어요 — 길게 눌러 직접 복사해 주세요.', url);
+      }));
+    }
+
     function renderApps() {
       // '자료' 탭이면 결제 목록을 그린다 — 입금 체크는 설 자리가 없어 숨긴다(죽은 필터 금지)
       const isLab = _appKind === 'lab';
@@ -5171,7 +5212,9 @@
       const body = document.getElementById('appsBody');
       if (!list.length) {
         body.innerHTML = apSummary(appScopeLabel(), '', [[list.length, '신청']])
-          + '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>';
+          + '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'
+          + chSubmitLinksHtml(_appKind);   // 새 기수 0명이어도 링크는 필요하다
+        wireCopyLinks(body);
         return;
       }
       const phoneSet = memberPhoneSet();
@@ -5234,7 +5277,9 @@
         + (_appsTruncated
             ? '<div class="apl-note">신청이 너무 많아 일부만 불러왔습니다 — 건수·중복 표시가 실제보다 적습니다.</div>'
             : '')
-        + '</div>';
+        + '</div>'
+        + chSubmitLinksHtml(_appKind);   // 챌린지 탭이면 목록 아래 제출 링크(오픈챗 공유용)
+      wireCopyLinks(body);
       const appMoreBtn = document.getElementById('appMoreBtn');
       if (appMoreBtn) appMoreBtn.addEventListener('click', () => { _aShown += A_PAGE; renderApps(); });
       // 간편결제 환불 — cancel-payment Edge Function(관리자 검증) → 포트원 취소(원결제수단 자동 환불)

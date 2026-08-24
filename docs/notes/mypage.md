@@ -19,6 +19,7 @@
   **기수는 링크에 안 싣는다** — 각자 신청에서 자동으로 붙는다(round). 승자각은 DAY 문항 목록으로 그린다(`answers.html?title=…#new` — mypage 카드와 같은 규칙).
   미로그인은 requireSession 이 login 으로 보내고 **returnTo 가 쿼리까지 들고 돌아온다**(`safeReturnTo` 정규식이 `?…` 허용 — 실측). 비참가 계정은 안내 카드(신청 계정 재로그인 안내).
   `data-nav-offset` 필수(빼면 제목이 고정 nav 에 가려진다 — 실측). **칸 이름·업로드 규칙을 바꿀 땐 mypage.html·admin.html·submit.html 세 곳을 같이 고친다.**
+  오너가 쓸 공유 주소는 **admin 신청자 현황의 챌린지 탭 아래 '제출 링크' 패널**에서 복사한다(admin.md '제출 링크 패널' 절 — 주소를 따로 적어 둘 필요 없음).
   승자각은 파일 대신 **DAY1~10 문항 목록 + 작성 N/10** — 문항 클릭 → `answers.html?title=…#new`(제목 자동 채움).
 - **문항 정본은 `challenge_lessons`**(2026-08-24 — admin '챌린지' 탭 → 승자각 DAY 문항). `renderChSubs` 가 판정 전에 `loadAnswerLessons()` 로 받아 `ANSWER_DAYS`·`ANSWER_DAY_WORDS` 를 덮어쓴다.
   ⚠️ 코드에 적힌 10줄은 **폴백**이다 — 표가 없거나 0줄이면 덮어쓰지 않는다(지우지 말 것).
