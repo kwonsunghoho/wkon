@@ -8,7 +8,7 @@
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://monc.ai.kr/games.html" />
   <meta property="og:title"       content="역량검사 게임 연습 — MONC 몬크" />
-  <meta property="og:description" content="항공사 채용 AI역량검사의 전략게임 유형 9가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
+  <meta property="og:description" content="항공사 채용 AI역량검사의 전략게임 유형 10가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
   <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
@@ -16,7 +16,7 @@
   <meta property="og:site_name"   content="MONC 몬크" />
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="역량검사 게임 연습 — MONC 몬크" />
-  <meta name="twitter:description" content="항공사 채용 AI역량검사의 전략게임 유형 9가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
+  <meta name="twitter:description" content="항공사 채용 AI역량검사의 전략게임 유형 10가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
   <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
 
   <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
@@ -27,7 +27,7 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "xlu6nkv2uh");
   </script>
-  <meta name="description" content="항공사 채용 AI역량검사의 전략게임 유형 9가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
+  <meta name="description" content="항공사 채용 AI역량검사의 전략게임 유형 10가지를 무료로 무제한 연습하세요. 점수 기록과 게임별 공략 팁 제공." />
 
   <!-- 파비콘 -->
   <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
@@ -109,6 +109,16 @@
       color: var(--action-ink); border: 0; border-radius: 12px; font-size: 16px; font-weight: 800;
       cursor: pointer; box-shadow: var(--shadow-action); }
     .gm-start:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; }
+    /* 모드가 있는 게임 — 슬라이더·옵션 나열 대신 버튼 두세 개(기본값 고정 — "더 쉽게", 오너 방향) */
+    .gm-start small { display: block; font-size: 12px; font-weight: 500; opacity: .85; margin-top: 2px; }
+    .gm-start.alt { margin-top: 8px; background: var(--surface); color: var(--text);
+      border: 1px solid var(--border-strong); box-shadow: none; }
+    .gm-start.alt small { color: var(--text-muted); opacity: 1; }
+
+    /* 문항 제한시간 막대 — 문항당 3초 같은 짧은 시간은 전역 타이머 대신 이걸 쓴다 */
+    .gm-qtimer { height: 6px; max-width: 340px; margin: 12px auto; border-radius: 999px;
+      background: var(--bg3); overflow: hidden; }
+    .gm-qtimer i { display: block; height: 100%; width: 0; background: var(--action); border-radius: 999px; }
 
     /* 진행 중 HUD — 값에는 이름을 붙인다(원칙 15) */
     .gm-hud { display: none; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 14px;
@@ -182,14 +192,17 @@
     .gm-cell.empty { border-color: transparent; background: transparent; cursor: default; }
     .gm-cell svg { width: 52%; height: 52%; stroke-width: 1.6; }
 
-    /* 개수 비교 점판 */
-    .gm-dots { position: relative; flex: 1 1 0; aspect-ratio: 5/6; max-width: 170px; background: var(--bg2);
-      border: 1.5px solid var(--border-strong); border-radius: 14px; cursor: pointer; }
-    .gm-dots:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
-    .gm-dots i { position: absolute; border-radius: 50%; background: var(--accent); }
-    .gm-dots .tag { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%);
+    /* 개수 비교 — 단어가 흩어진 좌우 판(1초 노출 뒤 사라짐) */
+    .gm-wpanel { position: relative; flex: 1 1 0; aspect-ratio: 5/6; max-width: 170px; background: var(--bg2);
+      border: 1.5px solid var(--border-strong); border-radius: 14px; cursor: pointer; overflow: visible; }
+    .gm-wpanel:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .gm-wpanel span { position: absolute; font-weight: 800; color: var(--accent); line-height: 1; white-space: nowrap; }
+    .gm-wpanel .tag { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%);
       font-size: 12px; font-weight: 800; font-style: normal; color: var(--action-ink); background: var(--action);
-      padding: 2px 12px; border-radius: 999px; }
+      padding: 2px 12px; border-radius: 999px; z-index: 1; }
+    .gm-reveal { text-align: center; font-size: 14px; font-weight: 800; color: var(--ink); min-height: 24px; }
+    .c-red { color: #C0453E; }
+    .c-blue { color: #2B6CB0; }
 
     /* 도형 회전 */
     .gm-rot-target { display: flex; justify-content: center; margin-bottom: 14px; }
@@ -208,18 +221,19 @@
     .gm-tile.hot svg { stroke: var(--accent); }
     .gm-pathmeta { display: flex; justify-content: center; gap: 14px; margin-top: 10px; font-size: 13px; color: var(--text-muted); }
 
-    /* 고양이 술래잡기 — 육각 느낌의 어긋난 격자.
-       셀 40px + 간격 4px = 터치 피치 44px(터치 44px 원칙은 이 피치로 맞춘다 — 7×7이라 더 못 키운다) */
-    .gm-cat { margin: 0 auto; max-width: 340px; }
-    .gm-cat .row { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
-    .gm-cat .row.odd { transform: translateX(22px); }
-    .gm-hex { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-strong);
-      background: var(--surface); cursor: pointer; padding: 0; flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: center; }
-    .gm-hex svg { width: 27px; height: 27px; stroke-width: 1.7; color: var(--accent-dark); }
-    .gm-hex:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
-    .gm-hex.wall { background: var(--action); border-color: var(--action); cursor: default; }
-    .gm-hex.cat { border-color: var(--accent-dark); background: var(--accent-tint); cursor: default; }
+    /* 고양이 술래잡기 — 생쥐 위치 기억 격자 + 판단 버튼 4개(확신 포함).
+       칸은 누르는 게 아니라 보는 것이라 44px 터치 규칙은 아래 버튼에만 적용된다 */
+    .gm-mgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-width: 340px; margin: 0 auto; }
+    .gm-mcell { aspect-ratio: 1/1; min-width: 0; border: 1.5px solid var(--border-soft); border-radius: 10px;
+      background: var(--bg2); display: flex; align-items: center; justify-content: center; }
+    .gm-mcell svg { width: 68%; height: 68%; stroke-width: 1.5; color: var(--ink); }
+    .gm-mcell.probe-r { border: 3px solid #C0453E; }
+    .gm-mcell.probe-b { border: 3px solid #2B6CB0; }
+    .gm-judge { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 340px; margin: 0 auto; }
+    .gm-judge button { min-height: 50px; border-radius: 12px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); font-size: 13.5px; font-weight: 800; cursor: pointer; }
+    .gm-judge button:disabled { opacity: .4; cursor: default; }
+    .gm-judge button:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
 
     /* 약속 정하기 */
     .gm-say { max-width: 380px; margin: 0 auto 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -231,35 +245,36 @@
       background: var(--surface); cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text-dim); }
     .gm-slot:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
 
-    /* 마법약 만들기 */
-    .gm-order { text-align: center; margin-bottom: 12px; }
-    .gm-order .pot { font-size: 15px; font-weight: 800; color: var(--ink); }
-    .gm-order .need { display: flex; justify-content: center; align-items: center; gap: 8px;
-      min-height: 28px; margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--text-muted); }
-    .gm-order .need svg { width: 24px; height: 24px; color: var(--accent-ink); }
-    .gm-cauldron { min-height: 52px; max-width: 340px; margin: 0 auto 12px; padding: 10px 12px;
-      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px;
-      background: var(--bg2); border: 1.5px dashed var(--border-strong); border-radius: 12px; }
-    .gm-cauldron svg { width: 22px; height: 22px; color: var(--ink); }
-    .gm-ing { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 340px; margin: 0 auto; }
-    .gm-ing button { min-height: 52px; display: flex; align-items: center; justify-content: center;
-      background: var(--surface); border: 1.5px solid var(--border-strong); border-radius: 12px; cursor: pointer; }
-    .gm-ing button svg { width: 26px; height: 26px; color: var(--accent-ink); }
-    .gm-ing button:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
-    .gm-potbtns { display: flex; gap: 8px; max-width: 340px; margin: 10px auto 0; }
-    .gm-potbtns button { flex: 1 1 0; min-height: 48px; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; }
-    .gm-brew { background: var(--action); color: var(--action-ink); border: 0; }
-    .gm-empty { background: var(--surface); border: 1px solid var(--border-strong); }
-    .gm-potbtns button:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; }
+    /* 마법약 만들기 — 켜진 약초 조합을 보고 결과(파란약/빨간약)를 예측 */
+    .gm-herbs { display: flex; gap: 10px; justify-content: center; }
+    .gm-herb { width: 62px; height: 76px; border-radius: 12px; border: 1.5px solid var(--border-soft);
+      background: var(--bg2); display: flex; align-items: center; justify-content: center; opacity: .32; }
+    .gm-herb.lit { opacity: 1; background: var(--accent-tint); border-color: var(--accent-dark); }
+    .gm-herb svg { width: 30px; height: 30px; color: var(--accent-ink); }
+    .gm-pots { display: flex; gap: 10px; max-width: 340px; margin: 0 auto; }
+    .gm-pots button { flex: 1 1 0; min-height: 54px; border-radius: 12px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); font-size: 16px; font-weight: 800; cursor: pointer; }
+    .gm-pots .blue { color: #2B6CB0; }
+    .gm-pots .red { color: #C0453E; }
+    .gm-pots button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+
+    /* 도형 2-back — 가운데 큰 도형 + 판단 버튼 */
+    .gm-nb-stage { display: flex; align-items: center; justify-content: center; min-height: 128px;
+      font-size: 15px; font-weight: 800; color: var(--text-muted); text-align: center; }
+    .gm-nb-stage svg { width: 92px; height: 92px; color: var(--accent); }
+    .gm-nb-btns { display: flex; gap: 8px; justify-content: center; }
+    .gm-nb-btns button { flex: 1 1 0; max-width: 150px; min-height: 56px; border-radius: 12px;
+      border: 1.5px solid var(--border-strong); background: var(--surface); font-size: 13px; font-weight: 800;
+      cursor: pointer; padding: 6px 4px; line-height: 1.35; }
+    .gm-nb-btns button:disabled { opacity: .4; cursor: default; }
+    .gm-nb-btns button:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
 
     .gm-foot { padding: 44px 0 80px; }
 
     @media (max-width: 360px) {
       .container { padding: 0 12px; }
       .gm-grid { gap: 8px; }
-      .gm-hex { width: 34px; height: 34px; }
-      .gm-hex svg { width: 23px; height: 23px; }
-      .gm-cat .row.odd { transform: translateX(19px); }
+      .gm-herb { width: 56px; height: 70px; }
     }
   </style>
 </head>
@@ -313,6 +328,19 @@
         <path d="M12 4.5V19M7.5 19.5h9M4.5 7.5h15"/>
         <path d="m4.5 7.5-2.2 4.5a2.5 2.5 0 0 0 4.4 0ZM19.5 7.5l-2.2 4.5a2.5 2.5 0 0 0 4.4 0Z"/>
       </symbol>
+      <!-- 도형 2-back — 앞뒤로 겹친 카드 두 장(이전 것과 비교) -->
+      <symbol id="gi-nback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4.5" y="9" width="10.5" height="10.5" rx="2"/>
+        <path d="M9 5.5h8.5a2 2 0 0 1 2 2V16"/>
+        <path d="M11.5 3 9 5.5 11.5 8"/>
+      </symbol>
+      <!-- 생쥐 — 고양이 술래잡기의 기억 대상 -->
+      <symbol id="gi-mouse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 14.5c0-3.8 3-6.3 6.7-6.3 2.9 0 5.2 1.5 6.2 3.8l1.8.6c.7.2.7 1.2 0 1.4l-1.9.6c-1.1 2.1-3.4 3.2-6.1 3.2-3.6 0-6.7-1.4-6.7-3.3z"/>
+        <circle cx="15.6" cy="12.2" r=".7" fill="currentColor" stroke="none"/>
+        <circle cx="8.6" cy="8.6" r="2.2"/>
+        <path d="M5 14.5c-1.9.1-2.9 1.7-2.2 3.1"/>
+      </symbol>
       <!-- 도형 세트(면 채움) — 순서 기억·마법약 재료·가위바위보 '바위'가 쓴다 -->
       <symbol id="gs-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="currentColor"/></symbol>
       <symbol id="gs-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
@@ -335,7 +363,7 @@
     <div class="container">
       <div class="bf-eyebrow">MONC GAMES</div>
       <h1 class="bf-title">역량검사 게임 연습</h1>
-      <p class="bf-sub">항공사 채용에 들어온 AI역량검사, 게임 유형을 미리 손에 익히세요.<br><b>9가지 유형 · 무료 · 무제한</b></p>
+      <p class="bf-sub">항공사 채용에 들어온 AI역량검사, 게임 유형을 미리 손에 익히세요.<br><b>10가지 유형 · 무료 · 무제한</b></p>
     </div>
   </header>
 
