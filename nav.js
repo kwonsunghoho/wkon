@@ -41,10 +41,15 @@
     ['news.html', '항공사 뉴스&산업분석', '10개 항공사 소식 · 스크랩'],
     ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
     ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"],
-    /* 준비중(2026-08-11 오너 "잠깐 꺼놔") — 다시 열 때 부제를 'AI 같은 표현 찾아 밑줄로'로 되돌린다 */
-    ['ai-killer.html', 'AI킬러', '지금은 준비 중이에요'],
+    /* ⚠️ AI킬러 잠시 내림(2026-08-25 오너 "ai킬러는 잠깐 숨겨줘 네비에서") — 메뉴에서만 뺀다.
+       tools.html 격자 타일은 지시 범위가 아니라 남겨 둔다('격자와 같은 구성' 규칙의 의도적
+       예외 — briefing.md에 기록). 다시 열 때 아래 줄을 되살리고, 부제도 준비중 여부를 확인해
+       'AI 같은 표현 찾아 밑줄로'(2026-08-11 이전 문구)로 되돌린다.
+    ['ai-killer.html', 'AI킬러', '지금은 준비 중이에요'], */
     /* 2026-08-07 개명 '필수 기출 하루 한 개' → '일문일답' — programs.html 제목·tools.html 타일과 한 벌 */
-    ['programs.html', '일문일답', '하루 한 개, 내 경험으로']
+    ['programs.html', '일문일답', '하루 한 개, 내 경험으로'],
+    /* 역량검사 게임(2026-08-24 신설) — 무료·비회원 공개. tools.html 격자와 같은 목록 유지 */
+    ['games.html', '역량검사 게임', '검사 유형 7가지 무료 연습']
   ];
   var CHALLENGE_HUB = 'challenges.html';
   var CHALLENGE_SUB = [
@@ -92,6 +97,7 @@
     'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
     'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
     'programs.html': 'tools', 'program.html': 'tools', 'experiences.html': 'tools',
+    'games.html': 'tools',
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
     'challenge-answer.html': 'challenge',
