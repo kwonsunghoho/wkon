@@ -95,16 +95,37 @@
     }
   }
 
-  /* 문항 제한시간 막대(3초 등) — 전역 타이머와 별개. stop() 을 부르면 멈춘다 */
-  function ticker(bar, ms, onEnd) {
+  /* 문항 제한시간 막대(3초 등) — 전역 타이머와 별개. stop() 을 부르면 멈춘다.
+     num 을 주면 남은 시간을 숫자로도 적는다(60초 이상은 m:ss) — 임박(잔여 20% 이하)이면 붉게. */
+  function fmtLeft(msLeft) {
+    var sec = Math.ceil(msLeft / 1000);
+    if (sec >= 60) return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2);
+    return String(sec);
+  }
+  function ticker(bar, ms, onEnd, num) {
     var t0 = Date.now();
     bar.style.width = '100%';
+    if (num) { num.textContent = fmtLeft(ms); num.classList.remove('low'); }
     var id = setInterval(function () {
-      var left = 1 - (Date.now() - t0) / ms;
-      if (left <= 0) { clearInterval(id); bar.style.width = '0%'; if (onEnd) onEnd(); return; }
-      bar.style.width = (left * 100) + '%';
+      var leftMs = ms - (Date.now() - t0);
+      if (leftMs <= 0) {
+        clearInterval(id);
+        bar.style.width = '0%';
+        if (num) num.textContent = '0';
+        if (onEnd) onEnd();
+        return;
+      }
+      bar.style.width = (leftMs / ms * 100) + '%';
+      if (num) {
+        num.textContent = fmtLeft(leftMs);
+        num.classList.toggle('low', leftMs <= ms * 0.2);
+      }
     }, 80);
     return { stop: function () { clearInterval(id); } };
+  }
+  function timerHtml(p) {
+    return '<div class="gm-trow"><div class="gm-qtimer"><i id="' + p + 'Tick"></i></div>' +
+      '<b class="gm-qnum" id="' + p + 'Num">–</b></div>';
   }
 
   function stopTimer() { if (timerId) { clearInterval(timerId); timerId = 0; } }
@@ -365,9 +386,9 @@
     b.innerHTML =
       '<div class="gm-q"><span id="nbPhase"></span><span class="sub" id="nbInfo"></span></div>' +
       '<div class="gm-nb-stage" id="nbStage"></div>' +
-      '<div class="gm-qtimer"><i id="nbTick"></i></div>' +
+      timerHtml('nb') +
       '<div class="gm-nb-btns" id="nbBtns"></div>';
-    var stageEl = $('nbStage'), tickBar = $('nbTick'), btnsEl = $('nbBtns');
+    var stageEl = $('nbStage'), tickBar = $('nbTick'), numEl = $('nbNum'), btnsEl = $('nbBtns');
     var phaseEl = $('nbPhase'), infoEl = $('nbInfo');
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
@@ -452,7 +473,7 @@
           api.flash(b, false);
         }
         next();
-      });
+      }, numEl);
     }
     buildButtons(plan[0].dual);
     seq = genSeq(plan[0]);
@@ -485,14 +506,14 @@
         '<div class="gm-hand"><em>나</em><span id="rpsMe"></span></div>' +
         '<div class="gm-hand"><em>상대</em><span id="rpsOp"></span></div>' +
       '</div>' +
-      '<div class="gm-qtimer"><i id="rpsTick"></i></div>' +
+      timerHtml('rps') +
       '<div class="gm-bigrow" id="rpsBtns"></div>';
     var phaseEl = $('rpsPhase'), infoEl = $('rpsInfo'), meCard = $('rpsMe'), opCard = $('rpsOp');
-    var tickBar = $('rpsTick'), wrap = $('rpsBtns');
+    var tickBar = $('rpsTick'), numEl = $('rpsNum'), wrap = $('rpsBtns');
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
-    var ri = 0, persp = 'me', want = 0, betw = true;
+    var ri = 0, persp = 'me', want = 0, betw = true, qn = 0;
     [1, 0, 2].forEach(function (i) {                   // 실전 배열 순서: 가위·바위·보
       var btn = el('button', 'gm-big', sym(HANDS[i]) + '<span>' + NAMES[i] + '</span>');
       btn.type = 'button';
@@ -520,11 +541,14 @@
         opCard.innerHTML = '<i>?</i>';
         infoEl.textContent = '내 손을 보고, 상대가 지는 손을 고르세요';
       }
-      phaseEl.textContent = 'R' + (ri + 1) + '/' + rounds.length + ' · ' + (persp === 'me' ? '나의 관점' : '상대 관점');
+      qn++;
+      phaseEl.textContent = 'R' + (ri + 1) + '/' + rounds.length + ' · ' +
+        (persp === 'me' ? '나의 관점' : '상대 관점') + ' · 문제 ' + qn;
     }
     function startRound() {
       if (!isRunning()) return;
       betw = false;
+      qn = 0;
       next();
       tk = ticker(tickBar, rounds[ri].sec * 1000, function () {
         ri++;
@@ -535,7 +559,7 @@
         infoEl.textContent = '잠깐 쉬었다 이어집니다';
         meCard.innerHTML = ''; opCard.innerHTML = '';
         later(startRound, 1400);
-      });
+      }, numEl);
     }
     startRound();
   }
@@ -551,9 +575,9 @@
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q"><span id="numPhase"></span><span class="sub" id="numInfo"></span></div>' +
-      '<div class="gm-qtimer"><i id="numTick"></i></div>' +
+      timerHtml('num') +
       '<div class="gm-cells" id="numGrid" style="grid-template-columns:repeat(3,1fr);max-width:300px"></div>';
-    var phaseEl = $('numPhase'), infoEl = $('numInfo'), tickBar = $('numTick'), wrap = $('numGrid');
+    var phaseEl = $('numPhase'), infoEl = $('numInfo'), tickBar = $('numTick'), numTimeEl = $('numNum'), wrap = $('numGrid');
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
@@ -567,7 +591,7 @@
         cells.push(c); wrap.appendChild(c);
       });
     }
-    var phase = 0, target = 0, ready = false, switching = false;
+    var phase = 0, target = 0, ready = false, switching = false, r2q = 0;
     var exp = [], ep = 0, twice = 0, skip = 0;
     function cellOf(n) { return cells[nums.indexOf(n)]; }
     function onTap(n, c) {
@@ -623,7 +647,8 @@
         exp.push(n);
         if (n === twice) exp.push(n);
       }
-      infoEl.innerHTML = '<b>' + twice + '</b>는 연속 2번 · <b>' + skip + '</b>은 건너뛰기';
+      r2q++;
+      infoEl.innerHTML = '문항 ' + r2q + ' · <b>' + twice + '</b>는 연속 2번 · <b>' + skip + '</b>은 건너뛰기';
       wrap.style.opacity = '.45';
       later(function () { wrap.style.opacity = ''; ready = true; }, 800);   /* 준비 — 그 전에 누르면 오답 */
     }
@@ -636,7 +661,7 @@
       nextTarget();
       tk = ticker(tickBar, r1sec * 1000, function () {
         if (doR2) startBreak(); else api.finish();
-      });
+      }, numTimeEl);
     }
     function startBreak() {
       phase = 0; ready = false;
@@ -650,7 +675,7 @@
       /* '2라운드만'으로 바로 들어오면 쉬는 화면을 안 거친다 — 제목을 여기서도 적는다 */
       phaseEl.textContent = '2라운드 — 순서대로 누르기';
       newR2Q();
-      tk = ticker(tickBar, r2sec * 1000, function () { api.finish(); });
+      tk = ticker(tickBar, r2sec * 1000, function () { api.finish(); }, numTimeEl);
     }
     if (doR1) startR1(); else startR2();
   }
@@ -667,9 +692,9 @@
         '<button type="button" class="gm-wpanel" id="cmpL" aria-label="왼쪽 판"><i class="tag">왼쪽</i></button>' +
         '<button type="button" class="gm-wpanel" id="cmpR" aria-label="오른쪽 판"><i class="tag">오른쪽</i></button>' +
       '</div>' +
-      '<div class="gm-qtimer"><i id="cmpTick"></i></div>' +
+      timerHtml('cmp') +
       '<div class="gm-reveal" id="cmpReveal"></div>';
-    var L = $('cmpL'), R = $('cmpR'), infoEl = $('cmpInfo'), tickBar = $('cmpTick'), revealEl = $('cmpReveal');
+    var L = $('cmpL'), R = $('cmpR'), infoEl = $('cmpInfo'), tickBar = $('cmpTick'), numEl = $('cmpNum'), revealEl = $('cmpReveal');
     var q = 0, nl = 0, nr = 0, done = false, tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
@@ -718,7 +743,7 @@
         clearPanels();
         tk = ticker(tickBar, 3000, function () {
           if (!done && myq === q) finishQ(false, true);
-        });
+        }, numEl);
       }, 1000);
     }
     function answer(left) {
@@ -742,10 +767,10 @@
       : mode === 'pattern' ? [{ kind: 'pattern', count: 10 }] : [{ kind: 'letter', count: 10 }];
     var C = Math.SQRT1_2;
     var OPS = [
-      { k: 'L45', label: '왼쪽 45°', m: [C, -C, C, C] },
-      { k: 'R45', label: '오른쪽 45°', m: [C, C, -C, C] },
-      { k: 'H', label: '좌우반전', m: [-1, 0, 0, 1] },
-      { k: 'V', label: '상하반전', m: [1, 0, 0, -1] }
+      { k: 'L45', label: '왼쪽 45°', icon: 'gi-rl', m: [C, -C, C, C] },
+      { k: 'R45', label: '오른쪽 45°', icon: 'gi-rr', m: [C, C, -C, C] },
+      { k: 'H', label: '좌우반전', icon: 'gi-fh', m: [-1, 0, 0, 1] },
+      { k: 'V', label: '상하반전', icon: 'gi-fv', m: [1, 0, 0, -1] }
     ];
     function mul(o, u) {                               // o∘u — css matrix(a,b,c,d) 합성
       return [o[0] * u[0] + o[2] * u[1], o[1] * u[0] + o[3] * u[1],
@@ -768,7 +793,7 @@
       '<div class="gm-rt-tools"><span>남은 클릭 <b id="rtClick">20</b></span>' +
         '<button type="button" id="rtUndo">하나 지움</button>' +
         '<button type="button" id="rtReset">전체 초기화</button></div>' +
-      (real ? '<div class="gm-qtimer"><i id="rtTick"></i></div>' : '') +
+      (real ? timerHtml('rt') : '') +
       '<div class="gm-reveal" id="rtReveal"></div>' +
       '<button type="button" class="gm-submit" id="rtGo">답안 제출</button>';
     var phaseEl = $('rtPhase'), infoEl = $('rtInfo'), beforeEl = $('rtBefore'), afterEl = $('rtAfter');
@@ -810,9 +835,12 @@
     }
     function apply(svg, m) { svg.style.transform = 'matrix(' + m.join(',') + ',0,0)'; svg.style.transformOrigin = '50% 50%'; }
     function drawSeq() {
-      slotsEl.innerHTML = seq.length
-        ? seq.map(function (o) { return '<i>' + o.label + '</i>'; }).join('')
-        : '<i style="background:transparent;color:var(--text-dim)">버튼을 눌러 순서를 입력하세요</i>';
+      /* 빈 슬롯 8칸을 미리 보여 준다 — 과정이 최대 8단계라는 걸 화면이 말하게(캡처와 동일) */
+      var out = '';
+      for (var i = 0; i < 8; i++) {
+        out += seq[i] ? '<i>' + seq[i].label + '</i>' : '<i class="empty">' + (i + 1) + '</i>';
+      }
+      slotsEl.innerHTML = out;
     }
     function spend() {
       if (clicks <= 0) return false;
@@ -820,7 +848,7 @@
       return true;
     }
     OPS.forEach(function (o) {
-      var btn = el('button', '', o.label);
+      var btn = el('button', '', sym(o.icon) + '<span>' + o.label + '</span>');
       btn.type = 'button';
       btn.addEventListener('click', function () {
         if (!isRunning() || locked) return;
@@ -882,7 +910,7 @@
           pi++;
           if (pi >= phases.length) { api.finish(); return; }
           startPhase();
-        });
+        }, $('rtNum'));
       }
       nq();
     }
@@ -900,10 +928,11 @@
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q">울타리로 꺾어서 <b>같은 색 손님</b>에게 보내세요<span class="sub" id="pthInfo"></span></div>' +
-      '<div class="gm-pstats"><span>남은 클릭 <b id="pthClick">20</b></span>' +
-        '<span>정답 울타리 <b id="pthNeed">0</b></span><span>설치 <b id="pthSet">0</b></span></div>' +
+      '<div class="gm-pstats"><span>남은 클릭<b id="pthClick">20</b></span>' +
+        '<span>정답 울타리<b id="pthNeed">0</b></span><span>설치<b id="pthSet">0</b></span>' +
+        '<span>문제<b id="pthQ">–</b></span></div>' +
       '<div class="gm-pwrap" id="pthWrap"></div>' +
-      (real ? '<div class="gm-qtimer"><i id="pthTick"></i></div>' : '') +
+      (real ? timerHtml('pth') : '') +
       '<div class="gm-reveal" id="pthReveal"></div>' +
       '<button type="button" class="gm-submit" id="pthGo">제출</button>';
     var infoEl = $('pthInfo'), clickEl = $('pthClick'), needEl = $('pthNeed'), setEl = $('pthSet');
@@ -911,7 +940,7 @@
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
-    if (real) tk = ticker($('pthTick'), 300 * 1000, function () { api.finish(); });
+    if (real) tk = ticker($('pthTick'), 300 * 1000, function () { api.finish(); }, $('pthNum'));
 
     var VEH = [
       { v: 'gi-taxi', g: 'gi-guest1', c: 'col-y' },
@@ -993,8 +1022,10 @@
           }
           var k = r + ',' + c;
           var src = hint ? puzzle.sol : fences;
+          /* 빈 칸엔 흐린 ✕ — '/ 또는 \\ 를 놓는 자리'라는 안내(캡처의 어포던스) */
           var cell = el('button', 'gm-pcell' + (hint && puzzle.sol[k] ? ' hint' : ''),
-            src[k] ? fenceSvg(src[k]) : '');
+            src[k] ? fenceSvg(src[k])
+              : '<svg viewBox="0 0 48 48" class="ph" aria-hidden="true"><path d="M15 15 33 33M33 15 15 33" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/></svg>');
           cell.type = 'button';
           cell.setAttribute('aria-label', (r + 1) + '행 ' + (c + 1) + '열 울타리');
           (function (kk) {
@@ -1042,8 +1073,9 @@
       fences = {}; placed = 0; clicks = 20;
       clickEl.textContent = '20'; setEl.textContent = '0';
       needEl.textContent = String(puzzle.need);
+      $('pthQ').textContent = q + '/' + total;
       revealEl.textContent = '';
-      infoEl.textContent = '문항 ' + q + '/' + total + ' · 칸을 누르면 없음 → / → \\ 순서로 바뀝니다';
+      infoEl.textContent = '칸을 누르면 없음 → / → \\ 순서로 바뀝니다';
       draw(false);
     }
     nq();
@@ -1068,10 +1100,10 @@
     b.innerHTML =
       '<div class="gm-q"><span id="ykPhase"></span><span class="sub" id="ykInfo"></span></div>' +
       '<div class="gm-memo" id="ykStage"></div>' +
-      '<div class="gm-qtimer"><i id="ykTick"></i></div>' +
+      timerHtml('yk') +
       '<div class="gm-reveal" id="ykReveal"></div>';
     var phaseEl = $('ykPhase'), infoEl = $('ykInfo'), stageEl = $('ykStage'), revealEl = $('ykReveal');
-    var tickBar = $('ykTick');
+    var tickBar = $('ykTick'), numEl = $('ykNum');
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
@@ -1134,12 +1166,14 @@
         if (!isRunning()) return;
         if (k >= NAMES.length) { ask(); return; }
         stageEl.innerHTML = '<div class="who">' + NAMES[k] + '</div>' +
-          '<div class="set">' + data.sets[k].map(function (x) { return '<i>' + x + '</i>'; }).join('') + '</div>';
+          '<div class="set">' + data.sets[k].map(function (x) { return '<i>' + x + '</i>'; }).join('') + '</div>' +
+          '<p class="gm-hint">순서대로 기억하세요…</p>';
         later(function () { showFriend(k + 1); }, 1000);   // 제시 1초 — 실전 속도 그대로
       }
       function ask() {
         var done = false;
-        stageEl.innerHTML = '<div class="who">' + r.q + '</div><div class="gm-cands" id="ykCands"></div>';
+        stageEl.innerHTML = '<div class="who">' + r.q + '</div><div class="gm-cands" id="ykCands"></div>' +
+          '<p class="gm-hint">' + r.note + '</p>';
         var candsEl = $('ykCands');
         data.cands.forEach(function (cd) {
           var btn = el('button', '', cd);
@@ -1163,7 +1197,7 @@
           api.flash(b, false);
           if (!real) revealEl.textContent = '시간 초과 — 정답: ' + data.answer;
           later(nq, real ? 350 : 1000);
-        });
+        }, numEl);
       }
     }
     roundList = PART != null ? [ROUNDS[PART]] : ROUNDS;
