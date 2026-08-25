@@ -35,11 +35,40 @@
     node.classList.remove('gm-flash-ok', 'gm-flash-no');
     void node.offsetWidth;                      // 리플로우로 애니메이션 재시작
     node.classList.add(c);
+    /* 판정 배지 — 배경 번쩍임만으론 무슨 일이 났는지 약하다(2026-08-25 게임감 보강) */
+    var old = node.querySelector('.gm-pop');
+    if (old) old.remove();
+    var badge = el('span', 'gm-pop ' + (ok ? 'ok' : 'no'),
+      ok ? '<svg viewBox="0 0 24 24"><path d="m6 12.5 4 4L18.5 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+         : '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>');
+    badge.setAttribute('aria-hidden', 'true');
+    node.appendChild(badge);
+    badge.addEventListener('animationend', function () { badge.remove(); });
   }
   function shake(node) {
     node.classList.remove('gm-shake');
     void node.offsetWidth;
     node.classList.add('gm-shake');
+  }
+  /* 등장 연출 — 새로 그린 칸·후보 버튼이 촤르륵 깔린다(transform·opacity 만, 레이아웃 불변) */
+  function dealIn(wrapEl, step) {
+    if (!wrapEl) return;
+    [].slice.call(wrapEl.children).forEach(function (c, i) {
+      c.classList.add('gm-dealt');
+      c.style.animationDelay = (i * (step || 35)) + 'ms';
+    });
+  }
+  /* 결과 점수 카운트업 — 떨어진 숫자보다 올라가는 숫자가 성취로 읽힌다 */
+  function countUp(elm, to) {
+    if (!elm) return;
+    if (to <= 0) { elm.textContent = '0'; return; }
+    var t0 = Date.now(), dur = Math.min(900, 300 + to * 30);
+    (function step() {
+      var p = Math.min(1, (Date.now() - t0) / dur);
+      var eased = 1 - Math.pow(1 - p, 3);
+      elm.textContent = String(Math.round(to * eased));
+      if (p < 1) requestAnimationFrame(step);
+    })();
   }
 
   /* ── 기록 — 기기별 최고 점수. 위치 기록과 달리 개인정보가 아니라 localStorage 를 쓴다 ── */
@@ -84,6 +113,10 @@
       setScore(score + (gain == null ? 1 : gain));
       streak++;
       if (streak > bestStreak) bestStreak = streak;
+      /* 오를 때만 튄다 — 값이 움직였다는 걸 HUD 가 몸으로 말한다 */
+      [scoreEl, streakEl].forEach(function (x) {
+        x.classList.remove('bump'); void x.offsetWidth; x.classList.add('bump');
+      });
     } else streak = 0;
     streakEl.textContent = String(streak);
     if (seg) {
@@ -155,19 +188,22 @@
     hud.classList.remove('on');
     var isNew = saveRec(cur.id, score);
     var best = (readRec()[cur.id] || {}).best || 0;
+    var pctAll = tries > 0 ? Math.round(okCnt / tries * 100) : 0;
     resultEl.innerHTML =
       '<div class="r-name">' + sym(cur.icon) + cur.name + '</div>' +
-      '<div class="r-score">' + score + '<small> ' + cur.unit + '</small></div>' +
+      '<div class="r-score"><span id="rVal">0</span><small> ' + cur.unit + '</small></div>' +
       '<div class="r-best">이 기기 최고 기록 <b>' + best + cur.unit + '</b></div>' +
       (isNew && score > 0 ? '<span class="r-new">신기록!</span>' : '') +
       (tries > 0
         ? '<div class="r-stats">' +
-          '<div class="r-row"><span>정답</span><b>' + okCnt + ' / ' + tries + '문항 · ' +
-            Math.round(okCnt / tries * 100) + '%</b></div>' +
+          '<div class="r-row"><span>정답</span><b>' + okCnt + ' / ' + tries + '문항 · ' + pctAll + '%</b></div>' +
+          '<div class="r-bar"><i data-w="' + pctAll + '"></i></div>' +
           '<div class="r-row"><span>최고 연속</span><b>' + bestStreak + '</b></div>' +
           segs.map(function (sg) {
+            var p = sg.tot ? Math.round(sg.ok / sg.tot * 100) : 0;
             return '<div class="r-row"><span>' + sg.label + '</span><b>' + sg.ok + ' / ' + sg.tot +
-              (sg.tot ? ' · ' + Math.round(sg.ok / sg.tot * 100) + '%' : '') + '</b></div>';
+              (sg.tot ? ' · ' + p + '%' : '') + '</b></div>' +
+              '<div class="r-bar"><i data-w="' + p + '"></i></div>';
           }).join('') +
           '</div>'
         : '') +
@@ -177,6 +213,13 @@
       '</div>' +
       '<button type="button" class="r-report" id="gmReportJump">게임이 이상했나요? 오류 제보 남기기</button>';
     resultEl.classList.add('on');
+    countUp($('rVal'), score);
+    /* 성적 막대 — 붙인 다음 프레임에 폭을 줘야 transition 이 탄다 */
+    requestAnimationFrame(function () {
+      [].slice.call(resultEl.querySelectorAll('.r-bar i')).forEach(function (bar) {
+        bar.style.width = bar.getAttribute('data-w') + '%';
+      });
+    });
     $('gmAgain').addEventListener('click', function () { startPlay(); });
     $('gmToHub').addEventListener('click', function () { goHub(); });
     $('gmReportJump').addEventListener('click', function () { openReport(cur.id); });
@@ -376,6 +419,13 @@
       ['gs-ring', 'gs-half', 'gs-hex'],
       ['gs-diamond', 'gs-star', 'gs-plus']
     ];
+    /* 도형마다 고정 색(실물도 유채색) — 색=도형 1:1 이라 난이도는 그대로, 화면만 산다.
+       색은 길 만들기 표식과 같은 기능색 3종 + 네이비 재사용(새 브랜드색 아님). */
+    var SHAPE_COLOR = {
+      'gs-circle': '#1B3A6B', 'gs-tri': '#B7791F', 'gs-square': '#C0453E',
+      'gs-ring': '#1B3A6B', 'gs-half': '#B7791F', 'gs-hex': '#2B6CB0',
+      'gs-diamond': '#2B6CB0', 'gs-star': '#B7791F', 'gs-plus': '#1B3A6B'
+    };
     var plan = mode === 'real'
       ? [{ dual: false, count: 23, sec: 3, fast: false }, { dual: true, count: 24, sec: 3, fast: false }]
       : mode === 'dual'
@@ -465,6 +515,8 @@
         ? '문항 ' + (idx - lead + 1) + '/' + pl.count
         : '기억만 하세요 (' + (idx + 1) + '/' + lead + ') — 아직 답하지 않아요';
       stageEl.innerHTML = sym(seq[idx]);
+      if (stageEl.firstElementChild) stageEl.firstElementChild.style.color = SHAPE_COLOR[seq[idx]] || '';
+      stageEl.classList.remove('pop'); void stageEl.offsetWidth; stageEl.classList.add('pop');
       setBtns(judge);
       if (tk) tk.stop();
       tk = ticker(tickBar, pl.sec * 1000, function () {
@@ -508,12 +560,27 @@
       '</div>' +
       timerHtml('rps') +
       '<div class="gm-bigrow" id="rpsBtns"></div>';
+    /* 카운트다운 숫자는 카드 위에 겹쳐 뜬다(레이아웃 안 밀림) */
+    b.querySelector('.gm-vs').insertAdjacentHTML('beforeend',
+      '<div class="gm-count" id="rpsCount" aria-hidden="true"></div>');
     var phaseEl = $('rpsPhase'), infoEl = $('rpsInfo'), meCard = $('rpsMe'), opCard = $('rpsOp');
-    var tickBar = $('rpsTick'), numEl = $('rpsNum'), wrap = $('rpsBtns');
+    var tickBar = $('rpsTick'), numEl = $('rpsNum'), wrap = $('rpsBtns'), countEl = $('rpsCount');
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
     var ri = 0, persp = 'me', want = 0, betw = true, qn = 0;
+    /* 3·2·1 — 실물처럼 라운드를 의식으로 연다. 준비 없이 툭 시작하면 성의 없어 보인다 */
+    function countdown(cb) {
+      var n = 3;
+      countEl.style.display = 'flex';
+      (function tick() {
+        if (!isRunning()) return;
+        if (n === 0) { countEl.style.display = 'none'; countEl.textContent = ''; cb(); return; }
+        countEl.textContent = String(n);
+        countEl.classList.remove('pop'); void countEl.offsetWidth; countEl.classList.add('pop');
+        n--; later(tick, 500);
+      })();
+    }
     [1, 0, 2].forEach(function (i) {                   // 실전 배열 순서: 가위·바위·보
       var btn = el('button', 'gm-big', sym(HANDS[i]) + '<span>' + NAMES[i] + '</span>');
       btn.type = 'button';
@@ -544,8 +611,12 @@
       qn++;
       phaseEl.textContent = 'R' + (ri + 1) + '/' + rounds.length + ' · ' +
         (persp === 'me' ? '나의 관점' : '상대 관점') + ' · 문제 ' + qn;
+      /* 새 문제 = 카드가 새로 놓인다(팝) */
+      [meCard, opCard].forEach(function (cd) {
+        cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
+      });
     }
-    function startRound() {
+    function beginRound() {
       if (!isRunning()) return;
       betw = false;
       qn = 0;
@@ -554,12 +625,18 @@
         ri++;
         if (ri >= rounds.length) { api.finish(); return; }
         betw = true;
-        phaseEl.textContent = 'ROUND ' + (ri + 1) + ' · ' +
-          (rounds[ri].persp === 'me' ? '나의 관점' : rounds[ri].persp === 'opp' ? '상대 관점' : '관점 랜덤');
         infoEl.textContent = '잠깐 쉬었다 이어집니다';
         meCard.innerHTML = ''; opCard.innerHTML = '';
-        later(startRound, 1400);
+        later(startRound, 900);
       }, numEl);
+    }
+    function startRound() {
+      if (!isRunning()) return;
+      betw = true;
+      phaseEl.textContent = 'ROUND ' + (ri + 1) + '/' + rounds.length + ' · ' +
+        (rounds[ri].persp === 'me' ? '나의 관점' : rounds[ri].persp === 'opp' ? '상대 관점' : '관점 랜덤');
+      infoEl.textContent = '곧 시작합니다';
+      countdown(beginRound);
     }
     startRound();
   }
@@ -590,6 +667,7 @@
         c.addEventListener('click', function () { onTap(n, c); });
         cells.push(c); wrap.appendChild(c);
       });
+      dealIn(wrap, 25);   /* 새 배열이 촤르륵 깔린다 */
     }
     var phase = 0, target = 0, ready = false, switching = false, r2q = 0;
     var exp = [], ep = 0, twice = 0, skip = 0;
@@ -722,12 +800,14 @@
       api.flash(b, ok);
       if (reveal) revealEl.textContent = '왼쪽 ' + nl + '개 · 오른쪽 ' + nr + '개' + (timeout ? ' — 시간 초과' : '');
       clearPanels();
+      [L, R].forEach(function (p) { p.classList.remove('covered'); });
       later(next, reveal ? 1000 : 350);
     }
     function next() {
       if (q >= total) { api.finish(); return; }
       q++; done = false;
       var myq = q;
+      [L, R].forEach(function (p) { p.classList.remove('covered'); });
       revealEl.textContent = '';
       infoEl.textContent = '문항 ' + q + '/' + total;
       var base = 16 + rnd(26);                                    /* 16~41 */
@@ -741,6 +821,8 @@
       later(function () {                                         /* 1초만 보여주고 가린다 */
         if (done || myq !== q || !isRunning()) return;
         clearPanels();
+        /* 빈 판은 고장처럼 보인다 — 가려졌다는 표시(?)를 띄운다 */
+        [L, R].forEach(function (p) { p.classList.add('covered'); });
         tk = ticker(tickBar, 3000, function () {
           if (!done && myq === q) finishQ(false, true);
         }, numEl);
@@ -874,11 +956,26 @@
       var m = I;
       seq.forEach(function (o) { m = mul(o.m, m); });
       var ok = same(m, target);
-      api.mark(ok, 1, phases[pi].kind === 'letter' ? '글자' : '무늬');
-      if (ok) solved++;
-      api.flash(b, ok);
-      if (!real) revealEl.textContent = '정답 예: ' + curAnswer.map(function (o) { return o.label; }).join(' → ');
-      later(nq, real ? 500 : 1300);
+      var segLabel = phases[pi].kind === 'letter' ? '글자' : '무늬';
+      /* 입력한 순서대로 '전' 도형을 실제로 돌려 보여준다 — 맞았으면 '후'와 겹치는 걸 눈으로 확인.
+         판정·다음 문제는 재생이 끝난 뒤. */
+      var pm = I, k = 0;
+      beforeEl.style.transition = 'transform .24s ease';
+      (function play() {
+        if (!isRunning()) return;
+        if (k >= seq.length) { later(judge, seq.length ? 340 : 0); return; }
+        pm = mul(seq[k].m, pm); apply(beforeEl, pm); k++;
+        later(play, 290);
+      })();
+      function judge() {
+        if (!isRunning() || !locked) return;   // 실전 단계 전환과 겹치면 이쪽을 버린다
+        beforeEl.style.transition = '';
+        api.mark(ok, 1, segLabel);
+        if (ok) solved++;
+        api.flash(b, ok);
+        if (!real) revealEl.textContent = '정답 예: ' + curAnswer.map(function (o) { return o.label; }).join(' → ');
+        later(nq, real ? 500 : 1300);
+      }
     });
     var curAnswer = [];
     function nq() {
@@ -956,19 +1053,22 @@
     function simulate(side, idx, fmap) {
       var e = entryCell(side, idx);
       var r = e.r, c = e.c, d = DIRS[side].slice(), guard = 0, touched = {};
+      var trail = [{ r: e.r, c: e.c }];   // 주행 재생용 — 지나간 칸 순서
       while (guard++ < 80) {
         var f = fmap[r + ',' + c];
         if (f) { d = reflect(d, f); touched[r + ',' + c] = 1; }
         var nr = r + d[0], nc = c + d[1];
         if (nr < 0 || nr >= N || nc < 0 || nc >= N) {
           var os = d[0] === 1 ? 'B' : d[0] === -1 ? 'T' : d[1] === 1 ? 'R' : 'L';
-          return { side: os, idx: os === 'T' || os === 'B' ? c : r, touched: touched };
+          return { side: os, idx: os === 'T' || os === 'B' ? c : r, touched: touched, trail: trail };
         }
         r = nr; c = nc;
+        trail.push({ r: r, c: c });
       }
       return null;   // 울타리 순환
     }
     var q = 0, puzzle = null, fences = {}, clicks = 20, placed = 0;
+    var cellEls = {}, edgeEls = {};   // 주행 재생이 좌표를 읽는 맵 — draw() 가 채운다
     function genPuzzle(vcount, fcount) {
       for (var t = 0; t < 300; t++) {
         var sol = {}, put = 0, g = 0;
@@ -1007,17 +1107,20 @@
       }
       return '';
     }
-    function draw(hint) {
+    function draw(hint, deal) {
       wrap.innerHTML = '';
+      cellEls = {}; edgeEls = {};
       for (var r = -1; r <= N; r++) {
         for (var c = -1; c <= N; c++) {
           if (r === -1 || r === N || c === -1 || c === N) {
-            var mk = '';
-            if (r === -1 && c >= 0 && c < N) mk = markerAt('T', c);
-            else if (r === N && c >= 0 && c < N) mk = markerAt('B', c);
-            else if (c === -1 && r >= 0 && r < N) mk = markerAt('L', r);
-            else if (c === N && r >= 0 && r < N) mk = markerAt('R', r);
-            wrap.appendChild(el('div', 'gm-pedge', mk));
+            var mk = '', ek = null;
+            if (r === -1 && c >= 0 && c < N) { mk = markerAt('T', c); ek = 'T' + c; }
+            else if (r === N && c >= 0 && c < N) { mk = markerAt('B', c); ek = 'B' + c; }
+            else if (c === -1 && r >= 0 && r < N) { mk = markerAt('L', r); ek = 'L' + r; }
+            else if (c === N && r >= 0 && r < N) { mk = markerAt('R', r); ek = 'R' + r; }
+            var edge = el('div', 'gm-pedge', mk);
+            if (ek) edgeEls[ek] = edge;
+            wrap.appendChild(edge);
             continue;
           }
           var k = r + ',' + c;
@@ -1031,9 +1134,11 @@
           (function (kk) {
             cell.addEventListener('click', function () { tap(kk); });
           })(k);
+          cellEls[k] = cell;
           wrap.appendChild(cell);
         }
       }
+      if (deal) dealIn(wrap, 12);   // 새 문제일 때만 — 탭마다 다시 깔리면 어지럽다
     }
     var locked = false;
     function tap(k) {
@@ -1047,6 +1152,46 @@
       setEl.textContent = String(placed);
       draw(false);
     }
+    /* 제출하면 차량이 실제로 격자를 달린다 — 이 재생이 이 게임의 답 확인이다.
+       차례로 한 대씩: 진입 표식 → 지나간 칸들 → 나간 자리. 틀린 차는 끝에서 흔들린다. */
+    function animateVehicles(done) {
+      var vi2 = 0;
+      (function nextV() {
+        if (!isRunning()) return;
+        if (vi2 >= puzzle.vs.length) { done(); return; }
+        var v = puzzle.vs[vi2++];
+        var res = simulate(v.side, v.idx, fences);
+        var stops = [edgeEls[v.side + v.idx]];
+        if (res) {
+          res.trail.forEach(function (t) { stops.push(cellEls[t.r + ',' + t.c]); });
+          stops.push(edgeEls[res.side + res.idx]);
+        }
+        var def = VEH[v.kind];
+        var runner = el('span', 'gm-runner ' + def.c, sym(def.v));
+        runner.setAttribute('aria-hidden', 'true');
+        wrap.appendChild(runner);
+        var base = stops[0];
+        runner.style.left = base.offsetLeft + 'px';
+        runner.style.top = base.offsetTop + 'px';
+        runner.style.width = base.offsetWidth + 'px';
+        runner.style.height = base.offsetHeight + 'px';
+        var okV = !!res && res.side === v.out && res.idx === v.outIdx;
+        var k = 1;
+        var iv = setInterval(function () {
+          if (!isRunning()) { clearInterval(iv); runner.remove(); return; }
+          if (k >= stops.length) {
+            clearInterval(iv);
+            if (!okV) runner.classList.add('bad');
+            later(function () { runner.remove(); nextV(); }, okV ? 240 : 520);
+            return;
+          }
+          var t = stops[k++];
+          runner.style.transform = 'translate(' + (t.offsetLeft - base.offsetLeft) + 'px,' +
+            (t.offsetTop - base.offsetTop) + 'px)';
+        }, 115);
+        tids.push(iv);   // clearTimeout 은 interval id 도 지운다 — cleanup 한 줄로 충분
+      })();
+    }
     $('pthGo').addEventListener('click', function () {
       if (!isRunning() || locked) return;
       locked = true;
@@ -1054,13 +1199,15 @@
         var res = simulate(v.side, v.idx, fences);
         return res && res.side === v.out && res.idx === v.outIdx;
       });
-      api.mark(allOk, 1);
-      api.flash(b, allOk);
-      if (!real) {
-        revealEl.textContent = allOk ? '연결 성공!' : '정답 배치를 잠깐 보여드릴게요';
-        if (!allOk) draw(true);
-        later(nq, allOk ? 700 : 1600);
-      } else later(nq, 400);
+      animateVehicles(function () {
+        api.mark(allOk, 1);
+        api.flash(b, allOk);
+        if (!real) {
+          revealEl.textContent = allOk ? '연결 성공!' : '정답 배치를 잠깐 보여드릴게요';
+          if (!allOk) draw(true);
+          later(nq, allOk ? 700 : 1600);
+        } else later(nq, 400);
+      });
     });
     function nq() {
       if (!isRunning()) return;
@@ -1076,7 +1223,7 @@
       $('pthQ').textContent = q + '/' + total;
       revealEl.textContent = '';
       infoEl.textContent = '칸을 누르면 없음 → / → \\ 순서로 바뀝니다';
-      draw(false);
+      draw(false, true);
     }
     nq();
   }
@@ -1168,6 +1315,7 @@
         stageEl.innerHTML = '<div class="who">' + NAMES[k] + '</div>' +
           '<div class="set">' + data.sets[k].map(function (x) { return '<i>' + x + '</i>'; }).join('') + '</div>' +
           '<p class="gm-hint">순서대로 기억하세요…</p>';
+        dealIn(stageEl.querySelector('.set'), 70);   // 항목이 순서대로 깔린다 — '순서 기억'을 화면이 거든다
         later(function () { showFriend(k + 1); }, 1000);   // 제시 1초 — 실전 속도 그대로
       }
       function ask() {
@@ -1190,6 +1338,7 @@
           });
           candsEl.appendChild(btn);
         });
+        dealIn(candsEl, 40);
         tk = ticker(tickBar, 3000, function () {         // 답 3초
           if (done) return;
           done = true;
