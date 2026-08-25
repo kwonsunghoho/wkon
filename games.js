@@ -26,6 +26,10 @@
     if (html != null) e.innerHTML = html;
     return e;
   }
+  /* 심볼 참조 svg — 아이콘·도형은 전부 games.html <defs> 의 자체 제작 심볼(이모지 금지 — games.md) */
+  function sym(id) {
+    return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>';
+  }
   function flash(node, ok) {
     var c = ok ? 'gm-flash-ok' : 'gm-flash-no';
     node.classList.remove('gm-flash-ok', 'gm-flash-no');
@@ -99,7 +103,7 @@
     var isNew = saveRec(cur.id, score);
     var best = (readRec()[cur.id] || {}).best || 0;
     resultEl.innerHTML =
-      '<div class="r-name">' + cur.icon + ' ' + cur.name + '</div>' +
+      '<div class="r-name">' + sym(cur.icon) + cur.name + '</div>' +
       '<div class="r-score">' + score + '<small> ' + cur.unit + '</small></div>' +
       '<div class="r-best">이 기기 최고 기록 <b>' + best + cur.unit + '</b></div>' +
       (isNew && score > 0 ? '<span class="r-new">신기록!</span>' : '') +
@@ -151,7 +155,7 @@
     board.classList.remove('on'); board.innerHTML = '';
     hud.classList.remove('on');
     resultEl.classList.remove('on');
-    titleEl.textContent = g.icon + ' ' + g.name;
+    titleEl.innerHTML = sym(g.icon) + g.name;
     introEl.style.display = '';
     introEl.innerHTML =
       '<span class="meas">' + g.meas + '</span>' +
@@ -196,7 +200,7 @@
       var r = rec[g.id];
       var bs = r && r.best > 0 ? '최고 ' + r.best + g.unit : '아직 기록 없음';
       var card = el('button', 'gm-card',
-        '<span class="ic" aria-hidden="true">' + g.icon + '</span>' +
+        '<span class="ic" aria-hidden="true">' + sym(g.icon) + '</span>' +
         '<span class="nm">' + g.name + '</span>' +
         '<span class="ms">' + g.meas + '</span>' +
         '<span class="bs">' + bs + '</span>');
@@ -213,7 +217,7 @@
 
   /* ── 1. 가위바위보 — 지시(이겨라/져라/비겨라)를 빠르게 뒤집어 판단 ── */
   function gameRPS(api) {
-    var HANDS = ['✊', '✌️', '✋'];   // 바위·가위·보
+    var HANDS = ['gs-circle', 'gi-rps', 'gs-paper'];   // 바위·가위·보 — 자체 심볼
     var NAMES = ['바위', '가위', '보'];
     var winOf = function (o) { return (o + 2) % 3; };   // 상대를 이기는 손
     var loseOf = function (o) { return (o + 1) % 3; };  // 상대에게 지는 손
@@ -226,9 +230,8 @@
     var ruleEl = $('rpsRule'), oppoEl = $('rpsOppo'), wrap = $('rpsBtns');
     var oppo = 0, want = 0;
     HANDS.forEach(function (h, i) {
-      var btn = el('button', 'gm-big', h);
+      var btn = el('button', 'gm-big', sym(h) + '<span>' + NAMES[i] + '</span>');
       btn.type = 'button';
-      btn.setAttribute('aria-label', NAMES[i]);
       btn.addEventListener('click', function () {
         if (!isRunning()) return;
         if (i === want) { api.addScore(1); api.flash(b, true); }
@@ -242,7 +245,7 @@
       var mode = rnd(3);                                 // 0 이겨라 1 져라 2 비겨라
       want = mode === 0 ? winOf(oppo) : mode === 1 ? loseOf(oppo) : oppo;
       ruleEl.textContent = mode === 0 ? '이기세요' : mode === 1 ? '지세요' : '비기세요';
-      oppoEl.textContent = HANDS[oppo];
+      oppoEl.innerHTML = sym(HANDS[oppo]) + '<span>' + NAMES[oppo] + '</span>';
     }
     next();
   }
@@ -589,7 +592,7 @@
           cell.type = 'button';
           if (walls[k]) { cell.classList.add('wall'); cell.setAttribute('aria-label', '벽'); }
           else if (cat[0] === r && cat[1] === c) {
-            cell.classList.add('cat'); cell.textContent = '🐱';
+            cell.classList.add('cat'); cell.innerHTML = sym('gi-cat');
             cell.setAttribute('aria-label', '고양이');
           } else {
             cell.setAttribute('aria-label', (r + 1) + '행 ' + (c + 1) + '열에 벽 세우기');
@@ -696,7 +699,8 @@
 
   /* ── 8. 마법약 만들기 — 주문서 재료를 정확히 담아 제조 ── */
   function gamePotion(api) {
-    var ING = ['🌿', '🍄', '💧', '⭐', '🪨', '🔥'];
+    var ING = ['gs-circle', 'gs-square', 'gs-tri', 'gs-diamond', 'gs-star', 'gs-hex'];
+    var ING_NAMES = { 'gs-circle': '원', 'gs-square': '네모', 'gs-tri': '세모', 'gs-diamond': '마름모', 'gs-star': '별', 'gs-hex': '육각' };
     var POTS = ['용기의 물약', '차분함의 물약', '집중의 물약', '미소의 물약', '순발력의 물약'];
     var b = api.board;
     b.innerHTML =
@@ -710,13 +714,15 @@
       '</div>';
     var nameEl = $('ptName'), needEl = $('ptNeed'), potEl = $('ptPot'), ingEl = $('ptIng');
     var need = [], have = [], hideId = 0;
+    function drawPot() { potEl.innerHTML = have.map(sym).join(''); }
     ING.forEach(function (g) {
-      var btn = el('button', '', g);
+      var btn = el('button', '', sym(g));
       btn.type = 'button';
+      btn.setAttribute('aria-label', ING_NAMES[g] + ' 재료 담기');
       btn.addEventListener('click', function () {
         if (!isRunning() || have.length >= 8) return;
         have.push(g);
-        potEl.textContent = have.join('');
+        drawPot();
       });
       ingEl.appendChild(btn);
     });
@@ -729,35 +735,34 @@
     }
     function next() {
       clearTimeout(hideId);
-      have = []; potEl.textContent = '';
+      have = []; drawPot();
       var k = Math.min(3 + Math.floor(score / 3), 6);
       need = [];
       for (var i = 0; i < k; i++) need.push(pick(ING));
       need.sort();
       nameEl.textContent = pick(POTS) + ' 주문서';
-      needEl.textContent = need.join('');
+      needEl.innerHTML = need.map(sym).join('');
       /* 5점부터는 주문서가 잠깐만 보인다 — 외워서 담는 단계 */
       if (score >= 5) {
         hideId = setTimeout(function () {
-          needEl.textContent = '? (외운 대로 담으세요)';
-          needEl.style.fontSize = '15px';
+          needEl.textContent = '? 외운 대로 담으세요';
         }, 2600);
-        needEl.style.fontSize = '';
-      } else needEl.style.fontSize = '';
+      }
     }
     api.onCleanup(function () { clearTimeout(hideId); });
-    $('ptClear').addEventListener('click', function () { have = []; potEl.textContent = ''; });
+    $('ptClear').addEventListener('click', function () { have = []; drawPot(); });
     $('ptBrew').addEventListener('click', function () {
       if (!isRunning()) return;
       if (multisetEq(have, need)) { api.addScore(1); api.flash(b, true); next(); }
-      else { api.flash(b, false); shake(potEl); have = []; potEl.textContent = ''; }
+      else { api.flash(b, false); shake(potEl); have = []; drawPot(); }
     });
     next();
   }
 
   /* ── 9. 도형 순서 기억 — 불 들어온 순서를 그대로 따라 누르기 ── */
   function gameSequence(api) {
-    var GLYPHS = ['●', '■', '▲', '◆', '★', '✚', '♥', '☾', '✿'];
+    var GLYPHS = ['gs-circle', 'gs-ring', 'gs-square', 'gs-tri', 'gs-diamond', 'gs-star', 'gs-plus', 'gs-hex', 'gs-half'];
+    var GNAMES = ['원', '고리', '네모', '세모', '마름모', '별', '십자', '육각', '반달'];
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q">불이 들어온 <b>순서 그대로</b> 누르세요<span class="sub" id="sqInfo"></span></div>' +
@@ -767,9 +772,9 @@
     var timeouts = [];
     api.onCleanup(function () { timeouts.forEach(clearTimeout); });
     GLYPHS.forEach(function (g, i) {
-      var c = el('button', 'gm-cell', g);
+      var c = el('button', 'gm-cell', sym(g));
       c.type = 'button';
-      c.setAttribute('aria-label', '칸 ' + (i + 1));
+      c.setAttribute('aria-label', GNAMES[i]);
       c.addEventListener('click', function () {
         if (!isRunning() || playing) return;
         if (i === seq[input]) {
@@ -816,35 +821,35 @@
 
   /* ── 게임 정의 목록 — 허브 카드 순서 그대로 ── */
   var GAMES = [
-    { id: 'rps', name: '가위바위보', icon: '✌️', unit: '점', time: 60,
+    { id: 'rps', name: '가위바위보', icon: 'gi-rps', unit: '점', time: 60,
       meas: '순발력 · 판단 전환',
       rules: ['상대 손과 지시(이기세요·지세요·비기세요)가 나옵니다.',
         '지시에 맞는 손을 최대한 빨리 고르세요.', '60초 동안 맞힌 개수가 점수입니다.'],
       tips: ['"지세요"가 나오면 한 박자 멈추고 뒤집어 생각하세요 — 습관대로 이기는 손이 먼저 나갑니다.',
         '정확도가 속도보다 먼저입니다. 틀린 답을 빨리 내는 것이 제일 손해입니다.'],
       start: gameRPS },
-    { id: 'path', name: '길 만들기', icon: '🧭', unit: '점', time: 90,
+    { id: 'path', name: '길 만들기', icon: 'gi-path', unit: '점', time: 90,
       meas: '계획 · 공간 지각',
       rules: ['타일을 누르면 90도씩 돌아갑니다.', '왼쪽 입구(파란 표시)에서 오른쪽 출구까지 길을 이으세요.',
         '길 하나를 완성할 때마다 +10점, 90초 안에 여러 판을 깹니다.'],
       tips: ['입구부터 순서대로 잇지 말고, 먼저 전체 경로를 눈으로 그린 뒤 손을 대세요.',
         '꺾임 타일은 네 방향 중 하나뿐입니다 — 최대 세 번이면 원하는 방향이 나옵니다.'],
       start: gamePath },
-    { id: 'sequence', name: '도형 순서 기억', icon: '🧠', unit: '단계', time: 0,
+    { id: 'sequence', name: '도형 순서 기억', icon: 'gi-seq', unit: '단계', time: 0,
       meas: '작업 기억',
       rules: ['칸에 불이 순서대로 들어옵니다.', '다 본 뒤 같은 순서로 누르세요.',
         '성공하면 한 개씩 길어지고, 기회 3번을 다 쓰면 끝납니다.'],
       tips: ['위치를 말로 바꿔 외우세요("가운데-왼쪽 위-별") — 눈으로만 좇는 것보다 오래 남습니다.',
         '틀렸을 때 같은 길이로 다시 옵니다. 침착하게 다시 외우면 됩니다.'],
       start: gameSequence },
-    { id: 'rotate', name: '도형 회전', icon: '🔷', unit: '점', time: 60,
+    { id: 'rotate', name: '도형 회전', icon: 'gi-rotate', unit: '점', time: 60,
       meas: '공간 회전',
       rules: ['기준 도형을 돌려서 같아지는 보기를 고르세요.',
         '뒤집힌(거울상) 도형이 함정으로 섞여 있습니다.', '60초 동안 맞힌 개수가 점수입니다.'],
       tips: ['도형의 튀어나온 귀퉁이 하나를 정해 그것만 따라 돌리세요 — 전체를 돌리는 것보다 빠릅니다.',
         '거울상은 아무리 돌려도 겹치지 않습니다. 헷갈리면 귀퉁이의 좌우 방향을 보세요.'],
       start: gameRotate },
-    { id: 'potion', name: '마법약 만들기', icon: '🧪', unit: '점', time: 60,
+    { id: 'potion', name: '마법약 만들기', icon: 'gi-potion', unit: '점', time: 60,
       meas: '작업 기억 · 정확성',
       rules: ['주문서에 적힌 재료를 그대로 솥에 담고 제조를 누르세요.',
         '개수까지 정확해야 합니다. 틀리면 솥이 비워집니다.',
@@ -852,7 +857,7 @@
       tips: ['재료를 종류별로 묶어 세면(풀 2, 물 1) 외우기 쉽습니다.',
         '틀리는 것이 제일 느립니다. 담기 전에 주문서를 한 번 더 확인하세요.'],
       start: gamePotion },
-    { id: 'cat', name: '고양이 술래잡기', icon: '🐱', unit: '판', time: 0,
+    { id: 'cat', name: '고양이 술래잡기', icon: 'gi-cat', unit: '판', time: 0,
       meas: '전략 · 수읽기', scoreLabel: '잡은 판',
       rules: ['빈 칸을 누르면 벽이 생기고, 고양이는 한 칸씩 밖으로 도망갑니다.',
         '가장자리에 닿기 전에 사방을 막아 가두세요.',
@@ -860,21 +865,21 @@
       tips: ['고양이 옆에 붙여 쌓지 말고, 두세 칸 앞 길목을 먼저 끊으세요.',
         '고양이가 가려는 방향(가장 가까운 가장자리)부터 막는 것이 기본입니다.'],
       start: gameCat },
-    { id: 'yaksok', name: '약속 정하기', icon: '📅', unit: '점', time: 90,
+    { id: 'yaksok', name: '약속 정하기', icon: 'gi-yaksok', unit: '점', time: 90,
       meas: '조건 추론',
       rules: ['친구들의 가능한 시간 조건이 나옵니다.',
         '전원이 가능한 단 하나의 시간을 표에서 고르세요.', '90초 동안 맞힌 문제 수가 점수입니다.'],
       tips: ['"~만 돼요"부터 읽으세요 — 후보가 가장 크게 줄어듭니다.',
         '남은 후보에 "안 돼요" 조건을 하나씩 지워 나가면 답이 남습니다.'],
       start: gameYaksok },
-    { id: 'numbers', name: '숫자 누르기', icon: '🔢', unit: '점', time: 60,
+    { id: 'numbers', name: '숫자 누르기', icon: 'gi-numbers', unit: '점', time: 60,
       meas: '주의력 · 탐색 속도',
       rules: ['흩어진 숫자를 1부터 차례대로 누르세요.',
         '한 판을 다 누르면 다음 판은 숫자가 늘어납니다.', '60초 동안 모은 점수로 겨룹니다.'],
       tips: ['다음 숫자를 누르는 동안 눈은 그다음 숫자를 찾고 있어야 합니다.',
         '화면을 왼쪽 위→오른쪽 아래로 훑는 자기만의 순서를 정해 두면 빨라집니다.'],
       start: gameNumbers },
-    { id: 'compare', name: '개수 비교', icon: '⚖️', unit: '점', time: 60,
+    { id: 'compare', name: '개수 비교', icon: 'gi-compare', unit: '점', time: 60,
       meas: '수 감각 · 순간 판단',
       rules: ['두 판 중 점이 더 많은 쪽을 고르세요.',
         '점 크기가 제각각이라 넓이로는 못 셉니다.', '맞힐수록 개수 차이가 줄어듭니다.'],
