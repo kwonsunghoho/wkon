@@ -65,9 +65,6 @@
   var hud = $('gmHud'), timeEl = $('gmTime'), timeBar = $('gmTimeBar'), scoreEl = $('gmScore');
   var board = $('gmBoard'), resultEl = $('gmResult'), backBtn = $('gmBack');
 
-  /* 버그 제보 창구 — 사이트 공용 카카오톡 문의(정본 주소는 nav.js SOCIAL·pages.md) */
-  var REPORT_URL = 'https://pf.kakao.com/_iajxnX/chat';
-
   /* ── 엔진 상태 ── */
   var cur = null;          // 현재 게임 정의
   var running = false;
@@ -157,10 +154,11 @@
         '<button type="button" class="gm-tohub" id="gmToHub">목록으로</button>' +
         '<button type="button" class="gm-again" id="gmAgain">다시 하기</button>' +
       '</div>' +
-      '<a class="r-report" href="' + REPORT_URL + '" target="_blank" rel="noopener">게임이 이상했나요? 카카오톡으로 제보하기</a>';
+      '<button type="button" class="r-report" id="gmReportJump">게임이 이상했나요? 오류 제보 남기기</button>';
     resultEl.classList.add('on');
     $('gmAgain').addEventListener('click', function () { startPlay(); });
     $('gmToHub').addEventListener('click', function () { goHub(); });
+    $('gmReportJump').addEventListener('click', function () { openReport(cur.id); });
     $('gmAgain').focus();
   }
 
@@ -277,8 +275,75 @@
     });
   }
 
+  /* ── 게임 오류 제보 — 카카오톡(상담 창구)과 분리해 game_reports 테이블에 저장(2026-08-25 오너
+     "카톡은 상담 문의 내용이라 섞이면 안돼"). 연락처는 일부러 안 받는다 — 버그 기록함.
+     마이그레이션 미적용이면 insert 가 실패한다 → "준비 중" 안내로 조용히 degrade. ── */
+  var reportToggle = $('gmReportToggle'), reportForm = $('gmReportForm');
+  var rpGame = $('rpGame'), rpMsg = $('rpMsg'), rpSend = $('rpSend'), rpDone = $('rpDone');
+  var RP_COOL_KEY = 'monc_game_report_last';
+  function fillReportGames() {
+    rpGame.innerHTML = '<option value="">페이지 전체 · 기타</option>' +
+      GAMES.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
+  }
+  function openReport(gameId) {
+    reportForm.hidden = false;
+    reportToggle.setAttribute('aria-expanded', 'true');
+    if (gameId) rpGame.value = gameId;
+    $('gmReportBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  reportToggle.addEventListener('click', function () {
+    reportForm.hidden = !reportForm.hidden;
+    reportToggle.setAttribute('aria-expanded', reportForm.hidden ? 'false' : 'true');
+  });
+  reportForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var msg = (rpMsg.value || '').trim();
+    if (msg.length < 5) { rpDone.textContent = '무엇이 이상했는지 조금만 더 적어 주세요.'; return; }
+    var last = 0;
+    try { last = Number(localStorage.getItem(RP_COOL_KEY) || 0); } catch (err) {}
+    if (Date.now() - last < 60 * 1000) {
+      rpDone.textContent = '방금 제보를 보냈어요 — 잠시 후 다시 보낼 수 있어요.';
+      return;
+    }
+    if (!window.MONC || !MONC.sb) {
+      rpDone.textContent = '지금은 제보 저장이 준비 중이에요. 잠시 후 다시 시도해 주세요.';
+      return;
+    }
+    rpSend.disabled = true;
+    rpSend.textContent = '보내는 중…';
+    (async function () {
+      var row = {
+        game: rpGame.value || '',
+        mode: curMode || '',
+        message: msg.slice(0, 2000),
+        ua: (navigator.userAgent || '').slice(0, 300)
+      };
+      try {
+        var session = await MONC.getSession();
+        if (session && session.user) row.member_id = session.user.id;
+      } catch (err) {}
+      var res = await MONC.sb.from('game_reports').insert(row);
+      rpSend.disabled = false;
+      rpSend.textContent = '제보 보내기';
+      if (res && res.error) {
+        /* PGRST205 = 테이블 미생성(마이그레이션 미적용 판정 — CLAUDE.md) */
+        rpDone.textContent = res.error.code === 'PGRST205'
+          ? '지금은 제보 저장이 준비 중이에요. 잠시 후 다시 시도해 주세요.'
+          : '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
+        return;
+      }
+      try { localStorage.setItem(RP_COOL_KEY, String(Date.now())); } catch (err) {}
+      rpMsg.value = '';
+      rpDone.textContent = '제보가 접수됐어요. 확인해서 고치겠습니다 — 감사합니다!';
+    })().catch(function () {
+      rpSend.disabled = false;
+      rpSend.textContent = '제보 보내기';
+      rpDone.textContent = '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
+    });
+  });
+
   /* ══════════════════════════════════════════════════════════════════════
-     게임 9종 — 전부 이 아래에서만 정의한다. 새 게임은 GAMES 배열에 추가.
+     게임 7종 — 전부 이 아래에서만 정의한다. 새 게임은 GAMES 배열에 추가.
      ══════════════════════════════════════════════════════════════════════ */
 
   /* ── 0. 도형 2-back — n번째 전 도형과 같은지 판단(작업 기억 갱신) ──
@@ -1202,6 +1267,7 @@
 
   /* ── 시작 — 주소 해시(#rps)로 바로 열 수 있게 ── */
   renderHub();
+  fillReportGames();
   var h = (location.hash || '').replace('#', '');
   if (h) {
     for (var i = 0; i < GAMES.length; i++) {
