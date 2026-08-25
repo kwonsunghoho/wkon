@@ -46,7 +46,7 @@
     /* 2026-08-07 개명 '필수 기출 하루 한 개' → '일문일답' — programs.html 제목·tools.html 타일과 한 벌 */
     ['programs.html', '일문일답', '하루 한 개, 내 경험으로'],
     /* 역량검사 게임(2026-08-24 신설) — 무료·비회원 공개. tools.html 격자와 같은 목록 유지 */
-    ['games.html', '역량검사 게임', '검사 유형 10가지 무료 연습']
+    ['games.html', '역량검사 게임', '검사 유형 7가지 무료 연습']
   ];
   var CHALLENGE_HUB = 'challenges.html';
   var CHALLENGE_SUB = [

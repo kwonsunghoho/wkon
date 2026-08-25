@@ -778,98 +778,6 @@
     build();
   }
 
-  /* ── 6. 고양이 술래잡기 — 생쥐 위치를 외웠다가, 고양이가 나온 칸에 생쥐가 있었는지 판단 ──
-     실전 구성(캡처 기준): 생쥐 약 1초 노출 → 고양이 등장 → 빨간 칸부터 판단, 확신 4단계,
-     고양이 한 마리당 3초, 생쥐 4→최대 18마리, 한 문항 = 빨강·파랑 2번 판단. 확신도는 채점에
-     안 넣고 안내만 한다(실제 검사가 확신을 본다는 사실을 팁으로 전한다). */
-  function gameCat(api, mode) {
-    var total = mode === 'real' ? 20 : 10;
-    var reveal = mode !== 'real';
-    var b = api.board;
-    b.innerHTML =
-      '<div class="gm-q"><span id="catQ"></span><span class="sub" id="catInfo"></span></div>' +
-      '<div class="gm-mgrid" id="catGrid"></div>' +
-      '<div class="gm-qtimer"><i id="catTick"></i></div>' +
-      '<div class="gm-judge" id="catBtns"></div>';
-    var qEl = $('catQ'), infoEl = $('catInfo'), wrap = $('catGrid'), tickBar = $('catTick'), btnsEl = $('catBtns');
-    var tk = null, tids = [];
-    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
-    function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
-    var cells = [];
-    function buildGrid() {
-      wrap.innerHTML = ''; cells = [];
-      for (var i = 0; i < 25; i++) {
-        var c = el('div', 'gm-mcell', '');
-        cells.push(c); wrap.appendChild(c);
-      }
-    }
-    var onAns = null;
-    [['y2', '있었다 · 확실'], ['y1', '있었다 · 아마'], ['n1', '없었다 · 아마'], ['n2', '없었다 · 확실']]
-      .forEach(function (d) {
-        var btn = el('button', '', d[1]);
-        btn.type = 'button';
-        btn.disabled = true;
-        btn.addEventListener('click', function () { if (onAns) onAns(d[0].charAt(0) === 'y'); });
-        btnsEl.appendChild(btn);
-      });
-    function setBtns(on) { [].slice.call(btnsEl.children).forEach(function (x) { x.disabled = !on; }); }
-    var q = 0, mice = [];
-    function nq() {
-      if (!isRunning()) return;
-      if (q >= total) { api.finish(); return; }
-      q++;
-      var n = Math.min(4 + Math.floor((q - 1) / 2) * 2, 18);
-      qEl.textContent = '생쥐 위치를 기억하세요';
-      infoEl.textContent = '문항 ' + q + '/' + total + ' · 생쥐 ' + n + '마리';
-      buildGrid();
-      setBtns(false);
-      tickBar.style.width = '0%';
-      mice = shuffle(Array.apply(null, Array(25)).map(function (_, i) { return i; })).slice(0, n);
-      mice.forEach(function (i) { cells[i].innerHTML = sym('gi-mouse'); });
-      later(function () {
-        if (!isRunning()) return;
-        cells.forEach(function (c) { c.innerHTML = ''; });
-        probe(0);
-      }, 1100);
-    }
-    function probe(k) {                                 /* k=0 첫 번째(빨강) · k=1 두 번째(파랑) */
-      var cellIdx, has;
-      if (rnd(2) === 0) { cellIdx = pick(mice); has = true; }     /* 반반 나오게 */
-      else {
-        var g = 0;
-        do { cellIdx = rnd(25); } while (mice.indexOf(cellIdx) >= 0 && g++ < 40);
-        has = mice.indexOf(cellIdx) >= 0;
-      }
-      var cls = k === 0 ? 'probe-r' : 'probe-b';
-      cells[cellIdx].classList.add(cls);
-      cells[cellIdx].innerHTML = sym('gi-cat');
-      qEl.innerHTML = (k === 0 ? '<b class="c-red">첫 번째 칸</b>' : '<b class="c-blue">두 번째 칸</b>') +
-        ' — 여기에 생쥐가 있었나요?';
-      setBtns(true);
-      var settled = false;
-      tk = ticker(tickBar, 3000, function () { if (!settled) settle(null); });
-      onAns = function (saidYes) { if (!settled) settle(saidYes); };
-      function settle(saidYes) {
-        settled = true;
-        if (tk) tk.stop();
-        setBtns(false);
-        onAns = null;
-        var ok = saidYes !== null && saidYes === has;
-        if (ok) api.addScore(1);
-        api.flash(b, ok);
-        cells[cellIdx].classList.remove(cls);
-        cells[cellIdx].innerHTML = '';
-        if (k === 0) later(function () { probe(1); }, 300);
-        else if (reveal) {
-          mice.forEach(function (i) { cells[i].innerHTML = sym('gi-mouse'); });
-          infoEl.textContent = '생쥐가 있던 자리예요';
-          later(nq, 1000);
-        } else later(nq, 300);
-      }
-    }
-    nq();
-  }
-
   /* ── 7. 약속 정하기 — 조건을 모두 만족하는 유일한 시간 찾기 ── */
   function gameYaksok(api) {
     var DAYS = ['월', '화', '수', '목', '금'];
@@ -919,135 +827,6 @@
     next();
   }
 
-  /* ── 8. 마법약 만들기 — 켜진 약초 조합을 보고 결과(파란약/빨간약)를 예측하는 규칙 학습 ──
-     실전 구성(캡처 기준): 카드 일부만 켜짐·전체 조합이 결과를 결정, 답 3초, 매 문항 결과 공개
-     (공개가 과제의 일부), 같은 조합의 결과가 도중에 몰래 바뀐다, 실전 100문항. */
-  function gamePotion(api, mode) {
-    var HERBS = ['gs-circle', 'gs-tri', 'gs-square', 'gs-star'];
-    var total = mode === 'real' ? 100 : 30;
-    var b = api.board;
-    b.innerHTML =
-      '<div class="gm-q">이 조합이면 <b>무슨 약</b>이 나올까요?<span class="sub" id="ptInfo"></span></div>' +
-      '<div class="gm-herbs" id="ptHerbs"></div>' +
-      '<div class="gm-qtimer"><i id="ptTick"></i></div>' +
-      '<div class="gm-reveal" id="ptReveal"></div>' +
-      '<div class="gm-pots">' +
-        '<button type="button" class="blue" id="ptBlue">파란약</button>' +
-        '<button type="button" class="red" id="ptRed">빨간약</button>' +
-      '</div>';
-    var infoEl = $('ptInfo'), herbsEl = $('ptHerbs'), tickBar = $('ptTick'), revealEl = $('ptReveal');
-    var tk = null, tids = [];
-    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
-    function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
-    /* 조합 풀 — 1~3개가 켜진 서로 다른 조합 6가지. 결과는 조합마다 고정이지만
-       중간중간 일부 조합이 조용히 뒤집힌다(규칙 전환 — 알아채고 갈아타는 것까지가 과제). */
-    var pool = (function () {
-      var masks = [];
-      for (var m = 1; m < 16; m++) {
-        var bits = m.toString(2).replace(/0/g, '').length;
-        if (bits >= 1 && bits <= 3) masks.push(m);
-      }
-      return shuffle(masks).slice(0, 6).map(function (m) { return { mask: m, blue: rnd(2) === 0 }; });
-    })();
-    var q = 0, curCombo = null, done = false;
-    var nextSwitch = 10 + rnd(8);
-    function drawCombo(mask) {
-      herbsEl.innerHTML = '';
-      HERBS.forEach(function (h, i) {
-        herbsEl.appendChild(el('span', 'gm-herb' + (mask & (1 << i) ? ' lit' : ''), sym(h)));
-      });
-    }
-    function settle(saidBlue) {
-      if (done || !isRunning()) return;
-      done = true;
-      if (tk) { tk.stop(); tickBar.style.width = '0%'; }
-      var isBlue = curCombo.blue;
-      var ok = saidBlue !== null && saidBlue === isBlue;
-      if (ok) api.addScore(1);
-      api.flash(b, ok);
-      revealEl.innerHTML = '제조 결과: <b class="' + (isBlue ? 'c-blue' : 'c-red') + '">' +
-        (isBlue ? '파란약' : '빨간약') + '</b>' +
-        (saidBlue === null ? ' — 시간 초과' : ok ? ' — 맞았어요' : ' — 틀렸어요');
-      later(nq, 950);
-    }
-    $('ptBlue').addEventListener('click', function () { settle(true); });
-    $('ptRed').addEventListener('click', function () { settle(false); });
-    function nq() {
-      if (!isRunning()) return;
-      if (q >= total) { api.finish(); return; }
-      q++;
-      if (q >= nextSwitch) {                            /* 규칙 전환 — 안내 없이 조용히 */
-        shuffle(pool.slice()).slice(0, 1 + rnd(2)).forEach(function (c) { c.blue = !c.blue; });
-        nextSwitch = q + 10 + rnd(8);
-      }
-      done = false;
-      revealEl.textContent = '';
-      infoEl.textContent = '문항 ' + q + '/' + total;
-      curCombo = pick(pool);
-      drawCombo(curCombo.mask);
-      tk = ticker(tickBar, 3000, function () { settle(null); });
-    }
-    nq();
-  }
-
-  /* ── 9. 도형 순서 기억 — 불 들어온 순서를 그대로 따라 누르기 ── */
-  function gameSequence(api) {
-    var GLYPHS = ['gs-circle', 'gs-ring', 'gs-square', 'gs-tri', 'gs-diamond', 'gs-star', 'gs-plus', 'gs-hex', 'gs-half'];
-    var GNAMES = ['원', '고리', '네모', '세모', '마름모', '별', '십자', '육각', '반달'];
-    var b = api.board;
-    b.innerHTML =
-      '<div class="gm-q">불이 들어온 <b>순서 그대로</b> 누르세요<span class="sub" id="sqInfo"></span></div>' +
-      '<div class="gm-cells" id="sqGrid" style="grid-template-columns:repeat(3,1fr);max-width:280px"></div>';
-    var wrap = $('sqGrid'), infoEl = $('sqInfo');
-    var cells = [], seq = [], input = 0, len = 3, lives = 3, playing = false;
-    var timeouts = [];
-    api.onCleanup(function () { timeouts.forEach(clearTimeout); });
-    GLYPHS.forEach(function (g, i) {
-      var c = el('button', 'gm-cell', sym(g));
-      c.type = 'button';
-      c.setAttribute('aria-label', GNAMES[i]);
-      c.addEventListener('click', function () {
-        if (!isRunning() || playing) return;
-        if (i === seq[input]) {
-          c.classList.add('lit');
-          timeouts.push(setTimeout(function () { c.classList.remove('lit'); }, 180));
-          input++;
-          if (input >= seq.length) {
-            api.setScore(len);                        // 점수 = 성공한 최고 단계
-            len++;
-            playing = true;                           // 다음 판 준비 중 잘못 눌러 기회를 잃지 않게
-            timeouts.push(setTimeout(function () { if (isRunning()) round(); }, 500));
-          }
-        } else {
-          lives--;
-          api.flash(b, false);
-          if (lives <= 0) { api.finish(); return; }
-          info();
-          playing = true;
-          timeouts.push(setTimeout(function () { if (isRunning()) round(); }, 600));
-        }
-      });
-      cells.push(c);
-      wrap.appendChild(c);
-    });
-    function info() {
-      infoEl.textContent = '이번 단계: ' + len + '개 · 남은 기회 ' + lives;
-    }
-    function round() {
-      info();
-      seq = [];
-      for (var i = 0; i < len; i++) seq.push(rnd(9));
-      input = 0;
-      playing = true;
-      seq.forEach(function (s, i) {
-        timeouts.push(setTimeout(function () { cells[s].classList.add('lit'); }, 600 + i * 620));
-        timeouts.push(setTimeout(function () { cells[s].classList.remove('lit'); }, 600 + i * 620 + 450));
-      });
-      timeouts.push(setTimeout(function () { playing = false; }, 600 + seq.length * 620));
-    }
-    round();
-  }
-
   function isRunning() { return running; }
 
   /* ── 게임 정의 목록 — 허브 카드 순서 그대로 ── */
@@ -1079,13 +858,6 @@
       tips: ['입구부터 순서대로 잇지 말고, 먼저 전체 경로를 눈으로 그린 뒤 손을 대세요.',
         '꺾임 타일은 네 방향 중 하나뿐입니다 — 최대 세 번이면 원하는 방향이 나옵니다.'],
       start: gamePath },
-    { id: 'sequence', name: '도형 순서 기억', icon: 'gi-seq', unit: '단계', time: 0,
-      meas: '작업 기억',
-      rules: ['칸에 불이 순서대로 들어옵니다.', '다 본 뒤 같은 순서로 누르세요.',
-        '성공하면 한 개씩 길어지고, 기회 3번을 다 쓰면 끝납니다.'],
-      tips: ['위치를 말로 바꿔 외우세요("가운데-왼쪽 위-별") — 눈으로만 좇는 것보다 오래 남습니다.',
-        '틀렸을 때 같은 길이로 다시 옵니다. 침착하게 다시 외우면 됩니다.'],
-      start: gameSequence },
     { id: 'rotate', name: '도형 회전', icon: 'gi-rotate', unit: '점', time: 60,
       meas: '공간 회전',
       rules: ['기준 도형을 돌려서 같아지는 보기를 고르세요.',
@@ -1093,30 +865,6 @@
       tips: ['도형의 튀어나온 귀퉁이 하나를 정해 그것만 따라 돌리세요 — 전체를 돌리는 것보다 빠릅니다.',
         '거울상은 아무리 돌려도 겹치지 않습니다. 헷갈리면 귀퉁이의 좌우 방향을 보세요.'],
       start: gameRotate },
-    { id: 'potion', name: '마법약 만들기', icon: 'gi-potion', unit: '점', time: 0,
-      meas: '규칙 학습 · 적응',
-      modes: [
-        { key: 'practice', label: '연습', sub: '30문항' },
-        { key: 'real', label: '실전 흐름', sub: '100문항 · 실제와 같은 길이' }
-      ],
-      rules: ['약초 4가지 중 <b>일부가 켜진 조합</b>이 나옵니다. 파란약과 빨간약 중 무엇이 나올지 3초 안에 예측하세요.',
-        '정답 규칙은 알려 주지 않습니다 — 매 문항 공개되는 제조 결과를 보며 <b>조합→결과 규칙을 스스로 찾는</b> 게임입니다.',
-        '같은 조합의 결과가 <b>도중에 바뀔 수 있습니다.</b> 바뀐 걸 알아채고 갈아타는 것까지가 과제입니다.'],
-      tips: ['카드 하나가 아니라 <b>조합 전체</b>가 결과를 정합니다. "원+세모=파랑"처럼 조합 단위로 외우세요.',
-        '모든 문항을 맞힐 수는 없습니다. 한 번 틀렸다고 뒤집지 말고, 두 번 연속 틀리면 규칙이 바뀐 걸로 보세요.'],
-      start: gamePotion },
-    { id: 'cat', name: '고양이 술래잡기', icon: 'gi-cat', unit: '점', time: 0,
-      meas: '위치 기억 · 판단',
-      modes: [
-        { key: 'practice', label: '연습', sub: '10문항 · 판단 뒤 정답 공개' },
-        { key: 'real', label: '실전 흐름', sub: '20문항 · 공개 없음' }
-      ],
-      rules: ['생쥐들이 숨은 자리가 <b>1초만</b> 보였다 사라집니다.',
-        '고양이가 나타난 칸(<b class="c-red">첫 번째</b> → <b class="c-blue">두 번째</b>)에 생쥐가 있었는지 3초 안에 답하세요.',
-        '답은 확신까지 넷 중 하나입니다. 생쥐는 4마리에서 시작해 최대 18마리까지 늘어납니다.'],
-      tips: ['전부 외울 수는 없습니다 — 생쥐가 몰린 구역을 덩어리로 기억하세요.',
-        '실제 검사는 확신도까지 봅니다. 모르면 과신보다 "아마"를 고르는 게 낫습니다.'],
-      start: gameCat },
     { id: 'yaksok', name: '약속 정하기', icon: 'gi-yaksok', unit: '점', time: 90,
       meas: '조건 추론',
       rules: ['친구들의 가능한 시간 조건이 나옵니다.',
