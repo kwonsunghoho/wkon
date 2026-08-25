@@ -262,11 +262,11 @@
     grid.innerHTML = '';
     GAMES.forEach(function (g) {
       var r = rec[g.id];
-      var bs = r && r.best > 0 ? '최고 ' + r.best + g.unit : '아직 기록 없음';
+      var bs = r && r.best > 0 ? '최고 ' + r.best + g.unit : '기록 없음';
+      /* 타일 = 틴트 박스 + 이름 + 기록(측정 문구는 소개 화면 몫 — tools 격자 문법) */
       var card = el('button', 'gm-card',
         '<span class="ic" aria-hidden="true">' + sym(g.icon) + '</span>' +
         '<span class="nm">' + g.name + '</span>' +
-        '<span class="ms">' + g.meas + '</span>' +
         '<span class="bs">' + bs + '</span>');
       card.type = 'button';
       card.setAttribute('role', 'listitem');
