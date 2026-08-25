@@ -65,15 +65,38 @@
   var hud = $('gmHud'), timeEl = $('gmTime'), timeBar = $('gmTimeBar'), scoreEl = $('gmScore');
   var board = $('gmBoard'), resultEl = $('gmResult'), backBtn = $('gmBack');
 
+  /* 버그 제보 창구 — 사이트 공용 카카오톡 문의(정본 주소는 nav.js SOCIAL·pages.md) */
+  var REPORT_URL = 'https://pf.kakao.com/_iajxnX/chat';
+
   /* ── 엔진 상태 ── */
   var cur = null;          // 현재 게임 정의
   var running = false;
   var timerId = 0, endAt = 0, timeLimit = 0;
   var score = 0;
+  var streak = 0, bestStreak = 0, tries = 0, okCnt = 0, segs = [];
   var cleanupFn = null;    // 게임별 타이머 정리 등
+  var streakEl = $('gmStreak');
 
   function setScore(n) { score = n; scoreEl.textContent = String(n); }
-  function addScore(n) { setScore(score + n); }
+  /* 판정 한 번 = mark 한 번 — 점수·연속·세그먼트(라운드별 성적)를 한 곳에서 적는다.
+     결과 화면의 정답률·최고 연속·라운드별 성적이 전부 여기서 나온다. */
+  function mark(ok, gain, seg) {
+    tries++;
+    if (ok) {
+      okCnt++;
+      setScore(score + (gain == null ? 1 : gain));
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+    } else streak = 0;
+    streakEl.textContent = String(streak);
+    if (seg) {
+      var sg = null;
+      for (var i = 0; i < segs.length; i++) if (segs[i].label === seg) sg = segs[i];
+      if (!sg) { sg = { label: seg, ok: 0, tot: 0 }; segs.push(sg); }
+      sg.tot++;
+      if (ok) sg.ok++;
+    }
+  }
 
   /* 문항 제한시간 막대(3초 등) — 전역 타이머와 별개. stop() 을 부르면 멈춘다 */
   function ticker(bar, ms, onEnd) {
@@ -119,10 +142,22 @@
       '<div class="r-score">' + score + '<small> ' + cur.unit + '</small></div>' +
       '<div class="r-best">이 기기 최고 기록 <b>' + best + cur.unit + '</b></div>' +
       (isNew && score > 0 ? '<span class="r-new">신기록!</span>' : '') +
+      (tries > 0
+        ? '<div class="r-stats">' +
+          '<div class="r-row"><span>정답</span><b>' + okCnt + ' / ' + tries + '문항 · ' +
+            Math.round(okCnt / tries * 100) + '%</b></div>' +
+          '<div class="r-row"><span>최고 연속</span><b>' + bestStreak + '</b></div>' +
+          segs.map(function (sg) {
+            return '<div class="r-row"><span>' + sg.label + '</span><b>' + sg.ok + ' / ' + sg.tot +
+              (sg.tot ? ' · ' + Math.round(sg.ok / sg.tot * 100) + '%' : '') + '</b></div>';
+          }).join('') +
+          '</div>'
+        : '') +
       '<div class="r-btns">' +
         '<button type="button" class="gm-tohub" id="gmToHub">목록으로</button>' +
         '<button type="button" class="gm-again" id="gmAgain">다시 하기</button>' +
-      '</div>';
+      '</div>' +
+      '<a class="r-report" href="' + REPORT_URL + '" target="_blank" rel="noopener">게임이 이상했나요? 카카오톡으로 제보하기</a>';
     resultEl.classList.add('on');
     $('gmAgain').addEventListener('click', function () { startPlay(); });
     $('gmToHub').addEventListener('click', function () { goHub(); });
@@ -132,7 +167,7 @@
   /* 게임에 넘겨주는 손잡이 — 게임 코드는 이 밖의 엔진 내부를 만지지 않는다 */
   var api = {
     board: board,
-    addScore: addScore,
+    mark: mark,
     setScore: setScore,
     finish: finishGame,
     onCleanup: function (fn) { cleanupFn = fn; },
@@ -147,6 +182,8 @@
     resultEl.classList.remove('on');
     introEl.style.display = 'none';
     setScore(0);
+    streak = 0; bestStreak = 0; tries = 0; okCnt = 0; segs = [];
+    streakEl.textContent = '0';
     board.innerHTML = '';
     board.classList.add('on');
     hud.classList.add('on');
@@ -185,8 +222,14 @@
             return '<button type="button" class="gm-start' + (i ? ' alt' : '') + '" data-mode="' + m.key + '">' +
               m.label + '<small>' + m.sub + '</small></button>';
           }).join('')
-        : '<button type="button" class="gm-start" data-mode="practice">시작하기</button>');
-    [].slice.call(introEl.querySelectorAll('.gm-start')).forEach(function (btn) {
+        : '<button type="button" class="gm-start" data-mode="practice">시작하기</button>') +
+      /* 약한 라운드만 골라 반복 — 실물의 라운드 선택을 칩 한 줄로 */
+      (g.parts
+        ? '<div class="gm-parts"><em>부분만 연습</em>' + g.parts.map(function (pp) {
+            return '<button type="button" class="gm-part" data-mode="' + pp.key + '">' + pp.label + '</button>';
+          }).join('') + '</div>'
+        : '');
+    [].slice.call(introEl.querySelectorAll('.gm-start, .gm-part')).forEach(function (btn) {
       btn.addEventListener('click', function () { startPlay(btn.getAttribute('data-mode')); });
     });
     if (!viaHistory) {
@@ -311,7 +354,7 @@
       answered = true;
       setBtns(false);
       var ok = key === truthOf(idx);
-      if (ok) api.addScore(1);
+      api.mark(ok, 1, plan[pi].dual ? '2·3-back' : '2-back');
       api.flash(b, ok);
       if (plan[pi].fast) { if (tk) tk.stop(); later(next, 260); }
     }
@@ -339,7 +382,10 @@
       setBtns(judge);
       if (tk) tk.stop();
       tk = ticker(tickBar, pl.sec * 1000, function () {
-        if (judge && !answered) api.flash(b, false);    /* 미응답 = 오답 */
+        if (judge && !answered) {                       /* 미응답 = 오답 */
+          api.mark(false, 0, pl.dual ? '2·3-back' : '2-back');
+          api.flash(b, false);
+        }
         next();
       });
     }
@@ -358,11 +404,15 @@
     var winOf = function (o) { return (o + 2) % 3; };  // o 를 이기는 손
     var loseOf = function (o) { return (o + 1) % 3; }; // o 에게 지는 손
     var real = mode === 'real';
-    var rounds = [
-      { persp: 'me', sec: real ? 40 : 20 },
-      { persp: 'opp', sec: real ? 40 : 20 },
-      { persp: 'rand', sec: real ? 100 : 40 }
-    ];
+    var rounds =
+      mode === 'r1' ? [{ persp: 'me', sec: 40 }] :
+      mode === 'r2' ? [{ persp: 'opp', sec: 40 }] :
+      mode === 'r3' ? [{ persp: 'rand', sec: 100 }] :
+      [
+        { persp: 'me', sec: real ? 40 : 20 },
+        { persp: 'opp', sec: real ? 40 : 20 },
+        { persp: 'rand', sec: real ? 100 : 40 }
+      ];
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q"><span id="rpsPhase"></span><span class="sub" id="rpsInfo"></span></div>' +
@@ -377,14 +427,14 @@
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
-    var ri = 0, persp = 'me', want = 0, streak = 0, betw = true;
+    var ri = 0, persp = 'me', want = 0, betw = true;
     [1, 0, 2].forEach(function (i) {                   // 실전 배열 순서: 가위·바위·보
       var btn = el('button', 'gm-big', sym(HANDS[i]) + '<span>' + NAMES[i] + '</span>');
       btn.type = 'button';
       btn.addEventListener('click', function () {
         if (!isRunning() || betw) return;
         var ok = i === want;
-        if (ok) { api.addScore(1); streak++; } else streak = 0;
+        api.mark(ok, 1, persp === 'me' ? '나의 관점' : '상대 관점');
         api.flash(b, ok);
         next();
       });
@@ -398,14 +448,14 @@
         want = winOf(shown);
         opCard.innerHTML = sym(HANDS[shown]) + '<b>' + NAMES[shown] + '</b>';
         meCard.innerHTML = '<i>?</i>';
-        infoEl.textContent = '상대 손을 보고, 내가 이기는 손 · 연속 ' + streak;
+        infoEl.textContent = '상대 손을 보고, 내가 이기는 손을 고르세요';
       } else {
         want = loseOf(shown);
         meCard.innerHTML = sym(HANDS[shown]) + '<b>' + NAMES[shown] + '</b>';
         opCard.innerHTML = '<i>?</i>';
-        infoEl.textContent = '내 손을 보고, 상대가 지는 손 · 연속 ' + streak;
+        infoEl.textContent = '내 손을 보고, 상대가 지는 손을 고르세요';
       }
-      phaseEl.textContent = 'R' + (ri + 1) + '/3 · ' + (persp === 'me' ? '나의 관점' : '상대 관점');
+      phaseEl.textContent = 'R' + (ri + 1) + '/' + rounds.length + ' · ' + (persp === 'me' ? '나의 관점' : '상대 관점');
     }
     function startRound() {
       if (!isRunning()) return;
@@ -415,7 +465,6 @@
         ri++;
         if (ri >= rounds.length) { api.finish(); return; }
         betw = true;
-        streak = 0;
         phaseEl.textContent = 'ROUND ' + (ri + 1) + ' · ' +
           (rounds[ri].persp === 'me' ? '나의 관점' : rounds[ri].persp === 'opp' ? '상대 관점' : '관점 랜덤');
         infoEl.textContent = '잠깐 쉬었다 이어집니다';
@@ -430,8 +479,10 @@
      실전 구성(캡처 기준): R1 60초 고정 배열에서 활성화된 숫자 클릭 / R2 120초 매 문항 섞인
      배열에서 1→9 순서, 지정 숫자는 연속 2번·지정 숫자는 건너뛰기, 신호 전 클릭은 오답. */
   function gameNumbers(api, mode) {
-    var r1sec = mode === 'real' ? 60 : 30;
-    var r2sec = mode === 'real' ? 120 : 60;
+    var doR1 = mode !== 'p2', doR2 = mode !== 'p1';
+    var short = mode === 'practice';
+    var r1sec = short ? 30 : 60;
+    var r2sec = short ? 60 : 120;
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q"><span id="numPhase"></span><span class="sub" id="numInfo"></span></div>' +
@@ -459,10 +510,10 @@
       if (phase === 1) {
         if (!ready) return;
         if (n === target) {
-          api.addScore(1);
+          api.mark(true, 1, '1라운드');
           c.classList.remove('lit');
           nextTarget();
-        } else shake(c);
+        } else { api.mark(false, 0, '1라운드'); shake(c); }
       } else if (phase === 2) {
         if (switching) return;
         if (!ready) { failQ('신호 전에 눌렀어요'); return; }
@@ -472,7 +523,7 @@
           if (exp[ep] === n) c.classList.remove('done');   /* 2번 숫자 첫 클릭 — 한 번 더 눌러야 한다 */
           if (ep >= exp.length) {
             switching = true;
-            api.addScore(1);
+            api.mark(true, 1, '2라운드');
             api.flash(b, true);
             later(newR2Q, 280);
           }
@@ -490,6 +541,7 @@
       if (switching) return;
       switching = true;
       ready = false;
+      api.mark(false, 0, '2라운드');
       api.flash(b, false);
       infoEl.textContent = why + ' — 다음 문항으로';
       later(newR2Q, 600);
@@ -517,7 +569,9 @@
       buildGrid(shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]));
       ready = true;
       nextTarget();
-      tk = ticker(tickBar, r1sec * 1000, startBreak);
+      tk = ticker(tickBar, r1sec * 1000, function () {
+        if (doR2) startBreak(); else api.finish();
+      });
     }
     function startBreak() {
       phase = 0; ready = false;
@@ -528,10 +582,12 @@
     }
     function startR2() {
       phase = 2;
+      /* '2라운드만'으로 바로 들어오면 쉬는 화면을 안 거친다 — 제목을 여기서도 적는다 */
+      phaseEl.textContent = '2라운드 — 순서대로 누르기';
       newR2Q();
       tk = ticker(tickBar, r2sec * 1000, function () { api.finish(); });
     }
-    startR1();
+    if (doR1) startR1(); else startR2();
   }
 
   /* ── 3. 개수 비교 — 좌우 단어 무리가 1초만 보였다 사라진다(캡처 기준: 답 3초·16~45개·차이 3~4) ── */
@@ -572,7 +628,7 @@
     function finishQ(ok, timeout) {
       done = true;
       if (tk) { tk.stop(); tickBar.style.width = '0%'; }
-      if (ok) api.addScore(1);
+      api.mark(ok, 1);
       api.flash(b, ok);
       if (reveal) revealEl.textContent = '왼쪽 ' + nl + '개 · 오른쪽 ' + nr + '개' + (timeout ? ' — 시간 초과' : '');
       clearPanels();
@@ -725,7 +781,8 @@
       var m = I;
       seq.forEach(function (o) { m = mul(o.m, m); });
       var ok = same(m, target);
-      if (ok) { api.addScore(1); solved++; }
+      api.mark(ok, 1, phases[pi].kind === 'letter' ? '글자' : '무늬');
+      if (ok) solved++;
       api.flash(b, ok);
       if (!real) revealEl.textContent = '정답 예: ' + curAnswer.map(function (o) { return o.label; }).join(' → ');
       later(nq, real ? 500 : 1300);
@@ -901,7 +958,7 @@
         var res = simulate(v.side, v.idx, fences);
         return res && res.side === v.out && res.idx === v.outIdx;
       });
-      if (allOk) api.addScore(1);
+      api.mark(allOk, 1);
       api.flash(b, allOk);
       if (!real) {
         revealEl.textContent = allOk ? '연결 성공!' : '정답 배치를 잠깐 보여드릴게요';
@@ -933,7 +990,8 @@
   function gameYaksok(api, mode) {
     var NAMES = ['지민', '서연', '하준'];
     var real = mode === 'real';
-    var perRound = real ? 10 : 3;
+    var PART = { day: 0, place: 1, menu: 2, bus: 3 }[mode];
+    var perRound = real ? 10 : PART != null ? 10 : 3;
     var ROUNDS = [
       { label: '요일', q: '약속 요일을 언제로 잡으면 좋을까요?', pool: ['월', '화', '수', '목', '금', '토', '일'], candAll: true, common: true, note: '모두가 공통으로 고르는 요일' },
       { label: '장소', q: '약속 장소는 어디가 좋을까요?', pool: ['공원', '카페', '서점', '영화관', '박물관', '한강', '전시회', '노래방'], common: true, note: '모두가 공통으로 고르는 곳' },
@@ -952,6 +1010,7 @@
     var tk = null, tids = [];
     api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
+    var roundList = null;   // ROUNDS 아래에서 채운다(부분 연습이면 한 라운드만)
     var ri = 0, qi = 0;
     function gen(round, memSize) {
       if (round.common) {
@@ -984,10 +1043,10 @@
       return { answer: String(ans), sets: sets2.map(function (st) { return st.map(String); }), cands: cands2.map(String) };
     }
     function roundIntro() {
-      if (ri >= ROUNDS.length) { api.finish(); return; }
+      if (ri >= roundList.length) { api.finish(); return; }
       qi = 0;
-      var r = ROUNDS[ri];
-      phaseEl.textContent = 'ROUND ' + (ri + 1) + '/4 · ' + r.label;
+      var r = roundList[ri];
+      phaseEl.textContent = 'ROUND ' + (ri + 1) + '/' + roundList.length + ' · ' + r.label;
       infoEl.textContent = r.note;
       stageEl.innerHTML = '<div class="who">' + r.note + '</div>';
       tickBar.style.width = '0%';
@@ -997,11 +1056,11 @@
       if (!isRunning()) return;
       if (qi >= perRound) { ri++; roundIntro(); return; }
       qi++;
-      var r = ROUNDS[ri];
+      var r = roundList[ri];
       var memSize = real && qi >= 6 ? 4 : 3;
       var data = gen(r, memSize);
       if (!data) { qi--; later(nq, 10); return; }
-      phaseEl.textContent = 'R' + (ri + 1) + '/4 · ' + r.label;
+      phaseEl.textContent = 'R' + (ri + 1) + '/' + roundList.length + ' · ' + r.label;
       infoEl.textContent = '문항 ' + qi + '/' + perRound;
       revealEl.textContent = '';
       tickBar.style.width = '0%';
@@ -1025,7 +1084,7 @@
             done = true;
             if (tk) tk.stop();
             var ok = cd === data.answer;
-            if (ok) api.addScore(1);
+            api.mark(ok, 1, r.label);
             api.flash(b, ok);
             if (!real) revealEl.textContent = '정답: ' + data.answer;
             later(nq, real ? 350 : 1000);
@@ -1035,12 +1094,14 @@
         tk = ticker(tickBar, 3000, function () {         // 답 3초
           if (done) return;
           done = true;
+          api.mark(false, 0, r.label);
           api.flash(b, false);
           if (!real) revealEl.textContent = '시간 초과 — 정답: ' + data.answer;
           later(nq, real ? 350 : 1000);
         });
       }
     }
+    roundList = PART != null ? [ROUNDS[PART]] : ROUNDS;
     roundIntro();
   }
 
@@ -1072,6 +1133,7 @@
         '3라운드(나의 관점 → 상대 관점 → 랜덤) 동안 무제한으로 풀어 맞힌 수를 셉니다.'],
       tips: ['상대 관점이 나오면 한 박자 멈추세요 — 습관대로 이기는 손이 먼저 나가는 게 최대 실점 요인입니다.',
         '랜덤 라운드는 매 문항 관점 배지부터 확인하고 손을 고르세요.'],
+      parts: [{ key: 'r1', label: 'R1 나의 관점' }, { key: 'r2', label: 'R2 상대 관점' }, { key: 'r3', label: 'R3 랜덤' }],
       start: gameRPS },
     { id: 'path', name: '길 만들기', icon: 'gi-path', unit: '점', time: 0,
       meas: '경로 계획 · 공간',
@@ -1109,6 +1171,7 @@
         '답변 제한은 문항당 3초입니다.'],
       tips: ['세 명의 목록을 다 외우려 하지 말고, 첫 친구 것을 기준으로 겹치는 것만 남기며 지워 나가세요.',
         '버스 라운드는 규칙이 뒤집힙니다 — 라운드 안내를 놓치면 아는 문제도 틀립니다.'],
+      parts: [{ key: 'day', label: '요일만' }, { key: 'place', label: '장소만' }, { key: 'menu', label: '메뉴만' }, { key: 'bus', label: '버스만' }],
       start: gameYaksok },
     { id: 'numbers', name: '숫자 누르기', icon: 'gi-numbers', unit: '점', time: 0,
       meas: '반응 속도 · 인지 제어',
@@ -1121,6 +1184,7 @@
         '준비 표시 중에 누르면 오답이고, 규칙을 어기면 그 문항은 즉시 끝납니다.'],
       tips: ['2라운드는 누르기 전에 규칙(2번/건너뛰기 숫자)과 배열부터 확인하는 습관이 점수를 만듭니다.',
         '급하게 시작하는 게 제일 손해예요 — 흐림이 걷힌 다음 손을 대세요.'],
+      parts: [{ key: 'p1', label: '1라운드만' }, { key: 'p2', label: '2라운드만' }],
       start: gameNumbers },
     { id: 'compare', name: '개수 비교', icon: 'gi-compare', unit: '점', time: 0,
       meas: '수 감각 · 순간 판단',
