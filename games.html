@@ -154,10 +154,10 @@
     .gm-hud .bar i { display: block; height: 100%; width: 100%; background: var(--action); border-radius: 3px;
       transition: width .2s linear; }
 
-    /* 게임 보드 공통 */
+    /* 게임 보드 공통 — relative 는 판정 배지(.gm-pop)의 기준면 */
     .gm-board { margin-top: 12px; padding: 16px 12px 18px; background: var(--surface);
       border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow);
-      min-height: 300px; display: none; }
+      min-height: 300px; display: none; position: relative; }
     .gm-board.on { display: block; }
     .gm-q { text-align: center; font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 12px; }
     .gm-q .sub { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
@@ -218,6 +218,64 @@
     .gm-shake { animation: gmshake .3s; }
     @keyframes gmshake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
+    /* ── 게임감(주스) — 2026-08-25 오너 "성의 없고 대충 만든 느낌" 대응.
+       원칙: transform·opacity 만 움직인다(레이아웃 불변·오버플로 없음), 판정·주행·카운트다운은
+       games.js 의 flash()/animateVehicles()/countdown() 한 곳씩. prefers-reduced-motion 존중. ── */
+    /* 판정 배지 — 맞음/틀림이 그 자리에서 떠오른다 */
+    .gm-pop { position: absolute; left: 50%; top: 40%; width: 54px; height: 54px; margin: -27px 0 0 -27px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 3; animation: gmpop .55s ease-out forwards; }
+    .gm-pop.ok { background: #E7F3EA; color: #2F7A43; }
+    .gm-pop.no { background: #FBEBEA; color: #C0453E; }
+    .gm-pop svg { width: 30px; height: 30px; }
+    @keyframes gmpop { 0% { transform: scale(.5); opacity: 0; } 25% { transform: scale(1.1); opacity: 1; }
+      60% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+    /* HUD 점수·연속이 오를 때 튄다 */
+    .gm-hud .hv b.bump { animation: gmbump .35s ease; }
+    @keyframes gmbump { 40% { transform: scale(1.3); color: var(--accent); } }
+    /* 등장 연출 — 새로 그린 칸·후보가 촤르륵 */
+    .gm-dealt { animation: gmdeal .28s ease backwards; }
+    @keyframes gmdeal { from { opacity: 0; transform: translateY(6px) scale(.92); } }
+    /* 누르는 감촉 */
+    .gm-cell:active, .gm-big:active, .gm-pcell:active, .gm-part:active,
+    .gm-nb-btns button:active, .gm-rt-ops button:active, .gm-cands button:active { transform: scale(.95); }
+    /* 2-back 도형 팝 */
+    .gm-nb-stage.pop svg { animation: gmshape .3s ease; }
+    @keyframes gmshape { 0% { transform: scale(.6); opacity: 0; } 65% { transform: scale(1.06); } }
+    /* 가위바위보 — 카드 팝 + 라운드 3·2·1(카드 위에 겹침) */
+    .gm-vs { position: relative; }
+    .gm-hand span.pop { animation: gmdeal .22s ease; }
+    .gm-count { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      font-size: 46px; font-weight: 800; color: var(--accent);
+      background: rgba(255,255,255,.74); border-radius: 14px; z-index: 2; pointer-events: none; }
+    .gm-count.pop { animation: gmcount .5s ease; }
+    @keyframes gmcount { 0% { transform: scale(1.6); opacity: .2; } 100% { transform: scale(1); opacity: 1; } }
+    /* 숫자 누르기 — 불 들어온 칸이 숨쉰다 */
+    .gm-cell.lit { animation: gmlit 1s ease-in-out infinite; }
+    @keyframes gmlit { 50% { box-shadow: 0 0 0 7px rgba(27,58,107,.16); } }
+    /* 개수 비교 — 가려진 판 표시(빈 판은 고장처럼 보인다) */
+    .gm-wpanel.covered::after { content: '?'; position: absolute; inset: 0; display: flex;
+      align-items: center; justify-content: center; font-size: 36px; font-weight: 800;
+      color: var(--text-dim); opacity: .45; }
+    /* 길 만들기 — 달리는 차(격자 좌표는 JS 가 계산, 이동은 transform 만) */
+    .gm-pwrap { position: relative; }
+    .gm-runner { position: absolute; display: flex; align-items: center; justify-content: center;
+      background: var(--surface); border: 2.5px solid; border-radius: 10px; box-shadow: var(--shadow);
+      transition: transform .12s linear; z-index: 2; pointer-events: none; }
+    .gm-runner svg { width: 64%; height: 64%; stroke-width: 1.7; }
+    .gm-runner.bad { animation: gmshake .4s; }
+    /* 결과 — 신기록 팝 + 성적 막대 */
+    .gm-result .r-new { animation: gmpopin .45s ease; }
+    @keyframes gmpopin { 0% { transform: scale(.5); opacity: 0; } 65% { transform: scale(1.12); } }
+    .r-bar { height: 4px; border-radius: 3px; background: var(--bg3); overflow: hidden; margin: -2px 0 4px; }
+    .r-bar i { display: block; height: 100%; width: 0; background: var(--action); border-radius: 3px;
+      transition: width .7s ease; }
+    @media (prefers-reduced-motion: reduce) {
+      .gm-dealt, .gm-pop, .gm-nb-stage.pop svg, .gm-cell.lit, .gm-count.pop,
+      .gm-hand span.pop, .gm-hud .hv b.bump, .gm-result .r-new { animation: none; }
+      .gm-runner, .r-bar i { transition: none; }
+    }
+
     /* 격자 보드(숫자 누르기·도형 순서) */
     .gm-cells { display: grid; gap: 8px; margin: 0 auto; max-width: 340px; }
     .gm-cell { aspect-ratio: 1/1; min-width: 0; border-radius: 12px; border: 1.5px solid var(--border-strong);
@@ -274,9 +332,10 @@
     .gm-pedge .mk { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid; background: var(--surface);
       display: flex; align-items: center; justify-content: center; }
     .gm-pedge svg { width: 20px; height: 20px; stroke-width: 1.7; }
-    .mk.col-y { border-color: #B7791F; color: #B7791F; }
-    .mk.col-b { border-color: #2B6CB0; color: #2B6CB0; }
-    .mk.col-r { border-color: #C0453E; color: #C0453E; }
+    /* 색 고리 — 표식(.mk)과 달리는 차(.gm-runner)가 같은 색 체계를 쓴다 */
+    .mk.col-y, .gm-runner.col-y { border-color: #B7791F; color: #B7791F; }
+    .mk.col-b, .gm-runner.col-b { border-color: #2B6CB0; color: #2B6CB0; }
+    .mk.col-r, .gm-runner.col-r { border-color: #C0453E; color: #C0453E; }
     /* 테두리가 칸의 유일한 식별 수단이라 --border-strong(3:1) — border-soft 는 1.1:1 로 미달 */
     .gm-pcell { aspect-ratio: 1/1; min-width: 0; border: 1.5px solid var(--border-strong); border-radius: 8px;
       background: var(--bg2); cursor: pointer; padding: 0; }
@@ -491,7 +550,7 @@
     <div class="gm-foot"></div>
   </main>
 
-<script src="games.js?v=1" defer></script>
+<script src="games.js?v=2" defer></script>
 <script>
 /* bfcache — 뒤로/앞으로 오면 크롬은 떠날 때 그리던 화면을 그대로 되살린다.
    게임 타이머는 시각 기반이라 되살린 화면은 그대로 종료돼 버린 상태다 — 통째로 다시 받는다(CLAUDE.md 표준). */
