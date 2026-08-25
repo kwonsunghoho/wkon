@@ -349,39 +349,81 @@
     show();
   }
 
-  /* ── 1. 가위바위보 — 지시(이겨라/져라/비겨라)를 빠르게 뒤집어 판단 ── */
-  function gameRPS(api) {
-    var HANDS = ['gs-circle', 'gi-rps', 'gs-paper'];   // 바위·가위·보 — 자체 심볼
+  /* ── 2. 가위바위보 — 목표는 언제나 '내가 이긴다', 라운드마다 관점이 뒤집힌다 ──
+     실전 구성(오너 캡처): R1 나의 관점 40초 → R2 상대 관점 40초 → R3 랜덤 1분 40초, 무제한 문제.
+     나의 관점 = 상대 손을 보고 내가 이기는 손 / 상대 관점 = 내 손을 보고 상대가 지는 손. */
+  function gameRPS(api, mode) {
+    var HANDS = ['gs-circle', 'gi-rps', 'gs-paper'];   // 0 바위 1 가위 2 보
     var NAMES = ['바위', '가위', '보'];
-    var winOf = function (o) { return (o + 2) % 3; };   // 상대를 이기는 손
-    var loseOf = function (o) { return (o + 1) % 3; };  // 상대에게 지는 손
+    var winOf = function (o) { return (o + 2) % 3; };  // o 를 이기는 손
+    var loseOf = function (o) { return (o + 1) % 3; }; // o 에게 지는 손
+    var real = mode === 'real';
+    var rounds = [
+      { persp: 'me', sec: real ? 40 : 20 },
+      { persp: 'opp', sec: real ? 40 : 20 },
+      { persp: 'rand', sec: real ? 100 : 40 }
+    ];
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q"><span class="gm-rule"><b id="rpsRule"></b></span>' +
-      '<span class="sub">상대가 낸 손을 보고, 지시에 맞는 손을 고르세요</span></div>' +
-      '<div class="gm-oppo" id="rpsOppo" aria-live="polite"></div>' +
+      '<div class="gm-q"><span id="rpsPhase"></span><span class="sub" id="rpsInfo"></span></div>' +
+      '<div class="gm-vs">' +
+        '<div class="gm-hand"><em>나</em><span id="rpsMe"></span></div>' +
+        '<div class="gm-hand"><em>상대</em><span id="rpsOp"></span></div>' +
+      '</div>' +
+      '<div class="gm-qtimer"><i id="rpsTick"></i></div>' +
       '<div class="gm-bigrow" id="rpsBtns"></div>';
-    var ruleEl = $('rpsRule'), oppoEl = $('rpsOppo'), wrap = $('rpsBtns');
-    var oppo = 0, want = 0;
-    HANDS.forEach(function (h, i) {
-      var btn = el('button', 'gm-big', sym(h) + '<span>' + NAMES[i] + '</span>');
+    var phaseEl = $('rpsPhase'), infoEl = $('rpsInfo'), meCard = $('rpsMe'), opCard = $('rpsOp');
+    var tickBar = $('rpsTick'), wrap = $('rpsBtns');
+    var tk = null, tids = [];
+    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
+    var ri = 0, persp = 'me', want = 0, streak = 0, betw = true;
+    [1, 0, 2].forEach(function (i) {                   // 실전 배열 순서: 가위·바위·보
+      var btn = el('button', 'gm-big', sym(HANDS[i]) + '<span>' + NAMES[i] + '</span>');
       btn.type = 'button';
       btn.addEventListener('click', function () {
-        if (!isRunning()) return;
-        if (i === want) { api.addScore(1); api.flash(b, true); }
-        else api.flash(b, false);
+        if (!isRunning() || betw) return;
+        var ok = i === want;
+        if (ok) { api.addScore(1); streak++; } else streak = 0;
+        api.flash(b, ok);
         next();
       });
       wrap.appendChild(btn);
     });
     function next() {
-      oppo = rnd(3);
-      var mode = rnd(3);                                 // 0 이겨라 1 져라 2 비겨라
-      want = mode === 0 ? winOf(oppo) : mode === 1 ? loseOf(oppo) : oppo;
-      ruleEl.textContent = mode === 0 ? '이기세요' : mode === 1 ? '지세요' : '비기세요';
-      oppoEl.innerHTML = sym(HANDS[oppo]) + '<span>' + NAMES[oppo] + '</span>';
+      var p = rounds[ri].persp;
+      persp = p === 'rand' ? (rnd(2) ? 'me' : 'opp') : p;
+      var shown = rnd(3);
+      if (persp === 'me') {
+        want = winOf(shown);
+        opCard.innerHTML = sym(HANDS[shown]) + '<b>' + NAMES[shown] + '</b>';
+        meCard.innerHTML = '<i>?</i>';
+        infoEl.textContent = '상대 손을 보고, 내가 이기는 손 · 연속 ' + streak;
+      } else {
+        want = loseOf(shown);
+        meCard.innerHTML = sym(HANDS[shown]) + '<b>' + NAMES[shown] + '</b>';
+        opCard.innerHTML = '<i>?</i>';
+        infoEl.textContent = '내 손을 보고, 상대가 지는 손 · 연속 ' + streak;
+      }
+      phaseEl.textContent = 'R' + (ri + 1) + '/3 · ' + (persp === 'me' ? '나의 관점' : '상대 관점');
     }
-    next();
+    function startRound() {
+      if (!isRunning()) return;
+      betw = false;
+      next();
+      tk = ticker(tickBar, rounds[ri].sec * 1000, function () {
+        ri++;
+        if (ri >= rounds.length) { api.finish(); return; }
+        betw = true;
+        streak = 0;
+        phaseEl.textContent = 'ROUND ' + (ri + 1) + ' · ' +
+          (rounds[ri].persp === 'me' ? '나의 관점' : rounds[ri].persp === 'opp' ? '상대 관점' : '관점 랜덤');
+        infoEl.textContent = '잠깐 쉬었다 이어집니다';
+        meCard.innerHTML = ''; opCard.innerHTML = '';
+        later(startRound, 1400);
+      });
+    }
+    startRound();
   }
 
   /* ── 2. 숫자 누르기 — 1라운드 신호 반응 + 2라운드 순서·특수 규칙(인지 제어) ──
@@ -567,264 +609,439 @@
     next();
   }
 
-  /* ── 4. 도형 회전 — 회전하면 같아지는 도형 고르기(거울상이 함정) ── */
-  function gameRotate(api) {
+  /* ── 5. 도형 회전 — 45도 회전·반전 순서를 '상상해서' 입력한다(모양은 안 바뀐다) ──
+     실전 구성(오너 캡처): 한 번에 45도(90도 아님), 좌우·상하반전, 문제당 클릭 20(지움·초기화 포함),
+     과정 최대 8단계, 실전은 글자 3분 → 무늬 3분. 판정은 변형 행렬 비교 — 글자·무늬 모두
+     비대칭이라 행렬이 같아야만 화면도 같다(대칭 도형은 생성에서 거른다). */
+  function gameRotate(api, mode) {
+    var LETTERS = ['F', 'G', 'J', 'L', 'P', 'R', 'Q'];
+    var real = mode === 'real';
+    var phases = real
+      ? [{ kind: 'letter', sec: 180 }, { kind: 'pattern', sec: 180 }]
+      : mode === 'pattern' ? [{ kind: 'pattern', count: 10 }] : [{ kind: 'letter', count: 10 }];
+    var C = Math.SQRT1_2;
+    var OPS = [
+      { k: 'L45', label: '왼쪽 45°', m: [C, -C, C, C] },
+      { k: 'R45', label: '오른쪽 45°', m: [C, C, -C, C] },
+      { k: 'H', label: '좌우반전', m: [-1, 0, 0, 1] },
+      { k: 'V', label: '상하반전', m: [1, 0, 0, -1] }
+    ];
+    function mul(o, u) {                               // o∘u — css matrix(a,b,c,d) 합성
+      return [o[0] * u[0] + o[2] * u[1], o[1] * u[0] + o[3] * u[1],
+        o[0] * u[2] + o[2] * u[3], o[1] * u[2] + o[3] * u[3]];
+    }
+    var I = [1, 0, 0, 1];
+    function same(a, c) {
+      for (var i = 0; i < 4; i++) if (Math.abs(a[i] - c[i]) > 0.01) return false;
+      return true;
+    }
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q">아래 도형을 <b>돌려서 같아지는</b> 것을 고르세요<span class="sub">뒤집힌(거울) 도형은 정답이 아닙니다</span></div>' +
-      '<div class="gm-rot-target"><span class="gm-shape target" id="rotTarget"></span></div>' +
-      '<div class="gm-rot-opts" id="rotOpts"></div>';
-    var targetEl = $('rotTarget'), optsEl = $('rotOpts');
-
-    function walkShape(n) {
-      var cells = { '0,0': true }, cur = [0, 0], list = [[0, 0]];
-      var guard = 0;
-      while (list.length < n && guard++ < 200) {
-        var d = pick([[0, 1], [0, -1], [1, 0], [-1, 0]]);
-        cur = [cur[0] + d[0], cur[1] + d[1]];
-        var k = cur[0] + ',' + cur[1];
-        if (!cells[k]) { cells[k] = true; list.push(cur.slice()); }
+      '<div class="gm-q"><span id="rtPhase"></span><span class="sub" id="rtInfo"></span></div>' +
+      '<div class="gm-rt-cards">' +
+        '<div class="gm-rt-card"><em>전</em><svg id="rtBefore" viewBox="0 0 80 80"></svg></div>' +
+        '<div class="gm-rt-card aft"><em>후</em><svg id="rtAfter" viewBox="0 0 80 80"></svg></div>' +
+      '</div>' +
+      '<div class="gm-rt-ops" id="rtOps"></div>' +
+      '<div class="gm-rt-slots" id="rtSlots"></div>' +
+      '<div class="gm-rt-tools"><span>남은 클릭 <b id="rtClick">20</b></span>' +
+        '<button type="button" id="rtUndo">하나 지움</button>' +
+        '<button type="button" id="rtReset">전체 초기화</button></div>' +
+      (real ? '<div class="gm-qtimer"><i id="rtTick"></i></div>' : '') +
+      '<div class="gm-reveal" id="rtReveal"></div>' +
+      '<button type="button" class="gm-submit" id="rtGo">답안 제출</button>';
+    var phaseEl = $('rtPhase'), infoEl = $('rtInfo'), beforeEl = $('rtBefore'), afterEl = $('rtAfter');
+    var opsEl = $('rtOps'), slotsEl = $('rtSlots'), clickEl = $('rtClick'), revealEl = $('rtReveal');
+    var tk = null, tids = [];
+    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
+    var pi = 0, q = 0, clicks = 20, seq = [], target = I, shapeHtml = '', solved = 0, locked = false;
+    function letterShape() {
+      return '<text x="40" y="41" text-anchor="middle" dominant-baseline="central" font-size="50" ' +
+        'font-weight="800" font-family="Arial, sans-serif" fill="currentColor">' + pick(LETTERS) + '</text>';
+    }
+    function patternShape() {
+      /* 3×3에서 4칸 — 어떤 회전·반전으로도 자기 자신이 안 되는 비대칭 무늬만 쓴다 */
+      for (var t = 0; t < 60; t++) {
+        var cells = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]).slice(0, 4).sort();
+        var pts = cells.map(function (i) { return [Math.floor(i / 3), i % 3]; });
+        var keyOf = function (ps) {
+          return ps.map(function (c) { return c.join(','); }).sort().join('|');
+        };
+        var base = keyOf(pts), symm = false;
+        var variants = [
+          function (r, c) { return [c, 2 - r]; }, function (r, c) { return [2 - r, 2 - c]; },
+          function (r, c) { return [2 - c, r]; }, function (r, c) { return [r, 2 - c]; },
+          function (r, c) { return [2 - r, c]; }, function (r, c) { return [c, r]; },
+          function (r, c) { return [2 - c, 2 - r]; }
+        ];
+        for (var v = 0; v < variants.length; v++) {
+          var mapped = pts.map(function (pc) { return variants[v](pc[0], pc[1]); });
+          if (keyOf(mapped) === base) { symm = true; break; }
+        }
+        if (symm) continue;
+        return pts.map(function (pc) {
+          return '<rect x="' + (17 + pc[1] * 16) + '" y="' + (17 + pc[0] * 16) +
+            '" width="14" height="14" rx="2" fill="currentColor"/>';
+        }).join('');
       }
-      return list;
+      return '<rect x="17" y="17" width="14" height="14" fill="currentColor"/>';
     }
-    function normalize(cells) {
-      var mr = Infinity, mc = Infinity;
-      cells.forEach(function (c) { mr = Math.min(mr, c[0]); mc = Math.min(mc, c[1]); });
-      return cells.map(function (c) { return [c[0] - mr, c[1] - mc]; });
+    function apply(svg, m) { svg.style.transform = 'matrix(' + m.join(',') + ',0,0)'; svg.style.transformOrigin = '50% 50%'; }
+    function drawSeq() {
+      slotsEl.innerHTML = seq.length
+        ? seq.map(function (o) { return '<i>' + o.label + '</i>'; }).join('')
+        : '<i style="background:transparent;color:var(--text-dim)">버튼을 눌러 순서를 입력하세요</i>';
     }
-    function rot90(cells) {
-      var mx = 0; cells.forEach(function (c) { mx = Math.max(mx, c[0]); });
-      return normalize(cells.map(function (c) { return [c[1], mx - c[0]]; }));
+    function spend() {
+      if (clicks <= 0) return false;
+      clicks--; clickEl.textContent = String(clicks);
+      return true;
     }
-    function mirror(cells) {
-      var mx = 0; cells.forEach(function (c) { mx = Math.max(mx, c[1]); });
-      return normalize(cells.map(function (c) { return [c[0], mx - c[1]]; }));
-    }
-    function keyOf(cells) {
-      return normalize(cells).map(function (c) { return c.join(','); }).sort().join('|');
-    }
-    function svgOf(cells, rotDeg) {
-      var mr = 0, mc = 0;
-      cells.forEach(function (c) { mr = Math.max(mr, c[0]); mc = Math.max(mc, c[1]); });
-      var S = 18, W = (mc + 1) * S, H = (mr + 1) * S, M = Math.max(W, H);
-      var rects = cells.map(function (c) {
-        return '<rect x="' + (c[1] * S + (M - W) / 2) + '" y="' + (c[0] * S + (M - H) / 2) +
-          '" width="' + (S - 2) + '" height="' + (S - 2) + '" rx="3" fill="currentColor"/>';
-      }).join('');
-      return '<svg width="86" height="86" viewBox="-4 -4 ' + (M + 8) + ' ' + (M + 8) +
-        '" style="color:var(--accent);transform:rotate(' + (rotDeg || 0) + 'deg)" aria-hidden="true">' + rects + '</svg>';
-    }
-    function next() {
-      var shape, rots, mir, tries = 0;
-      /* 거울상이 회전과 같아지는 대칭 도형(ㅁ·ㅡ꼴)은 함정을 못 만들어 다시 뽑는다 */
+    OPS.forEach(function (o) {
+      var btn = el('button', '', o.label);
+      btn.type = 'button';
+      btn.addEventListener('click', function () {
+        if (!isRunning() || locked) return;
+        if (seq.length >= 8 || !spend()) { shake(btn); return; }
+        seq.push(o);
+        drawSeq();
+      });
+      opsEl.appendChild(btn);
+    });
+    $('rtUndo').addEventListener('click', function () {
+      if (!isRunning() || locked || !seq.length) return;
+      if (!spend()) return;
+      seq.pop(); drawSeq();
+    });
+    $('rtReset').addEventListener('click', function () {
+      if (!isRunning() || locked || !seq.length) return;
+      if (!spend()) return;
+      seq = []; drawSeq();
+    });
+    $('rtGo').addEventListener('click', function () {
+      if (!isRunning() || locked) return;
+      locked = true;
+      var m = I;
+      seq.forEach(function (o) { m = mul(o.m, m); });
+      var ok = same(m, target);
+      if (ok) { api.addScore(1); solved++; }
+      api.flash(b, ok);
+      if (!real) revealEl.textContent = '정답 예: ' + curAnswer.map(function (o) { return o.label; }).join(' → ');
+      later(nq, real ? 500 : 1300);
+    });
+    var curAnswer = [];
+    function nq() {
+      if (!isRunning()) return;
+      var ph = phases[pi];
+      if (!real && q >= ph.count) { api.finish(); return; }
+      q++; locked = false;
+      clicks = 20; clickEl.textContent = '20';
+      seq = []; drawSeq();
+      revealEl.textContent = '';
+      shapeHtml = ph.kind === 'letter' ? letterShape() : patternShape();
+      var len = 1 + Math.min(2, Math.floor(solved / 4)) + rnd(2);   // 1~2 → 최대 3~4
+      var m = I;
       do {
-        shape = normalize(walkShape(5 + rnd(2)));
-        rots = [keyOf(shape)];
-        var r = shape;
-        for (var i = 0; i < 3; i++) { r = rot90(r); rots.push(keyOf(r)); }
-        mir = mirror(shape);
-      } while (rots.indexOf(keyOf(mir)) >= 0 && tries++ < 40);
-      targetEl.innerHTML = svgOf(shape, 0);
-      var correctRot = (1 + rnd(3)) * 90;
-      var m1 = mir, m2 = rot90(mirror(shape));
-      var opts = shuffle([
-        { cells: shape, deg: correctRot, ok: true },
-        { cells: m1, deg: rnd(4) * 90, ok: false },
-        { cells: m2, deg: rnd(4) * 90, ok: false },
-        { cells: rot90(rot90(mir)), deg: rnd(4) * 90, ok: false }
-      ]);
-      optsEl.innerHTML = '';
-      opts.forEach(function (o, i) {
-        var btn = el('button', 'gm-shape', svgOf(o.cells, o.deg));
-        btn.type = 'button';
-        btn.setAttribute('aria-label', '보기 ' + (i + 1));
-        btn.addEventListener('click', function () {
-          if (!isRunning()) return;
-          if (o.ok) { api.addScore(1); api.flash(b, true); next(); }
-          else { api.flash(b, false); shake(btn); }
-        });
-        optsEl.appendChild(btn);
-      });
+        m = I; curAnswer = [];
+        for (var i = 0; i < len; i++) { var o = pick(OPS); curAnswer.push(o); m = mul(o.m, m); }
+      } while (same(m, I));
+      target = m;
+      beforeEl.innerHTML = shapeHtml; apply(beforeEl, I);
+      afterEl.innerHTML = shapeHtml; apply(afterEl, target);
+      phaseEl.textContent = (ph.kind === 'letter' ? '글자' : '무늬') + (real ? ' · 실전' : '');
+      infoEl.textContent = real ? '맞힌 ' + score + '개' : '문항 ' + q + '/' + ph.count;
     }
-    next();
+    function startPhase() {
+      var ph = phases[pi];
+      q = 0;
+      if (real) {
+        tk = ticker($('rtTick'), ph.sec * 1000, function () {
+          pi++;
+          if (pi >= phases.length) { api.finish(); return; }
+          startPhase();
+        });
+      }
+      nq();
+    }
+    startPhase();
   }
 
-  /* ── 5. 길 만들기 — 타일을 돌려 왼쪽 입구에서 오른쪽 출구까지 연결 ── */
-  function gamePath(api) {
+  /* ── 4. 길 만들기 — 울타리(/ \\)로 직진 차량을 꺾어 같은 색 손님에게 보낸다 ──
+     실전 구성(오너 캡처): 차량은 직진·울타리를 만나면 90도 꺾임, 설치·제거 클릭 최대 20,
+     정답 울타리 수 표시, 48문제·최대 5분. 짝은 택시→1인·버스→단체·오토바이→화물(색 동일).
+     캡처의 '누른 위치로 방향 결정'은 터치에 안 맞아 탭 순환(없음→/→\\→없음)으로 바꿨다. */
+  function gamePath(api, mode) {
+    var N = 5;
+    var real = mode === 'real';
+    var total = real ? 48 : 12;
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q">타일을 눌러 돌리고, <b>▶ 입구에서 출구 ▶</b>까지 길을 이으세요</div>' +
-      '<div class="gm-path" id="pthGrid"></div>' +
-      '<div class="gm-pathmeta"><span id="pthCleared">완성한 길 0개</span><span>완성마다 +10점</span></div>';
-    var wrap = $('pthGrid'), clearedEl = $('pthCleared');
-    var N = 4, cleared = 0;
-    var tiles = [];                                   // {kind:'s'|'c', rot, btn}
-    var entryRow = 0, exitRow = 0;
-    var SIDES = ['U', 'R', 'D', 'L'];
-    function conns(t) {                               // 타일이 잇는 두 변
-      if (t.kind === 's') return t.rot % 2 === 0 ? ['L', 'R'] : ['U', 'D'];
-      var a = SIDES[t.rot % 4], c = SIDES[(t.rot + 1) % 4];   // 꺾임: 이웃한 두 변
-      return [a, c];
+      '<div class="gm-q">울타리로 꺾어서 <b>같은 색 손님</b>에게 보내세요<span class="sub" id="pthInfo"></span></div>' +
+      '<div class="gm-pstats"><span>남은 클릭 <b id="pthClick">20</b></span>' +
+        '<span>정답 울타리 <b id="pthNeed">0</b></span><span>설치 <b id="pthSet">0</b></span></div>' +
+      '<div class="gm-pwrap" id="pthWrap"></div>' +
+      (real ? '<div class="gm-qtimer"><i id="pthTick"></i></div>' : '') +
+      '<div class="gm-reveal" id="pthReveal"></div>' +
+      '<button type="button" class="gm-submit" id="pthGo">제출</button>';
+    var infoEl = $('pthInfo'), clickEl = $('pthClick'), needEl = $('pthNeed'), setEl = $('pthSet');
+    var wrap = $('pthWrap'), revealEl = $('pthReveal');
+    var tk = null, tids = [];
+    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
+    if (real) tk = ticker($('pthTick'), 300 * 1000, function () { api.finish(); });
+
+    var VEH = [
+      { v: 'gi-taxi', g: 'gi-guest1', c: 'col-y' },
+      { v: 'gi-bus', g: 'gi-guest2', c: 'col-b' },
+      { v: 'gi-moto', g: 'gi-cargo', c: 'col-r' }
+    ];
+    var DIRS = { T: [1, 0], B: [-1, 0], L: [0, 1], R: [0, -1] };   // 진입 방향(안쪽으로)
+    function reflect(d, t) { return t === 1 ? [-d[1], -d[0]] : [d[1], d[0]]; }   // 1='/' 2='\\'
+    function entryCell(side, idx) {
+      return side === 'T' ? { r: 0, c: idx } : side === 'B' ? { r: N - 1, c: idx } :
+        side === 'L' ? { r: idx, c: 0 } : { r: idx, c: N - 1 };
     }
-    function svgTile(t) {
-      var d = t.kind === 's'
-        ? 'M2 24 L46 24'
-        : 'M24 2 Q24 24 46 24';                       // 위(U)→오른쪽(R) 꺾임이 기본형
-      return '<svg viewBox="0 0 48 48" style="transform:rotate(' + t.rot * 90 + 'deg)" aria-hidden="true">' +
-        '<path d="' + d + '" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></svg>';
+    function simulate(side, idx, fmap) {
+      var e = entryCell(side, idx);
+      var r = e.r, c = e.c, d = DIRS[side].slice(), guard = 0, touched = {};
+      while (guard++ < 80) {
+        var f = fmap[r + ',' + c];
+        if (f) { d = reflect(d, f); touched[r + ',' + c] = 1; }
+        var nr = r + d[0], nc = c + d[1];
+        if (nr < 0 || nr >= N || nc < 0 || nc >= N) {
+          var os = d[0] === 1 ? 'B' : d[0] === -1 ? 'T' : d[1] === 1 ? 'R' : 'L';
+          return { side: os, idx: os === 'T' || os === 'B' ? c : r, touched: touched };
+        }
+        r = nr; c = nc;
+      }
+      return null;   // 울타리 순환
     }
-    function opp(s) { return { U: 'D', D: 'U', L: 'R', R: 'L' }[s]; }
-    function checkPath() {
-      /* 입구 칸에 'L'로 들어가 연결을 따라간다 — 출구 칸의 'R'로 나가면 완성 */
-      tiles.forEach(function (t) { t.btn.classList.remove('hot'); });
-      var r = entryRow, c = 0, from = 'L', guard = 0, hot = [];
-      while (guard++ < N * N + 2) {
-        var t = tiles[r * N + c];
-        var cn = conns(t);
-        if (cn.indexOf(from) < 0) return false;
-        hot.push(t);
-        var out = cn[0] === from ? cn[1] : cn[0];
-        if (r === exitRow && c === N - 1 && out === 'R') {
-          hot.forEach(function (x) { x.btn.classList.add('hot'); });
-          return true;
+    var q = 0, puzzle = null, fences = {}, clicks = 20, placed = 0;
+    function genPuzzle(vcount, fcount) {
+      for (var t = 0; t < 300; t++) {
+        var sol = {}, put = 0, g = 0;
+        while (put < fcount && g++ < 60) {
+          var k = rnd(N) + ',' + rnd(N);
+          if (!sol[k]) { sol[k] = 1 + rnd(2); put++; }
         }
-        if (out === 'U') r--; else if (out === 'D') r++;
-        else if (out === 'L') c--; else c++;
-        if (r < 0 || r >= N || c < 0 || c >= N) return false;
-        from = opp(out);
+        var kinds = shuffle([0, 1, 2]).slice(0, vcount);
+        var usedSlots = {}, vs = [], bad = false, touchedAll = {};
+        for (var vi = 0; vi < vcount; vi++) {
+          var side = pick(['T', 'B', 'L', 'R']), idx = rnd(N);
+          if (usedSlots[side + idx]) { bad = true; break; }
+          usedSlots[side + idx] = 1;
+          var res = simulate(side, idx, sol);
+          if (!res || usedSlots[res.side + res.idx]) { bad = true; break; }
+          usedSlots[res.side + res.idx] = 1;
+          Object.keys(res.touched).forEach(function (kk) { touchedAll[kk] = 1; });
+          vs.push({ kind: kinds[vi], side: side, idx: idx, out: res.side, outIdx: res.idx });
+        }
+        if (bad) continue;
+        if (Object.keys(touchedAll).length < fcount) continue;   // 안 쓰인 울타리가 있으면 다시
+        return { vs: vs, sol: sol, need: fcount };
       }
-      return false;
+      return null;
     }
-    function build() {
-      N = cleared >= 3 ? 5 : 4;
-      wrap.style.gridTemplateColumns = 'repeat(' + N + ',1fr)';
-      entryRow = rnd(N);
-      /* 정답 길 깎기 — 열마다 세로로 조금 움직인 뒤 오른쪽으로 한 칸(재방문 없음이 보장된다) */
-      var path = [], r = entryRow;
-      for (var c = 0; c < N; c++) {
-        path.push([r, c, 'v']);
-        if (c < N - 1) {
-          var target = Math.max(0, Math.min(N - 1, r + (rnd(3) - 1) * (1 + rnd(2))));
-          while (r !== target) { r += target > r ? 1 : -1; path.push([r, c, 'v']); }
-        }
+    function fenceSvg(t) {
+      return '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="' +
+        (t === 1 ? 'M8 40 40 8' : 'M8 8 40 40') +
+        '" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" fill="none"/></svg>';
+    }
+    function markerAt(side, idx) {
+      for (var i = 0; i < puzzle.vs.length; i++) {
+        var v = puzzle.vs[i], def = VEH[v.kind];
+        if (v.side === side && v.idx === idx) return '<span class="mk ' + def.c + '">' + sym(def.v) + '</span>';
+        if (v.out === side && v.outIdx === idx) return '<span class="mk ' + def.c + '">' + sym(def.g) + '</span>';
       }
-      exitRow = r;
-      /* 길 칸의 필요 타일 계산 — 들어온 변·나가는 변의 짝으로 종류·회전을 정한다 */
-      var need = {};                                  // 'r,c' → [side,side]
-      var fromSide = 'L';
-      for (var i = 0; i < path.length; i++) {
-        var pr = path[i][0], pc = path[i][1];
-        var out;
-        if (i === path.length - 1) out = 'R';
-        else {
-          var nr = path[i + 1][0], nc = path[i + 1][1];
-          out = nr > pr ? 'D' : nr < pr ? 'U' : 'R';
-        }
-        need[pr + ',' + pc] = [fromSide, out];
-        fromSide = opp(out);
-      }
+      return '';
+    }
+    function draw(hint) {
       wrap.innerHTML = '';
-      tiles = [];
-      for (var rr = 0; rr < N; rr++) {
-        for (var cc = 0; cc < N; cc++) {
-          var pair = need[rr + ',' + cc];
-          var t;
-          if (pair) {
-            var s = pair.slice().sort().join('');
-            if (s === 'LR' || s === 'DU') t = { kind: 's', rot: rnd(4) };
-            else {
-              var rot = 0;
-              for (var k = 0; k < 4; k++) {
-                var cn = [SIDES[k], SIDES[(k + 1) % 4]].sort().join('');
-                if (cn === s) { rot = k; break; }
-              }
-              t = { kind: 'c', rot: (rot + 1 + rnd(3)) % 4 };   // 정답에서 살짝 돌려 둔다
-            }
-          } else t = { kind: rnd(3) === 0 ? 's' : 'c', rot: rnd(4) };
-          var btn = el('button', 'gm-tile', svgTile(t));
-          btn.type = 'button';
-          btn.setAttribute('aria-label', (rr + 1) + '행 ' + (cc + 1) + '열 타일 돌리기');
-          if (cc === 0 && rr === entryRow) btn.style.borderLeft = '4px solid var(--action)';
-          if (cc === N - 1 && rr === exitRow) btn.style.borderRight = '4px solid var(--action)';
-          t.btn = btn;
-          (function (tt) {
-            tt.btn.addEventListener('click', function () {
-              if (!isRunning()) return;
-              tt.rot = (tt.rot + 1) % 4;
-              tt.btn.innerHTML = svgTile(tt);
-              if (checkPath()) {
-                api.addScore(10);
-                cleared++;
-                clearedEl.textContent = '완성한 길 ' + cleared + '개';
-                api.flash(b, true);
-                setTimeout(function () { if (isRunning()) build(); }, 350);
-              }
-            });
-          })(t);
-          tiles.push(t);
-          wrap.appendChild(btn);
+      for (var r = -1; r <= N; r++) {
+        for (var c = -1; c <= N; c++) {
+          if (r === -1 || r === N || c === -1 || c === N) {
+            var mk = '';
+            if (r === -1 && c >= 0 && c < N) mk = markerAt('T', c);
+            else if (r === N && c >= 0 && c < N) mk = markerAt('B', c);
+            else if (c === -1 && r >= 0 && r < N) mk = markerAt('L', r);
+            else if (c === N && r >= 0 && r < N) mk = markerAt('R', r);
+            wrap.appendChild(el('div', 'gm-pedge', mk));
+            continue;
+          }
+          var k = r + ',' + c;
+          var src = hint ? puzzle.sol : fences;
+          var cell = el('button', 'gm-pcell' + (hint && puzzle.sol[k] ? ' hint' : ''),
+            src[k] ? fenceSvg(src[k]) : '');
+          cell.type = 'button';
+          cell.setAttribute('aria-label', (r + 1) + '행 ' + (c + 1) + '열 울타리');
+          (function (kk) {
+            cell.addEventListener('click', function () { tap(kk); });
+          })(k);
+          wrap.appendChild(cell);
         }
       }
-      /* 처음부터 이어져 있으면 정답 타일 하나를 더 돌려 둔다 */
-      if (checkPath()) {
-        var keys = Object.keys(need);
-        var kk = keys[rnd(keys.length)].split(',');
-        var tt2 = tiles[Number(kk[0]) * N + Number(kk[1])];
-        tt2.rot = (tt2.rot + 1) % 4;
-        tt2.btn.innerHTML = svgTile(tt2);
-        tiles.forEach(function (t) { t.btn.classList.remove('hot'); });
-      }
     }
-    build();
+    var locked = false;
+    function tap(k) {
+      if (!isRunning() || locked) return;
+      if (clicks <= 0) { shake(wrap); return; }
+      clicks--; clickEl.textContent = String(clicks);
+      var cur = fences[k] || 0;
+      if (cur === 2) delete fences[k];
+      else fences[k] = cur + 1;                        // 없음 → / → \\ → 없음
+      placed = Object.keys(fences).length;
+      setEl.textContent = String(placed);
+      draw(false);
+    }
+    $('pthGo').addEventListener('click', function () {
+      if (!isRunning() || locked) return;
+      locked = true;
+      var allOk = puzzle.vs.every(function (v) {
+        var res = simulate(v.side, v.idx, fences);
+        return res && res.side === v.out && res.idx === v.outIdx;
+      });
+      if (allOk) api.addScore(1);
+      api.flash(b, allOk);
+      if (!real) {
+        revealEl.textContent = allOk ? '연결 성공!' : '정답 배치를 잠깐 보여드릴게요';
+        if (!allOk) draw(true);
+        later(nq, allOk ? 700 : 1600);
+      } else later(nq, 400);
+    });
+    function nq() {
+      if (!isRunning()) return;
+      if (q >= total) { api.finish(); return; }
+      q++; locked = false;
+      var step = real ? 12 : 4;
+      var fcount = Math.min(4, 1 + Math.floor((q - 1) / step));
+      var vcount = fcount >= 3 ? 2 : 1;
+      puzzle = genPuzzle(vcount, fcount) || genPuzzle(1, 1);
+      fences = {}; placed = 0; clicks = 20;
+      clickEl.textContent = '20'; setEl.textContent = '0';
+      needEl.textContent = String(puzzle.need);
+      revealEl.textContent = '';
+      infoEl.textContent = '문항 ' + q + '/' + total + ' · 칸을 누르면 없음 → / → \\ 순서로 바뀝니다';
+      draw(false);
+    }
+    nq();
   }
 
-  /* ── 7. 약속 정하기 — 조건을 모두 만족하는 유일한 시간 찾기 ── */
-  function gameYaksok(api) {
-    var DAYS = ['월', '화', '수', '목', '금'];
-    var TIMES = ['오전', '오후'];
-    var NAMES = ['지민', '서연', '하준', '유나', '도윤'];
+  /* ── 6. 약속 정하기 — 세 친구의 선호가 1초씩 지나간다. 기억했다가 공통(R4는 반대)을 답한다 ──
+     실전 구성(오너 캡처): R1 요일·R2 장소·R3 메뉴는 모두의 공통, R4 버스는 아무도 안 탄 번호.
+     4라운드 × 10문항, 제시 1초·답 3초, 각 라운드 6번째 문항부터 기억 3개 → 4개. */
+  function gameYaksok(api, mode) {
+    var NAMES = ['지민', '서연', '하준'];
+    var real = mode === 'real';
+    var perRound = real ? 10 : 3;
+    var ROUNDS = [
+      { label: '요일', q: '약속 요일을 언제로 잡으면 좋을까요?', pool: ['월', '화', '수', '목', '금', '토', '일'], candAll: true, common: true, note: '모두가 공통으로 고르는 요일' },
+      { label: '장소', q: '약속 장소는 어디가 좋을까요?', pool: ['공원', '카페', '서점', '영화관', '박물관', '한강', '전시회', '노래방'], common: true, note: '모두가 공통으로 고르는 곳' },
+      { label: '메뉴', q: '메뉴는 무엇으로 할까요?', pool: ['김밥', '피자', '치킨', '국수', '초밥', '샐러드', '버거', '전골'], common: true, note: '모두가 공통으로 고르는 메뉴' },
+      { label: '버스', q: '아무도 타지 않은 버스는 몇 번일까요?', common: false, note: '이번엔 반대 — 아무도 안 탄 번호를 고르세요' }
+    ];
+    function sample(arr, n) { return shuffle(arr.slice()).slice(0, n); }
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q">전원이 가능한 <b>단 하나의 시간</b>을 고르세요</div>' +
-      '<div class="gm-say" id="ykSay"></div>' +
-      '<div class="gm-week" id="ykWeek"></div>';
-    var sayEl = $('ykSay'), weekEl = $('ykWeek');
-    var answer = [0, 0];
-    function next() {
-      var extra = score >= 3;                          // 3문제부터 조건 하나 추가
-      var ad = rnd(5), at = rnd(2);
-      answer = [ad, at];
-      var others = shuffle([0, 1, 2, 3, 4].filter(function (d) { return d !== ad; }));
-      var dx = others[0], dy = others[1];
-      var names = shuffle(NAMES.slice()).slice(0, extra ? 4 : 3);
-      /* 구성으로 유일함을 보장한다: (답 요일+dx[+dy])만 가능 ∩ 답 시간대만 ∩ dx 불가 [∩ dy 불가] */
-      var lines = [
-        [names[0], '저는 <b>' + shuffle([DAYS[ad], DAYS[dx]].concat(extra ? [DAYS[dy]] : [])).join('·') + '요일</b>만 돼요'],
-        [names[1], '저는 <b>' + TIMES[at] + '</b>만 가능해요'],
-        [names[2], '<b>' + DAYS[dx] + '요일</b>은 안 돼요']
-      ];
-      if (extra) lines.push([names[3], '<b>' + DAYS[dy] + '요일</b>은 안 돼요']);
-      sayEl.innerHTML = shuffle(lines).map(function (l) {
-        return '<p><b>' + l[0] + '</b> · ' + l[1] + '</p>';
-      }).join('');
-      weekEl.innerHTML = '<span class="hd"></span>' +
-        DAYS.map(function (d) { return '<span class="hd">' + d + '</span>'; }).join('');
-      TIMES.forEach(function (t, ti) {
-        weekEl.appendChild(el('span', 'hd', t));
-        DAYS.forEach(function (d, di) {
-          var s = el('button', 'gm-slot', '선택');
-          s.type = 'button';
-          s.setAttribute('aria-label', d + '요일 ' + t);
-          s.addEventListener('click', function () {
-            if (!isRunning()) return;
-            if (di === answer[0] && ti === answer[1]) { api.addScore(1); api.flash(b, true); next(); }
-            else { api.flash(b, false); shake(s); }
+      '<div class="gm-q"><span id="ykPhase"></span><span class="sub" id="ykInfo"></span></div>' +
+      '<div class="gm-memo" id="ykStage"></div>' +
+      '<div class="gm-qtimer"><i id="ykTick"></i></div>' +
+      '<div class="gm-reveal" id="ykReveal"></div>';
+    var phaseEl = $('ykPhase'), infoEl = $('ykInfo'), stageEl = $('ykStage'), revealEl = $('ykReveal');
+    var tickBar = $('ykTick');
+    var tk = null, tids = [];
+    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
+    var ri = 0, qi = 0;
+    function gen(round, memSize) {
+      if (round.common) {
+        for (var t = 0; t < 60; t++) {
+          var answer = pick(round.pool);
+          var rest = round.pool.filter(function (x) { return x !== answer; });
+          var sets = NAMES.map(function () { return shuffle([answer].concat(sample(rest, memSize - 1))); });
+          var inter = round.pool.filter(function (x) {
+            return sets.every(function (st) { return st.indexOf(x) >= 0; });
           });
-          weekEl.appendChild(s);
-        });
-      });
+          if (inter.length !== 1) continue;
+          var cands = round.candAll ? round.pool.slice()
+            : shuffle([answer].concat(sample(rest, 5)));
+          return { answer: answer, sets: sets, cands: cands };
+        }
+        return null;
+      }
+      /* 버스 — 후보는 전부 '누군가 탄 번호'여야 하고 답만 아무도 안 탄 번호다 */
+      var nums = [];
+      while (nums.length < 8) {
+        var n = 10 + rnd(90);
+        if (nums.indexOf(n) < 0) nums.push(n);
+      }
+      var ans = nums[0];
+      var ridden = nums.slice(1);
+      var sets2 = NAMES.map(function () { return sample(ridden, memSize); });
+      var union = [];
+      sets2.forEach(function (st) { st.forEach(function (n2) { if (union.indexOf(n2) < 0) union.push(n2); }); });
+      var cands2 = shuffle([ans].concat(sample(union, Math.min(5, union.length))));
+      return { answer: String(ans), sets: sets2.map(function (st) { return st.map(String); }), cands: cands2.map(String) };
     }
-    next();
+    function roundIntro() {
+      if (ri >= ROUNDS.length) { api.finish(); return; }
+      qi = 0;
+      var r = ROUNDS[ri];
+      phaseEl.textContent = 'ROUND ' + (ri + 1) + '/4 · ' + r.label;
+      infoEl.textContent = r.note;
+      stageEl.innerHTML = '<div class="who">' + r.note + '</div>';
+      tickBar.style.width = '0%';
+      later(nq, 1600);
+    }
+    function nq() {
+      if (!isRunning()) return;
+      if (qi >= perRound) { ri++; roundIntro(); return; }
+      qi++;
+      var r = ROUNDS[ri];
+      var memSize = real && qi >= 6 ? 4 : 3;
+      var data = gen(r, memSize);
+      if (!data) { qi--; later(nq, 10); return; }
+      phaseEl.textContent = 'R' + (ri + 1) + '/4 · ' + r.label;
+      infoEl.textContent = '문항 ' + qi + '/' + perRound;
+      revealEl.textContent = '';
+      tickBar.style.width = '0%';
+      showFriend(0);
+      function showFriend(k) {
+        if (!isRunning()) return;
+        if (k >= NAMES.length) { ask(); return; }
+        stageEl.innerHTML = '<div class="who">' + NAMES[k] + '</div>' +
+          '<div class="set">' + data.sets[k].map(function (x) { return '<i>' + x + '</i>'; }).join('') + '</div>';
+        later(function () { showFriend(k + 1); }, 1000);   // 제시 1초 — 실전 속도 그대로
+      }
+      function ask() {
+        var done = false;
+        stageEl.innerHTML = '<div class="who">' + r.q + '</div><div class="gm-cands" id="ykCands"></div>';
+        var candsEl = $('ykCands');
+        data.cands.forEach(function (cd) {
+          var btn = el('button', '', cd);
+          btn.type = 'button';
+          btn.addEventListener('click', function () {
+            if (!isRunning() || done) return;
+            done = true;
+            if (tk) tk.stop();
+            var ok = cd === data.answer;
+            if (ok) api.addScore(1);
+            api.flash(b, ok);
+            if (!real) revealEl.textContent = '정답: ' + data.answer;
+            later(nq, real ? 350 : 1000);
+          });
+          candsEl.appendChild(btn);
+        });
+        tk = ticker(tickBar, 3000, function () {         // 답 3초
+          if (done) return;
+          done = true;
+          api.flash(b, false);
+          if (!real) revealEl.textContent = '시간 초과 — 정답: ' + data.answer;
+          later(nq, real ? 350 : 1000);
+        });
+      }
+    }
+    roundIntro();
   }
 
   function isRunning() { return running; }
@@ -844,33 +1061,54 @@
       tips: ['눈이 아니라 입으로 외우세요 — "원-세모-원"처럼 최근 도형을 소리 없이 되뇌면 덜 놓칩니다.',
         '틀렸다고 멈추면 다음 도형까지 놓칩니다. 틀린 건 버리고 바로 다음 도형을 외우세요.'],
       start: gameNback },
-    { id: 'rps', name: '가위바위보', icon: 'gi-rps', unit: '점', time: 60,
-      meas: '순발력 · 판단 전환',
-      rules: ['상대 손과 지시(이기세요·지세요·비기세요)가 나옵니다.',
-        '지시에 맞는 손을 최대한 빨리 고르세요.', '60초 동안 맞힌 개수가 점수입니다.'],
-      tips: ['"지세요"가 나오면 한 박자 멈추고 뒤집어 생각하세요 — 습관대로 이기는 손이 먼저 나갑니다.',
-        '정확도가 속도보다 먼저입니다. 틀린 답을 빨리 내는 것이 제일 손해입니다.'],
+    { id: 'rps', name: '가위바위보', icon: 'gi-rps', unit: '점', time: 0,
+      meas: '순발력 · 관점 전환',
+      modes: [
+        { key: 'practice', label: '짧게 연습', sub: '라운드당 20초 → 랜덤 40초' },
+        { key: 'real', label: '실전 흐름', sub: '나의 관점 40초 → 상대 관점 40초 → 랜덤 1분 40초' }
+      ],
+      rules: ['규칙은 하나 — <b>언제나 내가 이겨야</b> 합니다. 관점에 따라 고르는 손이 뒤집힙니다.',
+        '<b>나의 관점</b>: 상대 손을 보고 내가 이기는 손 / <b>상대 관점</b>: 내 손을 보고 상대가 지는 손.',
+        '3라운드(나의 관점 → 상대 관점 → 랜덤) 동안 무제한으로 풀어 맞힌 수를 셉니다.'],
+      tips: ['상대 관점이 나오면 한 박자 멈추세요 — 습관대로 이기는 손이 먼저 나가는 게 최대 실점 요인입니다.',
+        '랜덤 라운드는 매 문항 관점 배지부터 확인하고 손을 고르세요.'],
       start: gameRPS },
-    { id: 'path', name: '길 만들기', icon: 'gi-path', unit: '점', time: 90,
-      meas: '계획 · 공간 지각',
-      rules: ['타일을 누르면 90도씩 돌아갑니다.', '왼쪽 입구(파란 표시)에서 오른쪽 출구까지 길을 이으세요.',
-        '길 하나를 완성할 때마다 +10점, 90초 안에 여러 판을 깹니다.'],
-      tips: ['입구부터 순서대로 잇지 말고, 먼저 전체 경로를 눈으로 그린 뒤 손을 대세요.',
-        '꺾임 타일은 네 방향 중 하나뿐입니다 — 최대 세 번이면 원하는 방향이 나옵니다.'],
+    { id: 'path', name: '길 만들기', icon: 'gi-path', unit: '점', time: 0,
+      meas: '경로 계획 · 공간',
+      modes: [
+        { key: 'practice', label: '연습', sub: '12문항 · 틀리면 정답 배치 공개' },
+        { key: 'real', label: '실전 흐름', sub: '48문항 · 최대 5분 · 클릭 20' }
+      ],
+      rules: ['차량은 <b>직진</b>하고, 울타리(/ 또는 \\)를 만나면 <b>90도 꺾입니다.</b>',
+        '칸을 누르면 없음 → / → \\ 순서로 바뀝니다. 누를 때마다 클릭(최대 20)이 차감됩니다.',
+        '같은 색 손님에게 닿게 만든 뒤 제출하세요. 정답 울타리 수에 맞게 최소로 설치하는 게 좋습니다.'],
+      tips: ['차량에서 손님까지 길을 눈으로 먼저 그리고, 꺾이는 자리에만 울타리를 놓으세요.',
+        '/ 는 오른쪽 진행을 위로, \\ 는 아래로 꺾습니다 — 헷갈리면 연습에서 하나 놓고 제출해 확인하세요.'],
       start: gamePath },
-    { id: 'rotate', name: '도형 회전', icon: 'gi-rotate', unit: '점', time: 60,
-      meas: '공간 회전',
-      rules: ['기준 도형을 돌려서 같아지는 보기를 고르세요.',
-        '뒤집힌(거울상) 도형이 함정으로 섞여 있습니다.', '60초 동안 맞힌 개수가 점수입니다.'],
-      tips: ['도형의 튀어나온 귀퉁이 하나를 정해 그것만 따라 돌리세요 — 전체를 돌리는 것보다 빠릅니다.',
-        '거울상은 아무리 돌려도 겹치지 않습니다. 헷갈리면 귀퉁이의 좌우 방향을 보세요.'],
+    { id: 'rotate', name: '도형 회전', icon: 'gi-rotate', unit: '점', time: 0,
+      meas: '심적 회전 · 계획',
+      modes: [
+        { key: 'practice', label: '연습 · 글자', sub: '10문항 · 제출 후 정답 순서 공개' },
+        { key: 'pattern', label: '연습 · 무늬', sub: '10문항' },
+        { key: 'real', label: '실전 흐름', sub: '글자 3분 → 무늬 3분 · 클릭 20' }
+      ],
+      rules: ['전 모양을 회전·반전시켜 <b>후 모양과 똑같이 만드는 순서</b>를 입력하세요.',
+        '회전은 한 번에 <b>45도</b>입니다(90도 아님). 좌우반전·상하반전도 있습니다.',
+        '버튼을 눌러도 <b>모양은 바뀌지 않습니다</b> — 머릿속으로 돌려 보고 순서(최대 8단계)를 넣으세요. 지움·초기화도 클릭(20)을 소모합니다.'],
+      tips: ['글자의 튀어나온 획 하나를 정해 그것만 따라 돌리면 전체를 상상하는 것보다 빠릅니다.',
+        '45도 두 번이 90도입니다 — 후 모양이 비스듬하면 홀수 번, 반듯하면 짝수 번 돌린 것입니다.'],
       start: gameRotate },
-    { id: 'yaksok', name: '약속 정하기', icon: 'gi-yaksok', unit: '점', time: 90,
-      meas: '조건 추론',
-      rules: ['친구들의 가능한 시간 조건이 나옵니다.',
-        '전원이 가능한 단 하나의 시간을 표에서 고르세요.', '90초 동안 맞힌 문제 수가 점수입니다.'],
-      tips: ['"~만 돼요"부터 읽으세요 — 후보가 가장 크게 줄어듭니다.',
-        '남은 후보에 "안 돼요" 조건을 하나씩 지워 나가면 답이 남습니다.'],
+    { id: 'yaksok', name: '약속 정하기', icon: 'gi-yaksok', unit: '점', time: 0,
+      meas: '순간 기억 · 규칙 전환',
+      modes: [
+        { key: 'practice', label: '연습', sub: '4라운드 × 3문항 · 정답 공개' },
+        { key: 'real', label: '실전 흐름', sub: '4라운드 × 10문항 · 6번째부터 기억 4개' }
+      ],
+      rules: ['세 친구의 선호가 <b>각자 1초씩</b> 빠르게 지나갑니다. 기억했다가 질문에 답하세요.',
+        '요일·장소·메뉴 라운드는 <b>모두가 공통으로</b> 고른 것, 마지막 버스 라운드는 반대로 <b>아무도 안 탄 번호</b>를 고릅니다.',
+        '답변 제한은 문항당 3초입니다.'],
+      tips: ['세 명의 목록을 다 외우려 하지 말고, 첫 친구 것을 기준으로 겹치는 것만 남기며 지워 나가세요.',
+        '버스 라운드는 규칙이 뒤집힙니다 — 라운드 안내를 놓치면 아는 문제도 틀립니다.'],
       start: gameYaksok },
     { id: 'numbers', name: '숫자 누르기', icon: 'gi-numbers', unit: '점', time: 0,
       meas: '반응 속도 · 인지 제어',
