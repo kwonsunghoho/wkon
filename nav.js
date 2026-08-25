@@ -329,7 +329,10 @@
             '<button class="nav-dd-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
           '</li>' +
-          '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' +
+          /* ⚠️ 승준 코스 잠시 내림(2026-08-25 오너 "사용량이 너무 적어서 잠시 빼줬으면") —
+             briefing.html 리다이렉트와 한 벌(docs/notes/briefing.md '승준 코스 잠시 내림').
+             다시 열 때 아래 데스크톱·모바일 두 줄을 같이 되살린다(한쪽만 열면 어긋난다).
+          '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' + */
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('tools') + '>승준 도구' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(TOOLS_SUB) + '</div>' +
@@ -358,7 +361,8 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmChallenges">' + accPanel(CHALLENGE_SUB) + '</div>' +
         '</li>' +
-        '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' +
+        /* ⚠️ 승준 코스 잠시 내림 — 위 데스크톱 줄과 한 벌. 다시 열 때 둘 다 되살린다.
+        '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' + */
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-controls="mmBriefing"' + cur('tools') + '>승준 도구' +
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
