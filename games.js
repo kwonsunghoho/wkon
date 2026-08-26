@@ -201,6 +201,16 @@
     hud.classList.remove('on');
     var isNew = saveRec(cur.id, score);
     var best = (readRec()[cur.id] || {}).best || 0;
+    /* 회원이면 서버 기록 병행(2026-08-26 오너 지시) — 기기 기록이 본체라 실패는 조용히.
+       최고점 병합은 서버(save_game_score RPC)가 한다. 부분 연습 모드도 practice 로 묶는다. */
+    if (window.MONC && MONC.sb && MONC.getSession) {
+      (function (gid, kind, sc) {
+        Promise.resolve().then(function () { return MONC.getSession(); }).then(function (s) {
+          if (!s || !s.user) return;
+          return MONC.sb.rpc('save_game_score', { p_game: gid, p_kind: kind, p_score: sc });
+        }).catch(function () {});
+      })(cur.id, curMode === 'real' ? 'real' : 'practice', score);
+    }
     var pctAll = tries > 0 ? Math.round(okCnt / tries * 100) : 0;
     /* 게임 이름은 위 제목 줄에 이미 있다 — 결과 카드는 점수부터(같은 제목 두 번 금지) */
     resultEl.innerHTML =
