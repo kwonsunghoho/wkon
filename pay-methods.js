@@ -2,8 +2,9 @@
    pay-methods.js — 포트원 결제수단(채널) 공용 창구 (2026-08-19)
    -----------------------------------------------------------------------------
    - 상점 ID·채널 키는 이 파일 한 곳에만 둔다(공개 가능 값). 결제 7개 페이지
-     (apply·lecture·mypage·ai-killer·polish·program·lab-shelf)가 전부 이걸 읽는다 —
-     페이지에 다시 하드코딩하지 말 것(2026-08-02 폴백 금액처럼 한쪽만 고치는 사고 방지).
+     (apply·lecture·mypage·ai-killer·polish·program·lab-shelf) + 온보딩(본인인증 채널)이
+     전부 이걸 읽는다 — 페이지에 다시 하드코딩하지 말 것(2026-08-02 폴백 금액처럼
+     한쪽만 고치는 사고 방지).
    - ⚠️ KAKAO 키가 빈 문자열이면 카카오페이는 화면 어디에도 안 나온다(토스페이 단독 —
      기존과 동일 동작). 포트원 콘솔에서 카카오페이 채널을 만들면 키만 채우면 켜진다.
    - choose(): 결제수단 고르는 바텀시트. 카카오 키가 없으면 시트 없이 토스 키를 즉시
@@ -25,6 +26,10 @@
        선택지가 화면에서 통째로 꺼진다(끄는 스위치를 겸한다). */
     kakao: 'channel-key-86182882-80d9-450b-9ec3-3b178e5d0227'
   };
+  /* 휴대폰 본인인증 채널 키(2026-08-26 오너 전달 — KG이니시스 통합인증, 포트원 경유).
+     결제수단이 아니라 온보딩 본인인증(requestIdentityVerification)용 — choose() 시트와 무관.
+     비우면 온보딩이 인증 UI 를 켜지 않고 직접 입력 폼으로 폴백한다(카카오 키와 같은 스위치). */
+  var IDENTITY_CHANNEL = 'channel-key-d4c6e771-0eb6-424d-971b-200a655c2d2b';
 
   var _resolve = null;   // 시트가 열려 있는 동안만 값이 있다(중복 오픈 방지 겸용)
   var _lastFocus = null;
@@ -126,6 +131,7 @@
   window.moncPay = {
     storeId: STORE_ID,
     channels: CHANNELS,
+    identityChannel: IDENTITY_CHANNEL,
     kakaoReady: kakaoReady,
     choose: choose
   };

@@ -66,6 +66,20 @@
     .save-btn:disabled { opacity: .6; cursor: default; }
     .status { margin-top: 14px; font-size: 13px; color: var(--text-muted); min-height: 18px; }
     .status.err { color: var(--action-dark); }
+    /* 휴대폰 본인인증(2026-08-26) — 인증 모드에서 이름·전화 입력 대신 보이는 단 */
+    .idv-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px; min-height: 48px;
+      background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900;
+      font-family: inherit; cursor: pointer;
+    }
+    .idv-btn:hover { background: var(--action-hover); }
+    .idv-btn:disabled { opacity: .6; cursor: default; }
+    .idv-note { margin-top: 8px; font-size: 12px; color: var(--text-dim); line-height: 1.6; word-break: keep-all; }
+    /* 확인된 값 표시 — 입력칸과 같은 자리·크기지만 누를 수 없음이 보이게 옅은 판(--bg2 는 흰 카드 안 전용) */
+    .idv-val {
+      padding: 13px 14px; border: 1.5px solid var(--border-soft); border-radius: 10px;
+      font-size: 16px; background: var(--bg2); color: var(--text);
+    }
     /* 중복 번호 선택 강제(2026-08-20) — login.html #dupChoice 와 같은 원칙:
        안내문+버튼이 아니라, 답하기 전엔 입력 폼이 안 보이는 구조("안 읽는다" — 오너) */
     #dupView .dup-t { font-size: 19px; font-weight: 900; margin-top: 18px; color: var(--ink); }
@@ -87,10 +101,27 @@
     <p class="sub">신청과 2주 성장 기록을 매끄럽게 연결하려면<br>몇 가지만 알려주세요.</p>
 
     <form id="onboardForm" onsubmit="return false;">
-      <div class="field-label">이름</div>
-      <input type="text" id="obName" class="inp" placeholder="홍길동" autocomplete="name">
-      <div class="field-label">전화번호</div>
-      <input type="tel" id="obPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric">
+      <!-- 휴대폰 본인인증(2026-08-26 · KG이니시스 통합인증, 포트원 경유) — 채널 키·SDK·
+           verify-identity 프로브가 전부 확인되면 JS 가 이 단을 켜고 직접 입력을 끈다.
+           하나라도 빠지면 아래 직접 입력 폼이 그대로다(전화번호 필수·중복 차단 폴백). -->
+      <div id="idvStage" hidden>
+        <div class="field-label">이름·전화번호</div>
+        <button type="button" class="idv-btn" id="idvBtn">휴대폰 본인인증</button>
+        <p class="idv-note">인증창에서 확인된 실명과 번호가 그대로 저장돼요.</p>
+      </div>
+      <div id="idvDone" hidden>
+        <div class="field-label">이름</div>
+        <div class="idv-val" id="idvName"></div>
+        <div class="field-label">전화번호</div>
+        <div class="idv-val" id="idvPhone"></div>
+        <p class="idv-note">휴대폰 본인인증으로 확인된 정보예요.</p>
+      </div>
+      <div id="manualFields">
+        <div class="field-label">이름</div>
+        <input type="text" id="obName" class="inp" placeholder="홍길동" autocomplete="name">
+        <div class="field-label">전화번호</div>
+        <input type="tel" id="obPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric">
+      </div>
       <div class="field-label">전공 <span class="opt">(선택)</span></div>
       <input type="text" id="obMajor" class="inp" placeholder="예: 항공서비스학과, 영어영문학과">
 
@@ -116,6 +147,9 @@
   <script src="supabase-config.js"></script>
   <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
   <script src="phone-check.js"></script>
+  <!-- 포트원 V2 SDK + 채널 키 공용 창구 — 본인인증(2026-08-26). 키는 pay-methods.js 한 곳. -->
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+  <script src="pay-methods.js?v=3"></script>
   <script>
     const statusEl = document.getElementById('status');
     const setStatus = (t, err) => { statusEl.textContent = t || ''; statusEl.classList.toggle('err', !!err); };
@@ -131,6 +165,12 @@
     const dupGo = document.getElementById('dupGo');
     const dupRetry = document.getElementById('dupRetry');
     const dupNote = document.getElementById('dupNote');
+    const idvStage = document.getElementById('idvStage');
+    const idvDone = document.getElementById('idvDone');
+    const idvBtn = document.getElementById('idvBtn');
+    const idvNameEl = document.getElementById('idvName');
+    const idvPhoneEl = document.getElementById('idvPhone');
+    const manualFields = document.getElementById('manualFields');
     // 열린 리다이렉트 방지 — login.html safeReturnTo 와 같은 규칙('파일명.html' 만, 자기 자신 제외)
     const safeReturnTo = v => {
       v = String(v || '');
@@ -186,7 +226,130 @@
         if (data && data.major) majorEl.value = data.major;
       } catch (e) {}
 
+      /* ── 휴대폰 본인인증(2026-08-26 · KG이니시스 통합인증, 포트원 경유) ──────────
+         켜는 조건 셋: ① pay-methods 의 identityChannel ② 포트원 SDK 로드
+         ③ verify-identity 프로브(배포 확인). 하나라도 빠지면 아무것도 바꾸지 않는다 —
+         직접 입력 폼(전화번호 필수·중복 차단)이 그대로 폴백이다.
+         서버가 포트원 API 로 결과를 재조회해 저장하므로 브라우저는 인증 건 id 만 보낸다. */
+      let idvMode = false, idvVerified = false, idvBusy = false;
+      const idvChannel = (window.moncPay && window.moncPay.identityChannel) || '';
+      function idvOn() {
+        idvMode = true;
+        manualFields.hidden = true; idvStage.hidden = false; idvDone.hidden = true;
+        saveBtn.hidden = true;   // 인증 전엔 저장할 것이 없다 — 행동은 인증 버튼 하나
+      }
+      function idvOff(msg) {     // 폴백 — 직접 입력 폼으로 되돌린다
+        idvMode = false; idvVerified = false;
+        idvStage.hidden = true; idvDone.hidden = true; manualFields.hidden = false;
+        saveBtn.hidden = false;
+        if (msg) setStatus(msg, true);
+      }
+      function idvShowVerified(name, phone) {
+        idvMode = true; idvVerified = true;
+        idvStage.hidden = true; manualFields.hidden = true; idvDone.hidden = false;
+        idvNameEl.textContent = name || '—';
+        idvPhoneEl.textContent = phone || '—';
+        saveBtn.hidden = false;
+      }
+      // 인증 결과를 서버로 확정한다 — 이름·번호는 서버가 포트원에서 받아 온다
+      async function idvFinish(vid) {
+        if (idvBusy) return; idvBusy = true;
+        idvBtn.disabled = true; setStatus('인증 결과를 확인하는 중…');
+        let r = null;
+        try {
+          const { data, error } = await MONC.sb.functions.invoke('verify-identity',
+            { body: { identityVerificationId: vid } });
+          if (error) throw error;
+          r = data || {};
+        } catch (e) {
+          idvBusy = false; idvBtn.disabled = false;
+          setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
+          return;
+        }
+        idvBusy = false;
+        if (r.ok) { idvShowVerified(r.name, r.phone); setStatus('본인인증이 완료됐어요.'); return; }
+        idvBtn.disabled = false;
+        if (r.code === 'dup_phone') { setStatus(''); showDup(r.provider, r.me_fresh); return; }
+        if (r.code === 'verification_used') { setStatus('이 인증은 이미 다른 계정에서 사용됐어요. 다시 시도해 주세요.', true); return; }
+        if (r.code === 'not_verified') { setStatus('인증이 완료되지 않았어요. 다시 시도해 주세요.', true); return; }
+        if (r.code === 'not_ready') { idvOff('지금은 본인인증을 쓸 수 없어요. 번호를 직접 입력해 주세요.'); return; }
+        setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
+      }
+      /* 인증창으로 나갔다 뒤로 돌아온 문서(bfcache) — 얼어붙은 '여는 중…' 상태를 되살린다
+         (apply 의 _payRestore 원칙 — idvBusy 가 IIFE 안이라 복원 훅을 밖에 내준다) */
+      window._idvRestore = () => { idvBusy = false; };
+      idvBtn.addEventListener('click', async () => {
+        if (idvBusy) return;
+        const vid = 'identity-verification-' + (crypto.randomUUID ? crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+              const n = Math.random() * 16 | 0; return (c === 'x' ? n : (n & 3 | 8)).toString(16);
+            }));
+        idvBtn.disabled = true; setStatus('인증창을 여는 중…');
+        // 모바일은 페이지 리다이렉트로 복귀한다 — 포트원이 identityVerificationId 쿼리를 붙여 준다
+        const rt = returnTo();
+        const redirectUrl = location.origin + location.pathname
+          + (rt ? '?returnTo=' + encodeURIComponent(rt) : '');
+        let resp = null;
+        try {
+          resp = await PortOne.requestIdentityVerification({
+            storeId: window.moncPay.storeId,
+            channelKey: idvChannel,
+            identityVerificationId: vid,
+            redirectUrl: redirectUrl,
+          });
+        } catch (e) { resp = { code: 'SDK_ERROR', message: String(e && e.message || e) }; }
+        if (!resp || resp.code != null) {
+          // 취소·실패 — 조용히 버튼만 되살린다(취소는 흔한 일이라 빨간 줄을 띄우지 않는다)
+          idvBtn.disabled = false; setStatus('');
+          return;
+        }
+        idvFinish(resp.identityVerificationId || vid);
+      });
+
+      // 모바일 리다이렉트 복귀 — 포트원이 복귀 주소에 붙여 준 인증 건 쿼리를 서버로 확정
+      const backId = (() => {
+        const q = new URLSearchParams(location.search).get('identityVerificationId') || '';
+        return /^identity-verification-[0-9a-fA-F-]{36}$/.test(q) ? q : '';
+      })();
+      if (backId) {
+        // 복귀 주소의 인증 쿼리는 지운다 — 새로고침 때 같은 건을 다시 확인하지 않게
+        try {
+          const u = new URL(location.href);
+          u.searchParams.delete('identityVerificationId');
+          history.replaceState(null, '', u.pathname + (u.search || '') + (u.hash || ''));
+        } catch (e) {}
+        idvOn();
+        idvFinish(backId);
+      } else {
+        // 이미 인증을 마친 회원(재방문) — 다시 시키지 않는다. 컬럼 미생성 환경 대비 방어 조회.
+        let already = false;
+        try {
+          const { data } = await MONC.sb.from('members').select('verified_at').eq('id', me).single();
+          already = !!(data && data.verified_at);
+        } catch (e) {}
+        if (already) {
+          idvShowVerified(profile && profile.name, profile && profile.phone);
+        } else if (idvChannel && window.PortOne) {
+          // 배포 프로브 — 함수가 아직 없으면 켜지 않는다(죽은 버튼 금지)
+          try {
+            const { data } = await MONC.sb.functions.invoke('verify-identity', { body: { probe: true } });
+            if (data && data.ok) idvOn();
+          } catch (e) { /* 프로브 실패 = 폴백 유지 */ }
+        }
+      }
+
       saveBtn.addEventListener('click', async () => {
+        /* 인증 모드 — 실명·번호는 서버가 인증으로 이미 저장했다. 남은 건 전공뿐.
+           save_my_profile 은 verified 회원의 name·phone 입력을 무시한다(잠금). */
+        if (idvMode) {
+          if (!idvVerified) { setStatus('휴대폰 본인인증을 먼저 진행해 주세요.', true); return; }
+          saveBtn.disabled = true; setStatus('저장 중…');
+          const r0 = await MONC.saveMyProfile({ major: majorEl.value.trim() }) || {};
+          if (r0.ok) { location.replace(nextPage()); return; }
+          saveBtn.disabled = false;
+          setStatus('저장 실패: ' + (r0.message || '잠시 후 다시 시도해 주세요.'), true);
+          return;
+        }
         const name = nameEl.value.trim(), phone = phoneEl.value.trim(), major = majorEl.value.trim();
         /* 규칙은 phone-check.js 한 곳 (2026-08-02 오너 "전화번호 양식이 다를 시 가입 또는
            신청 안 되게"). 여기가 '가입' 쪽 관문이다 — 챌린지·특강·오픈알림과 같은 규칙을 쓴다.
@@ -242,11 +405,13 @@
       dupRetry.addEventListener('click', hideDup);
     })();
 
-    /* 뒤로가기 복원(bfcache) — '정리하는 중…' 채로 얼어붙은 버튼을 되살린다.
+    /* 뒤로가기 복원(bfcache) — '정리하는 중…'·'인증창을 여는 중…' 채로 얼어붙은 버튼을 되살린다.
        입력값(이름·번호)이 있는 화면이라 통째 reload 는 하지 않는다(버튼만 복원 — apply 와 같은 규칙). */
     window.addEventListener('pageshow', (e) => {
       if (!e.persisted) return;
       saveBtn.disabled = false; dupGo.disabled = false; dupRetry.disabled = false;
+      idvBtn.disabled = false;
+      if (window._idvRestore) window._idvRestore();
       setStatus('');
     });
   </script>

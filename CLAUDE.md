@@ -75,7 +75,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 - **마이그레이션은 레포가 소스지만, 오너가 Supabase SQL Editor 에서 실행해야 반영된다.** 미적용 상태에서도 조용히 degrade 해야 한다: 목록 조회는 `select('*')`(컬럼 나열 시 미적용 환경에서 400), 신규 컬럼은 `getMyProfile()` 같은 공용 셀렉트에 넣지 않는다(`major`·`agreed_at`·`refunded_amount` 전례).
 - **SQL·마이그레이션 본문은 파일 경로가 아니라 대화창에 ```sql 코드로 붙여넣는다.** 오너는 콘솔 SQL Editor 에 붙여넣는다(경로를 bash 블록으로 주면 Run 버튼이 터미널을 연다).
-- **Edge Function 배포는 Supabase 콘솔에서 한다**(오너 PC 에 CLI 없음 — `supabase functions deploy` 안내 금지). 함수는 **한 파일 유지**(콘솔 붙여넣기 배포라 모듈로 쪼개면 배포 불가). 코드를 고치면 `FN_VERSION` 도 같이 올리고, **배포 여부는 anon key 프로브로 확인한다 — 관리자에게 SQL 을 시키지 말 것.** **새 함수를 만들면 `FN_VERSION` 과 `probe:true` 분기를 처음부터 넣는다** — 인증 검사보다 **앞에** 둔다(배포 여부는 로그인 없이 확인할 수 있어야 한다). 현재 7개 함수 전부 있다. ⚠️ **portone-webhook 만 콘솔에서 JWT 검증을 끈다**(포트원이 부르는 함수라 Supabase 키가 없다) — 다른 함수는 끄지 말 것.
+- **Edge Function 배포는 Supabase 콘솔에서 한다**(오너 PC 에 CLI 없음 — `supabase functions deploy` 안내 금지). 함수는 **한 파일 유지**(콘솔 붙여넣기 배포라 모듈로 쪼개면 배포 불가). 코드를 고치면 `FN_VERSION` 도 같이 올리고, **배포 여부는 anon key 프로브로 확인한다 — 관리자에게 SQL 을 시키지 말 것.** **새 함수를 만들면 `FN_VERSION` 과 `probe:true` 분기를 처음부터 넣는다** — 인증 검사보다 **앞에** 둔다(배포 여부는 로그인 없이 확인할 수 있어야 한다). 현재 8개 함수 전부 있다(2026-08-26 verify-identity 합류). ⚠️ **portone-webhook 만 콘솔에서 JWT 검증을 끈다**(포트원이 부르는 함수라 Supabase 키가 없다) — 다른 함수는 끄지 말 것.
 - 테이블 미생성 판정은 `42P01` 이 아니라 **`PGRST205`** 다.
 - 함수 배포·마이그레이션 적용 같은 **시점 상태는 `docs/notes/implementation-status.md`** 에서 확인·갱신한다.
 - Dead code 는 남기지 말고 제거한다. 타임스탬프 백업 파일 커밋 금지. 커밋 메시지·코드 주석은 한국어.

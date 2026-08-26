@@ -60,6 +60,35 @@
 - 저장형은 하이픈 표준형(`MONC_PHONE.format` — `010-1234-5678`)으로 통일: 서버 정규화
   대조·마이페이지 마스킹·문자 발송이 한 형으로 맞는다. +82 붙여넣기도 국내형이 된다.
 
+## 휴대폰 본인인증 — 2026-08-26 (KG이니시스 통합인증 · 포트원 경유)
+
+위 절이 "문자 본인인증을 붙일 때 이 RPC 앞단에 끼운다"로 남겨 둔 그 후속. 가라 번호가
+원천 차단된다. 설계 원장: `docs/superpowers/specs/2026-08-26-identity-verification-design.md`.
+
+- **경로는 포트원 V2**(`PortOne.requestIdentityVerification`) — 이니시스 직접 연동 금지
+  (SEED 암호화·결과수신 서버를 자작해야 한다). 이니시스 상점관리자 KEY(MID·API KEY·SEED IV)는
+  **포트원 콘솔에만** 들어간다 — 비밀값, 레포 반입 금지. **본인인증 채널 키(공개 가능)는
+  `pay-methods.js` 의 `identityChannel` 한 곳.** 비우면 온보딩이 인증 UI 를 안 켠다(스위치 겸용).
+  이니시스 상점관리자 **도메인 등록에 `monc.ai.kr` 필수** — 미등록이면 인증창이 안 뜬다.
+- **온보딩 인증 모드 켜는 조건 셋**: 채널 키 + 포트원 SDK 로드 + `verify-identity` 프로브.
+  하나라도 빠지면 **직접 입력 폼 폴백**(전화번호 필수·중복 차단 그대로) — 죽은 버튼 금지.
+- **판정은 전부 서버**: 브라우저는 `identityVerificationId` 하나만 보낸다. verify-identity 가
+  포트원 API 재조회(`VERIFIED` 확인) → RPC `apply_identity_verification`(**service_role 전용** —
+  authenticated 에 열면 화면이 인증 없이 아무 실명·CI 나 넣는다) → **CI 우선 중복 판정**
+  (같은 사람이면 번호를 바꿔도 잡힌다) + 번호 대조 → `members` 실명·번호·생년월일·CI·DI·
+  `verified_at` 저장 + `identity_verifications` 감사 기록(verification_id UNIQUE = 재사용 차단).
+  중복이면 기존 `dup_phone` 모양 그대로 → 온보딩 `#dupView` 선택 강제 재사용.
+- **verified 회원은 name·phone 잠금**: `save_my_profile` 이 입력을 무시하고 전공만 갱신
+  (`phone_locked:true`). 마이페이지 연락처 칸도 잠금 표시("본인인증으로 확인된 번호예요").
+  번호 변경은 문의 → admin. **인증 회원의 번호를 화면 저장으로 덮는 경로를 다시 열지 말 것.**
+- **모바일은 리다이렉트 복귀**: 포트원이 온보딩 주소에 `identityVerificationId` 쿼리를 붙여
+  돌아온다 — 로드 시 감지해 서버 확정, 쿼리는 `history.replaceState` 로 지운다(새로고침 재확인
+  방지). 인증창으로 나가는 버튼이라 bfcache 복귀 시 버튼 복원(`_idvRestore`)을 같이 단다.
+- **적용 범위는 신규 가입 온보딩만**(오너 확정) — 기존 회원 재인증 강요 없음. 이미
+  verified 인 회원이 온보딩에 다시 오면 인증을 다시 시키지 않고 확인된 값만 보여 준다.
+- CI·DI·생년월일은 privacy.html 에 이미 고지돼 있다(2026-08 심사 대응 때 선반영).
+  `verified_at` 등 신규 컬럼은 **공용 `getMyProfile()` 셀렉트 금지** — 방어 조회만(major 전례).
+
 ## 카카오 중복 가입 차단 — 2026-08-08 오너 지시(선택 강제 구조)
 
 구글로 가입한 회원이 카카오로 로그인하면 **항상 별개의 새 계정이 생긴다** — 카카오는
