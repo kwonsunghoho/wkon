@@ -472,7 +472,7 @@
         : [{ dual: false, count: 15, sec: pSec, fast: true }];
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q"><span id="nbPhase"></span><span class="sub" id="nbInfo"></span></div>' +
+      '<div class="gm-q"><span class="ph" id="nbPhase"></span><span class="sub" id="nbInfo"></span></div>' +
       '<div class="gm-prog" aria-hidden="true"><i id="nbProg"></i></div>' +
       '<div class="gm-nb-stage" id="nbStage"></div>' +
       timerHtml('nb') +
@@ -615,7 +615,7 @@
       ];
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q"><span id="rpsPhase"></span><span class="sub" id="rpsInfo"></span></div>' +
+      '<div class="gm-q"><span class="ph" id="rpsPhase"></span><span class="sub" id="rpsInfo"></span></div>' +
       '<div class="gm-vs">' +
         '<div class="gm-hand"><em>나</em><span id="rpsMe"></span></div>' +
         '<div class="gm-hand"><em>상대</em><span id="rpsOp"></span></div>' +
@@ -628,7 +628,11 @@
     var phaseEl = $('rpsPhase'), infoEl = $('rpsInfo'), meCard = $('rpsMe'), opCard = $('rpsOp');
     var tickBar = $('rpsTick'), numEl = $('rpsNum'), wrap = $('rpsBtns'), countEl = $('rpsCount');
     var tk = null, tids = [];
-    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    api.onCleanup(function () {
+      if (tk) tk.stop();
+      tids.forEach(clearTimeout);
+      if (onKey) document.removeEventListener('keydown', onKey);
+    });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
     var ri = 0, persp = 'me', want = 0, betw = true, qn = 0;
     /* 3·2·1 — 실물처럼 라운드를 의식으로 연다. 준비 없이 툭 시작하면 성의 없어 보인다 */
@@ -643,16 +647,38 @@
         n--; later(tick, 500);
       })();
     }
-    [1, 0, 2].forEach(function (i) {                   // 실전 배열 순서: 가위·바위·보
-      var btn = el('button', 'gm-big', sym(HANDS[i]) + '<span>' + NAMES[i] + '</span>');
+    /* PC 키보드 1·2·3(가위·바위·보 순 — 화면 버튼 순서 그대로) */
+    var hasKb = window.matchMedia && matchMedia('(pointer:fine)').matches;
+    var ORDER = [1, 0, 2];                             // 실전 배열 순서: 가위·바위·보
+    function choose(i) {
+      if (!isRunning() || betw) return;
+      var ok = i === want;
+      api.mark(ok, 1, persp === 'me' ? '나의 관점' : '상대 관점');
+      api.flash(b, ok);
+      /* 연습에선 ? 카드에 방금 낸 손을 잠깐 보여준다 — 무엇을 냈는지 배우는 화면 */
+      if (!real) {
+        betw = true;
+        var qCard = persp === 'me' ? meCard : opCard;
+        qCard.innerHTML = sym(HANDS[i]) + '<b>' + NAMES[i] + '</b>';
+        qCard.classList.remove('pop'); void qCard.offsetWidth; qCard.classList.add('pop');
+        later(function () { if (!isRunning()) return; betw = false; next(); }, 340);
+      } else next();
+    }
+    var onKey = null;
+    if (hasKb) {
+      onKey = function (e) {
+        var n = { '1': 0, '2': 1, '3': 2 }[e.key];
+        if (n == null || !isRunning() || betw) return;
+        e.preventDefault();
+        choose(ORDER[n]);
+      };
+      document.addEventListener('keydown', onKey);
+    }
+    ORDER.forEach(function (i, bi) {
+      var btn = el('button', 'gm-big',
+        (hasKb ? '<kbd>' + (bi + 1) + '</kbd>' : '') + sym(HANDS[i]) + '<span>' + NAMES[i] + '</span>');
       btn.type = 'button';
-      btn.addEventListener('click', function () {
-        if (!isRunning() || betw) return;
-        var ok = i === want;
-        api.mark(ok, 1, persp === 'me' ? '나의 관점' : '상대 관점');
-        api.flash(b, ok);
-        next();
-      });
+      btn.addEventListener('click', function () { choose(i); });
       wrap.appendChild(btn);
     });
     function next() {
@@ -717,12 +743,29 @@
     var r2sec = short ? 60 : 120;
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q"><span id="numPhase"></span><span class="sub" id="numInfo"></span></div>' +
+      '<div class="gm-q"><span class="ph" id="numPhase"></span><span class="sub" id="numInfo"></span></div>' +
       timerHtml('num') +
       '<div class="gm-cells" id="numGrid" style="grid-template-columns:repeat(3,1fr);max-width:300px"></div>';
     var phaseEl = $('numPhase'), infoEl = $('numInfo'), tickBar = $('numTick'), numTimeEl = $('numNum'), wrap = $('numGrid');
     var tk = null, tids = [];
-    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    /* PC 에선 숫자 키(1~9)로도 누른다 — 실전이 PC 응시라 키보드 훈련이 곧 실전 훈련 */
+    var hasKb = window.matchMedia && matchMedia('(pointer:fine)').matches;
+    var onKey = null;
+    if (hasKb) {
+      onKey = function (e) {
+        if (!isRunning() || !/^[1-9]$/.test(e.key)) return;
+        var n = +e.key, c = cellOf(n);
+        if (!c) return;
+        e.preventDefault();
+        onTap(n, c);
+      };
+      document.addEventListener('keydown', onKey);
+    }
+    api.onCleanup(function () {
+      if (tk) tk.stop();
+      tids.forEach(clearTimeout);
+      if (onKey) document.removeEventListener('keydown', onKey);
+    });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
     var cells = [], nums = [];
     function buildGrid(order) {
@@ -829,18 +872,36 @@
     var WORDS = ['하늘', '구름', '미소', '안전', '기내', '여권', '규정', '승객', '표정', '메모'];
     var total = mode === 'real' ? 46 : 20;
     var reveal = mode !== 'real';
+    /* 노출 시간은 연습 칩에서만 조절 — 실전은 1초 고정 */
+    var exposeMs = mode === 'real' ? 1000 : Math.round(parseFloat(api.opt('expose') || '1') * 1000);
+    var hasKb = window.matchMedia && matchMedia('(pointer:fine)').matches;
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q">단어가 <b>더 많았던 쪽</b>을 고르세요<span class="sub" id="cmpInfo"></span></div>' +
+      '<div class="gm-prog" aria-hidden="true"><i id="cmpProg"></i></div>' +
       '<div class="gm-bigrow" style="align-items:stretch">' +
-        '<button type="button" class="gm-wpanel" id="cmpL" aria-label="왼쪽 판"><i class="tag">왼쪽</i></button>' +
-        '<button type="button" class="gm-wpanel" id="cmpR" aria-label="오른쪽 판"><i class="tag">오른쪽</i></button>' +
+        '<button type="button" class="gm-wpanel" id="cmpL" aria-label="왼쪽 판"><i class="tag">' + (hasKb ? '← ' : '') + '왼쪽</i></button>' +
+        '<button type="button" class="gm-wpanel" id="cmpR" aria-label="오른쪽 판"><i class="tag">' + (hasKb ? '→ ' : '') + '오른쪽</i></button>' +
       '</div>' +
       timerHtml('cmp') +
       '<div class="gm-reveal" id="cmpReveal"></div>';
     var L = $('cmpL'), R = $('cmpR'), infoEl = $('cmpInfo'), tickBar = $('cmpTick'), numEl = $('cmpNum'), revealEl = $('cmpReveal');
+    var progEl = $('cmpProg');
     var q = 0, nl = 0, nr = 0, done = false, tk = null, tids = [];
-    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    var onKey = null;
+    if (hasKb) {
+      onKey = function (e) {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        answer(e.key === 'ArrowLeft');
+      };
+      document.addEventListener('keydown', onKey);
+    }
+    api.onCleanup(function () {
+      if (tk) tk.stop();
+      tids.forEach(clearTimeout);
+      if (onKey) document.removeEventListener('keydown', onKey);
+    });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
     function fill(panel, word, n) {
       [].slice.call(panel.querySelectorAll('span')).forEach(function (x) { x.remove(); });
@@ -876,6 +937,7 @@
       [L, R].forEach(function (p) { p.classList.remove('covered'); });
       revealEl.textContent = '';
       infoEl.textContent = '문항 ' + q + '/' + total;
+      if (progEl) progEl.style.width = (q / total * 100) + '%';
       var base = 16 + rnd(26);                                    /* 16~41 */
       var diff = (reveal && q <= 5) ? 5 : 3 + rnd(2);             /* 연습 초반만 완만, 이후 3~4 */
       nl = base; nr = base + diff;
@@ -884,7 +946,7 @@
       do { wr = pick(WORDS); } while (wr === wl);
       fill(L, wl, nl);
       fill(R, wr, nr);
-      later(function () {                                         /* 1초만 보여주고 가린다 */
+      later(function () {                                         /* 노출 뒤 가린다(실전 1초) */
         if (done || myq !== q || !isRunning()) return;
         clearPanels();
         /* 빈 판은 고장처럼 보인다 — 가려졌다는 표시(?)를 띄운다 */
@@ -892,7 +954,7 @@
         tk = ticker(tickBar, 3000, function () {
           if (!done && myq === q) finishQ(false, true);
         }, numEl);
-      }, 1000);
+      }, exposeMs);
     }
     function answer(left) {
       if (!isRunning() || done) return;
@@ -910,6 +972,8 @@
   function gameRotate(api, mode) {
     var LETTERS = ['F', 'G', 'J', 'L', 'P', 'R', 'Q'];
     var real = mode === 'real';
+    var pickLetter = api.opt('letter');                  // 연습·글자에서만 의미(실전은 랜덤)
+    var preview = !real && api.opt('preview') === 'on';  // 입문용 — 기본은 실전 방식(모양 안 바뀜)
     var phases = real
       ? [{ kind: 'letter', sec: 180 }, { kind: 'pattern', sec: 180 }]
       : mode === 'pattern' ? [{ kind: 'pattern', count: 10 }] : [{ kind: 'letter', count: 10 }];
@@ -931,7 +995,8 @@
     }
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q"><span id="rtPhase"></span><span class="sub" id="rtInfo"></span></div>' +
+      '<div class="gm-q"><span class="ph" id="rtPhase"></span><span class="sub" id="rtInfo"></span></div>' +
+      (real ? '' : '<div class="gm-prog" aria-hidden="true"><i id="rtProg"></i></div>') +
       '<div class="gm-rt-cards">' +
         '<div class="gm-rt-card"><em>전</em><svg id="rtBefore" viewBox="0 0 80 80"></svg></div>' +
         '<div class="gm-rt-card aft"><em>후</em><svg id="rtAfter" viewBox="0 0 80 80"></svg></div>' +
@@ -951,8 +1016,9 @@
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
     var pi = 0, q = 0, clicks = 20, seq = [], target = I, shapeHtml = '', solved = 0, locked = false;
     function letterShape() {
+      var ch = (!real && pickLetter && pickLetter !== 'rand') ? pickLetter : pick(LETTERS);
       return '<text x="40" y="41" text-anchor="middle" dominant-baseline="central" font-size="50" ' +
-        'font-weight="800" font-family="Arial, sans-serif" fill="currentColor">' + pick(LETTERS) + '</text>';
+        'font-weight="800" font-family="Arial, sans-serif" fill="currentColor">' + ch + '</text>';
     }
     function patternShape() {
       /* 3×3에서 4칸 — 어떤 회전·반전으로도 자기 자신이 안 되는 비대칭 무늬만 쓴다 */
@@ -995,6 +1061,12 @@
       clicks--; clickEl.textContent = String(clicks);
       return true;
     }
+    function applySeq() {   /* 미리보기(입문용) — 입력한 순서를 '전' 카드에 바로 반영 */
+      var m = I;
+      seq.forEach(function (o) { m = mul(o.m, m); });
+      beforeEl.style.transition = 'transform .18s ease';
+      apply(beforeEl, m);
+    }
     OPS.forEach(function (o) {
       var btn = el('button', '', sym(o.icon) + '<span>' + o.label + '</span>');
       btn.type = 'button';
@@ -1003,6 +1075,7 @@
         if (seq.length >= 8 || !spend()) { shake(btn); return; }
         seq.push(o);
         drawSeq();
+        if (preview) applySeq();
       });
       opsEl.appendChild(btn);
     });
@@ -1010,11 +1083,13 @@
       if (!isRunning() || locked || !seq.length) return;
       if (!spend()) return;
       seq.pop(); drawSeq();
+      if (preview) applySeq();
     });
     $('rtReset').addEventListener('click', function () {
       if (!isRunning() || locked || !seq.length) return;
       if (!spend()) return;
       seq = []; drawSeq();
+      if (preview) applySeq();
     });
     $('rtGo').addEventListener('click', function () {
       if (!isRunning() || locked) return;
@@ -1024,7 +1099,8 @@
       var ok = same(m, target);
       var segLabel = phases[pi].kind === 'letter' ? '글자' : '무늬';
       /* 입력한 순서대로 '전' 도형을 실제로 돌려 보여준다 — 맞았으면 '후'와 겹치는 걸 눈으로 확인.
-         판정·다음 문제는 재생이 끝난 뒤. */
+         판정·다음 문제는 재생이 끝난 뒤. 미리보기 모드는 이미 돌아간 상태라 재생을 건너뛴다. */
+      if (preview) { judge(); return; }
       var pm = I, k = 0;
       beforeEl.style.transition = 'transform .24s ease';
       (function play() {
@@ -1064,6 +1140,10 @@
       afterEl.innerHTML = shapeHtml; apply(afterEl, target);
       phaseEl.textContent = (ph.kind === 'letter' ? '글자' : '무늬') + (real ? ' · 실전' : '');
       infoEl.textContent = real ? '맞힌 ' + score + '개' : '문항 ' + q + '/' + ph.count;
+      if (!real) {
+        var pg = $('rtProg');
+        if (pg) pg.style.width = (q / ph.count * 100) + '%';
+      }
     }
     function startPhase() {
       var ph = phases[pi];
@@ -1302,6 +1382,8 @@
     var real = mode === 'real';
     var PART = { day: 0, place: 1, menu: 2, bus: 3 }[mode];
     var perRound = real ? 10 : PART != null ? 10 : 3;
+    /* 제시 속도는 연습 칩에서만 조절 — 실전은 1초 고정 */
+    var paceMs = real ? 1000 : Math.round(parseFloat(api.opt('pace') || '1') * 1000);
     var ROUNDS = [
       { label: '요일', q: '약속 요일을 언제로 잡으면 좋을까요?', pool: ['월', '화', '수', '목', '금', '토', '일'], candAll: true, common: true, note: '모두가 공통으로 고르는 요일' },
       { label: '장소', q: '약속 장소는 어디가 좋을까요?', pool: ['공원', '카페', '서점', '영화관', '박물관', '한강', '전시회', '노래방'], common: true, note: '모두가 공통으로 고르는 곳' },
@@ -1311,7 +1393,8 @@
     function sample(arr, n) { return shuffle(arr.slice()).slice(0, n); }
     var b = api.board;
     b.innerHTML =
-      '<div class="gm-q"><span id="ykPhase"></span><span class="sub" id="ykInfo"></span></div>' +
+      '<div class="gm-q"><span class="ph" id="ykPhase"></span><span class="sub" id="ykInfo"></span></div>' +
+      '<div class="gm-prog" aria-hidden="true"><i id="ykProg"></i></div>' +
       '<div class="gm-memo" id="ykStage"></div>' +
       timerHtml('yk') +
       '<div class="gm-reveal" id="ykReveal"></div>';
@@ -1372,6 +1455,8 @@
       if (!data) { qi--; later(nq, 10); return; }
       phaseEl.textContent = 'R' + (ri + 1) + '/' + roundList.length + ' · ' + r.label;
       infoEl.textContent = '문항 ' + qi + '/' + perRound;
+      var pg = $('ykProg');
+      if (pg) pg.style.width = (((ri * perRound) + qi) / (roundList.length * perRound) * 100) + '%';
       revealEl.textContent = '';
       tickBar.style.width = '0%';
       showFriend(0);
@@ -1382,7 +1467,7 @@
           '<div class="set">' + data.sets[k].map(function (x) { return '<i>' + x + '</i>'; }).join('') + '</div>' +
           '<p class="gm-hint">순서대로 기억하세요…</p>';
         dealIn(stageEl.querySelector('.set'), 70);   // 항목이 순서대로 깔린다 — '순서 기억'을 화면이 거든다
-        later(function () { showFriend(k + 1); }, 1000);   // 제시 1초 — 실전 속도 그대로
+        later(function () { showFriend(k + 1); }, paceMs);   // 실전 1초 — 연습은 칩에서 조절
       }
       function ask() {
         var done = false;
@@ -1472,7 +1557,8 @@
       ],
       rules: ['규칙은 하나 — <b>언제나 내가 이겨야</b> 합니다. 관점에 따라 고르는 손이 뒤집힙니다.',
         '<b>나의 관점</b>: 상대 손을 보고 내가 이기는 손 / <b>상대 관점</b>: 내 손을 보고 상대가 지는 손.',
-        '3라운드(나의 관점 → 상대 관점 → 랜덤) 동안 무제한으로 풀어 맞힌 수를 셉니다.'],
+        '3라운드(나의 관점 → 상대 관점 → 랜덤) 동안 무제한으로 풀어 맞힌 수를 셉니다.',
+        '실전은 PC 응시 — PC 에선 키보드 <b>1·2·3</b>(가위·바위·보 순)으로도 낼 수 있어요.'],
       tips: ['상대 관점이 나오면 한 박자 멈추세요 — 습관대로 이기는 손이 먼저 나가는 게 최대 실점 요인입니다.',
         '랜덤 라운드는 매 문항 관점 배지부터 확인하고 손을 고르세요.'],
       parts: [{ key: 'r1', label: 'R1 나의 관점' }, { key: 'r2', label: 'R2 상대 관점' }, { key: 'r3', label: 'R3 랜덤' }],
@@ -1512,6 +1598,18 @@
         '<span class="arr">→</span>' +
         '<span class="tile hit"><span style="display:inline-block;transform:rotate(90deg)">F</span></span>' +
         '</div><span class="cap">45도 두 번 = 90도 — 머릿속으로만 돌려 보고 <b>순서를</b> 입력합니다</span>',
+      /* 미리보기는 입문용(연습만) — 실전 방식(모양 안 바뀜)이 기본. 글자 칩은 약한 글자만 반복 */
+      opts: [
+        { key: 'letter', label: '글자(연습·글자)', def: 'rand', items: [
+          { v: 'rand', label: '랜덤' },
+          { v: 'F', label: 'F' }, { v: 'G', label: 'G' }, { v: 'J', label: 'J' }, { v: 'L', label: 'L' },
+          { v: 'P', label: 'P' }, { v: 'R', label: 'R' }, { v: 'Q', label: 'Q' }
+        ] },
+        { key: 'preview', label: '변형 미리보기', def: 'off', items: [
+          { v: 'off', label: '끔 · 실전 방식' },
+          { v: 'on', label: '켬 · 입문용(연습만)' }
+        ] }
+      ],
       modes: [
         { key: 'practice', label: '연습 · 글자', sub: '10문항 · 제출 후 정답 순서 공개' },
         { key: 'pattern', label: '연습 · 무늬', sub: '10문항' },
@@ -1530,6 +1628,9 @@
         '<div class="pl"><em>서연</em><i>화</i><i class="hit">목</i><i>토</i></div>' +
         '<div class="pl"><em>하준</em><i class="hit">목</i><i>수</i><i>일</i></div>' +
         '</div><span class="cap">한 명씩 1초만 보입니다 — 셋 모두에게 있는 요일은 <b>목</b></span>',
+      opts: [{ key: 'pace', label: '제시 속도(연습)', def: '1', items: [
+        { v: '1', label: '1초 · 실전 속도' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
+      ] }],
       modes: [
         { key: 'practice', label: '연습', sub: '4라운드 × 3문항 · 정답 공개' },
         { key: 'real', label: '실전 흐름', sub: '4라운드 × 10문항 · 6번째부터 기억 4개' }
@@ -1554,7 +1655,8 @@
       ],
       rules: ['1라운드: 불이 들어온 숫자를 최대한 빨리 누릅니다.',
         '2라운드: 새 배열마다 <b>1→9 순서대로.</b> 단 한 숫자는 <b>연속 2번</b>, 한 숫자는 <b>건너뛰기.</b>',
-        '준비 표시 중에 누르면 오답이고, 규칙을 어기면 그 문항은 즉시 끝납니다.'],
+        '준비 표시 중에 누르면 오답이고, 규칙을 어기면 그 문항은 즉시 끝납니다.',
+        'PC 에선 <b>숫자 키(1~9)</b>로도 누를 수 있어요 — 실전이 PC 응시라 키 훈련이 곧 실전 훈련.'],
       tips: ['2라운드는 누르기 전에 규칙(2번/건너뛰기 숫자)과 배열부터 확인하는 습관이 점수를 만듭니다.',
         '급하게 시작하는 게 제일 손해예요 — 흐림이 걷힌 다음 손을 대세요.'],
       parts: [{ key: 'p1', label: '1라운드만' }, { key: 'p2', label: '2라운드만' }],
@@ -1572,13 +1674,17 @@
         '<circle cx="24" cy="40" r="3.2"/><circle cx="44" cy="46" r="3.2"/><circle cx="18" cy="56" r="3.2"/>' +
         '</g></svg></span>' +
         '</div><span class="cap">1초 뒤 사라집니다 — 오른쪽이 <b>9 대 7</b>로 더 많음(실제론 단어가 흩어져 있어요)</span>',
+      opts: [{ key: 'expose', label: '노출 시간(연습)', def: '1', items: [
+        { v: '1', label: '1초 · 실전 속도' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
+      ] }],
       modes: [
         { key: 'practice', label: '연습', sub: '20문항 · 답하면 실제 개수 공개' },
         { key: 'real', label: '실전 흐름', sub: '46문항 · 노출 1초 · 답 3초' }
       ],
       rules: ['좌우에 단어들이 <b>1초만</b> 보였다 사라집니다.',
         '단어가 더 많았던 쪽을 <b>3초 안에</b> 고르세요.',
-        '글자 크기가 제각각이라 면적이 아니라 <b>개수</b>로 판단해야 합니다. 한쪽 16~45개, 차이는 3~4개 안팎.'],
+        '글자 크기가 제각각이라 면적이 아니라 <b>개수</b>로 판단해야 합니다. 한쪽 16~45개, 차이는 3~4개 안팎.',
+        'PC 에선 <b>← / →</b> 키로 답할 수 있어요.'],
       tips: ['하나씩 셀 시간이 없습니다 — 서너 개 묶음으로 어림하고, 헷갈리면 더 많아 보인 쪽을 직관적으로 바로 고르세요.',
         '연습에서 실제 개수를 확인하며 내 눈대중이 몇 개 차이까지 통하는지 재 보세요.'],
       start: gameCompare }

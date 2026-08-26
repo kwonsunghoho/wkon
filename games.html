@@ -203,13 +203,19 @@
     .gm-hud .bar i { display: block; height: 100%; width: 100%; background: var(--action); border-radius: 3px;
       transition: width .2s linear; }
 
-    /* 게임 보드 공통 — relative 는 판정 배지(.gm-pop)의 기준면 */
-    .gm-board { margin-top: 12px; padding: 16px 12px 18px; background: var(--surface);
-      border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow);
+    /* 게임 보드 공통 — relative 는 판정 배지(.gm-pop)의 기준면.
+       2026-08-26 디자인 재정비(오너 "UI 너무 허접"): 흰 위에 흰 카드라 깊이가 없었다 —
+       보드는 옅은 필드(bg2), 그 위의 조각(카드·칸·판)은 흰색+옅은 그림자, 버튼은 키캡. */
+    .gm-board { margin-top: 12px; padding: 16px 12px 20px; background: var(--bg2);
+      border: 1px solid var(--border-soft); border-radius: 20px; box-shadow: var(--shadow);
       min-height: 300px; display: none; position: relative; }
     .gm-board.on { display: block; }
     .gm-q { text-align: center; font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 12px; }
     .gm-q .sub { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+    /* 단계 칩 — 라운드·모드 이름은 본문이 아니라 라벨(radius 4 — 알약 금지) */
+    .gm-q .ph { display: inline-block; font-size: 12.5px; font-weight: 800; color: var(--accent-ink);
+      background: var(--accent-tint); border-radius: 4px; padding: 3px 10px; margin-bottom: 6px; }
+    .gm-q .ph:empty { display: none; }
 
     /* 결과 판 */
     .gm-result { display: none; margin-top: 14px; padding: 24px 16px; background: var(--surface);
@@ -251,7 +257,8 @@
     .gm-hand { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .gm-hand em { font-style: normal; font-size: 12.5px; font-weight: 800; color: var(--text-muted); }
     .gm-hand span { width: 108px; min-height: 104px; border-radius: 14px; border: 1.5px solid var(--border-strong);
-      background: var(--bg2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+      background: var(--surface); box-shadow: 0 1px 2px rgba(23,42,71,.08);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
     .gm-hand span svg { width: 48px; height: 48px; stroke-width: 1.2; color: var(--ink); }
     .gm-hand span b { font-size: 13px; color: var(--ink); }
     .gm-hand span i { font-style: normal; font-size: 38px; font-weight: 800; color: var(--accent-ink); }
@@ -288,9 +295,15 @@
     /* 등장 연출 — 새로 그린 칸·후보가 촤르륵 */
     .gm-dealt { animation: gmdeal .28s ease backwards; }
     @keyframes gmdeal { from { opacity: 0; transform: translateY(6px) scale(.92); } }
-    /* 누르는 감촉 */
-    .gm-cell:active, .gm-big:active, .gm-pcell:active, .gm-part:active,
-    .gm-nb-btns button:active, .gm-rt-ops button:active, .gm-cands button:active { transform: scale(.95); }
+    /* 누르는 감촉 — 키캡: 아래로 2px 두께가 있고, 누르면 그만큼 내려앉는다(2026-08-26 재정비) */
+    .gm-big, .gm-nb-btns button, .gm-cands button, .gm-rt-ops button, .gm-rt-tools button,
+    .gm-cell:not(.empty), .gm-wpanel, .gm-part, .gm-opt, .gm-start.alt {
+      box-shadow: 0 2px 0 rgba(23,42,71,.20); }
+    .gm-cell.done { box-shadow: none; }   /* 이미 누른 숫자는 눌려 들어간 채로 */
+    .gm-big:active, .gm-nb-btns button:not(:disabled):active, .gm-cands button:active,
+    .gm-rt-ops button:active, .gm-rt-tools button:active, .gm-cell:not(.empty):active,
+    .gm-wpanel:active, .gm-part:active, .gm-pcell:active, .gm-opt:active, .gm-start.alt:active {
+      transform: translateY(2px) scale(.98); box-shadow: 0 0 0 rgba(23,42,71,.20); }
     /* 2-back 도형 팝 */
     .gm-nb-stage.pop svg { animation: gmshape .3s ease; }
     @keyframes gmshape { 0% { transform: scale(.6); opacity: 0; } 65% { transform: scale(1.06); } }
@@ -339,7 +352,7 @@
     .gm-cell.empty { border-color: transparent; background: transparent; cursor: default; }
 
     /* 개수 비교 — 단어가 흩어진 좌우 판(1초 노출 뒤 사라짐) */
-    .gm-wpanel { position: relative; flex: 1 1 0; aspect-ratio: 5/6; max-width: 170px; background: var(--bg2);
+    .gm-wpanel { position: relative; flex: 1 1 0; aspect-ratio: 5/6; max-width: 170px; background: var(--surface);
       border: 1.5px solid var(--border-strong); border-radius: 14px; cursor: pointer; overflow: visible; }
     .gm-wpanel:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
     .gm-wpanel span { position: absolute; font-weight: 800; color: var(--accent); line-height: 1; white-space: nowrap; }
@@ -351,7 +364,7 @@
     /* 도형 회전 — 전/후 카드 + 변형 순서 입력(버튼을 눌러도 모양은 안 바뀐다) */
     .gm-rt-cards { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
     .gm-rt-card { flex: 0 1 150px; border: 1.5px solid var(--border-strong); border-radius: 14px;
-      background: var(--bg2); padding: 8px 6px 4px; text-align: center; }
+      background: var(--surface); box-shadow: 0 1px 2px rgba(23,42,71,.08); padding: 8px 6px 4px; text-align: center; }
     .gm-rt-card.aft { background: var(--accent-tint); }
     .gm-rt-card em { font-style: normal; font-size: 12px; font-weight: 800; color: var(--text-muted); }
     .gm-rt-card svg { display: block; width: 86px; height: 86px; margin: 0 auto; color: var(--ink); }
@@ -390,7 +403,7 @@
     .mk.col-r, .gm-runner.col-r { border-color: #C0453E; color: #C0453E; }
     /* 테두리가 칸의 유일한 식별 수단이라 --border-strong(3:1) — border-soft 는 1.1:1 로 미달 */
     .gm-pcell { aspect-ratio: 1/1; min-width: 0; border: 1.5px solid var(--border-strong); border-radius: 8px;
-      background: var(--bg2); cursor: pointer; padding: 0; }
+      background: var(--surface); cursor: pointer; padding: 0; }
     .gm-pcell svg { display: block; width: 100%; height: 100%; color: var(--ink); }
     .gm-pcell svg.ph { opacity: .16; }   /* 빈 칸의 흐린 ✕ — 여기에 / 또는 \ 를 놓는다는 안내 */
     .gm-pcell.hint { background: var(--accent-tint); border-color: var(--accent-dark); }
@@ -406,7 +419,7 @@
     .gm-memo .set { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
     .gm-memo .set i { font-style: normal; min-width: 58px; padding: 12px 10px; border-radius: 12px;
       border: 1.5px solid var(--border-strong); background: var(--surface); font-size: 18px; font-weight: 800;
-      color: var(--ink); }
+      color: var(--ink); box-shadow: 0 1px 2px rgba(23,42,71,.08); }
     .gm-cands { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; max-width: 360px; margin: 0 auto; }
     .gm-cands button { min-width: 46px; min-height: 50px; padding: 4px 10px; border-radius: 12px;
       border: 1.5px solid var(--border-strong); background: var(--surface); font-size: 15.5px; font-weight: 800;
@@ -417,8 +430,9 @@
     .gm-nb-stage { display: flex; align-items: center; justify-content: center; min-height: 128px;
       font-size: 15px; font-weight: 800; color: var(--text-muted); text-align: center; }
     .gm-nb-stage svg { width: 92px; height: 92px; color: var(--accent); }
-    /* 기억 단계(아직 답 안 하는 도형)는 점선 카드로 구분 — 투명 테두리 상시라 전환 시 레이아웃 불변 */
-    .gm-nb-stage .fr { display: flex; align-items: center; justify-content: center; padding: 10px;
+    /* 도형은 흰 카드 위 — 기억 단계는 점선 테두리로 구분(투명 테두리 상시라 전환 시 레이아웃 불변) */
+    .gm-nb-stage .fr { display: flex; align-items: center; justify-content: center; padding: 12px;
+      background: var(--surface); box-shadow: 0 1px 2px rgba(23,42,71,.08);
       border: 2px dashed transparent; border-radius: 18px; }
     .gm-nb-stage.lead .fr { border-color: var(--border-strong); }
     /* 문항 진행 막대 — 제한시간 막대(gm-qtimer)와 별개 */
@@ -427,7 +441,7 @@
     .gm-prog i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px;
       transition: width .25s ease; }
     /* PC 키보드 힌트 — 마우스 포인터 환경에서만 그린다(games.js hasKb) */
-    .gm-nb-btns kbd { display: block; width: max-content; margin: 0 auto 3px; font-family: inherit;
+    .gm-nb-btns kbd, .gm-big kbd { display: block; width: max-content; margin: 0 auto 3px; font-family: inherit;
       font-size: 12px; font-weight: 700; color: var(--text-muted); background: var(--bg2);
       border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 5px; }
     .gm-nb-btns { display: flex; gap: 8px; justify-content: center; }
@@ -632,7 +646,7 @@
     <div class="gm-foot"></div>
   </main>
 
-<script src="games.js?v=4" defer></script>
+<script src="games.js?v=5" defer></script>
 <script>
 /* bfcache — 뒤로/앞으로 오면 크롬은 떠날 때 그리던 화면을 그대로 되살린다.
    게임 타이머는 시각 기반이라 되살린 화면은 그대로 종료돼 버린 상태다 — 통째로 다시 받는다(CLAUDE.md 표준). */
