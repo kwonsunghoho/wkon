@@ -225,9 +225,14 @@
     .v2-ghost:hover { border-color: var(--action); color: var(--action); }
     .v2-logout { width: 100%; margin-top: 20px; }
 
-    /* 회원 탈퇴 — '내 정보' 접이 맨 아래. 되돌릴 수 없는 동작이라 시각적으로 분리한다. */
-    .v2-danger { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
-    .v2-danger-h { margin: 0 0 6px; font-size: 14px; font-weight: 800; color: var(--text); }
+    /* 회원 탈퇴 — '내 정보' 접이 맨 아래, 평소엔 작은 글자 링크 하나(2026-08-26 오너 지적
+       "탈퇴를 종용하는 것 같다" — 설명·빨간 버튼은 링크를 눌러야 펼쳐진다). */
+    .v2-quit-row { margin-top: 18px; padding-top: 4px; border-top: 1px solid var(--border); }
+    .v2-quit-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0;
+      background: none; border: 0; font-family: inherit; font-size: 12.5px; font-weight: 600;
+      color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .v2-quit-link:hover { color: var(--text-muted); }
+    .v2-danger { margin-top: 2px; }
     .v2-danger-d { margin: 0 0 12px; font-size: 12.5px; line-height: 1.65; color: var(--text-muted); }
     .v2-danger-d a { color: var(--accent-ink); }
     .v2-danger-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
@@ -547,9 +552,14 @@
                  고지하는데 정작 학생이 그 요구를 행사할 창구가 사이트에 없었다.
                  ⚠️ 접이 안에 두는 것은 의도다 — 자주 누를 것이 아니고, 로그아웃 버튼과
                     나란히 두면 오탭 위험이 커진다. 삭제 함수는 동의 게이트와 같은
-                    MONC.deleteMyAccount() 를 그대로 쓴다(두 벌로 나누지 말 것). -->
-            <div class="v2-danger">
-              <p class="v2-danger-h">회원 탈퇴</p>
+                    MONC.deleteMyAccount() 를 그대로 쓴다(두 벌로 나누지 말 것).
+                 ⚠️ 2026-08-26 오너 지적("탈퇴를 종용하는 것 같다")으로 한 겹 더 접었다 —
+                    평소엔 작은 글자 링크 하나만 보이고, 눌러야 설명+빨간 버튼이 펼쳐진다.
+                    창구 자체를 없애면 안 된다(법적 필수) — 눈에 덜 띄게만 한다. -->
+            <div class="v2-quit-row">
+              <button class="v2-quit-link" id="deleteAccOpen" type="button" aria-expanded="false" aria-controls="deleteAccBox">회원 탈퇴</button>
+            </div>
+            <div class="v2-danger" id="deleteAccBox" hidden>
               <p class="v2-danger-d">
                 계정과 함께 <b>저장한 답변·소재 카드·미션 기록·남은 크레딧</b>이 모두 삭제되며
                 되돌릴 수 없습니다. 결제·환불 기록은 전자상거래법에 따라 5년간 별도 보관됩니다
@@ -608,6 +618,15 @@
       const btn = document.getElementById('deleteAccBtn');
       const msg = document.getElementById('deleteMsg');
       if (!btn) return;
+      // 평소엔 접혀 있다 — 작은 링크를 눌러야 설명+버튼이 펼쳐진다(2026-08-26 오너 지적)
+      const openLink = document.getElementById('deleteAccOpen');
+      const box = document.getElementById('deleteAccBox');
+      if (openLink && box) {
+        openLink.addEventListener('click', () => {
+          box.hidden = !box.hidden;
+          openLink.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
+        });
+      }
       btn.addEventListener('click', async () => {
         if (!window.confirm('회원 탈퇴를 진행할까요?\n\n저장한 답변·소재 카드·미션 기록·남은 크레딧이 모두 삭제되며 되돌릴 수 없습니다.')) return;
         const typed = window.prompt('정말 탈퇴하시려면 아래에 «탈퇴»라고 입력해 주세요.');
