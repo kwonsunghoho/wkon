@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>특강 시작일 강조 목업 3종 — ?v=a(카드 머리) / b(히어로) / c(줄 승격)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     특강 상세 시작일 강조 목업 — 2026-08-26
+     현행 라이브 디자인(다크 히어로 + 헤어라인 팩트 카드) 위에 얹는 3안.
+     A안 = 팩트 카드 머리에 큰 날짜(티켓식) · B안 = 히어로 안 큰 날짜 · C안 = 일시 줄 승격(최소)
+     ═══════════════════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+    background: var(--bg, #fff); color: var(--text, #1E2229);
+    line-height: 1.65; -webkit-font-smoothing: antialiased;
+    word-break: keep-all; overflow-wrap: break-word; padding-bottom: 40px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+  .variant { display: none; }
+  body.va .v-a, body.vb .v-b, body.vc .v-c { display: block; }
+
+  /* 목업 식별 띠 — 실구현엔 없음 */
+  .mk-tag { position: sticky; top: 0; z-index: 99; background: var(--bg-dark, #1C2A3A); color: #fff;
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-align: center; padding: 7px 0; }
+
+  /* ── 현행 라이브와 동일: 다크 히어로 ── */
+  .hero { position: relative; background: linear-gradient(160deg, #141D29, #1C2A3A 55%, #223349); padding: 44px 0 88px; }
+  .hero .wrap { position: relative; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+    margin-bottom: 14px; background: rgba(255,255,255,.14); color: #C9EBD4; }
+  .eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .2em; color: var(--action-on-dark, #A8C7F0);
+    text-transform: uppercase; margin-bottom: 12px; }
+  .title { font-size: 30px; font-weight: 800; color: #fff; letter-spacing: -.5px; line-height: 1.28; }
+  .sub { font-size: 16px; color: #F1F4F8; opacity: .85; margin-top: 12px; }
+
+  /* ── 현행 라이브와 동일: 무대에 걸쳐 뜨는 팩트 카드 ── */
+  .facts { position: relative; margin-top: -56px; background: var(--surface, #fff); border: 1px solid var(--border-soft);
+    border-top: 2px solid var(--accent, #1B3A6B); border-radius: var(--radius-md, 20px);
+    box-shadow: 0 10px 30px rgba(20,32,52,.14); padding: 6px 20px; }
+  .fact { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--border-soft); }
+  .fact:last-child { border-bottom: none; }
+  .fact .k { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--text-dim, #5F6874); }
+  .fact .v { font-size: 16px; font-weight: 700; text-align: right; }
+  .fact .v.price { font-size: 20px; font-weight: 800; color: var(--accent-ink, #1B3A6B); }
+
+  /* 본문 맛보기(공통) */
+  .sec { margin-top: 56px; }
+  .sec .lab { font-size: 12px; font-weight: 700; letter-spacing: .22em; color: var(--accent-ink, #1B3A6B); text-transform: uppercase; }
+  .sec h2 { font-size: 20px; font-weight: 800; color: var(--ink, #1C2A3A); margin: 8px 0 14px; }
+  .sec p { font-size: 16px; }
+
+  /* ═══════════ A안 — 팩트 카드 머리에 큰 날짜(티켓식) ═══════════
+     8/26 목업 A안(보딩패스)의 tk-big 을 현행 카드로 가져온다.
+     날짜가 카드에서 참가비(20px)보다 큰 유일한 값이 된다. */
+  .v-a .dhead { padding: 18px 0 16px; border-bottom: 1px solid var(--border-soft); }
+  .v-a .dhead .k { font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--text-dim, #5F6874); text-transform: uppercase; }
+  .v-a .dhead .big { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  .v-a .dhead .big .d { font-size: 32px; font-weight: 800; color: var(--ink, #1C2A3A); letter-spacing: -.5px; line-height: 1.2; }
+  .v-a .dhead .big .t { font-size: 17px; font-weight: 700; color: var(--accent-ink, #1B3A6B); }
+
+  /* ═══════════ B안 — 히어로 안 큰 날짜(포스터식) ═══════════
+     다크 무대 맨 아래, 제목보다 큰 흰 날짜. 팩트 카드의 일시 줄은 시간·장소 줄로 바뀐다. */
+  .v-b .hdate { margin-top: 22px; }
+  .v-b .hdate .k { font-size: 12px; font-weight: 700; letter-spacing: .18em; color: var(--action-on-dark, #A8C7F0); text-transform: uppercase; }
+  .v-b .hdate .big { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+  .v-b .hdate .big .d { font-size: 34px; font-weight: 800; color: #fff; letter-spacing: -.5px; line-height: 1.2; }
+  .v-b .hdate .big .t { font-size: 17px; font-weight: 700; color: var(--action-on-dark, #A8C7F0); }
+
+  /* ═══════════ C안 — 일시 줄 승격(최소 변경) ═══════════
+     줄 구조는 그대로, 라벨을 '특강 시작일'로 바꾸고 값을 참가비와 같은 20px 800 네이비로. */
+  .v-c .fact .v.date { font-size: 20px; font-weight: 800; color: var(--ink, #1C2A3A); }
+</style>
+</head>
+<body>
+
+<!-- ══════════ A안 · 팩트 카드 머리에 큰 날짜 ══════════ -->
+<div class="variant v-a">
+  <div class="mk-tag">A안 — 팩트 카드 머리에 큰 날짜(티켓식)</div>
+  <header class="hero"><div class="wrap">
+    <div class="eyebrow">Special Lecture</div>
+    <span class="badge">신청 중 · D-8</span>
+    <h1 class="title">영상면접 1:1 원데이<br>진단&amp;코칭</h1>
+    <p class="sub">카메라 앞 첫인상부터 답변 구성까지, 하루에 잡는 1:1 집중 진단.</p>
+  </div></header>
+  <div class="wrap">
+    <div class="facts">
+      <div class="dhead">
+        <div class="k">특강 시작일</div>
+        <div class="big"><span class="d">9월 5일</span><span class="t">(금) 14:00 · 강남 스튜디오</span></div>
+      </div>
+      <div class="fact"><div class="k">강사</div><div class="v">몬크 수석 연구원</div></div>
+      <div class="fact"><div class="k">신청 기간</div><div class="v">8월 26일 ~ 9월 3일</div></div>
+      <div class="fact"><div class="k">잔여석</div><div class="v">6석 / 정원 12명</div></div>
+      <div class="fact"><div class="k">참가비</div><div class="v price">50,000원</div></div>
+    </div>
+    <section class="sec"><div class="lab">About</div><h2>특강 소개</h2>
+      <p>영상면접은 대면 면접과 완전히 다른 승부처가 있습니다. 실제 촬영 환경에서 하나씩 진단합니다.</p>
+    </section>
+  </div>
+</div>
+
+<!-- ══════════ B안 · 히어로 안 큰 날짜 ══════════ -->
+<div class="variant v-b">
+  <div class="mk-tag">B안 — 히어로 안 큰 날짜(포스터식)</div>
+  <header class="hero"><div class="wrap">
+    <div class="eyebrow">Special Lecture</div>
+    <span class="badge">신청 중 · D-8</span>
+    <h1 class="title">영상면접 1:1 원데이<br>진단&amp;코칭</h1>
+    <p class="sub">카메라 앞 첫인상부터 답변 구성까지, 하루에 잡는 1:1 집중 진단.</p>
+    <div class="hdate">
+      <div class="k">특강 시작일</div>
+      <div class="big"><span class="d">9월 5일 (금)</span><span class="t">14:00</span></div>
+    </div>
+  </div></header>
+  <div class="wrap">
+    <div class="facts">
+      <div class="fact"><div class="k">시간·장소</div><div class="v">14:00 · 강남 스튜디오</div></div>
+      <div class="fact"><div class="k">강사</div><div class="v">몬크 수석 연구원</div></div>
+      <div class="fact"><div class="k">신청 기간</div><div class="v">8월 26일 ~ 9월 3일</div></div>
+      <div class="fact"><div class="k">잔여석</div><div class="v">6석 / 정원 12명</div></div>
+      <div class="fact"><div class="k">참가비</div><div class="v price">50,000원</div></div>
+    </div>
+    <section class="sec"><div class="lab">About</div><h2>특강 소개</h2>
+      <p>영상면접은 대면 면접과 완전히 다른 승부처가 있습니다. 실제 촬영 환경에서 하나씩 진단합니다.</p>
+    </section>
+  </div>
+</div>
+
+<!-- ══════════ C안 · 일시 줄 승격(최소 변경) ══════════ -->
+<div class="variant v-c">
+  <div class="mk-tag">C안 — 일시 줄 승격(최소 변경)</div>
+  <header class="hero"><div class="wrap">
+    <div class="eyebrow">Special Lecture</div>
+    <span class="badge">신청 중 · D-8</span>
+    <h1 class="title">영상면접 1:1 원데이<br>진단&amp;코칭</h1>
+    <p class="sub">카메라 앞 첫인상부터 답변 구성까지, 하루에 잡는 1:1 집중 진단.</p>
+  </div></header>
+  <div class="wrap">
+    <div class="facts">
+      <div class="fact"><div class="k">특강 시작일</div><div class="v date">9월 5일 (금) 14:00</div></div>
+      <div class="fact"><div class="k">강사</div><div class="v">몬크 수석 연구원</div></div>
+      <div class="fact"><div class="k">신청 기간</div><div class="v">8월 26일 ~ 9월 3일</div></div>
+      <div class="fact"><div class="k">잔여석</div><div class="v">6석 / 정원 12명</div></div>
+      <div class="fact"><div class="k">참가비</div><div class="v price">50,000원</div></div>
+    </div>
+    <section class="sec"><div class="lab">About</div><h2>특강 소개</h2>
+      <p>영상면접은 대면 면접과 완전히 다른 승부처가 있습니다. 실제 촬영 환경에서 하나씩 진단합니다.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  var v = new URLSearchParams(location.search).get('v') || 'a';
+  document.body.className = 'v' + (['a','b','c'].indexOf(v) >= 0 ? v : 'a');
+</script>
+</body>
+</html>

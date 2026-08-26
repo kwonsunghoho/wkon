@@ -70,6 +70,13 @@
     /* ── 정보 카드 — 무대에 걸쳐 뜨는 흰 카드 + 세로 나열(C안 헤어라인 · 2026-08-26 오너 확정) ──
        상단 2px 룰이 항공사 액센트 자리다(다크 히어로에선 항공사색이 안 보여 여기로 옮겼다). */
     .lc-facts { position: relative; margin-top: -56px; background: var(--surface); border: 1px solid var(--border-soft); border-top: 2px solid var(--lx-accent, var(--lx-navy)); border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(20,32,52,.14); padding: 6px 20px; }
+    /* 특강 시작일 — 카드 머리 큰 날짜(2026-08-26 오너 확정 A안 · outputs/lecture-date-mockup.html).
+       카드 안에서 참가비(20px)보다 큰 유일한 값이라 시작일이 첫눈에 잡힌다. 32px 는 히어로 제목과 같은 표시값. */
+    .lc-dhead { padding: 18px 0 16px; border-bottom: 1px solid var(--border-soft); }
+    .lc-dhead .k { font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--text-dim); }
+    .lc-dhead .big { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    .lc-dhead .big .d { font-size: 32px; font-weight: 800; color: var(--ink, #1C2A3A); letter-spacing: -.5px; line-height: 1.2; }
+    .lc-dhead .big .t { font-size: 17px; font-weight: 700; color: var(--accent-ink); }
     .lc-fact { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border-soft); }
     .lc-fact:last-child { border-bottom: none; }
     .lc-fact .k { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
@@ -289,8 +296,32 @@
       // 0원 특강은 관리자 문구(price_label — '상담 시 안내' 등)가 있으면 '무료' 대신 그걸 쓴다
       const priceStr = LEC.priceText(l);
 
+      // 특강 시작일 = 팩트 카드 머리 큰 날짜(2026-08-26 오너 확정 A안). 큰 글자는 날짜만,
+      // 요일·시간·장소는 옆 꼬리로. 날짜를 못 읽는 특강(추후 안내)은 종전 '일시' 줄로 폴백.
+      let dhead = '';
+      const headFmt = LEC.fmtDate(SLOTS.length ? SLOTS[0].slot_date : l.lecture_date);
+      if (headFmt) {
+        const hm = headFmt.match(/^(.*일)(\(.+\))$/); // '9월 5일(금)' → 큰 '9월 5일' + 꼬리 '(금)'
+        const tail = [];
+        if (SLOTS.length === 1) {
+          const time = [LEC.fmtTime(SLOTS[0].start_time), LEC.fmtTime(SLOTS[0].end_time)].filter(Boolean).join(' ~ ');
+          if (time) tail.push(time);
+          if (SLOTS[0].label) tail.push(SLOTS[0].label);
+          if (l.schedule_text) tail.push(l.schedule_text);
+        } else if (SLOTS.length > 1) {
+          // 여러 타임이면 첫 날짜만 크게, 나머지는 개수로 요약(자세한 건 아래 선택 목록에서)
+          const oneDay = SLOTS.every(s => String(s.slot_date) === String(SLOTS[0].slot_date));
+          tail.push((oneDay ? '' : '외 · ') + SLOTS.length + '개 타임');
+        } else if (l.schedule_text) tail.push(l.schedule_text);
+        const tailStr = ((hm ? hm[2] + ' ' : '') + tail.join(' · ')).trim();
+        dhead = '<div class="lc-dhead"><div class="k">특강 시작일</div><div class="big">'
+          + '<span class="d">' + LEC.esc(hm ? hm[1] : headFmt) + '</span>'
+          + (tailStr ? '<span class="t">' + LEC.esc(tailStr) + '</span>' : '')
+          + '</div></div>';
+      }
+
       const facts = [];
-      facts.push(fact('일시', when));
+      if (!dhead) facts.push(fact('일시', when));
       if (l.instructor) facts.push(fact('강사', l.instructor));
       if (recruitPeriod) facts.push(fact('신청 기간', recruitPeriod));
       // 잔여석은 DB 트리거가 '정원 − 신청건수'로 자동 계산한 값(20260724150000 마이그레이션).
@@ -320,7 +351,7 @@
         + (l.subtitle ? '<p class="lc-sub">' + LEC.esc(l.subtitle) + '</p>' : '')
         + '</div></header>'
         + '<div class="container">'
-        + '<div class="lc-facts">' + facts.join('') + '</div>'
+        + '<div class="lc-facts">' + dhead + facts.join('') + '</div>'
         + (l.description ? '<section class="lc-sec lc-desc"><div class="lab">About</div><h2>특강 소개</h2>' + descHtml(l.description) + '</section>' : '')
         + (highlights.length ? '<section class="lc-sec"><div class="lab">Point</div><h2>이런 걸 얻어가요</h2><ul class="lc-high">'
             + highlights.map(h => '<li>' + LEC.esc(h) + '</li>').join('') + '</ul></section>' : '')
