@@ -73,8 +73,8 @@
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   text-align: center; color: #fff;
 }
-.bq-intro-title { font-size: clamp(24px, 6.4vw, 30px); font-weight: 900; line-height: 1.3; color: #fff; }
-.bq-intro-meta { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.66); }
+.bq-intro-title { font-size: clamp(24px, 6.4vw, 30px); font-weight: 800; line-height: 1.3; color: #fff; }
+.bq-intro-meta { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.66); }
 .bq-start-btn { min-height: 52px; padding: 14px 36px; font-size: 16px; font-weight: 800; margin-top: 4px; }
 .bq-scene { position: relative; aspect-ratio: 16 / 9; background: #131722; }
 .bq-scene video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -87,7 +87,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .bq-scene-badge {
-  font-size: 12.5px; font-weight: 800; color: #F1F4F8;
+  font-size: 12px; font-weight: 800; color: #F1F4F8;
   background: rgba(16,18,26,.62); border: 1px solid rgba(255,255,255,.18);
   padding: 4px 11px; border-radius: 99px;
   display: inline-flex; align-items: center; gap: 6px;
@@ -100,7 +100,7 @@
 .bq-dots i.on { background: var(--action-on-dark); }
 .bq-scene-tag {
   position: absolute; z-index: 1; left: 14px; bottom: 12px;
-  font-size: 12.5px; font-weight: 800; color: #F1F4F8;
+  font-size: 12px; font-weight: 800; color: #F1F4F8;
   background: rgba(25,65,146,.72); padding: 4px 11px; border-radius: 99px;
 }
 .bq-console { padding: 18px 18px 22px; }
@@ -126,8 +126,8 @@
 }
 .bq-clip-info { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .bq-clip-name { font-size: 15px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.bq-clip-check { font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }
-.bq-clip-badge { font-size: 12.5px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
+.bq-clip-check { font-size: 12px; font-weight: 700; color: var(--accent-ink); }
+.bq-clip-badge { font-size: 12px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
 .bq-clip-badge.is-before { background: rgba(20,32,52,.1); color: var(--primary); }
 .bq-clip-badge.is-after { background: var(--action); color: var(--action-ink); }
 .bq-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
@@ -156,19 +156,19 @@
 .bq-answer-btn:disabled { opacity: .35; cursor: default; border-color: var(--border); color: var(--text-dim); }
 .bq-answer-btn:not(:disabled):hover, .bq-answer-btn:not(:disabled):active { background: var(--accent-tint); }
 .bq-reveal { margin-top: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.bq-verdict { font-size: 20px; font-weight: 900; color: var(--accent-dark); }
+.bq-verdict { font-size: 20px; font-weight: 800; color: var(--accent-dark); }
 .bq-verdict.is-miss { color: var(--primary); }
 .bq-explain { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
 .bq-explain strong { color: var(--text); }
 .bq-next-btn { min-height: 48px; padding: 12px 32px; font-size: 15px; font-weight: 800; margin-top: 4px; }
 .bq-result { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 24px; }
-.bq-score-big { font-size: clamp(24px, 6vw, 32px); font-weight: 900; color: var(--text); line-height: 1.3; }
+.bq-score-big { font-size: clamp(24px, 6vw, 32px); font-weight: 800; color: var(--text); line-height: 1.3; }
 .bq-score-big strong { color: var(--action); }
 .bq-result-msg { font-size: 14.5px; color: var(--text-muted); line-height: 1.7; }
 .bq-cta { min-height: 52px; padding: 15px 32px; font-size: 16px; font-weight: 800; margin-top: 6px; }
 .bq-retry {
   background: none; border: none; cursor: pointer;
-  font-size: 13.5px; font-weight: 700; color: var(--text-dim); font-family: inherit;
+  font-size: 14px; font-weight: 700; color: var(--text-dim); font-family: inherit;
   text-decoration: underline; text-underline-offset: 3px;
   padding: 8px; -webkit-tap-highlight-color: transparent;
 }
