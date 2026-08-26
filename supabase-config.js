@@ -227,6 +227,7 @@
   //   ① verified_at 조회 실패·컬럼 미생성 → 통과
   //   ② verify-identity 프로브 실패(인증 인프라 다운 — 세션당 1회 캐시) → 통과
   //   ③ 온보딩이 '지금 인증 불가'를 판정하고 끊어 준 세션 통과 티켓(monc_idv_pass) → 통과
+  // 관리자(members.role='admin')는 면제 — 운영 확인 동선이 인증에 막히면 안 된다.
   // 미인증이면 onboarding.html?verify=1&returnTo=… 로 보낸다(인증 후 되돌아온다).
   // ⚠️ 마이페이지·챌린지 신청(apply)·게임·뉴스는 대상이 아니다 — 부르는 곳을 늘릴 땐 오너 확인.
   async function requireVerified() {
@@ -234,9 +235,10 @@
     if (!session) return false;
     try { if (sessionStorage.getItem('monc_idv_pass') === '1') return true; } catch (e) {}
     try {
-      const { data, error } = await sb.from('members').select('verified_at').eq('id', session.user.id).single();
+      const { data, error } = await sb.from('members').select('verified_at, role').eq('id', session.user.id).single();
       if (error || !data) return true;
       if (data.verified_at) return true;
+      if (data.role === 'admin') return true;   // 관리자는 본인인증 면제(2026-08-26 오너 지시)
       let probe = null;
       try { probe = sessionStorage.getItem('monc_idv_probe'); } catch (e) {}
       if (probe !== '1' && probe !== '0') {
