@@ -93,8 +93,9 @@
     .gm-card .nm { font-size: 12.5px; font-weight: 700; color: var(--text); }
     .gm-card .bs { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: -4px; }
 
-    /* ── 게임 화면(스테이지) — 허브와 자리를 바꿔 그린다 ── */
-    .gm-stage { display: none; margin-top: 18px; }
+    /* ── 게임 화면(스테이지) — 허브와 자리를 바꿔 그린다.
+       폭 480 제한: PC 에서 640 컬럼에 짧은 글자가 뜨면 좌우 여백만 남는다(2026-08-26 조판 재정비) ── */
+    .gm-stage { display: none; margin: 18px auto 0; max-width: 480px; }
     .gm-stage.on { display: block; }
     .gm-hubwrap.off { display: none; }
 
@@ -112,16 +113,26 @@
       background: var(--accent-tint); border-radius: 4px; padding: 3px 10px; }
     .gm-intro ul { margin: 12px 0 0; padding-left: 18px; font-size: 14.5px; line-height: 1.7; }
     .gm-intro details { margin-top: 12px; font-size: 13.5px; color: var(--text-muted); }
-    .gm-intro summary { cursor: pointer; font-weight: 700; color: var(--text); min-height: 44px; display: flex; align-items: center; }
-    .gm-start { display: block; width: 100%; margin-top: 14px; min-height: 52px; background: var(--action);
+    .gm-intro summary { cursor: pointer; font-weight: 700; color: var(--text); min-height: 44px;
+      display: flex; align-items: center; justify-content: space-between; }
+    .gm-intro summary::after { content: '+'; font-size: 17px; font-weight: 700; color: var(--text-dim); }
+    .gm-intro details[open] summary::after { content: '–'; }
+    .gm-start { display: block; width: 100%; margin-top: 16px; min-height: 52px; background: var(--action);
       color: var(--action-ink); border: 0; border-radius: 12px; font-size: 16px; font-weight: 800;
       cursor: pointer; box-shadow: var(--shadow-action); }
     .gm-start:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; }
-    /* 모드가 있는 게임 — 슬라이더·옵션 나열 대신 버튼 두세 개(기본값 고정 — "더 쉽게", 오너 방향) */
-    .gm-start small { display: block; font-size: 12px; font-weight: 500; opacity: .85; margin-top: 2px; }
-    .gm-start.alt { margin-top: 8px; background: var(--surface); color: var(--text);
-      border: 1px solid var(--border-strong); box-shadow: none; }
-    .gm-start.alt small { color: var(--text-muted); opacity: 1; }
+    /* 모드 = 선택 카드 격자(고르고 나서 시작하기 하나) — 풀폭 버튼을 쌓지 않는다(2026-08-26 조판 재정비) */
+    .gm-lab { margin: 14px 2px 6px; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+    .gm-modes { display: grid; gap: 8px; }
+    .gm-modes[data-n="2"] { grid-template-columns: 1fr 1fr; }
+    .gm-modes[data-n="3"] { grid-template-columns: repeat(3, 1fr); }
+    .gm-mode { min-height: 56px; padding: 8px 6px; border-radius: 12px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); font-size: 13px; font-weight: 800; color: var(--text); cursor: pointer;
+      line-height: 1.3; }
+    .gm-mode.sel { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--accent-ink); }
+    .gm-mode:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
+    /* 고른 모드의 설명 한 줄 — 카드 안에 긴 설명을 구겨 넣지 않는다 */
+    .gm-modesub { margin: 8px 2px 0; font-size: 12.5px; color: var(--text-muted); min-height: 18px; }
     /* 부분 연습 칩 — 약한 라운드만 골라 반복(2026-08-25 오너 "기능이 딸린다" 보강) */
     /* 간격 8px·높이 44px = 터치 규칙 하한(2026-08-25 실측 감사에서 40px·6px 적발) */
     .gm-parts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px;
@@ -297,12 +308,12 @@
     @keyframes gmdeal { from { opacity: 0; transform: translateY(6px) scale(.92); } }
     /* 누르는 감촉 — 키캡: 아래로 2px 두께가 있고, 누르면 그만큼 내려앉는다(2026-08-26 재정비) */
     .gm-big, .gm-nb-btns button, .gm-cands button, .gm-rt-ops button, .gm-rt-tools button,
-    .gm-cell:not(.empty), .gm-wpanel, .gm-part, .gm-opt, .gm-start.alt {
+    .gm-cell:not(.empty), .gm-wpanel, .gm-part, .gm-opt, .gm-mode {
       box-shadow: 0 2px 0 rgba(23,42,71,.20); }
     .gm-cell.done { box-shadow: none; }   /* 이미 누른 숫자는 눌려 들어간 채로 */
     .gm-big:active, .gm-nb-btns button:not(:disabled):active, .gm-cands button:active,
     .gm-rt-ops button:active, .gm-rt-tools button:active, .gm-cell:not(.empty):active,
-    .gm-wpanel:active, .gm-part:active, .gm-pcell:active, .gm-opt:active, .gm-start.alt:active {
+    .gm-wpanel:active, .gm-part:active, .gm-pcell:active, .gm-opt:active, .gm-mode:active {
       transform: translateY(2px) scale(.98); box-shadow: 0 0 0 rgba(23,42,71,.20); }
     /* 2-back 도형 팝 */
     .gm-nb-stage.pop svg { animation: gmshape .3s ease; }
@@ -453,8 +464,12 @@
 
     /* 게임 오류 제보 폼 — 입력칸 16px 하한(iOS 확대 방지 겸 원칙) */
     .gm-reportbox { margin: 26px auto 0; max-width: 560px; }
+    /* 좌정렬 + 우측 상태 표시 — 짧은 글자를 풀폭 박스 가운데 띄우지 않는다(조판 재정비) */
     .gm-report-toggle { width: 100%; min-height: 48px; border: 1px solid var(--border-strong);
-      border-radius: 12px; background: var(--surface); font-size: 14px; font-weight: 800; cursor: pointer; }
+      border-radius: 12px; background: var(--surface); font-size: 14px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+    .gm-report-toggle::after { content: '+'; font-size: 18px; font-weight: 700; color: var(--text-muted); }
+    .gm-report-toggle[aria-expanded="true"]::after { content: '–'; }
     .gm-report-toggle:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
     .gm-report-form { margin-top: 10px; padding: 14px; border: 1px solid var(--border-soft);
       border-radius: 14px; background: var(--surface); box-shadow: var(--shadow);
@@ -646,7 +661,7 @@
     <div class="gm-foot"></div>
   </main>
 
-<script src="games.js?v=5" defer></script>
+<script src="games.js?v=6" defer></script>
 <script>
 /* bfcache — 뒤로/앞으로 오면 크롬은 떠날 때 그리던 화면을 그대로 되살린다.
    게임 타이머는 시각 기반이라 되살린 화면은 그대로 종료돼 버린 상태다 — 통째로 다시 받는다(CLAUDE.md 표준). */

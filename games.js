@@ -297,8 +297,18 @@
         ? '<details><summary>공략 팁 보기</summary><ul>' +
           g.tips.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></details>'
         : '') +
-      /* 옵션 칩(도형 세트·도형당 시간 등) — 시작 버튼보다 위: 고르고 나서 시작하는 순서.
-         슬라이더 금지는 유지(2026-08-26 오너 캡처 지시 — 베끼지 말고 우리 문법으로) */
+      /* 모드는 선택 카드 — 고르고 맨 아래 '시작하기' 하나로 시작한다.
+         풀폭 버튼을 쌓지 않는다(2026-08-26 오너 "박스 안 글자 좌우 여백" — 조판 재정비) */
+      (g.modes
+        ? '<p class="gm-lab">모드</p>' +
+          '<div class="gm-modes" data-n="' + g.modes.length + '">' +
+          g.modes.map(function (m, i) {
+            return '<button type="button" class="gm-mode' + (i === 0 ? ' sel' : '') +
+              '" data-mode="' + m.key + '">' + m.label + '</button>';
+          }).join('') + '</div>' +
+          '<p class="gm-modesub" id="gmModeSub"></p>'
+        : '') +
+      /* 옵션 칩(도형 세트·도형당 시간 등) — 슬라이더 금지는 유지 */
       (g.opts ? g.opts.map(function (op) {
         return '<div class="gm-opts" data-key="' + op.key + '"><em>' + op.label + '</em>' +
           op.items.map(function (it) {
@@ -307,20 +317,31 @@
               (it.html || it.label) + '</button>';
           }).join('') + '</div>';
       }).join('') : '') +
-      /* 모드가 있으면 버튼 두세 개(첫 번째가 기본) — 슬라이더·옵션 나열은 두지 않는다(오너 "더 쉽게") */
-      (g.modes
-        ? g.modes.map(function (m, i) {
-            return '<button type="button" class="gm-start' + (i ? ' alt' : '') + '" data-mode="' + m.key + '">' +
-              m.label + '<small>' + m.sub + '</small></button>';
-          }).join('')
-        : '<button type="button" class="gm-start" data-mode="practice">시작하기</button>') +
       /* 약한 라운드만 골라 반복 — 실물의 라운드 선택을 칩 한 줄로 */
       (g.parts
         ? '<div class="gm-parts"><em>부분만 연습</em>' + g.parts.map(function (pp) {
             return '<button type="button" class="gm-part" data-mode="' + pp.key + '">' + pp.label + '</button>';
           }).join('') + '</div>'
-        : '');
-    [].slice.call(introEl.querySelectorAll('.gm-start, .gm-part')).forEach(function (btn) {
+        : '') +
+      '<button type="button" class="gm-start" id="gmGo">시작하기</button>';
+    var selMode = g.modes ? g.modes[0].key : 'practice';
+    var modeSubEl = $('gmModeSub');
+    function paintModeSub() {
+      if (!modeSubEl || !g.modes) return;
+      for (var mi = 0; mi < g.modes.length; mi++)
+        if (g.modes[mi].key === selMode) modeSubEl.textContent = g.modes[mi].sub;
+    }
+    paintModeSub();
+    [].slice.call(introEl.querySelectorAll('.gm-mode')).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selMode = btn.getAttribute('data-mode');
+        [].slice.call(introEl.querySelectorAll('.gm-mode')).forEach(function (x) { x.classList.remove('sel'); });
+        btn.classList.add('sel');
+        paintModeSub();
+      });
+    });
+    $('gmGo').addEventListener('click', function () { startPlay(selMode); });
+    [].slice.call(introEl.querySelectorAll('.gm-part')).forEach(function (btn) {
       btn.addEventListener('click', function () { startPlay(btn.getAttribute('data-mode')); });
     });
     [].slice.call(introEl.querySelectorAll('.gm-opts')).forEach(function (row) {
