@@ -130,6 +130,17 @@
     .gm-part { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-strong);
       background: var(--surface); font-size: 12.5px; font-weight: 700; cursor: pointer; }
     .gm-part:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
+    /* 소개 화면 옵션 칩(2-back 도형 세트·도형당 시간) — 2026-08-26 오너 캡처 지시로 추가.
+       슬라이더·긴 옵션 나열 금지는 유지 — 칩 한두 줄이 상한이다. */
+    .gm-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px;
+      font-size: 12.5px; color: var(--text-muted); }
+    .gm-opts em { font-style: normal; font-weight: 700; }
+    .gm-opt { min-height: 44px; padding: 0 11px; border-radius: 10px; border: 1px solid var(--border-strong);
+      background: var(--surface); font-size: 12.5px; font-weight: 700; color: var(--text);
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    .gm-opt svg { width: 15px; height: 15px; }
+    .gm-opt.sel { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--accent-ink); }
+    .gm-opt:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
 
     /* ── 소개 화면 예시 도해 — 실전처럼 '그림으로 먼저' 가르친다(2026-08-26 실전 반영 보강).
        조작 요소가 아니라 그림이다 — 44px 터치 규칙 대상 아님. 내용은 games.js 각 게임의 demo 필드. ── */
@@ -406,6 +417,19 @@
     .gm-nb-stage { display: flex; align-items: center; justify-content: center; min-height: 128px;
       font-size: 15px; font-weight: 800; color: var(--text-muted); text-align: center; }
     .gm-nb-stage svg { width: 92px; height: 92px; color: var(--accent); }
+    /* 기억 단계(아직 답 안 하는 도형)는 점선 카드로 구분 — 투명 테두리 상시라 전환 시 레이아웃 불변 */
+    .gm-nb-stage .fr { display: flex; align-items: center; justify-content: center; padding: 10px;
+      border: 2px dashed transparent; border-radius: 18px; }
+    .gm-nb-stage.lead .fr { border-color: var(--border-strong); }
+    /* 문항 진행 막대 — 제한시간 막대(gm-qtimer)와 별개 */
+    .gm-prog { height: 4px; max-width: 340px; margin: 0 auto 10px; border-radius: 3px;
+      background: var(--bg3); overflow: hidden; }
+    .gm-prog i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px;
+      transition: width .25s ease; }
+    /* PC 키보드 힌트 — 마우스 포인터 환경에서만 그린다(games.js hasKb) */
+    .gm-nb-btns kbd { display: block; width: max-content; margin: 0 auto 3px; font-family: inherit;
+      font-size: 12px; font-weight: 700; color: var(--text-muted); background: var(--bg2);
+      border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 5px; }
     .gm-nb-btns { display: flex; gap: 8px; justify-content: center; }
     .gm-nb-btns button { flex: 1 1 0; max-width: 150px; min-height: 56px; border-radius: 12px;
       border: 1.5px solid var(--border-strong); background: var(--surface); font-size: 13px; font-weight: 800;
@@ -530,6 +554,13 @@
       <symbol id="gs-plus" viewBox="0 0 24 24"><path d="M9.3 4h5.4v5.3H20v5.4h-5.3V20H9.3v-5.3H4V9.3h5.3Z" fill="currentColor"/></symbol>
       <symbol id="gs-hex" viewBox="0 0 24 24"><path d="M12 3 19.6 7.4v8.8L12 20.6 4.4 16.2V7.4Z" fill="currentColor"/></symbol>
       <symbol id="gs-half" viewBox="0 0 24 24"><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></symbol>
+      <!-- 세트 4·5(2026-08-26 세트 선택 추가로 신설 — 전부 자체 드로잉) -->
+      <symbol id="gs-heart" viewBox="0 0 24 24"><path d="M12 20.2C6.8 16.6 4 13.6 4 10.2 4 7.9 5.8 6 8.1 6c1.5 0 2.9.8 3.9 2.2C13 6.8 14.4 6 15.9 6 18.2 6 20 7.9 20 10.2c0 3.4-2.8 6.4-8 10Z" fill="currentColor"/></symbol>
+      <symbol id="gs-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.6 8.6 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2Z" fill="currentColor"/></symbol>
+      <symbol id="gs-bolt" viewBox="0 0 24 24"><path d="M13 2 5.8 13h4L11 22l7.2-11h-4Z" fill="currentColor"/></symbol>
+      <symbol id="gs-drop" viewBox="0 0 24 24"><path d="M12 3c3.7 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0C6 10.6 8.3 7.3 12 3Z" fill="currentColor"/></symbol>
+      <symbol id="gs-arrow" viewBox="0 0 24 24"><path d="M12 3.5 19 11h-4v9.5H9V11H5Z" fill="currentColor"/></symbol>
+      <symbol id="gs-bowtie" viewBox="0 0 24 24"><path d="M4.5 5.5 11 12 4.5 18.5ZM19.5 5.5 13 12l6.5 6.5Z" fill="currentColor"/></symbol>
       <!-- 가위바위보 손 3종(gh-*) — 실전처럼 '손 모양'으로 보여준다(2026-08-26 실전 반영 보강,
            구 gs-paper 종이 아이콘 폐기). 자체 드로잉 — 잡다 그래픽과 무관. -->
       <symbol id="gh-rock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -601,7 +632,7 @@
     <div class="gm-foot"></div>
   </main>
 
-<script src="games.js?v=3" defer></script>
+<script src="games.js?v=4" defer></script>
 <script>
 /* bfcache — 뒤로/앞으로 오면 크롬은 떠날 때 그리던 화면을 그대로 되살린다.
    게임 타이머는 시각 기반이라 되살린 화면은 그대로 종료돼 버린 상태다 — 통째로 다시 받는다(CLAUDE.md 표준). */
