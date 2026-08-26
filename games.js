@@ -30,6 +30,19 @@
   function sym(id) {
     return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>';
   }
+  /* 2-back 도형 고정색 — 색=도형 1:1 이라 난이도 불변(기능색 3종+네이비 재사용, 새 브랜드색 아님).
+     세트 4·5는 2026-08-26 세트 선택 추가로 신설. */
+  var NB_COLOR = {
+    'gs-circle': '#1B3A6B', 'gs-tri': '#B7791F', 'gs-square': '#C0453E',
+    'gs-ring': '#1B3A6B', 'gs-half': '#B7791F', 'gs-hex': '#2B6CB0',
+    'gs-diamond': '#2B6CB0', 'gs-star': '#B7791F', 'gs-plus': '#1B3A6B',
+    'gs-heart': '#C0453E', 'gs-moon': '#B7791F', 'gs-bolt': '#1B3A6B',
+    'gs-drop': '#2B6CB0', 'gs-arrow': '#1B3A6B', 'gs-bowtie': '#C0453E'
+  };
+  /* 색 입힌 심볼 — 세트 미리보기 칩·소개 도해용 */
+  function symC(id) {
+    return '<svg aria-hidden="true" style="color:' + (NB_COLOR[id] || '') + '"><use href="#' + id + '"/></svg>';
+  }
   function flash(node, ok) {
     var c = ok ? 'gm-flash-ok' : 'gm-flash-no';
     node.classList.remove('gm-flash-ok', 'gm-flash-no');
@@ -227,6 +240,7 @@
   }
 
   /* 게임에 넘겨주는 손잡이 — 게임 코드는 이 밖의 엔진 내부를 만지지 않는다 */
+  var curOpts = {};   // 소개 화면 옵션 칩 선택값 — openGame 마다 기본값으로 초기화, '다시 하기'는 유지
   var api = {
     board: board,
     mark: mark,
@@ -234,7 +248,8 @@
     finish: finishGame,
     onCleanup: function (fn) { cleanupFn = fn; },
     flash: flash,
-    shake: shake
+    shake: shake,
+    opt: function (k) { return curOpts[k]; }
   };
 
   /* ── 화면 전환 ── */
@@ -264,6 +279,8 @@
     if (!g) return;
     cur = g;
     curMode = 'practice';           // 다른 게임의 '실전'이 넘어오지 않게 초기화
+    curOpts = {};
+    if (g.opts) g.opts.forEach(function (op) { curOpts[op.key] = op.def; });
     hubWrap.classList.add('off');
     stage.classList.add('on');
     board.classList.remove('on'); board.innerHTML = '';
@@ -280,6 +297,16 @@
         ? '<details><summary>공략 팁 보기</summary><ul>' +
           g.tips.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></details>'
         : '') +
+      /* 옵션 칩(도형 세트·도형당 시간 등) — 시작 버튼보다 위: 고르고 나서 시작하는 순서.
+         슬라이더 금지는 유지(2026-08-26 오너 캡처 지시 — 베끼지 말고 우리 문법으로) */
+      (g.opts ? g.opts.map(function (op) {
+        return '<div class="gm-opts" data-key="' + op.key + '"><em>' + op.label + '</em>' +
+          op.items.map(function (it) {
+            return '<button type="button" class="gm-opt' + (curOpts[op.key] === it.v ? ' sel' : '') +
+              '" data-v="' + it.v + '"' + (it.aria ? ' aria-label="' + it.aria + '"' : '') + '>' +
+              (it.html || it.label) + '</button>';
+          }).join('') + '</div>';
+      }).join('') : '') +
       /* 모드가 있으면 버튼 두세 개(첫 번째가 기본) — 슬라이더·옵션 나열은 두지 않는다(오너 "더 쉽게") */
       (g.modes
         ? g.modes.map(function (m, i) {
@@ -295,6 +322,16 @@
         : '');
     [].slice.call(introEl.querySelectorAll('.gm-start, .gm-part')).forEach(function (btn) {
       btn.addEventListener('click', function () { startPlay(btn.getAttribute('data-mode')); });
+    });
+    [].slice.call(introEl.querySelectorAll('.gm-opts')).forEach(function (row) {
+      var key = row.getAttribute('data-key');
+      [].slice.call(row.querySelectorAll('.gm-opt')).forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          curOpts[key] = btn.getAttribute('data-v');
+          [].slice.call(row.querySelectorAll('.gm-opt')).forEach(function (x) { x.classList.remove('sel'); });
+          btn.classList.add('sel');
+        });
+      });
     });
     if (!viaHistory) {
       try { history.pushState({ gm: id }, '', '#' + id); } catch (e) {}
@@ -419,31 +456,49 @@
     var SETS = [
       ['gs-circle', 'gs-tri', 'gs-square'],
       ['gs-ring', 'gs-half', 'gs-hex'],
-      ['gs-diamond', 'gs-star', 'gs-plus']
+      ['gs-diamond', 'gs-star', 'gs-plus'],
+      ['gs-heart', 'gs-moon', 'gs-bolt'],
+      ['gs-drop', 'gs-arrow', 'gs-bowtie']
     ];
-    /* 도형마다 고정 색(실물도 유채색) — 색=도형 1:1 이라 난이도는 그대로, 화면만 산다.
-       색은 길 만들기 표식과 같은 기능색 3종 + 네이비 재사용(새 브랜드색 아님). */
-    var SHAPE_COLOR = {
-      'gs-circle': '#1B3A6B', 'gs-tri': '#B7791F', 'gs-square': '#C0453E',
-      'gs-ring': '#1B3A6B', 'gs-half': '#B7791F', 'gs-hex': '#2B6CB0',
-      'gs-diamond': '#2B6CB0', 'gs-star': '#B7791F', 'gs-plus': '#1B3A6B'
-    };
+    /* 세트·도형당 시간은 소개 화면 칩(opts) 선택 — 취약한 세트만 골라 반복(실전 모드에도 적용).
+       도형 색은 NB_COLOR 고정(색=도형 1:1 이라 난이도 불변). */
+    var setPick = api.opt('set');
+    var set = (setPick == null || setPick === 'rand') ? pick(SETS) : SETS[+setPick];
+    var pSec = +(api.opt('speed') || 4);            // 연습 도형당 시간 — 실전은 3초 고정
     var plan = mode === 'real'
       ? [{ dual: false, count: 23, sec: 3, fast: false }, { dual: true, count: 24, sec: 3, fast: false }]
       : mode === 'dual'
-        ? [{ dual: true, count: 15, sec: 4, fast: true }]
-        : [{ dual: false, count: 15, sec: 4, fast: true }];
-    var set = pick(SETS);
+        ? [{ dual: true, count: 15, sec: pSec, fast: true }]
+        : [{ dual: false, count: 15, sec: pSec, fast: true }];
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q"><span id="nbPhase"></span><span class="sub" id="nbInfo"></span></div>' +
+      '<div class="gm-prog" aria-hidden="true"><i id="nbProg"></i></div>' +
       '<div class="gm-nb-stage" id="nbStage"></div>' +
       timerHtml('nb') +
       '<div class="gm-nb-btns" id="nbBtns"></div>';
     var stageEl = $('nbStage'), tickBar = $('nbTick'), numEl = $('nbNum'), btnsEl = $('nbBtns');
-    var phaseEl = $('nbPhase'), infoEl = $('nbInfo');
+    var phaseEl = $('nbPhase'), infoEl = $('nbInfo'), progEl = $('nbProg');
     var tk = null, tids = [];
-    api.onCleanup(function () { if (tk) tk.stop(); tids.forEach(clearTimeout); });
+    /* 실전은 PC 응시 — 마우스 포인터 환경이면 키보드(← / → / Space)도 받는다 */
+    var hasKb = window.matchMedia && matchMedia('(pointer:fine)').matches;
+    var onKey = null;
+    if (hasKb) {
+      onKey = function (e) {
+        if (!isRunning()) return;
+        var key = e.key === ' ' ? 'none' : e.key === 'ArrowLeft' ? 'b2'
+          : (e.key === 'ArrowRight' && plan[pi].dual) ? 'b3' : null;
+        if (!key) return;
+        e.preventDefault();
+        answer(key);
+      };
+      document.addEventListener('keydown', onKey);
+    }
+    api.onCleanup(function () {
+      if (tk) tk.stop();
+      tids.forEach(clearTimeout);
+      if (onKey) document.removeEventListener('keydown', onKey);
+    });
     function later(fn, ms) { tids.push(setTimeout(fn, ms)); }
 
     var pi = 0, seq = [], idx = 0, lead = 2, answered = false;
@@ -451,10 +506,10 @@
     function buildButtons(dual) {
       btnsEl.innerHTML = '';
       var defs = dual
-        ? [['b2', '2번째 전과<br>같다'], ['b3', '3번째 전과<br>같다'], ['none', '둘 다<br>아니다']]
-        : [['b2', '2번째 전과 같다'], ['none', '다르다']];
+        ? [['b2', '2번째 전과<br>같다', '←'], ['b3', '3번째 전과<br>같다', '→'], ['none', '둘 다<br>아니다', 'Space']]
+        : [['b2', '2번째 전과 같다', '←'], ['none', '다르다', 'Space']];
       defs.forEach(function (d) {
-        var btn = el('button', '', d[1]);
+        var btn = el('button', '', (hasKb ? '<kbd>' + d[2] + '</kbd>' : '') + d[1]);
         btn.type = 'button';
         btn.disabled = true;
         btn.addEventListener('click', function () { answer(d[0]); });
@@ -503,6 +558,7 @@
       if (idx >= seq.length) {                          /* 단계 끝 */
         pi++;
         if (pi >= plan.length) { api.finish(); return; }
+        stageEl.classList.remove('lead');
         stageEl.textContent = '이어서 2·3-back — ' + plan[pi].count + '문항';
         buildButtons(plan[pi].dual);
         seq = genSeq(plan[pi]);
@@ -516,8 +572,12 @@
       infoEl.textContent = judge
         ? '문항 ' + (idx - lead + 1) + '/' + pl.count
         : '기억만 하세요 (' + (idx + 1) + '/' + lead + ') — 아직 답하지 않아요';
-      stageEl.innerHTML = sym(seq[idx]);
-      if (stageEl.firstElementChild) stageEl.firstElementChild.style.color = SHAPE_COLOR[seq[idx]] || '';
+      /* 기억 단계는 점선 카드(lead) — 판정 단계와 화면부터 다르게 보인다 */
+      stageEl.classList.toggle('lead', !judge);
+      stageEl.innerHTML = '<span class="fr">' + sym(seq[idx]) + '</span>';
+      var sv = stageEl.querySelector('svg');
+      if (sv) sv.style.color = NB_COLOR[seq[idx]] || '';
+      if (progEl) progEl.style.width = ((idx + 1) / seq.length * 100) + '%';
       stageEl.classList.remove('pop'); void stageEl.offsetWidth; stageEl.classList.add('pop');
       setBtns(judge);
       if (tk) tk.stop();
@@ -1366,19 +1426,36 @@
     { id: 'nback', name: '도형 2-back', icon: 'gi-nback', unit: '점', time: 0,
       meas: '작업 기억 갱신',
       demo: '<div class="row">' +
-        '<span class="tile hit">' + sym('gs-tri') + '</span>' +
-        '<span class="tile">' + sym('gs-circle') + '</span>' +
-        '<span class="tile hit">' + sym('gs-tri') + '</span>' +
+        '<span class="tile hit">' + symC('gs-tri') + '</span>' +
+        '<span class="tile">' + symC('gs-circle') + '</span>' +
+        '<span class="tile hit">' + symC('gs-tri') + '</span>' +
         '<span class="arr">→ "같다"</span>' +
         '</div><span class="cap">3번째 도형이 <b>2번째 전</b>(1번째)과 같은 경우 — 이렇게 계속 이어집니다</span>',
+      /* 옵션 칩 — 세트는 실전 모드에도 적용(취약 세트 반복), 시간은 연습에만(실전은 3초 고정) */
+      opts: [
+        { key: 'set', label: '도형 세트', def: 'rand', items: [
+          { v: 'rand', label: '랜덤' },
+          { v: '0', aria: '세트 1', html: symC('gs-circle') + symC('gs-tri') + symC('gs-square') },
+          { v: '1', aria: '세트 2', html: symC('gs-ring') + symC('gs-half') + symC('gs-hex') },
+          { v: '2', aria: '세트 3', html: symC('gs-diamond') + symC('gs-star') + symC('gs-plus') },
+          { v: '3', aria: '세트 4', html: symC('gs-heart') + symC('gs-moon') + symC('gs-bolt') },
+          { v: '4', aria: '세트 5', html: symC('gs-drop') + symC('gs-arrow') + symC('gs-bowtie') }
+        ] },
+        { key: 'speed', label: '도형당 시간(연습)', def: '4', items: [
+          { v: '3', label: '3초 · 실전 속도' },
+          { v: '4', label: '4초' },
+          { v: '6', label: '6초 · 느긋' }
+        ] }
+      ],
       modes: [
-        { key: 'b2', label: '2-back 연습', sub: '15문항 · 도형당 4초 · 맞히면 바로 다음' },
+        { key: 'b2', label: '2-back 연습', sub: '15문항 · 맞히면 바로 다음' },
         { key: 'dual', label: '2·3-back 연습', sub: '15문항 · 판정이 하나 늘어요' },
-        { key: 'real', label: '실전 흐름', sub: '2-back 23문항 → 2·3-back 24문항 · 도형당 3초' }
+        { key: 'real', label: '실전 흐름', sub: '2-back 23문항 → 2·3-back 24문항 · 도형당 3초 · 같은 세트' }
       ],
       rules: ['도형이 하나씩 나옵니다. 3번째 도형부터, <b>2번째 전 도형과 같은지</b> 답하세요.',
         '2·3-back 은 4번째부터 <b>2번째 전 / 3번째 전 / 둘 다 아님</b> 셋 중 하나로 답합니다.',
-        '제한시간 안에 답하지 않으면 오답입니다.'],
+        '제한시간 안에 답하지 않으면 오답입니다.',
+        '실전은 PC 응시라 키보드가 빠릅니다 — PC 에선 <b>← 같다 · → 3번째 전 · Space 다름</b>으로도 답할 수 있어요.'],
       tips: ['눈이 아니라 입으로 외우세요 — "원-세모-원"처럼 최근 도형을 소리 없이 되뇌면 덜 놓칩니다.',
         '틀렸다고 멈추면 다음 도형까지 놓칩니다. 틀린 건 버리고 바로 다음 도형을 외우세요.'],
       start: gameNback },
