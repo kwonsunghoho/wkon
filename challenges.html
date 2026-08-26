@@ -249,9 +249,11 @@
       display: block; margin-top: auto; padding-top: 10px;
       font-size: 12px; font-weight: 700; color: var(--text-dim);
       font-variant-numeric: tabular-nums;
-      /* 한 줄 고정 — 날짜 줄이 두 줄로 풀리면 카드 하단 정렬이 깨진다(기간 표기는 압축형 7/28~8/6) */
-      white-space: nowrap;
+      /* 줄바꿈은 라벨·날짜 덩어리(.mm) 사이에서만 — 구 통째 nowrap 은 '5기 · 선착순 모집
+         8/24~9/6'(실측 144px)이 카드 내용폭(375px 에서 131px)을 넘겨 끝이 잘렸다
+         (2026-08-26 오너 신고). 덩어리 구조가 네 카드 같아 하단 정렬은 유지된다. */
     }
+    .ch-meta .mm { white-space: nowrap; }
     .ch-meta:empty { padding-top: 0; }
     .ch-st {
       display: block; margin-top: 0; padding-top: 3px;
@@ -484,12 +486,20 @@
       const status = getStatus(start, end);
       if (status === 'closed') { meta.textContent = ''; return; }
       const round = window._challengeRounds && window._challengeRounds[id];
-      /* 기간은 압축형(7/28~8/6) — 카드 하단 한 줄 고정(.ch-meta nowrap)과 한 쌍.
-         '모집' 라벨은 유지한다(원칙 15 — 없으면 챌린지 진행 기간으로 읽힌다).
-         선착순은 '선착순 모집 8/6~' — 마감이 날짜가 아니라 인원이라는 것만 말한다. */
-      meta.textContent = [round ? round + '기' : null,
-        (fcfs ? '선착순 모집 ' : '모집 ') + fmtPeriod(start, end).replace(/ /g, '')]
+      /* 기간은 압축형(7/28~8/6). '모집' 라벨은 유지한다(원칙 15 — 없으면 챌린지 진행
+         기간으로 읽힌다). 선착순은 '선착순 모집' — 마감이 날짜가 아니라 인원이라는 것만 말한다.
+         ⚠️ 라벨·날짜를 .mm 두 덩어리로 나눠 그 사이에서만 줄바꿈한다(.ch-meta CSS 주석 참조 —
+         통째 nowrap 으로 되돌리면 긴 날짜에서 끝이 또 잘린다). */
+      const label = [round ? round + '기' : null, fcfs ? '선착순 모집' : '모집']
         .filter(Boolean).join(' · ');
+      const dates = fmtPeriod(start, end).replace(/ /g, '');
+      meta.textContent = '';
+      [label, dates].forEach((t, i) => {
+        if (i) meta.append(' ');
+        const s = document.createElement('span');
+        s.className = 'mm'; s.textContent = t;
+        meta.append(s);
+      });
     });
   });
 
