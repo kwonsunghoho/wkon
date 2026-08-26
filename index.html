@@ -183,8 +183,10 @@
         .door[hidden]{display:none} 가드를 지우지 말 것(display:flex가 UA [hidden]을 이긴다). -->
 <section class="doors" id="doors">
 
+  <!-- ⚠️ 라벨 번호(.eyeb)는 기본값일 뿐 — 문이 켜지고 꺼질 때 renumberDoors()(하단 JS)가
+       보이는 문만 세어 다시 붙인다. 문을 추가·복원하면 번호를 손으로 맞출 필요 없다. -->
   <div class="tl-step reveal">
-    <p class="tl-when">2주 밀착 챌린지</p>
+    <p class="tl-when"><span class="eyeb" aria-hidden="true">01</span>2주 밀착 챌린지</p>
     <a class="door-poster" href="challenges.html" data-pillar="challenge" aria-label="챌린지 보러가기">
       <!-- 2026-08-19 오너 교체 — 챌린지 참여자 화면 격자(블러). ?v= 는 인앱 웹뷰 캐시 대비 -->
       <img src="images/door-challenge.webp?v=20260819" alt="" loading="lazy" decoding="async">
@@ -207,7 +209,7 @@
        briefing.html 리다이렉트·nav.js 항목과 한 벌. 다시 열 때 hidden 과 아래
        클로징 버튼 주석을 같이 되살린다(docs/notes/briefing.md '승준 코스 잠시 내림'). -->
   <div class="tl-step reveal" id="doorCourse" hidden>
-    <p class="tl-when">나만의 맞춤 로드맵</p>
+    <p class="tl-when"><span class="eyeb" aria-hidden="true">02</span>나만의 맞춤 로드맵</p>
     <div class="door door-course">
       <div class="dr-txt">
         <div class="section-label">MONC Course</div>
@@ -225,7 +227,7 @@
   </div>
 
   <div class="tl-step reveal">
-    <p class="tl-when">올인원 면접 툴킷</p>
+    <p class="tl-when"><span class="eyeb" aria-hidden="true">02</span>올인원 면접 툴킷</p>
     <div class="door door-tools rev">
       <div class="dr-txt">
         <div class="section-label">MONC Tools</div>
@@ -244,7 +246,7 @@
   </div>
 
   <div class="tl-step reveal" id="doorLecture" hidden>
-    <p class="tl-when">공채 대비 파이널</p>
+    <p class="tl-when"><span class="eyeb" aria-hidden="true">03</span>공채 대비 파이널</p>
     <div class="door door-lecture">
       <div class="dr-txt">
         <div class="section-label">Special Lecture</div>
@@ -678,6 +680,20 @@
     });
   })();
 
+  /* ── 문 라벨 번호 재부여 — 보이는 문만 01부터 다시 센다(2026-08-26 라벨 타이포 D안).
+     코스 문이 내려가 있고 특강 문은 동적이라, 마크업 번호만 믿으면 01·03·04 로 건너뛴다.
+     문이 켜지고 꺼지는 곳(지금은 특강 문 하나)에서 다시 부른다. ── */
+  function renumberDoors() {
+    var n = 0;
+    document.querySelectorAll('.doors .tl-step').forEach(function (st) {
+      var eb = st.querySelector('.eyeb');
+      if (!eb || st.hidden) return;
+      n += 1;
+      eb.textContent = (n < 10 ? '0' : '') + n;
+    });
+  }
+  renumberDoors();
+
   /* ── 특강 문 — 공개 특강이 있을 때만 켠다(구 #pillars '빈 방 금지' 규칙 승계).
      칩엔 가장 임박한 '신청중' 특강의 D-day(없으면 기본 문구 유지). ── */
   (async function lectureDoor() {
@@ -688,6 +704,7 @@
       var res = await window.MONC.sb.from('special_lectures').select('*').eq('visible', true);
       if (res.error || !res.data || !res.data.length) return;
       door.hidden = false;
+      renumberDoors();
       var today = new Date(); today.setHours(0, 0, 0, 0);
       var best = null;
       res.data.forEach(function (l) {
