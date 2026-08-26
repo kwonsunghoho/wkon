@@ -68,6 +68,7 @@
 - **점수 기록은 localStorage `monc_games_v1`** — 기기별 최고점·판수뿐, 개인정보 아님. scroll-keep 의 'sessionStorage 고정' 규칙은 위치 기록 얘기라 여기 적용 안 된다.
 - **bfcache reload 표준 장착.** 게임 타이머가 `Date.now()` 기준이라 되살아난 화면은 이미 끝난 판이다 — reload 가 맞다. `scroll-keep.js` 는 defer 없이, 페이지 reload 처리보다 앞(CLAUDE.md).
 - 연타 UI 라 `button { touch-action: manipulation }` + 보드 `user-select:none` — 빼면 더블탭 줌·텍스트 선택으로 화면이 튄다.
+- ⚠️ **`hidden` 속성은 author `display` 가 이긴다** — 제보 폼(`.gm-report-form`)에 `display:flex` 를 주면 `hidden` 이 무력화돼 접이가 항상 펼쳐진다(2026-08-26 실사고 — 오너 "시선만 분산"). `.gm-report-form[hidden] { display: none; }` 을 지울 것. display 를 주는 요소를 hidden 으로 접을 땐 어디서든 같은 함정.
 - rotate: 판정은 변형 행렬(css matrix) 비교 — **비대칭 글자(F G J L P R Q)·비대칭 무늬만 쓴다**(대칭이면 화면은 같은데 행렬이 달라 오답 처리된다 — 무늬는 생성 시 8변형 검사로 거른다). 버튼이 모양을 바꾸지 않는 것이 과제의 핵심 — 미리보기를 넣지 말 것.
 - path: 퍼즐 생성은 '무작위 울타리 배치 → 시뮬레이션으로 출구 확정' 방식 — 안 쓰인 울타리가 있으면 다시 뽑는다(정답 울타리 수가 거짓말이 된다). 캡처의 '누른 위치로 / \\ 결정'은 터치에서 정밀도가 안 나와 **탭 순환**으로 바꿨다(의도한 차이).
 - yaksok: 공통 라운드는 교집합이 정확히 1개인지 검증 후 출제. 버스 라운드 후보는 답 하나 빼고 전부 '누군가 탄 번호'에서만 뽑는다(안 그러면 답이 여럿이 된다).
