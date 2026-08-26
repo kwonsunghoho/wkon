@@ -146,7 +146,7 @@
   function fmtLeft(msLeft) {
     var sec = Math.ceil(msLeft / 1000);
     if (sec >= 60) return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2);
-    return String(sec);
+    return sec + '초';   // 맨숫자는 무엇의 값인지 안 붙는다(원칙 '값에는 이름을')
   }
   function ticker(bar, ms, onEnd, num) {
     var t0 = Date.now();
@@ -202,8 +202,8 @@
     var isNew = saveRec(cur.id, score);
     var best = (readRec()[cur.id] || {}).best || 0;
     var pctAll = tries > 0 ? Math.round(okCnt / tries * 100) : 0;
+    /* 게임 이름은 위 제목 줄에 이미 있다 — 결과 카드는 점수부터(같은 제목 두 번 금지) */
     resultEl.innerHTML =
-      '<div class="r-name">' + sym(cur.icon) + cur.name + '</div>' +
       '<div class="r-score"><span id="rVal">0</span><small> ' + cur.unit + '</small></div>' +
       '<div class="r-best">이 기기 최고 기록 <b>' + best + cur.unit + '</b></div>' +
       (isNew && score > 0 ? '<span class="r-new">신기록!</span>' : '') +
@@ -281,6 +281,8 @@
     curMode = 'practice';           // 다른 게임의 '실전'이 넘어오지 않게 초기화
     curOpts = {};
     if (g.opts) g.opts.forEach(function (op) { curOpts[op.key] = op.def; });
+    /* 게임 안에서는 목록용 간판을 접는다(CSS body.gm-ingame) — 게임이 첫 화면의 주인공이 된다 */
+    document.body.classList.add('gm-ingame');
     hubWrap.classList.add('off');
     stage.classList.add('on');
     board.classList.remove('on'); board.innerHTML = '';
@@ -297,30 +299,51 @@
         ? '<details><summary>공략 팁 보기</summary><ul>' +
           g.tips.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></details>'
         : '') +
-      /* 옵션 칩(도형 세트·도형당 시간 등) — 시작 버튼보다 위: 고르고 나서 시작하는 순서.
-         슬라이더 금지는 유지(2026-08-26 오너 캡처 지시 — 베끼지 말고 우리 문법으로) */
+      /* 모드는 선택 카드 — 고르고 맨 아래 '시작하기' 하나로 시작한다.
+         풀폭 버튼을 쌓지 않는다(2026-08-26 오너 "박스 안 글자 좌우 여백" — 조판 재정비) */
+      (g.modes
+        ? '<p class="gm-lab">모드</p>' +
+          '<div class="gm-modes" data-n="' + g.modes.length + '">' +
+          g.modes.map(function (m, i) {
+            return '<button type="button" class="gm-mode' + (i === 0 ? ' sel' : '') +
+              '" data-mode="' + m.key + '">' + m.label + '</button>';
+          }).join('') + '</div>' +
+          '<p class="gm-modesub" id="gmModeSub"></p>'
+        : '') +
+      /* 옵션 칩(도형 세트·도형당 시간 등) — 라벨은 위 블록(.gm-lab), 슬라이더 금지는 유지 */
       (g.opts ? g.opts.map(function (op) {
-        return '<div class="gm-opts" data-key="' + op.key + '"><em>' + op.label + '</em>' +
+        return '<p class="gm-lab">' + op.label + '</p><div class="gm-opts" data-key="' + op.key + '">' +
           op.items.map(function (it) {
             return '<button type="button" class="gm-opt' + (curOpts[op.key] === it.v ? ' sel' : '') +
               '" data-v="' + it.v + '"' + (it.aria ? ' aria-label="' + it.aria + '"' : '') + '>' +
               (it.html || it.label) + '</button>';
           }).join('') + '</div>';
       }).join('') : '') +
-      /* 모드가 있으면 버튼 두세 개(첫 번째가 기본) — 슬라이더·옵션 나열은 두지 않는다(오너 "더 쉽게") */
-      (g.modes
-        ? g.modes.map(function (m, i) {
-            return '<button type="button" class="gm-start' + (i ? ' alt' : '') + '" data-mode="' + m.key + '">' +
-              m.label + '<small>' + m.sub + '</small></button>';
-          }).join('')
-        : '<button type="button" class="gm-start" data-mode="practice">시작하기</button>') +
-      /* 약한 라운드만 골라 반복 — 실물의 라운드 선택을 칩 한 줄로 */
+      /* 약한 라운드만 골라 반복 — 라벨은 위 블록(.gm-lab), 칩은 옵션과 같은 조용한 칩 문법 */
       (g.parts
-        ? '<div class="gm-parts"><em>부분만 연습</em>' + g.parts.map(function (pp) {
+        ? '<p class="gm-lab">부분만 연습 — 누르면 바로 시작</p><div class="gm-opts">' + g.parts.map(function (pp) {
             return '<button type="button" class="gm-part" data-mode="' + pp.key + '">' + pp.label + '</button>';
           }).join('') + '</div>'
-        : '');
-    [].slice.call(introEl.querySelectorAll('.gm-start, .gm-part')).forEach(function (btn) {
+        : '') +
+      '<button type="button" class="gm-start" id="gmGo">시작하기</button>';
+    var selMode = g.modes ? g.modes[0].key : 'practice';
+    var modeSubEl = $('gmModeSub');
+    function paintModeSub() {
+      if (!modeSubEl || !g.modes) return;
+      for (var mi = 0; mi < g.modes.length; mi++)
+        if (g.modes[mi].key === selMode) modeSubEl.textContent = g.modes[mi].sub;
+    }
+    paintModeSub();
+    [].slice.call(introEl.querySelectorAll('.gm-mode')).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selMode = btn.getAttribute('data-mode');
+        [].slice.call(introEl.querySelectorAll('.gm-mode')).forEach(function (x) { x.classList.remove('sel'); });
+        btn.classList.add('sel');
+        paintModeSub();
+      });
+    });
+    $('gmGo').addEventListener('click', function () { startPlay(selMode); });
+    [].slice.call(introEl.querySelectorAll('.gm-part')).forEach(function (btn) {
       btn.addEventListener('click', function () { startPlay(btn.getAttribute('data-mode')); });
     });
     [].slice.call(introEl.querySelectorAll('.gm-opts')).forEach(function (row) {
@@ -343,6 +366,7 @@
     running = false;
     stopTimer();
     runCleanup();
+    document.body.classList.remove('gm-ingame');
     stage.classList.remove('on');
     hubWrap.classList.remove('off');
     renderHub();
@@ -365,7 +389,8 @@
     grid.innerHTML = '';
     GAMES.forEach(function (g) {
       var r = rec[g.id];
-      var bs = r && r.best > 0 ? '최고 ' + r.best + g.unit : '기록 없음';
+      /* 기록은 있을 때만 — '기록 없음' 7줄 반복은 자리만 채운다(2026-08-26 비평) */
+      var bs = r && r.best > 0 ? '최고 ' + r.best + g.unit : '';
       /* 타일 = 틴트 박스 + 이름 + 기록(측정 문구는 소개 화면 몫 — tools 격자 문법) */
       var card = el('button', 'gm-card',
         '<span class="ic" aria-hidden="true">' + sym(g.icon) + '</span>' +
@@ -505,11 +530,12 @@
 
     function buildButtons(dual) {
       btnsEl.innerHTML = '';
+      /* 라벨은 한 줄·키 힌트는 라벨 옆 — 키를 위에 쌓으면 버튼만 높아지고 글자가 박스에 뜬다 */
       var defs = dual
-        ? [['b2', '2번째 전과<br>같다', '←'], ['b3', '3번째 전과<br>같다', '→'], ['none', '둘 다<br>아니다', 'Space']]
-        : [['b2', '2번째 전과 같다', '←'], ['none', '다르다', 'Space']];
+        ? [['b2', '2번째 전', '←'], ['b3', '3번째 전', '→'], ['none', '둘 다 아님', 'Space']]
+        : [['b2', '같다 · 2번째 전', '←'], ['none', '다르다', 'Space']];
       defs.forEach(function (d) {
-        var btn = el('button', '', (hasKb ? '<kbd>' + d[2] + '</kbd>' : '') + d[1]);
+        var btn = el('button', '', (hasKb ? '<kbd>' + d[2] + '</kbd>' : '') + '<span>' + d[1] + '</span>');
         btn.type = 'button';
         btn.disabled = true;
         btn.addEventListener('click', function () { answer(d[0]); });
@@ -1368,7 +1394,7 @@
       needEl.textContent = String(puzzle.need);
       $('pthQ').textContent = q + '/' + total;
       revealEl.textContent = '';
-      infoEl.textContent = '칸을 누르면 없음 → / → \\ 순서로 바뀝니다';
+      infoEl.innerHTML = '칸을 누르면 <b>없음 → / → \\</b> 순서로 바뀝니다';
       draw(false, true);
     }
     nq();
@@ -1526,16 +1552,16 @@
           { v: '3', aria: '세트 4', html: symC('gs-heart') + symC('gs-moon') + symC('gs-bolt') },
           { v: '4', aria: '세트 5', html: symC('gs-drop') + symC('gs-arrow') + symC('gs-bowtie') }
         ] },
-        { key: 'speed', label: '도형당 시간(연습)', def: '4', items: [
-          { v: '3', label: '3초 · 실전 속도' },
+        { key: 'speed', label: '도형당 시간 · 연습', def: '4', items: [
+          { v: '3', label: '3초 · 실전' },
           { v: '4', label: '4초' },
           { v: '6', label: '6초 · 느긋' }
         ] }
       ],
       modes: [
-        { key: 'b2', label: '2-back 연습', sub: '15문항 · 맞히면 바로 다음' },
-        { key: 'dual', label: '2·3-back 연습', sub: '15문항 · 판정이 하나 늘어요' },
-        { key: 'real', label: '실전 흐름', sub: '2-back 23문항 → 2·3-back 24문항 · 도형당 3초 · 같은 세트' }
+        { key: 'b2', label: '2-back', sub: '15문항 · 맞히면 바로 다음' },
+        { key: 'dual', label: '2·3-back', sub: '15문항 · 판정이 하나 늘어요' },
+        { key: 'real', label: '실전', sub: '2-back 23문항 → 2·3-back 24문항 · 도형당 3초 · 같은 세트' }
       ],
       rules: ['도형이 하나씩 나옵니다. 3번째 도형부터, <b>2번째 전 도형과 같은지</b> 답하세요.',
         '2·3-back 은 4번째부터 <b>2번째 전 / 3번째 전 / 둘 다 아님</b> 셋 중 하나로 답합니다.',
@@ -1552,8 +1578,8 @@
         '<span class="chip">나</span><span class="tile hit">' + sym('gh-rock') + '</span>' +
         '</div><span class="cap">상대가 가위 → 내가 이기는 손은 <b>바위</b></span>',
       modes: [
-        { key: 'practice', label: '짧게 연습', sub: '라운드당 20초 → 랜덤 40초' },
-        { key: 'real', label: '실전 흐름', sub: '나의 관점 40초 → 상대 관점 40초 → 랜덤 1분 40초' }
+        { key: 'practice', label: '연습', sub: '라운드당 20초 → 랜덤 40초' },
+        { key: 'real', label: '실전', sub: '나의 관점 40초 → 상대 관점 40초 → 랜덤 1분 40초' }
       ],
       rules: ['규칙은 하나 — <b>언제나 내가 이겨야</b> 합니다. 관점에 따라 고르는 손이 뒤집힙니다.',
         '<b>나의 관점</b>: 상대 손을 보고 내가 이기는 손 / <b>상대 관점</b>: 내 손을 보고 상대가 지는 손.',
@@ -1582,7 +1608,7 @@
         '<span class="cap">차량은 직진 — 울타리( / )를 만나면 <b>90도 꺾여</b> 같은 색 손님에게 갑니다</span>',
       modes: [
         { key: 'practice', label: '연습', sub: '12문항 · 틀리면 정답 배치 공개' },
-        { key: 'real', label: '실전 흐름', sub: '48문항 · 최대 5분 · 클릭 20' }
+        { key: 'real', label: '실전', sub: '48문항 · 최대 5분 · 클릭 20' }
       ],
       rules: ['차량은 <b>직진</b>하고, 울타리(/ 또는 \\)를 만나면 <b>90도 꺾입니다.</b>',
         '칸을 누르면 없음 → / → \\ 순서로 바뀝니다. 누를 때마다 클릭(최대 20)이 차감됩니다.',
@@ -1594,26 +1620,26 @@
       meas: '심적 회전 · 계획',
       demo: '<div class="row">' +
         '<span class="tile">F</span>' +
-        '<span class="chip">오른쪽 45°</span><span class="chip">오른쪽 45°</span>' +
+        '<span class="chip">오른쪽 45° ×2</span>' +
         '<span class="arr">→</span>' +
         '<span class="tile hit"><span style="display:inline-block;transform:rotate(90deg)">F</span></span>' +
         '</div><span class="cap">45도 두 번 = 90도 — 머릿속으로만 돌려 보고 <b>순서를</b> 입력합니다</span>',
       /* 미리보기는 입문용(연습만) — 실전 방식(모양 안 바뀜)이 기본. 글자 칩은 약한 글자만 반복 */
       opts: [
-        { key: 'letter', label: '글자(연습·글자)', def: 'rand', items: [
+        { key: 'letter', label: '연습할 글자 · 글자 모드', def: 'rand', items: [
           { v: 'rand', label: '랜덤' },
           { v: 'F', label: 'F' }, { v: 'G', label: 'G' }, { v: 'J', label: 'J' }, { v: 'L', label: 'L' },
           { v: 'P', label: 'P' }, { v: 'R', label: 'R' }, { v: 'Q', label: 'Q' }
         ] },
         { key: 'preview', label: '변형 미리보기', def: 'off', items: [
           { v: 'off', label: '끔 · 실전 방식' },
-          { v: 'on', label: '켬 · 입문용(연습만)' }
+          { v: 'on', label: '켬 · 입문용' }
         ] }
       ],
       modes: [
-        { key: 'practice', label: '연습 · 글자', sub: '10문항 · 제출 후 정답 순서 공개' },
-        { key: 'pattern', label: '연습 · 무늬', sub: '10문항' },
-        { key: 'real', label: '실전 흐름', sub: '글자 3분 → 무늬 3분 · 클릭 20' }
+        { key: 'practice', label: '글자', sub: '10문항 · 제출 후 정답 순서 공개' },
+        { key: 'pattern', label: '무늬', sub: '10문항' },
+        { key: 'real', label: '실전', sub: '글자 3분 → 무늬 3분 · 클릭 20' }
       ],
       rules: ['전 모양을 회전·반전시켜 <b>후 모양과 똑같이 만드는 순서</b>를 입력하세요.',
         '회전은 한 번에 <b>45도</b>입니다(90도 아님). 좌우반전·상하반전도 있습니다.',
@@ -1628,12 +1654,12 @@
         '<div class="pl"><em>서연</em><i>화</i><i class="hit">목</i><i>토</i></div>' +
         '<div class="pl"><em>하준</em><i class="hit">목</i><i>수</i><i>일</i></div>' +
         '</div><span class="cap">한 명씩 1초만 보입니다 — 셋 모두에게 있는 요일은 <b>목</b></span>',
-      opts: [{ key: 'pace', label: '제시 속도(연습)', def: '1', items: [
-        { v: '1', label: '1초 · 실전 속도' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
+      opts: [{ key: 'pace', label: '제시 속도 · 연습', def: '1', items: [
+        { v: '1', label: '1초 · 실전' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
       ] }],
       modes: [
         { key: 'practice', label: '연습', sub: '4라운드 × 3문항 · 정답 공개' },
-        { key: 'real', label: '실전 흐름', sub: '4라운드 × 10문항 · 6번째부터 기억 4개' }
+        { key: 'real', label: '실전', sub: '4라운드 × 10문항 · 6번째부터 기억 4개' }
       ],
       rules: ['세 친구의 선호가 <b>각자 1초씩</b> 빠르게 지나갑니다. 기억했다가 질문에 답하세요.',
         '요일·장소·메뉴 라운드는 <b>모두가 공통으로</b> 고른 것, 마지막 버스 라운드는 반대로 <b>아무도 안 탄 번호</b>를 고릅니다.',
@@ -1650,8 +1676,8 @@
         '<span class="nc">8</span><span class="nc">1</span><span class="nc">6</span>' +
         '</div><span class="cap">R1 불 들어온 숫자를 빨리 · R2 매 판 <b>1→9 순서</b>(한 숫자는 2번, 한 숫자는 건너뛰기)</span>',
       modes: [
-        { key: 'practice', label: '짧게 연습', sub: '1라운드 30초 → 2라운드 60초' },
-        { key: 'real', label: '실전 흐름', sub: '1라운드 60초 → 2라운드 120초' }
+        { key: 'practice', label: '연습', sub: '1라운드 30초 → 2라운드 60초' },
+        { key: 'real', label: '실전', sub: '1라운드 60초 → 2라운드 120초' }
       ],
       rules: ['1라운드: 불이 들어온 숫자를 최대한 빨리 누릅니다.',
         '2라운드: 새 배열마다 <b>1→9 순서대로.</b> 단 한 숫자는 <b>연속 2번</b>, 한 숫자는 <b>건너뛰기.</b>',
@@ -1674,12 +1700,12 @@
         '<circle cx="24" cy="40" r="3.2"/><circle cx="44" cy="46" r="3.2"/><circle cx="18" cy="56" r="3.2"/>' +
         '</g></svg></span>' +
         '</div><span class="cap">1초 뒤 사라집니다 — 오른쪽이 <b>9 대 7</b>로 더 많음(실제론 단어가 흩어져 있어요)</span>',
-      opts: [{ key: 'expose', label: '노출 시간(연습)', def: '1', items: [
-        { v: '1', label: '1초 · 실전 속도' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
+      opts: [{ key: 'expose', label: '노출 시간 · 연습', def: '1', items: [
+        { v: '1', label: '1초 · 실전' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
       ] }],
       modes: [
         { key: 'practice', label: '연습', sub: '20문항 · 답하면 실제 개수 공개' },
-        { key: 'real', label: '실전 흐름', sub: '46문항 · 노출 1초 · 답 3초' }
+        { key: 'real', label: '실전', sub: '46문항 · 노출 1초 · 답 3초' }
       ],
       rules: ['좌우에 단어들이 <b>1초만</b> 보였다 사라집니다.',
         '단어가 더 많았던 쪽을 <b>3초 안에</b> 고르세요.',
