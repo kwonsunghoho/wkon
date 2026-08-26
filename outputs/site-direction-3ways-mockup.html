@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MONC 디자인 방향 3벌 — 챌린지 허브 슬라이스로 비교 (2026-08-26)</title>
+<!-- 오너 요청: "추천할만한 디자인 3가지 — 지금 바이브코딩 느낌이 너무 많이 난다".
+     팔레트(딥 네이비 on 순백)는 오너 확정이라 유지하고, 그 안에서 '시스템'을 제안한다.
+     세 방향 모두 승무원의 세계에서 가져온 문법이다 — 탑승권 / 출발 안내판 / 기내 사보.
+     시안 전용 폰트: Noto Serif KR(C안 디스플레이) · IBM Plex Mono(A안 데이터) — 채택 시 서브셋 자체 호스팅. -->
+<link rel="stylesheet" href="../tokens.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', sans-serif;
+    background: #EDEFF2; color: #1E2229; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .frame { max-width: 375px; margin: 0 auto 28px; background: #fff; }
+  .dir-tag { max-width: 375px; margin: 26px auto 8px; padding: 0 16px; }
+  .dir-tag b { font-size: 16px; font-weight: 800; }
+  .dir-tag p { font-size: 12.5px; color: #545C68; margin-top: 2px; word-break: keep-all; }
+
+  /* ════════ A. 탑승권 — MONC PASS ════════
+     카드가 카드가 아니라 '표'다. 장식이 전부 실데이터(클래스·기수·기간·후기 수)를 나른다. */
+  .A { padding: 26px 16px 30px; background: #fff; }
+  .A .hero { padding: 6px 4px 18px; }
+  .A .hero .rt { display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 2px solid #1B3A6B; padding-bottom: 10px; }
+  .A .hero .rt b { font-size: 13px; font-weight: 800; letter-spacing: .22em; color: #1B3A6B; }
+  .A .hero .rt span { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+    color: #5F6874; letter-spacing: .08em; }
+  .A .hero h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin-top: 14px; word-break: keep-all; }
+  .A .hero p { font-size: 13.5px; color: #545C68; margin-top: 6px; word-break: keep-all; }
+  .A .pass { position: relative; border: 1px solid rgba(23,42,71,.22); border-radius: 10px;
+    overflow: hidden; background: #fff; margin-top: 14px; display: block;
+    text-decoration: none; color: inherit;
+    box-shadow: 0 10px 24px -12px rgba(22,38,64,.25); }
+  .A .p-top { display: flex; }
+  .A .p-shot { width: 118px; flex: 0 0 auto; aspect-ratio: 4/5; overflow: hidden; }
+  .A .p-shot img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%; display: block; }
+  .A .p-head { flex: 1; padding: 13px 14px 10px; display: flex; flex-direction: column; }
+  .A .p-k { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
+    letter-spacing: .16em; color: #5F6874; }
+  .A .p-cat { font-size: 24px; font-weight: 800; letter-spacing: -.01em; color: #1B3A6B; margin-top: 2px; }
+  .A .p-name { font-size: 12px; color: #5F6874; margin-top: 3px; }
+  .A .p-status { margin-top: auto; display: inline-flex; align-self: flex-start; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 800; color: #1B3A6B; font-variant-numeric: tabular-nums; }
+  .A .p-status i { width: 7px; height: 7px; border-radius: 50%; background: #1B3A6B; }
+  /* 절취선 + 양옆 홈 — 탑승권의 서명 */
+  .A .p-perf { position: relative; border-top: 2px dashed rgba(23,42,71,.28); }
+  .A .p-perf::before, .A .p-perf::after { content: ""; position: absolute; top: -8px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; border: 1px solid rgba(23,42,71,.22); }
+  .A .p-perf::before { left: -9px; clip-path: inset(0 0 0 50%); }
+  .A .p-perf::after { right: -9px; clip-path: inset(0 50% 0 0); }
+  .A .p-data { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0 10px; padding: 10px 14px 12px; align-items: end; }
+  .A .p-cell small { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600;
+    letter-spacing: .14em; color: #5F6874; }
+  .A .p-cell b { display: block; font-size: 13.5px; font-weight: 800;
+    color: #1E2229; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .A .p-bar { width: 46px; height: 26px; background:
+    repeating-linear-gradient(90deg, #1E2229 0 2px, transparent 2px 4px, #1E2229 4px 5px, transparent 5px 8px); }
+
+  /* ════════ B. 출발 안내판 — DEPARTURES ════════
+     격자 카드 폐지 — 다크 보드 위 '운항표' 줄. 상태가 화면의 주인공이 된다. */
+  .B { background: #0F1F3C; padding: 26px 16px 30px; }
+  .B .hero b { font-size: 12px; font-weight: 800; letter-spacing: .26em; color: #8FB3E8; }
+  .B .hero h1 { color: #fff; font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin-top: 10px; }
+  .B .hero p { color: #A9BAD6; font-size: 13px; margin-top: 6px; word-break: keep-all; }
+  .B .board { margin-top: 18px; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; overflow: hidden; }
+  .B .b-head { display: grid; grid-template-columns: 64px 1fr 92px; gap: 8px; padding: 9px 12px;
+    background: rgba(255,255,255,.06); font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600;
+    letter-spacing: .18em; color: #8FB3E8; }
+  .B .row { display: grid; grid-template-columns: 64px 1fr 92px; gap: 8px; align-items: center;
+    padding: 13px 12px; border-top: 1px solid rgba(255,255,255,.10); text-decoration: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.035) 0%, rgba(255,255,255,0) 55%); }
+  .B .r-code { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #8FB3E8;
+    letter-spacing: .06em; }
+  .B .r-main b { display: block; color: #fff; font-size: 19px; font-weight: 800; letter-spacing: .01em; }
+  .B .r-main span { display: block; color: #A9BAD6; font-size: 11.5px; margin-top: 1px; }
+  .B .r-st { text-align: right; font-size: 12px; font-weight: 800; word-break: keep-all; }
+  .B .r-st .on { color: #F2C14E; }      /* 앰버 = 안내판 기능색 후보(다크 보드 전용) */
+  .B .r-st .off { color: #7386A6; }
+  .B .r-st small { display: block; color: #A9BAD6; font-size: 10px; font-weight: 500; margin-top: 2px;
+    font-family: 'IBM Plex Mono', monospace; }
+  .B .b-foot { padding: 9px 12px; border-top: 1px solid rgba(255,255,255,.10);
+    font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #7386A6; letter-spacing: .12em; }
+
+  /* ════════ C. 기내 사보 — MONC JOURNAL ════════
+     진짜 세리프 디스플레이 + 듀오톤 사진 + 헤어라인. 카드가 아니라 '기사 목차'다. */
+  .C { padding: 30px 20px 34px; background: #fff; }
+  .C .hero { text-align: center; border-bottom: 1px solid rgba(23,42,71,.18); padding-bottom: 18px; }
+  .C .hero .vol { font-size: 10.5px; font-weight: 700; letter-spacing: .3em; color: #5F6874; }
+  .C .hero h1 { font-family: 'Noto Serif KR', serif; font-size: 30px; font-weight: 800; color: #1B3A6B;
+    letter-spacing: -.01em; margin-top: 10px; line-height: 1.3; word-break: keep-all; }
+  .C .hero p { font-size: 13px; color: #545C68; margin-top: 8px; }
+  .C .entry { display: flex; gap: 16px; align-items: center; padding: 20px 0;
+    border-bottom: 1px solid rgba(23,42,71,.14); text-decoration: none; color: inherit; }
+  .C .e-no { font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 600; color: #5F6874;
+    flex: 0 0 auto; width: 24px; }
+  .C .e-main { flex: 1; min-width: 0; }
+  .C .e-main b { display: block; font-family: 'Noto Serif KR', serif; font-size: 23px; font-weight: 800;
+    color: #1E2229; letter-spacing: -.01em; line-height: 1.3; }
+  .C .e-main .nm { display: block; font-size: 11.5px; color: #5F6874; margin-top: 5px; letter-spacing: .02em; }
+  .C .e-main .rc { display: block; font-size: 12px; font-weight: 700; color: #1B3A6B; margin-top: 7px;
+    font-variant-numeric: tabular-nums; }
+  .C .e-shot { position: relative; width: 86px; aspect-ratio: 1; flex: 0 0 auto; overflow: hidden; }
+  .C .e-shot img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%;
+    display: block; filter: grayscale(1) contrast(1.04); }
+  .C .e-shot::after { content: ""; position: absolute; inset: 0; background: #1B3A6B; mix-blend-mode: color; }
+  .C .foot { padding-top: 16px; text-align: center; font-size: 10.5px; letter-spacing: .24em; color: #5F6874; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="dir-tag"><b>A안 — 탑승권 시스템 (MONC PASS)</b>
+  <p>카드를 '표'로 만든다. 절취선·데이터 칸·모노 활자가 전부 실데이터(기수·기간·후기)를 나른다. 신청 = 탑승이라는 은유가 사이트 전체(신청서·마이페이지 이용권·특강)로 확장된다.</p></div>
+<div class="frame"><div class="A">
+  <div class="hero">
+    <div class="rt"><b>MONC PASS</b><span>CHALLENGE / 5TH</span></div>
+    <h1>매일 습관을 만들 기회</h1>
+    <p>2주 동안 하루 한 번. 지금 나에게 필요한 것부터 고르세요.</p>
+  </div>
+  <a class="pass" href="#">
+    <span class="p-top">
+      <span class="p-shot"><img src="../images/hero-voice.webp" alt=""></span>
+      <span class="p-head">
+        <span class="p-k">CLASS</span>
+        <span class="p-cat">보이스</span>
+        <span class="p-name">보.신.각 · 2주 챌린지</span>
+        <span class="p-status"><i></i>모집 중 · D-11</span>
+      </span>
+    </span>
+    <span class="p-perf"></span>
+    <span class="p-data">
+      <span class="p-cell"><small>ROUND</small><b>5기</b></span>
+      <span class="p-cell"><small>DATE</small><b>8/24–9/6</b></span>
+      <span class="p-cell"><small>REVIEW</small><b>55개</b></span>
+      <span class="p-bar" aria-hidden="true"></span>
+    </span>
+  </a>
+  <a class="pass" href="#">
+    <span class="p-top">
+      <span class="p-shot"><img src="../images/hero-expression.webp" alt=""></span>
+      <span class="p-head">
+        <span class="p-k">CLASS</span>
+        <span class="p-cat">영상면접</span>
+        <span class="p-name">영.합.각 · 2주 챌린지</span>
+        <span class="p-status"><i></i>모집 중 · D-11</span>
+      </span>
+    </span>
+    <span class="p-perf"></span>
+    <span class="p-data">
+      <span class="p-cell"><small>ROUND</small><b>5기</b></span>
+      <span class="p-cell"><small>DATE</small><b>8/24–9/6</b></span>
+      <span class="p-cell"><small>REVIEW</small><b>28개</b></span>
+      <span class="p-bar" aria-hidden="true"></span>
+    </span>
+  </a>
+</div></div>
+
+<div class="dir-tag"><b>B안 — 출발 안내판 (DEPARTURES)</b>
+  <p>격자 카드를 걷어내고 공항 안내판의 '운항표' 줄로 세운다. 모집 상태가 주인공 — 앰버 한 색만 다크 보드 위 기능색으로 쓴다. 홈 히어로·모집 현황·특강 일정이 같은 보드 문법을 쓴다.</p></div>
+<div class="frame"><div class="B">
+  <div class="hero">
+    <b>MONC DEPARTURES</b>
+    <h1>지금 열려 있는 챌린지</h1>
+    <p>2주 동안 하루 한 번 — 탑승 마감 전에 자리를 잡으세요.</p>
+  </div>
+  <div class="board">
+    <div class="b-head"><span>CLASS</span><span>CHALLENGE</span><span style="text-align:right">STATUS</span></div>
+    <a class="row" href="#">
+      <span class="r-code">VC-01</span>
+      <span class="r-main"><b>보이스</b><span>보.신.각 · 후기 55개</span></span>
+      <span class="r-st"><span class="on">모집 중</span><small>D-11 · 8/24–9/6</small></span>
+    </a>
+    <a class="row" href="#">
+      <span class="r-code">EX-02</span>
+      <span class="r-main"><b>영상면접</b><span>영.합.각 · 후기 28개</span></span>
+      <span class="r-st"><span class="on">모집 중</span><small>D-11 · 8/24–9/6</small></span>
+    </a>
+    <a class="row" href="#">
+      <span class="r-code">SP-03</span>
+      <span class="r-main"><b>말투 · 어투</b><span>스.피.닝 · 후기 19개</span></span>
+      <span class="r-st"><span class="on">모집 중</span><small>D-11 · 8/24–9/6</small></span>
+    </a>
+    <a class="row" href="#">
+      <span class="r-code">AN-04</span>
+      <span class="r-main"><b>답변</b><span>승.자.각 · 후기 6개</span></span>
+      <span class="r-st"><span class="off">준비 중</span></span>
+    </a>
+    <div class="b-foot">UPDATED DAILY · MONC.AI.KR</div>
+  </div>
+</div></div>
+
+<div class="dir-tag"><b>C안 — 기내 사보 (MONC JOURNAL)</b>
+  <p>진짜 세리프 디스플레이 + 네이비 듀오톤 사진 + 헤어라인 — 잡지의 목차처럼 세운다. 상품이 '강의'가 아니라 '읽을거리·기록'으로 보여서 후기·연구실 콘텐츠와 톤이 이어진다.</p></div>
+<div class="frame"><div class="C">
+  <div class="hero">
+    <div class="vol">MONC JOURNAL · VOL.5</div>
+    <h1>매일 습관을<br>만들 기회</h1>
+    <p>2주 동안 하루 한 번 — 다섯 번째 기수 모집.</p>
+  </div>
+  <a class="entry" href="#">
+    <span class="e-no">1</span>
+    <span class="e-main"><b>보이스</b><span class="nm">보.신.각 · 2주 챌린지 · 후기 55</span>
+      <span class="rc">모집 중 D-11 · 8/24–9/6</span></span>
+    <span class="e-shot"><img src="../images/hero-voice.webp" alt=""></span>
+  </a>
+  <a class="entry" href="#">
+    <span class="e-no">2</span>
+    <span class="e-main"><b>영상면접</b><span class="nm">영.합.각 · 2주 챌린지 · 후기 28</span>
+      <span class="rc">모집 중 D-11 · 8/24–9/6</span></span>
+    <span class="e-shot"><img src="../images/hero-expression.webp" alt=""></span>
+  </a>
+  <a class="entry" href="#">
+    <span class="e-no">3</span>
+    <span class="e-main"><b>말투 · 어투</b><span class="nm">스.피.닝 · 2주 챌린지 · 후기 19</span>
+      <span class="rc">모집 중 D-11 · 8/24–9/6</span></span>
+    <span class="e-shot"><img src="../images/hero-spinning.webp" alt=""></span>
+  </a>
+  <div class="foot">MONC — MOMENT OF NEW CAREER</div>
+</div></div>
+
+<div style="height:30px"></div>
+</body>
+</html>
