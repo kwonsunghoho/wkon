@@ -500,11 +500,12 @@
     var setPick = api.opt('set');
     var set = (setPick == null || setPick === 'rand') ? pick(SETS) : SETS[+setPick];
     var pSec = +(api.opt('speed') || 4);            // 연습 도형당 시간 — 실전은 3초 고정
+    var pCount = +(api.opt('count') || 15);         // 연습 문항 수 — 실전은 23→24 고정
     var plan = mode === 'real'
       ? [{ dual: false, count: 23, sec: 3, fast: false }, { dual: true, count: 24, sec: 3, fast: false }]
       : mode === 'dual'
-        ? [{ dual: true, count: 15, sec: pSec, fast: true }]
-        : [{ dual: false, count: 15, sec: pSec, fast: true }];
+        ? [{ dual: true, count: pCount, sec: pSec, fast: true }]
+        : [{ dual: false, count: pCount, sec: pSec, fast: true }];
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q"><span class="ph" id="nbPhase"></span><span class="sub" id="nbInfo"></span></div>' +
@@ -906,7 +907,7 @@
   /* ── 3. 개수 비교 — 좌우 단어 무리가 1초만 보였다 사라진다(캡처 기준: 답 3초·16~45개·차이 3~4) ── */
   function gameCompare(api, mode) {
     var WORDS = ['하늘', '구름', '미소', '안전', '기내', '여권', '규정', '승객', '표정', '메모'];
-    var total = mode === 'real' ? 46 : 20;
+    var total = mode === 'real' ? 46 : +(api.opt('count') || 20);   // 연습 문항 수 칩 — 실전 46 고정
     var reveal = mode !== 'real';
     /* 노출 시간은 연습 칩에서만 조절 — 실전은 1초 고정 */
     var exposeMs = mode === 'real' ? 1000 : Math.round(parseFloat(api.opt('expose') || '1') * 1000);
@@ -1010,9 +1011,10 @@
     var real = mode === 'real';
     var pickLetter = api.opt('letter');                  // 연습·글자에서만 의미(실전은 랜덤)
     var preview = !real && api.opt('preview') === 'on';  // 입문용 — 기본은 실전 방식(모양 안 바뀜)
+    var pCount = +(api.opt('count') || 10);          // 연습 문항 수 — 실전은 시간제
     var phases = real
       ? [{ kind: 'letter', sec: 180 }, { kind: 'pattern', sec: 180 }]
-      : mode === 'pattern' ? [{ kind: 'pattern', count: 10 }] : [{ kind: 'letter', count: 10 }];
+      : mode === 'pattern' ? [{ kind: 'pattern', count: pCount }] : [{ kind: 'letter', count: pCount }];
     var C = Math.SQRT1_2;
     var OPS = [
       { k: 'L45', label: '왼쪽 45°', icon: 'gi-rl', m: [C, -C, C, C] },
@@ -1203,7 +1205,7 @@
   function gamePath(api, mode) {
     var N = 5;
     var real = mode === 'real';
-    var total = real ? 48 : 12;
+    var total = real ? 48 : +(api.opt('count') || 12);   // 연습 문항 수 칩 — 실전 48 고정
     var b = api.board;
     b.innerHTML =
       '<div class="gm-q">울타리로 꺾어서 <b>같은 색 손님</b>에게 보내세요<span class="sub" id="pthInfo"></span></div>' +
@@ -1417,7 +1419,7 @@
     var NAMES = ['지민', '서연', '하준'];
     var real = mode === 'real';
     var PART = { day: 0, place: 1, menu: 2, bus: 3 }[mode];
-    var perRound = real ? 10 : PART != null ? 10 : 3;
+    var perRound = real ? 10 : PART != null ? 10 : +(api.opt('count') || 3);   // 연습 라운드당 문항 칩
     /* 제시 속도는 연습 칩에서만 조절 — 실전은 1초 고정 */
     var paceMs = real ? 1000 : Math.round(parseFloat(api.opt('pace') || '1') * 1000);
     var ROUNDS = [
@@ -1554,6 +1556,9 @@
         '</div><span class="cap">3번째 도형이 <b>2번째 전</b>(1번째)과 같은 경우 — 이렇게 계속 이어집니다</span>',
       /* 옵션 칩 — 세트는 실전 모드에도 적용(취약 세트 반복), 시간은 연습에만(실전은 3초 고정) */
       opts: [
+        { key: 'count', label: '문항 수 · 연습', def: '15', items: [
+          { v: '10', label: '10문항' }, { v: '15', label: '15문항' }, { v: '30', label: '30문항' }
+        ] },
         { key: 'set', label: '도형 세트', def: 'rand', items: [
           { v: 'rand', label: '랜덤' },
           { v: '0', aria: '세트 1', html: symC('gs-circle') + symC('gs-tri') + symC('gs-square') },
@@ -1569,8 +1574,8 @@
         ] }
       ],
       modes: [
-        { key: 'b2', label: '2-back', sub: '15문항 · 맞히면 바로 다음' },
-        { key: 'dual', label: '2·3-back', sub: '15문항 · 판정이 하나 늘어요' },
+        { key: 'b2', label: '2-back', sub: '맞히면 바로 다음' },
+        { key: 'dual', label: '2·3-back', sub: '판정이 하나 늘어요' },
         { key: 'real', label: '실전', sub: '2-back 23문항 → 2·3-back 24문항 · 도형당 3초 · 같은 세트' }
       ],
       rules: ['도형이 하나씩 나옵니다. 3번째 도형부터, <b>2번째 전 도형과 같은지</b> 답하세요.',
@@ -1601,6 +1606,9 @@
       start: gameRPS },
     { id: 'path', name: '길 만들기', icon: 'gi-path', unit: '점', time: 0,
       meas: '경로 계획 · 공간',
+      opts: [{ key: 'count', label: '문항 수 · 연습', def: '12', items: [
+        { v: '6', label: '6문항' }, { v: '12', label: '12문항' }, { v: '24', label: '24문항' }
+      ] }],
       /* 색은 게임 표식과 같은 기능색(col-y)·잉크·경계선 값 — 새 색 아님 */
       demo: '<svg class="pdemo" viewBox="0 0 176 88" aria-hidden="true">' +
         '<g fill="none" stroke="rgba(23,42,71,.34)" stroke-width="1.5">' +
@@ -1617,7 +1625,7 @@
         '</svg>' +
         '<span class="cap">차량은 직진 — 울타리( / )를 만나면 <b>90도 꺾여</b> 같은 색 손님에게 갑니다</span>',
       modes: [
-        { key: 'practice', label: '연습', sub: '12문항 · 틀리면 정답 배치 공개' },
+        { key: 'practice', label: '연습', sub: '틀리면 정답 배치 공개' },
         { key: 'real', label: '실전', sub: '48문항 · 최대 5분 · 클릭 20' }
       ],
       rules: ['차량은 <b>직진</b>하고, 울타리(/ 또는 \\)를 만나면 <b>90도 꺾입니다.</b>',
@@ -1636,6 +1644,9 @@
         '</div><span class="cap">45도 두 번 = 90도 — 머릿속으로만 돌려 보고 <b>순서를</b> 입력합니다</span>',
       /* 미리보기는 입문용(연습만) — 실전 방식(모양 안 바뀜)이 기본. 글자 칩은 약한 글자만 반복 */
       opts: [
+        { key: 'count', label: '문항 수 · 연습', def: '10', items: [
+          { v: '5', label: '5문항' }, { v: '10', label: '10문항' }, { v: '20', label: '20문항' }
+        ] },
         { key: 'letter', label: '연습할 글자 · 글자 모드', def: 'rand', items: [
           { v: 'rand', label: '랜덤' },
           { v: 'F', label: 'F' }, { v: 'G', label: 'G' }, { v: 'J', label: 'J' }, { v: 'L', label: 'L' },
@@ -1647,8 +1658,8 @@
         ] }
       ],
       modes: [
-        { key: 'practice', label: '글자', sub: '10문항 · 제출 후 정답 순서 공개' },
-        { key: 'pattern', label: '무늬', sub: '10문항' },
+        { key: 'practice', label: '글자', sub: '제출 후 정답 순서 공개' },
+        { key: 'pattern', label: '무늬', sub: '무늬 문제만' },
         { key: 'real', label: '실전', sub: '글자 3분 → 무늬 3분 · 클릭 20' }
       ],
       rules: ['전 모양을 회전·반전시켜 <b>후 모양과 똑같이 만드는 순서</b>를 입력하세요.',
@@ -1664,11 +1675,15 @@
         '<div class="pl"><em>서연</em><i>화</i><i class="hit">목</i><i>토</i></div>' +
         '<div class="pl"><em>하준</em><i class="hit">목</i><i>수</i><i>일</i></div>' +
         '</div><span class="cap">한 명씩 1초만 보입니다 — 셋 모두에게 있는 요일은 <b>목</b></span>',
-      opts: [{ key: 'pace', label: '제시 속도 · 연습', def: '1', items: [
+      opts: [
+        { key: 'count', label: '라운드당 문항 · 연습', def: '3', items: [
+          { v: '3', label: '3문항' }, { v: '5', label: '5문항' }, { v: '10', label: '10문항' }
+        ] },
+        { key: 'pace', label: '제시 속도 · 연습', def: '1', items: [
         { v: '1', label: '1초 · 실전' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
       ] }],
       modes: [
-        { key: 'practice', label: '연습', sub: '4라운드 × 3문항 · 정답 공개' },
+        { key: 'practice', label: '연습', sub: '4라운드 · 정답 공개' },
         { key: 'real', label: '실전', sub: '4라운드 × 10문항 · 6번째부터 기억 4개' }
       ],
       rules: ['세 친구의 선호가 <b>각자 1초씩</b> 빠르게 지나갑니다. 기억했다가 질문에 답하세요.',
@@ -1710,11 +1725,15 @@
         '<circle cx="24" cy="40" r="3.2"/><circle cx="44" cy="46" r="3.2"/><circle cx="18" cy="56" r="3.2"/>' +
         '</g></svg></span>' +
         '</div><span class="cap">1초 뒤 사라집니다 — 오른쪽이 <b>9 대 7</b>로 더 많음(실제론 단어가 흩어져 있어요)</span>',
-      opts: [{ key: 'expose', label: '노출 시간 · 연습', def: '1', items: [
+      opts: [
+        { key: 'count', label: '문항 수 · 연습', def: '20', items: [
+          { v: '10', label: '10문항' }, { v: '20', label: '20문항' }, { v: '40', label: '40문항' }
+        ] },
+        { key: 'expose', label: '노출 시간 · 연습', def: '1', items: [
         { v: '1', label: '1초 · 실전' }, { v: '1.5', label: '1.5초' }, { v: '2', label: '2초 · 느긋' }
       ] }],
       modes: [
-        { key: 'practice', label: '연습', sub: '20문항 · 답하면 실제 개수 공개' },
+        { key: 'practice', label: '연습', sub: '답하면 실제 개수 공개' },
         { key: 'real', label: '실전', sub: '46문항 · 노출 1초 · 답 3초' }
       ],
       rules: ['좌우에 단어들이 <b>1초만</b> 보였다 사라집니다.',
