@@ -489,6 +489,20 @@
           </div>
         </details>
 
+        <!-- 역량검사 게임 기록 — 회원 최고점(game_scores). 0건이면 안 연다(2026-08-26 오너 지시). -->
+        <details class="v2-fold" id="sec-games" style="display:none;">
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg>
+            <span class="v2-fold-t">역량검사 게임</span>
+            <span class="v2-fold-c" id="gameCount">0</span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body">
+            <ul class="v2-list" id="gameRows"></ul>
+            <a class="v2-more" href="games.html">게임 연습장 가기 →</a>
+          </div>
+        </details>
+
         <!-- 크레딧 사용·충전 내역 — 원장(credit_ledger) 최근 10건. 0건이면 안 연다. -->
         <details class="v2-fold" id="sec-credits" style="display:none;">
           <summary>
@@ -1164,6 +1178,36 @@
       } catch (_) { /* 접이 숨김 유지 */ }
     }
 
+    // ── 역량검사 게임 기록 접이 — 회원 최고점(game_scores). 0건이면 안 연다(2026-08-26). ──
+    async function loadGameScores() {
+      try {
+        const s = await MONC.getSession();
+        if (!s) return;
+        // ⚠️ .eq('member_id') 를 빼면 admin 계정에선 전 회원 행이 섞인다(제출 카드와 같은 규칙)
+        const { data, error } = await MONC.sb.from('game_scores')
+          .select('*').eq('member_id', s.user.id);
+        if (error || !data || !data.length) return;
+        const NAMES = { nback: '도형 2-back', rps: '가위바위보', path: '길 만들기', rotate: '도형 회전',
+          yaksok: '약속 정하기', numbers: '숫자 누르기', compare: '개수 비교' };
+        const byGame = {};
+        data.forEach(r => { (byGame[r.game] = byGame[r.game] || {})[r.kind] = r; });
+        const games = ['nback', 'rps', 'path', 'rotate', 'yaksok', 'numbers', 'compare'].filter(g => byGame[g]);
+        if (!games.length) return;
+        document.getElementById('gameRows').innerHTML = games.map(g => {
+          const real = byGame[g].real, prac = byGame[g].practice;
+          const parts = [];
+          if (real) parts.push(`실전 최고 ${real.best}점`);
+          if (prac) parts.push(`연습 최고 ${prac.best}점`);
+          return `<li><a class="v2-item" href="games.html#${g}">
+              <div class="v2-pay-top"><span class="v2-pay-t">${esc(NAMES[g] || g)}</span></div>
+              <div class="v2-pay-d"><span class="v2-num">${esc(parts.join(' · '))}</span></div>
+            </a></li>`;
+        }).join('');
+        document.getElementById('gameCount').textContent = games.length;
+        document.getElementById('sec-games').style.display = '';
+      } catch (_) { /* 표 미적용(PGRST205 등) — 접이 숨김 유지 */ }
+    }
+
     // ── 내 챌린지 제출 — 처음/끝 학생 직접 업로드 (2026-08-20 오너 확정) ──────────
     // 보신각·스피닝=음성, 영합각=영상, 승자각=답변집(answers) 연동.
     // ⚠️ 화면의 참가 판정(partOf)은 카드를 그릴지만 정한다 — 업로드 허용의 원장은
@@ -1412,7 +1456,7 @@
       // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작. 끝나면 대기 화면을 내린다.
       Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });
       showSignupBonus();          // 가입 축하 크레딧을 '방금 받았다'고 한 번 알린다
-      loadWallet(); loadPacks(); loadCreditLedger(); loadMyPrograms();
+      loadWallet(); loadPacks(); loadCreditLedger(); loadMyPrograms(); loadGameScores();
       const profile = await MONC.getMyProfile();
 
       // 관리자면 관리자 페이지로 가는 링크 노출 (회원 화면에 갇히지 않게)
