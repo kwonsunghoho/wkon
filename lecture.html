@@ -50,55 +50,62 @@
     a { color: inherit; }
 
 
-    /* 히어로 */
-    .lc-hero { padding: 96px 0 8px; }
-    .lc-badge { display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 12px; }
-    .lc-badge.open { background: rgba(46,125,70,.14); color: #2E7D46; }
-    .lc-badge.soon { background: var(--accent-tint); color: var(--accent-ink); }
-    .lc-badge.closed { background: rgba(120,120,120,.14); color: #6b6b6b; }
-    /* 항공사 영문 사명 eyebrow — 카드의 .lx-en 과 같은 계열(액센트색·자간). --lx-accent 는 render()가 지정. */
-    .lc-eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .14em; color: var(--lx-accent, var(--lx-navy)); text-transform: uppercase; margin-bottom: 10px; }
-    .lc-title { font-family: var(--serif); font-size: clamp(26px, 5.4vw, 40px); font-weight: 700; color: var(--lx-navy); letter-spacing: -.5px; line-height: 1.28; }
-    .lc-sub { font-size: 16px; color: var(--text); opacity: .82; margin-top: 12px; }
-    .lc-cover { width: 100%; max-height: 340px; object-fit: cover; border-radius: var(--radius-md); margin-top: 20px; display: block; }
+    /* ── 히어로 — 다크 무대(2026-08-26 오너 확정: B안 무대 + 사진 배경 + 검정 볼드 톤) ──
+       사진(thumb_url)이 있으면 배경으로 깔고 검정 스크림을 덮는다(구 본문 <img class="lc-cover"> 폐지).
+       사진이 없으면 딥 네이비 그라디언트 폴백 — 어느 쪽이든 글자는 항상 흰색 계열. */
+    .lc-hero { position: relative; background: linear-gradient(160deg, #141D29, #1C2A3A 55%, #223349); padding: 100px 0 88px; }
+    .lc-hero.has-shot { background-size: cover; background-position: center 30%; background-repeat: no-repeat; }
+    .lc-hero.has-shot::before { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(10,14,20,.6), rgba(10,14,20,.8)); }
+    .lc-hero .container { position: relative; }
+    .lc-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; margin-bottom: 14px; background: rgba(255,255,255,.14); }
+    .lc-badge.open { color: #C9EBD4; }
+    .lc-badge.soon { color: #DCE7F5; }
+    .lc-badge.closed { color: #C4CBD6; }
+    /* 항공사 영문 사명 eyebrow — 다크 위 강조는 --action-on-dark(팔레트 규칙). 항공사 액센트는 아래 팩트 카드 상단 룰이 잇는다. */
+    .lc-eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .2em; color: var(--action-on-dark, #A8C7F0); text-transform: uppercase; margin-bottom: 12px; }
+    /* ⚠️ 다크 배경 위 제목은 색을 자기 규칙으로 명시(tokens.css 의 h1 잉크 기본값이 상속을 이긴다) */
+    .lc-title { font-size: clamp(26px, 5.4vw, 40px); font-weight: 800; color: #fff; letter-spacing: -.5px; line-height: 1.28; }
+    .lc-sub { font-size: 16px; color: #F1F4F8; opacity: .85; margin-top: 12px; }
 
-    /* 정보 카드 */
-    .lc-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: var(--radius-md); overflow: hidden; margin-top: 22px; }
-    .lc-fact { background: var(--surface); padding: 14px 16px; }
-    .lc-fact .k { font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: .02em; }
-    .lc-fact .v { font-size: 16px; font-weight: 800; margin-top: 3px; }
-    .lc-fact .v.price { color: var(--accent-ink); }
-    @media (max-width: 480px) { .lc-facts { grid-template-columns: 1fr; } }
+    /* ── 정보 카드 — 무대에 걸쳐 뜨는 흰 카드 + 세로 나열(C안 헤어라인 · 2026-08-26 오너 확정) ──
+       상단 2px 룰이 항공사 액센트 자리다(다크 히어로에선 항공사색이 안 보여 여기로 옮겼다). */
+    .lc-facts { position: relative; margin-top: -56px; background: var(--surface); border: 1px solid var(--border-soft); border-top: 2px solid var(--lx-accent, var(--lx-navy)); border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(20,32,52,.14); padding: 6px 20px; }
+    .lc-fact { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border-soft); }
+    .lc-fact:last-child { border-bottom: none; }
+    .lc-fact .k { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
+    .lc-fact .v { font-size: 16px; font-weight: 700; text-align: right; }
+    .lc-fact .v.price { font-size: 20px; font-weight: 800; color: var(--accent-ink); }
 
-    /* 본문 섹션 */
-    .lc-sec { margin-top: 34px; }
-    .lc-sec h2 { font-family: var(--serif); font-size: 20px; font-weight: 700; margin-bottom: 12px; }
-    .lc-desc p { font-size: 15.5px; color: var(--text); margin-bottom: 12px; }
+    /* 본문 섹션 — 홈과 같은 리듬(영문 라벨 + 제목 + 여백 56px) */
+    .lc-sec { margin-top: 56px; }
+    .lc-sec .lab { font-size: 12px; font-weight: 700; letter-spacing: .22em; color: var(--accent-ink); text-transform: uppercase; }
+    .lc-sec h2 { font-size: 20px; font-weight: 800; color: var(--ink, #1C2A3A); margin: 8px 0 14px; }
+    .lc-desc p { font-size: 16px; color: var(--text); margin-bottom: 12px; }
     .lc-desc p:last-child { margin-bottom: 0; }
-    .lc-high { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .lc-high li { position: relative; padding-left: 28px; font-size: 15.5px; }
-    .lc-high li::before { content: ''; position: absolute; left: 0; top: 7px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A33D14' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/12px no-repeat; }
+    .lc-high { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .lc-high li { position: relative; padding-left: 30px; font-size: 15px; }
+    .lc-high li::before { content: ''; position: absolute; left: 0; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/12px no-repeat; }
 
     /* 신청 박스 */
     .lc-apply { margin-top: 34px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 22px 20px 24px; box-shadow: 0 4px 18px rgba(23,42,71,.07); }
-    .lc-apply h2 { font-family: var(--serif); font-size: 21px; font-weight: 700; margin-bottom: 4px; }
-    .lc-apply .hint { font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; }
-    .member-badge { display: none; background: var(--accent-tint); color: var(--accent-ink); font-size: 13.5px; font-weight: 700; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
+    .lc-apply h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .lc-apply .hint { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+    .member-badge { display: none; background: var(--accent-tint); color: var(--accent-ink); font-size: 14px; font-weight: 700; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
     /* 로그인 게이트(2026-08-05 특강 신청 로그인 필수) — 비회원에겐 폼 대신 이 안내 */
     .lc-logingate { text-align: center; padding: 10px 0 2px; }
     .lc-logingate .t { font-size: 15px; font-weight: 700; color: var(--text-muted); line-height: 1.6; margin: 0; }
-    .lc-loginbtn { display: block; width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; text-align: center; text-decoration: none; box-sizing: border-box; }
+    .lc-loginbtn { display: block; width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 800; text-align: center; text-decoration: none; box-sizing: border-box; }
     .lc-field { margin-bottom: 12px; }
     /* 인라인 오류 (2026-08-02) — alert 는 어느 칸이 틀렸는지 못 알려주고 닫으면 사라진다.
        apply.html .field-err 와 같은 규칙. */
     .lc-field .inp.is-err { border-color: #C0392B; }
-    .lc-err { display: none; margin-top: 6px; font-size: 13px; line-height: 1.5; color: #C0392B; }
+    .lc-err { display: none; margin-top: 6px; font-size: 14px; line-height: 1.5; color: #C0392B; }
     .lc-err.on { display: block; }
-    .lc-field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .lc-field label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
     /* 시간대 선택 — 정원·잔여석이 타임마다 따로라 신청 전에 반드시 하나를 고른다.
        라디오는 시각적으로 숨기고 라벨 전체를 44px+ 터치 타깃으로 쓴다(키보드 포커스는 :focus-visible 링으로). */
     .lc-slots { margin-bottom: 14px; }
-    .lc-slots > .cap { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+    .lc-slots > .cap { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
     .lc-slot { display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-bottom: 8px; cursor: pointer;
                border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg); }
     .lc-slot:last-child { margin-bottom: 0; }
@@ -106,7 +113,7 @@
     .lc-slot .dot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); position: relative; }
     .lc-slot .txt { flex: 1 1 auto; min-width: 0; }
     .lc-slot .when { display: block; font-size: 15px; font-weight: 800; line-height: 1.35; word-break: keep-all; }
-    .lc-slot .seat { display: block; font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .lc-slot .seat { display: block; font-size: 14px; color: var(--text-muted); margin-top: 2px; }
     .lc-slot.is-on { border-color: var(--accent-dark); background: var(--accent-tint); }
     .lc-slot.is-on .dot { border-color: var(--accent-dark); }
     .lc-slot.is-on .dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-dark); }
@@ -116,18 +123,18 @@
     .lc-slot .low { color: var(--accent-ink); font-weight: 700; }
     .inp { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: 11px; font-size: 16px; font-family: inherit; background: var(--bg); color: var(--text); }
     .inp:focus { outline: 2px solid var(--accent-dark); outline-offset: 1px; border-color: var(--accent-dark); }
-    .consent { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--text); margin: 14px 0 4px; cursor: pointer; line-height: 1.5; }
+    .consent { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; color: var(--text); margin: 14px 0 4px; cursor: pointer; line-height: 1.5; }
     .consent input { width: 19px; height: 19px; margin-top: 1px; flex: 0 0 auto; accent-color: var(--accent-dark); }
     .consent a { color: var(--accent-ink); font-weight: 700; }
     .pay-total { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 4px; padding-top: 14px; border-top: 1px dashed var(--border); }
     .pay-total .l { font-size: 14px; font-weight: 700; }
-    .pay-total .a { font-size: 22px; font-weight: 900; }
+    .pay-total .a { font-size: 22px; font-weight: 800; }
     .pay-total .a small { font-size: 14px; font-weight: 700; }
-    .btn-toss { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: #0064FF; color: #fff; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    .btn-toss { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: #0064FF; color: #fff; font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
     /* 카카오페이(2026-08-19) — 노랑·먹색은 카카오 브랜드 기능색(팔레트 통일 대상 아님) */
-    .btn-kakao { width: 100%; margin-top: 8px; padding: 16px; border: none; border-radius: 12px; background: #FFEB00; color: #191919; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
+    .btn-kakao { width: 100%; margin-top: 8px; padding: 16px; border: none; border-radius: 12px; background: #FFEB00; color: #191919; font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
     .btn-bank { width: 100%; margin-top: 8px; padding: 16px; border: 1.5px solid var(--accent-dark); border-radius: 12px; background: var(--surface); color: var(--accent-ink); font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
-    .btn-free { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
+    .btn-free { width: 100%; margin-top: 14px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
     /* 카카오톡 문의 — 결제 버튼 아래 한 줄(2026-08-09 오너 확정 · apply.html 과 같은 모양). 노랑·먹색은 카카오 브랜드색(기능색). */
     /* 조용한 안내 줄(2026-08-19 오너 "카카오페이랑 너무 똑같잖아") — 노란 알약로 되돌리지 말 것. apply.html 과 한 벌 */
     .kakao-ask { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; margin-top: 8px; padding: 10px 16px; background: none; color: var(--text-muted); font-size: 13.5px; font-weight: 600; text-decoration: none; letter-spacing: -0.015em; }
@@ -148,14 +155,14 @@
     .bt-close { background: none; border: none; font-size: 26px; line-height: 1; color: var(--text-muted); cursor: pointer; }
     .bt-amount { display: flex; justify-content: space-between; align-items: baseline; background: var(--surface2); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
     .bt-amount .l { font-size: 14px; color: var(--text-muted); font-weight: 700; }
-    .bt-amount .v { font-size: 20px; font-weight: 900; }
+    .bt-amount .v { font-size: 20px; font-weight: 800; }
     .bank { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px 16px; }
     .bank .h { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; }
     .bank .line > div { font-size: 15px; margin-bottom: 4px; }
     .bank .acct { display: flex; align-items: center; gap: 10px; }
     .copy-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 12px; font-weight: 700; cursor: pointer; }
-    .bank .note { font-size: 12.5px; color: var(--text-muted); margin-top: 10px; line-height: 1.55; }
-    .bt-confirm { width: 100%; margin-top: 16px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
+    .bank .note { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.55; }
+    .bt-confirm { width: 100%; margin-top: 16px; padding: 16px; border: none; border-radius: 12px; background: var(--action); color: var(--action-ink); font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
 
     /* 하단 고정 바 */
     /* ⚠️ 챌린지 상세의 .ch-sticky 와 같은 규칙을 쓴다(2026-08-02) — 반투명 금지(밑 글자가
@@ -167,9 +174,9 @@
     @media (prefers-reduced-motion: reduce) { .lc-sticky { transition: none; } }
     .lc-sticky-in { max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
     .lc-sticky .info { flex: 1 1 auto; min-width: 0; }
-    .lc-sticky .info .p { font-size: 17px; font-weight: 900; }
+    .lc-sticky .info .p { font-size: 17px; font-weight: 800; }
     .lc-sticky .info .s { font-size: 12px; color: var(--text-muted); }
-    .lc-sticky .go { flex: 0 0 auto; padding: 13px 24px; border: none; border-radius: 999px; background: var(--action); color: var(--action-ink); font-size: 15px; font-weight: 900; font-family: inherit; cursor: pointer; }
+    .lc-sticky .go { flex: 0 0 auto; padding: 13px 24px; border: none; border-radius: 999px; background: var(--action); color: var(--action-ink); font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer; }
     .lc-sticky .go:disabled { opacity: .5; cursor: not-allowed; }
 
     .lc-loading, .lc-notfound { text-align: center; padding: 140px 20px; color: var(--text-muted); }
@@ -300,22 +307,26 @@
 
       const highlights = Array.isArray(l.highlights) ? l.highlights.filter(Boolean) : [];
 
+      // 사진은 다크 히어로의 배경으로 깔린다(2026-08-26 오너 확정 — 구 본문 <img> 커버 폐지).
+      // shotUrl() 이 주소를 검사·CSS 이스케이프하고, 없으면 네이비 그라디언트 폴백이 나온다.
+      const shot = LEC.shotUrl(l.thumb_url);
       root.innerHTML =
-        '<header class="lc-hero"><div class="container">'
+        '<header class="lc-hero' + (shot ? ' has-shot' : '') + '"'
+        + (shot ? ' style="background-image:url(' + LEC.esc('"' + shot + '"') + ')"' : '') + '>'
+        + '<div class="container">'
+        + '<div class="lc-eyebrow">' + (air ? LEC.esc(air.en) : 'SPECIAL LECTURE') + '</div>'
         + badge
-        + (air ? '<div class="lc-eyebrow">' + LEC.esc(air.en) + '</div>' : '')
         + '<h1 class="lc-title">' + LEC.esc(l.title) + '</h1>'
         + (l.subtitle ? '<p class="lc-sub">' + LEC.esc(l.subtitle) + '</p>' : '')
-        + (l.thumb_url ? '<img class="lc-cover" src="' + LEC.esc(l.thumb_url) + '" alt="">' : '')
-        + '<div class="lc-facts">' + facts.join('') + '</div>'
         + '</div></header>'
         + '<div class="container">'
-        + (l.description ? '<section class="lc-sec lc-desc"><h2>특강 소개</h2>' + descHtml(l.description) + '</section>' : '')
-        + (highlights.length ? '<section class="lc-sec"><h2>이런 걸 얻어가요</h2><ul class="lc-high">'
+        + '<div class="lc-facts">' + facts.join('') + '</div>'
+        + (l.description ? '<section class="lc-sec lc-desc"><div class="lab">About</div><h2>특강 소개</h2>' + descHtml(l.description) + '</section>' : '')
+        + (highlights.length ? '<section class="lc-sec"><div class="lab">Point</div><h2>이런 걸 얻어가요</h2><ul class="lc-high">'
             + highlights.map(h => '<li>' + LEC.esc(h) + '</li>').join('') + '</ul></section>' : '')
         // 신청이 열려 있으면 시간대는 아래 신청 폼에서 고른다. 닫혀 있을 땐(예정·마감)
         // 폼이 없어 시간대를 볼 데가 사라지므로 여기서 안내만 한다.
-        + (st !== 'open' && SLOTS.length ? '<section class="lc-sec"><h2>시간대</h2>'
+        + (st !== 'open' && SLOTS.length ? '<section class="lc-sec"><div class="lab">Time</div><h2>시간대</h2>'
             + '<div class="lc-slots">' + SLOTS.map(s => slotRowHtml(s, true)).join('') + '</div></section>' : '')
         + applyBoxHtml(l, st, priceStr)
         + '</div>'

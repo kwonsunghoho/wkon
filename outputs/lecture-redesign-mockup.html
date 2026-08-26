@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>특강 상세 리디자인 목업 3종 — ?v=a(티켓) / b(네이비 무대) / c(에디토리얼)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     특강 상세(lecture.html) 리디자인 목업 — 2026-08-26
+     A안 = 보딩패스 티켓 · B안 = 네이비 무대 · C안 = 에디토리얼 헤어라인
+     공통 규칙: 현행 팔레트(딥 네이비 on 순백)·활자 {12,14,15,16,17,19,20+표시값}
+     ·굵기 {400,700,800}·입력칸 16px·터치 44px — design-principles.md 그대로.
+     ═══════════════════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+    background: var(--bg, #fff); color: var(--text, #1E2229);
+    line-height: 1.65; -webkit-font-smoothing: antialiased;
+    word-break: keep-all; overflow-wrap: break-word; padding-bottom: 96px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+  .variant { display: none; }
+  body.va .v-a, body.vb .v-b, body.vc .v-c { display: block; }
+
+  /* 목업 식별 띠 — 실구현엔 없음 */
+  .mk-tag { position: sticky; top: 0; z-index: 99; background: var(--bg-dark, #1C2A3A); color: #fff;
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-align: center; padding: 7px 0; }
+
+  /* ── 공통: 상태 배지 ── */
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+    padding: 5px 12px; border-radius: 999px; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.open { background: rgba(46,125,70,.12); color: #2E6E42; }
+
+  /* ── 공통: 섹션 조판 — 홈과 같은 리듬(라벨 + 큰 제목 + 여백 56px) ── */
+  .sec { margin-top: 56px; }
+  .sec .lab { font-size: 12px; font-weight: 700; letter-spacing: .22em; color: var(--accent-ink, #1B3A6B);
+    text-transform: uppercase; }
+  .sec h2 { font-size: 20px; font-weight: 800; color: var(--ink, #1C2A3A); margin-top: 8px; letter-spacing: -.3px; }
+  .sec .bd { margin-top: 14px; }
+  .sec .bd p { font-size: 16px; color: var(--text, #1E2229); margin-bottom: 12px; }
+  .sec .bd p:last-child { margin-bottom: 0; }
+
+  /* 핵심 포인트 — 주황 잔재를 걷어낸 네이비 체크 */
+  .hi { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .hi li { position: relative; padding-left: 30px; font-size: 15px; font-weight: 400; }
+  .hi li::before { content: ''; position: absolute; left: 0; top: 3px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-tint, #E4E8F2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/12px no-repeat; }
+
+  /* ── 공통: 신청 카드 ── */
+  .apply { margin-top: 56px; background: var(--surface, #fff); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg, 24px); padding: 24px 20px 26px; box-shadow: 0 4px 18px rgba(20,32,52,.07); }
+  .apply h2 { font-size: 19px; font-weight: 800; color: var(--ink, #1C2A3A); }
+  .apply .hint { font-size: 14px; color: var(--text-muted, #545C68); margin: 4px 0 18px; }
+  .fld { margin-bottom: 12px; }
+  .fld label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .inp { width: 100%; padding: 14px; border: 1px solid var(--border-strong); border-radius: 12px;
+    font-size: 16px; font-family: inherit; background: var(--bg, #fff); color: var(--text); }
+  .consent { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; margin: 16px 0 6px; line-height: 1.5; }
+  .consent input { width: 19px; height: 19px; margin-top: 1px; accent-color: var(--accent-dark, #142C52); }
+  .consent a { color: var(--accent-ink, #1B3A6B); font-weight: 700; }
+  .paysum { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 4px;
+    padding-top: 14px; border-top: 1px dashed var(--border); }
+  .paysum .l { font-size: 14px; font-weight: 700; }
+  .paysum .a { font-size: 22px; font-weight: 800; }
+  .paysum .a small { font-size: 14px; font-weight: 700; }
+  .btn { width: 100%; margin-top: 8px; padding: 16px; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; gap: 6px; }
+  .btn.toss { margin-top: 14px; background: #0064FF; color: #fff; }
+  .btn.kakao { background: #FFEB00; color: #191919; }
+  .btn.bank { background: var(--surface, #fff); color: var(--accent-ink, #1B3A6B); border: 1.5px solid var(--accent-dark, #142C52); }
+
+  /* ── 공통: 하단 고정 바 ── */
+  .sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: var(--bg, #fff);
+    border-top: 1px solid var(--border-strong); box-shadow: 0 -6px 18px rgba(20,32,52,.10);
+    padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .sticky-in { max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+  .sticky .info { flex: 1 1 auto; min-width: 0; }
+  .sticky .info .p { font-size: 17px; font-weight: 800; }
+  .sticky .info .s { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sticky .go { flex: 0 0 auto; padding: 13px 26px; border: none; border-radius: 999px;
+    background: var(--action, #1B3A6B); color: var(--action-ink, #fff); font-size: 15px; font-weight: 800;
+    font-family: inherit; cursor: pointer; }
+
+  /* ═══════════ A안 — 보딩패스 티켓 ═══════════ */
+  .v-a .hero { padding: 40px 0 0; }
+  .v-a .eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .2em; color: var(--accent-ink, #1B3A6B);
+    text-transform: uppercase; margin-bottom: 12px; }
+  .v-a h1 { font-size: 30px; font-weight: 800; color: var(--ink, #1C2A3A); letter-spacing: -.5px; line-height: 1.25; margin-top: 10px; }
+  .v-a .sub { font-size: 16px; color: var(--text-muted, #545C68); margin-top: 12px; }
+
+  /* 티켓 — 카드 정보부와 같은 #F8FAFD 판 위에, 절취선과 반원 노치 */
+  .tk { margin-top: 26px; background: #F8FAFD; border: 1px solid var(--border);
+    border-radius: var(--radius-md, 20px); overflow: hidden; position: relative; }
+  .tk-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--accent, #1B3A6B); }
+  .tk-head .en { font-size: 12px; font-weight: 400; letter-spacing: .18em; color: var(--accent-ink, #1B3A6B); text-transform: uppercase; }
+  .tk-head .no { font-size: 12px; font-weight: 700; color: var(--text-dim, #5F6874); letter-spacing: .08em; }
+  .tk-main { padding: 18px 20px 20px; }
+  .tk-big { display: flex; align-items: baseline; gap: 10px; }
+  .tk-big .d { font-size: 34px; font-weight: 800; color: var(--ink, #1C2A3A); letter-spacing: -.5px; }
+  .tk-big .t { font-size: 19px; font-weight: 700; color: var(--accent-ink, #1B3A6B); }
+  .tk-rows { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  .tk-rows .r .k { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text-dim, #5F6874); }
+  .tk-rows .r .v { font-size: 15px; font-weight: 700; color: var(--text, #1E2229); margin-top: 2px; }
+  /* 절취선 + 노치 — 티켓 판(#F8FAFD) 위라 순백 반원이 파인 자리로 읽힌다 */
+  .tk-perf { position: relative; height: 0; border-top: 2px dashed var(--border); margin: 0 14px; }
+  .tk-perf::before, .tk-perf::after { content: ''; position: absolute; top: -12px; width: 24px; height: 24px;
+    border-radius: 50%; background: var(--bg, #fff); border: 1px solid var(--border); }
+  .tk-perf::before { left: -28px; }
+  .tk-perf::after  { right: -28px; }
+  .tk-stub { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 20px 18px; }
+  .tk-stub .price .k { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text-dim, #5F6874); }
+  .tk-stub .price .v { font-size: 24px; font-weight: 800; color: var(--accent-ink, #1B3A6B); margin-top: 2px; }
+  .tk-bar { flex: 0 0 auto; width: 96px; height: 36px; opacity: .85;
+    background: repeating-linear-gradient(90deg, var(--ink, #1C2A3A) 0 2px, transparent 2px 5px,
+      var(--ink, #1C2A3A) 5px 6px, transparent 6px 9px, var(--ink, #1C2A3A) 9px 12px, transparent 12px 15px); }
+
+  /* ═══════════ B안 — 네이비 무대 ═══════════ */
+  .v-b .stage { background: var(--bg-dark, #1C2A3A); padding: 44px 0 84px; }
+  .v-b .stage .eyebrow { font-size: 13px; font-weight: 400; letter-spacing: .2em; color: var(--action-on-dark, #A8C7F0); text-transform: uppercase; }
+  .v-b .stage .pill.open { background: rgba(255,255,255,.10); color: #DCE7F5; margin-top: 14px; }
+  /* 다크 위 제목은 색을 자기 규칙으로 명시(전역 h1 잉크 규칙이 상속을 이기므로) */
+  .v-b .stage h1 { font-size: 30px; font-weight: 800; color: #fff; letter-spacing: -.5px; line-height: 1.25; margin-top: 12px; }
+  .v-b .stage .sub { font-size: 16px; color: #F1F4F8; opacity: .82; margin-top: 12px; }
+  .v-b .stage .cta { display: inline-block; margin-top: 22px; padding: 14px 28px; border-radius: 999px;
+    background: #fff; color: var(--accent-ink, #1B3A6B); font-size: 16px; font-weight: 800; text-decoration: none; }
+  /* 무대에 걸쳐 뜨는 정보 카드 */
+  .v-b .float { margin-top: -56px; background: var(--surface, #fff); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md, 20px); box-shadow: 0 10px 30px rgba(20,32,52,.14); padding: 20px; }
+  .v-b .float .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .v-b .float .r .k { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text-dim, #5F6874); }
+  .v-b .float .r .v { font-size: 15px; font-weight: 700; margin-top: 3px; }
+  .v-b .float .r .v.price { font-size: 20px; font-weight: 800; color: var(--accent-ink, #1B3A6B); }
+
+  /* ═══════════ C안 — 에디토리얼 헤어라인 ═══════════ */
+  .v-c .hero { padding: 44px 0 0; }
+  .v-c .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .26em; color: var(--accent-ink, #1B3A6B); text-transform: uppercase; }
+  .v-c h1 { font-size: 34px; font-weight: 800; color: var(--ink, #1C2A3A); letter-spacing: -.8px; line-height: 1.22; margin-top: 14px; }
+  .v-c .sub { font-size: 16px; color: var(--text-muted, #545C68); margin-top: 14px; }
+  .v-c .facts { margin-top: 30px; border-top: 2px solid var(--ink, #1C2A3A); }
+  .v-c .facts .row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+    padding: 15px 2px; border-bottom: 1px solid var(--border); }
+  .v-c .facts .k { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--text-dim, #5F6874); }
+  .v-c .facts .v { font-size: 16px; font-weight: 700; text-align: right; }
+  .v-c .facts .row.price .v { font-size: 20px; font-weight: 800; color: var(--accent-ink, #1B3A6B); }
+</style>
+</head>
+<body>
+
+<!-- ══════════ A안 · 보딩패스 티켓 ══════════ -->
+<div class="variant v-a">
+  <div class="mk-tag">A안 — 보딩패스 티켓</div>
+  <div class="wrap">
+    <header class="hero">
+      <div class="eyebrow">Special Lecture</div>
+      <span class="pill open"><span class="dot"></span>신청 중 · D-8</span>
+      <h1>영상면접 1:1 원데이<br>진단&amp;코칭</h1>
+      <p class="sub">카메라 앞 첫인상부터 답변 구성까지, 하루에 잡는 1:1 집중 진단.</p>
+    </header>
+
+    <section class="tk" aria-label="특강 정보">
+      <div class="tk-head">
+        <span class="en">MONC Special Lecture</span>
+        <span class="no">NO. 2026-09</span>
+      </div>
+      <div class="tk-main">
+        <div class="tk-big"><span class="d">9.05</span><span class="t">금 · 14:00</span></div>
+        <div class="tk-rows">
+          <div class="r"><div class="k">장소</div><div class="v">강남 스튜디오</div></div>
+          <div class="r"><div class="k">진행</div><div class="v">1:1 · 60분</div></div>
+          <div class="r"><div class="k">강사</div><div class="v">몬크 수석 연구원</div></div>
+          <div class="r"><div class="k">신청 기간</div><div class="v">8/26 ~ 9/3</div></div>
+        </div>
+      </div>
+      <div class="tk-perf" aria-hidden="true"></div>
+      <div class="tk-stub">
+        <div class="price"><div class="k">참가비</div><div class="v">50,000원</div></div>
+        <div class="tk-bar" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="lab">About</div>
+      <h2>특강 소개</h2>
+      <div class="bd">
+        <p>영상면접은 대면 면접과 완전히 다른 승부처가 있습니다. 화면 속 시선 처리, 목소리 전달, 답변 길이까지 — 실제 촬영 환경에서 하나씩 진단합니다.</p>
+        <p>촬영한 영상을 그 자리에서 함께 돌려보며, 다음 촬영에서 바로 고칠 수 있는 것부터 짚어 드립니다.</p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="lab">Point</div>
+      <h2>이런 걸 얻어가요</h2>
+      <div class="bd">
+        <ul class="hi">
+          <li>실제 항공사 영상면접과 같은 세팅에서 촬영</li>
+          <li>내 영상 속 습관을 연구원과 함께 진단</li>
+          <li>다음 촬영에 바로 쓰는 개선 포인트 정리</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="apply">
+      <h2>신청하기</h2>
+      <p class="hint">아래 정보로 신청이 접수돼요.</p>
+      <div class="fld"><label>이름</label><input class="inp" value="김몬크"></div>
+      <div class="fld"><label>연락처</label><input class="inp" value="010-1234-5678"></div>
+      <label class="consent"><input type="checkbox" checked><span>만 14세 이상이며 <a href="#">개인정보 수집·이용</a>에 동의합니다.</span></label>
+      <div class="paysum"><span class="l">결제 금액</span><span class="a">50,000<small>원</small></span></div>
+      <button class="btn toss">토스페이로 결제하고 신청하기</button>
+      <button class="btn kakao">카카오페이로 결제하고 신청하기</button>
+      <button class="btn bank">계좌이체로 신청하기</button>
+    </section>
+  </div>
+  <div class="sticky"><div class="sticky-in">
+    <div class="info"><div class="p">50,000원</div><div class="s">영상면접 1:1 원데이 진단&amp;코칭</div></div>
+    <button class="go">신청하기</button>
+  </div></div>
+</div>
+
+<!-- ══════════ B안 · 네이비 무대 ══════════ -->
+<div class="variant v-b">
+  <div class="mk-tag">B안 — 네이비 무대</div>
+  <div class="stage">
+    <div class="wrap">
+      <div class="eyebrow">Special Lecture</div>
+      <div><span class="pill open">신청 중 · D-8</span></div>
+      <h1>영상면접 1:1 원데이<br>진단&amp;코칭</h1>
+      <p class="sub">카메라 앞 첫인상부터 답변 구성까지, 하루에 잡는 1:1 집중 진단.</p>
+      <a class="cta" href="#">신청하기</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <section class="float" aria-label="특강 정보">
+      <div class="grid">
+        <div class="r"><div class="k">일시</div><div class="v">9월 5일(금) 14:00</div></div>
+        <div class="r"><div class="k">장소</div><div class="v">강남 스튜디오</div></div>
+        <div class="r"><div class="k">강사</div><div class="v">몬크 수석 연구원</div></div>
+        <div class="r"><div class="k">참가비</div><div class="v price">50,000원</div></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="lab">About</div>
+      <h2>특강 소개</h2>
+      <div class="bd">
+        <p>영상면접은 대면 면접과 완전히 다른 승부처가 있습니다. 화면 속 시선 처리, 목소리 전달, 답변 길이까지 — 실제 촬영 환경에서 하나씩 진단합니다.</p>
+        <p>촬영한 영상을 그 자리에서 함께 돌려보며, 다음 촬영에서 바로 고칠 수 있는 것부터 짚어 드립니다.</p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="lab">Point</div>
+      <h2>이런 걸 얻어가요</h2>
+      <div class="bd">
+        <ul class="hi">
+          <li>실제 항공사 영상면접과 같은 세팅에서 촬영</li>
+          <li>내 영상 속 습관을 연구원과 함께 진단</li>
+          <li>다음 촬영에 바로 쓰는 개선 포인트 정리</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="apply">
+      <h2>신청하기</h2>
+      <p class="hint">아래 정보로 신청이 접수돼요.</p>
+      <div class="fld"><label>이름</label><input class="inp" value="김몬크"></div>
+      <div class="fld"><label>연락처</label><input class="inp" value="010-1234-5678"></div>
+      <label class="consent"><input type="checkbox" checked><span>만 14세 이상이며 <a href="#">개인정보 수집·이용</a>에 동의합니다.</span></label>
+      <div class="paysum"><span class="l">결제 금액</span><span class="a">50,000<small>원</small></span></div>
+      <button class="btn toss">토스페이로 결제하고 신청하기</button>
+      <button class="btn kakao">카카오페이로 결제하고 신청하기</button>
+      <button class="btn bank">계좌이체로 신청하기</button>
+    </section>
+  </div>
+  <div class="sticky"><div class="sticky-in">
+    <div class="info"><div class="p">50,000원</div><div class="s">영상면접 1:1 원데이 진단&amp;코칭</div></div>
+    <button class="go">신청하기</button>
+  </div></div>
+</div>
+
+<!-- ══════════ C안 · 에디토리얼 헤어라인 ══════════ -->
+<div class="variant v-c">
+  <div class="mk-tag">C안 — 에디토리얼 헤어라인</div>
+  <div class="wrap">
+    <header class="hero">
+      <div class="eyebrow">Special Lecture</div>
+      <h1>영상면접 1:1 원데이<br>진단&amp;코칭</h1>
+      <p class="sub">카메라 앞 첫인상부터 답변 구성까지, 하루에 잡는 1:1 집중 진단.</p>
+    </header>
+
+    <section class="facts" aria-label="특강 정보">
+      <div class="row"><span class="k">일시</span><span class="v">9월 5일(금) 14:00</span></div>
+      <div class="row"><span class="k">장소</span><span class="v">강남 스튜디오</span></div>
+      <div class="row"><span class="k">강사</span><span class="v">몬크 수석 연구원</span></div>
+      <div class="row"><span class="k">신청 기간</span><span class="v">8/26 ~ 9/3</span></div>
+      <div class="row price"><span class="k">참가비</span><span class="v">50,000원</span></div>
+    </section>
+
+    <section class="sec">
+      <div class="lab">About</div>
+      <h2>특강 소개</h2>
+      <div class="bd">
+        <p>영상면접은 대면 면접과 완전히 다른 승부처가 있습니다. 화면 속 시선 처리, 목소리 전달, 답변 길이까지 — 실제 촬영 환경에서 하나씩 진단합니다.</p>
+        <p>촬영한 영상을 그 자리에서 함께 돌려보며, 다음 촬영에서 바로 고칠 수 있는 것부터 짚어 드립니다.</p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="lab">Point</div>
+      <h2>이런 걸 얻어가요</h2>
+      <div class="bd">
+        <ul class="hi">
+          <li>실제 항공사 영상면접과 같은 세팅에서 촬영</li>
+          <li>내 영상 속 습관을 연구원과 함께 진단</li>
+          <li>다음 촬영에 바로 쓰는 개선 포인트 정리</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="apply">
+      <h2>신청하기</h2>
+      <p class="hint">아래 정보로 신청이 접수돼요.</p>
+      <div class="fld"><label>이름</label><input class="inp" value="김몬크"></div>
+      <div class="fld"><label>연락처</label><input class="inp" value="010-1234-5678"></div>
+      <label class="consent"><input type="checkbox" checked><span>만 14세 이상이며 <a href="#">개인정보 수집·이용</a>에 동의합니다.</span></label>
+      <div class="paysum"><span class="l">결제 금액</span><span class="a">50,000<small>원</small></span></div>
+      <button class="btn toss">토스페이로 결제하고 신청하기</button>
+      <button class="btn kakao">카카오페이로 결제하고 신청하기</button>
+      <button class="btn bank">계좌이체로 신청하기</button>
+    </section>
+  </div>
+  <div class="sticky"><div class="sticky-in">
+    <div class="info"><div class="p">50,000원</div><div class="s">영상면접 1:1 원데이 진단&amp;코칭</div></div>
+    <button class="go">신청하기</button>
+  </div></div>
+</div>
+
+<script>
+  var v = new URLSearchParams(location.search).get('v') || 'a';
+  document.body.className = 'v' + (['a','b','c'].indexOf(v) >= 0 ? v : 'a');
+</script>
+</body>
+</html>
