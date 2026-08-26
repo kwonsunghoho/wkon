@@ -131,6 +131,44 @@
       background: var(--surface); font-size: 12.5px; font-weight: 700; cursor: pointer; }
     .gm-part:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
 
+    /* ── 소개 화면 예시 도해 — 실전처럼 '그림으로 먼저' 가르친다(2026-08-26 실전 반영 보강).
+       조작 요소가 아니라 그림이다 — 44px 터치 규칙 대상 아님. 내용은 games.js 각 게임의 demo 필드. ── */
+    .gm-demo { margin-top: 12px; padding: 14px 10px 11px; background: var(--bg2); border-radius: 12px;
+      text-align: center; }
+    .gm-demo .cap { display: block; margin-top: 9px; font-size: 12.5px; color: var(--text-muted); }
+    .gm-demo .cap b { color: var(--accent-ink); }
+    .gm-demo .row { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .gm-demo .tile { width: 46px; height: 46px; border-radius: 10px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 21px; color: var(--ink); line-height: 1; }
+    .gm-demo .tile svg { width: 26px; height: 26px; stroke-width: 1.5; color: var(--accent); }
+    .gm-demo .tile.hit { border-color: var(--accent-dark); background: var(--accent-tint); }
+    .gm-demo .arr { font-size: 13px; font-weight: 800; color: var(--text-muted); }
+    .gm-demo .chip { font-size: 12px; font-weight: 800; color: var(--accent-ink); background: var(--accent-tint);
+      border-radius: 4px; padding: 3px 8px; }
+    /* 약속 정하기 — 세 명의 목록과 공통 항목 */
+    .gm-demo .ppl { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+    .gm-demo .pl { display: flex; gap: 4px; align-items: center; font-size: 12.5px; }
+    .gm-demo .pl em { font-style: normal; font-weight: 800; color: var(--text-muted); min-width: 36px;
+      text-align: right; margin-right: 3px; }
+    .gm-demo .pl i { font-style: normal; min-width: 30px; padding: 4px 7px; border-radius: 6px;
+      border: 1px solid var(--border-strong); background: var(--surface); font-weight: 800; font-size: 12.5px;
+      color: var(--ink); line-height: 1.2; }
+    .gm-demo .pl i.hit { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--accent-ink); }
+    /* 숫자 누르기 — 3×3 미니 자판(불 켜진 칸 하나) */
+    .gm-demo .ngrid { display: grid; grid-template-columns: repeat(3, 34px); gap: 4px; justify-content: center; }
+    .gm-demo .nc { width: 34px; height: 34px; border: 1.5px solid var(--border-strong); border-radius: 8px;
+      background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; }
+    .gm-demo .nc.lit { background: var(--action); border-color: var(--action); color: var(--action-ink); }
+    /* 개수 비교 — 점이 흩어진 두 판 */
+    .gm-demo .wpan { width: 64px; height: 78px; border-radius: 10px; border: 1.5px solid var(--border-strong);
+      background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
+    .gm-demo .wpan.hit { border-color: var(--accent-dark); background: var(--accent-tint); }
+    .gm-demo .wpan svg { width: 52px; height: 66px; color: var(--accent); }
+    /* 길 만들기 — 울타리 하나로 꺾이는 경로 */
+    .gm-demo .pdemo { display: block; margin: 0 auto; width: 176px; max-width: 100%; height: auto; }
+
     /* 문항 제한시간 — 막대 + 숫자(캡처의 0:29·빨간 카운트다운). 임박하면 숫자가 붉어진다 */
     .gm-qtimer { height: 6px; max-width: 340px; margin: 12px auto; border-radius: 3px;
       background: var(--bg3); overflow: hidden; }
@@ -206,6 +244,9 @@
     .gm-hand span svg { width: 48px; height: 48px; stroke-width: 1.2; color: var(--ink); }
     .gm-hand span b { font-size: 13px; color: var(--ink); }
     .gm-hand span i { font-style: normal; font-size: 38px; font-weight: 800; color: var(--accent-ink); }
+    /* 지금 '고르는 쪽'(? 카드) 강조 — 실전처럼 어느 관점인지 화면이 크게 말한다(2026-08-26) */
+    .gm-hand.pick em { color: var(--accent-ink); }
+    .gm-hand.pick span { border-color: var(--accent-dark); background: var(--accent-tint); }
     .gm-rule { text-align: center; }
     .gm-rule b { display: inline-block; font-size: 22px; font-weight: 800; padding: 4px 18px; border-radius: 12px;
       background: var(--accent-tint); color: var(--accent-ink); }
@@ -479,7 +520,7 @@
         <rect x="5.5" y="7" width="13" height="11" rx="1.5"/>
         <path d="M5.5 10.5h13M12 7v3.5"/>
       </symbol>
-      <!-- 도형 세트(면 채움) — 2-back 도형 세트·가위바위보 '바위'가 쓴다 -->
+      <!-- 도형 세트(면 채움) — 2-back 도형 세트가 쓴다 -->
       <symbol id="gs-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="currentColor"/></symbol>
       <symbol id="gs-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
       <symbol id="gs-square" viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="2" fill="currentColor"/></symbol>
@@ -489,10 +530,20 @@
       <symbol id="gs-plus" viewBox="0 0 24 24"><path d="M9.3 4h5.4v5.3H20v5.4h-5.3V20H9.3v-5.3H4V9.3h5.3Z" fill="currentColor"/></symbol>
       <symbol id="gs-hex" viewBox="0 0 24 24"><path d="M12 3 19.6 7.4v8.8L12 20.6 4.4 16.2V7.4Z" fill="currentColor"/></symbol>
       <symbol id="gs-half" viewBox="0 0 24 24"><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></symbol>
-      <!-- 가위바위보의 '보'(펼친 종이) -->
-      <symbol id="gs-paper" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="5.5" y="4" width="13" height="16" rx="1.8"/>
-        <path d="M9 9h6M9 12.5h6M9 16h4"/>
+      <!-- 가위바위보 손 3종(gh-*) — 실전처럼 '손 모양'으로 보여준다(2026-08-26 실전 반영 보강,
+           구 gs-paper 종이 아이콘 폐기). 자체 드로잉 — 잡다 그래픽과 무관. -->
+      <symbol id="gh-rock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.4 12.4V10c0-2.3 1.7-4 4-4h5.2c2.3 0 4 1.7 4 4v2.6c0 3.3-2.4 5.4-5.8 5.4h-1.6c-3.4 0-5.8-2.1-5.8-5.6Z"/>
+        <path d="M10.3 6v2.7M13.7 6v2.7"/>
+        <path d="M5.4 11.6h2.2c1 0 1.7.8 1.7 1.7 0 1-.7 1.7-1.7 1.7H6.3"/>
+      </symbol>
+      <symbol id="gh-scis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m9.8 12.6-2.3-7a1.5 1.5 0 0 1 2.9-.9l1.6 5 1.6-5a1.5 1.5 0 0 1 2.9.9l-2.3 7"/>
+        <path d="M9 12.4h6c1.8 0 3.1 1.3 3.1 3 0 2.7-2.2 4.4-5.4 4.4h-1.4c-3.2 0-5.4-1.7-5.4-4.4 0-1.7 1.3-3 3.1-3Z"/>
+      </symbol>
+      <symbol id="gh-palm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7.4 12.2V6.4a1.3 1.3 0 0 1 2.6 0v4.2M10 10.6V4.8a1.3 1.3 0 0 1 2.6 0v5.6M12.6 10.4V5.6a1.3 1.3 0 0 1 2.6 0v6.6"/>
+        <path d="m15.2 12.2 1.5-2a1.4 1.4 0 0 1 2.2 1.7l-2.7 4.2c-1.2 1.9-2.8 2.9-5.2 2.9-3.4 0-5.6-2.2-5.6-5.6v-1.2"/>
       </symbol>
     </defs>
   </svg>
@@ -550,7 +601,7 @@
     <div class="gm-foot"></div>
   </main>
 
-<script src="games.js?v=2" defer></script>
+<script src="games.js?v=3" defer></script>
 <script>
 /* bfcache — 뒤로/앞으로 오면 크롬은 떠날 때 그리던 화면을 그대로 되살린다.
    게임 타이머는 시각 기반이라 되살린 화면은 그대로 종료돼 버린 상태다 — 통째로 다시 받는다(CLAUDE.md 표준). */
