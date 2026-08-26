@@ -50,7 +50,7 @@
 | `20260725200000` + `20260725210000` | airline_profiles(+티웨이) | 적용 완료 |
 | `20260730120000_challenge_waitlist` | 오픈 알림 명단 | **owner 실행 필요** |
 | `20260825150000_game_reports` | 역량검사 게임 오류 제보함(anon insert·admin select) | **owner 실행 필요** — 미적용 시 게임 페이지 제보 폼이 "준비 중" 안내로 degrade(게임은 영향 없음) |
-| `20260826180000_game_scores` | 역량검사 게임 회원 최고점(`game_scores` + `save_game_score` RPC — 쓰기는 RPC 만, 읽기는 본인 행) | **owner 실행 필요** — 미적용이면 게임은 기기 기록만으로 그대로 돌고 mypage '역량검사 게임' 접이가 안 보일 뿐(조용한 degrade) |
+| `20260826180000_game_scores` | 역량검사 게임 회원 최고점(`game_scores` + `save_game_score` RPC — 쓰기는 RPC 만, 읽기는 본인 행) | **오너 실행 보고(2026-08-26)** — 그 세션 프록시가 supabase.co 를 막아(403) anon 프로브 실측은 못 했다. 의심되면 프로브 둘: `GET /rest/v1/game_scores?select=game&limit=1`(anon) → `[]` 이면 표 존재·PGRST205 면 미적용 / `POST /rest/v1/rpc/save_game_score`(anon) → `login required` 면 함수 정상·PGRST202 면 미적용. 실사용 확인은 로그인 플레이 1판 → mypage '역량검사 게임' 접이 |
 | `20260730130000_answer_polishes` | 첨삭 기록 + 리허설 단가 15 선반영 | **적용 완료 — 2026-08-14 프로브 실측 `polish_table` 19**(쌓인 첨삭 19건). 그전까지 'owner 실행 필요'로 적혀 있었으나 실측과 어긋났다. 다시 실행 안내를 하지 말 것 |
 | `20260730150000_answer_program` | 답변 프로그램 전체(롤백 포함) | 실행 완료(프로브 확인) |
 | `20260731120000_expression_reports` | 미니 다듬기(quickfix) 수집함 | **owner 실행 필요**(마이그레이션만 남았다 — **ai-killer 재배포는 2026-08-04 에 완료**). 미적용이면 위젯이 '준비 중'으로만 뜬다 |
