@@ -24,7 +24,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 anon 프로브로 확인한다.
-const FN_VERSION = '2026-08-26a'
+const FN_VERSION = '2026-08-26b'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -77,11 +77,18 @@ Deno.serve(async (req) => {
 
     const vc = iv?.verifiedCustomer || {}
     const name = String(vc.name || '').trim()
-    const phone = String(vc.phoneNumber || '').trim()
+    // 인증사 응답의 번호는 형이 제각각일 수 있다(+82 국제형·하이픈 포함) — 숫자만 남기고
+    // 82 국가번호는 국내형(0…)으로 바꿔 RPC(형식 검사·중복 대조)에 넘긴다. 통합인증 창에서
+    // 휴대폰이 아닌 방식(카드·간편인증서)을 고르면 번호가 아예 빠질 수 있다 → bad_phone.
+    let phone = String(vc.phoneNumber || '').replace(/\D/g, '')
+    if (/^82(1[016789])/.test(phone)) phone = '0' + phone.slice(2)
     const birth = /^\d{4}-\d{2}-\d{2}$/.test(String(vc.birthDate || '')) ? String(vc.birthDate) : null
     const ci = String(vc.ci || '').trim() || null
     const di = String(vc.di || '').trim() || null
-    if (!phone) return json({ ok: false, code: 'bad_phone' })
+    if (!phone) {
+      console.error('verify-identity bad_phone — verifiedCustomer keys:', Object.keys(vc).join(','))
+      return json({ ok: false, code: 'bad_phone' })
+    }
 
     // ── 저장은 RPC 한 곳(service_role) — CI·번호 중복 판정 + 감사 기록 ────────
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -96,6 +103,8 @@ Deno.serve(async (req) => {
       console.error('apply_identity_verification failed', error)
       return json({ ok: false, code: 'error', message: error.message })
     }
+    // 성공이 아닌 결과는 로그에 남긴다 — 화면 캡처만으로 원인을 좁힐 수 있게(2026-08-26 실사고)
+    if (!data || data.ok !== true) console.error('verify-identity outcome', data?.code, 'member', user.id)
     // RPC 가 주는 jsonb 그대로 — { ok:true, name, phone } | { ok:false, code, provider, me_fresh }
     return json(data || { ok: false, code: 'error' })
   } catch (e) {

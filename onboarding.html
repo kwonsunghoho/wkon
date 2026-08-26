@@ -289,7 +289,18 @@
           r = data || {};
         } catch (e) {
           idvBusy = false; idvBtn.disabled = false;
-          setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
+          /* 실패 이유를 괄호에 같이 보여 준다(2026-08-26 실사고 — "인증 확인에 실패했어요"만
+             떠서 학생 캡처로는 원인을 좁힐 수 없었다). supabase-js 는 non-2xx 면 본문을
+             감추고 error.context(Response)에만 남긴다 — 상태·코드를 꺼내 붙인다. */
+          let detail = '';
+          try {
+            if (e && e.context && typeof e.context.status === 'number') detail = 'HTTP ' + e.context.status;
+            const b = (e && e.context && e.context.json) ? await e.context.json() : null;
+            if (b && b.code) detail = (detail ? detail + ' · ' : '') + b.code;
+          } catch (e2) {}
+          if (!detail && e && e.message) detail = String(e.message).slice(0, 80);
+          setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요.'
+            + (detail ? ' (' + detail + ')' : ''), true);
           return;
         }
         idvBusy = false;
@@ -305,7 +316,12 @@
           if (verifyOnly) { idvPass(); return; }   // 인증 전용 모드 — 직접 입력 폼은 의미가 없다
           idvOff('지금은 본인인증을 쓸 수 없어요. 번호를 직접 입력해 주세요.'); return;
         }
-        setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
+        /* 인증사가 휴대전화 번호를 안 준 경우(통합인증 창에서 카드·인증서 방식을 고르면
+           번호가 빠질 수 있다) — 휴대폰 인증으로 다시 하라고 정확히 안내한다 */
+        if (r.code === 'bad_phone') { setStatus('휴대전화 번호가 확인되지 않았어요. 인증창에서 휴대폰(통신사) 인증으로 진행해 주세요.', true); return; }
+        // 남은 실패(error·member_not_found 등)는 코드·메시지를 그대로 보여 원인 추적을 돕는다
+        setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요. ('
+          + (r.code || '?') + (r.message ? ' · ' + String(r.message).slice(0, 120) : '') + ')', true);
       }
       /* 인증창으로 나갔다 뒤로 돌아온 문서(bfcache) — 얼어붙은 '여는 중…' 상태를 되살린다
          (apply 의 _payRestore 원칙 — idvBusy 가 IIFE 안이라 복원 훅을 밖에 내준다) */
