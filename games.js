@@ -310,9 +310,9 @@
           }).join('') + '</div>' +
           '<p class="gm-modesub" id="gmModeSub"></p>'
         : '') +
-      /* 옵션 칩(도형 세트·도형당 시간 등) — 슬라이더 금지는 유지 */
+      /* 옵션 칩(도형 세트·도형당 시간 등) — 라벨은 위 블록(.gm-lab), 슬라이더 금지는 유지 */
       (g.opts ? g.opts.map(function (op) {
-        return '<div class="gm-opts" data-key="' + op.key + '"><em>' + op.label + '</em>' +
+        return '<p class="gm-lab">' + op.label + '</p><div class="gm-opts" data-key="' + op.key + '">' +
           op.items.map(function (it) {
             return '<button type="button" class="gm-opt' + (curOpts[op.key] === it.v ? ' sel' : '') +
               '" data-v="' + it.v + '"' + (it.aria ? ' aria-label="' + it.aria + '"' : '') + '>' +
