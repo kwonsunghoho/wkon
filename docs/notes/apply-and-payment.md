@@ -43,6 +43,14 @@
   잔존(20260804150000 실측)과 같은 부류 — DB 객체는 콘솔에서 손으로 만들지 말고
   마이그레이션 파일로 만든다. 신청처럼 돈이 걸린 표를 고칠 땐 `pg_trigger` 도 같이 본다.
 
+## 신청 시 프로필 번호 백필은 saveMyProfile 경유 (2026-08-20)
+
+apply(2곳)·lecture(1곳)의 "회원인데 프로필에 번호가 없으면 신청 폼 번호를 프로필에 저장"
+백필이 직접 `members.update` 에서 **`MONC.saveMyProfile()`(서버 중복 대조)** 로 바뀌었다.
+다른 계정(구글↔카카오 이중 가입)의 번호면 **백필만 조용히 건너뛴다** — 신청·결제 접수
+자체는 그대로 진행된다(applications 의 번호는 별개). 직접 update 로 되돌리지 말 것.
+배경은 `docs/notes/auth-consent.md` '전화번호 필수 + 중복 가입 차단' 절.
+
 ## 카카오페이 채널 추가 — 상점·채널 키는 pay-methods.js 한 곳 (2026-08-19)
 
 카카오페이 가맹 심사 완료로 결제 7곳(apply·lecture·mypage·ai-killer·polish·program·lab-shelf) 전부에

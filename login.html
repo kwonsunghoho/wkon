@@ -474,10 +474,12 @@
       await grantSignupBonus();   // 동의를 마친 회원만 서버가 지급한다(미동의는 RPC 가 거른다)
       const rt = takeReturnTo();
       if (profile.role === 'admin') { window.location.replace(rt || 'admin.html'); return; }
-      // 전화번호 미입력 = 온보딩(프로필 완성) 미완료 → 온보딩으로. 한 번 건너뛰면(monc_onboard_done) 다시 강제 안 함.
+      // 전화번호 미입력 = 온보딩(프로필 완성) 미완료 → 온보딩으로.
+      // 2026-08-20 오너 확정: 건너뛰기(monc_onboard_done) 폐지 — 전화번호는 구글·카카오
+      // 이중 가입을 잡는 유일한 공통 식별자라 입력 없이는 가입이 안 끝난다.
+      // 회원 페이지 쪽은 requireConsent 의 가입 완성 가드가 같은 판정을 한다.
       // 온보딩에도 목적지를 넘긴다 — onboarding 의 nextPage() 가 ?returnTo 를 읽는다.
-      let skipped = false; try { skipped = !!localStorage.getItem('monc_onboard_done'); } catch (e) {}
-      if (!profile.phone && !skipped) {
+      if (!profile.phone) {
         window.location.replace('onboarding.html' + (rt ? '?returnTo=' + encodeURIComponent(rt) : ''));
         return;
       }
