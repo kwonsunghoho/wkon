@@ -719,6 +719,9 @@
     /* ── 무료 신청(직접 접수) ── */
     async function submitFree() {
       if (_busy) return;
+      // 본인인증 게이트(2026-08-26 오너 지시) — 특강 신청은 인증 회원만(fail-open).
+      // 상세 열람은 그대로 열어 두고 신청 단추에서만 세운다(전환 동선 유지).
+      if (!(await MONC.requireVerified())) return;
       const applicant = readApplicant(); if (!applicant) return;
       _busy = true;
       const btn = document.getElementById('freeBtn'); const orig = btn.textContent;
@@ -759,6 +762,7 @@
     }
     async function confirmBankTransfer() {
       if (_busy) return;
+      if (!(await MONC.requireVerified())) return;   // 본인인증 게이트(2026-08-26) — 특강 신청은 인증 회원만
       const applicant = readApplicant(); if (!applicant) return;
       _busy = true;
       const btn = document.getElementById('btConfirm'); const orig = btn.textContent;
@@ -820,6 +824,7 @@
        provider = 'toss' | 'kakao' — 채널 키만 다르고 흐름은 같다(pay-methods.js). */
     async function payEasy(provider) {
       if (_busy) return;
+      if (!(await MONC.requireVerified())) return;   // 본인인증 게이트(2026-08-26) — 특강 신청은 인증 회원만
       const applicant = readApplicant(); if (!applicant) return;
       if (!window.PortOne || !window.moncPay) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
       _busy = true;

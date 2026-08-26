@@ -1302,7 +1302,16 @@
   // 비밀번호 자료가 파일까지 여러 개면, 파일을 고른 뒤 다시 부를 때 또 물어보면 안 된다.
   // 방금 통과한 비밀번호를 들고 있다가 같이 보낸다(자료를 바꾸면 지운다).
   var lastPw = '';
+  /* 본인인증 게이트(2026-08-26 오너 지시) — 연구실 자료 열람·받기는 인증 회원만.
+     requireVerified 는 fail-open(조회 실패·인프라 다운이면 통과)이라 잠금 사고가 없다.
+     목록·서가 열람은 그대로 열어 두고 자료를 여는 순간에만 세운다. */
   function openDoc(row, password, fileId, o) {
+    if (busy) return;
+    window.MONC.requireVerified().then(function (ok) {
+      if (ok) openDocGo(row, password, fileId, o);
+    });
+  }
+  function openDocGo(row, password, fileId, o) {
     if (busy) return;
     busy = true;
     if (password) lastPw = password;
@@ -1507,10 +1516,14 @@
   function buyDoc(row) {
     if (busy) return;
     if (!window.PortOne || !window.moncPay) { alert('결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.'); return; }
-    // 결제수단 선택(토스페이·카카오페이) — 버튼 잠금·미결 기록보다 앞. 닫으면 아무 일 없다.
-    window.moncPay.choose().then(function (channelKey) {
-      if (!channelKey || busy) return;
-      startBuy(row, channelKey);
+    // 본인인증 게이트(2026-08-26) — 인증 없이 결제부터 받으면 돈 받고 막는 꼴이 된다(구매도 세운다)
+    window.MONC.requireVerified().then(function (ok) {
+      if (!ok || busy) return;
+      // 결제수단 선택(토스페이·카카오페이) — 버튼 잠금·미결 기록보다 앞. 닫으면 아무 일 없다.
+      window.moncPay.choose().then(function (channelKey) {
+        if (!channelKey || busy) return;
+        startBuy(row, channelKey);
+      });
     });
   }
 

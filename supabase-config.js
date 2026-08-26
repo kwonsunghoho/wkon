@@ -220,6 +220,38 @@
     return e2 ? { ok: false, code: 'error', message: e2.message } : { ok: true, degraded: true };
   }
 
+  // ── 본인인증 게이트(2026-08-26 오너 지시) ──────────────────────────────────
+  // 특강 신청·승준 도구(소재·킬러·첨삭·저장소·소재 창고·일문일답)·연구실 자료는
+  // 인증(members.verified_at) 회원만 쓴다. 정책 게이트지 보안 경계가 아니다 —
+  // **실패 방향은 전부 통과(fail-open)**: 게이트 때문에 회원 전체가 잠기면 안 된다.
+  //   ① verified_at 조회 실패·컬럼 미생성 → 통과
+  //   ② verify-identity 프로브 실패(인증 인프라 다운 — 세션당 1회 캐시) → 통과
+  //   ③ 온보딩이 '지금 인증 불가'를 판정하고 끊어 준 세션 통과 티켓(monc_idv_pass) → 통과
+  // 미인증이면 onboarding.html?verify=1&returnTo=… 로 보낸다(인증 후 되돌아온다).
+  // ⚠️ 마이페이지·챌린지 신청(apply)·게임·뉴스는 대상이 아니다 — 부르는 곳을 늘릴 땐 오너 확인.
+  async function requireVerified() {
+    const session = await requireSession();   // 미로그인은 로그인부터(returnTo 포함)
+    if (!session) return false;
+    try { if (sessionStorage.getItem('monc_idv_pass') === '1') return true; } catch (e) {}
+    try {
+      const { data, error } = await sb.from('members').select('verified_at').eq('id', session.user.id).single();
+      if (error || !data) return true;
+      if (data.verified_at) return true;
+      let probe = null;
+      try { probe = sessionStorage.getItem('monc_idv_probe'); } catch (e) {}
+      if (probe !== '1' && probe !== '0') {
+        try {
+          const { data: p } = await sb.functions.invoke('verify-identity', { body: { probe: true } });
+          probe = (p && p.ok) ? '1' : '0';
+        } catch (e) { probe = '0'; }
+        try { sessionStorage.setItem('monc_idv_probe', probe); } catch (e) {}
+      }
+      if (probe !== '1') return true;
+      window.location.replace('onboarding.html?verify=1&returnTo=' + encodeURIComponent(pageRef()));
+      return false;
+    } catch (e) { return true; }
+  }
+
   // ⚠️ 구 hasSojaeAccess()(members.sojae_enabled 기반 소재 발굴 권한 판정)는 2026-07-27
   //    삭제 — 소재 발굴은 크레딧으로 통제한다(다듬기 1회 = credit_costs.sojae).
   //    권한 플래그 방식으로 되돌리지 말 것.
@@ -336,7 +368,7 @@
     signInWithProvider, signInWithGoogle, signInWithKakao,
     signOut, getSession, requireSession,
     getMyProfile, saveMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
-    getConsent, recordConsent, hasConsented, requireConsent, deleteMyAccount,
+    getConsent, recordConsent, hasConsented, requireConsent, requireVerified, deleteMyAccount,
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
   };
 })();

@@ -178,6 +178,13 @@
     };
     const returnTo = () => safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
     const nextPage = () => returnTo() || 'mypage.html';
+    /* 인증 전용 모드(2026-08-26) — requireVerified 게이트·마이페이지 버튼이 ?verify=1 로 보낸다.
+       가입 온보딩이 아니라 '기존 회원의 본인인증 한 번'이라 제목·버튼 문구만 바꾼다(흐름 동일). */
+    const verifyOnly = new URLSearchParams(location.search).get('verify') === '1';
+    if (verifyOnly) {
+      titleEl.textContent = '휴대폰 본인인증';
+      subEl.innerHTML = '안전한 이용을 위해<br>한 번만 본인인증이 필요해요.';
+    }
     // 로그인으로 되보낼 때도 가려던 화면(returnTo)을 이어 준다
     const loginHref = () => {
       const rt = returnTo();
@@ -249,7 +256,15 @@
         idvStage.hidden = true; manualFields.hidden = true; idvDone.hidden = false;
         idvNameEl.textContent = name || '—';
         idvPhoneEl.textContent = phone || '—';
+        saveBtn.textContent = verifyOnly ? '완료하고 돌아가기' : '저장하고 시작하기';
         saveBtn.hidden = false;
+      }
+      /* 인증 전용 모드인데 지금 인증을 못 띄운다(프로브 실패·SDK 미로드·not_ready) —
+         게이트가 같은 세션에서 다시 막지 않게 통과 티켓을 끊고 가려던 화면으로 돌려보낸다.
+         인프라가 살아나면 다음 세션부터 다시 막힌다(fail-open — 게이트로 사이트를 잠그지 않는다). */
+      function idvPass() {
+        try { sessionStorage.setItem('monc_idv_pass', '1'); } catch (e) {}
+        location.replace(nextPage());
       }
       // 인증 결과를 서버로 확정한다 — 이름·번호는 서버가 포트원에서 받아 온다
       async function idvFinish(vid) {
@@ -272,7 +287,10 @@
         if (r.code === 'dup_phone') { setStatus(''); showDup(r.provider, r.me_fresh); return; }
         if (r.code === 'verification_used') { setStatus('이 인증은 이미 다른 계정에서 사용됐어요. 다시 시도해 주세요.', true); return; }
         if (r.code === 'not_verified') { setStatus('인증이 완료되지 않았어요. 다시 시도해 주세요.', true); return; }
-        if (r.code === 'not_ready') { idvOff('지금은 본인인증을 쓸 수 없어요. 번호를 직접 입력해 주세요.'); return; }
+        if (r.code === 'not_ready') {
+          if (verifyOnly) { idvPass(); return; }   // 인증 전용 모드 — 직접 입력 폼은 의미가 없다
+          idvOff('지금은 본인인증을 쓸 수 없어요. 번호를 직접 입력해 주세요.'); return;
+        }
         setStatus('인증 확인에 실패했어요. 잠시 후 다시 시도해 주세요.', true);
       }
       /* 인증창으로 나갔다 뒤로 돌아온 문서(bfcache) — 얼어붙은 '여는 중…' 상태를 되살린다
@@ -328,13 +346,18 @@
           already = !!(data && data.verified_at);
         } catch (e) {}
         if (already) {
+          // 이미 인증된 회원이 게이트·버튼으로 오면 볼 일이 없다 — 가려던 화면으로
+          if (verifyOnly) { location.replace(nextPage()); return; }
           idvShowVerified(profile && profile.name, profile && profile.phone);
         } else if (idvChannel && window.PortOne) {
           // 배포 프로브 — 함수가 아직 없으면 켜지 않는다(죽은 버튼 금지)
           try {
             const { data } = await MONC.sb.functions.invoke('verify-identity', { body: { probe: true } });
             if (data && data.ok) idvOn();
-          } catch (e) { /* 프로브 실패 = 폴백 유지 */ }
+            else if (verifyOnly) { idvPass(); return; }
+          } catch (e) { if (verifyOnly) { idvPass(); return; } /* 프로브 실패 = 폴백 유지 */ }
+        } else if (verifyOnly) {
+          idvPass(); return;   // 채널 키·SDK 가 없다 — 인증 전용 모드는 여기 세울 수 없다
         }
       }
 

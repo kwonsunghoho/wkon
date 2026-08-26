@@ -978,6 +978,8 @@
       if (!session) return;
       // 회원 페이지는 예외 없이 동의 게이트를 통과해야 한다(주소창 우회 차단)
       if (!(await MONC.requireConsent())) return;
+      // 본인인증 게이트(2026-08-26 오너 지시) — 승준 도구는 인증 회원만(fail-open)
+      if (!(await MONC.requireVerified())) return;
 
       const me = ME = session.user.id;
       try {

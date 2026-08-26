@@ -1385,6 +1385,8 @@
     (async () => {
       const session = await MONC.requireSession();   // 미로그인 → login 으로 이동
       if (session && !(await MONC.requireConsent())) return;  // 약관 동의(가입 시 1회) 미완료 → 동의 게이트
+      // 본인인증 게이트(2026-08-26 오너 지시) — 승준 도구는 인증 회원만(fail-open)
+      if (session && !(await MONC.requireVerified())) return;
       if (!session) return;
       // ⚠️ 구 members.sojae_enabled 권한 차단 화면은 2026-07-27 삭제 — 회원이면 누구나
       //    들어와 되묻기(무료)를 하고, 값은 다듬기에서만 받는다. 권한 게이트 재도입 금지.

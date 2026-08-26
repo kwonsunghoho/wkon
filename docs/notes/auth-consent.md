@@ -84,8 +84,24 @@
 - **모바일은 리다이렉트 복귀**: 포트원이 온보딩 주소에 `identityVerificationId` 쿼리를 붙여
   돌아온다 — 로드 시 감지해 서버 확정, 쿼리는 `history.replaceState` 로 지운다(새로고침 재확인
   방지). 인증창으로 나가는 버튼이라 bfcache 복귀 시 버튼 복원(`_idvRestore`)을 같이 단다.
-- **적용 범위는 신규 가입 온보딩만**(오너 확정) — 기존 회원 재인증 강요 없음. 이미
-  verified 인 회원이 온보딩에 다시 오면 인증을 다시 시키지 않고 확인된 값만 보여 준다.
+- **적용 범위(2026-08-26 오너 2차 지시로 확장)**: ① 신규 가입 온보딩 ② **특강 신청·승준
+  도구·연구실 자료는 인증 회원만**(아래 게이트 절) ③ 기존 회원은 마이페이지 연락처 칸의
+  '휴대폰 본인인증으로 확인하기' 버튼(미인증에게만 노출 — `#phoneVerify`)으로 자발 인증.
+  이미 verified 인 회원이 온보딩에 다시 오면 인증을 다시 시키지 않고 확인된 값만 보여 준다.
+- **본인인증 게이트 `MONC.requireVerified()`**(supabase-config.js): 부르는 곳 —
+  승준 도구 진입 6곳(sojae·polish·answers·ai-killer·experiences·program — requireConsent 다음
+  줄) + 특강 신청 단추 3곳(lecture 의 submitFree·confirmBankTransfer·payEasy — **상세 열람은
+  열어 둔다**, 전환 동선) + 연구실 자료 여는 순간 2곳(lab-shelf 의 openDoc·buyDoc — 목록
+  열람은 열어 둔다). **마이페이지·챌린지 신청(apply)·게임·뉴스는 대상이 아니다(오너 지시
+  그대로) — 부르는 곳을 늘리거나 빼려면 오너 확인.** 미인증이면
+  `onboarding.html?verify=1&returnTo=…`(인증 전용 모드 — 제목·버튼 문구만 다르고 흐름 동일)로
+  보내고 인증 후 되돌아온다.
+- **게이트는 정책이지 보안 경계가 아니다 — 실패 방향은 전부 통과(fail-open)**: verified_at
+  조회 실패 · verify-identity 프로브 실패(세션당 1회 캐시 `monc_idv_probe`) · 온보딩이 '지금
+  인증 불가'(SDK 미로드·not_ready)를 판정하고 끊는 세션 통과 티켓 `monc_idv_pass`. 게이트
+  때문에 회원 전체가 잠기는 사고를 막는 장치들이다 — **셋 중 하나라도 빼면 인프라 장애 =
+  전 기능 잠금이 된다.** 서버 강제(함수들의 verified 검사)는 안 넣었다 — 화면 게이트로
+  충분하다는 판단이며, 우회가 실제로 관찰되면 그때 함수 쪽에 붙인다.
 - CI·DI·생년월일은 privacy.html 에 이미 고지돼 있다(2026-08 심사 대응 때 선반영).
   `verified_at` 등 신규 컬럼은 **공용 `getMyProfile()` 셀렉트 금지** — 방어 조회만(major 전례).
 
