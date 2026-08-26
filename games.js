@@ -273,6 +273,8 @@
     introEl.style.display = '';
     introEl.innerHTML =
       '<span class="meas">' + g.meas + '</span>' +
+      /* 예시 도해 — 실전처럼 그림으로 먼저 가르친다. 내용은 규칙 목록과 같아 보조 그림(aria-hidden) */
+      (g.demo ? '<div class="gm-demo" aria-hidden="true">' + g.demo + '</div>' : '') +
       '<ul>' + g.rules.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>' +
       (g.tips && g.tips.length
         ? '<details><summary>공략 팁 보기</summary><ul>' +
@@ -537,7 +539,7 @@
      실전 구성(오너 캡처): R1 나의 관점 40초 → R2 상대 관점 40초 → R3 랜덤 1분 40초, 무제한 문제.
      나의 관점 = 상대 손을 보고 내가 이기는 손 / 상대 관점 = 내 손을 보고 상대가 지는 손. */
   function gameRPS(api, mode) {
-    var HANDS = ['gs-circle', 'gi-rps', 'gs-paper'];   // 0 바위 1 가위 2 보
+    var HANDS = ['gh-rock', 'gh-scis', 'gh-palm'];     // 0 바위 1 가위 2 보 — 실전처럼 손 모양(자체 드로잉)
     var NAMES = ['바위', '가위', '보'];
     var winOf = function (o) { return (o + 2) % 3; };  // o 를 이기는 손
     var loseOf = function (o) { return (o + 1) % 3; }; // o 에게 지는 손
@@ -608,6 +610,9 @@
         opCard.innerHTML = '<i>?</i>';
         infoEl.textContent = '내 손을 보고, 상대가 지는 손을 고르세요';
       }
+      /* 지금 답할 쪽(? 카드)을 카드째 강조 — 랜덤 라운드에서 관점을 놓치는 게 최대 실점 요인 */
+      meCard.parentNode.classList.toggle('pick', persp === 'me');
+      opCard.parentNode.classList.toggle('pick', persp !== 'me');
       qn++;
       phaseEl.textContent = 'R' + (ri + 1) + '/' + rounds.length + ' · ' +
         (persp === 'me' ? '나의 관점' : '상대 관점') + ' · 문제 ' + qn;
@@ -627,6 +632,7 @@
         betw = true;
         infoEl.textContent = '잠깐 쉬었다 이어집니다';
         meCard.innerHTML = ''; opCard.innerHTML = '';
+        [meCard, opCard].forEach(function (cd) { cd.parentNode.classList.remove('pick'); });
         later(startRound, 900);
       }, numEl);
     }
@@ -1359,6 +1365,12 @@
   var GAMES = [
     { id: 'nback', name: '도형 2-back', icon: 'gi-nback', unit: '점', time: 0,
       meas: '작업 기억 갱신',
+      demo: '<div class="row">' +
+        '<span class="tile hit">' + sym('gs-tri') + '</span>' +
+        '<span class="tile">' + sym('gs-circle') + '</span>' +
+        '<span class="tile hit">' + sym('gs-tri') + '</span>' +
+        '<span class="arr">→ "같다"</span>' +
+        '</div><span class="cap">3번째 도형이 <b>2번째 전</b>(1번째)과 같은 경우 — 이렇게 계속 이어집니다</span>',
       modes: [
         { key: 'b2', label: '2-back 연습', sub: '15문항 · 도형당 4초 · 맞히면 바로 다음' },
         { key: 'dual', label: '2·3-back 연습', sub: '15문항 · 판정이 하나 늘어요' },
@@ -1372,6 +1384,11 @@
       start: gameNback },
     { id: 'rps', name: '가위바위보', icon: 'gi-rps', unit: '점', time: 0,
       meas: '순발력 · 관점 전환',
+      demo: '<div class="row">' +
+        '<span class="chip">상대</span><span class="tile">' + sym('gh-scis') + '</span>' +
+        '<span class="arr">→</span>' +
+        '<span class="chip">나</span><span class="tile hit">' + sym('gh-rock') + '</span>' +
+        '</div><span class="cap">상대가 가위 → 내가 이기는 손은 <b>바위</b></span>',
       modes: [
         { key: 'practice', label: '짧게 연습', sub: '라운드당 20초 → 랜덤 40초' },
         { key: 'real', label: '실전 흐름', sub: '나의 관점 40초 → 상대 관점 40초 → 랜덤 1분 40초' }
@@ -1385,6 +1402,21 @@
       start: gameRPS },
     { id: 'path', name: '길 만들기', icon: 'gi-path', unit: '점', time: 0,
       meas: '경로 계획 · 공간',
+      /* 색은 게임 표식과 같은 기능색(col-y)·잉크·경계선 값 — 새 색 아님 */
+      demo: '<svg class="pdemo" viewBox="0 0 176 88" aria-hidden="true">' +
+        '<g fill="none" stroke="rgba(23,42,71,.34)" stroke-width="1.5">' +
+        '<rect x="46" y="30" width="28" height="28" rx="6"/>' +
+        '<rect x="78" y="30" width="28" height="28" rx="6"/>' +
+        '<rect x="110" y="30" width="28" height="28" rx="6"/></g>' +
+        '<path d="M83 53 101 35" stroke="#1C2A3A" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+        '<path d="M36 44H92V27" stroke="#B7791F" stroke-width="2.5" stroke-dasharray="1 6" ' +
+          'stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+        '<circle cx="20" cy="44" r="13" fill="#FFFFFF" stroke="#B7791F" stroke-width="2.5"/>' +
+        '<use href="#gi-taxi" x="11" y="35" width="18" height="18" stroke-width="1.9" style="color:#B7791F"/>' +
+        '<circle cx="92" cy="13" r="12" fill="#FFFFFF" stroke="#B7791F" stroke-width="2.5"/>' +
+        '<use href="#gi-guest1" x="84" y="5" width="16" height="16" stroke-width="2" style="color:#B7791F"/>' +
+        '</svg>' +
+        '<span class="cap">차량은 직진 — 울타리( / )를 만나면 <b>90도 꺾여</b> 같은 색 손님에게 갑니다</span>',
       modes: [
         { key: 'practice', label: '연습', sub: '12문항 · 틀리면 정답 배치 공개' },
         { key: 'real', label: '실전 흐름', sub: '48문항 · 최대 5분 · 클릭 20' }
@@ -1397,6 +1429,12 @@
       start: gamePath },
     { id: 'rotate', name: '도형 회전', icon: 'gi-rotate', unit: '점', time: 0,
       meas: '심적 회전 · 계획',
+      demo: '<div class="row">' +
+        '<span class="tile">F</span>' +
+        '<span class="chip">오른쪽 45°</span><span class="chip">오른쪽 45°</span>' +
+        '<span class="arr">→</span>' +
+        '<span class="tile hit"><span style="display:inline-block;transform:rotate(90deg)">F</span></span>' +
+        '</div><span class="cap">45도 두 번 = 90도 — 머릿속으로만 돌려 보고 <b>순서를</b> 입력합니다</span>',
       modes: [
         { key: 'practice', label: '연습 · 글자', sub: '10문항 · 제출 후 정답 순서 공개' },
         { key: 'pattern', label: '연습 · 무늬', sub: '10문항' },
@@ -1410,6 +1448,11 @@
       start: gameRotate },
     { id: 'yaksok', name: '약속 정하기', icon: 'gi-yaksok', unit: '점', time: 0,
       meas: '순간 기억 · 규칙 전환',
+      demo: '<div class="ppl">' +
+        '<div class="pl"><em>지민</em><i>월</i><i class="hit">목</i><i>금</i></div>' +
+        '<div class="pl"><em>서연</em><i>화</i><i class="hit">목</i><i>토</i></div>' +
+        '<div class="pl"><em>하준</em><i class="hit">목</i><i>수</i><i>일</i></div>' +
+        '</div><span class="cap">한 명씩 1초만 보입니다 — 셋 모두에게 있는 요일은 <b>목</b></span>',
       modes: [
         { key: 'practice', label: '연습', sub: '4라운드 × 3문항 · 정답 공개' },
         { key: 'real', label: '실전 흐름', sub: '4라운드 × 10문항 · 6번째부터 기억 4개' }
@@ -1423,6 +1466,11 @@
       start: gameYaksok },
     { id: 'numbers', name: '숫자 누르기', icon: 'gi-numbers', unit: '점', time: 0,
       meas: '반응 속도 · 인지 제어',
+      demo: '<div class="ngrid">' +
+        '<span class="nc">4</span><span class="nc">9</span><span class="nc">2</span>' +
+        '<span class="nc">3</span><span class="nc lit">5</span><span class="nc">7</span>' +
+        '<span class="nc">8</span><span class="nc">1</span><span class="nc">6</span>' +
+        '</div><span class="cap">R1 불 들어온 숫자를 빨리 · R2 매 판 <b>1→9 순서</b>(한 숫자는 2번, 한 숫자는 건너뛰기)</span>',
       modes: [
         { key: 'practice', label: '짧게 연습', sub: '1라운드 30초 → 2라운드 60초' },
         { key: 'real', label: '실전 흐름', sub: '1라운드 60초 → 2라운드 120초' }
@@ -1436,6 +1484,17 @@
       start: gameNumbers },
     { id: 'compare', name: '개수 비교', icon: 'gi-compare', unit: '점', time: 0,
       meas: '수 감각 · 순간 판단',
+      demo: '<div class="row">' +
+        '<span class="wpan"><svg viewBox="0 0 52 66" aria-hidden="true"><g fill="currentColor">' +
+        '<circle cx="12" cy="10" r="3.2"/><circle cx="34" cy="8" r="3.2"/><circle cx="44" cy="22" r="3.2"/>' +
+        '<circle cx="20" cy="28" r="3.2"/><circle cx="8" cy="44" r="3.2"/><circle cx="30" cy="48" r="3.2"/>' +
+        '<circle cx="42" cy="58" r="3.2"/></g></svg></span>' +
+        '<span class="wpan hit"><svg viewBox="0 0 52 66" aria-hidden="true"><g fill="currentColor">' +
+        '<circle cx="10" cy="8" r="3.2"/><circle cx="26" cy="14" r="3.2"/><circle cx="42" cy="6" r="3.2"/>' +
+        '<circle cx="14" cy="26" r="3.2"/><circle cx="38" cy="28" r="3.2"/><circle cx="8" cy="42" r="3.2"/>' +
+        '<circle cx="24" cy="40" r="3.2"/><circle cx="44" cy="46" r="3.2"/><circle cx="18" cy="56" r="3.2"/>' +
+        '</g></svg></span>' +
+        '</div><span class="cap">1초 뒤 사라집니다 — 오른쪽이 <b>9 대 7</b>로 더 많음(실제론 단어가 흩어져 있어요)</span>',
       modes: [
         { key: 'practice', label: '연습', sub: '20문항 · 답하면 실제 개수 공개' },
         { key: 'real', label: '실전 흐름', sub: '46문항 · 노출 1초 · 답 3초' }
