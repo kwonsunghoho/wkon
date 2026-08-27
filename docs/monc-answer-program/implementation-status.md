@@ -64,6 +64,27 @@
 > 아래는 CLAUDE.md 다이어트(2026-07-30) 때 원문 그대로 옮긴 운영 기록이다. 위 본문과 겹치면 아래(더 최근 기록)가 우선.
 > ⚠️ 2026-08-15 정정: 아래 원문의 'main 미병합'·'owner 실행 필요'는 옛 상태다 — 2026-07-30 main 반영, 마이그레이션·verify-payment `programId` 분기 모두 적용·배포 완료. 원문은 기록이라 그대로 둔다(현행 시점 상태는 `docs/notes/implementation-status.md`).
 
+### 오너 지시 원문 — 제품 목표·작업 방식 (2026-08-27 CLAUDE.md 2차 다이어트 이관)
+
+> 절대 원칙 10개는 CLAUDE.md '매일 답변 프로그램' 절에 그대로 남아 있다. 아래는 같은 오너 지시(2026-07-30)의 나머지 원문이다.
+
+**제품 목표**
+
+항공사별 기출문제를 매일 작성하며 학생의 실제 경험을 바탕으로
+개인화된 면접답변을 완성하는 프로그램을 개발한다.
+
+상세 요구사항은 다음 문서를 따른다.
+
+`docs/monc-answer-program-spec.md`
+
+**작업 방식**
+
+- 먼저 기존 저장소 구조를 분석한다.
+- 저장소에서 확인 가능한 내용은 사용자에게 다시 묻지 않는다.
+- 구현 계획만 작성하고 종료하지 않는다.
+- 기능을 작은 수직 단위로 구현하고 검증한다.
+- 완료하지 못한 내용은 정확하게 기록한다.
+
 ### 매일 답변 프로그램 (2026-07-30 신설 · 브랜치 airline-interview-program-mvp — main 미병합)
 **"매일 한 문제씩, 내 경험으로 완성하는 항공사 면접답변 프로그램."** 오너 원본 요구사항은 `docs/monc-answer-program-spec.md`(참고용 원문), 구현 원장은 `docs/monc-answer-program/`(analysis·spec·architecture·data-model·ai-pipeline·privacy·admin-guide·test-plan·implementation-status). 페이지: `programs.html`(허브)·`program.html`(작성 흐름)·`experiences.html`(경험 창고)·`review-desk.html`(연구원 검수 — ⚠️ `reviews.html` 후기와 다른 파일) + admin '답변 프로그램' 탭 + 승준노트 카드 '매일 기출'. 서버: `supabase/functions/answer-program/index.ts`(한 파일·프로브 있음), migration `20260730150000_answer_program.sql`(**owner 실행 필요** — 미적용 시 전부 '준비 중' degrade).
 - **원칙은 바로 위 'MONC 답변 프로그램 개발 원칙'(오너 지시 원문)이 원장이다.** 이 프로그램 코드를 고칠 때 절대 원칙 10개를 먼저 읽을 것. 자체 검수 명령: `node scripts/answer-program-tests.mjs` + `deno check supabase/functions/answer-program/index.ts` + 브라우저 375px 실측.
