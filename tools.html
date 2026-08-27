@@ -55,9 +55,14 @@
 
     /* ══════════════════════════════════════════════════════════════════════
        승준 도구 허브(2026-08-06 신설) — 승준 코스(briefing.html)에서 분리.
-       도구 격자·아이콘·틴트 박스 규칙은 briefing.html 시절 확정값 그대로 옮겨 왔다
-       (결정 이력: docs/notes/briefing.md '자유 선택 도구' 절 — 기각 목록 포함).
-       ⚠️ 타일에 회원별 상태 문구·금액·근거 없는 표시('인기'·'NEW') 금지 — 허브 공통 규칙.
+       2026-08-27 오너 확정 3안으로 틴트 박스 격자 → 종이 카드 리스트 개편
+       ("너무 밋밋해서 다른 허브들이랑 같은 결로" — 비교 목업
+        outputs/tools-hub-flavor-mockup.html 5안 중 3안 채택).
+       결은 연구실 허브(lab.html)의 카드 문법: 종이 그라데이션(#FCFDFF→#EBF1F8) +
+       네이비 원판 화살표. 아이콘 확정값(가는 선 + 두 사물 겹침)은 그대로 쓴다
+       (결정 이력: docs/notes/briefing.md — 기각 목록 포함).
+       ⚠️ 카드에 회원별 상태 문구·금액·근거 없는 표시('인기'·'NEW') 금지 — 허브 공통 규칙.
+          역할 한 줄(small)은 도구가 하는 일의 정적 사실만 적는다.
        ══════════════════════════════════════════════════════════════════════ */
     .bf-head { padding: 104px 0 4px; text-align: center; }
     .bf-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .24em; color: var(--accent-ink); }
@@ -65,41 +70,48 @@
     .bf-sub { font-size: 15px; color: var(--text); opacity: .72; margin-top: 12px; max-width: 34em; margin-left: auto; margin-right: auto; text-wrap: balance; }
     .bf-sub b { color: var(--action); font-weight: 800; white-space: nowrap; }
 
-    /* 데스크톱 열 폭 — briefing.html 과 같은 값(안 잡으면 760px 열에서 격자가 부푼다) */
+    /* 데스크톱 열 폭 — briefing.html 과 같은 값(카드 리스트가 이 폭을 그대로 채운다) */
     main.container > section { max-width: 600px; margin-left: auto; margin-right: auto; }
-    .fr-grid { max-width: 420px; }
 
     .sec-t { margin: 30px 0 0; text-align: center; }
     .sec-t b { font-size: 19px; font-weight: 800; }
     .sec-t span { display: block; font-size: var(--fs-body-sm, 15px); color: var(--text-muted); margin-top: 5px; }
 
-    /* ── 도구 격자 — 큰 사각 버튼 박스 + 라인 아이콘(2026-08-06 오너 확정) ──
+    /* ── 도구 리스트 — 종이 카드 줄 + 화살표 원판(2026-08-27 오너 확정 3안) ──
+       구 틴트 박스 격자(.fr-grid, 2026-08-06 확정)를 대체한다.
        ⚠️ **아이콘을 키울 때 선 굵기를 같이 키우지 말 것.** 이 결이 사는 이유는 큰 게 아니라
           '크면서 선이 얇은' 것이다. 화면 선두께 = stroke-width × (렌더크기 ÷ 24) 이므로
-          52px 에서 1.6px 이 되게 0.74 를 쓴다. 크기를 바꾸면 이 값도 다시 계산한다.
+          32px 에서 1.6px 이 되게 1.2 를 쓴다. 크기를 바꾸면 이 값도 다시 계산한다.
        ⚠️ **굵기는 심볼이 아니라 여기(바깥 svg)에서 준다** — 심볼에 stroke-width 를 적어 두면
           use 그림자 트리에서 그 값이 이겨 CSS 조절이 안 먹는다(실측 확인).
-       ⚠️ 박스 면은 **흰색이 아니라 틴트**다 — 순백 배경에서 흰 박스는 사라진다.
-          카드 안에 넣지 말 것 · 긴 대각 그림자 금지 · 그림자는 근접형 하나. */
-    .fr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 8px; margin: 16px auto 0; }
-    .fr-c { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 0 4px;
-      font-size: 12px; font-weight: 700; line-height: 1.3; text-align: center;
-      text-decoration: none; color: var(--text); }
-    .fr-c:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; border-radius: 26px; }
-    .fr-ic { width: 100%; max-width: 98px; aspect-ratio: 1 / 1; border-radius: 26px;
-      background: var(--accent-tint); border: 1px solid rgba(27,58,107,.14); flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: center; color: var(--accent-ink);
-      box-shadow: 0 4px 12px rgba(23,42,71,.07); position: relative; }
-    .fr-ic svg { stroke-width: .74; }
-    /* 킬러·첨삭 짝 표시 — 말 꼬리표('검사'/'고치기') + 역할 한 줄.
-       ⚠️ 번호 배지(.fr-n 1·2)로 되돌리지 말 것 — "해야 할 개수처럼 보인다"로 오너 기각. */
-    .fr-tag { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); white-space: nowrap;
-              background: var(--accent); color: #fff; font-style: normal; font-size: 12px; font-weight: 800;
-              padding: 2px 9px; border-radius: 999px; border: 2px solid var(--bg); }
-    .fr-c small { font-size: 12px; font-weight: 400; color: var(--text-muted); line-height: 1.4;
-                  margin-top: -4px; }
-    @media (hover: hover) { .fr-c:hover .fr-ic {
-      border-color: rgba(27,58,107,.30); box-shadow: 0 7px 18px rgba(23,42,71,.12); } }
+       ⚠️ 아이콘 판은 **흰색이 아니라 틴트**다 — 종이 카드 위에서도 흰 판은 묻힌다. */
+    .tl-list { display: flex; flex-direction: column; gap: 12px; margin: 24px auto 0; }
+    .tl-card { display: flex; align-items: center; gap: 14px; border-radius: 22px; padding: 16px;
+      background: linear-gradient(180deg, #FCFDFF, #EBF1F8); border: 1px solid var(--border);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55), var(--shadow);
+      text-decoration: none; color: var(--text);
+      transition: transform .18s ease, box-shadow .18s ease; }
+    @media (hover: hover) { .tl-card:hover { transform: translateY(-2px);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55), var(--shadow-lg); } }
+    @media (prefers-reduced-motion: reduce) { .tl-card { transition: none; } }
+    .tl-card:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .tl-ic { flex: 0 0 auto; width: 58px; height: 58px; border-radius: 18px;
+      background: var(--accent-tint); border: 1px solid rgba(27,58,107,.14);
+      display: flex; align-items: center; justify-content: center; color: var(--accent-ink); }
+    .tl-ic svg { stroke-width: 1.2; }
+    .tl-tx { flex: 1 1 auto; min-width: 0; }
+    .tl-tx b { display: flex; align-items: center; gap: 7px; font-size: 17px; font-weight: 800;
+      color: var(--ink); letter-spacing: -.2px; line-height: 1.35; }
+    /* 킬러·첨삭 짝 표시 — 이름 옆 말 꼬리표('검사'/'고치기'). 격자 시절 .fr-tag 의 후신.
+       ⚠️ 번호 배지(1·2)로 되돌리지 말 것 — "해야 할 개수처럼 보인다"로 오너 기각. */
+    .tl-tx b i { font-style: normal; font-size: 12px; font-weight: 800; color: #fff;
+      background: var(--accent); border-radius: 6px; padding: 1px 7px; flex: none; }
+    .tl-tx small { display: block; font-size: 13px; font-weight: 400; color: var(--text-muted);
+      margin-top: 2px; line-height: 1.45; }
+    .tl-pill { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+      background: var(--action); color: var(--action-ink);
+      display: flex; align-items: center; justify-content: center; }
+    .tl-pill svg { width: 18px; height: 18px; stroke-width: 2.4; }
 
     /* ── 승준 코스 안내 줄 — 뭐부터 할지 모르는 사람을 코스로 보낸다(분리하며 신설).
        회원별 상태·금액 없는 정적 안내라 허브 카드 금지 규칙과 무관하다. ── */
@@ -118,8 +130,8 @@
     /* 320px 실측 대응 — 활자는 12px 하한이라 못 줄이므로 여백만 좁힌다 */
     @media (max-width: 360px) {
       .container { padding: 0 12px; }
-      .fr-grid { gap: 8px; }
-      .fr-c { font-size: 12px; }
+      .tl-list { gap: 10px; }
+      .tl-card { padding: 14px; gap: 12px; }
     }
   </style>
 </head>
@@ -177,6 +189,10 @@
         <rect x="4" y="13" width="7" height="7" rx="1.5"/>
         <circle cx="16.5" cy="16.5" r="3.6"/>
       </symbol>
+      <!-- 이동 화살표 — lab.html 허브 카드의 원판 화살표와 같은 그림(굵기는 .tl-pill svg 가 준다) -->
+      <symbol id="tn-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M13 6l6 6-6 6"/>
+      </symbol>
     </defs>
   </svg>
 
@@ -190,23 +206,26 @@
 
   <main class="container">
     <section aria-label="도구 목록">
-      <div class="fr-grid">
-        <a class="fr-c" href="news.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-news"/></svg></span>뉴스 스크랩</a>
-        <a class="fr-c" href="sojae.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-dig"/></svg></span>소재 발굴</a>
+      <!-- 카드 한 장 = 아이콘 판 + 이름·역할 한 줄 + 화살표 원판(2026-08-27 3안).
+           역할 줄은 도구가 하는 일의 정적 사실만 — 회원별 상태·금액이 아니다. -->
+      <div class="tl-list">
+        <a class="tl-card" href="news.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-news"/></svg></span><span class="tl-tx"><b>뉴스 스크랩</b><small>항공 뉴스를 읽고 스크랩해요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
+        <a class="tl-card" href="sojae.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-dig"/></svg></span><span class="tl-tx"><b>소재 발굴</b><small>내 경험에서 답변 소재를 찾아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
         <!-- 킬러·첨삭은 한 세트(검사·고치기 — 스펙 2026-08-06-killer-polish-distinction-design.md).
-             읽는 순서에 맞춰 AI킬러가 먼저다. 역할 줄은 회원별 상태·금액이 아니다. -->
-        <!-- ⚠️ AI킬러 타일 잠시 내림(2026-08-25 오너 "타일도 숨겨줘" — nav 항목과 한 세트로 내려
-             격자·메뉴가 다시 같은 6종이다). 페이지 자체는 살아 있다. 다시 열 때 아래 줄을 되살리고
-             부제를 'AI 같은 문장을 찾아요'로 되돌린다(2026-08-11 준비중 문구 이전).
-             짝 표시(.fr-tag 검사/고치기)도 다시 한 쌍이 된다 — 지금은 첨삭의 '고치기'만 남는다.
-        <a class="fr-c" href="ai-killer.html"><span class="fr-ic"><i class="fr-tag">검사</i><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-kill"/></svg></span>AI킬러<small>지금은 준비 중이에요</small></a> -->
-        <a class="fr-c" href="polish.html"><span class="fr-ic"><i class="fr-tag">고치기</i><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-fix"/></svg></span>답변 첨삭<small>문장을 고쳐 드려요</small></a>
-        <!-- ⚠️ 일문일답 타일 잠시 내림(2026-08-26 오너 "일문일답도 일단 가려놓는게 좋겠다") —
-             nav.js TOOLS_SUB 항목과 한 세트. 페이지는 살아 있다. 다시 열 때 둘 다 되살린다.
-        <a class="fr-c" href="programs.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-quiz"/></svg></span>일문일답</a> -->
-        <a class="fr-c" href="answers.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-note"/></svg></span>나만의 노트</a>
+             읽는 순서에 맞춰 AI킬러가 먼저다. -->
+        <!-- ⚠️ AI킬러 카드 잠시 내림(2026-08-25 오너 "타일도 숨겨줘" — nav 항목과 한 세트로 내려
+             목록·메뉴가 같은 5종이다). 페이지 자체는 살아 있다. 다시 열 때 아래 줄을 되살린다
+             (2026-08-27 리스트 개편에 맞춰 구 격자 타일 마크업에서 카드 마크업으로 갱신해 둠).
+             짝 꼬리표(검사/고치기)도 다시 한 쌍이 된다 — 지금은 첨삭의 '고치기'만 남는다.
+        <a class="tl-card" href="ai-killer.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-kill"/></svg></span><span class="tl-tx"><b>AI킬러 <i>검사</i></b><small>AI 같은 문장을 찾아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a> -->
+        <a class="tl-card" href="polish.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-fix"/></svg></span><span class="tl-tx"><b>답변 첨삭 <i>고치기</i></b><small>문장을 고쳐 드려요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
+        <!-- ⚠️ 일문일답 카드 잠시 내림(2026-08-26 오너 "일문일답도 일단 가려놓는게 좋겠다") —
+             nav.js TOOLS_SUB 항목과 한 세트. 페이지는 살아 있다. 다시 열 때 둘 다 되살린다
+             (마크업은 리스트 개편에 맞춰 갱신해 둠 — 역할 줄 문구는 가안).
+        <a class="tl-card" href="programs.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-quiz"/></svg></span><span class="tl-tx"><b>일문일답</b><small>항공사 기출에 매일 답해요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a> -->
+        <a class="tl-card" href="answers.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-note"/></svg></span><span class="tl-tx"><b>나만의 노트</b><small>쓴 답변을 한곳에 모아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
         <!-- 역량검사 게임(2026-08-24 신설) — 무료·비회원 공개, 상세는 docs/notes/games.md -->
-        <a class="fr-c" href="games.html"><span class="fr-ic"><svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-game"/></svg></span>역량검사 게임<small>검사 유형을 게임으로</small></a>
+        <a class="tl-card" href="games.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-game"/></svg></span><span class="tl-tx"><b>역량검사 게임</b><small>검사 유형을 게임으로 연습해요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
       </div>
 
       <!-- ⚠️ 승준 코스 잠시 내림(2026-08-25 오너 "사용량이 너무 적어서 잠시 빼줬으면") —
