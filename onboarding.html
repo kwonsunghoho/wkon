@@ -147,6 +147,10 @@
   <script src="supabase-config.js"></script>
   <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
   <script src="phone-check.js"></script>
+  <!-- 인앱 판정·안내 공용(2026-08-27 합류) — 인스타·카톡 인앱 웹뷰는 본인인증 창의
+       PASS·간편인증 앱 전환이 막혀 "화면이 안 넘어간다"(2026-08-27 신고). MONC_INAPP
+       플래그로 인증 모드를 끄고 직접 입력 폼으로 폴백한다. 배너·탈출 인텐트도 이 파일. -->
+  <script src="inapp.js?v=10" defer></script>
   <!-- 포트원 V2 SDK + 채널 키 공용 창구 — 본인인증(2026-08-26). 키는 pay-methods.js 한 곳. -->
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="pay-methods.js?v=3"></script>
@@ -226,6 +230,12 @@
         return /^identity-verification-[0-9a-fA-F-]{36}$/.test(q) ? q : '';
       })();
       if (idvBackQuery) { try { sessionStorage.setItem(IDV_BACK_KEY, idvBackQuery); } catch (e) {} }
+      /* 인앱 판정(MONC_INAPP)은 defer 인 inapp.js 가 넣는다 — defer 는 DOMContentLoaded
+         전에 반드시 실행되므로, 여기서 DOM 준비를 기다리면 아래 판정 시점엔 플래그가
+         확정돼 있다(스텁 실측 2026-08-27: 안 기다리면 인라인이 먼저 돌아 플래그를 놓친다). */
+      if (document.readyState === 'loading') {
+        await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
+      }
       if (!window.MONC) { setStatus('로그인 모듈 로드 실패. 새로고침 해주세요.', true); return; }
       const session = await MONC.requireSession(); // 미로그인 시 login.html 로 보냄
       if (!session) return;
@@ -245,9 +255,12 @@
       } catch (e) {}
 
       /* ── 휴대폰 본인인증(2026-08-26 · KG이니시스 통합인증, 포트원 경유) ──────────
-         켜는 조건 셋: ① pay-methods 의 identityChannel ② 포트원 SDK 로드
-         ③ verify-identity 프로브(배포 확인). 하나라도 빠지면 아무것도 바꾸지 않는다 —
-         직접 입력 폼(전화번호 필수·중복 차단)이 그대로 폴백이다.
+         켜는 조건 넷: ① pay-methods 의 identityChannel ② 포트원 SDK 로드
+         ③ verify-identity 프로브(배포 확인) ④ 인앱 브라우저가 아닐 것(2026-08-27 —
+         인스타·카톡 인앱 웹뷰는 인증창의 PASS·간편인증 앱 전환이 막혀 완주가 안 된다.
+         함수 Logs 실측도 실패 기록 0 = 서버까지 도달 못 함). 하나라도 빠지면 아무것도
+         바꾸지 않는다 — 직접 입력 폼(전화번호 필수·중복 차단)이 그대로 폴백이다.
+         단 인증창 복귀 확정(backId)은 인앱이어도 그대로 처리한다(완주했으면 저장해야 한다).
          서버가 포트원 API 로 결과를 재조회해 저장하므로 브라우저는 인증 건 id 만 보낸다. */
       let idvMode = false, idvVerified = false, idvBusy = false;
       const idvChannel = (window.moncPay && window.moncPay.identityChannel) || '';
@@ -328,6 +341,14 @@
       window._idvRestore = () => { idvBusy = false; };
       idvBtn.addEventListener('click', async () => {
         if (idvBusy) return;
+        /* 인앱 레이스 방어 — inapp.js(defer)가 판정보다 늦게 실행돼 버튼이 켜졌더라도,
+           클릭 시점엔 플래그가 항상 있다(login 구글 버튼과 같은 전제). 인증창은 못 여는
+           환경이므로 여기서도 같은 폴백을 태운다. */
+        if (window.MONC_INAPP) {
+          if (verifyOnly) { idvPass(); return; }
+          idvOff('이 앱 안에서는 본인인증 창이 열리지 않아요. 번호를 직접 입력해 주세요.');
+          return;
+        }
         const vid = 'identity-verification-' + (crypto.randomUUID ? crypto.randomUUID()
           : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
               const n = Math.random() * 16 | 0; return (c === 'x' ? n : (n & 3 | 8)).toString(16);
@@ -385,7 +406,7 @@
           // 이미 인증된 회원이 게이트·버튼으로 오면 볼 일이 없다 — 가려던 화면으로
           if (verifyOnly) { location.replace(nextPage()); return; }
           idvShowVerified(profile && profile.name, profile && profile.phone);
-        } else if (idvChannel && window.PortOne) {
+        } else if (idvChannel && window.PortOne && !window.MONC_INAPP) {
           // 배포 프로브 — 함수가 아직 없으면 켜지 않는다(죽은 버튼 금지)
           try {
             const { data } = await MONC.sb.functions.invoke('verify-identity', { body: { probe: true } });
@@ -393,7 +414,7 @@
             else if (verifyOnly) { idvPass(); return; }
           } catch (e) { if (verifyOnly) { idvPass(); return; } /* 프로브 실패 = 폴백 유지 */ }
         } else if (verifyOnly) {
-          idvPass(); return;   // 채널 키·SDK 가 없다 — 인증 전용 모드는 여기 세울 수 없다
+          idvPass(); return;   // 채널 키·SDK 가 없거나 인앱 — 인증 전용 모드는 여기 세울 수 없다
         }
       }
 

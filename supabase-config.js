@@ -234,6 +234,14 @@
     const session = await requireSession();   // 미로그인은 로그인부터(returnTo 포함)
     if (!session) return false;
     try { if (sessionStorage.getItem('monc_idv_pass') === '1') return true; } catch (e) {}
+    // ④ 인앱 브라우저(인스타·카톡)는 본인인증 창의 PASS·간편인증 앱 전환이 막힌다 —
+    //    '지금 인증 불가' 환경으로 보고 통과(2026-08-27 인스타 유입 "화면이 안 넘어간다" 신고).
+    //    판정은 inapp.js MONC_INAPP 단일 소스 — defer 라 DOM 준비를 기다린 뒤 읽는다
+    //    (defer 는 DOMContentLoaded 전에 반드시 실행). 플래그가 없으면(미로드·구캐시) 평소 게이트.
+    if (document.readyState === 'loading') {
+      await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
+    }
+    if (window.MONC_INAPP) return true;
     try {
       const { data, error } = await sb.from('members').select('verified_at, role').eq('id', session.user.id).single();
       if (error || !data) return true;

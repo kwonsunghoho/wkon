@@ -1493,6 +1493,15 @@
           if (vb) {
             vb.hidden = false;
             vb.addEventListener('click', () => {
+              /* 인앱 브라우저는 본인인증 창(PASS 앱 전환)이 막힌다(2026-08-27) — login 구글
+                 버튼과 같은 우회: 안드로이드는 크롬으로 이 페이지를 열고, 아이폰은 여는 법
+                 한 줄 alert(인텐트·문구는 inapp.js 단일 소스 — 복사 금지). */
+              if (window.MONC_INAPP) {
+                if (window.MONC_INAPP_OPEN && MONC_INAPP_OPEN(location.origin + location.pathname)) return;
+                alert('앱 안 브라우저에서는 본인인증이 안 돼요.\n\n'
+                  + (window.MONC_INAPP_HOWTO || '브라우저(Chrome·Safari)에서 열어 주세요.'));
+                return;
+              }
               location.href = 'onboarding.html?verify=1&returnTo=' + encodeURIComponent('mypage.html');
             });
           }
