@@ -251,6 +251,15 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 9. **정보 그룹핑** → 원칙 9(유지 + 320px 확인)
 10. **큼직한 레이아웃** → 원칙 10(수정 — 길이의 대가)
 
+## 화면 전환 크로스페이드 — 전 페이지 공통 (2026-08-28)
+
+오너 신고 "화면 넘어갈 때마다 깜빡깜빡 거린다"의 수리. 페이지 사이 이동을 흰 화면 끊김 대신 옛 화면 → 새 화면 크로스페이드(0.22s 아웃 / 0.34s 인)로 잇는다.
+
+- **정본은 `tokens.css` 맨 아래 View Transitions 블록 한 곳.** 전환은 떠나는 쪽·도착하는 쪽 **둘 다** `@view-transition` opt-in 이 있어야 걸린다 — 처음(2026-07)엔 6개 화면(index·apply·challenge 상세 4)에만 있어서 그 밖의 모든 이동이 뚝 끊겼고, 이게 "전체적으로 깜빡인다"의 원인이었다. **페이지에 이 블록을 다시 복사해 넣지 말 것**(2026-08-28 6곳의 중복을 걷어냈다).
+- `prefers-reduced-motion: reduce` 면 전환 없음(가드 유지). 미지원 브라우저는 지금까지처럼 뚝 바뀔 뿐 깨지지 않는다.
+- **안 걸리는 이동 셋**: 새로고침(reload)·주소창 직접 입력·다른 출처(OAuth·결제창 복귀). 특히 **bfcache 복원 뒤 `location.reload()` 하는 뒤로가기**(CLAUDE.md bfcache 절)는 reload 라 전환 대상이 아니다 — 뒤로가기 깜빡임을 더 줄이려면 reload 를 replace 로 바꾸는 별도 과제가 필요한데, scroll-keep 의 `back_forward` 판정·해시 착지(tools.html#community)와 얽혀 있어 이번에 같이 하지 않았다.
+- challenge 상세 hero 제목의 `view-transition-name: challenge-name`(상세↔상세 제목 morph)은 이 전역 opt-in 위에서 그대로 동작한다. index.css 에 있던 finder 전환 규칙(vt-fin-*)은 파인더 폐지로 죽은 코드라 같이 지웠다.
+
 ## 적용 방법
 
 - 대상: **학생이 보는 모든 페이지 + admin.**

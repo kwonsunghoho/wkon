@@ -379,3 +379,24 @@ h2.section-title {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
+
+/* ── 화면 전환 크로스페이드(View Transitions) — 전 페이지 공통(2026-08-28) ──
+   오너 신고 "화면 넘어갈 때마다 깜빡깜빡"의 수리. 페이지 사이 이동을 흰 화면
+   끊김 대신 옛 화면 → 새 화면 크로스페이드로 잇는다.
+   ⚠️ 전환은 **떠나는 쪽·도착하는 쪽 둘 다** 이 opt-in 이 있어야 걸린다. 처음엔
+      6개 화면(index.css·apply·challenge 상세 4)에만 있어서 나머지 이동이 전부
+      뚝 끊겼다 — 그래서 전 페이지가 싣는 유일한 CSS 인 여기로 모았다.
+      **페이지에 이 블록을 다시 복사해 넣지 말 것**(중복 정의만 된다).
+   - 새로고침(reload)·주소창 직접 입력은 스펙상 대상이 아니다 — bfcache 복원 뒤
+     location.reload() 하는 뒤로가기(CLAUDE.md bfcache 절)의 깜빡임은 이걸로 안
+     없어진다(별도 과제).
+   - 미지원 브라우저(구형)는 지금까지처럼 뚝 바뀔 뿐 깨지지 않는다.
+   - challenge 상세의 view-transition-name: challenge-name(제목 morph)은 이
+     opt-in 위에서 그대로 동작한다. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root) { animation: vt-fade-out .22s both; }
+  ::view-transition-new(root) { animation: vt-fade-in .34s both; }
+  @keyframes vt-fade-out { to { opacity: 0; } }
+  @keyframes vt-fade-in { from { opacity: 0; } }
+}
