@@ -422,11 +422,13 @@
     .ad-srch { flex: 1; position: relative; display: flex; align-items: center; min-width: 160px; }
     .ad-srch svg { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
     .ad-srch .search { width: 100%; height: 44px; padding: 0 12px 0 38px; border-radius: var(--radius-sm); }
-    .ad-sq { height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm);
+    /* 테두리는 --border-strong — 흰 면 위 흰 버튼이라 테두리가 유일한 경계다(원칙 4 · 3:1).
+       2026-08-02 보정 :is() 목록보다 늦게(08-22) 생긴 클래스라 빠져 있었다(--border ≈1.36:1 · 2026-08-28 진단). */
+    .ad-sq { height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-sm);
              display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
     .ad-sq svg { width: 17px; height: 17px; flex: none; }
     .ad-sq:hover { border-color: var(--accent-dark); color: var(--accent-ink); }
-    .ad-sq.xl { color: var(--accent-ink); border-color: rgba(27, 58, 107, .35); }
+    .ad-sq.xl { color: var(--accent-ink); border-color: rgba(27, 58, 107, .52); }
     .ad-sq .lg, .apl-sum .lg { display: none; }   /* 데스크톱에서만 — 폰은 아이콘(새로고침)·짧은 글자(엑셀)·첫 신청일만 */
     /* ── 밑줄 탭 — admin 에서 '무엇을 볼지 고르는 줄'은 전부 이 모양(2026-08-22 전 탭 확대) ──
        신청자 범위(.af-tabs) · 회원 상태/기출 유형/소재 유형·난이도/서가/항공사(.af-row)
@@ -445,11 +447,16 @@
     /* 개수 배지(유형 12 · 난이도 4 …) — 탭 글자 옆 흐린 숫자 */
     .af-chip b, .rv-kf b { font-weight: 800; margin-left: 5px; opacity: .62; font-variant-numeric: tabular-nums; }
     .af-cond { display: flex; gap: 10px 16px; align-items: flex-end; flex-wrap: wrap; padding: 12px 0 14px; }
-    .af-field { display: flex; flex-direction: column; gap: 4px; }
+    /* ⚠️ max-width:100% 를 지우지 말 것 — 셀렉트의 고유 폭은 가장 긴 option 만큼이라, 특강·자료 제목이
+       길면 이 칸이 화면(375px)을 뚫고 나가 페이지 전체에 가로 스크롤이 생긴다(2026-08-28 오너 신고 실사고).
+       flex 항목은 max-width 가 있어야 내용 크기 밑으로 줄어든다 — 셀렉트 쪽 max-width:100% 만으로는
+       부모(.af-field)가 내용만큼 늘어나 못 막는다. */
+    .af-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: 100%; }
     .af-field label { font-size: 12px; font-weight: 700; color: var(--text-dim); }
-    /* 기수·특강·자료 셀렉트 — 칩 줄 대신(기수·특강은 계속 쌓이므로 칩으로 나열하면 끝없이 는다). 입력칸 16px 하한(iOS 확대 방지). */
+    /* 기수·특강·자료 셀렉트 — 칩 줄 대신(기수·특강은 계속 쌓이므로 칩으로 나열하면 끝없이 는다). 입력칸 16px 하한(iOS 확대 방지).
+       긴 제목은 말줄임(…) — 전체 제목은 펼친 옵션 목록과 아래 요약 띠에서 그대로 보인다. */
     .af-select { appearance: none; -webkit-appearance: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); height: 44px; min-width: 190px; max-width: 100%;
-                 padding: 0 36px 0 14px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+                 text-overflow: ellipsis; padding: 0 36px 0 14px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
                  background: var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a95a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right 12px center / 16px 16px; }
     .af-chk { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; user-select: none; }
     .af-chk input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent-ink); cursor: pointer; }
@@ -483,8 +490,9 @@
     .apl-row .ch em { font-style: normal; color: var(--text-dim); }
     .apl-row .ch b { color: var(--ink); }
     .apl-row .act { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
-    /* 상태 버튼 묶음 — 네모 모서리, 붙어 있는 칸. 켜지면 옅은 초록(입금·무료)/주황(환불) 바탕 + ✓ */
-    .apl-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+    /* 상태 버튼 묶음 — 네모 모서리, 붙어 있는 칸. 켜지면 옅은 초록(입금·무료)/주황(환불) 바탕 + ✓
+       바깥 테두리는 --border-strong(원칙 4 · 3:1 — 흰 행 위 흰 버튼이라 테두리가 유일한 경계). 안쪽 칸 구분선은 --border 유지. */
+    .apl-seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; background: var(--surface); }
     .apl-seg button { appearance: none; border: 0; border-right: 1px solid var(--border); background: var(--surface); min-height: 40px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 700;
                      color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
     .apl-seg button:last-child { border-right: 0; }
@@ -498,8 +506,9 @@
     .apl-txt:hover { color: var(--st-alert); }
     .apl-txt svg { width: 15px; height: 15px; }
     /* 글자 버튼 둘(블랙·삭제)은 한 묶음으로 오른쪽 — 좁은 폭에서 줄바꿈될 때도 같이 움직인다
-       (묶지 않으면 auto 마진이 갈라져 삭제만 왼쪽에 홀로 떨어진다 — 375px 실측) */
-    .apl-txts { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+       (묶지 않으면 auto 마진이 갈라져 삭제만 왼쪽에 홀로 떨어진다 — 375px 실측)
+       간격 8px — '삭제'가 낀 줄의 인접 표적 규칙(원칙 2 · 2026-08-03 행 버튼 6→8px 과 같은 벌) */
+    .apl-txts { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
     .apl-txts .apl-txt { margin-left: 0; }
     .apl-more { padding: 10px 14px; font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--border-soft); }
     .apl-more .ad-sq { height: 36px; }
@@ -1053,6 +1062,16 @@
          (클래스 2개)로 정의돼, 클래스 1개짜리 이 줄이 져서 폰에서 40·36px 로 남았다(실측). */
       .rv-btn, .rv-kf, .apl-seg button, .apl-txt { min-height: 44px; }
       .app-card .ac-tg, .ri-actions .q-lv { min-height: 44px; }
+      /* 렌더 JS 가 만드는 '더 보기'(36px)·'다시 불러오기'(32px)·제출물 접이 summary(40px)가 이 목록에서
+         빠져 있었다(2026-08-28 진단). min-height 가 고정 height 를 이기므로 세 곳 다 44px 로 선다. */
+      .apl-more .ad-sq, .apl-note .ad-sq, .apl-subs > summary { min-height: 44px; }
+      /* 요약 띠 — 한 줄이면 수치 칸이 4~5개(무료·미입금·블랙)일 때 제목이 0px 로 눌리고 마지막 칸이
+         잘린다(2026-08-28 실측 — overflow:hidden 이라 조용히 사라진다). 모바일은 제목 줄 + 수치 줄. */
+      .apl-sum { flex-wrap: wrap; }
+      .apl-sum .ttl { flex: 1 1 100%; }
+      .apl-sum .st { flex: 1 1 auto; justify-content: flex-end; border-top: 1px solid var(--border-soft); }
+      .apl-sum .st div { min-width: 0; padding: 10px; }
+      .apl-sum .st div:first-child { border-left: 0; }
       /* 위 목록은 '행 버튼'만 덮었다 — 정작 저장·추가·CSV 같은 **주 버튼과 모든 select** 가
          빠져 있어 36~38px 로 남아 있었다(2026-08-02 실측 30종). 폼 조작요소를 통째로 잡는다.
          .btn-sm 도 모바일에선 44px 다 — 좁은 화면에서 '작은 버튼'은 그냥 못 누르는 버튼이다. */
@@ -8477,9 +8496,9 @@
       let rows = '';
       for (let d = 1; d <= p.total_days; d++) {
         const cur = byDay[d];
-        rows += `<div style="display:grid;grid-template-columns:52px 1fr ${p.reveal_policy === 'by_date' ? '130px' : ''};gap:8px;align-items:center;margin-top:6px;">
+        rows += `<div style="display:grid;grid-template-columns:52px minmax(0,1fr) ${p.reveal_policy === 'by_date' ? '130px' : ''};gap:8px;align-items:center;margin-top:6px;">
           <b style="font-size:13px;">${d}일차</b>
-          <select class="apd-q" data-day="${d}" style="font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:#fff;max-width:100%;">${opts(cur)}</select>
+          <select class="apd-q" data-day="${d}" style="font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:#fff;min-width:0;width:100%;max-width:100%;">${opts(cur)}</select>
           ${p.reveal_policy === 'by_date' ? `<input class="apd-date" data-day="${d}" type="date" value="${cur && cur.unlock_date || ''}" style="border:1px solid var(--border);border-radius:8px;padding:0 8px;">` : ''}
         </div>`;
       }
