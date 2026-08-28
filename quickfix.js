@@ -237,7 +237,8 @@
   /* 퍼널 링크 — 지금 있는 페이지로 가는 링크는 뺀다 */
   function funnelLinks() {
     var links = '';
-    if (_source !== 'killer') links += '<a href="ai-killer.html">글 전체는 KILL AI로 검사하기 →</a>';
+    // ⚠️ AI킬러 잠시 내림(2026-08-28 오너 "다 내리자") — 복원 시 아래 줄을 되살린다:
+    // if (_source !== 'killer') links += '<a href="ai-killer.html">글 전체는 KILL AI로 검사하기 →</a>';
     links += '<a href="polish.html">문장까지 제대로 고치려면 첨삭 →</a>';
     return '<div class="qf-links">' + links + '</div>';
   }

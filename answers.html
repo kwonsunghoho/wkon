@@ -516,11 +516,12 @@
       if (air === 'all') bits.push('<span class="tag">만능</span>');
       else if (AIRLINES[air]) bits.push(`<span class="tag tag-air air-${esc(air)}">${esc(AIRLINES[air].en)}</span>`);
       const list = CHECKS.get(a.id) || [];
-      if (list.length) {
+      // ⚠️ AI킬러 잠시 내림(2026-08-28 오너 "다 내리자") — 카드의 검사 등급 칩을 뺀다. 복원 시 되살린다.
+      /* if (list.length) {
         const last = list[0];
         bits.push(`<span class="tag tag-grade grade-${esc(last.grade)}">${esc(GRADE[last.grade] || last.grade)}`
           + (list.length > 1 ? ` <i>· ${list.length}회 검사</i>` : '') + '</span>');
-      }
+      } */
       const pols = POLISHES.get(a.id) || [];
       if (pols.length) bits.push(`<span class="tag">첨삭 ${pols.length}회</span>`);
       return bits.length ? `<div class="note-meta">${bits.join('')}</div>` : '';
@@ -534,13 +535,15 @@
       const list = CHECKS.get(a.id) || [];
       const pols = POLISHES.get(a.id) || [];
       // 두 이력을 시간순 하나로 합친다 — 학생이 겪은 순서 그대로 읽히게
+      // ⚠️ AI킬러 잠시 내림(2026-08-28 오너 "다 내리자") — 검사 행·KILL AI 버튼을 빼고 문구를 '첨삭 이력'으로.
+      //    복원 시 아래 /* */ 블록 둘을 되살리고 '첨삭 이력'→'검사·첨삭 이력', '첨삭받지'→'검사하지'로 되돌린다.
       const merged = [
-        ...list.map(c => ({ t: c.created_at, html:
+        /* ...list.map(c => ({ t: c.created_at, html:
           `<a class="hrow grade-${esc(c.grade)}" href="ai-killer.html?check=${encodeURIComponent(c.id)}">
              <span class="hrow-d">${fmt(c.created_at)}</span>
              <span class="hrow-g">${esc(GRADE[c.grade] || c.grade)}</span>
              <span class="hrow-c">고칠 곳 ${Number(c.hit_count) || 0}</span>
-             <span class="hrow-go">보기 →</span></a>` })),
+             <span class="hrow-go">보기 →</span></a>` })), */
         ...pols.map(p => ({ t: p.created_at, html:
           `<a class="hrow" href="polish.html?polish=${encodeURIComponent(p.id)}">
              <span class="hrow-d">${fmt(p.created_at)}</span>
@@ -548,10 +551,10 @@
              <span class="hrow-go">보기 →</span></a>` })),
       ].sort((x, y) => new Date(y.t) - new Date(x.t));
       return `<div class="hist">
-        <div class="hist-h"><span class="hist-t">검사·첨삭 이력</span><span class="hist-n">${merged.length}회</span></div>
-        ${merged.map(m => m.html).join('') || '<p class="hist-none">아직 검사하지 않은 답변이에요.</p>'}
-        <a class="hist-cta" href="ai-killer.html?answer=${encodeURIComponent(a.id)}">
-          ${list.length ? '고쳐서 다시 KILL AI' : '이 답변 KILL AI'}</a>
+        <div class="hist-h"><span class="hist-t">첨삭 이력</span><span class="hist-n">${merged.length}회</span></div>
+        ${merged.map(m => m.html).join('') || '<p class="hist-none">아직 첨삭받지 않은 답변이에요.</p>'}
+        ${'' /* <a class="hist-cta" href="ai-killer.html?answer=${encodeURIComponent(a.id)}">
+          ${list.length ? '고쳐서 다시 KILL AI' : '이 답변 KILL AI'}</a> */}
         <a class="hist-cta" style="margin-top:8px" href="polish.html?answer=${encodeURIComponent(a.id)}">이 답변 첨삭받기</a>
       </div>`;
     }
