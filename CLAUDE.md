@@ -30,7 +30,7 @@ MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 �
 1. **Google Apps Script**(레거시 신청·후기 시트) — 이 레포가 아니라 구글 콘솔에서 수정·재배포한다. 신청은 항상 새 행 append.
 2. **Supabase**(`supabase-config.js`, `MONC.sb`) — 회원·신청·후기·site_config·계측·도구 테이블 전부. 테이블·RLS·컬럼은 오너가 콘솔에서 만든다.
 3. **모집일정 = Supabase `challenge_rounds` 단일 소스**(admin '챌린지' 탭에서 CRUD — CSV 폴백 금지는 아래 '절대 되살리면 안 되는 것').
-4. **뉴스 수집기**(GitHub Actions 3시간 주기, `scripts/fetch-news.mjs`) — 유일하게 브라우저 밖에서 도는 코드.
+4. ~~뉴스 수집기~~ — **2026-08-28 오너 지시로 뉴스 기능 전체 폐지**(news.md). 이제 브라우저 밖에서 도는 코드는 없다(.github/workflows 삭제).
 
 The repo is sometimes edited from a git **worktree** under `.claude/worktrees/...` on a `claude/*` branch; the canonical checkout is the repo root on `main`.
 
@@ -43,7 +43,6 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - **전체 lint·build·테스트 시스템이 없다. 존재하지 않는 lint/build 명령을 만들지 말 것.** 검증 수단은 아래가 전부다.
   - **브라우저 렌더 확인 — 375px 우선**(트래픽 99%가 모바일). 올리기 전 필수.
   - 항공사 문항 매칭: `node scripts/ai-killer-qmatch.mjs` — 임계값·유사도 식 변경 시(첨삭이 쓴다).
-  - 뉴스 필터: `python scripts/verify-news-rules.py` — 실데이터 RSS 에 대고 '버린 목록'을 눈으로 확인(`--old` 는 기준선).
   - 답변 프로그램: `node scripts/answer-program-tests.mjs` + `deno check supabase/functions/answer-program/index.ts`(**deno 미설치 — 현재 못 돌린다**) + 375px 브라우저 실측.
 
 ### ⚠️ 어디에 푸시할까 — 오너 확정(2026-07-30)
@@ -68,7 +67,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 신청·명단 폼의 필수 동의 체크(`apply.html #appConsent` · `lecture.html` · `waitlist.js #wlAgree`)는 미체크 시 제출 차단 — **삭제·완화 금지.** 법적 고지 활자도 12px 하한.
 - **개인정보·학원 자산 반입 금지**: 합격 자소서 원문, 정규반 교재의 기출·가이던스, 소재 노하우(`sojae_playbook`)는 레포·공개 테이블 어디에도 넣지 않는다(비공개 테이블 + SQL 대화창 전달). **합격자 문장을 AI 프롬프트 예시로 주지 않는다.** 자료는 파일명이 아니라 본문 출처로 확인. **커뮤니티 오픈챗 주소·참여코드도 같은 취급** — 회원 전용 표 `community_config`(RLS `authenticated` 만)에만 두고, 값 insert SQL 은 대화창으로 전달한다.
 - **전화번호로 남을 조회할 창구를 만들지 않는다**(번호만으로 신청·관심 여부가 캐진다 — 비회원 사전 조회·명단 본인 조회를 일부러 안 열었다).
-- **휴대폰 본인인증(KG이니시스 통합인증·포트원 경유)**: 가입 온보딩 + **특강 신청·승준 도구·연구실 자료는 인증 회원만**(`MONC.requireVerified()` 게이트 — 챌린지 신청·게임·뉴스는 대상 아님). 판정은 서버(verify-identity → `apply_identity_verification` service_role 전용), 인증 회원의 이름·번호는 화면 저장으로 못 바꾼다. **게이트는 fail-open** — 안전장치(3중 + **인앱 브라우저 통과**, 2026-08-27 오너 확정 유예 — 면제 아님)를 빼면 인프라 장애·인앱 유입이 전 기능 잠금이 된다. 채널 키는 `pay-methods.js` `identityChannel` 한 곳. 번호 서버 대조의 승인된 예외는 `save_my_profile` RPC 하나뿐 — 넓히려면 오너 확인 먼저. 상세는 auth-consent.md '휴대폰 본인인증'.
+- **휴대폰 본인인증(KG이니시스 통합인증·포트원 경유)**: 가입 온보딩 + **특강 신청·승준 도구·연구실 자료는 인증 회원만**(`MONC.requireVerified()` 게이트 — 챌린지 신청·게임은 대상 아님). 판정은 서버(verify-identity → `apply_identity_verification` service_role 전용), 인증 회원의 이름·번호는 화면 저장으로 못 바꾼다. **게이트는 fail-open** — 안전장치(3중 + **인앱 브라우저 통과**, 2026-08-27 오너 확정 유예 — 면제 아님)를 빼면 인프라 장애·인앱 유입이 전 기능 잠금이 된다. 채널 키는 `pay-methods.js` `identityChannel` 한 곳. 번호 서버 대조의 승인된 예외는 `save_my_profile` RPC 하나뿐 — 넓히려면 오너 확인 먼저. 상세는 auth-consent.md '휴대폰 본인인증'.
 - **전화번호는 가입 필수 + 구글·카카오 이중 가입 차단(오너 확정)**: 온보딩 건너뛰기 없음. 프로필 저장은 `MONC.saveMyProfile()`(서버 대조) 한 곳 — 직접 `members.update` 로 되돌리지 말 것. 상세는 auth-consent.md '전화번호 필수'.
 
 ## 결제·유료 기능 — 판정은 서버·DB 가 한다
@@ -102,10 +101,10 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 페이지 공통 장비(bfcache·스크롤·인앱 배너·og 메타·제목) | `scroll-keep.js`·`inapp.js` | 새 페이지에 한 벌로 장착(위 체크리스트), scroll-keep `defer` 금지, 인앱 문자열은 `\uXXXX`, 수정 시 `?v=` 동반 | `docs/notes/page-common.md` |
 | 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·`pay-methods.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로. 취소선 정가 `challenge_list_price` 는 표시 전용(판정은 `MONC.loadChallengePricing()` 한 곳) | `docs/notes/apply-and-payment.md` |
 | 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
-| 승준 코스·승준 도구 | `briefing.html`(코스)·`tools.html`(도구) | 코스는 2026-08-25 잠시 내림(briefing→tools 리다이렉트 — 복원 절차는 briefing.md), 도구 허브는 종이 카드 리스트(2026-08-27 3안 — AI킬러·일문일답 잠시 내림, 표시 5종). 카드·타일에 회원별 상태 문구·금액 금지 | `docs/notes/briefing.md` |
+| 승준 코스·승준 도구 | `briefing.html`(코스)·`tools.html`(도구) | 코스는 2026-08-25 잠시 내림(briefing→tools 리다이렉트 — 복원 절차는 briefing.md), 도구 허브는 종이 카드 리스트(2026-08-27 3안 — AI킬러·일문일답 잠시 내림, 표시 4종 · 2026-08-28 뉴스 폐지로 5→4). 카드·타일에 회원별 상태 문구·금액 금지 | `docs/notes/briefing.md` |
 | 역량검사 게임 | `games.html`·`games.js` | 전부 자체 제작(타사 화면·그래픽·명칭 복제 금지), 이모지 금지 — 자체 라인 SVG 만, 무료·비회원·서버 호출 없음, 하단 '자체 도구·무관' 고지 삭제 금지 | `docs/notes/games.md` |
 | 연구실 | `lab.html`·`lab-archive.html`·`lab-shelf.html`(서가 4종 공용)·`lab-viewer.js`·`researchers-data.js` | 상세는 `?shelf=` 한 파일(서가별 HTML 금지), 자료 파일은 비공개 버킷 + lab-file 서명 URL 만, PDF 는 lab-viewer 가 먼저(화면 전용 차단은 서버 유지), 값은 `lab_resources.price`(0=무료) — 채용 캘린더만 `recruit_rounds` 예외 | `docs/notes/lab.md` |
-| 뉴스 | `news.html`·`scripts/fetch-news.mjs` | 필터는 픽커+바텀시트(칩 나열 회귀 금지), 규칙 수정 시 verify-news-rules.py | `docs/notes/news.md` |
+| 뉴스(폐지) | `news.html`(홈 리다이렉트 스텁만 남음) | **2026-08-28 오너 지시로 기능 전체 폐지** — 화면·수집기·Actions 삭제. 경위·복구는 news.md | `docs/notes/news.md` |
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 판정은 오너 지침 프롬프트(4기준+의심 지수+인간미 그린 플래그) — 규칙 판정으로 되돌리지 말 것. 구조화 출력·한 파일 유지, 피드백은 판정에 자동 반영 금지 | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB), 난이도는 `questions.level` 한 곳(`.eq('level')` 금지 — 미적용 환경 400), 진입은 난이도 화면 먼저 | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
@@ -116,7 +115,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | admin | `admin.html` | 좌측 사이드바 셸 + '오늘' 브리핑 — 탭 추가는 그룹부터 정한다. UI 는 역할별 모양 한 벌 — **알약(`999px`) 금지.** 회원 관리 등급 판정 두 자리(`free_use` 는 delta 0 · '관심'의 신청 이력)를 건드리면 사람이 잘못 보관된다 | `docs/notes/admin.md` |
 | 후기(허브·챌린지·상담·합격 수기) | `reviews.html`·`reviews-list.html`·`stories.html`·`story.html`·`review-write.html` | 목록은 `?kind=` 한 파일, 0건 종류는 카드를 안 그린다, 상담 후기 실명 미노출. 회원 제출 후기는 서버 RPC 가 `visible=false` 로(즉시 공개 금지·보상 없음). 합격 수기는 잠시 내림(복원 절차는 pages.md) | `docs/notes/pages.md` |
 | 1:1 상담·네이버 예약 | `consult.html` | 네이버 예약 주소 정본은 consult.html 한 곳. 진입점 3곳 고정 — 홈 본문·nav 메뉴·플로팅 금지 | `docs/notes/pages.md` |
-| 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·뉴스·도구 3곳뿐(홈 금지), 이 한 파일에서만 수정(세 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
+| 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·도구 2곳뿐(홈 금지 · 뉴스는 2026-08-28 폐지로 빠짐), 이 한 파일에서만 수정(두 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
 | 기타 페이지(연구진·상세 4종·오디오) | `researchers.html`·`challenge-*.html` | 상세 4종 인라인 공통 CSS 는 네 파일을 같이 고친다 | `docs/notes/pages.md` |
 | 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
 | 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
@@ -161,7 +160,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 승준노트 카드 권한 배지(`.bf-badge`)·회원별 상태 문구 (briefing.md)
 - 승준노트 B 머리의 기록 칩·'마이페이지에서 자세히' 링크 (briefing.md)
 - 승준노트 매거진 목차 6줄·루트맵 룰렛·강조 세 자리 (briefing.md)
-- 뉴스 필터 칩 나열 sticky 바·리본 북마크·라벨 없는 스크랩 아이콘 (news.md)
+- 뉴스 기능 일습(게시판·수집기·스크랩) — 2026-08-28 오너 "뉴스 자체글 빼자"로 전체 폐지. 복구 절차·구 확정 규칙은 news.md
 - 투명 nav·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
 - nav 강조의 깜빡이는 점(`bfPulse`)·승준노트를 nav 4번으로 내리는 안 (nav.md)
 - 히어로 스크롤 구동·창 통과 줌·로고 흩날림 안·하단바 '몬크 더 알아보기' 상태 (home.md)

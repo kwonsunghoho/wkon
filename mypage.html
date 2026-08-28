@@ -160,7 +160,8 @@
     .v2-note-p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       margin-top: 5px; font-size: 14px; line-height: 1.55; color: var(--text-muted); word-break: keep-all; }
 
-    /* 뉴스 */
+    /* 목록 줄 제목·부제 — 연구실 구매 접이가 쓴다(구 뉴스 접이에서 승계한 이름 · 뉴스는 2026-08-28 폐지.
+       ⚠️ '뉴스 잔재'로 오인해 지우지 말 것 — 지우면 구매 목록 스타일이 조용히 깨진다). */
     .v2-news-t { display: block; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; word-break: keep-all; }
     .v2-news-s { display: block; margin-top: 5px; font-size: 12px; color: var(--text-dim); }
 
@@ -449,19 +450,6 @@
           </div>
         </details>
 
-        <details class="v2-fold" id="sec-news" style="display:none;">
-          <summary>
-            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h13v14a1 1 0 0 0 1 1H5a1 1 0 0 1-1-1V5z"/><path d="M17 9h3v10a1 1 0 0 1-1 1M7 9h6M7 13h6M7 17h4"/></svg>
-            <span class="v2-fold-t">뉴스 스크랩</span>
-            <span class="v2-fold-c" id="newsCount">0</span>
-            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-          </summary>
-          <div class="v2-fold-body">
-            <ul class="v2-list" id="newsScraps"></ul>
-            <a class="v2-more" id="newsMore" href="news.html?tab=scraps">전체 보기 →</a>
-          </div>
-        </details>
-
         <details class="v2-fold" id="sec-labdocs" style="display:none;">
           <summary>
             <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M8 7h7M8 11h5"/></svg>
@@ -659,8 +647,8 @@
       });
     })();
 
-    // 뒤로가기로 돌아오면(bfcache) 아래 IIFE 가 다시 돌지 않아 화면이 통째로 낡는다.
-    // 뉴스에서 스크랩하고 돌아왔는데 그대로이던 문제(2026-07-24 오너 신고)가 이것.
+    // 뒤로가기로 돌아오면(bfcache) 아래 IIFE 가 다시 돌지 않아 화면이 통째로 낡는다
+    // (다른 화면에서 기록을 만들고 돌아왔는데 그대로이던 문제 — 2026-07-24 오너 신고).
     window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -816,30 +804,6 @@
         document.getElementById('sec-answers').style.display = '';
         return data;   // 승자각 제출 카드(renderChSubs)가 DAY 문항 작성 여부 판정에 재사용
       } catch (_) { return []; /* 접이 숨김 유지 */ }
-    }
-
-    // ── 내 뉴스 스크랩 접이 — 최근 3건. news_scraps 미생성(마이그레이션 전)이면 접이를 숨긴 채로 둔다. ──
-    const AIRLINE_LABEL_MP = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
-    async function loadNewsScraps() {
-      try {
-        const { data, error } = await MONC.sb.from('news_scraps')
-          .select('created_at, news_articles(title, url, airline)')
-          .order('created_at', { ascending: false });
-        if (error) return;
-        const rows = (data || []).filter(r => r.news_articles);
-        if (!rows.length) return;                    // 0건이면 접이를 안 연다
-        document.getElementById('newsScraps').innerHTML = rows.slice(0, 3).map(r => {
-          const a = r.news_articles;
-          const air = a.airline ? AIRLINE_LABEL_MP[a.airline] || a.airline : '';
-          return `<li><a class="v2-item" href="${esc(a.url)}" target="_blank" rel="noopener">
-            <span class="v2-news-t">${esc(a.title)}</span>
-            ${air ? `<span class="v2-news-s">${esc(air)}</span>` : ''}
-          </a></li>`;
-        }).join('');
-        document.getElementById('newsCount').textContent = rows.length;
-        document.getElementById('newsMore').textContent = '전체 ' + rows.length + '건 →';
-        document.getElementById('sec-news').style.display = '';
-      } catch (_) { /* 접이 숨김 유지 */ }
     }
 
     // ── 구매한 연구실 자료 접이 — lab_my_purchases() RPC. 유료 마이그레이션
@@ -1451,7 +1415,6 @@
       const me = session.user.id;
       // 승자각 제출 카드가 답변 제목을 재사용하므로 promise 를 들고 있는다(추가 요청 없이 한 번만 조회)
       const ansLoad = loadAnswerNotes(me);
-      loadNewsScraps();
       loadLabPurchases();
       // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작. 끝나면 대기 화면을 내린다.
       Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });

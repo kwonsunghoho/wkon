@@ -38,7 +38,7 @@
        0건이면 접이가 아예 안 그려져 '눌렀는데 아무것도 없음'이 됐다(2026-08-02 오너
        "접힌 칸으로 안 가게 해야지"). 마이페이지 접이로 되돌리지 말 것. */
     ['answers.html', '나만의 승준노트', '쓴 답변이 전부 모이는 곳'],
-    ['news.html', '항공사 뉴스&산업분석', '10개 항공사 소식 · 스크랩'],
+    /* 항공사 뉴스는 2026-08-28 오너 지시로 기능 전체 폐지(news.md) — 메뉴에 되살리지 말 것 */
     ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
     ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"],
     /* ⚠️ AI킬러 잠시 내림(2026-08-25 오너 "ai킬러는 잠깐 숨겨줘 네비에서") — 메뉴에서만 뺀다.
@@ -96,7 +96,7 @@
   var SECTION_OF = {
     /* 승준 코스는 단독 링크라 자기 파일 하나뿐. 도구 페이지들은 '승준 도구' 소속 표시 */
     'briefing.html': 'course',
-    'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
+    'tools.html': 'tools', 'sojae.html': 'tools',
     'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
     'programs.html': 'tools', 'program.html': 'tools', 'experiences.html': 'tools',
     'games.html': 'tools',
@@ -414,7 +414,7 @@
         4종)는 폭·정렬을 그 안에서 잡으므로 **그 안에** 넣어야 좌우가 맞는다. 없는 쪽
         (apply·결제 화면 6종의 인라인 미니 푸터)은 footer 가 직접 자식을 세우므로 거기 붙인다.
         footer 에 무조건 붙이면 앞의 일곱 페이지에서 소셜만 컨테이너 밖으로 삐져나온다.
-     ⚠️ 푸터가 **없는 페이지에는 아무것도 만들지 않는다**(2026-08-04 현재 25개 — news·
+     ⚠️ 푸터가 **없는 페이지에는 아무것도 만들지 않는다**(2026-08-04 기준 25개 —
         sojae·answers·reviews·lectures·briefing·lab 등). 없는 자리에 소셜 줄만 띄우면
         페이지마다 하단 구조(dock·sticky bar)와 부딪힌다. 그 페이지들의 데스크톱 노출은
         푸터를 공용화할 때 함께 해결한다. */

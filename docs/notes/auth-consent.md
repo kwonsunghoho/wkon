@@ -119,8 +119,8 @@
   승준 도구 진입 6곳(sojae·polish·answers·ai-killer·experiences·program — requireConsent 다음
   줄) + 특강 신청 단추 3곳(lecture 의 submitFree·confirmBankTransfer·payEasy — **상세 열람은
   열어 둔다**, 전환 동선) + 연구실 자료 여는 순간 2곳(lab-shelf 의 openDoc·buyDoc — 목록
-  열람은 열어 둔다). **마이페이지·챌린지 신청(apply)·게임·뉴스는 대상이 아니다(오너 지시
-  그대로) — 부르는 곳을 늘리거나 빼려면 오너 확인.** 미인증이면
+  열람은 열어 둔다). **마이페이지·챌린지 신청(apply)·게임은 대상이 아니다(오너 지시
+  그대로 — 지시 당시 목록의 '뉴스'는 2026-08-28 기능 폐지로 사라졌다) — 부르는 곳을 늘리거나 빼려면 오너 확인.** 미인증이면
   `onboarding.html?verify=1&returnTo=…`(인증 전용 모드 — 제목·버튼 문구만 다르고 흐름 동일)로
   보내고 인증 후 되돌아온다. **관리자(`members.role='admin'`)는 면제**(2026-08-26 오너 지시
   "관리자는 본인인증 빼줘야지") — 게이트가 role 을 같이 읽어 admin 이면 통과한다.

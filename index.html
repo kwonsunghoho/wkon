@@ -233,14 +233,15 @@
         <div class="section-label">MONC Tools</div>
         <!-- ⚠️ &nbsp; — '반으로'가 혼자 한 줄에 남는 것 방지 -->
         <h3 class="dr-title">준비 시간은&nbsp;반으로</h3>
-        <p class="dr-ds">항공 뉴스, 소재 발굴, 합격생 데이터 첨삭까지</p>
+        <!-- 2026-08-28 뉴스 폐지로 '항공 뉴스,' 만 뺐다 — 나머지는 2026-08-19 오너 확정 문구 그대로 -->
+        <p class="dr-ds">소재 발굴부터 합격생 데이터 첨삭까지</p>
         <a class="dr-link" href="tools.html" data-pillar="tools">승준 도구 열기 →</a>
       </div>
       <a class="dr-card" href="tools.html" data-pillar="tools" aria-label="승준 도구 열기">
         <img src="images/door-briefing.webp" alt="" loading="lazy" decoding="async">
-        <!-- ⚠️ &nbsp; — 375px 글 칸이 110px 이라 두 줄이 되는데, 없으면 '업데이트'만 혼자 둘째 줄에 남는다.
-             (이 문구는 뉴스 수 조회가 실패했을 때의 기본값 — 성공하면 아래 JS가 '오늘 뉴스 N건'으로 바꾼다.) -->
-        <span class="dr-chip" id="doorNewsChip">항공 뉴스 · 매일&nbsp;업데이트</span>
+        <!-- ⚠️ &nbsp; — 375px 글 칸이 110px 이라 두 줄이 될 때 낱말이 혼자 남지 않게.
+             구 '오늘 뉴스 N건' 칩은 2026-08-28 뉴스 폐지로 정적 문구(도구 이름 두 개 — 사실만)로 교체. -->
+        <span class="dr-chip">소재 발굴 · 답변&nbsp;첨삭</span>
       </a>
     </div>
   </div>
@@ -378,7 +379,7 @@
         <b>무료로 먼저 써 보기</b>
         <a href="sojae.html">답변 소재 발굴</a><!-- ⚠️ AI킬러 잠시 내림(2026-08-25 nav·타일 →
           2026-08-26 오너 "홈 하단 링크도 빼줘") — nav.js·tools.html 주석과 한 벌. 다시 열 때 같이 되살린다.
-        <a href="ai-killer.html">AI킬러</a> --><a href="polish.html">답변 첨삭</a><a href="news.html">항공사 뉴스</a><a href="lab.html">연구실</a><a href="reviews.html">후기</a>
+        <a href="ai-killer.html">AI킬러</a> --><a href="polish.html">답변 첨삭</a><a href="lab.html">연구실</a><a href="reviews.html">후기</a>
       </p>
       <p class="closing-note">이미 회원이라면 <a href="login.html">로그인</a></p>
     </div>
@@ -718,21 +719,6 @@
       });
       var chip = document.getElementById('doorLectureChip');
       if (chip && best != null) chip.innerHTML = '다음 특강 <b>' + (best === 0 ? 'D-Day' : 'D-' + best) + '</b>';
-    } catch (e) {}
-  })();
-
-  /* ── 승준노트 문 칩 — 오늘 들어온 항공 뉴스 수(실데이터 — 숫자를 꾸며내지 않는다).
-     조회 실패·0건이면 기본 문구('항공 뉴스 · 매일 업데이트') 유지. ── */
-  (async function newsChip() {
-    var chip = document.getElementById('doorNewsChip');
-    if (!chip || !window.MONC || !window.MONC.sb) return;
-    try {
-      var t = new Date(); t.setHours(0, 0, 0, 0);
-      var res = await window.MONC.sb.from('news_articles')
-        .select('id', { count: 'exact', head: true })
-        .gte('published_at', t.toISOString());
-      if (res.error || !res.count) return;
-      chip.innerHTML = '오늘 뉴스 <b>' + res.count + '건</b>';
     } catch (e) {}
   })();
 

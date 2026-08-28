@@ -37,7 +37,7 @@
 | `20260711120000_applications_rls` | applications RLS | owner 실행 표기 |
 | `20260715120000_member_consent` | agreed_at·terms_version + `delete_my_account()` | owner 실행 표기(미적용 시 계정별 로컬 폴백 + 추후 백필) |
 | `20260717120000_applications_payment` | 결제 컬럼 4종 | 적용(결제 운영 중) |
-| `20260721120000_news_board` | news_articles | 실행 완료 |
+| `20260721120000_news_board` | news_articles | 실행 완료 → **2026-08-28 뉴스 폐지로 드롭 대상**(`20260828130000_drop_news`) |
 | `20260723120000_payment_refunds` | refunds·refunded_amount | **실행 완료 — 다시 실행 안내 금지** |
 | `20260724120000_special_lectures` | special_lectures + applications.lecture_id | owner 실행 필요 표기(특강이 운영 중이면 적용된 것) |
 | `20260724130000` | 특강 airline·seats_left 컬럼 | 미적용 시 브랜딩만 빠짐 |
@@ -98,6 +98,7 @@
 | `20260824120000_challenge_lessons` | **챌린지 DAY 문항 단일 소스**(2026-08-24 오너 "고칠 수 있게 해줘") — `challenge_lessons`(challenge · day_no · title · summary · match_words) + 공개 읽기/admin 쓰기 RLS + 승자각 10줄 심기. admin '챌린지' 탭 아래 '승자각 DAY 문항'에서 고친다 | **적용 완료(2026-08-24 오너 실행 — anon 프로브 실측 10줄 + 라이브 화면 실측: challenge-answer·apply 가 표 값으로 그린다).** 같은 날 오너가 준 새 커리큘럼으로 10줄을 갱신했다(가치관·좋은 서비스·팀워크·규정 상황 대처·실패 경험·항공사 장점·실패 경험·영어 자기소개·승무원 자질·마지막 할 말). ⚠️ **DAY 5 와 DAY 7 이 '실패 경험'으로 같다** — 오너 원문 그대로다. 낱말로는 DAY 5 가 먼저 잡혀 DAY 7 은 제목에 'DAY 7' 이 있을 때만 잡히므로 DAY 7 낱말은 비워 뒀다(오너 확인 대기). 미적용 degrade 는 그대로 유효하다 — 표를 못 읽으면 세 화면이 HTML 폴백으로 돌아간다 |
 | `20260822180000_member_segments` | **회원 조건 저장(세그먼트)**(3단계) — `member_segments`(name · rule jsonb `{"all":[…]}` AND 만 · followup). 이름은 대소문자·공백 무시 유일 인덱스. 거르기는 브라우저가 한다(이 표는 조건만 담는다) | **실행 완료(2026-08-23 오너 실행 · anon 프로브 실측: HTTP 200 `[]`).** 미실행일 때는 '저장한 조건' 묶음만 통째로 숨고 나머지는 그대로 돈다 |
 | `20260828120000_sojae_ke20_level` | **소재 발굴 KE20 섹션**(대한항공 대비 프로젝트 · 오너 지시 2026-08-28) — `questions.level` 체크 제약을 `basic/mid/advanced/deep/ke20` 으로 교체(drop→add · 재실행 안전). 문항은 오너가 admin '소재 문제'에서 직접 입력 | **실행 완료(2026-08-28 오너 실행·자기보고).** ⚠️ 이 마이그레이션은 anon 프로브로 판별 불가다(체크 제약은 insert 때만 평가 — 익명 insert 는 그 전에 RLS 42501). 의심되면 admin 에서 KE20 문항 저장을 해 본다(성공=적용, 23514 + 파일명 안내=미적용) 또는 `pg_get_constraintdef`(20260806090000 줄과 같은 방법). 화면·admin 은 이 날 main 배포 완료 |
+| `20260828130000_drop_news` | **뉴스 기능 전체 폐지**(오너 2026-08-28 "뉴스 자체글 빼자") — `news_scraps`·`news_articles` 표 드롭. 화면·수집기·GitHub Actions 제거는 같은 날 main 배포 | **owner 실행 선택** — 안 실행해도 문제 없다(아무도 안 읽는 표로 남는다). ⚠️ 실행하면 기사·회원 스크랩 데이터가 지워진다(복구 불가) · 반드시 이 날 main 배포가 라이브에 나간 **뒤에** 실행 |
 
 ### ⚠️ 동명 함수 재실행 경고 — 옛 파일을 다시 돌리면 새 정의가 조용히 사라진다 (2026-08-22 감사 #6)
 
@@ -172,7 +173,7 @@
   **verify-payment 재배포와 무관**하고 청구 금액도 안 바뀐다. 규칙은
   `docs/notes/apply-and-payment.md` '정가 앵커' 절.
 - `apply.html` FAQ #3·#6·#7 — 임시 문구.
-- GitHub Actions 뉴스 스케줄 — 공개 리포는 **60일간 커밋이 없으면 자동 중지**(메일 통지 후 버튼 재활성).
+- ~~GitHub Actions 뉴스 스케줄~~ — 2026-08-28 뉴스 폐지로 워크플로 자체를 삭제(news.md). Actions 시크릿 `SUPABASE_SERVICE_ROLE_KEY` 는 쓰는 곳이 없어졌다 — 오너가 GitHub Settings 에서 지워도 된다(선택).
 
 ## 2026-08-02 UX·UI 진단 반영 — 배포 현황
 
