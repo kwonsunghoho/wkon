@@ -1788,6 +1788,8 @@
               <option value="mid">중급</option>
               <option value="advanced">고급</option>
               <option value="deep">심화</option>
+              <!-- KE20(2026-08-28) — 대한항공 대비 프로젝트 섹션. 마이그레이션 20260828120000 필요 -->
+              <option value="ke20">KE20</option>
             </select></div>
           <!-- 항공사 칸은 2026-08-05 삭제(오너 "항공사는 의미가 없다") — 소재 문제는 전 항공사 공통이다.
                DB `questions.airline` 컬럼은 남겨 뒀다(구 데이터 보존). 다시 만들지 말 것. -->
@@ -2334,7 +2336,7 @@
   <script src="supabase-config.js"></script>
   <!-- 회원 번호 상태 판정에 쓴다 — 가입·신청 창구가 쓰는 것과 **같은 규칙**이어야 한다(2026-08-03) -->
   <script src="phone-check.js"></script>
-  <script src="sojae-common.js?v=2"></script>
+  <script src="sojae-common.js?v=3"></script>
   <script src="lecture-common.js"></script>
   <!-- 녹음 미리듣기 동시 재생 차단(전역) -->
   <script src="ba-audio.js" defer></script>
@@ -6092,7 +6094,7 @@
 
     // ── 기출문제(questions) CRUD ──
     const Q_CAT = window.SOJAE.CAT_LABEL;   // 공용(sojae-common.js)
-    const Q_LV = window.SOJAE.LEVEL_LABEL;  // 난이도 라벨(초급/중급/고급/심화)
+    const Q_LV = window.SOJAE.LEVEL_LABEL;  // 난이도 라벨(초급/중급/고급/심화/KE20)
     const todayStr = window.SOJAE.todayStr; // KST 기준 — sojae/mypage와 동일
     let _questions = [], _editQid = null, _qLevelF = '', _qCatF = '';
 
@@ -6129,6 +6131,11 @@
         const label = { level: '난이도', hint: '예시' };
         alert(dropped.map(c => label[c]).join('·') + '는 저장되지 않았어요. 마이그레이션 '
           + dropped.map(c => Q_OPT_COLS[c]).join(' · ') + ' 을 먼저 실행해 주세요.');
+      }
+      // KE20(2026-08-28)은 구 체크 제약에 없는 코드다 — 제약 위반(23514)이면 영어 오류
+      // 대신 실행할 마이그레이션을 알려준다(level 컬럼 자체가 없는 환경은 위 재시도가 처리).
+      if (error && error.code === '23514' && row.level === 'ke20') {
+        alert('KE20 저장에는 마이그레이션 20260828120000_sojae_ke20_level.sql 실행이 먼저 필요해요.');
       }
       return error;
     }
@@ -6169,7 +6176,7 @@
       if (!_questions.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 문제가 없습니다. 위에서 추가하세요.</div>'; return; }
       const today = todayStr();
       // 오늘 실제 노출되는 문제 — 선정 로직은 공용 sojae-common.js(sojae/mypage와 100% 동일).
-      // ⚠️ 난이도마다 하나씩이라 '오늘 노출 중'은 최대 네 줄이다(학생이 고른 난이도의 것이 나간다).
+      // ⚠️ 난이도(+KE20 섹션)마다 하나씩이라 '오늘 노출 중'은 최대 다섯 줄이다(학생이 고른 것이 나간다).
       const effIds = new Set();
       S.LEVELS.forEach(lv => { const e = S.pickEffective(_questions, lv); if (e) effIds.add(e.id); });
       const rows = _questions.filter(q =>
