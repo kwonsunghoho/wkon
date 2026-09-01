@@ -142,7 +142,7 @@
 ### 연구진 (홈 스트립·성장 리포트 목업은 2026-07-29 삭제)
 구 `#researchers-strip`(포트레이트 마퀴 + rAF 물리 IIFE)과 `#member-appeal`(성장 리포트 목업 `.db-root`)은 홈 개편으로 **통째로 삭제**(`.ts-*`/`.db-*`/`.ma-*` CSS 포함). 연구진 소개는 `researchers.html` 단독 — 이력의 소스오브트루스는 **`researchers-data.js`(`window.MONC_RESEARCHERS`) 하나**(2026-07-31 `lab.html` 연구진 섹션과 공유하려고 인라인 배열에서 이관 — 페이지에 배열을 다시 복사해 넣지 말 것. 렌더러는 페이지별로 다르고 데이터만 공유).
 - **⚠️ 현형빈은 챌린지를 지도하지 않는다(2026-07-24 오너 확인).** researchers.html에만 노출하고 apply.html·terms.html의 '담당 코치' 명단에는 넣지 않는다(약관상 실제 지도자 명단). '연구진 전원 = 챌린지 담당 코치'를 전제한 문구 금지.
-- **카드 순서 = 직급 순**(수석 권성호·박새암 → 책임 고은지 → 선임 최보민·김유리·현형빈) — 직급이 바뀌면 자리도 같이 옮긴다. 사진 `images/instructor-<kwon|park|hyun|koh|choi|kim>.webp`(800px 폭 webp q78).
+- **카드 순서 = 직급 순**(수석 권성호·박새암 → 책임 고은지·김유리 → 선임 최보민·현형빈) — 직급이 바뀌면 자리도 같이 옮긴다. 사진 `images/instructor-<kwon|park|hyun|koh|choi|kim>.webp`(800px 폭 webp q78).
 
 ## 챌린지 상세 4종 · legacy 페이지(구 CLAUDE.md Pages 항목)
 

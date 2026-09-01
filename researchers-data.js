@@ -94,6 +94,30 @@ window.MONC_RESEARCHERS = [
     ]
   },
   {
+    id:'kim',
+    role:'책임 연구원',
+    name:'김유리',
+    position:'대한항공 출신 · 기내방송 & 스피치 전문가',
+    photo:'images/instructor-kim.webp',
+    tags:['기내방송','스피치 지도','일등석·프레스티지','VIP 서비스'],
+    bio:'대한항공 국제선에서 10년간 근무하며 <strong>일등석·프레스티지 클래스</strong>와 VIP 고객 서비스를 담당하고 객실 부사무장까지 지낸 전직 승무원입니다. <strong>기내방송 전문성과 스피치지도사 1급</strong> 자격을 바탕으로 정확한 발음·전달력을 지도합니다.',
+    stats:[
+      {num:10, suffix:'년', label:'대한항공 승무원'},
+      {num:9000, suffix:'시간', label:'국제선 비행'},
+      {num:'부사무장', suffix:'', label:'객실 부사무장'}
+    ],
+    key:[
+      '<strong>대한항공 국제선 객실승무원</strong> · 객실 부사무장 (10년)',
+      '국제선 비행 <strong>약 9,000시간</strong>',
+      '대한항공 <strong>일등석·프레스티지 클래스</strong> 근무',
+      '<strong>기내방송 전문</strong>'
+    ],
+    more:[
+      'VIP 고객 서비스 담당',
+      '스피치지도사 <strong>1급</strong>'
+    ]
+  },
+  {
     id:'choi',
     role:'선임 연구원',
     name:'최보민',
@@ -117,30 +141,6 @@ window.MONC_RESEARCHERS = [
       '면접 답변 구조화 및 전략 설계',
       'FSC·LCC 항공사별 이미지 메이킹',
       '승무원 면접 스피치 및 표현력 지도'
-    ]
-  },
-  {
-    id:'kim',
-    role:'선임 연구원',
-    name:'김유리',
-    position:'대한항공 출신 · 기내방송 & 스피치 전문가',
-    photo:'images/instructor-kim.webp',
-    tags:['기내방송','스피치 지도','일등석·프레스티지','VIP 서비스'],
-    bio:'대한항공 국제선에서 10년간 근무하며 <strong>일등석·프레스티지 클래스</strong>와 VIP 고객 서비스를 담당하고 객실 부사무장까지 지낸 전직 승무원입니다. <strong>기내방송 전문성과 스피치지도사 1급</strong> 자격을 바탕으로 정확한 발음·전달력을 지도합니다.',
-    stats:[
-      {num:10, suffix:'년', label:'대한항공 승무원'},
-      {num:9000, suffix:'시간', label:'국제선 비행'},
-      {num:'부사무장', suffix:'', label:'객실 부사무장'}
-    ],
-    key:[
-      '<strong>대한항공 국제선 객실승무원</strong> · 객실 부사무장 (10년)',
-      '국제선 비행 <strong>약 9,000시간</strong>',
-      '대한항공 <strong>일등석·프레스티지 클래스</strong> 근무',
-      '<strong>기내방송 전문</strong>'
-    ],
-    more:[
-      'VIP 고객 서비스 담당',
-      '스피치지도사 <strong>1급</strong>'
     ]
   },
   {
