@@ -116,6 +116,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<!-- 기수 시작일 잠금(loadRoundStartMap·pickContentRound) — mypage 제출 카드와 같은 규칙. 함수만 정의하는 파일. -->
+<script src="recruit.js?v=2"></script>
 <script>
   /* bfcache 로 되살아나면 통째로 새로고침 — 입력값 없는 화면 공통 규칙(CLAUDE.md).
      스크롤은 scroll-keep.js 가 되돌린다. */
@@ -184,7 +186,8 @@
       } catch (_) { /* 표 미생성 — 기본 문항으로 그린다 */ }
     }
 
-    let ctx = null;   // 업로드 뒤 다시 그릴 재료 { me, partOf }
+    let ctx = null;   // 업로드 뒤 다시 그릴 재료 { me, partOf, lockOf }
+    const mdKor = s => { const p = String(s || '').split('-'); return p.length === 3 ? (+p[1]) + '월 ' + (+p[2]) + '일' : ''; };
 
     function slotHtml(ch, type, sub, notReady) {
       let body;
@@ -204,11 +207,14 @@
       return `<div class="sb-slot${type === 'after' ? ' after' : ''}"><div class="sb-tag">${tagOf(ch, type)}</div>${body}</div>`;
     }
 
-    async function render(me, partOf) {
+    // lockOf[챌린지] = 시작일 — 있으면 시작 전(2026-09-03). 문항·제출 칸 대신 시작일 안내만 그린다.
+    async function render(me, partOf, lockOf) {
       const box = document.getElementById('sbCards');
-      ctx = { me: me, partOf: partOf };
+      lockOf = lockOf || {};
+      ctx = { me: me, partOf: partOf, lockOf: lockOf };
       let keys = CH_ORDER.filter(c => c in partOf);
       if (onlyCh) keys = keys.filter(c => c === onlyCh);
+      const openKeys = keys.filter(c => !lockOf[c]);
 
       if (!keys.length) {
         const want = onlyCh ? (CH_META[onlyCh].label + ' ') : '';
@@ -220,19 +226,21 @@
         return;
       }
 
-      // 제출물 조회 — 표 미생성(PGRST205 등)이면 '준비 중'으로 조용히 내려간다.
+      // 제출물 조회 — 표 미생성(PGRST205 등)이면 '준비 중'으로 조용히 내려간다. 시작 전뿐이면 조회 안 함.
       let subs = [], notReady = false;
-      try {
-        const { data, error } = await MONC.sb.from('challenge_submissions')
-          .select('*').eq('member_id', me);
-        if (error) notReady = true; else subs = data || [];
-      } catch (_) { notReady = true; }
+      if (openKeys.length) {
+        try {
+          const { data, error } = await MONC.sb.from('challenge_submissions')
+            .select('*').eq('member_id', me);
+          if (error) notReady = true; else subs = data || [];
+        } catch (_) { notReady = true; }
+      }
       const subOf = {};
       subs.forEach(s => { subOf[s.challenge + '#' + s.type] = s; });
 
       // 승자각 작성 여부 — answers 에서 제목만 가볍게 받는다(select('*') 방어는 mypage 와 동일)
       const doneOf = {};
-      if (keys.indexOf('answer') >= 0) {
+      if (openKeys.indexOf('answer') >= 0) {
         await loadAnswerLessons();
         try {
           let { data, error } = await MONC.sb.from('answers')
@@ -249,6 +257,12 @@
       box.innerHTML = keys.map(c => {
         const meta = CH_META[c];
         const rTxt = partOf[c] ? partOf[c] + '기' : '';
+        if (lockOf[c]) {
+          return `<div class="sb-card">
+            <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${esc(rTxt)}</span></div>
+            <p class="sb-hint">${esc(mdKor(lockOf[c]))}에 시작해요. 문항과 제출 칸은 시작일에 열려요.</p>
+          </div>`;
+        }
         if (meta.media === 'answers') {
           return `<div class="sb-card">
             <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${rTxt ? esc(rTxt) + ' · ' : ''}답변 ${Object.keys(doneOf).length}/${ANSWER_DAYS.length}</span></div>
@@ -326,7 +340,7 @@
             }, { onConflict: 'member_id,challenge,type' });
             if (error) throw error;
             if (old && old !== path) { try { await MONC.sb.storage.from('recordings').remove([old]); } catch (_) {} }
-            await render(ctx.me, ctx.partOf);
+            await render(ctx.me, ctx.partOf, ctx.lockOf);
             return;   // 카드를 통째로 다시 그렸으니 버튼 복원 불필요(요소가 교체됐다)
           } catch (e) {
             alert('업로드하지 못했어요: ' + (e && e.message ? e.message : e));
@@ -344,7 +358,7 @@
       if (!(await MONC.requireConsent())) return;
       const me = session.user.id;
 
-      // 참가 판정 — mypage 와 같은 기준(결제완료·무료·부분 환불 유지, 같은 챌린지는 최신 기수)
+      // 참가 판정 — mypage 와 같은 기준(결제완료·무료·부분 환불 유지)
       const { data: myApps } = await MONC.sb.from('applications')
         .select('created_at, challenges, total_price, paid, refunded, payment_status')
         .eq('member_id', me).order('created_at', { ascending: false });
@@ -353,20 +367,28 @@
         a.payment_status === 'partial_refunded' ? '부분' :
         a.payment_status === 'free' ? '무료' :
         (a.paid || a.payment_status === 'paid') ? '결제' : '대기';
-      const partOf = {};
+      const roundsOf = {};
       (myApps || []).forEach(a => {
         const st = stateOf(a);
         if (st !== '결제' && st !== '무료' && st !== '부분') return;
         (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
           if (!c || c.type === 'lecture' || c.lecture_id || !CH_META[c.challenge]) return;
-          const r = Number(c.round) || null;
-          if (!(c.challenge in partOf) || (r && (!partOf[c.challenge] || r > partOf[c.challenge]))) {
-            partOf[c.challenge] = r;
-          }
+          (roundsOf[c.challenge] = roundsOf[c.challenge] || []).push(Number(c.round) || null);
         });
       });
+      // 시작 전 기수는 잠근다(2026-09-03) — 기수 선택·시작일 규칙은 recruit.js(mypage 와 한 벌).
+      // recruit.js 가 옛 캐시면 함수가 없다 → 최신 기수·열림(종전 동작).
+      const startMap = (typeof loadRoundStartMap === 'function') ? await loadRoundStartMap() : null;
+      const partOf = {}, lockOf = {};
+      Object.keys(roundsOf).forEach(ch => {
+        const pick = (typeof pickContentRound === 'function')
+          ? pickContentRound(ch, roundsOf[ch], startMap)
+          : { round: roundsOf[ch].filter(Boolean).sort((a, b) => b - a)[0] || null, locked: false };
+        partOf[ch] = pick.round;
+        if (pick.locked) lockOf[ch] = pick.start;
+      });
 
-      await render(me, partOf);
+      await render(me, partOf, lockOf);
     })();
   })();
 </script>

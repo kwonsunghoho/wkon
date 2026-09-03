@@ -396,6 +396,8 @@ alert 은 닫는 순간 문구가 사라지고, 모바일에서 **어디를 고�
 - **⚠️ `loadRecruitDataFromSupabase` 는 `select('*')`** — `start_mode` 를 나열하면 마이그레이션
   미적용 환경에서 조회 전체가 400 난다. 미적용이면 `fcfs=false` 로 떨어져 기존 동작 그대로.
 - 서버는 모집 기간을 안 본다(중복·정원만 판정) — 선착순이라고 verify-payment 를 고칠 일은 없다.
+- **`program_start` 는 선착순에서도 저장한다**(2026-09-03) — 학생 화면(마이페이지·submit)의 문항·제출 칸이
+  열리는 날. 규칙(`recruit.js roundStartDate`)과 배경은 mypage.md '시작 전 잠금'.
 - 검증: `scratchpad/recruit-fcfs-test.mjs`(node 16검사) + admin 검사대·상세/허브 목 주입 실측(2026-08-06).
 1. **기수 0건**: 상태 `none` · 칩/버튼 '다음 기수 준비 중' · 버튼을 눌러도 **apply.html 로 안 감** ·
    오픈 알림 시트가 열림 · 신청 페이지 카드 4개 전부 비활성 + '준비 중' + 오픈 알림 버튼.

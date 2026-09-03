@@ -109,7 +109,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 답변 첨삭 | `polish.html`(서버는 ai-killer `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB), 난이도는 `questions.level` 한 곳(`.eq('level')` 금지 — 미적용 환경 400), 진입은 난이도 화면 먼저 | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
 | 답변 저장소·크레딧 | `answers.html`·`mypage.html` | 저장 무료·무제한, answers/mypage 는 같이 고친다 | `docs/notes/credits.md` |
-| 마이페이지 | `mypage.html`·`submit.html`(챌린지 제출 입구) | '오늘 한 칸'엔 사이트가 아는 사실만, 접이는 데이터 있는 줄만. 제출 칸 이름·규칙은 mypage·admin·submit 세 곳 한 벌 | `docs/notes/mypage.md` |
+| 마이페이지 | `mypage.html`·`submit.html`(챌린지 제출 입구) | '오늘 한 칸'엔 사이트가 아는 사실만, 접이는 데이터 있는 줄만. 제출 칸 이름·규칙은 mypage·admin·submit 세 곳 한 벌. **결제했어도 기수 시작일(`challenge_rounds.program_start`) 전엔 문항·제출 칸을 열지 않는다**(판정은 `recruit.js` 한 곳) | `docs/notes/mypage.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
 | admin | `admin.html` | 좌측 사이드바 셸 + '오늘' 브리핑 — 탭 추가는 그룹부터 정한다. UI 는 역할별 모양 한 벌 — **알약(`999px`) 금지.** 회원 관리 등급 판정 두 자리(`free_use` 는 delta 0 · '관심'의 신청 이력)를 건드리면 사람이 잘못 보관된다 | `docs/notes/admin.md` |

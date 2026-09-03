@@ -604,8 +604,9 @@
           지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
   <script src="pay-return.js"></script>
   <script src="sojae-common.js?v=3"></script>
-  <!-- 모집 상태 판정(challenge_rounds) — 시작 안내 줄의 '모집 중' 배지용. 함수만 정의하는 파일이라 부작용 없음. -->
-  <script src="recruit.js"></script>
+  <!-- 모집 상태 판정(challenge_rounds) — 시작 안내 줄의 '모집 중' 배지 + 제출 카드의 시작일 잠금(loadRoundStartMap·pickContentRound).
+       함수만 정의하는 파일이라 부작용 없음. 잠금 함수를 추가하며 ?v=2(옛 캐시면 전부 열림으로 떨어진다). -->
+  <script src="recruit.js?v=2"></script>
   <!-- 비포/애프터 음성 동시 재생 차단(전역). 이 화면엔 .ba-cell 이 없어 UI 는 그대로다 -->
   <script src="ba-audio.js" defer></script>
   <script>
@@ -1236,20 +1237,26 @@
     const MAX_SUB_MB = 50;   // 버킷 file_size_limit(50MB)와 한 쌍 — 한쪽만 바꾸지 말 것
     let _chSubCtx = null;    // 업로드 뒤 다시 그릴 때 쓰는 재료
 
-    async function renderChSubs(me, partOf, ansLoad) {
+    // lockOf[챌린지] = 시작일 — 있으면 그 챌린지는 시작 전이다(2026-09-03). 문항·제출 칸을 그리지 않는다.
+    async function renderChSubs(me, partOf, ansLoad, lockOf) {
       const box = document.getElementById('chSubs');
       const keys = CH_SUB_ORDER.filter(c => c in partOf);
       if (!keys.length) return;
-      _chSubCtx = { me: me, partOf: partOf, ansLoad: ansLoad };
+      lockOf = lockOf || {};
+      _chSubCtx = { me: me, partOf: partOf, ansLoad: ansLoad, lockOf: lockOf };
+      const openKeys = keys.filter(c => !lockOf[c]);
 
       // 제출물 조회 — 표 미생성(PGRST205 등)이면 '준비 중'으로 조용히 내려간다.
       // ⚠️ .eq('member_id') 를 빼면 admin 계정에선 전 회원 행이 내려온다(chsub_admin_all).
+      // 시작 전 챌린지뿐이면 조회하지 않는다(보여줄 칸이 없다).
       let subs = [], notReady = false;
-      try {
-        const { data, error } = await MONC.sb.from('challenge_submissions')
-          .select('*').eq('member_id', me);
-        if (error) notReady = true; else subs = data || [];
-      } catch (_) { notReady = true; }
+      if (openKeys.length) {
+        try {
+          const { data, error } = await MONC.sb.from('challenge_submissions')
+            .select('*').eq('member_id', me);
+          if (error) notReady = true; else subs = data || [];
+        } catch (_) { notReady = true; }
+      }
       const subOf = {};
       subs.forEach(s => { subOf[s.challenge + '#' + s.type] = s; });
 
@@ -1258,7 +1265,7 @@
       // ⚠️ 제목은 두 곳에서 온다 — 직접 쓴 글은 title, 소재 발굴 답변은 questions.content
       //    (answers.html·답변노트 접이의 titleOf 와 같은 규칙).
       const doneOf = {};
-      if (keys.indexOf('answer') >= 0) {
+      if (openKeys.indexOf('answer') >= 0) {
         await loadAnswerLessons();   // 문항이 바뀌었을 수 있다 — 판정 전에 정본을 받는다
         ((await ansLoad) || []).forEach(a => {
           const t = (a.title || '').trim() || ((a.questions || {}).content || '').trim();
@@ -1270,6 +1277,13 @@
       box.innerHTML = keys.map(c => {
         const meta = CH_SUB_META[c];
         const rTxt = partOf[c] ? partOf[c] + '기' : '';
+        if (lockOf[c]) {
+          // 시작 전 — 문항·제출 칸은 시작일에 연다. 무엇을 하게 될지는 적지 않는다(챌린지 내용).
+          return `<div class="v2-card">
+            <div class="v2-cs-h"><span class="v2-cs-t">${meta.label}</span><span class="v2-cs-r">${esc(rTxt)}</span></div>
+            <p class="v2-cs-hint">${esc(mdKor(lockOf[c]))}에 시작해요. 문항과 제출 칸은 시작일에 열려요. 그동안 소재 발굴로 미리 준비해 보세요.</p>
+          </div>`;
+        }
         if (meta.media === 'answers') {
           const doneN = Object.keys(doneOf).length;
           return `<div class="v2-card">
@@ -1298,12 +1312,13 @@
           <div class="v2-cs-slots">${slots}</div>
         </div>`;
       }).join('')
-        // 챌린지 후기 쓰기 — 참가자에게만 보이는 입구(2026-08-20 후기 직접 제출·review-write.html)
-        + `<div class="v2-card">
+        // 챌린지 후기 쓰기 — 참가자에게만 보이는 입구(2026-08-20 후기 직접 제출·review-write.html).
+        // 시작한 챌린지가 하나도 없으면(전부 시작 전) 후기 입구도 없다.
+        + (openKeys.length ? `<div class="v2-card">
           <div class="v2-cs-h"><span class="v2-cs-t">챌린지 후기</span></div>
           <p class="v2-cs-hint">참여한 챌린지의 후기를 남겨 주세요.</p>
           <a class="v2-outline" href="review-write.html" style="margin-top:12px;">후기 쓰기</a>
-        </div>`;
+        </div>` : '');
       box.style.display = '';
       wireChSubs(notReady);
 
@@ -1380,7 +1395,7 @@
             if (error) throw error;
             // 확장자가 바뀌었으면 옛 파일 정리(실패해도 무시 — 재생은 새 경로로 간다)
             if (old && old !== path) { try { await MONC.sb.storage.from('recordings').remove([old]); } catch (_) {} }
-            await renderChSubs(_chSubCtx.me, _chSubCtx.partOf, _chSubCtx.ansLoad);
+            await renderChSubs(_chSubCtx.me, _chSubCtx.partOf, _chSubCtx.ansLoad, _chSubCtx.lockOf);
             return;   // 카드를 통째로 다시 그렸으니 버튼 복원 불필요(요소가 교체됐다)
           } catch (e) {
             alert('업로드하지 못했어요: ' + (e && e.message ? e.message : e));
@@ -1526,19 +1541,30 @@
         a.payment_status === 'free' ? ['무료 참여', 'is-ok'] :
         (a.paid || a.payment_status === 'paid') ? ['결제완료', 'is-ok'] : ['입금대기', 'is-bad'];
 
-      // 참가 챌린지 → 제출 카드 재료. 결제완료·무료(미환불)만, 같은 챌린지는 최신 기수 하나.
+      // 참가 챌린지 → 제출 카드 재료. 결제완료·무료(미환불)만.
       // ⚠️ 이 판정은 '카드를 그릴지'만 정한다 — 업로드 허용의 원장은 DB RLS(is_challenge_participant)다.
-      const partOf = {};
+      const roundsOf = {};
       (myApps || []).forEach(a => {
         const st = stateOf(a)[0];
         if (st !== '결제완료' && st !== '무료 참여' && st !== '부분 환불') return;
         (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
           if (!c || c.type === 'lecture' || c.lecture_id || !CH_SUB_META[c.challenge]) return;
-          const r = Number(c.round) || null;
-          if (!(c.challenge in partOf) || (r && (!partOf[c.challenge] || r > partOf[c.challenge]))) {
-            partOf[c.challenge] = r;
-          }
+          (roundsOf[c.challenge] = roundsOf[c.challenge] || []).push(Number(c.round) || null);
         });
+      });
+      // 시작 전 기수는 문항·제출 칸을 열지 않는다(2026-09-03 오너 지적 — 4기 진행 중에 5기 결제자가
+      // 챌린지 내용을 미리 봤다). 시작일은 challenge_rounds(recruit.js roundStartDate 규칙).
+      // 같은 챌린지에 기수가 여럿이면 pickContentRound 가 고른다 — 시작한 기수 중 최신, 없으면 가장 먼저
+      // 시작할 기수를 잠근 채. recruit.js 가 옛 캐시(함수 없음)면 전부 열림으로 떨어진다(?v=2 로 실었다).
+      const todayS = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
+      const startMap = (typeof loadRoundStartMap === 'function') ? await loadRoundStartMap() : null;
+      const partOf = {}, lockOf = {};   // lockOf[챌린지] = 시작일(YYYY-MM-DD) — 있으면 잠김
+      Object.keys(roundsOf).forEach(ch => {
+        const pick = (typeof pickContentRound === 'function')
+          ? pickContentRound(ch, roundsOf[ch], startMap, todayS)
+          : { round: roundsOf[ch].filter(Boolean).sort((a, b) => b - a)[0] || null, locked: false };
+        partOf[ch] = pick.round;
+        if (pick.locked) lockOf[ch] = pick.start;
       });
 
       if (myApps && myApps.length) {
@@ -1574,18 +1600,22 @@
       // ── 회원 상태별 배치 ──────────────────────────────────────────────
       const state = memberState(profile, Object.keys(partOf).length > 0, myLectures.length > 0);
       const cohort = profile && profile.cohorts;
-      const todayS = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
       // 기수 배정 후 시작 전이면 '시작 전' 문구로 (일차 계산이 0 이하)
       const dayN = (cohort && cohort.start_date)
         ? Math.floor((Date.parse(todayS) - Date.parse(String(cohort.start_date))) / 86400000) + 1 : 0;
-      const phase = (state === 'active' && cohort && cohort.start_date && todayS < String(cohort.start_date))
-        ? 'prestart' : state;
+      // 시작 전 판정 둘: ① 기수(cohort) 배정 + 시작일 전 ② 결제한 챌린지가 전부 시작 전(lockOf)
+      //    — ②가 없으면 cohort 미배정 신청자(5기 결제 직후)에게 '챌린지 진행 중이에요'가 뜬다.
+      const lockKeys = Object.keys(lockOf);
+      const allLocked = lockKeys.length > 0 && lockKeys.length === Object.keys(partOf).length;
+      const preStart = (cohort && cohort.start_date && todayS < String(cohort.start_date)) ? String(cohort.start_date)
+        : (allLocked ? lockKeys.map(k => lockOf[k]).sort()[0] : null);
+      const phase = (state === 'active' && preStart) ? 'prestart' : state;
 
       // 신원 줄
       document.getElementById('idSub').textContent = cohort
         ? [cohort.name, (cohort.start_date && cohort.end_date) ? mdDot(cohort.start_date) + ' ~ ' + mdDot(cohort.end_date) : '']
             .filter(Boolean).join(' · ')
-        : (phase === 'active' ? '챌린지 진행 중' : '아직 참여 중인 챌린지 없음');
+        : (phase === 'active' ? '챌린지 진행 중' : phase === 'prestart' ? '챌린지 시작 전' : '아직 참여 중인 챌린지 없음');
 
       // 오늘 한 칸 — 문장은 전부 '사이트가 아는 사실'만 (제출 여부·마감 판정 문구 금지)
       const tagEl = document.getElementById('todayTag');
@@ -1616,7 +1646,7 @@
         nextQ.dataset.role = 'q';
         if (phase === 'prestart') {
           dateEl.textContent = mdKor(todayS);
-          headEl.textContent = mdKor(cohort.start_date) + '에 시작해요';
+          headEl.textContent = mdKor(preStart) + '에 시작해요';
           descEl.textContent = '첫 미션 안내는 챌린지 카톡방에서 드려요. 그동안 소재 발굴로 미리 준비해 보세요.';
         } else if (phase === 'done') {
           dateEl.textContent = mdKor(todayS);
@@ -1637,8 +1667,9 @@
       }
       syncTodayQ();
 
-      // 내 챌린지 제출 — 결제한 챌린지가 있으면 카드가 뜬다(기수 배정 여부와 무관)
-      await renderChSubs(me, partOf, ansLoad);
+      // 내 챌린지 제출 — 결제한 챌린지가 있으면 카드가 뜬다(기수 배정 여부와 무관).
+      // 시작 전 기수(lockOf)는 문항·제출 칸 대신 '시작일 안내'만.
+      await renderChSubs(me, partOf, ansLoad, lockOf);
 
       // (legacy) 회원당 한 쌍 Before/After — admin 이 올려 준 옛 기록이 있을 때만 접이가 보인다.
       // 새 기록은 위 제출 카드가 맡는다.

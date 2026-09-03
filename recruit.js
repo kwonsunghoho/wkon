@@ -331,3 +331,55 @@ async function applyGlobalRecruitCta() {
       : (best.dday === 'D-Day' ? '오늘 오픈' : `다음 모집 ${best.dday}`);
   badges.forEach(el => { el.textContent = label; el.hidden = false; });
 }
+
+/* ── 챌린지 콘텐츠 열림 판정 — 회원 화면(mypage 제출 카드·submit.html) 공용 ──
+   2026-09-03 오너 지적: 4기 진행 중에 5기 신청자가 결제 직후 마이페이지에서 문항·제출 칸을
+   봤다. 결제 여부만 보고 카드를 그렸기 때문(기수 시작일을 어디서도 안 읽었다).
+   규칙: 신청한 기수의 **시작일 전엔 문항·제출 칸을 열지 않는다.**
+
+   시작일 = challenge_rounds.program_start.
+           없으면 '개강일 지정' 기수는 모집 마감(recruit_end) 다음 날로 본다 — 모집 중엔 열리지 않는다.
+           선착순(fcfs)이면서 program_start 도 없으면 **시작 시점을 모른다 → 연다**(admin 에서
+           시작일을 넣으면 그날부터 열린다). 조회 실패도 연다 — 진행 중인 기수를 장애로 잠그지 않는다.
+   ⚠️ 이 판정은 '카드를 그릴지'만 정한다. 업로드 허용의 원장은 DB RLS(is_challenge_participant). */
+function roundStartDate(r) {
+  if (!r) return null;
+  if (r.program_start) return String(r.program_start).slice(0, 10);
+  if (r.start_mode !== 'fcfs' && r.recruit_end) {
+    const d = parseDate(String(r.recruit_end));
+    if (d) { d.setDate(d.getDate() + 1); return ymdLocal(d); }
+  }
+  return null;
+}
+function ymdLocal(d) {
+  const p = n => (n < 10 ? '0' : '') + n;
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+/* {'voice#5': '2026-09-15', …} — 시작일을 모르는 기수는 null. 조회 실패면 null 을 돌려준다. */
+async function loadRoundStartMap() {
+  if (!window.MONC || !window.MONC.sb) return null;
+  try {
+    // select('*') 유지 — program_start·start_mode 를 나열하면 미적용 환경에서 400(CLAUDE.md).
+    const { data, error } = await window.MONC.sb.from('challenge_rounds').select('*');
+    if (error || !data) return null;
+    const map = {};
+    data.forEach(r => { map[r.challenge + '#' + r.round] = roundStartDate(r); });
+    return map;
+  } catch (_) { return null; }
+}
+/* 한 챌린지에 결제한 기수들(번호 배열) 중 화면에 쓸 기수를 고른다.
+   시작한 기수가 있으면 그중 최신(4기 진행 중 + 5기 결제 → 4기 카드가 유지된다),
+   하나도 안 시작했으면 가장 먼저 시작할 기수를 잠근 채 돌려준다.
+   → { round, start, locked }. startMap 이 null(조회 실패)이면 최신 기수·열림. */
+function pickContentRound(challenge, rounds, startMap, todayStr) {
+  const list = Array.from(new Set((rounds || []).map(r => Number(r) || null)));
+  if (!list.length) return { round: null, start: null, locked: false };
+  const today = todayStr || ymdLocal(new Date());
+  const info = list.map(r => {
+    const start = (startMap && r != null) ? (startMap[challenge + '#' + r] || null) : null;
+    return { round: r, start: start, locked: !!(start && today < start) };
+  });
+  const open = info.filter(x => !x.locked);
+  if (open.length) return open.reduce((a, b) => ((b.round || 0) > (a.round || 0) ? b : a));
+  return info.reduce((a, b) => (b.start < a.start ? b : a));
+}
