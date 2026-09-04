@@ -154,52 +154,6 @@
       .ch-list { max-width: 940px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
 
-    /* ── 선두 카드(전체 폭 가로) — 2026-09-04 오너 확정 B안.
-       항공사를 지정한 챌린지(대.문.각)처럼 성격이 다른 것을 격자에 섞지 않고 맨 위에 따로 둔다.
-       ⚠️⚠️ #ch-list **밖**의 자기 컨테이너에 둔다. 안에 넣으면 heroReorder() 가 모집 상태로
-          카드를 재정렬하면서 기수가 없을 때 이 카드를 격자 한가운데로 밀어 2×2 가 깨진다.
-          모집 띠·모집기간 줄·후기 수는 document 전역 선택자라 격자 밖에서도 그대로 채워진다.
-       ⚠️ 그래서 이 카드는 재정렬 대상이 아니다 — 모집 중이 아니어도 자리를 지킨다(의도된 고정). */
-    .ch-lead {
-      width: 100%; max-width: 560px; margin: 0 auto var(--space-2);
-      padding: 0 var(--space-3);
-    }
-    @media (min-width: 860px) { .ch-lead { max-width: 940px; } }
-    /* ⚠️ 높이는 min-height 로 잡고 사진은 aspect-ratio 없이 늘린다(align-items:stretch).
-       가로 카드에 aspect-ratio 를 주면 카드 폭이 두 배가 되는 데스크톱(940px)에서 사진 높이가
-       같이 두 배가 되어 화면 하나를 통째로 먹는다. */
-    .ch-card.is-wide { flex-direction: row; min-height: 176px; }
-    .ch-card.is-wide .ch-shot {
-      width: 46%; flex: 0 0 46%; aspect-ratio: auto;
-      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-    }
-    /* 데스크톱 — 카드 폭이 940px 라 본문을 한 줄로 편다(세로로 쌓으면 오른쪽이 비어 보인다):
-       왼쪽 이름·설명, 오른쪽 후기 수·모집 기간. */
-    @media (min-width: 860px) {
-      .ch-card.is-wide { min-height: 208px; }
-      .ch-card.is-wide .ch-shot { width: 34%; flex: 0 0 34%; }
-      .ch-card.is-wide .ch-body { flex-direction: row; align-items: center; gap: 24px; padding: 20px 28px; }
-      .ch-card.is-wide .ch-lead-txt { flex: 1 1 auto; min-width: 0; }
-      .ch-card.is-wide .ch-lead-info { flex: 0 0 auto; text-align: right; }
-      .ch-card.is-wide .ch-name { font-size: 24px; }
-      .ch-card.is-wide .ch-line { font-size: 14.5px; }
-    }
-    /* 카테고리 판 — 좁은 폭이라 두 줄까지 허용한다(keep-all 이라 어절에서만 끊긴다).
-       ⚠️ 정사각 카드의 19px 를 그대로 쓰면 '대한항공 문화이해'가 판 밖으로 나간다(375px 실측). */
-    .ch-card.is-wide .ch-cat {
-      font-size: 17px; line-height: 1.3; padding: 7px 8px;
-      white-space: normal; word-break: keep-all; text-align: center;
-    }
-    .ch-card.is-wide .ch-body { justify-content: center; padding: 14px 14px 16px; }
-    .ch-card.is-wide .ch-lead-txt, .ch-card.is-wide .ch-lead-info { display: block; }
-    /* margin-top:auto(정사각 카드의 하단 정렬)를 끈다 — 가로 카드는 본문이 세로 가운데다 */
-    .ch-card.is-wide .ch-meta { margin-top: 8px; }
-    .ch-card.is-wide .ch-proof { margin-top: 10px; }
-    .ch-name { display: block; font-size: 20px; font-weight: 800; color: var(--text); }
-    .ch-line {
-      display: block; margin-top: 6px; font-size: 13px; color: var(--text-muted);
-      line-height: 1.6; word-break: keep-all;
-    }
     .ch-card {
       display: flex; flex-direction: column;
       /* 풀블리드 — 사진이 카드 위를 끝까지 채운다(구 8px 종이 액자 폐지). overflow 가 라운드를 지킨다 */
@@ -269,6 +223,11 @@
       font-size: 19px; font-weight: 800; letter-spacing: .01em; color: #fff;
       background: rgba(27, 58, 107, .85);
     }
+    /* 두 줄짜리 카테고리 판 — '대한항공 문화이해'는 19px 한 줄로는 카드 폭(375px 에서
+       안쪽 약 161px)을 넘는다. 이 카드만 두 줄로 받고 활자를 조금 줄인다.
+       ⚠️ 12px 하한·판 대비(α.85)는 그대로다. 다른 카드의 한 줄 19px 를 건드리지 말 것. */
+    .ch-cat.is-two { font-size: 16px; line-height: 1.25; padding: 7px 8px; }
+
     .ch-shot::after {
       content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
       box-shadow:
@@ -363,29 +322,24 @@
 <!-- 챌린지 카드 — 클릭 = 각 상세 페이지. 신청 버튼은 상세가 담당(허브에 CTA를 두지 않는다 — 오너 확정 2026-07-29) -->
 <section class="ch-section">
 
-  <!-- 선두 카드 — 항공사 지정 챌린지. 격자 밖에 따로 두어 맨 위에 고정한다(위 .ch-lead 주석). -->
-  <div class="ch-lead">
-    <a class="ch-card is-wide" href="challenge-culture.html"
+  <div class="ch-list" id="ch-list">
+
+    <!-- 대.문.각 — 항공사를 지정한 첫 챌린지. 나머지 넷과 같은 규격의 카드다(2026-09-04 오너
+         "다른 카드들이랑 크기 통일해줘"). ⚠️ 전체 폭 가로 카드로 되돌리지 말 것 —
+         데스크톱(940px)에서 본문 오른쪽이 텅 비어 오너가 물렸다. -->
+    <a class="ch-card" href="challenge-culture.html"
        data-recruit-id="culture" data-review-ch="대문각">
       <span class="ch-shot">
         <img src="images/hero-culture.webp" alt="" loading="lazy" decoding="async">
-        <span class="ch-cat">대한항공 문화이해</span>
+        <span class="ch-cat is-two">대한항공<br>문화이해</span>
       </span>
       <span class="ch-body">
-        <span class="ch-lead-txt">
-          <span class="ch-name">대.문.각</span>
-          <span class="ch-line">2주 동안 하루 한 번, 답변 30개를 완성합니다</span>
-        </span>
-        <span class="ch-lead-info">
-          <span class="ch-proof" hidden></span>
-          <span class="ch-meta"></span>
-          <span class="ch-st" hidden></span>
-        </span>
+        <span class="ch-sub">대.문.각 · 2주 챌린지</span>
+        <span class="ch-proof" hidden></span>
+        <span class="ch-meta"></span>
+        <span class="ch-st" hidden></span>
       </span>
     </a>
-  </div>
-
-  <div class="ch-list" id="ch-list">
 
     <a class="ch-card" href="challenge-voice.html"
        data-recruit-id="voice" data-review-ch="보신각">
