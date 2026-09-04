@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대문각 카드 배치 시안 4안 — MONC</title>
+<link rel="stylesheet" href="/tokens.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'SUIT Variable',SUIT,'Apple SD Gothic Neo',-apple-system,sans-serif;color:var(--text);line-height:1.7}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root { --serif: 'SUIT Variable', SUIT, sans-serif; }
+
+    body {
+      font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      overflow-x: hidden;
+      overflow-x: clip;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg3); }
+    ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 99px; }
+
+    /* ── UTILS ── */
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 28px; border-radius: 99px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      text-decoration: none; transition: all .25s ease; border: none; outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* ── Action 버튼 (코랄) — 신청 전환 CTA 전용 ── */
+    .btn-action {
+      background: var(--action); color: var(--action-ink);
+      border-radius: 14px; padding: 16px 28px; font-weight: 700;
+      box-shadow: var(--shadow-action);
+    }
+    .btn-action:hover { background: var(--action-hover); transform: translateY(-2px); box-shadow: var(--shadow-action-lg); }
+    .btn-action:active { transform: translateY(0) scale(.99); box-shadow: var(--shadow-action); }
+    .btn-action:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; }
+
+    /* 에이브로우 라벨 — 코랄 대시(—) 프리픽스 */
+    .section-label {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--accent-ink);
+      margin-bottom: 10px;
+    }
+    .section-label::before {
+      content: ''; width: 26px; height: 1.5px; background: var(--action); flex: none;
+    }
+
+    /* ⚠️ NAV 스타일은 nav.css 로 옮겼다(2026-07-30) — 전 페이지 공용. 여기에 다시 적지 말 것. */
+
+    /* ── PAGE HERO — 홈 '챌린지 문'에서 이어받는 같은 문장. 무대 리듬상 정보 섹션 = 좌측 정렬 ── */
+    .chb-hero {
+      background: var(--bg);
+      padding: 118px 0 10px;
+    }
+    .chb-hero-inner {
+      width: 100%; max-width: 560px; margin: 0 auto;
+      padding: 0 var(--space-3);
+    }
+    /* 제목 = 고딕 A1 900 + 좁힌 자간(2026-08-26 오너 확정 C안 — "타이포 느낌으로 트렌디하게").
+       뒷 구절(em)만 네이비. 폰트는 head 의 서브셋 링크가 받는다 — 워딩 변경 시 그쪽 text= 동반. */
+    .chb-title {
+      font-family: 'Gothic A1', 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', sans-serif;
+      font-weight: 900; color: var(--text);
+      font-size: var(--fs-h2); letter-spacing: -.045em; line-height: 1.3;
+      margin-top: 12px; word-break: keep-all;
+    }
+    .chb-title em { font-style: normal; color: var(--accent-ink); }
+    .chb-sub {
+      margin-top: 13px; font-size: var(--fs-body-sm, 15px); font-weight: 400;
+      color: var(--text-muted); line-height: 1.65; word-break: keep-all;
+    }
+    @media (min-width: 860px) { .chb-hero-inner { max-width: 940px; } }
+
+    /* ── 챌린지 목록 (.ch-*) — 2026-08-03 오너 확정 개편: 클래스101 위계 × 무신사 풀블리드
+       + 모집 중 카드만 이미지 상단 '광 스윕 띠'(85% 네이비). 결정 기록 = outputs/ 목업 4파일
+       (1차 impact 하단 조작안 기각 → 2차 layout 형태안 → 3차 reference 문법 채집 → 4차 band 확정).
+       유지되는 규칙:
+       ⚠️ 흰 카드 금지(베이지 배경 위 이물감) — 종이 그라디언트가 물성을 만든다.
+       ⚠️ 그림자는 회색이 아니라 갈빛(rgba(22,38,64,…)) 3겹 — 하나라도 빼면 물성이 무너진다.
+       ⚠️ 사진 위 '맨글자' 금지(크림 막이 사진을 죽인다)는 유지 — 띠는 불투명 85% 네이비 면 위
+          활자라 오너가 확정한 예외다. 초록 알약·스크림 위 글자는 여전히 금지.
+       ⚠️ 예정·마감 상태는 하단 활자 그대로(.ch-st) + 사진 흑백(.is-dim, recruit.js가 부여).
+          띠는 모집 중에만 — 전 카드에 붙이면 열린 카드가 안 튄다.
+       ⚠️ 증거 줄(.ch-proof)은 실데이터(후기 수)만 — 0건·조회 실패면 줄 자체를 감춘다. */
+    .ch-section { padding: 26px 0 72px; background: var(--bg); }
+    .ch-list {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 var(--space-3);
+      display: grid;
+      gap: var(--space-2);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      /* ⚠️ grid-auto-rows:1fr — 행마다 높이가 갈리면 넉 장이 '한 세트'로 안 읽힌다 */
+      grid-auto-rows: 1fr;
+    }
+    @media (min-width: 860px) {
+      .ch-list { max-width: 940px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    .ch-card {
+      display: flex; flex-direction: column;
+      /* 풀블리드 — 사진이 카드 위를 끝까지 채운다(구 8px 종이 액자 폐지). overflow 가 라운드를 지킨다 */
+      padding: 0; overflow: hidden;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #FCFDFF 0%, #EBF1F8 100%);
+      border: 1px solid rgba(23,42,71, .11);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .9),
+        0 2px 3px rgba(22,38,64, .08),
+        0 18px 36px -14px rgba(22,38,64, .26);
+      text-decoration: none; color: var(--text);
+      transition: box-shadow .18s ease, transform .12s ease;
+    }
+    /* ⚠️ hover 는 반드시 @media (hover:hover) 안에 — 밖에 두면 모바일 탭 잔류 강조가 생긴다 */
+    @media (hover: hover) {
+      .ch-card:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, .9),
+          0 3px 5px rgba(22,38,64, .10),
+          0 24px 44px -14px rgba(22,38,64, .32);
+      }
+    }
+    .ch-card:active { transform: translateY(0) scale(.995); }
+    .ch-card:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; }
+    .ch-shot {
+      /* ⚠️ flex:0 0 auto — 없으면 사진이 눌려 aspect-ratio 가 깨진다 */
+      display: block; position: relative; overflow: hidden; flex: 0 0 auto;
+      aspect-ratio: 4 / 5;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: var(--bg3);
+    }
+    .ch-shot img {
+      display: block; width: 100%; height: 100%;
+      object-fit: cover; object-position: 50% 24%;
+    }
+    /* 띠(약 35px)가 인물 머리를 가리지 않게 띠 있는 카드만 초점을 위로 — 목업 실측 비교로 잡은 값.
+       사진을 교체하면 이 값을 다시 볼 것(door-* object-position 과 같은 성격). */
+    .ch-shot.has-band img { object-position: 50% 8%; }
+    /* 모집 띠 — 모집 중 카드에만 하단 스크립트가 단다. 배경 85% = --accent(#1B3A6B)의 α.85.
+       ⚠️ 띠 밑 최악(순백) 픽셀 실측 대비 7.3:1 — 65% 밑으로 내리면 4.5:1 미달(목업 번외 절 실측).
+       ⚠️ 블러(backdrop-filter) 금지 — 특강 카드 유리 패널 폐지 전례. */
+    .ch-band {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+      padding: 7px 10px; overflow: hidden;
+      font-size: 12px; font-weight: 800; letter-spacing: .03em; color: #fff;
+      background: rgba(27, 58, 107, .85);
+    }
+    /* 광 스윕 — 빛 한 줄기가 2.8초에 한 번 띠를 훑는다(4차 목업 가안 · 오너 확정 "제일 잘보이고 깔끔").
+       left 가 아니라 transform 애니메이션이어야 레이아웃을 안 건드린다. */
+    .ch-band::after {
+      content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 44%;
+      background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .30), transparent);
+      transform: translateX(-120%);
+      animation: chSweep 2.8s ease-in-out infinite;
+    }
+    @keyframes chSweep { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(290%); } }
+    /* 카테고리 판(2026-08-26 오너 확정 C안 — "뭔 챌린지인지 큰 텍스트로 직관적으로 강조") —
+       사진 하단 네이비 판 위 흰 큰 글자(보이스/영상면접/말투 · 어투/답변). 모집 띠와 같은
+       '면 위 활자' 문법이라 '사진 위 맨글자 금지'의 확정 예외다. 배경 α.85 는 띠와 같은 값
+       (최악 픽셀 대비 7.3:1 실측 — 띠 주석 참조). 시안: outputs/challenge-card-category-mockup.html */
+    .ch-cat {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+      display: flex; align-items: center; justify-content: center; padding: 8px 10px;
+      font-size: 19px; font-weight: 800; letter-spacing: .01em; color: #fff;
+      background: rgba(27, 58, 107, .85);
+    }
+    /* 두 줄짜리 카테고리 판 — '대한항공 문화이해'는 19px 한 줄로는 카드 폭(375px 에서
+       안쪽 약 161px)을 넘는다. 이 카드만 두 줄로 받고 활자를 조금 줄인다.
+       ⚠️ 12px 하한·판 대비(α.85)는 그대로다. 다른 카드의 한 줄 19px 를 건드리지 말 것. */
+    .ch-cat.is-two { font-size: 16px; line-height: 1.25; padding: 7px 8px; }
+
+    .ch-shot::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      box-shadow:
+        inset 0 2px 5px rgba(23,42,71, .30),
+        inset 0 0 0 1px rgba(23,42,71, .16);
+    }
+    .ch-card.is-dim .ch-shot img { filter: grayscale(1); }
+    .ch-body { display: flex; flex-direction: column; flex: 1; padding: 12px 12px 14px; }
+    /* 변화 문장(.ch-copy '떨리는 목소리 → …')은 2026-08-26 오너 지시로 폐지 —
+       카테고리 판(.ch-cat)이 제목 역할을 이어받았다("굳이 필요하냐 … 뺀게 나아").
+       본문 첫 줄은 이름 메타('보.신.각 · 2주 챌린지'). */
+    .ch-sub { display: block; font-size: 12px; color: var(--text-dim); }
+    /* 증거 줄 — 후기 수(실데이터·하단 스크립트가 채운다). 0건·실패면 hidden 유지.
+       ⚠️ [hidden] 가드 필수 — display:block 이 UA [hidden] 을 이긴다(.door[hidden] 과 같은 함정) */
+    .ch-proof {
+      display: block; margin-top: 7px;
+      font-size: 12px; font-weight: 800; color: var(--accent-ink); word-break: keep-all;
+    }
+    .ch-proof[hidden] { display: none; }
+    .ch-card.is-dim .ch-proof { color: var(--text-dim); }
+    /* 모집 기간 줄 — recruit 데이터 도착 후 하단 스크립트가 채운다(허브 전용, 홈엔 없던 줄) */
+    .ch-meta {
+      display: block; margin-top: auto; padding-top: 10px;
+      font-size: 12px; font-weight: 700; color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+      /* 줄바꿈은 라벨·날짜 덩어리(.mm) 사이에서만 — 구 통째 nowrap 은 '5기 · 선착순 모집
+         8/24~9/6'(실측 144px)이 카드 내용폭(375px 에서 131px)을 넘겨 끝이 잘렸다
+         (2026-08-26 오너 신고). 덩어리 구조가 네 카드 같아 하단 정렬은 유지된다. */
+    }
+    .ch-meta .mm { white-space: nowrap; }
+    .ch-meta:empty { padding-top: 0; }
+    .ch-st {
+      display: block; margin-top: 0; padding-top: 3px;
+      font-size: var(--fs-caption); font-weight: 700; line-height: 1.4;
+    }
+    /* ⚠️ [hidden] 가드 — 모집 중 카드는 띠가 상태를 말하므로 하단 상태 줄을 숨긴다(중복 방지).
+       display:block 이 UA [hidden] 을 이겨서 가드 없이는 안 숨는다. */
+    .ch-st[hidden] { display: none; }
+    .ch-st.is-open     { color: var(--accent-ink); font-weight: 800; }
+    .ch-st.is-upcoming { color: var(--text-dim); }
+    .ch-st.is-closed   { color: var(--text-dim); }
+    @media (prefers-reduced-motion: reduce) {
+      .ch-card { transition: none; }
+      .ch-band::after { animation: none; }
+    }
+
+    /* ── 홈으로 돌아가기 ── */
+    .chb-back { text-align: center; padding: 0 0 56px; background: var(--bg); }
+    .chb-back a {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 700; color: var(--accent-ink); text-decoration: none;
+      padding: 12px 8px; min-height: 44px;
+    }
+    .chb-back a:hover { text-decoration: underline; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--border); padding: 40px 0; }  /* 배경 없음 — 전체 폭 밴드 폐지(2026-08-05) */
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-logo { display: flex; align-items: center; }
+    .footer-logo img { height: 22px; width: auto; display: block; }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    /* 표적 하한 24px(WCAG 2.5.8 AA) — 구 20px 높이. index.css 의 공용 푸터와 같은 규칙. */
+    .footer-links a { display: inline-flex; align-items: center; min-height: 24px; font-size: 12px; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--primary); }
+    .footer-copy { font-size: 12px; color: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .chb-hero { padding-top: 96px; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .container { padding: 0 16px; }
+    }
+</style>
+  <style>
+    body { background: var(--bg); }
+    .mk-head { max-width: 560px; margin: 0 auto; padding: 30px 16px 8px; }
+    @media (min-width: 860px) { .mk-head { max-width: 940px; } }
+    .mk-tag { display:inline-block; font-size:12px; font-weight:800; letter-spacing:.06em;
+      color:#fff; background:var(--accent); padding:5px 10px; border-radius:6px; }
+    .mk-note { font-size:13px; color:var(--text-muted); line-height:1.65; margin-top:9px; word-break:keep-all; }
+    .mk-rule { max-width:560px; margin:40px auto 0; border-top:1px dashed rgba(23,42,71,.3); }
+    @media (min-width: 860px) { .mk-rule { max-width:940px; } }
+    /* ④ 데스크톱 5열 */
+    .ch-list.five { }
+    @media (min-width: 860px) { .ch-list.five { grid-template-columns: repeat(5, minmax(0,1fr)); } }
+    /* ③ 묶음 소제목 */
+    .ch-group { width:100%; max-width:560px; margin:0 auto; padding:0 var(--space-3); }
+    @media (min-width: 860px) { .ch-group { max-width:940px; } }
+    .ch-group-t { display:flex; align-items:baseline; gap:8px; margin:22px 0 10px; }
+    .ch-group-t b { font-size:16px; font-weight:800; color:var(--text); }
+    .ch-group-t span { font-size:12px; color:var(--text-dim); word-break:keep-all; }
+    .ch-list.in-group { padding:0; max-width:none; }
+  </style>
+</head>
+<body>
+
+<div class="mk-head">
+  <span class="mk-tag">① 대문각을 맨 앞에 (지금 배포된 상태)</span>
+  <p class="mk-note">모집 중인 것끼리 앞으로 오는 기존 정렬은 그대로. 새 챌린지가 가장 먼저 눈에 들어온다. 모바일은 2·2·1, 데스크톱은 4+1.</p>
+</div>
+<section class="ch-section" style="padding:8px 0 0"><div class="ch-list" id="L1"></div></section>
+<div class="mk-rule"></div>
+
+<div class="mk-head">
+  <span class="mk-tag">② 대문각을 맨 뒤에</span>
+  <p class="mk-note">기존 넷의 순서를 그대로 두고 새 것을 끝에 붙인다. 눈에 덜 띄지만 익숙한 자리가 안 흔들린다.</p>
+</div>
+<section class="ch-section" style="padding:8px 0 0"><div class="ch-list" id="L2"></div></section>
+<div class="mk-rule"></div>
+
+<div class="mk-head">
+  <span class="mk-tag">③ 두 묶음으로 가르기</span>
+  <p class="mk-note">‘모든 항공사 공통’ 넉 장과 ‘항공사별’ 한 장을 소제목으로 나눈다. 한 장만 따로 있는 이유가 설명되고, 아시아나·제주 편이 생겨도 자리를 다시 안 만든다.</p>
+</div>
+<section class="ch-section" style="padding:8px 0 0">
+  <div class="ch-group">
+    <div class="ch-group-t"><b>모든 항공사 공통</b><span>목소리 · 표현력 · 말투 · 답변</span></div>
+    <div class="ch-list in-group" id="L3a"></div>
+    <div class="ch-group-t"><b>항공사별</b><span>지원할 회사가 정해졌다면</span></div>
+    <div class="ch-list in-group" id="L3b"></div>
+  </div>
+</section>
+<div class="mk-rule"></div>
+
+<div class="mk-head">
+  <span class="mk-tag">④ 데스크톱은 다섯을 한 줄로</span>
+  <p class="mk-note">데스크톱 열을 4개에서 5개로 바꿔 혼자 남는 카드를 없앤다. 카드가 조금 좁아진다(224px → 176px). 모바일은 ①과 같다.</p>
+</div>
+<section class="ch-section" style="padding:8px 0 60px"><div class="ch-list five" id="L4"></div></section>
+
+<script>
+  var CARDS = {
+    culture:    ['/images/hero-culture.webp',    '대한항공<br>문화이해', '대.문.각 · 2주 챌린지', '',              '1기 · 선착순 모집', 'open',  1],
+    voice:      ['/images/hero-voice.webp',      '보이스',              '보.신.각 · 2주 챌린지', '수강생 후기 55개', '5기 · 선착순 모집 8/24~9/13', 'open', 0],
+    expression: ['/images/hero-expression.webp', '영상면접',            '영.합.각 · 2주 챌린지', '수강생 후기 28개', '5기 · 선착순 모집 8/24~9/13', 'open', 0],
+    answer:     ['/images/hero-answer.webp',     '답변',                '승.자.각 · 2주 챌린지', '수강생 후기 6개',  '5기 · 선착순 모집 8/24~9/13', 'open', 0],
+    spinning:   ['/images/hero-spinning.webp',   '말투 · 어투',          '스.피.닝 · 2주 챌린지', '수강생 후기 19개', '',              'closed', 0]
+  };
+  function card(k) {
+    var c = CARDS[k];
+    var band = c[5] === 'open' ? '<span class="ch-band">모집 중 · ' + (k === 'culture' ? '선착순' : 'D-9') + '</span>' : '';
+    return '<a class="ch-card' + (c[5] === 'closed' ? ' is-dim' : '') + '" href="#">' +
+      '<span class="ch-shot' + (band ? ' has-band' : '') + '">' + band +
+        '<img src="' + c[0] + '" alt="" loading="lazy">' +
+        '<span class="ch-cat' + (c[6] ? ' is-two' : '') + '">' + c[1] + '</span></span>' +
+      '<span class="ch-body">' +
+        '<span class="ch-sub">' + c[2] + '</span>' +
+        (c[3] ? '<span class="ch-proof">' + c[3] + '</span>' : '') +
+        '<span class="ch-meta">' + (c[4] ? '<span class="mm">' + c[4] + '</span>' : '') + '</span>' +
+        (c[5] === 'closed' ? '<span class="ch-st is-closed">다음 기수 준비 중</span>' : '') +
+      '</span></a>';
+  }
+  function fill(id, keys) { document.getElementById(id).innerHTML = keys.map(card).join(''); }
+  var COMMON = ['voice', 'expression', 'answer', 'spinning'];
+  fill('L1', ['culture'].concat(COMMON));
+  fill('L2', COMMON.concat(['culture']));
+  fill('L3a', COMMON);
+  fill('L3b', ['culture']);
+  fill('L4', ['culture'].concat(COMMON));
+</script>
+</body>
+</html>
