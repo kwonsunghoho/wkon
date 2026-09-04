@@ -280,6 +280,7 @@
     #lrPwClearRow[hidden] { display: none; }
     #lrPwClearRow input { width: 24px; height: 24px; accent-color: var(--action); flex: none; }
     #rfAllHint { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin-top: -6px; }
+    .round-form .rf-note { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin: -2px 0 0; line-height: 1.55; }
     #rfAllHint[hidden] { display: none; }
     /* ⚠️⚠️ 날짜 입력은 **네이티브 위젯 렌더링을 끈다**(`appearance:none`).
        2026-08-02 오너가 같은 자리를 세 번 지적했다 — 칸을 넓혀도(span 2) 계속 삐져나왔다.
@@ -1403,6 +1404,9 @@
         <div class="field field-date"><label for="rfStart">모집 시작</label><input id="rfStart" type="date"></div>
         <div class="field field-date"><label for="rfEnd" id="rfEndLabel">모집 마감</label><input id="rfEnd" type="date"></div>
         <div class="field field-date"><label for="rfProgram" id="rfProgramLabel">프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
+        <!-- 학생 화면(마이페이지·제출 입구)의 문항·제출 칸은 이 시작일부터 열린다(2026-09-03).
+             비우면 '개강일 지정'은 모집 마감 다음 날, 선착순은 바로 열린다 — recruit.js roundStartDate. -->
+        <p class="rf-note">마이페이지의 문항·제출 칸은 <b>프로그램 시작일부터</b> 열려요. 비우면 개강일 지정은 모집 마감 다음 날, 선착순은 결제 즉시 열립니다 — 선착순은 시작이 정해지면 날짜를 넣어 주세요.</p>
         <!-- 4개 한번에 — 같은 날짜로 4개 챌린지 기수를 한 번에 등록(오너 요청 2026-08-06).
              기수는 챌린지마다 '기존 최고 기수 + 1' 로 자동 매긴다(아래 안내 줄이 미리 보여 준다). -->
         <label id="rfAllRow">
@@ -4020,10 +4024,8 @@
     function updateModeUi() {
       const fcfs = document.getElementById('rfMode').value === 'fcfs';
       document.getElementById('rfEndLabel').textContent = fcfs ? '모집 마감(선택)' : '모집 마감';
-      const prog = document.getElementById('rfProgram');
-      prog.disabled = fcfs;
-      if (fcfs) prog.value = '';
-      document.getElementById('rfProgramLabel').textContent = fcfs ? '프로그램 시작(선착순은 미정)' : '프로그램 시작(선택)';
+      // 선착순도 시작일을 받는다(2026-09-03) — 학생 화면 잠금의 기준이라 잠그면 잠글 방법이 없다.
+      document.getElementById('rfProgramLabel').textContent = fcfs ? '프로그램 시작(정해지면 입력)' : '프로그램 시작(선택)';
     }
     document.getElementById('rfMode').addEventListener('change', updateModeUi);
 
@@ -4053,7 +4055,7 @@
       updateModeUi();
       document.getElementById('rfStart').value   = r.recruit_start || '';
       document.getElementById('rfEnd').value     = r.recruit_end || '';
-      if (r.start_mode !== 'fcfs') document.getElementById('rfProgram').value = r.program_start || '';
+      document.getElementById('rfProgram').value = r.program_start || '';
       document.getElementById('rfAll').checked = false;
       document.getElementById('rfAllRow').hidden = true;   // 수정은 한 기수만 — 한번에 등록과 섞지 않는다
       updateBulkUi();
@@ -4303,7 +4305,7 @@
           <div>
             <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
             <div class="ri-sub">${r.start_mode === 'fcfs'
-              ? '선착순 · 모집 ' + fmtDay(r.recruit_start) + ' ~' + (r.recruit_end ? ' ' + fmtDay(r.recruit_end) : '') + ' · 인원이 모이면 시작'
+              ? '선착순 · 모집 ' + fmtDay(r.recruit_start) + ' ~' + (r.recruit_end ? ' ' + fmtDay(r.recruit_end) : '') + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : ' · 인원이 모이면 시작')
               : '모집 ' + fmtDay(r.recruit_start) + ' ~ ' + fmtDay(r.recruit_end) + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : '')}</div>
           </div>
           <div class="ri-actions">
@@ -4329,7 +4331,7 @@
       const mode    = document.getElementById('rfMode').value;   // 'scheduled' | 'fcfs'
       const start   = document.getElementById('rfStart').value;
       const end     = document.getElementById('rfEnd').value || null;
-      const program = mode === 'fcfs' ? null : (document.getElementById('rfProgram').value || null);
+      const program = document.getElementById('rfProgram').value || null;   // 선착순도 받는다(학생 화면 잠금 기준)
 
       if (!start) { alert('모집 시작을 입력하세요.'); return; }
       // 선착순만 마감 없이 열 수 있다 — 개강일 지정에서 마감이 비면 '언제까지 모집인지' 아무도 모른다
