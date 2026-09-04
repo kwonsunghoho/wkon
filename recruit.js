@@ -203,7 +203,7 @@ async function applyIndexRecruit() {
    apply.reorderCards · challenges.heroReorder · index.challengeChip)는 전부 '키 없음'을
    이미 안전하게 다룬다 — 카드를 비활성하지 않고, 정렬은 가운데, 개수는 안 센다.
    여기서 하드코딩 날짜를 다시 넣으면 그 안전장치가 통째로 무력해진다(파일 맨 위 실사고). */
-const CHALLENGE_IDS = ['voice', 'expression', 'spinning', 'answer'];
+const CHALLENGE_IDS = ['voice', 'expression', 'spinning', 'answer', 'culture'];
 
 async function loadChallengeStatuses() {
   if (window._challengeStatuses) return;

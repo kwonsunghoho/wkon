@@ -102,7 +102,7 @@
     'games.html': 'tools',
     'challenges.html': 'challenge', 'challenge-voice.html': 'challenge',
     'challenge-expression.html': 'challenge', 'challenge-spinning.html': 'challenge',
-    'challenge-answer.html': 'challenge',
+    'challenge-answer.html': 'challenge', 'challenge-culture.html': 'challenge',
     'lab.html': 'lab',
     'lab-shelf.html': 'lab', 'lab-archive.html': 'lab',
     /* ⚠️ lab-shelf.html 은 열리자마자 history.replaceState 로 주소를 lab-<key>.html 로

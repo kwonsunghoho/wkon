@@ -24,7 +24,8 @@
     voice:      { label: '보.신.각', what: '목소리' },
     expression: { label: '영.합.각', what: '표현력' },
     spinning:   { label: '스.피.닝', what: '말투' },
-    answer:     { label: '승.자.각', what: '답변' }
+    answer:     { label: '승.자.각', what: '답변' },
+    culture:    { label: '대.문.각', what: '대한항공 문화이해' }
   };
 
   var CSS = [

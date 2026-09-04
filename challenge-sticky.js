@@ -31,7 +31,8 @@
   if (!CH) return;
 
   var NAME = {
-    voice: '보.신.각', expression: '영.합.각', spinning: '스.피.닝', answer: '승.자.각'
+    voice: '보.신.각', expression: '영.합.각', spinning: '스.피.닝', answer: '승.자.각',
+    culture: '대.문.각'
   }[CH] || '챌린지';
 
   /* 챌린지를 지도하지 않는 연구원은 뺀다(pages.md — '연구진 전원 = 챌린지 코치'가 아니다) */
