@@ -38,9 +38,15 @@
   /* 챌린지를 지도하지 않는 연구원은 뺀다(pages.md — '연구진 전원 = 챌린지 코치'가 아니다) */
   var NON_COACH = { hyun: 1 };
 
-  /* 챌린지별 담당 코치 — 오너 확정(2026-08-02). researchers-data.js 의 id 를 쓴다.
+  /* 챌린지별 담당 코치 — 오너 확정(2026-08-02 · 2026-09-04 대문각=김유리 추가).
      ⚠️ 여기 없는 챌린지는 담당을 말하지 않고 코치진 전체만 보여준다(추측 금지). */
-  var LEAD = { voice: 'kwon', expression: 'park', spinning: 'park', answer: 'park' };
+  var LEAD = { voice: 'kwon', expression: 'park', spinning: 'park', answer: 'park', culture: 'kim' };
+
+  /* 진행 방식이 **코치 가이던스 영상 + 매일 직접 작성**인 챌린지 — 담당 코치 문장이 다르다.
+     ⚠️⚠️ 이 둘에 '1:1'·'미션을 확인하고 피드백을 남겨요' 를 쓰지 말 것. 코치가 중간에
+        봐 주지 않는 상품이라 지키지 못할 약속이 된다(apply.html '서비스 제공 안내'의
+        진행 주기 줄·FAQ '어떻게 진행되나요?' 와 한 벌 — 셋을 같이 고친다). */
+  var GUIDE = { answer: 1, culture: 1 };
 
   /* ── 스타일 (이 파일이 주입 — 상세 4종 인라인 CSS 에 복사하지 말 것) ── */
   if (!document.getElementById('chStickyCss')) {
@@ -293,7 +299,9 @@
       '<div class="ch-coach-in">' +
         '<h2>누가 지도하나요</h2>' +
         '<p class="lead">' + (lead
-          ? NAME + '은 <b>' + lead.name + ' 코치</b>가 맡습니다. 2주 동안 미션을 확인하고 피드백을 남겨요.'
+          ? NAME + '은 <b>' + lead.name + ' 코치</b>가 맡습니다. ' + (GUIDE[CH]
+              ? '코치 가이던스 영상을 따라 2주 동안 매일 답변을 직접 씁니다.'
+              : '2주 동안 미션을 확인하고 피드백을 남겨요.')
           : '전직 객실승무원과 보이스·스피치 전문 코치진이 함께합니다.') + '</p>' +
         '<ul>' + (lead ? row(lead, true) : '') + rest.map(function (r) { return row(r, false); }).join('') + '</ul>' +
         '<a class="more" href="researchers.html">연구진 전체 이력 보기 →</a>' +
