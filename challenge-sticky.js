@@ -32,13 +32,13 @@
 
   var NAME = {
     voice: '보.신.각', expression: '영.합.각', spinning: '스.피.닝', answer: '승.자.각',
-    culture: '대.문.각'
+    culture: '댄.특.완'
   }[CH] || '챌린지';
 
   /* 챌린지를 지도하지 않는 연구원은 뺀다(pages.md — '연구진 전원 = 챌린지 코치'가 아니다) */
   var NON_COACH = { hyun: 1 };
 
-  /* 챌린지별 담당 코치 — 오너 확정(2026-08-02 · 2026-09-04 대문각=김유리 추가).
+  /* 챌린지별 담당 코치 — 오너 확정(2026-08-02 · 2026-09-04 댄특완=김유리 추가).
      ⚠️ 여기 없는 챌린지는 담당을 말하지 않고 코치진 전체만 보여준다(추측 금지). */
   var LEAD = { voice: 'kwon', expression: 'park', spinning: 'park', answer: 'park', culture: 'kim' };
 

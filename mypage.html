@@ -1175,7 +1175,7 @@
     }
 
     // ── 내 챌린지 제출 — 처음/끝 학생 직접 업로드 (2026-08-20 오너 확정) ──────────
-    // 보신각·스피닝=음성, 영합각=영상, 승자각·대문각=답변집(answers) 연동.
+    // 보신각·스피닝=음성, 영합각=영상, 승자각·댄특완=답변집(answers) 연동.
     // ⚠️ 화면의 참가 판정(partOf)은 카드를 그릴지만 정한다 — 업로드 허용의 원장은
     //    DB RLS(is_challenge_participant)라, 화면을 속여도 서버가 거부한다.
     const CH_SUB_META = {
@@ -1183,10 +1183,10 @@
       expression: { label: '영.합.각 · 표현력', media: 'video', accept: 'video/*', what: '영상' },
       spinning:   { label: '스.피.닝 · 스피치', media: 'audio', accept: 'audio/*', what: '음성' },
       answer:     { label: '승.자.각 · 답변', media: 'answers' },
-      culture:    { label: '대.문.각 · 대한항공 문화이해', media: 'answers' },
+      culture:    { label: '댄.특.완 · 대한항공 특화 답변', media: 'answers' },
     };
     const CH_SUB_ORDER = ['voice', 'expression', 'spinning', 'answer', 'culture'];
-    /* ── 답변형 챌린지(승자각·대문각) DAY 문항 ─────────────────────────────────
+    /* ── 답변형 챌린지(승자각·댄특완) DAY 문항 ─────────────────────────────────
        ⚠️ 정본은 challenge_lessons(admin '챌린지' 탭 → DAY 문항 고치기)다. 아래는 **폴백**이니
           지우지 말 것 — 표가 없거나 조회에 실패하면 이 값으로 그린다.
        ⚠️⚠️ 둘 다 저장소(answers)에 같은 모양의 제목으로 쌓인다. 'DAY 1' 만으로는 어느
@@ -1197,7 +1197,11 @@
           번호·낱말만으로 가르면 반대로 **남의 챌린지 답변이 '작성됨'으로 잘못 뜬다** —
           덜 나쁜 쪽을 택했다. 표식을 떼지 말 것. */
     const ANSWER_CHS = ['answer', 'culture'];
-    const CH_DAY_MARK = { answer: '', culture: '대.문.각 ' };
+    const CH_DAY_MARK = { answer: '', culture: '댄.특.완 ' };
+    /* 이름이 바뀌기 전(2026-09-04 '대.문.각')에 쓴 답변도 계속 알아본다 — 표식이 학생의
+       답변 제목에 이미 박혀 있어서, 새 표식만 보면 그 답변들이 전부 '쓰기'로 되돌아간다.
+       ⚠️ 지우지 말 것. 새 표식은 위 CH_DAY_MARK 가, 알아보기는 여기까지가 담당이다. */
+    const CH_DAY_MARK_OLD = { culture: ['대.문.각'] };
     const DAY_FALLBACK = {
       answer: [
       'DAY 1. 가치관',
@@ -1241,13 +1245,14 @@
     function dayNoOf(title, ch) {
       const t = normTitle(title);
       if (!t) return 0;
-      const mine = normTitle(CH_DAY_MARK[ch] || '');
-      if (mine) {
-        if (t.indexOf(mine) < 0) return 0;              // 표식 있는 챌린지 = 표식이 있어야 내 것
-      } else if (ANSWER_CHS.some(k => {                 // 표식 없는 챌린지 = 남의 표식이 붙었으면 남의 것
-        const m = normTitle(CH_DAY_MARK[k] || '');
-        return m && t.indexOf(m) >= 0;
-      })) return 0;
+      const marksOf = k => [CH_DAY_MARK[k] || ''].concat(CH_DAY_MARK_OLD[k] || [])
+        .map(normTitle).filter(Boolean);
+      const mine = marksOf(ch);
+      if (mine.length) {
+        if (!mine.some(m => t.indexOf(m) >= 0)) return 0;   // 표식 있는 챌린지 = 표식이 있어야 내 것
+      } else if (ANSWER_CHS.some(k =>                       // 표식 없는 챌린지 = 남의 표식이 붙었으면 남의 것
+        marksOf(k).some(m => t.indexOf(m) >= 0)
+      )) return 0;
       const days = CH_DAYS[ch] || [], words = CH_DAY_WORDS[ch] || [];
       const m = t.match(/day0*(\d{1,2})/) || t.match(/(\d{1,2})일차/);
       if (m) { const n = Number(m[1]); if (n >= 1 && n <= days.length) return n; }

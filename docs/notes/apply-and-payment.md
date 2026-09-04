@@ -133,7 +133,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 
 - `apply.html` — **신청·결제 전용(모든 신청 CTA의 목적지).** 히어로 → 챌린지 카드 4개(클릭=선택+커리큘럼 아코디언, 다중선택 장바구니) → 회원가입 배너(→login.html) → 조합 추천 → FAQ → 계좌이체 폼 → 하단 고정 요약바. `?c=voice,answer`로 프리셀렉트. `supabase-config.js`+`recruit.js` 로드, `loadChallengeStatuses()`로 마감 카드 비활성, 제출 `MONC.sb.from('applications').insert(...)`. 챌린지·FAQ는 하단 인라인 `CHALLENGES`/`FAQ` 배열(FAQ #3·#6·#7 임시 문구). **회원 모드**: 로그인 시 `getMyProfile()`로 이름·전화 자동채움·insert에 `member_id` 포함(→마이페이지 연동)·전화 미보유 시 `members`에 저장. **⚠️ 법적 필수:** 신청 버튼 위 `#appConsent` 필수 동의 체크(만14세+개인정보 수집·이용) 미체크 시 `submitApplication()`이 차단 — **개인정보 보호법상 삭제·완화 금지.**
 
-### 챌린지가 다섯이 됐다 — 대.문.각(2026-09-04)
+### 챌린지가 다섯이 됐다 — 댄.특.완(2026-09-04)
 
 `apply.html` `CHALLENGES` 배열 맨 앞에 `culture` 를 넣었다(허브 선두 카드와 같은 자리 감각).
 참가비는 **다른 넷과 같은 `site_config.challenge_price` 한 값** — 챌린지별 가격은 없다(넣으려면

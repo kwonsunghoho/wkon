@@ -25,7 +25,7 @@
     expression: { label: '영.합.각', what: '표현력' },
     spinning:   { label: '스.피.닝', what: '말투' },
     answer:     { label: '승.자.각', what: '답변' },
-    culture:    { label: '대.문.각', what: '대한항공 문화이해' }
+    culture:    { label: '댄.특.완', what: '대한항공 특화 답변' }
   };
 
   var CSS = [

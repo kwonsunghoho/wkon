@@ -1395,7 +1395,7 @@
             <option value="expression">영합각(표현력)</option>
             <option value="spinning">스피닝</option>
             <option value="answer">승자각(답변)</option>
-            <option value="culture">대문각(대한항공 문화이해)</option>
+            <option value="culture">댄특완(대한항공 특화 답변 완성)</option>
           </select></div>
         <div class="field"><label for="rfRound">기수</label><input id="rfRound" type="number" min="1" placeholder="예: 3"></div>
         <!-- 시작 방식 — 개강일을 정해 두거나, 선착순(인원이 모이면 바로 시작). start_mode 컬럼. -->
@@ -1435,7 +1435,7 @@
         <div class="field" style="max-width:300px;margin-bottom:12px;"><label for="lesCh">챌린지</label>
           <select id="lesCh">
             <option value="answer">승자각(답변)</option>
-            <option value="culture">대문각(대한항공 문화이해)</option>
+            <option value="culture">댄특완(대한항공 특화 답변 완성)</option>
           </select></div>
         <div class="round-list" id="lesList"><div class="loading">불러오는 중…</div></div>
         <div class="les-foot">
@@ -1544,7 +1544,7 @@
         <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="expression">영합각</button>
         <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="spinning">스피닝</button>
         <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="answer">승자각</button>
-        <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="culture">대문각</button>
+        <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="culture">댄특완</button>
         <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="lecture">특강</button>
         <button type="button" class="af-tab" role="tab" aria-selected="false" data-kind="lab">자료</button>
       </div>
@@ -1586,7 +1586,7 @@
             <option value="expression">영합각(표현력)</option>
             <option value="spinning">스피닝</option>
             <option value="answer">승자각(답변)</option>
-            <option value="culture">대문각(대한항공 문화이해)</option>
+            <option value="culture">댄특완(대한항공 특화 답변 완성)</option>
           </select>
         </div>
         <label class="af-chk"><input type="checkbox" id="wlHideDone"> 연락 완료 숨기기</label>
@@ -3152,7 +3152,7 @@
       const chSubsHtml = !chSubsReady
         ? '<div class="mini-empty">challenge_submissions 마이그레이션(20260820120000)이 아직 적용 전입니다. 적용하면 학생이 직접 올리고, 여기서 확인됩니다.</div>'
         : !orderedChs.length
-          ? '<div class="mini-empty">파일 제출 대상 챌린지 신청이 없습니다. (승자각·대문각은 파일 대신 답변노트로 확인)</div>'
+          ? '<div class="mini-empty">파일 제출 대상 챌린지 신청이 없습니다. (승자각·댄특완은 파일 대신 답변노트로 확인)</div>'
           : orderedChs.map(ch => `
             <div style="margin-bottom:12px;">
               <div style="font-size:13px;font-weight:700;margin-bottom:6px;">${CH_SUB_ADM[ch].label}</div>
@@ -4010,7 +4010,7 @@
        DB 값은 voice/expression/spinning/answer 그대로고 여기서 표시만 바꾼다.
        ⚠️ 전에는 '보이스·표현력·답변'이라 후기 탭('보신각·영합각·승자각')·공개 페이지와 이름이 갈렸다.
           오너가 학생 문의를 받고 어느 챌린지인지 admin 에서 다시 번역해야 했다. */
-    const CH_LABEL = { voice:'보신각', expression:'영합각', spinning:'스피닝', answer:'승자각', culture:'대문각' };
+    const CH_LABEL = { voice:'보신각', expression:'영합각', spinning:'스피닝', answer:'승자각', culture:'댄특완' };
     let editingRoundId = null;   // null=추가 모드, 값=그 id 기수를 수정 중
     let _roundsData = [];        // loadRounds 가 채운다 — '한번에 등록'의 다음 기수 계산용
 
@@ -4233,7 +4233,7 @@
     // ⚠️ 표가 없으면(PGRST205 등) 묶음을 숨긴다. 세 화면은 HTML 값으로 계속 돌아간다.
     // ⚠️ 손으로 적던 '이렇게 써도 같은 문항' 칸은 2026-08-24 오너 지시로 없앴다("헷갈려").
     //    마이페이지 작성 판정은 이제 **문항 이름에서 스스로 만든다**(mypage dayNoOf) — 다시 만들지 말 것.
-    /* ⚠️ 고정 'answer' 였다(2026-08-24). 2026-09-04 대문각이 생기며 셀렉트로 바뀌었다 —
+    /* ⚠️ 고정 'answer' 였다(2026-08-24). 2026-09-04 댄특완이 생기며 셀렉트로 바뀌었다 —
        읽는 곳이 늘었으니 다시 상수로 되돌리지 말 것. */
     const LES_CH_OPTS = ['answer', 'culture'];
     const lesCh = () => {
@@ -5325,7 +5325,7 @@
 
     /* ── 제출물 접이(2026-08-24 오너 "신청자에서 제출 녹음본 바로 볼 수 있게") ──
        챌린지 탭(보신각·영합각·스피닝)의 회원 줄마다 접이 한 줄 — 펼치면 처음/끝 파일을 그 자리에서 재생.
-       승자각·대문각은 파일이 없어(답변노트) 대상이 아니고, 비회원 줄은 제출 계정 자체가 없어 안 그린다.
+       승자각·댄특완은 파일이 없어(답변노트) 대상이 아니고, 비회원 줄은 제출 계정 자체가 없어 안 그린다.
        파일은 챌린지·칸마다 한 개(재업로드 = 교체)라 기수로 거르지 않는다 — 기수는 줄에 표시만.
        표 전체를 챌린지 탭 첫 진입에 한 번 받는다(작은 표 — 진입 조회 다이어트는 탭 누른 뒤로 미룬 것으로 지킨다). */
     let _chSubRows = [], _chSubReady = false, _chSubErr = '', _chSubLoading = false;
@@ -5778,7 +5778,7 @@
     // 종류(kind)는 챌린지/상담 둘뿐이다. 합격 수기는 이 표가 아니라 success_stories(아래 절).
     const RV_KIND_LABEL = { challenge: '챌린지 후기', consult: '상담 후기' };
     // ⚠️ 이 값들은 challenge-*.html 의 data-challenge 와 문자열이 같아야 한다(상세 후기 섹션의 매칭 키).
-    const RV_CH_OPTS = ['보신각', '영합각', '스피닝', '승자각', '대문각'];
+    const RV_CH_OPTS = ['보신각', '영합각', '스피닝', '승자각', '댄특완'];
     let rvKindFilter = 'all';
     const R_PAGE = 60;        // 후기 카드를 한 번에 그리는 수(회원 목록과 같은 규칙)
     let _rvShown = R_PAGE;
