@@ -281,6 +281,8 @@
     #lrPwClearRow input { width: 24px; height: 24px; accent-color: var(--action); flex: none; }
     #rfAllHint { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin-top: -6px; }
     .round-form .rf-note { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin: -2px 0 0; line-height: 1.55; }
+    .ri-gate { margin-top: 2px; font-weight: 700; color: var(--action); }
+    .ri-gate.is-locked { color: #9E3B34; }
     #rfAllHint[hidden] { display: none; }
     /* ⚠️⚠️ 날짜 입력은 **네이티브 위젯 렌더링을 끈다**(`appearance:none`).
        2026-08-02 오너가 같은 자리를 세 번 지적했다 — 칸을 넓혀도(span 2) 계속 삐져나왔다.
@@ -1406,7 +1408,7 @@
         <div class="field field-date"><label for="rfProgram" id="rfProgramLabel">프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
         <!-- 학생 화면(마이페이지·제출 입구)의 문항·제출 칸은 이 시작일부터 열린다(2026-09-03).
              비우면 '개강일 지정'은 모집 마감 다음 날, 선착순은 바로 열린다 — recruit.js roundStartDate. -->
-        <p class="rf-note">마이페이지의 문항·제출 칸은 <b>프로그램 시작일부터</b> 열려요. 비우면 개강일 지정은 모집 마감 다음 날, 선착순은 결제 즉시 열립니다 — 선착순은 시작이 정해지면 날짜를 넣어 주세요.</p>
+        <p class="rf-note">마이페이지의 문항·제출 칸은 <b>프로그램 시작일부터</b> 열려요. 비우면 <b>모집 마감 다음 날</b>에 열리고, 마감도 없는 선착순은 다음 기수가 등록되기 전까지 <b>잠겨</b> 있어요 — 시작이 정해지면 날짜를 넣어 주세요. 아래 목록의 '학생 화면' 표시가 지금 상태예요.</p>
         <!-- 4개 한번에 — 같은 날짜로 4개 챌린지 기수를 한 번에 등록(오너 요청 2026-08-06).
              기수는 챌린지마다 '기존 최고 기수 + 1' 로 자동 매긴다(아래 안내 줄이 미리 보여 준다). -->
         <label id="rfAllRow">
@@ -2357,6 +2359,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 기수별 학생 화면 열림/잠김 판정(2026-09-03) — mypage·submit 과 같은 파일(MONC_GATE) -->
+  <script src="round-gate.js?v=1"></script>
   <!-- 회원 번호 상태 판정에 쓴다 — 가입·신청 창구가 쓰는 것과 **같은 규칙**이어야 한다(2026-08-03) -->
   <script src="phone-check.js"></script>
   <script src="sojae-common.js?v=3"></script>
@@ -4300,6 +4304,8 @@
       _roundsData = data || [];
       updateBulkUi();   // 기수가 바뀌었으니 '한번에 등록' 안내의 다음 기수도 다시 계산
       if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 기수가 없습니다.</div>'; return; }
+      // 학생 화면(마이페이지·제출 입구)에 이 기수가 열려 있는지 — 판정은 round-gate.js(MONC_GATE) 한 곳
+      const gateOf = r => window.MONC_GATE ? MONC_GATE.gateLabel(MONC_GATE.roundStartOf(r, data)) : '';
       listEl.innerHTML = data.map(r => `
         <div class="round-item">
           <div>
@@ -4307,6 +4313,7 @@
             <div class="ri-sub">${r.start_mode === 'fcfs'
               ? '선착순 · 모집 ' + fmtDay(r.recruit_start) + ' ~' + (r.recruit_end ? ' ' + fmtDay(r.recruit_end) : '') + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : ' · 인원이 모이면 시작')
               : '모집 ' + fmtDay(r.recruit_start) + ' ~ ' + fmtDay(r.recruit_end) + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : '')}</div>
+            ${gateOf(r) ? `<div class="ri-sub ri-gate${/잠김/.test(gateOf(r)) ? ' is-locked' : ''}">${esc(gateOf(r))}</div>` : ''}
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${r.id}">수정</button>
