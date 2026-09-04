@@ -116,7 +116,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 후기(허브·챌린지·상담·합격 수기) | `reviews.html`·`reviews-list.html`·`stories.html`·`story.html`·`review-write.html` | 목록은 `?kind=` 한 파일, 0건 종류는 카드를 안 그린다, 상담 후기 실명 미노출. 회원 제출 후기는 서버 RPC 가 `visible=false` 로(즉시 공개 금지·보상 없음). 합격 수기는 잠시 내림(복원 절차는 pages.md) | `docs/notes/pages.md` |
 | 1:1 상담·네이버 예약 | `consult.html` | 네이버 예약 주소 정본은 consult.html 한 곳. 진입점 3곳 고정 — 홈 본문·nav 메뉴·플로팅 금지 | `docs/notes/pages.md` |
 | 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·도구 2곳뿐(홈 금지 · 뉴스는 2026-08-28 폐지로 빠짐), 이 한 파일에서만 수정(두 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
-| 기타 페이지(연구진·상세 4종·오디오) | `researchers.html`·`challenge-*.html` | 상세 4종 인라인 공통 CSS 는 네 파일을 같이 고친다 | `docs/notes/pages.md` |
+| 기타 페이지(연구진·상세 5종·오디오) | `researchers.html`·`challenge-*.html` | 상세 5종 인라인 공통 CSS 는 다섯 파일을 같이 고친다 | `docs/notes/pages.md` |
 | 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
 | 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
 
@@ -169,7 +169,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격 (admin.md)
 - admin 의 알약(`border-radius:999px`) — 역할별 모양 한 벌로 교체됨 (admin.md '알약 걷어내기')
 - `rehearsal.html` 카드 숨김 해제 — 코드가 main 에 없어 404 난다(`claude/rehearsal-wip` 먼저 병합) (implementation-status.md)
-- `challenge-express.html`·`challenge-speech.html` 되살리기 — 상세는 voice·expression·spinning·answer 4종뿐 (pages.md)
+- `challenge-express.html`·`challenge-speech.html` 되살리기 — 상세는 voice·expression·spinning·answer·culture 5종뿐 (pages.md)
 - AI킬러 일반 텍스트 응답·함수 모듈 분리 (ai-killer 스펙)
 - AI킬러 규칙 엔진 판정(사전 매칭·어미 반복·밀도 등급) — 판정은 오너 지침 종합 판정 (ai-killer 스펙)
 - 첨삭(polish) 제출 전 프로브 게이트 삭제 (polish.md)

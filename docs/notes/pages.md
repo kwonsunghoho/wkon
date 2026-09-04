@@ -1,4 +1,4 @@
-# 기타 페이지(후기·연구진·상세 4종·오디오) — 상세 기록
+# 기타 페이지(후기·연구진·상세 5종·오디오) — 상세 기록
 
 ## 커뮤니티 오픈챗 모집 카드 — community-card.js 공용 (2026-08-16 오너 확정)
 
@@ -144,15 +144,16 @@
 - **⚠️ 현형빈은 챌린지를 지도하지 않는다(2026-07-24 오너 확인).** researchers.html에만 노출하고 apply.html·terms.html의 '담당 코치' 명단에는 넣지 않는다(약관상 실제 지도자 명단). '연구진 전원 = 챌린지 담당 코치'를 전제한 문구 금지.
 - **카드 순서 = 직급 순**(수석 권성호·박새암 → 책임 고은지·김유리 → 선임 최보민·현형빈) — 직급이 바뀌면 자리도 같이 옮긴다. 사진 `images/instructor-<kwon|park|hyun|koh|choi|kim>.webp`(800px 폭 webp q78).
 
-## 챌린지 상세 4종 · legacy 페이지(구 CLAUDE.md Pages 항목)
+## 챌린지 상세 5종 · legacy 페이지(구 CLAUDE.md Pages 항목)
 
-- Active detail pages (challenges.html 카드에서 링크, 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각). ⚠️ 블라인드 퀴즈는 2026-07-30 허브(challenges.html) 하단으로 이사 — 상세엔 없다.
-  - **⚠️ 상세 4종의 인라인 `<style>` 공통 블록(`*` 리셋 ~ `.footer-copy`)은 네 파일이 글자 그대로 같다** — 한 곳만 고치면 넷이 어긋난다. 고칠 땐 네 파일을 같이 바꿀 것(`@media (max-width:600px)` 블록만 페이지별로 다르다: 영합각은 오버뷰가 '한 줄 바', 나머지 셋은 3칸 그리드).
+- Active detail pages (challenges.html 카드에서 링크, 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각), `challenge-culture.html`(대문각 · 2026-09-04 신설). ⚠️ 블라인드 퀴즈는 2026-07-30 허브(challenges.html) 하단으로 이사 — 상세엔 없다.
+  - **⚠️ 상세 5종의 인라인 `<style>` 공통 블록(`*` 리셋 ~ `.footer-copy`)은 다섯 파일이 글자 그대로 같다** — 한 곳만 고치면 나머지가 어긋난다. 고칠 땐 다섯 파일을 같이 바꿀 것(`@media (max-width:600px)` 블록만 페이지별로 다르다: 영합각은 오버뷰가 '한 줄 바', 나머지 넷은 3칸 그리드).
+  - **대.문.각(culture)은 항공사를 지정한 첫 챌린지다**(대한항공). 진행 방식은 승.자.각 계열 — **코치 가이던스 영상 + 매일 직접 작성이라 '1:1 개별 점검'이라고 쓰지 말 것.** 하루 15~20분·완성 답변 30개(하루 3개)로 다른 넷과 분량이 다르다. 커리큘럼 정본은 `challenge_lessons`(challenge='culture'), HTML 의 10줄은 폴백 겸 검색엔진용.
   - **2026-07-30 확정 팔레트 적용 완료(오너 "가독성 자체가 말이 안 된다 / 홈 색에 맞춰라").** 되돌리지 말 것: ① CTA = `--action` 네이비 면 + 흰 글씨(구 갈색→네이비 그라디언트) ② 마무리 `.cta-box` = `--accent`→`--accent-dark` 네이비 배경 + **흰 알약 + 네이비 글씨** 버튼 ③ 챌린저 아바타 원은 **전부 같은 네이비 단색**(구 6종 갈색·오렌지 그라디언트 — 그중 `#FF6B35→#FFB088` 은 흰 글씨 대비가 2:1 대였다) ④ BEFORE = 종이색 / AFTER = `--action-tint` ⑤ 섹션 배경 워시(구 오렌지·갈색 반투명 그라디언트) 제거. ⚠️ **2026-08-05(7455a30) 이후엔 `--bg2` 단색도 아니고 배경이 아예 없다** — 섹션 11개 + 푸터 4개에서 걷었고, 네 파일에 `--bg2` 사용처는 0곳이다. 전체 폭 `--bg2` 밴드를 다시 깔지 말 것(순백과 만나는 가로선 — design-principles.md).
   - **활자 하한 정리(9대 원칙 1)**: 본문·설명줄 **15px**(구 13/13.5), 카드 제목 16px, 라벨·캡션 **12px 하한**(구 11px 섹션 라벨·BEFORE/AFTER 라벨, 10px 오버뷰 라벨, 11px 푸터 사업자 정보). **히어로 제목은 500**(구 300 `--fw-light` 은 한글 SUIT 에서 획이 얇아 큰 글씨가 본문보다 흐리게 읽혔다) — 강조 span 700 과의 대비로 위계는 살아 있다.
   - **스피닝 비포&애프터 카드엔 후기 인용 칸이 없다(2026-07-31).** 보신각 구조를 복사할 때 들어온 빈 `""` 자리표시자 4개를 삭제했다(오너 "올릴 내용 없으면 칸 자체를 삭제"). 스피닝 챌린저 후기 문구가 생기면 보신각 카드의 인용 블록(`--surface2` + `--action` 왼 보더) 패턴을 다시 붙인다.
-- `challenge-express.html`, `challenge-speech.html` — **2026-07-14 커밋 `072c937`(고아 파일 정리)에서 삭제됐다.** 어디서도 링크되지 않던 고아 파일이라 걷었다. 현존하는 챌린지 상세는 위 4종(voice·expression·spinning·answer)뿐이니 되살리지 말 것.
-- **링크 미리보기(2026-08-01)**: 상세 4종·허브(challenges)·신청(apply)은 각자 `images/og/challenge-*.jpg`·`challenges.jpg` 를 쓴다. **히어로 사진 배경 + 왼쪽 종이 카드**(워드마크·별칭·부제·before→after 두 줄) 구성이고, 신청은 허브 이미지를 함께 쓴다. og:title 은 화면 `<title>` 과 달리 **별칭이 앞에 온다**(`보.신.각 — 보이스 신분상승 각 | MONC`) — 카톡에선 별칭이 먼저 읽혀야 어느 챌린지인지 안다. 사진 크롭은 인물이 카드에 가리지 않게 사진마다 손으로 맞춘 값이라, 히어로 사진을 바꾸면 미리보기 이미지도 다시 만든다. 서가 쪽 규칙은 lab.md.
+- `challenge-express.html`, `challenge-speech.html` — **2026-07-14 커밋 `072c937`(고아 파일 정리)에서 삭제됐다.** 어디서도 링크되지 않던 고아 파일이라 걷었다. 현존하는 챌린지 상세는 위 5종(voice·expression·spinning·answer·culture)뿐이니 되살리지 말 것.
+- **링크 미리보기(2026-08-01)**: 상세·허브(challenges)·신청(apply)은 각자 `images/og/challenge-*.jpg`·`challenges.jpg` 를 쓴다. ⚠️ **대.문.각만 전용 이미지가 없어 임시로 `challenges.jpg` 를 물려 뒀다** — `challenge-culture.jpg` 가 생기면 `challenge-culture.html` 의 og·twitter 두 줄을 함께 교체한다. **히어로 사진 배경 + 왼쪽 종이 카드**(워드마크·별칭·부제·before→after 두 줄) 구성이고, 신청은 허브 이미지를 함께 쓴다. og:title 은 화면 `<title>` 과 달리 **별칭이 앞에 온다**(`보.신.각 — 보이스 신분상승 각 | MONC`) — 카톡에선 별칭이 먼저 읽혀야 어느 챌린지인지 안다. 사진 크롭은 인물이 카드에 가리지 않게 사진마다 손으로 맞춘 값이라, 히어로 사진을 바꾸면 미리보기 이미지도 다시 만든다. 서가 쪽 규칙은 lab.md.
 
 ### Audio (detail pages)
 `audio/`의 before/after 클립, 위치 기반 네이밍: `challenger-a-before.mp3`…(voice), `spinning-a-before.m4a`…(spinning). Windows에서 추가 시 이중 확장자 주의(`*.mp3.m4a`). **클립은 음성이라 mono ~80kbps로 최적화**(스테레오·128k+ 불필요) — 새 클립도 `-ac 1 -b:a 80k`로 맞출 것. 전·후는 동일 설정으로 인코딩해 대비를 왜곡하지 않는다.

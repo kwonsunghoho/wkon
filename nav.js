@@ -58,7 +58,8 @@
     ['challenge-voice.html', '보.신.각', '2주 만에 목소리가 달라져요'],
     ['challenge-expression.html', '영.합.각', '카메라 앞에서도 자연스럽게'],
     ['challenge-spinning.html', '스.피.닝', '리듬을 타며 발음이 터진다'],
-    ['challenge-answer.html', '승.자.각', '2주에 답변 10개 완성']
+    ['challenge-answer.html', '승.자.각', '2주에 답변 10개 완성'],
+    ['challenge-culture.html', '대.문.각', '대한항공 문화이해 · 답변 30개']
   ];
   /* 연구실 드롭다운(2026-07-31 오너 확정) — 상단 탭 '연구실'은 카테고리(두 번 누르면
      허브 lab.html)고, 목차는 허브의 카드 두 장과 1:1 — 연구실(원장)/연구진("하위탭도
