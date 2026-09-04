@@ -116,8 +116,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
-<!-- 기수 시작일 잠금(loadRoundStartMap·pickContentRound) — mypage 제출 카드와 같은 규칙. 함수만 정의하는 파일. -->
-<script src="recruit.js?v=2"></script>
+<!-- 기수 시작 전 잠금 판정(2026-09-03) — mypage 제출 카드·admin 과 같은 파일(MONC_GATE). -->
+<script src="round-gate.js?v=1"></script>
 <script>
   /* bfcache 로 되살아나면 통째로 새로고침 — 입력값 없는 화면 공통 규칙(CLAUDE.md).
      스크롤은 scroll-keep.js 가 되돌린다. */
@@ -258,9 +258,10 @@
         const meta = CH_META[c];
         const rTxt = partOf[c] ? partOf[c] + '기' : '';
         if (lockOf[c]) {
+          const when = lockOf[c].start ? esc(mdKor(lockOf[c].start)) + '에 시작해요.' : '시작 안내는 챌린지 카톡방에서 드려요.';
           return `<div class="sb-card">
             <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${esc(rTxt)}</span></div>
-            <p class="sb-hint">${esc(mdKor(lockOf[c]))}에 시작해요. 문항과 제출 칸은 시작일에 열려요.</p>
+            <p class="sb-hint">${when} 문항과 제출 칸은 시작일에 열려요.</p>
           </div>`;
         }
         if (meta.media === 'answers') {
@@ -376,16 +377,16 @@
           (roundsOf[c.challenge] = roundsOf[c.challenge] || []).push(Number(c.round) || null);
         });
       });
-      // 시작 전 기수는 잠근다(2026-09-03) — 기수 선택·시작일 규칙은 recruit.js(mypage 와 한 벌).
-      // recruit.js 가 옛 캐시면 함수가 없다 → 최신 기수·열림(종전 동작).
-      const startMap = (typeof loadRoundStartMap === 'function') ? await loadRoundStartMap() : null;
+      // 시작 전 기수는 잠근다(2026-09-03) — 기수 선택·시작일 규칙은 round-gate.js(MONC_GATE · mypage 와 한 벌).
+      // 스크립트가 못 실렸으면 최신 기수·열림(종전 동작).
+      const G = window.MONC_GATE;
+      const startMap = G ? await G.loadRoundStartMap() : null;
       const partOf = {}, lockOf = {};
       Object.keys(roundsOf).forEach(ch => {
-        const pick = (typeof pickContentRound === 'function')
-          ? pickContentRound(ch, roundsOf[ch], startMap)
+        const pick = G ? G.pickContentRound(ch, roundsOf[ch], startMap)
           : { round: roundsOf[ch].filter(Boolean).sort((a, b) => b - a)[0] || null, locked: false };
         partOf[ch] = pick.round;
-        if (pick.locked) lockOf[ch] = pick.start;
+        if (pick.locked) lockOf[ch] = { start: pick.start, pending: pick.pending };
       });
 
       await render(me, partOf, lockOf);

@@ -604,9 +604,10 @@
           지운 뒤에 실행돼 오버레이가 아예 안 뜬다(실측). -->
   <script src="pay-return.js"></script>
   <script src="sojae-common.js?v=3"></script>
-  <!-- 모집 상태 판정(challenge_rounds) — 시작 안내 줄의 '모집 중' 배지 + 제출 카드의 시작일 잠금(loadRoundStartMap·pickContentRound).
-       함수만 정의하는 파일이라 부작용 없음. 잠금 함수를 추가하며 ?v=2(옛 캐시면 전부 열림으로 떨어진다). -->
-  <script src="recruit.js?v=2"></script>
+  <!-- 모집 상태 판정(challenge_rounds) — 시작 안내 줄의 '모집 중' 배지용. 함수만 정의하는 파일이라 부작용 없음. -->
+  <script src="recruit.js"></script>
+  <!-- 제출 카드의 기수 시작 전 잠금 판정(2026-09-03) — 판정은 이 파일 한 곳(submit·admin 과 공용). -->
+  <script src="round-gate.js?v=1"></script>
   <!-- 비포/애프터 음성 동시 재생 차단(전역). 이 화면엔 .ba-cell 이 없어 UI 는 그대로다 -->
   <script src="ba-audio.js" defer></script>
   <script>
@@ -1279,9 +1280,10 @@
         const rTxt = partOf[c] ? partOf[c] + '기' : '';
         if (lockOf[c]) {
           // 시작 전 — 문항·제출 칸은 시작일에 연다. 무엇을 하게 될지는 적지 않는다(챌린지 내용).
+          const when = lockOf[c].start ? esc(mdKor(lockOf[c].start)) + '에 시작해요.' : '시작 안내는 챌린지 카톡방에서 드려요.';
           return `<div class="v2-card">
             <div class="v2-cs-h"><span class="v2-cs-t">${meta.label}</span><span class="v2-cs-r">${esc(rTxt)}</span></div>
-            <p class="v2-cs-hint">${esc(mdKor(lockOf[c]))}에 시작해요. 문항과 제출 칸은 시작일에 열려요. 그동안 소재 발굴로 미리 준비해 보세요.</p>
+            <p class="v2-cs-hint">${when} 문항과 제출 칸은 시작일에 열려요. 그동안 소재 발굴로 미리 준비해 보세요.</p>
           </div>`;
         }
         if (meta.media === 'answers') {
@@ -1553,18 +1555,17 @@
         });
       });
       // 시작 전 기수는 문항·제출 칸을 열지 않는다(2026-09-03 오너 지적 — 4기 진행 중에 5기 결제자가
-      // 챌린지 내용을 미리 봤다). 시작일은 challenge_rounds(recruit.js roundStartDate 규칙).
-      // 같은 챌린지에 기수가 여럿이면 pickContentRound 가 고른다 — 시작한 기수 중 최신, 없으면 가장 먼저
-      // 시작할 기수를 잠근 채. recruit.js 가 옛 캐시(함수 없음)면 전부 열림으로 떨어진다(?v=2 로 실었다).
+      // 챌린지 내용을 미리 봤다). 규칙·기수 선택은 round-gate.js 한 곳(MONC_GATE) — 페이지에 복사하지 말 것.
+      // 스크립트가 못 실렸으면(옛 캐시 등) 종전 동작(최신 기수·열림)으로 떨어진다.
       const todayS = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
-      const startMap = (typeof loadRoundStartMap === 'function') ? await loadRoundStartMap() : null;
-      const partOf = {}, lockOf = {};   // lockOf[챌린지] = 시작일(YYYY-MM-DD) — 있으면 잠김
+      const G = window.MONC_GATE;
+      const startMap = G ? await G.loadRoundStartMap() : null;
+      const partOf = {}, lockOf = {};   // lockOf[챌린지] = { start(YYYY-MM-DD|null), pending } — 있으면 잠김
       Object.keys(roundsOf).forEach(ch => {
-        const pick = (typeof pickContentRound === 'function')
-          ? pickContentRound(ch, roundsOf[ch], startMap, todayS)
+        const pick = G ? G.pickContentRound(ch, roundsOf[ch], startMap, todayS)
           : { round: roundsOf[ch].filter(Boolean).sort((a, b) => b - a)[0] || null, locked: false };
         partOf[ch] = pick.round;
-        if (pick.locked) lockOf[ch] = pick.start;
+        if (pick.locked) lockOf[ch] = { start: pick.start, pending: pick.pending };
       });
 
       if (myApps && myApps.length) {
@@ -1608,8 +1609,8 @@
       const lockKeys = Object.keys(lockOf);
       const allLocked = lockKeys.length > 0 && lockKeys.length === Object.keys(partOf).length;
       const preStart = (cohort && cohort.start_date && todayS < String(cohort.start_date)) ? String(cohort.start_date)
-        : (allLocked ? lockKeys.map(k => lockOf[k]).sort()[0] : null);
-      const phase = (state === 'active' && preStart) ? 'prestart' : state;
+        : (allLocked ? (lockKeys.map(k => lockOf[k].start).filter(Boolean).sort()[0] || null) : null);
+      const phase = (state === 'active' && (preStart || allLocked)) ? 'prestart' : state;
 
       // 신원 줄
       document.getElementById('idSub').textContent = cohort
@@ -1646,7 +1647,8 @@
         nextQ.dataset.role = 'q';
         if (phase === 'prestart') {
           dateEl.textContent = mdKor(todayS);
-          headEl.textContent = mdKor(preStart) + '에 시작해요';
+          // 시작일 미정(선착순·날짜 없음)이면 날짜 없이 — 사이트가 모르는 날짜를 지어내지 않는다.
+          headEl.textContent = preStart ? mdKor(preStart) + '에 시작해요' : '챌린지 시작 전이에요';
           descEl.textContent = '첫 미션 안내는 챌린지 카톡방에서 드려요. 그동안 소재 발굴로 미리 준비해 보세요.';
         } else if (phase === 'done') {
           dateEl.textContent = mdKor(todayS);
