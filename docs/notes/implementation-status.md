@@ -32,6 +32,7 @@
 
 | migration | 내용 | 기록된 상태 |
 |---|---|---|
+| `20260904120000_culture_lessons` | **대.문.각 DAY 문항 10줄 심기**(2026-09-04 챌린지 신설) — `challenge_lessons` 에 `challenge='culture'` 행만 넣는다(표·RLS 는 20260824120000 이 이미 만들었다). 읽는 곳: challenge-culture·apply·mypage·submit, 고치는 곳: admin '챌린지' 탭 → DAY 문항 고치기 → 대문각 | **미적용(오너 실행 대기).** 미적용이어도 네 화면은 HTML 폴백 10줄로 그대로 돈다 — 다만 admin 에서 문항을 고칠 수 없다(목록이 비어 '심기 구문을 실행하세요'). ⚠️ `match_words` 칸은 20260824160000 에서 없앴다 — 다시 넣지 말 것 |
 | `20260708120000_member_major` | members.major | owner 실행 표기(미적용 시 major 만 방어적 무시) |
 | `20260710130000_reviews_classify` | 후기 분류 컬럼 + 기존 108건 백필 | owner 실행 표기 |
 | `20260711120000_applications_rls` | applications RLS | owner 실행 표기 |

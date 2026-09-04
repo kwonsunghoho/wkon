@@ -133,7 +133,21 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 
 - `apply.html` — **신청·결제 전용(모든 신청 CTA의 목적지).** 히어로 → 챌린지 카드 4개(클릭=선택+커리큘럼 아코디언, 다중선택 장바구니) → 회원가입 배너(→login.html) → 조합 추천 → FAQ → 계좌이체 폼 → 하단 고정 요약바. `?c=voice,answer`로 프리셀렉트. `supabase-config.js`+`recruit.js` 로드, `loadChallengeStatuses()`로 마감 카드 비활성, 제출 `MONC.sb.from('applications').insert(...)`. 챌린지·FAQ는 하단 인라인 `CHALLENGES`/`FAQ` 배열(FAQ #3·#6·#7 임시 문구). **회원 모드**: 로그인 시 `getMyProfile()`로 이름·전화 자동채움·insert에 `member_id` 포함(→마이페이지 연동)·전화 미보유 시 `members`에 저장. **⚠️ 법적 필수:** 신청 버튼 위 `#appConsent` 필수 동의 체크(만14세+개인정보 수집·이용) 미체크 시 `submitApplication()`이 차단 — **개인정보 보호법상 삭제·완화 금지.**
 
-### recruit.js (challenges + 상세 4종 + index 공유)
+### 챌린지가 다섯이 됐다 — 대.문.각(2026-09-04)
+
+`apply.html` `CHALLENGES` 배열 맨 앞에 `culture` 를 넣었다(허브 선두 카드와 같은 자리 감각).
+참가비는 **다른 넷과 같은 `site_config.challenge_price` 한 값** — 챌린지별 가격은 없다(넣으려면
+화면·verify-payment 양쪽을 같이 손대야 한다 · 위 '참가비' 절).
+
+- **진행 방식은 승.자.각 계열**(코치 가이던스 영상 + 매일 직접 작성)이다. '서비스 제공 안내'의
+  진행 주기 줄과 FAQ '어떻게 진행되나요?' 두 곳이 이 사실을 적는다 — **'1:1 개별 점검'에 넣지 말 것.**
+- **조합 추천(`COMBO_PAIRS`)**: 2026-07-30 오너 확정 네 줄은 그대로 두고 `['answer','culture']`를
+  **맨 뒤에** 붙였다(우선순위를 건드리지 않기 위해서다). 위로 올릴지는 오너가 정한다.
+- **커리큘럼 요약은 `challenge_lessons` 가 정본**(`loadLessons()` 가 answer·culture 를 각각 받는다).
+  배열에 적힌 10줄은 폴백이다 — 지우지 말 것.
+- ⚠️ **카드 불릿은 10글자 안쪽**으로 — 375px 에서 카드 안쪽이 150px(14px 활자)라 넘기면 두 줄로 쪼개진다(실측).
+
+### recruit.js (challenges + 상세 5종 + index 공유)
 `loadRecruitData()`(Supabase `challenge_rounds` 단일 소스), `applyIndexRecruit()`(`.ch-card` 상태 칩·흑백·`monc:recruitready` 디스패치 — **2026-07-29부터 카드가 challenges.html에 있어 사실상 그 페이지용**, 이름은 구명 유지), `applyDetailRecruit(id)`(상세 + 마감 시 `.apply-btn` 비활성), `loadChallengeStatuses()`(`window._challengeStatuses`), `applyGlobalRecruitCta()`(index 하단 고정 CTA 바 D-day 뱃지 — index에서 호출하는 유일한 함수). 챌린지 정체성 = `data-recruit-id`(`voice`/`expression`/`spinning`/`answer`), 카드·폴백 전반 일관.
 - **⚠️ 데이터 소스는 Supabase `challenge_rounds` 단일(2026-07-23 구글 시트 CSV 폴백 제거 · 2026-08-02 하드코딩 날짜 폴백도 제거 — admin 단일 관리):** `loadRecruitData()`는 `loadRecruitDataFromSupabase()`만 부른다. **날짜 폴백이 없다** — 모르면 칩을 아예 안 그린다. `RECRUIT_FALLBACKS`·`data-recruit-start/-end` 는 레포 코드에 남아 있지 않다(문서 안 언급은 전부 과거 사고 기록). 각 호출부(`applyIndexRecruit`/`applyDetailRecruit`/`loadChallengeStatuses`/`applyGlobalRecruitCta`)는 **'안 한다'와 '모른다'를 가른다**: 조회 성공 + 그 챌린지 행 없음이면 `'none'`(다음 기수 준비 중 · 신청 닫힘 → 오픈 알림), 조회 실패(`loadRecruitDataFromSupabase()` 가 `null` 반환)면 상태 키를 안 넣고 '불러오지 못했어요'만 띄운 채 **버튼은 살려 둔다**(최종 판정은 DB 트리거·verify-payment). ⚠️ 그래서 일부 기수만 등록된 상태에선 **미등록 챌린지가 '다음 기수 준비 중'으로 뜬다 — admin '챌린지' 탭에서 기수를 등록하면 자동 반영**(코드가 아니라 데이터 문제). 상태 상세는 아래 '⚠️ 모집 상태 네 갈래' 절. **구글 시트/CSV 폴백도, 하드코딩 날짜 폴백도 재도입하지 말 것.**
 - **⚠️ `applyDetailRecruit`는 로딩 중 날짜를 숨긴다(2026-07-23 오너 "새로고침마다 날짜가 다르게 보인다"):** 구 버전은 `await loadRecruitData()` **전에** HTML 하드코딩 날짜가 그려진 채였다가 원격 도착 후 교체돼, 새로고침 타이밍마다 하드코딩값↔원격값 플래시가 보였다(캐시·최적화 문제 아님, 렌더 순서 문제). 지금은 함수 진입 즉시 chip을 `'모집기간 확인 중…'`(opacity .55)로 덮고, **데이터가 온 뒤에만** 실제 기간을 그린다. ⚠️ 로딩 표시로 chip의 `<strong>`이 사라지므로 도착 후엔 **항상 `innerHTML`을 새로 조립**(구 버전은 `open && dday` 조합에서만 재구성해, 그 외 엣지에서 빈 chip이 됐다). 하드코딩 날짜를 곧바로 표시하는 방식으로 되돌리지 말 것.

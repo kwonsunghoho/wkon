@@ -134,8 +134,9 @@
       expression: { label: '영.합.각 · 표현력', media: 'video', accept: 'video/*', what: '영상' },
       spinning:   { label: '스.피.닝 · 스피치', media: 'audio', accept: 'audio/*', what: '음성' },
       answer:     { label: '승.자.각 · 답변', media: 'answers' },
+      culture:    { label: '대.문.각 · 대한항공 문화이해', media: 'answers' },
     };
-    const CH_ORDER = ['voice', 'expression', 'spinning', 'answer'];
+    const CH_ORDER = ['voice', 'expression', 'spinning', 'answer', 'culture'];
     // 스피닝만 첫날 녹음 2개(before·before2) — 나머지는 처음/끝 한 쌍
     const typesOf = ch => ch === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'];
     const tagOf = (ch, type) => type === 'after' ? '끝 · 마칠 무렵'
@@ -148,7 +149,7 @@
 
     /* ── 링크 매개변수 — 오픈챗에 공유하는 주소가 여기를 정한다.
        ?t=before(시작 무렵) / ?t=after(마칠 무렵) : 그 시기의 칸만 보여준다(없으면 전부).
-       ?ch=voice|expression|spinning|answer : 그 챌린지만(없으면 내가 참가한 전부).
+       ?ch=voice|expression|spinning|answer|culture : 그 챌린지만(없으면 내가 참가한 전부).
        기수는 링크에 안 싣는다 — 각자 신청에서 자동으로 붙는다(저장 시 round). ── */
     const qs = new URLSearchParams(location.search);
     const onlyCh = CH_META[qs.get('ch')] ? qs.get('ch') : '';
@@ -159,31 +160,87 @@
       : onlyT === 'after' ? '마칠 무렵(마지막 날) 제출물을 올리는 곳이에요.'
       : '챌린지 제출물을 올리는 곳이에요.';
 
-    /* ── 승자각 문항 — 정본은 challenge_lessons, 아래는 폴백(mypage 와 같은 규칙) ── */
-    let ANSWER_DAYS = ['DAY 1. 가치관', 'DAY 2. 좋은 서비스', 'DAY 3. 팀워크', 'DAY 4. 규정 상황 대처',
-      'DAY 5. 실패 경험', 'DAY 6. 항공사 장점', 'DAY 7. 실패 경험', 'DAY 8. 영어 자기소개',
-      'DAY 9. 승무원 자질', 'DAY 10. 마지막 할 말'];
+    /* ── 답변형 챌린지(승자각·대문각) DAY 문항 ─────────────────────────────────
+       ⚠️ 정본은 challenge_lessons(admin '챌린지' 탭 → DAY 문항 고치기)다. 아래는 **폴백**이니
+          지우지 말 것 — 표가 없거나 조회에 실패하면 이 값으로 그린다.
+       ⚠️⚠️ 둘 다 저장소(answers)에 같은 모양의 제목으로 쌓인다. 'DAY 1' 만으로는 어느
+          챌린지의 DAY 1 인지 알 수 없어(둘 다 1~10), 제목 앞 **표식**으로 가른다.
+          승자각은 표식이 없다(빈 문자열) — 이미 쌓인 답변 제목을 깨지 않기 위해서다.
+          새 답변형 챌린지를 넣으면 반드시 고유 표식을 준다.
+       ⚠️ 학생이 저장소에서 제목을 고쳐 표식을 지우면 그 답변은 다시 '쓰기'로 보인다.
+          번호·낱말만으로 가르면 반대로 **남의 챌린지 답변이 '작성됨'으로 잘못 뜬다** —
+          덜 나쁜 쪽을 택했다. 표식을 떼지 말 것. */
+    const ANSWER_CHS = ['answer', 'culture'];
+    const CH_DAY_MARK = { answer: '', culture: '대.문.각 ' };
+    const DAY_FALLBACK = {
+      answer: [
+      'DAY 1. 가치관',
+      'DAY 2. 좋은 서비스',
+      'DAY 3. 팀워크',
+      'DAY 4. 규정 상황 대처',
+      'DAY 5. 실패 경험',
+      'DAY 6. 항공사 장점',
+      'DAY 7. 뽑아야 하는 이유',
+      'DAY 8. 영어 자기소개',
+      'DAY 9. 승무원 자질',
+      'DAY 10. 마지막 할 말'
+      ],
+      culture: [
+      'DAY 1. 좋은 신입은 처음부터 일을 잘하는 사람일까?',
+      'DAY 2. 팀워크는 사이좋게 지내는 게 아니다',
+      'DAY 3. 센스 있는 승무원은 무조건 먼저 움직이지 않는다',
+      'DAY 4. 친절한 승무원이 좋은 승무원일까?',
+      'DAY 5. 그래서 대한항공은 어떤 사람과 같이 일하고 싶을까?',
+      'DAY 6. 면접관은 승무원이 아닙니다',
+      'DAY 7. 일을 못해서 미운 후배는 별로 없었습니다',
+      'DAY 8. 싫어하는 사람이랑도 비행해야 합니다',
+      'DAY 9. 일 잘하는 사람과 같이 일하고 싶은 사람은 다를 수 있습니다',
+      'DAY 10. 대한항공 10년 후, 다시 신입 면접을 본다면'
+      ]
+    };
+    // 사이 공백·마침표·괄호를 걷어낸 비교용 문자열. 'DAY 1. 자기소개' → 'day1자기소개'
     const normTitle = s => String(s || '').toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+    // 문항 이름 → 작성 판정에 쓸 낱말. '장점/단점' 처럼 갈래가 있으면 나눠 각각 본다.
+    // ⚠️ 낱말을 손으로 적는 칸이 admin 에 있었는데 2026-08-24 없앴다(오너 "헷갈려").
+    //    규칙은 이 함수 하나다 — 문항 이름이 곧 낱말이다. 손으로 적는 목록을 다시 만들지 말 것.
     const wordsOf = title => String(title || '').split(/[\/·,]/).map(x => normTitle(x)).filter(Boolean);
-    let ANSWER_DAY_WORDS = ANSWER_DAYS.map(d => wordsOf(d.replace(/^DAY\s*\d+\.\s*/, '')));
-    function dayNoOf(title) {
+    const dayWordsOf = list => list.map(d => wordsOf(d.replace(/^DAY\s*\d+\.\s*/, '')));
+    let CH_DAYS = { answer: DAY_FALLBACK.answer.slice(), culture: DAY_FALLBACK.culture.slice() };
+    let CH_DAY_WORDS = { answer: dayWordsOf(CH_DAYS.answer), culture: dayWordsOf(CH_DAYS.culture) };
+
+    // 제목 → 그 챌린지의 DAY 번호(못 찾으면 0). ① 표식으로 챌린지를 가르고
+    // ② 'DAY 3'·'3일차' 같은 번호가 있으면 그것 ③ 없으면 낱말.
+    // ⚠️ 정확 일치로 되돌리지 말 것 — 학생이 저장소에서 제목을 고치면 이미 쓴 답변이
+    //    다시 '쓰기'로 보여 "썼는데 왜 안 뜨냐"가 됐다(2026-08-23).
+    function dayNoOf(title, ch) {
       const t = normTitle(title);
       if (!t) return 0;
+      const mine = normTitle(CH_DAY_MARK[ch] || '');
+      if (mine) {
+        if (t.indexOf(mine) < 0) return 0;              // 표식 있는 챌린지 = 표식이 있어야 내 것
+      } else if (ANSWER_CHS.some(k => {                 // 표식 없는 챌린지 = 남의 표식이 붙었으면 남의 것
+        const m = normTitle(CH_DAY_MARK[k] || '');
+        return m && t.indexOf(m) >= 0;
+      })) return 0;
+      const days = CH_DAYS[ch] || [], words = CH_DAY_WORDS[ch] || [];
       const m = t.match(/day0*(\d{1,2})/) || t.match(/(\d{1,2})일차/);
-      if (m) { const n = Number(m[1]); if (n >= 1 && n <= ANSWER_DAYS.length) return n; }
-      for (let i = 0; i < ANSWER_DAY_WORDS.length; i++) {
-        if (ANSWER_DAY_WORDS[i].some(w => t.indexOf(w) >= 0)) return i + 1;
+      if (m) { const n = Number(m[1]); if (n >= 1 && n <= days.length) return n; }
+      for (let i = 0; i < words.length; i++) {
+        if (words[i].some(w => t.indexOf(w) >= 0)) return i + 1;
       }
       return 0;
     }
-    async function loadAnswerLessons() {
-      try {
-        const { data, error } = await MONC.sb.from('challenge_lessons')
-          .select('day_no, title').eq('challenge', 'answer').order('day_no');
-        if (error || !data || !data.length) return;
-        ANSWER_DAYS = data.map(r => 'DAY ' + r.day_no + '. ' + r.title);
-        ANSWER_DAY_WORDS = data.map(r => wordsOf(r.title));
-      } catch (_) { /* 표 미생성 — 기본 문항으로 그린다 */ }
+    // ⚠️ 챌린지별로 나눠 받는다 — 한쪽 조회가 실패해도 다른 쪽 폴백만 남기고 넘어간다.
+    async function loadDayLessons() {
+      for (const ch of ANSWER_CHS) {
+        try {
+          const { data, error } = await MONC.sb.from('challenge_lessons')
+            .select('day_no, title').eq('challenge', ch).order('day_no');
+          if (error || !data || !data.length) continue;
+          CH_DAYS[ch] = data.map(r => 'DAY ' + r.day_no + '. ' + r.title);
+          CH_DAY_WORDS[ch] = data.map(r => wordsOf(r.title));
+        } catch (_) { /* 표 미생성 — 폴백 문항으로 그린다 */ }
+      }
     }
 
     let ctx = null;   // 업로드 뒤 다시 그릴 재료 { me, partOf, lockOf }
@@ -238,18 +295,23 @@
       const subOf = {};
       subs.forEach(s => { subOf[s.challenge + '#' + s.type] = s; });
 
-      // 승자각 작성 여부 — answers 에서 제목만 가볍게 받는다(select('*') 방어는 mypage 와 동일)
+      // 답변형 챌린지 작성 여부 — answers 에서 제목만 가볍게 받는다(select('*') 방어는 mypage 와 동일)
       const doneOf = {};
-      if (openKeys.indexOf('answer') >= 0) {
-        await loadAnswerLessons();
+      const ansChs = openKeys.filter(c => ANSWER_CHS.indexOf(c) >= 0);
+      if (ansChs.length) {
+        await loadDayLessons();
         try {
           let { data, error } = await MONC.sb.from('answers')
             .select('*, questions(content)').eq('member_id', me);
           if (error) ({ data } = await MONC.sb.from('answers').select('*').eq('member_id', me));
-          (data || []).forEach(a => {
-            const t = (a.title || '').trim() || ((a.questions || {}).content || '').trim();
-            const n = dayNoOf(t);
-            if (n && !(n in doneOf)) doneOf[n] = t;
+          const rows = data || [];
+          ansChs.forEach(ch => {
+            const d = doneOf[ch] = {};
+            rows.forEach(a => {
+              const t = (a.title || '').trim() || ((a.questions || {}).content || '').trim();
+              const n = dayNoOf(t, ch);
+              if (n && !(n in d)) d[n] = t;
+            });
           });
         } catch (_) {}
       }
@@ -265,12 +327,15 @@
           </div>`;
         }
         if (meta.media === 'answers') {
+          const days = CH_DAYS[c] || [];
+          const doneC = doneOf[c] || {};
           return `<div class="sb-card">
-            <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${rTxt ? esc(rTxt) + ' · ' : ''}답변 ${Object.keys(doneOf).length}/${ANSWER_DAYS.length}</span></div>
+            <div class="sb-h"><span class="sb-t">${meta.label}</span><span class="sb-r">${rTxt ? esc(rTxt) + ' · ' : ''}답변 ${Object.keys(doneC).length}/${days.length}</span></div>
             <p class="sb-hint">문항을 누르면 나만의 승준노트에 답변을 쓸 수 있어요. 쓴 답변은 마이페이지·저장소에 그대로 남아요.</p>
-            <ul class="sb-days">${ANSWER_DAYS.map((d, i) => {
-              const done = doneOf[i + 1];
-              const href = done ? 'answers.html' : 'answers.html?title=' + encodeURIComponent(d) + '#new';
+            <ul class="sb-days">${days.map((d, i) => {
+              const done = doneC[i + 1];
+              // ⚠️ 새 답변 제목엔 챌린지 표식을 붙인다(위 CH_DAY_MARK) — mypage 와 한 쌍이다.
+              const href = done ? 'answers.html' : 'answers.html?title=' + encodeURIComponent((CH_DAY_MARK[c] || '') + d) + '#new';
               return `<li><a href="${href}">
                 <span class="q">${esc(d)}</span>
                 <span class="sb-chip${done ? ' is-done' : ''}">${done ? '작성됨' : '쓰기'}</span>
