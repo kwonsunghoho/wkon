@@ -135,9 +135,13 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 
 ### 챌린지가 다섯이 됐다 — 댄.특.완(2026-09-04)
 
-`apply.html` `CHALLENGES` 배열 맨 앞에 `culture` 를 넣었다(허브 선두 카드와 같은 자리 감각).
-참가비는 **다른 넷과 같은 `site_config.challenge_price` 한 값** — 챌린지별 가격은 없다(넣으려면
-화면·verify-payment 양쪽을 같이 손대야 한다 · 위 '참가비' 절).
+`apply.html` `CHALLENGES` 배열 맨 앞에 `culture` 를 넣었다.
+
+**⚠️ 참가비는 다른 넷과 같은 33,000원 — 2026-09-05 오너 확정("참가비는 그대로 33000원으로 가자").**
+답변이 30개(다른 챌린지의 3배)라 챌린지별 가격을 둘지 물었고, 오너가 같은 값으로 결정했다.
+값은 `site_config.challenge_price` 한 곳이 정본이고 **챌린지별 가격 칸은 없다** — 만들려면
+화면(apply.html `PRICE`·challenge-sticky.js)과 verify-payment 를 같이 손봐야 한다(위 '참가비' 절).
+분량이 다르다는 이유로 이 결정을 다시 뒤집지 말 것 — 오너가 알고 정했다.
 
 - **진행 방식은 승.자.각 계열**(코치 가이던스 영상 + 매일 직접 작성)이다. '서비스 제공 안내'의
   진행 주기 줄과 FAQ '어떻게 진행되나요?' 두 곳이 이 사실을 적는다 — **'1:1 개별 점검'에 넣지 말 것.**
