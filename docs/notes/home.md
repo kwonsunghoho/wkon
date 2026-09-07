@@ -2,7 +2,7 @@
 
 ## 홈·챌린지 허브 활자 규칙 — 제목은 그대로, 나머지는 상세와 같은 값 (2026-09-07 오너 확정)
 
-비교 목업 `outputs/type-rule-home-hub-mockup.html`(라이브 페이지 두 틀에 상세의 `--cd-*` 규칙을 겹친 것)을 보고 오너가
+비교 목업(라이브 페이지 두 틀에 상세의 `--cd-*` 규칙을 겹친 `outputs/type-rule-home-hub-mockup.html` — 결정 뒤 오너 지시로 삭제, git 이력 f27acf5)을 보고 오너가
 "메인 타이틀 강조는 현재가 더 좋고, 그 외 텍스트 타이포 줄바꿈·가독성은 규칙을 적용한 게 더 좋다"로 결정. 그대로 적용했다.
 
 - **그대로 둔 것(제목·강조)**: 홈 `.msn-title .wr-q .sort-title .tl-when .dr-title .dp-title .nums-title .num strong .nums-line .closing-title`,
