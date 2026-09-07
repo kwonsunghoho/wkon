@@ -21,7 +21,7 @@
 .bq-head { text-align: center; max-width: 520px; margin: 0 auto 40px; }
 .bq-label {
   display: inline-flex; align-items: center; gap: 9px;
-  font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
   color: var(--action-on-dark); margin-bottom: 10px;
 }
 .bq-label::before { content: ''; width: 26px; height: 1.5px; background: var(--action-on-dark); flex: none; }
@@ -30,11 +30,11 @@
   font-size: var(--fs-h2); line-height: 1.28; letter-spacing: -0.01em;
   color: var(--action-on-dark); margin-bottom: 14px; word-break: keep-all;
 }
-.bq-desc { font-size: var(--fs-body, 17px); color: rgba(241,244,248,.6); line-height: 1.7; }
+.bq-desc { font-size: 16px; color: rgba(241,244,248,.6); line-height: 1.65; }
 .bq-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: #FFFFFF; color: var(--accent-ink); border: none; cursor: pointer;
-  border-radius: 14px; padding: 16px 28px; font-size: 15px; font-weight: 700;
+  border-radius: 14px; padding: 16px 28px; font-size: 16px; font-weight: 700;
   font-family: inherit; text-decoration: none; box-shadow: var(--shadow-action);
   transition: background .2s, transform .2s; -webkit-tap-highlight-color: transparent;
 }
@@ -74,8 +74,8 @@
   text-align: center; color: #fff;
 }
 .bq-intro-title { font-size: clamp(24px, 6.4vw, 30px); font-weight: 800; line-height: 1.3; color: #fff; }
-.bq-intro-meta { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.66); }
-.bq-start-btn { min-height: 52px; padding: 14px 36px; font-size: 16px; font-weight: 800; margin-top: 4px; }
+.bq-intro-meta { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.66); }
+.bq-start-btn { min-height: 52px; padding: 14px 36px; font-size: 16px; font-weight: 700; margin-top: 4px; }
 .bq-scene { position: relative; aspect-ratio: 16 / 9; background: #131722; }
 .bq-scene video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .bq-scene::after {
@@ -87,7 +87,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .bq-scene-badge {
-  font-size: 12px; font-weight: 800; color: #F1F4F8;
+  font-size: 12.5px; font-weight: 700; color: #F1F4F8;
   background: rgba(16,18,26,.62); border: 1px solid rgba(255,255,255,.18);
   padding: 4px 11px; border-radius: 99px;
   display: inline-flex; align-items: center; gap: 6px;
@@ -100,11 +100,11 @@
 .bq-dots i.on { background: var(--action-on-dark); }
 .bq-scene-tag {
   position: absolute; z-index: 1; left: 14px; bottom: 12px;
-  font-size: 12px; font-weight: 800; color: #F1F4F8;
+  font-size: 12.5px; font-weight: 700; color: #F1F4F8;
   background: rgba(25,65,146,.72); padding: 4px 11px; border-radius: 99px;
 }
 .bq-console { padding: 18px 18px 22px; }
-.bq-round-num { font-size: 12px; font-weight: 800; color: rgba(241,244,248,.72); letter-spacing: .04em; margin-bottom: 10px; }
+.bq-round-num { font-size: 12.5px; font-weight: 700; color: rgba(241,244,248,.72); letter-spacing: 0; margin-bottom: 10px; }
 .bq-clips { display: flex; flex-direction: column; gap: 10px; }
 .bq-clip {
   display: flex; align-items: center; gap: 12px;
@@ -125,9 +125,9 @@
   display: flex; align-items: center; justify-content: center;
 }
 .bq-clip-info { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.bq-clip-name { font-size: 15px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.bq-clip-check { font-size: 12px; font-weight: 700; color: var(--accent-ink); }
-.bq-clip-badge { font-size: 12px; font-weight: 800; border-radius: 99px; padding: 2px 9px; }
+.bq-clip-name { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bq-clip-check { font-size: 12.5px; font-weight: 700; color: var(--accent-ink); }
+.bq-clip-badge { font-size: 12.5px; font-weight: 700; border-radius: 99px; padding: 2px 9px; }
 .bq-clip-badge.is-before { background: rgba(20,32,52,.1); color: var(--primary); }
 .bq-clip-badge.is-after { background: var(--action); color: var(--action-ink); }
 .bq-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
@@ -140,7 +140,7 @@
 .bq-clip-bar { display: block; height: 4px; border-radius: 99px; background: rgba(23,42,71,.12); overflow: hidden; }
 .bq-clip-fill { display: block; height: 100%; width: 0%; background: var(--accent-dark); border-radius: 99px; transition: width .1s linear; }
 .bq-question { margin-top: 20px; text-align: center; }
-.bq-q-text { font-size: 15px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; }
+.bq-q-text { font-size: 16px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; }
 .bq-q-text strong { color: var(--text); }
 .bq-answers { display: flex; gap: 10px; }
 .bq-answer-btn {
@@ -148,7 +148,7 @@
   border-radius: 99px;
   border: 2px solid var(--accent-ink);
   background: var(--surface); color: var(--accent-ink);
-  font-size: 15px; font-weight: 800; cursor: pointer;
+  font-size: 16px; font-weight: 700; cursor: pointer;
   font-family: inherit;
   transition: background .2s, opacity .2s;
   -webkit-tap-highlight-color: transparent;
@@ -158,9 +158,9 @@
 .bq-reveal { margin-top: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .bq-verdict { font-size: 20px; font-weight: 800; color: var(--accent-dark); }
 .bq-verdict.is-miss { color: var(--primary); }
-.bq-explain { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+.bq-explain { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
 .bq-explain strong { color: var(--text); }
-.bq-next-btn { min-height: 48px; padding: 12px 32px; font-size: 15px; font-weight: 800; margin-top: 4px; }
+.bq-next-btn { min-height: 48px; padding: 12px 32px; font-size: 16px; font-weight: 700; margin-top: 4px; }
 .bq-result { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 24px; }
 .bq-score-big { font-size: clamp(24px, 6vw, 32px); font-weight: 800; color: var(--text); line-height: 1.3; }
 .bq-score-big strong { color: var(--action); }

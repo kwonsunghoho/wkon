@@ -1,5 +1,21 @@
 # 홈(index) · 챌린지 허브 — 상세 기록
 
+## 홈·챌린지 허브 활자 규칙 — 제목은 그대로, 나머지는 상세와 같은 값 (2026-09-07 오너 확정)
+
+비교 목업 `outputs/type-rule-home-hub-mockup.html`(라이브 페이지 두 틀에 상세의 `--cd-*` 규칙을 겹친 것)을 보고 오너가
+"메인 타이틀 강조는 현재가 더 좋고, 그 외 텍스트 타이포 줄바꿈·가독성은 규칙을 적용한 게 더 좋다"로 결정. 그대로 적용했다.
+
+- **그대로 둔 것(제목·강조)**: 홈 `.msn-title .wr-q .sort-title .tl-when .dr-title .dp-title .nums-title .num strong .nums-line .closing-title`,
+  허브 `.chb-title`(고딕 A1 900)·**`.ch-cat` 카테고리 판(19px 800 — 2026-08-26 C안)**, 퀴즈 `.bq-title .bq-intro-title .bq-verdict .bq-score-big`,
+  히어로 인트로·태그라인·스크롤 신호(`.hi-* .hc-*` 실측 상수), 칩 정렬 블록(`.sc*` — `.sc-t` 행간 1.35 가 핵심), 푸터.
+- **규칙으로 바꾼 것(그 외 전부)**: 본문·설명 16px 행간 1.65(`.msn-lead .dr-ds .chb-sub .bq-desc`) · 보조 14px 행간 1.5(`.wr-sub .dp-ds .num > span .ch-st .bq-explain`) ·
+  캡션 12.5px(`.section-label .bq-label`(굵기 700·자간 .12em) · 칩 `.dr-chip .dp-chip .ch-band .ch-proof .mm .ch-sub .closing-note .closing-free` 등) ·
+  굵기 800 → 700(라벨·칩·버튼·`.sgrp-h .mcta-*`) · 자간 0(칩·`.num > span`) · 버튼 16px(`.btn .bq-btn .bq-answer-btn .bq-next-btn`). 데스크톱 `.msn-lead` 19→17(문 설명 17과 같은 값).
+- 값은 `index.css`·`challenges.html` 인라인·`blind-quiz.js` CSS 문자열에 **직접** 넣었다(상세처럼 변수 한 벌이 아니다 — 홈은 실측 상수가 섞여 있어
+  블록별로 값을 골라 바꿨다). 다시 손볼 땐 위 '그대로 둔 것' 목록을 먼저 본다.
+- 실측(375 미러 · 2026-09-07): 홈 제목 24/800 유지 · 리드 16/1.65 · 라벨 12.5/700 · 칩 12.5/700 · 콘솔 에러 0 · 넘침 0 · 칩 정렬 애니메이션 정상.
+  허브 제목 30/900 유지 · 부제 16 · 카드 부제·모집 줄 12.5 · 퀴즈 라벨 12.5/700.
+
 ## 계측 비콘 `page_events` — 규칙 (2026-08-05 보안 점검)
 
 anon INSERT 는 **열어 둔다.** 측정 대상이 로그아웃 방문자의 히어로 도달률이라 로그인 필수로 만들면 기능이 죽는다. 대신 무엇을·얼마나 넣을 수 있는지를 좁혔다(migration `20260805150000_page_events_guard.sql`).
