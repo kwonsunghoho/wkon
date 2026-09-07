@@ -147,7 +147,7 @@
 ## 챌린지 상세 ①안 '결과 먼저' 배치 — 보신각 먼저 (2026-09-07 오너 확정)
 
 오너 "각 챌린지 상세페이지가 구매전환에 약한 것 같다. 매출이 극대화되도록 UX/UI 를 바꾸고 싶다" →
-목업 3안(`outputs/challenge-detail-direction-mockup.html` · 보신각 실데이터)에서 **①안**(클래스101 문법:
+목업 3안(`outputs/challenge-detail-direction-mockup.html` · 보신각 실데이터 — 결정 뒤 오너 지시로 삭제, git 이력 4a5b17f)에서 **①안**(클래스101 문법:
 첫 화면 = 결과물, 가격은 위에) 확정, "보신각부터". 범위는 상세 5종만(신청 페이지는 범위 밖).
 설계 원장 `docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md`,
 계획 `docs/superpowers/plans/2026-09-07-challenge-detail-voice-conversion.md`.

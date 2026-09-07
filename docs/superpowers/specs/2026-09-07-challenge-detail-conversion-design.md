@@ -1,7 +1,7 @@
 # 챌린지 상세 구매전환 개편 — ①안 '결과 먼저' (2026-09-07 오너 승인)
 
 오너 지시: "각 챌린지 상세페이지가 구매전환에 약한 것 같다. UX/UI 를 매출이 극대화되도록
-바꾸고 싶다." → 목업 3안(`outputs/challenge-detail-direction-mockup.html`) 중 **①안 확정**,
+바꾸고 싶다." → 목업 3안(`outputs/challenge-detail-direction-mockup.html` — 결정 뒤 오너 지시로 삭제, git 이력 4a5b17f) 중 **①안 확정**,
 "보신각부터" 적용. 범위는 **상세 5종만**(A안) — 신청 페이지(apply.html)는 이번 범위 밖.
 
 ## 진단(2026-09-07 실측 · 375×812)
