@@ -144,6 +144,50 @@
 - **⚠️ 현형빈은 챌린지를 지도하지 않는다(2026-07-24 오너 확인).** researchers.html에만 노출하고 apply.html·terms.html의 '담당 코치' 명단에는 넣지 않는다(약관상 실제 지도자 명단). '연구진 전원 = 챌린지 담당 코치'를 전제한 문구 금지.
 - **카드 순서 = 직급 순**(수석 권성호·박새암 → 책임 고은지·김유리 → 선임 최보민·현형빈) — 직급이 바뀌면 자리도 같이 옮긴다. 사진 `images/instructor-<kwon|park|hyun|koh|choi|kim>.webp`(800px 폭 webp q78).
 
+## 챌린지 상세 ①안 '결과 먼저' 배치 — 보신각 먼저 (2026-09-07 오너 확정)
+
+오너 "각 챌린지 상세페이지가 구매전환에 약한 것 같다. 매출이 극대화되도록 UX/UI 를 바꾸고 싶다" →
+목업 3안(`outputs/challenge-detail-direction-mockup.html` · 보신각 실데이터)에서 **①안**(클래스101 문법:
+첫 화면 = 결과물, 가격은 위에) 확정, "보신각부터". 범위는 상세 5종만(신청 페이지는 범위 밖).
+설계 원장 `docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md`,
+계획 `docs/superpowers/plans/2026-09-07-challenge-detail-voice-conversion.md`.
+
+- **진단 실측(개편 전 · 375×812)**: 보신각 10,420px = 12.8화면. 커리큘럼이 두 번째, 가격은 하단 바에만(본문 0회),
+  후기 55건은 9번째 화면, 환불·FAQ 는 신청 페이지에만, 효과 설명 섹션 셋('얻을 수 있어요'·'핵심 변화'·'최종 목표')이
+  길이의 1/4. 상세 5종 비콘 0개.
+- **순서 8단계(①안)**: ① 사진 히어로 — 배지 + 제목 + 약속 한 줄 + **사실 알약 3개**(후기 N건 · 모집/D-day · 참가비) +
+  신청 + '시작일 전날까지 취소하면 전액 환불' ② 비포/애프터 **1쌍**(+ '다른 챌린저 6명의 변화 더 듣기' 접이)
+  ③ 이런 학생에게(체크 목록 6줄, 제목만) ④ 2주 진행 방식(사실 4칸 + 주차 접이 둘 다 접힘 + **담당 코치 한 줄**)
+  ⑤ 후기 3개(`challenge-reviews.js` 섹션을 이 자리로) ⑥ **참가비 카드**(정가/할인가 · 포함 내역 4줄 · 신청 · 환불 한 줄)
+  ⑦ FAQ 4개(`<details>`) ⑧ 마무리 `.cta-box`. **지운 것**: 오버뷰 3칸(2주/10강/30초) · '얻을 수 있어요' ·
+  '핵심 변화' · '최종 목표' · '← 목록으로'.
+- **실측(개편 후 · 375×812 미러)**: 4,794px = **5.9화면**. 320px 넘침 0 · 12px 미만 활자 0 · 44px 미만 터치 0
+  (nav 햄버거 32px 은 nav 몫) · 콘솔 에러 0. 알약 3개 값 = 실데이터(후기 55건 · 모집 8/24 ~ 9/13 D-6 · 49,000→33,000),
+  참가비 카드 금액 = 하단 바 금액. 데스크톱 1280: 히어로 2열(사진 5 : 글 6), 넘침 0.
+- **스타일은 `challenge-detail.css` 한 파일** — 인라인 `<style>` 블록 **뒤**에 링크한다(앞에 두면 인라인 `.hero` 가
+  같은 특이도로 덮는다). 상세 5종 인라인 공통 블록은 그대로다(보신각↔스피닝 diff 0). 히어로 위 여백 **57px** =
+  모바일 nav 높이(`nav.css` `body[data-nav-offset]` 와 같은 값 — 66 으로 두면 9px 흰 띠), ≥860px 은 96px(nav 67 + 여백).
+- **슬롯 규약 — 공용 JS 는 마크업에 슬롯이 있을 때만 새 동작. 슬롯 없는 나머지 넷은 종전 그대로**(스피닝 회귀 실측: 코치진
+  섹션·바·칩·후기 동일, 콘솔 에러 0):
+  - `challenge-reviews.js`: `[data-review-count]` 에 `N건`, `[data-review-pill]` hidden 해제. 0건·조회 실패면 손대지 않는다.
+  - `challenge-sticky.js`: `[data-ch-price="now"|"list"]`·`[data-price-pill]` 을 하단 바와 **같은 조회 한 번**으로 채운다
+    (못 읽으면 알약 hidden 유지 + 카드 '참가비 안내' — 숫자 지어내기 금지). `[data-coach-slot]` 이 있으면 담당 코치
+    **한 줄**(`.coach-line` + `.coach-more`)만, 없으면 종전 코치진 섹션. 슬롯이 있는데 `LEAD` 가 없으면 아무것도 안 그린다.
+  - `recruit.js`: `#recruitChip` 은 그대로(클래스만 `.fact-pill`). D-day 조각 `.dday-chip` 스타일은 challenge-detail.css 가 맡는다.
+- **사진**: 허브 카드와 같은 `images/hero-<id>.webp`, 4:3 · `object-position: 50% 24%`(허브 초점과 동일) ·
+  `fetchpriority="high"`(첫 화면 최대 요소). 상세엔 원래 사진이 없었다(orb·점무늬 배경) — 그 마크업은 걷었다.
+- **비포/애프터 접이**: 카드 7장 마크업·`controls` 폴백·`preload="none"` 은 ba-audio.js 규칙 그대로. B~G 는
+  `#baRest[hidden]` 안, 접을 때 재생 중인 오디오를 멈춘다. 챌린저 A 인용문은 그대로 보인다.
+- **계측**(`page_events` · `challenge-sticky.js` 공용이라 5종 전부 쌓인다): `ch_detail_cta {c,pos}`(pos = hero/price/final/bar) ·
+  `ch_detail_reach {c,s}`(s = price/faq/end, 각 1회). 분모는 `page_view`. `moncBeacon` 은 2026-09-07 부터 **keepalive fetch**
+  (supabase-config.js) — 클릭 직후 페이지를 떠나도 요청이 산다(실측 4건 전부 201). ⚠️ 검증 중 localhost 에서 보낸
+  4건(reach 3 + cta 1 · 2026-09-07 · path `/challenge-voice.html`)이 표에 들어가 있다.
+- **판매 문구 규칙 유지**: 보신각 = "담당 코치 1:1 중간 점검 1회"(빈도를 세는 표현 금지 — apply-and-payment.md '중간 점검 1회'),
+  환불 = 시작일 전날까지 전액 / 시작 이후 불가(4자리 한 벌과 같은 문장). 가짜 긴급(카운트다운·'N명이 보는 중') 금지.
+- **다음**: 같은 틀로 영합각·스피닝·승자각·댄특완. 승자각·댄특완은 비포/애프터가 없으니(승자각 BA 금지 규칙 유지) 그 자리에
+  후기(승자각 6건) 또는 완성 답변 모양. 댄특완은 후기 0건이라 후기 알약이 빠진다(코치 이력으로 신뢰). 2주 뒤
+  `ch_detail_cta / page_view` 전후 비교.
+
 ## 챌린지 상세 5종 · legacy 페이지(구 CLAUDE.md Pages 항목)
 
 - Active detail pages (challenges.html 카드에서 링크, 신청은 `apply.html?c=<id>`로): `challenge-voice.html`(보신각), `challenge-expression.html`(영합각), `challenge-spinning.html`(스피닝), `challenge-answer.html`(승자각), `challenge-culture.html`(댄특완 · 2026-09-04 신설). ⚠️ 블라인드 퀴즈는 2026-07-30 허브(challenges.html) 하단으로 이사 — 상세엔 없다.
@@ -159,6 +203,9 @@
 `audio/`의 before/after 클립, 위치 기반 네이밍: `challenger-a-before.mp3`…(voice), `spinning-a-before.m4a`…(spinning). Windows에서 추가 시 이중 확장자 주의(`*.mp3.m4a`). **클립은 음성이라 mono ~80kbps로 최적화**(스테레오·128k+ 불필요) — 새 클립도 `-ac 1 -b:a 80k`로 맞출 것. 전·후는 동일 설정으로 인코딩해 대비를 왜곡하지 않는다.
 
 ## 2026-08-02 챌린지 상세 — 가격·신청 고정 바 + 코치진 (`challenge-sticky.js`)
+
+> 2026-09-07 ①안 배치 페이지(보신각)에서는 코치진 섹션 대신 **담당 코치 한 줄**(`[data-coach-slot]`)이고, 금액은 히어로 알약·
+> 참가비 카드에도 같이 채운다 — 위 '①안 결과 먼저' 절의 슬롯 규약. 아래 내용은 슬롯 없는 구 배치 페이지에 그대로 적용된다.
 
 상세 4종에서 `참가비|N,NNN원|무료` 정규식이 **0건**이었다. 학생은 커리큘럼 10일치와 전후
 음성 7쌍을 다 듣고도 금액을 모르고 apply.html 에 가서야 3만원을 처음 봤다. 버튼 공백도

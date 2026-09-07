@@ -117,6 +117,11 @@
       });
       if (!rows.length) return;                            // 0건이면 안 그린다
 
+      /* 히어로 사실 알약 '후기 N건'(2026-09-07 ①안) — 위 return 이 0건을 걸러 주므로 여기 오면 항상 1건 이상.
+         슬롯이 없는 페이지(아직 구 배치)에서는 아무 일도 없다. */
+      document.querySelectorAll('[data-review-count]').forEach(function (el) { el.textContent = rows.length + '건'; });
+      document.querySelectorAll('[data-review-pill]').forEach(function (el) { el.hidden = false; });
+
       // 인용문이 있는 후기를 앞에 — 훑을 수 있는 층이 먼저 보여야 한다(목록 페이지와 같은 규칙)
       rows.sort(function (a, b) { return (b.quote ? 1 : 0) - (a.quote ? 1 : 0); });
       var cards = rows.slice(0, MAX).map(cardHtml).filter(Boolean);

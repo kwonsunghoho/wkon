@@ -403,9 +403,21 @@
   // 공용 비콘 — 페이지 인라인 계측도 앞으로는 이걸 쓴다(insert 코드 복사 금지)
   window.moncBeacon = function (event, meta) {
     try {
-      window.MONC.sb.from('page_events')
-        .insert({ event: event, path: path, meta: meta || {} })
-        .then(function () {}, function () {});
+      const sb = window.MONC.sb;
+      const row = { event: event, path: path, meta: meta || {} };
+      /* keepalive fetch(2026-09-07): 버튼을 누르자마자 페이지를 떠나도(상세 → 신청 이동) 요청이 살아남는다.
+         supabase-js insert 는 일반 fetch 라 이동과 함께 끊길 수 있었다(ch_detail_cta 가 이 경우다).
+         anon 키로 보낸다 — page_events INSERT 는 anon 정책(with check true)이라 회원이어도 같은 결과. */
+      if (window.fetch && sb.supabaseUrl && sb.supabaseKey) {
+        fetch(sb.supabaseUrl + '/rest/v1/page_events', {
+          method: 'POST', keepalive: true,
+          headers: { 'Content-Type': 'application/json', 'apikey': sb.supabaseKey,
+                     'Authorization': 'Bearer ' + sb.supabaseKey, 'Prefer': 'return=minimal' },
+          body: JSON.stringify(row)
+        }).catch(function () {});
+        return;
+      }
+      sb.from('page_events').insert(row).then(function () {}, function () {});
     } catch (e) {}
   };
 

@@ -244,21 +244,33 @@
      ⚠️ 앵커 판정(정가 ≤ 판매가면 안 그린다)은 MONC.loadChallengePricing 안에 있다. 여기 복사 금지. */
   (async function price() {
     var el = document.getElementById('chStickyPrice');
-    if (!window.MONC || !window.MONC.sb || !window.MONC.loadChallengePricing) { el.textContent = '참가비 안내'; return; }
+    /* ①안 히어로 알약·참가비 카드 슬롯(2026-09-07) — 같은 조회 한 번으로 바·알약·카드를 같이 채운다.
+       ⚠️ 못 읽으면 알약은 그리지 않고(hidden 유지) 카드는 '참가비 안내'로 비운다 — 숫자를 지어내지 않는다. */
+    var nows  = document.querySelectorAll('[data-ch-price="now"]');
+    var lists = document.querySelectorAll('[data-ch-price="list"]');
+    var pills = document.querySelectorAll('[data-price-pill]');
+    function unknown() {
+      el.textContent = '참가비 안내';
+      nows.forEach(function (n) { n.textContent = '참가비 안내'; });
+      lists.forEach(function (s) { s.hidden = true; });
+    }
+    if (!window.MONC || !window.MONC.sb || !window.MONC.loadChallengePricing) { unknown(); return; }
     try {
       var p = await window.MONC.loadChallengePricing(null);
       if (p && Number.isFinite(p.price) && p.price >= 0) {
         var won = '<span class="won">원</span>';
         /* 취소선은 시각 효과라 낭독기가 안 읽는다 — 무엇이 정가고 무엇이 낼 돈인지 말해 준다. */
-        el.innerHTML =
-          (p.list == null ? '' : '<s class="was"><span class="sr-only">정가 </span>' + p.list.toLocaleString('ko-KR') + won + '</s>') +
-          '<span class="now">' + (p.list == null ? '' : '<span class="sr-only">할인가 </span>') +
-          p.price.toLocaleString('ko-KR') + won + '</span>';
+        var wasHtml = p.list == null ? '' : '<span class="sr-only">정가 </span>' + p.list.toLocaleString('ko-KR') + won;
+        var nowHtml = (p.list == null ? '' : '<span class="sr-only">할인가 </span>') + p.price.toLocaleString('ko-KR') + won;
+        el.innerHTML = (wasHtml ? '<s class="was">' + wasHtml + '</s>' : '') + '<span class="now">' + nowHtml + '</span>';
+        nows.forEach(function (n) { n.innerHTML = nowHtml; });
+        lists.forEach(function (s) { s.hidden = !wasHtml; if (wasHtml) s.innerHTML = wasHtml; });
+        pills.forEach(function (pl) { pl.hidden = false; });
         return;
       }
     } catch (err) {}
     /* ⚠️ 실패해도 숫자를 지어내지 않는다 — 틀린 금액을 띄우면 광고가와 청구가가 어긋난다. */
-    el.textContent = '참가비 안내';
+    unknown();
   })();
 
   /* ── 모집 상태를 버튼 라벨에 반영 ────────────────────────────────────── */
@@ -292,7 +304,21 @@
       '<span class="po">' + r.position + '</span></span></li>';
   }
 
-  if (anchor && all.length) {
+  /* ①안 배치(2026-09-07): 페이지에 [data-coach-slot] 이 있으면 담당 코치 **한 줄만** 그 자리에 넣는다.
+     코치진 전체 섹션(아래 else)은 구 배치 페이지에서만 — 슬롯이 있는데 LEAD 가 없으면 아무것도 안 그린다(추측 금지). */
+  var slot = document.querySelector('[data-coach-slot]');
+  if (slot) {
+    if (lead) {
+      slot.innerHTML =
+        '<div class="coach-line">' +
+          '<img src="' + lead.photo + '" alt="" loading="lazy" width="52" height="52"' +
+          (lead.photoPos ? ' style="object-position:' + lead.photoPos + '"' : '') + '>' +
+          '<span class="who"><span class="nm">' + NAME + '은 ' + lead.name + ' 코치가 맡습니다<i>담당 코치</i></span>' +
+          '<span class="po">' + lead.position + ' · ' + (GUIDE[CH] ? '가이던스 영상' : '1:1 중간 점검 1회') + '</span></span>' +
+        '</div>' +
+        '<a class="coach-more" href="researchers.html">연구진 전체 이력 보기 →</a>';
+    }
+  } else if (anchor && all.length) {
     var sec = document.createElement('section');
     sec.className = 'ch-coach';
     sec.innerHTML =
@@ -307,5 +333,27 @@
         '<a class="more" href="researchers.html">연구진 전체 이력 보기 →</a>' +
       '</div>';
     anchor.parentNode.insertBefore(sec, anchor);
+  }
+
+  /* ── 계측(2026-09-07 상세 개편 전후 비교용) — page_events, 실패는 조용히 무시 ──
+     ch_detail_cta  {c, pos}: 신청 버튼 클릭(pos = 마크업 data-pos: hero/price/final, 하단 바 = bar).
+     ch_detail_reach {c, s}: [data-reach] 섹션이 화면에 들어온 첫 순간(s = price/faq/end).
+     분모는 supabase-config 의 page_view. 슬롯 없는 구 배치 페이지도 CTA 기준선은 쌓인다. */
+  function beacon(ev, meta) { if (typeof window.moncBeacon === 'function') window.moncBeacon(ev, meta); }
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('.apply-btn, #chStickyGo') : null;
+    if (!t) return;
+    beacon('ch_detail_cta', { c: CH, pos: t.getAttribute('data-pos') || (t.id === 'chStickyGo' ? 'bar' : 'other') });
+  }, true);
+  var reaches = document.querySelectorAll('[data-reach]');
+  if (reaches.length && 'IntersectionObserver' in window) {
+    var rio = new IntersectionObserver(function (es) {
+      es.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        beacon('ch_detail_reach', { c: CH, s: en.target.getAttribute('data-reach') });
+        rio.unobserve(en.target);
+      });
+    }, { threshold: 0.25 });
+    reaches.forEach(function (r) { rio.observe(r); });
   }
 })();
