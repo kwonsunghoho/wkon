@@ -36,7 +36,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          # ⚠️ 입력값은 env 로 받아 셸 변수로 쓴다 — ${{ }} 로 run: 에 직접 끼워 넣으면 셸 주입이 된다
+          #    (pages="1; curl …$SUPABASE_SERVICE_ROLE_KEY" 로 최고 권한 키가 새는 것을 2026-09-07 리뷰에서 재현).
+          MODE: ${{ github.event.inputs.mode }}
+          PAGES: ${{ github.event.inputs.pages }}
         run: |
-          node scripts/fetch-news.mjs \
-            ${{ github.event.inputs.mode == 'dry-run' && '--dry-run' || '' }} \
-            --pages ${{ github.event.inputs.pages || '1' }}
+          ARGS=()
+          [ "$MODE" = "dry-run" ] && ARGS+=(--dry-run)
+          node scripts/fetch-news.mjs "${ARGS[@]}" --pages "${PAGES:-1}"
