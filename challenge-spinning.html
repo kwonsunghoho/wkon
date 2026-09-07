@@ -167,49 +167,153 @@
       .cta-box { padding: 40px 20px; border-radius: 20px; }
     }
   </style>
+  <!-- ①안 '결과 먼저' 배치(2026-09-07) 공용 스타일 — 인라인 블록 뒤에 둔다(앞에 두면 .hero 가 덮는다) -->
+  <link rel="stylesheet" href="challenge-detail.css?v=1">
 </head>
 <body data-challenge="spinning">
 
-
-<section class="hero">
-  <div class="hero-bg">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="dots-bg"></div>
-  </div>
-  <div class="container hero-inner">
-    <div data-reveal>
-      <div class="hero-badge">보이스</div>
+<!-- ①안 '결과 먼저'(2026-09-07 오너 확정 · 보신각과 같은 틀) — 순서·규칙: docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md
+     사진·알약·카드 스타일은 challenge-detail.css(공용). 인라인에 복사하지 말 것. -->
+<section class="hero hero--photo">
+  <div class="hero-wrap">
+    <div class="hero-photo">
+      <!-- 허브 카드와 같은 사진 — 첫 화면 최대 요소라 먼저 받는다 -->
+      <img src="images/hero-spinning.webp" alt="" width="1400" height="933" fetchpriority="high" decoding="async">
+      <span class="hero-badge">보이스</span>
+    </div>
+    <div class="container hero-inner">
       <h1 class="hero-title"><span class="gradient-text" style="font-weight: var(--fw-bold); view-transition-name: challenge-name;">스.피.닝</span> - 듣기 좋은 <strong style="font-weight: var(--fw-bold);">말투</strong> 만들기</h1>
-      <p class="hero-desc">정확한 발음, 안정적인 호흡, 밝은 미소, 자연스러운 인토네이션, 신뢰감 있는 끝맺음, 쉬운 표현까지 단계적으로 연습하며 차분하고 준비된 사람으로 느끼게 합니다.</p>
-    </div>
-    <div class="hero-meta">
-      <div class="meta-chip" id="recruitChip">모집기간 확인 중…</div>
-      <div class="meta-chip">하루 <strong>10-15분</strong></div>
-      <div class="meta-chip">2주 · 미션 <strong>10회차</strong></div>
-      <div class="meta-chip">전후 음성 <strong>4쌍 공개</strong></div>
-      <div class="meta-chip">전문가 <strong>가이던스 영상</strong></div>
-    </div>
-    <div class="hero-actions">
-      <a class="btn btn-primary apply-btn" href="#" onclick="handleApply(event)">지금 바로 도전하기</a>
-      <a class="btn btn-ghost" href="challenges.html">← 목록으로</a>
+      <p class="hero-desc">딱딱한 말투에서 귀에 감기는 말투로. 코치와 함께하는 2주, 하루 10~15분.</p>
+      <!-- 사실 3개 — 전부 실데이터. 후기 수 = challenge-reviews.js · 모집 = recruit.js · 참가비 = challenge-sticky.js.
+           ⚠️ 값을 모르면 알약을 그리지 않는다(hidden 유지). 숫자를 지어내지 말 것. -->
+      <div class="hero-facts">
+        <span class="fact-pill" data-review-pill hidden>후기 <strong data-review-count></strong></span>
+        <span class="fact-pill" id="recruitChip">모집기간 확인 중…</span>
+        <span class="fact-pill" data-price-pill hidden><s data-ch-price="list" hidden></s><strong data-ch-price="now"></strong></span>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary apply-btn" data-pos="hero" href="#" onclick="handleApply(event)">신청하기</a>
+      </div>
+      <p class="hero-note">시작일 전날까지 취소하면 전액 환불</p>
     </div>
   </div>
 </section>
 
-<section>
+<!-- 2. 증거 — 1쌍만 펼치고 나머지 3쌍은 버튼으로. 카드 마크업·controls 폴백·preload=none 은 ba-audio.js 규칙 그대로 -->
+<section class="cd-sec">
   <div class="container">
-    <div class="overview-grid">
-      <div class="overview-card"><div class="overview-val">2주</div><div class="overview-label">커리큘럼</div></div>
-      <div class="overview-card"><div class="overview-val">10강</div><div class="overview-label">총 강의 수</div></div>
-      <div class="overview-card"><div class="overview-val">10-15분</div><div class="overview-label">하루 연습시간</div></div>
-    </div>
+    <div class="section-label">Before &amp; After</div>
+    <h2 class="section-title">같은 사람의 말투가 2주 만에 이렇게 달라졌어요</h2>
+    <p class="cd-lead">직접 들어보세요. 실제 챌린저의 처음과 끝 녹음입니다.</p>
+    <div class="ba-list">
+      <!-- ── 챌린저 A ── -->
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">A</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 A</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-a-before.m4a"></audio>
+          </div>
+          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-a-after.m4a"></audio>
+          </div>
+        </div>
+      </div>
+      <div class="ba-rest" id="baRest" hidden>
+      <!-- ── 챌린저 B ── -->
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">B</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 B</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-b-before.m4a"></audio>
+          </div>
+          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-b-after.m4a"></audio>
+          </div>
+        </div>
+      </div>
 
-    <div class="section-label">Curriculum</div>
-    <h2 class="section-title">2주 커리큘럼</h2>
+<!-- ── 챌린저 C ── -->
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">C</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 C</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-c-before.m4a"></audio>
+          </div>
+          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-c-after.m4a"></audio>
+          </div>
+        </div>
+      </div>
+
+<!-- ── 챌린저 D ── -->
+      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">D</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 D</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-d-before.m4a"></audio>
+          </div>
+          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
+            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
+            <audio preload="none" controls style="width:100%;" src="audio/spinning-d-after.m4a"></audio>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+    <button type="button" class="ba-more-btn" id="baMoreBtn" aria-expanded="false" aria-controls="baRest">다른 챌린저 3명의 변화 더 듣기</button>
+  </div>
+</section>
+
+<!-- 3. 나한테 맞나 — 카드를 체크 목록으로(제목만) -->
+<section class="cd-sec">
+  <div class="container">
+    <div class="section-label">Recommended For</div>
+    <h2 class="section-title">이런 학생에게 맞아요</h2>
+    <ul class="fit-list">
+      <li>면접에서 말이 급해지는 학생</li>
+      <li>발음이 뭉개지거나 말끝이 흐려지는 학생</li>
+      <li>답변은 준비했지만 전달력이 약한 학생</li>
+      <li>밝게 말하고 싶은데 표정과 목소리가 굳는 학생</li>
+      <li>외운 티 없이 자연스럽게 말하고 싶은 학생</li>
+      <li>어려운 질문도 부드럽고 차분하게 답하고 싶은 학생</li>
+      <li>승무원 면접에 어울리는 말투를 만들고 싶은 학생</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 4. 어떻게 하나 — 사실 4칸 + 주차 접이(둘 다 접힘) + 담당 코치 한 줄(challenge-sticky.js 가 [data-coach-slot] 에 채움) -->
+<section class="cd-sec">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">2주 동안 이렇게 진행돼요</h2>
+    <div class="how-facts">
+      <div class="how-fact"><b>하루 10~15분</b><span>가이던스 영상 보고 녹음 제출</span></div>
+      <div class="how-fact"><b>미션 10회차</b><span>2주 · 1주치를 한 번에 받아요</span></div>
+      <div class="how-fact"><b>카카오톡 채널</b><span>미션 안내 · 과제 제출</span></div>
+      <div class="how-fact"><b>1:1 중간 점검 1회</b><span>담당 코치가 직접 짚어줘요</span></div>
+    </div>
     <div class="curriculum-list">
 
-      <div class="curriculum-week open">
+      <div class="curriculum-week">
         <div class="week-header">
           <div class="week-num">1</div>
           <div class="week-info">
@@ -250,254 +354,55 @@
       </div>
 
     </div>
+    <div data-coach-slot></div>
   </div>
 </section>
 
-<!-- 실제 챌린저 비포 & 애프터 -->
-<section style="padding: 60px 0;">
-  <div class="container">
-    <div class="section-label">Before &amp; After</div>
-    <h2 class="section-title">실제 챌린저 비포 &amp; 애프터</h2>
-    <p style="font-size:17px; color:var(--text-muted); margin-bottom:40px; line-height:1.7; word-break:keep-all;">
-      직접 들어보세요. 같은 사람의 말투가 <strong style="color:var(--accent-ink);">2주 만에</strong> 이렇게 달라졌어요.
-    </p>
-    <div style="display:flex; flex-direction:column; gap:20px; max-width:720px; margin:0 auto;">
-
-      <!-- ── 챌린저 A ── -->
-      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">A</div>
-          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 A</div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-a-before.m4a"></audio>
-          </div>
-          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-a-after.m4a"></audio>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 챌린저 B ── -->
-      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">B</div>
-          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 B</div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-b-before.m4a"></audio>
-          </div>
-          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-b-after.m4a"></audio>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 챌린저 C ── -->
-      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">C</div>
-          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 C</div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-c-before.m4a"></audio>
-          </div>
-          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-c-after.m4a"></audio>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 챌린저 D ── -->
-      <div style="background:var(--surface); border-radius:20px; padding:24px; box-shadow:var(--shadow); border:1.5px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-          <div style="width:36px; height:36px; border-radius:50%; background:var(--action); display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; font-weight:900; flex-shrink:0;">D</div>
-          <div style="font-size:15px; font-weight:800; color:var(--text);">챌린저 D</div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="ba-cell" data-ba="before" style="background:var(--bg); border-radius:12px; padding:14px; border:1.5px solid var(--border);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--text-dim); margin-bottom:8px;">BEFORE</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-d-before.m4a"></audio>
-          </div>
-          <div class="ba-cell" data-ba="after" style="background:var(--action-tint); border-radius:12px; padding:14px; border:1.5px solid rgba(27,58,107,.28);">
-            <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--accent-ink); margin-bottom:8px;">AFTER</div>
-            <audio preload="none" controls style="width:100%;" src="audio/spinning-d-after.m4a"></audio>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<section style="padding-top: 0;">
-  <div class="container">
-    <div class="section-label">Results</div>
-    <h2 class="section-title">이런 걸 얻을 수 있어요</h2>
-    <div class="benefits-grid">
-      <div class="benefit-card"><div class="benefit-title">정확한 발음 및 안정적인 호흡</div><p class="benefit-desc">뭉개지는 발음을 줄이고, 문장을 의미 단위로 끊어 말하는 안정적인 호흡 습관을 만들어요.</p></div>
-      <div class="benefit-card"><div class="benefit-title">밝고 호감 있는 말투</div><p class="benefit-desc">미소와 목소리가 함께 밝아지며, 딱딱한 내용도 따뜻하고 안정적으로 전달하는 감각을 익혀요.</p></div>
-      <div class="benefit-card"><div class="benefit-title">신뢰감 있는 답변 전달</div><p class="benefit-desc">문장 끝을 흐리지 않고, 어려운 질문도 부드럽고 차분하게 답하는 쿠셔닝 표현을 배워요.</p></div>
-      <div class="benefit-card"><div class="benefit-title">최종 1분 스피치</div><p class="benefit-desc">2주 동안 배운 모든 요소를 적용해 면접관이 기억하는 스피치를 완성하게 돼요.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- 2주 과정의 핵심 변화 -->
-<section style="padding: 60px 0;">
-  <div class="container">
-    <div class="section-label">Core of the Program</div>
-    <h2 class="section-title">2주 과정의 핵심 변화</h2>
-    <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
-        <p style="margin-bottom: 24px;">스.피.닝을 마치면 학생은 단순히 말을 많이 해본 것이 아니라,<br><strong style="color: var(--accent-ink);">면접 말하기에 필요한 핵심 요소를 하나씩 정리한 결과물</strong>을 갖게 됩니다.</p>
-
-        <ul style="list-style: none; padding: 0; margin-bottom: 0;">
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            내 발음 습관과 자주 틀리는 발음 체크
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            발음 주의 단어가 표시된 원고
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            호흡구간이 정리된 스피치 원고
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            미소와 말투를 함께 사용하는 감각
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            강조 단어와 음의 고저가 표시된 원고
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            말끝을 흐리지 않는 끝맺음 습관
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            부정적인 답변을 부드럽게 바꾸는 쿠셔닝 표현
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            어려운 내용을 쉽게 설명하는 말하기 방식
-          </li>
-          <li style="margin-bottom: 12px; padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            1일차와 비교 가능한 스피치 변화
-          </li>
-          <li style="padding-left: 28px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">✓</span>
-            최종 1분 스피치 발표본
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 이 챌린지의 실제 후기 (2026-08-02) — 마크업·스타일은 challenge-reviews.js 가 채운다.
-     ⚠️ 후기 0건이면 섹션을 안 그린다(hidden 유지). data-challenge 값은 reviews.challenge 와 같아야 한다. -->
+<!-- 5. 남들은 뭐라나 — 실제 후기 3개(challenge-reviews.js 가 채운다). ⚠️ 후기 0건이면 섹션을 안 그린다(hidden 유지).
+     data-challenge 값은 reviews.challenge 와 같아야 한다(admin 후기 탭의 RV_CH_OPTS 와 같이 고친다). -->
 <section class="ch-rv" id="chReviews" data-challenge="스피닝" hidden></section>
 
-<!-- 이런 학생에게 추천합니다 -->
-
-<section style="padding: 60px 0;">
+<!-- 6. 얼마인가 — 금액은 challenge-sticky.js 가 site_config 에서 채운다(하드코딩 금지 · 못 읽으면 '참가비 안내') -->
+<section class="cd-sec" data-reach="price">
   <div class="container">
-    <div class="section-label">Recommended For</div>
-    <h2 class="section-title">이런 학생에게 추천합니다</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">면접에서 말이 급해지는 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">호흡을 조절해 차분하고 안정적으로 말하는 방법을 배워요.</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">발음이 뭉개지거나 말끝이 흐려지는 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">또렷한 발음과 명확한 끝맺음을 연습해요.</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">답변은 준비했지만 전달력이 약한 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">좋은 내용을 더 신뢰감 있게 전달하는 기술을 배워요.</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">밝게 말하고 싶은데 표정과 목소리가 굳는 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">미소와 함께 따뜻하고 안정적인 말하기를 익혀요.</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">외운 티 없이 자연스럽게 말하고 싶은 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">높낮이와 리듬감을 살려 생동감 있게 표현하는 법을 배워요.</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">어려운 질문도 부드럽고 차분하게 답하고 싶은 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">부정적인 주제도 성숙하게 전달하는 쿠셔닝 표현을 익혀요.</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">승무원 면접에 어울리는 말투를 만들고 싶은 학생</div>
-        <div style="font-size: 15px; color: var(--text-muted); line-height: 1.65; word-break: keep-all;">또렷하고 신뢰감 있으며 호감 있는 종합적인 말하기 능력을 갖춰요.</div>
-      </div>
+    <div class="section-label">Price</div>
+    <h2 class="section-title">참가비</h2>
+    <div class="price-card">
+      <div class="price-cap">스.피.닝 · 코치와 함께하는 2주 · 미션 10회차</div>
+      <div class="price-line"><s data-ch-price="list" hidden></s><strong data-ch-price="now">참가비 확인 중…</strong></div>
+      <ul class="price-inc">
+        <li>2주 · 미션 10회차(DAY 1~10) 코치 가이던스 영상</li>
+        <li>담당 코치 1:1 중간 점검 1회</li>
+        <li>카카오톡 전용 채널 미션 안내 · 과제 제출</li>
+        <li>처음·끝 녹음 비교(마이페이지)</li>
+      </ul>
+      <a class="btn btn-primary apply-btn" data-pos="price" href="#" onclick="handleApply(event)">신청하기</a>
+      <p class="price-refund">시작일 전날까지 취소 시 전액 환불 · 시작 이후 환불 불가 · <a href="apply.html?c=spinning">제공·환불 규정 자세히</a></p>
     </div>
   </div>
 </section>
 
-<!-- 최종 목표 -->
-<section style="padding: 60px 0;">
+<!-- 7. 궁금한 것 — apply.html FAQ 와 같은 사실(진행 방식은 이 챌린지 문장). 참가비 FAQ 는 위 카드가 맡는다 -->
+<section class="cd-sec" data-reach="faq">
   <div class="container">
-    <div class="section-label">Final Goal</div>
-    <h2 class="section-title">최종 목표</h2>
-    <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
-        <p style="margin-bottom: 24px;">스.피.닝의 최종 목표는<br><strong style="color: var(--accent-ink);">단순히 예쁜 목소리나 아나운서 같은 발음을 만드는 것이 아닙니다.</strong></p>
-
-        <p style="margin-bottom: 20px;">
-          <strong style="color: var(--text); display: block; margin-bottom: 8px;">승무원 면접에서</strong>
-          더 또렷하게 들리고, 더 신뢰감 있게 전달되고, 더 호감 있게 기억되는 말투를 만드는 것입니다.
-        </p>
-
-        <p style="margin-bottom: 20px;">
-          <strong style="color: var(--text); display: block; margin-bottom: 8px;">1주차에는</strong>
-          말의 기본기를 정리하고,
-        </p>
-
-        <p style="margin-bottom: 20px;">
-          <strong style="color: var(--text); display: block; margin-bottom: 8px;">2주차에는</strong>
-          실제 면접 답변에 그 말투를 적용합니다.
-        </p>
-
-        <p style="padding-top: 20px; border-top: 1px solid var(--border);">
-          그 결과 학생은<br>
-          <strong style="color: var(--accent-ink);">자신의 답변을 더 안정적으로 전달</strong>하고,<br>
-          <strong style="color: var(--accent-ink);">면접관이 듣기 편한 말하기 방식</strong>으로<br>
-          <strong style="color: var(--accent-ink);">최종 1분 스피치를 완성</strong>하게 됩니다.
-        </p>
-      </div>
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">자주 묻는 질문</h2>
+    <div class="faq">
+      <details><summary>어떻게 진행되나요?</summary><p>100% 온라인·비대면이에요. 카카오톡 전용 채널에서 2주(14일) 동안 미션 10회차(DAY 1~10)를 안내받고 음성 녹음 과제를 제출해요. 미션은 1주치가 한 번에 제공되고, 진행 중간에 담당 코치가 1:1로 점검해요.</p></details>
+      <details><summary>결제하면 언제 시작하나요?</summary><p>입금 확인 후, 다음 기수 시작일에 다 함께 시작해요. 시작 전에 채널로 안내드려요.</p></details>
+      <details><summary>수료 기준이 뭔가요?</summary><p>2주(14일) 중 미션 10일(DAY 1~10)을 모두 완수하면 수료예요.</p></details>
+      <details><summary>중간에 그만두면 환불되나요?</summary><p>시작일 전날까지 취소하시면 결제 금액을 전액(100%) 환불해 드려요. 시작 후에는 1주일치 미션이 한 번에 제공되고 선착순 정원이라 환불이 되지 않아요. 자세한 규정은 <a href="apply.html?c=spinning">신청 페이지</a>와 <a href="terms.html">이용약관 제4조</a>에 있어요.</p></details>
     </div>
   </div>
 </section>
 
-<section style="padding-top: 0; padding-bottom: 80px;">
+<!-- 8. 마무리 -->
+<section style="padding-top: 0; padding-bottom: 80px;" data-reach="end">
   <div class="container">
     <div class="cta-box">
-      <h2 class="cta-title">지금 바로 시작하세요</h2>
-      <p class="cta-desc">또렷하고 신뢰감 있는 말투로 면접관의 마음을 사로잡는 2주 과정</p>
-      <a class="btn btn-white apply-btn" href="#" onclick="handleApply(event)">스.피.닝 챌린지 참여하기</a>
+      <h2 class="cta-title">2주 뒤, 말투가 달라집니다</h2>
+      <p class="cta-desc">코치와 함께하는 2주 · 미션 10회차</p>
+      <a class="btn btn-white apply-btn" data-pos="final" href="#" onclick="handleApply(event)">스.피.닝 신청하기</a>
       <p style="font-size:13px; color:rgba(255,255,255,.84); margin:18px 0 0; line-height:1.6; position:relative; z-index:1;">100% 온라인·비대면 · 기수 시작일부터 14일(총 10회차) 제공 · 카카오톡 전용 채널 진행 · 제공·환불 규정은 <a href="apply.html?c=spinning" style="color:#fff; text-decoration:underline;">신청 페이지</a> 참고</p>
     </div>
   </div>
@@ -534,6 +439,20 @@
      ⚠️ 마크업이 아니라 여기서 role·tabindex·aria-expanded 를 단다 — 상세 4종이
         같은 스크립트를 복사해 쓰므로 한 곳만 고치면 네 파일이 같이 맞는다.
      ⚠️ Space 는 기본 동작이 스크롤이라 preventDefault 가 필요하다. */
+  /* 비포/애프터 — 1쌍만 펼치고 나머지는 버튼으로(2026-09-07 ①안). 접을 때 재생 중인 소리는 멈춘다. */
+  (function () {
+    const btn = document.getElementById('baMoreBtn'), rest = document.getElementById('baRest');
+    if (!btn || !rest) return;
+    const label = btn.textContent;
+    btn.addEventListener('click', () => {
+      const open = rest.hidden;
+      rest.hidden = !open;
+      if (!open) rest.querySelectorAll('audio').forEach(a => a.pause());
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.textContent = open ? '접기' : label;
+    });
+  })();
+
   (function () {
     const heads = document.querySelectorAll('.week-header');
     const sync = () => heads.forEach(h => h.setAttribute(

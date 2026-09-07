@@ -177,73 +177,89 @@
       .cta-box { padding: 40px 20px; border-radius: 20px; }
     }
   </style>
+  <!-- ①안 '결과 먼저' 배치(2026-09-07) 공용 스타일 — 인라인 블록 뒤에 둔다(앞에 두면 .hero 가 덮는다) -->
+  <link rel="stylesheet" href="challenge-detail.css?v=1">
 </head>
 <body data-challenge="expression">
 
-
-<section class="hero">
-  <div class="hero-bg">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="dots-bg"></div>
-  </div>
-  <div class="container hero-inner">
-    <div data-reveal>
-      <div class="hero-badge">표현력</div>
+<!-- ①안 '결과 먼저'(2026-09-07 오너 확정 · 보신각과 같은 틀) — 순서·규칙: docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md
+     사진·알약·카드 스타일은 challenge-detail.css(공용). 인라인에 복사하지 말 것. -->
+<section class="hero hero--photo">
+  <div class="hero-wrap">
+    <div class="hero-photo">
+      <!-- 허브 카드와 같은 사진 — 첫 화면 최대 요소라 먼저 받는다 -->
+      <img src="images/hero-expression.webp" alt="" width="1400" height="759" fetchpriority="high" decoding="async">
+      <span class="hero-badge">표현력</span>
+    </div>
+    <div class="container hero-inner">
       <h1 class="hero-title"><span class="gradient-text" style="font-weight: var(--fw-bold); view-transition-name: challenge-name;">영.합.각</span> - 영상면접 <strong style="font-weight: var(--fw-bold);">합격</strong> 각</h1>
-      <p class="hero-desc">카메라 앞에서 어떻게 보여야 하고, 어떻게 말해야 하고, 어떻게 기억되어야 하는지를 2주 동안 완성합니다.</p>
-    </div>
-    <div class="hero-meta">
-      <div class="meta-chip" id="recruitChip">모집기간 확인 중…</div>
-      <div class="meta-chip">하루 <strong>10-15분</strong></div>
-      <div class="meta-chip">2주 · 미션 <strong>10회차</strong></div>
-      <div class="meta-chip">전후 <strong>영상 공개</strong></div>
-      <div class="meta-chip">전문가 <strong>가이던스 영상</strong></div>
-    </div>
-    <div class="hero-actions">
-      <a class="btn btn-primary apply-btn" href="#" onclick="handleApply(event)">지금 바로 도전하기</a>
-      <a class="btn btn-ghost" href="challenges.html">← 목록으로</a>
+      <p class="hero-desc">카메라 앞에서 어떻게 보여야 하고, 어떻게 말해야 하고, 어떻게 기억되어야 하는지. 코치와 함께하는 2주, 하루 10~15분.</p>
+      <!-- 사실 3개 — 전부 실데이터. 후기 수 = challenge-reviews.js · 모집 = recruit.js · 참가비 = challenge-sticky.js.
+           ⚠️ 값을 모르면 알약을 그리지 않는다(hidden 유지). 숫자를 지어내지 말 것. -->
+      <div class="hero-facts">
+        <span class="fact-pill" data-review-pill hidden>후기 <strong data-review-count></strong></span>
+        <span class="fact-pill" id="recruitChip">모집기간 확인 중…</span>
+        <span class="fact-pill" data-price-pill hidden><s data-ch-price="list" hidden></s><strong data-ch-price="now"></strong></span>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary apply-btn" data-pos="hero" href="#" onclick="handleApply(event)">신청하기</a>
+      </div>
+      <p class="hero-note">시작일 전날까지 취소하면 전액 환불</p>
     </div>
   </div>
 </section>
 
-<!-- BEFORE / AFTER 영상 -->
-<section style="padding:60px 0;">
-  <div class="container" style="max-width:760px;">
+<!-- 2. 증거 — 실제 수강생의 2주 전후 영상(유튜브). 첫 화면 다음이라 lazy 로 받는다 -->
+<section class="cd-sec">
+  <div class="container">
     <div class="section-label">Before &amp; After</div>
-    <h2 class="section-title" style="margin-bottom:8px;">2주가 만드는 차이</h2>
-    <p style="font-size:17px;color:var(--text-muted);margin-bottom:32px;line-height:1.7;word-break:keep-all;">
-      같은 사람, 같은 말. 단 2주 전후의 실제 영상입니다.
-    </p>
-    <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:18px;overflow:hidden;box-shadow:0 12px 48px rgba(20,32,52,.18);">
+    <h2 class="section-title">2주가 만드는 차이</h2>
+    <p class="cd-lead">같은 사람, 같은 말. 2주 전후의 실제 영상입니다.</p>
+    <div style="position:relative;width:100%;max-width:720px;margin:0 auto;padding-bottom:56.25%;border-radius:18px;overflow:hidden;box-shadow:0 12px 48px rgba(20,32,52,.18);">
       <iframe
         src="https://www.youtube.com/embed/9c659A4tay0?rel=0&modestbranding=1"
         title="영합각 비포애프터"
+        loading="lazy"
         frameborder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowfullscreen
         style="position:absolute;top:0;left:0;width:100%;height:100%;">
       </iframe>
     </div>
-    <p style="text-align:center;font-size:14px;color:var(--text-dim);margin-top:16px;">
-      실제 수강생의 비포&애프터 · 영합각 2주 결과
-    </p>
+    <p style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:12px;">실제 수강생의 비포&amp;애프터 · 영합각 2주 결과</p>
   </div>
 </section>
 
-<section>
+<!-- 3. 나한테 맞나 — 카드를 체크 목록으로(제목만) -->
+<section class="cd-sec">
   <div class="container">
-    <div class="overview-grid">
-      <div class="overview-card"><div class="overview-val">2주</div><div class="overview-label">커리큘럼</div></div>
-      <div class="overview-card"><div class="overview-val">10강</div><div class="overview-label">총 강의 수</div></div>
-      <div class="overview-card"><div class="overview-val">10명-12명</div><div class="overview-label">소수정예 진행</div></div>
-    </div>
+    <div class="section-label">Recommended For</div>
+    <h2 class="section-title">이런 학생에게 맞아요</h2>
+    <ul class="fit-list">
+      <li>영상면접이 처음이라 어디서부터 준비해야 할지 막막한 학생</li>
+      <li>카메라 앞에서 표정과 시선이 어색해지는 학생</li>
+      <li>답변은 준비했지만 말투가 딱딱하거나 외운 티가 나는 학생</li>
+      <li>화면 속 이미지가 실제보다 덜 좋아 보여 고민인 학생</li>
+      <li>미소, 자세, 조명, 각도까지 체계적으로 점검받고 싶은 학생</li>
+      <li>1분 자기소개 영상을 최종 제출본 수준으로 완성하고 싶은 학생</li>
+    </ul>
+  </div>
+</section>
 
-    <div class="section-label">Curriculum</div>
-    <h2 class="section-title">2주 커리큘럼</h2>
+<!-- 4. 어떻게 하나 — 사실 4칸 + 주차 접이(둘 다 접힘) + 담당 코치 한 줄(challenge-sticky.js 가 [data-coach-slot] 에 채움) -->
+<section class="cd-sec">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">2주 동안 이렇게 진행돼요</h2>
+    <div class="how-facts">
+      <div class="how-fact"><b>하루 10~15분</b><span>가이던스 영상 보고 촬영 제출</span></div>
+      <div class="how-fact"><b>미션 10회차</b><span>2주 · 1주치를 한 번에 받아요</span></div>
+      <div class="how-fact"><b>10~12명 소수정예</b><span>기수마다 적은 인원으로</span></div>
+      <div class="how-fact"><b>1:1 중간 점검 1회</b><span>담당 코치가 직접 짚어줘요</span></div>
+    </div>
     <div class="curriculum-list">
 
-      <div class="curriculum-week open">
+      <div class="curriculum-week">
         <div class="week-header">
           <div class="week-num">1</div>
           <div class="week-info">
@@ -284,132 +300,55 @@
       </div>
 
     </div>
+    <div data-coach-slot></div>
   </div>
 </section>
 
-<section style="padding-top: 0;">
-  <div class="container">
-    <div class="section-label">Results</div>
-    <h2 class="section-title">이런 걸 얻을 수 있어요</h2>
-    <div class="benefits-grid">
-      <div class="benefit-card"><div class="benefit-title">카메라 속 최고의 이미지</div><p class="benefit-desc">첫인상, 스타일링, 표정, 각도까지 모두 계산된 영상면접용 이미지를 완성해요.</p></div>
-      <div class="benefit-card"><div class="benefit-title">자연스러운 미소와 시선</div><p class="benefit-desc">어색하지 않은 자연스러운 표정으로 면접관과 아이컨택하는 법을 배워요.</p></div>
-      <div class="benefit-card"><div class="benefit-title">설득력 있는 말하기</div><p class="benefit-desc">호흡, 인토네이션, 속도를 조절해 답변이 자연스럽고 신뢰감 있게 들리도록 해요.</p></div>
-      <div class="benefit-card"><div class="benefit-title">제출 가능한 수준의 영상</div><p class="benefit-desc">영상면접에 바로 제출 가능한 1분 자기소개 영상을 완성하게 돼요.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- 2주 과정의 핵심 변화 -->
-<section style="padding: 60px 0;">
-  <div class="container">
-    <div class="section-label">Core of the Program</div>
-    <h2 class="section-title">2주 과정의 핵심 변화</h2>
-    <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
-        <p style="margin-bottom: 24px;">영합각은 <strong style="color: var(--accent-ink);">단순한 영상 촬영 수업이 아닙니다.</strong></p>
-
-        <p style="margin-bottom: 20px;">
-          <strong style="color: var(--text); display: block; margin-bottom: 8px;">1주차에는</strong>
-          카메라 앞에서 가장 좋은 이미지를 만드는 방법을 체계적으로 배웁니다.
-        </p>
-
-        <p style="margin-bottom: 20px;">
-          <strong style="color: var(--text); display: block; margin-bottom: 8px;">2주차에는</strong>
-          그 이미지에 어울리는 자연스럽고 설득력 있는 말하기를 완성합니다.
-        </p>
-
-        <p style="padding-top: 20px; border-top: 1px solid var(--border);">
-          이미지와 말하기를 함께 완성하면,<br>
-          <strong style="color: var(--accent-ink);">면접관에게 준비된 지원자로 기억되는</strong> 차이가 생깁니다.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 이 챌린지의 실제 후기 (2026-08-02) — 마크업·스타일은 challenge-reviews.js 가 채운다.
-     ⚠️ 후기 0건이면 섹션을 안 그린다(hidden 유지). data-challenge 값은 reviews.challenge 와 같아야 한다. -->
+<!-- 5. 남들은 뭐라나 — 실제 후기 3개(challenge-reviews.js 가 채운다). ⚠️ 후기 0건이면 섹션을 안 그린다(hidden 유지).
+     data-challenge 값은 reviews.challenge 와 같아야 한다(admin 후기 탭의 RV_CH_OPTS 와 같이 고친다). -->
 <section class="ch-rv" id="chReviews" data-challenge="영합각" hidden></section>
 
-<!-- 이런 학생에게 추천합니다 -->
-<section style="padding: 60px 0;">
+<!-- 6. 얼마인가 — 금액은 challenge-sticky.js 가 site_config 에서 채운다(하드코딩 금지 · 못 읽으면 '참가비 안내') -->
+<section class="cd-sec" data-reach="price">
   <div class="container">
-    <div class="section-label">Recommended For</div>
-    <h2 class="section-title">이런 학생에게 추천합니다</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">영상면접이 처음이라 어디서부터 준비해야 할지 막막한 학생</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">카메라 앞에서 표정과 시선이 어색해지는 학생</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">답변은 준비했지만 말투가 딱딱하거나 외운 티가 나는 학생</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">화면 속 이미지가 실제보다 덜 좋아 보여 고민인 학생</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">미소, 자세, 조명, 각도까지 체계적으로 점검받고 싶은 학생</div>
-      </div>
-
-      <div style="background: var(--surface); padding: 20px; border-radius: 16px; border: 1.5px solid var(--border); box-shadow: var(--shadow);">
-        <div style="font-weight: 700; color: var(--text); margin-bottom: 8px;">1분 자기소개 영상을 최종 제출본 수준으로 완성하고 싶은 학생</div>
-      </div>
+    <div class="section-label">Price</div>
+    <h2 class="section-title">참가비</h2>
+    <div class="price-card">
+      <div class="price-cap">영.합.각 · 코치와 함께하는 2주 · 미션 10회차</div>
+      <div class="price-line"><s data-ch-price="list" hidden></s><strong data-ch-price="now">참가비 확인 중…</strong></div>
+      <ul class="price-inc">
+        <li>2주 · 미션 10회차(DAY 1~10) 코치 가이던스 영상</li>
+        <li>담당 코치 1:1 중간 점검 1회</li>
+        <li>카카오톡 전용 채널 미션 안내 · 과제 제출</li>
+        <li>처음·끝 영상 비교(마이페이지)</li>
+      </ul>
+      <a class="btn btn-primary apply-btn" data-pos="price" href="#" onclick="handleApply(event)">신청하기</a>
+      <p class="price-refund">시작일 전날까지 취소 시 전액 환불 · 시작 이후 환불 불가 · <a href="apply.html?c=expression">제공·환불 규정 자세히</a></p>
     </div>
   </div>
 </section>
 
-<!-- 최종 목표 -->
-<section style="padding: 60px 0;">
+<!-- 7. 궁금한 것 — apply.html FAQ 와 같은 사실(진행 방식은 이 챌린지 문장). 참가비 FAQ 는 위 카드가 맡는다 -->
+<section class="cd-sec" data-reach="faq">
   <div class="container">
-    <div class="section-label">Final Goal</div>
-    <h2 class="section-title">최종 목표</h2>
-    <div style="max-width: 720px; margin: 0 auto;">
-      <div style="background: var(--surface); padding: 32px; border-radius: 20px; line-height: 1.8; color: var(--text-muted); box-shadow: var(--shadow);">
-        <p style="margin-bottom: 24px;">영합각의 최종 목표는</p>
-        <p style="margin-bottom: 24px; font-weight: 600; color: var(--text);">단순히 영상면접 답변을 외우게 만드는 것이 아닙니다.</p>
-
-        <p style="margin-bottom: 24px;">
-          <strong style="color: var(--text);">카메라 앞에서</strong><br>
-          어떻게 보여야 하는지, 어떻게 말해야 하는지, 어떻게 기억되어야 하는지를<br>
-          <strong style="color: var(--accent-ink);">2주 동안 하나씩 완성하는 과정입니다.</strong>
-        </p>
-
-        <ul style="list-style: none; padding: 0; margin-bottom: 28px;">
-          <li style="margin-bottom: 12px; padding-left: 24px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">1</span>
-            <strong style="color: var(--text);">1주차에는</strong> 카메라 속 이미지를 만들고,
-          </li>
-          <li style="padding-left: 24px; position: relative;">
-            <span style="position: absolute; left: 0; color: var(--accent-ink); font-weight: 700;">2</span>
-            <strong style="color: var(--text);">2주차에는</strong> 그 이미지에 어울리는 말하기를 입힙니다.
-          </li>
-        </ul>
-
-        <p style="padding-top: 24px; border-top: 1px solid var(--border);">
-          그 결과 학생은<br>
-          <span style="display: block; margin: 12px 0; font-weight: 700; color: var(--accent-ink);">영상면접에서 단정하고 자연스럽게 보이며,</span>
-          <span style="display: block; margin: 12px 0; font-weight: 700; color: var(--accent-ink);">답변이 외운 말처럼 들리지 않고,</span>
-          <span style="font-weight: 700; color: var(--accent-ink);">면접관에게 준비된 지원자로 기억될 수 있는</span><br>
-          최종 영상면접 제출본을 완성하게 됩니다.
-        </p>
-      </div>
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">자주 묻는 질문</h2>
+    <div class="faq">
+      <details><summary>어떻게 진행되나요?</summary><p>100% 온라인·비대면이에요. 카카오톡 전용 채널에서 2주(14일) 동안 미션 10회차(DAY 1~10)를 안내받고 촬영한 영상 과제를 제출해요. 미션은 1주치가 한 번에 제공되고, 진행 중간에 담당 코치가 1:1로 점검해요.</p></details>
+      <details><summary>결제하면 언제 시작하나요?</summary><p>입금 확인 후, 다음 기수 시작일에 다 함께 시작해요. 시작 전에 채널로 안내드려요.</p></details>
+      <details><summary>수료 기준이 뭔가요?</summary><p>2주(14일) 중 미션 10일(DAY 1~10)을 모두 완수하면 수료예요.</p></details>
+      <details><summary>중간에 그만두면 환불되나요?</summary><p>시작일 전날까지 취소하시면 결제 금액을 전액(100%) 환불해 드려요. 시작 후에는 1주일치 미션이 한 번에 제공되고 선착순 정원이라 환불이 되지 않아요. 자세한 규정은 <a href="apply.html?c=expression">신청 페이지</a>와 <a href="terms.html">이용약관 제4조</a>에 있어요.</p></details>
     </div>
   </div>
 </section>
 
-<section style="padding-top: 0; padding-bottom: 80px;">
+<!-- 8. 마무리 -->
+<section style="padding-top: 0; padding-bottom: 80px;" data-reach="end">
   <div class="container">
     <div class="cta-box">
-      <h2 class="cta-title">2주의 기적, 지금 시작하세요</h2>
-      <p class="cta-desc">카메라 앞에서도 자연스러운 표정과 시선을 만드는 2주 과정</p>
-      <a class="btn btn-white apply-btn" href="#" onclick="handleApply(event)">2주의 기적 챌린지 참여하기</a>
+      <h2 class="cta-title">2주 뒤, 카메라 앞이 달라집니다</h2>
+      <p class="cta-desc">코치와 함께하는 2주 · 미션 10회차</p>
+      <a class="btn btn-white apply-btn" data-pos="final" href="#" onclick="handleApply(event)">영.합.각 신청하기</a>
       <p style="font-size:13px; color:rgba(255,255,255,.84); margin:18px 0 0; line-height:1.6; position:relative; z-index:1;">100% 온라인·비대면 · 기수 시작일부터 14일(총 10회차) 제공 · 카카오톡 전용 채널 진행 · 제공·환불 규정은 <a href="apply.html?c=expression" style="color:#fff; text-decoration:underline;">신청 페이지</a> 참고</p>
     </div>
   </div>
