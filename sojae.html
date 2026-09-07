@@ -525,11 +525,32 @@
     // ── AI 호출: Edge Function 'sojae-chat' (되묻기=Haiku 4.5, 다듬기=Sonnet 5) ──
     // 함수 코드: supabase/functions/sojae-chat/index.ts (오너가 콘솔 배포 + ANTHROPIC_API_KEY 시크릿)
     // 미배포·비로그인 등 실패 시 canned 응답으로 폴백 → 화면은 항상 동작.
-    let _step = 0;
+    /* ⚠️ 폴백은 '화면이 멈추지 않게' 하는 장치지 인터뷰어가 아니다(2026-09-07 실사고 — 서버 AI 호출이
+       매 턴 실패하자 정해진 질문 5개가 세 바퀴 돌았고, 학생은 같은 질문에 세 번씩 답한 끝에
+       "다듬기에 실패했어요"를 봤다). 그래서 ① 같은 질문을 두 번 묻지 않고(순환 금지) ② 서버
+       ASK_FORMAT 의 [멈춤] 규칙과 같은 4문답에서 멈춰 다듬기로 넘기며 ③ 처음 폴백으로 떨어질 때
+       한 번 알리고 ④ 실패를 계측(sojae_ai_fail)에 남긴다 — 운영이 장애를 볼 유일한 창이다. */
+    let _step = 0;                 // 이번 세션에서 쓴 폴백 질문 수(복원 때 대화에서 다시 센다)
+    let _fallbackNoticed = false;  // 폴백 안내는 한 번만
+    const CANNED_MAX_TURNS = 4;    // 서버의 4문답 상한(2026-08-05 오너 확정)과 같은 값
+    const CANNED_CLOSE = '지금까지 꺼낸 이야기는 저장돼 있어요. 연구원 연결이 원활하지 않아 되묻기는 여기서 멈출게요 — 잠시 뒤 다시 들어와 <b>다듬기</b>를 눌러 주세요.';
     function cannedAsk(help) {
       const list = FOLLOWUPS[category] || FOLLOWUPS.experience;
       if (help) return HELP_REPLY;
-      const t = list[_step % list.length]; _step++; return t;
+      if (_step >= list.length || userMsgCount >= CANNED_MAX_TURNS) { showRefine(); return CANNED_CLOSE; }
+      const t = list[_step]; _step++; return t;
+    }
+    // 실패를 삼키지 않는다 — 계측에 남기고, 되묻기는 처음 한 번 학생에게도 알린다(sys 말풍선은
+    // transcript 에 안 들어가므로 저장본·다듬기 재료를 더럽히지 않는다).
+    function noteAiFail(stage, e) {
+      const why = !e ? 'unknown'
+        : (e.name && e.name !== 'Error' ? e.name : String(e.code || e.message || 'unknown')).slice(0, 80);
+      const status = (e && e.context && e.context.status) || null;   // FunctionsHttpError 의 HTTP 상태
+      moncTrack('sojae_ai_fail', { stage, turn: userMsgCount, why, status });
+      if (stage === 'ask' && !_fallbackNoticed) {
+        _fallbackNoticed = true;
+        sysBubble('지금 연구원 연결이 원활하지 않아 <b>기본 질문</b>으로 이어갑니다. 답은 그대로 저장돼요.');
+      }
     }
     async function askAI(help) {
       try {
@@ -545,7 +566,7 @@
         if (data.materials_sufficient) showRefine();
         updateMeter(data, ctaWasHidden);             // 재료 게이지 갱신(missing 실측 기반)
         return esc(data.message).replace(/\n/g, '<br>');
-      } catch (_) { return cannedAsk(help); }
+      } catch (e) { noteAiFail('ask', e); return cannedAsk(help); }
     }
     // 반환 {v2:{card,skeleton,card_saved}} 또는 {html} 또는 {err, msg}.
     // ⚠️ 신구 판정은 프로브가 아니라 응답 형태로 한다 — 구함수는 message 만 주고(기존 렌더),
@@ -561,7 +582,7 @@
         // ⚠️ 크레딧 부족·실패는 서버가 200 + code 로 알려준다. 이걸 다른 오류와 함께
         //    폴백(뼈대)으로 삼키면 "왜 안 깎였는데 결과가 나오지"가 되고, 사용자는
         //    충전해야 한다는 사실을 영영 모른다. code 가 있으면 반드시 그대로 띄운다.
-        if (data && data.code) return { err: data.code, msg: data.error };
+        if (data && data.code) { noteAiFail('refine', { code: data.code }); return { err: data.code, msg: data.error }; }
         if (!data || !data.message) throw new Error('빈 응답');
         if (_wallet && data.balance != null) {          // 차감 결과로 남은 양 갱신
           _wallet.balance = data.balance;
@@ -569,7 +590,7 @@
         }
         if (data.card && data.skeleton) return { v2: data };
         return { html: esc(data.message).replace(/\n/g, '<br>') };
-      } catch (_) { return { html: refineSkeleton() }; }
+      } catch (e) { noteAiFail('refine', e); return { html: refineSkeleton() }; }
     }
 
     // (괄호 빈칸) 칠하기 — polish.html 과 같은 규칙. esc 를 거친 문자열에만 쓴다.
@@ -1054,6 +1075,9 @@
       if (answer) { _answerStatus = answer.status || 'draft'; _answerId = answer.id; }   // id 는 첨삭 직행용
       replayTranscript(msgs);
       userMsgCount = transcript.filter(t => t.role === 'user').length;
+      // 폴백 질문을 몇 개 썼는지도 대화에서 다시 센다 — 새로고침마다 같은 질문이 처음부터 돌지 않게
+      const canned = FOLLOWUPS[category] || FOLLOWUPS.experience;
+      _step = transcript.filter(t => t.role === 'researcher' && canned.includes(t.content)).length;
       if (userMsgCount >= 2) showRefine();
       // 뼈대까지 갔거나(=write/done) 이미 답변을 쓰기 시작했으면 최종작성 모드로 복원
       const inWrite = (sess && (sess.stage === 'write' || sess.stage === 'done')) || (answer && answer.content);
