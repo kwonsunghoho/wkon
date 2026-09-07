@@ -1,118 +1,181 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   챌린지 상세 — ①안 '결과 먼저' 배치 공용 스타일 (2026-09-07 오너 확정)
+   챌린지 상세 — ①안 '결과 먼저' 배치 공용 스타일 + 활자·폭 한 벌 (2026-09-07 오너 확정)
    설계: docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md
-   싣는 법: 인라인 <style> 블록 **뒤**에 <link rel="stylesheet" href="challenge-detail.css?v=1">
-           (앞에 두면 인라인 .hero 규칙이 같은 특이도로 이 파일을 덮는다)
-   ⚠️ 상세 5종의 인라인 공통 CSS 블록(* 리셋 ~ .footer-copy)은 그대로 둔다. 새 배치의 스타일은
-      이 파일 한 곳 — 페이지 인라인에 복사하면 다섯 파일이 어긋난다(pages.md).
-   ⚠️ 색은 tokens.css 변수만(새 색 금지). 활자 12px+ · 터치 44px+ · 경계선 3:1.
+   싣는 법: 인라인 <style> 블록 **뒤**에 <link rel="stylesheet" href="challenge-detail.css?v=2">
+
+   ── 활자 규칙(2026-09-07 오너 "그 값으로 5종에 적용") ─────────────────────────────
+   클래스101·인프런 강의 상세 실측(375px)에 맞춘 값이다 — 두 사이트 공통: 제목은 본문보다 조금만 크다
+   (20~22px), 굵기는 700 이 최대, 본문 16px 행간 1.5~1.75, 글자 시작선은 한 곳, 정렬은 전부 왼쪽.
+     페이지 제목 22/28px · 섹션 제목 20/24px · 카드 제목 16px · 본문 16px(1.65) · 보조 14px(1.5) · 캡션 12.5px
+     굵기 400·600·700 셋만(참가비 금액·하단 바 금액도 700 — 크기로만 키운다) · 자간은 제목 -0.01em, 나머지 0
+     폭: 모바일 좌우 16px 한 줄, 데스크톱 본문 720px 한 줄(히어로·후기·카드·FAQ·마무리 전부)
+   ⚠️ 이 페이지엔 활자 규칙이 다섯 곳(tokens.css · 인라인 공통 블록 · 이 파일 · 스크립트 3개가 심는 스타일 ·
+      카드 인라인)에서 나온다. **여기서 `body[data-challenge]` 특이도로 전부 덮는다** — 다른 곳에 값을 다시
+      쓰면 다시 뒤죽박죽이 된다(2026-09-07 오너 "행간·자간이 하나도 정렬이 안 돼 있다").
+   ⚠️ 상세 5종의 인라인 공통 CSS 블록은 손대지 않는다(다섯 파일 동일 유지). 색은 tokens.css 변수만.
+   ⚠️ tokens.css 의 h2.section-title 800 은 사이트 공통이라 그대로 두고, 상세 안에서만 700 으로 덮는다.
    ══════════════════════════════════════════════════════════════════════════ */
+
+body[data-challenge] {
+  --cd-h1: 22px; --cd-h2: 20px; --cd-h3: 16px;
+  --cd-body: 16px; --cd-sub: 14px; --cd-cap: 12.5px;
+  --cd-lh-head: 1.3; --cd-lh-body: 1.65; --cd-lh-sub: 1.5;
+  --cd-ls-head: -0.01em;
+  --cd-gap: 48px;                 /* 섹션 사이 */
+}
+@media (min-width: 860px) {
+  body[data-challenge] { --cd-h1: 28px; --cd-h2: 24px; }
+}
+
+/* ── 0. 폭 한 줄 — 인라인 .container(800) 를 760 으로 좁혀 내용 폭 720. 카드·목록은 그 폭을 그대로 쓴다 ── */
+body[data-challenge] .container { max-width: 760px; }
+body[data-challenge] .hero-wrap { max-width: 760px; }
 
 /* ── 1. 히어로: 사진 + 약속 한 줄 + 사실 알약 3개 + 신청 버튼 ── */
 /* 위 57px = 모바일 고정 nav 높이(nav.css `body[data-nav-offset]` 와 같은 값 · 2026-09-07 실측 57) — 사진이 바로 밑에 붙는다.
    ⚠️ 66 으로 두면 9px 흰 띠가 생긴다. 데스크톱(≥860)은 아래 미디어쿼리(nav 67 + 여백). */
 .hero.hero--photo { padding: 57px 0 40px; }
-.hero-wrap { max-width: 1000px; margin: 0 auto; }
+.hero-wrap { margin: 0 auto; }
 .hero-photo { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--bg3); }
 .hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 24%; }
 .hero-photo .hero-badge { position: absolute; left: 16px; top: 16px; margin: 0; background: rgba(255,255,255,.94); }
+body[data-challenge] .hero-badge { font-size: var(--cd-cap); font-weight: 700; letter-spacing: 0; }
 .hero--photo .hero-inner { padding-top: 22px; }
-.hero--photo .hero-title { font-size: clamp(26px, 6.4vw, 40px); margin-bottom: 10px; }
-.hero--photo .hero-desc { font-size: 16px; line-height: 1.65; margin-bottom: 18px; }
-.hero-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-.fact-pill { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 13px; border-radius: 999px;
-  background: var(--surface); border: 1.5px solid var(--border); font-size: 13.5px; font-weight: 700; color: var(--text);
-  font-variant-numeric: tabular-nums; }
+body[data-challenge] .hero--photo .hero-title {
+  font-size: var(--cd-h1); font-weight: 700; line-height: var(--cd-lh-head); letter-spacing: var(--cd-ls-head); margin-bottom: 10px;
+}
+body[data-challenge] .hero--photo .hero-desc { font-size: var(--cd-body); line-height: var(--cd-lh-body); margin-bottom: 16px; max-width: none; }
+.hero-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.fact-pill { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 12px; border-radius: 999px;
+  background: var(--surface); border: 1.5px solid var(--border); font-size: var(--cd-sub); font-weight: 600; line-height: 1;
+  color: var(--text); font-variant-numeric: tabular-nums; }
 .fact-pill[hidden] { display: none; }
-.fact-pill strong { color: var(--accent-ink); font-weight: 800; }
-.fact-pill s { color: var(--text-muted); font-weight: 500; text-decoration-thickness: 1.5px; }
+.fact-pill strong { color: var(--accent-ink); font-weight: 700; }
+.fact-pill s { color: var(--text-muted); font-weight: 400; text-decoration-thickness: 1.5px; }
 .fact-pill s[hidden] { display: none; }
-.fact-pill .won { font-size: 12px; }
+.fact-pill .won { font-size: var(--cd-cap); }
 /* recruit.js 가 #recruitChip 안에 붙이는 D-day 조각 — 임박(3일 이하)만 채운 알약 */
 .fact-pill .dday-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px;
-  background: var(--action-tint); color: var(--accent-ink); font-size: 12px; font-weight: 800; }
+  background: var(--action-tint); color: var(--accent-ink); font-size: var(--cd-cap); font-weight: 700; }
 .fact-pill .dday-urgent { background: var(--action); color: var(--action-ink); }
 .hero--photo .hero-actions { flex-direction: column; }
 .hero--photo .hero-actions .btn { width: 100%; }
-.hero-note { margin-top: 10px; font-size: 13px; color: var(--text-muted); text-align: center; line-height: 1.5; }
+.hero-note { margin-top: 10px; font-size: var(--cd-sub); line-height: var(--cd-lh-sub); color: var(--text-muted); }
 @media (min-width: 860px) {
   .hero.hero--photo { padding-top: 96px; }
-  .hero-wrap { display: grid; grid-template-columns: 5fr 6fr; gap: 40px; align-items: center; padding: 0 20px; }
+  .hero-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; padding: 0 20px; }
   .hero-photo { border-radius: var(--radius); }
   .hero--photo .hero-inner { padding: 0; margin: 0; max-width: none; }
   .hero--photo .hero-actions { flex-direction: row; }
-  .hero--photo .hero-actions .btn { width: auto; min-width: 220px; }
-  .hero-note { text-align: left; }
+  .hero--photo .hero-actions .btn { width: auto; min-width: 200px; }
 }
 
-/* ── 2. 섹션 공통(새 배치) — 인라인 section 규칙(padding-top 0 · bottom 60) 위에 간격만 조인다 ── */
-.cd-sec { padding: 0 0 48px; }
-.cd-sec .section-title { margin-bottom: 16px; }
-.cd-lead { font-size: 15.5px; color: var(--text-muted); line-height: 1.65; margin: -6px 0 18px; word-break: keep-all; }
-.cd-more { display: inline-flex; align-items: center; min-height: 44px; font-size: 14.5px; font-weight: 800; color: var(--accent-ink);
+/* ── 2. 섹션 공통 — 제목·라벨·부제를 한 벌로. 인라인 section 규칙(padding-top 0)과 tokens 의 h2.section-title 을 덮는다 ── */
+.cd-sec { padding: 0 0 var(--cd-gap); }
+body[data-challenge] .section-label { font-size: var(--cd-cap); font-weight: 700; letter-spacing: .12em; line-height: 1.4; margin-bottom: 8px; }
+body[data-challenge] h2.section-title, body[data-challenge] .section-title {
+  font-size: var(--cd-h2); font-weight: 700; line-height: var(--cd-lh-head); letter-spacing: var(--cd-ls-head); margin-bottom: 14px;
+}
+.cd-lead { font-size: var(--cd-body); color: var(--text-muted); line-height: var(--cd-lh-body); margin: -4px 0 16px; word-break: keep-all; }
+.cd-more { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--cd-sub); font-weight: 700; color: var(--accent-ink);
   text-decoration: underline; text-underline-offset: 3px; }
 
-/* ── 3. 비포/애프터 — 1쌍만 펼치고 나머지는 버튼 ── */
-.ba-list { display: flex; flex-direction: column; gap: 16px; max-width: 720px; margin: 0 auto; }
+/* ── 3. 비포/애프터 — 1쌍만 펼치고 나머지는 버튼. 카드 안 활자는 인라인 값 대신 여기(ba-name·ba-quote 는 마크업 클래스) ── */
+.ba-list { display: flex; flex-direction: column; gap: 16px; }
 .ba-rest { display: flex; flex-direction: column; gap: 16px; }
 .ba-rest[hidden] { display: none; }
-.ba-more-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 720px; margin: 14px auto 0;
+.ba-name { font-size: var(--cd-h3); font-weight: 700; line-height: var(--cd-lh-head); color: var(--text); }
+.ba-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--action); display: flex; align-items: center; justify-content: center;
+  font-size: var(--cd-sub); color: #fff; font-weight: 700; flex-shrink: 0; }
+.ba-quote { font-size: var(--cd-body); color: var(--text-muted); line-height: var(--cd-lh-body); margin: 0; word-break: keep-all; }
+body[data-challenge] .ba-tx { font-size: var(--cd-cap); font-weight: 700; }
+.ba-more-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 14px 0 0;
   min-height: 48px; padding: 0 20px; border-radius: 999px; border: 1.5px solid rgba(27,58,107,.55); background: var(--surface);
-  color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+  color: var(--accent-ink); font: inherit; font-size: var(--cd-body); font-weight: 700; cursor: pointer; }
 .ba-more-btn::after { content: '▾'; font-size: 13px; }
 .ba-more-btn[aria-expanded="true"]::after { content: '▴'; }
 .ba-more-btn:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 3px; }
 
-/* ── 4. 이런 학생에게 — 카드 대신 체크 목록 ── */
-.fit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-width: 720px; }
-.fit-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; line-height: 1.55; color: var(--text); word-break: keep-all; }
-.fit-list li::before { content: ''; flex: 0 0 22px; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background-color: var(--action-tint);
+/* ── 4. 체크 목록(추천 대상 · 결과물) ── */
+.fit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.fit-list li { display: flex; gap: 10px; align-items: flex-start; font-size: var(--cd-body); line-height: var(--cd-lh-body); color: var(--text); word-break: keep-all; }
+.fit-list li b { font-weight: 700; }
+.fit-list li::before { content: ''; flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px; border-radius: 50%; background-color: var(--action-tint);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3 3 7-7' fill='none' stroke='%231B3A6B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-size: 14px; background-position: center; background-repeat: no-repeat; }
 @media (min-width: 640px) { .fit-list { grid-template-columns: 1fr 1fr; } }
+body[data-challenge] .cd-sec h3 { font-size: var(--cd-h3); font-weight: 700; line-height: var(--cd-lh-head); color: var(--text); margin: 22px 0 10px; }
 
-/* ── 5. 2주 진행 방식 — 사실 4칸 + 주차 접이(기존 .curriculum-*) + 담당 코치 한 줄(challenge-sticky.js 가 채움) ── */
-.how-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+/* ── 5. 2주 진행 방식 — 사실 4칸 + 주차 접이(인라인 .curriculum-* 활자를 덮는다) + 담당 코치 한 줄 ── */
+.how-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .how-fact { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--bg2); border: 1px solid var(--border-soft); }
-.how-fact b { display: block; font-size: 16px; font-weight: 800; color: var(--text); line-height: 1.3; }
-.how-fact span { display: block; margin-top: 3px; font-size: 13px; color: var(--text-muted); line-height: 1.45; word-break: keep-all; }
+.how-fact b { display: block; font-size: var(--cd-h3); font-weight: 700; color: var(--text); line-height: var(--cd-lh-head); }
+.how-fact span { display: block; margin-top: 3px; font-size: var(--cd-sub); color: var(--text-muted); line-height: var(--cd-lh-sub); word-break: keep-all; }
 @media (min-width: 640px) { .how-facts { grid-template-columns: repeat(4, 1fr); } }
+body[data-challenge] .curriculum-list { gap: 10px; }
+body[data-challenge] .week-header { padding: 14px 16px; gap: 12px; }
+body[data-challenge] .week-num { width: 34px; height: 34px; font-size: var(--cd-sub); font-weight: 700; }
+body[data-challenge] .week-title { font-size: var(--cd-h3); font-weight: 700; line-height: var(--cd-lh-head); }
+body[data-challenge] .week-sub { font-size: var(--cd-sub); line-height: var(--cd-lh-sub); margin-top: 3px; }
+body[data-challenge] .week-body { padding: 0 16px 16px; }
+body[data-challenge] .lesson-item { font-size: var(--cd-body); line-height: var(--cd-lh-body); }
+body[data-challenge] .lesson-item strong { font-weight: 700; margin-bottom: 2px; }
 .coach-line { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm);
   background: var(--action-tint); border: 1px solid rgba(27,58,107,.28); }
 .coach-line img { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; object-fit: cover; object-position: center 18%; background: var(--bg2); }
 .coach-line .who { min-width: 0; }
-.coach-line .nm { display: block; font-size: 15px; font-weight: 800; color: var(--text); line-height: 1.35; word-break: keep-all; }
+.coach-line .nm { display: block; font-size: var(--cd-h3); font-weight: 700; color: var(--text); line-height: var(--cd-lh-head); word-break: keep-all; }
 .coach-line .nm i { font-style: normal; display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--action);
-  color: var(--action-ink); font-size: 12px; font-weight: 800; vertical-align: 1px; }
-.coach-line .po { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
-.coach-more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--accent-ink);
+  color: var(--action-ink); font-size: var(--cd-cap); font-weight: 700; vertical-align: 1px; }
+.coach-line .po { display: block; margin-top: 3px; font-size: var(--cd-sub); color: var(--text-muted); line-height: var(--cd-lh-sub); }
+.coach-more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: var(--cd-sub); font-weight: 700; color: var(--accent-ink);
   text-decoration: underline; text-underline-offset: 3px; }
 
+/* ── 후기 섹션(challenge-reviews.js 가 심는 스타일을 덮는다) — 같은 폭·왼쪽 정렬·같은 활자 ── */
+body[data-challenge] .ch-rv { padding: 0 20px var(--cd-gap); }
+@media (max-width: 600px) { body[data-challenge] .ch-rv { padding: 0 16px var(--cd-gap); } }
+body[data-challenge] .ch-rv-in { max-width: 720px; }
+body[data-challenge] .ch-rv-head { text-align: left; margin-bottom: 0; }
+body[data-challenge] .ch-rv-grid { gap: 12px; }
+body[data-challenge] .ch-rv-card { padding: 16px; gap: 10px; }
+body[data-challenge] .ch-rv-badge { font-size: var(--cd-cap); font-weight: 700; }
+body[data-challenge] .ch-rv-q { font-size: var(--cd-body); line-height: var(--cd-lh-body); }
+body[data-challenge] .ch-rv-who { font-size: var(--cd-sub); font-weight: 600; line-height: var(--cd-lh-sub); }
+body[data-challenge] .ch-rv-more { margin: 16px 0 0; max-width: none; font-size: var(--cd-body); font-weight: 700; min-height: 48px; }
+
 /* ── 6. 참가비 카드 ── */
-.price-card { max-width: 720px; margin: 0 auto; padding: 20px 18px; border-radius: var(--radius); border: 1.5px solid var(--action);
-  background: var(--surface); box-shadow: var(--shadow); }
-.price-cap { font-size: 13px; font-weight: 700; color: var(--text-muted); letter-spacing: .02em; }
+.price-card { padding: 20px 18px; border-radius: var(--radius); border: 1.5px solid var(--action); background: var(--surface); box-shadow: var(--shadow); }
+.price-cap { font-size: var(--cd-sub); font-weight: 600; color: var(--text-muted); line-height: var(--cd-lh-sub); }
 .price-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.price-line s { font-size: 15px; color: var(--text-muted); text-decoration-thickness: 1.5px; }
+.price-line s { font-size: var(--cd-body); color: var(--text-muted); text-decoration-thickness: 1.5px; }
 .price-line s[hidden] { display: none; }
-.price-line strong { font-size: 30px; font-weight: 900; color: var(--text); letter-spacing: -.02em; line-height: 1.1; }
-.price-line strong .won { font-size: 16px; font-weight: 800; margin-left: 1px; }
+.price-line strong { font-size: 30px; font-weight: 700; color: var(--text); letter-spacing: var(--cd-ls-head); line-height: 1.1; }
+.price-line strong .won { font-size: var(--cd-body); font-weight: 700; margin-left: 1px; }
 .price-inc { list-style: none; display: grid; gap: 8px; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px dashed var(--border-strong);
-  font-size: 15px; color: var(--text); }
-.price-inc li { display: flex; gap: 8px; word-break: keep-all; line-height: 1.5; }
-.price-inc li::before { content: '·'; font-weight: 900; color: var(--accent-ink); }
+  font-size: var(--cd-body); line-height: var(--cd-lh-sub); color: var(--text); }
+.price-inc li { display: flex; gap: 8px; word-break: keep-all; }
+.price-inc li::before { content: '·'; font-weight: 700; color: var(--accent-ink); }
 .price-card .btn { width: 100%; margin-top: 18px; }
-.price-refund { margin-top: 12px; font-size: 12.5px; color: var(--text-muted); line-height: 1.55; text-align: center; word-break: keep-all; }
+.price-refund { margin-top: 12px; font-size: var(--cd-cap); color: var(--text-muted); line-height: var(--cd-lh-sub); word-break: keep-all; }
 .price-refund a { color: var(--accent-ink); font-weight: 700; }
 
 /* ── 7. FAQ — 네이티브 details(키보드·낭독기 기본 지원) ── */
-.faq { max-width: 720px; margin: 0 auto; border-top: 1px solid var(--border); }
+.faq { border-top: 1px solid var(--border); }
 .faq details { border-bottom: 1px solid var(--border); }
 .faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 12px 0;
-  font-size: 16px; font-weight: 700; color: var(--text); cursor: pointer; word-break: keep-all; }
+  font-size: var(--cd-body); font-weight: 700; line-height: var(--cd-lh-head); color: var(--text); cursor: pointer; word-break: keep-all; }
 .faq summary::-webkit-details-marker { display: none; }
 .faq summary::after { content: '+'; flex: 0 0 auto; font-size: 22px; font-weight: 400; color: var(--text-muted); line-height: 1; }
 .faq details[open] summary::after { content: '−'; }
 .faq summary:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 2px; border-radius: 6px; }
-.faq p { padding: 0 0 16px; font-size: 15px; line-height: 1.7; color: var(--text-muted); word-break: keep-all; }
+.faq p { padding: 0 0 16px; font-size: var(--cd-body); line-height: var(--cd-lh-body); color: var(--text-muted); word-break: keep-all; }
 .faq p a { color: var(--accent-ink); font-weight: 700; }
+
+/* ── 8. 마무리 상자(가운데 정렬 유일 예외) + 하단 바 활자 ── */
+body[data-challenge] .cta-title { font-size: var(--cd-h1); font-weight: 700; line-height: var(--cd-lh-head); letter-spacing: var(--cd-ls-head); margin-bottom: 10px; }
+body[data-challenge] .cta-desc { font-size: var(--cd-body); line-height: var(--cd-lh-body); margin-bottom: 22px; }
+body[data-challenge] .btn-white, body[data-challenge] .btn-primary { font-weight: 700; }
+body[data-challenge] .ch-sticky .p { font-weight: 700; }
+body[data-challenge] .ch-sticky .p .was, body[data-challenge] .ch-sticky .p .won { font-weight: 600; }
+body[data-challenge] .ch-sticky .s { font-size: var(--cd-cap); }
+body[data-challenge] .ch-sticky .go { font-weight: 700; }
