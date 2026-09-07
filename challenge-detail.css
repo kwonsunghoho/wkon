@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════════
    챌린지 상세 — ①안 '결과 먼저' 배치 공용 스타일 + 활자·폭 한 벌 (2026-09-07 오너 확정)
    설계: docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md
-   싣는 법: 인라인 <style> 블록 **뒤**에 <link rel="stylesheet" href="challenge-detail.css?v=2">
+   싣는 법: 인라인 <style> 블록 **뒤**에 <link rel="stylesheet" href="challenge-detail.css?v=3">
 
    ── 활자 규칙(2026-09-07 오너 "그 값으로 5종에 적용") ─────────────────────────────
    클래스101·인프런 강의 상세 실측(375px)에 맞춘 값이다 — 두 사이트 공통: 제목은 본문보다 조금만 크다
@@ -17,14 +17,16 @@
    ══════════════════════════════════════════════════════════════════════════ */
 
 body[data-challenge] {
-  --cd-h1: 22px; --cd-h2: 20px; --cd-h3: 16px;
+  /* 2026-09-07 오너 "다닥다닥 붙어 있다" → B안(여백·위계 + 판·아이콘). 제목 22/20 → 24/22, 섹션 간격 48 → 80.
+     ⚠️ 섹션 간격은 목록·상자 간격(10~14px)과 뚜렷이 달라야 '어디서 섹션이 바뀌는지'가 읽힌다 — 48 로 되돌리지 말 것. */
+  --cd-h1: 24px; --cd-h2: 22px; --cd-h3: 16px;
   --cd-body: 16px; --cd-sub: 14px; --cd-cap: 12.5px;
   --cd-lh-head: 1.3; --cd-lh-body: 1.65; --cd-lh-sub: 1.5;
   --cd-ls-head: -0.01em;
-  --cd-gap: 48px;                 /* 섹션 사이 */
+  --cd-gap: 80px;                 /* 섹션 사이 */
 }
 @media (min-width: 860px) {
-  body[data-challenge] { --cd-h1: 28px; --cd-h2: 24px; }
+  body[data-challenge] { --cd-h1: 30px; --cd-h2: 26px; --cd-gap: 104px; }
 }
 
 /* ── 0. 폭 한 줄 — 인라인 .container(800) 를 760 으로 좁혀 내용 폭 720. 카드·목록은 그 폭을 그대로 쓴다 ── */
@@ -34,7 +36,7 @@ body[data-challenge] .hero-wrap { max-width: 760px; }
 /* ── 1. 히어로: 사진 + 약속 한 줄 + 사실 알약 3개 + 신청 버튼 ── */
 /* 위 57px = 모바일 고정 nav 높이(nav.css `body[data-nav-offset]` 와 같은 값 · 2026-09-07 실측 57) — 사진이 바로 밑에 붙는다.
    ⚠️ 66 으로 두면 9px 흰 띠가 생긴다. 데스크톱(≥860)은 아래 미디어쿼리(nav 67 + 여백). */
-.hero.hero--photo { padding: 57px 0 40px; }
+.hero.hero--photo { padding: 57px 0 56px; }
 .hero-wrap { margin: 0 auto; }
 .hero-photo { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--bg3); }
 .hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 24%; }
@@ -72,11 +74,13 @@ body[data-challenge] .hero--photo .hero-desc { font-size: var(--cd-body); line-h
 
 /* ── 2. 섹션 공통 — 제목·라벨·부제를 한 벌로. 인라인 section 규칙(padding-top 0)과 tokens 의 h2.section-title 을 덮는다 ── */
 .cd-sec { padding: 0 0 var(--cd-gap); }
-body[data-challenge] .section-label { font-size: var(--cd-cap); font-weight: 700; letter-spacing: .12em; line-height: 1.4; margin-bottom: 8px; }
+body[data-challenge] .section-label { font-size: var(--cd-cap); font-weight: 700; letter-spacing: .12em; line-height: 1.4; margin-bottom: 10px; }
+/* 섹션 시작 표시 — 라벨 앞 짧은 네이비 선(허브 .section-label 과 같은 문법) */
+body[data-challenge] .section-label::before { content: ''; display: inline-block; width: 22px; height: 2px; background: var(--action); margin-right: 8px; vertical-align: middle; }
 body[data-challenge] h2.section-title, body[data-challenge] .section-title {
-  font-size: var(--cd-h2); font-weight: 700; line-height: var(--cd-lh-head); letter-spacing: var(--cd-ls-head); margin-bottom: 14px;
+  font-size: var(--cd-h2); font-weight: 700; line-height: var(--cd-lh-head); letter-spacing: var(--cd-ls-head); margin-bottom: 18px;
 }
-.cd-lead { font-size: var(--cd-body); color: var(--text-muted); line-height: var(--cd-lh-body); margin: -4px 0 16px; word-break: keep-all; }
+.cd-lead { font-size: var(--cd-body); color: var(--text-muted); line-height: var(--cd-lh-body); margin: -6px 0 20px; word-break: keep-all; }
 .cd-more { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--cd-sub); font-weight: 700; color: var(--accent-ink);
   text-decoration: underline; text-underline-offset: 3px; }
 
@@ -97,7 +101,7 @@ body[data-challenge] .ba-tx { font-size: var(--cd-cap); font-weight: 700; }
 .ba-more-btn:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 3px; }
 
 /* ── 4. 체크 목록(추천 대상 · 결과물) ── */
-.fit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.fit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .fit-list li { display: flex; gap: 10px; align-items: flex-start; font-size: var(--cd-body); line-height: var(--cd-lh-body); color: var(--text); word-break: keep-all; }
 .fit-list li b { font-weight: 700; }
 .fit-list li::before { content: ''; flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px; border-radius: 50%; background-color: var(--action-tint);
@@ -107,12 +111,19 @@ body[data-challenge] .ba-tx { font-size: var(--cd-cap); font-weight: 700; }
 body[data-challenge] .cd-sec h3 { font-size: var(--cd-h3); font-weight: 700; line-height: var(--cd-lh-head); color: var(--text); margin: 22px 0 10px; }
 
 /* ── 5. 2주 진행 방식 — 사실 4칸 + 주차 접이(인라인 .curriculum-* 활자를 덮는다) + 담당 코치 한 줄 ── */
-.how-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.how-fact { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--bg2); border: 1px solid var(--border-soft); }
+.how-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.how-fact { padding: 14px 14px 12px; border-radius: var(--radius-sm); background: var(--bg2); border: 1px solid var(--border-soft); }
+/* 사실 칸 아이콘 — 마크업 data-icon 으로 고른다(자체 선 아이콘 · 이모지 금지) */
+.how-fact::before { content: ''; display: block; width: 30px; height: 30px; margin-bottom: 8px; border-radius: 9px; background: var(--action-tint) center/18px no-repeat; }
+.how-fact[data-icon="clock"]::before { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E"); }
+.how-fact[data-icon="list"]::before { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h12M8 12h12M8 18h12'/%3E%3Ccircle cx='4' cy='6' r='1'/%3E%3Ccircle cx='4' cy='12' r='1'/%3E%3Ccircle cx='4' cy='18' r='1'/%3E%3C/svg%3E"); }
+.how-fact[data-icon="chat"]::before { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8 8 0 0 1-8 8H8l-5 3 1.5-4.5A8 8 0 1 1 21 12z'/%3E%3C/svg%3E"); }
+.how-fact[data-icon="person"]::before { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21a8 8 0 0 1 16 0'/%3E%3C/svg%3E"); }
+.how-fact[data-icon="play"]::before { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7 4 20 12 7 20 7 4'/%3E%3C/svg%3E"); }
 .how-fact b { display: block; font-size: var(--cd-h3); font-weight: 700; color: var(--text); line-height: var(--cd-lh-head); }
 .how-fact span { display: block; margin-top: 3px; font-size: var(--cd-sub); color: var(--text-muted); line-height: var(--cd-lh-sub); word-break: keep-all; }
 @media (min-width: 640px) { .how-facts { grid-template-columns: repeat(4, 1fr); } }
-body[data-challenge] .curriculum-list { gap: 10px; }
+body[data-challenge] .curriculum-list { gap: 12px; }
 body[data-challenge] .week-header { padding: 14px 16px; gap: 12px; }
 body[data-challenge] .week-num { width: 34px; height: 34px; font-size: var(--cd-sub); font-weight: 700; }
 body[data-challenge] .week-title { font-size: var(--cd-h3); font-weight: 700; line-height: var(--cd-lh-head); }
@@ -120,9 +131,9 @@ body[data-challenge] .week-sub { font-size: var(--cd-sub); line-height: var(--cd
 body[data-challenge] .week-body { padding: 0 16px 16px; }
 body[data-challenge] .lesson-item { font-size: var(--cd-body); line-height: var(--cd-lh-body); }
 body[data-challenge] .lesson-item strong { font-weight: 700; margin-bottom: 2px; }
-.coach-line { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm);
+.coach-line { display: flex; align-items: center; gap: 12px; margin-top: 22px; padding: 12px 14px; border-radius: var(--radius-sm);
   background: var(--action-tint); border: 1px solid rgba(27,58,107,.28); }
-.coach-line img { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; object-fit: cover; object-position: center 18%; background: var(--bg2); }
+.coach-line img { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%; object-fit: cover; object-position: center 18%; background: var(--bg2); }
 .coach-line .who { min-width: 0; }
 .coach-line .nm { display: block; font-size: var(--cd-h3); font-weight: 700; color: var(--text); line-height: var(--cd-lh-head); word-break: keep-all; }
 .coach-line .nm i { font-style: normal; display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--action);
@@ -131,12 +142,39 @@ body[data-challenge] .lesson-item strong { font-weight: 700; margin-bottom: 2px;
 .coach-more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: var(--cd-sub); font-weight: 700; color: var(--accent-ink);
   text-decoration: underline; text-underline-offset: 3px; }
 
+/* ── 5-1. 진행 3단계 그림 줄(B안) — 마크업 .cd-steps, 아이콘은 data-icon ── */
+.cd-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 20px; position: relative; }
+.cd-steps::before { content: ''; position: absolute; left: 16%; right: 16%; top: 22px; height: 2px; background: var(--border); }
+.cd-step { position: relative; text-align: center; font-size: var(--cd-cap); color: var(--text-muted); line-height: 1.4; word-break: keep-all; }
+.cd-step i { display: block; width: 44px; height: 44px; margin: 0 auto 8px; border-radius: 50%;
+  background: var(--action-tint) center/22px no-repeat; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border-soft); }
+.cd-step b { display: block; font-size: var(--cd-sub); color: var(--text); font-weight: 700; margin-bottom: 2px; }
+.cd-step i[data-icon="chat"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8 8 0 0 1-8 8H8l-5 3 1.5-4.5A8 8 0 1 1 21 12z'/%3E%3C/svg%3E"); }
+.cd-step i[data-icon="play"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7 4 20 12 7 20 7 4'/%3E%3C/svg%3E"); }
+.cd-step i[data-icon="mic"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z'/%3E%3Cpath d='M19 11a7 7 0 0 1-14 0'/%3E%3Cpath d='M12 18v3'/%3E%3C/svg%3E"); }
+.cd-step i[data-icon="video"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='13' height='12' rx='2'/%3E%3Cpath d='M16 10l5-3v10l-5-3z'/%3E%3C/svg%3E"); }
+.cd-step i[data-icon="pen"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20l4-1 10-10-3-3L5 16l-1 4z'/%3E%3Cpath d='M13 7l3 3'/%3E%3C/svg%3E"); }
+.cd-step i[data-icon="check"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 4.5-5'/%3E%3C/svg%3E"); }
+
+/* ── 판(B안): 추천·후기·FAQ 를 옅은 면에 담아 흰 섹션과 번갈아 놓는다.
+   ⚠️ 전체 폭 띠가 아니다 — 섹션 좌우 여백(16/20px)을 남기고 둥근 판만 칠한다(design-principles '--bg2 는 카드 안 옅은 판 전용'). */
+.cd-sec.is-panel { padding-left: 16px; padding-right: 16px; }
+.cd-sec.is-panel .container { background: var(--bg2); border-radius: 20px; padding: 26px 16px 28px; }
+body[data-challenge] .ch-rv.is-panel .ch-rv-in { background: var(--bg2); border-radius: 20px; padding: 26px 16px 28px; }
+.is-panel .faq { background: var(--surface); border-radius: 14px; border: 1px solid var(--border-soft); padding: 0 14px; }
+.is-panel .faq details:last-child { border-bottom: 0; }
+@media (min-width: 601px) { .cd-sec.is-panel { padding-left: 20px; padding-right: 20px; } }
+@media (min-width: 860px) {
+  .cd-sec.is-panel { padding-left: 0; padding-right: 0; }
+  .cd-sec.is-panel .container, body[data-challenge] .ch-rv.is-panel .ch-rv-in { padding: 32px 28px; }
+}
+
 /* ── 후기 섹션(challenge-reviews.js 가 심는 스타일을 덮는다) — 같은 폭·왼쪽 정렬·같은 활자 ── */
 body[data-challenge] .ch-rv { padding: 0 20px var(--cd-gap); }
 @media (max-width: 600px) { body[data-challenge] .ch-rv { padding: 0 16px var(--cd-gap); } }
 body[data-challenge] .ch-rv-in { max-width: 720px; }
 body[data-challenge] .ch-rv-head { text-align: left; margin-bottom: 0; }
-body[data-challenge] .ch-rv-grid { gap: 12px; }
+body[data-challenge] .ch-rv-grid { gap: 14px; }
 body[data-challenge] .ch-rv-card { padding: 16px; gap: 10px; }
 body[data-challenge] .ch-rv-badge { font-size: var(--cd-cap); font-weight: 700; }
 body[data-challenge] .ch-rv-q { font-size: var(--cd-body); line-height: var(--cd-lh-body); }
@@ -151,7 +189,7 @@ body[data-challenge] .ch-rv-more { margin: 16px 0 0; max-width: none; font-size:
 .price-line s[hidden] { display: none; }
 .price-line strong { font-size: 30px; font-weight: 700; color: var(--text); letter-spacing: var(--cd-ls-head); line-height: 1.1; }
 .price-line strong .won { font-size: var(--cd-body); font-weight: 700; margin-left: 1px; }
-.price-inc { list-style: none; display: grid; gap: 8px; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px dashed var(--border-strong);
+.price-inc { list-style: none; display: grid; gap: 10px; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px dashed var(--border-strong);
   font-size: var(--cd-body); line-height: var(--cd-lh-sub); color: var(--text); }
 .price-inc li { display: flex; gap: 8px; word-break: keep-all; }
 .price-inc li::before { content: '·'; font-weight: 700; color: var(--accent-ink); }
@@ -162,7 +200,7 @@ body[data-challenge] .ch-rv-more { margin: 16px 0 0; max-width: none; font-size:
 /* ── 7. FAQ — 네이티브 details(키보드·낭독기 기본 지원) ── */
 .faq { border-top: 1px solid var(--border); }
 .faq details { border-bottom: 1px solid var(--border); }
-.faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 12px 0;
+.faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; padding: 12px 0;
   font-size: var(--cd-body); font-weight: 700; line-height: var(--cd-lh-head); color: var(--text); cursor: pointer; word-break: keep-all; }
 .faq summary::-webkit-details-marker { display: none; }
 .faq summary::after { content: '+'; flex: 0 0 auto; font-size: 22px; font-weight: 400; color: var(--text-muted); line-height: 1; }
