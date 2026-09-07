@@ -197,7 +197,7 @@
   **verify-payment 재배포와 무관**하고 청구 금액도 안 바뀐다. 규칙은
   `docs/notes/apply-and-payment.md` '정가 앵커' 절.
 - `apply.html` FAQ #3·#6·#7 — 임시 문구.
-- ~~GitHub Actions 뉴스 스케줄~~ — 2026-08-28 뉴스 폐지로 워크플로 자체를 삭제(news.md). Actions 시크릿 `SUPABASE_SERVICE_ROLE_KEY` 는 쓰는 곳이 없어졌다 — 오너가 GitHub Settings 에서 지워도 된다(선택).
+- **GitHub Actions 뉴스 수집** — 2026-09-07 부활(news.md). 워크플로 `.github/workflows/news.yml`, 3시간마다. **시크릿 3개 필요**: `SUPABASE_SERVICE_ROLE_KEY`(폐지 때 "지워도 된다"고 안내했으므로 존재 여부 확인 필요) · `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET`(developers.naver.com 검색 API 애플리케이션). ⚠️ 공개 리포는 60일 무커밋이면 스케줄 자동 중지.
 
 ## 2026-08-02 UX·UI 진단 반영 — 배포 현황
 
