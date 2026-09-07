@@ -290,7 +290,108 @@ async function deleteIds(ids) {
   }
 }
 
+// ── 요약 수집(2026-09-07) ────────────────────────────────────────────────────
+// 언론사가 카톡·SNS 공유용으로 기사 페이지에 써 둔 og:description 한두 문장을 가져온다.
+// ⚠️ 본문을 긁지 않는다(저작권 — 스펙 3절). 사진(og:image)도 가져오지 않는다.
+// ⚠️ 신규 행에만 1회 부른다 — 재실행마다 전체를 다시 긁으면 언론사에 민폐고 느리다.
+// 실측(2026-09-07): 실기사 8곳(연합·매경×2·파이낸셜·경기일보·인더스트리·이코노미사이언스·
+// 이넷뉴스) 전부 og:description 추출 성공.
+const OG_TIMEOUT = 8000;
+const OG_MAX_BYTES = 512 * 1024;      // 머리만 필요하다 — 512KB 넘게 읽지 않는다
+const SUMMARY_MAX = 300;              // DB 주석과 한 벌
+
+function metaContent(html, prop) {
+  // <meta property="og:x" content="..."> 와 순서가 뒤집힌 것 둘 다 잡는다
+  const a = new RegExp('<meta[^>]+(?:property|name)=["\\\']' + prop
+    + '["\\\'][^>]*content=["\\\']([^"\\\']*)', 'i').exec(html);
+  if (a) return a[1];
+  const b = new RegExp('<meta[^>]+content=["\\\']([^"\\\']*)["\\\'][^>]*(?:property|name)=["\\\']'
+    + prop + '["\\\']', 'i').exec(html);
+  return b ? b[1] : null;
+}
+
+const unescapeHtml = s => String(s || '')
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+  .replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, ' ')
+  .replace(/&amp;/g, '&')
+  .replace(/\s+/g, ' ').trim();
+
+async function fetchOg(url) {
+  const res = await fetch(url, {
+    redirect: 'follow',
+    signal: AbortSignal.timeout(OG_TIMEOUT),
+    headers: {
+      // 우리가 누구인지 밝힌다 — 막고 싶은 언론사가 막을 수 있게.
+      'User-Agent': 'Mozilla/5.0 (compatible; MONC-news/1.0; +https://monc.ai.kr)',
+      'Accept': 'text/html,application/xhtml+xml',
+    },
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const ctype = res.headers.get('content-type') || '';
+  if (!/text\/html|application\/xhtml/i.test(ctype)) throw new Error('HTML 아님: ' + ctype);
+
+  // 512KB 까지만 읽는다(머리에 og 가 있다). 문자셋은 헤더 → <meta charset> 순.
+  const buf = new Uint8Array(await res.arrayBuffer()).slice(0, OG_MAX_BYTES);
+  let charset = (/charset=([\w-]+)/i.exec(ctype) || [])[1];
+  let html = new TextDecoder(charset && isKnownCharset(charset) ? charset : 'utf-8',
+                             { fatal: false }).decode(buf);
+  if (!charset) {
+    const m = /<meta[^>]+charset=["\']?([\w-]+)/i.exec(html.slice(0, 4096));
+    if (m && isKnownCharset(m[1]) && !/^utf-?8$/i.test(m[1])) {
+      html = new TextDecoder(m[1], { fatal: false }).decode(buf);
+    }
+  }
+  return {
+    description: unescapeHtml(metaContent(html, 'og:description')),
+    siteName: unescapeHtml(metaContent(html, 'og:site_name')),
+  };
+}
+
+// 한국 언론사는 EUC-KR 을 쓰는 곳이 남아 있다. TextDecoder 가 모르는 이름이면 utf-8 로 간다.
+function isKnownCharset(name) {
+  try { new TextDecoder(name); return true; } catch (e) { return false; }
+}
+
+const hostName = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return null; } };
+const cutSummary = s => {
+  const t = String(s || '').trim();
+  if (!t) return null;
+  return t.length > SUMMARY_MAX ? t.slice(0, SUMMARY_MAX - 1) + '…' : t;
+};
+
+// rows 를 제자리에서 채운다(summary·source). 동시 4개 — 언론사 서버를 두들기지 않는다.
+async function attachSummaries(rows) {
+  let ok = 0, fallback = 0, none = 0;
+  const queue = rows.slice();
+  const worker = async () => {
+    for (;;) {
+      const r = queue.shift();
+      if (!r) return;
+      let og = null;
+      try { og = await fetchOg(r.url); } catch (e) { og = null; }
+      const desc = og && og.description ? og.description : null;
+      if (desc) { r.summary = cutSummary(desc); ok++; }
+      else if (r.naverDesc) { r.summary = cutSummary(r.naverDesc); fallback++; }
+      else { r.summary = null; none++; }
+      r.source = (og && og.siteName) || hostName(r.url);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  console.log(`요약 성공 ${ok} · 폴백 ${fallback} · 없음 ${none}`);
+}
+
 (async () => {
+  // 진단 — URL 하나의 og 추출 결과만 보고 끝낸다(막는 언론사 확인용)
+  if (SUMMARY_TEST) {
+    try {
+      const og = await fetchOg(SUMMARY_TEST);
+      console.log('og:site_name   =', og.siteName || '(없음)');
+      console.log('og:description =', og.description || '(없음)');
+      console.log('저장될 summary =', cutSummary(og.description) || '(없음)');
+    } catch (e) { console.error('실패:', e.message); process.exitCode = 1; }
+    return;
+  }
+
   // 1) 수집 — 검색어 하나가 죽어도 나머지는 진행. url 로 자동 중복 제거.
   const collected = new Map();               // url → item
   for (const q of QUERIES) {
@@ -353,6 +454,7 @@ async function deleteIds(ids) {
     const unclassified = rows.filter(r => !r.topic).length;
     console.log(`\ndry-run: 저장 대상 ${rows.length}건 · 주제 미분류 ${unclassified}건`
                 + ` (${(unclassified / rows.length * 100).toFixed(0)}%)`);
+    console.log('(dry-run 은 요약을 가져오지 않는다 — 실행 시에만 신규 행에 붙는다)');
     return;
   }
 
@@ -364,13 +466,18 @@ async function deleteIds(ids) {
   const fresh = rows.filter((r, i) =>
     !dbTitles.has(normTitle(r.title)) && !dbTk.some(t => similar(t, rowTk[i]) >= DUP_MIN));
 
+  // 3.5) 요약·언론사명 수집 — ⚠️ 신규 행(fresh)에만. 저장분을 매번 다시 긁지 않는다.
+  if (fresh.length) await attachSummaries(fresh);
+
   // 4) upsert — url unique 충돌은 무시(재수집 안전)
+  // ⚠️ naverDesc 는 내부 폴백용 필드다. 그대로 실어 보내면 없는 컬럼이라 400 이 난다.
+  const payload = fresh.map(({ naverDesc, ...row }) => row);
   let inserted = 0;
-  if (fresh.length) {
+  if (payload.length) {
     const res = await sbFetch('news_articles?on_conflict=url', {
       method: 'POST',
       headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
-      body: JSON.stringify(fresh),
+      body: JSON.stringify(payload),
     });
     inserted = (await res.json()).length;
   }
