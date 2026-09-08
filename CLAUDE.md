@@ -78,7 +78,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - **지급의 최종 안전망은 웹훅(portone-webhook)** — 브라우저가 영영 안 돌아와도 서버가 지급을 끝낸다. **모든 `requestPayment` 에 주문 맥락 `customData`(`k`=종류 + 대상)를 싣고, 새 결제 흐름엔 웹훅 분기를 더한다.** 통보 본문은 방아쇠일 뿐 — 서버가 포트원 API 재조회로 금액을 DB 와 대조한 뒤에만 지급한다(멱등).
 - 환불(cancel-payment)에서 포트원 취소 성공 + DB 기록 실패는 `ok:true + warning` — 실패로 바꾸면 관리자가 다시 눌러 **이중 환불**이 난다.
 - **돈이 걸린 판정은 전부 DB 가 원장**: 잔여석·중복 신청·세션 상태는 DB 트리거(+`for update`·advisory lock), 크레딧 잔액은 **원장(`credit_ledger`) 합계**(잔액 컬럼 금지). 브라우저 검사·클라이언트 update 로 대체 금지. 브라우저가 보낸 `answerId`·금액·슬롯도 서버가 소유·소속 재확인.
-- **크레딧 공통 규칙**: 저장(직접 쓰기·소재 발굴·킬러 자동 저장)은 언제나 **무료·무제한.** 단가는 소재 2 / 킬러 3 / 첨삭 10(**가치 기준**). **하루 무료 5는 '첨삭 잠금장치'** — 첨삭 단가 이상이 되면 첨삭이 매일 공짜가 된다. 후하게 줄 땐 `grant_credit`. 차감 키는 `<대상 id>#<묶음>`(재전송 무차감). 유료 기능은 기록 count 실패 시 **차감 전에 `not_ready`** 로 멈춘다(무시하면 영구 무료 결함). **환급은 서버 전용 `refund_credit_for`(service_role)만** — `auth.uid()` 대상 RPC 를 `authenticated` 에 열면 학생이 자기 차감을 되돌린다.
+- **크레딧 공통 규칙**: 저장(직접 쓰기·소재 발굴·킬러 자동 저장)은 언제나 **무료·무제한.** 단가는 소재 5 / 킬러 5 / 첨삭 15(**가치 기준** · 2026-09-08 오너 확정 — 크레딧은 100원/개라 소재 500원·첨삭 1,500원). **하루 무료 5크레딧은 '첨삭 잠금장치'** — 첨삭 단가 이상이 되면 첨삭이 매일 공짜가 된다. 후하게 줄 땐 `grant_credit`. 차감 키는 `<대상 id>#<묶음>`(재전송 무차감). 유료 기능은 기록 count 실패 시 **차감 전에 `not_ready`** 로 멈춘다(무시하면 영구 무료 결함). **환급은 서버 전용 `refund_credit_for`(service_role)만** — `auth.uid()` 대상 RPC 를 `authenticated` 에 열면 학생이 자기 차감을 되돌린다.
 - **유료 콘텐츠 비공개**: 답변 프로그램 기출은 비공개 `interview_questions` + `ap_program_view()` RPC 만(회원 전체 읽기 `questions` 금지). `program_enrollments` 자가 INSERT 정책 금지(**체험판·무료 등록 없음** — 오너 확정). `airline_profiles`·`ai_killer_terms`·`sojae_playbook` RLS 는 일반 회원에게 닫혀 있다.
 
 ## 디자인 공통
@@ -108,7 +108,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 판정은 오너 지침 프롬프트(4기준+의심 지수+인간미 그린 플래그) — 규칙 판정으로 되돌리지 말 것. 구조화 출력·한 파일 유지, 피드백은 판정에 자동 반영 금지 | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 2번째 답변부터 항상 노출(오너 확정), 노하우는 `sojae_playbook`(DB), 난이도는 `questions.level` 한 곳(`.eq('level')` 금지 — 미적용 환경 400), 진입은 난이도 화면 먼저 | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
-| 답변 저장소·크레딧 | `answers.html`·`mypage.html` | 저장 무료·무제한, answers/mypage 는 같이 고친다 | `docs/notes/credits.md` |
+| 답변 저장소·크레딧·충전 | `answers.html`·`mypage.html`·`credits.html`(충전 허브)·`credit-charge.js` | 저장 무료·무제한, answers/mypage 는 같이 고친다. 충전 로직은 `credit-charge.js` 한 곳(화면만 페이지가 그린다), 충전 화면 정본은 `credits.html` — 도구는 `?back=` 을 달아 보낸다(첨삭 인라인 충전함은 유지) | `docs/notes/credits.md` |
 | 마이페이지 | `mypage.html`·`submit.html`(챌린지 제출 입구) | '오늘 한 칸'엔 사이트가 아는 사실만, 접이는 데이터 있는 줄만. 제출 칸 이름·규칙은 mypage·admin·submit 세 곳 한 벌. **결제했어도 기수 시작일(`challenge_rounds.program_start`) 전엔 문항·제출 칸을 열지 않는다**(판정은 `round-gate.js` 한 곳) | `docs/notes/mypage.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |

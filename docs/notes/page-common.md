@@ -10,7 +10,7 @@
 
 1. **홈 `index.html`·챌린지 허브 `challenges.html`** — 되돌아온 화면이 리셋되는 게 낡은 화면보다 거슬린다며 오너가 뺐다(홈은 히어로 애니메이션이, 챌린지 허브는 하단 블라인드 퀴즈가 처음부터 다시 시작한다).
 2. **입력값 있는 화면**(sojae·experiences·review-desk·onboarding) — 쓰던 글이 날아간다.
-3. **결제로 나갔다 오는 화면**(apply·lecture·program·ai-killer·polish·lab-shelf) — 통째 reload 대신 **버튼만 복원**(복귀 흐름을 건드린다).
+3. **결제로 나갔다 오는 화면**(apply·lecture·program·ai-killer·polish·lab-shelf·credits) — 통째 reload 대신 **버튼만 복원**(복귀 흐름을 건드린다). ⚠️ `credits.html`(충전 허브)은 `scroll-keep.js` 를 아예 안 싣는다 — 버튼 복원은 `credit-charge.js` 의 `pageshow` 가 한다.
 
 남는 한 가지: GitHub Pages 가 HTML 에 강제하는 `max-age=600` 은 레포에서 못 없앤다 — **배포 직후 확인은 강력 새로고침**으로 한다.
 

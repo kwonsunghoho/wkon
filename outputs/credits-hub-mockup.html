@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>크레딧 충전 허브 — 목업</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     credits.html(충전 허브) 목업 — 2026-09-08 오너 지시
+       "충전을 크레딧 눌렀을때 부족하면 충전 허브를 하나 만들어서 그쪽으로 이동"
+       + "첨삭 인라인 충전함은 그대로 두고 허브도 만들자"
+
+     전제(확정 단가): 소재 발굴 5 · 첨삭 15 · 하루 무료 5크레딧 · 100원/크레딧
+     값은 전부 DB(site_config)에서 읽는다 — 이 목업의 숫자는 예시다.
+     ══════════════════════════════════════════════════════════════════════ */
+  :root{
+    --bg:#FFFFFF; --bg2:#F4F7FC; --surface:#FFFFFF; --surface2:#EFF3F9;
+    --text:#1E2229; --text-muted:#545C68; --text-dim:#5F6874; --ink:#1C2A3A;
+    --border:rgba(23,42,71,0.16); --border-soft:rgba(23,42,71,0.12);
+    --border-strong:rgba(23,42,71,0.52);
+    --shadow:0 4px 20px rgba(20,32,52,0.10);
+    --action:#1B3A6B; --action-ink:#fff; --accent-ink:#1B3A6B;
+    --radius-xs:8px; --radius-sm:14px; --radius:20px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'Pretendard','Apple SD Gothic Neo',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:520px;margin:0 auto;padding:0 16px 56px;}
+
+  /* nav 자리(실제 페이지는 nav.js 공용) */
+  .navstub{height:56px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;
+    padding:0 16px;font-weight:800;color:var(--ink);font-size:15px;letter-spacing:-0.01em;}
+
+  .head{padding:24px 0 4px;}
+  .head h1{margin:0 0 6px;font-size:24px;line-height:1.3;letter-spacing:-0.02em;color:var(--ink);}
+  .head p{margin:0;font-size:14px;line-height:1.65;color:var(--text-muted);}
+
+  /* 복귀 안내 — ?back= 이 있을 때만 */
+  .back{display:flex;gap:10px;align-items:flex-start;margin:16px 0 0;padding:12px 14px;
+    background:var(--bg2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+    font-size:13px;line-height:1.6;color:var(--accent-ink);}
+  .back b{font-weight:700;}
+
+  /* 잔액 */
+  .bal{margin:16px 0 0;padding:20px 18px;background:var(--surface);
+    border:1px solid var(--border-soft);border-radius:var(--radius);box-shadow:var(--shadow);}
+  .bal-tag{display:inline-block;font-size:12px;font-weight:700;color:var(--text-dim);
+    letter-spacing:0.02em;margin-bottom:8px;}
+  .bal-n{margin:0;font-size:38px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);line-height:1;}
+  .bal-n span{font-size:15px;font-weight:700;margin-left:5px;color:var(--text-muted);letter-spacing:0;}
+  .bal-can{margin:12px 0 0;font-size:14px;line-height:1.6;color:var(--text);}
+  .bal-can b{color:var(--accent-ink);}
+  .bal-free{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--border-soft);
+    font-size:13px;line-height:1.6;color:var(--text-muted);}
+
+  /* 충전 팩 */
+  h2{margin:28px 0 10px;font-size:16px;letter-spacing:-0.01em;color:var(--ink);}
+  .packs{display:grid;gap:10px;}
+  .pack{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+    min-height:64px;padding:14px 16px;background:var(--surface);cursor:pointer;text-align:left;
+    border:1px solid var(--border-strong);border-radius:var(--radius-sm);font:inherit;color:inherit;}
+  .pack:hover{background:var(--bg2);}
+  .pack .n{display:block;font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;}
+  .pack em{display:block;margin-top:3px;font-size:12.5px;font-style:normal;color:var(--text-muted);}
+  .pack .p{flex:none;font-size:16px;font-weight:800;color:var(--accent-ink);}
+  .pack.best{border-color:var(--action);box-shadow:0 0 0 1px var(--action) inset;}
+  .pack .tag{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:6px;
+    background:var(--action);color:var(--action-ink);font-size:11px;font-weight:700;vertical-align:2px;}
+
+  .note{margin:12px 0 0;font-size:13px;line-height:1.7;color:var(--text-muted);}
+  .note b{color:var(--text);}
+  .note a{color:var(--accent-ink);}
+
+  /* 단가 표 */
+  .cost{margin:12px 0 0;border:1px solid var(--border-soft);border-radius:var(--radius-sm);overflow:hidden;}
+  .cost-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:12px 14px;font-size:14px;background:var(--surface);}
+  .cost-row + .cost-row{border-top:1px solid var(--border-soft);}
+  .cost-row b{font-weight:700;color:var(--ink);}
+  .cost-row span{font-size:13.5px;color:var(--text-muted);}
+  .cost-row .free{background:var(--bg2);}
+
+  /* 사용 내역 */
+  details{margin:24px 0 0;border-top:1px solid var(--border-soft);padding-top:14px;}
+  summary{list-style:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--ink);
+    display:flex;justify-content:space-between;align-items:center;min-height:44px;}
+  summary::-webkit-details-marker{display:none;}
+  summary .ar{font-size:12px;color:var(--text-dim);font-weight:600;}
+  .led{margin-top:6px;}
+  .led-row{display:flex;justify-content:space-between;gap:10px;padding:11px 2px;font-size:13.5px;
+    border-top:1px solid var(--border-soft);}
+  .led-row:first-child{border-top:0;}
+  .led-row .d{color:var(--text-muted);}
+  .led-row .v{font-weight:700;color:var(--ink);}
+  .led-row .v.minus{color:var(--text-muted);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="navstub">MONC 몬크</div>
+
+<div class="wrap">
+  <div class="head">
+    <h1>크레딧 충전</h1>
+    <p>소재 발굴과 답변 첨삭에 쓰는 크레딧이에요.</p>
+  </div>
+
+  <!-- ?back=polish.html 로 들어왔을 때만 -->
+  <div class="back">
+    <div>충전하면 <b>답변 첨삭</b>으로 바로 돌아갈 수 있어요. 쓰던 글은 그대로 있어요.</div>
+  </div>
+
+  <div class="bal">
+    <span class="bal-tag">내 크레딧</span>
+    <p class="bal-n">15<span>크레딧</span></p>
+    <p class="bal-can">지금 <b>첨삭 1회</b> 또는 <b>소재 발굴 3회</b>를 할 수 있어요.</p>
+    <p class="bal-free">오늘 무료 5크레딧이 남아 있어요 — 소재 발굴 1회 · 매일 자정에 새로 채워져요.</p>
+  </div>
+
+  <h2>충전하기</h2>
+  <div class="packs">
+    <button class="pack" type="button">
+      <span><span class="n">50크레딧</span><em>첨삭 3회 · 소재 발굴 10회</em></span>
+      <span class="p">5,000원</span>
+    </button>
+    <button class="pack best" type="button">
+      <span><span class="n">110크레딧<span class="tag">10% 더</span></span><em>첨삭 7회 · 소재 발굴 22회</em></span>
+      <span class="p">10,000원</span>
+    </button>
+    <button class="pack" type="button">
+      <span><span class="n">350크레딧<span class="tag">17% 더</span></span><em>첨삭 23회 · 소재 발굴 70회</em></span>
+      <span class="p">30,000원</span>
+    </button>
+  </div>
+
+  <p class="note">학원 자소서 첨삭은 한 문항에 <b>2~5만 원</b>이에요. 카드·간편결제로 결제하면 <b>바로 충전</b>됩니다.</p>
+  <p class="note"><b>충전한 크레딧은 소멸되지 않아요</b> — 유효기간이 없습니다.
+    자세한 내용은 <a href="terms.html">이용약관 제5조</a>를 참고해 주세요.</p>
+
+  <h2>어디에 얼마나 쓰이나요</h2>
+  <div class="cost">
+    <div class="cost-row"><b>소재 발굴 — 다듬기 1회</b><span>5크레딧</span></div>
+    <div class="cost-row"><b>답변 첨삭 1회</b><span>15크레딧</span></div>
+    <div class="cost-row free"><b>답변 저장·되묻기 대화</b><span>무료 · 무제한</span></div>
+  </div>
+  <p class="note">매일 <b>5크레딧</b>이 무료로 채워져요(남은 무료분은 다음 날로 넘어가지 않아요).</p>
+
+  <details>
+    <summary>사용 내역 <span class="ar">펼치기</span></summary>
+    <div class="led">
+      <div class="led-row"><span class="d">9월 8일 · 소재 발굴</span><span class="v minus">무료</span></div>
+      <div class="led-row"><span class="d">9월 7일 · 답변 첨삭</span><span class="v minus">-15</span></div>
+      <div class="led-row"><span class="d">9월 5일 · 충전</span><span class="v">+50</span></div>
+      <div class="led-row"><span class="d">9월 1일 · 가입 축하 지급</span><span class="v">+15</span></div>
+    </div>
+  </details>
+</div>
+</body>
+</html>
