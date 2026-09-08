@@ -5305,6 +5305,24 @@
         ${rows.map(([k, u]) => `<div class="sublink-row"><span class="sublink-k">${k}</span><span class="sublink-url">${u}</span><button type="button" class="ad-sq" data-copylink="${u}">복사</button></div>`).join('')}
       </div>`;
     }
+    /* 후기 링크(review-write.html) — 챌린지가 끝난 뒤 참가자에게 보내는 주소(2026-09-08 오너 요청).
+       제출 링크와 같은 자리·같은 문법이다. 로그인한 결제 참가자만 열리고 판정은 서버 RPC 가 한다.
+       기수도 신청 기록에서 서버가 읽으므로 링크에 사람·기수를 심지 않는다 — 매 기수 같은 주소를 재사용.
+       ⚠️ 댄특완(culture)은 submit_challenge_review 가 받는 네 챌린지에 없다 — 줄을 그리지 않는다
+          (죽은 링크 금지). RPC 에 culture 를 더하면 여기 REVIEW_CH 에도 같이 넣는다. */
+    const REVIEW_BASE = 'https://monc.ai.kr/review-write.html';
+    const REVIEW_CH = ['voice', 'expression', 'spinning', 'answer'];
+    function chReviewLinkHtml(kind) {
+      const isAll = kind === 'all';
+      if (!isAll && REVIEW_CH.indexOf(kind) < 0) return '';
+      const url = isAll ? REVIEW_BASE : REVIEW_BASE + '?ch=' + kind;
+      const k = isAll ? '후기 쓰기' : CH_LABEL[kind] + ' 후기';
+      return `<div class="sublink">
+        <div class="sublink-t">후기 링크 — 챌린지 끝나고 보내기</div>
+        <div class="sublink-hint">${isAll ? '챌린지 탭을 고르면 그 챌린지가 미리 골라진 주소가 나와요. ' : ''}로그인한 결제 참가자만 열려요(기수는 각자 신청에서 자동으로 붙어요). 받은 후기는 바로 공개되지 않아요 — '후기 관리' 탭에서 노출을 켜야 올라갑니다.</div>
+        <div class="sublink-row"><span class="sublink-k">${k}</span><span class="sublink-url">${url}</span><button type="button" class="ad-sq" data-copylink="${url}">복사</button></div>
+      </div>`;
+    }
     function wireCopyLinks(root) {
       root.querySelectorAll('[data-copylink]').forEach(btn => btn.addEventListener('click', async () => {
         const url = btn.dataset.copylink;
@@ -5422,7 +5440,8 @@
       if (!list.length) {
         body.innerHTML = apSummary(appScopeLabel(), '', [[list.length, '신청']])
           + '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'
-          + chSubmitLinksHtml(_appKind);   // 새 기수 0명이어도 링크는 필요하다
+          + chSubmitLinksHtml(_appKind)    // 새 기수 0명이어도 링크는 필요하다
+          + chReviewLinkHtml(_appKind);
         wireCopyLinks(body);
         return;
       }
@@ -5490,7 +5509,8 @@
             : '')
         + chSubNoteHtml()   // 제출물 표를 못 읽었으면 사실대로 적는다(단정 금지)
         + '</div>'
-        + chSubmitLinksHtml(_appKind);   // 챌린지 탭이면 목록 아래 제출 링크(오픈챗 공유용)
+        + chSubmitLinksHtml(_appKind)    // 챌린지 탭이면 목록 아래 제출 링크(오픈챗 공유용)
+        + chReviewLinkHtml(_appKind);    // 그 아래 후기 링크(챌린지 4종 · 전체 탭)
       wireCopyLinks(body);
       wireSubsFolds(body);
       const chSubRetry = document.getElementById('chSubRetry');

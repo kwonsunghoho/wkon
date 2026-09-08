@@ -124,8 +124,10 @@
       <span class="lb">어느 챌린지 후기인가요?</span>
       <div class="ch-pick" id="chPick" role="group" aria-label="챌린지 선택"></div>
 
-      <label class="lb" for="rwName">표시 이름<em>후기에 그대로 보여요 — 비우면 이름 없이 게시</em></label>
-      <input class="inp" id="rwName" type="text" maxlength="40" autocomplete="name" placeholder="예: 박신우">
+      <!-- '이름'이 아니라 '닉네임'이다(2026-09-08 오너 "이름이라고 써있으면 부담스러워할 것 같다").
+           프로필 이름 자동 채우기도 같이 뺐다 — 닉네임 칸에 본명이 박혀 있으면 라벨과 어긋난다. -->
+      <label class="lb" for="rwName">닉네임<em>후기에 그대로 보여요 — 비우면 이름 없이 게시</em></label>
+      <input class="inp" id="rwName" type="text" maxlength="40" autocomplete="off" placeholder="예: 승무원준비생">
 
       <label class="lb" for="rwQuote">후기 내용<em>10자 이상</em></label>
       <!-- data-keep: 뒤로가기·새로고침에도 쓰던 글 보존(sessionStorage — draft-keep.js) -->
@@ -317,15 +319,18 @@
         pick.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
         syncSubmit();
       });
-      if (keys.length === 1) { picked = keys[0]; pick.querySelector('button').classList.add('on'); }
-
-      // 표시 이름 기본값 = 프로필 이름(수정 가능)
-      try {
-        const profile = await MONC.getMyProfile();
-        if (profile && profile.name && !document.getElementById('rwName').value) {
-          document.getElementById('rwName').value = profile.name;
-        }
-      } catch (_) {}
+      /* 미리 고르기 — 참가한 챌린지가 하나뿐이거나, 링크에 `?ch=` 가 붙어 왔을 때
+         (admin 신청자 현황의 '후기 링크'가 챌린지 탭 값을 붙여 준다 · 2026-09-08).
+         ⚠️ 고를 수 있는 것은 언제나 결제 기록에서 만든 keys 뿐이다 — 주소로 넘어온 값이
+            거기에 없으면 조용히 무시한다(주소만 바꿔 남의 챌린지 후기를 쓰게 하지 않는다).
+            최종 판정은 어차피 서버 RPC 가 다시 한다. */
+      const wantCh = new URLSearchParams(location.search).get('ch');
+      const preset = keys.length === 1 ? keys[0] : (keys.indexOf(wantCh) >= 0 ? wantCh : '');
+      if (preset) {
+        picked = preset;
+        const pb = pick.querySelector('button[data-ch="' + preset + '"]');
+        if (pb) pb.classList.add('on');
+      }
 
       document.getElementById('rwQuote').addEventListener('input', syncSubmit);
       document.getElementById('rwSubmit').addEventListener('click', submitReview);
