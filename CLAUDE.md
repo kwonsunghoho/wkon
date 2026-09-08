@@ -149,7 +149,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 
 각 항목의 배경·실측은 괄호의 문서에 있다.
 
-- 전체 폭 섹션 밴드 — `--bg2` 는 흰 카드 안 옅은 판 전용 (design-principles.md)
+- 전체 폭 섹션 밴드 — `--bg2` 는 흰 카드 안 옅은 판 전용 (design-principles.md). ⚠️ 홈 ④ 숫자(`.nums`)의 **사진 + 다크 판은 이 금지의 예외**다(2026-09-08 오너 확정) — 금지가 걱정한 건 순백과 옅은 판이 만나 생기는 가로선이고, 사진·짙은 판은 장면 전환으로 읽힌다. 걷어내지 말 것 (home.md)
 - 웜 페이퍼 배경·웜그레이 잉크 일습 — 2026-08-05 순백+쿨 그레이로 전면 교체 (design-principles.md)
 - `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 (apply-and-payment.md)
 - 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
