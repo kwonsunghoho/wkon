@@ -747,6 +747,19 @@
     .side details.sfold > summary::-webkit-details-marker { display: none; }
     .side details.sfold > summary::before { content: '\25B8'; font-size: 11px; color: var(--text-dim); }
     .side details.sfold[open] > summary::before { content: '\25BE'; }
+    /* 재학생 명단 줄(2026-09-09) — 이름·번호 / 종료일·상태 / 빼기 한 줄.
+       ⚠️ 알약(999px) 금지 규칙 그대로 — 상태는 색 글씨로만 구분한다. */
+    .stu-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px;
+      padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+    .stu-row .stu-main { font-size: 13px; }
+    .stu-row .stu-sub { grid-column: 1; font-size: 12px; color: var(--text-dim); }
+    .stu-row .stu-main { grid-column: 1; }
+    /* 사이드바 버튼이지만 누르는 자리는 44px 를 지킨다(원칙 2 — '작은 버튼'은 못 누르는 버튼이다) */
+    .stu-row .btn, #stuAdd { min-height: 44px; }
+    .stu-row .btn { grid-column: 2; grid-row: 1 / span 2; }
+    /* 상태색은 위 한 벌만 쓴다 — 새 색을 만들지 않는다(--st-alert / --st-ok) */
+    .stu-st { font-weight: 700; color: var(--st-alert); }
+    .stu-st.ok { color: var(--st-ok); }
 
     /* ── 회원 상세 머리 ── */
     .mhead { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
@@ -1359,6 +1372,36 @@
           <span class="bulk-count" id="selCount"></span>
         </div>
       </div>
+
+      <!-- 재학생 명단(2026-09-09 오너 "재학생들은 챌린지 신청할때 무료로") — 여기 있는 번호로
+           본인인증한 회원은 챌린지·특강·자료를 화면에서 0원으로 접수한다(서버 판정).
+           ⚠️ 번호는 개인정보다 — 값을 레포에 커밋하지 않는다. 등록은 이 화면에서만.
+           ⚠️ 표가 아직 없으면(PGRST205) 이 묶음만 안내로 바뀌고 나머지 회원 관리는 그대로 돈다. -->
+      <details class="sfold" id="stuFold">
+        <summary>재학생 명단 <span class="adm-help-v" id="stuCount" hidden>0명</span></summary>
+        <div style="padding-top:10px;display:flex;flex-direction:column;gap:10px">
+          <div id="stuMissing" class="dist-note" hidden>
+            재학생 명단 표가 아직 없어요. 마이그레이션(20260909120000)을 실행하면 켜집니다.
+          </div>
+          <div id="stuBody" hidden>
+            <div class="af-field" style="margin:0 0 8px">
+              <label for="stuPaste">번호 붙여넣기 (한 줄에 한 명)</label>
+              <textarea id="stuPaste" rows="4" placeholder="010-1234-5678&#10;홍길동 010-2222-3333"
+                        style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;"></textarea>
+            </div>
+            <div class="af-field" style="margin:0 0 8px">
+              <label for="stuUntil">무료 종료일 (이 날까지)</label>
+              <input id="stuUntil" type="date"
+                     style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;width:100%;box-sizing:border-box;">
+            </div>
+            <button class="btn btn-action btn-sm" type="button" id="stuAdd">명단에 넣기</button>
+            <p class="dist-note" style="margin:8px 0 0">같은 번호를 다시 넣으면 종료일만 바뀝니다.</p>
+
+            <input class="search" id="stuSearch" placeholder="이름·번호 검색" aria-label="재학생 명단 검색" style="margin-top:12px">
+            <div id="stuList" style="max-height:320px;overflow:auto;margin-top:6px"></div>
+          </div>
+        </div>
+      </details>
 
       <!-- 기수 만들기는 매일 하는 일이 아니다 — 접이로 내린다(2026-08-22) -->
       <details class="sfold">
@@ -3624,6 +3667,117 @@
       document.getElementById('cohortName').value = '';
       await loadCohorts();
       toast('기수 추가됨');
+    });
+
+    /* ══ 재학생 명단(2026-09-09 오너 확정) ═════════════════════════════════════
+       여기 있는 번호로 **본인인증한** 회원이 챌린지·특강·자료를 0원으로 접수한다.
+       판정·접수는 서버(monc_is_student · apply_free_* · claim_free_resource)가 하고,
+       이 화면은 명단을 넣고 빼는 일만 한다.
+       ⚠️ 번호는 개인정보다 — 값을 레포·문서에 옮겨 적지 않는다.
+       ⚠️ 무료가 안 되는 이유가 보여야 문의를 바로 답한다 → 줄마다 가입·인증 여부를 적는다.
+       ⚠️ 표가 없으면(PGRST205) 이 묶음만 안내로 바뀐다 — 회원 관리 나머지는 그대로 돈다. */
+    let _students = null, _stuLoading = false;
+    const stuNorm = s => String(s || '').replace(/\D/g, '');
+    const stuFmt = d => (window.MONC_PHONE ? MONC_PHONE.format(d) : d);
+
+    async function loadStudents() {
+      if (_stuLoading) return;
+      _stuLoading = true;
+      const { data, error } = await sb().from('academy_students').select('*').order('created_at', { ascending: false });
+      _stuLoading = false;
+      if (error) {
+        const missing = error.code === 'PGRST205' || /academy_students/i.test(error.message || '');
+        document.getElementById('stuMissing').hidden = !missing;
+        document.getElementById('stuMissing').textContent = missing
+          ? '재학생 명단 표가 아직 없어요. 마이그레이션(20260909120000)을 실행하면 켜집니다.'
+          : '명단을 불러오지 못했어요: ' + error.message;
+        document.getElementById('stuBody').hidden = true;
+        return;
+      }
+      _students = data || [];
+      document.getElementById('stuMissing').hidden = true;
+      document.getElementById('stuBody').hidden = false;
+      renderStudents();
+    }
+
+    function renderStudents() {
+      if (!_students) return;
+      const q = stuNorm(document.getElementById('stuSearch').value) ||
+                document.getElementById('stuSearch').value.trim();
+      const today = new Date().toISOString().slice(0, 10);
+      const list = _students.filter(s => {
+        if (!q) return true;
+        return String(s.phone_norm || '').includes(q) || String(s.name || '').includes(q);
+      });
+      const cnt = document.getElementById('stuCount');
+      cnt.hidden = false;
+      cnt.textContent = _students.length + '명';
+      // 가입·인증 여부는 이미 받아 둔 회원 목록으로 맞춘다(추가 조회 없음)
+      const byPhone = new Map();
+      members.forEach(m => { const d = stuNorm(m.phone); if (d) byPhone.set(d, m); });
+      document.getElementById('stuList').innerHTML = list.length
+        ? list.map(s => {
+            const m = byPhone.get(s.phone_norm);
+            const expired = String(s.valid_until || '') < today;
+            // ⚠️ '무료 가능'은 세 가지가 다 맞을 때만이다 — 하나라도 빠지면 학생 화면은 유료다
+            const state = expired ? '기간 지남' : !m ? '미가입' : !m.verified_at ? '미인증' : '무료 가능';
+            return '<div class="stu-row">'
+              + '<div class="stu-main"><b>' + esc(s.name || '(이름 없음)') + '</b> '
+              + '<span class="num">' + esc(stuFmt(s.phone_norm)) + '</span></div>'
+              + '<div class="stu-sub">~' + esc(String(s.valid_until || '')) + ' · '
+              + '<span class="stu-st' + (state === '무료 가능' ? ' ok' : '') + '">' + state + '</span></div>'
+              + '<button class="btn btn-ghost btn-sm" type="button" data-stu-del="' + esc(s.phone_norm) + '">빼기</button>'
+              + '</div>';
+          }).join('')
+        : '<p class="dist-note">' + (q ? '검색 결과가 없어요.' : '아직 등록된 재학생이 없어요.') + '</p>';
+    }
+
+    document.getElementById('stuFold').addEventListener('toggle', function () {
+      if (this.open && _students === null) loadStudents();   // 처음 열 때만 받는다
+    });
+    document.getElementById('stuSearch').addEventListener('input', renderStudents);
+
+    document.getElementById('stuAdd').addEventListener('click', async () => {
+      const until = document.getElementById('stuUntil').value;
+      if (!until) { alert('무료 종료일을 골라주세요.'); return; }
+      const lines = document.getElementById('stuPaste').value.split('\n');
+      const rows = [];
+      const bad = [];
+      lines.forEach(line => {
+        const raw = line.trim();
+        if (!raw) return;
+        const digits = stuNorm(raw);
+        // 번호가 아닌 부분은 이름으로 본다('홍길동 010-…' · '010-… 홍길동' 둘 다)
+        const name = raw.replace(/[0-9\-.\s+()]/g, '').trim();
+        if (digits.length < 10 || digits.length > 11) { bad.push(raw); return; }
+        if (rows.some(r => r.phone_norm === digits)) return;
+        rows.push({ phone_norm: digits, name: name || null, valid_until: until });
+      });
+      if (!rows.length) { alert('넣을 번호가 없어요.' + (bad.length ? '\n번호 형식을 확인해 주세요.' : '')); return; }
+      const btn = document.getElementById('stuAdd');
+      btn.disabled = true;
+      // 같은 번호를 다시 넣으면 종료일·이름만 바뀐다(한 사람은 한 줄)
+      const { error } = await sb().from('academy_students').upsert(rows, { onConflict: 'phone_norm' });
+      btn.disabled = false;
+      if (error) { alert('등록 실패: ' + error.message); return; }
+      document.getElementById('stuPaste').value = '';
+      _students = null;
+      await loadStudents();
+      toast(rows.length + '명 등록됨' + (bad.length ? ' · ' + bad.length + '줄은 번호가 아니라 건너뜀' : ''));
+    });
+
+    document.getElementById('stuList').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-stu-del]');
+      if (!btn) return;
+      const phone = btn.getAttribute('data-stu-del');
+      const row = (_students || []).filter(s => s.phone_norm === phone)[0];
+      if (!confirm((row && row.name ? row.name + ' 님' : stuFmt(phone)) + '을 명단에서 뺄까요?\n'
+        + '이미 접수한 무료 신청은 그대로 남고, 앞으로만 정상가로 바뀝니다.')) return;
+      const { error } = await sb().from('academy_students').delete().eq('phone_norm', phone);
+      if (error) { alert('삭제 실패: ' + error.message); return; }
+      _students = null;
+      await loadStudents();
+      toast('명단에서 뺐어요');
     });
 
     // ⚠️ 조건이 바뀌면 표시 수를 처음으로 되돌린다 — 안 그러면 검색 결과 3명인데 '더 보기'가 남는다.
