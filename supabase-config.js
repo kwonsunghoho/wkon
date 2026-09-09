@@ -362,6 +362,47 @@
     return out;
   }
 
+  // ── 재학생 무료(2026-09-09 오너 "재학생들은 챌린지 신청할때 무료로") ────────
+  // 판정은 서버(my_student_status → academy_students + 본인인증 번호 + 기간)다. 화면은
+  // 그 답으로 금액·버튼만 바꾼다. 명단 자체는 관리자만 읽는다.
+  // ⚠️ **실패 방향이 requireVerified 와 반대다 — 못 물어보면 '재학생 아님'(유료).**
+  //    게이트는 막히면 안 되니 fail-open 이지만, 무료는 실패로 열리면 안 된다.
+  // ⚠️ 판정 규칙을 페이지에 복사하지 말 것 — apply·lecture·연구실이 이 한 곳을 부른다.
+  let _studentPromise = null;
+  async function studentStatus() {
+    if (_studentPromise) return _studentPromise;   // 세션 동안 한 번만 묻는다
+    _studentPromise = (async () => {
+      const off = { student: false, until: null };
+      try {
+        const session = await getSession();
+        if (!session) return off;
+        const { data, error } = await sb.rpc('my_student_status');
+        if (error || !data) return off;            // 함수 미배포(PGRST202)·조회 실패 = 유료
+        return { student: data.student === true, until: data.until || null };
+      } catch (e) { return off; }
+    })();
+    return _studentPromise;
+  }
+
+  // 무료 접수 세 창구. 금액·기수·대상 회원은 전부 서버가 정한다(인자는 '무엇을'만).
+  // 돌려주는 모양은 { ok, code?, ... } 한 벌 — 화면이 code 로 안내를 가른다.
+  //   not_student(명단에 없거나 미인증) · duplicate(program) · not_open · lecture_full ·
+  //   profile_missing · not_ready(함수 미배포)
+  async function callFree(fn, args) {
+    try {
+      const { data, error } = await sb.rpc(fn, args);
+      if (error) {
+        const missing = error.code === 'PGRST202' || new RegExp(fn, 'i').test(error.message || '');
+        return { ok: false, code: missing ? 'not_ready' : 'error', message: error.message };
+      }
+      return data || { ok: false, code: 'error' };
+    } catch (e) { return { ok: false, code: 'error', message: String(e) }; }
+  }
+  const applyFreeChallenges = (ids) => callFree('apply_free_challenges', { p_ids: ids || [] });
+  const applyFreeLecture = (lectureId, slotId) =>
+    callFree('apply_free_lecture', { p_lecture: lectureId, p_slot: slotId || null });
+  const claimFreeResource = (resourceId) => callFree('claim_free_resource', { p_resource: resourceId });
+
   // private 버킷 파일의 재생용 signed URL (기본 1시간)
   async function getSignedUrl(storagePath, expiresIn) {
     if (!storagePath) return null;
@@ -380,6 +421,7 @@
     getMyProfile, saveMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
     getConsent, recordConsent, hasConsented, requireConsent, requireVerified, deleteMyAccount,
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
+    studentStatus, applyFreeChallenges, applyFreeLecture, claimFreeResource,
   };
 })();
 
