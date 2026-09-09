@@ -117,6 +117,13 @@
       border-bottom-left-radius: 6px; color: var(--text); }
     .me { align-self: flex-end; background: var(--action); color: var(--action-ink);
       border-bottom-right-radius: 6px; }
+    /* ── 방금 보낸 말 고치기(2026-09-09 사용자 피드백 "보낸 대화를 수정하고 싶다") ──
+       마지막 내 말풍선 아래에만 붙는다. 응답 대기 중·다듬기 이후엔 떼어 낸다.
+       ⚠️ 대화 중간 말풍선으로 넓히지 말 것 — 그 뒤 문답이 통째로 어긋난다. */
+    .editrow { align-self: flex-end; margin-top: -4px; }
+    .editbtn { min-height: 44px; padding: 0 4px; background: none; border: 0; font: inherit;
+      font-size: 13px; font-weight: 700; color: var(--accent-ink); cursor: pointer;
+      text-decoration: underline; text-underline-offset: 3px; color-scheme: light; }
     /* 강조 안내 말풍선 — 시스템(진행·완료) 안내 전용 세 번째 문법(2026-08-06 오너 확정).
        네이비 틴트 + 왼쪽 4px 띠, 'R 연구원' 머리 없음. ⚠️ 질문·대답 말풍선에 쓰지 말 것 —
        자주 나오면 강조가 죽는다. transcript 에도 넣지 않는다(sysBubble 주석 참조). */
@@ -298,11 +305,30 @@
     .mcard-link { display: inline-block; margin-top: 9px; font-size: 13px; font-weight: 800;
       color: var(--accent-ink); }
     .sk-h { font-size: 14px; font-weight: 800; margin: 4px 0 8px; }
-    .sk-step { margin-bottom: 9px; font-size: 15px; line-height: 1.55; }
-    .sk-step b { display: block; margin-bottom: 2px; }
-    .sk-str { margin-top: 11px; font-size: 14px; line-height: 1.55; padding-top: 9px;
-      border-top: 1px dashed var(--border-soft); }
-    .sk-close { margin-top: 8px; font-size: 14px; color: var(--text-muted); }
+    /* ── 답변 뼈대는 표로(2026-09-09 사용자 피드백 "도표는 좋았는데 마지막이 줄글이라 아쉽다") ──
+       단계 번호 열 + 내용 열. 375px 에서 가로 스크롤이 나지 않게 번호 열은 고정 44px,
+       내용은 남는 폭을 다 쓴다(말풍선 안이라 실폭 ~289px). 표를 가로로 넓히지 말 것. */
+    .sk-tbl { border: 1px solid var(--border-soft); border-radius: 12px; overflow: hidden;
+      background: var(--surface); }
+    .sk-tr { display: flex; align-items: stretch; border-top: 1px solid var(--border-soft); }
+    .sk-tr:first-child { border-top: 0; }
+    .sk-k { flex: 0 0 44px; display: flex; align-items: center; justify-content: center;
+      background: var(--bg2); font-size: 15px; font-weight: 800; color: var(--accent-ink); }
+    .sk-v { flex: 1 1 auto; min-width: 0; padding: 10px 12px; font-size: 14.5px; line-height: 1.5;
+      word-break: keep-all; }
+    .sk-v b { display: block; font-weight: 800; }
+    .sk-fill { display: block; margin-top: 4px; font-size: 13.5px; color: var(--text-muted); }
+    .sk-fill i { font-style: normal; font-weight: 800; color: var(--accent-ink); }
+    /* 강점 포인트도 줄글 대신 항목으로 — 서버가 목록으로 준다(옛 문자열도 한 줄로 그린다) */
+    .sk-str { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border-soft); }
+    .sk-str-h { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--accent-ink);
+      margin-bottom: 6px; }
+    .sk-ul { list-style: none; margin: 0; padding: 0; }
+    .sk-ul li { position: relative; padding-left: 15px; font-size: 14px; line-height: 1.55;
+      margin-bottom: 5px; word-break: keep-all; }
+    .sk-ul li::before { content: ''; position: absolute; left: 2px; top: 8px; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--accent-ink); }
+    .sk-close { margin-top: 10px; font-size: 14px; color: var(--text-muted); }
     /* 첨삭과 같은 규칙 — (괄호 빈칸)은 학생이 제 사실로 채울 자리 */
     .blank { background: var(--action-tint); border-radius: 4px; padding: 0 2px; font-weight: 700; }
 
@@ -532,7 +558,10 @@
        한 번 알리고 ④ 실패를 계측(sojae_ai_fail)에 남긴다 — 운영이 장애를 볼 유일한 창이다. */
     let _step = 0;                 // 이번 세션에서 쓴 폴백 질문 수(복원 때 대화에서 다시 센다)
     let _fallbackNoticed = false;  // 폴백 안내는 한 번만
-    const CANNED_MAX_TURNS = 4;    // 서버의 4문답 상한(2026-08-05 오너 확정)과 같은 값
+    /* 서버의 문답 상한과 같은 값 — 6→4(2026-08-05 오너) → 4→3(2026-09-09 사용자 피드백
+       "너무 집요하게 물어봐서 힘들었다"). ⚠️ 서버 ASK_FORMAT 과 playbook ask_core 의
+       숫자도 같이 3 이어야 한다(한쪽만 고치면 화면과 AI 가 다른 상한으로 돈다). */
+    const CANNED_MAX_TURNS = 3;
     const CANNED_CLOSE = '지금까지 꺼낸 이야기는 저장돼 있어요. 연구원 연결이 원활하지 않아 되묻기는 여기서 멈출게요 — 잠시 뒤 다시 들어와 <b>다듬기</b>를 눌러 주세요.';
     function cannedAsk(help) {
       const list = FOLLOWUPS[category] || FOLLOWUPS.experience;
@@ -602,9 +631,20 @@
     function refineHtmlV2(d) {
       const c = d.card, s = d.skeleton;
       const comps = (c.competencies || []).map(x => '<span class="mcard-tag">' + esc(x) + '</span>').join('');
+      /* 뼈대는 표로 그린다(2026-09-09) — 왼쪽 번호 열 + 오른쪽 '무슨 내용'·'내가 채울 것'.
+         ⚠️ 줄글(sk-step)로 되돌리지 말 것: 도표는 좋았는데 뒷부분이 줄글이라 아쉬웠다는
+         피드백이 이 표의 이유다. */
       const steps = (s.steps || []).map((st, i) =>
-        '<div class="sk-step"><b>' + (i + 1) + '. ' + esc(st.what) + '</b>'
-        + markBlanks(esc(st.fill)) + '</div>').join('');
+        '<div class="sk-tr"><div class="sk-k">' + (i + 1) + '</div>'
+        + '<div class="sk-v"><b>' + esc(st.what) + '</b>'
+        + '<span class="sk-fill"><i>내가 채울 것</i> · ' + markBlanks(esc(st.fill)) + '</span>'
+        + '</div></div>').join('');
+      // 강점 포인트: 신함수는 목록, 구함수는 문자열 하나 — 둘 다 같은 모양으로 그린다.
+      const strList = Array.isArray(s.strengths) ? s.strengths : (s.strengths ? [s.strengths] : []);
+      const strHtml = strList.length
+        ? '<div class="sk-str"><div class="sk-str-h">강점 포인트</div><ul class="sk-ul">'
+          + strList.map(x => '<li>' + markBlanks(esc(x)) + '</li>').join('') + '</ul></div>'
+        : '';
       return '<div class="mcard"><div class="mcard-h">소재 카드</div>'
         + '<div class="mcard-t">' + esc(c.title) + '</div>'
         + '<div class="mcard-one">' + esc(c.one_line) + '</div>'
@@ -614,8 +654,9 @@
             ? '<a class="mcard-link" href="answers.html#materials">소재 모음에 저장됨 · 모음 보기 →</a>'
             : '')
         + '</div>'
-        + '<div class="sk-h">답변 뼈대 — 이 순서로 말해보세요</div>' + steps
-        + '<div class="sk-str"><b>강점 포인트</b> · ' + markBlanks(esc(s.strengths)) + '</div>'
+        + '<div class="sk-h">답변 뼈대 — 이 순서로 말해보세요</div>'
+        + '<div class="sk-tbl">' + steps + '</div>'
+        + strHtml
         + '<p class="sk-close">' + esc(s.closing) + '</p>';
     }
 
@@ -754,6 +795,7 @@
       const d = document.createElement('div');
       d.className = 'bub ' + cls; d.innerHTML = html;
       chat.appendChild(d); tailTools(); chat.scrollTop = chat.scrollHeight;
+      return d;
     }
     // 되묻기 대화 로그 — 다듬기 프롬프트의 {collected_materials} 재료 (docs/prompts/sojae-refine.md)
     // TODO(save): 로그인 붙이면 discovery_messages 에도 저장.
@@ -765,6 +807,71 @@
     function me(text){
       bubble('me', esc(text));
       transcript.push({ role: 'user', content: text });
+    }
+
+    /* ── 방금 보낸 말 고쳐 쓰기(2026-09-09 사용자 피드백) ────────────────────────
+       마지막 내 말 **하나만** 연다. 누르면 그 말과 그 뒤 대화가 화면·기록에서 지워지고
+       쓴 글이 입력칸으로 돌아온다 — 다시 보내면 연구원이 새로 답한다.
+       ⚠️ 중간 말풍선까지 열지 말 것: 그 뒤 문답이 통째로 어긋나고, 실제 요구는
+          "방금 잘못 보냈다"였다.
+       ⚠️ 서버 기록(discovery_messages)은 append-only 라, 수정할 땐 그 세션 대화를 지우고
+          잘린 대화로 다시 쓴다(truncateServer). 지우기가 실패하면 조용히 넘기지 않는다. */
+    let _editRow = null;
+    function clearEdit(){ if (_editRow) { _editRow.remove(); _editRow = null; } }
+    function offerEdit(){
+      clearEdit();
+      if (_busy || _restoring || !_ready) return;
+      if (document.getElementById('askMode').style.display === 'none') return;   // 다듬기 이후엔 없다
+      const last = chat.querySelectorAll('.bub.me');
+      if (!last.length) return;
+      const row = document.createElement('div');
+      row.className = 'editrow';
+      row.innerHTML = '<button class="editbtn" type="button">방금 보낸 말 고쳐 쓰기</button>';
+      last[last.length - 1].insertAdjacentElement('afterend', row);
+      row.querySelector('button').addEventListener('click', startEdit);
+      _editRow = row;
+    }
+    function startEdit(){
+      if (_busy || !_ready) return;
+      let idx = -1;
+      for (let i = transcript.length - 1; i >= 0; i--) { if (transcript[i].role === 'user') { idx = i; break; } }
+      if (idx < 0) return;
+      const text = transcript[idx].content;
+      moncTrack('sojae_edit', { turn: userMsgCount });
+      clearEdit();
+      // 화면: 그 말풍선과 그 뒤(연구원 답·안내 말풍선·도움 카드)를 전부 걷는다.
+      const bubs = chat.querySelectorAll('.bub.me');
+      const lastEl = bubs[bubs.length - 1];
+      let n = lastEl.nextSibling;
+      while (n) { const next = n.nextSibling; if (n !== refineWrap) n.remove(); n = next; }
+      lastEl.remove();
+      closeHelpAsk();
+      // 기록: 그 자리부터 뒤를 자른다(뒤따르던 '잘 안 떠올라요' 표식도 같이 사라진다).
+      transcript.length = idx;
+      userMsgCount = transcript.filter(t => t.role === 'user').length;
+      const canned = FOLLOWUPS[category] || FOLLOWUPS.experience;
+      _step = transcript.filter(t => t.role === 'researcher' && canned.includes(t.content)).length;
+      // 게이지는 지워진 턴의 판정이라 그대로 두면 거짓이 된다 — 다음 응답에서 다시 켠다.
+      _mat = null; matMeter.hidden = true; mmDetail.hidden = true;
+      if (userMsgCount >= 1) showRefine(); else hideRefine();
+      // 쓴 글을 입력칸으로 돌려준다
+      ta.value = text; grow(); toggle(); ta.focus(); resetIdle();
+      chat.scrollTop = chat.scrollHeight;
+      truncateServer();
+    }
+    // 서버 대화를 잘린 기록으로 다시 맞춘다(지우고 → 남은 대화만 다시 넣는다).
+    async function truncateServer(){
+      if (!_srvSession) return;
+      let session;
+      try { session = await MONC.getSession(); } catch (_) { return; }
+      if (!session) return;
+      try {
+        const { error } = await MONC.sb.from('discovery_messages')
+          .delete().eq('session_id', _srvSession).eq('member_id', session.user.id);
+        if (error) { syncTrouble(); return; }
+        _srvSynced = 0;
+        await syncServer();   // 남은 대화만 다시 기록
+      } catch (_) { syncTrouble(); }
     }
     /* 강조 안내 말풍선(시스템 전용 — .bub-sys) — ⚠️ transcript 에 넣지 않는다.
        대화 재료가 아니라 화면 장치라, 넣으면 다듬기 프롬프트의 {collected_materials}
@@ -849,7 +956,11 @@
       setTimeout(()=>{ if(ta.value.length===1){ ta.value=''; grow(); toggle(); } }, 80);
       userMsgCount++;
       moncTrack('sojae_turn', { turn: userMsgCount });
-      if (userMsgCount >= 2) showRefine();
+      /* 첫 답 직후부터 다듬기 칩을 연다(2026-09-09 — "너무 집요하게 물어봐서 힘들었다").
+         2턴부터 열던 때는 '그만 묻고 정리로 넘어가는 길'이 한참 뒤에야 보였다.
+         ⚠️ 다시 2 로 올리지 말 것 — 되묻기를 끊고 나갈 문이 처음부터 보여야 한다. */
+      if (userMsgCount >= 1) showRefine();
+      clearEdit();                                        // 새 말이 올라가면 수정 대상이 바뀐다
       /* ⚠️ 여기서 answers 초안 행을 만들지 않는다(2026-08-05 오너 지적 — "아무것도 안 썼는데
          답변노트에 저장된다"). 예전엔 첫 전송부터 빈 행을 만들어 마이페이지 '작성 중'에
          띄웠는데, 대화만 하다 나가면 내용 없는 항목이 노트에 남았다. 이어쓰기는 그 행이
@@ -857,8 +968,22 @@
          '이어쓰기' 를 붙여 준다. 노트에는 학생이 실제로 쓴 글이 생겼을 때만 들어간다. */
       _busy = true;
       const p = aiPending();
-      askAI(false).then(html => { aiFill(p, html); _busy = false; syncServer(); });
+      askAI(false).then(html => {
+        aiFill(p, html); _busy = false;
+        nudgeStop(); offerEdit(); syncServer();
+      });
       resetIdle();
+    }
+    /* 3번째 답을 보내고 나면 재료가 덜 모였어도 정리로 넘어갈 수 있다고 화면이 먼저 말한다
+       (2026-09-09 — 집요함 피드백). 5/5 안내를 이미 띄웠으면 두 번 말하지 않는다. */
+    let _stopNudged = false;
+    function nudgeStop(){
+      if (_stopNudged || userMsgCount < CANNED_MAX_TURNS) return;
+      if (document.getElementById('askMode').style.display === 'none') return;
+      _stopNudged = true;
+      showRefine();
+      if (_matCheered) return;
+      sysBubble('여기까지 꺼낸 이야기로도 <b>답변 뼈대를 잡을 수 있어요.</b> 더 하고 싶은 이야기가 있으면 이어서 적어도 돼요.');
     }
     ta.addEventListener('input', ()=>{ grow(); toggle(); resetIdle(); });
     ta.addEventListener('keydown', e=>{
@@ -881,9 +1006,9 @@
     function runHelp(){
       if (_busy || !_ready) return;
       transcript.push({ role: 'help', content: '잘 안 떠올라요' });   // 서버에서 [막힘 대응] 트리거
-      _busy = true;
+      _busy = true; clearEdit();
       const p = aiPending();
-      askAI(true).then(html => { aiFill(p, html); _busy = false; syncServer(); });
+      askAI(true).then(html => { aiFill(p, html); _busy = false; offerEdit(); syncServer(); });
       resetIdle();
     }
     function askHelpConfirm(){
@@ -909,22 +1034,34 @@
     function refineSkeleton(){
       const mats = transcript.filter(t => t.role === 'user').map(t => t.content);
       const hook = mats[0] ? '“' + esc(mats[0].slice(0, 24)) + (mats[0].length > 24 ? '…' : '') + '”' : '꺼낸 이야기';
+      // 폴백도 서버 결과와 **같은 표 문법**으로 그린다(2026-09-09) — 장애 때만 화면 문법이
+      // 달라지면 학생은 그것도 상품의 얼굴로 본다.
+      const tbl = rows => '<div class="sk-tbl">' + rows.map((r, i) =>
+        '<div class="sk-tr"><div class="sk-k">' + (i + 1) + '</div>'
+        + '<div class="sk-v"><b>' + r[0] + '</b><span class="sk-fill"><i>내가 채울 것</i> · '
+        + r[1] + '</span></div></div>').join('') + '</div>';
+      const strs = list => '<div class="sk-str"><div class="sk-str-h">강점 포인트</div><ul class="sk-ul">'
+        + list.map(x => '<li>' + x + '</li>').join('') + '</ul></div>';
       if (category === 'judgment') {
         // 상황판단형: 경험 서술이 아니라 판단·대처 흐름 (프롬프트 [유형별 주의])
-        return '<b>답변 뼈대 — 판단·대처 흐름으로</b><br><br>'
-          + '① <b>판단 기준</b> — 이 상황에서 무엇을 최우선으로 볼지(안전·규정·승객 마음) 먼저 한 문장으로.<br>'
-          + '② <b>즉시 대처</b> — 그 기준에 따라 내가 먼저 할 행동을 순서대로. 여기에 무게를 두세요.<br>'
-          + '③ <b>후속 마무리</b> — 동료·선임 공유, 승객 재확인까지 한 문장으로.<br><br>'
-          + '<b>강점 포인트</b>: ' + hook + ' 에서 보인 침착한 기준 잡기. 그대로 살리세요.<br><br>'
-          + '이제 아래 칸에서 “나는 이렇게 판단하고, 이렇게 대처하겠다” 흐름으로 직접 완성해보세요.';
+        return '<div class="sk-h">답변 뼈대 — 판단·대처 흐름으로</div>'
+          + tbl([
+              ['판단 기준', '이 상황에서 무엇을 최우선으로 볼지(안전·규정·승객 마음)를 한 문장으로.'],
+              ['즉시 대처', '그 기준에 따라 내가 먼저 할 행동을 순서대로. 답변의 무게는 여기에.'],
+              ['후속 마무리', '동료·선임 공유, 승객 재확인까지 한 문장으로.'],
+            ])
+          + strs([hook + ' 에서 보인 침착한 기준 잡기. 그대로 살리세요.'])
+          + '<p class="sk-close">“나는 이렇게 판단하고, 이렇게 대처하겠다” 흐름으로 아래 칸에서 직접 완성해보세요.</p>';
       }
-      return '<b>답변 뼈대 — 이 순서로 말해보세요</b><br><br>'
-        + '① <b>장면 꺼내기</b> — ' + hook + ' 상황을 한두 문장으로. 언제·어디서였는지만 간결히.<br>'
-        + '② <b>나의 행동</b> — 그때 무엇을 어떤 순서로 했는지. 답변의 무게는 여기에.<br>'
-        + '③ <b>결과와 느낀 점</b> — 상대 반응·결과 + 그때 감정을 한 문장으로.<br>'
-        + '④ <b>승무원과 연결</b> — 이 경험이 기내에서 어떻게 이어질지로 마무리.<br><br>'
-        + '<b>강점 포인트</b>: 직접 겪은 구체적인 장면이 있다는 것. 표정·말 같은 디테일을 살리면 더 생생해져요.<br><br>'
-        + '완성 문장은 제가 만들지 않아요 — 아래 칸에 지원자님의 말로 직접 채워보세요.';
+      return '<div class="sk-h">답변 뼈대 — 이 순서로 말해보세요</div>'
+        + tbl([
+            ['장면 꺼내기', hook + ' 상황을 한두 문장으로. 언제·어디서였는지만 간결히.'],
+            ['나의 행동', '그때 무엇을 어떤 순서로 했는지. 답변의 무게는 여기에.'],
+            ['결과와 느낀 점', '상대 반응·결과 + 그때 감정을 한 문장으로.'],
+            ['승무원과 연결', '이 경험이 기내에서 어떻게 이어질지로 마무리.'],
+          ])
+        + strs(['직접 겪은 구체적인 장면이 있다는 것.', '표정·말 같은 디테일을 살리면 더 생생해져요.'])
+        + '<p class="sk-close">완성 문장은 제가 만들지 않아요 — 아래 칸에 지원자님의 말로 직접 채워보세요.</p>';
     }
 
     // ── 이어쓰기 저장/복원 (서버 단일 원천) ──────────────────────────────
@@ -1042,7 +1179,7 @@
     }
     // 최종작성 모드 UI 로 전환(복원 시 사용).
     function showWriteMode(){
-      hideRefine();
+      hideRefine(); clearEdit();   // 되묻기가 끝났으면 '고쳐 쓰기'도 같이 걷는다
       document.getElementById('askMode').style.display = 'none';
       document.getElementById('step1').classList.remove('on');
       document.getElementById('step2').classList.add('on');
@@ -1078,7 +1215,7 @@
       // 폴백 질문을 몇 개 썼는지도 대화에서 다시 센다 — 새로고침마다 같은 질문이 처음부터 돌지 않게
       const canned = FOLLOWUPS[category] || FOLLOWUPS.experience;
       _step = transcript.filter(t => t.role === 'researcher' && canned.includes(t.content)).length;
-      if (userMsgCount >= 2) showRefine();
+      if (userMsgCount >= 1) showRefine();
       // 뼈대까지 갔거나(=write/done) 이미 답변을 쓰기 시작했으면 최종작성 모드로 복원
       const inWrite = (sess && (sess.stage === 'write' || sess.stage === 'done')) || (answer && answer.content);
       if (inWrite) {
@@ -1141,6 +1278,7 @@
       moncTrack('sojae_refine_click', { turns: userMsgCount });
       _busy = true;
       hideRefine();                                          // 중복 클릭 방지
+      clearEdit();                                           // 되묻기가 끝났으니 고쳐 쓰기도 걷는다
       clearTimeout(idleT);                                   // 되묻기 넛지 중지
       document.getElementById('askMode').style.display = 'none';
       document.getElementById('step1').classList.remove('on');
@@ -1161,6 +1299,7 @@
           document.getElementById('step1').classList.add('on');
           showRefine();                                      // 충전 뒤 바로 다시 누를 수 있게
           _busy = false;
+          offerEdit();                                       // 되묻기로 돌아왔으니 고쳐 쓰기도 되살린다
           return;
         }
         if (r.v2) {
@@ -1401,6 +1540,7 @@
       }
       moncTrack('sojae_start', { category, level });
       _ready = true;                       // 문제 확정 후에만 전송 허용
+      offerEdit();                         // 이어쓰기로 들어왔으면 마지막 내 말도 고칠 수 있게
       setTimeout(pulse, 1800);             // 인사말이 뜬 뒤에 넛지 시작
       resetIdle();
     }

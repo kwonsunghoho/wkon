@@ -14,9 +14,13 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const FN_VERSION = "2026-08-05a";   // 4문답 상한 + 충분 시 새 질문 금지(다듬기 권유)
+const FN_VERSION = "2026-09-09a";   // 3문답 상한(집요함 피드백) + 강점 포인트 목록화
 // refund_server = 환급을 service_role 전용 refund_credit_for 로 이동(2026-08-04 보안)
-const FN_FEATURES = ["ask_v2", "refine_v2", "materials", "playbook", "refund_server"];
+// ask3          = 되묻기 상한 4→3 (2026-09-09 사용자 피드백 "너무 집요하게 물어본다")
+// strength_list = 다듬기 strengths 를 문자열 → 목록으로(화면이 표·항목으로 그린다)
+const FN_FEATURES = [
+  "ask_v2", "refine_v2", "materials", "playbook", "refund_server", "ask3", "strength_list",
+];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -54,8 +58,8 @@ const FB_ASK_CORE = `너는 승무원 면접 지원자의 소재 발굴을 돕�
   부드럽게 마무리.
 
 [멈춤]
-- 재료가 충분히 모였으면 더 묻지 말고 멈춰. 잘 나와도 4번 주고받기 안에서 멈춰
-  (2026-08-05 오너 확정 — "경험 추출만 하다가 지친다", 6→4로 단축).`;
+- 재료가 충분히 모였으면 더 묻지 말고 멈춰. 잘 나와도 3번 주고받기 안에서 멈춰
+  (2026-08-05 오너 확정 6→4 · 2026-09-09 사용자 피드백 "너무 집요하게 물어봐서 힘들다" 4→3).`;
 
 const FB_ASK_TYPES: Record<string, string> = {
   experience: `[이 유형 파고들기 — 과거경험검증형]
@@ -110,8 +114,10 @@ const ASK_FORMAT = `
 - missing: 아직 안 모인 재료. scene(언제·어디서의 장면) / action(무엇을 어떤 순서로 했나)
   / judgment(왜 그렇게 판단했나) / result(결과·상대 반응) / feeling(그때 감정 한 줄) 중에서.
   materials_sufficient 가 true 면 빈 배열.
-- 판정은 횟수가 아니라 재료 기준으로. 다만 문답이 4번을 넘겼으면 더 캐묻지 말고
-  모인 재료만으로 정리하고 멈춰(2026-08-05 오너 확정 — 학생이 지치지 않게).
+- 판정은 횟수가 아니라 재료 기준으로. 다만 문답이 3번을 넘겼으면 더 캐묻지 말고
+  모인 재료만으로 정리하고 멈춰(2026-09-09 — 학생이 지치지 않게. 이 숫자가 playbook
+  ask_core 와 다르면 여기(3번)를 따른다).
+- 한 번에 하나만 물어. 한 답변 안에 질문을 두 개 이상 넣지 마 — 캐묻는 느낌의 절반이 이것이다.
 - materials_sufficient 가 true 면 새 질문을 하지 마 — 모인 재료를 한 줄로 짚어 주고
   '다듬기'로 넘어가자고 권해.`;
 
@@ -122,7 +128,8 @@ const REFINE_FORMAT = `
   / competencies(이 경험이 증거가 되는 역량 이름 1~3개, 한국어) / reinterpretation(역량 재해석 한 문장 —
   "나에게 ○○이란 …이다"처럼 이 사람 언어로).
 - skeleton: 답변 뼈대. steps 는 2~4단계, 각 단계 what(무슨 내용)과 fill(지원자가 채울 방향).
-  strengths(재료 중 강점 포인트) / closing(스스로 완성해보게 하는 한마디).
+  strengths(재료 중 강점 포인트 — **문장 하나씩 끊어 1~3개 목록으로.** 화면이 표·항목으로
+  그린다. 여러 강점을 한 문단에 이어 붙이지 마) / closing(스스로 완성해보게 하는 한마디).
 - 지원자가 말하지 않은 사실·숫자를 지어내지 마. 지원자가 채워야 할 빈 자리는 (괄호) 로 남겨.
 - 완성 문장을 대신 써 주지 마 — fill 은 '방향'이다.`;
 
@@ -179,7 +186,9 @@ const REFINE_SCHEMA = {
             additionalProperties: false,
           },
         },
-        strengths: { type: "string" },
+        // ⚠️ 목록이다(2026-09-09) — 문자열 하나로 되돌리면 화면이 다시 줄글로 그린다.
+        //    "도표는 좋았는데 마지막이 줄글이라 아쉽다"가 이 변경의 이유.
+        strengths: { type: "array", items: { type: "string" } },
         closing: { type: "string" },
       },
       required: ["steps", "strengths", "closing"],
@@ -264,7 +273,10 @@ function legacyMessage(card: any, skeleton: any): string {
     "",
     steps,
     "",
-    `강점 포인트: ${skeleton.strengths}`,
+    // 강점 포인트는 목록 — 구버전 화면(평문만 아는)에서도 줄로 끊어 읽히게 한다.
+    "강점 포인트",
+    (Array.isArray(skeleton.strengths) ? skeleton.strengths : [skeleton.strengths])
+      .filter(Boolean).map((x: string) => `· ${x}`).join("\n"),
     "",
     skeleton.closing,
   ].join("\n");
