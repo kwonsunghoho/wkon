@@ -1132,6 +1132,9 @@
         mark = '';
         priceHtml = r.owned
           ? '<span class="doc-price owned">구매함</span>'
+          // 재학생(isStudent)에게는 값 대신 '무료' — 판정은 서버이고 화면은 그 답만 그린다(2026-09-09)
+          : isStudent
+          ? '<span class="doc-price owned">무료</span>'
           : '<span class="doc-price num">' + fmtWon(r.price) + '</span>';
       }
       var bits = [];
@@ -1180,9 +1183,13 @@
     if (isBuy) {
       buyTarget = opts.row;
       $('shBuyTit').textContent = '「' + opts.row.title + '」';
-      $('shBuyPrice').textContent = fmtWon(opts.row.price);
+      // 재학생(2026-09-09) — 값 대신 '무료', 결제 대신 받기. 비교 기준 한 줄은 낼 돈이 없어 숨긴다.
+      $('shBuyPrice').textContent = isStudent ? '무료' : fmtWon(opts.row.price);
+      $('shBuyNote').hidden = isStudent;
+      // 청약철회 제한 고지는 '결제한 사람'에게 하는 말이다 — 무료 수령엔 해당이 없다
+      $('shBuyWarn').hidden = isStudent;
       $('shBuyGo').disabled = false;
-      $('shBuyGo').textContent = '동의하고 결제하기';
+      $('shBuyGo').textContent = isStudent ? '무료로 받기' : '동의하고 결제하기';
     } else if (isFile) {
       // 자료 하나에 파일이 여러 개(상·하편) — 무엇을 받을지 고른다.
       // 파일 목록은 서버가 준 것만 쓴다(경로는 아예 오지 않는다).
@@ -1420,6 +1427,10 @@
      ⚠️ 실패·중복은 서버가 HTTP 200 + code 로 답한다 — 그래야 환불 안내를 띄운다. */
   // 상점·채널 키는 pay-methods.js 한 곳(window.moncPay) — 결제수단 선택도 거기서.
   var PAY_KEY = 'monc_pending_lab_pay';
+  /* 재학생 무료(2026-09-09 오너 확정) — 판정은 서버 한 곳(MONC.studentStatus → my_student_status).
+     ⚠️ 조회 실패는 false(유료) 로 둔다. 자료가 장애로 공짜가 되면 안 된다.
+     ⚠️ 화면만 바뀐다 — 실제 지급은 claim_free_resource 가 다시 판정하고 0원 기록을 넣는다. */
+  var isStudent = false;
   var buyTarget = null;
   var payRestore = null;
   var autoOpenId = null;   // 결제 확인이 끝난 자료 — 목록을 다시 받은 뒤 바로 열어 준다
@@ -1524,6 +1535,40 @@
         if (!channelKey || busy) return;
         startBuy(row, channelKey);
       });
+    });
+  }
+
+  /* 재학생 무료 받기(2026-09-09) — 결제창도 미결 기록도 없다. 서버가 재학생인지 다시 보고
+     lab_purchases 에 0원 기록을 넣으면, 그 다음은 산 자료와 완전히 같은 길이다. */
+  function claimFreeDoc(row) {
+    if (busy) return;
+    busy = true;
+    var btn = $('shBuyGo');
+    btn.disabled = true; btn.textContent = '받는 중…';
+    var restore = function () { busy = false; btn.disabled = false; btn.textContent = '무료로 받기'; };
+    window.MONC.claimFreeResource(row.id).then(function (r) {
+      r = r || {};
+      if (r.ok) {
+        busy = false;
+        closeSheet();
+        toast('받았어요. 자료를 열어 드릴게요.', 2600);
+        load();                                   // 목록의 '구매함' 표시를 갱신
+        setTimeout(function () { openDoc(row, ''); }, 500);
+        return;
+      }
+      restore();
+      if (r.code === 'not_student') {
+        // 명단에서 빠졌거나 인증 번호가 바뀐 경우 — 화면을 유료로 되돌린다
+        isStudent = false;
+        alert('지금은 재학생 무료 대상으로 확인되지 않아요.\n담당 코치에게 문의해 주세요. (070-4032-0015)');
+        closeSheet(); load();
+        return;
+      }
+      alert('자료를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.\n계속되면 070-4032-0015 로 연락 주세요.');
+    }).catch(function (e) {
+      console.error('무료 자료 받기 실패', e);
+      restore();
+      alert('오류가 발생했어요. 다시 시도해 주세요.');
     });
   }
 
@@ -1750,7 +1795,9 @@
   }, true);
 
   $('shBuyGo').addEventListener('click', function () {
-    if (buyTarget) buyDoc(buyTarget);
+    if (!buyTarget) return;
+    if (isStudent) { claimFreeDoc(buyTarget); return; }   // 재학생 — 결제 없이 받는다(2026-09-09)
+    buyDoc(buyTarget);
   });
 
   $('shList').addEventListener('click', function (e) {
@@ -1790,7 +1837,14 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sheetKind) closeSheet(); });
 
   if (SH.rounds) initTip();   // 제보함은 채용 캘린더 서가에만
-  load();
+  /* 재학생 여부를 먼저 묻고 목록을 그린다(값 자리에 '무료'가 처음부터 맞게 뜨도록).
+     실패·지연이어도 목록은 그린다 — 판정 조회가 자료실을 막아선 안 된다. */
+  if (window.MONC && window.MONC.studentStatus) {
+    window.MONC.studentStatus()
+      .then(function (s) { isStudent = !!(s && s.student); })
+      .catch(function () {})
+      .then(function () { load(); });
+  } else { load(); }
   resumePay();   // 모바일 결제창에서 돌아온 경우에만 동작한다
 })();
 </script>

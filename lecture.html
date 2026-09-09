@@ -149,6 +149,9 @@
     .kakao-ask { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; margin-top: 8px; padding: 10px 16px; background: none; color: var(--text-muted); font-size: 13.5px; font-weight: 600; text-decoration: none; letter-spacing: -0.015em; }
     .kakao-ask svg { flex: 0 0 auto; color: #191919; background: #FEE500; border-radius: 50%; padding: 3px; }
     .btn-toss:disabled, .btn-kakao:disabled, .btn-bank:disabled, .btn-free:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
+    /* 재학생 무료 안내(2026-09-09) — 명단에 있는 계정에서만 그려진다 */
+    .lc-stufree { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-tint);
+      border: 1px solid rgba(27,58,107,.22); font-size: 13px; font-weight: 700; color: var(--accent-ink); line-height: 1.55; }
     .lc-refund { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-top: 14px; }
     .lc-refund a { color: var(--accent-ink); text-decoration: underline; }
     .lc-closednote { text-align: center; font-size: 15px; font-weight: 700; color: var(--text-muted); padding: 10px 0 2px; }
@@ -233,6 +236,9 @@
     let SLOTS = [];        // 시간대(lecture_slots). 없으면 빈 배열 = 단일 일정 특강
     let _slotId = null;    // 사용자가 고른 시간대
     let _memberId = null, _profileHadPhone = false;
+    /* 재학생 무료(2026-09-09 오너 확정) — 판정은 서버 한 곳(MONC.studentStatus).
+       ⚠️ 조회 실패는 '재학생 아님'(유료 화면)이다. 무료가 장애로 열리면 안 된다. */
+    let _isStudent = false;
     let _busy = false;
     let _payRestore = null;   // 결제 중 '버튼 되돌리기'를 담아둔다 — 결제사 페이지에서 뒤로 왔을 때 쓴다(pageshow)
 
@@ -245,6 +251,8 @@
       if (error || !data) { renderNotFound(); return; }
       LECTURE = data;
       SLOTS = await fetchSlots();
+      // 첫 렌더 전에 재학생 여부를 안다 — 나중에 알면 결제 버튼이 잠깐 보였다 바뀐다
+      try { const s = await window.MONC.studentStatus(); _isStudent = !!(s && s.student); } catch (e) { _isStudent = false; }
       await rerender(data);
       Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });
     }
@@ -404,7 +412,13 @@
       const priceHeld = free && LEC.priceText(l) !== '무료';
       // 카카오페이 버튼은 채널 키가 채워져 있을 때만 그린다(pay-methods.js · 2026-08-19)
       const kakaoOn = window.moncPay && window.moncPay.kakaoReady();
-      const payButtons = free
+      /* 재학생 무료(2026-09-09) — 유료 특강이지만 이 계정만 0원이다. 접수는 결제가 아니라
+         서버 RPC(apply_free_lecture)로 간다. 비재학생 화면은 그대로다. */
+      const stuFree = !free && _isStudent;
+      const payButtons = stuFree
+        ? '<div class="lc-stufree">재학생은 참가비 없이 참여해요.</div>'
+          + '<button type="button" class="btn-free" id="stuFreeBtn">무료로 신청하기</button>'
+        : free
         ? '<button type="button" class="btn-free" id="freeBtn">' + (priceHeld ? '신청하기' : '무료로 신청하기') + '</button>'
         : '<button type="button" class="btn-toss" id="tossBtn"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px;width:auto;display:block;"><span>로 결제하고 신청하기</span></button>'
           + (kakaoOn ? '<button type="button" class="btn-kakao" id="kakaoBtn">카카오페이로 결제하고 신청하기</button>' : '')
@@ -424,8 +438,10 @@
         + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric" maxlength="20" aria-describedby="lcErrPhone"><p class="lc-err" id="lcErrPhone"></p></div>'
         + '<label class="consent" for="appConsent"><input type="checkbox" id="appConsent"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다.</span></label>'
         + '<p class="lc-err" id="lcErrConsent"></p>'
-        + (free ? '' : '<div class="pay-total"><span class="l">' + LEC.priceLabel(l) + '</span><span class="a">' + LEC.esc(priceStr) + '</span></div>'
-          + (LEC.isDeposit(l) ? '<small class="lc-deposit-note">' + LEC.esc(LEC.DEPOSIT_NOTE) + '</small>' : ''))
+        // 재학생(stuFree)은 금액 자리가 '무료' — 예약금 잔금 안내도 낼 돈이 없으니 붙이지 않는다.
+        + (free ? '' : '<div class="pay-total"><span class="l">' + LEC.priceLabel(l) + '</span><span class="a">'
+            + (stuFree ? '무료' : LEC.esc(priceStr)) + '</span></div>'
+          + (!stuFree && LEC.isDeposit(l) ? '<small class="lc-deposit-note">' + LEC.esc(LEC.DEPOSIT_NOTE) + '</small>' : ''))
         + payButtons
         + '<a class="kakao-ask" href="https://pf.kakao.com/_iajxnX/chat" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.2c0 2.5 1.7 4.7 4.2 6l-1 3.6c-.1.3.3.6.6.4l4.3-2.8c.4 0 .7.1 1.1.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z"/></svg>궁금한 점은 카카오톡으로 물어보세요</a>'
         + '<p class="lc-refund">신청 후 환불은 「콘텐츠 이용자 보호지침」에 따릅니다. 특강 시작 전 취소는 전액 환불되며, 자세한 내용은 <a href="terms.html" target="_blank" rel="noopener">이용약관</a>을 참고해 주세요.</p>'
@@ -512,6 +528,8 @@
       if (kakao) kakao.addEventListener('click', () => payEasy('kakao'));
       if (bank) bank.addEventListener('click', openBankModal);
       if (free) free.addEventListener('click', submitFree);
+      const stuFree = document.getElementById('stuFreeBtn');       // 재학생 무료(2026-09-09)
+      if (stuFree) stuFree.addEventListener('click', submitStudentFree);
 
       const modal = document.getElementById('bankModal');
       modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeBankModal));
@@ -823,6 +841,53 @@
       restoreBtn(btn, orig);
       if (btn && document.body.contains(btn)) btn.style.opacity = '1';
       if (ok) { hideBankModal(); afterApplied('신청이 접수되었습니다! 입금 확인 후 안내드리겠습니다.'); }
+    }
+
+    /* ── 재학생 무료 신청(2026-09-09) ─────────────────────────────────────────
+       유료 특강을 0원으로 접수한다. ⚠️ 브라우저가 applications 에 0원을 직접 넣지 않는다 —
+       RLS 가 막기도 하지만, '무료로 줄지'는 서버(apply_free_lecture)가 판정할 일이다.
+       정원·중복은 그 함수 안에서 기존 트리거가 그대로 본다. */
+    async function submitStudentFree() {
+      if (_busy) return;
+      const applicant = readApplicant(); if (!applicant) return;   // 시간대·이름·연락처·동의
+      _busy = true;
+      const btn = document.getElementById('stuFreeBtn'); const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = '신청 중…';
+      let done = false;
+      try {
+        if (await dupBlocked()) return;
+        if (!(await ensureSeatOpen())) return;   // 마감이면 화면을 다시 그리고 멈춘다
+        const r = await window.MONC.applyFreeLecture(LECTURE.id, _slotId || null) || {};
+        if (r.ok) {
+          await rememberApplied();
+          done = true;
+          return;
+        }
+        if (r.code === 'duplicate') {
+          alert('이미 신청하신 특강이에요.\n같은 특강을 두 번 신청할 수는 없어요.');
+          await rememberApplied();
+        } else if (r.code === 'lecture_full') {
+          alert('아쉽게도 방금 정원이 모두 찼어요.\n결제 전이라 빠져나간 금액은 없습니다.');
+          await refreshLecture();
+        } else if (r.code === 'not_student') {
+          // 명단에서 빠졌거나 인증 번호가 바뀐 경우 — 유료 화면으로 되돌린다
+          alert('지금은 재학생 무료 대상으로 확인되지 않아요.\n담당 코치에게 문의해 주세요. (070-4032-0015)');
+          _isStudent = false;
+          await refreshLecture();
+        } else if (r.code === 'profile_missing') {
+          alert('계정에 이름·전화번호가 없어 접수할 수 없어요.\n마이페이지에서 먼저 채워주세요.');
+        } else {
+          alert('신청 처리에 문제가 생겼어요. 잠시 후 다시 시도해주세요.\n계속되면 070-4032-0015 로 연락 주세요.');
+        }
+      } catch (e) {
+        console.error('재학생 무료 신청 실패', e);
+        alert('오류가 발생했어요. 다시 시도해주세요.');
+      } finally {
+        _busy = false;
+        restoreBtn(btn, orig);
+        // afterApplied 는 화면을 통째로 다시 그린다 — 버튼 복구 뒤에 부른다
+        if (done) await afterApplied('신청이 접수되었습니다! 재학생 무료 참여로 접수됐어요.');
+      }
     }
 
     /* applications 직접 insert (무료·계좌이체 공통). paid=false(기본) → 관리자 확인. */
