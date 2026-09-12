@@ -1479,7 +1479,14 @@
         <div class="field"><label for="lfDesc">상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
         <div class="field"><label for="lfHigh">핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-          <div class="field"><label for="lfPrice">참가비(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
+          <div class="field"><label for="lfPrice">금액(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
+          <!-- 금액 이름(price_kind · 20260912120000) — 예약금이면 카드·상세·신청 폼 라벨이 '예약금'이 되고
+               '잔금은 별도로 안내드려요' 한 줄이 붙는다. 청구 금액은 위 금액 그대로(잔금은 사이트가 안 받는다). -->
+          <div class="field"><label for="lfPriceKind">금액 이름</label>
+            <select id="lfPriceKind">
+              <option value="fee">참가비 (전액)</option>
+              <option value="deposit">예약금 (잔금 별도 안내)</option>
+            </select></div>
           <div class="field"><label for="lfPriceLabel">0원일 때 표시</label><input id="lfPriceLabel" type="text" maxlength="20" placeholder="무료 (예: 상담 시 안내)"></div>
           <div class="field"><label for="lfCapacity">정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
           <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
@@ -4452,6 +4459,7 @@
       document.getElementById('lfHigh').value       = Array.isArray(l.highlights) ? l.highlights.join('\n') : '';
       document.getElementById('lfPrice').value      = (l.price != null ? l.price : '');
       document.getElementById('lfPriceLabel').value = l.price_label || '';
+      document.getElementById('lfPriceKind').value  = l.price_kind === 'deposit' ? 'deposit' : 'fee';
       document.getElementById('lfCapacity').value   = (l.capacity != null ? l.capacity : '');
       document.getElementById('lfSort').value       = (l.sort_order != null ? l.sort_order : '');
       document.getElementById('lfRStart').value     = l.recruit_start || '';
@@ -4755,7 +4763,7 @@
         <div class="round-item">
           <div>
             <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${esc(LEC.priceText(l))}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + fmtDay(l.lecture_date) : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + fmtDay(l.recruit_start) + '~' + fmtDay(l.recruit_end) : ''}</div>
+            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${LEC.isDeposit(l) ? '예약금 ' : ''}${esc(LEC.priceText(l))}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + fmtDay(l.lecture_date) : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + fmtDay(l.recruit_start) + '~' + fmtDay(l.recruit_end) : ''}</div>
           </div>
           <div class="ri-actions">
             <button class="ri-edit" data-id="${l.id}">수정</button>
@@ -4780,7 +4788,7 @@
       const priceRaw = lecVal('lfPrice');
       if (!title) { alert('제목을 입력하세요.'); return; }
       const price = parseInt(priceRaw, 10);
-      if (priceRaw === '' || isNaN(price) || price < 0) { alert('참가비를 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
+      if (priceRaw === '' || isNaN(price) || price < 0) { alert('금액을 0 이상 숫자로 입력하세요. (무료면 0)'); return; }
       const highlights = lecVal('lfHigh').split('\n').map(s => s.trim()).filter(Boolean);
       const slotRows = readSlotRows();
       if (slotRows.some(s => s.start_time === null || s.end_time === null)) {
@@ -4798,6 +4806,7 @@
         highlights:    highlights.length ? highlights : null,
         price,
         price_label:   lecVal('lfPriceLabel') || null,   // 0원일 때 '무료' 대신 보일 문구
+        price_kind:    lecVal('lfPriceKind') === 'deposit' ? 'deposit' : 'fee',   // 금액 이름(참가비/예약금) — 라벨만 바꾼다
         sort_order:    lecVal('lfSort') ? parseInt(lecVal('lfSort'), 10) : 0,
         recruit_start: lecVal('lfRStart') || null,
         recruit_end:   lecVal('lfREnd') || null,
@@ -4817,6 +4826,7 @@
       const LEC_OPT_COLS = {
         show_seats:  { label: '잔여석 공개 설정', mig: '20260819130000_lecture_show_seats.sql' },
         price_label: { label: '0원 표시 문구',    mig: '20260819140000_lecture_price_label.sql' },
+        price_kind:  { label: '금액 이름(예약금)', mig: '20260912120000_lecture_price_kind.sql' },
       };
       const runLec = r => lectureId
         ? MONC.sb.from('special_lectures').update(r).eq('id', lectureId)

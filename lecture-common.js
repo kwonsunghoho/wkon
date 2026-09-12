@@ -99,6 +99,15 @@
     return label || '무료';
   }
 
+  /* 금액 이름 — admin 특강 폼 '금액 이름'(price_kind · 20260912120000). 'deposit' 이면 '예약금',
+     그 외(기본·마이그레이션 미적용)는 '참가비'. 라벨만 바꾼다 — 청구·서버 검증 금액은 price 그대로.
+     ⚠️ 예약금은 값이 있을 때만 의미가 있다 — 0원 특강은 '무료'/문구가 나가므로 라벨을 예약금으로 안 바꾼다.
+     카드·상세·신청 폼·하단바가 전부 이 두 함수를 부른다(페이지마다 '참가비' 문자열을 직접 쓰지 말 것). */
+  function isDeposit(l) { return !!l && l.price > 0 && l.price_kind === 'deposit'; }
+  function priceLabel(l) { return isDeposit(l) ? '예약금' : '참가비'; }
+  // 예약금 특강에 붙는 잔금 안내 한 줄(오너 확정 2026-09-12) — 상세 정보 카드·신청 폼 두 곳 같은 문장.
+  const DEPOSIT_NOTE = '잔금은 별도로 안내드려요.';
+
   // 날짜 → 시각 → sort_order 순. DB 정렬과 같은 규칙을 클라이언트에서도 보장한다.
   function sortSlots(list) {
     return (list || []).slice().sort((a, b) =>
@@ -157,7 +166,7 @@
     // 무료도 이 줄 하나로만 — 배지와 두 번 말하지 않는다.
     // 초록 강조는 '무료'라는 단어에만 — '상담 시 안내' 같은 관리자 문구는 금액처럼 네이비.
     const priceStr = priceText(l);
-    const priceLine = '<div class="lx-price"><span class="l">참가비</span>'
+    const priceLine = '<div class="lx-price"><span class="l">' + priceLabel(l) + '</span>'
       + '<span class="v' + (priceStr === '무료' ? ' free' : '') + '">'
       + esc(priceStr) + '</span></div>';
 
@@ -234,6 +243,6 @@
   window.LEC = {
     esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl,
     cardHtml, skeletonHtml,
-    fmtTime, slotWhen, slotShort, slotFull, seatsVisible, priceText, sortSlots, attachSlots,
+    fmtTime, slotWhen, slotShort, slotFull, seatsVisible, priceText, isDeposit, priceLabel, DEPOSIT_NOTE, sortSlots, attachSlots,
   };
 })();

@@ -82,6 +82,8 @@
     .lc-fact .k { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
     .lc-fact .v { font-size: 16px; font-weight: 700; text-align: right; }
     .lc-fact .v.price { font-size: 20px; font-weight: 800; color: var(--accent-ink); }
+    /* 예약금 특강의 잔금 안내 한 줄(LEC.DEPOSIT_NOTE) — 금액 줄 바로 아래, 12px 하한·보조색. 정보 카드·신청 폼 공용. */
+    .lc-deposit-note { display: block; font-size: 13px; font-weight: 600; color: var(--text-dim); text-align: right; margin: 2px 0 0; line-height: 1.5; }
 
     /* 본문 섹션 — 홈과 같은 리듬(영문 라벨 + 제목 + 여백 56px) */
     .lc-sec { margin-top: 56px; }
@@ -334,7 +336,8 @@
             : l.seats_left + '석' + (l.capacity ? ' / 정원 ' + l.capacity + '명' : '')));
         } else if (l.capacity) facts.push(fact('정원', l.capacity + '명'));
       }
-      facts.push(fact('참가비', priceStr, true));
+      // 예약금 특강(admin '금액 이름')은 라벨이 '예약금'이 되고 잔금 안내 한 줄이 금액 아래 붙는다.
+      facts.push(fact(LEC.priceLabel(l), priceStr, true, LEC.isDeposit(l) ? LEC.DEPOSIT_NOTE : ''));
 
       const highlights = Array.isArray(l.highlights) ? l.highlights.filter(Boolean) : [];
 
@@ -367,8 +370,9 @@
       wireApply(st, l.price);
     }
 
-    function fact(k, v, isPrice) {
-      return '<div class="lc-fact"><div class="k">' + LEC.esc(k) + '</div><div class="v' + (isPrice ? ' price' : '') + '">' + LEC.esc(v) + '</div></div>';
+    function fact(k, v, isPrice, note) {
+      return '<div class="lc-fact"><div class="k">' + LEC.esc(k) + '</div><div class="v' + (isPrice ? ' price' : '') + '">' + LEC.esc(v)
+        + (note ? '<small class="lc-deposit-note">' + LEC.esc(note) + '</small>' : '') + '</div></div>';
     }
 
     /* 시간대 한 줄. readOnly면 라디오 없이 안내용으로만 그린다(신청 예정·마감 상태). */
@@ -420,7 +424,8 @@
         + '<div class="lc-field" id="rowPhone"><label>연락처</label><input type="tel" id="appPhone" class="inp" placeholder="010-0000-0000" autocomplete="tel" inputmode="numeric" maxlength="20" aria-describedby="lcErrPhone"><p class="lc-err" id="lcErrPhone"></p></div>'
         + '<label class="consent" for="appConsent"><input type="checkbox" id="appConsent"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다.</span></label>'
         + '<p class="lc-err" id="lcErrConsent"></p>'
-        + (free ? '' : '<div class="pay-total"><span class="l">참가비</span><span class="a">' + LEC.esc(priceStr) + '</span></div>')
+        + (free ? '' : '<div class="pay-total"><span class="l">' + LEC.priceLabel(l) + '</span><span class="a">' + LEC.esc(priceStr) + '</span></div>'
+          + (LEC.isDeposit(l) ? '<small class="lc-deposit-note">' + LEC.esc(LEC.DEPOSIT_NOTE) + '</small>' : ''))
         + payButtons
         + '<a class="kakao-ask" href="https://pf.kakao.com/_iajxnX/chat" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.2c0 2.5 1.7 4.7 4.2 6l-1 3.6c-.1.3.3.6.6.4l4.3-2.8c.4 0 .7.1 1.1.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z"/></svg>궁금한 점은 카카오톡으로 물어보세요</a>'
         + '<p class="lc-refund">신청 후 환불은 「콘텐츠 이용자 보호지침」에 따릅니다. 특강 시작 전 취소는 전액 환불되며, 자세한 내용은 <a href="terms.html" target="_blank" rel="noopener">이용약관</a>을 참고해 주세요.</p>'
@@ -449,7 +454,8 @@
         : st === 'closed' ? (l.seats_left === 0 ? '정원 마감' : '신청 마감')
         : '신청하기';
       return '<div class="lc-sticky"><div class="lc-sticky-in">'
-        + '<div class="info"><div class="p">' + LEC.esc(priceStr) + '</div><div class="s">' + LEC.esc(l.title) + '</div></div>'
+        // 하단바는 라벨 없이 금액만 보이던 자리라, 예약금이면 '예약금 ' 을 앞에 붙여 전액으로 읽히지 않게 한다.
+        + '<div class="info"><div class="p">' + (LEC.isDeposit(l) ? '예약금 ' : '') + LEC.esc(priceStr) + '</div><div class="s">' + LEC.esc(l.title) + '</div></div>'
         + '<button type="button" class="go" id="stickyGo"' + (disabled ? ' disabled' : '') + '>' + label + '</button>'
         + '</div></div>';
     }
