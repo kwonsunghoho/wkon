@@ -405,6 +405,19 @@
        display 있는 요소에 hidden 을 쓰면 아래처럼 [hidden] 짝을 같이 둘 것. */
     #lrEditBar { display: flex; }
     .round-editing[hidden], #lrEditBar[hidden] { display: none; }
+    /* ── 챌린지 탭 기수 목록 — 상태별 두 묶음(2026-09-13 오너 "지난 챌린지는 보기 쉽게 정리").
+       머리 한 줄(.rl-head) + 모집 중·예정 판, 아래 '지난 기수' 접이(.rl-past · 기본 닫힘). 접이 무늬는
+       .les-head 와 같은 ▸/▾. 지난 줄은 .is-done(바탕만 눕힘 — opacity 금지, 위 규칙). 상태 라벨은 .apl-tag 재사용. */
+    .rl-head, .rl-past > summary { display: flex; align-items: center; gap: 8px; min-height: 44px;
+      font-size: 15px; font-weight: 800; color: var(--ink); }
+    .rl-n { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+    .rl-past { margin-top: 14px; }
+    .rl-past > summary { cursor: pointer; list-style: none; }
+    .rl-past > summary::-webkit-details-marker { display: none; }
+    .rl-past > summary::before { content: '\25B8'; font-size: 12px; color: var(--text-dim); }
+    .rl-past[open] > summary::before { content: '\25BE'; }
+    .rl-past > summary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; border-radius: 4px; }
+    .round-item .ri-main .apl-tag { vertical-align: 2px; }
 
     .apps-wrap { padding: 20px; max-width: 900px; }
     .apps-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
@@ -1420,7 +1433,8 @@
         <div id="rfAllHint" hidden></div>
         <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
-      <div class="round-list" id="roundList"><div class="loading">불러오는 중…</div></div>
+      <!-- 기수 목록 — 상태별 두 묶음(모집 중·예정 판 + 지난 기수 접이). loadRounds 가 안에 판을 그린다(2026-09-13). -->
+      <div id="roundList"><div class="loading">불러오는 중…</div></div>
 
       <!-- 승자각 DAY 문항 — challenge_lessons 단일 소스(2026-08-24).
            고치면 challenge-answer.html · apply.html · mypage.html 이 같이 바뀐다.
@@ -4339,6 +4353,22 @@
        ⚠️ 저장하지 않은 편집은 사라진다 — 목록을 통째로 다시 그리기 때문이다. */
     document.getElementById('lesCh').addEventListener('change', loadLessons);
 
+    /* ── 기수 목록은 상태별 두 묶음(2026-09-13 오너 "지난 챌린지는 보기 쉽게 정리… 뒤죽박죽") ──
+       위 '모집 중·예정' = 아직 안 지난 기수 전부(챌린지마다 하나가 아니다 — 5기 모집 중 + 6기 예정이면 둘 다).
+       아래 '지난 기수' = 접이(기본 닫힘·.is-done). 다시 그려도 열어 둔 상태는 유지한다(정리하며 삭제를 연달아 누를 때).
+       '지난' 판정은 학생 화면(recruit.js 의 현재 기수 규칙)과 같은 기준 — 모집 마감이 오늘보다 앞선 기수.
+       마감 없는 선착순은 같은 챌린지에 더 높은 기수가 있으면 지난 것(round-gate.js ③ 과 같은 뜻). */
+    const CH_ORDER = Object.keys(CH_LABEL);
+    function roundIsPast(r, all, today) {
+      if (r.recruit_end) return String(r.recruit_end).slice(0, 10) < today;
+      return all.some(x => x.challenge === r.challenge && Number(x.round) > Number(r.round));
+    }
+    function roundToday() {   // 로컬 날짜 — toISOString 은 UTC 라 새벽엔 하루 어긋난다
+      if (window.MONC_GATE) return MONC_GATE.todayYmd();
+      const d = new Date(), p = n => (n < 10 ? '0' : '') + n;
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
     async function loadRounds() {
       const listEl = document.getElementById('roundList');
       const { data, error } = await MONC.sb.from('challenge_rounds')
@@ -4349,10 +4379,21 @@
       if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 기수가 없습니다.</div>'; return; }
       // 학생 화면(마이페이지·제출 입구)에 이 기수가 열려 있는지 — 판정은 round-gate.js(MONC_GATE) 한 곳
       const gateOf = r => window.MONC_GATE ? MONC_GATE.gateLabel(MONC_GATE.roundStartOf(r, data)) : '';
-      listEl.innerHTML = data.map(r => `
-        <div class="round-item">
+      const today = roundToday();
+      const ymd = v => String(v || '').slice(0, 10);
+      const chIdx = r => { const i = CH_ORDER.indexOf(r.challenge); return i < 0 ? 99 : i; };
+      // 위 판: 이른 일정부터(마감이 가까운 것이 위) → 챌린지 순 → 기수. 지난 판: 최근 일정부터 → 챌린지 순 → 높은 기수부터.
+      const curOrder  = (a, b) => ymd(a.recruit_start).localeCompare(ymd(b.recruit_start)) || chIdx(a) - chIdx(b) || Number(a.round) - Number(b.round);
+      const pastOrder = (a, b) => ymd(b.recruit_start).localeCompare(ymd(a.recruit_start)) || chIdx(a) - chIdx(b) || Number(b.round) - Number(a.round);
+      const cur  = data.filter(r => !roundIsPast(r, data, today)).sort(curOrder);
+      const past = data.filter(r =>  roundIsPast(r, data, today)).sort(pastOrder);
+      const tagOf = r => today < ymd(r.recruit_start)
+        ? '<span class="apl-tag g">모집 예정</span>'
+        : '<span class="apl-tag">모집 중</span>';
+      const row = (r, isPast) => `
+        <div class="round-item${isPast ? ' is-done' : ''}">
           <div>
-            <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기</div>
+            <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기${isPast ? '' : ' ' + tagOf(r)}</div>
             <div class="ri-sub">${r.start_mode === 'fcfs'
               ? '선착순 · 모집 ' + fmtDay(r.recruit_start) + ' ~' + (r.recruit_end ? ' ' + fmtDay(r.recruit_end) : '') + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : ' · 인원이 모이면 시작')
               : '모집 ' + fmtDay(r.recruit_start) + ' ~ ' + fmtDay(r.recruit_end) + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : '')}</div>
@@ -4362,7 +4403,23 @@
             <button class="ri-edit" data-id="${r.id}">수정</button>
             <button class="ri-del is-danger" data-id="${r.id}">삭제</button>
           </div>
-        </div>`).join('');
+        </div>`;
+      // 위 판에 없는 챌린지는 '모집 중인 기수 없음' 한 줄(버튼 없음) — 다음 기수를 등록할 차례라는 표시
+      const idle = CH_ORDER.filter(ch => !cur.some(r => r.challenge === ch)).map(ch => {
+        const last = data.filter(r => r.challenge === ch).sort((a, b) => Number(b.round) - Number(a.round))[0];
+        const sub = !last ? '등록된 기수가 없어요'
+          : '마지막 ' + last.round + '기 · ' + (last.recruit_end ? fmtDay(last.recruit_end) + ' 마감' : '선착순');
+        return `<div class="round-item is-off"><div>
+            <div class="ri-main">${esc(CH_LABEL[ch])} <span class="apl-tag g">모집 중인 기수 없음</span></div>
+            <div class="ri-sub">${esc(sub)}</div></div></div>`;
+      });
+      const wasOpen = !!(listEl.querySelector('.rl-past') || {}).open;
+      listEl.innerHTML =
+        `<div class="rl-head">모집 중·예정 <span class="rl-n">${cur.length}개</span></div>
+         <div class="round-list">${cur.map(r => row(r, false)).join('')}${idle.join('')}</div>` +
+        (past.length ? `<details class="rl-past"${wasOpen ? ' open' : ''}>
+           <summary>지난 기수 <span class="rl-n">${past.length}개 · 모집 마감</span></summary>
+           <div class="round-list">${past.map(r => row(r, true)).join('')}</div></details>` : '');
       listEl.querySelectorAll('.ri-edit').forEach(b => b.addEventListener('click', () => {
         const r = data.find(x => String(x.id) === b.dataset.id);
         if (r) enterRoundEdit(r);
