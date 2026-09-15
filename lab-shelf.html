@@ -1355,6 +1355,28 @@
       // 값이 붙은 자료 — 서버가 구매 기록을 못 찾았다. 결제 시트로 넘긴다.
       // ⚠️ row.price 가 비어 있어도 서버가 준 d.price 로 받는다(목록이 낡았을 때).
       if (d.code === 'need_purchase') {
+        /* 재학생(2026-09-15 오너 "바로 열리게")은 시트를 띄우지 않는다 — 누르는 순간 받고 연다.
+           판정은 서버(claim_free_resource)가 다시 한다. 한 자료에 한 번만 시도한다 —
+           실패가 누를 때마다 되풀이되면 안 되고, 두 번째부터는 아래 시트([무료로 받기])로 간다. */
+        if (isStudent && !row._freeTried) {
+          row._freeTried = true;
+          window.MONC.claimFreeResource(row.id).then(function (r) {
+            r = r || {};
+            if (r.ok) { load(); openDoc(row, ''); return; }
+            $('shToast').hidden = true;
+            if (r.code === 'not_student') {
+              // 명단에서 빠졌거나 인증 번호가 바뀌었다 — 유료 화면으로 되돌리고 결제 시트를 연다
+              isStudent = false; render();
+              openSheet('buy', { row: row });
+              return;
+            }
+            toast('자료를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+          }).catch(function () {
+            $('shToast').hidden = true;
+            toast('자료를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+          });
+          return;
+        }
         $('shToast').hidden = true;
         if (!Number(row.price) && Number(d.price)) row.price = d.price;
         // 이 자료의 미결 결제가 남아 있으면 결제창보다 확인이 먼저다(2026-08-10) —

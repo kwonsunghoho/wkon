@@ -8,8 +8,12 @@
 
 유료 자료도 재학생 계정에서는 0원이다. 판정·명단은 apply-and-payment.md '재학생 무료 참여' 참조.
 
-- 목록의 값 자리가 '무료', 구매 시트가 [무료로 받기]. 비교 기준 한 줄(`#shBuyNote`)과
-  청약철회 제한 고지(`#shBuyWarn`)는 숨긴다 — 둘 다 '결제하는 사람'에게 하는 말이다.
+- 목록의 값 자리가 '무료'. **자료를 누르면 시트 없이 바로 받고 연다**(2026-09-15 오너 "바로 열리게") —
+  `openDocGo` 의 `need_purchase` 분기에서 `claimFreeResource` → `load()` → `openDoc` 순서.
+  ⚠️ 자료당 한 번만 자동 시도한다(`row._freeTried`) — 실패가 누를 때마다 되풀이되지 않게. 두 번째부터는
+  구매 시트가 [무료로 받기]로 뜬다(재시도 창구). `not_student` 면 유료 화면으로 되돌리고 결제 시트를 연다.
+- 시트가 뜰 때는 비교 기준 한 줄(`#shBuyNote`)과 청약철회 제한 고지(`#shBuyWarn`)를 숨긴다 —
+  둘 다 '결제하는 사람'에게 하는 말이다.
 - 지급은 `claim_free_resource(p_resource)` — `lab_purchases` 에 **0원·payment_id null** 기록.
   ⚠️ **회원 자가 INSERT 정책을 열지 말 것**(20260801160000 경고) — 이 security definer 함수만 넣는다.
   이미 가진 자료면 `{ok:true, already:true}`(실패가 아니다).
