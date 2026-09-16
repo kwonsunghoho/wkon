@@ -755,8 +755,14 @@
     .stu-row .stu-sub { grid-column: 1; font-size: 12px; color: var(--text-dim); }
     .stu-row .stu-main { grid-column: 1; }
     /* 사이드바 버튼이지만 누르는 자리는 44px 를 지킨다(원칙 2 — '작은 버튼'은 못 누르는 버튼이다) */
-    .stu-row .btn, #stuAdd { min-height: 44px; }
+    .stu-row .btn, #stuAdd, .stu-act input { min-height: 44px; }
     .stu-row .btn { grid-column: 2; grid-row: 1 / span 2; }
+    /* 승인 대기 줄(2026-09-16) — 종료일 칸 + [승인][거절]이 한 줄 더 붙는다. 한 열로 푼다 */
+    .stu-row.pend { grid-template-columns: 1fr; }
+    .stu-row.pend .btn { grid-column: auto; grid-row: auto; }
+    .stu-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .stu-act input { flex: 1 1 120px; min-width: 0; padding: 6px 8px; border: 1px solid var(--border);
+      border-radius: var(--radius-xs); font-size: 14px; font-family: inherit; }
     /* 상태색은 위 한 벌만 쓴다 — 새 색을 만들지 않는다(--st-alert / --st-ok) */
     .stu-st { font-weight: 700; color: var(--st-alert); }
     .stu-st.ok { color: var(--st-ok); }
@@ -3709,27 +3715,60 @@
         if (!q) return true;
         return String(s.phone_norm || '').includes(q) || String(s.name || '').includes(q);
       });
+      // 승인 대기(학생이 마이페이지에서 신청 · 2026-09-16)를 맨 위에 — 오너가 할 일이 먼저다.
+      // status 컬럼이 없는 환경(20260916 미적용)은 전부 승인 취급이라 대기 줄이 없다.
+      const isPending = s => s.status === 'pending';
+      list.sort((a, b) => (isPending(b) - isPending(a)) ||
+        String(b.requested_at || b.created_at || '').localeCompare(String(a.requested_at || a.created_at || '')));
+      const pendN = _students.filter(isPending).length;
       const cnt = document.getElementById('stuCount');
       cnt.hidden = false;
-      cnt.textContent = _students.length + '명';
+      cnt.textContent = (pendN ? '대기 ' + pendN + ' · ' : '') + _students.length + '명';
       // 가입·인증 여부는 이미 받아 둔 회원 목록으로 맞춘다(추가 조회 없음)
       const byPhone = new Map();
       members.forEach(m => { const d = stuNorm(m.phone); if (d) byPhone.set(d, m); });
+      // 승인 기본 종료일 = 오늘 + 6개월(오너 확정 2026-09-16) — 칸에서 고칠 수 있다
+      const def = new Date(); def.setMonth(def.getMonth() + 6);
+      const defUntil = def.toISOString().slice(0, 10);
       document.getElementById('stuList').innerHTML = list.length
         ? list.map(s => {
             const m = byPhone.get(s.phone_norm);
-            const expired = String(s.valid_until || '') < today;
+            const head = '<div class="stu-main"><b>' + esc(s.name || '(이름 없음)') + '</b> '
+              + '<span class="num">' + esc(stuFmt(s.phone_norm)) + '</span></div>';
+            if (isPending(s)) {
+              // 신청은 인증 회원만 받으므로 여기 줄은 이미 '가입+인증'이다 — 승인만 남았다
+              const when = s.requested_at ? new Date(s.requested_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) : '';
+              return '<div class="stu-row pend">' + head
+                + '<div class="stu-sub"><span class="stu-st">승인 대기</span>' + (when ? ' · ' + esc(when) + ' 신청' : '') + '</div>'
+                + '<div class="stu-act">'
+                + '<input type="date" value="' + defUntil + '" aria-label="무료 종료일" data-stu-until="' + esc(s.phone_norm) + '">'
+                + '<button class="btn btn-action btn-sm" type="button" data-stu-ok="' + esc(s.phone_norm) + '">승인</button>'
+                + '<button class="btn btn-ghost btn-sm" type="button" data-stu-del="' + esc(s.phone_norm) + '">거절</button>'
+                + '</div></div>';
+            }
+            const expired = !s.valid_until || String(s.valid_until) < today;
             // ⚠️ '무료 가능'은 세 가지가 다 맞을 때만이다 — 하나라도 빠지면 학생 화면은 유료다
             const state = expired ? '기간 지남' : !m ? '미가입' : !m.verified_at ? '미인증' : '무료 가능';
-            return '<div class="stu-row">'
-              + '<div class="stu-main"><b>' + esc(s.name || '(이름 없음)') + '</b> '
-              + '<span class="num">' + esc(stuFmt(s.phone_norm)) + '</span></div>'
+            return '<div class="stu-row">' + head
               + '<div class="stu-sub">~' + esc(String(s.valid_until || '')) + ' · '
               + '<span class="stu-st' + (state === '무료 가능' ? ' ok' : '') + '">' + state + '</span></div>'
               + '<button class="btn btn-ghost btn-sm" type="button" data-stu-del="' + esc(s.phone_norm) + '">빼기</button>'
               + '</div>';
           }).join('')
         : '<p class="dist-note">' + (q ? '검색 결과가 없어요.' : '아직 등록된 재학생이 없어요.') + '</p>';
+    }
+
+    /* 승인 — 대기 줄을 approved 로 바꾸고 종료일을 적는다(학생 화면은 다음 방문부터 0원) */
+    async function approveStudent(phone) {
+      const inp = document.querySelector('[data-stu-until="' + phone + '"]');
+      const until = inp && inp.value;
+      if (!until) { alert('무료 종료일을 골라주세요.'); return; }
+      const { error } = await sb().from('academy_students')
+        .update({ status: 'approved', valid_until: until }).eq('phone_norm', phone);
+      if (error) { alert('승인 실패: ' + error.message); return; }
+      _students = null;
+      await loadStudents();
+      toast('승인됨 · ' + until + ' 까지 무료');
     }
 
     document.getElementById('stuFold').addEventListener('toggle', function () {
@@ -3756,8 +3795,13 @@
       if (!rows.length) { alert('넣을 번호가 없어요.' + (bad.length ? '\n번호 형식을 확인해 주세요.' : '')); return; }
       const btn = document.getElementById('stuAdd');
       btn.disabled = true;
-      // 같은 번호를 다시 넣으면 종료일·이름만 바뀐다(한 사람은 한 줄)
-      const { error } = await sb().from('academy_students').upsert(rows, { onConflict: 'phone_norm' });
+      // 같은 번호를 다시 넣으면 종료일·이름만 바뀐다(한 사람은 한 줄). 대기 줄이면 곧 승인이다.
+      // status 컬럼이 없는 환경(20260916 미적용 · PGRST204)이면 그 칸만 빼고 다시 넣는다.
+      let { error } = await sb().from('academy_students')
+        .upsert(rows.map(r => Object.assign({ status: 'approved' }, r)), { onConflict: 'phone_norm' });
+      if (error && error.code === 'PGRST204') {
+        ({ error } = await sb().from('academy_students').upsert(rows, { onConflict: 'phone_norm' }));
+      }
       btn.disabled = false;
       if (error) { alert('등록 실패: ' + error.message); return; }
       document.getElementById('stuPaste').value = '';
@@ -3767,12 +3811,17 @@
     });
 
     document.getElementById('stuList').addEventListener('click', async (e) => {
+      const ok = e.target.closest('[data-stu-ok]');
+      if (ok) { ok.disabled = true; await approveStudent(ok.getAttribute('data-stu-ok')); return; }
       const btn = e.target.closest('[data-stu-del]');
       if (!btn) return;
       const phone = btn.getAttribute('data-stu-del');
       const row = (_students || []).filter(s => s.phone_norm === phone)[0];
-      if (!confirm((row && row.name ? row.name + ' 님' : stuFmt(phone)) + '을 명단에서 뺄까요?\n'
-        + '이미 접수한 무료 신청은 그대로 남고, 앞으로만 정상가로 바뀝니다.')) return;
+      const who = (row && row.name ? row.name + ' 님' : stuFmt(phone));
+      // 대기 줄의 '거절'은 줄을 지우는 것과 같다 — 학생 화면은 다시 '신청' 버튼으로 돌아간다
+      if (!confirm(row && row.status === 'pending'
+        ? who + '의 재학생 신청을 거절할까요?\n학생은 다시 신청할 수 있어요.'
+        : who + '을 명단에서 뺄까요?\n이미 접수한 무료 신청은 그대로 남고, 앞으로만 정상가로 바뀝니다.')) return;
       const { error } = await sb().from('academy_students').delete().eq('phone_norm', phone);
       if (error) { alert('삭제 실패: ' + error.message); return; }
       _students = null;
@@ -3950,6 +3999,11 @@
           sel.value = focus; _mFilter = focus; selected.clear(); _mShown = M_PAGE; renderMemberList();
         }
       }
+      // '오늘'의 재학생 승인 대기 → 회원 관리 탭의 '재학생 명단' 접이를 열고 그 자리로(2026-09-16)
+      if (name === 'members' && focus === 'students') {
+        const fold = document.getElementById('stuFold');
+        if (fold) { fold.open = true; fold.scrollIntoView({ block: 'start' }); }   // open 이 toggle 을 쏘아 loadStudents 가 돈다
+      }
       if (name === 'waitlist' && focus === 'waiting') {
         const cb = document.getElementById('wlHideDone');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
@@ -4104,6 +4158,13 @@
           .select('id', { count: 'exact', head: true }).eq('status', 'new');
         tips = error ? 0 : (count || 0);
       } catch (_) { tips = 0; }
+      // 재학생 승인 대기(2026-09-16) — academy_students.status='pending'. 표·컬럼이 없으면 0으로 조용히.
+      let stuPend = 0;
+      try {
+        const { count, error } = await sb().from('academy_students')
+          .select('phone_norm', { count: 'exact', head: true }).eq('status', 'pending');
+        stuPend = error ? 0 : (count || 0);
+      } catch (_) { stuPend = 0; }
 
       tdSet('tdUnpaid', unpaid.length);
       tdSet('tdWaitlist', wl.length);
@@ -4145,6 +4206,9 @@
       }
       if (tips) {
         todos.push({ html: `<b>채용 캘린더 제보 ${tips}건.</b> 학생이 알려준 일정입니다. 읽고 회차에 반영해 주세요.`, go: 'reccal', label: '채용 캘린더 열기 →' });
+      }
+      if (stuPend) {
+        todos.push({ html: `<b>재학생 승인 대기 ${stuPend}명.</b> 마이페이지에서 재학생 신청을 눌렀습니다. 종료일을 정해 승인해 주세요.`, go: 'members', focus: 'students', label: '재학생 명단 열기 →' });
       }
       /* 저장한 조건 중 '후속 조치'를 켠 것(2026-08-22 3단계).
          ⚠️ **기존 네 줄 아래**에 붙인다 — 돈(입금)·연락·검수가 먼저라는 순서를 바꾸지 않는다.

@@ -228,6 +228,11 @@
 
     /* 회원 탈퇴 — '내 정보' 접이 맨 아래, 평소엔 작은 글자 링크 하나(2026-08-26 오너 지적
        "탈퇴를 종용하는 것 같다" — 설명·빨간 버튼은 링크를 눌러야 펼쳐진다). */
+    /* 재학생 신청 칸(2026-09-16) — 연락처 아래 한 덩이. 상태 한 줄 + 버튼(대기·적용 중이면 버튼 없음) */
+    .v2-stu { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+    .v2-stu-t { font-size: 14px; line-height: 1.55; color: var(--text-muted); }
+    .v2-stu-t b { color: var(--accent-ink); }
+    .v2-stu-btn { margin-top: 10px; }
     .v2-quit-row { margin-top: 18px; padding-top: 4px; border-top: 1px solid var(--border); }
     .v2-quit-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0;
       background: none; border: 0; font-family: inherit; font-size: 12px; font-weight: 700;
@@ -533,6 +538,14 @@
             <!-- 휴대폰 본인인증(2026-08-26) — 미인증 회원에게만 JS 가 보여 준다.
                  누르면 온보딩 인증 전용 모드(?verify=1)로 갔다가 이리로 돌아온다. -->
             <button class="v2-idv" id="phoneVerify" type="button" hidden>휴대폰 본인인증으로 확인하기</button>
+
+            <!-- 재학생 신청(2026-09-16 오너 "재학생들이 따로 신청하면 내가 등업") — 본인인증 회원에게만
+                 JS 가 보여 준다. 누르면 admin '재학생 명단'에 승인 대기로 올라가고, 오너가 승인하면
+                 챌린지·특강·자료가 0원이 된다. 공개 화면엔 안 둔다(마이페이지만 · 2026-09-16 오너 확정). -->
+            <div class="v2-stu" id="stuRow" hidden>
+              <div class="v2-stu-t" id="stuText"></div>
+              <button class="v2-idv v2-stu-btn" id="stuReq" type="button" hidden>학원 재학생이에요 · 무료 신청</button>
+            </div>
 
             <!-- 회원 탈퇴 (2026-08-02 B-2) — privacy.html 이 '회원 탈퇴 시까지' 보관한다고
                  고지하는데 정작 학생이 그 요구를 행사할 창구가 사이트에 없었다.
@@ -1427,6 +1440,35 @@
             });
           }
         }
+      } catch (e) {}
+
+      /* ── 재학생 신청 칸(2026-09-16) — 인증 회원에게만. 판정·상태는 서버(my_student_status) ──
+         적용 중·대기 중이면 사실만 적고 버튼은 없다. 버튼은 '신청 가능'일 때 하나.
+         ⚠️ 함수 미배포(not_ready)·조회 실패면 칸을 아예 안 그린다 — 안내문으로 자리를 먹지 않는다. */
+      try {
+        const st = await MONC.studentStatus();
+        const row = document.getElementById('stuRow');
+        const txt = document.getElementById('stuText');
+        const btn = document.getElementById('stuReq');
+        const fmtD = d => d ? String(d).slice(0, 10).replace(/-/g, '.') : '';
+        const paint = (s) => {
+          if (!s || !s.verified) { row.hidden = true; return; }   // 미인증은 위 인증 버튼이 먼저다
+          row.hidden = false;
+          if (s.student) { txt.innerHTML = '<b>재학생 무료 적용 중</b> · ' + fmtD(s.until) + ' 까지'; btn.hidden = true; return; }
+          if (s.status === 'pending') { txt.innerHTML = '<b>재학생 확인 대기 중</b> · 확인되면 챌린지·특강·자료가 무료로 바뀌어요.'; btn.hidden = true; return; }
+          txt.textContent = s.status === 'expired' ? '재학생 무료 기간이 끝났어요. 계속 다니고 있으면 다시 신청해 주세요.' : '';
+          btn.hidden = false;
+        };
+        paint(st);
+        btn.addEventListener('click', async () => {
+          btn.disabled = true; const orig = btn.textContent; btn.textContent = '신청 중…';
+          const r = await MONC.requestStudent() || {};
+          btn.disabled = false; btn.textContent = orig;
+          if (r.ok) { paint(await MONC.studentStatus()); return; }
+          if (r.code === 'not_verified') { alert('휴대폰 본인인증을 먼저 해 주세요.'); return; }
+          if (r.code === 'not_ready') { alert('재학생 신청 준비가 아직 안 됐어요. 담당 코치에게 말씀해 주세요.'); return; }
+          alert('신청이 안 됐어요. 잠시 뒤 다시 시도해 주세요.');
+        });
       } catch (e) {}
       document.getElementById('phoneSave').addEventListener('click', async () => {
         const phone = phoneInput.value.trim();

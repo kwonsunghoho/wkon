@@ -378,10 +378,20 @@
         if (!session) return off;
         const { data, error } = await sb.rpc('my_student_status');
         if (error || !data) return off;            // 함수 미배포(PGRST202)·조회 실패 = 유료
-        return { student: data.student === true, until: data.until || null };
+        // status(approved/pending/expired/null)·verified 는 마이페이지 신청 칸이 쓴다(2026-09-16).
+        // 구판 함수(20260909120000)는 두 값을 안 주므로 없으면 null 로 둔다.
+        return { student: data.student === true, until: data.until || null,
+                 status: data.status || null, verified: data.verified === true };
       } catch (e) { return off; }
     })();
     return _studentPromise;
+  }
+  // 재학생 자가 신청(2026-09-16 오너 "따로 신청하면 내가 등업") — 마이페이지 한 곳에서 부른다.
+  // 서버가 인증 여부를 다시 보고 '승인 대기' 줄을 만든다. 승인은 admin 몫.
+  async function requestStudent() {
+    const r = await callFree('request_student_status', {});
+    _studentPromise = null;   // 상태가 바뀌었으니 다음 물음은 새로 받는다
+    return r;
   }
 
   // 무료 접수 세 창구. 금액·기수·대상 회원은 전부 서버가 정한다(인자는 '무엇을'만).
@@ -421,7 +431,7 @@
     getMyProfile, saveMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
     getConsent, recordConsent, hasConsented, requireConsent, requireVerified, deleteMyAccount,
     isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
-    studentStatus, applyFreeChallenges, applyFreeLecture, claimFreeResource,
+    studentStatus, requestStudent, applyFreeChallenges, applyFreeLecture, claimFreeResource,
   };
 })();
 
