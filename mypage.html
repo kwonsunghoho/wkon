@@ -1436,7 +1436,8 @@
                   + (window.MONC_INAPP_HOWTO || '브라우저(Chrome·Safari)에서 열어 주세요.'));
                 return;
               }
-              location.href = 'onboarding.html?verify=1&returnTo=' + encodeURIComponent('mypage.html');
+              // ?student=1 로 들어온 학생은 인증 뒤 같은 자리(신청 칸)로 돌아와야 한다(2026-09-16)
+              location.href = 'onboarding.html?verify=1&returnTo=' + encodeURIComponent('mypage.html' + location.search);
             });
           }
         }
@@ -1451,8 +1452,18 @@
         const txt = document.getElementById('stuText');
         const btn = document.getElementById('stuReq');
         const fmtD = d => d ? String(d).slice(0, 10).replace(/-/g, '.') : '';
+        /* 오너가 학생에게 주는 바로가기 mypage.html?student=1 (2026-09-16) — '내 정보'를 펼치고 그 자리로.
+           미인증이면 신청 칸 대신 인증 버튼이 있으니 그리로 데려가고, 왜 인증이 먼저인지 한 줄만 적는다. */
+        const deep = new URLSearchParams(location.search).get('student') === '1';
         const paint = (s) => {
-          if (!s || !s.verified) { row.hidden = true; return; }   // 미인증은 위 인증 버튼이 먼저다
+          if (!s || !s.verified) {
+            row.hidden = true;
+            if (deep && s && s.verified === false) {
+              row.hidden = false; btn.hidden = true;
+              txt.textContent = '재학생 신청은 휴대폰 본인인증 뒤에 할 수 있어요. 위 버튼으로 인증해 주세요.';
+            }
+            return;   // 미인증은 위 인증 버튼이 먼저다
+          }
           row.hidden = false;
           if (s.student) { txt.innerHTML = '<b>재학생 무료 적용 중</b> · ' + fmtD(s.until) + ' 까지'; btn.hidden = true; return; }
           if (s.status === 'pending') { txt.innerHTML = '<b>재학생 확인 대기 중</b> · 확인되면 챌린지·특강·자료가 무료로 바뀌어요.'; btn.hidden = true; return; }
@@ -1460,6 +1471,12 @@
           btn.hidden = false;
         };
         paint(st);
+        if (deep) {
+          const fold = document.getElementById('sec-contact');
+          if (fold) fold.open = true;
+          const target = row.hidden ? document.getElementById('phoneVerify') : row;
+          if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+        }
         btn.addEventListener('click', async () => {
           btn.disabled = true; const orig = btn.textContent; btn.textContent = '신청 중…';
           const r = await MONC.requestStudent() || {};
