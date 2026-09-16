@@ -757,6 +757,13 @@
     /* 사이드바 버튼이지만 누르는 자리는 44px 를 지킨다(원칙 2 — '작은 버튼'은 못 누르는 버튼이다) */
     .stu-row .btn, #stuAdd, .stu-act input { min-height: 44px; }
     .stu-row .btn { grid-column: 2; grid-row: 1 / span 2; }
+    /* 학생용 신청 링크 한 덩이(2026-09-16) — 라벨 / 주소 / 복사. 주소는 줄바꿈 없이 넘치면 가로 스크롤 */
+    .stu-link { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center;
+      padding: 10px 12px; margin-bottom: 12px; background: var(--bg2); border-radius: var(--radius-xs); }
+    .stu-link-l { font-size: 12px; font-weight: 700; color: var(--text-dim); }
+    /* 주소는 끝(?student=1)까지 다 보여야 한다 — 300px 사이드바에선 두 줄로 꺾는다(스크롤이면 꼬리가 잘려 보인다 · 실측) */
+    .stu-link-u { grid-column: 1; font-size: 12px; color: var(--text); word-break: break-all; font-family: inherit; }
+    .stu-link .btn { grid-column: 2; grid-row: 1 / span 2; min-height: 44px; }
     /* 승인 대기 줄(2026-09-16) — 종료일 칸 + [승인][거절]이 한 줄 더 붙는다. 한 열로 푼다 */
     .stu-row.pend { grid-template-columns: 1fr; }
     .stu-row.pend .btn { grid-column: auto; grid-row: auto; }
@@ -1390,6 +1397,13 @@
             재학생 명단 표가 아직 없어요. 마이그레이션(20260909120000)을 실행하면 켜집니다.
           </div>
           <div id="stuBody" hidden>
+            <!-- 학생에게 보내는 신청 바로가기(2026-09-16 오너 "계속 사용할 수 있게 회원관리 쪽에") —
+                 주소는 여기 한 곳. 누르면 복사된다(모바일에서 긴 주소를 드래그로 고르지 않게). -->
+            <div class="stu-link">
+              <span class="stu-link-l">학생용 신청 링크</span>
+              <code class="stu-link-u" id="stuLinkUrl">https://monc.ai.kr/mypage.html?student=1</code>
+              <button class="btn btn-ghost btn-sm" type="button" data-copylink="https://monc.ai.kr/mypage.html?student=1">복사</button>
+            </div>
             <div class="af-field" style="margin:0 0 8px">
               <label for="stuPaste">번호 붙여넣기 (한 줄에 한 명)</label>
               <textarea id="stuPaste" rows="4" placeholder="010-1234-5678&#10;홍길동 010-2222-3333"
@@ -3774,6 +3788,7 @@
     document.getElementById('stuFold').addEventListener('toggle', function () {
       if (this.open && _students === null) loadStudents();   // 처음 열 때만 받는다
     });
+    wireCopyLinks(document.getElementById('stuBody'));   // 학생용 신청 링크 [복사] — 제출 링크 패널과 같은 복사 함수
     document.getElementById('stuSearch').addEventListener('input', renderStudents);
 
     document.getElementById('stuAdd').addEventListener('click', async () => {
