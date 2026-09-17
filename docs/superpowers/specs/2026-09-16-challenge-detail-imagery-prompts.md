@@ -6,6 +6,7 @@
 ## 뽑는 법
 
 1. **비율부터 맞춘다** — 각 프롬프트 제목 옆에 적혀 있다(16:9 또는 1:1).
+   3단계(6~11)는 1:1 이 안 되면 16:9 로 뽑아도 된다 — 가운데를 정사각형으로 잘라 쓴다(2026-09-17 녹음·촬영 실측).
 2. 프롬프트 칸을 **통째로 복사해 붙인다.** 끝의 영어 꼬리까지 전부 한 덩어리다.
 3. 마음에 드는 한 장을 **`다운로드\monc-seedream`** 폴더에 저장한다. 파일 이름은 그대로 둬도 된다.
 
@@ -65,37 +66,37 @@ An empty airport departure gate lounge in the early morning, rows of pale grey s
 ### 6. 영상 보기 · 1:1
 
 ```
-A tablet propped upright on a pale desk beside a window, its screen showing a soft blurred abstract video player with an indistinct progress bar, a closed navy notebook beside it. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+A tablet propped upright on a pale desk beside a window, its screen showing only soft abstract blue-grey gradient shapes with a single round play button and a thin progress bar, no human figure or silhouette on the screen, a closed navy notebook beside it. Objects grouped closely in the center of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ### 7. 녹음 · 1:1
 
 ```
-A smartphone lying flat on a pale desk next to a small silver microphone, the phone screen showing a soft abstract audio waveform drawn in deep navy on white. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+A smartphone lying flat on a pale desk next to a small silver microphone, the phone screen showing a soft abstract audio waveform drawn in deep navy on white. Objects grouped closely in the center of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ### 8. 촬영 · 1:1
 
 ```
-A smartphone mounted on a small desktop tripod on a pale desk, its screen showing a soft blurred camera view of an empty bright room, a small round ring light beside it switched off. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+A smartphone mounted on a small desktop tripod on a pale desk, its screen showing a soft blurred camera view of an empty bright room, a small round ring light beside it switched off. Objects grouped closely in the center of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ### 9. 답변 쓰기 · 1:1
 
 ```
-An open notebook on a pale desk with soft indistinct pencil marks and no readable writing, a navy pen lying across the page, a small white cup at the edge of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+An open notebook on a pale desk with soft indistinct pencil marks and no readable writing, a navy pen lying across the page, a small white cup close beside it. Objects grouped closely in the center of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ### 10. 채널 제출 · 1:1
 
 ```
-A smartphone lying on a pale desk beside a closed navy notebook, its screen showing a soft abstract chat layout with a few rounded message bubbles in deep navy and white, no readable text. No people, no hands, no faces, no text, no letters, no logos, no brand marks, no yellow. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+A smartphone lying on a pale desk beside a closed navy notebook, its screen showing a soft abstract chat layout with a few rounded message bubbles in deep navy and white, no readable text. Objects grouped closely in the center of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks, no yellow. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ### 11. 코치 점검 · 1:1
 
 ```
-Closed-back headphones resting on a pale desk beside an open laptop, the laptop screen showing a soft abstract audio waveform with a few small navy check marks along it, a pen lying beside the laptop. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+Closed-back headphones resting on a pale desk beside an open laptop, the laptop screen showing a soft abstract audio waveform with a few small navy check marks along it, a pen lying beside the laptop. Objects grouped closely in the center of the frame. No people, no hands, no faces, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ---
