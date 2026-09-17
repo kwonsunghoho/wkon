@@ -103,10 +103,13 @@ Closed-back headphones resting on a pale desk beside an open laptop, the laptop 
 
 ## C. 마무리 — 5종 공용 (16:9 · 1장)
 
-사진 위에 흰 글씨와 신청 버튼이 올라간다. 남색 덮개를 씌우니 밝아도 괜찮다.
+사진 위에 흰 글씨와 신청 버튼이 올라간다. **어두운 사진이어야 한다** — 2026-09-17 밝은 낮 하늘(창밖 구름)로
+뽑았더니 글씨 대비를 지키려고 남색 덮개를 진하게 깔아 폰에서 사진이 거의 안 보였다. 밤하늘로 바꿨다.
+
+추가로 버리는 기준: 주황빛 도시 불빛 · 날개 끝 빨강·초록 등 · 달 · 새까만 화면(남색이 아니면 사진이 안 보인다).
 
 ### 12. 마무리 · 16:9
 
 ```
-A calm cool-toned daytime sky above a soft white cloud layer seen through an aircraft cabin window from inside, the rounded window frame slightly out of focus in the foreground. No people, no hands, no faces, no text, no letters, no logos, no brand marks, no aircraft livery. Cool white and deep navy color palette, soft natural daylight, no warm orange, golden, beige or yellow tones, calm minimal editorial photography, serene and clean composition.
+An aircraft cabin window seen from inside at night, a deep navy blue night sky with a few faint stars, a dim softly moonlit cloud layer far below, the rounded window frame slightly out of focus in the foreground with a faint cool reflection on its edge. Dark, quiet and calm, deep navy rather than pure black. No people, no hands, no faces, no text, no letters, no logos, no brand marks, no aircraft livery, no wing lights, no city lights, no moon in frame. Deep navy and cool blue-grey color palette, no warm orange, golden, amber, beige or yellow tones, calm minimal editorial photography, serene composition.
 ```
