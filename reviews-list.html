@@ -111,7 +111,6 @@
     .rv-name { font-family: var(--serif); font-size: 15px; font-weight: 800; color: var(--text); }
     .rv-when { font-size: 14px; font-weight: 700; color: var(--rv-dim); font-variant-numeric: tabular-nums; }
     .rv-tag { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(27,58,107,.10); color: var(--accent-ink); }
-    .rv-tag-cohort { background: var(--action-tint); color: var(--accent-ink); }
     /* 시각 높이는 유지하고 ::after 로 히트 영역만 44px 로 넓힌다(9대원칙 2) */
     .rv-src { position: relative; appearance: none; border: 0; background: none; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 14px; font-weight: 800; color: var(--accent-ink); padding: 5px 2px; }
     .rv-src::after { content: ''; position: absolute; left: -8px; right: -8px; top: 50%; transform: translateY(-50%); height: 44px; }
@@ -256,7 +255,7 @@
     const ctaEl = document.querySelector('.rv-foot-btn');
     ctaEl.href = CFG.cta.href; ctaEl.textContent = CFG.cta.label;
 
-    let items = [];                // {url, challenge, cohort, name, date, quote}
+    let items = [];                // {url, challenge, name, date, quote}
     function imgUrl(path) { return MONC.sb.storage.from('reviews').getPublicUrl(path).data.publicUrl; }
     // 상담 후기 카드에 붙는 시기 표기 — 날짜까지는 필요 없고 'YYYY.MM' 이면 충분하다
     function ym(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})/); return m ? `${m[1]}.${m[2]}` : ''; }
@@ -273,7 +272,6 @@
         .map(r => ({
           url: r.image_path ? imgUrl(r.image_path) : '',
           challenge: r.challenge || null,
-          cohort: (r.cohort != null && r.cohort !== 0) ? Number(r.cohort) : null,
           name: r.reviewer_name || '',
           date: r.review_date || r.created_at || '',
           quote: (r.quote || '').trim(),
@@ -303,14 +301,10 @@
       grid.innerHTML = items.map(i => {
         // 상담 후기는 이름을 쓰지 않으므로 대체 텍스트에서도 뺀다
         const alt = (CFG.showName
-          ? `${esc(i.challenge || '')} ${i.cohort ? i.cohort + '기' : ''} ${esc(i.name)} 후기`
+          ? `${esc(i.challenge || '')} ${esc(i.name)} 후기`
           : `${CFG.title} ${ym(i.date)}`).replace(/\s+/g, ' ').trim();
-        // 기수 칩은 챌린지 칩 옆에 있을 때만 '1기'로 충분하다. 혼자 서면 무엇의
-        // 기수인지 안 읽히므로 '참여자'를 붙인다(2026-08-02 오너 지적 — 상세 카드 건과 같은 규칙).
-        const tags = CFG.tags
-          ? (i.challenge ? `<span class="rv-tag">${esc(i.challenge)}</span>` : '')
-            + (i.cohort != null ? `<span class="rv-tag rv-tag-cohort">${i.cohort}기${i.challenge ? '' : ' 참여자'}</span>` : '')
-          : '';
+        // 기수는 화면에 내지 않는다(2026-09-18 오너 "기수 안나오게 해줘라 그냥") — 챌린지 꼬리표만.
+        const tags = (CFG.tags && i.challenge) ? `<span class="rv-tag">${esc(i.challenge)}</span>` : '';
         const nameEl = (CFG.showName && i.name) ? `<span class="rv-name">${esc(i.name)}</span>` : '';
         const whenEl = (CFG.showDate && ym(i.date)) ? `<span class="rv-when">${ym(i.date)}</span>` : '';
         const who = (nameEl || whenEl || tags) ? `<div class="rv-who">${nameEl}${whenEl}${tags}</div>` : '';

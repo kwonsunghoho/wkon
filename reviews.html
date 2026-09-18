@@ -196,7 +196,6 @@
         kind: r.kind || 'challenge',
         url: r.image_path ? imgUrl(r.image_path) : '',
         challenge: r.challenge || null,
-        cohort: (r.cohort != null && r.cohort !== 0) ? Number(r.cohort) : null,
         name: r.reviewer_name || '',
         date: r.review_date || r.created_at || '',
         quote: (r.quote || '').trim(),
@@ -226,13 +225,12 @@
       return withQuote.concat(rest).slice(0, n);
     }
 
-    /* 발신자 줄 — 챌린지와 기수는 한 덩어리로 붙인다('보신각 1기').
-       ' · '로 갈라 놓으면 '1기'가 홀로 떠서 무엇의 기수인지 안 읽힌다(2026-08-02 오너 지적).
-       이름이 없는 건은 '참여자'를 붙여 숫자만 남지 않게 한다. */
+    /* 발신자 줄 — '이름 · 챌린지'. 기수는 내지 않는다(2026-09-18 오너 "기수 안나오게 해줘라 그냥").
+       이름이 없는 건은 '보신각 참여자'로 누구의 후기인지 남긴다. */
     function whoLine(i) {
-      const co = i.cohort != null ? [i.challenge, i.cohort + '기'].filter(Boolean).join(' ') : (i.challenge || '');
-      if (i.name && co) return i.name + ' · ' + co;
-      if (co) return i.cohort != null ? co + ' 참여자' : co;
+      const ch = i.challenge || '';
+      if (i.name && ch) return i.name + ' · ' + ch;
+      if (ch) return ch + ' 참여자';
       return i.name || '';
     }
 

@@ -81,14 +81,11 @@
      ⚠️ 이름 컬럼은 `reviewer_name` 이다(`name` 아님 — 2026-08-02 오너 지적 전까지
         `r.name` 을 읽어 **이름이 한 번도 안 붙었고**, 남은 게 '1기' 한 조각뿐이라
         오타처럼 보였다. reviews-list·reviews 허브는 처음부터 reviewer_name 을 쓴다).
-     ⚠️ 이름이 없는 건은 숫자만 남으므로 '참여자'를 붙여 **무엇의 1기인지** 말한다.
-        기수 숫자를 홀로 두지 말 것 — 카드는 캡처돼 돌아다녀서 제목 없이도 읽혀야 한다. */
+     기수는 내지 않는다(2026-09-18 오너 "기수 안나오게 해줘라 그냥"). 이름이 없는 건은
+     '보신각 참여자'로 — 카드는 캡처돼 돌아다녀서 제목 없이도 읽혀야 한다. */
   function whoLine(r) {
     var nm = (r.reviewer_name || '').trim();
-    var co = (r.cohort != null && r.cohort !== '') ? CH + ' ' + r.cohort + '기' : '';
-    if (nm && co) return nm + ' · ' + co;
-    if (co) return co + ' 참여자';
-    return nm;
+    return nm ? nm + ' · ' + CH : CH + ' 참여자';
   }
 
   function cardHtml(r) {
