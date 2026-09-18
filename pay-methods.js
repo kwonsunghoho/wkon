@@ -34,7 +34,7 @@
      주소에 ?pg=kpn 이 있을 때만 apply.html 에 '신용카드' 버튼이 뜬다 — 일반 화면은 그대로다.
      테스트 결제를 받을지는 서버 스위치(site_config.pg_test_open)가 정한다(verify-payment).
      심사가 끝나면 이 키를 비우고 스위치를 끈다. */
-  var KPN_TEST_CHANNEL = '';
+  var KPN_TEST_CHANNEL = 'channel-key-c2c0bbd5-2c45-4fb5-a743-08f291b1bde9';
 
   var _resolve = null;   // 시트가 열려 있는 동안만 값이 있다(중복 오픈 방지 겸용)
   var _lastFocus = null;
