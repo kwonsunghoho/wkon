@@ -1442,7 +1442,9 @@ async function payEasy(provider) {
       return { challenge: id, name: c.fullName, round: (rounds[id] != null ? rounds[id] : null), price: PRICE };
     });
     const total = ids.length * PRICE;
-    const paymentId = 'monc-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+    // KPN 은 paymentId 가 영문·숫자만, 32자 이하다(하이픈 → 결제창 호출 실패, 33자+ → 9104 — 2026-09-18 실측)
+    const _pid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    const paymentId = provider === 'kpn' ? ('monc' + _pid.replace(/-/g, '')).slice(0, 32) : 'monc-' + _pid;
     const applicant = { name: name, phone: phone };
     if (_memberId) applicant.member_id = _memberId;
 
