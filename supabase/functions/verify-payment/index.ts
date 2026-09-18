@@ -9,7 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-08-10b'
+const FN_VERSION = '2026-09-18a'
 
 // site_config.challenge_price 미설정 시 기본값.
 // ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
@@ -56,6 +56,20 @@ async function refundAll(
   }
 }
 
+// 테스트 채널 결제(2026-09-18 · KPN 서브몰 심사 캡처용) — 포트원 '테스트' 채널 결제는 돈이 오가지
+// 않는데 PAID 로 조회된다. 그대로 받으면 무료 신청·지급이 된다(apply.html ?pg=kpn 을 누구나 열 수 있다).
+// site_config.pg_test_open 이 true 일 때만 받고(심사 기간에만 켠다), 아니면 자동 환불 + HTTP 200.
+// 반환: null=계속 진행 / Response=여기서 끝.
+// deno-lint-ignore no-explicit-any
+async function testGate(supa: any, pay: any, paymentId: string): Promise<Response | null> {
+  if (pay?.channel?.type !== 'TEST') return null
+  const { data } = await supa.from('site_config').select('value').eq('key', 'pg_test_open').maybeSingle()
+  if (data?.value === true) return null
+  const amt = Number(pay?.amount?.total) || 0
+  const refunded = amt > 0 ? await refundAll(supa, paymentId, amt, '테스트 채널 결제(닫힘) · 자동 환불') : false
+  return json({ ok: false, error: 'test_payment_closed', refunded })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
@@ -73,10 +87,12 @@ Deno.serve(async (req) => {
       const { data: cfg } = await supa.from('site_config').select('value').eq('key', 'challenge_price').maybeSingle()
       const raw = cfg?.value
       const price = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
+      const { data: tcfg } = await supa.from('site_config').select('value').eq('key', 'pg_test_open').maybeSingle()
       return json({
         ok: true, fn: 'verify-payment', version: FN_VERSION,
         challengePrice: Number.isFinite(price) ? price : null,
         priceFallback: PRICE_PER_CHALLENGE_FALLBACK,
+        pgTestOpen: tcfg?.value === true,   // 테스트 채널 결제 수락 스위치(심사 기간에만 true)
       })
     }
 
@@ -125,6 +141,8 @@ Deno.serve(async (req) => {
       if (pay?.amount?.total !== price) {
         return json({ ok: false, error: 'amount_mismatch', paid: pay?.amount?.total, expected: price }, 402)
       }
+      const tgC = await testGate(supa, pay, paymentId)
+      if (tgC) return tgC
 
       // 검증 통과 → 원장에 넣는다. reason='purchase', ref=결제 id (멱등성 키).
       const { error: insErr } = await supa.from('credit_ledger').insert({
@@ -183,6 +201,8 @@ Deno.serve(async (req) => {
       if (pPay?.amount?.total !== progPrice) {
         return json({ ok: false, error: 'amount_mismatch', paid: pPay?.amount?.total, expected: progPrice }, 402)
       }
+      const tgP = await testGate(supa, pPay, paymentId)
+      if (tgP) return tgP
 
       // 검증 통과 → 이용권 지급. unique(program_id, member_id) 가 최종 방어다.
       const { error: enrErr } = await supa.from('program_enrollments').insert({
@@ -251,6 +271,8 @@ Deno.serve(async (req) => {
       if (rPay?.amount?.total !== resPrice) {
         return json({ ok: false, error: 'amount_mismatch', paid: rPay?.amount?.total, expected: resPrice }, 402)
       }
+      const tgR = await testGate(supa, rPay, paymentId)
+      if (tgR) return tgR
       // 결제를 연 계정 표식(customData.uid) 대조 — 복귀 주소(paymentId·rid)가 새어도
       // 남의 계정으로 확인해 자료를 가로채지 못하게(2026-08-10). 표식 없는 옛 결제는 통과.
       try {
@@ -374,6 +396,8 @@ Deno.serve(async (req) => {
     if (pay.status !== 'PAID') return json({ ok: false, error: 'not_paid', status: pay.status }, 402)
     const paid = pay?.amount?.total
     if (paid !== expected) return json({ ok: false, error: 'amount_mismatch', paid, expected }, 402)
+    const tgA = await testGate(supa, pay, paymentId)
+    if (tgA) return tgA
 
     // 3) 검증 통과 → 신청 저장 (service role, RLS 우회)
     const payload: Record<string, unknown> = {
@@ -382,7 +406,8 @@ Deno.serve(async (req) => {
       refund_account: applicant.refund_account || null,
       challenges: list,
       total_price: expected,
-      pay_method: lectureId ? 'tosspay' : 'kakaopay',
+      // 테스트 채널 결제는 'test' — 심사 캡처 뒤 admin 에서 골라 지우기 쉽게(돈이 안 오간 행).
+      pay_method: pay?.channel?.type === 'TEST' ? 'test' : (lectureId ? 'tosspay' : 'kakaopay'),
       payment_id: paymentId,
       payment_status: 'paid',
       paid_amount: paid,

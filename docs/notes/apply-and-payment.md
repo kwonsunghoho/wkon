@@ -1,5 +1,14 @@
 # 신청·결제·모집일정·오픈 알림 — 상세 기록
 
+## KPN 테스트 채널 — 서브몰 심사 캡처용 카드 결제 (2026-09-18 오너 승인)
+
+KPN(한국결제네트웍스) 서브몰 심사는 'KPN 결제창 → 하나카드 인증창' 캡처를 요구한다. 라이브 결제는 간편결제(토스·카카오)뿐이라 포트원 **테스트** 채널을 따로 붙였다.
+
+- 키는 `pay-methods.js` `KPN_TEST_CHANNEL` 한 곳. **주소에 `?pg=kpn` 이 있을 때만** `apply.html` 에 '신용카드로 결제하고 신청하기'(`#kpnBtn`, `payMethod:'CARD'`)가 뜬다. 일반 화면은 그대로.
+- ⚠️ 테스트 채널 결제는 돈이 안 오가는데 포트원 조회가 `PAID` 다 — 그대로 받으면 무료 신청이 된다. verify-payment `testGate()` 가 `pay.channel.type==='TEST'` 이면 **`site_config.pg_test_open === true` 일 때만** 받고, 아니면 자동 환불 + `test_payment_closed`(HTTP 200). 네 분기(크레딧·이용권·자료·챌린지/특강) 전부. 받은 행은 `pay_method='test'`.
+- portone-webhook 은 테스트 결제를 지급하지 않는다(`skip:'test_channel'`) — 스위치 우회 방지.
+- **심사 끝나면**: 키 비우기 + `pg_test_open` 끄기 + `pay_method='test'` 신청 행 삭제. 스위치 상태는 verify-payment 프로브의 `pgTestOpen`.
+
 ## 재학생 무료 참여 (2026-09-09 오너 "재학생들은 챌린지 신청할때 무료로")
 
 명단에 있는 재학생은 **화면에서 0원으로 접수한다.** 설계 원문은

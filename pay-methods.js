@@ -30,11 +30,17 @@
      결제수단이 아니라 온보딩 본인인증(requestIdentityVerification)용 — choose() 시트와 무관.
      비우면 온보딩이 인증 UI 를 켜지 않고 직접 입력 폼으로 폴백한다(카카오 키와 같은 스위치). */
   var IDENTITY_CHANNEL = 'channel-key-d4c6e771-0eb6-424d-971b-200a655c2d2b';
+  /* KPN 테스트 채널 키(2026-09-18 · KPN 서브몰 심사 캡처 전용 — 포트원 '테스트' 채널).
+     주소에 ?pg=kpn 이 있을 때만 apply.html 에 '신용카드' 버튼이 뜬다 — 일반 화면은 그대로다.
+     테스트 결제를 받을지는 서버 스위치(site_config.pg_test_open)가 정한다(verify-payment).
+     심사가 끝나면 이 키를 비우고 스위치를 끈다. */
+  var KPN_TEST_CHANNEL = '';
 
   var _resolve = null;   // 시트가 열려 있는 동안만 값이 있다(중복 오픈 방지 겸용)
   var _lastFocus = null;
 
   function kakaoReady() { return !!CHANNELS.kakao; }
+  function kpnTestReady() { return !!KPN_TEST_CHANNEL && /(?:^|[?&])pg=kpn(?:&|$)/.test(location.search); }
 
   /* ── 바텀시트 — 처음 열 때 한 번만 만든다 ── */
   function buildSheet() {
@@ -132,7 +138,9 @@
     storeId: STORE_ID,
     channels: CHANNELS,
     identityChannel: IDENTITY_CHANNEL,
+    kpnTestChannel: KPN_TEST_CHANNEL,
     kakaoReady: kakaoReady,
+    kpnTestReady: kpnTestReady,
     choose: choose
   };
 })();
