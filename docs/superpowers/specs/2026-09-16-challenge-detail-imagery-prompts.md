@@ -37,8 +37,12 @@ A minimal desk beside a bright window: a small silver metronome with its pendulu
 
 ### 3. 영합각 · 16:9
 
+영상면접이 바로 읽히게 면접자 자리에서 본 모니터·웹캠·조명(2026-09-18 오너 제안 — 구 '흰 벽 앞 빈 의자'는 은유라
+약했다). 조명은 **사각 LED 패널** — 같은 페이지 3단계 '촬영'(8번)이 링라이트라 겹치지 않게.
+추가로 버리는 기준: 모니터 화면 속 사람·글자·아이콘 · 모니터·웹캠 브랜드 로고 · 링라이트.
+
 ```
-A calm bright room with a single pale chair placed in front of a plain white wall, soft window light falling across the wall, a small round mirror leaning on a side table reflecting only the pale wall. Wide horizontal composition with generous empty negative space on the left side. No people, no hands, no faces, no reflections of people, no text, no letters, no logos, no brand marks. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
+A home setup for a video job interview, seen from the candidate's empty seat: a slim desktop monitor on a pale desk facing the viewer, a small webcam mounted on top of the monitor, a flat rectangular LED panel light on a slim stand beside the monitor glowing with soft cool white light, the monitor screen glowing with a soft empty blue-grey gradient, a closed navy notebook and a glass of water on the desk. Wide horizontal composition with generous empty negative space on the left side. No people, no hands, no faces, no people on the screen, no text, no letters, no icons, no logos, no brand marks on the monitor or webcam, no ring light. Cool white and deep navy color palette, soft natural window light from the side, no warm beige or yellow tones, calm minimal editorial still life photography, shallow depth of field, clean uncluttered composition.
 ```
 
 ### 4. 승자각 · 16:9
