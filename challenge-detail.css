@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════════
    챌린지 상세 — ①안 '결과 먼저' 배치 공용 스타일 + 활자·폭 한 벌 (2026-09-07 오너 확정)
    설계: docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md
-   싣는 법: 인라인 <style> 블록 **뒤**에 <link rel="stylesheet" href="challenge-detail.css?v=3">
+   싣는 법: 인라인 <style> 블록 **뒤**에 <link rel="stylesheet" href="challenge-detail.css?v=4">
 
    ── 활자 규칙(2026-09-07 오너 "그 값으로 5종에 적용") ─────────────────────────────
    클래스101·인프런 강의 상세 실측(375px)에 맞춘 값이다 — 두 사이트 공통: 제목은 본문보다 조금만 크다
@@ -100,6 +100,17 @@ body[data-challenge] .ba-tx { font-size: var(--cd-cap); font-weight: 700; }
 .ba-more-btn[aria-expanded="true"]::after { content: '▴'; }
 .ba-more-btn:focus-visible { outline: 3px solid var(--accent-dark); outline-offset: 3px; }
 
+/* ── 3-1. 전환 밴드(2026-09-18) — '증거' 섹션(3번) 뒤 사진 한 장. 모바일 전체 폭, 데스크톱은 본문 폭(720) ──
+   이미지 images/cd-band-<id>.webp(16:9 · Seedream 4.5). 설계: docs/superpowers/specs/2026-09-16-challenge-detail-imagery-design.md
+   ⚠️ 전체 폭 밴드 금지의 승인된 예외(홈 ④ 숫자와 같은 문법 — 금지가 막은 건 순백과 옅은 판이 만드는 가로선이다).
+   사진 위아래 가장자리는 이미지 파일에 어둡게 구워 넣었다(흰 창·흰 벽이 순백에 녹지 않게) — CSS 로 덧칠하지 말 것. */
+.cd-band { margin: 0 0 var(--cd-gap); }
+.cd-band img { display: block; width: 100%; height: auto; }
+@media (min-width: 860px) {
+  .cd-band { max-width: 760px; margin-left: auto; margin-right: auto; padding: 0 20px; }
+  .cd-band img { border-radius: var(--radius); }
+}
+
 /* ── 4. 체크 목록(추천 대상 · 결과물) ── */
 .fit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .fit-list li { display: flex; gap: 10px; align-items: flex-start; font-size: var(--cd-body); line-height: var(--cd-lh-body); color: var(--text); word-break: keep-all; }
@@ -142,19 +153,15 @@ body[data-challenge] .lesson-item strong { font-weight: 700; margin-bottom: 2px;
 .coach-more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: var(--cd-sub); font-weight: 700; color: var(--accent-ink);
   text-decoration: underline; text-underline-offset: 3px; }
 
-/* ── 5-1. 진행 3단계 그림 줄(B안) — 마크업 .cd-steps, 아이콘은 data-icon ── */
-.cd-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 20px; position: relative; }
-.cd-steps::before { content: ''; position: absolute; left: 16%; right: 16%; top: 22px; height: 2px; background: var(--border); }
-.cd-step { position: relative; text-align: center; font-size: var(--cd-cap); color: var(--text-muted); line-height: 1.4; word-break: keep-all; }
-.cd-step i { display: block; width: 44px; height: 44px; margin: 0 auto 8px; border-radius: 50%;
-  background: var(--action-tint) center/22px no-repeat; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border-soft); }
+/* ── 5-1. 진행 3단계 사진 줄(2026-09-18 선 아이콘 → 사진) — 마크업 .cd-steps > .cd-step > img + b ──
+   사진 6장(images/cd-step-*.webp · 1:1)을 5종이 나눠 쓴다: 보신각·스피닝 watch/record/review ·
+   영합각 watch/film/review · 승자각·댄특완 watch/write/submit. 흰색은 밴드 톤에 맞춰 파일에서 보정했다. */
+.cd-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 20px; }
+.cd-step { text-align: center; font-size: var(--cd-cap); color: var(--text-muted); line-height: 1.4; word-break: keep-all; }
+/* 옅은 테두리 — 흰 책상 사진이 순백 배경에 녹는다(구 아이콘 원과 같은 --border-soft) */
+.cd-step img { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover;
+  border-radius: var(--radius-sm); box-shadow: 0 0 0 1px var(--border-soft); margin: 0 0 8px; }
 .cd-step b { display: block; font-size: var(--cd-sub); color: var(--text); font-weight: 700; margin-bottom: 2px; }
-.cd-step i[data-icon="chat"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8 8 0 0 1-8 8H8l-5 3 1.5-4.5A8 8 0 1 1 21 12z'/%3E%3C/svg%3E"); }
-.cd-step i[data-icon="play"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7 4 20 12 7 20 7 4'/%3E%3C/svg%3E"); }
-.cd-step i[data-icon="mic"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z'/%3E%3Cpath d='M19 11a7 7 0 0 1-14 0'/%3E%3Cpath d='M12 18v3'/%3E%3C/svg%3E"); }
-.cd-step i[data-icon="video"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='13' height='12' rx='2'/%3E%3Cpath d='M16 10l5-3v10l-5-3z'/%3E%3C/svg%3E"); }
-.cd-step i[data-icon="pen"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20l4-1 10-10-3-3L5 16l-1 4z'/%3E%3Cpath d='M13 7l3 3'/%3E%3C/svg%3E"); }
-.cd-step i[data-icon="check"] { background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B3A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 4.5-5'/%3E%3C/svg%3E"); }
 
 /* ── 판(B안): 추천·후기·FAQ 를 옅은 면에 담아 흰 섹션과 번갈아 놓는다.
    ⚠️ 전체 폭 띠가 아니다 — 섹션 좌우 여백(16/20px)을 남기고 둥근 판만 칠한다(design-principles '--bg2 는 카드 안 옅은 판 전용'). */
@@ -217,3 +224,25 @@ body[data-challenge] .ch-sticky .p { font-weight: 700; }
 body[data-challenge] .ch-sticky .p .was, body[data-challenge] .ch-sticky .p .won { font-weight: 600; }
 body[data-challenge] .ch-sticky .s { font-size: var(--cd-cap); }
 body[data-challenge] .ch-sticky .go { font-weight: 700; }
+
+/* ── 8-1. 마무리 상자 사진(2026-09-18) — 밤하늘 기내 창(images/cd-outro.webp · 1:1) + 남색 덮개 ──
+   ⚠️ 인라인 .cta-box::before 는 오른쪽 위 220px 원형 장식이다. width·height·border-radius 를 리셋하지 않으면
+      덮개가 왼쪽 위 원 하나로 줄어든다(2026-09-17 실측 — 목업이 이 상태로 한 번 승인됐다).
+   덮개 알파는 글씨 줄마다 실측해 정했다(폰 320·375·430 · 데스크톱 1280, 흰 글씨 최저 5:1대). 사진·문구를 바꾸면
+   다시 잰다 — 방법·표는 설계 문서 '사진 위 글씨 대비' 절. 덮개색은 홈 사진 덮개(index.css)와 같은 값.
+   사진 뒤 그라디언트 = 로드 전·실패 폴백(인라인 .cta-box 와 같은 색) — 흰 글씨가 흰 바탕에 뜨지 않게. */
+body[data-challenge] .cta-box {
+  background-image: url("images/cd-outro.webp"), linear-gradient(150deg, var(--accent) 0%, var(--accent-dark) 100%);
+  background-size: cover; background-position: 50% 50%;
+}
+body[data-challenge] .cta-box::before {
+  inset: 0; width: auto; height: auto; border-radius: 0;
+  /* 폰: 제목·설명 뒤는 짙은 별하늘이라 옅게, 아래 작은 글씨 뒤는 밝은 구름층이라 진하게 */
+  background: linear-gradient(180deg, rgba(18,28,46,.24) 0%, rgba(18,28,46,.26) 45%, rgba(18,28,46,.72) 62%, rgba(18,28,46,.74) 100%);
+}
+@media (min-width: 860px) {
+  /* 데스크톱: 1:1 사진이 넓게 확대돼 제목 뒤에 밝은 창틀이 온다 — 폰 값을 쓰면 제목 대비가 무너진다 */
+  body[data-challenge] .cta-box::before {
+    background: linear-gradient(180deg, rgba(18,28,46,.60) 0%, rgba(18,28,46,.60) 34%, rgba(18,28,46,.44) 48%, rgba(18,28,46,.68) 68%, rgba(18,28,46,.70) 100%);
+  }
+}
