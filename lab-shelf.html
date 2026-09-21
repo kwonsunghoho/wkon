@@ -429,9 +429,10 @@
   }
   @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
 
-  /* ── '여는 중' 덮개 — 자료별 주소(?r=)로 들어온 방문 전용 (2026-09-21 오너 지적) ──
+  /* ── '여는 중' 덮개 — 자료를 여는 모든 경로 공용 (2026-09-21 오너 지적·통일) ──
      하단 토스트만으로는 '자료가 열리는 중'인지 '여기서 찾으라는 것'인지 구분이 안 됐다.
-     화면 가운데에 무엇을 여는지 이름까지 적는다. 시트(210)보다 위·뷰어(900)보다 아래. */
+     화면 가운데에 무엇을 여는지 이름까지 적는다. 데스크톱·모바일 같은 카드(최대 340px).
+     시트(210)보다 위·뷰어(900)보다 아래. */
   .opening { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(23,42,71,.55); }
   .opening[hidden] { display: none; }
   .op-card { width: min(100%, 340px); padding: 28px 24px 24px; border-radius: var(--radius); background: var(--surface); text-align: center; box-shadow: 0 18px 48px rgba(20,32,52,.32); }
@@ -652,7 +653,7 @@
     toastTimer = setTimeout(function () { el.hidden = true; }, ms || 2600);
   }
 
-  /* ── '여는 중' 덮개 — 자료별 주소(?r=)로 들어온 방문 전용 ──
+  /* ── '여는 중' 덮개 — 자료를 여는 모든 경로가 쓴다(openDoc 이 띄운다 · 하단 토스트 '준비하는 중…'을 대체) ──
      ⚠️ 15초 뒤엔 스스로 걷힌다 — 어느 경로가 걷는 걸 빠뜨려도 화면이 영영 막히지 않게. */
   var OPENING_SUB = '잠시만 기다려 주세요. 곧 화면에 뜹니다.';
   var openingTimer = null;
@@ -1369,7 +1370,6 @@
         비회원도 같다 — 로그인 화면으로는 한 번만 보내고, 로그인 없이 돌아오면 줄만 강조해 둔다
         (로그인하고 돌아오면 그때 연다). 기록은 탭 단위(sessionStorage)면 충분하다. */
   var deepDone = false;
-  var deepAuto = false;   // 자동 열기가 시작됐다 — 이 자료의 '준비 중' 안내는 하단 토스트 대신 가운데 덮개로 한다
   function deepState(v) {
     var k = 'monc_lab_r:' + deepId;
     try {
@@ -1397,26 +1397,27 @@
       if (!session) {
         if (st === 'login') { hideOpening(); toast('로그인하면 이 자료를 바로 보실 수 있어요.', 3600); return; }
         deepState('login');
-        // 곧 로그인 화면으로 넘어간다 — 왜 넘어가는지 먼저 말해 둔다
-        showOpening(row.title, '로그인 화면으로 이동합니다. 로그인하면 이 자료가 바로 열려요.');
-      } else showOpening(row.title);
-      deepAuto = true;
-      pwTarget = row; lastPw = ''; openDoc(row, '');
+      }
+      // 비회원은 곧 로그인 화면으로 넘어간다 — 왜 넘어가는지 덮개에 먼저 말해 둔다
+      pwTarget = row; lastPw = '';
+      openDoc(row, '', '', session ? null : { sub: '로그인 화면으로 이동합니다. 로그인하면 이 자료가 바로 열려요.' });
     }).catch(function () { hideOpening(); });
   }
 
   function openDoc(row, password, fileId, o) {
     if (busy) return;
+    // 누른 즉시 가운데 덮개 — 로그인·인증 확인(네트워크 왕복) 동안에도 '열리는 중'이 보여야 한다.
+    // ok=false 는 로그인·본인인증 화면으로 넘어가는 중이라 걷지 않는다(돌아오면 pageshow·새 로드가 정리).
+    showOpening(row.title, o && o.sub);
     window.MONC.requireVerified().then(function (ok) {
       if (ok) openDocGo(row, password, fileId, o);
-    });
+    }).catch(function () { hideOpening(); });
   }
   function openDocGo(row, password, fileId, o) {
     if (busy) return;
     busy = true;
     if (row.id === deepId) deepState('opened');   // 로그인·인증 게이트를 다 지난 자리 — 이 방문에선 다시 자동으로 열지 않는다
     if (password) lastPw = password;
-    if (deepAuto && row.id === deepId) showOpening(row.title); else toast('자료를 준비하는 중…', 8000);
 
     // 뷰어 대상: 링크가 아니고 PDF 일 때(ext 는 목록 행 또는 파일 고르기 시트에서 안다).
     // ext 를 모르는 레거시 행과 direct(뷰어 실패 후 재시도)는 현행 경로로 간다.
