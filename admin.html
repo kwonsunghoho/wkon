@@ -7095,6 +7095,9 @@
         + '<div class="ri-actions">'
           + '<button class="ri-del lab-edit" data-id="' + r.id + '" style="color:var(--action-dark);border-color:var(--action)">수정</button>'
           + '<button class="ri-del lab-log" data-id="' + r.id + '">이력' + (hits.length ? '' : ' 0') + '</button>'
+          // 자료별 홍보 주소(2026-09-21) — 이 주소로 들어오면 학생 화면이 그 자료를 바로 연다(lab-shelf.html openDeep).
+          // 서가별 안내판 주소를 써야 카톡 미리보기가 그 서가(자료실·기출·영상관·리포트)를 말한다.
+          + '<button class="ri-del" data-copylink="https://monc.ai.kr/lab-' + esc(r.shelf) + '.html?r=' + r.id + '">링크</button>'
           + '<button class="ri-del lab-price" data-id="' + r.id + '" data-price="' + (Number(r.price) || 0) + '">가격</button>'
           + '<button class="ri-del lab-pw" data-id="' + r.id + '">비밀번호</button>'
           + '<button class="ri-del lab-pub" data-id="' + r.id + '" data-pub="' + (r.published ? 1 : 0) + '">' + (r.published ? '숨기기' : '공개') + '</button>'
@@ -7105,6 +7108,7 @@
     }
 
     function bindLabRowButtons(listEl) {
+      wireCopyLinks(listEl);   // [링크] — 자료별 주소 복사(후기·신청 링크와 같은 복사 함수)
       listEl.querySelectorAll('.lab-edit').forEach(b => b.addEventListener('click', () => labEditStart(b.dataset.id)));
 
       // 이 자료의 열람 이력만 보기

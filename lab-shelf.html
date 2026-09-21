@@ -149,6 +149,8 @@
   @media (hover: hover) { .doc:hover { background: rgba(27,58,107,0.035); } }
   .doc:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: var(--radius-xs); }
   .doc[disabled] { cursor: default; opacity: .6; }
+  /* 자료별 주소(?r=)로 찾아온 줄 — 읽기 화면을 닫고 돌아왔을 때 어느 자료였는지 보이게 */
+  .doc.is-target, .vid.is-target, .gv.is-target { background: rgba(27,58,107,0.07); border-radius: var(--radius-xs); }
   .doc-ico {
     flex: none; width: 38px; height: 38px; border-radius: 10px;
     background: var(--accent-tint); color: var(--accent-ink);
@@ -590,13 +592,21 @@
   var kindParam = params.get('kind');
   if (kindParam && SHELF_LIST.indexOf(kindParam) >= 0) branch = kindParam;
 
+  /* 자료별 주소 ?r=<자료 id> (2026-09-21 오너 "자료별로 홍보해서 유입량을 늘리고싶은데") —
+     이 값으로 들어오면 목록을 받은 뒤 그 자료를 바로 연다(아래 openDeep). 링크는 admin 자료 줄의 [링크]가 만든다.
+     ⚠️ 주소창에도 남겨 둔다(syncUrl) — 로그인·본인인증으로 나갔다 돌아오는 returnTo 가 주소창을 읽는다.
+        지우면 로그인하고 돌아왔을 때 자료가 안 열린다.
+     ⚠️ 결제 복귀 주소의 rid 와 다른 값이다 — 섞지 말 것(rid 는 resumePay 가 읽는다). */
+  var deepId = params.get('r') || '';
+  if (!/^[0-9a-f-]{36}$/i.test(deepId)) deepId = '';
+
   /* 주소를 서가 전용 주소(lab-<key>.html)로 바꿔 둔다 — 주소창을 그대로 복사해 카톡·DM 에 보내도
      서가별 제목·사진이 뜬다. 그 파일은 og 만 든 얇은 스텁이고 화면은 이 파일이 그린다.
      기출 갈래일 땐 lab-question.html 로 쓴다(받는 사람이 기대하는 것이 기출이다).
      ⚠️ 상대 주소라 경로 깊이가 같아야 한다(하위 폴더로 옮기면 페이지 안 상대 링크가 전부 어긋난다). */
   function syncUrl() {
     var key = (SH.branches && branch === 'question') ? 'question' : shelfKey;
-    try { history.replaceState(null, '', 'lab-' + key + '.html' + location.hash); } catch (e) {}
+    try { history.replaceState(null, '', 'lab-' + key + '.html' + (deepId ? '?r=' + deepId : '') + location.hash); } catch (e) {}
   }
   syncUrl();
 
@@ -675,7 +685,7 @@
           var bought = rows.filter(function (r) { return r.id === autoOpenId; })[0];
           autoOpenId = null;
           if (bought) { pwTarget = bought; lastPw = ''; openDoc(bought, ''); }
-        }
+        } else openDeep();
       })
       .catch(function () { $('shSkel').hidden = true; fail('자료를 불러오지 못했어요.'); });
   }
@@ -1078,7 +1088,8 @@
     '</button>';
   }
 
-  function render() {
+  function render() { renderList(); markTarget(); }
+  function renderList() {
     if (SH.rounds) { renderCal(); return; }   // 채용 캘린더는 파일 목록이 아니라 회차를 그린다
     var list = visible();
     var total = rows.length;
@@ -1312,6 +1323,44 @@
   /* 본인인증 게이트(2026-08-26 오너 지시) — 연구실 자료 열람·받기는 인증 회원만.
      requireVerified 는 fail-open(조회 실패·인프라 다운이면 통과)이라 잠금 사고가 없다.
      목록·서가 열람은 그대로 열어 두고 자료를 여는 순간에만 세운다. */
+  /* ── 자료별 주소로 들어온 방문 — 그 자료를 바로 연다 (2026-09-21 오너 확정 "들어오자마자 바로 열기") ──
+     ⚠️ 한 방문(탭)에 한 번만 연다. 영상·화면 열람은 같은 탭에서 밖으로 나가는데(자동 열기는 누른 것이
+        아니라 새 창이 막힌다), 뒤로 돌아올 때마다 또 열면 목록으로 영영 못 돌아온다.
+        비회원도 같다 — 로그인 화면으로는 한 번만 보내고, 로그인 없이 돌아오면 줄만 강조해 둔다
+        (로그인하고 돌아오면 그때 연다). 기록은 탭 단위(sessionStorage)면 충분하다. */
+  var deepDone = false;
+  function deepState(v) {
+    var k = 'monc_lab_r:' + deepId;
+    try {
+      if (v) sessionStorage.setItem(k, v);
+      else return sessionStorage.getItem(k);
+    } catch (e) {}
+    return null;
+  }
+  function markTarget() {
+    if (!deepId) return null;
+    var el = $('shList').querySelector('[data-id="' + deepId + '"]');   // deepId 는 위에서 형식을 걸렀다
+    if (el) el.classList.add('is-target');
+    return el;
+  }
+  function openDeep() {
+    if (!deepId || deepDone || params.get('payresult')) return;
+    deepDone = true;   // load() 는 구매·무료 받기 뒤에도 다시 돈다 — 그때 또 열지 않는다
+    var row = rows.filter(function (r) { return r.id === deepId; })[0];
+    if (!row) { toast('찾으시는 자료가 지금은 공개되어 있지 않아요.', 3600); return; }
+    var el = markTarget();
+    if (el) el.scrollIntoView({ block: 'center' });
+    var st = deepState();
+    if (st === 'opened') return;
+    window.MONC.getSession().then(function (session) {
+      if (!session) {
+        if (st === 'login') { toast('로그인하면 이 자료를 바로 보실 수 있어요.', 3600); return; }
+        deepState('login');
+      }
+      pwTarget = row; lastPw = ''; openDoc(row, '');
+    }).catch(function () {});
+  }
+
   function openDoc(row, password, fileId, o) {
     if (busy) return;
     window.MONC.requireVerified().then(function (ok) {
@@ -1321,6 +1370,7 @@
   function openDocGo(row, password, fileId, o) {
     if (busy) return;
     busy = true;
+    if (row.id === deepId) deepState('opened');   // 로그인·인증 게이트를 다 지난 자리 — 이 방문에선 다시 자동으로 열지 않는다
     if (password) lastPw = password;
     toast('자료를 준비하는 중…', 8000);
 
