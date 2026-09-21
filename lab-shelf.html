@@ -428,6 +428,19 @@
     box-shadow: 0 12px 32px rgba(20,32,52,.28);
   }
   @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
+
+  /* ── '여는 중' 덮개 — 자료별 주소(?r=)로 들어온 방문 전용 (2026-09-21 오너 지적) ──
+     하단 토스트만으로는 '자료가 열리는 중'인지 '여기서 찾으라는 것'인지 구분이 안 됐다.
+     화면 가운데에 무엇을 여는지 이름까지 적는다. 시트(210)보다 위·뷰어(900)보다 아래. */
+  .opening { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(23,42,71,.55); }
+  .opening[hidden] { display: none; }
+  .op-card { width: min(100%, 340px); padding: 28px 24px 24px; border-radius: var(--radius); background: var(--surface); text-align: center; box-shadow: 0 18px 48px rgba(20,32,52,.32); }
+  .op-spin { display: block; width: 36px; height: 36px; margin: 0 auto 16px; border-radius: 50%; border: 3px solid rgba(27,58,107,.18); border-top-color: var(--action); }
+  @media (prefers-reduced-motion: no-preference) { .op-spin { animation: opSpin .9s linear infinite; } }
+  @keyframes opSpin { to { transform: rotate(360deg); } }
+  .op-tit { font-size: 18px; font-weight: 800; line-height: 1.4; color: var(--ink); }
+  .op-doc { margin-top: 8px; font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--accent-ink); word-break: keep-all; }
+  .op-sub { margin-top: 10px; font-size: 14px; line-height: 1.6; color: var(--text-muted); word-break: keep-all; }
   </style>
 </head>
 <body>
@@ -539,6 +552,14 @@
 </div>
 
 <div class="toast" id="shToast" role="status" aria-live="polite" hidden></div>
+<div class="opening" id="shOpening" role="status" aria-live="polite" hidden>
+  <div class="op-card">
+    <span class="op-spin" aria-hidden="true"></span>
+    <p class="op-tit">자료를 여는 중이에요</p>
+    <p class="op-doc" id="shOpeningDoc" hidden></p>
+    <p class="op-sub" id="shOpeningSub">잠시만 기다려 주세요. 곧 화면에 뜹니다.</p>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
@@ -631,6 +652,24 @@
     toastTimer = setTimeout(function () { el.hidden = true; }, ms || 2600);
   }
 
+  /* ── '여는 중' 덮개 — 자료별 주소(?r=)로 들어온 방문 전용 ──
+     ⚠️ 15초 뒤엔 스스로 걷힌다 — 어느 경로가 걷는 걸 빠뜨려도 화면이 영영 막히지 않게. */
+  var OPENING_SUB = '잠시만 기다려 주세요. 곧 화면에 뜹니다.';
+  var openingTimer = null;
+  function showOpening(title, sub) {
+    $('shOpeningDoc').textContent = title ? '「' + title + '」' : '';
+    $('shOpeningDoc').hidden = !title;
+    $('shOpeningSub').textContent = sub || OPENING_SUB;
+    $('shOpening').hidden = false;
+    clearTimeout(openingTimer);
+    openingTimer = setTimeout(hideOpening, 15000);
+  }
+  function hideOpening() { clearTimeout(openingTimer); $('shOpening').hidden = true; }
+  // 목록을 받기 전부터 띄운다 — 도착한 순간부터 '열리는 중'이어야 다른 자료를 찾으러 가지 않는다
+  if (deepId && !SH.rounds && !params.get('payresult') && deepState() !== 'opened') showOpening('');
+  // 로그인 화면 등으로 나갔다가 뒤로가기로 되살아난 화면(bfcache)에 덮개가 남지 않게
+  window.addEventListener('pageshow', function (e) { if (e.persisted) hideOpening(); });
+
   /* ── 날짜 ── */
   function fmtDate(iso) {
     if (!iso) return '';
@@ -691,6 +730,7 @@
   }
 
   function fail(msg) {
+    hideOpening();
     $('shMeta').innerHTML = '<i class="live"></i>' + esc(msg);
     $('shEmpty').hidden = false;
     $('shEmptyMsg').textContent = msg;
@@ -1329,6 +1369,7 @@
         비회원도 같다 — 로그인 화면으로는 한 번만 보내고, 로그인 없이 돌아오면 줄만 강조해 둔다
         (로그인하고 돌아오면 그때 연다). 기록은 탭 단위(sessionStorage)면 충분하다. */
   var deepDone = false;
+  var deepAuto = false;   // 자동 열기가 시작됐다 — 이 자료의 '준비 중' 안내는 하단 토스트 대신 가운데 덮개로 한다
   function deepState(v) {
     var k = 'monc_lab_r:' + deepId;
     try {
@@ -1347,18 +1388,21 @@
     if (!deepId || deepDone || params.get('payresult')) return;
     deepDone = true;   // load() 는 구매·무료 받기 뒤에도 다시 돈다 — 그때 또 열지 않는다
     var row = rows.filter(function (r) { return r.id === deepId; })[0];
-    if (!row) { toast('찾으시는 자료가 지금은 공개되어 있지 않아요.', 3600); return; }
+    if (!row) { hideOpening(); toast('찾으시는 자료가 지금은 공개되어 있지 않아요.', 3600); return; }
     var el = markTarget();
     if (el) el.scrollIntoView({ block: 'center' });
     var st = deepState();
     if (st === 'opened') return;
     window.MONC.getSession().then(function (session) {
       if (!session) {
-        if (st === 'login') { toast('로그인하면 이 자료를 바로 보실 수 있어요.', 3600); return; }
+        if (st === 'login') { hideOpening(); toast('로그인하면 이 자료를 바로 보실 수 있어요.', 3600); return; }
         deepState('login');
-      }
+        // 곧 로그인 화면으로 넘어간다 — 왜 넘어가는지 먼저 말해 둔다
+        showOpening(row.title, '로그인 화면으로 이동합니다. 로그인하면 이 자료가 바로 열려요.');
+      } else showOpening(row.title);
+      deepAuto = true;
       pwTarget = row; lastPw = ''; openDoc(row, '');
-    }).catch(function () {});
+    }).catch(function () { hideOpening(); });
   }
 
   function openDoc(row, password, fileId, o) {
@@ -1372,7 +1416,7 @@
     busy = true;
     if (row.id === deepId) deepState('opened');   // 로그인·인증 게이트를 다 지난 자리 — 이 방문에선 다시 자동으로 열지 않는다
     if (password) lastPw = password;
-    toast('자료를 준비하는 중…', 8000);
+    if (deepAuto && row.id === deepId) showOpening(row.title); else toast('자료를 준비하는 중…', 8000);
 
     // 뷰어 대상: 링크가 아니고 PDF 일 때(ext 는 목록 행 또는 파일 고르기 시트에서 안다).
     // ext 를 모르는 레거시 행과 direct(뷰어 실패 후 재시도)는 현행 경로로 간다.
@@ -1391,6 +1435,10 @@
     }).then(function (res) {
       busy = false;
       var d = (res && res.data) || {};
+      // '여는 중' 덮개 — 이어서 또 기다리는 두 경우(재학생 무료 받기 · 읽기 화면 부품 로드)만 남기고 걷는다
+      var stillOpening = (d.code === 'need_purchase' && isStudent && !row._freeTried)
+        || (useViewer && d.ok && d.url && d.mode === 'view' && !d.external);
+      if (!stillOpening) hideOpening();
       if (res && res.error && !d.code) { toast('자료를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.'); return; }
 
       if (d.code === 'need_login') {
@@ -1413,7 +1461,7 @@
           window.MONC.claimFreeResource(row.id).then(function (r) {
             r = r || {};
             if (r.ok) { load(); openDoc(row, ''); return; }
-            $('shToast').hidden = true;
+            $('shToast').hidden = true; hideOpening();
             if (r.code === 'not_student') {
               // 명단에서 빠졌거나 인증 번호가 바뀌었다 — 유료 화면으로 되돌리고 결제 시트를 연다
               isStudent = false; render();
@@ -1422,7 +1470,7 @@
             }
             toast('자료를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.');
           }).catch(function () {
-            $('shToast').hidden = true;
+            $('shToast').hidden = true; hideOpening();
             toast('자료를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.');
           });
           return;
@@ -1471,6 +1519,7 @@
       // ⚠️ 'closed'(로딩 중 사용자가 뒤로가기로 취소)는 실패가 아니다 — 재시도하지 않는다.
       if (useViewer && d.mode === 'view' && !d.external) {
         ensureViewer().then(function (v) {
+          hideOpening();   // 여기부터는 읽기 화면이 제 안내('자료를 여는 중…')를 띄운다
           return v.open({
             url: d.url,
             title: (d.title || row.title) + (d.fileLabel ? ' — ' + d.fileLabel : ''),
@@ -1478,6 +1527,7 @@
             onSave: function () { saveDoc(row, fileId || ''); }
           });
         }).catch(function (e) {
+          hideOpening();
           if (e && e.message === 'closed') return;
           openDoc(row, lastPw, fileId, { direct: true, ext: ext });
         });
@@ -1488,7 +1538,7 @@
       if (d.watermarked) toast('받으신 분 정보가 표시된 파일이에요.', 3200);
       else if (d.mode !== 'view') toast('파일 받기를 시작했어요.', 2600);
     }).catch(function () {
-      busy = false;
+      busy = false; hideOpening();
       toast('자료를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.');
     });
   }
