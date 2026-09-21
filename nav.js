@@ -38,7 +38,7 @@
        0건이면 접이가 아예 안 그려져 '눌렀는데 아무것도 없음'이 됐다(2026-08-02 오너
        "접힌 칸으로 안 가게 해야지"). 마이페이지 접이로 되돌리지 말 것. */
     ['answers.html', '나만의 승준노트', '쓴 답변이 전부 모이는 곳'],
-    /* 항공사 뉴스는 2026-08-28 오너 지시로 기능 전체 폐지(news.md) — 메뉴에 되살리지 말 것 */
+    ['news.html', '항공사 뉴스&산업분석', '10개 항공사 소식 · 스크랩'],
     ['sojae.html', '답변 소재 발굴', '내 경험에서 소재 찾기'],
     ['polish.html', '답변 첨삭', "문장을 '지금 → 이렇게'로"],
     /* ⚠️ AI킬러 잠시 내림(2026-08-25 오너 "ai킬러는 잠깐 숨겨줘 네비에서") — 메뉴에서만 뺀다.
@@ -97,7 +97,7 @@
   var SECTION_OF = {
     /* 승준 코스는 단독 링크라 자기 파일 하나뿐. 도구 페이지들은 '승준 도구' 소속 표시 */
     'briefing.html': 'course',
-    'tools.html': 'tools', 'sojae.html': 'tools',
+    'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
     'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
     'programs.html': 'tools', 'program.html': 'tools', 'experiences.html': 'tools',
     'games.html': 'tools',

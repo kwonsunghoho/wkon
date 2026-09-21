@@ -30,7 +30,7 @@ MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 �
 1. **Google Apps Script**(레거시 신청·후기 시트) — 이 레포가 아니라 구글 콘솔에서 수정·재배포한다. 신청은 항상 새 행 append.
 2. **Supabase**(`supabase-config.js`, `MONC.sb`) — 회원·신청·후기·site_config·계측·도구 테이블 전부. 테이블·RLS·컬럼은 오너가 콘솔에서 만든다.
 3. **모집일정 = Supabase `challenge_rounds` 단일 소스**(admin '챌린지' 탭에서 CRUD — CSV 폴백 금지는 아래 '절대 되살리면 안 되는 것').
-4. ~~뉴스 수집기~~ — **2026-08-28 오너 지시로 뉴스 기능 전체 폐지**(news.md). 그 뒤로 브라우저 밖에서 도는 코드는 **하나뿐이다**: `.github/workflows/lab-og.yml`(2026-09-21 · 1시간마다 `scripts/lab-og-stubs.mjs` 가 연구실 자료별 미리보기 안내판 `r/*.html` 을 만들어 main 에 커밋 — 공개 목록만 읽고 시크릿 없음 · lab.md '자료별 미리보기').
+4. **브라우저 밖에서 도는 코드는 둘이다**(둘 다 GitHub Actions): ① **뉴스 수집기** `scripts/fetch-news.mjs` + `.github/workflows/news.yml` — 네이버 뉴스 검색 API 로 3시간마다 수집(2026-08-28 폐지 → 2026-09-07 오너 지시로 부활 · news.md) ② `.github/workflows/lab-og.yml`(2026-09-21 · 1시간마다 `scripts/lab-og-stubs.mjs` 가 연구실 자료별 미리보기 안내판 `r/*.html` 을 만들어 main 에 커밋 — 공개 목록만 읽고 시크릿 없음 · lab.md '자료별 미리보기'). ⚠️ 이 PC 의 git 토큰에는 `workflow` 권한이 없어 `.github/workflows/` 수정은 GitHub 웹 편집기로 한다.
 
 The repo is sometimes edited from a git **worktree** under `.claude/worktrees/...` on a `claude/*` branch; the canonical checkout is the repo root on `main`.
 
@@ -102,10 +102,10 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | 페이지 공통 장비(bfcache·스크롤·인앱 배너·og 메타·제목) | `scroll-keep.js`·`inapp.js` | 새 페이지에 한 벌로 장착(위 체크리스트), scroll-keep `defer` 금지, 인앱 문자열은 `\uXXXX`, 수정 시 `?v=` 동반 | `docs/notes/page-common.md` |
 | 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·`pay-methods.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로. 취소선 정가 `challenge_list_price` 는 표시 전용(판정은 `MONC.loadChallengePricing()` 한 곳) | `docs/notes/apply-and-payment.md` |
 | 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
-| 승준 코스·승준 도구 | `briefing.html`(코스)·`tools.html`(도구) | 코스는 2026-08-25 잠시 내림(briefing→tools 리다이렉트 — 복원 절차는 briefing.md), 도구 허브는 종이 카드 리스트(2026-08-27 3안 — AI킬러·일문일답 잠시 내림, 표시 4종 · 2026-08-28 뉴스 폐지로 5→4). 카드·타일에 회원별 상태 문구·금액 금지 | `docs/notes/briefing.md` |
+| 승준 코스·승준 도구 | `briefing.html`(코스)·`tools.html`(도구) | 코스는 2026-08-25 잠시 내림(briefing→tools 리다이렉트 — 복원 절차는 briefing.md), 도구 허브는 종이 카드 리스트(2026-08-27 3안 — AI킬러·일문일답 잠시 내림, 표시 5종 — 2026-08-28 뉴스 폐지로 4 → 2026-09-07 부활로 5). 카드·타일에 회원별 상태 문구·금액 금지 | `docs/notes/briefing.md` |
 | 역량검사 게임 | `games.html`·`games.js` | 전부 자체 제작(타사 화면·그래픽·명칭 복제 금지), 이모지 금지 — 자체 라인 SVG 만, 무료·비회원·서버 호출 없음, 하단 '자체 도구·무관' 고지 삭제 금지 | `docs/notes/games.md` |
 | 연구실 | `lab.html`·`lab-archive.html`·`lab-shelf.html`(서가 4종 공용)·`lab-viewer.js`·`researchers-data.js` | 상세는 `?shelf=` 한 파일(서가별 HTML 금지), 자료 파일은 비공개 버킷 + lab-file 서명 URL 만, PDF 는 lab-viewer 가 먼저(화면 전용 차단은 서버 유지), 값은 `lab_resources.price`(0=무료) — 채용 캘린더만 `recruit_rounds` 예외 | `docs/notes/lab.md` |
-| 뉴스(폐지) | `news.html`(홈 리다이렉트 스텁만 남음) | **2026-08-28 오너 지시로 기능 전체 폐지** — 화면·수집기·Actions 삭제. 경위·복구는 news.md | `docs/notes/news.md` |
+| 뉴스 스크랩 | `news.html`·`scripts/fetch-news.mjs` | 출처는 네이버 뉴스 검색 API(구글 RSS 금지 — 약관·원문 주소), 요약은 언론사 og:description ≤300자(**본문·사진 저장 금지**), 카드는 링크가 아니라 읽기 창을 여는 버튼, 학원·학과 홍보 제외에 '양성'·'교육'을 넣지 말 것 | `docs/notes/news.md` |
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 판정은 오너 지침 프롬프트(4기준+의심 지수+인간미 그린 플래그) — 규칙 판정으로 되돌리지 말 것. 구조화 출력·한 파일 유지, 피드백은 판정에 자동 반영 금지 | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 **첫 답변부터** 항상 노출(오너 확정 · 2026-09-09 2턴→1턴), 되묻기 상한 3문답(화면·함수·playbook 세 곳 한 벌), 다듬기 결과 뼈대는 표·강점은 목록, 노하우는 `sojae_playbook`(DB), 난이도는 `questions.level` 한 곳(`.eq('level')` 금지 — 미적용 환경 400), 진입은 난이도 화면 먼저 | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
@@ -116,7 +116,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | admin | `admin.html` | 좌측 사이드바 셸 + '오늘' 브리핑 — 탭 추가는 그룹부터 정한다(재학생 명단은 '회원 관리' 안 묶음). UI 는 역할별 모양 한 벌 — **알약(`999px`) 금지.** 회원 관리 등급 판정 두 자리(`free_use` 는 delta 0 · '관심'의 신청 이력)를 건드리면 사람이 잘못 보관된다 | `docs/notes/admin.md` |
 | 후기(허브·챌린지·상담·합격 수기) | `reviews.html`·`reviews-list.html`·`stories.html`·`story.html`·`review-write.html` | 목록은 `?kind=` 한 파일, 0건 종류는 카드를 안 그린다, 상담 후기 실명 미노출. 회원 제출 후기는 서버 RPC 가 `visible=false` 로(즉시 공개 금지·보상 없음). 합격 수기는 잠시 내림(복원 절차는 pages.md) | `docs/notes/pages.md` |
 | 1:1 상담·네이버 예약 | `consult.html` | 네이버 예약 주소 정본은 consult.html 한 곳. 진입점 3곳 고정 — 홈 본문·nav 메뉴·플로팅 금지 | `docs/notes/pages.md` |
-| 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·도구 2곳뿐(홈 금지 · 뉴스는 2026-08-28 폐지로 빠짐), 이 한 파일에서만 수정(두 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
+| 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·뉴스·도구 3곳(홈 금지 · 뉴스는 2026-08-28 폐지로 빠졌다 2026-09-07 부활로 복귀), 이 한 파일에서만 수정(세 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
 | 기타 페이지(연구진·상세 5종·오디오) | `researchers.html`·`challenge-*.html`·`challenge-detail.css` | 상세 5종 인라인 공통 CSS 는 다섯 파일을 같이 고친다. ①안 '결과 먼저' 배치(2026-09-07 5종 전부 적용)의 스타일과 **활자·폭 한 벌(변수 `--cd-*`, 클래스101·인프런 실측값)**은 `challenge-detail.css` 한 곳 — 인라인·스크립트에 값 복사 금지, 숫자는 실데이터 슬롯만, 승자각·댄특완은 비포/애프터 없이 '결과물 목록'이 증거. **생성 이미지(밴드·3단계·마무리 · 2026-09-18)는 사람 없이, 증거 자리(비포/애프터·후기·코치)엔 금지** — 마무리 사진·문구를 바꾸면 글씨 대비를 다시 잰다 | `docs/notes/pages.md` |
 | 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
 | 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
@@ -161,7 +161,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 승준노트 카드 권한 배지(`.bf-badge`)·회원별 상태 문구 (briefing.md)
 - 승준노트 B 머리의 기록 칩·'마이페이지에서 자세히' 링크 (briefing.md)
 - 승준노트 매거진 목차 6줄·루트맵 룰렛·강조 세 자리 (briefing.md)
-- 뉴스 기능 일습(게시판·수집기·스크랩) — 2026-08-28 오너 "뉴스 자체글 빼자"로 전체 폐지. 복구 절차·구 확정 규칙은 news.md
+- 뉴스 수집을 구글뉴스 RSS 로 되돌리기 · 기사 본문·사진 저장 · AI 요약 · 카드를 `<a target="_blank">` 로 되돌리기 (news.md '2026-09-07 부활')
 - 투명 nav·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
 - nav 강조의 깜빡이는 점(`bfPulse`)·승준노트를 nav 4번으로 내리는 안 (nav.md)
 - 히어로 스크롤 구동·창 통과 줌·로고 흩날림 안·하단바 '몬크 더 알아보기' 상태 (home.md)
