@@ -1,0 +1,38 @@
+# 연구실 자료별 미리보기 안내판(r/*.html) 자동 생성 — 1시간마다 scripts/lab-og-stubs.mjs 실행
+# 오너 설정 없음: 비회원도 보는 공개 목록만 읽는다(anon key 는 supabase-config.js 에 이미 공개돼 있다 — 시크릿 등록 불필요).
+# 바뀐 게 있을 때만 main 에 커밋한다 → GitHub Pages 가 그대로 배포한다.
+# ⚠️ 공개 리포는 60일간 커밋이 없으면 GitHub 가 스케줄을 자동 중지한다(메일 통지 → 버튼으로 재활성)
+name: 연구실 자료 미리보기 생성
+
+on:
+  schedule:
+    - cron: '17 * * * *'     # 매시 17분(정각은 GitHub 스케줄이 몰려 자주 밀린다)
+  workflow_dispatch: {}       # Actions 탭 'Run workflow' 버튼으로 즉시 생성
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lab-og
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 안내판 생성
+        run: node scripts/lab-og-stubs.mjs
+      - name: 바뀐 게 있으면 커밋
+        run: |
+          git add -A r
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git config user.name "monc-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "연구실 자료 미리보기 안내판 갱신(자동)"
+          git pull --rebase origin main
+          git push origin HEAD:main
