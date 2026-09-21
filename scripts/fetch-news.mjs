@@ -47,7 +47,9 @@ const AIRLINES = [
   { slug: 'asiana',    name: '아시아나항공', alias: ['아시아나'] },
   { slug: 'jinair',    name: '진에어',       alias: ['진에어'] },
   { slug: 'jejuair',   name: '제주항공',     alias: ['제주항공'] },
-  { slug: 'twayair',   name: '티웨이항공',   alias: ['티웨이'] },
+  // 2026-09-21 실데이터: 티웨이항공이 '트리니티항공'으로 사명 변경 — 새 이름 기사가 전부 미분류로 들어왔다.
+  // 슬러그는 그대로(news.html·mypage 라벨 계약). 검색어에도 새 이름을 더한다(아래 QUERIES).
+  { slug: 'twayair',   name: '티웨이항공',   alias: ['티웨이', '트리니티항공', '트리니티 항공'] },
   { slug: 'airbusan',  name: '에어부산',     alias: ['에어부산'] },
   { slug: 'airseoul',  name: '에어서울',     alias: ['에어서울'] },
   // '이스타'는 제목에서 줄여 쓰는 표기("이스타-관광공사, 중화권 방한객 유치").
@@ -176,8 +178,8 @@ const TOPICS = [
   { slug: 'policy',  re: /국토부|공항|안전|사고|규제|지연|결항|항공법|정부|과징금|제재|면허|점검|검역|입국|비자|관제/ },
 ];
 
-// 수집 쿼리 = 항공사 10개 + 산업 일반 2개
-const QUERIES = [...AIRLINES.map(a => a.name), '항공사 채용', '국내 항공업계'];
+// 수집 쿼리 = 항공사 10개 + 트리니티항공(티웨이 새 사명) + 산업 일반 2개
+const QUERIES = [...AIRLINES.map(a => a.name), '트리니티항공', '항공사 채용', '국내 항공업계'];
 
 // 네이버 검색 API 는 제목·발췌문에 검색어를 <b> 로 감싸 보내고 HTML 엔티티를 섞는다.
 const stripHtml = s => String(s == null ? '' : s)
