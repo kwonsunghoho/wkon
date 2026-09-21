@@ -243,7 +243,7 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 1. **Applications & reviews (legacy Apps Script)** — `APPLICATION_API_URL`. `POST {action:"application"}` **always appends a new row** to the **학생현황** sheet (dup phone irrelevant; phone stored with a leading apostrophe to keep the `0`). `GET ?action=reviews` returns the **후기** sheet. **Owned/edited in Google's console, not this repo** — changes need the owner to redeploy a new version.
 2. **Recruitment dates** — **Supabase `challenge_rounds`(admin '챌린지' 탭에서 CRUD — 구명 '모집일정', 2026-07-30 개편)가 단일 소스.** `recruit.js`가 읽어 모집중/예정/마감 + D-day chips를 그린다. **날짜 폴백은 없다**(2026-08-02 제거) — 미등록 챌린지는 `'none'`(다음 기수 준비 중), 조회 실패는 상태 키 없음('불러오지 못했어요' + 버튼 유지)으로 간다. **⚠️ 구 published Sheet CSV(`RECRUIT_CSV`·`loadRecruitDataFromCsv`)는 2026-07-23 완전 제거 — 구글 시트 폴백도, 하드코딩 날짜 폴백(`data-recruit-*`·`RECRUIT_FALLBACKS`)도 재도입 금지(admin 단일 관리).**
 3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`(구 `news_articles`·`news_scraps` 는 2026-08-28 뉴스 폐지 — news.md). **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
-4. ~~뉴스 수집기 (GitHub Actions)~~ — **2026-08-28 뉴스 기능 전체 폐지로 삭제**(news.md). 이제 브라우저 밖에서 도는 코드는 없다.
+4. ~~뉴스 수집기 (GitHub Actions)~~ — **2026-08-28 뉴스 기능 전체 폐지로 삭제**(news.md). 그 뒤 브라우저 밖에서 도는 코드는 연구실 미리보기 생성기(`.github/workflows/lab-og.yml` · 2026-09-21 · lab.md) 하나뿐이다 — 결제와 무관하다.
 
 ## 2026-08-02 UX 진단 반영 — 모집 상태·결제 폼·결제 복귀
 

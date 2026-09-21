@@ -30,7 +30,7 @@ MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 �
 1. **Google Apps Script**(레거시 신청·후기 시트) — 이 레포가 아니라 구글 콘솔에서 수정·재배포한다. 신청은 항상 새 행 append.
 2. **Supabase**(`supabase-config.js`, `MONC.sb`) — 회원·신청·후기·site_config·계측·도구 테이블 전부. 테이블·RLS·컬럼은 오너가 콘솔에서 만든다.
 3. **모집일정 = Supabase `challenge_rounds` 단일 소스**(admin '챌린지' 탭에서 CRUD — CSV 폴백 금지는 아래 '절대 되살리면 안 되는 것').
-4. ~~뉴스 수집기~~ — **2026-08-28 오너 지시로 뉴스 기능 전체 폐지**(news.md). 이제 브라우저 밖에서 도는 코드는 없다(.github/workflows 삭제).
+4. ~~뉴스 수집기~~ — **2026-08-28 오너 지시로 뉴스 기능 전체 폐지**(news.md). 그 뒤로 브라우저 밖에서 도는 코드는 **하나뿐이다**: `.github/workflows/lab-og.yml`(2026-09-21 · 1시간마다 `scripts/lab-og-stubs.mjs` 가 연구실 자료별 미리보기 안내판 `r/*.html` 을 만들어 main 에 커밋 — 공개 목록만 읽고 시크릿 없음 · lab.md '자료별 미리보기').
 
 The repo is sometimes edited from a git **worktree** under `.claude/worktrees/...` on a `claude/*` branch; the canonical checkout is the repo root on `main`.
 

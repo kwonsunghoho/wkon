@@ -6931,6 +6931,8 @@
     let _labShelf = 'all';
     let _labLogFor = null;      // 이력을 좁혀 볼 자료 id (null 이면 전체)
     let _labCount = {};         // 자료별 열람 집계 {id: {download, view, fail}}
+    let _labOgSlugs = {};       // 미리보기 안내판이 만들어진 자료 {id 앞 8자: true} — r/index.json(자동 생성)
+    let _labOgLoaded = false;   // 목록을 못 읽었으면 '준비 중'을 단정하지 않는다([링크]는 서가 주소로 — 그 주소는 언제나 열린다)
     let _labSales = {};         // 자료별 판매 집계 {id: {purchase_count, revenue, download_count}}
     let _labLogs = [];
     /* 열람 이력은 **화면만 끊어 그린다**(2026-08-03 · 오너 "꼭 저렇게 길어지게 쌓아야 하냐").
@@ -6977,6 +6979,14 @@
         const sres = await MONC.sb.rpc('lab_sales_summary');
         (sres.data || []).forEach(x => { _labSales[x.resource_id] = x; });
       } catch (e) { /* 미적용 환경 */ }
+
+      // 자료별 미리보기 안내판 목록 — 같은 사이트의 정적 파일이다(scripts/lab-og-stubs.mjs 가 1시간마다 갱신).
+      // 실패해도 조용히 넘어간다 — [링크]가 서가 주소(lab-<서가>.html?r=)로 돌아갈 뿐이다.
+      _labOgSlugs = {}; _labOgLoaded = false;
+      try {
+        const og = await fetch('r/index.json', { cache: 'no-store' });
+        if (og.ok) { ((await og.json()).slugs || []).forEach(x => { _labOgSlugs[x] = true; }); _labOgLoaded = true; }
+      } catch (e) { /* 파일 없음·오프라인 */ }
 
       await loadLabLogs();        // 집계를 먼저 구해야 목록 행에 '받기 N' 을 적을 수 있다
       renderLabShelfBar();
@@ -7071,6 +7081,8 @@
       if (r.access === 'password') bits.push('🔒 비밀번호');
       if (!r.published) bits.push('비공개');
       if (r.published_at) bits.push('공개 ' + fmtDate(r.published_at));
+      // 자료별 미리보기 안내판이 아직 안 만들어진 공개 자료 — 1시간 안에 생긴다(그동안 [링크]는 서가 공용 미리보기 주소)
+      if (r.published && _labOgLoaded && !_labOgSlugs[String(r.id).slice(0, 8)]) bits.push('미리보기 준비 중');
 
       // 열람 요약 — 이 자료를 몇 번 받아 갔는지가 행에서 바로 보여야 한다
       const c = _labCount[r.id] || {};
@@ -7097,7 +7109,11 @@
           + '<button class="ri-del lab-log" data-id="' + r.id + '">이력' + (hits.length ? '' : ' 0') + '</button>'
           // 자료별 홍보 주소(2026-09-21) — 이 주소로 들어오면 학생 화면이 그 자료를 바로 연다(lab-shelf.html openDeep).
           // 서가별 안내판 주소를 써야 카톡 미리보기가 그 서가(자료실·기출·영상관·리포트)를 말한다.
-          + '<button class="ri-del" data-copylink="https://monc.ai.kr/lab-' + esc(r.shelf) + '.html?r=' + r.id + '">링크</button>'
+          // 미리보기 안내판(r/<id 앞 8자>.html — scripts/lab-og-stubs.mjs 가 1시간마다 생성)이 있으면 그 주소를,
+          // 아직 없으면(방금 올린 자료) 서가 주소 + ?r= 를 복사한다. 둘 다 같은 자료로 간다 — 미리보기 글자만 다르다.
+          + '<button class="ri-del" data-copylink="' + (_labOgSlugs[String(r.id).slice(0, 8)]
+              ? 'https://monc.ai.kr/r/' + String(r.id).slice(0, 8) + '.html'
+              : 'https://monc.ai.kr/lab-' + esc(r.shelf) + '.html?r=' + r.id) + '">링크</button>'
           + '<button class="ri-del lab-price" data-id="' + r.id + '" data-price="' + (Number(r.price) || 0) + '">가격</button>'
           + '<button class="ri-del lab-pw" data-id="' + r.id + '">비밀번호</button>'
           + '<button class="ri-del lab-pub" data-id="' + r.id + '" data-pub="' + (r.published ? 1 : 0) + '">' + (r.published ? '숨기기' : '공개') + '</button>'

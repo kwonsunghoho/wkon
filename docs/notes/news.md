@@ -12,7 +12,7 @@
 
 오너 지시 원문 그대로: 먼저 *"야 우리 뉴스 스크랩 빼자 사용을 안한다"*, 이어 *"뉴스 스크랩만 빼자는게 아니라 뉴스 자체글 빼자고"*. **게시판·수집기·스크랩 일습을 같은 날 전부 제거했다.** 아래 절들은 이제 전부 폐지 시점의 역사 기록이다 — 현행 규칙이 아니다.
 
-- **지운 파일**: `scripts/fetch-news.mjs` · `scripts/verify-news-rules.py` · `.github/workflows/news.yml`(레포의 유일한 GitHub Action 이었다 — 이제 Actions 는 없다). `news.html` 은 옛 링크(블로그·검색·공유) 404 방지용 **홈 리다이렉트 스텁**만 남았다(briefing.html 과 같은 방식 + `noindex`).
+- **지운 파일**: `scripts/fetch-news.mjs` · `scripts/verify-news-rules.py` · `.github/workflows/news.yml`(그때 레포의 유일한 GitHub Action 이었다 — 2026-09-21 부터는 뉴스와 무관한 `lab-og.yml` 하나가 있다 · lab.md). `news.html` 은 옛 링크(블로그·검색·공유) 404 방지용 **홈 리다이렉트 스텁**만 남았다(briefing.html 과 같은 방식 + `noindex`).
 - **지운 참조**: nav 메뉴 항목·`SECTION_OF`, 홈 도구 문 설명('항공 뉴스,' 삭제)·`#doorNewsChip`(오늘 뉴스 N건 → 정적 칩 '소재 발굴 · 답변 첨삭')·클로징 '항공사 뉴스' 링크·`newsChip()` 조회, tools 카드·아이콘(표시 4종이 됐다), briefing 코스의 뉴스 1단계(v29 — 세 코스 모두), mypage '뉴스 스크랩' 접이, sitemap 항목. 커뮤니티 카드 게재처는 서가·도구 2곳이 됐다(pages.md).
 - **DB**: `20260828130000_drop_news.sql` — `news_scraps`·`news_articles` 드롭(오너 실행 선택 · 실행하면 복구 불가). ⚠️ **이 날 main 배포가 라이브에 나간 뒤에 실행할 것** — 구 코드가 살아 있는 채로 표를 지우면 조인이 400 으로 죽는다. 안 지워도 문제 없다.
 - **부활 금지 아님** — 오너가 다시 원하면 이 커밋 직전 버전(git)에서 통째로 복구할 수 있다. `#moncWin` 인라인 심볼(구 로고 창문 SVG 의 마지막 사본)·스크랩 UI 의 확정 규칙(리본 북마크 금지·낙관적 토글 경쟁 조건 3겹·스크롤 오터치 가드)·수집기 필터 규칙 전부 그 시점 파일과 이 문서 아래 절에 있다.
