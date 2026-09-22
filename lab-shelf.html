@@ -8,7 +8,7 @@
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://monc.ai.kr/lab-shelf.html" />
   <meta property="og:title"       content="연구실 자료 — MONC 몬크" />
-  <meta property="og:description" content="몬크 연구실 자료 — 취업 자료실(자료·기출)·영상관·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+  <meta property="og:description" content="몬크 연구실 자료 — 항공사별 취업 자료와 기출. 연구진이 모아 정리합니다." />
   <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
@@ -16,7 +16,7 @@
   <meta property="og:site_name"   content="MONC 몬크" />
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="연구실 자료 — MONC 몬크" />
-  <meta name="twitter:description" content="몬크 연구실 자료 — 취업 자료실(자료·기출)·영상관·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+  <meta name="twitter:description" content="몬크 연구실 자료 — 항공사별 취업 자료와 기출. 연구진이 모아 정리합니다." />
   <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
 
   <!-- Microsoft Clarity — 방문자 행동 분석. 프로젝트 xlu6nkv2uh -->
@@ -27,7 +27,7 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "xlu6nkv2uh");
   </script>
-  <meta name="description" content="몬크 연구실 자료 — 취업 자료실(자료·기출)·영상관·현장 리포트·채용 캘린더. 연구진이 모아 정리합니다." />
+  <meta name="description" content="몬크 연구실 자료 — 항공사별 취업 자료와 기출. 연구진이 모아 정리합니다." />
 
   <!-- 파비콘 -->
   <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
@@ -448,9 +448,11 @@
 
 <main class="wrap">
 
-  <a class="back" href="lab-archive.html">
+  <!-- ⚠️ 2026-09-22 서가 접기 — 원장(lab-archive.html)이 닫혀 있어 허브로 되돌린다.
+       원문: href="lab-archive.html" · 라벨 '연구실'(docs/notes/lab.md '서가 접기') -->
+  <a class="back" href="lab.html">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-    연구실
+    연구실 허브
   </a>
 
   <header class="hd">
@@ -582,7 +584,9 @@
      shelves = 이 서가가 품는 DB 값 · branches = 화면에서 고르는 갈래.
      ⚠️ DB 는 그대로다 — 합친 것은 화면뿐이라 갈래 줄만 빼면 원상복구다. */
   var SHELVES = {
-    airline:  { idx: '01 — 자료실',   name: '취업 자료실', desc: '항공사를 고르면 그 회사 자료와 기출을 모아 보여드려요.', noun: '자료',   unit: '건', airline: true,  type: '유형',
+    /* ⚠️ 2026-09-22 서가 접기 — 서가가 하나뿐이라 머리의 번호('01 — 자료실')가 뜻을 잃는다.
+       다시 열 때 idx 를 '01 — 자료실' 로 되돌린다(docs/notes/lab.md '서가 접기'). */
+    airline:  { idx: 'MONC LAB',     name: '취업 자료실', desc: '항공사를 고르면 그 회사 자료와 기출을 모아 보여드려요.', noun: '자료',   unit: '건', airline: true,  type: '유형',
                 shelves: ['airline', 'question'],
                 branches: [
                   { key: 'all',      label: '전체' },
@@ -608,6 +612,12 @@
   /* ⚠️ 구 주소 ?shelf=question 은 죽이지 않는다 — 카톡·DM 에 뿌린 링크와 즐겨찾기가 그 주소다.
      합친 서가의 '기출 갈래'로 열어 준다(스텁 lab-question.html 이 보내는 ?kind=question 도 같은 자리). */
   if (shelfKey === 'question') { shelfKey = 'airline'; branch = 'question'; }
+  /* ⚠️ 서가 접기(2026-09-22 오너 지시 "현장리포트, 영상관도 숨겨주고 연구실에 그냥 취업자료들이
+     있는 느낌으로") — 학생 화면 서가는 취업 자료실 하나다. 주소를 알아도(카톡 공유·즐겨찾기·
+     스텁 lab-video/report/calendar.html) 닫은 서가는 자료실로 열린다.
+     SHELVES 정의·loadCalendar/renderCal·제보함 코드는 그대로 둔다 — 다시 열 때 이 한 줄만 지운다.
+     경위·복원 절차는 docs/notes/lab.md '서가 접기'. */
+  if (shelfKey === 'video' || shelfKey === 'report' || shelfKey === 'calendar') shelfKey = 'airline';
   if (!SHELVES[shelfKey]) shelfKey = 'airline';
   var SH = SHELVES[shelfKey];
   var SHELF_LIST = SH.shelves || [shelfKey];          // 이 화면이 불러올 DB shelf 값
