@@ -70,6 +70,65 @@
 
     .count { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
 
+    /* ── 질문별 묶음 접이(2026-09-22 오너 "질문별로 좀 정리를 해줬으면") ──
+       한 질문에 답변이 여러 벌 쌓이는 게 정상 사용이라(고쳐 가며 새로 저장) 목록이 금세
+       같은 질문 반복으로 찬다. 질문 하나가 접이 한 줄이다.
+       ⚠️ 접혀 있어도 최신 답변 미리보기 한 줄을 보여 준다 — 제목만 남으면 노트가 아니라 목차가 된다. */
+    .grp { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); }
+    .grp + .grp { margin-top: 10px; }
+    .grp > summary { list-style: none; cursor: pointer; padding: 15px; display: flex; gap: 11px; align-items: flex-start; }
+    .grp > summary::-webkit-details-marker { display: none; }
+    .grp > summary:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; border-radius: var(--radius-sm); }
+    .grp-tx { flex: 1; min-width: 0; }
+    .grp-q { font-size: 15px; font-weight: 800; line-height: 1.45; }
+    .grp-p { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    .grp-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .grp-n { font-size: 13px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+    .grp-d { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .grp[open] > summary { border-bottom: 1px dashed var(--border-soft); }
+    .grp[open] .grp-p { display: none; }          /* 펼치면 아래 답변이 그 자리를 대신한다 */
+    .grp-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── 선택 모드(2026-09-22 오너 "체크박스를 만들어서 한번에 삭제") ──
+       평소엔 체크박스를 내걸지 않는다(삭제는 드문 일인데 상시 체크칸은 목록을 고르는 화면으로 만든다).
+       [선택]을 누르면 그때 화면 성격이 '고르는 화면'으로 바뀐다 — 묶음은 전부 펼쳐지고,
+       답변 카드는 접힌 채 제목만 남으며, 줄 아무 데나 누르면 선택된다(체크칸은 표시 전용). */
+    .selbox { flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 6px;
+      border: 2px solid var(--border); background: var(--surface); pointer-events: none;
+      display: none; align-items: center; justify-content: center; }
+    .selbox svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 3; fill: none; opacity: 0; }
+    body.sel-on .selbox { display: flex; }
+    .sel-row.on .selbox { background: var(--action); border-color: var(--action); }
+    .sel-row.on .selbox svg { opacity: 1; }
+    body.sel-on .note > summary, body.sel-on .grp > summary { cursor: default; }
+    body.sel-on .note-acts, body.sel-on .note-more, body.sel-on .addbar,
+    body.sel-on #quickfix-mount { display: none; }
+    .sel-row.on { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action); }
+
+    /* 선택 바 — 삭제가 되돌릴 수 없어 개수를 크게 읽히게 두고, 취소가 삭제보다 앞에 온다 */
+    .selbar { position: sticky; bottom: 0; z-index: 3; margin: 18px -20px 0; padding: 12px 20px 18px;
+      background: linear-gradient(to top, var(--bg) 72%, rgba(255,255,255,0));
+      display: flex; align-items: center; gap: 8px; }
+    /* ⚠️ display:flex 가 UA 의 [hidden]{display:none} 을 이긴다 — 이 줄이 없으면 선택 모드가
+       아닐 때도 바가 화면 아래 눌러앉는다(2026-09-22 실측 · lab.html .hub-meta 와 같은 함정). */
+    .selbar[hidden] { display: none; }
+    .selbar-n { flex: 1; min-width: 0; font-size: 15px; font-weight: 800; color: var(--text); }
+    .selbar-n span { color: var(--text-muted); font-weight: 700; }
+    .selbar button { min-height: 48px; padding: 0 16px; border-radius: 999px; font: inherit;
+      font-size: 15px; font-weight: 800; cursor: pointer; }
+    .sel-cancel { border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+    .sel-del { border: 0; background: #9E3B34; color: #fff; }
+    .sel-del[disabled] { opacity: .45; cursor: default; }
+
+    /* [선택] 들어가기 단추 — 개수 줄 오른쪽 */
+    .count-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .count-row .count { margin-bottom: 0; }
+    .sel-enter { margin-left: auto; min-height: 44px; padding: 0 14px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+    .sel-enter:hover { border-color: var(--accent-dark); }
+
     /* 노트 카드 — mypage 와 같은 문법 */
     .notes { display: flex; flex-direction: column; gap: 10px; }
     .note { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); }
@@ -301,8 +360,19 @@
           <div class="chips" id="chips" role="group" aria-label="답변 분류 필터"></div>
         </div>
 
-        <p class="count" id="count"></p>
+        <!-- 개수 줄 + [선택] — 선택 모드 진입구. 답변이 하나도 없으면 JS 가 단추를 숨긴다. -->
+        <div class="count-row">
+          <p class="count" id="count"></p>
+          <button type="button" class="sel-enter" id="selEnter" hidden>선택</button>
+        </div>
         <div class="notes" id="list"></div>
+
+        <!-- 선택 바 — 선택 모드에서만. 취소가 삭제보다 앞이다(되돌릴 수 없는 쪽을 끝에 둔다). -->
+        <div class="selbar" id="selBar" hidden>
+          <p class="selbar-n" id="selCount"><span>선택한 답변이 없어요</span></p>
+          <button type="button" class="sel-cancel" id="selCancel">취소</button>
+          <button type="button" class="sel-del" id="selDel" disabled>삭제</button>
+        </div>
 
         <!-- ⚠️ 저장은 크레딧과 무관하게 언제나 무료다. 그 사실을 버튼 밑에 붙여 둔다 —
              '검사 횟수가 없으면 저장도 못 하나?'라는 오해가 실제로 생긴다. -->
@@ -452,6 +522,111 @@
     function isDraft(a) { return (a.status || 'final') === 'draft'; }
     function airOf(a) { return a.airline || ''; }
 
+    /* ══ 질문별 묶음 (2026-09-22) ═══════════════════════════════════════════════
+       묶음 키는 이미 있는 question_id 다 — 새 컬럼을 만들지 않는다.
+       ⚠️ 질문 없이 직접 쓴 글은 제목이 저마다 달라 묶을 축이 없다. 맨 아래 '직접 쓴 글'
+          한 묶음으로 모은다(제목이 같은 것끼리 묶으면 남의 제목이 붙는 사고가 난다).
+       ⚠️ 열린 묶음은 OPEN 이 기억한다 — 삭제·검색으로 다시 그릴 때 접혀 버리면
+          방금 보던 자리를 잃는다(2026-08-01 스크롤 사고와 같은 기준). */
+    const FREE_KEY = '__free__';
+    let OPEN = new Set();
+
+    /* ══ 선택 모드 (2026-09-22 오너 "체크박스를 만들어서 한번에 삭제") ═══════════
+       ⚠️ 체크칸은 **표시 전용**이다(CSS pointer-events:none). 줄 어디를 눌러도 선택되게
+          두면 터치 목표가 줄 전체라 44px 걱정이 없고, 체크칸만 정확히 눌러야 하는 답답함도 없다.
+       ⚠️ 선택 모드에서는 답변 카드를 펼치지 않는다 — 고르는 화면과 읽는 화면을 섞으면
+          체크하려다 본문이 열리고, 열린 본문 때문에 다음 줄이 화면 밖으로 밀린다.
+          묶음은 반대로 전부 펼친다(안 그러면 묶음 통째로만 고를 수 있다). */
+    const CHECK_SVG = '<span class="selbox" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    let SEL_MODE = false;
+    let SEL = new Set();
+
+    function selEnter() {
+      SEL_MODE = true; SEL.clear();
+      document.body.classList.add('sel-on');
+      document.getElementById('selBar').hidden = false;
+      document.getElementById('selEnter').hidden = true;
+      render();
+    }
+
+    function selExit() {
+      SEL_MODE = false; SEL.clear();
+      document.body.classList.remove('sel-on');
+      document.getElementById('selBar').hidden = true;
+      document.getElementById('selEnter').hidden = !ROWS.length;
+      render();
+    }
+
+    // 고른 것들을 화면에 반영 — 줄 테두리·체크칸·선택 바 숫자가 한 벌이다.
+    function syncSel() {
+      document.querySelectorAll('#list [data-sel-id]').forEach(el => {
+        el.classList.toggle('on', SEL.has(el.dataset.selId));
+      });
+      // 묶음 줄은 '그 안이 전부 선택됐을 때'만 켠다(일부만이면 반쯤 고른 상태다)
+      document.querySelectorAll('#list [data-sel-grp]').forEach(el => {
+        const ids = idsOfGrp(el.dataset.selGrp);
+        el.classList.toggle('on', ids.length > 0 && ids.every(id => SEL.has(id)));
+      });
+      const n = SEL.size;
+      document.getElementById('selCount').innerHTML = n
+        ? ('<b>' + n + '개</b> 선택') : '<span>선택한 답변이 없어요</span>';
+      document.getElementById('selDel').disabled = !n;
+    }
+
+    // 지금 화면에 그려진 묶음의 답변 id — 필터·검색으로 걸러진 것은 고르지 않는다(안 보이는 것을 지우면 안 된다)
+    function idsOfGrp(key) {
+      const box = document.querySelector('#list [data-grp="' + (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]');
+      return box ? Array.from(box.querySelectorAll('[data-sel-id]')).map(el => el.dataset.selId) : [];
+    }
+
+    async function selDelete() {
+      const ids = Array.from(SEL);
+      if (!ids.length) return;
+      if (!confirm('선택한 답변 ' + ids.length + '개를 지울까요?\n수정 이력도 같이 사라지고, 되돌릴 수 없어요.')) return;
+      const btn = document.getElementById('selDel');
+      btn.disabled = true; btn.textContent = '지우는 중…';
+      try {
+        // member_id 조건은 RLS 와 겹치지만 남겨 둔다(단건 삭제와 같은 방어).
+        const { error } = await MONC.sb.from('answers').delete().in('id', ids).eq('member_id', ME);
+        if (error) throw error;
+      } catch (_) {
+        btn.disabled = false; btn.textContent = '삭제';
+        alert('지우지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+        return;
+      }
+      btn.textContent = '삭제';
+      ROWS = ROWS.filter(x => ids.indexOf(x.id) < 0);
+      ids.forEach(id => { CHECKS.delete(id); POLISHES.delete(id); REVS.delete(id); });
+      selExit();
+      buildChips(); render(); syncCount();
+    }
+
+    function grpKey(a) { return a.question_id || FREE_KEY; }
+
+    function groupRows(rows) {
+      const map = new Map();
+      rows.forEach(a => {
+        const k = grpKey(a);
+        if (!map.has(k)) map.set(k, []);
+        map.get(k).push(a);
+      });
+      const at = a => new Date(a.updated_at || a.created_at || 0).getTime();
+      const groups = [];
+      map.forEach((list, key) => {
+        list.sort((x, y) => at(y) - at(x));                       // 묶음 안은 최신순
+        groups.push({
+          key: key,
+          free: key === FREE_KEY,
+          title: key === FREE_KEY ? '직접 쓴 글' : titleOf(list[0]),
+          rows: list,
+          last: at(list[0])
+        });
+      });
+      // 묶음끼리도 최신순. '직접 쓴 글'은 질문이 아니라 서랍이라 언제나 맨 아래.
+      groups.sort((x, y) => (x.free - y.free) || (y.last - x.last));
+      return groups;
+    }
+
     function render() {
       const term = filter.q.trim().toLowerCase();
       const rows = ROWS.filter(a => {
@@ -479,9 +654,30 @@
       }
 
       const rawTerm = filter.q.trim();
-      listEl.innerHTML = rows.map(a => {
+      const groups = groupRows(rows);
+      // 검색 중에는 걸린 묶음을 자동으로 편다 — 찾은 것이 접힌 채로 있으면 못 찾은 것과 같다.
+      listEl.innerHTML = groups.map(g => {
+        const open = SEL_MODE || !!rawTerm || OPEN.has(g.key);
+        const first = g.rows[0];
+        const body = (first.content || '').trim();
+        const prev = body ? esc(body.slice(0, 60)) + (body.length > 60 ? '…' : '') : '아직 작성 전';
+        return `<details class="grp sel-row" data-grp="${esc(g.key)}" data-sel-grp="${esc(g.key)}"${open ? ' open' : ''}>
+          <summary>${CHECK_SVG}<div class="grp-tx">
+              <div class="grp-q">${hi(esc(g.title), rawTerm)}</div>
+              <p class="grp-p">${hi(prev, rawTerm)}</p>
+            </div>
+            <div class="grp-side"><span class="grp-n">${g.rows.length}개</span>
+              <span class="grp-d">${fmt(first.updated_at)}</span></div></summary>
+          <div class="grp-body">${g.rows.map(a => cardHtml(a, rawTerm)).join('')}</div>
+        </details>`;
+      }).join('');
+      syncSel();
+    }
+
+    /* 답변 카드 한 장 — 묶음 안에 들어간다(2026-09-22 전에는 이 덩어리가 render 안에 있었다). */
+    function cardHtml(a, rawTerm) {
         const qText = hi(esc(titleOf(a)), rawTerm);
-        const top = `<div class="note-top"><span class="note-cat">${esc(catLabel(a))}</span>` +
+        const top = `<div class="note-top">${CHECK_SVG}<span class="note-cat">${esc(catLabel(a))}</span>` +
           `<span class="note-date">${fmt(a.updated_at)}</span></div>`;
         if (isDraft(a)) {
           const body = (a.content || '').trim();
@@ -491,19 +687,18 @@
           const href = a.question_id ? 'sojae.html?q=' + encodeURIComponent(a.question_id) : null;
           // ⚠️ 카드 전체를 링크로 두지 않는다 — 삭제 버튼이 링크 안에 들어가기 때문이다
           //    (a 안의 button 은 마크업이 깨지고 탭 이동도 엉킨다). 링크를 버튼 줄로 내렸다.
-          return `<div class="note note-draft">${top}<div class="note-q">${qText}</div>
+          return `<div class="note note-draft sel-row" data-sel-id="${esc(a.id)}">${top}<div class="note-q">${qText}</div>
             <div class="note-preview">${preview}</div>
             <div class="note-acts">
               ${href ? `<a class="note-act note-act-go" href="${href}">이어서 작성 →</a>` : ''}
               ${delBtn(a)}
             </div></div>`;
         }
-        return `<details class="note"><summary>${top}<div class="note-q">${qText}</div>
+        return `<details class="note sel-row" data-sel-id="${esc(a.id)}"><summary>${top}<div class="note-q">${qText}</div>
           ${metaHtml(a)}<span class="note-more">답변 보기 ▾</span></summary>
           <div class="note-a">${hi(esc(a.content), rawTerm)}</div>
           ${histHtml(a)}${revHtml(a)}
           <div class="note-acts note-acts-end">${editBtn(a)}${delBtn(a)}</div></details>`;
-      }).join('');
     }
 
     // 카드 메타 한 줄 — 종류·항공사·마지막 검사 등급.
@@ -582,6 +777,9 @@
       document.getElementById('hSub').textContent = ROWS.length
         ? (ROWS.length + '개' + (nDraft ? ' · 작성 중 ' + nDraft : ''))
         : '써 둔 답변을 모아 두고, 언제든 다시 검사해요';
+      // 지울 것이 없으면 [선택]을 내걸지 않는다(빈 화면에 고르기 단추만 남는다)
+      const enter = document.getElementById('selEnter');
+      if (enter) enter.hidden = SEL_MODE || !ROWS.length;
     }
 
     function delBtn(a) {
@@ -687,13 +885,40 @@
       // toggle 은 버블링하지 않는다 — 캡처 단계로 받아야 위임이 먹는다.
       listEl.addEventListener('toggle', e => {
         const d = e.target;
-        if (!d.classList || !d.classList.contains('rev-item') || !d.open) return;
+        if (!d.classList) return;
+        // 질문 묶음을 열고 닫은 자리를 기억한다(삭제·검색으로 다시 그려도 보던 자리가 남게)
+        // ⚠️ 선택 모드가 강제로 편 것은 기억하지 않는다 — 기억하면 [취소] 뒤에도 전부 펼쳐진
+        //    채로 남아, 고르기 전 화면으로 돌아오지 않는다(2026-09-22 실측).
+        if (d.classList.contains('grp')) {
+          if (!SEL_MODE) { if (d.open) OPEN.add(d.dataset.grp); else OPEN.delete(d.dataset.grp); }
+          return;
+        }
+        if (!d.classList.contains('rev-item') || !d.open) return;
         if (d.dataset.loaded) return;
         d.dataset.loaded = '1';
         loadRev(d);
       }, true);
 
       listEl.addEventListener('click', async e => {
+        /* 선택 모드 — 줄 아무 데나 누르면 고르고, 다시 누르면 푼다.
+           ⚠️ preventDefault 가 <summary> 의 펼치기를 막는다. 이게 없으면 고르는 동안
+              카드가 열려 다음 줄이 화면 밖으로 밀린다. */
+        if (SEL_MODE) {
+          const grpEl = e.target.closest('[data-sel-grp]');
+          const rowEl = e.target.closest('[data-sel-id]');
+          if (!rowEl && !grpEl) return;
+          e.preventDefault();
+          if (rowEl) {                                   // 답변 한 줄
+            const id = rowEl.dataset.selId;
+            if (SEL.has(id)) SEL.delete(id); else SEL.add(id);
+          } else {                                       // 질문 줄 = 그 안 전부
+            const ids = idsOfGrp(grpEl.dataset.selGrp);
+            const allOn = ids.length > 0 && ids.every(id => SEL.has(id));
+            ids.forEach(id => { if (allOn) SEL.delete(id); else SEL.add(id); });
+          }
+          syncSel();
+          return;
+        }
         // 고치기 — 열기 / 취소 / 저장. 삭제보다 먼저 본다(같은 버튼 줄에 있다).
         const eOpen = e.target.closest('[data-edit]');
         if (eOpen) { e.preventDefault(); openEdit(eOpen); return; }
@@ -1065,6 +1290,11 @@
       buildChips();
       render();
       wireList();
+
+      // 선택 모드 단추 셋 — 들어가기 / 취소 / 한 번에 삭제(2026-09-22)
+      document.getElementById('selEnter').addEventListener('click', selEnter);
+      document.getElementById('selCancel').addEventListener('click', selExit);
+      document.getElementById('selDel').addEventListener('click', selDelete);
 
       let t;
       document.getElementById('q').addEventListener('input', e => {
