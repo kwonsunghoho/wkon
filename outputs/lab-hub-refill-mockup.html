@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>연구실 허브 카드 다시 채우기 — 3안 목업</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* 2026-09-22 서가 접기로 연구실 카드 안이 비었다(오너 "휑해졌어").
+   카드 껍데기(.hub-card.card-lab)·점선 리더(.ix)·라이브 점은 lab.html 원본 그대로 쓰고
+   안에 들어갈 내용만 세 가지로 그린다. 숫자·제목은 2026-09-22 실데이터. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; word-break: keep-all;
+}
+a { text-decoration: none; color: inherit; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 24px 20px 56px; }
+.mock-h { font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-ink); margin: 30px 0 4px; }
+.mock-h:first-child { margin-top: 0; }
+.mock-d { font-size: 13.5px; line-height: 1.6; color: var(--text-muted); margin-bottom: 12px; }
+
+.hub-card {
+  display: block; border-radius: 26px; padding: 28px 28px 22px;
+  background: linear-gradient(180deg, #FCFDFF, #EBF1F8);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), var(--shadow);
+}
+.hub-top { display: flex; align-items: center; gap: 10px; }
+.hub-name { font-family: var(--serif); font-size: 32px; font-weight: 800; letter-spacing: -0.01em; }
+.hub-desc { font-size: 16px; font-weight: 400; line-height: 1.58; color: var(--text-muted); margin-top: 9px; }
+.hub-meta {
+  display: flex; align-items: center; gap: 7px; margin-top: 20px; padding-top: 16px;
+  border-top: 1px dashed rgba(23,42,71,0.22); font-size: 14px; font-weight: 700; color: var(--text-dim);
+}
+.hub-meta b { font-weight: 800; color: var(--text); }
+.card-lab {
+  background: linear-gradient(180deg, #1E4079, #142C52);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow);
+}
+.card-lab .hub-name { color: #FFFFFF; }
+.card-lab .hub-desc { color: rgba(241,244,248,0.86); }
+.pill {
+  margin-left: auto; flex: none; width: 52px; height: 52px; border-radius: 50%;
+  background: var(--action); color: var(--action-ink); display: flex; align-items: center; justify-content: center;
+}
+.pill svg { width: 24px; height: 24px; }
+.card-lab .pill { background: #FFFFFF; color: var(--action); }
+.card-lab .hub-meta { border-color: rgba(241,244,248,0.3); color: rgba(241,244,248,0.78); }
+.card-lab .hub-meta b { color: #FFFFFF; }
+
+/* 점선 리더 목차 — lab.html 원본 값 그대로 */
+.ix { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.ix-row { display: flex; align-items: baseline; gap: 9px; font-size: 17px; }
+.ix-name { flex: none; font-weight: 700; color: rgba(241,244,248,0.93); }
+.ix-lead { flex: 1; border-bottom: 2px dotted rgba(241,244,248,0.28); position: relative; top: -3px; min-width: 18px; }
+.ix-n { flex: none; min-height: 20px; font-weight: 800; color: var(--action-on-dark); }
+.ix-n span { font-size: 12px; font-weight: 700; }
+.ix-rest { font-size: 14px; font-weight: 700; color: rgba(241,244,248,0.62); }
+
+.live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
+
+/* B안 — 최신 자료 줄 */
+.nw { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+.nw-row { display: flex; align-items: baseline; gap: 10px; }
+.nw-t {
+  flex: 1; min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.45; color: rgba(241,244,248,0.93);
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+.nw-d { flex: none; font-size: 13px; font-weight: 800; color: rgba(241,244,248,0.6); }
+.nw-tag {
+  flex: none; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 6px;
+  background: rgba(139,180,248,0.18); color: var(--action-on-dark);
+}
+
+/* C안 — 항공사 칩 + 최신 한 줄 */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip {
+  font-size: 14px; font-weight: 700; padding: 7px 12px; border-radius: 12px;
+  background: rgba(241,244,248,0.1); border: 1px solid rgba(241,244,248,0.22); color: rgba(241,244,248,0.93);
+}
+.chip b { font-weight: 800; color: var(--action-on-dark); margin-left: 5px; }
+.c-new { display: flex; align-items: baseline; gap: 9px; margin-top: 18px; padding-top: 16px; border-top: 1px dashed rgba(241,244,248,0.22); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="mock-h">A안 — 항공사별 목차</p>
+  <p class="mock-d">기존 점선 리더를 그대로 쓰되 줄을 '서가'에서 '항공사'로 바꾼다. 다음 화면이 항공사 고르기라 예고가 된다. 자료가 붙는 순간 순서·숫자가 저절로 바뀐다.</p>
+  <a class="hub-card card-lab" href="#">
+    <div class="hub-top">
+      <h2 class="hub-name">연구실</h2>
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </div>
+    <div class="ix num">
+      <p class="ix-row"><span class="ix-name">대한항공</span><span class="ix-lead"></span><span class="ix-n">7<span>건</span></span></p>
+      <p class="ix-row"><span class="ix-name">트리니티항공</span><span class="ix-lead"></span><span class="ix-n">4<span>건</span></span></p>
+      <p class="ix-row"><span class="ix-name">제주항공</span><span class="ix-lead"></span><span class="ix-n">2<span>건</span></span></p>
+      <p class="ix-row"><span class="ix-name ix-rest">그 외 4곳</span><span class="ix-lead"></span><span class="ix-n">5<span>건</span></span></p>
+    </div>
+    <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>18</b>건 · 갱신 6시간 전</p>
+  </a>
+
+  <p class="mock-h">B안 — 최신 자료 3줄</p>
+  <p class="mock-d">원장 카드가 쓰던 '최신' 표시를 허브로 올린다. 무엇이 올라와 있는지 제목으로 보여 주는 안. 제목이 길어 한 줄에서 잘린다.</p>
+  <a class="hub-card card-lab" href="#">
+    <div class="hub-top">
+      <h2 class="hub-name">연구실</h2>
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </div>
+    <div class="nw">
+      <p class="nw-row"><span class="nw-tag">NEW</span><span class="nw-t">26년 트리니티항공 최종면접 진출자 스펙 및 면접분위기</span><span class="nw-d num">09.22</span></p>
+      <p class="nw-row"><span class="nw-t">영상면접 합격자 vs 만성영탈자 비교영상</span><span class="nw-d num">09.21</span></p>
+      <p class="nw-row"><span class="nw-t">2026 대한항공 하반기 면접 리포트</span><span class="nw-d num">09.18</span></p>
+    </div>
+    <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>18</b>건 · 갱신 6시간 전</p>
+  </a>
+
+  <p class="mock-h">C안 — 항공사 칩 + 최신 한 줄</p>
+  <p class="mock-d">어느 회사 자료가 있는지(칩)와 방금 뭐가 올라왔는지(한 줄)를 같이 보여 준다. 셋 중 카드가 가장 꽉 차지만 요소가 두 종류라 시선이 갈린다.</p>
+  <a class="hub-card card-lab" href="#">
+    <div class="hub-top">
+      <h2 class="hub-name">연구실</h2>
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </div>
+    <p class="hub-desc">항공사별 자료와 기출을 연구진이 모아 정리합니다.</p>
+    <div class="chips num">
+      <span class="chip">대한항공<b>7</b></span>
+      <span class="chip">트리니티항공<b>4</b></span>
+      <span class="chip">제주항공<b>2</b></span>
+      <span class="chip">그 외 4곳<b>5</b></span>
+    </div>
+    <p class="c-new"><span class="nw-tag">NEW</span><span class="nw-t">26년 트리니티항공 최종면접 진출자 스펙 및 면접분위기</span><span class="nw-d num">09.22</span></p>
+    <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>18</b>건 · 갱신 6시간 전</p>
+  </a>
+
+</div>
+</body>
+</html>

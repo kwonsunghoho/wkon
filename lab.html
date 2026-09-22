@@ -145,6 +145,9 @@
   .ix-lead { flex: 1; border-bottom: 2px dotted rgba(241,244,248,0.28); position: relative; top: -3px; min-width: 18px; }
   .ix-n { flex: none; min-height: 20px; font-weight: 800; color: var(--action-on-dark); }
   .ix-n span { font-size: 12px; font-weight: 700; }
+  /* '그 외' 줄 — 회사 이름이 아니라 묶음이라 한 단계 물러나게 한다(크기는 같게 둔다.
+     줄 높이가 어긋나면 점선 리더가 층이 진다). 다크 면 위 대비 약 5:1. */
+  .ix-rest { color: rgba(241,244,248,0.66); }
 
   /* 연구 진행 신호 */
   .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
@@ -238,7 +241,11 @@
         <p class="ix-row" data-shelf="calendar"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n"></span></p>
       </div>
       -->
-      <p class="hub-desc">항공사별 자료와 기출을 연구진이 모아 정리합니다.</p>
+      <!-- 서가 접기 뒤 목차 = 항공사별 자료 수(2026-09-22 오너 "휑해졌어" → A안).
+           ⚠️ 줄·숫자는 JS 가 실데이터로 채운다 — 마크업에 항공사 이름을 적지 말 것
+              (자료가 빠지면 그 줄이 거짓말이 된다). 채우기 전·실패 시에는 아래 설명 줄이 남는다. -->
+      <div class="ix num" id="labIx" hidden></div>
+      <p class="hub-desc" id="labDesc">항공사별 자료와 기출을 연구진이 모아 정리합니다.</p>
       <p class="hub-meta num" id="labMeta" hidden><i class="live"></i></p>
     </a>
 
@@ -323,6 +330,44 @@
       f.textContent = '자료는 준비되는 대로 서가별로 채워집니다.';
       f.hidden = false;
     }
+  }).catch(function () {});
+
+  /* ══ 허브 목차 = 항공사별 자료 수 (2026-09-22 오너 "휑해졌어" → A안) ═══════════
+     서가 접기로 서가 목차가 사라진 자리를 항공사로 채운다 — 다음 화면이 항공사 고르기라
+     예고가 된다. ⚠️ 이름·숫자는 전부 실데이터다. 마크업에 항공사를 적지 말 것.
+     ⚠️ 조회가 실패하거나 항공사가 한 곳뿐이면 목차를 그리지 않고 설명 줄을 남긴다
+        (한 줄짜리 목차는 목차로 읽히지 않는다).
+     ⚠️ 자료실은 DB shelf 두 값(airline·question)이 한 서가다 — 둘 다 세야 발치 합계와 맞는다. */
+  var AIRLINE_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'트리니티항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
+  var TOP_N = 3;   // 상위 세 곳 + '그 외' 한 줄 = 네 줄(서가 목차와 같은 높이)
+
+  Promise.all(['airline', 'question'].map(function (s) {
+    return window.MONC.sb.rpc('lab_resource_list', { p_shelf: s, p_airline: null });
+  })).then(function (reses) {
+    if (reses.some(function (r) { return r.error; })) return;
+    var cnt = {}, restN = 0;
+    reses.forEach(function (r) {
+      (r.data || []).forEach(function (d) {
+        // 항공사가 없는 자료(전 항공사 공통)는 회사로 세지 않고 '그 외'로 넘긴다
+        if (d.airline && AIRLINE_LABEL[d.airline]) cnt[d.airline] = (cnt[d.airline] || 0) + 1;
+        else restN += 1;
+      });
+    });
+    var rank = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; });
+    if (rank.length < 2) return;                       // 한 곳뿐이면 설명 줄을 그대로 둔다
+    var rows = rank.slice(0, TOP_N).map(function (k) {
+      return { name: AIRLINE_LABEL[k], n: cnt[k], rest: false };
+    });
+    rank.slice(TOP_N).forEach(function (k) { restN += cnt[k]; });
+    if (restN > 0) rows.push({ name: '그 외', n: restN, rest: true });
+
+    var ix = document.getElementById('labIx');
+    ix.innerHTML = rows.map(function (r) {
+      return '<p class="ix-row"><span class="ix-name' + (r.rest ? ' ix-rest' : '') + '">' + r.name + '</span>'
+        + '<span class="ix-lead"></span><span class="ix-n">' + r.n + '<span>건</span></span></p>';
+    }).join('');
+    ix.hidden = false;
+    document.getElementById('labDesc').hidden = true;   // 목차가 서면 설명은 물러난다
   }).catch(function () {});
 })();
 </script>
