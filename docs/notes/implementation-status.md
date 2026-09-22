@@ -58,7 +58,7 @@
 | `20260725160000_ai_killer_context` | 검사 기록 문항·종류 컬럼 | 실행 대기(킬러 스펙 '오너 할 일' 기준 — 미적용이어도 검사 정상) |
 | `20260725170000`·`180000`·`190000` | 크레딧 분류 3종·단가·하루 무료·팩 3종 | **전부 적용 완료(2026-07-25)** |
 | `20260725200000` + `20260725210000` | airline_profiles(+티웨이) | 적용 완료 |
-| `20260922120000` | 티웨이항공 → 트리니티항공 사명 반영(airline_profiles 이름·문항 / lab_resources 제목·요약 / special_lectures / interview_questions 글자 치환 — 코드 `tw`·슬러그 `twayair` 는 그대로) | **미적용 — 오너 실행 필요**(2026-09-22). 화면 라벨 표는 같은 커밋에서 교체됨 |
+| `20260922120000` | 티웨이항공 → 트리니티항공 사명 반영(airline_profiles 이름·문항 / lab_resources 제목·요약 / special_lectures / interview_questions 글자 치환 — 코드 `tw`·슬러그 `twayair` 는 그대로) | **적용 완료**(2026-09-22 오너 실행 · 공개 목록 RPC 실측: lab_resources 28건 중 '티웨이' 0건·'트리니티항공' 4건, special_lectures 0건 — airline_profiles·interview_questions 는 비공개라 anon 으로 못 봤다). 화면 라벨 표는 같은 커밋에서 교체됨 |
 | `20260730120000_challenge_waitlist` | 오픈 알림 명단 | **owner 실행 필요** |
 | `20260825150000_game_reports` | 역량검사 게임 오류 제보함(anon insert·admin select) | **owner 실행 필요** — 미적용 시 게임 페이지 제보 폼이 "준비 중" 안내로 degrade(게임은 영향 없음) |
 | `20260826180000_game_scores` | 역량검사 게임 회원 최고점(`game_scores` + `save_game_score` RPC — 쓰기는 RPC 만, 읽기는 본인 행) | **적용 확인(2026-08-26)** — 오너 실행 후 실사용 검증: 로그인 플레이 → mypage '역량검사 게임' 접이 표시("잘뜨네"). RPC 저장→RLS 조회→접이까지 전 구간 정상. 참고: anon 프로브는 `GET /rest/v1/game_scores`(→`[]`) / `POST /rest/v1/rpc/save_game_score`(→`login required`) |
