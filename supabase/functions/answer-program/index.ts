@@ -37,7 +37,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // ⚠️ 코드를 고치면 여기도 올린다 — 배포 상태를 밖에서 아는 유일한 길(ai-killer 관례).
-const FN_VERSION = '2026-08-16b'   // 16a: 소재 창고 개명 문구 / 16b: card_from_chat(소재 발굴 대화→소재 카드)
+const FN_VERSION = '2026-09-22a'   // 09-22a: 티웨이항공 → 트리니티항공 사명 반영(라벨만) / 08-16b: card_from_chat(소재 발굴 대화→소재 카드)
 const FN_FEATURES = [
   'recommend',        // 질문에 맞는 경험 카드 추천
   'followup',         // 부족한 사실을 묻는 추가 질문
@@ -73,7 +73,7 @@ const MAX_DRAFT_CHARS = 2000
 const MAX_SOURCE_CHARS = 6000    // 자료(카드·사실·문답) 총량 상한 — 프롬프트 원가 잠금
 
 const AIRLINES: Record<string, string> = {
-  ke: '대한항공', lj: '진에어', '7c': '제주항공', tw: '티웨이항공',
+  ke: '대한항공', lj: '진에어', '7c': '제주항공', tw: '트리니티항공',
   ze: '이스타항공', yp: '에어프레미아', rf: '에어로케이',
 }
 

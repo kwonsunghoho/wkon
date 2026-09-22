@@ -64,7 +64,7 @@ const MAX_QUESTION_CHARS = 200
 
 // ⚠️ 배포 확인용 버전표. **코드를 고치면 여기도 올린다** — 이 값이 밖에서 "지금 무엇이
 //    올라가 있는지"를 아는 유일한 방법이다(로그인 게이트라 다른 응답은 전부 401).
-const FN_VERSION = '2026-08-22a'  // a = 첨삭 분량 전환 + N초 버전(short_version·cuts)
+const FN_VERSION = '2026-09-22a'  // 09-22a = 티웨이항공 → 트리니티항공 사명 반영(라벨만) / 08-22a = 첨삭 분량 전환 + N초 버전(short_version·cuts)
 const FN_FEATURES = [
   'holistic',         // 킬러 판정 = 오너 지침 4기준 종합 + AI 의심 지수 %(2026-08-12 전면 교체)
   'green_flags',      // 인간미 보존 영역(Green Flag) — 점수 보정 + 살릴 문장 짚기(2026-08-12b)
@@ -109,7 +109,7 @@ const MAX_RECHECK = 2
 // 항공사 — lecture-common.js 의 LEC.AIRLINES 와 같은 목록(사이트에서 항공사는 한 벌이어야 한다).
 // 'all' = 만능(어느 항공사에도 쓰는 답변)은 이 표에 없고 따로 다룬다.
 const AIRLINES: Record<string, string> = {
-  ke: '대한항공', lj: '진에어', '7c': '제주항공', tw: '티웨이항공',
+  ke: '대한항공', lj: '진에어', '7c': '제주항공', tw: '트리니티항공',
   ze: '이스타항공', yp: '에어프레미아', rf: '에어로케이',
 }
 
@@ -795,7 +795,7 @@ Deno.serve(async (req) => {
       fn: 'ai-killer',
       version: FN_VERSION,
       features: FN_FEATURES,
-      airline_profiles: airlines,   // 4면 제주·에프·이스타·티웨이가 다 들어간 것
+      airline_profiles: airlines,   // 4면 제주·에프·이스타·트리니티가 다 들어간 것
       terms: terms,
       coach_terms: coachTerms,      // 연구진 기준 표현 수 — 0이면 아직 임시 시드만(자산 미유입)
       polish_table: polishTable,    // null=마이그레이션 미적용 / 숫자=지금까지 쌓인 첨삭 수

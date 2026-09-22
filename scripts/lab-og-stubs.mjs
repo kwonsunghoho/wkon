@@ -33,7 +33,7 @@ const SHELVES = {
   video:    { to: 'shelf=video',                 img: 'lab-video.png',    name: '영상관' },
   report:   { to: 'shelf=report',                img: 'lab-report.png',   name: '현장 리포트' }
 };
-const AIRLINE_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'티웨이항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
+const AIRLINE_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'트리니티항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const oneLine = (s) => String(s || '').replace(/\s+/g, ' ').trim();
