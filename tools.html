@@ -70,6 +70,40 @@
     .bf-sub { font-size: 15px; color: var(--text); opacity: .72; margin-top: 12px; max-width: 34em; margin-left: auto; margin-right: auto; text-wrap: balance; }
     .bf-sub b { color: var(--action); font-weight: 800; white-space: nowrap; }
 
+    /* ── 나만의 승준노트 포스터(2026-09-23 오너 A안 · outputs/tools-hub-note-mockup.html) ──
+       허브의 주인공은 도구가 아니라 노트(아카이브)다 — 오너 "승준노트가 사실상 대시보드 … 제일 중요한 것".
+       홈 '네 개의 문' 1번(챌린지 포스터, index.css .door-poster)과 같은 문법: 사진이 카드 전체, 글은 하단 스크림 위.
+       사진은 홈 승준 도구 문과 같은 door-briefing.webp(노트 쓰는 장면).
+       ⚠️ 제목은 자기 규칙에 흰색을 명시한다 — tokens.css h2{color:var(--ink)} 가 상속을 이긴다(apply 배너 전례).
+       ⚠️ 스크림(.96/.72/0 62%)은 흰 글자의 대비 손잡이 — 사진이 밝다고 낮추지 말 것. pointer-events:none(카드가 <a>).
+       ⚠️ CTA 는 다크 위 규칙 그대로 흰 알약 + 네이비 글씨. 통째로 <a> 안이라 버튼이 아니라 모양만 알약(중첩 링크 금지).
+       ⚠️ 회원별 숫자·상태 없음 — 허브 공통 규칙(정적 사실만). */
+    .np { position: relative; display: block; overflow: hidden; margin: 22px auto 0; min-height: 300px;
+      border-radius: 22px; border: 1px solid var(--border-soft); box-shadow: var(--shadow);
+      color: #fff; text-decoration: none; }
+    .np img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 30%; display: block; }
+    /* 스크림은 홈 포스터(.96/.72/0 62%)보다 위까지 진하다 — 이 사진은 글자 자리(하단 절반)가 흰 스웨터·흰 책상이라
+       홈 값으로는 제목 뒤 배경이 밝아 대비가 모자랐다(2026-09-23 픽셀 실측). 낮추지 말 것. */
+    .np::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(to top, rgba(18,28,46,.97) 0%, rgba(18,28,46,.90) 40%, rgba(18,28,46,.55) 62%, rgba(18,28,46,0) 84%); }
+    .np:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    /* 칩 알약은 홈(.58)보다 진한 .74 — 이 사진의 왼쪽 위(흰 커튼)에서 .58 은 흰 글자 4.3:1 로 미달(2026-09-23 픽셀 실측). */
+    .np-chip { position: absolute; top: 12px; left: 14px; z-index: 2; font-size: 12px; font-weight: 700; line-height: 1.35;
+      color: #fff; background: rgba(20,32,52,.74); padding: 5px 11px; border-radius: 999px; }
+    .np-chip::before { content: "— "; color: var(--action-on-dark); }
+    .np-tx { position: absolute; left: 18px; right: 18px; bottom: 16px; z-index: 2; }
+    /* 라벨 글자는 흰색 — 홈 포스터의 하늘색(--action-on-dark)은 이 자리(스크림이 옅은 위쪽·흰 스웨터)에서 3.1:1 로
+       미달이라 글자만 희게 하고 대시(::before)에 하늘색을 남긴다(2026-09-23 픽셀 실측). */
+    .np-label { display: block; font-size: 12px; font-weight: 800; letter-spacing: .1em; color: #fff; }
+    .np-label::before { content: "— "; color: var(--action-on-dark); }
+    .np-title { font-family: var(--serif); font-weight: 800; font-size: 22px; line-height: 1.35; margin: 6px 0 0;
+      color: #fff; letter-spacing: -.01em; text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+    .np-ds { display: block; margin-top: 6px; font-size: 14px; line-height: 1.5; color: rgba(255,255,255,.86); }
+    .np-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; min-height: 44px; padding: 0 18px;
+      border-radius: 999px; background: #fff; color: var(--accent-ink); font-size: 14px; font-weight: 700; }
+    @media (min-width: 600px) { .np { min-height: 340px; } }
+    .sec-t + .tl-list { margin-top: 16px; }
+
     /* 데스크톱 열 폭 — briefing.html 과 같은 값(카드 리스트가 이 폭을 그대로 채운다) */
     main.container > section { max-width: 600px; margin-left: auto; margin-right: auto; }
 
@@ -200,17 +234,35 @@
     <div class="container">
       <div class="bf-eyebrow">MONC TOOLS</div>
       <h1 class="bf-title">승준 도구</h1>
-      <!-- 2026-09-07 뉴스 부활로 4→5가지(표시 카드 수와 한 벌 — 아래 목록 주석 참조) -->
-      <p class="bf-sub">필요한 도구만 골라 바로 쓰세요.<br>매일 쓰는 면접 준비 도구 <b>5가지</b></p>
+      <!-- 2026-09-23 노트 포스터 승격 — 부제는 '노트가 중심, 도구가 채운다'는 관계 한 줄.
+           도구 개수는 아래 절 제목('노트를 채우는 도구 N가지')이 들고 있다 — 카드 수와 한 벌(AI킬러·일문일답 복원 시 같이). -->
+      <p class="bf-sub">쓴 답변은 전부 <b>나만의 승준노트</b>에 모여요.<br>도구 4가지가 그 노트를 채워요.</p>
     </div>
   </header>
 
   <main class="container">
+    <!-- 나만의 승준노트 포스터(2026-09-23 오너 A안) — 허브 맨 위 한 판. 도구 카드에서 노트 줄은 뺐다(여기가 그 자리).
+         문구는 정적 사실만(회원별 답변 수·상태 금지 — 허브 공통 규칙). -->
+    <section aria-label="나만의 승준노트">
+      <a class="np" href="answers.html" data-pillar="note">
+        <img src="images/door-briefing.webp" alt="" decoding="async">
+        <span class="np-chip">면접 답변 · 자소서 아카이브</span>
+        <div class="np-tx">
+          <span class="np-label">MY NOTE</span>
+          <h2 class="np-title">나만의 승준노트</h2>
+          <span class="np-ds">쓴 답변이 전부 여기 모여요. 고치고, 첨삭받고, 면접 전날 다시 읽어요.</span>
+          <span class="np-cta">노트 열기 →</span>
+        </div>
+      </a>
+    </section>
+
     <section aria-label="도구 목록">
+      <!-- 절 제목의 '4가지'는 아래 카드 수와 한 벌 — AI킬러·일문일답을 되살리면 같이 올린다. -->
+      <div class="sec-t"><b>노트를 채우는 도구 4가지</b><span>필요한 것만 골라 바로 쓰세요</span></div>
       <!-- 카드 한 장 = 아이콘 판 + 이름·역할 한 줄 + 화살표 원판(2026-08-27 3안).
-           역할 줄은 도구가 하는 일의 정적 사실만 — 회원별 상태·금액이 아니다. -->
+           역할 줄은 도구가 하는 일의 정적 사실만 — 회원별 상태·금액이 아니다.
+           순서(2026-09-23): 노트에 글을 넣는 도구(소재 발굴 → 첨삭)가 먼저, 읽고 연습하는 도구(뉴스 → 게임)가 뒤. nav.js TOOLS_SUB 와 같은 순서. -->
       <div class="tl-list">
-        <a class="tl-card" href="news.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-news"/></svg></span><span class="tl-tx"><b>뉴스 스크랩</b><small>항공 뉴스를 요약으로 읽고 담아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
         <a class="tl-card" href="sojae.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-dig"/></svg></span><span class="tl-tx"><b>소재 발굴</b><small>내 경험에서 답변 소재를 찾아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
         <!-- 킬러·첨삭은 한 세트(검사·고치기 — 스펙 2026-08-06-killer-polish-distinction-design.md).
              읽는 순서에 맞춰 AI킬러가 먼저다. -->
@@ -224,7 +276,7 @@
              nav.js TOOLS_SUB 항목과 한 세트. 페이지는 살아 있다. 다시 열 때 둘 다 되살린다
              (마크업은 리스트 개편에 맞춰 갱신해 둠 — 역할 줄 문구는 가안).
         <a class="tl-card" href="programs.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-quiz"/></svg></span><span class="tl-tx"><b>일문일답</b><small>항공사 기출에 매일 답해요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a> -->
-        <a class="tl-card" href="answers.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-note"/></svg></span><span class="tl-tx"><b>나만의 노트</b><small>쓴 답변을 한곳에 모아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
+        <a class="tl-card" href="news.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-news"/></svg></span><span class="tl-tx"><b>뉴스 스크랩</b><small>항공 뉴스를 요약으로 읽고 담아요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
         <!-- 역량검사 게임(2026-08-24 신설) — 무료·비회원 공개, 상세는 docs/notes/games.md -->
         <a class="tl-card" href="games.html"><span class="tl-ic"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><use href="#tn-game"/></svg></span><span class="tl-tx"><b>역량검사 게임</b><small>검사 유형을 게임으로 연습해요</small></span><span class="tl-pill" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#tn-go"/></svg></span></a>
       </div>
