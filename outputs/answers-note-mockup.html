@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>나만의 승준노트 — 답변 단위 2단 구조 목업 (2026-09-23)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   나만의 승준노트(answers.html) 고도화 목업 — 2026-09-23 (v2 · 실데이터 반영)
+
+   v1(질문 묶음 → 질문 상세 + 이전 답변)은 오너가 돌린 실데이터로 기각했다.
+   실측(2026-09-23 · role='member' 50명):
+     · 질문 묶음 179개 중 답변 2벌 이상 **0** → 질문 묶음·'이전 답변' 절은 보여줄 게 없다.
+     · 고치기 쓴 회원 32/50(64%) — 가장 많이 쓰는 기능인데 카드 맨 아래에 있었다.
+     · 답변 10개 이상 13/50(26%), 최대 27 → 목록은 평평하게, 검색 유지.
+     · 작성 중 1%(초안 3건) → 상태 칩(전체/작성 중/완료) 삭제, 줄 표식만.
+     · 직접 쓴 글 31% → 한 묶음에 가두지 않고 한 줄씩.
+     · 직접 쓴 글 80건 중 같은 제목 반복은 묶음 9개·회원 6명·최대 5회 → 묶음 UI 를 만들 규모가
+       아니다. 본문 2줄 + 날짜로 구분되게 두고, 반복 자체는 저장 쪽(첨삭 붙여넣기 자동 저장)에서
+       줄이는 것이 후속 과제.
+
+   구조:
+     ① 목록 = 답변 한 줄씩(제목 + 본문 2줄 + 날짜 + 첨삭·작성 중 표식). 머리는 뒤로·제목·탭·검색·유형 칩.
+     ② 답변 상세 = 본문이 펼치기 없이 바로. 첫 버튼 [고치기], 옆 [첨삭받기]. 아래 첨삭 리포트·수정 이력.
+     ③ 답변 추가 = 질문·본문 칸이 먼저, 분류는 본문 아래 한 줄(유형·항공사는 기존 바텀시트).
+   팔레트·활자·라운드는 tokens.css 현행 값. 새 색 없음. 활자 12/14/15/16/17/20 · 굵기 400/700/800.
+   ══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
+  background: #DDE3EC; color: var(--text); line-height: 1.6; padding: 28px 20px 40px; word-break: keep-all; }
+.board { display: flex; gap: 28px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.col { width: 375px; flex: 0 0 375px; }
+.cap { font-size: 13px; font-weight: 800; color: #3B4657; letter-spacing: .04em; margin: 0 0 8px 4px; }
+.phone { width: 375px; background: var(--bg); border-radius: 22px; overflow: hidden;
+  box-shadow: 0 10px 40px rgba(20,32,52,.18); border: 1px solid rgba(23,42,71,.18); }
+
+/* 공용 nav 축약(실제로는 nav.js) */
+.mnav { height: 57px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+  border-bottom: 1px solid var(--border-soft); background: #fff; }
+.mnav .logo { font-weight: 800; font-size: 22px; letter-spacing: .02em; color: #1B3A6B; }
+.mnav .burger { width: 22px; height: 14px; border-top: 2px solid #1E2229; border-bottom: 2px solid #1E2229; position: relative; }
+.mnav .burger::after { content: ''; position: absolute; left: 0; right: 0; top: 4px; border-top: 2px solid #1E2229; }
+
+.wrap { padding: 8px 20px 0; }
+
+/* 서브내비 — program.html .subnav 문법(상위 복귀 + 현재 위치) */
+.sub { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.sub a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-size: 14px; font-weight: 700;
+  color: var(--text-muted); }
+.sub a svg { width: 16px; height: 16px; }
+
+.h1row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 2px; }
+h1 { font-family: var(--serif); font-weight: 700; font-size: 26px; line-height: 1.25; color: var(--ink, #1C2A3A); }
+.sel-enter { min-height: 44px; padding: 0 12px; border: 0; background: none; font: inherit; font-size: 14px;
+  font-weight: 800; color: var(--accent-ink); cursor: pointer; margin-right: -12px; }
+
+/* 탭 — 밑줄형 */
+.tabs { display: flex; margin-top: 8px; border-bottom: 1px solid var(--border-soft); }
+.tabs button { flex: 1; min-height: 44px; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 700;
+  color: var(--text-muted); position: relative; cursor: pointer; }
+.tabs button b { font-weight: 800; color: var(--text-dim); margin-left: 4px; }
+.tabs button.on { color: var(--text); font-weight: 800; }
+.tabs button.on b { color: var(--accent-ink); }
+.tabs button.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--action); }
+
+.search { position: relative; margin-top: 14px; }
+.search input { width: 100%; min-height: 48px; padding: 12px 16px 12px 44px; font: inherit; font-size: 16px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+.search input::placeholder { color: var(--text-dim); }
+.search svg { position: absolute; left: 17px; top: 15px; width: 18px; height: 18px; color: var(--text-dim); }
+
+.chips { display: flex; gap: 7px; overflow-x: auto; margin-top: 10px; padding-bottom: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 8px 15px; border-radius: 999px;
+  font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--accent-ink); background: var(--surface); border: 1px solid var(--border-soft); }
+.chip.on { color: var(--action-ink); background: var(--action); border-color: transparent; }
+
+/* 답변 줄 — 카드 한 장 = 답변 하나 */
+.qs { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.q { display: flex; gap: 12px; align-items: flex-start; padding: 14px 15px; background: var(--surface);
+  border: 1px solid var(--border-soft); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
+.q-tx { flex: 1; min-width: 0; }
+.q-t { font-size: 15px; font-weight: 800; line-height: 1.45; }
+.q-p { font-size: 14px; color: var(--text-muted); margin-top: 5px; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.q-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: 56px; }
+.q-d { font-size: 12px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.q-pol { font-size: 12px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+.q-draft { font-size: 12px; font-weight: 800; color: #8C4318; background: rgba(140,67,24,.09); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+
+/* 하단 고정 — 버튼 하나 + 짧은 사실 한 줄 */
+.addbar { margin: 18px -20px 0; padding: 12px 20px 16px; background: linear-gradient(to top, var(--bg) 70%, rgba(255,255,255,0)); }
+.add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border: 0;
+  border-radius: 999px; background: var(--text); color: #fff; font: inherit; font-size: 16px; font-weight: 800; }
+.add-btn svg { width: 18px; height: 18px; }
+.add-note { margin-top: 8px; text-align: center; font-size: 12px; color: var(--text-dim); }
+
+/* ── 답변 상세 ── */
+.meta { margin-top: 6px; font-size: 14px; color: var(--text-muted); font-weight: 700; }
+.meta .air { color: #14375E; letter-spacing: .06em; }
+.d-h1 { font-family: var(--serif); font-weight: 700; font-size: 20px; line-height: 1.35; margin-top: 4px; color: var(--ink, #1C2A3A); }
+.lat { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.lat-h { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--text-dim); }
+.lat-h .pol { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
+.body { margin-top: 10px; font-size: 16px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+.acts { display: flex; gap: 8px; margin-top: 16px; }
+.btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 14px;
+  border-radius: 999px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+.btn-line { border: 1.5px solid var(--text); background: transparent; color: var(--text); }
+.btn-fill { border: 0; background: var(--action); color: var(--action-ink); }
+
+.sec { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; }
+.sec-t { font-size: 15px; font-weight: 800; }
+.sec-n { font-size: 14px; color: var(--text-dim); }
+.hrow { display: flex; align-items: center; gap: 10px; min-height: 48px; margin-top: 8px; padding: 10px 12px; background: var(--bg2);
+  border: 1px solid var(--border-soft); border-radius: var(--radius-xs); }
+.hrow-d { font-size: 14px; color: var(--text-dim); }
+.hrow-g { font-size: 15px; font-weight: 800; color: var(--accent-ink); }
+.hrow-go { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
+.fold { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-top: 4px; }
+.fold .sec-n { font-weight: 700; color: var(--accent-ink); }
+.del { display: flex; justify-content: flex-end; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.del button { min-height: 44px; padding: 0 14px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 800; color: #9E3B34; }
+
+/* ── 답변 추가 ── */
+.f-title { width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-bottom: 1px solid var(--border);
+  font: inherit; font-size: 17px; font-weight: 700; color: var(--text); background: transparent; padding: 0 0 10px; }
+.f-title::placeholder { font-weight: 400; color: var(--text-dim); }
+.f-ta { width: 100%; min-height: 300px; margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  resize: vertical; font: inherit; font-size: 16px; line-height: 1.75; color: var(--text); background: var(--surface); }
+.f-ta::placeholder { color: var(--text-dim); }
+.f-cnt { margin-top: 6px; text-align: right; font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.f-lbl { margin-top: 16px; font-size: 14px; font-weight: 800; color: var(--text-dim); }
+.f-lbl span { font-weight: 700; opacity: .8; }
+.seg { display: flex; gap: 6px; margin-top: 8px; }
+.seg button { flex: 1; min-height: 44px; font: inherit; font-size: 14px; font-weight: 700; border: 1px solid var(--border);
+  background: var(--bg2); border-radius: var(--radius-xs); color: var(--text-muted); }
+.seg button.on { background: var(--surface); color: var(--text); border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.picks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.pick { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 44px; padding: 0 12px;
+  border: 1px solid var(--border); background: var(--bg2); border-radius: var(--radius-xs); font-size: 14px; font-weight: 700; color: var(--text-muted); }
+.pick svg { width: 16px; height: 16px; opacity: .5; flex: none; }
+.save { width: 100%; min-height: 54px; margin-top: 18px; border: 0; border-radius: 999px; background: var(--action); color: var(--action-ink);
+  font: inherit; font-size: 17px; font-weight: 800; }
+.save-note { margin-top: 10px; text-align: center; font-size: 14px; color: var(--text-dim); }
+.save-note b { color: var(--accent-ink); font-weight: 800; }
+.pad { height: 20px; }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <!-- ① 목록 -->
+  <div class="col">
+    <p class="cap">① 목록 — 답변 한 줄씩(같은 제목도 본문·날짜로 구분)</p>
+    <div class="phone">
+      <div class="mnav"><span class="logo">MONC</span><span class="burger"></span></div>
+      <div class="wrap">
+        <div class="sub">
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>마이페이지</a>
+        </div>
+        <div class="h1row"><h1>나만의 승준노트</h1><button type="button" class="sel-enter">선택</button></div>
+        <div class="tabs">
+          <button type="button" class="on">내 답변<b>8</b></button>
+          <button type="button">내 소재<b>2</b></button>
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input type="search" placeholder="질문·답변 내용 검색">
+        </div>
+        <div class="chips">
+          <span class="chip on">전체</span><span class="chip">직무핵심역량형</span><span class="chip">개인신상형</span><span class="chip">과거경험검증형</span><span class="chip">기업관심도형</span>
+        </div>
+
+        <div class="qs">
+          <a class="q" href="#">
+            <div class="q-tx"><div class="q-t">자신의 강점을 말해 보세요</div>
+              <p class="q-p">저의 강점은 상대의 말을 끝까지 듣는 태도입니다. 카페 아르바이트를 하던 때 단골 손님이 늘 같은 메뉴를 주문하셨는데, 어느 날 평소와 다른 표정으로</p></div>
+            <div class="q-side"><span class="q-d">9.22</span><span class="q-pol">첨삭 1회</span></div>
+          </a>
+          <a class="q" href="#">
+            <div class="q-tx"><div class="q-t">DAY 1. 가치관</div>
+              <p class="q-p">제가 가장 중요하게 여기는 가치는 신뢰입니다. 연회장 아르바이트에서 예약 실수를 제가 먼저 알렸을 때 매니저님이</p></div>
+            <div class="q-side"><span class="q-d">9.22</span></div>
+          </a>
+          <a class="q" href="#">
+            <div class="q-tx"><div class="q-t">동료와 갈등이 생겼을 때 어떻게 해결했나요</div>
+              <p class="q-p">조별 과제에서 역할 분담을 두고 의견이 갈렸을 때</p></div>
+            <div class="q-side"><span class="q-d">9.21</span><span class="q-draft">작성 중</span></div>
+          </a>
+          <a class="q" href="#">
+            <div class="q-tx"><div class="q-t">승무원이 되고 싶은 이유는 무엇인가요</div>
+              <p class="q-p">고등학교 때 가족 여행에서 처음 비행기를 탔습니다. 멀미로 힘들어하던 동생을 승무원분이 먼저 알아보고 다가와 주셨고</p></div>
+            <div class="q-side"><span class="q-d">9.21</span></div>
+          </a>
+          <a class="q" href="#">
+            <div class="q-tx"><div class="q-t">대한항공 자소서 1번 — 지원동기</div>
+              <p class="q-p">대한항공의 서비스를 처음 경험한 것은 가족 여행에서였습니다. 멀미로 힘들어하던 동생에게 승무원분이 먼저 다가와</p></div>
+            <div class="q-side"><span class="q-d">9.20</span></div>
+          </a>
+          <a class="q" href="#">
+            <div class="q-tx"><div class="q-t">DAY 1. 가치관</div>
+              <p class="q-p">저는 약속을 지키는 사람입니다. 학과 행사 준비에서 맡은 일을 기한보다 먼저 끝내</p></div>
+            <div class="q-side"><span class="q-d">9.18</span></div>
+          </a>
+        </div>
+
+        <div class="addbar">
+          <button type="button" class="add-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>답변 추가하기</button>
+          <p class="add-note">저장은 무료 · 횟수 제한 없음</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 답변 상세 -->
+  <div class="col">
+    <p class="cap">② 답변 상세 — 본문 바로, 첫 버튼은 고치기</p>
+    <div class="phone">
+      <div class="mnav"><span class="logo">MONC</span><span class="burger"></span></div>
+      <div class="wrap">
+        <div class="sub">
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>노트</a>
+        </div>
+        <p class="meta">직무핵심역량형 · 면접 답변 · <span class="air">KOREAN AIR</span></p>
+        <h2 class="d-h1">자신의 강점을 말해 보세요</h2>
+
+        <div class="lat">
+          <div class="lat-h"><span>9.22 09:12 고침</span><span class="pol">첨삭 1회</span></div>
+          <div class="body">저의 강점은 상대의 말을 끝까지 듣는 태도입니다. 카페 아르바이트를 하던 때 단골 손님이 늘 같은 메뉴를 주문하셨는데, 어느 날 평소와 다른 표정으로 오셨습니다. 주문을 받으며 오늘은 어떠신지 한마디 여쭈었고, 손님이 몸이 안 좋다고 하셔서 따뜻한 음료로 바꿔 드렸습니다. 이후 그분은 저를 찾아 주문하셨고, 저는 사람의 작은 변화를 읽는 일이 서비스의 시작이라는 걸 배웠습니다.</div>
+          <div class="acts">
+            <button type="button" class="btn btn-line">고치기</button>
+            <a class="btn btn-fill" href="#">이 답변 첨삭받기</a>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><span class="sec-t">첨삭 리포트</span><span class="sec-n">1회</span></div>
+          <a class="hrow" href="#"><span class="hrow-d">9.22</span><span class="hrow-g">첨삭 리포트</span><span class="hrow-go">보기 →</span></a>
+          <div class="fold"><span class="sec-t">수정 이력</span><span class="sec-n">2개 ▾</span></div>
+        </div>
+
+        <div class="del"><button type="button">이 답변 삭제</button></div>
+        <div class="pad"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 답변 추가 -->
+  <div class="col">
+    <p class="cap">③ 답변 추가 — 쓰는 칸이 먼저</p>
+    <div class="phone">
+      <div class="mnav"><span class="logo">MONC</span><span class="burger"></span></div>
+      <div class="wrap">
+        <div class="sub">
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>노트</a>
+        </div>
+        <div class="h1row"><h1>답변 추가</h1></div>
+        <input class="f-title" placeholder="어떤 질문인가요? 예) 자신의 강점을 말해 보세요">
+        <textarea class="f-ta" placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
+        <p class="f-cnt">0 / 1,500자</p>
+
+        <p class="f-lbl">분류 <span>(선택)</span></p>
+        <div class="seg"><button type="button" class="on">면접 답변</button><button type="button">자소서</button></div>
+        <div class="picks">
+          <span class="pick">질문 유형<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span class="pick">지망 항공사<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+
+        <button type="button" class="save">저장하기</button>
+        <p class="save-note">저장은 <b>무료</b> · 첨삭은 저장한 뒤 골라서</p>
+        <div class="pad"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

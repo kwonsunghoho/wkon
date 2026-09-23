@@ -33,79 +33,97 @@
   <!-- 뒤로 왔을 때 보던 자리로 되돌리기 — 위 bfcache 새로고침이 스크롤을 버리는 걸 메운다 -->
   <script src="scroll-keep.js?v=3"></script>
   <style>
+    /* ══ 2026-09-23 답변 단위 2단 구조(오너 승인 · 목업 outputs/answers-note-mockup.html) ══
+       화면은 셋 — ① 목록(답변 한 줄씩) ② 답변 상세(본문 바로 · 첫 버튼 고치기) ③ 답변 추가.
+       전환은 해시(#a=<id> · #new · #materials)로 하고 뒤로가기가 목록으로 돌아온다.
+       ⚠️ 질문별 묶음(9-22)은 실데이터로 걷어냈다 — 문항 묶음 179개 중 답변 2벌 이상 0.
+          되살리려면 먼저 그 숫자부터 다시 잴 것(docs/notes/credits.md '2026-09-23').
+       활자는 12(보조 메타) / 14 / 15 / 16(입력) / 17 / 20 / 26(제목) · 굵기 400/700/800 만 쓴다. */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', -apple-system, sans-serif;
-      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
-    .wrap { max-width: 780px; margin: 0 auto; padding: 24px 20px 80px; }
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; word-break: keep-all; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 8px 20px 80px; }
 
-    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .brand-link { display: flex; align-items: center; text-decoration: none; }
-    .brand-link img { height: 22px; width: auto; display: block; }
-    .brand-link:hover { opacity: .7; }
-    .back { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 10px 16px;
-      font-size: 13px; font-weight: 700; color: var(--text-muted); background: none;
-      border: 1px solid var(--border); border-radius: 999px; text-decoration: none; }
-    .back:hover { border-color: var(--action); color: var(--action-dark); }
+    /* 서브내비 — program.html .subnav 문법의 축약(상위 복귀 한 줄). 뒤로 알약·눈썹줄은 뺐다(머리 44px). */
+    .sub { display: flex; align-items: center; min-height: 44px; }
+    .sub-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px 0 0;
+      border: 0; background: none; font: inherit; font-size: 14px; font-weight: 700; color: var(--text-muted);
+      text-decoration: none; cursor: pointer; border-radius: 6px; }
+    .sub-back svg { width: 16px; height: 16px; }
+    .sub-back:hover { color: var(--action-dark); }
+    .sub-back:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
 
-    .head { margin-bottom: 18px; }
-    .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .1em; color: var(--accent-ink); }
-    .eyebrow::before { content: '— '; color: var(--action); }
-    h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(26px, 5vw, 34px); margin-top: 4px; }
-    .head .sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+    .h1row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+    h1 { font-family: var(--serif); font-weight: 700; font-size: 26px; line-height: 1.25; }
+    /* [선택] 들어가기 — 제목 줄 오른쪽 글자 버튼. 답변이 없으면 JS 가 숨긴다. */
+    .sel-enter { min-height: 44px; padding: 0 12px; margin-right: -12px; border: 0; background: none; font: inherit;
+      font-size: 14px; font-weight: 800; color: var(--accent-ink); cursor: pointer; border-radius: 6px; }
+    .sel-enter:focus-visible { outline: 3px solid var(--action); outline-offset: 0; }
 
-    /* 필터 — sticky 로 두지 않는다(작은 화면에서 필터바가 화면을 잡아먹는다) */
-    .filters { margin-bottom: 18px; }
-    .search { display: block; width: 100%; min-height: 48px; padding: 12px 18px; font: inherit; font-size: 15px;
-      color: var(--text); background: var(--surface); border: 1.5px solid var(--border); border-radius: 999px; }
-    .search::placeholder { color: var(--text-muted); }
-    .search:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    /* 탭(내 답변 · 내 소재) — 밑줄형. sojae_materials 미생성이면 JS 가 통째로 숨긴다. */
+    .tabs { display: flex; margin-top: 8px; border-bottom: 1px solid var(--border-soft); }
+    .tabs[hidden] { display: none; }   /* display:flex 가 UA [hidden] 을 이긴다 — 소재 표 미생성 환경에서 탭이 그대로 보인다 */
+    .tabs button { flex: 1; min-height: 44px; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 700;
+      color: var(--text-muted); position: relative; cursor: pointer; }
+    .tabs button b { font-weight: 800; color: var(--text-dim); margin-left: 4px; }
+    .tabs button.on { color: var(--text); font-weight: 800; }
+    .tabs button.on b { color: var(--accent-ink); }
+    .tabs button.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--action); }
+    .tabs button:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; }
+
+    /* 검색 + 유형 칩. 상태 칩(작성 중/완료)은 뺐다 — 초안이 전체의 1%(2026-09-23 실측). */
+    .filters { margin-top: 14px; }
+    .search { position: relative; }
+    .search input { display: block; width: 100%; min-height: 48px; padding: 12px 16px 12px 44px; font: inherit; font-size: 16px;
+      color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+    .search input::placeholder { color: var(--text-dim); }
+    .search input:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    .search svg { position: absolute; left: 17px; top: 15px; width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
     .chips { display: flex; gap: 7px; overflow-x: auto; margin-top: 10px; padding-bottom: 2px;
       -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .chips::-webkit-scrollbar { display: none; }
+    .chips[hidden] { display: none; }
     .chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 8px 15px;
-      border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer;
+      border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer;
       color: var(--accent-ink); background: var(--surface); border: 1px solid var(--border-soft); }
     .chip:hover { border-color: var(--accent-dark); }
     .chip.on { color: var(--action-ink); background: var(--action); border-color: transparent; }
+    .chip:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .count { margin-top: 10px; font-size: 14px; color: var(--text-dim); }
 
-    .count { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
-
-    /* ── 질문별 묶음 접이(2026-09-22 오너 "질문별로 좀 정리를 해줬으면") ──
-       한 질문에 답변이 여러 벌 쌓이는 게 정상 사용이라(고쳐 가며 새로 저장) 목록이 금세
-       같은 질문 반복으로 찬다. 질문 하나가 접이 한 줄이다.
-       ⚠️ 접혀 있어도 최신 답변 미리보기 한 줄을 보여 준다 — 제목만 남으면 노트가 아니라 목차가 된다. */
-    .grp { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); }
-    .grp + .grp { margin-top: 10px; }
-    .grp > summary { list-style: none; cursor: pointer; padding: 15px; display: flex; gap: 11px; align-items: flex-start; }
-    .grp > summary::-webkit-details-marker { display: none; }
-    .grp > summary:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; border-radius: var(--radius-sm); }
-    .grp-tx { flex: 1; min-width: 0; }
-    .grp-q { font-size: 15px; font-weight: 800; line-height: 1.45; }
-    .grp-p { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.5;
-      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-    .grp-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-    .grp-n { font-size: 13px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
-    .grp-d { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-    .grp[open] > summary { border-bottom: 1px dashed var(--border-soft); }
-    .grp[open] .grp-p { display: none; }          /* 펼치면 아래 답변이 그 자리를 대신한다 */
-    .grp-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+    /* 답변 줄 — 카드 한 장 = 답변 하나. 제목 + 본문 2줄 + 날짜·표식.
+       ⚠️ 같은 제목이 여러 줄이어도 묶지 않는다 — 본문 2줄과 날짜로 구분된다(회원 6명·최대 5회 규모). */
+    .rows { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .row { display: flex; gap: 12px; align-items: flex-start; padding: 14px 15px; background: var(--surface);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-sm); box-shadow: var(--shadow);
+      color: inherit; text-decoration: none; }
+    .row:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .row-tx { flex: 1; min-width: 0; }
+    .row-t { font-size: 15px; font-weight: 800; line-height: 1.45; }
+    .row-p { font-size: 14px; color: var(--text-muted); margin-top: 5px; line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .row-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: 56px; }
+    .row-d { font-size: 12px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }  /* 보조 메타 12px */
+    .row-pol { font-size: 12px; font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+    .row-draft { font-size: 12px; font-weight: 800; color: #8C4318; background: rgba(140,67,24,.09);
+      padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    mark { background: var(--action-tint); color: var(--accent-ink); padding: 0 2px; border-radius: 3px; }
+    .empty { text-align: center; color: var(--text-muted); font-size: 15px; padding: 50px 20px; }
+    .empty a { color: var(--accent-ink); font-weight: 700; }
+    .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
 
     /* ── 선택 모드(2026-09-22 오너 "체크박스를 만들어서 한번에 삭제") ──
-       평소엔 체크박스를 내걸지 않는다(삭제는 드문 일인데 상시 체크칸은 목록을 고르는 화면으로 만든다).
-       [선택]을 누르면 그때 화면 성격이 '고르는 화면'으로 바뀐다 — 묶음은 전부 펼쳐지고,
-       답변 카드는 접힌 채 제목만 남으며, 줄 아무 데나 누르면 선택된다(체크칸은 표시 전용). */
+       평소엔 체크칸이 없다. [선택]을 누르면 줄 왼쪽에 체크칸(표시 전용)이 생기고 줄 아무 데나 눌러 고른다. */
     .selbox { flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 6px;
       border: 2px solid var(--border); background: var(--surface); pointer-events: none;
       display: none; align-items: center; justify-content: center; }
     .selbox svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 3; fill: none; opacity: 0; }
     body.sel-on .selbox { display: flex; }
+    body.sel-on .row { cursor: default; }
+    body.sel-on .addbar, body.sel-on #quickfix-mount { display: none; }
+    .sel-row.on { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action); }
     .sel-row.on .selbox { background: var(--action); border-color: var(--action); }
     .sel-row.on .selbox svg { opacity: 1; }
-    body.sel-on .note > summary, body.sel-on .grp > summary { cursor: default; }
-    body.sel-on .note-acts, body.sel-on .note-more, body.sel-on .addbar,
-    body.sel-on #quickfix-mount { display: none; }
-    .sel-row.on { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action); }
-
     /* 선택 바 — 삭제가 되돌릴 수 없어 개수를 크게 읽히게 두고, 취소가 삭제보다 앞에 온다 */
     .selbar { position: sticky; bottom: 0; z-index: 3; margin: 18px -20px 0; padding: 12px 20px 18px;
       background: linear-gradient(to top, var(--bg) 72%, rgba(255,255,255,0));
@@ -121,19 +139,25 @@
     .sel-del { border: 0; background: #9E3B34; color: #fff; }
     .sel-del[disabled] { opacity: .45; cursor: default; }
 
-    /* [선택] 들어가기 단추 — 개수 줄 오른쪽 */
-    .count-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .count-row .count { margin-bottom: 0; }
-    .sel-enter { margin-left: auto; min-height: 44px; padding: 0 14px; border-radius: 999px;
-      border: 1px solid var(--border); background: var(--surface); color: var(--text);
-      font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
-    .sel-enter:hover { border-color: var(--accent-dark); }
+    /* ── 답변 추가 — 하단 고정 버튼. 저장은 무료·무제한이라는 사실 한 줄은 유지(오해가 실제로 생긴다). ── */
+    .addbar { position: sticky; bottom: 0; margin: 18px -20px 0; padding: 12px 20px 16px;
+      background: linear-gradient(to top, var(--bg) 70%, rgba(255,255,255,0)); }
+    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+      min-height: 52px; border: 0; border-radius: 999px; background: var(--text); color: #fff;
+      font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; text-decoration: none; }
+    .add-btn svg { width: 18px; height: 18px; }
+    .add-btn:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .add-note { margin-top: 8px; text-align: center; font-size: 12px; color: var(--text-dim); }
 
-    /* 노트 카드 — mypage 와 같은 문법 */
-    .notes { display: flex; flex-direction: column; gap: 10px; }
+    /* ── 내 소재 탭 — 답변 쪽 구성요소는 CSS 한 벌로 숨긴다(9-22 에 [선택]·티저가 남던 결함의 수리). ── */
+    #listView.mat-on .filters, #listView.mat-on #count, #listView.mat-on #list, #listView.mat-on .addbar,
+    #listView.mat-on #quickfix-mount, #listView.mat-on #selEnter, #listView.mat-on #selBar { display: none; }
+    .mat-count { margin-top: 14px; font-size: 14px; color: var(--text-dim); }
+    .notes { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
     .note { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); }
     .note > summary { list-style: none; cursor: pointer; padding: 15px; }
     .note > summary::-webkit-details-marker { display: none; }
+    .note > summary:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; border-radius: var(--radius-sm); }
     .note-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 7px; }
     .note-cat { display: inline-block; background: var(--accent-tint); color: var(--accent-ink); font-size: 12px;
       font-weight: 700; padding: 3px 9px; border-radius: 999px; }
@@ -142,183 +166,12 @@
     .note-more { display: inline-block; font-size: 12px; color: var(--accent-ink); margin-top: 8px; font-weight: 700; }
     .note[open] .note-q { color: var(--action-dark); }
     .note[open] .note-more { color: var(--text-muted); }
-    .note-a { font-size: 15px; color: var(--text); line-height: 1.7; white-space: pre-wrap;
-      border-top: 1px dashed var(--border-soft); margin: 0 15px; padding: 13px 0 16px; }
-    /* 초안 카드 — 예전엔 카드 전체가 이어쓰기 링크였다. 삭제 버튼이 들어오면서
-       링크를 아래 버튼 줄로 내렸다(a 안에 button 을 넣을 수 없다). */
-    .note-draft { padding: 15px; border-left: 3px solid var(--action); }
-    .note-preview { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
-    mark { background: var(--action-tint); color: var(--accent-ink); padding: 0 2px; border-radius: 3px; }
-
-    .empty { text-align: center; color: var(--text-muted); font-size: 15px; padding: 50px 20px; }
-    .empty a { color: var(--accent-ink); font-weight: 700; }
-    .loading { text-align: center; color: var(--text-dim); padding: 60px 0; }
-
-    /* ── 답변 메타(유형·종류·항공사·검사 등급) ──
-       ⚠️ 활자 하한 14px. 특강 카드에서 한 번 지적된 원칙이라 여기서도 지킨다.
-          예외는 항공사 영문 사명뿐(라틴 대문자 브랜드 마크 13px). */
     .note-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
-    .tag { font-size: 14px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
-      background: var(--bg3); color: var(--text-muted); }
-    .tag-air { background: transparent; border: 1px solid var(--border); color: var(--air, var(--text-muted));
-      font-size: 13px; font-weight: 800; letter-spacing: .06em; }
-    .tag-grade { font-size: 14px; font-weight: 800; color: var(--g, var(--text-muted)); background: none; padding: 0; }
-    .tag-grade i { font-style: normal; font-weight: 700; opacity: .65; }
-    .grade-human { --g: #2E6E42; } .grade-slight { --g: #8C4318; } .grade-heavy { --g: #9E3B34; }
-    /* 항공사 액센트 — lectures.css 의 --air-* 와 같은 값(사이트에서 항공사 색은 한 벌이어야 한다) */
-    .air-ke { --air: #14375E; } .air-lj { --air: #3A6440; } .air-7c { --air: #8C4318; }
-    .air-tw { --air: #9E3B34; } .air-ze { --air: #97323A; } .air-yp { --air: #2E3D63; }
-    .air-rf { --air: #8E4064; } .air-all { --air: var(--text); }
-
-    /* 펼친 답변 아래 — 검사 이력 */
-    .hist { border-top: 1px dashed var(--border-soft); margin: 0 15px; padding: 13px 0 16px; }
-    .hist-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-    .hist-t { font-size: 15px; font-weight: 800; }
-    .hist-n { font-size: 14px; color: var(--text-dim); }
-    .hrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 8px;
-      padding: 10px 12px; text-align: left; font: inherit; background: var(--bg2);
-      border: 1px solid var(--border-soft); border-radius: var(--radius-xs); cursor: pointer;
-      text-decoration: none; color: inherit; }
-    .hrow:hover { border-color: var(--accent-dark); }
-    .hrow-d { font-size: 14px; color: var(--text-dim); flex: 0 0 auto; }
-    .hrow-g { font-size: 15px; font-weight: 800; color: var(--g, var(--text-muted)); }
-    .hrow-c { font-size: 14px; color: var(--text-muted); }
-    .hrow-go { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
-    .hist-none { margin-top: 8px; font-size: 14px; color: var(--text-dim); }
-    .hist-cta { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px;
-      margin-top: 12px; border: 1.5px solid var(--text); border-radius: 999px; background: transparent;
-      font: inherit; font-size: 15px; font-weight: 800; color: var(--text); text-decoration: none; }
-    .hist-cta:hover { background: var(--text); color: #fff; }
-
-    /* ── 수정 이력(2026-08-05) — 두 겹 접이 ──
-       바깥은 '수정 이력 N개', 안쪽은 버전마다 날짜만. 본문은 펼칠 때 받아 온다.
-       ⚠️ 지난 본문을 펼치지 않은 채로 늘어놓지 말 것 — 카드가 원문 더미가 된다(오너 지시). */
-    .rev { border-top: 1px dashed var(--border-soft); margin: 0 15px; padding: 13px 0 16px; }
-    .rev-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline;
-      justify-content: space-between; gap: 8px; min-height: 24px; }
-    .rev-fold > summary::-webkit-details-marker { display: none; }
-    .rev-t { font-size: 15px; font-weight: 800; }
-    .rev-n { font-size: 14px; font-weight: 700; color: var(--accent-ink); }
-    .rev-lead { margin: 8px 0 2px; font-size: 14px; color: var(--text-dim); }
-    .rev-item { margin-top: 8px; background: var(--bg2); border: 1px solid var(--border-soft);
-      border-radius: var(--radius-xs); }
-    .rev-item > summary { list-style: none; cursor: pointer; display: flex; align-items: center;
-      gap: 10px; min-height: 48px; padding: 0 12px; }
-    .rev-item > summary::-webkit-details-marker { display: none; }
-    .rev-item[open] { border-color: var(--accent-dark); }
-    .rev-d { font-size: 14px; color: var(--text-muted); }
-    .rev-go { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
-    .rev-item[open] .rev-go { color: var(--text-muted); }
-    .rev-body { font-size: 15px; line-height: 1.7; white-space: pre-wrap; color: var(--text);
-      border-top: 1px dashed var(--border-soft); margin: 0 12px; padding: 11px 0 14px; }
-
-    /* ── 카드 안 버튼 줄(이어서 작성 · 삭제) ──
-       삭제는 되돌릴 수 없어 먼저 눈에 띄면 안 된다 — 테두리 없는 약한 글자 버튼으로 두되
-       터치 44px 은 지킨다(작게 만들면 옆 버튼을 잘못 누른다). */
-    .note-acts { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-    .note-acts-end { margin: 0 15px; padding-bottom: 14px; }
-    .note-act { display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
-      padding: 0 14px; font: inherit; font-size: 14px; font-weight: 800; border-radius: 999px;
-      border: 1px solid transparent; background: transparent; cursor: pointer; text-decoration: none; }
-    .note-act-go { color: var(--action-dark); border-color: var(--border); }
-    .note-act-go:hover { border-color: var(--accent-dark); }
-    .note-act-del { margin-left: auto; color: #9E3B34; }
-    .note-act-del:hover { background: #9E3B34; color: #fff; }
-    .note-act-del[disabled] { opacity: .6; cursor: default; }
-
-    /* ── 저장한 답변 고치기(2026-08-23 오너) — 본문만 그 자리에서 고친다.
-       그전에는 지우고 새로 쓰는 길밖에 없어서, 2주 동안 답변을 다듬는 챌린지와 맞지 않았다.
-       ⚠️ 고치면 트리거(snapshot_answer_revision)가 고치기 전 본문을 '수정 이력'에 남긴다
-          — 10분 묶기·답변당 20벌 상한이라, 남는 것은 '고치기 시작 직전의 원본'이다. */
-    .note-edit { margin: 0 15px 12px; }
-    .note-edit textarea { width: 100%; min-height: 220px; font: inherit; font-size: 16px;
-      line-height: 1.7; color: var(--text); background: var(--bg2); resize: vertical;
-      border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-    .note-edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .note-edit-acts { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-    .note-act-cancel { color: var(--text-muted); border-color: var(--border-soft); }
-    .note-edit-msg { font-size: 12px; line-height: 1.5; color: var(--text-muted); }
-
-    /* ── 답변 추가 — 저장소의 주인공. 무료·무제한 ──
-       ⚠️ 소재 발굴을 거치지 않고 바로 쓰는 길이다(2026-07-25 오너 지시).
-          소재 발굴은 소재를 캐내는 곳이지 답변을 넣는 관문이 아니다. */
-    .addbar { position: sticky; bottom: 0; margin: 18px -20px 0; padding: 14px 20px 18px;
-      background: linear-gradient(to top, var(--bg) 70%, rgba(255,255,255,0)); }
-    .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-      min-height: 52px; border: 0; border-radius: 999px; background: var(--text); color: #fff;
-      font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
-    .add-btn svg { width: 18px; height: 18px; }
-    .add-note { margin-top: 8px; text-align: center; font-size: 14px; color: var(--text-dim); }
-    .add-note b { color: var(--text-muted); font-weight: 800; }
-
-    .form-card { background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 15px; }
-    .lbl { font-size: 14px; font-weight: 800; color: var(--text-dim); margin-bottom: 8px; }
-    .lbl span { font-weight: 700; color: var(--text-dim); opacity: .8; }
-    .f-hr { height: 1px; background: var(--border-soft); margin: 14px 0; }
-    .f-title { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--border-soft);
-      font: inherit; font-size: 16px; font-weight: 700; color: var(--text); background: transparent;
-      padding: 0 0 10px; }
-    .f-title::placeholder { font-weight: 400; color: var(--text-dim); }
-    .f-ta { width: 100%; min-height: 170px; border: 0; resize: vertical; font: inherit; font-size: 15px;
-      line-height: 1.75; color: var(--text); background: transparent; }
-    .f-title:focus, .f-ta:focus { outline: none; }
-    .seg { display: flex; gap: 6px; }
-    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-    .seg button, .grid2 button, .pickbtn { min-height: 44px; font: inherit; font-size: 14px; font-weight: 700;
-      border: 1px solid var(--border); background: var(--bg2); border-radius: var(--radius-xs);
-      color: var(--text-muted); cursor: pointer; }
-    .seg button { flex: 1; }
-    .seg button.on, .grid2 button.on { background: var(--surface); color: var(--text); border-color: var(--text);
-      box-shadow: inset 0 0 0 1px var(--text); }
-    .pickbtn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 13px; text-align: left; }
-    .pickbtn.set { background: var(--surface); color: var(--text); border-color: var(--text); }
-    .pickbtn .en { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--air); }
-    .pickbtn .chev { margin-left: auto; width: 16px; height: 16px; opacity: .5; flex: 0 0 auto; }
-    .pickbtn.set .chev { margin-left: 6px; }
-    .f-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 11px;
-      padding-top: 11px; border-top: 1px solid var(--border-soft); font-size: 14px; color: var(--text-dim); }
-    .f-foot b { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
-    .f-foot b.over { color: #9E3B34; }
-    .save-btn { width: 100%; min-height: 54px; margin-top: 16px; border: 0; border-radius: 999px;
-      background: var(--action); color: var(--action-ink); font: inherit; font-size: 17px; font-weight: 800;
-      cursor: pointer; }
-    .save-btn:disabled { opacity: .45; cursor: default; }
-    .save-note { margin-top: 10px; text-align: center; font-size: 14px; color: var(--text-dim); }
-    .save-note b { color: var(--accent-ink); font-weight: 800; }
-    .notice { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-xs); font-size: 14px;
-      border: 1px solid rgba(158,59,52,.3); background: rgba(158,59,52,.07); color: #8A332D; }
-
-    /* 항공사 시트 — 공용 관습(버튼 → 바텀시트) */
-    .sheet-mask { position: fixed; inset: 0; z-index: 80; background: rgba(23,42,71,.45);
-      opacity: 0; pointer-events: none; transition: opacity .18s; }
-    .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 81; max-height: 78vh; overflow-y: auto;
-      background: var(--surface); border-radius: 18px 18px 0 0; padding: 8px 18px 24px;
-      transform: translateY(102%); transition: transform .24s cubic-bezier(.22,.61,.36,1); }
-    body.sheet-on .sheet-mask { opacity: 1; pointer-events: auto; }
-    body.sheet-on .sheet { transform: translateY(0); }
-    .sheet-inner { max-width: 780px; margin: 0 auto; }
-    .grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border); margin: 6px auto 14px; }
-    .sheet-h { font-size: 16px; font-weight: 800; }
-    .sheet-s { margin-top: 4px; margin-bottom: 12px; font-size: 14px; color: var(--text-dim); }
-    .opt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 4px;
-      border: 0; border-bottom: 1px solid var(--border-soft); background: none; font: inherit;
-      font-size: 15px; font-weight: 700; color: var(--text); cursor: pointer; text-align: left; }
-    .opt:last-child { border-bottom: 0; }
-    .opt .en { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--air); }
-    .opt .hint { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
-
-    /* ── 내 소재 탭 ── */
-    .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
-    .tabs button { flex: 1; min-height: 46px; font: inherit; font-size: 15px; font-weight: 800;
-      border: 1px solid var(--border); background: var(--bg2); border-radius: 999px;
-      color: var(--text-muted); cursor: pointer; }
-    .tabs button.on { background: var(--text); color: #fff; border-color: var(--text); }
     .mat-comp { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 8px;
       border-radius: 999px; background: var(--accent-tint); color: var(--accent-ink); margin-right: 4px; }
     .mat-body { font-size: 15px; line-height: 1.7; border-top: 1px dashed var(--border-soft);
       margin: 0 15px; padding: 13px 0 16px; }
-    .mat-body dt { font-size: 13px; font-weight: 800; color: var(--text-dim); margin-top: 10px; }
+    .mat-body dt { font-size: 14px; font-weight: 800; color: var(--text-dim); margin-top: 10px; }
     .mat-body dd { margin: 2px 0 0; white-space: pre-wrap; }
     .mat-acts { display: flex; gap: 8px; margin-top: 14px; }
     .mat-acts button { flex: 1; min-height: 44px; font: inherit; font-size: 14px; font-weight: 800;
@@ -330,42 +183,180 @@
       color: var(--text); background: var(--bg2); border: 1px solid var(--border-soft);
       border-radius: var(--radius-xs); padding: 9px 11px; margin-top: 4px; }
     .mat-edit textarea { min-height: 64px; resize: vertical; }
+    .lbl { font-size: 14px; font-weight: 800; color: var(--text-dim); margin-bottom: 8px; }
+
+    /* ── 답변 상세 — 본문이 펼치기 없이 바로. 첫 버튼은 고치기(회원 64%가 쓰는 기능 · 2026-09-23 실측). ── */
+    .d-meta { margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--text-muted); }
+    .d-air { letter-spacing: .06em; color: var(--air, var(--text-muted)); }
+    /* 항공사 액센트 — lectures.css 의 --air-* 와 같은 값(사이트에서 항공사 색은 한 벌이어야 한다) */
+    .air-ke { --air: #14375E; } .air-lj { --air: #3A6440; } .air-7c { --air: #8C4318; }
+    .air-tw { --air: #9E3B34; } .air-ze { --air: #97323A; } .air-yp { --air: #2E3D63; }
+    .air-rf { --air: #8E4064; }
+    .d-title { font-family: var(--serif); font-weight: 700; font-size: 20px; line-height: 1.35; margin-top: 4px; }
+    .d-main { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+    .d-when { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--text-dim);
+      font-variant-numeric: tabular-nums; }
+    .d-pol { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
+    .d-draft { margin-left: auto; font-size: 12px; font-weight: 800; color: #8C4318; background: rgba(140,67,24,.09);
+      padding: 2px 8px; border-radius: 999px; }
+    .d-body { margin-top: 10px; font-size: 16px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+    .d-none { color: var(--text-dim); }
+    .d-acts { display: flex; gap: 8px; margin-top: 16px; }
+    .d-acts[hidden] { display: none; }   /* 고치기 중엔 버튼 줄을 감춘다 — display:flex 가 [hidden] 을 이겨 실측에서 걸렸다(2026-09-23) */
+    .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 14px;
+      border-radius: 999px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; text-decoration: none; }
+    .btn-line { border: 1.5px solid var(--text); background: transparent; color: var(--text); }
+    .btn-line:hover { background: var(--text); color: #fff; }
+    .btn-fill { border: 0; background: var(--action); color: var(--action-ink); }
+    .btn-fill:hover { background: var(--action-dark); }
+    .btn:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .btn[disabled] { opacity: .45; cursor: default; }
+
+    /* 고치기 칸(2026-08-23 오너) — 본문 자리에 입력칸. ⚠️ 트리거(snapshot_answer_revision)가 고치기 전 본문을 남긴다. */
+    .d-edit { margin-top: 10px; }
+    .d-edit textarea { width: 100%; min-height: 220px; font: inherit; font-size: 16px; line-height: 1.7;
+      color: var(--text); background: var(--bg2); resize: vertical; border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px; }
+    .d-edit textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .d-edit-acts { display: flex; gap: 8px; margin-top: 10px; }
+    .d-edit-msg { margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--text-muted); }
+    .d-edit-msg:empty { display: none; }
+    .d-edit-msg.err { color: #9E3B34; font-weight: 700; }
+
+    /* 첨삭 이력 · 수정 이력 — 본문 아래. 이력이 없으면 절을 그리지 않는다(잔소리 금지). */
+    .d-sec { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+    .d-sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .d-sec-t { font-size: 15px; font-weight: 800; }
+    .d-sec-n { font-size: 14px; color: var(--text-dim); }
+    .hrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 8px;
+      padding: 10px 12px; text-align: left; font: inherit; background: var(--bg2);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-xs); cursor: pointer;
+      text-decoration: none; color: inherit; }
+    .hrow:hover { border-color: var(--accent-dark); }
+    .hrow:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .hrow-d { font-size: 14px; color: var(--text-dim); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+    .hrow-g { font-size: 15px; font-weight: 800; color: var(--g, var(--accent-ink)); }
+    .hrow-c { font-size: 14px; color: var(--text-muted); }
+    .hrow-go { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
+    .grade-human { --g: #2E6E42; } .grade-slight { --g: #8C4318; } .grade-heavy { --g: #9E3B34; }
+    /* 수정 이력(2026-08-05) — 두 겹 접이. 바깥은 '수정 이력 N개', 안쪽은 버전마다 날짜만. 본문은 펼칠 때 받아 온다.
+       ⚠️ 지난 본문을 펼치지 않은 채로 늘어놓지 말 것 — 화면이 원문 더미가 된다(오너 지시). */
+    .rev-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center;
+      justify-content: space-between; gap: 8px; min-height: 44px; }
+    .rev-fold > summary::-webkit-details-marker { display: none; }
+    .rev-fold > summary:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; border-radius: 6px; }
+    .rev-n { font-size: 14px; font-weight: 700; color: var(--accent-ink); }
+    .rev-lead { margin: 2px 0 2px; font-size: 14px; color: var(--text-dim); }
+    .rev-item { margin-top: 8px; background: var(--bg2); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xs); }
+    .rev-item > summary { list-style: none; cursor: pointer; display: flex; align-items: center;
+      gap: 10px; min-height: 48px; padding: 0 12px; }
+    .rev-item > summary::-webkit-details-marker { display: none; }
+    .rev-item > summary:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; border-radius: var(--radius-xs); }
+    .rev-item[open] { border-color: var(--accent-dark); }
+    .rev-d { font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .rev-go { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--accent-ink); }
+    .rev-item[open] .rev-go { color: var(--text-muted); }
+    .rev-body { font-size: 15px; line-height: 1.7; white-space: pre-wrap; color: var(--text);
+      border-top: 1px dashed var(--border-soft); margin: 0 12px; padding: 11px 0 14px; }
+
+    /* 삭제 — 되돌릴 수 없어 맨 아래 약한 글자 버튼. 터치 44px 은 지킨다. */
+    .d-del { display: flex; justify-content: flex-end; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+    .d-del button { min-height: 44px; padding: 0 14px; border: 0; background: none; font: inherit; font-size: 14px;
+      font-weight: 800; color: #9E3B34; cursor: pointer; border-radius: 999px; }
+    .d-del button:hover { background: #9E3B34; color: #fff; }
+    .d-del button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .d-del button[disabled] { opacity: .6; cursor: default; }
+
+    /* ── 답변 추가 — 질문·본문 칸이 먼저, 분류는 본문 아래. 저장은 언제나 무료·무제한(2026-07-25 오너). ── */
+    .f-title { display: block; width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-bottom: 1px solid var(--border);
+      font: inherit; font-size: 17px; font-weight: 700; color: var(--text); background: transparent; padding: 0 0 10px; }
+    .f-title::placeholder { font-weight: 400; color: var(--text-dim); }
+    .f-ta { display: block; width: 100%; min-height: 300px; margin-top: 14px; padding: 14px; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); resize: vertical; font: inherit; font-size: 16px; line-height: 1.75;
+      color: var(--text); background: var(--surface); }
+    .f-ta::placeholder { color: var(--text-dim); }
+    .f-title:focus-visible, .f-ta:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; }
+    .f-cnt { margin-top: 6px; text-align: right; font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    .f-cnt.over { color: #9E3B34; font-weight: 700; }
+    .f-lbl { margin-top: 16px; font-size: 14px; font-weight: 800; color: var(--text-dim); }
+    .f-lbl span { font-weight: 700; opacity: .8; }
+    .seg { display: flex; gap: 6px; margin-top: 8px; }
+    .seg button, .pick { min-height: 44px; font: inherit; font-size: 14px; font-weight: 700;
+      border: 1px solid var(--border); background: var(--bg2); border-radius: var(--radius-xs);
+      color: var(--text-muted); cursor: pointer; }
+    .seg button { flex: 1; }
+    .seg button.on { background: var(--surface); color: var(--text); border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+    .seg button:focus-visible, .pick:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+    .pick { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 12px; text-align: left; min-width: 0; }
+    .pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pick .chev { width: 16px; height: 16px; opacity: .5; flex: 0 0 auto; }
+    .pick.set { background: var(--surface); color: var(--text); border-color: var(--text); }
+    .save-btn { width: 100%; min-height: 54px; margin-top: 18px; border: 0; border-radius: 999px;
+      background: var(--action); color: var(--action-ink); font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; }
+    .save-btn:disabled { opacity: .45; cursor: default; }
+    .save-btn:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .save-note { margin-top: 10px; text-align: center; font-size: 14px; color: var(--text-dim); }
+    .save-note b { color: var(--accent-ink); font-weight: 800; }
+    .notice { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-xs); font-size: 14px;
+      border: 1px solid rgba(158,59,52,.3); background: rgba(158,59,52,.07); color: #8A332D; }
+
+    /* 시트(질문 유형 · 지망 항공사) — 공용 관습(버튼 → 바텀시트) */
+    .sheet-mask { position: fixed; inset: 0; z-index: 80; background: rgba(23,42,71,.45);
+      opacity: 0; pointer-events: none; transition: opacity .18s; }
+    .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 81; max-height: 78vh; overflow-y: auto;
+      background: var(--surface); border-radius: 18px 18px 0 0; padding: 8px 18px 24px;
+      transform: translateY(102%); transition: transform .24s cubic-bezier(.22,.61,.36,1); }
+    body.sheet-on .sheet-mask { opacity: 1; pointer-events: auto; }
+    body.sheet-on .sheet { transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .sheet, .sheet-mask { transition: none; } }
+    .sheet-inner { max-width: 780px; margin: 0 auto; }
+    .grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border); margin: 6px auto 14px; }
+    .sheet-h { font-size: 16px; font-weight: 800; }
+    .sheet-s { margin-top: 4px; margin-bottom: 12px; font-size: 14px; color: var(--text-dim); }
+    .sheet-s:empty { display: none; }
+    .opt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 4px;
+      border: 0; border-bottom: 1px solid var(--border-soft); background: none; font: inherit;
+      font-size: 15px; font-weight: 700; color: var(--text); cursor: pointer; text-align: left; }
+    .opt:last-child { border-bottom: 0; }
+    .opt:focus-visible { outline: 3px solid var(--action); outline-offset: -3px; border-radius: 6px; }
+    .opt .en { margin-left: auto; font-size: 14px; font-weight: 800; letter-spacing: .08em; color: var(--air); }
+    .opt .hint { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--text-dim); }
   </style>
 </head>
 <body data-nav-offset>
   <div class="wrap">
-    <div class="topbar">
-      <a href="mypage.html" class="back">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>마이페이지</a>
-    </div>
-
     <div id="content" style="display:none;">
-      <!-- ══ 목록 ══ -->
-      <div id="listView">
-        <div class="head">
-          <div class="eyebrow">MY ANSWERS</div>
+
+      <!-- ══ ① 목록 ══ -->
+      <section id="listView">
+        <div class="sub">
+          <a class="sub-back" href="mypage.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>마이페이지</a>
+        </div>
+        <div class="h1row">
           <h1>나만의 승준노트</h1>
-          <p class="sub" id="hSub"></p>
+          <!-- [선택] — 선택 모드 진입구. 답변이 하나도 없으면 JS 가 숨긴다. -->
+          <button type="button" class="sel-enter" id="selEnter" hidden>선택</button>
         </div>
 
         <!-- 내 소재 = 다듬기가 만든 소재 카드 서랍(2026-07-30 v2). 테이블 미생성이면 JS 가 탭을 숨긴다. -->
         <div class="tabs" id="tabs" hidden>
-          <button type="button" class="on" data-tab="answers">내 답변</button>
-          <button type="button" data-tab="materials">내 소재</button>
+          <button type="button" class="on" data-tab="answers">내 답변<b id="tabN"></b></button>
+          <button type="button" data-tab="materials">내 소재<b id="matN"></b></button>
         </div>
 
         <div class="filters">
-          <input type="search" class="search" id="q" placeholder="질문·답변 내용 검색" aria-label="답변 검색" />
-          <div class="chips" id="chips" role="group" aria-label="답변 분류 필터"></div>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="search" id="q" placeholder="질문·답변 내용 검색" aria-label="답변 검색" autocomplete="off" />
+          </div>
+          <div class="chips" id="chips" role="group" aria-label="질문 유형 필터" hidden></div>
         </div>
-
-        <!-- 개수 줄 + [선택] — 선택 모드 진입구. 답변이 하나도 없으면 JS 가 단추를 숨긴다. -->
-        <div class="count-row">
-          <p class="count" id="count"></p>
-          <button type="button" class="sel-enter" id="selEnter" hidden>선택</button>
-        </div>
-        <div class="notes" id="list"></div>
+        <p class="count" id="count" hidden></p>
+        <div class="rows" id="list"></div>
 
         <!-- 선택 바 — 선택 모드에서만. 취소가 삭제보다 앞이다(되돌릴 수 없는 쪽을 끝에 둔다). -->
         <div class="selbar" id="selBar" hidden>
@@ -374,15 +365,15 @@
           <button type="button" class="sel-del" id="selDel" disabled>삭제</button>
         </div>
 
-        <!-- ⚠️ 저장은 크레딧과 무관하게 언제나 무료다. 그 사실을 버튼 밑에 붙여 둔다 —
+        <!-- ⚠️ 저장은 크레딧과 무관하게 언제나 무료다. 그 사실을 버튼 밑에 짧게 붙여 둔다 —
              '검사 횟수가 없으면 저장도 못 하나?'라는 오해가 실제로 생긴다. -->
         <div class="addbar">
-          <button type="button" class="add-btn" id="addBtn">
+          <a class="add-btn" id="addBtn" href="#new">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
                  stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             답변 추가하기
-          </button>
-          <p class="add-note">저장은 <b>무제한 무료</b>예요. 검사 횟수와 상관없어요.</p>
+          </a>
+          <p class="add-note">저장은 무료 · 횟수 제한 없음</p>
         </div>
 
         <!-- 미니 다듬기(quickfix.js) — 무료 맛보기 겸 표현 수집 창구 -->
@@ -390,81 +381,70 @@
 
         <!-- ══ 내 소재(서랍) ══ -->
         <div id="matWrap" hidden>
-          <p class="count" id="matCount"></p>
+          <p class="mat-count" id="matCount"></p>
           <div class="notes" id="matList"></div>
-          <p class="add-note" style="margin-top:14px">
+          <p class="add-note" style="margin-top:14px;font-size:14px">
             소재 카드는 <a href="sojae.html" style="color:var(--accent-ink);font-weight:800">소재 발굴</a>의
             다듬기가 자동으로 만들어 줘요.
           </p>
         </div>
-      </div>
+      </section>
 
-      <!-- ══ 답변 추가 ══ -->
-      <div id="addView" hidden>
-        <div class="head">
-          <div class="eyebrow">NEW ANSWER</div>
-          <h1>답변 추가</h1>
-          <p class="sub">지금 생각나는 대로 써도 괜찮아요. 나중에 고칠 수 있어요.</p>
+      <!-- ══ ② 답변 상세 ══ -->
+      <section id="detailView" hidden>
+        <div class="sub">
+          <button type="button" class="sub-back" id="dBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>노트</button>
         </div>
+        <div id="detail"></div>
+      </section>
 
-        <div class="form-card">
-          <div class="lbl">어떤 질문인가요</div>
-          <input class="f-title" id="fTitle" maxlength="200" autocomplete="off"
-                 placeholder="예) 자신의 강점을 말해 보세요">
+      <!-- ══ ③ 답변 추가 ══ -->
+      <section id="addView" hidden>
+        <div class="sub">
+          <button type="button" class="sub-back" id="aBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>노트</button>
+        </div>
+        <div class="h1row"><h1>답변 추가</h1></div>
 
-          <div class="f-hr"></div>
-          <div class="lbl">질문 유형</div>
-          <div class="grid2" id="fCat" role="group" aria-label="질문 유형">
-            <button type="button" data-v="experience">과거경험검증형</button>
-            <button type="button" data-v="values">직무핵심역량형</button>
-            <button type="button" data-v="judgment">상황대처형</button>
-            <button type="button" data-v="company">기업관심도형</button>
-            <button type="button" data-v="personal">개인신상형</button>
-          </div>
+        <input class="f-title" id="fTitle" maxlength="200" autocomplete="off" aria-label="질문"
+               placeholder="어떤 질문인가요? 예) 자신의 강점을 말해 보세요">
+        <!-- 긴 글 임시 보관(draft-keep) — sessionStorage. localStorage 로 바꾸지 말 것(공용 기기에 학생 글이 남는다). -->
+        <textarea class="f-ta" id="fBody" data-keep="answers-body" maxlength="1500" aria-label="답변"
+                  placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
+        <p class="f-cnt" id="fCnt">0 / 1,500자</p>
 
-          <div class="f-hr"></div>
-          <div class="lbl">종류</div>
-          <div class="seg" id="fKind" role="group" aria-label="글 종류">
-            <button type="button" data-v="interview" class="on">면접 답변</button>
-            <button type="button" data-v="essay">자소서</button>
-          </div>
-
-          <div class="f-hr"></div>
-          <div class="lbl">지망 항공사 <span>(선택)</span></div>
-          <button type="button" class="pickbtn" id="fAir">
-            <span id="fAirLabel">아직 안 정했어요</span>
+        <p class="f-lbl">분류 <span>(선택)</span></p>
+        <div class="seg" id="fKind" role="group" aria-label="글 종류">
+          <button type="button" data-v="interview" class="on">면접 답변</button>
+          <button type="button" data-v="essay">자소서</button>
+        </div>
+        <div class="picks">
+          <button type="button" class="pick" id="fCat"><span id="fCatLabel">질문 유형</span>
             <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-
-          <div class="f-hr"></div>
-          <div class="lbl">답변</div>
-          <textarea class="f-ta" id="fBody" data-keep="answers-body" maxlength="1500"
-                    placeholder="면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요."></textarea>
-          <div class="f-foot"><span>나중에 이어서 써도 돼요</span><b id="fCnt">0 / 1,500자</b></div>
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+          <button type="button" class="pick" id="fAir"><span id="fAirLabel">지망 항공사</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         </div>
 
         <div id="fNotice"></div>
         <button type="button" class="save-btn" id="saveBtn" disabled>저장하기</button>
-        <p class="save-note">저장은 <b>무료</b>예요 · 검사는 저장한 뒤 골라서 해요</p>
-        <p class="add-note" style="margin-top:14px">
-          소재가 잘 안 떠오르면 <a href="sojae.html" style="color:var(--accent-ink);font-weight:800">소재 발굴</a>에서
-          되묻기로 캐낼 수도 있어요.
-        </p>
-      </div>
+        <p class="save-note">저장은 <b>무료</b> · 첨삭은 저장한 뒤 골라서</p>
+      </section>
     </div>
 
     <div class="loading" id="loading">불러오는 중…</div>
   </div>
 
-  <!-- 항공사 선택 시트 -->
+  <!-- 선택 시트(질문 유형 · 지망 항공사) — 내용은 JS 가 채운다 -->
   <div class="sheet-mask" id="sheetMask"></div>
-  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="지망 항공사">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetH" inert>
     <div class="sheet-inner">
       <div class="grip"></div>
-      <div class="sheet-h">지망 항공사</div>
-      <p class="sheet-s">항공사마다 자소서 흐름도, 면접이 보는 결도 달라요. 안 정했으면 비워도 돼요.</p>
-      <div id="airOpts"></div>
+      <div class="sheet-h" id="sheetH"></div>
+      <p class="sheet-s" id="sheetS"></p>
+      <div id="sheetOpts"></div>
     </div>
   </div>
 
@@ -487,19 +467,27 @@
       return escaped.replace(new RegExp('(' + esc(t) + ')', 'gi'), '<mark>$1</mark>');
     }
     const fmt = s => { const d = new Date(s); return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate(); };
+    // 목록·상세 날짜는 올해면 '9.22'(연도 없이) — 폰 메모가 쓰는 표기. 다른 해면 연도를 앞에 붙인다.
+    const fmtShort = s => {
+      const d = new Date(s), y = d.getFullYear();
+      return (y === new Date().getFullYear() ? '' : y + '.') + (d.getMonth() + 1) + '.' + d.getDate();
+    };
     // 수정 이력은 하루에 여러 번 쌓일 수 있어 시각까지 보여준다(날짜만 쓰면 같은 줄이 여럿 보인다).
     const fmtT = s => {
       const d = new Date(s), p = n => String(n).padStart(2, '0');
-      return fmt(s) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+      return fmtShort(s) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
     };
+    // 노트 안 행동 계측(2026-09-23) — 공용 비콘. 이벤트명 규칙 ^[a-z][a-z0-9_]{2,63}$ · 개인정보 없음.
+    //    note_view(n,m) · note_open(via) · note_search · note_add_save · note_edit_save · note_polish_go · note_delete(n)
+    function beacon(ev, meta) { try { if (window.moncBeacon) moncBeacon(ev, meta || {}); } catch (_) {} }
 
     let ROWS = [];              // 전체 답변(최신순)
-    let CHECKS = new Map();     // answer_id → 검사 이력(최신순)
+    let CHECKS = new Map();     // answer_id → 검사 이력(최신순) — AI킬러 잠시 내림(2026-08-28)이라 화면엔 안 그리지만 받아 둔다
     let POLISHES = new Map();   // answer_id → 첨삭 이력(최신순) — 킬러 검사와 나란한 1:N
     // answer_id → 수정 이력(최신순). ⚠️ **본문은 안 들고 온다** — 답변마다 최대 20벌이라
     //    전부 받으면 목록 한 번에 수백 KB 가 된다. 본문은 그 버전을 펼칠 때 한 행만 받는다.
     let REVS = new Map();
-    let filter = { status: 'all', cat: 'all', q: '' };
+    let filter = { cat: 'all', q: '' };
     let ME = null;
 
     // 항공사 — lecture-common.js 의 LEC.AIRLINES 와 같은 목록·같은 색(사이트에서 한 벌이어야 한다).
@@ -515,28 +503,58 @@
     const KIND_LABEL = { interview: '면접 답변', essay: '자소서' };
 
     // 유형·제목은 두 곳에서 온다 — 소재 발굴 답변은 questions, 직접 쓴 답변은 answers 자신.
-    // ⚠️ answers 쪽을 먼저 본다(학생이 직접 고친 값이 문제 원본보다 우선).
+    // ⚠️ answers 쪽을 먼저 본다(학생이 직접 고친 값이 문제 원본보다 우선). mypage.html 과 같은 규칙.
     function catOf(a) { return a.category || (a.questions || {}).category || ''; }
-    function catLabel(a) { return (window.SOJAE.CAT_LABEL[catOf(a)]) || '소재 발굴'; }
     function titleOf(a) { return (a.questions || {}).content || a.title || '(제목 없음)'; }
     function isDraft(a) { return (a.status || 'final') === 'draft'; }
     function airOf(a) { return a.airline || ''; }
+    function byId(id) { return ROWS.find(x => x.id === id); }
 
-    /* ══ 질문별 묶음 (2026-09-22) ═══════════════════════════════════════════════
-       묶음 키는 이미 있는 question_id 다 — 새 컬럼을 만들지 않는다.
-       ⚠️ 질문 없이 직접 쓴 글은 제목이 저마다 달라 묶을 축이 없다. 맨 아래 '직접 쓴 글'
-          한 묶음으로 모은다(제목이 같은 것끼리 묶으면 남의 제목이 붙는 사고가 난다).
-       ⚠️ 열린 묶음은 OPEN 이 기억한다 — 삭제·검색으로 다시 그릴 때 접혀 버리면
-          방금 보던 자리를 잃는다(2026-08-01 스크롤 사고와 같은 기준). */
-    const FREE_KEY = '__free__';
-    let OPEN = new Set();
+    /* ══ 화면 전환 — 해시 라우팅 ═══════════════════════════════════════════
+       #a=<id> 답변 상세 · #new 답변 추가 · #materials 소재 탭 · 그 밖은 목록.
+       목록에서 눌러 들어간 화면은 [노트] 버튼이 history.back() 으로 돌아가고(뒤로가기와 같은 길),
+       주소로 바로 들어온 화면은 해시를 지우고 목록을 그린다. 목록 스크롤은 떠날 때 적어 두고 돌아올 때 되돌린다. */
+    let CUR_VIEW = 'list';
+    let FROM_LIST = false;
+    let LIST_SCROLL = 0;
+    let TABS_ON = false;
+
+    function go(hash) {
+      LIST_SCROLL = window.scrollY;
+      FROM_LIST = true;
+      location.hash = hash;
+    }
+    function goBack() {
+      if (FROM_LIST) { history.back(); return; }          // hashchange → route → 목록
+      history.replaceState(null, '', location.pathname + location.search);
+      route();
+    }
+    function showView(name) {
+      const prev = CUR_VIEW; CUR_VIEW = name;
+      document.getElementById('listView').hidden = name !== 'list';
+      document.getElementById('detailView').hidden = name !== 'detail';
+      document.getElementById('addView').hidden = name !== 'add';
+      if (name === 'list') { if (prev !== 'list') window.scrollTo(0, LIST_SCROLL); FROM_LIST = false; }
+      else window.scrollTo(0, 0);
+    }
+    function route() {
+      const h = location.hash || '';
+      const m = /^#a=(.+)$/.exec(h);
+      if (SEL_MODE && m) selExit();            // 고르는 중에 다른 화면으로 가면 고르기를 접는다
+      if (m) {
+        renderDetail(decodeURIComponent(m[1]));
+        showView('detail');
+        beacon('note_open', { via: FROM_LIST ? 'list' : 'link' });
+        return;
+      }
+      if (h === '#new') { showView('add'); return; }
+      if (h === '#materials' && TABS_ON) showTab('materials');
+      showView('list');
+    }
 
     /* ══ 선택 모드 (2026-09-22 오너 "체크박스를 만들어서 한번에 삭제") ═══════════
        ⚠️ 체크칸은 **표시 전용**이다(CSS pointer-events:none). 줄 어디를 눌러도 선택되게
-          두면 터치 목표가 줄 전체라 44px 걱정이 없고, 체크칸만 정확히 눌러야 하는 답답함도 없다.
-       ⚠️ 선택 모드에서는 답변 카드를 펼치지 않는다 — 고르는 화면과 읽는 화면을 섞으면
-          체크하려다 본문이 열리고, 열린 본문 때문에 다음 줄이 화면 밖으로 밀린다.
-          묶음은 반대로 전부 펼친다(안 그러면 묶음 통째로만 고를 수 있다). */
+          두면 터치 목표가 줄 전체라 44px 걱정이 없고, 체크칸만 정확히 눌러야 하는 답답함도 없다. */
     const CHECK_SVG = '<span class="selbox" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
     let SEL_MODE = false;
     let SEL = new Set();
@@ -546,39 +564,25 @@
       document.body.classList.add('sel-on');
       document.getElementById('selBar').hidden = false;
       document.getElementById('selEnter').hidden = true;
-      render();
+      syncSel();
     }
-
     function selExit() {
       SEL_MODE = false; SEL.clear();
       document.body.classList.remove('sel-on');
       document.getElementById('selBar').hidden = true;
       document.getElementById('selEnter').hidden = !ROWS.length;
-      render();
+      syncSel();
     }
-
     // 고른 것들을 화면에 반영 — 줄 테두리·체크칸·선택 바 숫자가 한 벌이다.
     function syncSel() {
       document.querySelectorAll('#list [data-sel-id]').forEach(el => {
         el.classList.toggle('on', SEL.has(el.dataset.selId));
-      });
-      // 묶음 줄은 '그 안이 전부 선택됐을 때'만 켠다(일부만이면 반쯤 고른 상태다)
-      document.querySelectorAll('#list [data-sel-grp]').forEach(el => {
-        const ids = idsOfGrp(el.dataset.selGrp);
-        el.classList.toggle('on', ids.length > 0 && ids.every(id => SEL.has(id)));
       });
       const n = SEL.size;
       document.getElementById('selCount').innerHTML = n
         ? ('<b>' + n + '개</b> 선택') : '<span>선택한 답변이 없어요</span>';
       document.getElementById('selDel').disabled = !n;
     }
-
-    // 지금 화면에 그려진 묶음의 답변 id — 필터·검색으로 걸러진 것은 고르지 않는다(안 보이는 것을 지우면 안 된다)
-    function idsOfGrp(key) {
-      const box = document.querySelector('#list [data-grp="' + (window.CSS && CSS.escape ? CSS.escape(key) : key) + '"]');
-      return box ? Array.from(box.querySelectorAll('[data-sel-id]')).map(el => el.dataset.selId) : [];
-    }
-
     async function selDelete() {
       const ids = Array.from(SEL);
       if (!ids.length) return;
@@ -595,43 +599,22 @@
         return;
       }
       btn.textContent = '삭제';
+      forget(ids);
+      beacon('note_delete', { n: ids.length });
+      selExit();
+      buildChips(); render();
+    }
+    // 지운 답변을 화면 자료에서 걷어낸다 — 단건·일괄 삭제가 같은 뒤처리를 쓴다.
+    function forget(ids) {
       ROWS = ROWS.filter(x => ids.indexOf(x.id) < 0);
       ids.forEach(id => { CHECKS.delete(id); POLISHES.delete(id); REVS.delete(id); });
-      selExit();
-      buildChips(); render(); syncCount();
+      syncTabs();
     }
 
-    function grpKey(a) { return a.question_id || FREE_KEY; }
-
-    function groupRows(rows) {
-      const map = new Map();
-      rows.forEach(a => {
-        const k = grpKey(a);
-        if (!map.has(k)) map.set(k, []);
-        map.get(k).push(a);
-      });
-      const at = a => new Date(a.updated_at || a.created_at || 0).getTime();
-      const groups = [];
-      map.forEach((list, key) => {
-        list.sort((x, y) => at(y) - at(x));                       // 묶음 안은 최신순
-        groups.push({
-          key: key,
-          free: key === FREE_KEY,
-          title: key === FREE_KEY ? '직접 쓴 글' : titleOf(list[0]),
-          rows: list,
-          last: at(list[0])
-        });
-      });
-      // 묶음끼리도 최신순. '직접 쓴 글'은 질문이 아니라 서랍이라 언제나 맨 아래.
-      groups.sort((x, y) => (x.free - y.free) || (y.last - x.last));
-      return groups;
-    }
-
+    /* ══ ① 목록 ═══════════════════════════════════════════════════════════ */
     function render() {
       const term = filter.q.trim().toLowerCase();
       const rows = ROWS.filter(a => {
-        if (filter.status === 'draft' && !isDraft(a)) return false;
-        if (filter.status === 'final' && isDraft(a)) return false;
         if (filter.cat !== 'all' && catOf(a) !== filter.cat) return false;
         if (!term) return true;
         // 제목은 소재 발굴 문제(questions.content)일 수도, 직접 쓴 제목(title)일 수도 있다
@@ -640,8 +623,11 @@
       });
 
       const listEl = document.getElementById('list');
-      document.getElementById('count').textContent =
-        rows.length === ROWS.length ? (ROWS.length + '개') : (rows.length + '개 / 전체 ' + ROWS.length + '개');
+      const countEl = document.getElementById('count');
+      // 걸러진 상태에서만 개수를 말한다 — 평소엔 탭의 숫자가 그 몫이다.
+      countEl.hidden = rows.length === ROWS.length;
+      countEl.textContent = rows.length + '개 / 전체 ' + ROWS.length + '개';
+      document.querySelector('.filters').hidden = !ROWS.length;
 
       if (!rows.length) {
         // ⚠️ 답변이 없을 때 소재 발굴로만 보내지 않는다(2026-07-25 오너 지시).
@@ -650,304 +636,162 @@
           ? '조건에 맞는 답변이 없어요.'
           : '아직 저장한 답변이 없어요.<br>아래에서 <b>답변을 추가</b>하거나,'
             + ' <a href="sojae.html">소재 발굴</a>에서 캐내 보세요.') + '</p>';
+        syncSel();
         return;
       }
-
       const rawTerm = filter.q.trim();
-      const groups = groupRows(rows);
-      // 검색 중에는 걸린 묶음을 자동으로 편다 — 찾은 것이 접힌 채로 있으면 못 찾은 것과 같다.
-      listEl.innerHTML = groups.map(g => {
-        const open = SEL_MODE || !!rawTerm || OPEN.has(g.key);
-        const first = g.rows[0];
-        const body = (first.content || '').trim();
-        const prev = body ? esc(body.slice(0, 60)) + (body.length > 60 ? '…' : '') : '아직 작성 전';
-        return `<details class="grp sel-row" data-grp="${esc(g.key)}" data-sel-grp="${esc(g.key)}"${open ? ' open' : ''}>
-          <summary>${CHECK_SVG}<div class="grp-tx">
-              <div class="grp-q">${hi(esc(g.title), rawTerm)}</div>
-              <p class="grp-p">${hi(prev, rawTerm)}</p>
-            </div>
-            <div class="grp-side"><span class="grp-n">${g.rows.length}개</span>
-              <span class="grp-d">${fmt(first.updated_at)}</span></div></summary>
-          <div class="grp-body">${g.rows.map(a => cardHtml(a, rawTerm)).join('')}</div>
-        </details>`;
-      }).join('');
+      listEl.innerHTML = rows.map(a => rowHtml(a, rawTerm)).join('');
       syncSel();
     }
 
-    /* 답변 카드 한 장 — 묶음 안에 들어간다(2026-09-22 전에는 이 덩어리가 render 안에 있었다). */
-    function cardHtml(a, rawTerm) {
-        const qText = hi(esc(titleOf(a)), rawTerm);
-        const top = `<div class="note-top">${CHECK_SVG}<span class="note-cat">${esc(catLabel(a))}</span>` +
-          `<span class="note-date">${fmt(a.updated_at)}</span></div>`;
-        if (isDraft(a)) {
-          const body = (a.content || '').trim();
-          const preview = body ? hi(esc(body.slice(0, 70)), rawTerm) + (body.length > 70 ? '…' : '')
-            : '아직 작성 전';
-          // 소재 발굴에서 온 초안만 이어쓰기로 보낸다(직접 쓴 글은 그 화면이 없다)
-          const href = a.question_id ? 'sojae.html?q=' + encodeURIComponent(a.question_id) : null;
-          // ⚠️ 카드 전체를 링크로 두지 않는다 — 삭제 버튼이 링크 안에 들어가기 때문이다
-          //    (a 안의 button 은 마크업이 깨지고 탭 이동도 엉킨다). 링크를 버튼 줄로 내렸다.
-          return `<div class="note note-draft sel-row" data-sel-id="${esc(a.id)}">${top}<div class="note-q">${qText}</div>
-            <div class="note-preview">${preview}</div>
-            <div class="note-acts">
-              ${href ? `<a class="note-act note-act-go" href="${href}">이어서 작성 →</a>` : ''}
-              ${delBtn(a)}
-            </div></div>`;
+    // 답변 한 줄 — 제목 + 본문 2줄(CSS 가 자른다) + 날짜·표식. 줄 전체가 상세로 가는 링크다.
+    function rowHtml(a, rawTerm) {
+      const body = (a.content || '').trim();
+      const prev = body ? hi(esc(body.slice(0, 120)), rawTerm) : '<span class="d-none">아직 작성 전</span>';
+      const pols = (POLISHES.get(a.id) || []).length;
+      let side = '<span class="row-d">' + esc(fmtShort(a.updated_at)) + '</span>';
+      if (isDraft(a)) side += '<span class="row-draft">작성 중</span>';
+      else if (pols) side += '<span class="row-pol">첨삭 ' + pols + '회</span>';
+      return `<a class="row sel-row" href="#a=${encodeURIComponent(a.id)}" data-sel-id="${esc(a.id)}">${CHECK_SVG}
+        <div class="row-tx"><div class="row-t">${hi(esc(titleOf(a)), rawTerm)}</div><p class="row-p">${prev}</p></div>
+        <div class="row-side">${side}</div></a>`;
+    }
+
+    function buildChips() {
+      // 실제로 존재하는 유형만 칩으로 (없는 유형을 눌러 빈 화면을 보는 일이 없게). 유형이 하나도 없으면 줄 자체를 숨긴다.
+      const cats = [];
+      ROWS.forEach(a => { const c = catOf(a); if (c && cats.indexOf(c) < 0) cats.push(c); });
+      if (filter.cat !== 'all' && cats.indexOf(filter.cat) < 0) filter.cat = 'all';
+      const defs = [{ v: 'all', label: '전체' }].concat(cats.map(c => ({ v: c, label: window.SOJAE.CAT_LABEL[c] || c })));
+      const box = document.getElementById('chips');
+      box.hidden = !cats.length;
+      box.innerHTML = defs.map(d =>
+        `<button type="button" class="chip${filter.cat === d.v ? ' on' : ''}" ` +
+        `data-v="${esc(d.v)}" aria-pressed="${filter.cat === d.v}">${esc(d.label)}</button>`
+      ).join('');
+
+      // ⚠️ 다시 그릴 때마다 붙이면 클릭 한 번이 두 번 처리된다(삭제 뒤 칩을 다시 만든다).
+      if (buildChips.wired) return;
+      buildChips.wired = true;
+      box.addEventListener('click', e => {
+        const btn = e.target.closest('.chip');
+        if (!btn) return;
+        const v = btn.dataset.v;
+        filter.cat = (v === 'all' || filter.cat === v) ? 'all' : v;   // 같은 칩을 다시 누르면 해제
+        box.querySelectorAll('.chip').forEach(c => {
+          const on = filter.cat === c.dataset.v;
+          c.classList.toggle('on', on);
+          c.setAttribute('aria-pressed', String(on));
+        });
+        render();
+      });
+    }
+
+    // 탭 숫자·[선택] 노출 — 첫 로드와 삭제 뒤에 같은 규칙을 쓴다.
+    function syncTabs() {
+      document.getElementById('tabN').textContent = ROWS.length;
+      document.getElementById('matN').textContent = MATS.length;
+      const enter = document.getElementById('selEnter');
+      if (enter) enter.hidden = SEL_MODE || !ROWS.length;
+    }
+
+    // 목록 안에서 일어나는 일 — 줄 누르기(상세로 · 선택 모드면 고르기). render() 가 목록을
+    // 통째로 다시 그리므로 줄마다 달지 않고 컨테이너 한 곳에 위임한다.
+    function wireList() {
+      document.getElementById('list').addEventListener('click', e => {
+        const row = e.target.closest('[data-sel-id]');
+        if (!row) return;
+        e.preventDefault();
+        const id = row.dataset.selId;
+        if (SEL_MODE) {
+          if (SEL.has(id)) SEL.delete(id); else SEL.add(id);
+          syncSel();
+          return;
         }
-        return `<details class="note sel-row" data-sel-id="${esc(a.id)}"><summary>${top}<div class="note-q">${qText}</div>
-          ${metaHtml(a)}<span class="note-more">답변 보기 ▾</span></summary>
-          <div class="note-a">${hi(esc(a.content), rawTerm)}</div>
-          ${histHtml(a)}${revHtml(a)}
-          <div class="note-acts note-acts-end">${editBtn(a)}${delBtn(a)}</div></details>`;
+        go('a=' + encodeURIComponent(id));
+      });
     }
 
-    // 카드 메타 한 줄 — 종류·항공사·마지막 검사 등급.
-    // ⚠️ 검사한 적이 없으면 **아무것도 그리지 않는다.** '아직 안 함'을 굳이 쓰면 목록이 잔소리가 된다.
-    function metaHtml(a) {
+    /* ══ ② 답변 상세 ══════════════════════════════════════════════════════ */
+    function renderDetail(id) {
+      const a = byId(id);
+      const box = document.getElementById('detail');
+      if (!a) {
+        box.innerHTML = '<p class="empty">이 답변을 찾을 수 없어요.<br>지웠거나 주소가 잘못됐을 수 있어요.</p>';
+        return;
+      }
       const bits = [];
-      const kind = KIND_LABEL[a.doc_kind];
-      if (kind) bits.push(`<span class="tag">${esc(kind)}</span>`);
+      const c = catOf(a);
+      if (c && window.SOJAE.CAT_LABEL[c]) bits.push(esc(window.SOJAE.CAT_LABEL[c]));
+      if (KIND_LABEL[a.doc_kind]) bits.push(esc(KIND_LABEL[a.doc_kind]));
       const air = airOf(a);
-      if (air === 'all') bits.push('<span class="tag">만능</span>');
-      else if (AIRLINES[air]) bits.push(`<span class="tag tag-air air-${esc(air)}">${esc(AIRLINES[air].en)}</span>`);
-      const list = CHECKS.get(a.id) || [];
-      // ⚠️ AI킬러 잠시 내림(2026-08-28 오너 "다 내리자") — 카드의 검사 등급 칩을 뺀다. 복원 시 되살린다.
-      /* if (list.length) {
-        const last = list[0];
-        bits.push(`<span class="tag tag-grade grade-${esc(last.grade)}">${esc(GRADE[last.grade] || last.grade)}`
-          + (list.length > 1 ? ` <i>· ${list.length}회 검사</i>` : '') + '</span>');
-      } */
+      if (air === 'all') bits.push('만능');
+      else if (AIRLINES[air]) bits.push(`<span class="d-air air-${esc(air)}">${esc(AIRLINES[air].en)}</span>`);
+
       const pols = POLISHES.get(a.id) || [];
-      if (pols.length) bits.push(`<span class="tag">첨삭 ${pols.length}회</span>`);
-      return bits.length ? `<div class="note-meta">${bits.join('')}</div>` : '';
+      const body = (a.content || '').trim();
+      let main;
+      if (isDraft(a)) {
+        // 소재 발굴에서 온 초안은 이어쓰기로 보낸다(직접 쓴 글은 그 화면이 없다). 고치기는 완료본만.
+        main = `<div class="d-when"><span>${esc(fmtT(a.updated_at))}</span><span class="d-draft">작성 중</span></div>
+          <div class="d-body">${body ? esc(body) : '<span class="d-none">아직 작성 전</span>'}</div>
+          ${a.question_id ? `<div class="d-acts"><a class="btn btn-fill" href="sojae.html?q=${encodeURIComponent(a.question_id)}">이어서 작성 →</a></div>` : ''}`;
+      } else {
+        main = `<div class="d-when"><span>${esc(fmtT(a.updated_at))}</span>${pols.length ? `<span class="d-pol">첨삭 ${pols.length}회</span>` : ''}</div>
+          <div class="d-body">${esc(body)}</div>
+          <div class="d-acts">
+            <button type="button" class="btn btn-line" data-edit="${esc(a.id)}">고치기</button>
+            <a class="btn btn-fill" href="polish.html?answer=${encodeURIComponent(a.id)}" data-polish="1">이 답변 첨삭받기</a>
+          </div>`;
+      }
+      box.innerHTML = `${bits.length ? `<p class="d-meta">${bits.join(' · ')}</p>` : ''}
+        <h2 class="d-title">${esc(titleOf(a))}</h2>
+        <div class="d-main">${main}</div>
+        ${histHtml(a)}${revHtml(a)}
+        <div class="d-del"><button type="button" data-del="${esc(a.id)}">이 답변 삭제</button></div>`;
     }
 
-    // 펼쳤을 때 아래 — 검사·첨삭 이력.
-    // ⚠️ 한 답변을 고쳐 가며 여러 번 검사하는 게 정상 사용이라 1:N 으로 쌓인다.
+    // 본문 아래 — 검사·첨삭 이력. 이력이 없으면 절을 그리지 않는다.
+    // ⚠️ 한 답변을 고쳐 가며 여러 번 첨삭받는 게 정상 사용이라 1:N 으로 쌓인다.
     //    지난 결과는 ai-killer.html?check=<id> / polish.html?polish=<id> 가
     //    저장된 원본 그대로 다시 그린다(재검사 아님 — 차감 없음).
+    // ⚠️ AI킬러 잠시 내림(2026-08-28 오너 "다 내리자") — 검사 행을 빼고 문구를 '첨삭 리포트'로.
+    //    복원 시 아래 /* */ 블록을 되살리고 '첨삭 리포트'→'검사·첨삭 이력'으로 되돌린다.
     function histHtml(a) {
       const list = CHECKS.get(a.id) || [];
       const pols = POLISHES.get(a.id) || [];
-      // 두 이력을 시간순 하나로 합친다 — 학생이 겪은 순서 그대로 읽히게
-      // ⚠️ AI킬러 잠시 내림(2026-08-28 오너 "다 내리자") — 검사 행·KILL AI 버튼을 빼고 문구를 '첨삭 이력'으로.
-      //    복원 시 아래 /* */ 블록 둘을 되살리고 '첨삭 이력'→'검사·첨삭 이력', '첨삭받지'→'검사하지'로 되돌린다.
       const merged = [
         /* ...list.map(c => ({ t: c.created_at, html:
           `<a class="hrow grade-${esc(c.grade)}" href="ai-killer.html?check=${encodeURIComponent(c.id)}">
-             <span class="hrow-d">${fmt(c.created_at)}</span>
+             <span class="hrow-d">${esc(fmtShort(c.created_at))}</span>
              <span class="hrow-g">${esc(GRADE[c.grade] || c.grade)}</span>
              <span class="hrow-c">고칠 곳 ${Number(c.hit_count) || 0}</span>
              <span class="hrow-go">보기 →</span></a>` })), */
         ...pols.map(p => ({ t: p.created_at, html:
           `<a class="hrow" href="polish.html?polish=${encodeURIComponent(p.id)}">
-             <span class="hrow-d">${fmt(p.created_at)}</span>
-             <span class="hrow-g" style="color:var(--accent-ink)">첨삭 리포트</span>
+             <span class="hrow-d">${esc(fmtShort(p.created_at))}</span>
+             <span class="hrow-g">첨삭 리포트</span>
              <span class="hrow-go">보기 →</span></a>` })),
       ].sort((x, y) => new Date(y.t) - new Date(x.t));
-      return `<div class="hist">
-        <div class="hist-h"><span class="hist-t">첨삭 이력</span><span class="hist-n">${merged.length}회</span></div>
-        ${merged.map(m => m.html).join('') || '<p class="hist-none">아직 첨삭받지 않은 답변이에요.</p>'}
-        ${'' /* <a class="hist-cta" href="ai-killer.html?answer=${encodeURIComponent(a.id)}">
-          ${list.length ? '고쳐서 다시 KILL AI' : '이 답변 KILL AI'}</a> */}
-        <a class="hist-cta" style="margin-top:8px" href="polish.html?answer=${encodeURIComponent(a.id)}">이 답변 첨삭받기</a>
+      if (!merged.length) return '';
+      return `<div class="d-sec">
+        <div class="d-sec-h"><span class="d-sec-t">첨삭 리포트</span><span class="d-sec-n">${merged.length}회</span></div>
+        ${merged.map(m => m.html).join('')}
       </div>`;
     }
 
-    // 펼친 답변 아래 — 수정 이력(2026-08-05).
-    // ⚠️ 두 겹으로 접는다. 바깥 접이는 '수정 이력 N개', 그 안에서 버전마다 또 접혀 있어
-    //    날짜만 보인다 — 지난 본문을 그대로 늘어놓으면 카드가 원문 더미가 된다(오너 지시).
-    // ⚠️ 본문은 여기서 그리지 않는다. 버전을 펼치는 순간 그 한 행만 받아 온다(loadRev).
+    // 본문 아래 — 수정 이력(2026-08-05). 두 겹으로 접는다. 본문은 버전을 펼치는 순간 그 한 행만 받아 온다(loadRev).
     function revHtml(a) {
       const list = REVS.get(a.id) || [];
       if (!list.length) return '';
-      return `<div class="rev"><details class="rev-fold">
-        <summary><span class="rev-t">수정 이력</span><span class="rev-n">${list.length}개 ▾</span></summary>
+      return `<div class="d-sec"><details class="rev-fold">
+        <summary><span class="d-sec-t">수정 이력</span><span class="rev-n">${list.length}개 ▾</span></summary>
         <p class="rev-lead">고치기 전 본문이에요. 최신순으로 남습니다.</p>
         ${list.map(r => `<details class="rev-item" data-rev="${esc(r.id)}">
-          <summary><span class="rev-d">${fmtT(r.created_at)}</span>
+          <summary><span class="rev-d">${esc(fmtT(r.created_at))}</span>
             <span class="rev-go">본문 보기 ▾</span></summary>
           <div class="rev-body">불러오는 중…</div></details>`).join('')}
       </details></div>`;
-    }
-
-    // 머리말 숫자 — 첫 로드와 삭제 뒤에 같은 문구를 쓴다.
-    function syncCount() {
-      const nDraft = ROWS.filter(isDraft).length;
-      document.getElementById('hSub').textContent = ROWS.length
-        ? (ROWS.length + '개' + (nDraft ? ' · 작성 중 ' + nDraft : ''))
-        : '써 둔 답변을 모아 두고, 언제든 다시 검사해요';
-      // 지울 것이 없으면 [선택]을 내걸지 않는다(빈 화면에 고르기 단추만 남는다)
-      const enter = document.getElementById('selEnter');
-      if (enter) enter.hidden = SEL_MODE || !ROWS.length;
-    }
-
-    function delBtn(a) {
-      return `<button type="button" class="note-act note-act-del" data-del="${esc(a.id)}">삭제</button>`;
-    }
-
-    // 고치기 — 저장한 답변의 본문을 그 자리에서 고친다(제목·분류는 그대로).
-    function editBtn(a) {
-      return `<button type="button" class="note-act note-act-go" data-edit="${esc(a.id)}">고치기</button>`;
-    }
-
-    // 고치기 칸 열기 — 본문을 감추고 그 자리에 입력칸을 넣는다.
-    function openEdit(btn) {
-      const id = btn.dataset.edit;
-      const a = ROWS.find(x => x.id === id);
-      const card = btn.closest('.note');
-      const bodyEl = card && card.querySelector('.note-a');
-      if (!a || !bodyEl || card.querySelector('.note-edit')) return;
-      const box = document.createElement('div');
-      box.className = 'note-edit';
-      // maxlength 1500 — 답변 추가 폼(#fBody)과 같은 상한이어야 한다(한쪽만 바꾸지 말 것).
-      box.innerHTML = `<textarea maxlength="1500" aria-label="답변 본문 고치기"></textarea>
-        <div class="note-edit-acts">
-          <button type="button" class="note-act note-act-go" data-edit-save="${esc(id)}">저장</button>
-          <button type="button" class="note-act note-act-cancel" data-edit-cancel="1">취소</button>
-          <span class="note-edit-msg" role="status"></span>
-        </div>`;
-      const ta = box.querySelector('textarea');
-      ta.value = a.content || '';
-      bodyEl.hidden = true;
-      bodyEl.insertAdjacentElement('afterend', box);
-      btn.hidden = true;
-      ta.focus();
-    }
-
-    // 고치기 칸 닫기 — 본문을 도로 보이게 한다.
-    function closeEdit(card) {
-      const box = card.querySelector('.note-edit');
-      if (box) box.remove();
-      const bodyEl = card.querySelector('.note-a');
-      if (bodyEl) bodyEl.hidden = false;
-      const btn = card.querySelector('[data-edit]');
-      if (btn) btn.hidden = false;
-    }
-
-    // 고친 본문 저장. ⚠️ 실패하면 칸을 닫지 않는다 — 쓰던 글을 화면에서 잃지 않게.
-    async function saveEdit(btn) {
-      const id = btn.dataset.editSave;
-      const card = btn.closest('.note');
-      const a = ROWS.find(x => x.id === id);
-      const box = card && card.querySelector('.note-edit');
-      if (!a || !box) return;
-      const ta = box.querySelector('textarea');
-      const msgEl = box.querySelector('.note-edit-msg');
-      const text = (ta.value || '').trim();
-      if (!text) {
-        msgEl.textContent = '내용을 비울 수는 없어요. 지우려면 삭제를 눌러 주세요.';
-        ta.focus(); return;
-      }
-      if (text === (a.content || '').trim()) { closeEdit(card); return; }   // 바뀐 게 없다
-
-      btn.disabled = true; btn.textContent = '저장 중…'; msgEl.textContent = '';
-      // updated_at 은 트리거(trg_answers_updated_at)가 찍는다 — 여기서 보내지 않는다.
-      // member_id 조건은 RLS 와 겹치지만 남겨 둔다(삭제와 같은 방어).
-      const { error } = await MONC.sb.from('answers')
-        .update({ content: text }).eq('id', id).eq('member_id', ME);
-      if (error) {
-        btn.disabled = false; btn.textContent = '저장';
-        msgEl.textContent = '저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
-        return;
-      }
-      a.content = text;
-      a.updated_at = new Date().toISOString();
-
-      // ⚠️ 목록을 통째로 다시 그리지 않는다 — 펼쳐 둔 카드가 닫히고 스크롤이 튄다.
-      //    바뀐 자리(본문·날짜)만 손본다.
-      const bodyEl = card.querySelector('.note-a');
-      if (bodyEl) bodyEl.innerHTML = hi(esc(text), filter.q.trim());
-      const dateEl = card.querySelector('.note-date');
-      if (dateEl) dateEl.textContent = fmt(a.updated_at);
-      closeEdit(card);
-
-      // 수정 이력 — 트리거가 방금 한 벌 남겼을 수 있으니 이 답변 것만 다시 받는다
-      // (안 받으면 학생이 이력을 펼쳤을 때 방금 고친 흔적이 없어 '안 남았다'로 읽힌다).
-      try {
-        const { data: rv } = await MONC.sb.from('answer_revisions')
-          .select('id, answer_id, created_at')
-          .eq('member_id', ME).eq('answer_id', id)
-          .order('created_at', { ascending: false });
-        REVS.set(id, rv || []);
-        const html = revHtml(a);
-        const oldRev = card.querySelector('.rev');
-        if (oldRev) oldRev.outerHTML = html;
-        else if (html) card.querySelector('.note-acts-end').insertAdjacentHTML('beforebegin', html);
-      } catch (_) { /* answer_revisions 미생성 — 본문만 갱신하고 넘어간다 */ }
-    }
-
-    // 목록 안에서 일어나는 일 두 가지 — 버전 펼치기(본문 가져오기) · 답변 삭제.
-    // render() 가 목록을 통째로 다시 그리므로 카드마다 달지 않고 컨테이너 한 곳에 위임한다.
-    function wireList() {
-      const listEl = document.getElementById('list');
-
-      // toggle 은 버블링하지 않는다 — 캡처 단계로 받아야 위임이 먹는다.
-      listEl.addEventListener('toggle', e => {
-        const d = e.target;
-        if (!d.classList) return;
-        // 질문 묶음을 열고 닫은 자리를 기억한다(삭제·검색으로 다시 그려도 보던 자리가 남게)
-        // ⚠️ 선택 모드가 강제로 편 것은 기억하지 않는다 — 기억하면 [취소] 뒤에도 전부 펼쳐진
-        //    채로 남아, 고르기 전 화면으로 돌아오지 않는다(2026-09-22 실측).
-        if (d.classList.contains('grp')) {
-          if (!SEL_MODE) { if (d.open) OPEN.add(d.dataset.grp); else OPEN.delete(d.dataset.grp); }
-          return;
-        }
-        if (!d.classList.contains('rev-item') || !d.open) return;
-        if (d.dataset.loaded) return;
-        d.dataset.loaded = '1';
-        loadRev(d);
-      }, true);
-
-      listEl.addEventListener('click', async e => {
-        /* 선택 모드 — 줄 아무 데나 누르면 고르고, 다시 누르면 푼다.
-           ⚠️ preventDefault 가 <summary> 의 펼치기를 막는다. 이게 없으면 고르는 동안
-              카드가 열려 다음 줄이 화면 밖으로 밀린다. */
-        if (SEL_MODE) {
-          const grpEl = e.target.closest('[data-sel-grp]');
-          const rowEl = e.target.closest('[data-sel-id]');
-          if (!rowEl && !grpEl) return;
-          e.preventDefault();
-          if (rowEl) {                                   // 답변 한 줄
-            const id = rowEl.dataset.selId;
-            if (SEL.has(id)) SEL.delete(id); else SEL.add(id);
-          } else {                                       // 질문 줄 = 그 안 전부
-            const ids = idsOfGrp(grpEl.dataset.selGrp);
-            const allOn = ids.length > 0 && ids.every(id => SEL.has(id));
-            ids.forEach(id => { if (allOn) SEL.delete(id); else SEL.add(id); });
-          }
-          syncSel();
-          return;
-        }
-        // 고치기 — 열기 / 취소 / 저장. 삭제보다 먼저 본다(같은 버튼 줄에 있다).
-        const eOpen = e.target.closest('[data-edit]');
-        if (eOpen) { e.preventDefault(); openEdit(eOpen); return; }
-        const eCancel = e.target.closest('[data-edit-cancel]');
-        if (eCancel) { e.preventDefault(); closeEdit(eCancel.closest('.note')); return; }
-        const eSave = e.target.closest('[data-edit-save]');
-        if (eSave) { e.preventDefault(); await saveEdit(eSave); return; }
-
-        const btn = e.target.closest('[data-del]');
-        if (!btn) return;
-        e.preventDefault();
-        const id = btn.dataset.del;
-        const a = ROWS.find(x => x.id === id);
-        if (!a) return;
-        if (!confirm('이 답변을 지울까요?\n수정 이력도 같이 사라지고, 되돌릴 수 없어요.')) return;
-        btn.disabled = true; btn.textContent = '지우는 중…';
-        try {
-          // member_id 조건은 RLS 와 겹치지만 남겨 둔다 — 실수로 남의 id 가 들어와도 0건이 된다.
-          const { error } = await MONC.sb.from('answers').delete().eq('id', id).eq('member_id', ME);
-          if (error) throw error;
-        } catch (_) {
-          btn.disabled = false; btn.textContent = '삭제';
-          alert('지우지 못했어요. 잠시 뒤 다시 시도해 주세요.');
-          return;
-        }
-        ROWS = ROWS.filter(x => x.id !== id);
-        CHECKS.delete(id); POLISHES.delete(id); REVS.delete(id);
-        buildChips(); render(); syncCount();
-      });
     }
 
     // 버전 하나의 본문을 그때 받아 그린다(목록 전송량을 아끼는 자리).
@@ -964,68 +808,147 @@
       }
     }
 
-    function buildChips() {
-      // 실제로 존재하는 분류만 칩으로 (없는 카테고리를 눌러 빈 화면을 보는 일이 없게)
-      const cats = [];
-      ROWS.forEach(a => { const c = catOf(a); if (c && cats.indexOf(c) < 0) cats.push(c); });
-      const nDraft = ROWS.filter(isDraft).length;
-      const defs = [{ k: 'status', v: 'all', label: '전체' }];
-      if (nDraft) defs.push({ k: 'status', v: 'draft', label: '작성 중 ' + nDraft });
-      if (nDraft && nDraft < ROWS.length) defs.push({ k: 'status', v: 'final', label: '완료 ' + (ROWS.length - nDraft) });
-      cats.forEach(c => defs.push({ k: 'cat', v: c, label: window.SOJAE.CAT_LABEL[c] || c }));
+    // 고치기 칸 열기 — 본문을 감추고 그 자리에 입력칸을 넣는다(제목·분류는 그대로 — 고치고 싶으면 지우고 새로 쓴다).
+    function openEdit(btn) {
+      const id = btn.dataset.edit;
+      const a = byId(id);
+      const box = document.getElementById('detail');
+      const bodyEl = box.querySelector('.d-body');
+      if (!a || !bodyEl || box.querySelector('.d-edit')) return;
+      const ed = document.createElement('div');
+      ed.className = 'd-edit';
+      // maxlength 1500 — 답변 추가 폼(#fBody)과 같은 상한이어야 한다(한쪽만 바꾸지 말 것).
+      ed.innerHTML = `<textarea maxlength="1500" aria-label="답변 본문 고치기"></textarea>
+        <div class="d-edit-acts">
+          <button type="button" class="btn btn-fill" data-edit-save="${esc(id)}">저장</button>
+          <button type="button" class="btn btn-line" data-edit-cancel="1">취소</button>
+        </div>
+        <p class="d-edit-msg" role="status"></p>`;
+      const ta = ed.querySelector('textarea');
+      ta.value = a.content || '';
+      bodyEl.hidden = true;
+      bodyEl.insertAdjacentElement('afterend', ed);
+      box.querySelector('.d-acts').hidden = true;
+      // 커서를 맨 앞에 — 끝에 두면 긴 글은 칸이 끝으로 스크롤돼 첫 줄이 안 보인다(실측).
+      try { ta.setSelectionRange(0, 0); } catch (_) {}
+      ta.focus();
+      ta.scrollTop = 0;
+    }
+    function closeEdit() {
+      const box = document.getElementById('detail');
+      const ed = box.querySelector('.d-edit');
+      if (ed) ed.remove();
+      const bodyEl = box.querySelector('.d-body');
+      if (bodyEl) bodyEl.hidden = false;
+      const acts = box.querySelector('.d-acts');
+      if (acts) { acts.hidden = false; const b = acts.querySelector('[data-edit]'); if (b) b.focus(); }
+    }
+    // 고친 본문 저장. ⚠️ 실패하면 칸을 닫지 않는다 — 쓰던 글을 화면에서 잃지 않게.
+    async function saveEdit(btn) {
+      const id = btn.dataset.editSave;
+      const a = byId(id);
+      const box = document.getElementById('detail');
+      const ed = box.querySelector('.d-edit');
+      if (!a || !ed) return;
+      const ta = ed.querySelector('textarea');
+      const msgEl = ed.querySelector('.d-edit-msg');
+      const text = (ta.value || '').trim();
+      if (!text) {
+        msgEl.className = 'd-edit-msg err';
+        msgEl.textContent = '내용을 비울 수는 없어요. 지우려면 아래 삭제를 눌러 주세요.';
+        ta.focus(); return;
+      }
+      if (text === (a.content || '').trim()) { closeEdit(); return; }   // 바뀐 게 없다
 
-      // 켜져 있던 칩이 사라졌으면(마지막 초안을 지운 경우) 조건도 같이 푼다 — 안 그러면 빈 목록만 남는다.
-      if (!defs.some(d => d.k === 'status' && d.v === filter.status)) filter.status = 'all';
-      if (filter.cat !== 'all' && !defs.some(d => d.k === 'cat' && d.v === filter.cat)) filter.cat = 'all';
-      const isOn = d => (d.k === 'status' ? filter.status === d.v : filter.cat === d.v);
+      btn.disabled = true; btn.textContent = '저장 중…'; msgEl.className = 'd-edit-msg'; msgEl.textContent = '';
+      // updated_at 은 트리거(trg_answers_updated_at)가 찍는다 — 여기서 보내지 않는다.
+      // member_id 조건은 RLS 와 겹치지만 남겨 둔다(삭제와 같은 방어).
+      const { error } = await MONC.sb.from('answers')
+        .update({ content: text }).eq('id', id).eq('member_id', ME);
+      if (error) {
+        btn.disabled = false; btn.textContent = '저장';
+        msgEl.className = 'd-edit-msg err';
+        msgEl.textContent = '저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+        return;
+      }
+      a.content = text;
+      a.updated_at = new Date().toISOString();
+      beacon('note_edit_save');
 
-      const box = document.getElementById('chips');
-      box.innerHTML = defs.map(d =>
-        `<button type="button" class="chip${isOn(d) ? ' on' : ''}" ` +
-        `data-k="${d.k}" data-v="${esc(d.v)}" aria-pressed="${isOn(d)}">${esc(d.label)}</button>`
-      ).join('');
+      // 수정 이력 — 트리거가 방금 한 벌 남겼을 수 있으니 이 답변 것만 다시 받는다
+      // (안 받으면 학생이 이력을 펼쳤을 때 방금 고친 흔적이 없어 '안 남았다'로 읽힌다).
+      try {
+        const { data: rv } = await MONC.sb.from('answer_revisions')
+          .select('id, answer_id, created_at')
+          .eq('member_id', ME).eq('answer_id', id)
+          .order('created_at', { ascending: false });
+        REVS.set(id, rv || []);
+      } catch (_) { /* answer_revisions 미생성 — 본문만 갱신하고 넘어간다 */ }
+      // 상세는 다시 그리고(짧은 화면이라 자리가 튀지 않는다), 목록은 숨겨져 있으니 그 안의 미리보기만 맞춰 둔다.
+      renderDetail(id);
+      render();
+      const b = document.querySelector('#detail [data-edit]'); if (b) b.focus();
+    }
 
-      // ⚠️ 다시 그릴 때마다 붙이면 클릭 한 번이 두 번 처리된다(삭제 뒤 칩을 다시 만든다).
-      if (buildChips.wired) return;
-      buildChips.wired = true;
-      box.addEventListener('click', e => {
-        const btn = e.target.closest('.chip');
-        if (!btn) return;
-        const k = btn.dataset.k, v = btn.dataset.v;
-        // 같은 칩을 다시 누르면 해제. 카테고리·상태는 서로 독립.
-        if (k === 'cat') filter.cat = (filter.cat === v) ? 'all' : v;
-        else filter.status = v;
-        box.querySelectorAll('.chip').forEach(c => {
-          const on = c.dataset.k === 'cat' ? (filter.cat === c.dataset.v)
-            : (filter.status === c.dataset.v);
-          c.classList.toggle('on', on);
-          c.setAttribute('aria-pressed', String(on));
-        });
-        render();
+    async function deleteOne(btn) {
+      const id = btn.dataset.del;
+      const a = byId(id);
+      if (!a) return;
+      if (!confirm('이 답변을 지울까요?\n수정 이력도 같이 사라지고, 되돌릴 수 없어요.')) return;
+      btn.disabled = true; btn.textContent = '지우는 중…';
+      try {
+        // member_id 조건은 RLS 와 겹치지만 남겨 둔다 — 실수로 남의 id 가 들어와도 0건이 된다.
+        const { error } = await MONC.sb.from('answers').delete().eq('id', id).eq('member_id', ME);
+        if (error) throw error;
+      } catch (_) {
+        btn.disabled = false; btn.textContent = '이 답변 삭제';
+        alert('지우지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+        return;
+      }
+      forget([id]);
+      beacon('note_delete', { n: 1 });
+      buildChips(); render();
+      goBack();
+    }
+
+    // 상세 안에서 일어나는 일 — 고치기 열기/취소/저장 · 첨삭 이동 계측 · 삭제 · 버전 본문 받아 오기.
+    function wireDetail() {
+      const box = document.getElementById('detail');
+      box.addEventListener('click', async e => {
+        const eOpen = e.target.closest('[data-edit]');
+        if (eOpen) { e.preventDefault(); openEdit(eOpen); return; }
+        const eCancel = e.target.closest('[data-edit-cancel]');
+        if (eCancel) { e.preventDefault(); closeEdit(); return; }
+        const eSave = e.target.closest('[data-edit-save]');
+        if (eSave) { e.preventDefault(); await saveEdit(eSave); return; }
+        if (e.target.closest('[data-polish]')) { beacon('note_polish_go'); return; }   // 링크는 그대로 간다
+        const del = e.target.closest('[data-del]');
+        if (del) { e.preventDefault(); await deleteOne(del); }
       });
+      // toggle 은 버블링하지 않는다 — 캡처 단계로 받아야 위임이 먹는다.
+      box.addEventListener('toggle', e => {
+        const d = e.target;
+        if (!d.classList || !d.classList.contains('rev-item') || !d.open) return;
+        if (d.dataset.loaded) return;
+        d.dataset.loaded = '1';
+        loadRev(d);
+      }, true);
     }
 
-    // ── 답변 추가 ────────────────────────────────────────────────────────────
-    // ⚠️ 저장은 크레딧을 쓰지 않는다. 저장소에 글을 넣는 일은 언제나 무료·무제한이다.
+    /* ══ ③ 답변 추가 ══════════════════════════════════════════════════════
+       ⚠️ 저장은 크레딧을 쓰지 않는다. 저장소에 글을 넣는 일은 언제나 무료·무제한이다.
+       ⚠️ 소재 발굴을 거치지 않고 바로 쓰는 길이다(2026-07-25 오너 지시) — 소재 발굴은 관문이 아니다. */
     const form = { cat: '', kind: 'interview', air: '' };
-
-    function showAdd(on) {
-      document.getElementById('listView').hidden = on;
-      document.getElementById('addView').hidden = !on;
-      document.documentElement.scrollTop = 0;
-    }
 
     function pickOne(box, v) {
       box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
     }
-
     function formValid() {
       const t = document.getElementById('fTitle').value.trim();
       const b = document.getElementById('fBody').value.trim();
       // 제목만 있어도 저장된다 — '나중에 이어서 쓰기'가 가능해야 저장소가 쓸모 있다.
       return t.length > 0 && b.length <= 1500;
     }
-
     function syncForm() {
       const n = document.getElementById('fBody').value.trim().length;
       const c = document.getElementById('fCnt');
@@ -1034,32 +957,57 @@
       document.getElementById('saveBtn').disabled = !formValid();
     }
 
-    function openAir() {
-      const box = document.getElementById('airOpts');
-      // ⚠️ '만능'을 맨 위에 둔다 — '아직 안 정했어요'와 다른 값이고, 고르는 사람이 더 많다.
-      box.innerHTML =
-        `<button type="button" class="opt" data-air="all">만능<span class="hint">어디에나 쓰는 답변</span></button>`
-        + Object.keys(AIRLINES).map(c =>
-            `<button type="button" class="opt air-${esc(c)}" data-air="${esc(c)}">${esc(AIRLINES[c].ko)}`
-            + `<span class="en">${esc(AIRLINES[c].en)}</span></button>`).join('')
-        + `<button type="button" class="opt" data-air="">아직 안 정했어요</button>`;
+    // ── 시트(질문 유형 · 지망 항공사) — 한 시트를 내용만 바꿔 쓴다. 열 때 첫 항목에, 닫을 때 연 버튼에 포커스.
+    let SHEET_KIND = '';
+    let SHEET_OPENER = null;
+    function openSheet(kind, opener) {
+      SHEET_KIND = kind; SHEET_OPENER = opener || null;
+      const h = document.getElementById('sheetH'), s = document.getElementById('sheetS'), box = document.getElementById('sheetOpts');
+      if (kind === 'air') {
+        h.textContent = '지망 항공사';
+        s.textContent = '안 정했으면 비워도 돼요.';
+        // ⚠️ '만능'을 맨 위에 둔다 — '아직 안 정했어요'와 다른 값이고, 고르는 사람이 더 많다.
+        box.innerHTML =
+          `<button type="button" class="opt" data-v="all">만능<span class="hint">어디에나 쓰는 답변</span></button>`
+          + Object.keys(AIRLINES).map(c =>
+              `<button type="button" class="opt air-${esc(c)}" data-v="${esc(c)}">${esc(AIRLINES[c].ko)}`
+              + `<span class="en">${esc(AIRLINES[c].en)}</span></button>`).join('')
+          + `<button type="button" class="opt" data-v="">아직 안 정했어요</button>`;
+      } else {
+        h.textContent = '질문 유형';
+        s.textContent = '';
+        const L = window.SOJAE.CAT_LABEL;
+        box.innerHTML = Object.keys(L).map(c =>
+            `<button type="button" class="opt" data-v="${esc(c)}">${esc(L[c])}</button>`).join('')
+          + `<button type="button" class="opt" data-v="">안 정함</button>`;
+      }
+      const sheet = document.getElementById('sheet');
+      sheet.removeAttribute('inert');
       document.body.classList.add('sheet-on');
+      const first = box.querySelector('button'); if (first) first.focus();
     }
+    function closeSheet() {
+      document.body.classList.remove('sheet-on');
+      document.getElementById('sheet').setAttribute('inert', '');
+      if (SHEET_OPENER) { SHEET_OPENER.focus(); SHEET_OPENER = null; }
+    }
+    function sheetOpen() { return document.body.classList.contains('sheet-on'); }
 
     function setAir(code) {
       form.air = code || '';
       const btn = document.getElementById('fAir');
       const label = document.getElementById('fAirLabel');
-      btn.querySelector('.en')?.remove();
-      btn.className = 'pickbtn' + (form.air ? ' set air-' + form.air : '');
+      btn.classList.toggle('set', !!form.air);
       if (form.air === 'all') label.textContent = '만능 (항공사 공통)';
-      else if (AIRLINES[form.air]) {
-        label.textContent = AIRLINES[form.air].ko;
-        const en = document.createElement('span');
-        en.className = 'en'; en.textContent = AIRLINES[form.air].en;
-        btn.insertBefore(en, btn.querySelector('.chev'));
-      } else label.textContent = '아직 안 정했어요';
-      document.body.classList.remove('sheet-on');
+      else if (AIRLINES[form.air]) label.textContent = AIRLINES[form.air].ko;
+      else label.textContent = '지망 항공사';
+    }
+    function setCat(code) {
+      form.cat = code || '';
+      const btn = document.getElementById('fCat');
+      const label = document.getElementById('fCatLabel');
+      btn.classList.toggle('set', !!form.cat);
+      label.textContent = window.SOJAE.CAT_LABEL[form.cat] || '질문 유형';
     }
 
     async function saveAnswer() {
@@ -1093,14 +1041,15 @@
       // 저장에 성공했으니 임시 보관(draft-keep)을 지운다 — 안 지우면 다음에 빈 폼을
       // 열었을 때 이미 저장한 글이 되살아나 '중복 저장'으로 이어진다.
       if (window.moncDraftClear) moncDraftClear('answers-body');
+      beacon('note_add_save');   // keepalive 라 바로 아래 이동에도 살아남는다
       // 목록·필터·이력을 한 번에 다시 그린다. ⚠️ reload() 가 아니라 replace(pathname) —
       // ?title=…#new(승자각 문항 프리필)를 그대로 물고 새로고침하면 채워진 폼이 또 열려
       // 중복 저장처럼 보인다. 주소를 목록으로 되돌리며 새로 그린다.
       location.replace(location.pathname);
     }
 
-    // ── 내 소재(서랍) ─────────────────────────────────────────────────────
-    // 다듬기(sojae-chat)가 자동 저장한 소재 카드. 학생이 여기서 고치고 지운다.
+    /* ══ 내 소재(서랍) ═══════════════════════════════════════════════════
+       다듬기(sojae-chat)가 자동 저장한 소재 카드. 학생이 여기서 고치고 지운다. */
     let MATS = [];
     const MAT_FIELDS = [
       ['title', '경험 한 줄 제목', 'input'], ['one_line', '요약', 'input'],
@@ -1122,7 +1071,7 @@
         const q = (m.questions || {}).content;
         return `<details class="note" data-id="${esc(m.id)}"><summary>
             <div class="note-top"><span class="note-cat">소재 카드</span>
-              <span class="note-date">${fmt(m.updated_at)}</span></div>
+              <span class="note-date">${esc(fmt(m.updated_at))}</span></div>
             <div class="note-q">${esc(m.title || '(제목 없음)')}</div>
             ${comps ? '<div class="note-meta">' + comps + '</div>' : ''}
             <span class="note-more">카드 보기 ▾</span></summary>
@@ -1184,21 +1133,21 @@
           const { error } = await MONC.sb.from('sojae_materials').delete().eq('id', m.id);
           if (error) { alert('지우지 못했어요.'); return; }
           MATS = MATS.filter(x => x.id !== m.id);
-          matRender();
+          matRender(); syncTabs();
         }
       });
     }
 
+    // 탭 전환 — 답변 쪽 구성요소(검색·칩·개수·목록·추가바·미니 다듬기·[선택])는 CSS(.mat-on)가 한 벌로 숨긴다.
     function showTab(tab) {
       const onMat = tab === 'materials';
-      // 답변 쪽 구성요소를 통째로 토글 — 필터·개수·목록·추가바
-      document.querySelector('.filters').style.display = onMat ? 'none' : '';
-      document.getElementById('count').style.display = onMat ? 'none' : '';
-      document.getElementById('list').style.display = onMat ? 'none' : '';
-      document.querySelector('.addbar').style.display = onMat ? 'none' : '';
+      if (onMat && SEL_MODE) selExit();
+      document.getElementById('listView').classList.toggle('mat-on', onMat);
       document.getElementById('matWrap').hidden = !onMat;
       document.querySelectorAll('#tabs button').forEach(b =>
         b.classList.toggle('on', b.dataset.tab === tab));
+      // 소재 탭으로 들어온 딥링크(#materials)는 답변 탭으로 돌아올 때 지운다 — 새로고침이 소재 탭에 다시 서지 않게.
+      if (!onMat && location.hash === '#materials') history.replaceState(null, '', location.pathname + location.search);
     }
 
     (async () => {
@@ -1277,39 +1226,43 @@
         }
         if (mErr) throw mErr;
         MATS = ms || [];
+        TABS_ON = true;
         document.getElementById('tabs').hidden = false;
         document.getElementById('tabs').addEventListener('click', e => {
           const b = e.target.closest('button'); if (b) showTab(b.dataset.tab);
         });
         wireMats();
         matRender();
-        if (location.hash === '#materials') showTab('materials');
       } catch (_) { /* sojae_materials 미생성 — 탭 없이 종전 화면 그대로 */ }
 
-      syncCount();
+      syncTabs();
       buildChips();
       render();
       wireList();
+      wireDetail();
 
       // 선택 모드 단추 셋 — 들어가기 / 취소 / 한 번에 삭제(2026-09-22)
       document.getElementById('selEnter').addEventListener('click', selEnter);
       document.getElementById('selCancel').addEventListener('click', selExit);
       document.getElementById('selDel').addEventListener('click', selDelete);
 
-      let t;
+      let t, searched = false;
       document.getElementById('q').addEventListener('input', e => {
         clearTimeout(t);
-        t = setTimeout(() => { filter.q = e.target.value; render(); }, 160);
+        t = setTimeout(() => {
+          filter.q = e.target.value;
+          if (filter.q.trim() && !searched) { searched = true; beacon('note_search'); }   // 방문당 한 번
+          render();
+        }, 160);
       });
 
+      // ── 화면 전환 배선 ──
+      document.getElementById('addBtn').addEventListener('click', e => { e.preventDefault(); go('new'); });
+      document.getElementById('dBack').addEventListener('click', goBack);
+      document.getElementById('aBack').addEventListener('click', goBack);
+      window.addEventListener('hashchange', route);
+
       // ── 답변 추가 화면 배선 ──
-      document.getElementById('addBtn').addEventListener('click', () => showAdd(true));
-      document.getElementById('fCat').addEventListener('click', e => {
-        const b = e.target.closest('button'); if (!b) return;
-        // 같은 걸 다시 누르면 해제 — 유형은 선택 항목이다
-        form.cat = (form.cat === b.dataset.v) ? '' : b.dataset.v;
-        pickOne(e.currentTarget, form.cat);
-      });
       document.getElementById('fKind').addEventListener('click', e => {
         const b = e.target.closest('button'); if (!b) return;
         form.kind = b.dataset.v;
@@ -1318,34 +1271,36 @@
           ? '면접에서 답할 내용을 넣어 주세요. 말하듯이 쓴 그대로가 정확해요.'
           : '자소서 한 문항을 넣어 주세요. 여러 문항을 섞으면 정확도가 떨어져요.';
       });
-      document.getElementById('fAir').addEventListener('click', openAir);
-      document.getElementById('airOpts').addEventListener('click', e => {
-        const b = e.target.closest('[data-air]'); if (b) setAir(b.dataset.air);
+      document.getElementById('fCat').addEventListener('click', e => openSheet('cat', e.currentTarget));
+      document.getElementById('fAir').addEventListener('click', e => openSheet('air', e.currentTarget));
+      document.getElementById('sheetOpts').addEventListener('click', e => {
+        const b = e.target.closest('[data-v]'); if (!b) return;
+        if (SHEET_KIND === 'air') setAir(b.dataset.v); else setCat(b.dataset.v);
+        closeSheet();
       });
-      document.getElementById('sheetMask').addEventListener('click',
-        () => document.body.classList.remove('sheet-on'));
+      document.getElementById('sheetMask').addEventListener('click', closeSheet);
       document.getElementById('fTitle').addEventListener('input', syncForm);
       document.getElementById('fBody').addEventListener('input', syncForm);
       document.getElementById('saveBtn').addEventListener('click', saveAnswer);
       // 시트가 열려 있으면 시트만 닫고, 아니면 목록으로 돌아간다
       document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
-        if (document.body.classList.contains('sheet-on')) document.body.classList.remove('sheet-on');
-        else if (!document.getElementById('addView').hidden) showAdd(false);
+        if (sheetOpen()) closeSheet();
+        else if (CUR_VIEW !== 'list') goBack();
       });
-      // 추가 화면에서 뒤로가기를 누르면 목록으로(주소가 안 바뀌므로 브라우저가 페이지를 떠난다 —
-      // 그 전에 화면 상태만 되돌린다)
-      if (location.hash === '#new') showAdd(true);
+
       // 승자각 제출 카드(mypage)가 문항 제목을 들고 온다 — ?title=…#new 면 제목을 채워서 연다.
-      // 제목 정확 일치가 '작성됨' 판정이라, 여기서 채워 주는 값이 곧 판정 키다(mypage ANSWER_DAYS 와 한 쌍).
+      // 제목 정확 일치가 '작성됨' 판정이라, 여기서 채워 주는 값이 곧 판정 키다(mypage CH_DAYS 와 한 쌍).
       const preTitle = new URLSearchParams(location.search).get('title');
       if (preTitle && location.hash === '#new') {
-        const t = document.getElementById('fTitle');
-        if (!t.value) { t.value = preTitle.slice(0, 200); syncForm(); }
+        const ti = document.getElementById('fTitle');
+        if (!ti.value) { ti.value = preTitle.slice(0, 200); syncForm(); }
       }
 
+      route();
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
+      beacon('note_view', { n: ROWS.length, m: MATS.length });
     })();
   </script>
 </body>

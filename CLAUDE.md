@@ -109,7 +109,7 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 | AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 판정은 오너 지침 프롬프트(4기준+의심 지수+인간미 그린 플래그) — 규칙 판정으로 되돌리지 말 것. 구조화 출력·한 파일 유지, 피드백은 판정에 자동 반영 금지 | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
 | 답변 첨삭 | `polish.html`(서버는 ai-killer `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
 | 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 **첫 답변부터** 항상 노출(오너 확정 · 2026-09-09 2턴→1턴), 되묻기 상한 3문답(화면·함수·playbook 세 곳 한 벌), 다듬기 결과 뼈대는 표·강점은 목록, 노하우는 `sojae_playbook`(DB), 난이도는 `questions.level` 한 곳(`.eq('level')` 금지 — 미적용 환경 400), 진입은 난이도 화면 먼저 | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
-| 답변 저장소·크레딧·충전 | `answers.html`·`mypage.html`·`credits.html`(충전 허브)·`credit-charge.js` | 저장 무료·무제한, answers/mypage 는 같이 고친다. 충전 로직은 `credit-charge.js` 한 곳(화면만 페이지가 그린다), 충전 화면 정본은 `credits.html` — 도구는 `?back=` 을 달아 보낸다(첨삭 인라인 충전함은 유지) | `docs/notes/credits.md` |
+| 답변 저장소·크레딧·충전 | `answers.html`·`mypage.html`·`credits.html`(충전 허브)·`credit-charge.js` | 저장 무료·무제한, answers/mypage 는 같이 고친다. 노트는 **답변 단위 2단**(목록 → 상세 → 고치기 · 2026-09-23 실데이터로 확정 — 질문별 묶음·상태 칩 되살리기 금지). 충전 로직은 `credit-charge.js` 한 곳(화면만 페이지가 그린다), 충전 화면 정본은 `credits.html` — 도구는 `?back=` 을 달아 보낸다(첨삭 인라인 충전함은 유지) | `docs/notes/credits.md` |
 | 마이페이지 | `mypage.html`·`submit.html`(챌린지 제출 입구) | '오늘 한 칸'엔 사이트가 아는 사실만, 접이는 데이터 있는 줄만. 제출 칸 이름·규칙은 mypage·admin·submit 세 곳 한 벌. **결제했어도 기수 시작일(`challenge_rounds.program_start`) 전엔 문항·제출 칸을 열지 않는다**(판정은 `round-gate.js` 한 곳) | `docs/notes/mypage.md` |
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
@@ -177,3 +177,4 @@ The repo is sometimes edited from a git **worktree** under `.claude/worktrees/..
 - 소재 발굴을 답변 저장의 관문으로 만들기·다듬기 버튼을 AI 판정 뒤로 숨기기 (sojae 스펙)
 - admin 소재 문제의 항공사 칸(`#qfAirline`) — 소재 문제는 전 항공사 공통(답변 프로그램 기출 은행의 항공사는 그대로) (admin.md)
 - 연구진 전원=챌린지 코치 전제 문구 — 현형빈은 챌린지 미지도 (pages.md)
+- 답변노트 질문별 묶음 접이·상태 칩(작성 중/완료)·카드 안 접이 4겹 — 문항 묶음 179개 중 2벌 이상 0, 초안 1%(2026-09-23 실측). 단위는 답변 하나 (credits.md '2026-09-23')
