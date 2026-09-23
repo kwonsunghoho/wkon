@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>연구실 허브 재손질 — 2차 3안(더 과감하게) 목업 (2026-09-23)</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   연구실 허브(lab.html) 재손질 2차 — 2026-09-23 목업
+   1차 3안(활자·카드 사진·표지 사진 — lab-hub-revamp-mockup.html)에 오너: "더 고도화되고 차별화된
+   디자인 예시 보여줘봐". 1차는 '사진을 어디 두나'였고, 2차는 **카드 안 구조 자체**를 바꾼다.
+   전제(유지): 허브 = 히어로 + 카드 두 장(연구실/연구진), 1.5배 규격(padding 28 · 제목 32 · 알약 52),
+   ≥760px 2단 6:4, 팔레트 새 색 없음, 숫자·제목·날짜 전부 2026-09-23 실데이터.
+   ④ 출발 안내판 — 연구실 카드가 공항 안내판. 항공사 코드·자료 수·최신 갱신일·NEW 를 표로.
+   ⑤ 서류철      — 최신 자료 3건의 표지를 부채꼴로 쌓아 '자료가 있다'를 물건으로 보여 준다(CSS 로 그린 표지).
+   ⑥ 에디토리얼  — 잡지 마스트헤드 + 항공사별 자료 유형까지 적힌 목차(가장 정보가 많다).
+   사진은 ⑤·⑥ 어디에도 없다(④ 도 없음) — 셋 다 자산 없이 CSS 만으로 선다.
+   ══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { overflow-x: clip; }
+body { font-family: 'SUIT Variable', SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text);
+  -webkit-font-smoothing: antialiased; word-break: keep-all; }
+a { text-decoration: none; color: inherit; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+.caps { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; }
+
+.mock-h { max-width: 920px; margin: 0 auto; padding: 22px 20px 0; font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-ink); }
+.mock-d { max-width: 920px; margin: 4px auto 0; padding: 0 20px; font-size: 13.5px; line-height: 1.6; color: var(--text-muted); }
+.sep { height: 1px; background: var(--border-soft); margin: 48px 0 0; }
+
+.wrap { max-width: 560px; margin: 0 auto; padding: 0 20px 40px; }
+.hero { padding: 34px 0 0; }
+.hero-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-ink); }
+.hero h1 { font-family: var(--serif); font-size: 34px; font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; margin-top: 10px; }
+.hero-sub { font-size: 15px; line-height: 1.62; color: var(--text-muted); margin-top: 12px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 22px; border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); }
+.stat { padding: 14px 0 13px; }
+.stat + .stat { border-left: 1px solid var(--border-soft); padding-left: 16px; }
+.stat b { display: block; font-size: 24px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; color: var(--ink); }
+.stat b span { font-size: 13px; font-weight: 700; margin-left: 2px; color: var(--text-muted); }
+.stat small { display: block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--text-dim); }
+
+/* 카드 공통 — lab.html 1.5배 규격 */
+.hub-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 26px; }
+.hub-card { position: relative; display: block; border-radius: 26px; padding: 28px 28px 22px; overflow: hidden;
+  background: linear-gradient(180deg, #FCFDFF, #EBF1F8); border: 1px solid var(--border); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), var(--shadow); }
+.hub-top { display: flex; align-items: center; gap: 10px; position: relative; }
+.hub-name { font-family: var(--serif); font-size: 32px; font-weight: 800; letter-spacing: -0.01em; }
+.hub-kicker { display: block; margin-bottom: 8px; color: var(--accent-ink); }
+.hub-desc { font-size: 16px; line-height: 1.58; color: var(--text-muted); margin-top: 9px; }
+.hub-meta { display: flex; align-items: center; gap: 7px; margin-top: 20px; padding-top: 16px; border-top: 1px dashed rgba(23,42,71,0.22);
+  font-size: 14px; font-weight: 700; color: var(--text-dim); position: relative; }
+.hub-meta b { font-weight: 800; color: var(--text); }
+.card-lab { background: linear-gradient(180deg, #1E4079, #142C52); border-color: rgba(255,255,255,0.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow); }
+.card-lab .hub-name { color: #FFFFFF; }
+.card-lab .hub-kicker { color: var(--action-on-dark); }
+.pill { margin-left: auto; flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--action); color: var(--action-ink); display: flex; align-items: center; justify-content: center; }
+.pill svg { width: 24px; height: 24px; }
+.card-lab .pill { background: #FFFFFF; color: var(--action); }
+.card-lab .hub-meta { border-color: rgba(241,244,248,0.3); color: rgba(241,244,248,0.78); }
+.card-lab .hub-meta b { color: #FFFFFF; }
+.live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
+.ppl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+.ppl img { width: 100%; aspect-ratio: 4/5; border-radius: 14px; display: block; object-fit: cover; object-position: center 18%; background: var(--accent-tint); }
+
+/* ── ④ 출발 안내판 ── 항공사 코드 · 이름 · 자료 수 · 최신 갱신일. 최근 7일 안이면 NEW. */
+.board { margin-top: 18px; border-top: 1px solid rgba(241,244,248,0.22); }
+.board-h { display: grid; grid-template-columns: 44px 1fr 44px 52px; gap: 10px; padding: 10px 0 8px; color: rgba(241,244,248,0.55); }
+.board-h span:nth-child(3), .board-h span:nth-child(4), .brow .b-n, .brow .b-d { text-align: right; }
+.brow { display: grid; grid-template-columns: 44px 1fr 44px 52px; gap: 10px; align-items: center; min-height: 48px; border-top: 1px solid rgba(241,244,248,0.12); }
+.b-code { display: inline-flex; align-items: center; justify-content: center; height: 26px; border-radius: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
+  color: #FFFFFF; border: 1px solid rgba(241,244,248,0.35); }
+.b-code.dim { color: rgba(241,244,248,0.55); border-style: dashed; }
+.b-name { font-size: 16px; font-weight: 700; color: rgba(241,244,248,0.95); display: flex; align-items: center; gap: 8px; min-width: 0; }
+.b-new { flex: none; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 4px; background: var(--action-on-dark); color: #142C52; }
+.b-n { font-size: 17px; font-weight: 800; color: #FFFFFF; }
+.b-n span { font-size: 12px; font-weight: 700; color: rgba(241,244,248,0.7); margin-left: 1px; }
+.b-d { font-size: 13px; font-weight: 700; color: rgba(241,244,248,0.62); }
+
+/* ── ⑤ 서류철 ── 최신 자료 3건의 표지. CSS 로 그린 표지(제목·항공사·유형 실값). 사진 없음. */
+.stack { position: relative; height: 196px; margin: 22px 0 0; }
+.doc { position: absolute; left: 50%; bottom: 0; width: 176px; height: 176px; margin-left: -88px; border-radius: 10px; padding: 14px 14px 12px;
+  background: #FFFFFF; color: var(--ink); box-shadow: 0 10px 28px rgba(8,16,32,0.35); transform-origin: 50% 100%; display: flex; flex-direction: column; }
+.doc .d-top { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; color: var(--accent-ink); }
+.doc .d-air { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--text-dim); }
+.doc .d-t { margin-top: 10px; font-family: var(--serif); font-size: 14px; font-weight: 800; line-height: 1.38; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.doc .d-f { margin-top: auto; display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; color: var(--text-dim); }
+.doc.d1 { transform: rotate(-9deg) translateX(-68px); background: linear-gradient(180deg, #F4F7FC, #E4EBF5); }
+.doc.d2 { transform: rotate(6deg) translateX(66px); background: linear-gradient(180deg, #F4F7FC, #E4EBF5); }
+.doc.d3 { transform: rotate(-1deg); z-index: 2; }
+.doc .d-bar { height: 3px; border-radius: 2px; background: var(--action); margin-top: 8px; width: 42px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  color: rgba(241,244,248,0.93); background: rgba(241,244,248,0.08); border: 1px solid rgba(241,244,248,0.2); }
+.chip b { font-weight: 800; color: var(--action-on-dark); }
+.chip.rest { color: rgba(241,244,248,0.66); }
+
+/* ── ⑥ 에디토리얼 ── 마스트헤드 + 유형까지 적힌 목차 */
+.mast { padding: 34px 0 0; position: relative; }
+.mast-top { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.mast-top .caps { color: var(--ink); }
+.mast-top .caps.r { color: var(--text-dim); font-weight: 700; }
+.mast h1 { font-family: var(--serif); font-size: 40px; font-weight: 800; line-height: 1.12; letter-spacing: -0.015em; margin-top: 18px; }
+.mast .hero-sub { margin-top: 12px; }
+.mast .big { position: absolute; right: -4px; top: 44px; font-family: var(--serif); font-size: 118px; font-weight: 800; line-height: 1; letter-spacing: -0.05em;
+  color: var(--accent-tint); z-index: -1; }
+.mast-rule { margin-top: 20px; height: 1px; background: var(--ink); position: relative; }
+.mast-rule::after { content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 1px; background: var(--ink); }
+.toc { margin-top: 14px; }
+.trow { display: grid; grid-template-columns: 54px 1fr; gap: 0 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid rgba(241,244,248,0.16); }
+.trow:last-child { border-bottom: 0; }
+.t-n { font-family: var(--serif); font-size: 30px; font-weight: 800; line-height: 1; color: #FFFFFF; }
+.t-n span { font-family: inherit; font-size: 12px; font-weight: 700; color: rgba(241,244,248,0.6); margin-left: 2px; font-family: 'SUIT Variable', SUIT, sans-serif; }
+.t-name { font-size: 17px; font-weight: 700; color: rgba(241,244,248,0.95); }
+.t-types { grid-column: 2; font-size: 12.5px; font-weight: 600; color: rgba(241,244,248,0.6); margin-top: 3px; line-height: 1.5; }
+.t-name.rest { color: rgba(241,244,248,0.7); }
+
+/* ══ ≥760px — lab.html 과 같은 2단 6:4 ══ */
+@media (min-width: 760px) {
+  .wrap { max-width: 920px; }
+  .hero { display: grid; column-gap: 44px; align-items: baseline; grid-template-columns: minmax(0, max-content) minmax(300px, 1fr); }
+  .hero-eyebrow, .hero h1 { grid-column: 1; }
+  .hero-sub { grid-column: 2; grid-row: 2; margin-top: 0; }
+  .stats { grid-column: 1 / -1; grid-row: 3; max-width: 520px; }
+  .hub-grid { flex-direction: row; align-items: stretch; }
+  .hub-card { min-width: 0; display: flex; flex-direction: column; }
+  .card-lab { flex: 1 1 0; }
+  .hub-card:not(.card-lab) { flex: 0 1 40%; min-width: 332px; }
+  .ppl { margin-bottom: 20px; }
+  .hub-meta { margin-top: auto; }
+  /* ④ 안내판은 행이 6줄이라 그대로 채워진다 · 남는 높이는 행 간격이 아니라 발치 위 여백 */
+  .board { grid-template-columns: 52px 1fr 60px 64px; }
+  .board-h, .brow { grid-template-columns: 52px 1fr 60px 64px; }
+  .brow { min-height: 52px; }
+  /* ⑤ 서류철은 카드 안에서 좌우 — 스택 왼쪽 · 칩 오른쪽 */
+  .lab-e .body { display: grid; grid-template-columns: 1fr 200px; gap: 16px; align-items: end; flex: 1 1 auto; }
+  .lab-e .stack { height: 220px; margin-top: 10px; }
+  .lab-e .chips { flex-direction: column; align-items: stretch; margin-top: 0; }
+  .lab-e .chip { justify-content: space-between; min-height: 40px; }
+  /* ⑥ 마스트헤드 — 2단에서도 한 덩어리 */
+  .mast { display: block; }
+  .mast h1 { font-size: 48px; }
+  .mast .big { font-size: 180px; top: 20px; }
+  .mast .hero-sub { max-width: 520px; }
+  .toc { flex: 1 1 auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ ④ 출발 안내판 ═══════════════ -->
+<p class="mock-h" id="d">④안 — 출발 안내판</p>
+<p class="mock-d">연구실 카드가 공항 안내판이 된다. 항공사 코드 · 이름 · 자료 수 · 최신 갱신일이 표로 서고, 7일 안에 올라온 회사엔 NEW. 자료가 붙는 순간 표가 바뀐다(전부 실값).</p>
+<main class="wrap">
+  <header class="hero">
+    <p class="hero-eyebrow">MONC LAB</p>
+    <h1>몬크 연구실 &amp; 연구진</h1>
+    <p class="hero-sub">항공사별 자료와 기출문제까지 — 연구진이 모아 정리합니다.</p>
+    <div class="stats num">
+      <div class="stat"><b>18<span>건</span></b><small>자료</small></div>
+      <div class="stat"><b>5<span>곳</span></b><small>항공사</small></div>
+      <div class="stat"><b>6<span>명</span></b><small>연구원</small></div>
+    </div>
+  </header>
+  <div class="hub-grid">
+    <a class="hub-card card-lab" href="#">
+      <div class="hub-top"><h2 class="hub-name"><span class="caps hub-kicker">Research board · 항공사별</span>연구실</h2>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <div class="board num">
+        <div class="board-h caps"><span>코드</span><span>항공사</span><span>자료</span><span>갱신</span></div>
+        <div class="brow"><span class="b-code">TW</span><span class="b-name">트리니티항공 <i class="b-new">NEW</i></span><span class="b-n">4<span>건</span></span><span class="b-d">09.22</span></div>
+        <div class="brow"><span class="b-code">KE</span><span class="b-name">대한항공 <i class="b-new">NEW</i></span><span class="b-n">7<span>건</span></span><span class="b-d">09.18</span></div>
+        <div class="brow"><span class="b-code">7C</span><span class="b-name">제주항공</span><span class="b-n">2<span>건</span></span><span class="b-d">09.13</span></div>
+        <div class="brow"><span class="b-code">BX</span><span class="b-name">에어부산</span><span class="b-n">1<span>건</span></span><span class="b-d">08.28</span></div>
+        <div class="brow"><span class="b-code">LJ</span><span class="b-name">진에어</span><span class="b-n">1<span>건</span></span><span class="b-d">08.03</span></div>
+        <div class="brow"><span class="b-code dim">ALL</span><span class="b-name" style="color:rgba(241,244,248,0.7)">전 항공사 공통</span><span class="b-n">3<span>건</span></span><span class="b-d">09.21</span></div>
+      </div>
+      <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>18</b>건 · 갱신 1일 전</p>
+    </a>
+    <a class="hub-card" href="#">
+      <div class="hub-top"><h2 class="hub-name"><span class="caps hub-kicker">Researchers</span>연구진</h2>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>
+      <div class="ppl">
+        <img src="../images/instructor-kwon.webp" alt=""><img src="../images/instructor-kim.webp" alt=""><img src="../images/instructor-koh.webp" alt="">
+        <img src="../images/instructor-hyun.webp" alt=""><img src="../images/instructor-park.webp" alt=""><img src="../images/instructor-choi.webp" alt="">
+      </div>
+      <p class="hub-meta num">연구원 <b>6</b>명 · 수석 2 · 책임 1 · 선임 3</p>
+    </a>
+  </div>
+</main>
+
+<div class="sep"></div>
+
+<!-- ═══════════════ ⑤ 서류철 ═══════════════ -->
+<p class="mock-h" id="e">⑤안 — 서류철</p>
+<p class="mock-d">최신 자료 3건의 표지를 부채꼴로 쌓는다 — '자료가 있다'를 글자가 아니라 물건으로 보여 준다. 표지는 CSS 로 그리고(제목·항공사·유형 실값) 아래는 항공사 칩. 사진 없음.</p>
+<main class="wrap">
+  <header class="hero">
+    <p class="hero-eyebrow">MONC LAB</p>
+    <h1>몬크 연구실 &amp; 연구진</h1>
+    <p class="hero-sub">항공사별 자료와 기출문제까지 — 연구진이 모아 정리합니다.</p>
+    <div class="stats num">
+      <div class="stat"><b>18<span>건</span></b><small>자료</small></div>
+      <div class="stat"><b>5<span>곳</span></b><small>항공사</small></div>
+      <div class="stat"><b>6<span>명</span></b><small>연구원</small></div>
+    </div>
+  </header>
+  <div class="hub-grid">
+    <a class="hub-card card-lab lab-e" href="#">
+      <div class="hub-top"><h2 class="hub-name"><span class="caps hub-kicker">최근 올라온 자료</span>연구실</h2>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <div class="body">
+        <div class="stack" aria-hidden="true">
+          <div class="doc d1"><div class="d-top"><span>MONC LAB</span><span class="d-air">KOREAN AIR</span></div><div class="d-bar"></div>
+            <p class="d-t">2026 대한항공 하반기 면접 리포트</p><div class="d-f"><span>리포트</span><span>09.18</span></div></div>
+          <div class="doc d2"><div class="d-top"><span>MONC LAB</span><span class="d-air">공통</span></div><div class="d-bar"></div>
+            <p class="d-t">영상면접 합격자 vs 만성영탈자 비교영상</p><div class="d-f"><span>리포트</span><span>09.21</span></div></div>
+          <div class="doc d3"><div class="d-top"><span>MONC LAB</span><span class="d-air">TRINITY</span></div><div class="d-bar"></div>
+            <p class="d-t">26년 트리니티항공 최종면접 진출자 스펙 및 면접분위기를 통해 읽는 인사이트</p><div class="d-f"><span>기출 정리</span><span>09.22</span></div></div>
+        </div>
+        <div class="chips num">
+          <span class="chip">대한항공 <b>7</b></span><span class="chip">트리니티항공 <b>4</b></span>
+          <span class="chip">제주항공 <b>2</b></span><span class="chip rest">그 외 <b>5</b></span>
+        </div>
+      </div>
+      <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>18</b>건 · 갱신 1일 전</p>
+    </a>
+    <a class="hub-card" href="#">
+      <div class="hub-top"><h2 class="hub-name"><span class="caps hub-kicker">Researchers</span>연구진</h2>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>
+      <div class="ppl">
+        <img src="../images/instructor-kwon.webp" alt=""><img src="../images/instructor-kim.webp" alt=""><img src="../images/instructor-koh.webp" alt="">
+        <img src="../images/instructor-hyun.webp" alt=""><img src="../images/instructor-park.webp" alt=""><img src="../images/instructor-choi.webp" alt="">
+      </div>
+      <p class="hub-meta num">연구원 <b>6</b>명 · 수석 2 · 책임 1 · 선임 3</p>
+    </a>
+  </div>
+</main>
+
+<div class="sep"></div>
+
+<!-- ═══════════════ ⑥ 에디토리얼 ═══════════════ -->
+<p class="mock-h" id="f">⑥안 — 에디토리얼 목차</p>
+<p class="mock-d">잡지 마스트헤드(이중 괘선 · 큰 숫자 18) + 항공사별로 어떤 유형의 자료가 몇 건인지까지 적힌 목차. 셋 중 정보가 가장 많고 인쇄물처럼 읽힌다. 사진 없음.</p>
+<main class="wrap">
+  <header class="mast">
+    <div class="mast-top"><span class="caps">MONC LAB · 연구실</span><span class="caps r">2026 · 09</span></div>
+    <span class="big num" aria-hidden="true">18</span>
+    <h1>몬크 연구실 &amp;<br>연구진</h1>
+    <p class="hero-sub">항공사별 자료와 기출문제까지 — 연구진이 모아 정리합니다.</p>
+    <div class="stats num">
+      <div class="stat"><b>18<span>건</span></b><small>자료</small></div>
+      <div class="stat"><b>5<span>곳</span></b><small>항공사</small></div>
+      <div class="stat"><b>6<span>명</span></b><small>연구원</small></div>
+    </div>
+  </header>
+  <div class="hub-grid">
+    <a class="hub-card card-lab" href="#">
+      <div class="hub-top"><h2 class="hub-name"><span class="caps hub-kicker">Contents</span>연구실</h2>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <div class="toc num">
+        <div class="trow"><span class="t-n">7<span>건</span></span><span class="t-name">대한항공</span><span class="t-types">리포트 2 · 자소서 세부분석 2 · 기업 이해 1 · 회사 개요 1 · 올인원 1</span></div>
+        <div class="trow"><span class="t-n">4<span>건</span></span><span class="t-name">트리니티항공</span><span class="t-types">기출 분석 2 · 기출 정리 1 · 회사 개요 1</span></div>
+        <div class="trow"><span class="t-n">2<span>건</span></span><span class="t-name">제주항공</span><span class="t-types">리포트 1 · 자소서 세부분석 1</span></div>
+        <div class="trow"><span class="t-n">5<span>건</span></span><span class="t-name rest">그 외 · 공통</span><span class="t-types">리포트 3 · 기출 분석 1 · 기업 이해 1</span></div>
+      </div>
+      <p class="hub-meta num"><i class="live"></i>연구 진행 중 · 자료 <b>18</b>건 · 갱신 1일 전</p>
+    </a>
+    <a class="hub-card" href="#">
+      <div class="hub-top"><h2 class="hub-name"><span class="caps hub-kicker">Researchers</span>연구진</h2>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>
+      <div class="ppl">
+        <img src="../images/instructor-kwon.webp" alt=""><img src="../images/instructor-kim.webp" alt=""><img src="../images/instructor-koh.webp" alt="">
+        <img src="../images/instructor-hyun.webp" alt=""><img src="../images/instructor-park.webp" alt=""><img src="../images/instructor-choi.webp" alt="">
+      </div>
+      <p class="hub-meta num">연구원 <b>6</b>명 · 수석 2 · 책임 1 · 선임 3</p>
+    </a>
+  </div>
+</main>
+
+</body>
+</html>

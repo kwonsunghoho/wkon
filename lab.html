@@ -48,20 +48,29 @@
   <script src="scroll-keep.js?v=3"></script>
   <style>
   /* ══════════════════════════════════════════════════════════════════════════
-     몬크 연구실 허브 — 카드 두 장(2026-07-31 오너 확정) + ②안 '콘솔' 표면
-     ("뭔가 밋밋하지않냐" → 3안 목업 outputs/lab-hub-flavor-mockup.html 중
-      ② 채택 — "2안이 좋어보인다")
+     몬크 연구실 허브 — '출발 안내판' 한 벌 (2026-09-23 오너 확정 "이대로 구현")
 
-     오너: "간결하게 연구실 / 연구진 이렇게 두개 카드만 딱 나와야지 그게 허브 아니냐고."
-     구조: 이 페이지(허브) → 연구실 카드(lab-archive.html 원장) / 연구진 카드(researchers.html).
+     구조는 그대로다(2026-07-31 오너 "간결하게 연구실 / 연구진 이렇게 두개 카드만 딱 나와야지"):
+     이 페이지(허브) → 연구실 카드(취업 자료실 lab-shelf.html) / 연구진 카드(researchers.html).
 
-     ②안 콘솔 = 도구와 사람의 대비:
-     - 연구실 카드: 다크 네이비 콘솔(#1E4079→#142C52) + 서가 목차 4줄(점선 리더) +
-       '연구 진행 중' 라이브 점. 다크 위 강조는 --action-on-dark, CTA 는 흰 알약+네이비
-       화살표(디자인 공통 규칙). 목차 4줄은 lab-archive.html 서가와 같은 순서·수치.
-     - 연구진 카드: 레터프레스 종이(#FCFDFF→#EBF1F8) 그대로 + 얼굴 6개.
-       ⚠️ 얼굴·인원수는 researchers-data.js 단일 원본에서 JS 로 생성 — 여기 복사 금지.
-     ⚠️ 자료 수·갱신 시각은 아직 예시(foot-note 가 밝힘). 연구원 수는 실제 값.
+     표면은 2026-09-23 전면 교체. 오너 "지금 너무 밋밋하고 허접해보여" → 1차 3안(사진 자리) →
+     "더 고도화되고 차별화된 디자인" → 2차 3안(안내판·서류철·에디토리얼) → "4안이 제일 좋긴한데
+     100%는 아니야" + 부족한 점 넷(히어로 밋밋 · 안내판 완성도 · 연구진 카드 약함 · 사진 필요) →
+     ④+ 한 벌로 확정. 목업: outputs/lab-hub-revamp-mockup.html(1차) · lab-hub-revamp2-mockup.html(2차) ·
+     lab-hub-revamp3-mockup.html(④+ 확정본). 경과·기각안은 docs/notes/lab.md '허브 = 출발 안내판'.
+
+     한 벌의 네 조각 — 리듬은 다크(사진) → 밝음(계기) → 다크(안내판) → 밝음(연구진):
+     ① 마스트헤드: 기내 창문 사진(images/cd-outro.webp · 사람 없는 생성 이미지) 위 다크 상자.
+        ⚠️ 상자 안이다 — 전체 폭 밴드가 아니다(design-principles '전체 폭 밴드 금지').
+        ⚠️ 다크 위 제목은 색을 명시한다(tokens.css h1 기본값 --ink 가 상속되면 제목이 사라진다).
+     ② 계기 3칸: 자료·항공사·연구원 — 숫자는 플립 타일(한 자리 = 타일 하나, 가운데 이음선).
+     ③ 연구실 카드 = 안내판: 머리 띠 + 코드 타일 · 항공사 · 자료 수 · 갱신일 · NEW(7일 안).
+     ④ 연구진 카드 = 같은 언어: 머리 띠 + 얼굴 6장 + 직함 타일.
+     ⚠️ 화면 숫자·날짜·NEW 는 전부 실데이터(lab_resource_list). 마크업에 항공사 이름·숫자를 적지 말 것 —
+        자료가 빠지면 그 줄이 거짓말이 된다. 조회가 실패하면 안내판 대신 설명 한 줄이 남고 계기는 '—'.
+
+     카드 규격은 2026-08-01 오너 지시 1.5배 한 벌 — padding 28 · 제목 32px · 알약 52px(화살표 24) ·
+     설명 16px · 발치 14px. 하나만 되돌리지 말 것.
      ══════════════════════════════════════════════════════════════════════════ */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { overflow-x: clip; touch-action: manipulation; }
@@ -72,21 +81,59 @@
   }
   a { text-decoration: none; color: inherit; }
   .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+  /* 소문자 대문자 라벨 — 활자 하한 12px(design-principles) */
+  .caps { font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; }
 
-  .wrap { max-width: 560px; margin: 0 auto; padding: 0 20px 56px; }
+  /* 상단 여백 104px 는 고정 nav 를 피하는 전 페이지 공통값 */
+  .wrap { max-width: 560px; margin: 0 auto; padding: 104px 20px 56px; }
 
-  /* ── 히어로 — 상단 여백 104px 는 고정 nav 를 피하는 전 페이지 공통값 ── */
-  .hero { padding: 104px 0 0; }
-  .hero-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-ink); }
-  .hero h1 { font-family: var(--serif); font-size: 34px; font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; margin-top: 10px; }
-  .hero-sub { font-size: 15px; font-weight: 400; line-height: 1.62; color: var(--text-muted); margin-top: 12px; }
+  /* ── 플립 타일 — 숫자 한 자리 = 타일 하나. 가운데 이음선이 전광판 표식.
+        role="img"+aria-label 로 낭독기는 숫자를 한 덩어리로 읽는다(자리별 <i> 는 장식). ── */
+  .flap { display: inline-flex; gap: 2px; vertical-align: middle; }
+  .flap i {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 32px; border-radius: 5px; background: #0E1F3D; color: #FFFFFF;
+    font-style: normal; font-weight: 800; font-size: 18px; line-height: 1;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14), 0 1px 0 rgba(0,0,0,0.35);
+  }
+  .flap i::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,0.6); }
+  .flap.lt i { background: var(--action); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 1px 0 rgba(20,32,52,0.25); }
+  .flap.lg i { width: 30px; height: 40px; font-size: 22px; border-radius: 6px; }
+  .flap.sm i { width: 20px; height: 26px; font-size: 14px; border-radius: 4px; }
+  /* 값을 아직 모를 때의 자리 — 숫자 대신 '—' 한 타일(거짓 숫자를 두지 않는다) */
+  .flap i.na { color: rgba(241,244,248,0.45); }
 
-  /* ── 허브 카드 두 장 ── */
-  .hub-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 26px; }
-  /* 카드 규격은 2026-08-01 오너 지시로 1.5배("카드 크기 지금보다 1.5배씩 더 키워도
-     좋아보여") — padding·활자·화살표·목차 간격이 한 벌이다. 하나만 되돌리지 말 것. */
+  /* ── ① 마스트헤드 = 창문 사진 위 다크 상자 ── */
+  .mast {
+    position: relative; border-radius: 26px; overflow: hidden; padding: 26px 24px 24px; color: #FFFFFF;
+    background: #142C52 url('images/cd-outro.webp') center 38% / cover no-repeat; box-shadow: var(--shadow);
+  }
+  .mast::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(20,44,82,0.30) 0%, rgba(20,44,82,0.72) 55%, rgba(14,31,61,0.94) 100%);
+  }
+  .mast > * { position: relative; }
+  .mast-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: rgba(241,244,248,0.85); }
+  .mast-x { display: none; }                       /* 'Research board' 꼬리는 넓은 화면에서만 */
+  .live-t { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .live-t[hidden] { display: none; }
+  .mast h1 { font-family: var(--serif); font-size: 34px; font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; color: #FFFFFF; margin-top: 64px; }
+  .mast .sub { font-size: 15px; line-height: 1.62; color: rgba(241,244,248,0.86); margin-top: 10px; max-width: 300px; }
+  .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
+  @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
+  @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
+
+  /* ── ② 계기 3칸 — 밝은 판 위 네이비 플립 타일 ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { padding: 14px 12px 12px; border: 1px solid var(--border-soft); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+  .stat .v { display: flex; align-items: baseline; gap: 5px; }
+  .stat .v > span:last-child { font-size: 13px; font-weight: 800; color: var(--text-muted); }
+  .stat small { display: block; margin-top: 9px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--text-dim); }
+
+  /* ── 카드 두 장 ── */
+  .hub-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
   .hub-card {
-    display: block; border-radius: 26px; padding: 28px 28px 22px;
+    position: relative; display: block; border-radius: 26px; padding: 0 28px 22px; overflow: hidden;
     background: linear-gradient(180deg, #FCFDFF, #EBF1F8);
     border: 1px solid var(--border);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), var(--shadow);
@@ -97,20 +144,6 @@
   }
   .hub-card:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .hub-card { transition: none; } }
-  .hub-top { display: flex; align-items: center; gap: 10px; }
-  .hub-name { font-family: var(--serif); font-size: 32px; font-weight: 800; letter-spacing: -0.01em; }
-  .hub-desc { font-size: 16px; font-weight: 400; line-height: 1.58; color: var(--text-muted); margin-top: 9px; }
-  .hub-meta {
-    display: flex; align-items: center; gap: 7px; margin-top: 20px; padding-top: 16px;
-    border-top: 1px dashed rgba(23,42,71,0.22);
-    font-size: 14px; font-weight: 700; color: var(--text-dim);
-  }
-  .hub-meta b { font-weight: 800; color: var(--text); }
-  /* ⚠️ 위 display:flex 가 UA 의 [hidden]{display:none} 을 이긴다 — 이 줄이 없으면
-     카운트 조회가 끝나기 전·실패 시 라이브 점(●)만 홀로 남는다(2026-08-17 실측). */
-  .hub-meta[hidden] { display: none; }
-
-  /* ── 연구실 카드 = 다크 콘솔(②안). 밝은 활자는 --text-on-dark(#F1F4F8)의 rgba ── */
   .card-lab {
     background: linear-gradient(180deg, #1E4079, #142C52);
     border-color: rgba(255,255,255,0.14);
@@ -120,11 +153,20 @@
     .card-lab:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), var(--shadow-lg); }
   }
   .card-lab:focus-visible { outline-color: #FFFFFF; }
+  /* 머리 띠 — 안내판 상단 레일. 카드 padding 바깥까지 붙여 '판'으로 읽힌다 */
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 -28px; padding: 12px 28px; }
+  .card-lab .bar { background: rgba(8,18,38,0.55); color: rgba(241,244,248,0.85); border-bottom: 1px solid rgba(241,244,248,0.12); }
+  .hub-card:not(.card-lab) .bar { background: var(--bg3); color: var(--accent-ink); border-bottom: 1px solid var(--border-soft); }
+  .bar .r { font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .hub-top { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+  .hub-name { font-family: var(--serif); font-size: 32px; font-weight: 800; letter-spacing: -0.01em; }
   .card-lab .hub-name { color: #FFFFFF; }
-  /* 화살표 버튼 — 두 카드 같은 규격(40px 원 + 20px 화살표)으로 오른쪽 끝을 맞춘다.
-     ⚠️ margin-left:auto 는 알약에만 준다 — 알약 '안'의 svg 에 걸리면 화살표가 원
-        오른쪽 끝으로 밀려 가운데가 어긋난다(2026-08-01 실측: 왼쪽 18px·오른쪽 0px).
-     밝은 종이 카드 = 네이비 원 + 흰 화살표 / 다크 콘솔 카드 = 흰 원 + 네이비 화살표. */
+  .hub-desc { font-size: 16px; font-weight: 400; line-height: 1.58; color: var(--text-muted); margin-top: 9px; }
+  /* ⚠️ 다크 콘솔 위 설명 줄(조회 실패 시 폴백) — 기본 --text-muted 는 이 면에서 대비가 안 나온다 */
+  .card-lab .hub-desc { color: rgba(241,244,248,0.86); }
+  /* 화살표 알약 — 두 카드 같은 규격(52px 원 + 24px 화살표).
+     ⚠️ margin-left:auto 는 알약에만 준다 — 알약 '안'의 svg 에 걸리면 화살표가 원 오른쪽 끝으로
+        밀려 가운데가 어긋난다(2026-08-01 실측). 밝은 카드 = 네이비 원 + 흰 화살표 / 다크 = 흰 원 + 네이비. */
   .pill {
     margin-left: auto; flex: none; width: 52px; height: 52px; border-radius: 50%;
     background: var(--action); color: var(--action-ink);
@@ -132,80 +174,88 @@
   }
   .pill svg { width: 24px; height: 24px; }
   .card-lab .pill { background: #FFFFFF; color: var(--action); }
+  .hub-meta {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px;
+    border-top: 1px dashed rgba(23,42,71,0.22);
+    font-size: 14px; font-weight: 700; color: var(--text-dim);
+  }
+  .hub-meta b { font-weight: 800; color: var(--text); }
+  /* ⚠️ 위 display:flex 가 UA 의 [hidden]{display:none} 을 이긴다 — 이 줄이 없으면
+     조회가 끝나기 전·실패 시 발치가 빈 채로 뜬다(2026-08-17 실측). */
+  .hub-meta[hidden], .board[hidden] { display: none; }
   .card-lab .hub-meta { border-color: rgba(241,244,248,0.3); color: rgba(241,244,248,0.78); }
   .card-lab .hub-meta b { color: #FFFFFF; }
-  /* ⚠️ 다크 콘솔 위 설명 줄 — 기본 --text-muted(어두운 회색)는 이 면에서 대비가 안 나온다.
-     2026-09-22 서가 접기로 목차 자리에 설명이 들어오면서 필요해진 규칙이다. */
-  .card-lab .hub-desc { color: rgba(241,244,248,0.86); }
 
-  /* 서가 목차 4줄 — 점선 리더(기출문제는 2026-08-03 취업 자료실로 합쳤다). 순서·수치는 lab-archive.html 서가와 같게 유지 */
-  .ix { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
-  .ix-row { display: flex; align-items: baseline; gap: 9px; font-size: 17px; }
-  .ix-name { flex: none; font-weight: 700; color: rgba(241,244,248,0.93); }
-  .ix-lead { flex: 1; border-bottom: 2px dotted rgba(241,244,248,0.28); position: relative; top: -3px; min-width: 18px; }
-  .ix-n { flex: none; min-height: 20px; font-weight: 800; color: var(--action-on-dark); }
-  .ix-n span { font-size: 12px; font-weight: 700; }
-  /* '그 외' 줄 — 회사 이름이 아니라 묶음이라 한 단계 물러나게 한다(크기는 같게 둔다.
-     줄 높이가 어긋나면 점선 리더가 층이 진다). 다크 면 위 대비 약 5:1. */
-  .ix-rest { color: rgba(241,244,248,0.66); }
+  /* ── ③ 안내판 표 — 코드 · 항공사 · 자료 · 갱신 ──
+        ⚠️ 375px 에서 카드 안쪽은 277px 뿐이다. 칸 폭(40·44·42 + 간격 8×3 = 150)을 빼면 이름 칸이 127px 라
+           '트리니티항공'(96px) 옆에 NEW 배지(40px)가 들어가지 않는다(실측 — 배지가 자료 칸을 밀었다).
+           그래서 좁은 화면은 배지 대신 **갱신일을 밝히고 이름 뒤에 점**을 찍는다. 배지는 ≥760px 에서만. */
+  .board { margin-top: 16px; }
+  .board-h { display: grid; grid-template-columns: 40px 1fr 44px 42px; gap: 8px; padding: 0 0 8px; color: rgba(241,244,248,0.5); }
+  .board-h span:nth-child(3), .board-h span:nth-child(4), .brow .b-n, .brow .b-d { text-align: right; justify-self: end; }
+  .brow { display: grid; grid-template-columns: 40px 1fr 44px 42px; gap: 8px; align-items: center; min-height: 50px; border-top: 1px solid rgba(241,244,248,0.12); }
+  .b-code {
+    display: inline-flex; align-items: center; justify-content: center; height: 28px; width: 40px; border-radius: 5px;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: #FFFFFF; background: #0E1F3D;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14); position: relative;
+  }
+  .b-code::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,0.5); }
+  .b-code.dim { color: rgba(241,244,248,0.6); }
+  /* 이름은 320px 에서 두 줄로 접힐 수 있다(잘리는 것보다 낫다).
+     ⚠️ body 의 word-break:keep-all 은 '트리니티항공'을 한 단어로 봐서 못 접는다 — 여기서만 풀어 준다(실측 320px 넘침). */
+  .b-name { font-size: 16px; font-weight: 700; line-height: 1.3; color: rgba(241,244,248,0.95); display: flex; align-items: center; gap: 6px; min-width: 0;
+    word-break: normal; overflow-wrap: anywhere; }
+  .b-name.dim { color: rgba(241,244,248,0.72); }
+  .b-new { display: none; flex: none; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 4px; background: var(--action-on-dark); color: #142C52; font-style: normal; }
+  .b-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--action-on-dark); }
+  .b-n { display: inline-flex; align-items: baseline; gap: 3px; }
+  .b-n > span:last-child { font-size: 12px; font-weight: 700; color: rgba(241,244,248,0.7); }
+  .b-d { font-size: 13px; font-weight: 700; color: rgba(241,244,248,0.62); }
+  .b-d.new { color: var(--action-on-dark); font-weight: 800; }
+  .bar-x { display: none; }                        /* 머리 띠 꼬리 '· 항공사별'은 넓은 화면에서만 */
 
-  /* 연구 진행 신호 */
-  .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--action-on-dark); }
-  @media (prefers-reduced-motion: no-preference) { .live { animation: livePulse 2.6s ease-in-out infinite; } }
-  @keyframes livePulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.42; transform: scale(0.8); } }
-
-  /* 연구진 사진 6장 — researchers-data.js 에서 JS 로 채운다.
-     2026-08-01 오너 확정: **이름은 빼고 사진을 키운다**("이름은 빼고 사진을 차라리
-     조금 더 크게"), 모양은 **세로 4:5 직사각**("B로 가자") — researchers.html 의
-     연구진 카드(.mi-photo 4/5)와 같은 비율이라 눌러 들어가도 사진이 같은 모양으로 이어진다.
-     ⚠️ 한 줄 6장으로 되돌리지 말 것 — 375px 에서 카드 안쪽이 293px 라 사진이 41px 로
-        주저앉는다(실측). 3열 2행이라야 84px 가 나온다.
-     ⚠️ 사진 초점(object-position)은 researchers-data.js 의 photoPos 가 원본. */
+  /* ── ④ 연구진 카드 — 사진 6장 3열 2행 + 직함 타일.
+        2026-08-01 오너 확정: 이름은 빼고 사진을 키운다, 모양은 세로 4:5(researchers.html .mi-photo 와 같은 비율).
+        ⚠️ 한 줄 6장으로 되돌리지 말 것 — 375px 에서 카드 안쪽이 293px 라 사진이 41px 로 주저앉는다(실측).
+        ⚠️ 사진 초점(object-position)은 researchers-data.js 의 photoPos 가 원본. ── */
   .ppl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
   .ppl img {
     width: 100%; aspect-ratio: 4/5; border-radius: 14px; display: block;
     object-fit: cover; object-position: center 18%; background: var(--accent-tint);
   }
+  .roles { gap: 14px; }
+  .role { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--text-muted); }
 
   .foot-note { margin-top: 40px; text-align: center; font-size: 12px; font-weight: 400; color: var(--text-dim); }
 
   /* ══ 넓은 화면 = 좌우 2단 (2026-08-02 오너 "위아래 보다는 좌우로 보여지게") ══
-     히어로는 제목(왼쪽) + 설명(오른쪽), 허브 카드 두 장은 나란히.
-     ⚠️ 375px 는 지금처럼 위아래로 둔다 — 폰에서 두 장을 나란히 두면 카드 하나가
-        약 160px 라 목차 줄('취업 자료실')이 접히고 얼굴 3열이 41px 로 주저앉는다.
-        3열 사진 84px 를 지키는 카드 최소 폭이 353px 이라 760px 부터 2단이다.
-     ⚠️ 카드 규격(padding 28·제목 32px·화살표 52px 등)은 1.5배 한 벌 그대로 —
-        2단으로 바꾼다고 활자를 줄이지 말 것. */
+     마스트헤드는 제목(왼쪽) + 설명(오른쪽 아래), 카드 두 장은 나란히 6:4(연구실 넓게 —
+     자료가 주인공이라는 위계를 폭으로 말한다. 5안 비교 후 "C안으로 가자").
+     ⚠️ 375px 는 위아래 그대로 — 폰에서 두 장을 나란히 두면 얼굴 3열이 41px 로 주저앉는다.
+     ⚠️ 연구진 카드의 min-width:332px 를 내리지 말 것 — 이 폭이라야 얼굴 3열이 84px(375px 폰과 같은
+        크기, 문서의 하한)로 나온다. 40% 만 주면 760px 에서 카드가 288px 로 좁아져 얼굴이 68px 가 된다.
+     ⚠️ 2단으로 바꾼다고 카드 규격(padding 28·제목 32px·알약 52px)을 줄이지 말 것. */
   @media (min-width: 760px) {
     .wrap { max-width: 920px; }
-
-    /* 제목·설명 좌우 — 첫 줄 베이스라인을 맞춘다(align-items:baseline) */
-    .hero {
-      display: grid; column-gap: 44px; align-items: baseline;
-      grid-template-columns: minmax(0, max-content) minmax(300px, 1fr);
-    }
-    .hero-eyebrow, .hero h1 { grid-column: 1; }
-    .hero-sub { grid-column: 2; grid-row: 2; margin-top: 0; }
-
-    /* 카드 두 장 나란히 — 발치(점선 줄)를 카드 바닥에 붙여 두 장의 밑선을 맞춘다.
-       폭은 6:4(연구실 넓게) — 자료가 주인공이라는 위계를 폭으로 말한다.
-       2026-08-02 오너가 5안 비교(outputs/lab-hub-layout-mockup.html) 후 "C안으로 가자".
-       ⚠️ 연구진 카드의 `min-width: 332px` 를 내리지 말 것 — 이 폭이라야 얼굴 3열이
-          84px 로 나온다(375px 폰과 같은 크기, 문서의 하한). 40% 만 주면 760px 화면에서
-          카드가 288px 로 좁아져 얼굴이 68px 로 주저앉는다. 좁을 땐 이 카드가 폭을
-          지키고 연구실 카드가 남는 자리를 가져간다(760px 에서 374:332). */
+    .mast { padding: 30px 34px 30px; display: grid; grid-template-columns: 1fr auto; align-items: end; column-gap: 40px; }
+    .mast-bar { grid-column: 1 / -1; }
+    .mast-x { display: inline; }
+    .mast h1 { margin-top: 56px; font-size: 40px; }
+    .mast .sub { grid-column: 2; grid-row: 2; align-self: end; max-width: 360px; margin: 0 0 6px; }
+    .stats { max-width: 560px; }
     .hub-grid { flex-direction: row; align-items: stretch; }
     .hub-card { min-width: 0; display: flex; flex-direction: column; }
     .card-lab { flex: 1 1 0; }
     .hub-card:not(.card-lab) { flex: 0 1 40%; min-width: 332px; }
-    .ix, .ppl { margin-bottom: 20px; }
+    .ppl { margin-bottom: 20px; }
     .hub-meta { margin-top: auto; }
-    /* 연구실 카드는 얼굴 6장이 있는 연구진 카드보다 180px 짧다(실측 362 vs 562).
-       남는 자리를 그냥 비우면 다크 면에 큰 구멍이 생겨서, 목차 4줄을 세로로 펴
-       채운다(줄 간격 14→64px). ⚠️ 가운데 정렬은 제목 밑이 벌어져 실패한 안이다.
-       max-height 는 안전장치 — 연구원이 늘어 옆 카드가 더 길어져도 목차가
-       무한정 벌어지지 않고 남는 자리가 발치 위로 간다. */
-    .ix { flex: 1 1 auto; justify-content: space-between; max-height: 380px; }
+    /* 안내판은 회사 수만큼 줄이 선다 — 남는 높이는 줄 간격이 아니라 발치 위 여백으로 간다 */
+    .board-h, .brow { grid-template-columns: 52px 1fr 70px 60px; gap: 10px; }
+    .brow { min-height: 54px; }
+    .b-code { width: 52px; }
+    .b-new { display: inline-block; }              /* 넓은 화면은 배지, 점은 숨긴다 */
+    .b-dot { display: none; }
+    .bar-x { display: inline; }
   }
   </style>
 </head>
@@ -213,50 +263,50 @@
 
 <main class="wrap">
 
-  <header class="hero">
-    <p class="hero-eyebrow">MONC LAB</p>
+  <!-- ① 마스트헤드 — 오른쪽 '갱신 N일 전'은 실데이터가 온 뒤에만 켠다 -->
+  <header class="mast">
+    <div class="mast-bar">
+      <span class="caps">MONC LAB<span class="mast-x"> · Research board</span></span>
+      <span class="live-t num" id="labLive" hidden><i class="live"></i><span id="labLiveT"></span></span>
+    </div>
     <h1>몬크 연구실 &amp; 연구진</h1>
-    <p class="hero-sub">항공사별 자료와 기출문제까지 — 연구진이 모아 정리합니다.</p>
+    <p class="sub">항공사별 자료와 기출문제까지 — 연구진이 모아 정리합니다.</p>
   </header>
+
+  <!-- ② 계기 3칸 — 값은 JS 가 채운다. 채우기 전엔 '—' 타일(거짓 숫자를 두지 않는다) -->
+  <div class="stats num">
+    <div class="stat"><div class="v"><span class="flap lt lg" id="stDocs" role="img" aria-label="자료 수 확인 중"><i class="na">—</i></span><span>건</span></div><small>자료</small></div>
+    <div class="stat"><div class="v"><span class="flap lt lg" id="stAir" role="img" aria-label="항공사 수 확인 중"><i class="na">—</i></span><span>곳</span></div><small>항공사</small></div>
+    <div class="stat"><div class="v"><span class="flap lt lg" id="stPpl" role="img" aria-label="연구원 수 확인 중"><i class="na">—</i></span><span>명</span></div><small>연구원</small></div>
+  </div>
 
   <div class="hub-grid">
 
-    <!-- ⚠️ 2026-09-22 서가 접기 — 학생 화면 서가가 '취업 자료실' 하나라 원장(lab-archive.html)을
-         건너뛰고 자료 목록으로 바로 보낸다(오너 "연구실에 그냥 취업자료들이 있는 느낌").
-         원문: href="lab-archive.html" · docs/notes/lab.md '서가 접기' 절 -->
+    <!-- ③ 연구실 = 안내판. 2026-09-22 서가 접기로 학생 화면 서가가 '취업 자료실' 하나라 원장(lab-archive.html)을
+         건너뛰고 자료 목록으로 바로 보낸다(원문 href="lab-archive.html" · docs/notes/lab.md '서가 접기'). -->
     <a class="hub-card card-lab" href="lab-shelf.html?shelf=airline">
+      <div class="bar"><span class="caps">Research board<span class="bar-x"> · 항공사별</span></span><span class="r"><i class="live"></i>연구 진행 중</span></div>
       <div class="hub-top">
         <h2 class="hub-name">연구실</h2>
         <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
-      <!-- ⚠️ 2026-09-22 서가 접기(오너 지시) — 서가가 '취업 자료실' 하나라 목차 대신 설명 한 줄을 쓴다.
-           영상관·현장 리포트·채용 캘린더를 다시 열 때 아래 목차 네 줄을 되살리고
-           설명 줄을 지운 뒤 스크립트 UNIT 도 같이 되돌린다(docs/notes/lab.md '서가 접기').
-      숫자는 lab_shelf_counts() 가 채운다 — '—' 는 스크립트 전 자리표시
-      <div class="ix num">
-        <p class="ix-row" data-shelf="airline"><span class="ix-name">취업 자료실</span><span class="ix-lead"></span><span class="ix-n"></span></p>
-        <p class="ix-row" data-shelf="video"><span class="ix-name">영상관</span><span class="ix-lead"></span><span class="ix-n"></span></p>
-        기출문제 줄은 2026-08-03 취업 자료실로 합쳤다(그 안의 갈래) — 되살리지 말 것
-        <p class="ix-row" data-shelf="report"><span class="ix-name">현장 리포트</span><span class="ix-lead"></span><span class="ix-n"></span></p>
-        <p class="ix-row" data-shelf="calendar"><span class="ix-name">채용 캘린더</span><span class="ix-lead"></span><span class="ix-n"></span></p>
-      </div>
-      -->
-      <!-- 서가 접기 뒤 목차 = 항공사별 자료 수(2026-09-22 오너 "휑해졌어" → A안).
-           ⚠️ 줄·숫자는 JS 가 실데이터로 채운다 — 마크업에 항공사 이름을 적지 말 것
-              (자료가 빠지면 그 줄이 거짓말이 된다). 채우기 전·실패 시에는 아래 설명 줄이 남는다. -->
-      <div class="ix num" id="labIx" hidden></div>
+      <!-- ⚠️ 줄·숫자·날짜는 JS 가 실데이터로 채운다 — 마크업에 항공사 이름을 적지 말 것.
+           채우기 전·실패 시에는 아래 설명 줄이 남는다. -->
+      <div class="board num" id="labBoard" hidden></div>
       <p class="hub-desc" id="labDesc">항공사별 자료와 기출을 연구진이 모아 정리합니다.</p>
-      <p class="hub-meta num" id="labMeta" hidden><i class="live"></i></p>
+      <p class="hub-meta num" id="labMeta" hidden></p>
     </a>
 
+    <!-- ④ 연구진 — 얼굴·인원수·직함 구성은 researchers-data.js 에서 JS 로 생성(페이지에 복사 금지) -->
     <a class="hub-card" href="researchers.html">
+      <div class="bar"><span class="caps">Researchers</span><span class="r num" id="labPplN">연구원</span></div>
       <div class="hub-top">
         <h2 class="hub-name">연구진</h2>
         <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </div>
       <p class="hub-desc">자료를 만들고 검수하는 사람들 — 이력과 전문 분야를 소개합니다.</p>
       <div class="ppl" id="labPpl"></div>
-      <p class="hub-meta num" id="labPplMeta">연구원 <b>6</b>명</p>
+      <div class="hub-meta num roles" id="labPplMeta"></div>
     </a>
 
   </div>
@@ -268,10 +318,28 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script>
-/* 서가별 자료 수 — lab_shelf_counts() 가 원본. 화면 숫자는 DB 에서 셀 수 있는 값만 쓴다.
-   자료가 아직 없으면 목차 줄은 '—' 로 남고 카드 발치가 '자료 준비 중'이 된다. */
+/* ══ 안내판·계기 — lab_resource_list(airline·question) 실데이터 (2026-09-23) ══════════
+   자료실은 DB shelf 두 값(airline·question)이 한 서가다 — 둘을 합쳐 센다.
+   항공사별 자료 수·최신 갱신일을 내고, 7일 안에 올라온 회사엔 NEW 를 붙인다.
+   ⚠️ 항공사가 없는 자료(전 항공사 공통)는 회사로 세지 않는다 — 맨 아래 'ALL' 한 줄.
+   ⚠️ 조회가 실패하면 안내판을 그리지 않고 설명 줄(#labDesc)이 남는다. 계기는 '—' 그대로. */
 (function () {
   'use strict';
+  var AIRLINE = {
+    kal:       { name: '대한항공',     code: 'KE' },
+    asiana:    { name: '아시아나항공', code: 'OZ' },
+    jinair:    { name: '진에어',       code: 'LJ' },
+    jejuair:   { name: '제주항공',     code: '7C' },
+    twayair:   { name: '트리니티항공', code: 'TW' },
+    airbusan:  { name: '에어부산',     code: 'BX' },
+    airseoul:  { name: '에어서울',     code: 'RS' },
+    eastarjet: { name: '이스타항공',   code: 'ZE' },
+    airpremia: { name: '에어프레미아', code: 'YP' },
+    aerok:     { name: '에어로케이',   code: 'RF' }
+  };
+  var NEW_DAYS = 7;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function relTime(iso) {
     var h = Math.floor((Date.now() - new Date(iso).getTime()) / 36e5);
     if (h < 1) return '방금';
@@ -279,106 +347,86 @@
     var d = Math.floor(h / 24);
     return d < 30 ? d + '일 전' : new Date(iso).toISOString().slice(5, 10).replace('-', '.');
   }
-  /* 목차 줄의 단위 — 마크업에는 숫자도 단위도 두지 않는다(자리표시가 깜빡이던 자리) */
-  /* ⚠️ 기출문제는 2026-08-03 부터 취업 자료실 안의 갈래라 목차에 줄이 없다.
-     단위도 '건'으로 통일했다(옛 '개'를 되살리지 말 것). */
-  /* ⚠️ 2026-09-22 서가 접기 — 학생 화면 서가가 '취업 자료실' 하나다. 여기 남은 키만 합계에 든다.
-     다시 열 때 원문: var UNIT = { airline: '건', video: '편', report: '편', calendar: '회' };  // 캘린더는 파일이 아니라 공채 회차다(2026-08-04) */
-  var UNIT = { airline: '건' };
+  function mmdd(iso) { var d = new Date(iso); return String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0'); }
+  /* 플립 타일 — 숫자 한 자리가 타일 하나 */
+  function tiles(n) { return String(n).split('').map(function (c) { return '<i>' + c + '</i>'; }).join(''); }
+  function setStat(id, n, unit) {
+    var el = document.getElementById(id);
+    el.innerHTML = tiles(n);
+    el.setAttribute('aria-label', n + unit);
+  }
 
   if (!window.MONC || !window.MONC.sb) return;
-  window.MONC.sb.rpc('lab_shelf_counts').then(function (res) {
-    if (res.error) return;                       // 미적용 환경이면 조용히 둔다
-    var total = 0, last = null;
-    var map = {};
-    (res.data || []).forEach(function (r) { map[r.shelf] = r; });
-    /* 기출문제 건수는 취업 자료실 줄에 합친다 — 화면에서 한 서가가 됐다.
-       ⚠️ DB 는 그대로 shelf 두 값이다(원장 lab-archive.html 도 같은 방식). */
-    if (map.question) {
-      var a = map.airline || { n: 0, last_at: null };
-      map.airline = {
-        n: (Number(a.n) || 0) + (Number(map.question.n) || 0),
-        last_at: (a.last_at && map.question.last_at)
-          ? (a.last_at > map.question.last_at ? a.last_at : map.question.last_at)
-          : (a.last_at || map.question.last_at)
-      };
-      delete map.question;
-    }
-
-    Object.keys(UNIT).forEach(function (key) {
-      var cell = document.querySelector('.ix-row[data-shelf="' + key + '"] .ix-n');
-      var n = map[key] ? (Number(map[key].n) || 0) : 0;
-      total += n;
-      /* ⚠️ 합계·갱신 시각은 목차 줄이 없어도 센다 — 2026-09-22 서가 접기로 목차를 뺐더니
-         여기서 먼저 빠져나가 카드 발치가 '자료 준비 중'이 됐다(실측). 줄 채우기만 건너뛴다. */
-      if (!cell) {
-        if (map[key] && map[key].last_at && (!last || map[key].last_at > last)) last = map[key].last_at;
-        return;
-      }
-      if (map[key] && map[key].last_at && (!last || map[key].last_at > last)) last = map[key].last_at;
-      // 자료가 없는 서가는 숫자를 내걸지 않는다(원장의 '준비 중'과 같은 규칙)
-      cell.innerHTML = n > 0 ? (n + '<span>' + UNIT[key] + '</span>') : '<span>준비 중</span>';
-    });
-
-    var meta = document.getElementById('labMeta');
-    meta.innerHTML = '<i class="live"></i>' + (total > 0
-      ? '연구 진행 중 · 자료 <b>' + total + '</b>건' + (last ? ' · 갱신 ' + relTime(last) : '')
-      : '자료 준비 중');
-    meta.hidden = false;
-    if (total === 0) {
-      var f = document.getElementById('labFoot');
-      f.textContent = '자료는 준비되는 대로 서가별로 채워집니다.';
-      f.hidden = false;
-    }
-  }).catch(function () {});
-
-  /* ══ 허브 목차 = 항공사별 자료 수 (2026-09-22 오너 "휑해졌어" → A안) ═══════════
-     서가 접기로 서가 목차가 사라진 자리를 항공사로 채운다 — 다음 화면이 항공사 고르기라
-     예고가 된다. ⚠️ 이름·숫자는 전부 실데이터다. 마크업에 항공사를 적지 말 것.
-     ⚠️ 조회가 실패하거나 항공사가 한 곳뿐이면 목차를 그리지 않고 설명 줄을 남긴다
-        (한 줄짜리 목차는 목차로 읽히지 않는다).
-     ⚠️ 자료실은 DB shelf 두 값(airline·question)이 한 서가다 — 둘 다 세야 발치 합계와 맞는다. */
-  var AIRLINE_LABEL = { kal:'대한항공', asiana:'아시아나항공', jinair:'진에어', jejuair:'제주항공', twayair:'트리니티항공', airbusan:'에어부산', airseoul:'에어서울', eastarjet:'이스타항공', airpremia:'에어프레미아', aerok:'에어로케이' };
-  var TOP_N = 3;   // 상위 세 곳 + '그 외' 한 줄 = 네 줄(서가 목차와 같은 높이)
-
   Promise.all(['airline', 'question'].map(function (s) {
     return window.MONC.sb.rpc('lab_resource_list', { p_shelf: s, p_airline: null });
   })).then(function (reses) {
     if (reses.some(function (r) { return r.error; })) return;
-    var cnt = {}, restN = 0;
-    reses.forEach(function (r) {
-      (r.data || []).forEach(function (d) {
-        // 항공사가 없는 자료(전 항공사 공통)는 회사로 세지 않고 '그 외'로 넘긴다
-        if (d.airline && AIRLINE_LABEL[d.airline]) cnt[d.airline] = (cnt[d.airline] || 0) + 1;
-        else restN += 1;
-      });
-    });
-    var rank = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; });
-    if (rank.length < 2) return;                       // 한 곳뿐이면 설명 줄을 그대로 둔다
-    var rows = rank.slice(0, TOP_N).map(function (k) {
-      return { name: AIRLINE_LABEL[k], n: cnt[k], rest: false };
-    });
-    rank.slice(TOP_N).forEach(function (k) { restN += cnt[k]; });
-    if (restN > 0) rows.push({ name: '그 외', n: restN, rest: true });
+    var rows = [];
+    reses.forEach(function (r) { rows = rows.concat(r.data || []); });
+    if (!rows.length) {
+      var f = document.getElementById('labFoot');
+      f.textContent = '자료는 준비되는 대로 채워집니다.';
+      f.hidden = false;
+      return;
+    }
 
-    var ix = document.getElementById('labIx');
-    ix.innerHTML = rows.map(function (r) {
-      return '<p class="ix-row"><span class="ix-name' + (r.rest ? ' ix-rest' : '') + '">' + r.name + '</span>'
-        + '<span class="ix-lead"></span><span class="ix-n">' + r.n + '<span>건</span></span></p>';
-    }).join('');
-    ix.hidden = false;
-    document.getElementById('labDesc').hidden = true;   // 목차가 서면 설명은 물러난다
+    var by = {}, last = null;
+    rows.forEach(function (d) {
+      var k = (d.airline && AIRLINE[d.airline]) ? d.airline : '_';
+      if (!by[k]) by[k] = { n: 0, last: null };
+      by[k].n += 1;
+      var t = d.published_at || d.created_at || null;
+      if (t && (!by[k].last || t > by[k].last)) by[k].last = t;
+      if (t && (!last || t > last)) last = t;
+    });
+    var slugs = Object.keys(by).filter(function (k) { return k !== '_'; })
+      .sort(function (a, b) { return (by[b].n - by[a].n) || String(by[b].last).localeCompare(String(by[a].last)); });
+
+    /* 계기: 자료 수 · 항공사 수. 연구원 수는 researchers-data.js 쪽 스크립트가 채운다. */
+    setStat('stDocs', rows.length, '건');
+    setStat('stAir', slugs.length, '곳');
+
+    /* 마스트헤드 오른쪽 — 마지막 갱신 */
+    if (last) {
+      document.getElementById('labLiveT').textContent = '갱신 ' + relTime(last);
+      document.getElementById('labLive').hidden = false;
+    }
+
+    /* 안내판 */
+    var fresh = Date.now() - NEW_DAYS * 864e5;
+    /* NEW 표식은 둘이 한 벌 — 넓은 화면은 배지, 좁은 화면은 이름 뒤 점 + 밝힌 갱신일(CSS 가 폭에 따라 고른다) */
+    function row(code, name, n, at, dim) {
+      var isNew = at && new Date(at).getTime() >= fresh;
+      return '<div class="brow">'
+        + '<span class="b-code' + (dim ? ' dim' : '') + '">' + esc(code) + '</span>'
+        + '<span class="b-name' + (dim ? ' dim' : '') + '">' + esc(name)
+          + (isNew ? '<i class="b-new">NEW</i><i class="b-dot" aria-hidden="true"></i>' : '') + '</span>'
+        + '<span class="b-n"><span class="flap sm" role="img" aria-label="' + n + '건">' + tiles(n) + '</span><span>건</span></span>'
+        + '<span class="b-d' + (isNew ? ' new' : '') + '">' + (at ? mmdd(at) : '—') + '</span>'
+        + '</div>';
+    }
+    var html = '<div class="board-h caps"><span>코드</span><span>항공사</span><span>자료</span><span>갱신</span></div>'
+      + slugs.map(function (k) { return row(AIRLINE[k].code, AIRLINE[k].name, by[k].n, by[k].last, false); }).join('')
+      + (by._ ? row('ALL', '공통', by._.n, by._.last, true) : '');   // 항공사 없는 자료 — 짧게 '공통'(375px 이름 칸 127px)
+    var board = document.getElementById('labBoard');
+    board.innerHTML = html;
+    board.hidden = false;
+    document.getElementById('labDesc').hidden = true;   // 안내판이 서면 설명은 물러난다
+
+    var meta = document.getElementById('labMeta');
+    meta.innerHTML = '자료 <b>' + rows.length + '</b>건 · 항공사 <b>' + slugs.length + '</b>곳' + (last ? ' · 갱신 ' + relTime(last) : '');
+    meta.hidden = false;
   }).catch(function () {});
 })();
 </script>
 
 <script src="researchers-data.js" defer></script>
 <script>
-/* 연구진 얼굴·이름·직함 구성은 researchers-data.js 단일 원본에서 생성 — 페이지에
+/* 연구진 얼굴·인원수·직함 구성은 researchers-data.js 단일 원본에서 생성 — 페이지에
    복사 금지(연구원이 바뀌면 카드도 같이 바뀌어야 한다).
    ⚠️ 카드에 쓰는 문구는 배열에서 셀 수 있는 사실만. 출신 항공사·경력 연수처럼
       position 문자열을 파싱해야 나오는 값은 넣지 말 것(데이터가 바뀌면 조용히 틀어진다).
-   스크립트가 못 돌면 얼굴 줄만 비고 마크업의 '연구원 6명'이 남는다. */
+   스크립트가 못 돌면 얼굴 줄·직함 타일이 비고 머리 띠의 '연구원'만 남는다. */
 document.addEventListener('DOMContentLoaded', function () {
   var list = window.MONC_RESEARCHERS || [];
   var box = document.getElementById('labPpl');
@@ -395,23 +443,31 @@ document.addEventListener('DOMContentLoaded', function () {
     box.appendChild(img);
   });
 
-  /* 직함 구성 — '수석 연구원' 같은 role 문자열의 앞 두 글자로 묶는다 */
+  function tiles(n) { return String(n).split('').map(function (c) { return '<i>' + c + '</i>'; }).join(''); }
+
+  /* 인원수 — 머리 띠 + 계기 3칸의 '연구원' */
+  document.getElementById('labPplN').textContent = '연구원 ' + list.length + '명';
+  var st = document.getElementById('stPpl');
+  st.innerHTML = tiles(list.length);
+  st.setAttribute('aria-label', list.length + '명');
+
+  /* 직함 구성 — '수석 연구원' 같은 role 문자열에서 '연구원'을 떼어 묶는다 → 직함 타일 */
   var rank = {};
   list.forEach(function (r) {
     var k = String(r.role || '').replace(/\s*연구원\s*$/, '').trim();
     if (k) rank[k] = (rank[k] || 0) + 1;
   });
-  var parts = Object.keys(rank).map(function (k) { return k + ' ' + rank[k]; });
   var meta = document.getElementById('labPplMeta');
-  meta.innerHTML = '연구원 <b>' + list.length + '</b>명' + (parts.length ? ' · ' + parts.join(' · ') : '');
+  meta.innerHTML = Object.keys(rank).map(function (k) {
+    return '<span class="role"><span class="flap lt sm" role="img" aria-label="' + k + ' ' + rank[k] + '명">' + tiles(rank[k]) + '</span>' + k + '</span>';
+  }).join('');
 });
 </script>
 
 <script>
 /* bfcache — 뒤로/앞으로 가면 크롬이 **떠날 때 그리던 화면을 그대로 되살린다**(새로 받지 않는다).
-   배포 전에 열어 둔 탭이 있으면 옛 목차(기출문제가 따로 있던 5줄)가 그대로 떠서
-   "고쳤는데 왜 옛 화면이 깜빡이냐"가 된다(2026-08-03 오너 지적).
-   입력값이 없는 화면이라 통째로 다시 받는다 — answers·mypage·login 과 같은 규칙(CLAUDE.md). */
+   배포 전에 열어 둔 탭이 있으면 옛 화면이 그대로 떠서 "고쳤는데 왜 옛 화면이 깜빡이냐"가
+   된다(2026-08-03 오너 지적). 입력값이 없는 화면이라 통째로 다시 받는다 — CLAUDE.md 규칙. */
 window.addEventListener('pageshow', function (e) { if (e.persisted) location.reload(); });
 </script>
 </body>
