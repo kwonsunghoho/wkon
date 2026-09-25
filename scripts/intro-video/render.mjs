@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* ═══ MONC 홈페이지 소개 영상 렌더러 (2026-09-25) ═══
    compose.html(합성 무대)을 Playwright 크로미움으로 열고, 가상 시계를 1/30초씩 진행하며 프레임을
-   찍어 ffmpeg(libx264)로 잇는다 → video/monc-intro.mp4 (1080×1920 세로 · 30fps · 약 66초).
+   찍어 ffmpeg(libx264)로 잇는다 → video/monc-intro.mp4 (1080×1920 세로 · 30fps · 약 42초).
 
    왜 실시간 녹화가 아니라 프레임 단위인가: 홈의 조립 애니메이션·칩 정렬·카운트업은 rAF·setTimeout·
    CSS 전환이 섞여 있다. 실시간으로 찍으면 헤드리스 렌더 속도에 따라 끊기고 매번 결과가 다르다.
@@ -104,79 +104,85 @@ const SELECTORS = {
 };
 
 /* ── 타임라인(초) ────────────────────────────────────────────────────── */
-const END = 66.0;
-const XFADE = 0.45;                                   /* 화면(iframe) 교체 크로스페이드 */
+/* 2026-09-25 오너 "템포나 흐름이 좀 빠르면, 늘어지는 것 같아" → 66초 판을 42초로 다시 잘랐다.
+   정지 구간 2초 안팎, 스크롤 1~1.2초(ease-out — 폰 플릭처럼 빠르게 출발해 부드럽게 멈춤),
+   자막은 한 줄 부제로. 늘리려면 여기 시각만 밀면 된다(스크롤 목표는 실측이라 그대로). */
+const END = 42.0;
+const XFADE = 0.35;                                   /* 화면(iframe) 교체 크로스페이드 */
 const PAGE_SEG = [                                     /* 등장 순서 = compose.html iframe DOM 순서 */
-  { k: 'home', from: 0, to: 33.0 },
-  { k: 'ch', from: 33.0, to: 42.0 },
-  { k: 'tools', from: 42.0, to: 49.0 },
-  { k: 'res', from: 49.0, to: 55.0 },
-  { k: 'games', from: 55.0, to: END }
+  { k: 'home', from: 0, to: 20.4 },
+  { k: 'ch', from: 20.4, to: 26.4 },
+  { k: 'tools', from: 26.4, to: 30.8 },
+  { k: 'res', from: 30.8, to: 34.6 },
+  { k: 'games', from: 34.6, to: END }
 ];
-const PHONE_KF = [
-  { t: 0, v: FULL }, { t: 3.6, v: FULL }, { t: 4.7, v: DOCK }
+const PHONE_KF = [                                     /* 히어로 조립(1.7초)이 끝나고 신호가 뜬 직후 축소 */
+  { t: 0, v: FULL }, { t: 2.4, v: FULL }, { t: 3.2, v: DOCK }
 ];
 const CAPTIONS = [
-  { key: 'c1', from: 4.7, to: 11.0, e: 'MONC — Moment Of New Career', t: '승무원 준비의<br>새로운 기준, 몬크', s: '승무원 준비 온라인 플랫폼 — 혼자 준비하는 시간이 막막하지 않도록.' },
-  { key: 'c2', from: 11.4, to: 19.0, e: 'Challenge · Tools', t: '2주 밀착 챌린지,<br>올인원 면접 툴킷', s: '목소리부터 답변까지, 코치진과 하루 하나씩.' },
-  { key: 'c3', from: 19.4, to: 26.0, e: 'Why MONC', t: '혼자하면 막막하지만,<br>몬크와 함께하면 간결합니다', s: '열다섯 가지 준비 항목이 승준 도구 · 챌린지 · 특강, 세 갈래로 정리됩니다.' },
-  { key: 'c4', from: 26.4, to: 33.0, e: 'The Numbers', t: '어렵고 고민되는 승무원 준비,<br>방향을 알려드리겠습니다', s: '11년 몬크 데이터 · 함께한 승준생 30,000+명' },
-  { key: 'c5', from: 33.4, to: 38.4, e: 'Challenge', t: '각 분야 전문가의 코칭과<br>챌린저들의 열정으로', s: '보이스 · 영상면접 · 말투 · 답변 · 대한항공 특화 답변 — 2주 챌린지 5종' },
-  { key: 'c6', from: 38.8, to: 42.0, e: 'Blind Test', t: '당신이 면접관이라면?', s: '면접관의 귀로 직접 판정해 보는 블라인드 테스트.' },
-  { key: 'c7', from: 42.4, to: 49.0, e: 'MONC Tools', t: '쓴 답변은 전부<br>나만의 승준노트에', s: '소재 발굴 · 답변 첨삭 · 뉴스 스크랩 · 역량검사 게임' },
-  { key: 'c8', from: 49.4, to: 55.0, e: 'Researchers', t: '전문 연구원이 직접<br>설계하고 피드백합니다', s: '현장 경험이 풍부한 연구진 6명의 이력과 전문 분야.' },
-  { key: 'c9', from: 55.4, to: 60.0, e: 'MONC Games', t: '역량검사 게임 연습', s: '7가지 유형 · 무료 · 무제한 — 항공사 채용에 들어온 AI역량검사를 미리 손에.' }
+  { key: 'c1', from: 3.3, to: 6.6, e: 'MONC — Moment Of New Career', t: '승무원 준비의<br>새로운 기준, 몬크', s: '혼자 준비하는 시간이 막막하지 않도록.' },
+  { key: 'c2', from: 6.9, to: 11.4, e: 'Challenge · Tools', t: '2주 밀착 챌린지,<br>올인원 면접 툴킷', s: '목소리부터 답변까지, 코치진과 하루 하나씩.' },
+  { key: 'c3', from: 11.7, to: 15.6, e: 'Why MONC', t: '혼자하면 막막하지만,<br>몬크와 함께하면 간결합니다', s: '열다섯 가지 준비가 세 갈래로 정리됩니다.' },
+  { key: 'c4', from: 15.9, to: 20.4, e: 'The Numbers', t: '어렵고 고민되는 승무원 준비,<br>방향을 알려드리겠습니다', s: '11년 몬크 데이터 · 함께한 승준생 30,000+명' },
+  { key: 'c5', from: 20.7, to: 24.0, e: 'Challenge', t: '각 분야 전문가의 코칭과<br>챌린저들의 열정으로', s: '2주 챌린지 5종, 하루 한 번.' },
+  { key: 'c6', from: 24.2, to: 26.4, e: 'Blind Test', t: '당신이 면접관이라면?', s: '면접관의 귀로 직접 판정하는 블라인드 테스트.' },
+  { key: 'c7', from: 26.7, to: 30.8, e: 'MONC Tools', t: '쓴 답변은 전부<br>나만의 승준노트에', s: '소재 발굴 · 답변 첨삭 · 뉴스 스크랩 · 역량검사 게임' },
+  { key: 'c8', from: 31.1, to: 34.6, e: 'Researchers', t: '전문 연구원이 직접<br>설계하고 피드백합니다', s: '현장 경험이 풍부한 연구진 6명.' },
+  { key: 'c9', from: 34.9, to: 37.6, e: 'MONC Games', t: '역량검사 게임 연습', s: '7가지 유형 · 무료 · 무제한' }
 ];
-const URL_IN = 4.7, URL_OUT = 60.0;
-const FINAL_AT = 60.0;
+const URL_IN = 3.2, URL_OUT = 37.6;
+const FINAL_AT = 37.6;
 
 /* 스크롤 키프레임 — 실측값(A)으로 만든다. nav 는 상단 고정 바 높이(그 아래에 섹션 머리를 앉힌다). */
 function scrollKeys(A) {
   const H = A.home, C = A.ch, T = A.tools, R = A.res, G = A.games;
   const n = H.nav || 57;
   const bottom = m => Math.max(0, m.h - m.vh);
+  const O = 'out';                                     /* 스크롤은 플릭처럼: 빠르게 출발, 부드럽게 착지 */
+  const numsEnd = Math.min(bottom(H), H.numsStats - n - 110);
+  const chRows = Math.min(bottom(C), C.row3 + 237 - C.vh + 24);
   return {
     home: [
-      { t: 0, v: 0 }, { t: 5.0, v: 0 },
-      { t: 6.8, v: H.home - n },
-      { t: 11.0, v: H.home - n + 36, ease: 'linear' },
-      { t: 12.8, v: H.doors - n - 8 },
-      { t: 14.8, v: H.doors - n - 8 },
-      { t: 16.6, v: H.doorTools - n - 16 },
-      { t: 18.6, v: H.doorTools - n - 16 },
-      { t: 20.4, v: H.sort - n + 10 },
-      { t: 22.8, v: H.sort - n + 10 },
-      { t: 25.0, v: H.sortWrap + 30 },
-      { t: 26.0, v: H.sortWrap + 30 },
-      { t: 27.8, v: H.nums - n },
-      { t: 28.6, v: H.nums - n },
-      { t: 30.2, v: Math.min(bottom(H), H.numsStats - n - 110) },
-      { t: END, v: Math.min(bottom(H), H.numsStats - n - 110) }
+      { t: 0, v: 0 }, { t: 3.4, v: 0 },
+      { t: 4.6, v: H.home - n, ease: O },
+      { t: 6.6, v: H.home - n + 30, ease: 'linear' },
+      { t: 7.8, v: H.doors - n - 8, ease: O },
+      { t: 9.2, v: H.doors - n - 8 },
+      { t: 10.2, v: H.doorTools - n - 16, ease: O },
+      { t: 11.4, v: H.doorTools - n - 16 },
+      { t: 12.4, v: H.sort - n + 10, ease: O },      /* 칩 정렬(1.45초)은 스크롤 중 0.35 임계에서 시작 */
+      { t: 13.8, v: H.sort - n + 10 },
+      { t: 14.8, v: H.sortWrap + 30, ease: O },
+      { t: 15.6, v: H.sortWrap + 30 },
+      { t: 16.6, v: H.nums - n, ease: O },
+      { t: 16.9, v: H.nums - n },
+      { t: 17.9, v: numsEnd, ease: O },               /* 카운트업 2.0초+지연 → 20.4 전환 전에 끝난다 */
+      { t: END, v: numsEnd }
     ],
     ch: [
-      { t: 0, v: 0 }, { t: 34.4, v: 0 },
-      { t: 37.4, v: Math.min(bottom(C), C.row3 + 237 - C.vh + 24) },
-      { t: 38.2, v: Math.min(bottom(C), C.row3 + 237 - C.vh + 24) },
-      { t: 39.8, v: Math.min(bottom(C), C.bq - n) },
+      { t: 0, v: 0 }, { t: 21.2, v: 0 },
+      { t: 23.0, v: chRows, ease: O },
+      { t: 23.6, v: chRows },
+      { t: 24.6, v: Math.min(bottom(C), C.bq - n), ease: O },
       { t: END, v: Math.min(bottom(C), C.bq - n) }
     ],
     tools: [
-      { t: 0, v: 0 }, { t: 43.2, v: 0 },
-      { t: 45.0, v: Math.min(bottom(T), T.poster - n - 8) },
-      { t: 45.8, v: Math.min(bottom(T), T.poster - n - 8) },
-      { t: 47.6, v: bottom(T) },
+      { t: 0, v: 0 }, { t: 27.0, v: 0 },
+      { t: 28.0, v: Math.min(bottom(T), T.poster - n - 8), ease: O },
+      { t: 28.6, v: Math.min(bottom(T), T.poster - n - 8) },
+      { t: 29.8, v: bottom(T), ease: O },
       { t: END, v: bottom(T) }
     ],
     res: [
-      { t: 0, v: 0 }, { t: 50.2, v: 0 },
-      { t: 52.2, v: Math.min(bottom(R), R.panel - n) },
-      { t: 52.8, v: Math.min(bottom(R), R.panel - n) },
-      { t: 54.6, v: Math.min(bottom(R), R.panel + 560) },
+      { t: 0, v: 0 }, { t: 31.4, v: 0 },
+      { t: 32.4, v: Math.min(bottom(R), R.panel - n), ease: O },
+      { t: 32.8, v: Math.min(bottom(R), R.panel - n) },
+      { t: 33.8, v: Math.min(bottom(R), R.panel + 560), ease: O },
       { t: END, v: Math.min(bottom(R), R.panel + 560) }
     ],
     games: [
-      { t: 0, v: 0 }, { t: 56.2, v: 0 },
-      { t: 58.2, v: Math.min(bottom(G), G.grid - n - 20) },
+      { t: 0, v: 0 }, { t: 35.2, v: 0 },
+      { t: 36.4, v: Math.min(bottom(G), G.grid - n - 20), ease: O },
       { t: END, v: Math.min(bottom(G), G.grid - n - 20) }
     ]
   };
@@ -198,13 +204,13 @@ function stateAt(t, SK) {
   let caption = null;
   for (const c of CAPTIONS) {
     if (t >= c.from && t <= c.to + 0.02) {
-      const fi = fadeIn(t - c.from, 0.5), fo = fadeOut(c.to - t, 0.35);
+      const fi = fadeIn(t - c.from, 0.35), fo = fadeOut(c.to - t, 0.25);
       caption = { key: c.key, e: c.e, t: c.t, s: c.s, alpha: Math.min(fi, fo), dy: (1 - fi) * 14 };
       break;
     }
   }
-  const url = Math.min(fadeIn(t - URL_IN, 0.6), fadeOut(URL_OUT + 0.6 - t, 0.6));
-  const final = { alpha: fadeIn(t - FINAL_AT, 0.7), t: t - FINAL_AT };
+  const url = Math.min(fadeIn(t - URL_IN, 0.5), fadeOut(URL_OUT + 0.5 - t, 0.5));
+  const final = { alpha: fadeIn(t - FINAL_AT, 0.6), t: t - FINAL_AT };
   return { phone, pages, scroll, caption, url, final };
 }
 
@@ -282,6 +288,24 @@ async function main() {
   }
   const write = buf => new Promise(res => { if (ff.stdin.write(buf)) res(); else ff.stdin.once('drain', res); });
 
+  /* ⚠️ 한 장만 찍으면 가끔 폰 화면 일부가 흰색으로 빈다 — 크로미움이 바뀐 내용의 타일 래스터를
+     끝내기 전에 스크린샷이 잡히는 것(2026-09-25 미리보기 t=20.3 에서 실제로 잡힘). 상태는 가상
+     시계로 얼어 있으므로 **연속 두 장이 바이트 단위로 같을 때까지** 다시 찍는다. 첫 장이 렌더
+     갱신(IntersectionObserver 콜백 등)을 일으켜 두 번째가 달라질 수 있어 사이마다 __tickAll(0)
+     로 새 CSS 전환을 붙잡아 둔다(시간은 안 민다). 보통 2장, 최대 5장. */
+  let retakes = 0;
+  async function captureStable() {
+    let prev = await page.screenshot({ type: 'png' });
+    for (let k = 0; k < 4; k++) {
+      await page.evaluate(() => window.__tickAll(0));
+      const cur = await page.screenshot({ type: 'png' });
+      if (cur.equals(prev)) return cur;
+      retakes++;
+      prev = cur;
+    }
+    return prev;
+  }
+
   const t0 = Date.now();
   for (let i = 0; i < total; i++) {
     const t = i / FPS;
@@ -293,17 +317,17 @@ async function main() {
     if (PREVIEW) {
       if (wanted.has(i)) {
         const file = path.join(PREVIEW_DIR, `t${String(wanted.get(i)).replace('.', '_')}.png`);
-        await page.screenshot({ path: file, type: 'png' });
+        fs.writeFileSync(file, await captureStable());
         console.log('저장', file);
       } else {
         await page.screenshot({ type: 'jpeg', quality: 30, clip: { x: 0, y: 0, width: 4, height: 4 } }); /* 렌더 갱신만 */
       }
     } else {
-      await write(await page.screenshot({ type: 'png' }));
+      await write(await captureStable());
     }
-    if (i % (FPS * 5) === 0) console.log(`${t.toFixed(1)}s / ${END}s  (${((Date.now() - t0) / 1000).toFixed(0)}s 경과)`);
+    if (i % (FPS * 5) === 0) console.log(`${t.toFixed(1)}s / ${END}s  (${((Date.now() - t0) / 1000).toFixed(0)}s 경과 · 재촬영 ${retakes})`);
   }
-  if (ff) { ff.stdin.end(); await ffDone; console.log('완료', OUT, (fs.statSync(OUT).size / 1048576).toFixed(1) + 'MB'); }
+  if (ff) { ff.stdin.end(); await ffDone; console.log('완료', OUT, (fs.statSync(OUT).size / 1048576).toFixed(1) + 'MB', '· 재촬영 ' + retakes + '회'); }
   await browser.close();
 }
 
