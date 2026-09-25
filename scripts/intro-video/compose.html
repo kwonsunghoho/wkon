@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MONC 소개 영상 — 합성 무대(렌더 전용)</title>
+  <!-- ═══ 홈페이지 소개 영상 합성 무대 (2026-09-25) ═══
+       render.mjs 가 이 페이지를 540×960(@2x → 1080×1920) 으로 열고, 매 프레임
+       window.__setState() 로 폰 위치·스크롤·자막을 준 뒤 스크린샷을 찍어 ffmpeg 로 잇는다.
+       사이트 페이지는 같은 출처의 <iframe> 으로 싣는다(스크롤을 바깥에서 제어하려면 같은 출처여야 한다).
+       ⚠️ 사이트에 링크되는 화면이 아니다 — nav·og 메타·inapp 등 새 페이지 체크리스트 대상이 아니다.
+       ⚠️ 색은 사이트 팔레트 그대로(다크 무대 #0B1830 · 강조 --action-on-dark #A8C7F0 · 마무리는 순백 위 네이비).
+       글꼴은 /tokens.css 의 SUIT 조각을 그대로 쓴다(자막이 사이트와 같은 활자여야 한 벌로 읽힌다). -->
+  <link rel="stylesheet" href="/tokens.css">
+  <style>
+    html, body { margin: 0; padding: 0; width: 540px; height: 960px; overflow: hidden; background: #0B1830; }
+    body { font-family: 'SUIT Variable', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #fff; }
+    #stage { position: relative; width: 540px; height: 960px; overflow: hidden;
+      background: linear-gradient(180deg, #0B1830 0%, #12264A 58%, #1B3A6B 100%); }
+    #glow { position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(70% 46% at 50% 36%, rgba(168,199,240,.22), rgba(168,199,240,0) 72%); }
+
+    /* ── 폰 목업 — transform·모서리·베젤은 JS 가 매 프레임 준다(오프닝은 화면을 가득 채운 상태에서 시작) ── */
+    #phone { position: absolute; left: 0; top: 0; width: 375px; height: 667px; transform-origin: 0 0; }
+    #bezel { position: absolute; inset: -11px; border-radius: 46px; background: #0B1830; opacity: 0;
+      box-shadow: 0 34px 90px rgba(0,0,0,.55), inset 0 0 0 1.5px rgba(255,255,255,.16); }
+    #screen { position: absolute; inset: 0; overflow: hidden; background: #fff; border-radius: 0; }
+    /* iframe 은 DOM 순서 = 등장 순서. 다음 화면이 위에 얹혀 페이드인하고, 끝난 화면은 그 뒤에 투명해진다(흰 번쩍임 없음). */
+    #screen iframe { position: absolute; left: 0; top: 0; width: 375px; height: 667px; border: 0; opacity: 0; background: #fff; }
+
+    /* ── 자막(폰 위) ── */
+    #caption { position: absolute; left: 44px; right: 44px; top: 66px; opacity: 0; }
+    .cap-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #A8C7F0; }
+    .cap-title { margin: 12px 0 0; font-size: 30px; font-weight: 800; line-height: 1.3; letter-spacing: -.012em; word-break: keep-all; color: #fff; }
+    .cap-sub { margin: 12px 0 0; font-size: 16.5px; font-weight: 500; line-height: 1.55; color: rgba(255,255,255,.80); word-break: keep-all; }
+
+    #url { position: absolute; left: 0; right: 0; bottom: 24px; text-align: center; font-size: 14px; font-weight: 700;
+      letter-spacing: .10em; color: rgba(255,255,255,.66); opacity: 0; }
+
+    /* ── 마무리 카드 — 순백 위 네이비(로고 원본색을 살리려면 흰 바탕이어야 한다) ── */
+    #final { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; color: #1C2A3A;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 44px; }
+    #final img { width: 272px; height: auto; }
+    .fin-eyebrow { margin-top: 40px; font-size: 13px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #1B3A6B; }
+    .fin-title { margin: 14px 0 0; font-size: 34px; font-weight: 800; line-height: 1.3; letter-spacing: -.012em; word-break: keep-all; color: #1C2A3A; }
+    .fin-sub { margin: 14px 0 0; font-size: 17px; font-weight: 500; line-height: 1.55; color: #545C68; word-break: keep-all; }
+    .fin-url { margin-top: 34px; display: inline-block; padding: 17px 36px; border-radius: 999px; background: #1B3A6B; color: #fff;
+      font-size: 21px; font-weight: 800; letter-spacing: .04em; box-shadow: 0 14px 34px rgba(27,58,107,.28); }
+    .fin-social { margin-top: 26px; font-size: 14px; font-weight: 600; color: #545C68; letter-spacing: .02em; }
+    .fin-social b { color: #1B3A6B; font-weight: 700; }
+    .fin-item { opacity: 0; transform: translateY(14px); }
+  </style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+
+  <div id="caption">
+    <div class="cap-eyebrow" id="capE"></div>
+    <p class="cap-title" id="capT"></p>
+    <p class="cap-sub" id="capS"></p>
+  </div>
+
+  <div id="phone">
+    <div id="bezel"></div>
+    <div id="screen">
+      <iframe data-page="home"  src="/index.html"       title="홈"></iframe>
+      <iframe data-page="ch"    src="/challenges.html"  title="챌린지"></iframe>
+      <iframe data-page="tools" src="/tools.html"       title="승준 도구"></iframe>
+      <iframe data-page="res"   src="/researchers.html" title="연구진"></iframe>
+      <iframe data-page="games" src="/games.html"       title="역량검사 게임"></iframe>
+    </div>
+  </div>
+
+  <div id="url">monc.ai.kr</div>
+
+  <div id="final">
+    <img class="fin-item" id="finLogo" src="/images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-960.webp" alt="MONC" width="272">
+    <div class="fin-eyebrow fin-item" id="finE">Moment Of New Career</div>
+    <p class="fin-title fin-item" id="finT">국내 최초 온라인 승준 플랫폼,<br>몬크ON 시작하기</p>
+    <p class="fin-sub fin-item" id="finS">여러분들의 승무원 준비 여정,<br>몬크가 함께 합니다.</p>
+    <div class="fin-url fin-item" id="finU">monc.ai.kr</div>
+    <p class="fin-social fin-item" id="finX">인스타그램 <b>@monc.point</b> &nbsp;·&nbsp; 유튜브 <b>@monc_lab</b></p>
+  </div>
+</div>
+
+<script>
+/* 렌더러가 매 프레임 부르는 상태 적용 함수.
+   s = { phone:{x,y,s,r,bezel}, pages:{home:1,...}, scroll:{home:0,...},
+         caption:{key,e,t,s,alpha,dy}|null, url:0~1, final:{alpha, t} } */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var phone = $('phone'), bezel = $('bezel'), screen = $('screen'), cap = $('caption');
+  var capE = $('capE'), capT = $('capT'), capS = $('capS'), url = $('url'), fin = $('final');
+  var frames = Array.prototype.slice.call(document.querySelectorAll('#screen iframe'));
+  var FIN = ['finLogo', 'finE', 'finT', 'finS', 'finU', 'finX'];
+  var FIN_AT = [0.15, 0.55, 0.70, 0.90, 1.10, 1.35];   /* 마무리 카드 안 요소별 등장 시점(초) */
+  var cl = function (v) { return v < 0 ? 0 : (v > 1 ? 1 : v); };
+  var easeOut = function (p) { return 1 - Math.pow(1 - p, 3); };
+
+  window.__setState = function (s) {
+    var p = s.phone;
+    phone.style.transform = 'translate(' + p.x.toFixed(2) + 'px,' + p.y.toFixed(2) + 'px) scale(' + p.s.toFixed(4) + ')';
+    screen.style.borderRadius = p.r.toFixed(1) + 'px';
+    bezel.style.opacity = cl(p.bezel).toFixed(3);
+
+    frames.forEach(function (f) {
+      var k = f.getAttribute('data-page');
+      f.style.opacity = cl(s.pages[k] || 0).toFixed(3);
+      var y = s.scroll[k];
+      if (y != null && f.contentWindow) {
+        try { f.contentWindow.scrollTo({ top: y, left: 0, behavior: 'instant' }); } catch (e) { f.contentWindow.scrollTo(0, y); }
+      }
+    });
+
+    if (s.caption) {
+      if (cap.getAttribute('data-key') !== s.caption.key) {
+        cap.setAttribute('data-key', s.caption.key);
+        capE.textContent = s.caption.e || '';
+        capT.innerHTML = s.caption.t || '';
+        capS.innerHTML = s.caption.s || '';
+      }
+      cap.style.opacity = cl(s.caption.alpha).toFixed(3);
+      cap.style.transform = 'translateY(' + (s.caption.dy || 0).toFixed(2) + 'px)';
+    } else {
+      cap.style.opacity = '0';
+    }
+
+    url.style.opacity = cl(s.url).toFixed(3);
+
+    fin.style.opacity = cl(s.final.alpha).toFixed(3);
+    FIN.forEach(function (id, i) {
+      var q = easeOut(cl((s.final.t - FIN_AT[i]) / 0.55));
+      var el = $(id);
+      el.style.opacity = q.toFixed(3);
+      el.style.transform = 'translateY(' + ((1 - q) * 14).toFixed(2) + 'px)';
+    });
+  };
+
+  /* 렌더러가 iframe 별 기준점(섹션 top)을 재는 데 쓴다 */
+  window.__measure = function (selectors) {
+    var out = {};
+    frames.forEach(function (f) {
+      var k = f.getAttribute('data-page'), d = f.contentDocument, w = f.contentWindow, m = {};
+      if (!d || !w) { out[k] = null; return; }
+      m.h = d.documentElement.scrollHeight; m.vh = w.innerHeight;
+      var nav = d.getElementById('navbar');
+      m.nav = nav ? nav.offsetHeight : 0;
+      var sels = selectors[k] || {};
+      Object.keys(sels).forEach(function (name) {
+        var el = d.querySelector(sels[name]);
+        m[name] = el ? Math.round(el.getBoundingClientRect().top + w.scrollY) : null;
+      });
+      out[k] = m;
+    });
+    return out;
+  };
+
+  /* CSS 전환·애니메이션까지 가상 시간으로 돌린다 — 각 프레임(iframe 포함)의 __vtTick 을 부른다.
+     __vtTick 은 render.mjs 가 addInitScript 로 모든 프레임에 심는다. */
+  window.__tickAll = function (dt) {
+    if (window.__vtTick) window.__vtTick(dt);
+    frames.forEach(function (f) {
+      try { if (f.contentWindow && f.contentWindow.__vtTick) f.contentWindow.__vtTick(dt); } catch (e) {}
+    });
+  };
+})();
+</script>
+</body>
+</html>
