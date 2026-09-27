@@ -273,12 +273,14 @@
           url: r.image_path ? imgUrl(r.image_path) : '',
           challenge: r.challenge || null,
           name: r.reviewer_name || '',
-          date: r.review_date || r.created_at || '',
+          date: r.review_date || r.created_at || '',   // 표시용 — 상담 후기의 YYYY.MM
+          at: r.created_at || r.review_date || '',     // 정렬용 — 올린 시각
           quote: (r.quote || '').trim(),
         // 이미지도 한줄평도 없으면 보여 줄 게 없다
         })).filter(i => i.url || i.quote);
-      // 정렬: 최신순 한 줄 — 챌린지·기수로 나누지 않는다(2026-09-18 오너 "통합해놓자").
-      items.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      // 정렬: 최근 올린 순 한 줄(2026-09-27 오너 "최근 올린순으로") — 받은 날짜(review_date)가 아니라
+      // 올린 시각(created_at)이다. 챌린지·기수로 나누지 않는다(2026-09-18 오너 "통합해놓자").
+      items.sort((a, b) => String(b.at).localeCompare(String(a.at)));
       buildSummary();
       render();
     }

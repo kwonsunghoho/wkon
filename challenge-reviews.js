@@ -97,7 +97,9 @@
         + '<p class="ch-rv-q">' + esc(r.quote) + '</p>'
         + foot + '</figure>';
     }
-    var src = imgUrl(r.url);
+    /* ⚠️ DB 행의 사진 경로는 image_path 다 — 구 코드는 r.url 을 읽어 사진만 있는 후기가 상세에 한 장도
+       안 그려졌다(2026-09-27 발견 · '한줄평 먼저' 정렬이 빈 자리를 인용 후기로 채워 가려져 있었다). */
+    var src = imgUrl(r.image_path || r.url);
     if (!src) return '';
     return '<figure class="ch-rv-card">'
       + '<span class="ch-rv-badge">실제 후기</span>'
@@ -119,9 +121,11 @@
       document.querySelectorAll('[data-review-count]').forEach(function (el) { el.textContent = rows.length + '건'; });
       document.querySelectorAll('[data-review-pill]').forEach(function (el) { el.hidden = false; });
 
-      // 인용문이 있는 후기를 앞에 — 훑을 수 있는 층이 먼저 보여야 한다(목록 페이지와 같은 규칙)
-      rows.sort(function (a, b) { return (b.quote ? 1 : 0) - (a.quote ? 1 : 0); });
-      var cards = rows.slice(0, MAX).map(cardHtml).filter(Boolean);
+      // 최근 올린 순(2026-09-27 오너 "최근 올린순으로 · 올린 것도 보일 수 있게") — 목록·허브·admin 과 같은 기준(created_at).
+      // 구 '인용문 먼저'는 방금 올린 스크린샷 후기가 상세에 영영 안 뜨게 했다. 되돌리지 말 것.
+      rows.sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+      // 그릴 수 없는 행(사진 주소 없음)이 자리를 먹지 않게 — 먼저 만들고 앞에서 MAX 장
+      var cards = rows.map(cardHtml).filter(Boolean).slice(0, MAX);
       if (!cards.length) return;
 
       injectCss();

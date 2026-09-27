@@ -617,13 +617,11 @@
        한 줄에 다 안 들어가 375px 에서 카드 밖으로 글자가 삐져나왔다(실측 231px > 148px).
        min-width:0 이 없으면 label 이 flex 기본값(auto)이라 아무리 좁아도 안 줄어든다. */
     .rv-meta .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
-    .rv-order { width: 46px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
     /* 값 옆에 이름을 붙인다(원칙 15) — 채워 넣으면 placeholder 가 사라져 '2' 만 남았다. */
     /* ⚠️ min-width:0 이 있어야 이름표+입력칸 덩이가 카드 폭에 맞춰 줄어든다.
        빼면 input 의 기본 폭(size=20 · 약 177px)이 최소폭으로 남아 카드 밖으로 글자가 나간다(실측 231px > 148px). */
     .rv-lb { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--text-muted);
              white-space: nowrap; min-width: 0; }
-    .rv-rank { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--text-muted); }
     .rv-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 4px 2px 16px; }
     .rv-hint b { color: var(--action); }
     .rv-qt { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
@@ -1080,7 +1078,7 @@
           여기 걸려 있어 **투명해야 할 아래 테두리 2.5px 이 회색으로 칠해지고, 켜진 탭의 남색 밑줄까지
           !important 에 먹혔다**(실측: 켜짐·꺼짐 둘 다 rgba(23,42,71,.52)). 탭의 식별 수단은 테두리가 아니라 밑줄 색이다. */
     .smain :is(input, select, textarea, .btn, .btn-ghost, .ri-edit, .ri-del, .ri-cancel,
-               .ac-tg, .rv-btn, .rv-order, .rv-qt, .rv-ch, .rv-co, .rv-nm, .rv-kind,
+               .ac-tg, .rv-btn, .rv-qt, .rv-ch, .rv-co, .rv-nm, .rv-kind,
                .tb-more, .lf-slot-add, .search):not(.is-danger),
     .side :is(input, select, .btn-ghost):not(.is-danger),
     /* ⚠️ 누를 수 있게 만든 것은 테두리도 조작요소 기준이다(2026-08-03).
@@ -1756,14 +1754,20 @@
         <button class="btn btn-action" id="rvTextAdd">글 후기 추가</button>
       </div>
 
-      <div class="rv-section-title">올린 후기 · 대표 선정</div>
-      <div class="rv-hint"><b>대표</b> 칸(0=일반, 1 이상=대표)은 예전 홈 커뮤니티 섹션의 노출 순서였어요 — 홈 개편으로 지금은 화면에 반영되지 않으니 비워 두셔도 됩니다(홈에 후기를 되살리면 다시 씁니다).</div>
+      <div class="rv-section-title">올린 후기</div>
+      <!-- 2026-09-27 오너 "좀 단순하게" — 구 '대표' 칸(sort_order · 홈 커뮤니티 시절 노출 순서)은 카드에서 뺐다. 컬럼·값은 그대로. -->
+      <div class="rv-hint">최근 올린 순입니다. 회원이 직접 쓴 후기는 <b>승인 대기</b>로 들어오고, 카드의 [승인]을 누르면 후기 페이지에 올라갑니다.</div>
       <div class="rv-kfilter" id="rvKindFilter">
         <button class="rv-kf on" type="button" data-k="all">전체</button>
         <button class="rv-kf" type="button" data-k="challenge">챌린지 후기</button>
         <button class="rv-kf" type="button" data-k="consult">상담 후기</button>
-        <!-- 회원 직접 제출(review-write) — visible=false 로 들어와 여기서 승인(노출)한다(2026-08-20) -->
+        <!-- 회원 직접 제출(review-write) — visible=false 로 들어와 여기서 승인(노출)한다(2026-08-20).
+             '회원 제출'은 승인 전·후를 다 모은다(2026-09-27 · 오너 "이미 올린 것도 보이게") — 이미 공개된
+             회원 후기의 작성자를 찾을 때 '전체' 100장을 뒤지지 않게. '승인 대기'는 그중 아직 비공개인 것.
+             ⚠️ 순서: 칩 5개는 375px(내용 폭 351px)에서 84px 넘쳐 마지막 칩이 잘린다(줄은 가로 스크롤).
+                매일 누르는 '승인 대기'가 앞, 가끔 찾는 '회원 제출'이 맨 뒤 — 잘리는 쪽을 바꿨다. -->
         <button class="rv-kf" type="button" data-k="pending" id="rvPendingChip">승인 대기</button>
+        <button class="rv-kf" type="button" data-k="member" id="rvMemberChip">회원 제출</button>
       </div>
       <!-- 검색(2026-08-03) — 후기가 100장을 넘으면 한 건을 고치려고 화면을 계속 내려야 했다.
            ⚠️ 이름은 `reviewer_name` 컬럼이다(`name` 아님 — 한 번 틀려서 이름이 안 붙은 전례).
@@ -6204,6 +6208,9 @@
     function rvWriter(r) {
       return r.member_id ? (members.find(x => x.id === r.member_id) || null) : null;
     }
+    /* 노출 버튼 글자(2026-09-27) — 회원 제출이 아직 비공개면 '승인'(누르면 공개된다는 행동이 읽히게).
+       그 밖엔 현재 상태(노출/숨김)를 적는 admin 토글 문법 그대로. */
+    function rvVisLabel(r) { return r.visible ? '노출' : (r.member_id ? '승인' : '숨김'); }
     function rvWhoHtml(r) {
       if (!r.member_id) return '';
       const m = rvWriter(r);
@@ -6221,7 +6228,9 @@
       let data;
       if (useCache && _rvRows) { data = _rvRows; }
       else {
-        const res = await fetchAll(() => MONC.sb.from('reviews').select('*').order('sort_order').order('created_at'));
+        /* 최근 올린 순(2026-09-27 오너 "최근 올린순으로 · 올린 것도 보일 수 있게") — 전에는 오래된 순이라
+           방금 올린·방금 제출된 후기가 60장 뒤 '더 보기' 너머에 숨었다. 대표 순위(sort_order)는 정렬에서 뺐다. */
+        const res = await fetchAll(() => MONC.sb.from('reviews').select('*').order('created_at', { ascending: false }));
         if (res.error) { grid.innerHTML = '<div class="empty err">불러오기 실패: ' + esc(res.error.message) + '</div>'; return; }
         data = _rvRows = res.data || [];
       }
@@ -6237,12 +6246,15 @@
       const pendChip = document.getElementById('rvPendingChip');
       // 개수는 <b> 로 — 밑줄 탭의 흐린 숫자 규칙(.rv-kf b · 2026-08-22)
       if (pendChip) pendChip.innerHTML = '승인 대기<b>' + pendN + '</b>';
+      const memChip = document.getElementById('rvMemberChip');   // 회원 제출 전체(승인 전·후 · 2026-09-27)
+      if (memChip) memChip.innerHTML = '회원 제출<b>' + data.filter(r => r.member_id).length + '</b>';
       const rq = (document.getElementById('rvSearch').value || '').trim().toLowerCase();
       /* 작성 회원 전화는 검색어가 숫자 4자리 이상일 때만 견준다 — '3기'·'4기' 검색의 숫자가
          전화번호 속 3·4 에 걸려 회원 제출 후기가 전부 잡히는 것을 막는다(회원 관리 검색과 다른 점). */
       const rqd = rq.replace(/\D/g, '').length >= 4 ? rq.replace(/\D/g, '') : '';
       const rows = data.filter(r => {
         if (rvKindFilter === 'pending') { if (!(r.member_id && !r.visible)) return false; }
+        else if (rvKindFilter === 'member') { if (!r.member_id) return false; }   // 승인 전·후 회원 제출 전부
         else if (rvKindFilter !== 'all' && (r.kind || 'challenge') !== rvKindFilter) return false;
         if (!rq) return true;
         const w = rvWriter(r);   // 회원 제출이면 작성 회원의 이름·이메일·전화로도 찾는다(2026-09-27)
@@ -6273,7 +6285,7 @@
             </div>
             <div class="row"><label class="rv-lb" style="flex:1">이름<input type="text" class="rv-nm" style="flex:1" value="${esc(r.reviewer_name || '')}" placeholder="예: 박신우" aria-label="작성자 이름 — 챌린지 후기에만 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></label></div>
             <div class="row"><label class="rv-lb" style="flex:1">한줄평<input type="text" class="rv-qt" style="flex:1" value="${esc(r.quote || '')}" placeholder="비우면 스크린샷만" aria-label="후기 카드 앞면에 뜨는 문구"></label></div>
-            <div class="row"><label class="rv-rank" title="대표 순위 — 0=일반, 1 이상=대표(작을수록 앞에 노출)">대표<input type="number" class="rv-order" value="${r.sort_order}" min="0"></label><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}">${r.visible ? '노출' : '숨김'}</button></div>
+            <div class="row"><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}" type="button">${rvVisLabel(r)}</button></div>
             <div class="row"><button class="rv-btn rv-del is-danger">삭제</button></div>
           </div>
         </div>`).join('')
@@ -6321,23 +6333,23 @@
          다시 그려서 후기 100건을 정리하다 한 건을 숨길 때마다 스크롤이 맨 위로 튀었다.
          바로 위 종류·챌린지 변경은 이미 patchRow 를 쓰고 있었다(같은 이유). */
       grid.querySelectorAll('.rv-vis').forEach(b => b.addEventListener('click', async () => {
-        const id = b.closest('.rv-item').dataset.id;
+        const it = b.closest('.rv-item'); const id = it.dataset.id;
         const cur = b.classList.contains('on');
         const { error } = await MONC.sb.from('reviews').update({ visible: !cur }).eq('id', id);
         if (error) { alert('실패: ' + error.message); return; }
-        b.classList.toggle('on', !cur);
-        b.textContent = !cur ? '노출' : '숨김';
         patchRow(id, { visible: !cur });
+        const row = data.find(r => String(r.id) === String(id)) || { visible: !cur };
+        b.classList.toggle('on', !cur);
+        b.textContent = rvVisLabel(row);
+        it.classList.toggle('hidden', !row.visible);                 // 카드 흐림도 그 자리에서
+        const badge = it.querySelector('.rv-sub-badge');             // '회원 제출 · 승인 대기' 꼬리도 같이(2026-09-27)
+        if (badge) badge.textContent = '회원 제출' + (row.visible ? '' : ' · 승인 대기');
+        toast(row.visible ? '공개됨 — 후기 페이지에 올라갑니다' : '숨김으로 바꿈');
       }));
       // 작성자 줄 [회원 상세](2026-09-27) — 회원 관리 탭으로 건너가 그 회원을 연다('오늘'의 후속 조치와 같은 activateTab 경로).
       grid.querySelectorAll('.rv-who-go').forEach(b => b.addEventListener('click', () => {
         activateTab('members');
         selectMember(b.dataset.mid);
-      }));
-      grid.querySelectorAll('.rv-order').forEach(inp => inp.addEventListener('change', async () => {
-        const id = inp.closest('.rv-item').dataset.id;
-        const { error } = await MONC.sb.from('reviews').update({ sort_order: parseInt(inp.value || '0', 10) }).eq('id', id);
-        if (error) { alert('실패: ' + error.message); return; } toast('순서 저장');
       }));
       grid.querySelectorAll('.rv-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('이 후기를 삭제할까요?')) return;
@@ -6408,7 +6420,8 @@
       const path = `${crypto.randomUUID()}.${opt.ext}`;
       const up = await MONC.sb.storage.from('reviews').upload(path, opt.blob, { upsert: false, contentType: opt.type });
       if (up.error) throw up.error;
-      const base = { image_path: path, caption: caption || null, sort_order: 0 };
+      // visible 을 명시한다 — 관리자 업로드는 올린 즉시 공개(회원 제출만 RPC 가 false 강제). 콘솔 생성 표라 기본값에 기대지 않는다(2026-09-27).
+      const base = { image_path: path, caption: caption || null, sort_order: 0, visible: true };
       let { error } = await MONC.sb.from('reviews').insert({ ...base, kind: kind || 'challenge' });
       if (error && (error.code === '42703' || error.code === 'PGRST204')) {
         ({ error } = await MONC.sb.from('reviews').insert(base));

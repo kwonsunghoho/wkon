@@ -197,7 +197,8 @@
         url: r.image_path ? imgUrl(r.image_path) : '',
         challenge: r.challenge || null,
         name: r.reviewer_name || '',
-        date: r.review_date || r.created_at || '',
+        date: r.review_date || r.created_at || '',   // 표시용 — 상담 후기의 YYYY.MM
+        at: r.created_at || r.review_date || '',     // 정렬용 — 올린 시각
         quote: (r.quote || '').trim(),
       })).filter(i => i.url || i.quote);
     }
@@ -217,13 +218,9 @@
       );
     }
 
-    /* 미리보기 고르기 — 한줄평이 있는 것을 먼저 쓴다. 훑을 수 있는 글이 앞면에 와야
-       허브가 '이정표'가 아니라 '내용'으로 읽힌다. 없으면 스크린샷 조각으로 대신한다. */
-    function pickPreview(list, n) {
-      const withQuote = list.filter(i => i.quote);
-      const rest = list.filter(i => !i.quote);
-      return withQuote.concat(rest).slice(0, n);
-    }
+    /* 미리보기 고르기 — 최근 올린 순 그대로 앞에서 n개(2026-09-27 오너 "최근 올린순으로 · 올린 것도 보일 수 있게").
+       구 규칙(한줄평 있는 것 먼저)은 방금 올린 스크린샷 후기가 허브에 영영 안 뜨게 했다. 되살리지 말 것. */
+    function pickPreview(list, n) { return list.slice(0, n); }
 
     /* 발신자 줄 — '이름 · 챌린지'. 기수는 내지 않는다(2026-09-18 오너 "기수 안나오게 해줘라 그냥").
        이름이 없는 건은 '보신각 참여자'로 누구의 후기인지 남긴다. */
@@ -276,9 +273,9 @@
         return;
       }
       const challenge = reviews.filter(i => i.kind === 'challenge')
-        .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)));   // 최근 올린 순(2026-09-27)
       const consult = reviews.filter(i => i.kind === 'consult')
-        .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)));   // 최근 올린 순(2026-09-27)
 
       const secs = [];
       if (challenge.length) secs.push({
