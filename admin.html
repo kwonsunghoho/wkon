@@ -548,6 +548,15 @@
     .apl-slot-play { flex: 1 1 220px; min-width: 0; }
     .apl-slot-play audio { width: 100%; height: 36px; display: block; }
     .apl-slot-play video { width: 100%; max-width: 360px; border-radius: 8px; display: block; }
+    /* 제출물 코치 피드백(2026-09-27) — 회원 상세 슬롯(.ba .slot)과 신청자 현황 접이(.apl-slot) 두 곳이 같은 블록을 쓴다 */
+    .csfb { flex: 1 1 100%; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-soft); }
+    .csfb-lb { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+    .csfb-when { font-weight: 600; color: var(--text-dim); }
+    .csfb-ta { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; font-family: inherit; line-height: 1.5; resize: vertical; }
+    .csfb-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+    .csfb-save { min-height: 44px; padding: 0 14px; border: 1px solid var(--action); background: #fff; color: var(--action); border-radius: var(--radius-xs); font-size: 12.5px; font-weight: 800; font-family: inherit; cursor: pointer; }
+    .csfb-save[disabled] { opacity: .6; cursor: default; }
+    .csfb-note { flex: 1 1 100%; font-size: 12px; color: var(--text-dim); margin-top: 6px; }
     /* 제출 링크 패널(2026-08-24 오너 "각 챌린지 신청현황 아랫쪽에 링크") — 챌린지 탭에서만 목록 아래 */
     .sublink { margin-top: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
     .sublink-t { font-size: 13px; font-weight: 800; }
@@ -3526,6 +3535,49 @@
       expression: { label: '영.합.각 · 표현력 (영상)', media: 'video' },
       spinning:   { label: '스.피.닝 · 스피치 (음성)', media: 'audio' },
     };
+    /* ── 제출물 코치 피드백(2026-09-27 · 오너 "파일 올린 걸 피드백해 주고, 마이페이지에도 기록이 남게") ──
+       칸(파일) 하나에 피드백 하나 — 저장하면 덮는다. 화면은 feedback 본문만 보내고, 시각·작성자·파일 기준
+       시각은 서버 트리거가 채운다(migration 20260927150000). 학생 마이페이지의 같은 칸 아래에 그대로 보인다.
+       회원 상세 슬롯과 신청자 현황 제출물 접이가 같은 블록·같은 배선을 쓴다(한 곳만 고치지 말 것).
+       ⚠️ 보신각·영합각만(오너 "일단 영합각 보신각만") — 표는 제한이 없고 화면만 가른다. mypage 와 한 벌.
+       ⚠️ 받은 행에 feedback 키가 없으면 마이그레이션 적용 전 — 입력칸 대신 안내만(저장 시도 없음). */
+    const CH_SUB_FB = ['voice', 'expression'];
+    function chSubFbHtml(sub, compact) {
+      if (!sub || CH_SUB_FB.indexOf(sub.challenge) < 0) return '';
+      if (!('feedback' in sub)) return '<div class="csfb-note">피드백 칸은 마이그레이션 20260927150000_submission_feedback.sql 적용 후 열립니다.</div>';
+      const stale = !!(sub.feedback && sub.feedback_file_at && String(sub.updated_at || '') > String(sub.feedback_file_at));
+      const when = sub.feedback_at
+        ? fmtDate(sub.feedback_at) + ' 저장' + (stale ? ' · 그 뒤 학생이 파일을 다시 올렸어요' : '')
+        : '아직 피드백 없음';
+      return `<div class="csfb" data-sub="${esc(sub.id)}">
+        <label class="csfb-lb">코치 피드백 <span class="csfb-when">${esc(when)}</span></label>
+        <textarea class="csfb-ta" rows="${compact ? 2 : 3}" maxlength="2000" placeholder="학생 마이페이지의 이 칸 아래에 그대로 보여요" aria-label="코치 피드백">${esc(sub.feedback || '')}</textarea>
+        <div class="csfb-row"><button type="button" class="csfb-save">피드백 저장</button></div>
+      </div>`;
+    }
+    function wireChSubFb(root, onSaved) {
+      root.querySelectorAll('.csfb-save').forEach(b => b.addEventListener('click', async () => {
+        const box = b.closest('.csfb'); const id = box.dataset.sub;
+        const body = (box.querySelector('.csfb-ta').value || '').trim();
+        b.disabled = true;
+        // 저장한 행을 돌려받아(select) 서버가 채운 feedback_at 으로 상태 줄을 맞춘다
+        const { data, error } = await MONC.sb.from('challenge_submissions')
+          .update({ feedback: body || null }).eq('id', id).select('*').single();
+        b.disabled = false;
+        if (error) {
+          // 컬럼 없음(42703 · PGRST204)만 '미적용'으로 본다 — 트리거 거부(42501 · 'feedback columns are admin-only')까지 미적용으로 읽으면 엉뚱한 안내가 된다
+          const missing = error.code === '42703' || error.code === 'PGRST204';
+          alert(missing
+            ? '피드백 칸이 아직 켜지지 않았습니다.\nSupabase SQL Editor 에서 20260927150000_submission_feedback.sql 을 실행해 주세요.'
+            : '피드백 저장 실패: ' + error.message);
+          return;
+        }
+        toast(body ? '피드백 저장됨 — 학생 마이페이지에 보여요' : '피드백을 지웠어요');
+        const when = box.querySelector('.csfb-when');
+        if (when) when.textContent = data && data.feedback_at ? fmtDate(data.feedback_at) + ' 저장' : '아직 피드백 없음';
+        if (onSaved && data) onSaved(data);
+      }));
+    }
     // 스피닝만 첫날 녹음 2개(before·before2) — mypage 제출 카드와 같은 이름표(2026-08-24 오너).
     // 회원 상세와 신청자 현황 제출물 접이가 같이 쓴다 — 바꾸면 mypage·submit 도 같이(세 곳 한 벌).
     function chSubTypeLabel(ch, type) {
@@ -3539,6 +3591,7 @@
         <div class="tag">${label}</div>
         <div class="cur">${sub ? '등록됨: ' + esc(sub.storage_path) : '아직 없음'}</div>
         <div id="cs-play-${ch}-${type}"></div>
+        ${chSubFbHtml(sub)}
       </div>`;
     }
 
@@ -3639,6 +3692,8 @@
           ? `<video controls preload="none" src="${url}" style="width:100%"></video>`
           : `<audio controls preload="none" src="${url}"></audio>`;
       });
+      // 제출물 코치 피드백 저장(2026-09-27) — 저장한 행을 이 화면의 배열에도 반영(재렌더 없이 상태 줄이 맞게)
+      wireChSubFb(detail, row => { const i = (chSubs || []).findIndex(s => s.id === row.id); if (i >= 0) chSubs[i] = row; });
 
       // 회원 정보 저장 (이름 + 연락처 + 전공 + 기수)
       document.getElementById('saveProfile').addEventListener('click', async () => {
@@ -5770,7 +5825,7 @@
           const k = `<span class="apl-slot-k">${chSubTypeLabel(_appKind, t)}</span>`;
           return s
             ? `<div class="apl-slot">${k}<span class="apl-slot-d">${fmtDate(s.created_at)}${s.round ? ' · ' + s.round + '기' : ''}</span>
-                <div class="apl-slot-play" data-path="${esc(s.storage_path)}" data-media="${media}"></div></div>`
+                <div class="apl-slot-play" data-path="${esc(s.storage_path)}" data-media="${media}"></div>${chSubFbHtml(s, true)}</div>`
             : `<div class="apl-slot">${k}<span class="apl-slot-d">아직 없음</span></div>`;
         }).join('')}</div>
       </details>`;
@@ -5794,6 +5849,8 @@
           }
         });
       }));
+      // 제출물 코치 피드백 저장(2026-09-27) — 캐시(_chSubRows)의 그 행을 갈아 끼워 다시 그려도 최신이 남게
+      wireChSubFb(root, row => { const i = _chSubRows.findIndex(s => s.id === row.id); if (i >= 0) _chSubRows[i] = row; });
     }
     function chSubNoteHtml() {
       if (!isFileCh(_appKind) || !_chSubErr) return '';

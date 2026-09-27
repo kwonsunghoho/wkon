@@ -194,6 +194,12 @@
     .v2-cs-btn.ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); font-weight: 700; }
     .v2-cs-btn.ghost:hover { border-color: var(--action); color: var(--action); }
     .v2-cs-btn[disabled] { opacity: .6; cursor: default; }
+    /* 코치 피드백(2026-09-27) — 제출 칸 아래, 흰 판 + 네이비 왼 보더 */
+    .v2-fb { margin-top: 12px; padding: 10px 12px; background: var(--surface); border-left: 3px solid var(--action); border-radius: 0 var(--radius-xs) var(--radius-xs) 0; }
+    .v2-fb-h { font-size: 12px; font-weight: 800; color: var(--action); letter-spacing: .02em; }
+    .v2-fb-h span { font-weight: 600; color: var(--text-dim); margin-left: 6px; }
+    .v2-fb-b { margin: 6px 0 0; font-size: 14px; line-height: 1.65; color: var(--text); white-space: pre-wrap; word-break: keep-all; }
+    .v2-fb-note { margin: 6px 0 0; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
     /* 승자각 — DAY 문항 목록 */
     .v2-cs-days { list-style: none; margin: 12px 0 0; display: flex; flex-direction: column; gap: 6px; }
     .v2-cs-days a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px;
@@ -1131,6 +1137,8 @@
       culture:    { label: '댄.특.완 · 대한항공 특화 답변', media: 'answers' },
     };
     const CH_SUB_ORDER = ['voice', 'expression', 'spinning', 'answer', 'culture'];
+    // 코치 피드백을 보이는 챌린지(2026-09-27 오너 "일단 영합각 보신각만") — admin CH_SUB_FB 와 한 벌
+    const CH_SUB_FB = ['voice', 'expression'];
     /* ── 답변형 챌린지(승자각·댄특완) DAY 문항 ─────────────────────────────────
        ⚠️ 정본은 challenge_lessons(admin '챌린지' 탭 → DAY 문항 고치기)다. 아래는 **폴백**이니
           지우지 말 것 — 표가 없거나 조회에 실패하면 이 값으로 그린다.
@@ -1297,10 +1305,13 @@
           </div>`;
         }
         // 스피닝만 첫날 녹음 2개(before·before2) + 끝 — 나머지는 처음/끝 한 쌍(2026-08-24 오너)
-        const slots = (c === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'])
-          .map(t => chSubSlotHtml(c, t, subOf[c + '#' + t], notReady)).join('');
+        const types = c === 'spinning' ? ['before', 'before2', 'after'] : ['before', 'after'];
+        const slots = types.map(t => chSubSlotHtml(c, t, subOf[c + '#' + t], notReady)).join('');
+        // 머리 오른쪽에 '피드백 N' — 코치가 남긴 칸 수(2026-09-27). 0이면 안 붙인다.
+        const fbN = CH_SUB_FB.indexOf(c) >= 0 ? types.filter(t => (subOf[c + '#' + t] || {}).feedback).length : 0;
+        const rRight = esc(rTxt) + (fbN ? (rTxt ? ' · ' : '') + '피드백 ' + fbN : '');
         return `<div class="v2-card">
-          <div class="v2-cs-h"><span class="v2-cs-t">${meta.label}</span><span class="v2-cs-r">${esc(rTxt)}</span></div>
+          <div class="v2-cs-h"><span class="v2-cs-t">${meta.label}</span><span class="v2-cs-r">${rRight}</span></div>
           <p class="v2-cs-hint">${c === 'spinning'
             ? '첫날에 녹음 두 개를 올려 주세요 — ① 첫 녹음본, ② 발음을 신경 써서 다시 읽은 녹음본. 마지막 날엔 녹음본 하나예요.'
             : `챌린지 ${meta.what}을 직접 올려 주세요 — 시작 무렵 한 번, 마칠 무렵 한 번이면 됩니다.${meta.media === 'video' ? ' 영상은 1~2분, 50MB 이하로 부탁해요.' : ''}`}</p>
@@ -1342,7 +1353,7 @@
           <div class="v2-cs-row">
             <button type="button" class="v2-cs-btn ghost" data-cs="${challenge}" data-type="${type}" data-old="${esc(sub.storage_path)}">다시 올리기</button>
             ${day ? `<span class="v2-cs-hint" style="margin:0;">${esc(day)} 올림</span>` : ''}
-          </div>`;
+          </div>${chSubFbHtml(challenge, sub)}`;
       } else if (notReady) {
         body = '<div class="v2-ba-empty">제출 준비 중이에요. 조금만 기다려 주세요.</div>';
       } else {
@@ -1350,6 +1361,21 @@
           <div class="v2-cs-row"><button type="button" class="v2-cs-btn" data-cs="${challenge}" data-type="${type}">올리기</button></div>`;
       }
       return `<div class="v2-ba-slot${type === 'after' ? ' after' : ''}"><div class="v2-ba-tag">${tag}</div>${body}</div>`;
+    }
+
+    /* 코치 피드백(2026-09-27 오너 "피드백해 주면 마이페이지에도 기록이 남게") — admin 이 이 칸의 파일에 남긴 글.
+       보신각·영합각만(CH_SUB_FB). 컬럼 미적용(select('*') 에 키 없음)이거나 피드백이 없으면 안 그린다.
+       파일을 다시 올려도 피드백은 남는다 — 대신 '어느 파일에 대한 것인지'를 적는다(updated_at > feedback_file_at). */
+    function chSubFbHtml(challenge, sub) {
+      if (!sub || !sub.feedback || CH_SUB_FB.indexOf(challenge) < 0) return '';
+      const ymd = v => String(v || '').slice(0, 10).replace(/-/g, '.');
+      const when = ymd(sub.feedback_at);
+      const stale = !!(sub.feedback_file_at && String(sub.updated_at || '') > String(sub.feedback_file_at));
+      return `<div class="v2-fb">
+        <div class="v2-fb-h">코치 피드백${when ? `<span>${esc(when)}</span>` : ''}</div>
+        <p class="v2-fb-b">${esc(sub.feedback)}</p>
+        ${stale ? `<p class="v2-fb-note">${esc(ymd(sub.feedback_file_at))}에 올린 파일에 대한 피드백이에요. 그 뒤에 다시 올린 파일은 아직 피드백 전이에요.</p>` : ''}
+      </div>`;
     }
 
     function wireChSubs(notReady) {
