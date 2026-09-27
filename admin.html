@@ -643,6 +643,12 @@
     /* 회원 직접 제출(review-write) 표시 — 승인 전 후기를 한눈에 */
     .rv-sub-badge { display: inline-flex; align-items: center; font-size: 12px; font-weight: 800;
       color: var(--action); background: var(--action-tint); border-radius: 4px; padding: 3px 9px; }
+    /* 회원 제출 후기의 작성자 줄(2026-09-27 · 오너 "누가 썼는지를 알아야 우리가 피드백을 해주는데") —
+       공개 카드엔 안 뜨는 회원 이름·전화. 카드 폭이 140px 까지 좁아지므로 글줄이 한 줄을 통째로 쓰고
+       [회원 상세] 버튼은 다음 줄로 내려간다(.rv-meta .row 가 flex-wrap). */
+    .rv-who { flex: 1 1 100%; min-width: 0; font-size: 12px; line-height: 1.45; color: var(--text); word-break: keep-all; overflow-wrap: anywhere; }
+    .rv-who b { font-weight: 800; }
+    .rv-who.dim { color: var(--text-muted); }
 
     /* 합격 수기 — 긴 글이라 카드 그리드가 아니라 줄 목록 + 펼침 편집 */
     .st-row { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
@@ -1760,9 +1766,10 @@
         <button class="rv-kf" type="button" data-k="pending" id="rvPendingChip">승인 대기</button>
       </div>
       <!-- 검색(2026-08-03) — 후기가 100장을 넘으면 한 건을 고치려고 화면을 계속 내려야 했다.
-           ⚠️ 이름은 `reviewer_name` 컬럼이다(`name` 아님 — 한 번 틀려서 이름이 안 붙은 전례). -->
+           ⚠️ 이름은 `reviewer_name` 컬럼이다(`name` 아님 — 한 번 틀려서 이름이 안 붙은 전례).
+           회원 제출 후기는 작성 회원의 이름·이메일·전화(숫자 4자리 이상)로도 찾는다(2026-09-27 · rvWriter). -->
       <div class="rv-searchrow">
-        <input type="text" class="search" id="rvSearch" placeholder="이름·한줄평·챌린지·기수 검색" aria-label="후기 검색 — 이름·한줄평·챌린지·기수">
+        <input type="text" class="search" id="rvSearch" placeholder="이름·한줄평·챌린지·기수·회원 전화 검색" aria-label="후기 검색 — 이름·한줄평·챌린지·기수·작성 회원 이름·전화">
         <span class="apps-count" id="rvCount"></span>
       </div>
       <!-- 챌린지 상세 페이지(challenge-*.html)의 후기 섹션은 reviews.challenge 값으로 골라 담는다.
@@ -6187,6 +6194,28 @@
        검색은 글자마다 부르므로 매번 DB 를 치면 후기 수백 장을 반복해 받는다.
        저장·삭제·업로드처럼 데이터가 바뀐 뒤에는 인자 없이 불러 새로 받는다. */
     let _rvRows = null;
+    /* 회원 제출 후기의 작성자(2026-09-27 · 오너 "누가 썼는지를 알아야 우리가 피드백을 해주는데").
+       공개 화면의 이름은 닉네임이라(비워도 게시 — pages.md '회원 직접 제출') 카드만 보고는 누가 썼는지
+       몰랐다. 작성 계정은 reviews.member_id 에 있고, members 는 부팅 때 전량 받으므로(loadMembers)
+       추가 조회 없이 id 로 찾는다.
+       ⚠️ 이름·전화는 admin 에만 뜬다 — 공개 카드(reviews-list.html)는 그대로 닉네임.
+       ⚠️ member_id 가 있는데 못 찾으면 조용히 숨기지 않고 '못 찾음'으로 적는다(원칙 11 — 상태를 단정하지 않기).
+          탈퇴는 on delete set null 이라 member_id 자체가 비고, 남는 경우는 회원 목록 미수신이다. */
+    function rvWriter(r) {
+      return r.member_id ? (members.find(x => x.id === r.member_id) || null) : null;
+    }
+    function rvWhoHtml(r) {
+      if (!r.member_id) return '';
+      const m = rvWriter(r);
+      if (!m) return '<div class="row"><div class="rv-who dim">작성 회원을 찾지 못했습니다(회원 목록에 없음)</div></div>';
+      const tel = m.phone ? (window.MONC_PHONE ? MONC_PHONE.format(m.phone) : m.phone) : '';
+      const who = '작성자 <b>' + esc(m.name || '(이름 없음)') + '</b>'
+        + (tel ? ' · ' + esc(tel) : '')
+        + (!m.name && m.email ? ' · ' + esc(m.email) : '');
+      return `<div class="row"><div class="rv-who">${who}</div>`
+        + `<button class="rv-btn rv-who-go" type="button" data-mid="${esc(m.id)}" aria-label="${esc(m.name || '이 회원')} 회원 상세 열기">회원 상세</button></div>`;
+    }
+
     async function loadReviewsAdmin(useCache) {
       const grid = document.getElementById('rvGrid');
       let data;
@@ -6209,12 +6238,17 @@
       // 개수는 <b> 로 — 밑줄 탭의 흐린 숫자 규칙(.rv-kf b · 2026-08-22)
       if (pendChip) pendChip.innerHTML = '승인 대기<b>' + pendN + '</b>';
       const rq = (document.getElementById('rvSearch').value || '').trim().toLowerCase();
+      /* 작성 회원 전화는 검색어가 숫자 4자리 이상일 때만 견준다 — '3기'·'4기' 검색의 숫자가
+         전화번호 속 3·4 에 걸려 회원 제출 후기가 전부 잡히는 것을 막는다(회원 관리 검색과 다른 점). */
+      const rqd = rq.replace(/\D/g, '').length >= 4 ? rq.replace(/\D/g, '') : '';
       const rows = data.filter(r => {
         if (rvKindFilter === 'pending') { if (!(r.member_id && !r.visible)) return false; }
         else if (rvKindFilter !== 'all' && (r.kind || 'challenge') !== rvKindFilter) return false;
         if (!rq) return true;
-        return [r.reviewer_name, r.quote, r.caption, r.challenge, r.cohort == null ? '' : (r.cohort + '기')]
-          .some(v => String(v || '').toLowerCase().includes(rq));
+        const w = rvWriter(r);   // 회원 제출이면 작성 회원의 이름·이메일·전화로도 찾는다(2026-09-27)
+        return [r.reviewer_name, r.quote, r.caption, r.challenge, r.cohort == null ? '' : (r.cohort + '기'), w && w.name, w && w.email]
+          .some(v => String(v || '').toLowerCase().includes(rq))
+          || !!(rqd && w && (w.phone || '').replace(/\D/g, '').includes(rqd));
       });
       document.getElementById('rvCount').textContent =
         rq || rvKindFilter !== 'all' ? `${rows.length} / ${data.length}장` : `${data.length}장`;
@@ -6231,6 +6265,7 @@
             : `<div class="rv-noimg">${esc(r.quote || '(내용 없음)')}</div>`}
           <div class="rv-meta">
             ${r.member_id ? `<div class="row"><span class="rv-sub-badge">회원 제출${r.visible ? '' : ' · 승인 대기'}</span></div>` : ''}
+            ${rvWhoHtml(r)}
             <div class="row"><label class="rv-lb" style="flex:1">종류<select class="rv-kind" style="flex:1" aria-label="후기 종류 — 어느 목록에 실릴지 정합니다">${Object.keys(RV_KIND_LABEL).map(k => `<option value="${k}" ${(r.kind || 'challenge') === k ? 'selected' : ''}>${RV_KIND_LABEL[k]}</option>`).join('')}</select></label></div>
             <div class="row rv-cls" title="챌린지 후기 목록(reviews-list.html?kind=challenge) 기수·챌린지 필터에 쓰임">
               <label class="rv-lb" style="flex:1">챌린지<select class="rv-ch" style="flex:1" aria-label="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(미지정)'}</option>`).join('')}</select></label>
@@ -6293,6 +6328,11 @@
         b.classList.toggle('on', !cur);
         b.textContent = !cur ? '노출' : '숨김';
         patchRow(id, { visible: !cur });
+      }));
+      // 작성자 줄 [회원 상세](2026-09-27) — 회원 관리 탭으로 건너가 그 회원을 연다('오늘'의 후속 조치와 같은 activateTab 경로).
+      grid.querySelectorAll('.rv-who-go').forEach(b => b.addEventListener('click', () => {
+        activateTab('members');
+        selectMember(b.dataset.mid);
       }));
       grid.querySelectorAll('.rv-order').forEach(inp => inp.addEventListener('change', async () => {
         const id = inp.closest('.rv-item').dataset.id;
