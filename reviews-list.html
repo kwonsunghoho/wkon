@@ -217,6 +217,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 후기 글 그리기(소제목·긴 글 접기) — KE20 후기가 쓴다. 쓰기 화면 미리보기와 같은 규칙 -->
+  <script src="review-rich.js?v=1"></script>
   <script>
   (function () {
     /* 종류별 설정 — 이 표가 페이지의 성격을 전부 정한다.
@@ -229,6 +231,7 @@
         title: '챌린지 후기',
         lede: '2주 챌린지를 끝낸 참여자들이 직접 남긴 후기입니다.',
         docTitle: '챌린지 후기 — MONC 몬크',
+        sumLabel: '개의 실제 후기',
         tags: true, showName: true, showDate: false,
         cta: { href: 'apply.html', label: '나도 도전하기 →' },
       },
@@ -237,10 +240,29 @@
         title: '상담 후기',
         lede: '1:1 상담을 받은 분들이 남긴 후기입니다.',
         docTitle: '상담 후기 — MONC 몬크',
+        sumLabel: '개의 상담 후기',
         tags: false, showName: false, showDate: true,
         /* 상담 후기를 다 읽은 사람에게 붙는 행동은 상담이다(2026-08-16 오너 확정 —
            후기가 증거, 예약이 행동). 예약 주소는 consult.html 이 정본이라 직링크 금지. */
         cta: { href: 'consult.html', label: '나도 상담 받아보기 →' },
+      },
+      /* KE20 후기(2026-09-29 오너 지시) — 대한항공 대비 프로젝트. 회원이 review-write.html?ch=ke20 에서
+         쓰고 admin 승인 뒤 올라온다. 챌린지·상담과 다른 점 셋:
+         · rich — 1,500자까지 쓰고 글을 [소제목] 으로 나눈다. 본문을 review-rich.js 가 그린다
+           (소제목은 굵은 남색, 긴 글은 접고 '더 보기'). 챌린지·상담 카드는 지금 모양 그대로 둔다.
+         · fixedTag — 꼬리표는 challenge 값이 아니라 늘 'KE20' 이다(admin 이 올린 캡처 후기는
+           challenge 가 비어 있다 — 비었다고 꼬리표가 빠지면 카드만 잘라 봤을 때 무엇의 후기인지 모른다).
+         · cta 없음 — KE20 은 사이트에 신청 화면이 없다. 보낼 곳이 생기면 그때 넣는다
+           (상담 예약으로 보내지 말 것 — 상담 진입점은 3곳 고정, pages.md). */
+      ke20: {
+        eyebrow: 'KE20 REVIEWS',
+        title: 'KE20 후기',
+        lede: '대한항공 대비 프로젝트 KE20 참여자들이 직접 남긴 후기입니다.',
+        docTitle: 'KE20 후기 — MONC 몬크',
+        sumLabel: '개의 KE20 후기',
+        tags: false, fixedTag: 'KE20', showName: true, showDate: false,
+        rich: true, srcLabel: '사진 보기',
+        cta: null,
       },
     };
     const params = new URLSearchParams(location.search);
@@ -259,7 +281,10 @@
     document.getElementById('rvTitle').textContent = CFG.title;
     document.getElementById('rvLede').textContent = CFG.lede;
     const ctaEl = document.querySelector('.rv-foot-btn');
-    ctaEl.href = CFG.cta.href; ctaEl.textContent = CFG.cta.label;
+    if (CFG.cta) { ctaEl.href = CFG.cta.href; ctaEl.textContent = CFG.cta.label; }
+    else ctaEl.parentNode.hidden = true;      // 보낼 곳이 없는 종류는 단추를 그리지 않는다(빈 약속 금지)
+    // 글이 있는지 — 소제목만 있고 본문이 없는 글은 '글 없음'으로 본다(그릴 것이 없다)
+    const hasText = q => CFG.rich ? moncReview.bodyLen(q) > 0 : !!q;
 
     let items = [];                // {url, challenge, name, date, quote}
     let cards = [];                // 카드 요소(최근 올린 순) — 단 수가 바뀌면 다시 만들지 않고 옮겨 담는다
@@ -285,7 +310,7 @@
           at: r.created_at || r.review_date || '',     // 정렬용 — 올린 시각
           quote: (r.quote || '').trim(),
         // 이미지도 한줄평도 없으면 보여 줄 게 없다
-        })).filter(i => i.url || i.quote);
+        })).filter(i => i.url || hasText(i.quote));
       // 정렬: 최근 올린 순 한 줄(2026-09-27 오너 "최근 올린순으로") — 받은 날짜(review_date)가 아니라
       // 올린 시각(created_at)이다. 챌린지·기수로 나누지 않는다(2026-09-18 오너 "통합해놓자").
       items.sort((a, b) => String(b.at).localeCompare(String(a.at)));
@@ -298,7 +323,7 @@
       if (!items.length) return;
       sumEl.hidden = false;
       document.getElementById('rvSumN').textContent = items.length;
-      document.getElementById('rvSumL').textContent = CFG.tags ? '개의 실제 후기' : '개의 상담 후기';
+      document.getElementById('rvSumL').textContent = CFG.sumLabel;
     }
 
     const VERIFY_SVG = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -311,32 +336,36 @@
       const tpl = document.createElement('template');
       tpl.innerHTML = items.map(i => {
         // 상담 후기는 이름을 쓰지 않으므로 대체 텍스트에서도 뺀다
+        // 꼬리표 — 챌린지 후기는 챌린지 이름, KE20 후기는 늘 'KE20'(위 fixedTag 주석)
+        const tagText = CFG.fixedTag || (CFG.tags ? (i.challenge || '') : '');
         const alt = (CFG.showName
-          ? `${esc(i.challenge || '')} ${esc(i.name)} 후기`
+          ? `${esc(tagText)} ${esc(i.name)} 후기`
           : `${CFG.title} ${ym(i.date)}`).replace(/\s+/g, ' ').trim();
         // 기수는 화면에 내지 않는다(2026-09-18 오너 "기수 안나오게 해줘라 그냥") — 챌린지 꼬리표만.
-        const tags = (CFG.tags && i.challenge) ? `<span class="rv-tag">${esc(i.challenge)}</span>` : '';
+        const tags = tagText ? `<span class="rv-tag">${esc(tagText)}</span>` : '';
         const nameEl = (CFG.showName && i.name) ? `<span class="rv-name">${esc(i.name)}</span>` : '';
         const whenEl = (CFG.showDate && ym(i.date)) ? `<span class="rv-when">${ym(i.date)}</span>` : '';
         const who = (nameEl || whenEl || tags) ? `<div class="rv-who">${nameEl}${whenEl}${tags}</div>` : '';
+        // 챌린지·상담의 사진은 받은 후기의 캡처(원문)이고, KE20 의 사진은 쓴 사람이 붙인 사진이다 — 이름이 다르다
+        const srcLabel = CFG.srcLabel || '원문 보기';
         const srcBtn = i.url
           ? `<button class="rv-src js-open" type="button" aria-haspopup="dialog" data-src="${esc(i.url)}" data-alt="${esc(alt)}"
-               aria-label="${esc(alt)} 원문 보기">원문 보기 ${OUT_SVG}</button>`
+               aria-label="${esc(alt)} ${srcLabel}">${srcLabel} ${OUT_SVG}</button>`
           : '';
         const foot = (who || srcBtn) ? `<div class="rv-foot">${who}${srcBtn}</div>` : '';
 
         // 한줄평이 있으면 그것을 앞면에 — 훑을 수 있는 층이 생긴다
-        if (i.quote) {
+        if (hasText(i.quote)) {
           return `<figure class="rv-card rv-card--quote">
             <div class="rv-body">
               <span class="rv-verify">${VERIFY_SVG}실제 후기</span>
-              <p class="rv-quote">${esc(i.quote)}</p>
+              ${CFG.rich ? moncReview.bodyHtml(i.quote) : `<p class="rv-quote">${esc(i.quote)}</p>`}
             </div>${foot}
           </figure>`;
         }
         // 한줄평이 아직 없는 후기 — 스크린샷 상단만 미리보기로
         return `<figure class="rv-card rv-card--shot">
-          <button class="rv-shot js-open" type="button" aria-haspopup="dialog" data-src="${esc(i.url)}" data-alt="${esc(alt)}" aria-label="${esc(alt)} 원문 보기">
+          <button class="rv-shot js-open" type="button" aria-haspopup="dialog" data-src="${esc(i.url)}" data-alt="${esc(alt)}" aria-label="${esc(alt)} ${srcLabel}">
             <img src="${esc(i.url)}" alt="${esc(alt)}" loading="lazy">
           </button>${foot}
         </figure>`;
@@ -380,9 +409,18 @@
         const img = c.querySelector('.rv-shot img');
         if (img && img.complete && img.naturalHeight) markClip(img);
       });
+      /* 긴 글 접기(KE20) — 글은 접힌 채로 단에 담긴다(review-rich.js bodyHtml). 여기서 높이를 재서
+         안 접어도 되는 글은 풀고, 접힌 글에는 '더 보기'를 단다. 단에 담은 '뒤'에 재야 한다 —
+         단 폭에 따라 글줄 수가 달라진다. */
+      if (CFG.rich) moncReview.fit(grid);
     }
-    // 폭이 바뀌어 단 수가 달라지면 다시 나눠 담는다(폰 회전·창 크기 조절)
-    window.addEventListener('resize', () => { if (cards.length && colCount() !== colsNow) place(); });
+    // 폭이 바뀌어 단 수가 달라지면 다시 나눠 담는다(폰 회전·창 크기 조절).
+    // 단 수가 그대로여도 폭이 바뀌면 글줄 수가 달라지니 긴 글 접기는 다시 잰다.
+    window.addEventListener('resize', () => {
+      if (!cards.length) return;
+      if (colCount() !== colsNow) place();
+      else if (CFG.rich) moncReview.fit(grid);
+    });
 
     /* 라이트박스 — 폭 기준 확대(세로로 길면 스크롤), 이미지 탭 시 더 확대/원복 */
     (function initLb() {

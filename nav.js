@@ -153,6 +153,12 @@
       });
     });
   });
+  /* 메뉴에는 없지만 화면은 있는 갈래 — KE20 후기(2026-09-29).
+     KE20 후기는 공개된 글이 아직 0건일 수 있어 메뉴 줄을 넣지 않았다('0건인 종류는 안 그린다' —
+     허브 카드도 0건이면 숨는다. 지금 줄을 넣으면 빈 목록으로 가는 메뉴가 된다). 그런데 등록을 안 하면
+     `?kind=ke20` 이 '모르는 값'으로 읽혀 **챌린지 후기 줄에 현재 표시가 붙는다.** 아는 값으로만 올려 둔다.
+     ⚠️ KE20 후기가 공개되면 REVIEW_SUB 에 줄을 넣고 이 줄은 지운다(docs/notes/pages.md 'KE20 후기'). */
+  (QUERY_VALUES['reviews-list.html|kind'] = QUERY_VALUES['reviews-list.html|kind'] || []).push('ke20');
   var hereQuery = new URLSearchParams(location.search);
 
   function esc(s) {

@@ -3,22 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>챌린지 후기 쓰기 — MONC 몬크</title>
-  <meta name="description" content="참여한 몬크 챌린지 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
+  <!-- ⚠️ 이 페이지는 ?ch= 로 챌린지 후기와 KE20 후기를 겸하는데 크롤러엔 한 벌만 보인다(JS 를 안 돌린다).
+       그래서 제목·설명은 둘 다에 맞는 말로 둔다 — 'KE20 후기 링크'를 오픈챗에 붙였을 때 미리보기가
+       '챌린지 후기 쓰기'로 뜨면 안 된다(2026-09-29). 화면 안 제목은 스크립트가 갈래에 맞춰 바꾼다. -->
+  <title>후기 쓰기 — MONC 몬크</title>
+  <meta name="description" content="몬크 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
   <!-- Open Graph / SNS 공유 — 크롤러는 JS 를 안 돌리므로 여기에 직접 둔다 -->
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://monc.ai.kr/review-write.html" />
-  <meta property="og:title"       content="챌린지 후기 쓰기 — MONC 몬크" />
-  <meta property="og:description" content="참여한 몬크 챌린지 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
+  <meta property="og:title"       content="후기 쓰기 — MONC 몬크" />
+  <meta property="og:description" content="몬크 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
   <meta property="og:image"       content="https://monc.ai.kr/images/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:locale"      content="ko_KR" />
   <meta property="og:site_name"   content="MONC 몬크" />
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="챌린지 후기 쓰기 — MONC 몬크" />
-  <meta name="twitter:description" content="참여한 몬크 챌린지 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
+  <meta name="twitter:title"       content="후기 쓰기 — MONC 몬크" />
+  <meta name="twitter:description" content="몬크 후기를 남기는 곳. 검토 후 후기 페이지에 올라갑니다." />
   <meta name="twitter:image"       content="https://monc.ai.kr/images/og-image.png" />
+  <script>
+    /* 갈래를 먼저 정한다(?ch=ke20 → KE20 후기) — 본문이 그려지기 전에 표시해 둬야
+       KE20 링크로 들어온 사람에게 '챌린지 후기 쓰기' 머리글이 잠깐 비치지 않는다. */
+    if (new URLSearchParams(location.search).get('ch') === 'ke20') document.documentElement.classList.add('is-ke20');
+  </script>
   <link rel="icon" href="images/MONC_Logo_Full_Package/assets/favicon/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="images/MONC_Logo_Full_Package/assets/favicon/favicon-32x32.png">
@@ -92,13 +100,141 @@
       .wrap { padding-top: 36px; }
       .state-links a { max-width: 300px; margin: 0 auto; width: 100%; }
     }
+
+    /* ══ KE20 후기(?ch=ke20 · 2026-09-29) ═══════════════════════════════════════
+       오너 승인 목업 outputs/ke20-review-write-mockup.html 그대로다. 챌린지 후기 폼(위)은 손대지
+       않았다 — 그래서 새 규칙은 전부 ke- 로 시작한다(.inp·.hint·.submit 을 고치면 위 폼이 같이 바뀐다).
+       활자는 조작 면 사다리 12/14/16 + 제목 24, 굵기 400/700/800. */
+    #keHead { display: none; }
+    .is-ke20 #keHead { display: block; }
+    .is-ke20 #chHead { display: none; }
+    #keHead.is-off { display: none; }
+    .ke-eye { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--accent-ink); }
+    .ke button { font: inherit; }
+    .ke-card { padding: 20px 18px; }
+    /* 칸 하나 = 이름표 줄 + 입력 + 아래 한 줄 */
+    .ke-fld + .ke-fld { margin-top: 24px; }
+    .ke-lbrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .ke-lb { font-size: 14px; font-weight: 800; color: var(--text); }
+    .ke-opt { font-size: 12px; font-weight: 700; color: var(--text-dim); }
+    /* 입력칸 — 16px(iOS 확대 방지) · 경계선은 3:1 짜리 --border-strong(선 하나가 유일한 표식) */
+    .ke-inp { display: block; width: 100%; min-height: 48px; padding: 11px 12px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius-xs);
+      background: var(--surface); color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.5; }
+    .ke-inp::placeholder, .ke-ed textarea::placeholder { color: var(--text-dim); }
+    .ke-inp:focus { outline: 2px solid var(--action); outline-offset: -1px; border-color: var(--action); }
+    .ke-under { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 6px; min-height: 20px; }
+    .ke-hint { font-size: 12px; color: var(--text-dim); line-height: 1.5; word-break: keep-all; }
+    .ke-err { font-size: 14px; font-weight: 700; color: #B3261E; line-height: 1.45; word-break: keep-all; }
+    .ke-cnt { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    .ke-cnt.ok { color: var(--accent-ink); }
+    /* 내용 칸 — 소제목 판 + 글 쓰는 자리 + 글자 수가 한 상자다. 글이 길어지면 상자가 같이 자란다(안쪽 스크롤 없음) */
+    .ke-ed { border: 1px solid var(--border-strong); border-radius: var(--radius-xs); background: var(--surface); overflow: hidden; }
+    .ke-ed:has(textarea:focus) { outline: 2px solid var(--action); outline-offset: -1px; border-color: var(--action); }
+    .ke-ed.bad { border-color: #B3261E; }
+    .ke-ed.bad:has(textarea:focus) { outline-color: #B3261E; }
+    /* 소제목 단추 — 누르면 [소제목] 한 줄이 내용 칸에 들어간다(태그가 아니라 글의 일부다).
+       쓴 소제목은 더하기 자리가 체크로 바뀐다 — 아이콘 폭이 같아 단추가 움직이지 않는다.
+       ⚠️ 320px 에서는 긴 소제목 둘이 두 줄로 꺾인다(단추 46px) — 잘리지 않으니 그대로 둔다. */
+    .ke-seed { padding: 10px 10px 12px; border-bottom: 1px solid var(--border-soft); }
+    .ke-seed-h { margin: 0 2px 8px; font-size: 12px; font-weight: 800; color: var(--text-dim); }
+    .ke-seed-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .ke-seed-grid button { display: flex; align-items: center; justify-content: space-between; gap: 4px;
+      min-height: 44px; padding: 4px 8px 4px 10px; border: 1px solid transparent; border-radius: var(--radius-xs);
+      background: var(--action-tint); color: var(--accent-ink); font-size: 14px; font-weight: 700;
+      line-height: 1.3; text-align: left; word-break: keep-all; cursor: pointer; }
+    .ke-seed-grid button:hover { background: var(--bg3); }
+    .ke-seed-grid button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .ke-seed-grid .g { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; }
+    .ke-seed-grid .g svg { width: 12px; height: 12px; }
+    .ke-seed-grid button.used { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-dim); }
+    /* word-break:keep-all — 없으면 글 칸이 낱말 중간('연/습')에서 줄을 바꾼다. 띄어쓰기 없는 긴 글은 overflow-wrap 이 꺾는다 */
+    .ke-ed textarea { display: block; width: 100%; min-height: 160px; padding: 12px 12px 4px; border: 0; outline: 0; resize: none;
+      overflow: hidden; background: transparent; color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.65;
+      word-break: keep-all; overflow-wrap: anywhere; }
+    .ke-ed .dk-note { padding: 0 12px; }   /* draft-keep 의 '되살렸어요' 한 줄 — 상자 안쪽 여백에 맞춘다 */
+    .ke-ed-foot { display: flex; justify-content: flex-end; padding: 0 12px 8px; }
+    /* 사진(선택) */
+    .ke-ph-add { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px;
+      border: 1px dashed var(--border-strong); border-radius: var(--radius-xs); background: var(--bg2);
+      color: var(--text-muted); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .ke-ph-add:hover { border-color: var(--action); color: var(--accent-ink); }
+    .ke-ph-add:focus-visible, .ke-ph-sub:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+    .ke-ph-add svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .ke-ph-has { display: flex; align-items: stretch; gap: 12px; }
+    .ke-ph-has img { width: 84px; height: 112px; object-fit: cover; border-radius: var(--radius-xs);
+      border: 1px solid var(--border-soft); display: block; background: var(--surface2); flex-shrink: 0; }
+    .ke-ph-acts { display: flex; flex-direction: column; justify-content: center; gap: 8px; flex: 1; min-width: 0; }
+    .ke-ph-sub { min-height: 44px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-xs);
+      background: var(--surface); color: var(--text-muted); font-size: 14px; font-weight: 700; cursor: pointer; }
+    /* 미리보기 — 후기 목록(reviews-list.html)의 카드 규격 사본. 목록 카드 값을 바꾸면 여기도 같이 고친다.
+       긴 글·소제목 규칙(.rv-rich·.rv-part-*)은 review-rich.js 가 심는다. */
+    .ke-pv { margin-top: 24px; }
+    .ke-pv-h { display: flex; align-items: baseline; gap: 8px; margin: 0 2px 8px; }
+    .ke-pv-h b { font-size: 14px; font-weight: 800; color: var(--text); }
+    .ke-pv-h span { font-size: 12px; color: var(--text-dim); }
+    .ke-pv .rv-card { margin: 0; background: var(--surface); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm); overflow: hidden; box-shadow: 0 2px 10px rgba(23,42,71,.06); }
+    .ke-pv .rv-body { padding: 20px 18px 16px; display: flex; flex-direction: column; }
+    .ke-pv .rv-verify { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; font-size: 12px; font-weight: 800;
+      color: #2F6B42; background: rgba(47,107,66,.12); border-radius: 999px; padding: 4px 10px; margin-bottom: 13px; }
+    .ke-pv .rv-verify svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .ke-pv .rv-quote { font-family: var(--serif); font-size: 18px; font-weight: 700; line-height: 1.55; color: var(--text);
+      letter-spacing: -.2px; word-break: keep-all; white-space: pre-line; overflow-wrap: anywhere; }
+    .ke-pv .rv-quote.is-empty { color: var(--text-dim); font-weight: 400; font-size: 16px; }
+    .ke-pv .rv-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+      margin-top: 16px; padding: 12px 16px 13px; border-top: 1px solid var(--border-soft); }
+    .ke-pv .rv-who { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+    .ke-pv .rv-name { font-family: var(--serif); font-size: 15px; font-weight: 800; color: var(--text); overflow-wrap: anywhere; }
+    .ke-pv .rv-tag { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(27,58,107,.10); color: var(--accent-ink); }
+    .ke-pv .rv-src { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 14px; font-weight: 800; color: var(--accent-ink); padding: 5px 2px; }
+    .ke-pv .rv-src svg { width: 12px; height: 12px; }
+    .ke-submit { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px;
+      margin-top: 20px; border: 0; border-radius: var(--radius-sm); background: var(--action);
+      color: var(--action-ink); font-size: 16px; font-weight: 800; cursor: pointer; }
+    .ke-submit:hover { background: var(--action-hover); }
+    .ke-submit:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; }
+    .ke-submit[disabled] { opacity: .6; cursor: default; }
+    .ke-sub-err { margin-top: 10px; text-align: center; }
+    .ke-sub-err:empty { display: none; }
+    .ke-note { margin-top: 12px; font-size: 12px; color: var(--text-dim); text-align: center; line-height: 1.6; }
+    /* 완료 화면 */
+    .ke-done { text-align: center; padding-top: 12px; }
+    .ke-done .ic { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; background: var(--action-tint);
+      color: var(--action); display: flex; align-items: center; justify-content: center; }
+    .ke-done .ic svg { width: 28px; height: 28px; }
+    .ke-done h2 { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+    .ke-done h2:focus { outline: none; }   /* 낭독기용으로 스크립트가 옮긴 포커스 — 누르는 요소가 아니라 링을 그리지 않는다 */
+    .ke-done > p { margin-top: 8px; font-size: 14px; color: var(--text-muted); }
+    .ke-done .ke-pv { text-align: left; }
+    .ke-links { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+    .ke-links a { display: flex; align-items: center; justify-content: center; min-height: 52px;
+      border-radius: var(--radius-sm); text-decoration: none; font-size: 16px; font-weight: 800; }
+    .ke-links a.main { background: var(--action); color: var(--action-ink); }
+    .ke-links a.sub { border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 14px; min-height: 48px; }
+    .ke-links a:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; }
+    /* 상태 카드 안의 다시 시도 단추(링크가 아니라 동작이라 button) */
+    .state-links button { display: flex; align-items: center; justify-content: center; min-height: 48px; width: 100%;
+      border: 0; border-radius: var(--radius-xs); background: var(--action); color: var(--action-ink);
+      font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+    @media (min-width: 760px) {
+      .state-links button, .ke-links a { max-width: 300px; margin-left: auto; margin-right: auto; width: 100%; }
+    }
   </style>
 </head>
 <body data-nav-offset>
-  <h1 class="sr-only">챌린지 후기 쓰기</h1>
+  <h1 class="sr-only" id="pgH1">챌린지 후기 쓰기</h1>
   <main class="wrap">
-    <p class="pg-h" aria-hidden="true">챌린지 후기 쓰기</p>
-    <p class="pg-s">참여한 챌린지의 후기를 남겨 주세요. 제출하면 바로 공개되지 않고, 검토 후 후기 페이지에 올라갑니다.</p>
+    <div id="chHead">
+      <p class="pg-h" aria-hidden="true">챌린지 후기 쓰기</p>
+      <p class="pg-s">참여한 챌린지의 후기를 남겨 주세요. 제출하면 바로 공개되지 않고, 검토 후 후기 페이지에 올라갑니다.</p>
+    </div>
+    <!-- KE20 후기(?ch=ke20)의 머리글 — 위 챌린지 머리글과 둘 중 하나만 보인다(head 의 is-ke20 표시) -->
+    <div id="keHead">
+      <p class="ke-eye">대한항공 대비 프로젝트</p>
+      <p class="pg-h" aria-hidden="true">KE20 후기 쓰기</p>
+      <p class="pg-s">KE20을 마친 소감을 남겨 주세요.</p>
+    </div>
 
     <div class="card state" id="stLoading"><p>불러오는 중…</p></div>
 
@@ -155,10 +291,99 @@
         <a class="sub" href="reviews.html">후기 모아보기</a>
       </div>
     </div>
+
+    <!-- ══ KE20 후기(?ch=ke20 · 2026-09-29) ══
+         챌린지 후기와 달리 결제 판정이 없다(KE20 은 사이트 결제 상품이 아니다) — 로그인·동의한 회원이면
+         쓸 수 있고, 거르는 것은 admin 승인이다. 1,500자 · 소제목 · 회원당 1건. -->
+    <!-- 확인하지 못했을 때(통신 실패) — '준비 중'과 다른 말로 알린다 -->
+    <div class="card state" id="keFail" style="display:none;">
+      <h2>화면을 불러오지 못했어요</h2>
+      <p>연결이 잠시 끊겼을 수 있어요.</p>
+      <div class="state-links"><button type="button" id="keRetry">다시 시도</button></div>
+    </div>
+
+    <!-- 이미 남긴 회원 -->
+    <div class="card state" id="keAlready" style="display:none;">
+      <h2>KE20 후기는 이미 남기셨어요</h2>
+      <p>후기는 한 번 남길 수 있어요.<br>남겨 주신 글은 검토 뒤 후기 페이지에 올라갑니다.</p>
+      <div class="state-links">
+        <a class="main" href="reviews.html">후기 모아보기</a>
+        <a class="sub" href="index.html">홈으로</a>
+      </div>
+    </div>
+
+    <!-- 쓰는 화면 -->
+    <section class="ke" id="keForm" style="display:none;">
+      <div class="card ke-card">
+        <div class="ke-fld">
+          <div class="ke-lbrow">
+            <label class="ke-lb" for="keName">닉네임</label>
+            <span class="ke-opt">선택</span>
+          </div>
+          <!-- 프로필 이름을 채워 두지 않는다 — 닉네임 칸에 본명이 박혀 있으면 그대로 게시된다(2026-09-08 규칙) -->
+          <input class="ke-inp" id="keName" type="text" maxlength="20" autocomplete="off"
+                 enterkeyhint="next" placeholder="예: 하늘준비생">
+          <div class="ke-under"><p class="ke-hint">후기에 이 이름으로 보여요. 비우면 이름 없이 올라가요.</p></div>
+        </div>
+
+        <div class="ke-fld">
+          <div class="ke-lbrow">
+            <label class="ke-lb" for="keQuote">후기 내용</label>
+          </div>
+          <div class="ke-ed" id="keEd">
+            <div class="ke-seed">
+              <p class="ke-seed-h" id="keSeedH">소제목 넣기</p>
+              <div class="ke-seed-grid" id="keSeeds" role="group" aria-labelledby="keSeedH"></div>
+            </div>
+            <!-- data-keep: 뒤로가기·새로고침에도 쓰던 글 보존(sessionStorage — draft-keep.js) -->
+            <textarea id="keQuote" maxlength="1500" data-keep="rw-ke20" aria-describedby="keMsg keCnt"
+                      placeholder="소제목을 눌러 나눠 쓰거나, 자유롭게 적어 주세요."></textarea>
+            <div class="ke-ed-foot"><span class="ke-cnt" id="keCnt">0 / 1,500자</span></div>
+          </div>
+          <div class="ke-under"><p class="ke-hint" id="keMsg" role="status">10자 이상 적어 주세요.</p></div>
+        </div>
+
+        <div class="ke-fld">
+          <div class="ke-lbrow">
+            <span class="ke-lb" id="kePhLb">사진</span>
+            <span class="ke-opt">선택</span>
+          </div>
+          <div id="kePhBox"></div>
+          <div class="ke-under"><p class="ke-hint" id="kePhMsg" role="status">전화번호·이름이 찍힌 사진은 올리지 말아 주세요.</p></div>
+        </div>
+      </div>
+
+      <div class="ke-pv">
+        <div class="ke-pv-h"><b>미리보기</b><span>후기 페이지에 이렇게 올라가요</span></div>
+        <div id="kePv"></div>
+      </div>
+
+      <!-- 단추는 늘 살아 있다 — 부족하면 누른 순간 그 칸으로 데려가 알린다(꺼 둔 단추는 왜 안 눌리는지 말하지 않는다) -->
+      <button type="button" class="ke-submit" id="keSubmit">후기 제출하기</button>
+      <p class="ke-err ke-sub-err" id="keErr" role="alert"></p>
+      <p class="ke-note">제출한 후기는 검토 뒤 후기 페이지에 올라가요.</p>
+    </section>
+
+    <!-- 제출 완료 -->
+    <section class="ke ke-done" id="keDone" style="display:none;">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <h2 tabindex="-1" id="keDoneH">후기가 제출됐어요</h2>
+      <p>검토가 끝나면 후기 페이지에 올라갑니다.</p>
+      <div class="ke-pv">
+        <div class="ke-pv-h"><b>제출한 후기</b></div>
+        <div id="kePvDone"></div>
+      </div>
+      <div class="ke-links">
+        <a class="main" href="reviews.html">후기 모아보기</a>
+        <a class="sub" href="index.html">홈으로</a>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 후기 글 그리기(소제목·긴 글 접기) — KE20 미리보기가 목록과 같은 규칙으로 그려지게 -->
+  <script src="review-rich.js?v=1"></script>
   <!-- 긴 글 임시 보관 — data-keep 칸을 sessionStorage 에. localStorage 로 바꾸지 말 것(공용 기기). -->
   <script src="draft-keep.js" defer></script>
   <script>
@@ -173,11 +398,16 @@
     const CH_LABEL = { voice: '보.신.각 · 보이스', expression: '영.합.각 · 표현력', spinning: '스.피.닝 · 스피치', answer: '승.자.각 · 답변', culture: '댄.특.완 · 대한항공 특화 답변' };
     const CH_ORDER = ['voice', 'expression', 'spinning', 'answer', 'culture'];
 
+    // 갈래 — ?ch=ke20 이면 KE20 후기, 그 밖에는 챌린지 후기(head 의 is-ke20 표시와 같은 판정)
+    const KE20 = new URLSearchParams(location.search).get('ch') === 'ke20';
+
     let ME = null, picked = '', photo = null;   // photo = { blob, type, ext }
 
     function show(id) {
-      ['stLoading', 'stNone', 'stNotReady', 'formCard', 'stDone'].forEach(x =>
+      ['stLoading', 'stNone', 'stNotReady', 'formCard', 'stDone', 'keFail', 'keAlready', 'keForm', 'keDone'].forEach(x =>
         document.getElementById(x).style.display = (x === id ? '' : 'none'));
+      // KE20 머리글은 쓰는 동안에만 — 완료·이미 남김 화면은 자기 제목이 있다
+      document.getElementById('keHead').classList.toggle('is-off', id === 'keDone' || id === 'keAlready');
     }
 
     function syncSubmit() {
@@ -283,7 +513,233 @@
       }
     }
 
+    /* ══ KE20 후기(?ch=ke20 · 2026-09-29) ══════════════════════════════════════
+       오너 승인 목업 그대로: 닉네임 · 내용(소제목 단추 6 · 1,500자) · 사진 → 미리보기 → 제출.
+       글은 quote 한 칸에 글자로 들어간다 — 소제목은 줄 맨 앞의 [소제목] 이고, 읽는 규칙은
+       review-rich.js 한 곳이다(목록·허브·admin 과 같은 규칙으로 미리보기를 그린다). */
+    const KE_MIN = 10, KE_MAX = 1500;
+    /* 소제목 — 단추 글씨 = 내용 칸에 [ ] 로 들어가는 글씨 = 후기 카드에 보이는 소제목.
+       순서는 후기 한 편이 흘러가는 차례: 계기 → 과정(도움·기억·힘든 점) → 결과 → 추천.
+       ⚠️ 20자를 넘기지 말 것 — 그보다 길면 소제목으로 읽히지 않는다(review-rich.js · 서버 RPC 와 한 벌). */
+    const KE_TOPICS = ['신청 계기', '가장 도움이 된 점', '기억에 남는 것', '힘들었던 점', '달라진 점', '추천하고 싶은 분'];
+    const KE_MSG = {
+      quote_short: '후기를 10자 이상 적어 주세요.',
+      quote_long: '후기는 1,500자까지예요.',
+      bad_image: '사진을 다시 골라 주세요.',
+      auth: '로그인이 풀렸어요. 다시 로그인해 주세요.',
+    };
+    const KE_SVG = {
+      verify: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M5 8.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      out: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3h7v7M13 3 4 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.2-2h6.6L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg>',
+      check: '<svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.4l2.6 2.6L10 3.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      plus: '<svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    };
+
+    async function initKe20() {
+      const $ = id => document.getElementById(id);
+      document.title = 'KE20 후기 쓰기 — MONC 몬크';
+      $('pgH1').textContent = 'KE20 후기 쓰기';
+
+      const session = await MONC.requireSession();
+      if (!session) return;
+      if (!(await MONC.requireConsent())) return;
+      ME = session.user.id;
+      $('keRetry').addEventListener('click', () => location.reload());
+
+      /* 폼을 열기 전에 빈 글로 한 번 부른다 — 답이 셋으로 갈린다.
+         · 함수 없음(404 PGRST202) → 마이그레이션 미적용: '준비 중'
+         · already → 이미 남긴 회원(1,500자를 다 쓴 뒤에 막히지 않게 여기서 거른다)
+         · quote_short → 쓸 수 있다
+         그 밖의 실패(통신 등)는 '준비 중'이 아니라 '불러오지 못했어요'로 알린다(모르는 것을 단정하지 않는다). */
+      let pre;
+      try { pre = await MONC.sb.rpc('submit_ke20_review', { p_quote: '' }); }
+      catch (_) { show('keFail'); return; }
+      if (pre.error) {
+        show(String(pre.error.code || '').indexOf('PGRST2') === 0 ? 'stNotReady' : 'keFail');
+        return;
+      }
+      const preCode = (pre.data || {}).code;
+      if (preCode === 'already') { show('keAlready'); return; }
+      if (preCode === 'auth') { MONC.requireSession(); return; }
+
+      const nameEl = $('keName'), quoteEl = $('keQuote'), msgEl = $('keMsg'), cntEl = $('keCnt');
+      let kePhoto = null;      // { blob, type, ext, url, path } — path 는 올린 뒤에 생긴다
+      let tried = false;       // 제출을 한 번이라도 눌렀나 — 그 뒤로는 부족하면 빨갛게 알린다
+      let pvOpen = false;      // 미리보기의 '더 보기'를 펼쳐 뒀나(쓰는 동안 다시 접히지 않게)
+
+      /* 후기 목록 카드와 같은 마크업 — 이름이 없으면 꼬리표(KE20)만 남는다(목록과 같은 규칙).
+         live=쓰는 중: 아직 본문이 없는 소제목도 자리를 보여 준다. 올라가는 후기에서는 빈 소제목이 빠진다. */
+      function cardHtml(live) {
+        const name = nameEl.value.trim();
+        const body = moncReview.bodyHtml(quoteEl.value, { live: live, empty: '후기 내용이 여기에 보여요.' });
+        return `<figure class="rv-card">
+          <div class="rv-body"><span class="rv-verify">${KE_SVG.verify}실제 후기</span>${body}</div>
+          <div class="rv-foot">
+            <div class="rv-who">${name ? `<span class="rv-name">${esc(name)}</span>` : ''}<span class="rv-tag">KE20</span></div>
+            ${kePhoto ? `<span class="rv-src">사진 보기 ${KE_SVG.out}</span>` : ''}
+          </div>
+        </figure>`;
+      }
+
+      const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const headRe = t => new RegExp('(^|\\n)[ \\t]*\\[' + escRe(t) + '\\]');
+      function renderSeeds() {
+        const v = quoteEl.value;
+        $('keSeeds').innerHTML = KE_TOPICS.map((t, i) => {
+          const used = headRe(t).test(v);
+          return `<button type="button" data-i="${i}" class="${used ? 'used' : ''}"${used ? ' aria-label="' + esc(t) + ' — 넣었어요"' : ''}>
+            <span>${esc(t)}</span><span class="g" aria-hidden="true">${used ? KE_SVG.check : KE_SVG.plus}</span></button>`;
+        }).join('');
+      }
+
+      function sync() {
+        const v = quoteEl.value;
+        const n = moncReview.bodyLen(v);      // 소제목을 뺀 본문 — 서버와 같은 기준
+        cntEl.textContent = v.trim().length.toLocaleString() + ' / ' + KE_MAX.toLocaleString() + '자';
+        cntEl.classList.toggle('ok', n >= KE_MIN);
+        const bad = tried && n < KE_MIN;
+        $('keEd').classList.toggle('bad', bad);
+        if (bad) { msgEl.className = 'ke-err'; msgEl.textContent = '10자 이상 적어 주세요. 지금 ' + n + '자예요.'; }
+        else { msgEl.className = 'ke-hint'; msgEl.textContent = n >= KE_MIN ? '' : '10자 이상 적어 주세요.'; }
+        // 글이 길어지면 칸이 같이 자란다 — 칸 안에서 따로 스크롤하지 않게
+        quoteEl.style.height = 'auto';
+        quoteEl.style.height = Math.max(160, quoteEl.scrollHeight) + 'px';
+        $('kePv').innerHTML = cardHtml(true);
+        moncReview.fit($('kePv'), { open: pvOpen, onToggle: open => { pvOpen = open; } });
+      }
+
+      function renderPhoto() {
+        const box = $('kePhBox');
+        if (!kePhoto) {
+          box.innerHTML = `<button type="button" class="ke-ph-add" id="kePhPick" aria-describedby="kePhLb">${KE_SVG.cam}사진 고르기</button>`;
+        } else {
+          box.innerHTML = `<div class="ke-ph-has"><img src="${kePhoto.url}" alt="고른 사진 미리보기">
+            <div class="ke-ph-acts">
+              <button type="button" class="ke-ph-sub" id="kePhPick">다시 고르기</button>
+              <button type="button" class="ke-ph-sub" id="kePhDel">빼기</button>
+            </div></div>`;
+          $('kePhDel').addEventListener('click', () => {
+            URL.revokeObjectURL(kePhoto.url); kePhoto = null;
+            renderPhoto(); sync(); $('kePhPick').focus();
+          });
+        }
+        $('kePhPick').addEventListener('click', pickKePhoto);
+      }
+      // 사진을 못 읽었을 때는 그 칸 아래에서 알린다(alert 아님)
+      function photoMsg(text) {
+        const el = $('kePhMsg');
+        el.className = text ? 'ke-err' : 'ke-hint';
+        el.textContent = text || '전화번호·이름이 찍힌 사진은 올리지 말아 주세요.';
+      }
+      function pickKePhoto() {
+        const input = document.createElement('input');
+        input.type = 'file'; input.accept = 'image/*';
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          if (file.size > 10 * 1024 * 1024) { photoMsg('사진이 10MB 를 넘어요. 조금 줄여서 올려 주세요.'); return; }
+          try {
+            const opt = await optimizeImage(file);
+            if (kePhoto) URL.revokeObjectURL(kePhoto.url);
+            kePhoto = Object.assign(opt, { url: URL.createObjectURL(opt.blob), path: null });
+            photoMsg('');
+            renderPhoto(); sync();
+          } catch (e) { photoMsg(e.message || '사진을 읽지 못했어요.'); }
+        });
+        input.click();
+      }
+
+      /* 소제목 단추 — 아직 안 넣은 것은 글 끝에 새 단락으로 [소제목] 줄을 붙이고, 이미 넣은 것은
+         그 단락 끝으로 커서를 옮긴다. 어느 쪽이든 바로 쓸 수 있게 내용 칸에 포커스를 준다. */
+      $('keSeeds').addEventListener('click', e => {
+        const b = e.target.closest('button[data-i]'); if (!b) return;
+        const t = KE_TOPICS[Number(b.dataset.i)];
+        let cur = quoteEl.value, at;
+        const m = headRe(t).exec(cur);
+        if (m) {
+          const start = m.index + m[0].length;                                   // 소제목 줄 바로 뒤
+          const next = cur.slice(start).search(/\n[ \t]*\[[^\[\]\n]{1,20}\]/);    // 다음 소제목
+          const end = next < 0 ? cur.length : start + next;
+          at = start + cur.slice(start, end).replace(/\s+$/, '').length;
+          if (at === start) {                                                    // 본문이 아직 없다 — 소제목 다음 줄에 커서를
+            if (cur.charAt(start) !== '\n') { cur = cur.slice(0, start) + '\n' + cur.slice(start); quoteEl.value = cur; }
+            at = start + 1;
+          }
+        } else {
+          const head = cur.replace(/\s+$/, '');
+          const add = (head ? head + '\n\n' : '') + '[' + t + ']\n';
+          if (add.length > KE_MAX) return;                                       // 자리가 없으면 넣지 않는다(소제목이 잘려 들어가지 않게)
+          quoteEl.value = add;
+          at = add.length;
+        }
+        quoteEl.focus();
+        quoteEl.setSelectionRange(at, at);
+        quoteEl.dispatchEvent(new Event('input', { bubbles: true }));            // 임시 보관(draft-keep)도 따라오게
+      });
+
+      nameEl.addEventListener('input', sync);
+      nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); quoteEl.focus(); } });
+      quoteEl.addEventListener('input', () => { renderSeeds(); sync(); });
+
+      function showDone() {
+        show('keDone');
+        $('kePvDone').innerHTML = cardHtml(false);
+        moncReview.fit($('kePvDone'));
+        window.scrollTo(0, 0);
+        $('keDoneH').focus({ preventScroll: true });
+      }
+
+      /* 제출 — 단추는 늘 살아 있다. 부족하면 누른 순간 그 칸으로 데려가 알려 준다 */
+      $('keSubmit').addEventListener('click', async () => {
+        const btn = $('keSubmit'), errEl = $('keErr');
+        tried = true; sync();
+        errEl.textContent = '';
+        if (moncReview.bodyLen(quoteEl.value) < KE_MIN) {
+          quoteEl.focus({ preventScroll: true });
+          quoteEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
+        btn.disabled = true; btn.textContent = '제출 중…';
+        try {
+          // 사진은 한 번만 올린다 — 제출이 실패해 다시 누를 때 같은 사진을 또 올리지 않게 경로를 기억한다
+          if (kePhoto && !kePhoto.path) {
+            const path = 'submissions/' + ME + '/' + crypto.randomUUID() + '.' + kePhoto.ext;
+            const up = await MONC.sb.storage.from('reviews').upload(path, kePhoto.blob, { contentType: kePhoto.type });
+            if (up.error) throw new Error('사진 업로드에 실패했어요: ' + up.error.message);
+            kePhoto.path = path;
+          }
+          const { data, error } = await MONC.sb.rpc('submit_ke20_review', {
+            p_quote: quoteEl.value.trim(),
+            p_name: nameEl.value.trim() || null,
+            p_image_path: kePhoto ? kePhoto.path : null,
+          });
+          if (error) throw new Error('제출하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+          if (!data || !data.ok) {
+            const code = (data || {}).code;
+            if (code === 'already') { if (window.moncDraftClear) moncDraftClear('rw-ke20'); show('keAlready'); return; }
+            errEl.textContent = KE_MSG[code] || '제출하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+            return;
+          }
+          if (window.moncDraftClear) moncDraftClear('rw-ke20');
+          showDone();
+        } catch (e) {
+          errEl.textContent = e.message || '제출하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+        } finally {
+          btn.disabled = false; btn.textContent = '후기 제출하기';
+        }
+      });
+
+      renderSeeds(); renderPhoto();
+      show('keForm');
+      sync();      // 보이게 한 뒤에 — 높이를 재야 한다(글 칸 자라기·긴 글 접기). 되살린 글(draft-keep)도 여기서 읽는다
+    }
+
     (async () => {
+      if (KE20) { initKe20(); return; }
+
+      // head 의 제목은 두 갈래에 다 맞는 말('후기 쓰기')이라, 탭 제목은 여기서 갈래에 맞춘다
+      document.title = '챌린지 후기 쓰기 — MONC 몬크';
       const session = await MONC.requireSession();
       if (!session) return;
       if (!(await MONC.requireConsent())) return;

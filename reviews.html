@@ -139,8 +139,9 @@
     <div class="container">
       <div class="rv-eyebrow">REAL REVIEWS</div>
       <h1 class="rv-title">실제 후기</h1>
-      <!-- 합격 수기 잠시 내림(2026-08-16) — 다시 열면 "…, 합격한 사람이 직접 남긴 기록입니다." 로 되돌린다 -->
-      <p class="rv-lede">챌린지를 끝낸 사람, 상담을 받은 사람이 직접 남긴 기록입니다.</p>
+      <!-- 합격 수기 잠시 내림(2026-08-16) — 다시 열면 "…, 합격한 사람이 직접 남긴 기록입니다." 로 되돌린다.
+           KE20 후기가 1건이라도 공개되면 스크립트가 이 문장을 KE20 이 든 문장으로 바꾼다(아래 init). -->
+      <p class="rv-lede" id="rvLede">챌린지를 끝낸 사람, 상담을 받은 사람이 직접 남긴 기록입니다.</p>
     </div>
   </header>
 
@@ -166,6 +167,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 후기 글 읽기 — KE20 후기는 글 안에 [소제목] 줄이 있다. 두 줄 미리보기에서 그 줄을 빼는 데 쓴다 -->
+  <script src="review-rich.js?v=1"></script>
   <script>
   (function () {
     const hub = document.getElementById('rvHub');
@@ -185,7 +188,7 @@
     function imgUrl(path) { return MONC.sb.storage.from('reviews').getPublicUrl(path).data.publicUrl; }
     function ym(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})/); return m ? `${m[1]}.${m[2]}` : ''; }
 
-    /* reviews(챌린지·상담)를 한 번에 읽고 kind 로 가른다.
+    /* reviews(챌린지·KE20·상담)를 한 번에 읽고 kind 로 가른다.
        ⚠️ select('*') — .eq('kind', …) 로 서버에서 거르면 kind 컬럼 마이그레이션
           (20260801180000) 미적용 환경에서 400 이 난다. 미적용이면 전부 challenge 로 떨어진다. */
     async function loadReviews() {
@@ -240,6 +243,18 @@
       return `<div class="rv-prev-item">${bodyEl}${metaEl}</div>`;
     }
 
+    /* KE20 후기 미리보기(2026-09-29) — 글에서 [소제목] 줄을 빼고 본문만 잇는다(두 줄 안에 소제목까지
+       넣으면 글이 안 남는다). 발신자 줄은 '닉네임 · KE20', 닉네임을 비운 글은 'KE20 참여자'.
+       ⚠️ 꼬리는 challenge 값이 아니라 늘 'KE20' 이다 — admin 이 올린 캡처 후기는 challenge 가 비어 있다. */
+    function ke20ItemHtml(i) {
+      const text = moncReview.plain(i.quote);
+      const bodyEl = text
+        ? `<p class="rv-prev-q">${esc(text)}</p>`
+        : `<img class="rv-prev-shot" src="${esc(i.url)}" alt="" loading="lazy">`;
+      const meta = i.name ? i.name + ' · KE20' : 'KE20 참여자';
+      return `<div class="rv-prev-item">${bodyEl}<span class="rv-prev-meta">${esc(meta)}</span></div>`;
+    }
+
     function storyItemHtml(s) {
       // 항공사 이름만 두면 '합격'인지 '재직'인지 안 읽힌다 — stories.html 칩과 같은 규칙.
       const meta = [s.author_name || '', s.airline ? s.airline + ' 합격' : ''].filter(Boolean).join(' · ');
@@ -276,13 +291,24 @@
         .sort((a, b) => String(b.at).localeCompare(String(a.at)));   // 최근 올린 순(2026-09-27)
       const consult = reviews.filter(i => i.kind === 'consult')
         .sort((a, b) => String(b.at).localeCompare(String(a.at)));   // 최근 올린 순(2026-09-27)
+      // KE20 후기(2026-09-29) — 사진도 본문도 없는 글(소제목만 있는 글)은 그릴 것이 없어 뺀다. 목록과 같은 기준
+      const ke20 = reviews.filter(i => i.kind === 'ke20' && (i.url || moncReview.bodyLen(i.quote) > 0))
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)));
 
+      /* 카드 순서: 챌린지 → KE20 → 상담(2026-09-29 오너 승인 목업) — 수업 후기 둘을 붙이고 상담을 뒤에.
+         ⚠️ KE20 도 0건이면 카드를 안 그린다(위 '0건인 종류' 규칙). 첫 후기를 승인하는 순간 나타난다. */
       const secs = [];
       if (challenge.length) secs.push({
         title: '챌린지 후기', count: challenge.length,
         desc: '2주 챌린지를 끝낸 참여자들이 직접 남긴 후기입니다.',
         preview: pickPreview(challenge, PREVIEW_N).map(i => prevItemHtml(i, true)).join(''),
         href: 'reviews-list.html?kind=challenge', go: '챌린지 후기 전체 보기',
+      });
+      if (ke20.length) secs.push({
+        title: 'KE20 후기', count: ke20.length,
+        desc: '대한항공 대비 프로젝트 KE20 참여자들이 직접 남긴 후기입니다.',
+        preview: pickPreview(ke20, PREVIEW_N).map(ke20ItemHtml).join(''),
+        href: 'reviews-list.html?kind=ke20', go: 'KE20 후기 전체 보기',
       });
       if (consult.length) secs.push({
         title: '상담 후기', count: consult.length,
@@ -301,7 +327,9 @@
       if (!secs.length) { hub.innerHTML = ''; emptyEl.hidden = false; return; }
 
       hub.innerHTML = secs.map(secHtml).join('');
-      const total = challenge.length + consult.length + stories.length;
+      // 헤드라인 아래 문장 — KE20 카드가 있을 때만 KE20 을 말한다(없는 것을 있다고 적지 않는다)
+      if (ke20.length) document.getElementById('rvLede').textContent = '챌린지·KE20·상담을 마친 분들이 직접 남긴 기록입니다.';
+      const total = challenge.length + ke20.length + consult.length + stories.length;
       totalEl.hidden = false;
       document.getElementById('rvTotalN').textContent = total;
       document.getElementById('rvTotalL').textContent =
