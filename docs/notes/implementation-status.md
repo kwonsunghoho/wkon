@@ -113,6 +113,7 @@
 | `20260828130000_drop_news` | **뉴스 기능 전체 폐지**(오너 2026-08-28 "뉴스 자체글 빼자") — `news_scraps`·`news_articles` 표 드롭. 화면·수집기·GitHub Actions 제거는 같은 날 main 배포 | **owner 실행 선택** — 안 실행해도 문제 없다(아무도 안 읽는 표로 남는다). ⚠️ 실행하면 기사·회원 스크랩 데이터가 지워진다(복구 불가) · 반드시 이 날 main 배포가 라이브에 나간 **뒤에** 실행 |
 | `20260907120000_news_board_v2` | **뉴스 기능 부활**(오너 2026-09-07) — `news_articles`(+`summary`)·`news_scraps` 재생성. 요약은 og:description ≤300자(본문·사진 금지) | **실행 완료 — 2026-09-21**(anon 프로브 실측: `news_articles` 200 `[]`·`summary` 열 존재·anon POST 401, `news_scraps` 표 존재) |
 | `20260927150000_submission_feedback` | **챌린지 제출물 코치 피드백**(2026-09-27 오너 "파일 올린 걸 피드백 · 마이페이지에 기록") — `challenge_submissions.feedback/feedback_at/feedback_by/feedback_file_at` + 트리거 `chsub_guard_feedback`(admin 외 피드백 컬럼 쓰기 거부 · 저장 시 시각/작성자/파일 기준 시각 서버 채움 · 피드백만 바뀐 저장은 updated_at 유지). 화면은 보신각·영합각만 | **적용 완료(2026-09-27 오너 보고 "sql 완료" — 이 작업 환경은 외부 네트워크가 막혀 anon 프로브를 못 했다(응답 000). admin 제출물 접이에 피드백 입력칸이 뜨면 적용된 것)** |
+| `20260929120000_recruit_rounds_kal_2024_2026` | **채용 캘린더 대한항공 4회차**(2026-09-29 오너 정리) — 2024년 9월 공채 신규 + 2025년 4월·9월·2026년 2월 갱신(11단계 전부 · 2026.02 complete). `on conflict (airline, started_on) do update`(published 유지). 학생 화면은 서가 접기(2026-09-22)로 닫힌 상태 — 자료만 쌓는다 | **미적용 — 오너 실행 필요**(2026-09-29 · SQL 은 대화창으로 전달. 임시 Postgres 로 씨앗 위 2회 실행 검증) |
 
 ### ⚠️ 동명 함수 재실행 경고 — 옛 파일을 다시 돌리면 새 정의가 조용히 사라진다 (2026-08-22 감사 #6)
 
