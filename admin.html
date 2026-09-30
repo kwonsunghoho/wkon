@@ -633,7 +633,22 @@
              white-space: nowrap; min-width: 0; }
     .rv-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 4px 2px 16px; }
     .rv-hint b { color: var(--action); }
-    .rv-qt { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px; }
+    /* 한줄평 칸은 textarea 다(2026-09-29) — input 은 줄바꿈을 버려서, 여러 줄로 쓴 후기(회원 제출·KE20 의
+       [소제목] 줄)를 여기서 한 글자만 고쳐도 글이 한 줄로 뭉개졌다. ⚠️ input 으로 되돌리지 말 것. */
+    .rv-qt { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-xs); font-size: 13px;
+             font-family: inherit; line-height: 1.45; resize: vertical; min-height: 34px; }
+    /* 전체 글 보기(2026-09-29) — KE20 후기는 1,500자까지 온다. 카드(140~200px)에서는 다 못 읽으니
+       승인 전에 전문을 펼쳐 읽는 창. <dialog> 라 포커스 가두기·Esc·뒤 막기를 브라우저가 한다(원칙 14). */
+    .rv-dlg { width: min(560px, calc(100vw - 32px)); max-height: min(80vh, 720px); padding: 0; border: 1px solid var(--border);
+              border-radius: var(--radius-sm); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
+    .rv-dlg::backdrop { background: rgba(14,22,36,.5); }
+    .rv-dlg-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                   padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border-soft); }
+    .rv-dlg-head b { font-size: 14px; font-weight: 800; }
+    .rv-dlg-head .rv-btn { flex: none; min-width: 64px; min-height: 44px; }
+    .rv-dlg-meta { padding: 12px 16px 0; font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
+    .rv-dlg-body { padding: 12px 16px 20px; }
+    .rv-dlg-body .rv-quote { margin: 0; font-size: 16px; line-height: 1.75; white-space: pre-line; overflow-wrap: anywhere; }
     /* 챌린지+기수는 늘 두 줄이다 — 후기 카드는 어느 화면에서든 140~200px 라 한 줄에 넣으면
        챌린지 선택칸이 25px 까지 찌부러진다(실측). 좁아서 못 넣는 것은 줄을 바꾼다. */
     .rv-cls { gap: 6px; flex-direction: column; align-items: stretch; }
@@ -1716,10 +1731,12 @@
       <!-- 설명은 접는다(393px 145px 였다). ⚠️ 아래 개인정보 경고는 **접지 말 것** —
            스크린샷에 박힌 이름·전화번호를 코드가 가릴 수 없어 올리기 전에 눈에 띄어야 한다. -->
       <details class="adm-help">
-        <summary>후기 세 갈래 · 이 탭에서 무엇을 고치나</summary>
+        <summary>후기 갈래 · 이 탭에서 무엇을 고치나</summary>
         <div class="adm-help-body">
-          <p>후기는 <b>허브(reviews.html)</b> 아래 세 갈래로 나뉩니다 — <b>챌린지 후기</b>·<b>상담 후기</b>는
+          <p>후기는 <b>허브(reviews.html)</b> 아래 갈래로 나뉩니다 — <b>챌린지 후기</b>·<b>KE20 후기</b>·<b>상담 후기</b>는
             이 탭에서, <b>합격 수기</b>는 맨 아래 칸에서 관리해요.</p>
+          <p><b>KE20 후기</b>는 글을 <b>[소제목]</b> 줄로 나눠 씁니다 — 한줄평 칸에서 고칠 때 대괄호 줄과 줄바꿈을 그대로 두면
+            후기 페이지에서 소제목으로 보여요.</p>
           <p>각 후기의 종류·챌린지·기수·이름·한줄평은 아래에서 바로 고칠 수 있습니다.</p>
           <p class="adm-help-note">대표 칸은 예전 홈 커뮤니티 섹션용 — 지금은 화면에 반영되지 않지만,
             홈에 후기를 되살리면 다시 씁니다.</p>
@@ -1727,11 +1744,23 @@
       </details>
       <div class="rv-hint" style="background:var(--st-note-bg);border-radius:var(--radius-xs);padding:10px 12px;">⚠️ <b>상담 후기는 화면에 이름을 띄우지 않습니다</b>(1:1 상담이라 챌린지 후기와 성격이 다릅니다). 다만 <b>스크린샷 안에 이름·전화번호·프로필 사진이 찍혀 있으면 그대로 보입니다</b> — 올리기 전에 가려 주세요.</div>
 
+      <!-- KE20 후기 링크(2026-09-29 오너 "후기 작성하는 링크도 만들어주고") — 제출·후기 링크 판과 같은 문법.
+           챌린지 후기 링크는 '신청자 현황'의 챌린지 탭에 있는데, KE20 은 사이트 신청이 없어 그 탭이 없다.
+           그래서 받은 후기를 승인하는 이 탭에 둔다. 링크에 사람을 심지 않는다 — 매번 같은 주소를 쓴다.
+           ⚠️ 주소는 https://monc.ai.kr 하드코딩(location.origin 으로 바꾸면 프리뷰에서 localhost 가 복사된다). -->
+      <div class="rv-section-title">후기 쓰기 링크</div>
+      <div class="sublink" id="rvLinkBox" style="margin:0 0 20px">
+        <div class="sublink-t">KE20 후기 링크 — 끝나고 보내기</div>
+        <div class="sublink-hint">로그인한 회원이면 쓸 수 있어요(한 분이 한 번). 받은 후기는 바로 공개되지 않아요 — 아래 '승인 대기'에서 [승인]을 눌러야 올라갑니다.</div>
+        <div class="sublink-row"><span class="sublink-k">KE20 후기</span><span class="sublink-url">https://monc.ai.kr/review-write.html?ch=ke20</span><button type="button" class="ad-sq" data-copylink="https://monc.ai.kr/review-write.html?ch=ke20">복사</button></div>
+      </div>
+
       <div class="rv-section-title">여러 장 한번에 (자동 압축 · 라벨 없이)</div>
       <div class="rv-upload rv-upload-bulk">
         <select id="rvBulkKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;" aria-label="여러 장 올릴 후기 종류">
           <option value="challenge">챌린지 후기</option>
           <option value="consult">상담 후기</option>
+          <option value="ke20">KE20 후기</option>
         </select>
         <input type="file" id="rvBulkFile" accept="image/*" multiple style="flex:1;min-width:160px;" aria-label="후기 스크린샷 여러 장 고르기">
         <button class="btn btn-action" id="rvBulkUpload">여러 장 올리기</button>
@@ -1743,6 +1772,7 @@
         <select id="rvOneKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;" aria-label="한 장 올릴 후기 종류">
           <option value="challenge">챌린지 후기</option>
           <option value="consult">상담 후기</option>
+          <option value="ke20">KE20 후기</option>
         </select>
         <input type="file" id="rvFile" accept="image/*" aria-label="후기 스크린샷 한 장 고르기">
         <input type="text" id="rvCaption" placeholder="라벨 (예: 승자각 · 최종합격)" title="후기 이미지 아래 칩으로 표시됩니다(선택)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="후기 라벨">
@@ -1756,8 +1786,10 @@
         <select id="rvTextKind" title="올릴 후기의 종류" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-weight:700;background:#fff;" aria-label="글 후기 종류">
           <option value="consult">상담 후기</option>
           <option value="challenge">챌린지 후기</option>
+          <option value="ke20">KE20 후기</option>
         </select>
-        <input type="text" id="rvTextQuote" placeholder="후기 내용 (그대로 화면에 뜹니다)" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;" aria-label="글 후기 내용">
+        <!-- textarea(2026-09-29) — KE20 후기는 [소제목] 줄로 나눠 쓴다. input 은 줄바꿈을 못 넣는다 -->
+        <textarea id="rvTextQuote" rows="2" placeholder="후기 내용 (그대로 화면에 뜹니다)" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;font-family:inherit;line-height:1.5;resize:vertical;" aria-label="글 후기 내용"></textarea>
         <label class="field" style="flex:0 1 180px;"><span>받은 날짜(카드에 YYYY.MM)</span>
           <input type="date" id="rvTextDate" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:14px;"></label>
         <button class="btn btn-action" id="rvTextAdd">글 후기 추가</button>
@@ -1774,8 +1806,11 @@
              '회원 제출'은 승인 전·후를 다 모은다(2026-09-27 · 오너 "이미 올린 것도 보이게") — 이미 공개된
              회원 후기의 작성자를 찾을 때 '전체' 100장을 뒤지지 않게. '승인 대기'는 그중 아직 비공개인 것.
              ⚠️ 순서: 칩 5개는 375px(내용 폭 351px)에서 84px 넘쳐 마지막 칩이 잘린다(줄은 가로 스크롤).
-                매일 누르는 '승인 대기'가 앞, 가끔 찾는 '회원 제출'이 맨 뒤 — 잘리는 쪽을 바꿨다. -->
+                매일 누르는 '승인 대기'가 앞, 가끔 찾는 '회원 제출'이 맨 뒤 — 잘리는 쪽을 바꿨다.
+             ⚠️ 'KE20 후기'(2026-09-29)를 '상담 후기' 옆이 아니라 '승인 대기' 뒤에 둔 것도 같은 이유다 —
+                종류 순서대로 끼우면 매일 누르는 '승인 대기'가 375px 에서 화면 밖으로 밀린다. -->
         <button class="rv-kf" type="button" data-k="pending" id="rvPendingChip">승인 대기</button>
+        <button class="rv-kf" type="button" data-k="ke20">KE20 후기</button>
         <button class="rv-kf" type="button" data-k="member" id="rvMemberChip">회원 제출</button>
       </div>
       <!-- 검색(2026-08-03) — 후기가 100장을 넘으면 한 건을 고치려고 화면을 계속 내려야 했다.
@@ -2504,8 +2539,17 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- 후기 전체 글 보기(2026-09-29) — 후기 관리 카드의 [전체 글 보기]가 연다. 읽기 전용 -->
+  <dialog class="rv-dlg" id="rvFullDlg" aria-labelledby="rvFullT">
+    <div class="rv-dlg-head"><b id="rvFullT">후기 전체 글</b><button type="button" class="rv-btn" id="rvFullClose">닫기</button></div>
+    <div class="rv-dlg-meta" id="rvFullMeta"></div>
+    <div class="rv-dlg-body" id="rvFullBody"></div>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <!-- 후기 글 그리기 — [전체 글 보기]가 KE20 후기의 [소제목] 을 후기 페이지와 같은 모양으로 보여 준다 -->
+  <script src="review-rich.js?v=1"></script>
   <!-- 기수별 학생 화면 열림/잠김 판정(2026-09-03) — mypage·submit 과 같은 파일(MONC_GATE) -->
   <script src="round-gate.js?v=1"></script>
   <!-- 회원 번호 상태 판정에 쓴다 — 가입·신청 창구가 쓰는 것과 **같은 규칙**이어야 한다(2026-08-03) -->
@@ -6234,10 +6278,21 @@
     document.getElementById('appCsv').addEventListener('click', appsToXlsx);   // 엑셀(묶음별 시트) — 라이브러리를 못 받으면 안에서 CSV 폴백
 
     // ── 후기 관리(reviews) ──
-    // 종류(kind)는 챌린지/상담 둘뿐이다. 합격 수기는 이 표가 아니라 success_stories(아래 절).
-    const RV_KIND_LABEL = { challenge: '챌린지 후기', consult: '상담 후기' };
+    // 종류(kind)는 챌린지/상담/KE20 셋이다(KE20 은 2026-09-29 · migration 20260929150000 — 미실행이면
+    // 종류를 'KE20 후기'로 바꾸는 저장이 제약 위반으로 막힌다). 합격 수기는 이 표가 아니라 success_stories(아래 절).
+    const RV_KIND_LABEL = { challenge: '챌린지 후기', consult: '상담 후기', ke20: 'KE20 후기' };
     // ⚠️ 이 값들은 challenge-*.html 의 data-challenge 와 문자열이 같아야 한다(상세 후기 섹션의 매칭 키).
     const RV_CH_OPTS = ['보신각', '영합각', '스피닝', '승자각', '댄특완'];
+    /* 카드의 챌린지 칸에만 보이는 값 — 회원이 쓴 KE20 후기는 challenge 가 'KE20' 으로 들어온다(RPC).
+       선택지에 없으면 칸이 '(미지정)'으로 보이고, 그 칸을 건드리는 순간 값이 지워진다.
+       ⚠️ RV_CH_OPTS 에 넣지 말 것 — 그쪽은 챌린지 상세 페이지 건수 요약이 쓰고, KE20 은 상세 페이지가 없다. */
+    const RV_CH_EXTRA = ['KE20'];
+    // [전체 글 보기]를 다는 기준 — 카드의 글 칸에서 한눈에 안 읽히는 글(여러 줄이거나 60자 초과)
+    const rvIsLong = q => { const s = String(q || ''); return s.indexOf('\n') >= 0 || s.length > 60; };
+    /* 종류를 KE20 으로 넣거나 바꾸는데 제약 위반(23514)이면 마이그레이션 미실행이다 — 영어 오류 대신
+       무엇을 하면 되는지 적어 돌려준다(소재 문제의 KE20 저장과 같은 처방). 해당 없으면 빈 문자열. */
+    const rvKe20Blocked = (error, kind) => (error && error.code === '23514' && kind === 'ke20')
+      ? 'KE20 후기로 저장하려면 마이그레이션 20260929150000_reviews_ke20.sql 실행이 먼저 필요해요.' : '';
     let rvKindFilter = 'all';
     const R_PAGE = 60;        // 후기 카드를 한 번에 그리는 수(회원 목록과 같은 규칙)
     let _rvShown = R_PAGE;
@@ -6293,7 +6348,7 @@
       }
       renderRvChSum(data);
       if (!data.length) { grid.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 후기가 없습니다. 카톡 스크린샷을 업로드하세요.</div>'; return; }
-      const CH_OPTS = [''].concat(RV_CH_OPTS);
+      const CH_OPTS = [''].concat(RV_CH_OPTS, RV_CH_EXTRA);
       // kind 컬럼 마이그레이션(20260801180000) 전이면 undefined → 전부 챌린지로 취급
       /* 종류 필터 + 검색. ⚠️ 이름 컬럼은 `reviewer_name` 이다 — `name` 으로 읽어 이름이 한 번도
          안 붙었던 전례가 있다(2026-08-02 원칙 15 근거). */
@@ -6340,8 +6395,9 @@
               <label class="rv-lb" style="flex:1">챌린지<select class="rv-ch" style="flex:1" aria-label="챌린지">${CH_OPTS.map(o => `<option value="${o}" ${(r.challenge || '') === o ? 'selected' : ''}>${o || '(미지정)'}</option>`).join('')}</select></label>
               <label class="rv-lb">기수<input type="number" class="rv-co" value="${r.cohort != null ? r.cohort : ''}" placeholder="?" min="0" aria-label="기수(숫자). 비우면 미상"></label>
             </div>
-            <div class="row"><label class="rv-lb" style="flex:1">이름<input type="text" class="rv-nm" style="flex:1" value="${esc(r.reviewer_name || '')}" placeholder="예: 박신우" aria-label="작성자 이름 — 챌린지 후기에만 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></label></div>
-            <div class="row"><label class="rv-lb" style="flex:1">한줄평<input type="text" class="rv-qt" style="flex:1" value="${esc(r.quote || '')}" placeholder="비우면 스크린샷만" aria-label="후기 카드 앞면에 뜨는 문구"></label></div>
+            <div class="row"><label class="rv-lb" style="flex:1">이름<input type="text" class="rv-nm" style="flex:1" value="${esc(r.reviewer_name || '')}" placeholder="예: 박신우" aria-label="작성자 이름(닉네임) — 챌린지·KE20 후기에 표시됩니다(상담 후기는 이름을 띄우지 않습니다)"></label></div>
+            <div class="row"><label class="rv-lb" style="flex:1">한줄평<textarea class="rv-qt" rows="2" style="flex:1" placeholder="비우면 스크린샷만" aria-label="후기 카드 앞면에 뜨는 글 — 줄바꿈과 [소제목] 줄은 그대로 둡니다">${esc(r.quote || '')}</textarea></label></div>
+            ${rvIsLong(r.quote) ? `<div class="row"><button class="rv-btn rv-full" type="button" aria-haspopup="dialog">전체 글 보기</button></div>` : ''}
             <div class="row"><button class="rv-btn rv-vis ${r.visible ? 'on' : ''}" type="button">${rvVisLabel(r)}</button></div>
             <div class="row"><button class="rv-btn rv-del is-danger">삭제</button></div>
           </div>
@@ -6355,7 +6411,11 @@
       // 분류 필드 저장(챌린지·기수·이름) — site_config가 아니라 reviews 컬럼. 마이그레이션 미적용 시 컬럼 없음 에러 안내.
       const saveField = async (id, patch) => {
         const { error } = await MONC.sb.from('reviews').update(patch).eq('id', id);
-        if (error) { alert('저장 실패: ' + error.message + '\n(reviews 분류 컬럼 마이그레이션 20260710130000 · 20260801180000 미적용일 수 있어요)'); return false; }
+        if (error) {
+          alert(rvKe20Blocked(error, patch.kind)
+            || '저장 실패: ' + error.message + '\n(reviews 분류 컬럼 마이그레이션 20260710130000 · 20260801180000 미적용일 수 있어요)');
+          return false;
+        }
         toast('저장됨'); return true;
       };
       // 종류를 바꾸면 필터가 걸려 있을 때 목록에서 사라져야 하므로 다시 그린다
@@ -6371,7 +6431,11 @@
       grid.querySelectorAll('.rv-kind').forEach(sel => sel.addEventListener('change', async () => {
         const id = sel.closest('.rv-item').dataset.id;
         const ok = await saveField(id, { kind: sel.value });
-        if (!ok) return;
+        if (!ok) {   // 저장이 안 됐으면 칸도 원래 값으로 — 화면만 바뀐 채 남으면 저장된 줄 안다
+          const row = data.find(r => String(r.id) === String(id));
+          sel.value = (row && row.kind) || 'challenge';
+          return;
+        }
         if (rvKindFilter !== 'all') { patchRow(id, { kind: sel.value }); loadReviewsAdmin(true); return; }
         patchRow(id, { kind: sel.value });
       }));
@@ -6384,8 +6448,17 @@
         saveField(inp.closest('.rv-item').dataset.id, { cohort: inp.value === '' ? null : parseInt(inp.value, 10) })));
       grid.querySelectorAll('.rv-nm').forEach(inp => inp.addEventListener('change', () =>
         saveField(inp.closest('.rv-item').dataset.id, { reviewer_name: inp.value.trim() || null })));
-      grid.querySelectorAll('.rv-qt').forEach(inp => inp.addEventListener('change', () =>
-        saveField(inp.closest('.rv-item').dataset.id, { quote: inp.value.trim() || null })));
+      grid.querySelectorAll('.rv-qt').forEach(inp => inp.addEventListener('change', async () => {
+        const id = inp.closest('.rv-item').dataset.id;
+        const quote = inp.value.trim() || null;
+        // 메모리의 행도 같이 고친다 — 안 그러면 [전체 글 보기]가 고치기 전 글을 보여 준다
+        if (await saveField(id, { quote })) patchRow(id, { quote });
+      }));
+      // [전체 글 보기](2026-09-29) — 후기 페이지에 올라가는 모양 그대로 읽는다(KE20 은 소제목까지)
+      grid.querySelectorAll('.rv-full').forEach(b => b.addEventListener('click', () => {
+        const row = data.find(r => String(r.id) === String(b.closest('.rv-item').dataset.id));
+        if (row) openRvFull(row);
+      }));
       /* ⚠️ 노출/숨김도 patchRow 로 간다(2026-08-02 5차) — 전에는 loadReviewsAdmin() 으로 통째로
          다시 그려서 후기 100건을 정리하다 한 건을 숨길 때마다 스크롤이 맨 위로 튀었다.
          바로 위 종류·챌린지 변경은 이미 patchRow 를 쓰고 있었다(같은 이유). */
@@ -6417,6 +6490,35 @@
       }));
     }
 
+    /* 후기 전체 글 보기(2026-09-29) — KE20 후기는 1,500자까지 온다. 카드에서는 다 못 읽으니 승인 전에
+       여기서 읽는다. 읽기 전용이다(고치는 곳은 카드의 한줄평 칸 하나).
+       KE20 은 후기 페이지와 같은 규칙(review-rich.js)으로 소제목을 그리고, 챌린지·상담은 후기 페이지가
+       글을 있는 그대로 찍으므로 여기서도 그대로 찍는다(대괄호를 소제목으로 바꾸지 않는다). */
+    function openRvFull(r) {
+      const dlg = document.getElementById('rvFullDlg');
+      const body = document.getElementById('rvFullBody');
+      const w = rvWriter(r);
+      document.getElementById('rvFullMeta').textContent =
+        [RV_KIND_LABEL[r.kind || 'challenge'] || '', r.reviewer_name ? '닉네임 ' + r.reviewer_name : '닉네임 없음',
+         w ? '작성자 ' + (w.name || '(이름 없음)') : '', (r.quote || '').length.toLocaleString() + '자']
+          .filter(Boolean).join(' · ');
+      if ((r.kind || 'challenge') === 'ke20' && window.moncReview) {
+        body.innerHTML = moncReview.bodyHtml(r.quote) || '<p class="rv-quote">(내용 없음)</p>';
+        body.querySelectorAll('.rv-rich').forEach(x => x.classList.remove('is-clamp'));   // 전문을 읽는 창이라 접지 않는다
+      } else {
+        body.innerHTML = '<p class="rv-quote">' + esc(r.quote || '(내용 없음)') + '</p>';
+      }
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+      dlg.scrollTop = 0;
+    }
+    (function wireRvFull() {
+      const dlg = document.getElementById('rvFullDlg');
+      const close = () => { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); };
+      document.getElementById('rvFullClose').addEventListener('click', close);
+      dlg.addEventListener('click', e => { if (e.target === dlg) close(); });   // 창 바깥(뒤 막)을 누르면 닫힌다
+    })();
+    wireCopyLinks(document.getElementById('rvLinkBox'));   // KE20 후기 링크 [복사] — 제출·후기 링크 판과 같은 복사 함수
+
     // 종류 필터 — 108건 목록에서 상담 후기만 뽑아 보려면 필요하다
     document.getElementById('rvKindFilter').addEventListener('click', e => {
       const b = e.target.closest('.rv-kf'); if (!b) return;
@@ -6437,7 +6539,8 @@
       const { error } = await MONC.sb.from('reviews').insert({ quote, kind, review_date: date, sort_order: 0, visible: true });
       btn.disabled = false; btn.textContent = '글 후기 추가';
       if (error) {
-        alert('추가 실패: ' + error.message + '\n(사진 없는 후기는 마이그레이션 20260801180000 이 적용돼야 들어갑니다)');
+        alert(rvKe20Blocked(error, kind)
+          || '추가 실패: ' + error.message + '\n(사진 없는 후기는 마이그레이션 20260801180000 이 적용돼야 들어갑니다)');
         return;
       }
       document.getElementById('rvTextQuote').value = ''; document.getElementById('rvTextDate').value = '';
@@ -6483,7 +6586,10 @@
       if (error && (error.code === '42703' || error.code === 'PGRST204')) {
         ({ error } = await MONC.sb.from('reviews').insert(base));
       }
-      if (error) { await MONC.sb.storage.from('reviews').remove([path]); throw error; } // 고아 파일 정리
+      if (error) {
+        await MONC.sb.storage.from('reviews').remove([path]);   // 고아 파일 정리
+        throw (rvKe20Blocked(error, kind) ? new Error(rvKe20Blocked(error, kind)) : error);
+      }
     }
 
     // 1장(라벨 포함)
