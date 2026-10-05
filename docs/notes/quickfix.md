@@ -1,5 +1,9 @@
 # 미니 다듬기(quickfix) — 무료 한 구간 고침 + 표현 수집 창구
 
+## 작업 전 핵심 규칙
+
+- **미니 다듬기(표현 수집)**: 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지
+
 > 2026-07-31 신설. 결정 기록: `docs/superpowers/specs/2026-07-31-quickfix-collector-design.md`
 > 관련 파일: `quickfix.js`(공용 위젯) · `supabase/functions/ai-killer/index.ts`(`mode:'quickfix'` 분기)
 > · `supabase/migrations/20260731120000_expression_reports.sql` · admin 'AI킬러' 탭(구 감점 사전) '회원 제보'

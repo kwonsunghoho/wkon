@@ -1,8 +1,20 @@
 # 페이지 공통 장비 — bfcache·scroll-keep·inapp·og 메타·제목
 
+## 작업 전 핵심 규칙
+
+- **페이지 공통 장비(bfcache·스크롤·인앱 배너·og 메타·제목)**: 새 페이지에 한 벌로 장착(아래 새 페이지 체크리스트), scroll-keep `defer` 금지, 인앱 문자열은 `\uXXXX`, 수정 시 `?v=` 동반
+
 > 2026-08-27 CLAUDE.md 2차 다이어트로 이관한 원장이다. **새 페이지를 만들거나
 > bfcache·스크롤 복원·인앱 배너·링크 미리보기·`<title>` 을 건드리기 전에 읽는다.**
-> 매 작업 공통 요약(새 페이지 체크리스트)은 CLAUDE.md '디자인 공통' 절에 있다.
+> 새 페이지 체크리스트와 예외는 이 문서가 원장이다.
+
+## 새 페이지 체크리스트
+
+1. `nav.js` + `nav.css` 공용 메뉴를 사용한다. 가입·관리·검수·리다이렉트 페이지의 제외 목록은 `docs/notes/nav.md`를 따른다.
+2. `inapp.js`를 싣는다. 제외는 아래 'inapp.js' 절을 따른다.
+3. `<title>` 아래 og·twitter 메타를 HTML로 넣고 URL·설명을 바꾼다. 제목은 `[페이지 이름] — MONC 몬크`로 세 곳을 맞춘다. 홈 등 예외는 아래 제목 절을 따른다.
+4. bfcache `pageshow`+`persisted` → reload와 `scroll-keep.js`를 함께 적용한다. `scroll-keep.js`는 `defer` 금지. 홈·입력 화면·결제 복귀 화면의 예외는 아래 bfcache 절을 먼저 확인한다.
+5. `inapp.js`·`scroll-keep.js`를 수정하면 싣는 페이지의 `?v=`도 함께 올린다.
 
 ## bfcache — 뒤로/앞으로 방문은 통째 reload
 

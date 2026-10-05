@@ -1,193 +1,84 @@
 # AGENTS.md
 
-이 레포에서 작업하는 코딩 에이전트(Codex)가 매 작업 전에 읽는 규칙 문서다. 2026-09-29 `CLAUDE.md` 에서 이름을 바꿨다 — **문서·코드 주석에 남은 'CLAUDE.md' 표기는 이 파일을 가리킨다.**
+MONC(몬크 챌린지) 작업의 공통 지침. 과거 문서의 `CLAUDE.md`는 이 파일을 뜻한다.
+**공통 규칙은 여기, 기능별 세부 규칙은 아래 연결 문서가 원장이다.**
 
-**이 문서에는 매 작업에 공통인 핵심 규칙만 남긴다.** 기능별 상세 규칙·실측값·과거 의사결정은 아래 '기능별 문서' 표의 해당 문서가 원장이다 — **기능을 고치기 전에 그 문서를 먼저 읽는다.**
+## 응답과 진행
 
-⚠️ **파일을 지우거나 이름·주소·설정을 바꿨으면, 그 이름을 `AGENTS.md` 와 `docs/` 에서 검색해 같이 고친다.** 문서가 틀리면 다음 작업이 틀린 전제로 시작한다(2026-08-03 감사에서 문서 오류 5건 중 3건이 이 누락).
+- 한국어 존댓말로 결론부터 짧게 답한다. 판단에 필요한 근거만 적고, 반복·과장·비유·습관적인 칭찬과 맞장구는 피한다. 오너 인용은 원문을 유지한다.
+- 질문은 쉬운 말로 한 번에 1~2개. 저장소에서 확인할 수 있는 내용은 직접 확인한다.
+- 계획은 오너와 논의하고 승인 뒤 구현한다. **원인과 고칠 곳이 특정된 수정은 바로 처리**한다. 승인된 범위의 구현·수정·검증은 계속 진행한다.
+- UI는 **구현 → 375px 스크린샷 제시 → 오너 승인 → main 반영** 순서다. 이미 승인된 배포본의 명백한 결함 수정은 바로 반영할 수 있다. 브랜드 방향 변경은 별도 승인한다.
+- 구현은 기본적으로 한 세션에서 직접 한다. 원인이 특정된 수정에 하위 에이전트·다단 리뷰를 붙이지 않는다.
+- 오너가 직접 해야 할 일은 **실행 순서·누를 메뉴·복사할 내용·완료 기준**으로 따로 정리한다. SQL은 대화창의 `sql` 코드 블록, 긴 함수 코드는 바로 열 수 있는 파일 링크로 준다. 에이전트가 확인할 일과 구분한다.
+- 운영 반영 여부와 로컬 구현 완료를 구분해 보고한다. 가능한 검증을 마치고, 외부 적용이 남았으면 정확히 적는다.
 
-## 한국어 응답 문체
+## 프로젝트와 작업 시작
 
-사용자 응답과 이 문서 본문 모두에 적용한다. 단 오너 발언 인용은 원문 그대로(사실 기록).
+- 손으로 작성한 HTML/CSS/JS 정적 사이트. 프레임워크·번들러·`package.json`·전체 lint/build 시스템은 없다.
+- GitHub Pages가 `main`을 그대로 서빙한다. 라이브 주소는 **https://monc.ai.kr**(`CNAME`). 운영 확인은 이 주소에서 한다.
+- 데이터·회원·결제는 Supabase(`supabase-config.js`, `MONC.sb`). 레거시 신청·후기 Google Apps Script는 Google 콘솔에서 수정·재배포하며 신청은 새 행 append다.
+- **새 코드 변경 작업**은 `git status`로 기존 변경을 확인하고, `git fetch origin main` 후 `origin/main` 기준 새 브랜치에서 시작한다. 같은 작업의 후속 수정은 그 작업 상태를 이어간다. `.claude/worktrees/`·`claude/*`의 오래된 사본을 기준으로 삼지 않는다.
+- UI 작업의 'main 직행'은 **로컬 확인·승인 후 main 배포**를 뜻한다. 결제·신청·DB·로그인·큰 구조 변경은 브랜치에서 검증한 뒤 해당 작업의 승인 범위에 따라 반영한다.
+- 배포 명령은 `git push origin main`. 푸시가 배포이므로 해당 작업의 승인 범위를 따른다. 이미 승인받은 같은 작업에 허락을 반복해서 구하지 않는다.
+- **Windows·macOS 공통 지침이다. OS·셸·실행 파일은 현재 세션에서 확인**하고 그 환경의 명령과 경로를 사용한다. 다른 PC의 절대 경로를 그대로 적용하지 않는다. `wkon-mirror` rsync 미러·구 nvm 로더는 폐기됐다. 레포를 직접 서빙한다.
+- 파일명·주소·설정을 바꾸거나 삭제하면 기존 이름을 `AGENTS.md`와 `docs/`에서 검색해 관련 설명도 고친다. 코드 주석·커밋 메시지는 한국어. 죽은 코드와 타임스탬프 백업 파일을 남기지 않는다.
 
-- 결론부터. 핵심만. 설명은 판단에 필요한 근거까지만.
-- 문장은 짧게, 문단은 1~3문장. 같은 내용을 표현만 바꿔 반복하지 않는다.
-- 사용자가 이미 말한 내용을 다시 길게 요약하지 않는다. 불필요한 배경 설명·일반론을 넣지 않는다.
-- 자연스러운 한국어 존댓말. 친절하되 감정 표현은 최소화. 칭찬·공감·추임새를 습관적으로 넣지 않는다.
-- 사용자의 판단에 무조건 동의하지 않는다.
-- 과장·공격적 표현, 비유·은어·유행어·임의로 만든 표현 금지. 컨설팅 보고서처럼 거창하게 쓰지 않는다 — 실무자가 업무 내용을 정리해 전달하듯 쓴다.
+## 필요한 문서만 읽기
 
-특히 걸리는 두 부류: 과장된 비유("전부 무너진다"·"구멍이 크다")와 맞장구("정확히 짚으셨습니다"·"아주 좋은 판단입니다"). 평범하고 정확한 서술로 바꾼다 — "이 부분은 수정이 필요합니다", "이 방향이 더 적합합니다".
+- 아래 표에서 **바꾸는 기능에 해당하는 문서와 관련 절만** 읽는다. 여러 기능을 건드리면 해당 문서를 함께 확인한다. 전 문서 읽기를 매 작업의 선행 절차로 삼지 않는다.
+- 문서가 길면 제목·식별자로 관련 절을 찾고, 그 절의 규칙·예외·연결 파일을 읽는다. 공용 파일은 영향을 받는 기능까지 확인한다.
+- UI/CSS 변경: `docs/design-principles.md`. 새 페이지·메타·뒤로가기·인앱 배너: `docs/notes/page-common.md`.
+- DB·Edge Function 변경/배포: `docs/notes/supabase.md`. 적용 여부·함수 버전 확인: `docs/notes/implementation-status.md`.
+- 스크린샷·스텁·셸·이미지 생성 절차가 필요할 때: `docs/notes/working-rules.md`의 해당 절.
+- 기능 문서 첫머리의 핵심 규칙과 최근 확정 사항을 따른다. 오래된 기록에 상반된 값이 있으면 그대로 되살리지 않는다. 충돌을 해결할 근거가 없으면 오너에게 확인한다.
+- `docs/archive/plans/`는 과거 계획이다. 설계 문서도 아래에 지정한 AI킬러·소재 발굴 두 문서를 제외하면 설계 시점 기록이며, 현행 notes가 우선한다.
 
-답변 순서는 ① 결론 ② 핵심 이유 ③ 필요한 대안·다음 작업. 내용이 간단하면 제목·목록 없이 바로 답한다.
+| 작업 영역 / 파일 | 먼저 읽을 문서 |
+|---|---|
+| 홈·챌린지 허브: `index.*`, `challenges.html`, `blind-quiz.js` | `docs/notes/home.md` |
+| 공용 메뉴: `nav.js`, `nav.css` | `docs/notes/nav.md` |
+| 페이지 공통: `inapp.js`, `scroll-keep.js`, 메타·제목 | `docs/notes/page-common.md` |
+| 신청·결제·환불·모집: `apply.html`, `recruit.js`, `waitlist.js`, `pay-methods.js`, `pay-pending.js`, `refund-details.*`, verify/cancel-payment, portone-webhook | `docs/notes/apply-and-payment.md` |
+| 특강: `lecture.html`, `lectures.html`, `lecture-common.js` | `docs/notes/lectures.md` |
+| 코스·도구 허브: `briefing.html`, `tools.html` | `docs/notes/briefing.md` |
+| 역량검사: `games.html`, `games.js` | `docs/notes/games.md` |
+| 연구실: `lab*`, `researchers-data.js`, lab-file | `docs/notes/lab.md` |
+| 뉴스·자동 수집: `news.html`, `scripts/fetch-news.mjs` | `docs/notes/news.md` |
+| AI킬러·항공사 프로필: `ai-killer.html`, ai-killer 함수 | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
+| 답변 첨삭: `polish.html`, ai-killer의 polish 모드 | `docs/notes/polish.md` |
+| 소재 발굴: `sojae.html`, `sojae-common.js`, sojae-chat | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
+| 답변 저장소·크레딧·충전: `answers.html`, `credits.html`, `credit-charge.js`, mypage의 답변·지갑 | `docs/notes/credits.md` |
+| 마이페이지·제출: `mypage.html`, `submit.html`, `round-gate.js` | `docs/notes/mypage.md` |
+| 미니 다듬기: `quickfix.js`, ai-killer의 quickfix 모드 | `docs/notes/quickfix.md` |
+| 로그인·동의·본인인증·프로필: `login.html`, `onboarding.html`, `supabase-config.js` | `docs/notes/auth-consent.md` |
+| 관리자: `admin.html` | `docs/notes/admin.md` + 변경하는 기능의 문서 |
+| 후기·KE20·상담·연구진·상세 5종·오디오·커뮤니티: `reviews*`, `review-write.html`, `review-rich.js`, `stories.html`, `story.html`, `consult.html`, `researchers.html`, `challenge-*.html`, `challenge-detail.css`, `community-card.js` | `docs/notes/pages.md` |
+| 매일 답변 프로그램: `program*`, `experiences.html`, `review-desk.html`, answer-program 함수 | `docs/monc-answer-program/product-spec.md`의 작업 전 원칙 → 같은 폴더의 관련 문서 |
 
-## 프로젝트 구조
+## 공통 안전 기준
 
-MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 도구 사이트. **정적 사이트, 빌드 단계 없음.** GitHub Pages 가 `main` 을 그대로 서빙하고, **라이브 주소는 `CNAME` 의 커스텀 도메인 https://monc.ai.kr**(github.io 주소는 이리로 넘어온다 — 오너·계측이 보는 곳은 언제나 monc.ai.kr). 프레임워크·번들러·package.json·테스트 스위트 없음 — 손으로 쓴 HTML/CSS/JS.
+- **개인정보·학원 비공개 자산을 공개 레포/공개 테이블에 넣지 않는다.** 합격 자소서 원문·교재 기출/가이던스·소재 노하우·오픈챗 주소/참여코드가 포함된다. 비공개 표를 사용하고 데이터 입력 SQL은 대화창으로 전달한다. 합격자 문장을 AI 프롬프트 예시로 쓰지 않는다. 출처는 파일명이 아닌 본문으로 확인한다.
+- 로컬 비공개 메모도 공개 레포에 옮기지 않는다. 상품 방향·자료 확보·쇼츠 작업은 `docs/notes/working-rules.md`의 비공개 메모 안내를 먼저 확인한다.
+- **동의 게이트·거부 시 계정 파기·계정별 동의 캐시·회원 페이지 `MONC.requireConsent()`를 완화하지 않는다.** 동의 사전 체크/간주 동의 금지. 신청 폼 필수 동의는 미체크 시 제출 차단, 법적 고지 12px 이상.
+- 전화번호로 타인의 신청·관심 여부를 조회하는 기능을 만들지 않는다. 프로필 저장은 `MONC.saveMyProfile()`만 사용한다. 본인인증 게이트의 승인된 fail-open·인앱 통과 예외는 auth-consent 문서를 따른다.
+- **금액·지급 대상·잔여석·중복·크레딧·참가 권한은 서버/DB가 판단**한다. 브라우저 검사로 대체하지 않는다. 결제는 포트원 V2와 verify-payment, 지급 대상은 JWT. `requestPayment`의 주문 맥락과 웹훅 지급 경로를 유지한다.
+- **포트원 환불 성공 후 DB 기록 실패는 `ok:true + warning`**이다. 실패로 바꿔 재환불을 유도하지 않는다. 유료 콘텐츠 RLS·서버 전용 환급 RPC를 회원에게 열지 않는다.
+- 학생이 주지 않은 경험·성과·감정·결과를 생성하지 않는다. 부족한 사실은 추가 질문한다. 답변 프로그램의 `apValidateSentences` 근거 검증을 우회하지 않는다.
+- 답변 저장은 무료·무제한이다. 비용·무료량·재학생 판정은 임의로 바꾸지 말고 해당 기능 문서와 서버 원장을 따른다.
+- nav는 `nav.js`+`nav.css` 공용이다. 새 페이지에 nav·인앱 배너·메타·뒤로가기 장비를 적용할 때 page-common의 예외까지 확인한다.
 
-서버는 없고, "백엔드"는 브라우저가 부르는 외부 서비스다.
+## 검증과 완료
 
-1. **Google Apps Script**(레거시 신청·후기 시트) — 이 레포가 아니라 구글 콘솔에서 수정·재배포한다. 신청은 항상 새 행 append.
-2. **Supabase**(`supabase-config.js`, `MONC.sb`) — 회원·신청·후기·site_config·계측·도구 테이블 전부. 테이블·RLS·컬럼은 오너가 콘솔에서 만든다.
-3. **모집일정 = Supabase `challenge_rounds` 단일 소스**(admin '챌린지' 탭에서 CRUD — CSV 폴백 금지는 아래 '절대 되살리면 안 되는 것').
-4. **브라우저 밖에서 도는 코드는 둘이다**(둘 다 GitHub Actions): ① **뉴스 수집기** `scripts/fetch-news.mjs` + `.github/workflows/news.yml` — 네이버 뉴스 검색 API 로 3시간마다 수집(2026-08-28 폐지 → 2026-09-07 오너 지시로 부활 · news.md) ② `.github/workflows/lab-og.yml`(2026-09-21 · 1시간마다 `scripts/lab-og-stubs.mjs` 가 연구실 자료별 미리보기 안내판 `r/*.html` 을 만들어 main 에 커밋 — 공개 목록만 읽고 시크릿 없음 · lab.md '자료별 미리보기'). ⚠️ 이 PC 의 git 토큰에는 `workflow` 권한이 없어 `.github/workflows/` 수정은 GitHub 웹 편집기로 한다.
+- 없는 lint/build 명령을 만들지 않는다. 변경한 동작에 맞는 아래 검사와 브라우저 검증을 수행한다.
+- 프리뷰: 레포 루트에서 `python -m http.server 5500`(설치 상태에 따라 `python3` 또는 Windows의 `py -3` 사용). **화면은 375px부터 실제 렌더로 확인**하고 누른 뒤 성공·실패 상태까지 본다. 순서·배치 변경은 1280·768·375px 좌표로 확인한다. UI 측정 항목은 design-principles의 '적용 방법'을 따른다.
+- 회원·결제 화면 테스트는 운영 호출을 차단한 스텁을 사용한다. `supabase-config.js` 계측 비콘은 로컬에서도 운영 DB로 나간다. 절차는 working-rules의 '회원 화면 검증'.
 
-기준 체크아웃은 레포 루트의 `main` 이다. `.claude/worktrees/` 와 `claude/*` 브랜치는 이전 도구(Claude Code)가 쓰던 작업 사본이라 며칠 전 시점에 멈춰 있다 — **작업은 `origin/main` 기준 새 브랜치에서 시작하고, 파일은 그 뒤에 읽는다.**
+| 변경한 내용 | 검사 |
+|---|---|
+| 항공사 문항 매칭 임계값·유사도 | `node scripts/ai-killer-qmatch.mjs` |
+| 답변 프로그램 | `node scripts/answer-program-tests.mjs` + `deno check supabase/functions/answer-program/index.ts`(deno가 없으면 미실행 보고) + 375px 렌더 |
+| 환불 항목 처리 | `node scripts/refund-details-tests.cjs` + 선택·확인·처리 후 내역 렌더 |
+| 문서만 변경 | 참조 경로·중복·충돌·규칙 누락 확인 |
 
-## 작업 방식(오너 지시)
-
-상세·배경은 `docs/notes/working-rules.md`. 요지만 적는다.
-
-- **응답은 한국어만.** 짧게, 질문은 쉬운 말로 한 번에 1~2개.
-- **계획은 오너와 먼저 논의하고 승인 뒤 구현.** 원인이 특정된 수정은 바로 고친다 — 하위 에이전트·다단 리뷰를 돌리지 않는다.
-- **UI 는 375px 목업·스크린샷을 먼저 보이고 승인 뒤 main 에 올린다.**
-- **검증은 누른 '뒤' 상태까지, 순서·배치 수정은 1280·768·375px 세 폭에서** 좌표로 잰다.
-- 화면에 상시 떠 있는 안내문으로 해결하지 않는다 — 누르면 처리되거나 선택을 강제하는 구조로.
-- 이 PC 전용 비공개 메모(상품 방향·자료 확보 현황·쇼츠 제작 규칙 등)는 `C:\Users\cheess\.codex\wkon-notes\INDEX.md` 에 있다. 해당 영역 작업 전에 읽고, **내용을 레포에 옮기지 않는다**(공개 레포).
-
-## 명령·검증
-
-- 작업 기계는 **윈도우**(2026-08-27 윈도우로 옮김 — 구 macOS 절차인 `wkon-mirror` rsync 미러·nvm 로더는 폐기. 되살리지 말 것).
-- 로컬 프리뷰: 레포 루트에서 `python -m http.server 5500`(파이썬 단순 서버) — 레포를 직접 서빙한다. 375px 스크린샷 찍는 법은 `docs/notes/working-rules.md`.
-- 배포: `git push origin main` — 푸시가 곧 배포다(1~2분 전파).
-- **`node`(v24)·`python`(3.14)은 바로 실행된다.** **`deno` 는 없다.**
-- **전체 lint·build·테스트 시스템이 없다. 존재하지 않는 lint/build 명령을 만들지 말 것.** 검증 수단은 아래가 전부다.
-  - **브라우저 렌더 확인 — 375px 우선**(트래픽 99%가 모바일). 올리기 전 필수.
-  - 항공사 문항 매칭: `node scripts/ai-killer-qmatch.mjs` — 임계값·유사도 식 변경 시(첨삭이 쓴다).
-  - 답변 프로그램: `node scripts/answer-program-tests.mjs` + `deno check supabase/functions/answer-program/index.ts`(**deno 미설치 — 현재 못 돌린다**) + 375px 브라우저 실측.
-
-### ⚠️ 어디에 푸시할까 — 오너 확정(2026-07-30)
-
-**눈으로 보고 판단하는 수정(레이아웃·문구·색·애니메이션)은 `main` 직행.** GitHub Pages 가 `main` 만 서빙해서 브랜치는 오너가 폰으로 미리 볼 방법이 없다 — 실제로 "왜 적용이 안 되냐" 사고가 났다. 되돌리기는 `git revert` + 푸시로 1~2분.
-**잘못되면 돈·데이터가 걸리는 것은 브랜치**: 신청·결제 흐름, Supabase 마이그레이션, 로그인·동의 게이트, 큰 구조 변경.
-⚠️ 어느 쪽이든 진짜 안전장치는 **올리기 전 실제 브라우저 렌더 확인**이다(브랜치가 아니라). 375px 부터.
-
-## 데이터 안전 공통 규칙
-
-- **마이그레이션은 레포가 소스지만, 오너가 Supabase SQL Editor 에서 실행해야 반영된다.** 미적용 상태에서도 조용히 degrade 해야 한다: 목록 조회는 `select('*')`(컬럼 나열 시 미적용 환경에서 400), 신규 컬럼은 `getMyProfile()` 같은 공용 셀렉트에 넣지 않는다.
-- **SQL·마이그레이션 본문은 파일 경로가 아니라 대화창에 ```sql 코드로 붙여넣는다**(경로를 bash 블록으로 주면 Run 버튼이 터미널을 연다).
-- **Edge Function 배포는 Supabase 콘솔에서 한다**(오너 PC 에 CLI 없음 — `supabase functions deploy` 안내 금지). 함수는 **한 파일 유지**(콘솔 붙여넣기 배포라 모듈로 쪼개면 배포 불가). 코드를 고치면 `FN_VERSION` 도 같이 올리고, **배포 여부는 anon key 프로브로 확인한다 — 관리자에게 SQL 을 시키지 말 것.** **새 함수에는 `FN_VERSION` 과 `probe:true` 분기를 처음부터, 인증 검사보다 앞에** 넣는다. 현재 8개 함수 전부 있다. ⚠️ **portone-webhook 만 콘솔에서 JWT 검증을 끈다**(포트원이 부르는 함수라 Supabase 키가 없다) — 다른 함수는 끄지 말 것.
-- 테이블 미생성 판정은 `42P01` 이 아니라 **`PGRST205`** 다.
-- 함수 배포·마이그레이션 적용 같은 **시점 상태는 `docs/notes/implementation-status.md`** 에서 확인·갱신한다.
-- Dead code 는 남기지 말고 제거한다. 타임스탬프 백업 파일 커밋 금지. 커밋 메시지·코드 주석은 한국어.
-
-## 회원·로그인·동의·개인정보 — 법적 필수(완화 금지)
-
-- **동의는 가입 시 딱 한 번.** OAuth 복귀 후 `hasConsented()` false 면 동의 게이트(`login.html #consentView`). **체크박스 사전 체크·"간주 동의"·게이트 삭제 금지.** 약관 개정 시 `supabase-config.js` 의 `TERMS_VERSION` 을 올리면 전원 재동의.
-- **동의 3대 함정**(되돌리면 법적 리스크): ① 로컬 동의 캐시는 **계정별 키** `monc_consent_v1:<uid>` ② **거부 = 즉시 파기**(`MONC.deleteMyAccount()` — 로그아웃만 하면 미동의자 개인정보 잔존) ③ **회원 페이지 전부 `MONC.requireConsent()` 가드**(한 곳 빠지면 주소창 우회).
-- 신청·명단 폼의 필수 동의 체크(`apply.html #appConsent` · `lecture.html` · `waitlist.js #wlAgree`)는 미체크 시 제출 차단 — **삭제·완화 금지.** 법적 고지 활자도 12px 하한.
-- **개인정보·학원 자산 반입 금지**: 합격 자소서 원문, 정규반 교재의 기출·가이던스, 소재 노하우(`sojae_playbook`)는 레포·공개 테이블 어디에도 넣지 않는다(비공개 테이블 + SQL 대화창 전달). **합격자 문장을 AI 프롬프트 예시로 주지 않는다.** 자료는 파일명이 아니라 본문 출처로 확인. **커뮤니티 오픈챗 주소·참여코드도 같은 취급** — 회원 전용 표 `community_config`(RLS `authenticated` 만)에만 두고, 값 insert SQL 은 대화창으로 전달한다.
-- **전화번호로 남을 조회할 창구를 만들지 않는다**(번호만으로 신청·관심 여부가 캐진다 — 비회원 사전 조회·명단 본인 조회를 일부러 안 열었다).
-- **휴대폰 본인인증(KG이니시스 통합인증·포트원 경유)**: 가입 온보딩 + **특강 신청·승준 도구·연구실 자료는 인증 회원만**(`MONC.requireVerified()` 게이트 — 챌린지 신청·게임은 대상 아님). 판정은 서버(verify-identity → `apply_identity_verification` service_role 전용), 인증 회원의 이름·번호는 화면 저장으로 못 바꾼다. **게이트는 fail-open** — 안전장치(3중 + **인앱 브라우저 통과**, 2026-08-27 오너 확정 유예 — 면제 아님)를 빼면 인프라 장애·인앱 유입이 전 기능 잠금이 된다. 채널 키는 `pay-methods.js` `identityChannel` 한 곳. 번호 서버 대조의 승인된 예외는 `save_my_profile` RPC 하나뿐 — 넓히려면 오너 확인 먼저. 상세는 auth-consent.md '휴대폰 본인인증'.
-- **전화번호는 가입 필수 + 구글·카카오 이중 가입 차단(오너 확정)**: 온보딩 건너뛰기 없음. 프로필 저장은 `MONC.saveMyProfile()`(서버 대조) 한 곳 — 직접 `members.update` 로 되돌리지 말 것. 상세는 auth-consent.md '전화번호 필수'.
-
-## 결제·유료 기능 — 판정은 서버·DB 가 한다
-
-- 결제는 **포트원 V2 단일 경로**(간편결제 토스페이·카카오페이 — **상점·채널 키는 `pay-methods.js` 한 곳**, 페이지 하드코딩 금지), 신청·충전·이용권 저장은 **verify-payment Edge Function 경유.** **금액은 서버가 DB 에서 재확인**(`site_config.challenge_price` 등), **지급 대상은 body 가 아니라 JWT.** ⚠️ **DB 폴백 금액은 화면·서버 두 곳(`apply.html` `PRICE` ↔ verify-payment `PRICE_PER_CHALLENGE_FALLBACK`) — 한쪽만 고치지 말 것**(2026-08-02 인상 때 실사고).
-- 결제 후 실패(정원 마감 `MC001`·중복 신청 `MC002`·이용권 중복 등)는 **전액 자동 환불 + HTTP 200**(non-2xx 면 supabase-js 가 본문을 감춰 브라우저가 환불 안내를 못 띄운다). 크레딧 부족·실패도 HTTP 200 + `code`.
-- **미결 결제 기록은 `pay-pending.js` 공용(localStorage)** — 결제창 열기 **전에** add, **확답**(성공·확정 실패)일 때만 drop, 방문마다 조용히 재확인(sessionStorage 단건 보관으로 되돌리면 인앱 복귀 유실 사고 재발). 챌린지·특강 재확인은 `appsRetrySafe()` 가드 필수 — 상세는 apply-and-payment.md '미결 결제 기록'.
-- **지급의 최종 안전망은 웹훅(portone-webhook)** — 브라우저가 영영 안 돌아와도 서버가 지급을 끝낸다. **모든 `requestPayment` 에 주문 맥락 `customData`(`k`=종류 + 대상)를 싣고, 새 결제 흐름엔 웹훅 분기를 더한다.** 통보 본문은 방아쇠일 뿐 — 서버가 포트원 API 재조회로 금액을 DB 와 대조한 뒤에만 지급한다(멱등).
-- **재학생 무료(2026-09-09 오너 지시)**: 명단(`academy_students`)에 있고 **본인인증한** 번호면 챌린지·특강·연구실 자료가 0원이다. 판정·접수는 서버 RPC(`monc_is_student` · `apply_free_challenges`/`apply_free_lecture`/`claim_free_resource`)가 하고 **원장은 `payment_status='free'` 하나**(자동·수동 구분 컬럼 금지). 화면 판정은 `MONC.studentStatus()` 한 곳 — **조회 실패는 '재학생 아님'(유료)**이다. 크레딧 충전은 대상이 아니다. 상세는 apply-and-payment.md '재학생 무료 참여'.
-- 환불(cancel-payment)에서 포트원 취소 성공 + DB 기록 실패는 `ok:true + warning` — 실패로 바꾸면 관리자가 다시 눌러 **이중 환불**이 난다.
-- **돈이 걸린 판정은 전부 DB 가 원장**: 잔여석·중복 신청·세션 상태는 DB 트리거(+`for update`·advisory lock), 크레딧 잔액은 **원장(`credit_ledger`) 합계**(잔액 컬럼 금지). 브라우저 검사·클라이언트 update 로 대체 금지. 브라우저가 보낸 `answerId`·금액·슬롯도 서버가 소유·소속 재확인.
-- **크레딧 공통 규칙**: 저장(직접 쓰기·소재 발굴·킬러 자동 저장)은 언제나 **무료·무제한.** 단가는 소재 5 / 킬러 5 / 첨삭 15(**가치 기준** · 2026-09-08 오너 확정 — 크레딧은 100원/개라 소재 500원·첨삭 1,500원). **하루 무료 5크레딧은 '첨삭 잠금장치'** — 첨삭 단가 이상이 되면 첨삭이 매일 공짜가 된다. 후하게 줄 땐 `grant_credit`. 차감 키는 `<대상 id>#<묶음>`(재전송 무차감). 유료 기능은 기록 count 실패 시 **차감 전에 `not_ready`** 로 멈춘다(무시하면 영구 무료 결함). **환급은 서버 전용 `refund_credit_for`(service_role)만** — `auth.uid()` 대상 RPC 를 `authenticated` 에 열면 학생이 자기 차감을 되돌린다.
-- **유료 콘텐츠 비공개**: 답변 프로그램 기출은 비공개 `interview_questions` + `ap_program_view()` RPC 만(회원 전체 읽기 `questions` 금지). `program_enrollments` 자가 INSERT 정책 금지(**체험판·무료 등록 없음** — 오너 확정). `airline_profiles`·`ai_killer_terms`·`sojae_playbook` RLS 는 일반 회원에게 닫혀 있다.
-
-## 디자인 공통
-
-- **UI 원칙 15개와 현행 팔레트 상세 = `docs/design-principles.md`.** 요지: 활자 12px+·**입력칸 16px+**·터치 44px+·간격 8px·대비 4.5:1·**경계선 3:1**·라운드·계층·여백·그룹핑·상태를 단정하지 않기·결정 화면에 값/버튼/근거·전송량 예산·**포커스와 키보드**(div+click 금지)·값에는 그것이 무엇인지 붙이기.
-- **375px 눈검사만으로는 절반이 통과한다** — 올리기 전 재는 항목표가 design-principles.md '적용 방법'에 있다.
-- 팔레트는 **딥 네이비 on 쿨 화이트**: `--action`=`--accent`=`--accent-ink`=`#1B3A6B`, `--action-ink`=흰색. 다크 면 위 강조는 `--action-on-dark`, 다크 위 CTA 는 흰 알약+네이비 글씨. 새 색을 자리마다 만들지 말 것(기능색 — 에러 빨강·항공사 CI — 은 통일 대상 아님).
-- **배경은 순백(`--bg #FFFFFF`) + 쿨 그레이** — 베이지·아이보리 폐기값으로 되돌리지 말 것(잉크·그림자·테두리가 한 벌). 순백 위 카드는 `--border-soft`(0.12)와 `--shadow` 로 뜬다 — 이 둘을 낮추면 카드가 배경에 녹는다. 폐기 hex 목록·상세는 design-principles.md '현행 팔레트'.
-- **제목 색은 `--ink #1C2A3A`**(`tokens.css` 의 `h1,h2,h3` 전 페이지 기본값). ⚠️ 다크 배경 위 제목은 자기 규칙에 색을 명시할 것 — 상속받은 흰색이 밀려 제목이 배경에 사라진다.
-- **`tokens.css` 맨 아래 '팔레트 오버라이드' 블록 삭제 금지**(CSS 변수는 미정의여도 에러 없이 글자만 사라진다 — 큰 블록을 지웠으면 `var(--x)` 미정의 사용처를 훑는다). `background-clip:text` 금지(실패 모드가 '글자 없음'). CSS 를 크게 손댔으면 **주석 짝(`/* */`) 균형을 센다.**
-- **nav 는 `nav.js`+`nav.css` 전 페이지 공용** — 페이지에 nav 마크업 복사 금지, 메뉴 항목·현재 위치는 `nav.js` 의 배열·표에서만 고친다. 싣는 페이지·제외 목록(admin·login·onboarding·review-desk, `lab-*.html` 스텁 5개)은 nav.md.
-- **새 페이지 체크리스트**(상세·사고 기록은 page-common.md): ① `nav.js` + `inapp.js`(인스타가 유입 1위 — 인앱 배너를 지우지 말 것) ② `<title>` 아래 og·twitter 메타 블록 복사(크롤러가 JS 를 안 돌려 스크립트 주입 무효) ③ bfcache `pageshow`+`persisted` → reload + `scroll-keep.js`(**defer 금지**) — 예외 셋: 홈·챌린지 허브 / 입력값 있는 화면 / 결제 복귀 화면(버튼만 복원) ④ 제목 꼬리표는 `[페이지 이름] — MONC 몬크` 하나뿐(`<title>`=`og:title`=`twitter:title`). `inapp.js`·`scroll-keep.js` 를 고치면 싣는 페이지의 `?v=` 도 같이 올린다.
-
-## 기능별 문서(소스오브트루스)
-
-| 영역 | 핵심 파일 | 어기면 안 되는 것 한 줄 | 상세 문서 |
-|---|---|---|---|
-| 홈 랜딩·히어로·챌린지 허브 | `index.html`·`index.css`·`challenges.html`·`blind-quiz.js` | 섹션 서사·히어로 상수·카드 규격은 전부 실측 기반 — 값 수정 전 문서 필독 | `docs/notes/home.md` |
-| 공용 nav | `nav.js`·`nav.css` | 활자·정렬 값은 실측 합의값 — 임의 변경 금지, 소셜 링크는 모바일=햄버거·데스크톱=푸터 | `docs/notes/nav.md` |
-| 페이지 공통 장비(bfcache·스크롤·인앱 배너·og 메타·제목) | `scroll-keep.js`·`inapp.js` | 새 페이지에 한 벌로 장착(위 체크리스트), scroll-keep `defer` 금지, 인앱 문자열은 `\uXXXX`, 수정 시 `?v=` 동반 | `docs/notes/page-common.md` |
-| 신청·결제·모집일정·오픈 알림 | `apply.html`·`recruit.js`·`waitlist.js`·`pay-methods.js`·verify/cancel-payment | 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로. 취소선 정가 `challenge_list_price` 는 표시 전용(판정은 `MONC.loadChallengePricing()` 한 곳) | `docs/notes/apply-and-payment.md` |
-| 특강 | `lectures.html`·`lecture.html`·`lecture-common.js` | 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거 | `docs/notes/lectures.md` |
-| 승준 코스·승준 도구 | `briefing.html`(코스)·`tools.html`(도구) | 코스는 2026-08-25 잠시 내림(briefing→tools 리다이렉트 — 복원 절차는 briefing.md), 도구 허브는 **맨 위 노트 포스터(2026-09-23 오너 A안 — 홈 챌린지 포스터 문법) + 종이 카드 4종**(2026-08-27 3안 — AI킬러·일문일답 잠시 내림, 순서 소재→첨삭→뉴스→게임 = `nav.js` TOOLS_SUB). 포스터·카드에 회원별 상태 문구·금액 금지 | `docs/notes/briefing.md` |
-| 역량검사 게임 | `games.html`·`games.js` | 전부 자체 제작(타사 화면·그래픽·명칭 복제 금지), 이모지 금지 — 자체 라인 SVG 만, 무료·비회원·서버 호출 없음, 하단 '자체 도구·무관' 고지 삭제 금지 | `docs/notes/games.md` |
-| 연구실 | `lab.html`·`lab-archive.html`·`lab-shelf.html`(서가 4종 공용)·`lab-viewer.js`·`researchers-data.js` | 허브는 '출발 안내판' 한 벌(2026-09-23 · 숫자·날짜·NEW 전부 실값, 마크업에 항공사·숫자 금지 · lab.md '허브 = 출발 안내판'). 상세는 `?shelf=` 한 파일(서가별 HTML 금지), 자료 파일은 비공개 버킷 + lab-file 서명 URL 만, PDF 는 lab-viewer 가 먼저(화면 전용 차단은 서버 유지), 값은 `lab_resources.price`(0=무료) — 채용 캘린더만 `recruit_rounds` 예외. ⚠️ **2026-09-22 서가 접기 — 학생 화면 서가는 취업 자료실 하나**(영상관·현장 리포트·채용 캘린더와 `lab-archive.html` 은 잠시 닫음, 데이터·admin 은 그대로 · lab.md '서가 접기') | `docs/notes/lab.md` |
-| 뉴스 스크랩 | `news.html`·`scripts/fetch-news.mjs` | 출처는 네이버 뉴스 검색 API(구글 RSS 금지 — 약관·원문 주소), 요약은 언론사 og:description ≤300자(**본문·사진 저장 금지**), 카드는 링크가 아니라 읽기 창을 여는 버튼, 학원·학과 홍보 제외에 '양성'·'교육'을 넣지 말 것 | `docs/notes/news.md` |
-| AI킬러·항공사 프로필 | `ai-killer.html`·`supabase/functions/ai-killer` | 판정은 오너 지침 프롬프트(4기준+의심 지수+인간미 그린 플래그) — 규칙 판정으로 되돌리지 말 것. 구조화 출력·한 파일 유지, 피드백은 판정에 자동 반영 금지 | `docs/superpowers/specs/2026-07-24-ai-killer-design.md` |
-| 답변 첨삭 | `polish.html`(서버는 ai-killer `mode:'polish'`) | 제출 전 프로브 게이트 유지, fix 는 학생이 쓴 사실만 | `docs/notes/polish.md` |
-| 소재 발굴 v2 | `sojae.html`·`sojae-common.js`·sojae-chat | 다듬기 버튼은 **첫 답변부터** 항상 노출(오너 확정 · 2026-09-09 2턴→1턴), 되묻기 상한 3문답(화면·함수·playbook 세 곳 한 벌), 다듬기 결과 뼈대는 표·강점은 목록, 노하우는 `sojae_playbook`(DB), 난이도는 `questions.level` 한 곳(`.eq('level')` 금지 — 미적용 환경 400), 진입은 난이도 화면 먼저 | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
-| 답변 저장소·크레딧·충전 | `answers.html`·`mypage.html`·`credits.html`(충전 허브)·`credit-charge.js` | 저장 무료·무제한, answers/mypage 는 같이 고친다. 노트는 **답변 단위 2단**(목록 → 상세 → 고치기 · 2026-09-23 실데이터로 확정 — 질문별 묶음·상태 칩 되살리기 금지). 충전 로직은 `credit-charge.js` 한 곳(화면만 페이지가 그린다), 충전 화면 정본은 `credits.html` — 도구는 `?back=` 을 달아 보낸다(첨삭 인라인 충전함은 유지) | `docs/notes/credits.md` |
-| 마이페이지 | `mypage.html`·`submit.html`(챌린지 제출 입구) | '오늘 한 칸'엔 사이트가 아는 사실만, 접이는 데이터 있는 줄만. 제출 칸 이름·규칙은 mypage·admin·submit 세 곳 한 벌. **결제했어도 기수 시작일(`challenge_rounds.program_start`) 전엔 문항·제출 칸을 열지 않는다**(판정은 `round-gate.js` 한 곳). 제출물 코치 피드백은 제출물 행의 컬럼(`feedback*` · 2026-09-27)이고 **쓰기는 admin 만(트리거)** — 화면은 보신각·영합각만(`CH_SUB_FB` mypage·admin 한 벌) | `docs/notes/mypage.md` |
-| 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
-| 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
-| admin | `admin.html` | 좌측 사이드바 셸 + '오늘' 브리핑 — 탭 추가는 그룹부터 정한다(재학생 명단은 '회원 관리' 안 묶음). UI 는 역할별 모양 한 벌 — **알약(`999px`) 금지.** 회원 관리 등급 판정 두 자리(`free_use` 는 delta 0 · '관심'의 신청 이력)를 건드리면 사람이 잘못 보관된다 | `docs/notes/admin.md` |
-| 후기(허브·챌린지·KE20·상담·합격 수기) | `reviews.html`·`reviews-list.html`·`stories.html`·`story.html`·`review-write.html`·`review-rich.js` | 목록은 `?kind=` 한 파일, 0건 종류는 카드를 안 그린다, 상담 후기 실명 미노출. **목록·허브·상세 미리보기·admin 전부 최근 올린 순(`created_at` · 2026-09-27) — '한줄평 먼저'·`review_date` 정렬로 되돌리지 말 것.** 목록의 단 배치는 스크립트(`place()`)가 한다 — CSS `column-count` 로 되돌리면 PC·태블릿에서 예전 후기가 첫 줄에 온다(2026-09-29). 회원 제출 후기는 서버 RPC 가 `visible=false` 로(즉시 공개 금지·자동 보상 없음 — 보신각·영합각·스피닝은 완료 후 후기 작성 시 최종 점검 피드백 제공). **KE20 후기(2026-09-29)는 `?kind=ke20` · 쓰기 `review-write.html?ch=ke20`** — 사이트 결제 상품이 아니라 참가 판정이 없다(로그인 회원 + admin 승인), 글은 `quote` 한 칸에 줄 맨 앞 `[소제목]` 으로 들어가고 읽는 규칙은 `review-rich.js` ↔ 서버 RPC 한 벌(컬럼 추가·'첫마디' 방식 금지). 합격 수기는 잠시 내림(복원 절차는 pages.md) | `docs/notes/pages.md` |
-| 1:1 상담·네이버 예약 | `consult.html` | 네이버 예약 주소 정본은 consult.html 한 곳. 진입점 3곳 고정 — 홈 본문·nav 메뉴·플로팅 금지 | `docs/notes/pages.md` |
-| 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·뉴스·도구 3곳(홈 금지 · 뉴스는 2026-08-28 폐지로 빠졌다 2026-09-07 부활로 복귀), 이 한 파일에서만 수정(세 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
-| 기타 페이지(연구진·상세 5종·오디오) | `researchers.html`·`challenge-*.html`·`challenge-detail.css` | 상세 5종 인라인 공통 CSS 는 다섯 파일을 같이 고친다. ①안 '결과 먼저' 배치(2026-09-07 5종 전부 적용)의 스타일과 **활자·폭 한 벌(변수 `--cd-*`, 클래스101·인프런 실측값)**은 `challenge-detail.css` 한 곳 — 인라인·스크립트에 값 복사 금지, 숫자는 실데이터 슬롯만, 승자각·댄특완은 비포/애프터 없이 '결과물 목록'이 증거. **생성 이미지(밴드·3단계·마무리 · 2026-09-18)는 사람 없이, 증거 자리(비포/애프터·후기·코치)엔 금지** — 마무리 사진·문구를 바꾸면 글씨 대비를 다시 잰다 | `docs/notes/pages.md` |
-| 매일 답변 프로그램 | 아래 절 | 절대 원칙 10개 먼저 읽기 | `docs/monc-answer-program/` |
-| 배포·적용 시점 상태 | — | 함수 버전·마이그레이션 적용 현황은 여기서 확인 | `docs/notes/implementation-status.md` |
-
-> 끝난 작업의 **계획서는 `docs/archive/plans/`** 에 있다 — 현행 규칙이 아니다. 설계 문서(`docs/superpowers/specs/`)도 위 표가 가리키는 둘(ai-killer·sojae-v2) 말고는 설계 시점 기록이라, 값이 notes 와 다르면 notes 가 맞다.
-
-## 매일 답변 프로그램
-
-**절대 원칙(오너 지시 원문 · 2026-07-30 — 같은 지시의 제품 목표·작업 방식 원문은 `docs/monc-answer-program/implementation-status.md` 'CLAUDE.md 이관 메모', 상세 요구사항은 `docs/monc-answer-program-spec.md`):**
-
-1. 학생이 제공하지 않은 경험, 행동, 성과, 감정, 결과를 생성하지 않는다.
-2. 정보가 부족하면 답변을 만들지 말고 추가 질문을 한다.
-3. 학생이 먼저 초안을 작성한 뒤 AI가 첨삭한다.
-4. 모든 주요 문장은 학생의 경험 및 사실과 연결돼야 한다.
-5. 학생마다 같은 구조와 말투를 강제하지 않는다.
-6. 기존 회원, 상품, 결제, 답변 첨삭 구조를 우선 재사용한다.
-7. 학생 원문, AI 수정본, 연구원 수정본, 수정 이유를 모두 저장한다.
-8. 기존 기능을 삭제하거나 임의로 변경하지 않는다.
-9. 데이터베이스 변경에는 마이그레이션을 작성한다.
-10. 구현 후 타입 검사, 테스트, 린트, 빌드를 실행한다.
-
-> ⚠️ **10번의 이 레포 대응**: 이 레포엔 린트·빌드·타입 검사가 **없다**(위 '명령·검증'). 없는 명령을 지어내지 말고 `node scripts/answer-program-tests.mjs` · `deno check`(미설치) · 375px 실측 셋으로 대신한다.
-> 지시 원문의 "구현 계획만 작성하고 종료하지 않는다"는 착수한 일을 계획서만 남기고 덮지 말라는 뜻 — 큰 작업 전 오너에게 방향을 확인하는 것까지 막는 규칙이 아니다.
-
-- **근거 없는 문장 차단이 이 상품의 핵심**: 서버 `apValidateSentences` 가 근거 id 실존·자료에 없는 숫자를 검사해 unsupported 를 붙인다. 이 검증을 우회하는 코드 금지.
-- **유료 기출 비공개·이용권 서버 지급**은 위 '결제·유료 기능' 절 그대로. 교재 원문·기출 SQL 은 공개 리포 커밋 금지(위 '개인정보' 절).
-- **확정본은 `answers` 자유 글로 합류**(title=문항·doc_kind=interview) — 킬러·첨삭·답변노트가 붙는 연결을 끊지 말 것.
-- **파일 지도·데이터 모델·화면 흐름·AI 파이프라인·테스트·구현 현황은 `docs/monc-answer-program/`**(구현 상태는 implementation-status.md).
-
-## 절대 되살리면 안 되는 것(요지)
-
-- 챌린지 중간 점검·1:1 개별 점검 제공 약속 — 홈페이지 전체에서 삭제(2026-10-05 오너 지시, apply-and-payment.md). 보신각·영합각·스피닝은 최종 점검 피드백을 챌린지 완료 후 후기 작성 시 제공한다. 후기 조건은 FAQ·신청 전 안내·약관에 남기고 상세 카드·진행 단계·코치 소개에서는 생략한다. 실제 제출물 피드백 기능은 유지한다.
-
-각 항목의 배경·실측은 괄호의 문서에 있다.
-
-- 전체 폭 섹션 밴드 — `--bg2` 는 흰 카드 안 옅은 판 전용 (design-principles.md). ⚠️ 홈 ④ 숫자(`.nums`)의 **사진 + 다크 판은 이 금지의 예외**다(2026-09-08 오너 확정) — 금지가 걱정한 건 순백과 옅은 판이 만나 생기는 가로선이고, 사진·짙은 판은 장면 전환으로 읽힌다. 걷어내지 말 것 (home.md)
-- 웜 페이퍼 배경·웜그레이 잉크 일습 — 2026-08-05 순백+쿨 그레이로 전면 교체 (design-principles.md)
-- `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 (apply-and-payment.md)
-- 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
-- 모집일정 구글시트 CSV 폴백(`RECRUIT_CSV`) (apply-and-payment.md)
-- `members.sojae_enabled` 권한 스위치 — 소재는 크레딧으로 통제 (credits.md)
-- 환급 RPC(`refund_credit`)를 `authenticated` 에 다시 grant (credits.md)
-- `applications` INSERT 정책에서 결제 컬럼 제약 빼기 (apply-and-payment.md)
-- 승준노트 카드 권한 배지(`.bf-badge`)·회원별 상태 문구 (briefing.md)
-- 승준노트 B 머리의 기록 칩·'마이페이지에서 자세히' 링크 (briefing.md)
-- 승준노트 매거진 목차 6줄·루트맵 룰렛·강조 세 자리 (briefing.md)
-- 뉴스 수집을 구글뉴스 RSS 로 되돌리기 · 기사 본문·사진 저장 · AI 요약 · 카드를 `<a target="_blank">` 로 되돌리기 (news.md '2026-09-07 부활')
-- 투명 nav·홈 업계 현실 숫자(0.18%)·MONC PROMISE 3단·파인더(#advisor)·홈 커뮤니티 섹션 (home.md)
-- nav 강조의 깜빡이는 점(`bfPulse`)·승준노트를 nav 4번으로 내리는 안 (nav.md)
-- 히어로 스크롤 구동·창 통과 줌·로고 흩날림 안·하단바 '몬크 더 알아보기' 상태 (home.md)
-- 특강 카드 커버 가격 배지·backdrop-filter 유리 패널·클라이언트 잔여석 update (lectures.md)
-- 블라인드 퀴즈를 상세 페이지나 두 곳 이상에 싣기 — challenges.html 하단 한 곳 확정 (home.md)
-- admin '홈 커뮤니티' 탭·'기출 은행' 독립 탭 승격 (admin.md)
-- admin 의 알약(`border-radius:999px`) — 역할별 모양 한 벌로 교체됨 (admin.md '알약 걷어내기')
-- `rehearsal.html` 카드 숨김 해제 — 코드가 main 에 없어 404 난다(`claude/rehearsal-wip` 먼저 병합) (implementation-status.md)
-- `challenge-express.html`·`challenge-speech.html` 되살리기 — 상세는 voice·expression·spinning·answer·culture 5종뿐 (pages.md)
-- AI킬러 일반 텍스트 응답·함수 모듈 분리 (ai-killer 스펙)
-- AI킬러 규칙 엔진 판정(사전 매칭·어미 반복·밀도 등급) — 판정은 오너 지침 종합 판정 (ai-killer 스펙)
-- 첨삭(polish) 제출 전 프로브 게이트 삭제 (polish.md)
-- 소재 발굴을 답변 저장의 관문으로 만들기·다듬기 버튼을 AI 판정 뒤로 숨기기 (sojae 스펙)
-- admin 소재 문제의 항공사 칸(`#qfAirline`) — 소재 문제는 전 항공사 공통(답변 프로그램 기출 은행의 항공사는 그대로) (admin.md)
-- 연구진 전원=챌린지 코치 전제 문구 — 현형빈은 챌린지 미지도 (pages.md)
-- 답변노트 질문별 묶음 접이·상태 칩(작성 중/완료)·카드 안 접이 4겹 — 문항 묶음 179개 중 2벌 이상 0, 초안 1%(2026-09-23 실측). 단위는 답변 하나 (credits.md '2026-09-23')
+새 규칙은 실제 적용 범위의 문서 한 곳에 기록한다. `AGENTS.md`에는 매 작업에 필요한 핵심과 찾는 경로만 남긴다.

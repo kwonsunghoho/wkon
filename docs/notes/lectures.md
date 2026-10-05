@@ -1,5 +1,10 @@
 # 특강(special_lectures) 시스템 — 상세 기록
 
+## 작업 전 핵심 규칙
+
+- **특강**: 상세는 `lecture.html?id=` 템플릿(특강별 HTML 금지), 잔여석은 DB 트리거
+- **회귀 금지**: 특강 카드 커버 가격 배지·backdrop-filter 유리 패널·클라이언트 잔여석 update (lectures.md)
+
 > 신청 폼 결제 버튼 아래 카카오톡 문의 줄(`.kakao-ask` · 2026-08-09)은 apply.html 과 한 벌 — 규칙은 apply-and-payment.md '결제 버튼 아래 카카오톡 문의' 절.
 
 ## 재학생 무료 참여 (2026-09-09)

@@ -1,5 +1,22 @@
 # 신청·결제·모집일정·오픈 알림 — 상세 기록
 
+## 작업 전 핵심 규칙
+
+- 챌린지 중간 점검·1:1 개별 점검 제공 약속 — 홈페이지 전체에서 삭제(2026-10-05 오너 지시, apply-and-payment.md). 보신각·영합각·스피닝은 최종 점검 피드백을 챌린지 완료 후 후기 작성 시 제공한다. 후기 조건은 FAQ·신청 전 안내·약관에 남기고 상세 카드·진행 단계·코치 소개에서는 생략한다. 실제 제출물 피드백 기능은 유지한다.
+- **신청·결제·모집일정·오픈 알림**: 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로. 취소선 정가 `challenge_list_price` 는 표시 전용(판정은 `MONC.loadChallengePricing()` 한 곳)
+- **회귀 금지**: `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 (apply-and-payment.md)
+- **회귀 금지**: 보증금·환급 워딩(공개 페이지) — PG 심사 거절 사유 (apply-and-payment.md)
+- **회귀 금지**: 모집일정 구글시트 CSV 폴백(`RECRUIT_CSV`) (apply-and-payment.md)
+- **회귀 금지**: `applications` INSERT 정책에서 결제 컬럼 제약 빼기 (apply-and-payment.md)
+- 결제는 **포트원 V2 단일 경로**(간편결제 토스페이·카카오페이 — **상점·채널 키는 `pay-methods.js` 한 곳**, 페이지 하드코딩 금지), 신청·충전·이용권 저장은 **verify-payment Edge Function 경유.** **금액은 서버가 DB 에서 재확인**(`site_config.challenge_price` 등), **지급 대상은 body 가 아니라 JWT.** ⚠️ **DB 폴백 금액은 화면·서버 두 곳(`apply.html` `PRICE` ↔ verify-payment `PRICE_PER_CHALLENGE_FALLBACK`) — 한쪽만 고치지 말 것**(2026-08-02 인상 때 실사고).
+- 결제 후 실패(정원 마감 `MC001`·중복 신청 `MC002`·이용권 중복 등)는 **전액 자동 환불 + HTTP 200**(non-2xx 면 supabase-js 가 본문을 감춰 브라우저가 환불 안내를 못 띄운다). 크레딧 부족·실패도 HTTP 200 + `code`.
+- **미결 결제 기록은 `pay-pending.js` 공용(localStorage)** — 결제창 열기 **전에** add, **확답**(성공·확정 실패)일 때만 drop, 방문마다 조용히 재확인(sessionStorage 단건 보관으로 되돌리면 인앱 복귀 유실 사고 재발). 챌린지·특강 재확인은 `appsRetrySafe()` 가드 필수 — 상세는 apply-and-payment.md '미결 결제 기록'.
+- **지급의 최종 안전망은 웹훅(portone-webhook)** — 브라우저가 영영 안 돌아와도 서버가 지급을 끝낸다. **모든 `requestPayment` 에 주문 맥락 `customData`(`k`=종류 + 대상)를 싣고, 새 결제 흐름엔 웹훅 분기를 더한다.** 통보 본문은 방아쇠일 뿐 — 서버가 포트원 API 재조회로 금액을 DB 와 대조한 뒤에만 지급한다(멱등).
+- **재학생 무료(2026-09-09 오너 지시)**: 명단(`academy_students`)에 있고 **본인인증한** 번호면 챌린지·특강·연구실 자료가 0원이다. 판정·접수는 서버 RPC(`monc_is_student` · `apply_free_challenges`/`apply_free_lecture`/`claim_free_resource`)가 하고 **원장은 `payment_status='free'` 하나**(자동·수동 구분 컬럼 금지). 화면 판정은 `MONC.studentStatus()` 한 곳 — **조회 실패는 '재학생 아님'(유료)**이다. 크레딧 충전은 대상이 아니다. 상세는 apply-and-payment.md '재학생 무료 참여'.
+- 환불(cancel-payment)에서 포트원 취소 성공 + DB 기록 실패는 `ok:true + warning` — 실패로 바꾸면 관리자가 다시 눌러 **이중 환불**이 난다.
+- **돈이 걸린 판정은 전부 DB 가 원장**: 잔여석·중복 신청·세션 상태는 DB 트리거(+`for update`·advisory lock), 크레딧 잔액은 **원장(`credit_ledger`) 합계**(잔액 컬럼 금지). 브라우저 검사·클라이언트 update 로 대체 금지. 브라우저가 보낸 `answerId`·금액·슬롯도 서버가 소유·소속 재확인.
+- **유료 콘텐츠 비공개**: 답변 프로그램 기출은 비공개 `interview_questions` + `ap_program_view()` RPC 만(회원 전체 읽기 `questions` 금지). `program_enrollments` 자가 INSERT 정책 금지(**체험판·무료 등록 없음** — 오너 확정). `airline_profiles`·`ai_killer_terms`·`sojae_playbook` RLS 는 일반 회원에게 닫혀 있다.
+
 ## KPN 테스트 채널 — 서브몰 심사 캡처용 카드 결제 (2026-09-18 오너 승인)
 
 KPN(한국결제네트웍스) 서브몰 심사는 'KPN 결제창 → 하나카드 인증창' 캡처를 요구한다. 라이브 결제는 간편결제(토스·카카오)뿐이라 포트원 **테스트** 채널을 따로 붙였다.
@@ -228,16 +245,14 @@ All "신청하기" CTAs navigate to **`apply.html`** (detail pages → `apply.ht
 - **예외 접수(오너가 한 사람 이름으로 두 자리를 대신 넣어야 할 때)**: service role·콘솔 insert 도 트리거를 통과하지 못한다 → `alter table public.applications disable trigger applications_duplicate;` 로 잠깐 끄고 넣은 뒤 **반드시 다시 켠다**(마이그레이션 파일 하단에 명령 그대로 적혀 있음).
 - 미적용 시 degrade: 회원 사전 검사만 남아 비회원 중복이 통과한다(챌린지·특강 신청 자체는 정상).
 
-## 백엔드 구성 원문(구 CLAUDE.md 'Backend: there is no server')
-
-## Backend: there is no server
+## 백엔드 구성
 
 "Backend" = **Google Apps Script + published Google Sheets** and **Supabase**, called from the browser.
 
 1. **Applications & reviews (legacy Apps Script)** — `APPLICATION_API_URL`. `POST {action:"application"}` **always appends a new row** to the **학생현황** sheet (dup phone irrelevant; phone stored with a leading apostrophe to keep the `0`). `GET ?action=reviews` returns the **후기** sheet. **Owned/edited in Google's console, not this repo** — changes need the owner to redeploy a new version.
 2. **Recruitment dates** — **Supabase `challenge_rounds`(admin '챌린지' 탭에서 CRUD — 구명 '모집일정', 2026-07-30 개편)가 단일 소스.** `recruit.js`가 읽어 모집중/예정/마감 + D-day chips를 그린다. **날짜 폴백은 없다**(2026-08-02 제거) — 미등록 챌린지는 `'none'`(다음 기수 준비 중), 조회 실패는 상태 키 없음('불러오지 못했어요' + 버튼 유지)으로 간다. **⚠️ 구 published Sheet CSV(`RECRUIT_CSV`·`loadRecruitDataFromCsv`)는 2026-07-23 완전 제거 — 구글 시트 폴백도, 하드코딩 날짜 폴백(`data-recruit-*`·`RECRUIT_FALLBACKS`)도 재도입 금지(admin 단일 관리).**
-3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`(구 `news_articles`·`news_scraps` 는 2026-08-28 뉴스 폐지 — news.md). **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
-4. ~~뉴스 수집기 (GitHub Actions)~~ — **2026-08-28 뉴스 기능 전체 폐지로 삭제**(news.md). 그 뒤 브라우저 밖에서 도는 코드는 연구실 미리보기 생성기(`.github/workflows/lab-og.yml` · 2026-09-21 · lab.md) 하나뿐이다 — 결제와 무관하다.
+3. **Supabase** — `supabase-config.js` (`MONC.sb`). Auth/members, `applications`, `reviews`, `site_config`, `page_events`·뉴스 테이블(2026-09-07 부활, news.md). **Tables/RLS/columns are created by the owner in the Supabase console.** Migrations in the repo are the source, but the owner must run each in the SQL Editor before it takes effect; **unapplied migrations degrade gracefully** (features fall back silently).
+4. **브라우저 밖의 GitHub Actions 작업은 둘**이다. 뉴스 수집기(`scripts/fetch-news.mjs` + `.github/workflows/news.yml`)는 2026-09-07 부활했고 3시간마다 실행한다(`docs/notes/news.md`). 연구실 미리보기 생성기(`scripts/lab-og-stubs.mjs` + `.github/workflows/lab-og.yml`)는 1시간마다 공개 목록으로 `r/*.html`을 생성한다(`docs/notes/lab.md`). 워크플로 수정 절차는 `docs/notes/working-rules.md`의 실행 환경 절을 따른다.
 
 ## 2026-08-02 UX 진단 반영 — 모집 상태·결제 폼·결제 복귀
 
