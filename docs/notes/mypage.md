@@ -194,3 +194,7 @@
 - ⚠️ 하네스 생성 시 PowerShell `Get-Content` 는 **`-Encoding UTF8` 필수** — BOM 없는 파일을 ANSI 로 읽어 한글이 통째로 깨진다(2026-07-31 실측).
 - 확인 항목: 가로 오버플로 0 · summary 높이(터치 44+) · 접이 단일 열림 · `#sec-answers` 딥링크 · 결제 칩 색 · done CTA→B/A 접이 열림 · 데스크톱(1280px) 열 620px 중앙·버튼 중앙.
 - 2026-08-20 재검증(제출 카드): `supabase-config.js` 뒤에 스텁 스크립트를 끼운 사본(`__mypage-test.html?fix=ready|notready`)으로 375/320px 실측 — 오버플로 0·버튼 44px·활자 12px+·notready 시 '준비 중' 슬롯·콘솔 에러 0. 스크린샷은 헤드리스 크롬 직접으로는 375 레이아웃이 안 잡혀 **iframe 375px 래퍼**로 찍는다(창 크기만 줄이면 데스크톱 레이아웃이 나온다).
+
+## 신청 내역의 환불 상세 (2026-10-05)
+
+`#sec-apps` 신청 내역 안에 `refund-details.js`가 환불 항목·금액·날짜를 표시한다. 신청 조회는 신규 컬럼 미적용 방어를 위해 `select('*')`. 환불 상세는 본인 소유 신청만 반환하는 `application_refund_history`로 읽는다. 과거 항목은 추정하지 않고, 조회 실패와 미기록을 구분한다. 참가·제출 판정은 기존 규칙을 유지한다. 적용 순서는 apply-and-payment.md '환불 항목 기록'을 따른다.

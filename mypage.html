@@ -313,6 +313,7 @@
       .v2-logout { display: flex; width: auto; min-width: 240px; max-width: 300px; margin: 24px auto 0; }
     }
   </style>
+  <link rel="stylesheet" href="refund-details.css?v=1">
 </head>
 <body data-nav-offset>
   <!-- 페이지 제목 h1 (2026-08-02 D-2) — 이 화면의 시각 제목은 이미지·장식 요소라
@@ -611,6 +612,7 @@
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="refund-details.js?v=1"></script>
   <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
   <script src="pay-pending.js?v=1"></script>
   <!-- 결제수단(포트원 채널) 공용 창구 — 상점·채널 키는 이 파일 한 곳(2026-08-19) -->
@@ -1590,17 +1592,14 @@
       (recs || []).forEach(x => { recMap[x.type] = x.storage_path; });
 
       // 내 신청 내역 (RLS: member_id = 본인)
-      const CH_LABEL_MP = { voice:'보이스', expression:'표현력', spinning:'스피닝', answer:'답변' };
-      // ⚠️ challenges jsonb 에는 챌린지와 특강이 섞여 들어온다 — 특강은 {type:'lecture', lecture_id, name}.
-      const plainLabel = c => {
-        if (!c) return '';
-        if (c.type === 'lecture' || c.lecture_id) return '[특강] ' + (c.name || '특강');
-        return (CH_LABEL_MP[c.challenge] || c.challenge || '') + (c.round ? ' ' + c.round + '기' : '');
-      };
+      // 신청과 환불에 같은 챌린지명·기수·특강 시간대를 표시한다.
+      const plainLabel = MONC_REFUNDS.label;
       const { data: myApps } = await MONC.sb.from('applications')
-        .select('created_at, challenges, total_price, paid, refunded, payment_status')
+        .select('*')
         .eq('member_id', me)
         .order('created_at', { ascending: false });
+
+      await MONC_REFUNDS.load(myApps || []);
 
       // 상태는 환불 > 결제완료 > 입금대기 순으로 한 건당 하나 (간편결제 건은 payment_status 가 소스)
       const stateOf = a =>
@@ -1641,6 +1640,7 @@
           return `<li class="v2-item">
               <div class="v2-pay-top"><span class="v2-pay-t">${esc(names)}</span><span class="v2-chip ${cls}">${label}</span></div>
               <div class="v2-pay-d"><span class="v2-num">${(a.total_price || 0).toLocaleString()}원</span><span class="v2-num">${fmtDot(a.created_at)}</span></div>
+              ${MONC_REFUNDS.history(a)}
             </li>`;
         }).join('');
         document.getElementById('appsCount').textContent = myApps.length + '건';

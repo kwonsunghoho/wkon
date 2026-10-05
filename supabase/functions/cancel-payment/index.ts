@@ -5,12 +5,12 @@
 // 배포: Supabase 콘솔 > Edge Functions > cancel-payment (Verify JWT = ON, 기본값 유지)
 // 필요한 환경변수(Supabase Secrets):
 //   PORTONE_API_SECRET  — verify-payment 와 동일한 포트원 V2 API Secret (이미 등록됨)
-// ⚠️ 배포 전에 migration 20260723120000_payment_refunds.sql 먼저 실행할 것.
+// ⚠️ 기존 환불 테이블은 적용 완료. 이번 배포 전에는 20261005120000_refund_items.sql을 실행한다.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-08-07a'
+const FN_VERSION = '2026-10-05a'
 
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 
@@ -27,11 +27,11 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { applicationId, amount, reason, probe } = await req.json()
+    const { applicationId, amount, reason, itemIndexes, probe } = await req.json()
 
     // 배포 확인용 프로브 — 환불을 건드리지 않고 버전만 돌려준다(anon key 로 호출 가능).
     // admin 확인보다 앞에 둔다: 배포 여부는 로그인 없이도 확인할 수 있어야 한다.
-    if (probe === true) return json({ ok: true, fn: 'cancel-payment', version: FN_VERSION })
+    if (probe === true) return json({ ok: true, fn: 'cancel-payment', version: FN_VERSION, refundItems: true })
 
     const amt = Number(amount)
     if (!applicationId || !Number.isInteger(amt) || amt <= 0) {
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
 
     // 2) 신청 건 조회 + 환불 가능액 검증 (초과 환불 방지 1차 방어; 2차는 포트원이 막음)
     const { data: app, error: appErr } = await supa.from('applications')
-      .select('id, payment_id, paid_amount, refunded_amount, payment_status')
+      .select('*')
       .eq('id', applicationId).single()
     if (appErr || !app) return json({ ok: false, error: 'not_found' }, 404)
     if (!app.payment_id) return json({ ok: false, error: 'not_pg_payment' }, 400)
@@ -61,6 +61,29 @@ Deno.serve(async (req) => {
     if (amt > cancellable) {
       return json({ ok: false, error: 'amount_exceeds', cancellable }, 400)
     }
+
+    // 항목은 브라우저의 이름을 믿지 않고 해당 신청 원본에서 복사한다.
+    const choices = Array.isArray(app.challenges) ? app.challenges : []
+    if (!Array.isArray(itemIndexes) || !itemIndexes.length ||
+        itemIndexes.some((i: unknown) => typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= choices.length) ||
+        new Set(itemIndexes).size !== itemIndexes.length) {
+      return json({ ok: false, error: 'invalid_items', message: '환불할 항목을 다시 선택해 주세요.' }, 400)
+    }
+    if (amt === cancellable && !app.refunded_amount && itemIndexes.length !== choices.length) {
+      return json({ ok: false, error: 'invalid_items', message: '전액 환불은 모든 항목을 선택해 주세요.' }, 400)
+    }
+    const items = itemIndexes.map((i: number) => {
+      const c = choices[i]
+      if (!c || typeof c !== 'object') return null
+      // 표시와 식별에 필요한 값만 저장한다.
+      return c.type === 'lecture' || c.lecture_id
+        ? { type: 'lecture', lecture_id: c.lecture_id, name: c.name, slot: c.slot }
+        : c.challenge ? { challenge: c.challenge, round: c.round } : null
+    })
+    if (items.some((c: unknown) => c === null)) return json({ ok: false, error: 'invalid_items' }, 400)
+    // 마이그레이션 전에는 실제 돈이 움직이기 전에 멈춘다.
+    const { error: readyErr } = await supa.from('refunds').select('items').limit(0)
+    if (readyErr) return json({ ok: false, error: 'not_ready', message: '환불 항목 저장 준비가 필요합니다. 관리자에게 확인해 주세요.' })
 
     // 3) 포트원 결제 취소 (부분취소는 amount 지정)
     const secret = Deno.env.get('PORTONE_API_SECRET')
@@ -95,6 +118,7 @@ Deno.serve(async (req) => {
     const { error: insErr } = await supa.from('refunds').insert({
       application_id: app.id,
       amount: amt,
+      items,
       reason: reason || null,
       portone_response: pay?.cancellation || pay || null,
       created_by: user.id,
