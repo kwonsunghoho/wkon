@@ -1,5 +1,7 @@
 # 챌린지 상세 ①안 '결과 먼저' — 보신각 적용 계획
 
+> 2026-10-05 정정: 이 문서의 중간 점검·1:1 개별 점검 제공 안내는 폐기됐다. 현행 규칙은 `docs/notes/apply-and-payment.md`의 「챌린지 최종 점검 피드백」를 따른다. 아래는 당시 설계 기록이다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `challenge-voice.html` 을 설계서(`docs/superpowers/specs/2026-09-07-challenge-detail-conversion-design.md`)의 ①안 순서로 재배치하고, 그 배치를 다른 상세 넷이 재사용할 수 있게 공용 CSS·공용 JS 슬롯으로 만든다.

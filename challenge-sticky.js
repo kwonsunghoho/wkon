@@ -314,7 +314,7 @@
           '<img src="' + lead.photo + '" alt="" loading="lazy" width="52" height="52"' +
           (lead.photoPos ? ' style="object-position:' + lead.photoPos + '"' : '') + '>' +
           '<span class="who"><span class="nm">' + NAME + '은 ' + lead.name + ' 코치가 맡습니다<i>담당 코치</i></span>' +
-          '<span class="po">' + lead.position + ' · ' + (GUIDE[CH] ? '가이던스 영상' : '1:1 중간 점검 1회') + '</span></span>' +
+          '<span class="po">' + lead.position + (GUIDE[CH] ? ' · 가이던스 영상' : ' · 최종 점검 피드백') + '</span></span>' +
         '</div>' +
         '<a class="coach-more" href="researchers.html">연구진 전체 이력 보기 →</a>';
     }
@@ -327,7 +327,7 @@
         '<p class="lead">' + (lead
           ? NAME + '은 <b>' + lead.name + ' 코치</b>가 맡습니다. ' + (GUIDE[CH]
               ? '코치 가이던스 영상을 따라 2주 동안 매일 답변을 직접 씁니다.'
-              : '2주 동안 미션을 확인하고 피드백을 남겨요.')
+              : '담당 코치가 최종 점검 피드백을 드려요.')
           : '전직 객실승무원과 보이스·스피치 전문 코치진이 함께합니다.') + '</p>' +
         '<ul>' + (lead ? row(lead, true) : '') + rest.map(function (r) { return row(r, false); }).join('') + '</ul>' +
         '<a class="more" href="researchers.html">연구진 전체 이력 보기 →</a>' +

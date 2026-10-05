@@ -125,7 +125,7 @@ MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 �
 | 미니 다듬기(표현 수집) | `quickfix.js`(서버는 ai-killer `mode:'quickfix'`) | 프로브 게이트 유지(구버전이면 3크레딧 오차감), 300자+하루 3회는 한 쌍의 우회 방지 | `docs/notes/quickfix.md` |
 | 로그인·동의 | `login.html`·`onboarding.html`·`supabase-config.js` | 동의 게이트·거부 시 파기 흐름 완화 금지 | `docs/notes/auth-consent.md` |
 | admin | `admin.html` | 좌측 사이드바 셸 + '오늘' 브리핑 — 탭 추가는 그룹부터 정한다(재학생 명단은 '회원 관리' 안 묶음). UI 는 역할별 모양 한 벌 — **알약(`999px`) 금지.** 회원 관리 등급 판정 두 자리(`free_use` 는 delta 0 · '관심'의 신청 이력)를 건드리면 사람이 잘못 보관된다 | `docs/notes/admin.md` |
-| 후기(허브·챌린지·KE20·상담·합격 수기) | `reviews.html`·`reviews-list.html`·`stories.html`·`story.html`·`review-write.html`·`review-rich.js` | 목록은 `?kind=` 한 파일, 0건 종류는 카드를 안 그린다, 상담 후기 실명 미노출. **목록·허브·상세 미리보기·admin 전부 최근 올린 순(`created_at` · 2026-09-27) — '한줄평 먼저'·`review_date` 정렬로 되돌리지 말 것.** 목록의 단 배치는 스크립트(`place()`)가 한다 — CSS `column-count` 로 되돌리면 PC·태블릿에서 예전 후기가 첫 줄에 온다(2026-09-29). 회원 제출 후기는 서버 RPC 가 `visible=false` 로(즉시 공개 금지·보상 없음). **KE20 후기(2026-09-29)는 `?kind=ke20` · 쓰기 `review-write.html?ch=ke20`** — 사이트 결제 상품이 아니라 참가 판정이 없다(로그인 회원 + admin 승인), 글은 `quote` 한 칸에 줄 맨 앞 `[소제목]` 으로 들어가고 읽는 규칙은 `review-rich.js` ↔ 서버 RPC 한 벌(컬럼 추가·'첫마디' 방식 금지). 합격 수기는 잠시 내림(복원 절차는 pages.md) | `docs/notes/pages.md` |
+| 후기(허브·챌린지·KE20·상담·합격 수기) | `reviews.html`·`reviews-list.html`·`stories.html`·`story.html`·`review-write.html`·`review-rich.js` | 목록은 `?kind=` 한 파일, 0건 종류는 카드를 안 그린다, 상담 후기 실명 미노출. **목록·허브·상세 미리보기·admin 전부 최근 올린 순(`created_at` · 2026-09-27) — '한줄평 먼저'·`review_date` 정렬로 되돌리지 말 것.** 목록의 단 배치는 스크립트(`place()`)가 한다 — CSS `column-count` 로 되돌리면 PC·태블릿에서 예전 후기가 첫 줄에 온다(2026-09-29). 회원 제출 후기는 서버 RPC 가 `visible=false` 로(즉시 공개 금지·자동 보상 없음 — 보신각·영합각·스피닝은 완료 후 후기 작성 시 최종 점검 피드백 제공). **KE20 후기(2026-09-29)는 `?kind=ke20` · 쓰기 `review-write.html?ch=ke20`** — 사이트 결제 상품이 아니라 참가 판정이 없다(로그인 회원 + admin 승인), 글은 `quote` 한 칸에 줄 맨 앞 `[소제목]` 으로 들어가고 읽는 규칙은 `review-rich.js` ↔ 서버 RPC 한 벌(컬럼 추가·'첫마디' 방식 금지). 합격 수기는 잠시 내림(복원 절차는 pages.md) | `docs/notes/pages.md` |
 | 1:1 상담·네이버 예약 | `consult.html` | 네이버 예약 주소 정본은 consult.html 한 곳. 진입점 3곳 고정 — 홈 본문·nav 메뉴·플로팅 금지 | `docs/notes/pages.md` |
 | 커뮤니티 오픈챗 모집 카드 | `community-card.js` | 카드는 서가·뉴스·도구 3곳(홈 금지 · 뉴스는 2026-08-28 폐지로 빠졌다 2026-09-07 부활로 복귀), 이 한 파일에서만 수정(세 페이지 `?v=` 동반), 주소·참여코드는 레포 반입 금지(위 '개인정보' 절) | `docs/notes/pages.md` |
 | 기타 페이지(연구진·상세 5종·오디오) | `researchers.html`·`challenge-*.html`·`challenge-detail.css` | 상세 5종 인라인 공통 CSS 는 다섯 파일을 같이 고친다. ①안 '결과 먼저' 배치(2026-09-07 5종 전부 적용)의 스타일과 **활자·폭 한 벌(변수 `--cd-*`, 클래스101·인프런 실측값)**은 `challenge-detail.css` 한 곳 — 인라인·스크립트에 값 복사 금지, 숫자는 실데이터 슬롯만, 승자각·댄특완은 비포/애프터 없이 '결과물 목록'이 증거. **생성 이미지(밴드·3단계·마무리 · 2026-09-18)는 사람 없이, 증거 자리(비포/애프터·후기·코치)엔 금지** — 마무리 사진·문구를 바꾸면 글씨 대비를 다시 잰다 | `docs/notes/pages.md` |
@@ -158,6 +158,8 @@ MONC(몬크 챌린지) — 승무원 준비생 대상 챌린지·면접 준비 �
 - **파일 지도·데이터 모델·화면 흐름·AI 파이프라인·테스트·구현 현황은 `docs/monc-answer-program/`**(구현 상태는 implementation-status.md).
 
 ## 절대 되살리면 안 되는 것(요지)
+
+- 챌린지 중간 점검·1:1 개별 점검 제공 약속 — 홈페이지 전체에서 삭제(2026-10-05 오너 지시, apply-and-payment.md). 보신각·영합각·스피닝은 최종 점검 피드백을 챌린지 완료 후 후기 작성 시 제공한다. 후기 조건은 FAQ·신청 전 안내·약관에 남기고 상세 카드·진행 단계·코치 소개에서는 생략한다. 실제 제출물 피드백 기능은 유지한다.
 
 각 항목의 배경·실측은 괄호의 문서에 있다.
 
