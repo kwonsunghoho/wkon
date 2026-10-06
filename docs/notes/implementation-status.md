@@ -20,6 +20,15 @@
 
 배포 확인은 전부 **anon key 프로브**(결제 생성·DB 쓰기 없음 — 안전). 관리자에게 SQL 을 시키지 말 것.
 
+### 2026-10-06 Storage 제한 복구
+
+- 오너 Pro 결제 후 Auth·Storage API의 402 제한 해제 및 HTTP 200을 확인했다.
+- `lab-storage-cleanup` **`2026-10-06d` 콘솔 배포·anon 프로브 확인**. 일반 anon 실행은 403, service_role 호출만 허용하며 JWT 검증은 켜져 있다. 기본은 미리보기다. 사용 방법과 보존 기준은 lab.md.
+- 기준 `2026-10-04T00:12:07.363Z` 이전 워터마크 사본 **1,278개·2,250MB를 Storage API로 실제 삭제**했다. 삭제 응답 `ok:true, deleted:1278`과 SQL 재조회 `old_watermarks=0`으로 확인했다.
+- 삭제 후: lab-files **24개·51.9MB**(원본·기타 23개 + 최근 사본 1개), recordings **62개·804.1MB**, reviews **140개·6.3MB**, lecture-images **17개·1.0MB**. 합계 약 **863.3MB**. 원본·다른 버킷은 보존했다.
+- **자동 정리 일정은 아직 없다. 무료 전환도 실행하지 않았다.** 이 기록은 수동 정리 완료를 뜻하며 재발 방지 자동화 완료를 뜻하지 않는다.
+- 검증: `node scripts/lab-storage-cleanup-tests.mjs` 통과. 인증 거절·서버 관리자 검증·미리보기 해시 대조·원본/최근 파일 보존·조회 실패 차단을 검사한다. Deno가 없어 별도 `deno check`는 미실행, 운영 함수 실행은 성공했다.
+
 | 함수 | 기록된 상태(2026-07-30) | 프로브 |
 |---|---|---|
 | verify-payment | **`2026-09-18a` 배포 확인(2026-09-18 anon 프로브 실측 — KPN 테스트 채널 게이트 `testGate` · 프로브에 `pgTestOpen`, 이때 `true` — apply-and-payment.md 'KPN 테스트 채널').** 이전 기록: **`2026-08-10b` 배포(2026-08-10 오너 배포 보고 — 이 세션 프록시가 supabase.co 를 막아 프로브 실측은 못 했다).** b 판은 챌린지·특강(applications) 경로에 **payment_id 사전 확인**을 넣었다 — 없으면 같은 결제의 재확인이 중복신청 트리거(MC002)로 떨어져 **정상 결제를 전액 환불**한다. 사전 확인은 특강 비로그인(login_required) 환불 분기보다 앞. **미배포여도 화면은 안전하다** — 챌린지·특강 자가 회복(pay-pending.js)이 프로브로 `2026-08-10b` 이상을 확인한 뒤에만 재확인을 보낸다(크레딧·이용권·자료는 원래 멱등이라 가드 불필요). 앞선 이력: `2026-08-10a` 배포(오너 배포 보고 · 연구실 자료 계정 대조 `wrong_account`) · **`2026-08-07a` 배포 확인(2026-08-07 프로브 실측).** 이 배포에 참가비 폴백 30,000→**33,000** 정정과 `FN_VERSION`·버전 프로브가 같이 올라갔다 — 그전까지는 `site_config` 를 못 읽는 순간 화면 33,000 / 서버 30,000 으로 갈렸다. 앞선 이력: 특강 분기 2026-07-24 · creditPack 2026-07-25 · `programId` 2026-07-30 · `resourceId`(연구실 유료 자료) 2026-08-01 | **버전 프로브(2026-08-07 신설, 이것만 쓰면 된다): `POST {"probe":true}` → `version`·`challengePrice`·`priceFallback`** — 한 번으로 배포 여부·DB 참가비·폴백 일치를 다 본다. `bad_request` 가 오면 구버전이다. 아래는 구버전 분기 판정용: 특강 `{paymentId:'probe', lectureId:'00000000-0000-0000-0000-000000000000', applicant:{name:'x',phone:'0'}}` → **`login_required`=로그인 필수 버전**(2026-08-05 — JWT 확인이 특강 조회보다 먼저라 anon 프로브는 여기서 멈춘다), `lecture_not_found`=그 이전, `bad_request`=특강 이전, 404=미배포. 프로그램 `{paymentId:'probe', programId:'00000000-…-0'}` → `not_authenticated`=신버전. 자료 `{paymentId:'probe', resourceId:'00000000-…-0'}` → `not_authenticated`=신버전 |
