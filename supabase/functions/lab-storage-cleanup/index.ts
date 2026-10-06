@@ -1,13 +1,13 @@
 // 오래된 워터마크 사본만 정리한다. 대시보드의 service_role 호출 전용.
-// 기본은 미리보기이며, 삭제에는 같은 cutoff와 미리보기 digest가 필요하다.
+// 수동은 미리보기 해시를 확인하고, 서버 일정은 고정 48시간 기준으로 정리한다.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const FN_VERSION = "2026-10-06d";
+const FN_VERSION = "2026-10-06e";
 const BUCKET = "lab-files";
 const TWO_DAYS = 48 * 60 * 60 * 1000;
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
-// 단일 파일 시절의 <자료id>.pdf와 현재 <자료id>-<파일id>.pdf만 허용한다.
-const COPY = new RegExp(`^wm/${UUID}/${UUID}(?:-${UUID})?\\.pdf$`, "i");
+// 구형 1·2개 UUID 파일명과 생성별 UUID가 붙은 3개 UUID 파일명만 허용한다.
+const COPY = new RegExp(`^wm/${UUID}/${UUID}(?:-${UUID}){0,2}\\.pdf$`, "i");
 const reply = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { "Content-Type": "application/json" },
 });
@@ -58,14 +58,36 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return reply({ ok: false, code: "post_required" }, 405);
   let deleted = 0;
+  let db, runId;
+  const scheduled = body.scheduled === true;
+  const executing = scheduled || body.execute === true;
+  const finish = async (result, status = 200) => {
+    if (runId) {
+      const { error } = await db.from("lab_storage_cleanup_runs").update({
+        finished_at: new Date().toISOString(), status: result.ok ? "succeeded" : "failed",
+        deleted, candidates: result.count ?? 0, candidate_mb: result.mb ?? 0,
+        code: result.code ?? null,
+      }).eq("id", runId);
+      if (error) return reply({ ...result, ok: false, code: "run_log_failed" }, 500);
+    }
+    return reply(result, status);
+  };
   try {
-    const cutoff = body.cutoff ? Date.parse(body.cutoff) : Date.now() - TWO_DAYS;
+    const cutoff = !scheduled && body.cutoff ? Date.parse(body.cutoff) : Date.now() - TWO_DAYS;
     if (!Number.isFinite(cutoff) || cutoff > Date.now() - TWO_DAYS) {
       return reply({ ok: false, code: "cutoff_must_be_at_least_two_days_old" }, 400);
     }
-    const db = createClient(Deno.env.get("SUPABASE_URL"), serviceKey, {
+    db = createClient(Deno.env.get("SUPABASE_URL"), serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    if (executing) {
+      const { data, error } = await db.from("lab_storage_cleanup_runs").insert({
+        mode: scheduled ? "scheduled" : "manual", cutoff: new Date(cutoff).toISOString(),
+        version: FN_VERSION, status: "running",
+      }).select("id").single();
+      if (error || !data?.id) return reply({ ok: false, code: "run_log_unavailable" }, 500);
+      runId = data.id;
+    }
     const originals = new Set((await Promise.all([
       allRows(db, "lab_resources"), allRows(db, "lab_resource_files"),
     ])).flat().map(row => row.storage_path).filter(Boolean));
@@ -97,21 +119,21 @@ Deno.serve(async (req) => {
       count: candidates.length, mb: Math.round(candidates.reduce((n, f) => n + f.bytes, 0) / 104857.6) / 10,
       recent, protected: protectedCount, digest,
     };
-    if (body.execute !== true) return reply({ ok: true, dryRun: true, ...result });
-    if (body.digest !== digest || body.expectedCount !== candidates.length || !body.cutoff) {
-      return reply({ ok: false, code: "preview_changed", ...result }, 409);
+    if (!executing) return reply({ ok: true, dryRun: true, ...result });
+    if (!scheduled && (body.digest !== digest || body.expectedCount !== candidates.length || !body.cutoff)) {
+      return finish({ ok: false, code: "preview_changed", ...result }, 409);
     }
     // storage.objects 직접 DELETE 금지. Storage API로 파일 실체까지 삭제한다.
     for (let i = 0; i < candidates.length; i += 100) {
       const batch = candidates.slice(i, i + 100).map(file => file.path);
       const { data, error } = await storage.remove(batch);
       if (error || !Array.isArray(data) || data.length !== batch.length) {
-        return reply({ ok: false, code: "delete_incomplete", deleted, ...result }, 500);
+        return finish({ ok: false, code: "delete_incomplete", deleted, ...result }, 500);
       }
       deleted += data.length;
     }
-    return reply({ ok: true, dryRun: false, deleted, ...result });
+    return finish({ ok: true, dryRun: false, deleted, ...result });
   } catch {
-    return reply({ ok: false, code: "cleanup_failed", deleted }, 500);
+    return finish({ ok: false, code: "cleanup_failed", deleted }, 500);
   }
 });

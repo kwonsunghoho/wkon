@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-let handler, removed, failLookup, files;
+let handler, removed, failLookup, files, failLog = false;
+const runLogs = [];
 const uid = '11111111-1111-1111-1111-111111111111';
 const rid = '22222222-2222-2222-2222-222222222222';
 const fid = '33333333-3333-3333-3333-333333333333';
@@ -12,7 +13,13 @@ const old = { id: 'object-1', name: `${rid}-${fid}.pdf`, updated_at: '2026-01-01
 let originalPaths = [];
 globalThis.Deno = { env: { get: k => k === 'SUPABASE_SERVICE_ROLE_KEY' ? 'secret' : 'https://example.invalid' }, serve: f => { handler = f; } };
 globalThis.__cleanupClient = {
-  from: () => ({ select: () => ({ order: () => ({ range: async () => ({
+  from: table => table === 'lab_storage_cleanup_runs' ? {
+    insert: row => ({ select: () => ({ single: async () => {
+      if (failLog) return { data: null, error: {} };
+      runLogs.push(row); return { data: { id: String(runLogs.length) }, error: null };
+    } }) }),
+    update: row => ({ eq: async (_, id) => { Object.assign(runLogs[Number(id)-1], row); return { error: null }; } }),
+  } : ({ select: () => ({ order: () => ({ range: async () => ({
     data: originalPaths.map(storage_path => ({ storage_path })), error: failLookup ? {} : null,
   }) }) }) }),
   storage: { from: bucket => {
@@ -31,7 +38,7 @@ async function call(body, token = 'secret') {
   return { status: r.status, body: await r.json() };
 }
 removed = []; files = [old];
-assert.equal((await call({ probe: true }, 'anon')).body.version, '2026-10-06d');
+assert.equal((await call({ probe: true }, 'anon')).body.version, '2026-10-06e');
 assert.equal((await call({ execute: true }, 'anon')).status, 403);
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, options) => {
@@ -61,4 +68,16 @@ assert.equal((await call({ cutoff })).body.count, 1);
 failLookup = true;
 assert.equal((await call({ execute: true, cutoff, digest: preview.digest, expectedCount: 1 })).status, 500);
 assert.equal(removed.length, 0);
-console.log('통과: 인증, 프로브, 보관 기간, 미리보기, 변경 감지, 원본·최근 파일 보존, 조회 실패 시 삭제 차단');
+failLookup = false;
+files = [old, { ...old, id: 'recent', name: `${rid}-${fid}-${uid}.pdf`, updated_at: new Date().toISOString() }];
+assert.equal((await call({ scheduled: true }, 'anon')).status, 403);
+let scheduled = await call({ scheduled: true, cutoff: '2099-01-01T00:00:00Z' });
+assert.equal(scheduled.body.deleted, 1);
+assert.deepEqual(removed, [path]);
+assert.equal(runLogs.at(-1).status, 'succeeded');
+assert.equal(runLogs.at(-1).mode, 'scheduled');
+assert.ok(Date.parse(scheduled.body.cutoff) <= Date.now() - 48 * 3600000);
+removed = []; failLog = true;
+assert.equal((await call({ scheduled: true })).body.code, 'run_log_unavailable');
+assert.equal(removed.length, 0);
+console.log('통과: 관리자 인증·예약 실행·48시간 고정·기존/신규 파일명·원본/최근 파일 보존·미리보기·실행 기록·실패 시 삭제 차단');

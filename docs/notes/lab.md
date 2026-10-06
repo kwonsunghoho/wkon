@@ -178,10 +178,10 @@
 - 파일로 가는 유일한 문은 **`lab-file` Edge Function** 이 발급하는 **60초 서명 URL**.
 - `lab_resources` 본문에는 **RLS 정책을 하나도 만들지 않는다**(비밀번호 해시·경로가 그 안에 있다). 정책을 추가하지 말 것.
 - **비밀번호 대조는 `lab_check_password()` — service_role 전용 grant.** 회원에게 주면 브라우저에서 맞을 때까지 시도할 수 있다. 연속 실패 5회면 10분 잠금(`lab_downloads.kind='fail'` 로 센다).
-- **워터마크는 PDF 만.** pdf-lib 기본 폰트가 한글을 못 그려 이메일·회원 id 앞 8자·날짜만 ASCII 로 찍는다(한글 이름은 폰트 임베드가 필요 — 2단계). 원본은 건드리지 않고 `wm/<uid>/<resid>.pdf` 사본을 만들어 그 사본을 내준다. 사본 생성이 실패하면 원본을 내준다(열람을 막지 않는다).
+- **워터마크는 PDF 만.** pdf-lib 기본 폰트가 한글을 못 그려 이메일·회원 id 앞 8자·날짜만 ASCII 로 찍는다(한글 이름은 폰트 임베드가 필요 — 2단계). 원본은 건드리지 않고 `wm/<uid>/<resid>-<fileid>-<생성 UUID>.pdf` 사본을 만들어 그 사본을 내준다. 사본 생성이 실패하면 원본을 내준다(열람을 막지 않는다).
 - **열람 전용(`delivery='view'`)도 완벽한 차단은 아니다.** 브라우저가 파일을 받아야 보여주므로 저장 자체를 원천 차단할 수는 없다 — 워터마크가 실질적 억제 장치다. 이 한계를 오너에게 숨기지 말 것.
 - 모든 열람·다운로드·비밀번호 실패는 `lab_downloads` 에 남는다(유출 추적 근거).
-- **워터마크 사본 정리(2026-10-06)**: `lab-storage-cleanup`은 `lab-files/wm/<회원 UUID>/<자료 UUID>[-<파일 UUID>].pdf`만 대상으로, 최종 수정 후 최소 48시간이 지난 사본을 Storage API로 삭제한다. 원본으로 등록된 경로(`lab_resources`·`lab_resource_files`)와 최근 파일은 보존한다. `storage.objects`를 SQL로 직접 삭제하지 않는다. 기본 호출은 미리보기이며, 실행에는 미리보기의 `cutoff`·`digest`·`expectedCount`와 `execute:true`가 필요하다. service_role만 실행할 수 있고 JWT 검증도 유지한다. **현재 수동 실행 도구이며 자동 정리 일정은 없다.**
+- **워터마크 사본 정리(2026-10-06)**: `lab-storage-cleanup`은 `lab-files/wm/<회원 UUID>/<자료 UUID>[-<파일 UUID>][-<생성 UUID>].pdf`만 대상으로, 최종 수정 후 최소 48시간이 지난 사본을 Storage API로 삭제한다. 원본으로 등록된 경로(`lab_resources`·`lab_resource_files`)와 최근 파일은 보존한다. `storage.objects`를 SQL로 직접 삭제하지 않는다. 기본 호출은 미리보기이며, 실행에는 미리보기의 `cutoff`·`digest`·`expectedCount`와 `execute:true`가 필요하다. service_role만 실행할 수 있고 JWT 검증도 유지한다. **서버 일정 `lab-watermark-cleanup-daily`가 매일 한국 시간 04:00(UTC 19:00)에 실행**한다. 예약 호출은 `scheduled:true`이며 보관 기준을 서버가 48시간으로 고정한다. 새 사본은 생성마다 경로가 달라 정리와 동시 열람이 충돌하지 않는다. 실행 결과는 회원에게 닫힌 `lab_storage_cleanup_runs`에 30일 보관한다. 호출 키는 Supabase Vault에만 있고 SQL·레포에는 없다. 중지·재설정은 `20261006020000_lab_storage_cleanup_schedule.sql`을 따른다. PC·Codex 실행 여부와 무관하게 작동한다.
 - 숫자 연결: `lab_shelf_counts()` 가 허브 목차 4줄·원장 현황 스트립을 채운다(2026-08-01 연결 완료 — 예시 foot-note 는 그때 걷어냈다).
 
 **⚠️ 관리자는 service_role 이 아니다.** admin.html 의 관리자도 그냥 로그인 사용자라, 정책을 하나도 두지 않은 첫 마이그레이션만으로는 **자료를 올릴 수조차 없다.** `20260801130000` 이 `is_admin()` 에게만 문을 연다(자료 전권 · 열람 기록 조회 · `lab-files` 버킷 · `lab_set_password` 실행). **`authenticated` 전체에 여는 정책을 만들지 말 것** — `password_hash`·`storage_path` 가 노출된다. `lab_check_password` 는 관리자에게도 주지 않는다(브라우저에서 부를 수 있으면 시도 제한이 무의미).

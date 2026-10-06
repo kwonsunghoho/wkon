@@ -18,8 +18,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb, degrees } from "npm:pdf-lib@1.17.1";
 
-const FN_VERSION = "2026-08-10a";
-const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid", "multi_file", "admin_free"];
+const FN_VERSION = "2026-10-06a";
+const FN_FEATURES = ["signed_url", "password", "watermark", "view_mode", "audit", "external_url", "paid", "multi_file", "admin_free", "immutable_watermark"];
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -292,10 +292,11 @@ Deno.serve(async (req) => {
       }
       try {
         const stamped = await stampPdf(new Uint8Array(await file.arrayBuffer()), markText(user.email ?? "", user.id));
-        // 사본은 회원별·파일별 임시 경로에 둔다. 같은 경로를 재사용해 쌓이지 않게 한다.
-        signPath = `wm/${user.id}/${res.id}-${picked.id}.pdf`;
+        // 생성마다 새 경로를 쓴다. 오래된 사본 정리와 동시 열람이 겹쳐도 새 파일은 보존된다.
+        // 48시간 지난 사본은 lab-storage-cleanup의 서버 일정으로 정리한다.
+        signPath = `wm/${user.id}/${res.id}-${picked.id}-${crypto.randomUUID()}.pdf`;
         const { error: upErr } = await admin.storage.from(BUCKET)
-          .upload(signPath, stamped, { contentType: "application/pdf", upsert: true });
+          .upload(signPath, stamped, { contentType: "application/pdf", upsert: false });
         if (upErr) signPath = picked.storage_path;   // 사본 실패 시 원본으로 — 열람은 막지 않는다
       } catch (_e) {
         signPath = picked.storage_path;              // 손상·암호화 PDF 등
