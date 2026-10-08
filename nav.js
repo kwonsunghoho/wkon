@@ -84,11 +84,11 @@
      하나뿐이었다. 그 카드는 로드 실패 시 hub.innerHTML='' 로 비우기 때문에, 한 번
      실패하면 세 목록에 닿을 방법이 사라진다. 승준노트(6)·챌린지(4)·연구실(2)은
      드롭다운이 있는데 3갈래인 후기만 없던 자리다.
-     ⚠️ 목록은 reviews.html 허브 카드와 같은 세 갈래를 유지한다 — 한쪽만 늘리지 말 것. */
+     ⚠️ 목록은 reviews.html 허브 카드와 같은 공개 갈래를 유지한다 — 한쪽만 늘리지 말 것. */
   var REVIEW_HUB = 'reviews.html';
   var REVIEW_SUB = [
     ['reviews-list.html?kind=challenge', '챌린지 후기', '2주를 마친 학생들의 기록'],
-    ['reviews-list.html?kind=consult', '상담 후기', '1:1 상담을 받아 본 이야기']
+    ['reviews-list.html?kind=ke20', '수업 후기', '수업에 참여한 분들이 직접 남긴 후기']
     /* ⚠️ 합격 수기 잠시 내림(2026-08-16 오너 지시 "상담 후기 먼저 채워넣고 그다음 오픈").
        '허브 카드와 같은 세 갈래' 규칙은 양쪽을 같이 줄여 유지한다 — reviews.html 의
        STORIES_OPEN·stories.html/story.html 리다이렉트와 한 벌(docs/notes/pages.md 참조).
@@ -153,12 +153,8 @@
       });
     });
   });
-  /* 메뉴에는 없지만 화면은 있는 갈래 — KE20 후기(2026-09-29).
-     KE20 후기는 공개된 글이 아직 0건일 수 있어 메뉴 줄을 넣지 않았다('0건인 종류는 안 그린다' —
-     허브 카드도 0건이면 숨는다. 지금 줄을 넣으면 빈 목록으로 가는 메뉴가 된다). 그런데 등록을 안 하면
-     `?kind=ke20` 이 '모르는 값'으로 읽혀 **챌린지 후기 줄에 현재 표시가 붙는다.** 아는 값으로만 올려 둔다.
-     ⚠️ KE20 후기가 공개되면 REVIEW_SUB 에 줄을 넣고 이 줄은 지운다(docs/notes/pages.md 'KE20 후기'). */
-  (QUERY_VALUES['reviews-list.html|kind'] = QUERY_VALUES['reviews-list.html|kind'] || []).push('ke20');
+  /* 상담 후기는 메뉴에서 숨겼지만 기존 주소의 현재 표시 판정은 유지한다. */
+  (QUERY_VALUES['reviews-list.html|kind'] = QUERY_VALUES['reviews-list.html|kind'] || []).push('consult');
   var hereQuery = new URLSearchParams(location.search);
 
   function esc(s) {
