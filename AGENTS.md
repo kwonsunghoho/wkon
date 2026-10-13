@@ -36,7 +36,7 @@ MONC(몬크 챌린지) 작업의 공통 지침. 과거 문서의 `CLAUDE.md`는 
 
 | 작업 영역 / 파일 | 먼저 읽을 문서 |
 |---|---|
-| 홈·챌린지 허브: `index.*`, `challenges.html`, `blind-quiz.js` | `docs/notes/home.md` |
+| 홈·챌린지 허브: `index.*`, `community-home.*`, `challenges.html`, `blind-quiz.js` | `docs/notes/home.md` |
 | 공용 메뉴: `nav.js`, `nav.css` | `docs/notes/nav.md` |
 | 페이지 공통: `inapp.js`, `scroll-keep.js`, 메타·제목 | `docs/notes/page-common.md` |
 | 신청·결제·환불·모집: `apply.html`, `recruit.js`, `waitlist.js`, `pay-methods.js`, `pay-pending.js`, `refund-details.*`, verify/cancel-payment, portone-webhook | `docs/notes/apply-and-payment.md` |

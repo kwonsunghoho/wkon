@@ -49,6 +49,15 @@ await ok('게시글 공개 검색·댓글 검색과 타인 수정 차단',async(
  assert.equal((await read('thread',{id:post})).item.comments.length,1);
  assert.ok((await member(ids.a,'notices')).items.some(v=>v.kind==='thread'));
 });
+await ok('게시판 주제를 글 종류와 별도로 저장·검색',async()=>{
+ const id=(await member(ids.a,'post-save',{topic:'hair',category:'question',title:'헤메 예약 질문',body:'면접일 예약 시간을 질문합니다.'})).id;
+ assert.equal((await read('thread',{id})).item.topic,'hair');
+ assert.ok((await read('posts',{topic:'hair'})).items.every(p=>p.topic==='hair'));
+ assert.ok(!(await read('posts',{topic:'prep'})).items.some(p=>p.id===id));
+ await member(ids.a,'post-save',{id,topic:'free',category:'info',title:'예약 확인 안내',body:'예약 전 확인한 정보를 공유합니다.'});
+ assert.equal((await read('thread',{id})).item.topic,'free');
+ await denied(()=>member(ids.a,'post-save',{topic:'invalid',category:'info',title:'없는 주제',body:'허용한 게시판만 저장되어야 합니다.'}),'check constraint');
+});
 await ok('인증 원본은 서비스 함수만 접근·관리자 심사만 승인',async()=>{
  await db.exec('reset role');
  asset=(await db.query('select public.community_asset_create($1,$2,$3,$4,$5,$6,$7) id',[ids.b,'proof','테스트 인증 원본',ids.b+'/11111111-1111-4111-8111-111111111111.pdf','application/pdf',100,'private'])).rows[0].id;

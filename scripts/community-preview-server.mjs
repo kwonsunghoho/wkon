@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const port=Number(process.argv.includes('--port')?process.argv[process.argv.indexOf('--port')+1]:5518);
 const deps=process.argv[process.argv.indexOf('--deps')+1],source=process.argv[process.argv.indexOf('--source')+1];
 if(!deps||!source)throw new Error('--deps, --source 경로가 필요합니다.');
 const {PGlite}=await import(pathToFileURL(path.resolve(deps,'node_modules/@electric-sql/pglite/dist/index.js')));
@@ -42,7 +43,7 @@ await rpc('admin','community_admin','proof-decide',{id:ownerProof,decision:'appr
 await rpc('admin','community_admin','assessment-save',{profile_id:profiles.owner.id,level:2,skills:['basic','voice'],method:'class',date:'2026-10-13'});
 for(const p of [
  {category:'question',title:'지원서 경력, 오래된 아르바이트도 적으시나요?',body:'공고에는 최근 경력을 중심으로 작성하라고 되어 있네요. 여러분은 어떤 기준으로 정리하고 계신가요?',airline:'국내항공',stage:'지원서'},
- {category:'info',title:'헤메&샵 정보 같이 정리해요',body:'면접일 예약할 때 소요 시간과 이동 거리를 같이 확인하면 좋겠어요. 직접 이용한 후기는 댓글로 남겨 주세요.'},
+ {topic:'hair',category:'info',title:'헤메&샵 정보 같이 정리해요',body:'면접일 예약할 때 소요 시간과 이동 거리를 같이 확인하면 좋겠어요. 직접 이용한 후기는 댓글로 남겨 주세요.'},
  {category:'free',title:'면접 준비하다가 지칠 때 어떻게 쉬세요?',body:'이번 주는 잠깐 쉬고 다시 답변을 정리하려고요. 준비하는 분들과 이야기 나누고 싶어요.'},
  {category:'question',title:'영상면접에서 시선 처리 어떻게 하시나요?',body:'카메라를 보는 것과 화면을 보는 것 사이에서 시선이 자꾸 흔들리네요. 같이 경험을 나눠 주세요.',airline:'국내항공',stage:'영상면접'},
  {category:'info',title:'스터디룸 예약 전 확인할 것',body:'인원, 거울, 소음, 촬영 가능 여부를 미리 확인하면 모임 진행이 편해집니다.'}
@@ -63,19 +64,28 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.webp
 const json=(res,v)=>{res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(v));};
 const server=http.createServer(async(req,res)=>{try{
   const url=new URL(req.url,'http://127.0.0.1');
-  if(url.pathname==='/board.html'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(await fs.readFile(path.join(root,'scripts/community-preview-board.html'),'utf8'));return;}
+  if(url.pathname==='/board.html'||url.pathname==='/selected.html'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(await fs.readFile(path.join(root,'scripts/'+(url.pathname==='/selected.html'?'community-home-preview.html':'community-preview-board.html')),'utf8'));return;}
   if(url.pathname==='/__api/rpc') {const chunks=[];for await(const c of req){chunks.push(c);if(Buffer.concat(chunks).length>100000)throw new Error('요청 크기');}const data=JSON.parse(Buffer.concat(chunks));if(!['community_read','community_member','community_admin'].includes(data.fn))throw new Error('함수 이름');try{const r=await lock(()=>rpc(data.who,data.fn,data.p_action,data.p_data));json(res,{data:r,error:null});}catch(e){json(res,{data:null,error:{message:e.message,code:e.code}});}return;}
   if(url.pathname==='/__api/file') {const request=new Request(url,{method:'POST',headers:req.headers,body:req,duplex:'half'}),isForm=req.headers['content-type']?.includes('multipart/form-data');const form=isForm?await request.formData():null,data=form?Object.fromEntries(form):await request.json(),who=url.searchParams.get('who');try{const result=await lock(async()=>{
     if(!ids[who])throw new Error('community:login_required');
     if(data.action==='upload'){const b=Buffer.from(await form.get('file').arrayBuffer()),kind=data.kind,extension={proof:'pdf',text:'txt',audio:'mp3',video:'mp4'}[kind];const p=ids[who]+'/'+crypto.randomUUID()+'.'+extension;const id=(await db.query('select public.community_asset_create($1,$2,$3,$4,$5,$6,$7) id',[ids[who],kind,data.title,p,form.get('file').type||'text/plain',b.length,data.scope])).rows[0].id;files.set(p,b);return{ok:true,id};}
     const a=(await db.query('select public.community_asset_access($1,$2,$3) item',[ids[who],data.id,data.action==='delete'])).rows[0].item;
     if(data.action==='delete'){files.delete(a.path);await db.query('select public.community_asset_mark_deleted($1)',[data.id]);return{ok:true};}
-    const token=crypto.randomUUID();downloads.set(token,{path:a.path,until:Date.now()+60000});return{ok:true,url:'http://127.0.0.1:5518/__file/'+token,mime:a.mime,kind:a.kind,title:a.title};
+    const token=crypto.randomUUID();downloads.set(token,{path:a.path,until:Date.now()+60000});return{ok:true,url:'http://127.0.0.1:'+port+'/__file/'+token,mime:a.mime,kind:a.kind,title:a.title};
   });json(res,{data:result,error:null});}catch(e){json(res,{data:{ok:false,code:e.message},error:null});}return;}
   if(url.pathname.startsWith('/__file/')){const d=downloads.get(url.pathname.split('/').pop());if(!d||d.until<Date.now()||!files.has(d.path)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});res.end(files.get(d.path));return;}
-  if(url.pathname==='/'||url.pathname==='/community.html') {const html=(await fs.readFile(path.join(root,'community.html'),'utf8')).replace(/<script[^>]+src="(?:https:\/\/cdn[^\"]+|supabase-config\.js)"[^>]*><\/script>/g,'').replace('<body>','<body>'+stub+'<div style="position:fixed;bottom:0;right:0;font:12px sans-serif;color:#545c68;background:white;z-index:9999;padding:4px">로컬 확인 · 가상 데이터</div>');res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
+  if(url.pathname==='/'||url.pathname==='/index.html') {
+    const original=await fs.readFile(path.join(root,'index.html'),'utf8');
+    const blocks=Array.from(original.matchAll(/<script(?:\s[^>]*)?>([^]*?)<\/script>/g)).map(x=>x[1]);
+    const visual=blocks.filter(x=>x.includes('히어로 — MONC 조립 애니메이션')||x.includes("bar.classList.add('is-intro')")).join('\n');
+    if(!visual||/fetch\(|sendBeacon\(|MONC\.sb|sb\.from/.test(visual))throw new Error('시각 스크립트 확인');
+    let html=original.replace(/<script\b[^>]*>[^]*?<\/script>/g,'');
+    html=html.replace('</head>','<meta name="robots" content="noindex,nofollow"><style>.reveal{opacity:1!important;transform:none!important}</style><script src="nav.js" defer></script><script src="community-home.js" defer></script></head>').replace('<body>','<body>'+stub).replace('</body>','<script>'+visual+'</script></body>');
+    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;
+  }
+  if(url.pathname==='/community.html') {const html=(await fs.readFile(path.join(root,'community.html'),'utf8')).replace(/<script[^>]+src="(?:https:\/\/cdn[^\"]+|supabase-config\.js)"[^>]*><\/script>/g,'').replace('<body>','<body>'+stub);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
   const name=decodeURIComponent(url.pathname).slice(1);if(name.includes('..')||name.includes('\\'))throw new Error('경로');
-  const local=['community.js','community.css','nav.js'];const shared=['tokens.css','nav.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
+  const local=['community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
   const p=path.join(local.includes(name)?root:source,name);const content=await fs.readFile(p);res.writeHead(200,{'Content-Type':mime[path.extname(p)]||'application/octet-stream'});res.end(content);
 }catch(e){res.writeHead(500);res.end('로컬 확인 서버 오류');}});
-const downloads=new Map();server.listen(5518,'127.0.0.1',()=>process.stdout.write('운영 호출이 차단된 확인 화면: http://127.0.0.1:5518/community.html\n'));
+const downloads=new Map();server.listen(port,'127.0.0.1',()=>process.stdout.write('운영 호출이 차단된 확인 화면: http://127.0.0.1:'+port+'/selected.html\n'));

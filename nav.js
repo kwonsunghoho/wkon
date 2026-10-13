@@ -359,6 +359,7 @@
           '</li>' +
         '</ul>' +
         '<div class="nav-right">' + navRightHtml(authHint) + '</div>' +
+        '<a class="nav-community-quick" href="community.html"' + (section === 'community' ? ' aria-current="page"' : '') + '>커뮤니티</a>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
       '</div>' +
     '</nav>' +

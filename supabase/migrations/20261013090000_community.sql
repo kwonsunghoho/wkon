@@ -19,6 +19,7 @@ create unique index community_nickname_unique on monc_community.profiles(lower(n
 create table monc_community.posts (
   id uuid primary key default gen_random_uuid(), user_id uuid references auth.users(id) on delete set null,
   nickname text not null, category text not null check(category in ('question','info','free')),
+  topic text not null default 'prep' check(topic in ('prep','hair','free')),
   title text not null check(char_length(title) between 2 and 100), body text not null check(char_length(body) between 2 and 10000),
   airline text not null default '' check(char_length(airline)<=40), recruit_year integer check(recruit_year between 2000 and 2100),
   stage text not null default '' check(char_length(stage)<=50), source_url text not null default '' check(char_length(source_url)<=2000 and (source_url='' or source_url ~ '^https://[^[:space:]<>]+$')),
@@ -193,10 +194,11 @@ begin
   pat:='%'||replace(replace(replace(lower(q),'\','\\'),'%','\%'),'_','\_')||'%';
   if p_action='posts' then
     select coalesce(jsonb_agg(to_jsonb(t) order by t.created_at desc,t.id desc),'[]'::jsonb) into items from (
-      select p.id,p.category,p.title,left(p.body,180) excerpt,p.nickname,p.airline,p.recruit_year,p.stage,p.created_at,p.updated_at,
+      select p.id,p.category,p.topic,p.title,left(p.body,180) excerpt,p.nickname,p.airline,p.recruit_year,p.stage,p.created_at,p.updated_at,
       (select count(*) from monc_community.comments c where c.post_id=p.id and c.status='published') comments
       from monc_community.posts p where p.status='published'
       and (coalesce(p_data->>'category','')='' or p.category=p_data->>'category')
+      and (coalesce(p_data->>'topic','')='' or p.topic=p_data->>'topic')
       and (coalesce(p_data->>'airline','')='' or p.airline=p_data->>'airline')
       and (before_time is null or (p.created_at,p.id)<(before_time,coalesce(before_id,'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))
       and (q='' or lower(p.title||' '||p.body) like pat or exists(select 1 from monc_community.comments c where c.post_id=p.id and c.status='published' and lower(c.body) like pat))
@@ -204,7 +206,7 @@ begin
     ) t;
     return jsonb_build_object('ok',true,'items',items,'limit',lim);
   elsif p_action='thread' then
-    select jsonb_build_object('id',p.id,'category',p.category,'title',p.title,'body',p.body,'nickname',p.nickname,'airline',p.airline,'year',p.recruit_year,'stage',p.stage,'source_url',p.source_url,'created_at',p.created_at,
+    select jsonb_build_object('id',p.id,'category',p.category,'topic',p.topic,'title',p.title,'body',p.body,'nickname',p.nickname,'airline',p.airline,'year',p.recruit_year,'stage',p.stage,'source_url',p.source_url,'created_at',p.created_at,
       'comments',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'body',case when c.status='deleted' then '삭제된 댓글입니다.' else c.body end,'nickname',c.nickname,'parent_id',c.parent_id,'status',c.status,'created_at',c.created_at) order by c.created_at,c.id) from monc_community.comments c where c.post_id=p.id and c.status<>'hidden'),'[]'::jsonb)) into items
       from monc_community.posts p where p.id=target and p.status='published';
     return jsonb_build_object('ok',true,'item',items);
@@ -274,10 +276,10 @@ begin
   if p_action in ('post-save','comment-save','study-save','apply','proof-submit','report') then perform monc_community.rate(u,p_action,case when p_action='post-save' then 15 else 40 end); end if;
   if p_action='post-save' then
     if target is null then
-      insert into monc_community.posts(user_id,nickname,category,title,body,airline,recruit_year,stage,source_url)
-      values(u,profile_row.nickname,p_data->>'category',trim(p_data->>'title'),trim(p_data->>'body'),trim(coalesce(p_data->>'airline','')),(p_data->>'year')::integer,trim(coalesce(p_data->>'stage','')),trim(coalesce(p_data->>'source_url',''))) returning id into target;
+      insert into monc_community.posts(user_id,nickname,category,topic,title,body,airline,recruit_year,stage,source_url)
+      values(u,profile_row.nickname,p_data->>'category',coalesce(nullif(p_data->>'topic',''),case when p_data->>'category'='free' then 'free' else 'prep' end),trim(p_data->>'title'),trim(p_data->>'body'),trim(coalesce(p_data->>'airline','')),(p_data->>'year')::integer,trim(coalesce(p_data->>'stage','')),trim(coalesce(p_data->>'source_url',''))) returning id into target;
     else
-      update monc_community.posts set title=trim(p_data->>'title'),body=trim(p_data->>'body'),category=p_data->>'category',airline=trim(coalesce(p_data->>'airline','')),recruit_year=(p_data->>'year')::integer,stage=trim(coalesce(p_data->>'stage','')),source_url=trim(coalesce(p_data->>'source_url','')),updated_at=now() where id=target and user_id=u and status<>'deleted';
+      update monc_community.posts set title=trim(p_data->>'title'),body=trim(p_data->>'body'),category=p_data->>'category',topic=coalesce(nullif(p_data->>'topic',''),topic),airline=trim(coalesce(p_data->>'airline','')),recruit_year=(p_data->>'year')::integer,stage=trim(coalesce(p_data->>'stage','')),source_url=trim(coalesce(p_data->>'source_url','')),updated_at=now() where id=target and user_id=u and status<>'deleted';
       if not found then raise exception 'community:forbidden'; end if;
     end if;
     return jsonb_build_object('ok',true,'id',target);
