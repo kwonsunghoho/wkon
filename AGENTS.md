@@ -52,6 +52,7 @@ MONC(몬크 챌린지) 작업의 공통 지침. 과거 문서의 `CLAUDE.md`는 
 | 마이페이지·제출: `mypage.html`, `submit.html`, `round-gate.js` | `docs/notes/mypage.md` |
 | 미니 다듬기: `quickfix.js`, ai-killer의 quickfix 모드 | `docs/notes/quickfix.md` |
 | 로그인·동의·본인인증·프로필: `login.html`, `onboarding.html`, `supabase-config.js` | `docs/notes/auth-consent.md` |
+| 게시판·스터디·스터디 프로필: `community.html`, `community.js`, `community.css`, community-file 함수 | `docs/notes/community.md` |
 | 관리자: `admin.html` | `docs/notes/admin.md` + 변경하는 기능의 문서 |
 | 후기·KE20·상담·연구진·상세 5종·오디오·커뮤니티: `reviews*`, `review-write.html`, `review-rich.js`, `stories.html`, `story.html`, `consult.html`, `researchers.html`, `challenge-*.html`, `challenge-detail.css`, `community-card.js` | `docs/notes/pages.md` |
 | 매일 답변 프로그램: `program*`, `experiences.html`, `review-desk.html`, answer-program 함수 | `docs/monc-answer-program/product-spec.md`의 작업 전 원칙 → 같은 폴더의 관련 문서 |

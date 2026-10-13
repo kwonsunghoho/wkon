@@ -1,5 +1,9 @@
 # 마이페이지 — 상세 기록
 
+## 스터디 프로필 바로가기 (2026-10-13, 로컬 구현)
+
+회원 이름 아래에서 `community.html?view=profile`로 이동한다. 연락처·동의·본인인증·재학생 판정은 기존 경로를 유지하며 새 프로필은 별도 원장이다. 구현·운영 상태는 implementation-status.md, 상세는 community.md를 따른다.
+
 ## 작업 전 핵심 규칙
 
 - **마이페이지**: '오늘 한 칸'엔 사이트가 아는 사실만, 접이는 데이터 있는 줄만. 제출 칸 이름·규칙은 mypage·admin·submit 세 곳 한 벌. **결제했어도 기수 시작일(`challenge_rounds.program_start`) 전엔 문항·제출 칸을 열지 않는다**(판정은 `round-gate.js` 한 곳). 제출물 코치 피드백은 제출물 행의 컬럼(`feedback*` · 2026-09-27)이고 **쓰기는 admin 만(트리거)** — 화면은 보신각·영합각만(`CH_SUB_FB` mypage·admin 한 벌)

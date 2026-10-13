@@ -100,6 +100,7 @@
      '내가 어디에 있는지'를 알 수 있다(오너가 불편해한 지점의 절반이 이것이다). */
   var SECTION_OF = {
     /* 승준 코스는 단독 링크라 자기 파일 하나뿐. 도구 페이지들은 '승준 도구' 소속 표시 */
+    'community.html': 'community',
     'briefing.html': 'course',
     'tools.html': 'tools', 'news.html': 'tools', 'sojae.html': 'tools',
     'ai-killer.html': 'tools', 'answers.html': 'tools', 'polish.html': 'tools',
@@ -350,6 +351,7 @@
             '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(LAB_SUB) + '</div>' +
           '</li>' +
+          '<li><a href="community.html"' + cur('community') + '>커뮤니티</a></li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('reviews') + '>후기' + CHEV + '</button>' +
@@ -382,6 +384,7 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmLab">' + accPanel(LAB_SUB) + '</div>' +
         '</li>' +
+        '<li><a href="community.html"' + cur('community') + '>커뮤니티</a></li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-controls="mmReviews"' + cur('reviews') + '>후기' +
