@@ -30,7 +30,7 @@ window.MONC_RESEARCHERS = [
       '승무원 면접 전문 교육기관 <strong>MONSTERCREW & MONC(몬크) 11년 운영</strong>',
       '누적 온라인 수강생 <strong>3,500명+</strong> 지도',
       '<strong>국토교통부 주최 2026 항공산업 커리어 엑스포</strong> 영상면접·자소서&이력서 전문 컨설턴트',
-      '<strong>국토교통부 주최 2023·2025 항공잡페어</strong> 취업컨설턴트',
+      '<strong>국토교통부 주최 2023·2025 항공잡페어</strong> 취업컨설턴트 · <strong>한국항공대 주관 2025 활주로 일자리박람회</strong> 취업컨설턴트',
       '발성 트레이닝 <strong>자체 코칭북</strong> 개발·보급'
     ],
     more:[
