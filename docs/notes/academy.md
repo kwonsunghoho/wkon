@@ -40,15 +40,15 @@
 
 - `scripts/academy-tests.mjs`: 운영 접속 없는 PGlite 실제 PostgreSQL 검사. `ACADEMY_PGLITE_MODULE`에 별도 설치한 `@electric-sql/pglite/dist/index.js` 절대 경로를 넣고 실행한다. 38개 검사: 학생/미배정 교사 접근, 비공개 초안, 충돌, 중복 재시도, 불변 버전, 파일 검증·만료·삭제 잠금·실패, 탈퇴.
 - `scripts/academy-browser-tests.cjs`: `ACADEMY_RUNTIME_MODULES`에 Playwright가 있는 node_modules 경로를 지정한다. 로컬 서버를 자체 실행한다. Supabase 설정을 처음부터 스텁으로 대체하며 운영 요청을 차단한다. 320/375/768/1280px, 자동 저장·제출·최신 원문·이력 보존·업로드·피드백 공개·충돌 입력 보존을 검증한다. 스크린샷은 `outputs/academy-verification/`(합성 테스트 자료).
-- `deno check supabase/functions/academy-media/index.ts` 통과. 운영 테이블 8개 RLS·권한 차단, 비공개 버킷, 보관 정책 2개, 함수 프로브, 사이트 파일 8개 일치를 확인했다. 보안 Advisor의 새 표 8개 `RLS Enabled No Policy` INFO는 직접 테이블 접근을 회수하고 RPC만 사용하는 설계에 해당한다. 이번 기능의 경고 등급 항목은 없었다. 실제 Storage/TUS, 휴대폰 녹음, 수업 등록 이후 학생/교사 흐름, Cron/Vault 실행은 미검증이다.
+- `deno check supabase/functions/academy-media/index.ts` 통과. 운영 테이블 8개 RLS·권한 차단, 비공개 버킷, 보관 정책 2개, 함수 프로브, 사이트 파일 8개 일치를 확인했다. 보안 Advisor의 새 표 8개 `RLS Enabled No Policy` INFO는 직접 테이블 접근을 회수하고 RPC만 사용하는 설계에 해당한다. 이번 기능의 경고 등급 항목은 없었다. Vault 인증과 Storage 삭제는 아래 실행 결과로 확인했다. 실제 Storage/TUS 업로드, 휴대폰 녹음, 수업 등록 이후 학생/교사 흐름은 미검증이다.
 
-## 운영 적용 순서 · 화면·DB·함수 완료, 정리 예약 대기
+## 운영 적용 순서 · 화면·DB·함수·정리 예약 등록 완료
 
 1. 2026-10-13 오너가 수정된 학생·교사 화면과 운영 반영을 승인했다. 이후 같은 범위의 배포 승인을 다시 받지 않는다.
 2. `academy-media` 오너 콘솔 배포 완료. anon 프로브 `2026-10-13a`·기능 5개 응답과 Verify JWT ON을 실측했다. 함수부터 올려 기존 화면 전환 전 의존성을 준비했다.
 3. 오너가 SQL Editor에서 `20261013064830_academy_coursework.sql` 실행 완료. 새 표·RPC·RLS·버킷·정책 존재와 비회원 차단을 에이전트가 확인했다. SQL을 다시 실행하지 않는다.
 4. main `6cb20db` 배포 완료. monc.ai.kr의 학생·교사·챌린지 제출·마이페이지·관리자·공용 JS 8개가 배포본과 일치한다. 시험용 수업·학생 계정으로 실제 저장/업로드/피드백 검증은 남아 있다. 실제 운영 문자·결제는 호출하지 않는다.
-5. 만료 대상은 조회 당시 기존 챌린지 파일 58개, 709,908,801바이트(전체 65개)다. 최초 정리 전에 필요한 원본을 보관한다. 운영 파일은 이 개발 작업에서 삭제하지 않았다.
-6. Edge Function Secrets와 Vault에 같은 무작위 정리 비밀값을 등록하고, Vault에 프로젝트 legacy anon JWT를 등록한다. SQL Editor에서 정리 예약 본문을 실행한다. 응답 200·실제 파일 제거·제출 행/피드백 유지까지 에이전트가 확인한다.
+5. 오너가 정리 인증값과 예약 SQL을 등록했다. `monc-media-cleanup`(jobid 2), `*/10 * * * *`, active=true 확인. 첫 예약 시각 전 동일 HTTP 작업을 두 번 수동 실행했다. 요청 9·10 모두 HTTP 200, 50개+8개 삭제, 실패 0이다. 만료 파일 58개/709,908,801바이트를 삭제했고 해당 Storage 객체 잔존 0을 확인했다. 정상 파일 7개·Storage 객체 7개 유지, 만료 대기 0이다.
+6. 제출 65건·피드백 6건의 전체 행 지문을 실행 전후 비교해 동일함을 확인했다. Vault 인증·삭제 함수 경로는 검증 완료이며 예약 시각에 의한 첫 자동 실행은 이 확인 시점에는 아직 미도래다. 비밀값은 문서·레포에 기록하지 않는다.
 
 적용 여부 원장은 `implementation-status.md`. 과거 학생 자료 이전, 주간 평가·반별 과제 자동 생성, 상담·일정·직원 운영은 이번 코드에 완료로 기록하지 않는다.
