@@ -36,6 +36,7 @@
   <!-- 뒤로 왔을 때 보던 자리로 되돌리기 — 위 bfcache 새로고침이 스크롤을 버리는 걸 메운다 -->
   <script src="scroll-keep.js?v=3"></script>
   <style>
+    #academyEntry[hidden], #academyDeskEntry[hidden] { display: none !important; }
     /* ══ 마이페이지 '오늘 한 칸' 구조 (2026-07-31 재설계 ②안 확정 — outputs/mypage-mockup.html) ══
        원칙: 위에는 '지금 할 일' 하나(다크 네이비 카드), 과거 기록은 전부 접힌 줄.
        "오늘 미션이 안 올라왔어요" 같은 문장은 금지 — 제출이 카톡방이라 사이트가 모른다.
@@ -432,6 +433,12 @@
           <em id="foldsHint">필요할 때만 펼쳐 보세요</em>
         </div>
 
+        <div class="v2-card" id="academyEntry" hidden>
+          <div class="v2-cs-h"><span class="v2-cs-t">내 수업</span></div>
+          <p class="v2-cs-hint">과제를 제출하고 선생님의 피드백을 확인하세요.</p>
+          <a class="v2-outline" href="academy.html">과제 · 피드백 열기</a>
+          <a class="v2-outline" href="academy-desk.html" id="academyDeskEntry" hidden>선생님 피드백</a>
+        </div>
         <details class="v2-fold" id="sec-answers" style="display:none;">
           <summary>
             <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
@@ -611,7 +618,8 @@
   <!-- 포트원(PortOne) V2 결제 SDK — 크레딧 충전. 누른 뒤 받으면 결제창이 늦게 떠서 미리 싣는다. -->
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
+  <script src="supabase-config.js?v=20261013"></script>
+  <script src="media-storage.js?v=1"></script>
   <script src="refund-details.js?v=1"></script>
   <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
   <script src="pay-pending.js?v=1"></script>
@@ -1318,6 +1326,7 @@
             ? '첫날에 녹음 두 개를 올려 주세요 — ① 첫 녹음본, ② 발음을 신경 써서 다시 읽은 녹음본. 마지막 날엔 녹음본 하나예요.'
             : `챌린지 ${meta.what}을 직접 올려 주세요 — 시작 무렵 한 번, 마칠 무렵 한 번이면 됩니다.${meta.media === 'video' ? ' 영상은 1~2분, 50MB 이하로 부탁해요.' : ''}`}</p>
           <div class="v2-cs-slots">${slots}</div>
+          <p class="v2-cs-hint">영상·음성은 제출일부터 14일 보관해요. 제출 기록과 피드백은 남아요.</p>
         </div>`;
       }).join('')
         // 챌린지 후기 쓰기 — 참가자에게만 보이는 입구(2026-08-20 후기 직접 제출·review-write.html).
@@ -1334,6 +1343,7 @@
       subs.forEach(async s => {
         const holder = document.getElementById('csPlay-' + s.challenge + '-' + s.type);
         if (!holder) return;
+        if (MONC_MEDIA.challengeExpired(s)) { holder.textContent = '제출일부터 14일이 지나 파일 보관기간이 끝났어요.'; return; }
         const url = await MONC.getSignedUrl(s.storage_path);
         if (!url) { holder.innerHTML = '<div class="v2-ba-empty">재생 링크를 불러오지 못했어요.</div>'; return; }
         holder.innerHTML = (CH_SUB_META[s.challenge] || {}).media === 'video'
@@ -1404,20 +1414,8 @@
           const prev = btn.textContent;
           btn.disabled = true; btn.textContent = '업로드 중…';
           try {
-            let ext = (file.name.indexOf('.') > 0 ? file.name.split('.').pop() : '')
-              .toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!ext || ext.length > 8) ext = meta.media === 'video' ? 'mp4' : 'm4a';
-            const path = _chSubCtx.me + '/' + challenge + '-' + type + '.' + ext;
-            const up = await MONC.sb.storage.from('recordings')
-              .upload(path, file, { upsert: true, contentType: file.type || undefined });
-            if (up.error) throw up.error;
-            const { error } = await MONC.sb.from('challenge_submissions').upsert({
-              member_id: _chSubCtx.me, challenge: challenge, type: type,
-              round: _chSubCtx.partOf[challenge] || null, storage_path: path,
-            }, { onConflict: 'member_id,challenge,type' });
-            if (error) throw error;
-            // 확장자가 바뀌었으면 옛 파일 정리(실패해도 무시 — 재생은 새 경로로 간다)
-            if (old && old !== path) { try { await MONC.sb.storage.from('recordings').remove([old]); } catch (_) {} }
+            await MONC_MEDIA.uploadChallenge({ memberId: _chSubCtx.me, challenge, type,
+              round: _chSubCtx.partOf[challenge], file, oldPath: old });
             await renderChSubs(_chSubCtx.me, _chSubCtx.partOf, _chSubCtx.ansLoad, _chSubCtx.lockOf);
             return;   // 카드를 통째로 다시 그렸으니 버튼 복원 불필요(요소가 교체됐다)
           } catch (e) {
@@ -1451,6 +1449,13 @@
       loadTodayQuestion();
 
       const me = session.user.id;
+      // 수업 기능 미적용 환경에는 새 입구를 표시하지 않는다.
+      MONC.sb.rpc('academy_api', { p_action: 'bootstrap', p: {} }).then(({ data, error }) => {
+        if (!error && data && (data.enrollments.length || data.teacher)) {
+          document.getElementById('academyEntry').hidden = false;
+          document.getElementById('academyDeskEntry').hidden = !data.teacher;
+        }
+      }).catch(() => {});
       // 승자각 제출 카드가 답변 제목을 재사용하므로 promise 를 들고 있는다(추가 요청 없이 한 번만 조회)
       const ansLoad = loadAnswerNotes(me);
       loadNewsScraps();

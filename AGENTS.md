@@ -50,6 +50,7 @@ MONC(몬크 챌린지) 작업의 공통 지침. 과거 문서의 `CLAUDE.md`는 
 | 소재 발굴: `sojae.html`, `sojae-common.js`, sojae-chat | `docs/superpowers/specs/2026-07-30-sojae-v2-design.md` |
 | 답변 저장소·크레딧·충전: `answers.html`, `credits.html`, `credit-charge.js`, mypage의 답변·지갑 | `docs/notes/credits.md` |
 | 마이페이지·제출: `mypage.html`, `submit.html`, `round-gate.js` | `docs/notes/mypage.md` |
+| 재학생 수업·피드백·미디어 보관: `academy*`, `media-storage.js`, academy-media 함수 | `docs/notes/academy.md` |
 | 미니 다듬기: `quickfix.js`, ai-killer의 quickfix 모드 | `docs/notes/quickfix.md` |
 | 로그인·동의·본인인증·프로필: `login.html`, `onboarding.html`, `supabase-config.js` | `docs/notes/auth-consent.md` |
 | 관리자: `admin.html` | `docs/notes/admin.md` + 변경하는 기능의 문서 |

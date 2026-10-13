@@ -104,7 +104,7 @@
     <header class="sb-head">
       <h1 class="sb-title" id="sbTitle">챌린지 제출</h1>
       <p class="sb-sub" id="sbSub">제출물을 올리는 곳이에요.</p>
-      <p class="sb-note">여기서 올리면 <strong>내 마이페이지에도 똑같이 기록</strong>돼요. 다시 올리면 교체됩니다.</p>
+      <p class="sb-note">여기서 올리면 <strong>내 마이페이지에도 똑같이 기록</strong>돼요. 영상·음성은 제출일부터 14일 보관하고, 제출 기록과 피드백은 남아요.</p>
     </header>
     <div id="sbCards"><div class="loading">불러오는 중…</div></div>
     <div class="sb-foot">
@@ -115,7 +115,8 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
+<script src="supabase-config.js?v=20261013"></script>
+<script src="media-storage.js?v=1"></script>
 <!-- 기수 시작 전 잠금 판정(2026-09-03) — mypage 제출 카드·admin 과 같은 파일(MONC_GATE). -->
 <script src="round-gate.js?v=1"></script>
 <script>
@@ -364,6 +365,7 @@
       subs.forEach(async s => {
         const holder = document.getElementById('sbPlay-' + s.challenge + '-' + s.type);
         if (!holder) return;
+        if (MONC_MEDIA.challengeExpired(s)) { holder.textContent = '제출일부터 14일이 지나 파일 보관기간이 끝났어요.'; return; }
         const url = await MONC.getSignedUrl(s.storage_path);
         if (!url) { holder.innerHTML = '<div class="sb-empty">재생 링크를 불러오지 못했어요.</div>'; return; }
         holder.innerHTML = (CH_META[s.challenge] || {}).media === 'video'
@@ -398,19 +400,8 @@
           const prev = btn.textContent;
           btn.disabled = true; btn.textContent = '업로드 중…';
           try {
-            let ext = (file.name.indexOf('.') > 0 ? file.name.split('.').pop() : '')
-              .toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!ext || ext.length > 8) ext = meta.media === 'video' ? 'mp4' : 'm4a';
-            const path = ctx.me + '/' + ch + '-' + type + '.' + ext;
-            const up = await MONC.sb.storage.from('recordings')
-              .upload(path, file, { upsert: true, contentType: file.type || undefined });
-            if (up.error) throw up.error;
-            const { error } = await MONC.sb.from('challenge_submissions').upsert({
-              member_id: ctx.me, challenge: ch, type: type,
-              round: ctx.partOf[ch] || null, storage_path: path,
-            }, { onConflict: 'member_id,challenge,type' });
-            if (error) throw error;
-            if (old && old !== path) { try { await MONC.sb.storage.from('recordings').remove([old]); } catch (_) {} }
+            await MONC_MEDIA.uploadChallenge({ memberId: ctx.me, challenge: ch, type,
+              round: ctx.partOf[ch], file, oldPath: old });
             await render(ctx.me, ctx.partOf, ctx.lockOf);
             return;   // 카드를 통째로 다시 그렸으니 버튼 복원 불필요(요소가 교체됐다)
           } catch (e) {
