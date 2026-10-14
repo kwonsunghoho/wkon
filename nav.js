@@ -324,7 +324,8 @@
      인스타로 처음 들어온 학생에게 주력 상품인 챌린지를 먼저 보이는 1번 규칙은 그대로다.
      ⚠️ 구 '승준노트 2번 유지' 근거(매일 쓰는 도구 6개의 재방문 동선)는 이제 '승준 도구'가
         이어받는다 — 도구 드롭다운을 4번 뒤로 내리지 말 것.
-     ⚠️ 데스크톱 .nav-links 와 아래 모바일 아코디언은 **항상 같은 순서**로 둔다. */
+     ⚠️ 연구소 상세 항목의 순서는 데스크톱과 모바일에서 맞춘다.
+        모바일은 면접 연구소·승준 커뮤니티·스터디매치를 먼저 보여준다. */
   var navHtml =
     /* 본문 바로가기 (2026-08-02 D-12) — 37개 페이지 전부에 없었다. 데스크톱 키보드
        사용자는 매 페이지 nav 링크 9개를 지나야 본문에 닿는다.
@@ -371,6 +372,12 @@
       (authHint
         ? '<a class="mm-member-card" href="' + memberHref(authHint) + '">' + memberCardHtml(authHint) + '</a>'
         : '') +
+      '<nav class="mm-spaces" aria-label="주요 공간">' +
+        '<a href="index.html" data-space="research"><b>면접 연구소</b><span>수업·프로그램·면접 연구자료</span></a>' +
+        '<a href="community.html" data-space="community"><b>승준 커뮤니티</b><span>승준정보·헤메&amp;샵·자유게시판</span></a>' +
+        '<a href="community.html?view=studies" data-space="study"><b>스터디매치</b><span>프로필·인증을 보고 스터디 모집·지원</span></a>' +
+      '</nav>' +
+      '<p class="mm-research-label">면접 연구소 서비스</p>' +
       '<ul>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-controls="mmChallenges"' + cur('challenge') + '>챌린지' +
@@ -389,7 +396,6 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmLab">' + accPanel(LAB_SUB) + '</div>' +
         '</li>' +
-        '<li><a href="community.html"' + cur('community') + '>승준 커뮤니티</a></li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-controls="mmReviews"' + cur('reviews') + '>후기' +
@@ -399,7 +405,7 @@
       '</ul>' +
       '<div class="mobile-menu-cta">' +
         (authHint ? '' : '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>') +
-        '<a class="mm-apply" href="apply.html">신청하기</a>' +
+        '<a class="mm-apply" href="apply.html">챌린지 신청하기</a>' +
       '</div>' +
       /* 소셜 — 모바일은 여기가 담당(데스크톱 몫은 아래 mountFooterSocial 의 푸터).
          ⚠️ CTA 버튼 **아래**에 둔다. 위에 두면 신청하기까지 가는 길에 외부 링크가 끼어든다. */
@@ -432,7 +438,7 @@
     var active = section === 'community'
       ? (['studies','study'].indexOf(view) !== -1 ? 'study' : 'community')
       : (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? 'research' : '');
-    document.querySelectorAll('#navbar .nav-space-switch [data-space]').forEach(function (a) {
+    document.querySelectorAll('#navbar .nav-space-switch [data-space], #mobileMenu .mm-spaces [data-space]').forEach(function (a) {
       if (a.getAttribute('data-space') === active) a.setAttribute('aria-current','page');
       else a.removeAttribute('aria-current');
     });
