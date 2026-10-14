@@ -254,11 +254,22 @@
       ['자료·연습', [LAB_SUB[0]].concat(TOOLS_SUB.slice(3))],
       ['몬크 살펴보기', [LAB_SUB[1],[REVIEW_HUB,'후기','수업·챌린지에 참여한 학생들의 기록']]]
     ];
+    return spacePanelHtml(groups);
+  }
+  function spacePanelHtml(groups) {
     return groups.map(function (group) {
-      return '<section class="mm-research-group"><h2>' + esc(group[0]) + '</h2>' + group[1].map(function (it) {
-        return '<a class="mm-research-link" href="' + it[0] + '"' + curFile(it[0]) + '><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
+      return '<section class="mm-menu-group"><h2>' + esc(group[0]) + '</h2>' + group[1].map(function (it) {
+        var communityLink = it[0].indexOf('community.html') === 0;
+        return '<a class="mm-menu-link" href="' + it[0] + '"' + (communityLink ? ' data-community-shortcut' : curFile(it[0])) + '><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
       }).join('') + '</section>';
     }).join('');
+  }
+  function spaceHtml(key,label,description,href,id,panel) {
+    return '<div class="mm-space-group"><div class="mm-space-head">' +
+      '<a class="mm-space-link" href="' + href + '" data-space="' + key + '"><b>' + esc(label) + '</b><span>' + esc(description) + '</span></a>' +
+      '<button class="mm-space-toggle" type="button" data-space-label="' + esc(label) + '" aria-expanded="false" aria-controls="' + id + '" aria-label="' + esc(label) + ' 메뉴 펼치기">' +
+      '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>' +
+      '<div class="mm-space-panel" id="' + id + '" hidden>' + panel + '</div></div>';
   }
 
   /* 로고는 홈에서만 #home(미션 섹션) 앵커, 다른 페이지에선 홈으로 이동 */
@@ -382,17 +393,28 @@
         ? '<a class="mm-member-card" href="' + memberHref(authHint) + '">' + memberCardHtml(authHint) + '</a>'
         : '') +
       '<nav class="mm-spaces" aria-label="주요 공간">' +
-        '<div class="mm-research-space">' +
-          '<div class="mm-research-head">' +
-            '<a class="mm-space-link" href="index.html" data-space="research"><b>면접 연구소</b><span>수업·프로그램·면접 연구자료</span></a>' +
-            '<button class="mm-research-toggle" type="button" aria-expanded="false" aria-controls="mmResearch" aria-label="면접 연구소 메뉴 펼치기">' +
-              '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
-            '</button>' +
-          '</div>' +
-          '<div id="mmResearch" hidden>' + researchPanelHtml() + '</div>' +
-        '</div>' +
-        '<a class="mm-space-link" href="community.html" data-space="community"><b>승준 커뮤니티</b><span>승준정보·헤메&amp;샵·자유게시판</span></a>' +
-        '<a class="mm-space-link" href="community.html?view=studies" data-space="study"><b>스터디매치</b><span>프로필·인증을 보고 스터디 모집·지원</span></a>' +
+        spaceHtml('research','면접 연구소','수업·프로그램·면접 연구자료','index.html','mmResearch',researchPanelHtml()) +
+        spaceHtml('community','승준 커뮤니티','승준정보·헤메&샵·자유게시판','community.html','mmCommunity',spacePanelHtml([
+          ['게시판', [
+            ['community.html?view=board','전체 게시판','질문과 정보를 한곳에서 보기'],
+            ['community.html?view=board&topic=prep','승준정보','채용·지원서·면접 이야기'],
+            ['community.html?view=board&topic=hair','헤메&샵','헤어·메이크업·샵 정보 나누기'],
+            ['community.html?view=board&topic=free','자유게시판','승준생끼리 일상과 고민 나누기']
+          ]],
+          ['내 기록', [['community.html?view=activity','내 활동','내 글·댓글·저장한 글 확인 · 회원 전용']]]
+        ])) +
+        spaceHtml('study','스터디매치','프로필·인증을 보고 스터디 모집·지원','community.html?view=studies','mmStudies',spacePanelHtml([
+          ['스터디 찾기', [
+            ['community.html?view=studies','모집 중인 스터디','참여 조건과 일정 확인하기'],
+            ['community.html?view=studies&mode=online','온라인 스터디','온라인으로 함께 준비할 팀 찾기'],
+            ['community.html?view=studies&mode=offline','오프라인 스터디','직접 만나 준비할 팀 찾기'],
+            ['community.html?view=studies&verified=1','인증 조건이 있는 스터디','경험 인증·실력 레벨이 필요한 모집글']
+          ]],
+          ['내 준비·참여', [
+            ['community.html?view=profile','내 프로필·인증','준비 항목·샘플·인증 관리 · 회원 전용'],
+            ['community.html?view=activity','내 활동','내 스터디·지원 상태 확인 · 회원 전용']
+          ]]
+        ])) +
       '</nav>' +
       '<div class="mobile-menu-cta">' +
         (authHint ? '' : '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>') +
@@ -431,6 +453,16 @@
       : (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? 'research' : '');
     document.querySelectorAll('#navbar .nav-space-switch [data-space], #mobileMenu .mm-spaces [data-space]').forEach(function (a) {
       if (a.getAttribute('data-space') === active) a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+    });
+    var now = new URLSearchParams(location.search);
+    document.querySelectorAll('#mobileMenu [data-community-shortcut]').forEach(function (a) {
+      var wanted = new URL(a.href,location.href).searchParams;
+      var matched = section === 'community' && (now.get('view') || 'home') === wanted.get('view') && !now.get('id');
+      ['topic','mode','verified'].forEach(function (key) {
+        if ((now.get(key) || '') !== (wanted.get(key) || '')) matched = false;
+      });
+      if (matched) a.setAttribute('aria-current','page');
       else a.removeAttribute('aria-current');
     });
   }
@@ -602,16 +634,19 @@
         });
       });
       // 제목 링크와 펼침 버튼을 나눈다. 같은 버튼으로 반복해서 열고 닫을 수 있다.
-      var researchToggle = mm.querySelector('.mm-research-toggle');
-      var researchPanel = document.getElementById('mmResearch');
-      if (researchToggle && researchPanel) {
-        researchToggle.addEventListener('click', function () {
-          var expanded = researchToggle.getAttribute('aria-expanded') !== 'true';
-          researchToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-          researchToggle.setAttribute('aria-label', expanded ? '면접 연구소 메뉴 접기' : '면접 연구소 메뉴 펼치기');
-          researchPanel.hidden = !expanded;
+      var spaceToggles = [].slice.call(mm.querySelectorAll('.mm-space-toggle'));
+      spaceToggles.forEach(function (toggle) {
+        toggle.addEventListener('click', function () {
+          var opening = toggle.getAttribute('aria-expanded') !== 'true';
+          spaceToggles.forEach(function (other) {
+            var expanded = other === toggle && opening;
+            var panel = document.getElementById(other.getAttribute('aria-controls'));
+            other.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            other.setAttribute('aria-label', other.getAttribute('data-space-label') + (expanded ? ' 메뉴 접기' : ' 메뉴 펼치기'));
+            if (panel) panel.hidden = !expanded;
+          });
         });
-      }
+      });
     }
 
     document.addEventListener('keydown', function (e) {
