@@ -13,7 +13,8 @@
     if(!session)throw new Error('로그인이 만료됐어요. 작성 중인 글을 보관하고 다시 로그인해 주세요.');
     return new Promise((resolve,reject)=>{
       const upload=new root.tus.Upload(file,{
-        endpoint:ticket.endpoint,headers:{'x-signature':ticket.token,authorization:'Bearer '+session.access_token},
+        // 서명 토큰은 전용 경로에서 검증한다. 기존 함수가 주는 TUS 기본 주소도 호환한다.
+        endpoint:ticket.endpoint.replace(/\/resumable\/?$/, '/resumable/sign'),headers:{'x-signature':ticket.token,authorization:'Bearer '+session.access_token},
         chunkSize:6*1024*1024,retryDelays:[0,1000,3000,5000,10000],
         uploadDataDuringCreation:true,removeFingerprintOnSuccess:true,storeFingerprintForResuming:false,
         metadata:{bucketName:ticket.bucket,objectName:ticket.path,contentType:file.type,cacheControl:'0'},
