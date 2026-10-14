@@ -11,7 +11,7 @@ begin
   if nullif(service_key,'') is null then raise exception 'community cleanup credential missing'; end if;
   select net.http_post(
     url:='https://apzwauiumhmsvrgffjis.supabase.co/functions/v1/community-file',
-    headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||service_key,'apikey',service_key),
+    headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||service_key,'apikey',service_key,'x-cleanup-authorization','Bearer '||service_key),
     body:='{"action":"cleanup"}'::jsonb,timeout_milliseconds:=120000
   ) into request_id;
   return request_id;

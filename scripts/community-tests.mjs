@@ -144,7 +144,7 @@ await ok('원본 정리 예약은 자격 증명을 비공개 보관소에서 읽
  await db.exec(schedule);
  await db.exec('set role authenticated');await denied(()=>db.query('select public.monc_run_community_cleanup()'));await db.exec('reset role');
  await db.query('select public.monc_run_community_cleanup()');
- const request=(await db.query('select * from net.test_requests')).rows[0];assert.deepEqual(request.body,{action:'cleanup'});assert.equal(request.headers.Authorization,'Bearer 가상 서비스 자격');
+ const request=(await db.query('select * from net.test_requests')).rows[0];assert.deepEqual(request.body,{action:'cleanup'});assert.equal(request.headers.Authorization,'Bearer 가상 서비스 자격');assert.equal(request.headers['x-cleanup-authorization'],'Bearer 가상 서비스 자격');
  assert.equal((await db.query('select schedule from cron.test_jobs')).rows[0].schedule,'20 * * * *');
 });
 await db.close();process.stdout.write(`완료: ${checks}개 실제 PostgreSQL 동작 검사 통과\n`);

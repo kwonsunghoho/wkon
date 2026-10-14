@@ -1,7 +1,7 @@
 // 커뮤니티 서류·샘플의 업로드/열람/삭제. 모든 접근은 확인한 JWT와 서버 원장으로 판단한다.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
 
-const FN_VERSION = '2026-10-13a';
+const FN_VERSION = '2026-10-14a';
 const BUCKET = 'community-private';
 const TTL = 60;
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
@@ -51,10 +51,24 @@ Deno.serve(async req => {
   if (!url || !serviceKey || !anon) return reply({ ok: false, code: 'not_ready' });
   const auth = req.headers.get('authorization') || '';
   const token = auth.replace(/^Bearer\s+/i, '');
-  if (!token || token === auth) return reply({ ok: false, code: 'login_required' });
   const service = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   try {
-    if (body.action === 'cleanup' && token === serviceKey) {
+    if (body.action === 'cleanup') {
+      // 예약 호출의 원래 자격을 보존한다. 헤더의 존재나 JWT 본문만으로 허용하지 않는다.
+      const cleanupAuth = req.headers.get('x-cleanup-authorization') || auth;
+      let authorized = cleanupAuth === `Bearer ${serviceKey}`;
+      // 대시보드 키와 런타임 키가 달라도 같은 프로젝트의 관리자 API가 검증해야 한다.
+      if (!authorized && /^Bearer eyJ[\w.-]+$/.test(cleanupAuth)) {
+        try {
+          const verified = await fetch(`${url}/auth/v1/admin/users?page=1&per_page=1`, {
+            headers: { Authorization: cleanupAuth, apikey: cleanupAuth.slice(7) },
+            signal: AbortSignal.timeout(10000),
+          });
+          authorized = verified.ok;
+          await verified.body?.cancel();
+        } catch (_) { authorized = false; }
+      }
+      if (!authorized) return reply({ ok: false, code: 'service_role_required' }, 403);
       let deleted = 0;
       for (let batch = 0; batch < 10; batch++) {
         const { data, error } = await service.rpc('community_cleanup_candidates');
@@ -69,6 +83,7 @@ Deno.serve(async req => {
       }
       return reply({ ok: true, deleted, version: FN_VERSION });
     }
+    if (!token || token === auth) return reply({ ok: false, code: 'login_required' });
     // JWT 정보만 믿지 않고 삭제된 계정도 여기서 차단한다.
     const client = createClient(url, anon, { global: { headers: { Authorization: auth } }, auth: { persistSession: false, autoRefreshToken: false } });
     const { data: userData, error: userError } = await client.auth.getUser(token);
