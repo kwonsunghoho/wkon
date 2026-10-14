@@ -85,14 +85,14 @@ const server=http.createServer(async(req,res)=>{try{
   }
   if(url.pathname==='/community.html') {const html=(await fs.readFile(path.join(root,'community.html'),'utf8')).replace(/<script[^>]+src="(?:https:\/\/cdn[^\"]+|supabase-config\.js)"[^>]*><\/script>/g,'').replace('<body>','<body>'+stub);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
   // 공용 메뉴 변경을 대표 화면의 원본 스타일에 겹쳐 확인한다. 회원·운영 스크립트는 실행하지 않는다.
-  if(['/tools.html','/lab.html','/challenges.html','/login.html','/mypage.html'].includes(url.pathname)) {
+  if(['/tools.html','/lab.html','/challenges.html','/login.html','/mypage.html','/lectures.html','/sojae.html','/polish.html','/answers.html','/lab-airline.html','/news.html','/games.html','/researchers.html','/reviews.html'].includes(url.pathname)) {
     const original=await fs.readFile(path.join(source,url.pathname.slice(1)),'utf8');
     const navScript=original.includes('nav.css')?'<script src="nav.js" defer></script>':'';
     const html=original.replace(/<script\b[^>]*>[^]*?<\/script>/g,'').replace(/<body([^>]*)>/,'<body$1>'+stub).replace('</head>','<meta name="robots" content="noindex,nofollow">'+navScript+'</head>');
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;
   }
   const name=decodeURIComponent(url.pathname).slice(1);if(name.includes('..')||name.includes('\\'))throw new Error('경로');
-  const local=['community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
+  const local=['community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
   const p=path.join(local.includes(name)?root:source,name);const content=await fs.readFile(p);res.writeHead(200,{'Content-Type':mime[path.extname(p)]||'application/octet-stream'});res.end(content);
 }catch(e){res.writeHead(500);res.end('로컬 확인 서버 오류');}});
 const downloads=new Map();server.listen(port,'127.0.0.1',()=>process.stdout.write('운영 호출이 차단된 확인 화면: http://127.0.0.1:'+port+'/selected.html\n'));

@@ -255,89 +255,6 @@
   padding: 28px 24px; z-index: 99; overflow-y: auto;
 }
 #mobileMenu.open { display: flex; flex-direction: column; gap: 0; }
-#mobileMenu ul { list-style: none; display: flex; flex-direction: column; margin: 0; padding: 0; }
-#mobileMenu li { border-bottom: 1px solid var(--border); }
-/* 목록 링크에만 — 아래 CTA 버튼까지 덮치면 버튼 정렬·글자색이 깨진다 */
-#mobileMenu ul a {
-  display: block; padding: 18px 0;
-  font-size: 17px; color: var(--text-muted); text-decoration: none; font-weight: 600;
-}
-#mobileMenu ul a[aria-current="page"] { color: var(--accent-ink); font-weight: 700; }
-/* 주력 항목 강조 — 데스크톱과 같은 클래스(.nav-feature). 지금은 챌린지.
-   ⚠️ 구 `.mm-acc-btn .nav-briefing` 은 점을 담으려고 버튼 안에 <span> 을 한 겹 두던
-      구조였다. 점을 없애면서 span 도 없앴으니 클래스는 버튼에 바로 붙인다. */
-#mobileMenu .mm-acc-btn.nav-feature { color: var(--accent-ink); font-weight: 700; }
-
-/* ── '지금 여기' 표시 (2026-08-02 C-3) ────────────────────────────────────────
-   ⚠️ 색만으로는 안 된다. 주력 항목(`.nav-feature`, 지금은 챌린지)은 어느 페이지에서든
-      항상 --accent-ink 굵게라, 색 규칙만 넓히면 그 항목이 늘 '현재 위치'로 읽힌다.
-      그래서 색과 별개인 왼쪽 막대를 쓴다 — 색각 이상에서도 구분된다(원칙 4).
-      데스크톱에는 같은 이유로 밑줄 막대가 있다(위 '현재 위치 표시' 절).
-   ⚠️⚠️ **막대는 글자를 밀지 않는다 — 왼쪽 여백(#mobileMenu 패딩 24px 안)에 그린다**
-      (2026-08-04 오너 지적 "모바일에서 저 선 위치가 삐뚤어졌잖아"). 구 방식은
-      `inset 3px` + `padding-left:12px` 이라 **현재 줄만 글자가 안쪽으로 밀렸고**,
-      하위 줄에서는 자기 테두리(레일 2px) 안쪽에 막대가 그려져 **상위 줄 막대와 2px 어긋난 채
-      레일과 겹쳐** 층이 진 선으로 보였다(실측: 상위 x=24, 하위 x=26, 글자 38 vs 형제 40).
-      지금은 상위 줄 막대가 왼쪽 여백(x=12)에 서고, 글자는 어느 줄도 안 움직인다.
-   ⚠️⚠️ **하위 줄 막대는 여백에 못 그린다 — `.mm-acc-panel` 이 `overflow:hidden`**(펼침
-      전환이 max-height 라 필수)**이라 패널 왼쪽 밖은 잘려서 아예 안 보인다.** 계산상
-      x=12 로 맞춰 놓고 화면에 안 나온 자리다 — 값만 재고 눈으로 안 봤으면 놓친다.
-      그래서 하위 줄은 **원래 있는 세로 레일(`.mm-sub` 의 border-left 2px) 위에 겹쳐** 긋는다:
-      레일과 왼쪽 끝이 같고 1px 만 굵어, 회색 레일이 그 구간만 네이비로 바뀐 것처럼 보인다. */
-#mobileMenu ul > li > a[aria-current="page"],
-#mobileMenu .mm-acc-btn[aria-current="page"],
-#mobileMenu .mm-acc-panel a[aria-current="page"] {
-  position: relative;
-  color: var(--accent-ink);
-}
-#mobileMenu ul > li > a[aria-current="page"]::before,
-#mobileMenu .mm-acc-btn[aria-current="page"]::before,
-#mobileMenu .mm-acc-panel a[aria-current="page"]::before {
-  content: ''; position: absolute; left: -12px; top: 3px; bottom: 3px;
-  width: 3px; border-radius: 2px; background: var(--action);
-}
-#mobileMenu .mm-acc-panel a[aria-current="page"]::before { left: -2px; top: 2px; bottom: 2px; }
-#mobileMenu .mm-acc-btn[aria-current="page"] { font-weight: 800; }
-
-/* 아코디언(승준노트·챌린지) — 탭 한 번에 하위 항목을 펼쳐 바로 이동.
-   ⚠️ 토글은 반드시 <button> — 햄버거 로직이 메뉴 안 <a> 전부에 '클릭 시 메뉴 닫기'를
-   걸어놔서, <a> 로 만들면 펼치는 순간 메뉴가 통째로 닫힌다. */
-#mobileMenu .mm-acc-btn {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  width: 100%; padding: 18px 0; background: none; border: none; cursor: pointer;
-  font-family: inherit; font-size: 17px; font-weight: 600; color: var(--text-muted);
-  text-align: left; -webkit-tap-highlight-color: transparent;
-}
-#mobileMenu .mm-acc-chev { flex-shrink: 0; transition: transform .28s ease; }
-#mobileMenu .mm-acc.is-open .mm-acc-chev { transform: rotate(180deg); }
-/* max-height 전환 — grid 0fr→1fr 은 구형 iOS 사파리에서 안 먹어 펼침이 통째로 죽는다.
-   ⚠️ 상한은 실측 콘텐츠(375px에서 5칸 370px)보다 넉넉해야 한다 — 모자라면 설명이 한 줄
-   늘어난 좁은 화면에서 마지막 칸이 잘린다. 항목을 추가하면 같이 올릴 것. */
-#mobileMenu .mm-acc-panel {
-  max-height: 0; overflow: hidden; visibility: hidden;
-  transition: max-height .28s ease, visibility 0s linear .28s;
-}
-/* ⚠️ max-height 는 열림 전환용 고정값이라 **가장 긴 패널보다 커야 한다** — 모자라면
-   overflow:hidden 이 마지막 항목을 조용히 잘라낸다(실측 2026-07-31: 승준노트 7줄 = 494px
-   인데 460px 이라 '필수 기출 하루 한 개' 설명이 잘려 있었다).
-   ⚠️ 같은 날 '한눈에' 항목이 빠져 6줄 = 442px(375px 실측)로 줄었지만 560px 은 그대로 둔다 —
-      여유일 뿐 손해가 없고, 항목이 다시 늘 때 잘림 사고가 안 난다.
-   하위 항목을 추가하거나 문구를 늘리면 scrollHeight 를 다시 재서 이 값을 올릴 것. */
-#mobileMenu .mm-acc.is-open .mm-acc-panel {
-  max-height: 560px; visibility: visible;
-  transition: max-height .28s ease, visibility 0s;
-}
-#mobileMenu ul a.mm-sub {
-  padding: 11px 0 11px 14px; border-left: 2px solid var(--border);
-  font-size: 15px; color: var(--text);
-}
-#mobileMenu ul a.mm-sub:last-child { margin-bottom: 12px; }
-#mobileMenu .mm-sub b { display: block; font-weight: 700; }
-#mobileMenu .mm-sub span { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
-@media (prefers-reduced-motion: reduce) {
-  #mobileMenu .mm-acc-chev, #mobileMenu .mm-acc-panel { transition: none; }
-}
-
 #mobileMenu .mobile-menu-cta { margin-top: 28px; }
 #mobileMenu .mobile-menu-cta a {
   display: flex; align-items: center; justify-content: center;
@@ -511,11 +428,25 @@ select:focus-visible, textarea:focus-visible, summary:focus-visible,
   html { scroll-padding-top:45px; }
 }
 
-/* 햄버거는 세 공간을 먼저 보여주고 기존 연구소 상세 메뉴를 이어서 둔다. */
+/* 연구소 제목은 홈 이동, 옆 버튼은 기능 펼침으로 구분한다. */
+#mobileMenu [hidden] { display: none !important; }
 #mobileMenu .mm-spaces { display: flex; flex-direction: column; }
-#mobileMenu .mm-spaces a { position: relative; display: block; min-height: 72px; padding: 14px 24px 14px 0; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
-#mobileMenu .mm-spaces b { display: block; font-size: 18px; line-height: 1.4; font-weight: 800; }
-#mobileMenu .mm-spaces span { display: block; margin-top: 4px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-#mobileMenu .mm-spaces a::after { content: ""; position: absolute; right: 3px; top: 28px; width: 7px; height: 7px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); }
-#mobileMenu .mm-spaces a[aria-current=page] b { color: var(--action); text-decoration: underline; text-underline-offset: 5px; }
-#mobileMenu .mm-research-label { margin: 28px 0 8px; color: var(--text-muted); font-size: 13px; font-weight: 700; line-height: 1.6; }
+#mobileMenu .mm-space-link { position: relative; display: block; min-height: 72px; padding: 14px 24px 14px 0; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+#mobileMenu .mm-space-link b { display: block; font-size: 18px; line-height: 1.4; font-weight: 800; }
+#mobileMenu .mm-space-link span { display: block; margin-top: 4px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+#mobileMenu .mm-space-link::after { content: ""; position: absolute; right: 3px; top: 28px; width: 7px; height: 7px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); }
+#mobileMenu .mm-space-link[aria-current=page] b { color: var(--action); text-decoration: underline; text-underline-offset: 5px; }
+#mobileMenu .mm-research-head { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+#mobileMenu .mm-research-head .mm-space-link { flex: 1; border: 0; padding-right: 0; }
+#mobileMenu .mm-research-head .mm-space-link::after { content: none; }
+#mobileMenu .mm-research-toggle { display: flex; align-items: center; justify-content: center; flex: 0 0 44px; min-height: 44px; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--action); cursor: pointer; }
+#mobileMenu .mm-research-toggle svg { transition: transform .2s ease; }
+#mobileMenu .mm-research-toggle[aria-expanded=true] svg { transform: rotate(180deg); }
+#mobileMenu #mmResearch { padding: 12px 0 20px 16px; border-bottom: 1px solid var(--border); }
+#mobileMenu .mm-research-group + .mm-research-group { margin-top: 20px; }
+#mobileMenu .mm-research-group h2 { margin: 0 0 4px; color: var(--text-muted); font-size: 13px; font-weight: 700; line-height: 1.6; }
+#mobileMenu .mm-research-link { display: block; padding: 12px 0; color: var(--text); text-decoration: none; min-height: 44px; }
+#mobileMenu .mm-research-link b { display: block; font-size: 15px; font-weight: 700; line-height: 1.5; }
+#mobileMenu .mm-research-link span { display: block; margin-top: 3px; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+#mobileMenu .mm-research-link[aria-current=page] b { color: var(--action); text-decoration: underline; text-underline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { #mobileMenu .mm-research-toggle svg { transition: none; } }
