@@ -4,7 +4,7 @@
   const section=document.getElementById('homeCommunity');
   if(!section)return;
   const posts=document.getElementById('homeCommunityPosts'), studies=document.getElementById('homeCommunityStudies');
-  const topics={prep:'승준정보',hair:'헤메&샵',free:'자유게시판'}, categories={question:'질문',info:'정보 공유',free:'자유게시판'};
+  const topics={prep:'승준정보',hair:'헤메&샵',free:'자유게시판'}, categories={question:'질문',info:'정보 공유',free:'자유글'};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const path=(view,id)=>'community.html?view='+view+'&id='+encodeURIComponent(id);
   async function read(action,limit) {

@@ -351,7 +351,7 @@
             '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(LAB_SUB) + '</div>' +
           '</li>' +
-          '<li><a href="community.html"' + cur('community') + '>커뮤니티</a></li>' +
+          '<li><a href="community.html"' + cur('community') + '>승준 커뮤니티</a></li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('reviews') + '>후기' + CHEV + '</button>' +
@@ -359,8 +359,11 @@
           '</li>' +
         '</ul>' +
         '<div class="nav-right">' + navRightHtml(authHint) + '</div>' +
-        '<a class="nav-community-quick" href="community.html"' + (section === 'community' ? ' aria-current="page"' : '') + '>커뮤니티</a>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
+      '</div>' +
+      '<div class="nav-space-switch" role="navigation" aria-label="몬크 주요 공간">' +
+        '<a href="index.html"' + (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? ' aria-current="page"' : '') + '>면접 연구소</a>' +
+        '<a href="community.html"' + (section === 'community' ? ' aria-current="page"' : '') + '>승준 커뮤니티</a>' +
       '</div>' +
     '</nav>' +
     '<div class="mobile-menu" id="mobileMenu">' +
@@ -385,7 +388,7 @@
           '<svg class="mm-acc-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<div class="mm-acc-panel" id="mmLab">' + accPanel(LAB_SUB) + '</div>' +
         '</li>' +
-        '<li><a href="community.html"' + cur('community') + '>커뮤니티</a></li>' +
+        '<li><a href="community.html"' + cur('community') + '>승준 커뮤니티</a></li>' +
         '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
         '<li class="mm-acc">' +
           '<button class="mm-acc-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-controls="mmReviews"' + cur('reviews') + '>후기' +
@@ -412,11 +415,27 @@
        바로가기가 아니라 로고로 가서** 기능이 죽었다(실측). 기준 노드를 고정해 순서를 지킨다. */
     var anchor = document.body.firstChild;
     while (holder.firstChild) document.body.insertBefore(holder.firstChild, anchor);
+    alignSpaceNav();
     markMain();
     mountFooterSocial();
     wire();
     upgradeLoginLinks();
     initAuth();
+  }
+
+  /* 공용 바에 추가한 45px만 보완한다. 홈 사진·커뮤니티의 자체 여백은 각 화면이 맡는다. */
+  function alignSpaceNav() {
+    if (onHome || section === 'community') return;
+    var original = document.body.style.paddingTop;
+    function fit() {
+      document.body.style.paddingTop = original;
+      if (window.matchMedia('(max-width:880px)').matches) {
+        var base = parseFloat(window.getComputedStyle(document.body).paddingTop) || 0;
+        document.body.style.paddingTop = (base + 45) + 'px';
+      }
+    }
+    fit();
+    window.addEventListener('resize', fit, { passive: true });
   }
 
   /* 데스크톱 소셜 — 페이지 푸터 맨 끝에 붙인다(모바일에서는 nav.css 가 숨긴다. 그쪽은
