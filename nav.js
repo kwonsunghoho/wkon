@@ -362,8 +362,9 @@
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
       '</div>' +
       '<div class="nav-space-switch" role="navigation" aria-label="몬크 주요 공간">' +
-        '<a href="index.html"' + (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? ' aria-current="page"' : '') + '>면접 연구소</a>' +
-        '<a href="community.html"' + (section === 'community' ? ' aria-current="page"' : '') + '>승준 커뮤니티</a>' +
+        '<a href="index.html" data-space="research">면접 연구소</a>' +
+        '<a href="community.html" data-space="community">승준 커뮤니티</a>' +
+        '<a href="community.html?view=studies" data-space="study">스터디매치</a>' +
       '</div>' +
     '</nav>' +
     '<div class="mobile-menu" id="mobileMenu">' +
@@ -416,11 +417,25 @@
     var anchor = document.body.firstChild;
     while (holder.firstChild) document.body.insertBefore(holder.firstChild, anchor);
     alignSpaceNav();
+    syncSpaceNav();
+    window.addEventListener('monc:community-route', syncSpaceNav);
     markMain();
     mountFooterSocial();
     wire();
     upgradeLoginLinks();
     initAuth();
+  }
+
+  /* 같은 파일 안에서 게시판·모집 화면을 오가도 상위 메뉴의 현재 표시를 갱신한다. */
+  function syncSpaceNav() {
+    var view = new URLSearchParams(location.search).get('view');
+    var active = section === 'community'
+      ? (['studies','study'].indexOf(view) !== -1 ? 'study' : 'community')
+      : (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? 'research' : '');
+    document.querySelectorAll('#navbar .nav-space-switch [data-space]').forEach(function (a) {
+      if (a.getAttribute('data-space') === active) a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+    });
   }
 
   /* 공용 바에 추가한 45px만 보완한다. 홈 사진·커뮤니티의 자체 여백은 각 화면이 맡는다. */
