@@ -9,7 +9,7 @@
   const levels = ['실력검증 전','기본 준비','실전 대응','스터디 리딩'];
   const statuses = { pending:'확인 중', approved:'승인', rejected:'반려', withdrawn:'철회', accepted:'참여 승인', closed:'모집 종료', published:'공개', hidden:'숨김', open:'모집 중' };
   const scopes = { private:'나만 보기', organizer:'내가 지원한 스터디 모집자', members:'몬크 회원' };
-  let me = null, session = null, consent = false, admin = false, items = [], current = null, ownState = {}, sequence = 0, previousFocus;
+  let me = null, session = null, consent = false, items = [], current = null, ownState = {}, sequence = 0, previousFocus;
   let filters = readFilters(), next = null;
   function readFilters() { const q=new URLSearchParams(location.search);return {category:'',topic:topics[q.get('topic')]?q.get('topic'):'',q:(q.get('q')||'').slice(0,120),mode:['online','offline'].includes(q.get('mode'))?q.get('mode'):'',verified:q.get('verified')==='1'}; }
   function syncFilters() { const q=new URLSearchParams(location.search);for(const key of ['topic','q','mode','verified']){const v=filters[key];if(v)q.set(key,key==='verified'?'1':v);else q.delete(key);}history.replaceState(null,'','community.html?'+q.toString()); }
@@ -81,15 +81,24 @@
     try {
       if(['profile','activity','admin'].includes(view)&&!(await member())) { main.innerHTML='<div class="cm-empty">회원만 볼 수 있는 화면입니다.</div>';return; }
       if(view==='home') { await overview(main,turn); }
-      else if(view==='admin') { if(!(await MONC.requireAdmin())) return;admin=true;await showAdmin(main); }
+      else if(view==='admin') { if(!(await MONC.requireAdmin())) return;location.replace('admin.html?tab=community');return; }
       else if(view==='profile') { const p=(await rpc('member','profile',id?{id}:{})).item;if(turn!==sequence)return;current=p;main.innerHTML=p?profileHTML(p):`<div class="cm-empty">${id?'볼 수 없는 프로필입니다.':`스터디에 보여줄 내 프로필을 만들어 보세요.<br><br>${btn('profile-edit','프로필 만들기')}`}</div>`;
-        if(admin&&p)main.insertAdjacentHTML('beforeend',`<section class="cm-section"><h2>관리자 인증 관리</h2>${p.certificates.map(c=>`<div class="cm-list-row"><p>${esc(c.airline)} ${c.year} · ${esc(c.stage)}</p>${btn('certificate-revoke','경험 인증 취소',c.id,true)}</div>`).join('')}${btn('assessment-create','실력검증 등록',p.id,true)}</section>`);
       }
       else if(view==='activity') { const data=await rpc('member','activity');if(turn!==sequence)return;main.innerHTML=activityHTML(data); }
       else if(view==='thread') { const data=await rpc('read','thread',{id});if(turn!==sequence)return;current=data.item;ownState={};if(current&&session&&consent) ownState=await rpc('member','thread-state',{id});if(turn!==sequence)return;main.innerHTML=current?threadHTML(current):empty('볼 수 없는 글입니다.'); }
       else if(view==='study') { const data=await rpc('read','study',{id});if(turn!==sequence)return;current=data.item;ownState={};if(current&&session&&consent) ownState=await rpc('member','study-state',{id});if(turn!==sequence)return;main.innerHTML=current?studyHTML(current,true):empty('볼 수 없는 모집글입니다.'); }
       else { await listing(main,view,turn); }
+      if(turn===sequence)loadGuides(main,view,turn);
     } catch(e) { if(turn===sequence)main.innerHTML=`<div class="cm-error" role="alert">${esc(errorText(e))}<br><br>${btn('retry','다시 불러오기','',true)}</div>`; }
+  }
+  async function loadGuides(main,view,turn) {
+    if(!['board','studies'].includes(view))return;
+    try {
+      const result=await MONC.sb.rpc('community_guides',{p_scope:view==='studies'?'studies':filters.topic||''});
+      if(result.error||!result.data?.ok||turn!==sequence)return;
+      const entries=result.data.items.filter(g=>view==='studies'?g.scope==='studies':g.scope!=='studies');
+      if(entries.length)main.insertAdjacentHTML('afterbegin',`<section class="cm-board-guides" aria-label="게시판 이용 안내">${entries.map(g=>`<details><summary><span>공지</span>${esc(g.title)}</summary><div class="cm-guide-body">${esc(g.body)}</div></details>`).join('')}</section>`);
+    } catch(_) { /* 추가 SQL을 적용하기 전에도 기존 게시판은 계속 사용한다. */ }
   }
   async function listing(main,view,turn) {
     const studies=view==='studies',data=await rpc('read',studies?'studies':'posts',filters);if(turn!==sequence)return;
@@ -125,7 +134,6 @@
       `<label class="cm-check"><input type="checkbox" name="require_experience" ${s.require_experience?'checked':''}>면접 진출 경험 인증 필수</label><fieldset><legend class="cm-label">참여에 필요한 준비 항목</legend>${checks('required_skills',s.required_skills||[])}</fieldset><p class="cm-help">모집자도 같은 조건을 충족해야 해요. 준비 항목은 본인 표시, 실력 레벨은 몬크 평가로 확인해요. 지원자의 프로필을 보고 참여를 승인해 주세요. 연락처는 공개 모집글 대신 참여자 안내에 적어 주세요.</p>`,s.id?'수정하기':'모집 시작하기');
   }
   function fileForm(proof=false) { form(proof?'면접 진출 경험 인증':'샘플 첨부',proof?'proof':'sample',(proof?field('airline','항공사','','text',40,true)+field('year','채용 연도',new Date().getFullYear(),'number',4,true)+field('stage','진출 전형','','text',60,true):field('title','샘플 제목','','text',100,true)+select('kind','파일 종류',{text:'답변 텍스트 (.txt)',audio:'음성 (.mp3, .wav, .m4a, .webm)',video:'영상 (.mp4, .webm)'},'text')+select('scope','공개 범위',scopes,me?.sample_scope||'organizer'))+`<div class="cm-field"><label class="cm-label" for="f-file">${proof?'합격 메일·합격증 (PDF, PNG, JPG, 8MB 이하)':'샘플 파일 (텍스트 40KB · 음성 20MB · 영상 40MB 이하)'}</label><input id="f-file" name="file" type="file" ${proof?'accept=".pdf,.png,.jpg,.jpeg"':''} required></div><label class="cm-check"><input type="checkbox" name="file_confirm" required>${proof?'본인·항공사·전형을 확인할 수 있는 자료이며 불필요한 개인정보를 가렸습니다.':'직접 작성·녹음한 자료이며 다른 사람의 개인정보와 몬크 비공개 교재가 포함되어 있지 않습니다.'}</label>${proof?'<p class="cm-help">몬크가 서류를 확인한 뒤 승인하면 인증이 반영됩니다. 승인·반려 후 원본은 30일 보관하고 삭제하며, 인증 결과는 유지합니다.</p>':''}`,proof?'인증 신청하기':'첨부하기'); }
-  async function showAdmin(main) { const q=await rpc('admin','queue');main.innerHTML=`<section><h2>면접 경험 인증 ${q.proofs.length}건</h2>${q.proofs.map(p=>`<div class="cm-admin-panel"><b>${esc(p.nickname)} · ${esc(p.member_name)}</b><p class="cm-muted">${esc(p.airline)} ${p.recruit_year} · ${esc(p.stage)}</p><div class="cm-wrap">${btn('asset-read','원본 확인',p.asset_id,true)}${btn('proof-approve','승인',p.id)}${btn('proof-reject','반려',p.id,true)}</div></div>`).join('')||'<p class="cm-muted">심사할 인증이 없습니다.</p>'}</section><section class="cm-section"><h2>실력검증·회원 관리</h2><form data-admin-search class="cm-wrap"><label class="cm-sr-only" for="admin-search">닉네임 검색</label><input id="admin-search" name="q" class="cm-input" placeholder="닉네임 검색" maxlength="60"><button class="cm-btn-ghost">검색</button></form><div id="admin-results"></div></section><section class="cm-section"><h2>신고 ${q.reports.length}건</h2>${q.reports.map(r=>`<div class="cm-admin-panel"><b>${esc(r.content)}</b><p class="cm-muted">${esc(r.reason)}</p><p class="cm-caption">신고자 ${esc(r.nickname)}</p><div class="cm-wrap">${btn('report-hide','콘텐츠 숨김',r.id,true)}${btn('report-dismiss','신고 종결',r.id,true)}</div></div>`).join('')||'<p class="cm-muted">처리할 신고가 없습니다.</p>'}</section>`; }
   async function act(action,id,node) {
     if(['home','board','studies','profile','thread','study','activity'].includes(action)) { navigate(action,id);return; }
     if(action==='retry') { render();return; }
@@ -146,19 +154,14 @@
     if(action==='notices') { const data=await rpc('member','notices');open('내 알림',data.items.map(n=>`<div class="cm-list-row"><b>${esc(n.title)}</b><p class="cm-caption">${date(n.created_at)}${n.read_at?' · 읽음':''}</p>${n.target_id&&n.kind==='thread'?btn('thread','글 보기',n.target_id,true):n.target_id&&n.kind==='study'?btn('study','스터디 보기',n.target_id,true):btn('activity','내 활동 보기','',true)}</div>`).join('')||'<p class="cm-muted">새 알림이 없습니다.</p>');await rpc('member','notice-read');return; }
     if(action==='asset-scope') { const sample=current.samples.find(s=>s.id===id);form('샘플 공개 범위','scope',`<input type="hidden" name="id" value="${id}">`+select('scope','누가 볼 수 있나요?',scopes,sample.scope));return; }
     if(action==='asset-read') { const data=await file('read',{id});const url=new URL(data.url);if(url.protocol!=='https:'&&url.origin!==location.origin)throw new Error('파일 URL 오류');let html;if(data.kind==='text') { const r=await fetch(data.url);if(!r.ok)throw new Error('파일 오류');html=`<div class="cm-thread-body">${esc(await r.text())}</div>`; }else if(data.mime.startsWith('audio/'))html=`<audio controls class="cm-file-view" src="${esc(data.url)}"></audio>`;else if(data.mime.startsWith('video/'))html=`<video controls playsinline class="cm-file-view" src="${esc(data.url)}"></video>`;else if(data.mime.startsWith('image/'))html=`<img class="cm-file-view" src="${esc(data.url)}" alt="인증 원본">`;else html=`<a class="cm-btn cm-full" href="${esc(data.url)}">인증 원본 열기</a>`;open(data.title,html+`<p class="cm-help">접근 링크는 60초 후 만료됩니다.</p>`);return; }
-    if(action==='proof-reject') { form('인증 반려','proof-reject',`<input type="hidden" name="id" value="${id}">`+field('note','회원에게 전달할 반려 사유','','textarea',500,true),'반려 처리');return; }
-    if(action==='assessment-create') { form('몬크 실력검증 등록','assessment',`<input type="hidden" name="profile_id" value="${id}">`+select('level','평가 레벨',{1:'Lv.1 기본 준비',2:'Lv.2 실전 대응',3:'Lv.3 스터디 리딩'},'1')+select('method','평가 방식',{class:'수업 평가',test:'레벨테스트'},'test')+field('date','평가일',new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}),'date',10,true)+field('valid_until','유효기간 (선택)','','date')+`<fieldset><legend class="cm-label">몬크가 확인한 항목</legend>${checks('skills')}</fieldset>`+field('note','관리자 기록 (비공개)','','textarea',500));return; }
     const operations={ 'post-delete':['post-delete',{id},'글을 삭제할까요?'], 'comment-delete':['comment-delete',{id},'댓글을 삭제할까요?'], 'application-withdraw':['application-withdraw',{id},'지원을 철회할까요?'], 'proof-withdraw':['proof-withdraw',{id},'인증 신청을 철회하고 원본을 삭제할까요?'], 'study-close':['study-close',{id},'모집을 종료할까요? 대기 중인 지원도 종료됩니다.'], 'study-leave':['study-leave',{id},'스터디에서 나갈까요?'], 'study-transfer':['study-transfer',{id:current.id,profile_id:id},'이 회원에게 모집자 역할을 인계할까요?'], 'application-accept':['application-decide',{id,decision:'accept'},'이 지원자의 참여를 승인할까요?'], 'application-reject':['application-decide',{id,decision:'reject'},'이 지원을 거절할까요?'] };
     if(operations[action]) { const [a,d,q]=operations[action];if(!confirm(q))return;await rpc('member',a,d);toast('반영했어요.');if(action==='post-delete')navigate('board');else render();return; }
     if(action==='asset-delete') { if(!confirm('첨부한 파일을 삭제할까요?'))return;await file('delete',{id});toast('파일을 삭제했어요.');render();return; }
-    const adminOps={'proof-approve':['proof-decide',{id,decision:'approve'},'회원 이름·항공사·연도·전형과 원본을 확인했나요?'], 'certificate-revoke':['certificate-revoke',{id},'경험 인증을 취소할까요?'], 'report-hide':['report-resolve',{id,decision:'hide'},'신고된 콘텐츠를 숨길까요?'], 'report-dismiss':['report-resolve',{id,decision:'dismiss'},'신고를 종결할까요?'], 'assessment-revoke':['assessment-revoke',{profile_id:id},'실력검증을 취소할까요?'], 'member-block':['member-block',{profile_id:id,blocked:node.dataset.blocked!=='true'},'커뮤니티 이용 상태를 바꿀까요?']};
-    if(adminOps[action]) { if(!admin)throw new Error('community:forbidden');const [a,d,q]=adminOps[action];if(!confirm(q))return;await rpc('admin',a,d);toast('관리 결과를 반영했어요.');render(); }
   }
   document.addEventListener('click',async e=>{ const link=e.target.closest('[data-route]'),node=e.target.closest('[data-action]');if(link) { e.preventDefault();navigate(link.dataset.route);return; }if(!node||node.disabled)return;node.disabled=true;try{await act(node.dataset.action,node.dataset.id||'',node);}catch(err){toast(errorText(err));}finally{node.disabled=false;} });
   document.addEventListener('submit',async e=>{
     const f=e.target;
     if(f.matches('[data-search]')) {e.preventDefault();filters.q=new FormData(f).get('q').trim();if(route().view==='home')history.pushState(null,'',path('board'));syncFilters();next=null;render();return;}
-    if(f.matches('[data-admin-search]')) {e.preventDefault();try{const d=await rpc('admin','profiles',{q:new FormData(f).get('q')});document.getElementById('admin-results').innerHTML=d.items.map(p=>`<div class="cm-admin-panel"><b>${esc(p.nickname)} · ${p.level?'Lv.'+p.level:'아직 검증 없음'}</b><div class="cm-wrap">${btn('profile','프로필',p.id,true)}${btn('assessment-create','평가 등록',p.id,true)}${btn('assessment-revoke','평가 취소',p.id,true)}${btn('member-block',p.blocked?'제한 해제':'이용 제한',p.id,true,`data-blocked="${p.blocked}"`)}</div></div>`).join('')||'<p class="cm-muted">검색 결과가 없습니다.</p>';}catch(err){toast(errorText(err));}return;}
     if(!f.dataset.form)return;e.preventDefault();const submit=f.querySelector('[type=submit]'),error=f.querySelector('[role=alert]');if(submit.disabled)return;submit.disabled=true;error.hidden=true;const fd=new FormData(f),d=Object.fromEntries(fd);let after=()=>render();
     try {
       if(!(await member()))return;
@@ -172,8 +175,6 @@
         case 'report': await rpc('member','report',d);break;
         case 'scope': await rpc('member','asset-scope',d);break;
         case 'sample': case 'proof': {const proof=f.dataset.form==='proof',upload=new FormData();upload.set('action','upload');upload.set('kind',proof?'proof':d.kind);upload.set('title',proof?'면접 경험 인증 원본':d.title);upload.set('scope',proof?'private':d.scope);upload.set('file',fd.get('file'));const result=await file('upload',upload);if(proof) {try{await rpc('member','proof-submit',{airline:d.airline,year:Number(d.year),stage:d.stage,asset_id:result.id});}catch(err){await file('delete',{id:result.id}).catch(()=>{});throw err;}}break;}
-        case 'proof-reject': await rpc('admin','proof-decide',{...d,decision:'reject'});break;
-        case 'assessment': d.skills=fd.getAll('skills');d.level=Number(d.level);await rpc('admin','assessment-save',d);break;
       }
       const messages={profile:'프로필을 저장했어요.',post:d.id?'글을 수정했어요.':'글을 올렸어요.',comment:'댓글을 남겼어요.',guide:'참여자 안내를 저장했어요.',study:d.id?'모집글을 수정했어요.':'스터디 모집을 시작했어요.',apply:'지원을 보냈어요. 지원 결과는 내 활동에서 확인하세요.',report:'신고를 접수했어요.',scope:'샘플 공개 범위를 변경했어요.',sample:'샘플을 첨부했어요.',proof:'인증 신청을 보냈어요. 몬크 확인 후 결과를 알려드려요.','proof-reject':'인증을 반려했어요.',assessment:'실력검증 결과를 등록했어요.'};
       close();toast(messages[f.dataset.form]||'저장했어요.');after();

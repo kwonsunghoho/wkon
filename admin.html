@@ -88,11 +88,11 @@
             height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 20px 12px 16px; }
     .sn-logo { display: flex; align-items: center; gap: 8px; padding: 0 10px 12px; flex: 0 0 auto; }
     .sn-glabel { font-size: 12px; font-weight: 800; letter-spacing: .1em; color: var(--text-dim); padding: 14px 10px 6px; }
-    .tabbtn, .sn-community-link { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left;
+    .tabbtn { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left;
               padding: 11px 12px; border-radius: 12px; font-size: 14.5px; font-weight: 700; color: var(--text-muted);
               font-family: inherit; cursor: pointer; min-height: 44px; white-space: nowrap; }
-    .tabbtn .ic, .sn-community-link .ic { color: var(--text-dim); }
-    .tabbtn:hover, .sn-community-link:hover { background: var(--surface2); color: var(--text); }
+    .tabbtn .ic { color: var(--text-dim); }
+    .tabbtn:hover { background: var(--surface2); color: var(--text); }
     .tabbtn.active { background: var(--action); color: #fff; box-shadow: var(--shadow-action); }
     .tabbtn.active .ic { color: var(--action-on-dark); }
     .sn-me { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -129,7 +129,7 @@
       .sn-close .ic { width: 20px; height: 20px; }
       .snav .sn-logo { display: none; }   /* 로고는 상단 바가 갖고 있다 */
       .sn-glabel { grid-column: 1 / -1; padding: 10px 4px 2px; }
-      .tabbtn, .sn-community-link { min-height: 48px; padding: 11px 12px; border: 1px solid var(--border-soft); background: var(--surface);
+      .tabbtn { min-height: 48px; padding: 11px 12px; border: 1px solid var(--border-soft); background: var(--surface);
                 border-radius: 14px; font-size: 14px; }
       .tabbtn.active { box-shadow: none; }
       .sn-me { grid-column: 1 / -1; margin-top: 8px; padding: 12px 4px 0; }
@@ -1191,6 +1191,7 @@
     }
   </style>
   <link rel="stylesheet" href="refund-details.css?v=1">
+<link rel="stylesheet" href="community-admin.css?v=20261015a">
 </head>
 <body>
   <!-- 라인 아이콘 스프라이트(9대 원칙 3 — 이모지 혼용 금지, currentColor 리컬러) -->
@@ -1245,11 +1246,11 @@
       <span class="badge">관리자</span>
     </div>
     <div class="sn-glabel">운영</div>
-    <a class="sn-community-link" href="community.html?view=admin" style="text-decoration:none"><svg aria-hidden="true" class="ic"><use href="#i-users"/></svg>커뮤니티 관리</a>
     <button class="tabbtn active" data-tab="today"><svg aria-hidden="true" class="ic"><use href="#i-home"/></svg>오늘</button>
     <button class="tabbtn" data-tab="apps"><svg aria-hidden="true" class="ic"><use href="#i-inbox"/></svg>신청자 현황</button>
     <button class="tabbtn" data-tab="waitlist"><svg aria-hidden="true" class="ic"><use href="#i-bell"/></svg>오픈 알림</button>
     <button class="tabbtn" data-tab="members"><svg aria-hidden="true" class="ic"><use href="#i-users"/></svg>회원 관리</button>
+    <button class="tabbtn" data-tab="community"><svg aria-hidden="true" class="ic"><use href="#i-users"/></svg>커뮤니티 관리</button>
     <a class="tabbtn" href="academy-desk.html">수업 · 과제 피드백</a>
     <button class="tabbtn" data-tab="credits"><svg aria-hidden="true" class="ic"><use href="#i-coin"/></svg>크레딧</button>
     <div class="sn-glabel">상품</div>
@@ -1280,6 +1281,7 @@
        신문 1면 문법: 헤드라인 문장(실데이터로 생성) + 좌(지금 처리·최근 신청) / 우(숫자 스택).
        숫자는 이미 로드된 _apps/_wl/members 를 재사용하고 검수 대기만 count 쿼리 하나를 더 쓴다.
        모바일은 숫자 스택이 먼저 온다(간결 우선 — 오너 확정). id(td*)는 구 카드 시절 그대로다. -->
+  <div class="tab-panel" id="panel-community"><div id="communityAdminApp" class="ca-root"></div></div>
   <div class="tab-panel active" id="panel-today">
     <div class="today-wrap">
       <div class="tb-kick"><span>오늘 브리핑</span><span id="tbDate">–</span></div>
@@ -2551,6 +2553,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=20261013"></script>
+  <dialog id="caDialog" class="ca-root" aria-labelledby="caDialogTitle"><header class="ca-dialog-head"><h2 id="caDialogTitle"></h2><button type="button" class="op-btn secondary" data-ca="close">닫기</button></header><div id="caDialogBody"></div></dialog>
+  <div id="caToast" role="status" hidden></div>
+  <script src="community-admin.js?v=20261015a"></script>
+
   <script src="media-storage.js?v=2"></script>
   <script src="refund-details.js?v=1"></script>
   <!-- 후기 글 그리기 — [전체 글 보기]가 KE20 후기의 [소제목] 을 후기 페이지와 같은 모양으로 보여 준다 -->
@@ -4126,7 +4132,8 @@
            헤드라인·'지금 처리'가 3건 그대로 남아, 첫 화면이 이미 끝난 일을 계속 남은 일로
            단정했다(원칙 11). 캐시(_apps·_wl·members)만 다시 읽으므로 추가 조회는 검수 count 하나뿐. */
         if (b.dataset.tab === 'today' && _appsLoaded) loadToday();
-        ensureTab(b.dataset.tab);   // 이 탭 데이터를 아직 안 받았으면 지금 받는다(아래 ensureTab)
+        ensureTab(b.dataset.tab);
+        if (b.dataset.tab === 'community') window.MONCCommunityAdmin.mount();   // 이 탭 데이터를 아직 안 받았으면 지금 받는다(아래 ensureTab)
         /* ⚠️ 새 화면은 맨 위에서 시작한다(2026-08-02 5차).
            전에는 스크롤 위치가 그대로여서, 연구실 자료를 아래까지 내려 보다가 메뉴에서
            감점 사전을 고르면 그 탭의 중간부터 보였다(실측 1200px → 745px). */
@@ -9544,6 +9551,13 @@
       try { sessionStorage.setItem(DESK_TAB_KEY, on ? on.dataset.tab : ''); } catch (e) {}
     });
     function restoreDesk() {
+      const requested = new URLSearchParams(location.search);
+      if (requested.get('tab') === 'community') {
+        requested.delete('tab');
+        history.replaceState(null,'',location.pathname+(requested.size?'?'+requested.toString():'')+location.hash);
+        activateTab('community');
+        return;
+      }
       const SK = window.moncScrollKeep;
       if (!SK || !SK.backish) return;   // 새로 눌러 들어온 방문은 '오늘' 맨 위에서 시작하는 게 맞다
       let tab = '';
