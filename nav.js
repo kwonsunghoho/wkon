@@ -85,6 +85,18 @@
      실패하면 세 목록에 닿을 방법이 사라진다. 승준노트(6)·챌린지(4)·연구실(2)은
      드롭다운이 있는데 3갈래인 후기만 없던 자리다.
      ⚠️ 목록은 reviews.html 허브 카드와 같은 공개 갈래를 유지한다 — 한쪽만 늘리지 말 것. */
+  /* PC는 상단 메뉴로 이동하고 모바일은 하단 탐색을 유지한다. */
+  var COMMUNITY_SUB = [
+    ['home', '커뮤니티 홈', '최근 올라온 글과 모집 중인 스터디'],
+    ['board', '게시판', '승준정보·헤메&샵·자유게시판'],
+    ['studies', '스터디매치', '인증과 준비 항목을 보고 스터디 찾기'],
+    ['activity', '내 활동', '내 글·스터디 지원·프로필·인증 관리']
+  ];
+  function communityMenuHtml() {
+    return COMMUNITY_SUB.map(function (item) {
+      return '<a href="community.html?view=' + item[0] + '" data-community-view="' + item[0] + '"><b>' + esc(item[1]) + '</b><span>' + esc(item[2]) + '</span></a>';
+    }).join('');
+  }
   var REVIEW_HUB = 'reviews.html';
   var REVIEW_SUB = [
     ['reviews-list.html?kind=challenge', '챌린지 후기', '2주를 마친 학생들의 기록'],
@@ -377,7 +389,10 @@
             '<button class="nav-dd-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('reviews') + '>후기' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(REVIEW_SUB) + '</div>' +
           '</li>' +
-          '<li class="nav-community-entry"><a href="community.html"' + cur('community') + '>승준 커뮤니티</a></li>' +
+          '<li class="nav-dd nav-community-entry">' +
+            '<button class="nav-dd-btn" type="button" data-hub="community.html" aria-expanded="false" aria-haspopup="true"' + cur('community') + '>승준 커뮤니티' + CHEV + '</button>' +
+            '<div class="nav-dd-menu">' + communityMenuHtml() + '</div>' +
+          '</li>' +
         '</ul>' +
         '<div class="nav-right">' + navRightHtml(authHint) + '</div>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
@@ -453,6 +468,14 @@
       : (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? 'research' : '');
     document.querySelectorAll('#navbar .nav-space-switch [data-space], #mobileMenu .mm-spaces [data-space]').forEach(function (a) {
       if (a.getAttribute('data-space') === active) a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+    });
+    var communityView = view || 'home';
+    if (communityView === 'thread') communityView = 'board';
+    if (communityView === 'study') communityView = 'studies';
+    if (communityView === 'profile') communityView = 'activity';
+    document.querySelectorAll('#navbar [data-community-view]').forEach(function (a) {
+      if (section === 'community' && a.getAttribute('data-community-view') === communityView) a.setAttribute('aria-current','page');
       else a.removeAttribute('aria-current');
     });
     var now = new URLSearchParams(location.search);
