@@ -372,12 +372,12 @@
             '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(LAB_SUB) + '</div>' +
           '</li>' +
-          '<li><a href="community.html"' + cur('community') + '>승준 커뮤니티</a></li>' +
           '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
           '<li class="nav-dd">' +
             '<button class="nav-dd-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('reviews') + '>후기' + CHEV + '</button>' +
             '<div class="nav-dd-menu">' + ddMenu(REVIEW_SUB) + '</div>' +
           '</li>' +
+          '<li class="nav-community-entry"><a href="community.html"' + cur('community') + '>승준 커뮤니티</a></li>' +
         '</ul>' +
         '<div class="nav-right">' + navRightHtml(authHint) + '</div>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
