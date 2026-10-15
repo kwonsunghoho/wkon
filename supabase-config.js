@@ -413,14 +413,14 @@
     callFree('apply_free_lecture', { p_lecture: lectureId, p_slot: slotId || null });
   const claimFreeResource = (resourceId) => callFree('claim_free_resource', { p_resource: resourceId });
 
-  // private 버킷 파일의 재생용 signed URL (기본 1시간)
+  // 챌린지 파일 재생은 서버에서 보관기간·권한을 확인한다(최대 10분, 만료일을 넘지 않음).
   async function getSignedUrl(storagePath, expiresIn) {
     if (!storagePath) return null;
-    const { data, error } = await sb.storage
-      .from('recordings')
-      .createSignedUrl(storagePath, expiresIn || 3600);
-    if (error) { console.error('signed URL 실패', error); return null; }
-    return data.signedUrl;
+    try {
+      if (!window.MONC_MEDIA) return null;
+      const data = await window.MONC_MEDIA.path(storagePath);
+      return data.expired ? null : data.url;
+    } catch (e) { console.error('재생 링크 확인 실패', e); return null; }
   }
 
   // 전역 노출

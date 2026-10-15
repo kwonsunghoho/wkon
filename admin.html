@@ -1250,6 +1250,7 @@
     <button class="tabbtn" data-tab="apps"><svg aria-hidden="true" class="ic"><use href="#i-inbox"/></svg>신청자 현황</button>
     <button class="tabbtn" data-tab="waitlist"><svg aria-hidden="true" class="ic"><use href="#i-bell"/></svg>오픈 알림</button>
     <button class="tabbtn" data-tab="members"><svg aria-hidden="true" class="ic"><use href="#i-users"/></svg>회원 관리</button>
+    <a class="tabbtn" href="academy-desk.html">수업 · 과제 피드백</a>
     <button class="tabbtn" data-tab="credits"><svg aria-hidden="true" class="ic"><use href="#i-coin"/></svg>크레딧</button>
     <div class="sn-glabel">상품</div>
     <button class="tabbtn" data-tab="rounds"><svg aria-hidden="true" class="ic"><use href="#i-flag"/></svg>챌린지</button>
@@ -2549,7 +2550,8 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
+  <script src="supabase-config.js?v=20261013"></script>
+  <script src="media-storage.js?v=2"></script>
   <script src="refund-details.js?v=1"></script>
   <!-- 후기 글 그리기 — [전체 글 보기]가 KE20 후기의 [소제목] 을 후기 페이지와 같은 모양으로 보여 준다 -->
   <script src="review-rich.js?v=1"></script>
@@ -3735,6 +3737,7 @@
       (chSubs || []).forEach(async s => {
         const el = document.getElementById(`cs-play-${s.challenge}-${s.type}`);
         if (!el) return;
+        if (MONC_MEDIA.challengeExpired(s)) { el.textContent = '제출일부터 14일이 지나 파일 보관기간이 끝났습니다. 피드백 기록은 남아 있습니다.'; return; }
         const url = await MONC.getSignedUrl(s.storage_path);
         if (url) el.innerHTML = (CH_SUB_ADM[s.challenge] || {}).media === 'video'
           ? `<video controls preload="none" src="${url}" style="width:100%"></video>`
@@ -4106,7 +4109,7 @@
     // ── 탭 전환(사이드바·모바일 칩 공용) ──
     // .tabbtn[data-tab] ↔ #panel-* 규약 하나. 코드 어디서든 activateTab() 하나로 이동한다.
     function initTabs() {
-      document.querySelectorAll('.tabbtn').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('.tabbtn[data-tab]').forEach(b => b.addEventListener('click', () => {
         document.querySelectorAll('.tabbtn').forEach(x => x.classList.toggle('active', x === b));
         document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
         document.getElementById('panel-' + b.dataset.tab).classList.add('active');
@@ -5874,7 +5877,7 @@
           const k = `<span class="apl-slot-k">${chSubTypeLabel(_appKind, t)}</span>`;
           return s
             ? `<div class="apl-slot">${k}<span class="apl-slot-d">${fmtDate(s.created_at)}${s.round ? ' · ' + s.round + '기' : ''}</span>
-                <div class="apl-slot-play" data-path="${esc(s.storage_path)}" data-media="${media}"></div>${chSubFbHtml(s, true)}</div>`
+                ${MONC_MEDIA.challengeExpired(s) ? '<p class="apl-slot-d">제출일부터 14일이 지나 파일 보관기간이 끝났습니다.</p>' : `<div class="apl-slot-play" data-path="${esc(s.storage_path)}" data-media="${media}"></div>`}${chSubFbHtml(s, true)}</div>`
             : `<div class="apl-slot">${k}<span class="apl-slot-d">아직 없음</span></div>`;
         }).join('')}</div>
       </details>`;
