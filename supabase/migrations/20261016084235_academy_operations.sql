@@ -287,3 +287,14 @@ grant execute on function operations_private.dispatch(text,jsonb) to authenticat
 revoke all on function public.operations_api(text,jsonb) from public,anon;
 grant execute on function public.operations_api(text,jsonb) to authenticated;
 commit;
+
+notify pgrst, 'reload schema';
+select
+ to_regprocedure('public.operations_api(text,jsonb)') is not null as api_ready,
+ (select count(*)=6 and bool_and(c.relrowsecurity)
+  and not bool_or(has_table_privilege('anon',c.oid,'SELECT,INSERT,UPDATE,DELETE')
+                  or has_table_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE,DELETE'))
+  from pg_class c join pg_namespace n on n.oid=c.relnamespace
+  where n.nspname='operations_private' and c.relkind='r') as private_tables_protected,
+ not has_function_privilege('anon','public.operations_api(text,jsonb)','EXECUTE') as anonymous_blocked,
+ has_function_privilege('authenticated','public.operations_api(text,jsonb)','EXECUTE') as member_rpc_ready;
