@@ -1,0 +1,21 @@
+// 일정 반복 범위와 빈자리 계산의 실제 운영 경계값을 확인한다.
+import assert from 'node:assert/strict';
+import '../operations-utils.js';
+import '../operations-slots.js';
+const U=globalThis.MONC_OPS_UTIL,S=globalThis.MONC_OPS_SLOTS;
+assert.deepEqual(U.dates('2026-10-16','2026-10-30','weekly',[5]),['2026-10-16','2026-10-23','2026-10-30']);
+assert.throws(()=>U.dates('2026-02-30','','single'));
+assert.throws(()=>U.dates('2026-10-16','2026-10-15','range'));
+assert.deepEqual(S.eventSpan('13:00~15:00'),[780,900]);
+assert.deepEqual(S.eventSpan('14:30'),[870,990]);
+assert.equal(S.eventSpan('오후 1시'),null);
+const empty=S.buildDayPlans([],'2026-10-16',8);
+assert.equal(empty.length,5);
+assert.equal(empty.every(p=>p.openings.some(o=>o.start===780&&o.end===1320&&o.status==='free2')),true);
+const dates=U.dates('2026-10-16','2026-12-04','weekly',[5]);
+const events=dates.flatMap((date,i)=>[0,1].map(n=>({id:`${i}-${n}`,date,category:'수업',title:'합성 수업',time:'14:00~16:00'})));
+const friday=S.buildDayPlans(events,'2026-10-16',8).find(p=>p.weekday===5);
+assert.equal(friday.openings.some(o=>o.status!=='partial'&&o.start<960&&o.end>840),false);
+const consultations=S.buildDayPlans(events.map(e=>({...e,category:'상담'})),'2026-10-16',8);
+assert.deepEqual(consultations.map(p=>p.openings),empty.map(p=>p.openings));
+console.log('반복 날짜·빈자리 계산 10개 검사 통과');

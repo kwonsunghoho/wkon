@@ -36,7 +36,7 @@
   <!-- 뒤로 왔을 때 보던 자리로 되돌리기 — 위 bfcache 새로고침이 스크롤을 버리는 걸 메운다 -->
   <script src="scroll-keep.js?v=3"></script>
   <style>
-    #academyEntry[hidden], #academyDeskEntry[hidden] { display: none !important; }
+    #academyEntry[hidden], #academyDeskEntry[hidden], #operationsEntry[hidden] { display: none !important; }
     /* ══ 마이페이지 '오늘 한 칸' 구조 (2026-07-31 재설계 ②안 확정 — outputs/mypage-mockup.html) ══
        원칙: 위에는 '지금 할 일' 하나(다크 네이비 카드), 과거 기록은 전부 접힌 줄.
        "오늘 미션이 안 올라왔어요" 같은 문장은 금지 — 제출이 카톡방이라 사이트가 모른다.
@@ -439,6 +439,11 @@
           <p class="v2-cs-hint">과제를 제출하고 선생님의 피드백을 확인하세요.</p>
           <a class="v2-outline" href="academy.html">과제 · 피드백 열기</a>
           <a class="v2-outline" href="academy-desk.html" id="academyDeskEntry" hidden>선생님 피드백</a>
+        </div>
+        <div class="v2-card" id="operationsEntry" hidden>
+          <div class="v2-cs-h"><span class="v2-cs-t">학원 운영</span></div>
+          <p class="v2-cs-hint">함께 확인할 일정과 맡은 업무를 확인하세요.</p>
+          <a class="v2-outline" href="operations.html">일정 · 업무 열기</a>
         </div>
         <details class="v2-fold" id="sec-answers" style="display:none;">
           <summary>
@@ -1456,6 +1461,10 @@
           document.getElementById('academyEntry').hidden = false;
           document.getElementById('academyDeskEntry').hidden = !data.teacher;
         }
+      }).catch(() => {});
+      // 직원 입구만 확인한다. 일반 회원과 DB 미적용 환경에는 숨긴다.
+      MONC.sb.rpc('operations_api', { p_action: 'access', p: {} }).then(({ data, error }) => {
+        document.getElementById('operationsEntry').hidden = !!error || !data?.allowed;
       }).catch(() => {});
       // 승자각 제출 카드가 답변 제목을 재사용하므로 promise 를 들고 있는다(추가 요청 없이 한 번만 조회)
       const ansLoad = loadAnswerNotes(me);

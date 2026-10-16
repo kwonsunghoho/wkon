@@ -1,5 +1,9 @@
 # 마이페이지 — 상세 기록
 
+## 직원 운영 입구 (2026-10-16 · 로컬 구현)
+
+`operations_api('access')`가 허용한 직원에게만 학원 운영 카드를 표시한다. DB 미적용·조회 오류·일반 회원에는 숨긴다. 권한과 기능 원장은 `operations.md`, 운영 적용 여부는 `implementation-status.md`를 따른다.
+
 ## 스터디 프로필 바로가기 (2026-10-13, 로컬 구현)
 
 회원 이름 아래에서 `community.html?view=profile`로 이동한다. 연락처·동의·본인인증·재학생 판정은 기존 경로를 유지하며 새 프로필은 별도 원장이다. 구현·운영 상태는 implementation-status.md, 상세는 community.md를 따른다.
