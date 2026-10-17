@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="tokens.css">
   <!-- 공용 상단 메뉴(2026-07-30) — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
   <link rel="stylesheet" href="nav.css?v=20261017">
-  <script src="nav.js?v=20261017" defer></script>
+  <script src="nav.js?v=20261017-cta" defer></script>
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — 파일 받기·로그인이 막히는 자리 -->
   <script src="inapp.js?v=10" defer></script>
   <!-- 글꼴은 tokens.css 의 @import(SUIT) 하나가 책임진다 — 페이지별 폰트 링크 없음(2026-07-29) -->
@@ -847,6 +847,8 @@
   var wrap = document.getElementById('heroIntro');
   var bar  = document.getElementById('stickyCta');
   var community = document.getElementById('homeCommunity');
+  var ending = document.querySelector('.home-ending');
+  var footer = document.querySelector('footer');
   if (!wrap || !bar) return;
 
   var intro = null, ticking = false;
@@ -859,6 +861,10 @@
       var c = community.getBoundingClientRect();
       on = on || (c.top < window.innerHeight && c.bottom > 0);
     }
+    // 마무리가 보이기 시작하면 푸터까지 고정 신청 버튼을 숨긴다.
+    on = on || [ending, footer].some(function (section) {
+      return section && section.getBoundingClientRect().top < window.innerHeight;
+    });
     if (intro === on) return;      // 매 프레임 클래스 재기록 방지
     intro = on;
     bar.classList.toggle('is-intro', on);
@@ -870,6 +876,8 @@
   intro = true;
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
+  // 지연 로딩 이미지와 후기 때문에 섹션 위치가 바뀌어도 표시 조건을 다시 계산한다.
+  if ('ResizeObserver' in window) new ResizeObserver(onScroll).observe(document.body);
   measure();
 })();
 </script>

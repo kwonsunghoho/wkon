@@ -306,7 +306,7 @@
     } else {
       btn = '<a class="nav-login" href="' + loginHref() + '">로그인/회원가입</a>';
     }
-    return btn + '<a class="nav-cta" href="apply.html">신청하기</a>';
+    return btn + '<a class="nav-cta" href="apply.html">챌린지 신청</a>';
   }
   function memberCardHtml(hint) {
     var name = (hint.name || '회원').trim() || '회원';
