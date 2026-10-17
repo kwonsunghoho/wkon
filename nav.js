@@ -51,7 +51,7 @@
   var COMMUNITY_SUB = [
     ['home', '커뮤니티 홈', '최근 올라온 글과 모집 중인 스터디'],
     ['board', '게시판', '승준정보·헤메&샵·자유게시판'],
-    ['studies', '스터디매치', '인증과 준비 항목을 보고 스터디 찾기'],
+    ['studies', '스터디매치', '참여 조건·프로필 확인과 지원'],
     ['activity', '내 활동', '내 글·스터디 지원·프로필·인증 관리']
   ];
   function communityMenuHtml() {
@@ -350,10 +350,10 @@
           ['면접 연구자료', MATERIAL_SUB],
           ['특강', LECTURE_SUB]
         ]) + '</div>' +
-        spaceHtml('community','커뮤니티','질문·정보 공유·스터디 찾기','community.html','mmCommunity',spacePanelHtml([
+        spaceHtml('community','커뮤니티','질문·정보 공유·스터디매치','community.html','mmCommunity',spacePanelHtml([
           ['함께 준비하기', [
             ['community.html?view=board','게시판','승준정보·헤메&샵·자유게시판'],
-            ['community.html?view=studies','스터디매치','함께 준비할 스터디 찾기'],
+            ['community.html?view=studies','스터디매치','함께 준비할 스터디 모집과 지원'],
             ['community.html?view=activity','내 활동','내 글·스터디 지원·프로필·인증 관리']
           ]]
         ])) +
