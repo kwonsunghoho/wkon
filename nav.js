@@ -23,16 +23,7 @@
 
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
 
-  /* 승준 코스 — 드롭다운 없는 단독 링크(특강과 같은 형). 2026-08-06 오너 확정으로
-     승준노트를 '승준 코스(briefing.html)'와 '승준 도구(tools.html)' 둘로 분리했다.
-     ⚠️ 파일명은 briefing.html 그대로다(계측·외부 링크) — 화면 이름만 승준 코스. */
-  var COURSE_LINK = 'briefing.html';
-  /* 하위 항목 — 승준 도구는 tools.html 격자와, 챌린지는 challenges.html 카드와 같은 목록.
-     ⚠️ 실전 모의면접(rehearsal)은 배포 보류 — 넣지 말 것.
-     ⚠️ 맨 앞에 있던 '승준노트 한눈에'·'챌린지 한눈에'(허브 링크)는 2026-07-31 오너 지시로 뺐다.
-        허브로 가는 길은 아래 HUB 상수 + 상위 버튼 '한 번 더 누르기'가 대신한다(wire() 참조) —
-        목록 맨 위에 다시 넣지 말 것. */
-  var TOOLS_HUB = 'tools.html';
+  /* 답변·자료 기능 목록. 숨긴 AI킬러·일문일답은 복원하지 않는다. */
   var TOOLS_SUB = [
     /* ⚠️ 1번 항목은 저장소(answers.html) 직행 — 구 mypage.html#sec-answers 는 저장 답변이
        0건이면 접이가 아예 안 그려져 '눌렀는데 아무것도 없음'이 됐다(2026-08-02 오너
@@ -56,35 +47,6 @@
     ['games.html', '역량검사 게임', '검사 유형 7가지 무료 연습']
   ];
   var CHALLENGE_HUB = 'challenges.html';
-  var CHALLENGE_SUB = [
-    ['challenge-voice.html', '보.신.각', '2주 만에 목소리가 달라져요'],
-    ['challenge-expression.html', '영.합.각', '카메라 앞에서도 자연스럽게'],
-    ['challenge-spinning.html', '스.피.닝', '리듬을 타며 발음이 터진다'],
-    ['challenge-answer.html', '승.자.각', '2주에 답변 10개 완성'],
-    ['challenge-culture.html', '댄.특.완', '2주 동안 만드는 대한항공식 답변 30개']
-  ];
-  /* 연구실 드롭다운(2026-07-31 오너 확정) — 상단 탭 '연구실'은 카테고리(두 번 누르면
-     허브 lab.html)고, 목차는 허브의 카드 두 장과 1:1 — 연구실(원장)/연구진("하위탭도
-     두개로 나눠줘야지 왜 하나야"). 탭을 연구실·연구진 두 개로 분리하는 안은 같은 날
-     기각 — 상단 6개면 769~999px 에서 54px 초과(실측), 소개 페이지가 상품과 같은 급이
-     되고, 허브가 무의미해진다(경과는 nav.md). 하위 페이지(자료실·영상관 등)가 생기면
-     이 배열에 한 줄씩 추가한다.
-     ⚠️ 승준노트·챌린지 목차의 허브 링크('한눈에')는 오너가 뺐으므로 되살리지 말 것. */
-  var LAB_HUB = 'lab.html';
-  var LAB_SUB = [
-    /* ⚠️ 설명 줄은 lab-archive.html 의 서가 카드와 같은 목록을 유지한다. 기출문제는
-       2026-08-03 취업 자료실 안의 갈래가 됐는데 이 줄만 옛 5서가로 남아 있었다
-       — 메뉴를 열 때마다 옛 구성이 보였다(오너 지적). 서가를 늘리면 여기도 고친다. */
-    /* ⚠️ 2026-09-22 서가 접기 — 서가가 취업 자료실 하나라 원장을 건너뛰고 자료 목록으로 보낸다.
-       원문: ['lab-archive.html', '연구실', '취업 자료실·영상관·현장 리포트'] (docs/notes/lab.md '서가 접기') */
-    ['lab-airline.html', '연구실', '항공사별 자료와 기출'],
-    ['researchers.html', '연구진', '이력과 전문 분야 소개']
-  ];
-  /* 후기 드롭다운 (2026-08-02 C-9) — 세 갈래로 가는 길이 reviews.html 의 JS 카드
-     하나뿐이었다. 그 카드는 로드 실패 시 hub.innerHTML='' 로 비우기 때문에, 한 번
-     실패하면 세 목록에 닿을 방법이 사라진다. 승준노트(6)·챌린지(4)·연구실(2)은
-     드롭다운이 있는데 3갈래인 후기만 없던 자리다.
-     ⚠️ 목록은 reviews.html 허브 카드와 같은 공개 갈래를 유지한다 — 한쪽만 늘리지 말 것. */
   /* PC는 상단 메뉴로 이동하고 모바일은 하단 탐색을 유지한다. */
   var COMMUNITY_SUB = [
     ['home', '커뮤니티 홈', '최근 올라온 글과 모집 중인 스터디'],
@@ -97,7 +59,6 @@
       return '<a href="community.html?view=' + item[0] + '" data-community-view="' + item[0] + '"><b>' + esc(item[1]) + '</b><span>' + esc(item[2]) + '</span></a>';
     }).join('');
   }
-  var REVIEW_HUB = 'reviews.html';
   var REVIEW_SUB = [
     ['reviews-list.html?kind=challenge', '챌린지 후기', '2주를 마친 학생들의 기록'],
     ['reviews-list.html?kind=ke20', '수업 후기', '수업에 참여한 분들이 직접 남긴 후기']
@@ -139,6 +100,17 @@
     'stories.html': 'reviews', 'story.html': 'reviews'
   };
 
+
+  /* 실제 유입은 챌린지·연구자료·특강이다. 답변 도구는 자료 활용 메뉴에서 찾는다. */
+  var CHALLENGE_SUB = [[CHALLENGE_HUB, '2주 챌린지', '목소리·표정·발음·답변 집중 준비'], REVIEW_SUB[0]];
+  var LECTURE_SUB = [['lectures.html', '특강', '강의 주제·수강 대상·일정 확인'], REVIEW_SUB[1]];
+  var MATERIAL_SUB = [['lab-airline.html', '면접 연구자료', '항공사별 자료와 기출 찾기'], TOOLS_SUB[3], TOOLS_SUB[4], ['tools.html', '내 답변 준비 도구', '자료를 본 뒤 소재 발굴·첨삭·답변 저장']];
+  Object.keys(SECTION_OF).forEach(function (file) {
+    if (SECTION_OF[file] === 'lab' || SECTION_OF[file] === 'tools') SECTION_OF[file] = 'materials';
+    else if (SECTION_OF[file] === 'reviews') SECTION_OF[file] = 'about';
+  });
+  SECTION_OF['researchers.html'] = 'about';
+
   var here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   var section = SECTION_OF[here] || '';
   var onHome = (here === 'index.html' || here === '');
@@ -155,7 +127,7 @@
         빠뜨리면 그 화면에서 현재 표시가 아무 줄에도 안 붙는다. */
   var QUERY_DEFAULT = { 'reviews-list.html': { kind: 'challenge' } };
   var QUERY_VALUES = {};   // 'reviews-list.html|kind' → ['challenge','consult']
-  [TOOLS_SUB, CHALLENGE_SUB, LAB_SUB, REVIEW_SUB].forEach(function (list) {
+  [TOOLS_SUB, REVIEW_SUB].forEach(function (list) {
     list.forEach(function (it) {
       var p = String(it[0]).split('#')[0].split('?');
       if (!p[1]) return;
@@ -169,6 +141,9 @@
   /* 상담 후기는 메뉴에서 숨겼지만 기존 주소의 현재 표시 판정은 유지한다. */
   (QUERY_VALUES['reviews-list.html|kind'] = QUERY_VALUES['reviews-list.html|kind'] || []).push('consult');
   var hereQuery = new URLSearchParams(location.search);
+  if (here === 'reviews-list.html') {
+    section = hereQuery.get('kind') === 'ke20' ? 'lecture' : hereQuery.get('kind') === 'consult' ? 'about' : 'challenge';
+  }
 
   function esc(s) {
     return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) {
@@ -258,16 +233,6 @@
       return '<a href="' + it[0] + '"' + curFile(it[0]) + '><b>' + esc(it[1]) + '</b><span>' + esc(it[2]) + '</span></a>';
     }).join('');
   }
-  /* 모바일은 연구소 안에서 기능으로 바로 이동한다. 데스크톱 목록은 그대로 둔다. */
-  function researchPanelHtml() {
-    var groups = [
-      ['수업·프로그램', [[CHALLENGE_HUB,'챌린지','목소리·표정·발음·답변 집중 준비'],['lectures.html','특강','공채 대비 주제별 수업']]],
-      ['답변 준비', TOOLS_SUB.slice(0,3)],
-      ['자료·연습', [LAB_SUB[0]].concat(TOOLS_SUB.slice(3))],
-      ['몬크 살펴보기', [LAB_SUB[1],[REVIEW_HUB,'후기','수업·챌린지에 참여한 학생들의 기록']]]
-    ];
-    return spacePanelHtml(groups);
-  }
   function spacePanelHtml(groups) {
     return groups.map(function (group) {
       return '<section class="mm-menu-group"><h2>' + esc(group[0]) + '</h2>' + group[1].map(function (it) {
@@ -284,8 +249,8 @@
       '<div class="mm-space-panel" id="' + id + '" hidden>' + panel + '</div></div>';
   }
 
-  /* 로고는 홈에서만 #home(미션 섹션) 앵커, 다른 페이지에선 홈으로 이동 */
-  var logoHref = onHome ? '#home' : 'index.html';
+  /* 로고는 홈에서는 준비 선택으로, 다른 페이지에서는 홈으로 이동 */
+  var logoHref = onHome ? '#researchFeatures' : 'index.html';
 
   /* ── 로그인 링크는 '지금 화면'을 들려 보낸다 (2026-08-02) ────────────────────
      자동 리다이렉트(supabase-config 의 requireSession/requireConsent)는 이미 returnTo 를
@@ -350,14 +315,7 @@
       '<span class="mm-go">' + (hint.role === 'admin' ? '관리자 페이지 가기 →' : '마이페이지 가기 →') + '</span></span>';
   }
 
-  /* ── 항목 순서: 챌린지 · 승준 코스 · 승준 도구 · 연구실 · 특강 · 후기 (2026-08-06 분리) ──
-     2026-08-03 확정 순서(챌린지·승준노트·연구실·특강·후기)에서 승준노트 자리를 코스·도구
-     둘로 나눴다 — 코스를 밀기 위한 분리(오너 확정)라 코스가 도구보다 앞이다.
-     인스타로 처음 들어온 학생에게 주력 상품인 챌린지를 먼저 보이는 1번 규칙은 그대로다.
-     ⚠️ 구 '승준노트 2번 유지' 근거(매일 쓰는 도구 6개의 재방문 동선)는 이제 '승준 도구'가
-        이어받는다 — 도구 드롭다운을 4번 뒤로 내리지 말 것.
-     모바일은 세 공간을 먼저 보여주며, 연구소 기능은 별도 버튼으로 펼친다.
-        데스크톱은 기존 주 메뉴와 상세 목록을 유지한다. */
+  /* PC와 모바일 모두 챌린지·연구자료·특강을 먼저, 커뮤니티를 그다음에 둔다. */
   var navHtml =
     /* 본문 바로가기 (2026-08-02 D-12) — 37개 페이지 전부에 없었다. 데스크톱 키보드
        사용자는 매 페이지 nav 링크 9개를 지나야 본문에 닿는다.
@@ -368,68 +326,38 @@
       '<div class="nav-inner">' +
         '<a class="logo" href="' + logoHref + '"><img src="' + LOGO + '" alt="MONC" /></a>' +
         '<ul class="nav-links">' +
-          '<li class="nav-dd">' +
-            '<button class="nav-dd-btn nav-feature" type="button" data-hub="' + CHALLENGE_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div>' +
-          '</li>' +
-          /* ⚠️ 승준 코스 잠시 내림(2026-08-25 오너 "사용량이 너무 적어서 잠시 빼줬으면") —
-             briefing.html 리다이렉트와 한 벌(docs/notes/briefing.md '승준 코스 잠시 내림').
-             다시 열 때 데스크톱 줄과 researchPanelHtml의 기능 목록을 함께 확인한다.
-          '<li><a href="' + COURSE_LINK + '"' + cur('course') + '>승준 코스</a></li>' + */
-          '<li class="nav-dd">' +
-            '<button class="nav-dd-btn" type="button" data-hub="' + TOOLS_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('tools') + '>승준 도구' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(TOOLS_SUB) + '</div>' +
-          '</li>' +
-          '<li class="nav-dd">' +
-            '<button class="nav-dd-btn" type="button" data-hub="' + LAB_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('lab') + '>연구실' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(LAB_SUB) + '</div>' +
-          '</li>' +
-          '<li><a href="lectures.html"' + cur('lecture') + '>특강</a></li>' +
-          '<li class="nav-dd">' +
-            '<button class="nav-dd-btn" type="button" data-hub="' + REVIEW_HUB + '" aria-expanded="false" aria-haspopup="true"' + cur('reviews') + '>후기' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + ddMenu(REVIEW_SUB) + '</div>' +
-          '</li>' +
-          '<li class="nav-dd nav-community-entry">' +
-            '<button class="nav-dd-btn" type="button" data-hub="community.html" aria-expanded="false" aria-haspopup="true"' + cur('community') + '>승준 커뮤니티' + CHEV + '</button>' +
-            '<div class="nav-dd-menu">' + communityMenuHtml() + '</div>' +
-          '</li>' +
+          '<li class="nav-dd"><button class="nav-dd-btn nav-feature" type="button" data-hub="challenges.html" aria-expanded="false" aria-haspopup="true"' + cur('challenge') + '>챌린지' + CHEV + '</button><div class="nav-dd-menu">' + ddMenu(CHALLENGE_SUB) + '</div></li>' +
+          '<li class="nav-dd"><button class="nav-dd-btn" type="button" data-hub="lab-airline.html" aria-expanded="false" aria-haspopup="true"' + cur('materials') + '>연구자료' + CHEV + '</button><div class="nav-dd-menu">' + ddMenu(MATERIAL_SUB) + '</div></li>' +
+          '<li class="nav-dd"><button class="nav-dd-btn" type="button" data-hub="lectures.html" aria-expanded="false" aria-haspopup="true"' + cur('lecture') + '>특강' + CHEV + '</button><div class="nav-dd-menu">' + ddMenu(LECTURE_SUB) + '</div></li>' +
+          '<li class="nav-dd nav-community-entry"><button class="nav-dd-btn" type="button" data-hub="community.html" aria-expanded="false" aria-haspopup="true"' + cur('community') + '>커뮤니티' + CHEV + '</button><div class="nav-dd-menu">' + communityMenuHtml() + '</div></li>' +
+          '<li><a href="researchers.html"' + cur('about') + '>몬크 소개</a></li>' +
         '</ul>' +
         '<div class="nav-right">' + navRightHtml(authHint) + '</div>' +
         '<button class="hamburger" id="hamburger" aria-label="메뉴" aria-expanded="false"><span></span><span></span><span></span></button>' +
       '</div>' +
-      '<div class="nav-space-switch" role="navigation" aria-label="몬크 주요 공간">' +
-        '<a href="index.html" data-space="research">면접 연구소</a>' +
-        '<a href="community.html" data-space="community">승준 커뮤니티</a>' +
-        '<a href="community.html?view=studies" data-space="study">스터디매치</a>' +
+      '<div class="nav-space-switch" role="navigation" aria-label="몬크 주요 메뉴">' +
+        '<a href="index.html#researchFeatures" data-space="research">면접 준비</a>' +
+        '<a href="community.html" data-space="community">커뮤니티</a>' +
       '</div>' +
     '</nav>' +
     '<div class="mobile-menu" id="mobileMenu">' +
       (authHint
         ? '<a class="mm-member-card" href="' + memberHref(authHint) + '">' + memberCardHtml(authHint) + '</a>'
         : '') +
-      '<nav class="mm-spaces" aria-label="주요 공간">' +
-        spaceHtml('research','면접 연구소','수업·프로그램·면접 연구자료','index.html','mmResearch',researchPanelHtml()) +
-        spaceHtml('community','승준 커뮤니티','승준정보·헤메&샵·자유게시판','community.html','mmCommunity',spacePanelHtml([
-          ['게시판', [
-            ['community.html?view=board','전체 게시판','질문과 정보를 한곳에서 보기'],
-            ['community.html?view=board&topic=prep','승준정보','채용·지원서·면접 이야기'],
-            ['community.html?view=board&topic=hair','헤메&샵','헤어·메이크업·샵 정보 나누기'],
-            ['community.html?view=board&topic=free','자유게시판','승준생끼리 일상과 고민 나누기']
-          ]],
-          ['내 기록', [['community.html?view=activity','내 활동','내 글·댓글·저장한 글 확인 · 회원 전용']]]
-        ])) +
-        spaceHtml('study','스터디매치','프로필·인증을 보고 스터디 모집·지원','community.html?view=studies','mmStudies',spacePanelHtml([
-          ['스터디 찾기', [
-            ['community.html?view=studies','모집 중인 스터디','참여 조건과 일정 확인하기'],
-            ['community.html?view=studies&mode=online','온라인 스터디','온라인으로 함께 준비할 팀 찾기'],
-            ['community.html?view=studies&mode=offline','오프라인 스터디','직접 만나 준비할 팀 찾기'],
-            ['community.html?view=studies&verified=1','인증 조건이 있는 스터디','경험 인증·실력 레벨이 필요한 모집글']
-          ]],
-          ['내 준비·참여', [
-            ['community.html?view=profile','내 프로필·인증','준비 항목·샘플·인증 관리 · 회원 전용'],
-            ['community.html?view=activity','내 활동','내 스터디·지원 상태 확인 · 회원 전용']
+      '<nav class="mm-spaces" aria-label="면접 준비와 커뮤니티">' +
+        '<div class="mm-preparation">' + spacePanelHtml([
+          ['챌린지', CHALLENGE_SUB],
+          ['면접 연구자료', MATERIAL_SUB],
+          ['특강', LECTURE_SUB]
+        ]) + '</div>' +
+        spaceHtml('community','커뮤니티','질문·정보 공유·스터디 찾기','community.html','mmCommunity',spacePanelHtml([
+          ['함께 준비하기', [
+            ['community.html?view=board','게시판','승준정보·헤메&샵·자유게시판'],
+            ['community.html?view=studies','스터디매치','함께 준비할 스터디 찾기'],
+            ['community.html?view=activity','내 활동','내 글·스터디 지원·프로필·인증 관리']
           ]]
         ])) +
+        '<a class="mm-about" href="researchers.html"' + curFile('researchers.html') + '>몬크 소개·연구진 →</a>' +
       '</nav>' +
       '<div class="mobile-menu-cta">' +
         (authHint ? '' : '<a class="mm-login" href="' + loginHref() + '">로그인 / 회원가입</a>') +
@@ -464,8 +392,8 @@
   function syncSpaceNav() {
     var view = new URLSearchParams(location.search).get('view');
     var active = section === 'community'
-      ? (['studies','study'].indexOf(view) !== -1 ? 'study' : 'community')
-      : (onHome || ['course','tools','challenge','lab','lecture','reviews'].indexOf(section) !== -1 ? 'research' : '');
+      ? 'community'
+      : (onHome || ['course','challenge','lecture','materials','about'].indexOf(section) !== -1 ? 'research' : '');
     document.querySelectorAll('#navbar .nav-space-switch [data-space], #mobileMenu .mm-spaces [data-space]').forEach(function (a) {
       if (a.getAttribute('data-space') === active) a.setAttribute('aria-current','page');
       else a.removeAttribute('aria-current');
