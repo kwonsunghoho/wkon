@@ -44,6 +44,12 @@
       if (!cards.length) return;
       host.querySelector('.home-review-list').innerHTML = cards.join('');
       host.hidden = false;
+      // 카드가 제공하는 목록 링크를 아래에서 중복 노출하지 않는다.
+      document.querySelectorAll('.home-program-links a').forEach(function (link) {
+        link.hidden = Array.from(host.querySelectorAll('.home-review')).some(function (card) {
+          return card.getAttribute('href') === link.getAttribute('href');
+        });
+      });
     } catch (e) { /* 공개 후기를 확인하지 못하면 미리보기 없이 목록 링크만 제공한다. */ }
   }
   if ('IntersectionObserver' in window) {
