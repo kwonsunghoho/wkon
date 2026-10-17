@@ -1,6 +1,6 @@
 # 강사 채용 공고 이미지
 
-- 공개 이미지: `images/recruitment/monc-instructor.jpg` (860 × 4195px).
+- 공개 이미지: `images/recruitment/monc-instructor.jpg` (860 × 3068px).
 - 공개 주소: `https://monc.ai.kr/images/recruitment/monc-instructor.jpg`.
 - 사람인·잡코리아 상세 공고에 공통으로 삽입하는 승인된 이미지다. 학생 본연의 장점과 가능성을 이끌어내는 교육관을 담는다.
 - 이미지에는 채용 사이트명·접수기간·마감일을 넣지 않는다. 접수기간과 마감 설정은 각 채용 사이트에서 관리한다.
