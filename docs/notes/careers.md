@@ -1,10 +1,10 @@
 # 강사 채용 공고 이미지
 
-- 공개 이미지: `images/recruitment/monc-instructor-hd.jpg` (1720 × 6135px, 표시 폭 860px).
-- 공개 주소: `https://monc.ai.kr/images/recruitment/monc-instructor-hd.jpg`.
+- 공개 이미지: `images/recruitment/monc-instructor.png` (1720 × 6135px, 표시 폭 860px).
+- 공개 주소: `https://monc.ai.kr/images/recruitment/monc-instructor.png`.
 - 사람인·잡코리아 상세 공고에 공통으로 삽입하는 승인된 이미지다. 학생 본연의 장점과 가능성을 이끌어내는 교육관을 담는다.
 - 이미지에는 채용 사이트명·접수기간·마감일을 넣지 않는다. 접수기간과 마감 설정은 각 채용 사이트에서 관리한다.
 - 보수·업무량은 미정이며 강의 경력 무관이다. 자료 보호·외부 활동 제한 문구는 넣지 않는다.
 - 홈페이지용 채용 페이지 및 메뉴 링크는 배포 대상이 아니다. 공개 호스팅은 이미지 파일만 제공한다.
 
-- 고해상도 화면에서 글자 선명도를 높이기 위해 원본 HTML에서 2배 해상도로 출력한다. 출력 도구의 실제 파일 형식은 JPEG다. 기존 JPG 주소는 이전 공고 호환을 위해 유지한다.
+- 원본 HTML을 Chrome PNG 렌더러로 2배 해상도 출력한다. JPEG를 변환하지 않으며 PNG 파일 시그니처와 실제 이미지 형식을 검증한다. 기존 JPG 주소는 이전 공고 호환을 위해 유지한다.
