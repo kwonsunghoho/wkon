@@ -46,7 +46,7 @@
   <!-- 인앱 브라우저(인스타·카톡) 탈출 안내 — 파일 받기·로그인이 막히는 자리 -->
   <script src="inapp.js?v=10" defer></script>
   <!-- 글꼴은 tokens.css 의 @import(SUIT) 하나가 책임진다 — 페이지별 폰트 링크 없음(2026-07-29) -->
-  <link rel="stylesheet" href="index.css?v=20261017-visual">
+  <link rel="stylesheet" href="index.css?v=20261017-visual2">
   <link rel="stylesheet" href="community-home.css?v=20261017-visual">
   <script src="community-home.js?v=20261017" defer></script>
   <script src="review-rich.js?v=20261017" defer></script>
@@ -176,21 +176,9 @@
 
 <section class="home-programs" id="doors" aria-labelledby="homeProgramsTitle">
   <div class="home-programs-head" id="home">
-    <h2 id="homeProgramsTitle">수업으로 함께 준비하세요.</h2>
-    <p>목소리부터 답변까지, 코치진과 직접 연습합니다.</p>
-  </div>
-  <div class="home-program-list">
-    <a class="door-poster" href="challenges.html" data-pillar="challenge" aria-label="2주 챌린지 살펴보기">
-      <img src="images/hero-expression.webp" alt="" width="1400" height="759" loading="lazy" decoding="async">
-      <div class="dp-tx"><h3 class="dp-title">코치진과 하루 하나씩,<br>2주 챌린지</h3><span class="dp-ds">목소리·표정·발음·답변을 준비해요.</span><span class="dp-cta">챌린지 살펴보기 →</span></div>
-    </a>
-    <a class="home-lecture" id="doorLecture" href="lectures.html" data-pillar="lecture" hidden>
-      <img src="images/door-lecture.webp" alt="" width="480" height="320" loading="lazy" decoding="async">
-      <div class="home-lecture-copy"><span class="home-program-note" id="doorLectureChip">공개된 특강</span><h3>공채 대비 특강</h3><span>주제별 수업과 모집 일정을 확인하세요.</span><b>특강 살펴보기 →</b></div>
-    </a>
+    <h2 id="homeProgramsTitle">먼저 참여한 분들의 후기</h2>
   </div>
   <div class="home-reviews" id="homeReviews" hidden>
-    <h3>먼저 참여한 분들의 후기</h3>
     <div class="home-review-list"></div>
   </div>
   <div class="home-program-links"><a href="reviews-list.html?kind=challenge">챌린지 후기 보기 →</a><a href="reviews-list.html?kind=ke20">수업 후기 보기 →</a></div>
@@ -397,32 +385,6 @@
       }, { threshold: 0.3 });
       io.observe(grid);
     });
-  })();
-
-  /* ── 특강 문 — 공개 특강이 있을 때만 켠다(구 #pillars '빈 방 금지' 규칙 승계).
-     칩엔 가장 임박한 '신청중' 특강의 D-day(없으면 기본 문구 유지). ── */
-  (async function lectureDoor() {
-    var door = document.getElementById('doorLecture');
-    if (!door || !window.MONC || !window.MONC.sb) return;
-    try {
-      // select('*') — 마이그레이션 미적용 환경에서 컬럼 지정 시 조회 전체가 400
-      var res = await window.MONC.sb.from('special_lectures').select('*').eq('visible', true);
-      if (res.error || !res.data || !res.data.length) return;
-      door.hidden = false;
-      var today = new Date(); today.setHours(0, 0, 0, 0);
-      var best = null;
-      res.data.forEach(function (l) {
-        if (!l.recruit_start || !l.recruit_end) return;
-        var s = new Date(l.recruit_start), e = new Date(l.recruit_end);
-        e.setHours(23, 59, 59, 999);
-        if (today < s || today > e) return;               /* 신청중만 */
-        var target = l.lecture_date ? new Date(l.lecture_date) : e;
-        var dd = Math.round((target - today) / 86400000);
-        if (dd >= 0 && (best == null || dd < best)) best = dd;
-      });
-      var chip = document.getElementById('doorLectureChip');
-      if (chip && best != null) chip.innerHTML = '다음 특강 <b>' + (best === 0 ? 'D-Day' : 'D-' + best) + '</b>';
-    } catch (e) {}
   })();
 
   /* 챌린지 모집 상태는 recruit.js의 실제 조회 결과만 사용한다. */
