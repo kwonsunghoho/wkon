@@ -25,7 +25,9 @@
       if (!/^https?:\/\//i.test(src)) return '';
       body = '<img src="' + esc(src) + '" alt="' + esc(course) + ' 참여 후기" width="480" height="180" loading="lazy" decoding="async">';
     }
-    return '<a class="home-review" href="' + href + '"><span class="home-review-label">' + esc(course) + ' 참여 후기</span>' + body + '<span class="home-review-more">후기 읽기 →</span></a>';
+    var kind = row.kind === 'ke20' ? 'ke20' : 'challenge';
+    var label = kind === 'ke20' ? '수업 후기' : '챌린지 후기';
+    return '<a class="home-review" data-review-kind="' + kind + '" href="' + href + '"><div class="home-review-heading"><h3>' + label + '</h3><span>' + esc(course) + '</span></div><span class="home-review-mark" aria-hidden="true">“</span>' + body + '<span class="home-review-more">' + label + ' 더 보기 <span aria-hidden="true">→</span></span></a>';
   }
   async function loadReviews() {
     if (!window.MONC || !window.MONC.sb) return;
@@ -35,7 +37,10 @@
       if (result.error || !result.data) return;
       var rows = result.data.filter(function (row) { return !row.kind || row.kind === 'challenge' || row.kind === 'ke20'; });
       rows.sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
-      var cards = rows.map(reviewHtml).filter(Boolean).slice(0, 2);
+      // 두 종류를 독립적으로 고른다. 최근 수업 후기만으로 양쪽이 채워지지 않게 한다.
+      var cards = ['challenge', 'ke20'].map(function (kind) {
+        return rows.filter(function (row) { return (row.kind === 'ke20' ? 'ke20' : 'challenge') === kind; }).map(reviewHtml).filter(Boolean)[0] || '';
+      }).filter(Boolean);
       if (!cards.length) return;
       host.querySelector('.home-review-list').innerHTML = cards.join('');
       host.hidden = false;
