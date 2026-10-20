@@ -51,7 +51,7 @@
   var COMMUNITY_SUB = [
     ['home', '커뮤니티 홈', '최근 올라온 글과 모집 중인 스터디'],
     ['board', '게시판', '승준정보·헤메&샵·자유게시판'],
-    ['studies', '스터디매치', '인증과 준비 항목을 보고 스터디 찾기'],
+    ['studies', '스터디매치', '참여 조건·프로필 확인과 지원'],
     ['activity', '내 활동', '내 글·스터디 지원·프로필·인증 관리']
   ];
   function communityMenuHtml() {
@@ -199,7 +199,7 @@
        'promo'(**카카오 노랑 알약** — 같은 날 오너 "카톡문의랑 같은 느낌이라 클릭률 떨어질 것
        같다, 더 강조해줘". 노랑은 이 사이트에서 '카카오로 가는 행동' 색이다: .kakao-ask·카드
        입장 버튼과 같은 문법. 채널 아이콘 브랜드색 금지 규칙과 별개 — 그건 그대로다). */
-    ['tools.html#community', '오픈채팅 커뮤니티',
+    ['tools.html#community', '카카오톡 오픈채팅',
       '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
       'row2 promo'],
     /* 카카오톡 문의 (2026-08-09 오너 "문의를 좀 바로 할 수 있게") — 앞 셋은 채널이고 이것만
@@ -350,10 +350,10 @@
           ['면접 연구자료', MATERIAL_SUB],
           ['특강', LECTURE_SUB]
         ]) + '</div>' +
-        spaceHtml('community','커뮤니티','질문·정보 공유·스터디 찾기','community.html','mmCommunity',spacePanelHtml([
+        spaceHtml('community','커뮤니티','질문·정보 공유·스터디매치','community.html','mmCommunity',spacePanelHtml([
           ['함께 준비하기', [
             ['community.html?view=board','게시판','승준정보·헤메&샵·자유게시판'],
-            ['community.html?view=studies','스터디매치','함께 준비할 스터디 찾기'],
+            ['community.html?view=studies','스터디매치','함께 준비할 스터디 모집과 지원'],
             ['community.html?view=activity','내 활동','내 글·스터디 지원·프로필·인증 관리']
           ]]
         ])) +
