@@ -221,9 +221,11 @@
   function applyAuthUI(hint) {
     var right=document.querySelector('#navbar .nav-right');
     var account=document.querySelector('#mobileMenu .mm-account');
-    if(right) right.innerHTML=myHtml(hint);
+    // 서버 프로필로 확인된 관리자만 헤더에서 바로 관리 화면으로 이동한다.
+    var isAdmin=!!(hint && hint.role==='admin');
+    if(right) right.innerHTML=(isAdmin ? '<a class="nav-admin" href="admin.html" aria-label="관리자 페이지">관리자</a>' : '')+myHtml(hint);
     if(account) account.innerHTML=accountHtml(hint);
-    document.getElementById('menuAdmin').hidden=!(hint && hint.role==='admin');
+    document.getElementById('menuAdmin').hidden=!isAdmin;
   }
   function mountFooterSocial() {
     var f = document.querySelector('footer');

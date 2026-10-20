@@ -112,6 +112,19 @@ try{
   const {page,context}=await makePage({auth});
   if(auth==='slow')await page.waitForTimeout(300);
   assert.match(await page.locator('.nav-my').getAttribute('href'),auth==='guest'?/^login.html\?returnTo=/:/^mypage.html$/);
+  assert.equal(await page.locator('.nav-admin').isVisible(),auth==='admin');
+  if(auth==='admin'){
+   assert.equal(await page.locator('.nav-admin').getAttribute('href'),'admin.html');
+   for(const width of [320,375,768,1280]){
+    await page.setViewportSize({width,height:812});
+    await noOverflow(page,'관리자 헤더 '+width);
+    const targets=await page.locator('#navbar .nav-admin, #navbar .nav-my, #hamburger').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return{x:r.x,right:r.right,width:r.width,height:r.height};}));
+    assert.ok(targets.every(r=>r.width>=44&&r.height>=44));
+    assert.ok(targets[1].x-targets[0].right>=8&&targets[2].x-targets[1].right>=8);
+    if(width===375)await page.screenshot({path:path.join(output,'admin-header-375.png'),clip:{x:0,y:0,width:375,height:100}});
+   }
+   await page.setViewportSize({width:375,height:812});
+  }
   await page.locator('#hamburger').click();
   assert.equal(await page.locator('#menuAdmin').isVisible(),auth==='admin');
   await page.locator('#mobileMenu a[href="community.html?view=board&topic=hair"]').click();
@@ -217,6 +230,7 @@ try{
  }
  {
   const {page,context}=await makePage({profileFail:true,auth:'member'});
+  assert.equal(await page.locator('.nav-admin').isVisible(),false);
   await page.locator('#hamburger').click();
   assert.equal(await page.locator('#menuAdmin').isVisible(),false);
   await context.close();
