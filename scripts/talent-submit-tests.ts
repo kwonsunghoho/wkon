@@ -1,0 +1,9 @@
+import { validate, handler } from '../supabase/functions/talent-submit/index.ts';
+function assert(v:unknown,msg='검증 실패'){if(!v)throw new Error(msg);}
+const valid={request_id:'00000000-0000-4000-8000-000000000001',name:'가상 지원자',phone:'010-0000-0000',email:'test@example.com',education:'전문대 졸업',coaching:'없음',availability:'평일 오후',feedback:'피드백 경험',responsibility:'책임 경험',experience:'가상 경력',strength:'가상 교육 경험',approach:'가상 지도 계획',consent:true,consent_version:'talent-2026-10-17',website:''};
+Deno.test('입력 정규화 및 동의 검증',()=>{assert(validate(valid)?.phone==='01000000000');for(const patch of [{consent:false},{consent:'true'},{consent_version:'old'},{website:'spam'},{name:' '},{phone:'123'},{email:'wrong'},{strength:'x'.repeat(501)},{request_id:'wrong'}])assert(validate({...valid,...patch})===null,JSON.stringify(patch));});
+Deno.test('프로브는 개인정보를 노출하지 않는다',async()=>{const r=await handler(new Request('https://example.test',{method:'POST',body:JSON.stringify({probe:true})}));assert(r.status===200);const b=await r.json();assert(b.ok&&b.version&&!b.name&&!b.receipt);});
+Deno.test('미동의와 큰 본문은 저장 경로 진입 전에 거절',async()=>{for(const body of [JSON.stringify({...valid,consent:false}),'x'.repeat(33000)]){const r=await handler(new Request('https://example.test',{method:'POST',body}));assert(r.status===400);assert((await r.json()).ok===false);}});
+Deno.test('GET 접수 금지',async()=>{assert((await handler(new Request('https://example.test'))).status===405);});
+
+Deno.test('네 문항과 이력 필수 및 500자 경계',()=>{for(const k of ['education','coaching','availability','feedback','responsibility'])assert(validate({...valid,[k]:''})===null);for(const k of ['strength','approach','feedback','responsibility']){assert(validate({...valid,[k]:'가'.repeat(500)})!==null);assert(validate({...valid,[k]:'가'.repeat(501)})===null);}});
