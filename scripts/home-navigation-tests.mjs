@@ -100,14 +100,52 @@ try{
   await page.locator('.mm-scroll').evaluate(el=>el.scrollTop=0);
   await page.locator('#menuClose').focus();
   if([375,390,1280].includes(width))await page.screenshot({path:path.join(output,'menu-'+width+'.png')});
+  assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),0);
+  const collapsed=await page.locator('.mm-scroll').evaluate(el=>({content:el.scrollHeight,viewport:el.clientHeight}));
+  if(width===375)assert.ok(collapsed.content<=collapsed.viewport,'375px 접힌 메뉴는 스크롤 없이 전체 분류와 하단 링크 표시');
+  for(const name of ['면접 준비','자료·정보','커뮤니티','후기']){
+   const toggle=page.getByRole('button',{name,exact:true});
+   await toggle.click();
+   assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),1);
+   const panel=page.locator('#'+await toggle.getAttribute('aria-controls'));
+   assert.equal(await panel.isVisible(),true);
+   await noOverflow(page,'펼친 '+name+' '+width);
+   const small=await panel.locator('a').evaluateAll(nodes=>nodes.filter(el=>el.getBoundingClientRect().height<44).map(el=>el.textContent));
+   assert.deepEqual(small,[]);
+   const alignment=await panel.locator('a').evaluateAll(nodes=>nodes.map(el=>{
+    const range=document.createRange();range.selectNodeContents(el.firstChild);
+    const box=el.getBoundingClientRect(),text=range.getBoundingClientRect();
+    return {left:box.left,right:box.right,textLeft:text.left,height:box.height};
+   }));
+   assert.equal(new Set(alignment.map(r=>r.left)).size,1,'항목 왼쪽 정렬');
+   assert.equal(new Set(alignment.map(r=>r.right)).size,1,'항목 오른쪽 정렬');
+   assert.equal(new Set(alignment.map(r=>r.textLeft)).size,1,'첫 버튼 포함 글자 시작점 통일');
+   assert.equal(new Set(alignment.map(r=>r.height)).size,1,'한 줄 메뉴 높이 통일');
+   await panel.locator('a').last().scrollIntoViewIfNeeded();
+   assert.ok((await panel.locator('a').last().boundingBox()).y<812);
+   if(width===375&&name==='면접 준비'){
+    await page.locator('.mm-scroll').evaluate(el=>el.scrollTop=0);
+    await page.screenshot({path:path.join(output,'menu-expanded-375.png')});
+   }
+  }
+  const reviewToggle=page.getByRole('button',{name:'후기',exact:true});
+  await reviewToggle.press('Space');
+  assert.equal(await reviewToggle.getAttribute('aria-expanded'),'false');
+  await reviewToggle.press('Enter');
+  assert.equal(await reviewToggle.getAttribute('aria-expanded'),'true');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('href')),'reviews-list.html?kind=challenge');
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>document.getElementById('hamburger').getAttribute('aria-expanded')==='false');
   assert.equal(await page.locator('#mobileMenu').evaluate(el=>el.open),false);
   assert.equal(await page.evaluate(()=>document.activeElement.id),'hamburger');
   assert.notEqual(await page.evaluate(()=>getComputedStyle(document.body).overflow),'hidden');
+  await page.locator('#hamburger').click();
+  assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),0);
+  await page.locator('#menuClose').click();
   await context.close();
  }
- report.checks.push('7개 폭·바로가기 한 줄·메뉴 44px·끝 항목·Escape·포커스 순환·복귀');
+ report.checks.push('7개 폭·375px 접힌 메뉴 전체 표시·그룹 하나씩 펼침·44px·끝 항목·키보드 펼침과 접힘·Escape·초점 복귀·재열기 초기화');
  for(const auth of ['guest','member','admin','slow']){
   const {page,context}=await makePage({auth});
   if(auth==='slow')await page.waitForTimeout(300);
@@ -127,11 +165,15 @@ try{
   }
   await page.locator('#hamburger').click();
   assert.equal(await page.locator('#menuAdmin').isVisible(),auth==='admin');
+  if(auth==='admin')await page.screenshot({path:path.join(output,'menu-admin-375.png')});
+  await page.getByRole('button',{name:'커뮤니티',exact:true}).click();
   await page.locator('#mobileMenu a[href="community.html?view=board&topic=hair"]').click();
   await page.waitForURL('**/community.html?view=board&topic=hair');
   assert.equal(await page.locator('#mobileMenu').evaluate(el=>el.open),false);
   await page.locator('#hamburger').click();
   assert.equal(await page.locator('#mobileMenu [aria-current=page]').textContent(),'헤메&샵');
+  await page.getByRole('button',{name:'커뮤니티',exact:true}).click();
+  assert.equal(await page.locator('#mobileMenu [aria-current=page]').isVisible(),true);
   await page.locator('#menuClose').click();
   await context.close();
  }
@@ -198,6 +240,8 @@ try{
   await noOverflow(page,'큰 글자');
   await page.locator('#hamburger').click();
   await noOverflow(page,'큰 글자 메뉴');
+  await page.getByRole('button',{name:'면접 준비',exact:true}).click();
+  await noOverflow(page,'큰 글자 펼친 메뉴');
   await context.close();
  }
  {
@@ -224,6 +268,7 @@ try{
   await page.locator('.home-hero .home-primary').click();
   await page.locator('.home-shortcuts a[href="tools.html"]').click();
   await page.locator('#hamburger').click();
+  await page.getByRole('button',{name:'면접 준비',exact:true}).click();
   await page.locator('#mobileMenu a[href="lectures.html"]').click();
   assert.deepEqual(await page.evaluate(()=>window.__events.map(item=>item.event)),['home_challenge_hero','home_shortcut','menu_destination']);
   await context.close();

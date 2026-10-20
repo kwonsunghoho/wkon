@@ -126,8 +126,8 @@
       : '<a href="' + loginHref() + '">로그인 / 회원가입 <span aria-hidden="true">→</span></a>';
   }
   function menuHtml() {
-    return groups.map(function (group) {
-      return '<section class="mm-group"><h2>' + esc(group[0]) + '</h2><ul>' + group[1].map(function (item) {
+    return groups.map(function (group,index) {
+      return '<section class="mm-group"><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + esc(group[0]) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
         return '<li><a href="' + esc(item[0]) + '" data-menu-destination>' + esc(item[1]) + '</a></li>';
       }).join('') + '</ul></section>';
     }).join('');
@@ -179,13 +179,23 @@
     var opener = document.getElementById('hamburger');
     var savedOverflow = '', savedPadding = '';
     function close() { if (dialog.open) dialog.close(); }
+    function expandGroup(selected) {
+      dialog.querySelectorAll('.mm-group-toggle').forEach(function (button) {
+        var expanded=button===selected;
+        button.setAttribute('aria-expanded',String(expanded));
+        document.getElementById(button.getAttribute('aria-controls')).hidden=!expanded;
+      });
+    }
     opener.addEventListener('click',function () {
       savedOverflow = document.body.style.overflow;
       savedPadding = document.body.style.paddingRight;
       var gap = window.innerWidth - document.documentElement.clientWidth;
       if (gap) document.body.style.paddingRight = (parseFloat(getComputedStyle(document.body).paddingRight) + gap) + 'px';
       document.body.style.overflow = 'hidden';
+      // 메뉴를 열 때는 전체 분류를 먼저 보여주고, 선택한 그룹 하나만 펼친다.
+      expandGroup(null);
       dialog.showModal();
+      dialog.querySelector('.mm-scroll').scrollTop=0;
       opener.setAttribute('aria-expanded','true');
       document.getElementById('menuClose').focus();
     });
@@ -198,6 +208,12 @@
     document.getElementById('menuClose').addEventListener('click',close);
     dialog.addEventListener('cancel',function (event) { event.preventDefault(); close(); });
     dialog.addEventListener('click',function (event) {
+      var toggle = event.target.closest('.mm-group-toggle');
+      if (toggle) {
+        expandGroup(toggle.getAttribute('aria-expanded')==='true' ? null : toggle);
+        toggle.scrollIntoView({block:'nearest'});
+        return;
+      }
       var link = event.target.closest('a');
       if (link) {
         if (typeof window.moncBeacon === 'function') window.moncBeacon('menu_destination',{destination:link.getAttribute('href')});
