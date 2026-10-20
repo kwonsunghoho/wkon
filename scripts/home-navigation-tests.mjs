@@ -69,7 +69,9 @@ try{
    quickRows:new Set(Array.from(document.querySelectorAll('.home-shortcuts a'),el=>Math.round(el.getBoundingClientRect().top))).size,
    sections:Array.from(document.querySelectorAll('main > section'),el=>({id:el.id||el.className,y:Math.round(el.getBoundingClientRect().top+scrollY)}))
   }));
-  if(width>=360&&width<=430){assert.equal(layout.quickRows,1);assert.ok(layout.quickTop<600);}
+  // 오너가 원래 100svh 창문 인트로 보존을 확정했다. 바로가기는 그 아래 본문에 둔다.
+  if(width>=360&&width<=430)assert.equal(layout.quickRows,1);
+  assert.equal(await page.locator('#heroIntro').evaluate(el=>el.clientHeight),812);
   report.widths.push(layout);
   await page.locator('#doors').scrollIntoViewIfNeeded();
   await page.locator('#homeReviews[aria-busy=false]').waitFor();
@@ -179,7 +181,7 @@ try{
  {
   const {page,context}=await makePage();
   // 브라우저 글자 크기 확대를 모사하며 큰 글자에서도 정보가 잘리지 않는지 본다.
-  await page.addStyleTag({content:'main :is(h1,h2,h3,p,a,button,span), #mobileMenu :is(a,h2,span) {font-size:200% !important;}'});
+  await page.addStyleTag({content:'main > :not(#heroIntro) :is(h1,h2,h3,p,a,button,span), #mobileMenu :is(a,h2,span) {font-size:200% !important;}'});
   await noOverflow(page,'큰 글자');
   await page.locator('#hamburger').click();
   await noOverflow(page,'큰 글자 메뉴');
