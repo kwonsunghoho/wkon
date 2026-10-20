@@ -3,7 +3,7 @@
 ## 작업 전 핵심 규칙
 
 - 현행 팔레트와 아래 15개 원칙을 따른다. 웜 페이퍼·웜그레이로 되돌리지 않는다.
-- 전체 폭의 옅은 섹션 밴드는 금지한다. **홈 `.nums`의 사진 + 다크 판은 2026-09-08 승인된 예외**다(`docs/notes/home.md`).
+- 전체 폭의 옅은 섹션 밴드는 금지한다. 과거 홈 `.nums`의 사진 + 다크 판 예외는 2026-10-20 홈 개편에서 해당 영역을 제거해 종료했다(`docs/notes/home.md`).
 - CSS를 크게 바꾸면 **주석 짝(`/* */`) 균형**과 사용 중인 `var(--x)`의 정의 유무를 확인한다. `tokens.css`의 팔레트 오버라이드 블록을 삭제하거나 `background-clip:text`를 사용하지 않는다.
 
 > 이 문서는 저장소에 포함되어 **어느 컴퓨터에서든** 적용된다. UI/디자인 작업 전 반드시 참고.
@@ -39,7 +39,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 - **타이포:** 섹션 제목은 `h2.section-title`에 `var(--serif)`(=SUIT, 이름만 명조 시절 흔적) 800 + `--fs-h2 clamp(30px,4.2vw,46px)` (tokens.css 오버라이드, h2 접두 특이도로 `index.css`의 `.section-title` 규칙을 이김).
 - **UI 9대 원칙**(docs/design-principles.md): 가독성 12pt+ / 터치 44px+ / 대비 4.5:1 / 아이콘 통일 / 라운드 / 계층 / 여백 / 그룹핑 / 큼직. **375px 우선 검증.**
 - Typography(`--fs-*`)·spacing(`--space-*`, 8px)·radius(8/14/20/24)·섹션 배경 리듬 전부 토큰화 — 하드코딩보다 토큰 우선. **`--fs-body-sm: 15px`(2026-07-25 신설)는 본문 17과 캡션 14 사이의 '카드 설명줄' 칸** — 캡션 14px는 보조 정보용이라 카드의 유일한 설명 줄에는 작다(홈 `.msn-lead`·`.dr-ds`, 챌린지 허브 `.chb-sub`, 상세 4종 `.lesson-item`·`.benefit-desc` 가 쓴다 — 구 예시 `.bf-desc`·`.bp-desc` 는 승준노트 코스형·홈 스토리형 개편으로 라이브에서 사라졌고 `outputs/` 목업에만 남아 있다). ⚠️ 별도 파일에서 쓸 땐 `var(--fs-body-sm, 15px)` 폴백을 붙일 것(캐시 분리 대비 — 위 briefing.html 항목 참조).
-- 아이콘 = `<body>` 상단 `<symbol>` 스프라이트(`currentColor` 리컬러). 하단 스티키 CTA바 `.mobile-cta-bar`(index 전용, **2026-07-22부터 전 화면폭** — 넓은 화면은 `max-width:460px; margin:auto`로 가운데 알약. 클래스명은 구 이름 유지).
+- 아이콘은 `currentColor` 선형 SVG를 사용한다. **홈 하단 스티키 CTA바는 2026-10-20 개편에서 제거**했다(home.md). 상세 페이지의 기존 신청 바는 유지한다.
 
 ### 2026-07-14 목업 리디자인
 ⚠️ 소스오브트루스로 적혀 있던 `outputs/monc-font-mockup.html`·`monc-mockup-2.html`은 **커밋된 적이 없어 어디에도 남아 있지 않다**(2026-07-30 확인 — main·전 브랜치·히스토리 전부 없음). 아래 규칙 자체가 유일한 기록이니 여기서 지우지 말 것.
