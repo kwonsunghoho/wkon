@@ -4,18 +4,33 @@
   // 연구원 정보는 공용 원본을 사용한다. 모두를 챌린지 담당자로 표시하지 않는다.
   var portraits = document.getElementById('homeResearchers');
   if (portraits && Array.isArray(window.MONC_RESEARCHERS)) {
-    window.MONC_RESEARCHERS.forEach(function (researcher) {
-      if (!researcher.photo || !researcher.name) return;
-      var img = document.createElement('img');
-      img.src = researcher.photo;
-      img.alt = researcher.name + ' 연구원';
-      img.width = 96;
-      img.height = 120;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.style.objectPosition = researcher.photoPos || 'center 18%';
-      img.addEventListener('error', function () { img.hidden = true; });
-      portraits.appendChild(img);
+    window.MONC_RESEARCHERS.filter(function (researcher) { return researcher.role==='수석 연구원'; }).forEach(function (researcher) {
+      if (!researcher.name) return;
+      var card=document.createElement('article');
+      card.className='home-researcher';
+      if (researcher.photo) {
+        var img = document.createElement('img');
+        img.src = researcher.photo;
+        img.alt = '';
+        img.width = 80;
+        img.height = 100;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.style.objectPosition = researcher.photoPos || 'center 18%';
+        img.addEventListener('error', function () { img.hidden = true; });
+        card.appendChild(img);
+      }
+      var info=document.createElement('div');
+      var name=document.createElement('h4');
+      name.textContent=researcher.name;
+      var role=document.createElement('p');
+      role.className='home-researcher-role';
+      role.textContent=researcher.role;
+      var position=document.createElement('p');
+      position.textContent=researcher.position || '';
+      info.append(name,role,position);
+      card.appendChild(info);
+      portraits.appendChild(card);
     });
     portraits.hidden = !portraits.childElementCount;
   }

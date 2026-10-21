@@ -15,7 +15,16 @@
     var course = kind === 'ke20' ? '' : (row.challenge || '');
     var quote = window.moncReview ? window.moncReview.plain(row.quote || '') : (row.quote || '');
     var body = '';
-    if (quote.trim()) body = '<p class="home-review-quote">' + esc(quote) + '</p>';
+    if (quote.trim()) {
+      // 최신 공개 후기의 첫 부분만 발췌한다. 내용이나 어조를 새로 쓰지 않는다.
+      var text=quote.trim(), preview=Array.from(text).slice(0,120).join('');
+      if (preview.length<text.length) {
+        var sentence=preview.match(/^[\s\S]*[.!?。！？](?=\s|$)/);
+        if (sentence && sentence[0].length>=40) preview=sentence[0];
+        preview=preview.trimEnd()+'…';
+      }
+      body = '<p class="home-review-quote">' + esc(preview) + '</p>';
+    }
     else {
       var src = row.image_path || row.url;
       if (!src) return '';
@@ -28,10 +37,18 @@
     }
     return '<a class="home-review" data-review-kind="' + kind + '" href="reviews-list.html?kind=' + kind + '"><div class="home-review-heading"><h3>' + label + '</h3>' +
       (course ? '<span>' + esc(course) + '</span>' : '') + '</div>' + body +
-      '<span class="home-review-more">후기 원문·전체 목록 보기 <span aria-hidden="true">→</span></span></a>';
+      '<span class="home-review-more">' + label + ' 더 보기 <span aria-hidden="true">→</span></span></a>';
+  }
+  function syncLinks() {
+    document.querySelectorAll('[data-review-list]').forEach(function (link) {
+      link.hidden=!!host.querySelector('[data-review-kind="'+link.dataset.reviewList+'"]');
+    });
+    var links=document.querySelector('.home-program-links');
+    if (links) links.hidden=!links.querySelector('a:not([hidden])');
   }
   function status(message, failed) {
     host.querySelector('.home-review-list').innerHTML = '';
+    syncLinks();
     host.querySelectorAll('.home-status, .home-retry').forEach(function (node) { node.remove(); });
     host.insertAdjacentHTML('afterbegin','<p class="home-status" role="status">' + message + '</p>' +
       (failed ? '<button type="button" class="home-retry">후기 다시 불러오기</button>' : ''));
@@ -61,6 +78,7 @@
       else {
         host.querySelectorAll('.home-status, .home-retry').forEach(function (node) { node.remove(); });
         host.querySelector('.home-review-list').innerHTML=cards.join('');
+        syncLinks();
         host.querySelectorAll('img').forEach(function (img) {
           img.addEventListener('error',function () {
             var text=document.createElement('p');

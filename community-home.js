@@ -1,12 +1,11 @@
-/* 선택한 탭의 공개 목록만 읽는다. 기존 RPC의 공개 범위와 최신순 정렬을 유지한다. */
+/* 두 공개 목록을 간결하게 보여준다. 기존 RPC의 공개 범위와 최신순 정렬을 유지한다. */
 (function () {
   'use strict';
   const section=document.getElementById('homeCommunity');
   if(!section)return;
   const nodes={posts:document.getElementById('homeCommunityPosts'),studies:document.getElementById('homeCommunityStudies')};
-  const tabs=Array.from(section.querySelectorAll('[data-community-tab]'));
   const busy={}, rendered={}, lastAttempt={};
-  let selected='posts', visible=false, timer=null;
+  let visible=false, timer=null;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const path=(view,id)=>'community.html?view='+view+'&id='+encodeURIComponent(id)+(view==='thread'?'&topic=prep':'');
   function dateHtml(value) {
@@ -68,31 +67,11 @@
     }
   }
   // 로딩·오류 문구 높이 변화로 관찰 경계에 재진입해도 요청이 연속 발생하지 않게 한다.
-  function refresh(){if(visible&&!document.hidden && Date.now()-(lastAttempt[selected]||0)>1000)load(selected);}
-  function sync(){clearInterval(timer);timer=null;if(visible&&!document.hidden){refresh();timer=setInterval(refresh,30000);}}
-  function select(tab) {
-    selected=tab.dataset.communityTab;
-    tabs.forEach(button=>{
-      const active=button===tab;
-      button.setAttribute('aria-selected',String(active));
-      button.tabIndex=active?0:-1;
-      document.getElementById(button.getAttribute('aria-controls')).hidden=!active;
-    });
-    clearInterval(timer);timer=null;
-    if(visible&&!document.hidden){load(selected);timer=setInterval(refresh,30000);}
+  function refresh(){
+    if(!visible||document.hidden)return;
+    Object.keys(nodes).forEach(action=>{if(Date.now()-(lastAttempt[action]||0)>1000)load(action);});
   }
-  tabs.forEach((tab,index)=>{
-    tab.addEventListener('click',()=>select(tab));
-    tab.addEventListener('keydown',event=>{
-      let next;
-      if(event.key==='ArrowRight')next=(index+1)%tabs.length;
-      if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;
-      if(event.key==='Home')next=0;
-      if(event.key==='End')next=tabs.length-1;
-      if(next===undefined)return;
-      event.preventDefault();tabs[next].focus();select(tabs[next]);
-    });
-  });
+  function sync(){clearInterval(timer);timer=null;if(visible&&!document.hidden){refresh();timer=setInterval(refresh,30000);}}
   document.addEventListener('visibilitychange',sync);
   window.addEventListener('pagehide',()=>{clearInterval(timer);timer=null;});
   window.addEventListener('pageshow',sync);

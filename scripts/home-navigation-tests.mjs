@@ -23,7 +23,7 @@ const fixture={
 };
 const report={widths:[],checks:[],errors:[]};
 const stub=(state,data)=>`
-window.__testState=${JSON.stringify(state)};window.__testData=${JSON.stringify(data)};window.__events=[];window.__reads=[];
+window.__testState=${JSON.stringify(state)};window.__testData=${JSON.stringify(data)};window.__events=[];window.__reads=[];window.__rpcs=[];
 window.moncBeacon=(event,meta)=>window.__events.push({event,meta});
 async function result(key){window.__reads.push(key);if(window.__testState.mode==='delay')await new Promise(r=>setTimeout(r,600));if(window.__testState.mode==='error')return {error:{message:'검증용 오류'}};if(window.__testState.mode==='empty')return{data:key==='reviews'?[]:{ok:true,items:[]}};return{data:window.__testData[key]};}
 function query(table){const q={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,in:()=>q,then:(resolve,reject)=>result(table==='reviews'?'reviews':'other').then(resolve,reject)};return q;}
@@ -31,7 +31,7 @@ window.MONC={
  getSession:async()=>{if(window.__testState.auth==='slow')await new Promise(r=>setTimeout(r,200));return window.__testState.auth==='guest'?null:{user:{id:'local-test'}}},
  getMyProfile:async()=>{if(window.__testState.profileFail)throw Error('검증용 실패');return{name:'화면 검증 회원',role:window.__testState.auth==='admin'?'admin':'member'}},
  requireConsent:async()=>false,loadConfig:async()=>({}),
- sb:{from:query,rpc:async(name,args)=>{window.__lastRpc={name,args};return result(args.p_action);},auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}}
+ sb:{from:query,rpc:async(name,args)=>{window.__rpcs.push({name,args});return result(args.p_action);},auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}}
 };
 `;
 async function makePage(state={},data=fixture,width=375){
@@ -72,16 +72,54 @@ try{
   // 오너가 원래 100svh 창문 인트로 보존을 확정했다. 바로가기는 그 아래 본문에 둔다.
   if(width>=360&&width<=430)assert.equal(layout.quickRows,1);
   assert.equal(await page.locator('#heroIntro').evaluate(el=>el.clientHeight),812);
+  assert.equal(await page.locator('main a[href="challenges.html"]').count(),2,'챌린지 소개 CTA와 마지막 CTA만 유지');
+  assert.equal(await page.locator('.home-services').count(),0,'중복 서비스 카드 제거');
+  assert.equal(await page.locator('.home-hero-photo').count(),1);
+  assert.equal(await page.locator('.home-shortcuts a').count(),4);
+  assert.equal(await page.locator('.home-process-list li').count(),3);
+  assert.deepEqual(await page.locator('.home-researcher h4').allTextContents(),await page.evaluate(()=>MONC_RESEARCHERS.filter(r=>r.role==='수석 연구원').map(r=>r.name)));
   report.widths.push(layout);
   await page.locator('#doors').scrollIntoViewIfNeeded();
   await page.locator('#homeReviews[aria-busy=false]').waitFor();
   assert.equal(await page.locator('.home-review').count(),2);
+  assert.equal(await page.locator('.home-program-links').isVisible(),false,'카드가 있으면 중복 후기 링크 숨김');
   await page.locator('#homeCommunity').scrollIntoViewIfNeeded();
   await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();
+  await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
   if(!snapshot)assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
+  // 전체 캡처 전에 실제 스크롤로 지연 로딩 사진을 표시하고 디코딩까지 기다린다.
+  for(const selector of ['.home-hero-photo','.home-researchers']){
+   await page.locator(selector).scrollIntoViewIfNeeded();
+   await page.locator(selector).evaluate(async el=>{
+    const images=el.tagName==='IMG'?[el]:Array.from(el.querySelectorAll('img'));
+    await Promise.all(images.map(img=>img.decode()));
+   });
+  }
+  await noOverflow(page,'실제 데이터 로드 완료 '+width);
   await page.evaluate(()=>window.scrollTo(0,0));
   if([375,390,1280].includes(width))await page.screenshot({path:path.join(output,'home-'+width+'.png'),fullPage:true});
   if(width===375)await page.screenshot({path:path.join(output,'home-first-375.png')});
+  await page.locator('.hcta-main').click();
+  assert.equal(new URL(page.url()).hash,'#researchFeatures');
+  const introLayout=await page.evaluate(()=>{
+   const box=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom};};
+   return {hero:box('.home-hero'),copy:box('.home-hero-copy'),photo:box('.home-hero-photo'),action:box('.home-hero .home-primary'),shortcuts:box('.home-shortcuts'),reviews:box('#doors')};
+  });
+  assert.ok(introLayout.hero.y>=57&&introLayout.hero.y<180,'창문 시작하기는 통합 소개에 착지');
+  if(width<881){
+   assert.ok(introLayout.copy.bottom<=introLayout.photo.y&&introLayout.photo.bottom<=introLayout.action.y,'모바일 설명·사진·버튼 순서');
+  }else{
+   assert.ok(introLayout.copy.right<introLayout.photo.x,'데스크톱 설명과 사진 좌우 배치');
+  }
+  assert.ok(introLayout.hero.bottom<=introLayout.shortcuts.y&&introLayout.shortcuts.bottom<=introLayout.reviews.y);
+  if([375,768,1280].includes(width))await page.screenshot({path:path.join(output,'home-introduction-'+width+'.png')});
+  if([375,1280].includes(width)){
+   await page.locator('.home-process').evaluate(el=>window.scrollTo(0,el.offsetTop-80));
+   await page.screenshot({path:path.join(output,'home-process-'+width+'.png')});
+   await page.locator('#doors').evaluate(el=>window.scrollTo(0,el.offsetTop-80));
+   await page.screenshot({path:path.join(output,'home-reviews-'+width+'.png')});
+  }
+  await page.evaluate(()=>scrollTo(0,0));
   await page.locator('#hamburger').click();
   assert.equal(await page.locator('#mobileMenu').evaluate(el=>el.open),true);
   await noOverflow(page,'메뉴 '+width);
@@ -183,28 +221,32 @@ try{
   await page.locator('#homeCommunity').scrollIntoViewIfNeeded();
   await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();
   assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
-  assert.deepEqual(await page.evaluate(()=>window.__lastRpc.args),{p_action:'posts',p_data:{limit:3,topic:'prep'}});
-  await page.locator('#homePostsTab').focus();await page.keyboard.press('ArrowRight');
   await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
-  assert.equal(await page.locator('#homeStudiesTab').getAttribute('aria-selected'),'true');
+  assert.deepEqual(await page.evaluate(()=>window.__rpcs.find(r=>r.args.p_action==='posts').args),{p_action:'posts',p_data:{limit:3,topic:'prep'}});
+  assert.deepEqual(await page.evaluate(()=>window.__rpcs.find(r=>r.args.p_action==='studies').args),{p_action:'studies',p_data:{limit:3}});
+  assert.equal(await page.locator('#homePostsTitle a').getAttribute('href'),'community.html?view=board&topic=prep');
+  assert.equal(await page.locator('#homeStudiesTitle a').getAttribute('href'),'community.html?view=studies');
   assert.deepEqual(await page.locator('#homeCommunityStudies .home-community-tag').allTextContents(),['모집 중','정원 마감','모집 종료']);
   assert.equal(await page.locator('#homeCommunityStudies time').count(),3);
-  await page.locator('#homeStudiesTab').press('Home');
-  assert.equal(await page.locator('#homePostsTab').getAttribute('aria-selected'),'true');
   // 공개 데이터의 HTML은 해석하지 않고 글자로 표시한다.
   await page.evaluate(()=>{window.__testData.posts.items[0].title='<img src=x onerror=alert(1)>';});
-  await page.locator('#homeStudiesTab').click();await page.locator('#homePostsTab').click();
+  await page.waitForTimeout(1100);
+  await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
   await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();
+  assert.equal(await page.locator('#homeCommunityPosts article a').first().textContent(),'<img src=x onerror=alert(1)>');
   assert.equal(await page.locator('#homeCommunityPosts img').count(),0);
   await context.close();
  }
- report.checks.push('탭 키보드·서버 주제 필터·최대 3건·실제 상태·날짜·HTML 이스케이프');
+ report.checks.push('두 목록 직접 탐색·서버 주제 필터·최대 3건·실제 상태·날짜·HTML 이스케이프');
  for(const mode of ['empty','error','delay']){
   const {page,context}=await makePage({mode});
   await page.locator('#doors').scrollIntoViewIfNeeded();
   if(mode==='delay')assert.equal(await page.locator('#homeReviews').getAttribute('aria-busy'),'true');
   await page.locator('#homeReviews[aria-busy=false]').waitFor();
-  if(mode==='empty')assert.match(await page.locator('#homeReviews').textContent(),/공개 후기가 없습니다/);
+  if(mode==='empty'){
+   assert.match(await page.locator('#homeReviews').textContent(),/공개 후기가 없습니다/);
+   assert.equal(await page.locator('[data-review-list]:visible').count(),2);
+  }
   if(mode==='error'){
    assert.match(await page.locator('#homeReviews').textContent(),/불러오지 못했습니다/);
    await page.evaluate(()=>window.__testState.mode='normal');
@@ -215,7 +257,11 @@ try{
   }
   await page.locator('#homeCommunity').scrollIntoViewIfNeeded();
   await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();
-  if(mode==='empty')assert.match(await page.locator('#homeCommunityPosts').textContent(),/아직 공개된/);
+  await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
+  if(mode==='empty'){
+   assert.match(await page.locator('#homeCommunityPosts').textContent(),/아직 공개된/);
+   assert.ok((await page.locator('.home-community-grid').boundingBox()).height<250,'빈 목록은 간결하게 표시');
+  }
   if(mode==='error'){
    assert.match(await page.locator('#homeCommunityPosts').textContent(),/불러오지 못했습니다/);
    await page.locator('#homeCommunityPosts button').scrollIntoViewIfNeeded();
@@ -224,8 +270,12 @@ try{
    await page.locator('#homeCommunityPosts button').click();
    await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();
    assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
+   await page.locator('#homeCommunityStudies button').click();
+   await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
+   assert.equal(await page.locator('#homeCommunityStudies article').count(),3);
    await page.evaluate(()=>window.__testState.mode='error');
-   await page.locator('#homeStudiesTab').click();await page.locator('#homePostsTab').click();
+   await page.waitForTimeout(1100);
+   await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
    await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();
    assert.match(await page.locator('#homeCommunityPosts').textContent(),/이전 정보를/);
   }
@@ -234,9 +284,22 @@ try{
  }
  report.checks.push('지연·빈 목록·실패·재시도 성공·갱신 실패 시 이전 목록');
  {
+  const data={...fixture,reviews:[{kind:'challenge',quote:'원문을 그대로 보여 줍니다. '+ '추가 내용입니다. '.repeat(30)}]};
+  const {page,context}=await makePage({},data);
+  await page.locator('#doors').scrollIntoViewIfNeeded();
+  await page.locator('#homeReviews[aria-busy=false]').waitFor();
+  assert.equal(await page.locator('[data-review-list="challenge"]').isVisible(),false);
+  assert.equal(await page.locator('[data-review-list="ke20"]').isVisible(),true);
+  const excerpt=await page.locator('.home-review-quote').textContent();
+  assert.ok(Array.from(excerpt).length<=121);
+  assert.ok(data.reviews[0].quote.startsWith(excerpt.replace(/…$/,'')),'후기 앞부분 원문 보존');
+  await context.close();
+ }
+ report.checks.push('실제 연구진 원본·3단계 진행·후기 원문 발췌·종류별 중복 링크/대체 링크');
+ {
   const {page,context}=await makePage();
   // 브라우저 글자 크기 확대를 모사하며 큰 글자에서도 정보가 잘리지 않는지 본다.
-  await page.addStyleTag({content:'main > :not(#heroIntro) :is(h1,h2,h3,p,a,button,span), #mobileMenu :is(a,h2,span) {font-size:200% !important;}'});
+  await page.addStyleTag({content:'main > :not(#heroIntro) :is(h1,h2,h3,h4,p,a,button,span), #mobileMenu :is(a,h2,span) {font-size:200% !important;}'});
   await noOverflow(page,'큰 글자');
   await page.locator('#hamburger').click();
   await noOverflow(page,'큰 글자 메뉴');
