@@ -65,19 +65,23 @@ try{
   const {page,context}=await makePage({},snapshot||fixture,width);
   await noOverflow(page,'메인 '+width);
   const layout=await page.evaluate(()=>({
-   width:innerWidth,quickTop:document.querySelector('.home-shortcuts').getBoundingClientRect().top,
-   quickRows:new Set(Array.from(document.querySelectorAll('.home-shortcuts a'),el=>Math.round(el.getBoundingClientRect().top))).size,
+   width:innerWidth,quickTop:document.querySelector('.monc-quick').getBoundingClientRect().top,
+   quickRows:new Set(Array.from(document.querySelectorAll('.monc-quick a'),el=>Math.round(el.getBoundingClientRect().top))).size,
    sections:Array.from(document.querySelectorAll('main > section'),el=>({id:el.id||el.className,y:Math.round(el.getBoundingClientRect().top+scrollY)}))
   }));
   // 오너가 원래 100svh 창문 인트로 보존을 확정했다. 바로가기는 그 아래 본문에 둔다.
-  if(width>=360&&width<=430)assert.equal(layout.quickRows,1);
+  assert.equal(layout.quickRows,width<700?2:1);
   assert.equal(await page.locator('#heroIntro').evaluate(el=>el.clientHeight),812);
   assert.equal(await page.locator('main a[href="challenges.html"]').count(),2,'챌린지 소개 CTA와 마지막 CTA만 유지');
-  assert.equal(await page.locator('.home-services').count(),0,'중복 서비스 카드 제거');
-  assert.equal(await page.locator('.home-hero-photo').count(),1);
-  assert.equal(await page.locator('.home-shortcuts a').count(),4);
+  assert.equal(await page.locator('.monc-services').count(),1,'핵심 기능 네 가지를 한 영역에 표시');
+  assert.equal(await page.locator('.monc-grid-photo').count(),1);
+  assert.equal(await page.locator('.monc-quick a').count(),4);
   assert.equal(await page.locator('.home-process-list li').count(),3);
-  assert.deepEqual(await page.locator('.home-researcher h4').allTextContents(),await page.evaluate(()=>MONC_RESEARCHERS.filter(r=>r.role==='수석 연구원').map(r=>r.name)));
+  assert.deepEqual(await page.locator('.monc-person h3').allTextContents(),await page.evaluate(()=>MONC_RESEARCHERS.filter(r=>r.name).map(r=>r.name)));
+  await page.locator('#homeResearcherNext').click();
+  await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='2 / 6');
+  await page.locator('#homeResearchers').press('ArrowLeft');
+  await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='1 / 6');
   report.widths.push(layout);
   await page.locator('#doors').scrollIntoViewIfNeeded();
   await page.locator('#homeReviews[aria-busy=false]').waitFor();
@@ -88,10 +92,11 @@ try{
   await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
   if(!snapshot)assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
   // 전체 캡처 전에 실제 스크롤로 지연 로딩 사진을 표시하고 디코딩까지 기다린다.
-  for(const selector of ['.home-hero-photo','.home-researchers']){
+  for(const selector of ['.monc-grid-photo','.home-process-list','#homeResearchers']){
    await page.locator(selector).scrollIntoViewIfNeeded();
    await page.locator(selector).evaluate(async el=>{
-    const images=el.tagName==='IMG'?[el]:Array.from(el.querySelectorAll('img'));
+    const box=el.getBoundingClientRect();
+    const images=el.tagName==='IMG'?[el]:Array.from(el.querySelectorAll('img')).filter(img=>{const r=img.getBoundingClientRect();return r.left<box.right&&r.right>box.left;});
     await Promise.all(images.map(img=>img.decode()));
    });
   }
@@ -103,13 +108,13 @@ try{
   assert.equal(new URL(page.url()).hash,'#researchFeatures');
   const introLayout=await page.evaluate(()=>{
    const box=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom};};
-   return {hero:box('.home-hero'),copy:box('.home-hero-copy'),photo:box('.home-hero-photo'),action:box('.home-hero .home-primary'),shortcuts:box('.home-shortcuts'),reviews:box('#doors')};
+   return {hero:box('.monc-introduction'),copy:box('.monc-intro-copy'),photo:box('.monc-grid-photo'),action:box('.monc-introduction .monc-cta'),shortcuts:box('.monc-quick'),reviews:box('#doors')};
   });
   assert.ok(introLayout.hero.y>=57&&introLayout.hero.y<180,'창문 시작하기는 통합 소개에 착지');
-  if(width<881){
-   assert.ok(introLayout.copy.bottom<=introLayout.photo.y&&introLayout.photo.bottom<=introLayout.action.y,'모바일 설명·사진·버튼 순서');
-  }else{
-   assert.ok(introLayout.copy.right<introLayout.photo.x,'데스크톱 설명과 사진 좌우 배치');
+  assert.ok(introLayout.photo.bottom<=introLayout.copy.y,'큰 사진 다음 설명 배치');
+  if(width>=700){
+   const columns=await page.locator('.monc-intro-head,.monc-intro-details').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,right:r.right};}));
+   assert.ok(columns[0].right<columns[1].x,'데스크톱 소개와 행동 영역 분리');
   }
   assert.ok(introLayout.hero.bottom<=introLayout.shortcuts.y&&introLayout.shortcuts.bottom<=introLayout.reviews.y);
   if([375,768,1280].includes(width))await page.screenshot({path:path.join(output,'home-introduction-'+width+'.png')});
@@ -224,8 +229,8 @@ try{
   await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
   assert.deepEqual(await page.evaluate(()=>window.__rpcs.find(r=>r.args.p_action==='posts').args),{p_action:'posts',p_data:{limit:3,topic:'prep'}});
   assert.deepEqual(await page.evaluate(()=>window.__rpcs.find(r=>r.args.p_action==='studies').args),{p_action:'studies',p_data:{limit:3}});
-  assert.equal(await page.locator('#homePostsTitle a').getAttribute('href'),'community.html?view=board&topic=prep');
-  assert.equal(await page.locator('#homeStudiesTitle a').getAttribute('href'),'community.html?view=studies');
+  assert.equal(await page.locator('.monc-community-entry[href="community.html?view=board&topic=prep"]').getAttribute('href'),'community.html?view=board&topic=prep');
+  assert.equal(await page.locator('.monc-community-entry[href="community.html?view=studies"]').getAttribute('href'),'community.html?view=studies');
   assert.deepEqual(await page.locator('#homeCommunityStudies .home-community-tag').allTextContents(),['모집 중','정원 마감','모집 종료']);
   assert.equal(await page.locator('#homeCommunityStudies time').count(),3);
   // 공개 데이터의 HTML은 해석하지 않고 글자로 표시한다.
@@ -260,7 +265,7 @@ try{
   await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();
   if(mode==='empty'){
    assert.match(await page.locator('#homeCommunityPosts').textContent(),/아직 공개된/);
-   assert.ok((await page.locator('.home-community-grid').boundingBox()).height<250,'빈 목록은 간결하게 표시');
+   assert.ok((await page.locator('.home-community-grid').boundingBox()).height<400,'빈 목록은 두 진입 링크 아래 간결하게 표시');
   }
   if(mode==='error'){
    assert.match(await page.locator('#homeCommunityPosts').textContent(),/불러오지 못했습니다/);
@@ -320,7 +325,7 @@ try{
   assert.equal(await page.locator('#stickyCta').count(),0);
   assert.equal(await page.locator('.nav-space-switch').count(),0);
   await page.locator('#menuClose').click();
-  await page.locator('.home-shortcuts a[href="tools.html"]').click();
+  await page.locator('.monc-quick a[href="tools.html"]').click();
   await page.waitForURL('**/tools.html');
   await context.close();
  }
@@ -328,8 +333,8 @@ try{
  {
   const {page,context}=await makePage();
   await page.evaluate(()=>document.addEventListener('click',event=>{if(event.target.closest('a'))event.preventDefault();}));
-  await page.locator('.home-hero .home-primary').click();
-  await page.locator('.home-shortcuts a[href="tools.html"]').click();
+  await page.locator('.monc-introduction .monc-cta').click();
+  await page.locator('.monc-quick a[href="tools.html"]').click();
   await page.locator('#hamburger').click();
   await page.getByRole('button',{name:'면접 준비',exact:true}).click();
   await page.locator('#mobileMenu a[href="lectures.html"]').click();
