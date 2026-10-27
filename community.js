@@ -53,7 +53,7 @@
     const previousUser=session?.user.id;
     session=await MONC.getSession();
     if(previousUser && previousUser!==session?.user.id) { me=null;consent=false;close();toast('계정이 바뀌었어요. 다시 확인해 주세요.');render();return false; }
-    if(!session) { open('로그인하고 함께 참여하세요',`<p>글과 댓글은 누구나 읽을 수 있어요. 글쓰기·댓글·스터디 지원·프로필 확인은 로그인 후 이용하세요.</p><a class="cm-btn cm-full" href="login.html?returnTo=${encodeURIComponent('community.html'+location.search)}">로그인·가입하기</a>`);return false; }
+    if(!session) { open('로그인하고 함께 참여하세요',`<div class="cm-login-copy"><p>글과 댓글은 누구나 읽을 수 있어요.</p><p>글쓰기·댓글·스터디 지원·프로필 확인은 <span class="cm-login-next">로그인 후 이용하세요.</span></p></div><a class="cm-btn cm-full" href="login.html?returnTo=${encodeURIComponent('community.html'+location.search)}">로그인·가입하기</a>`);return false; }
     if(!(await MONC.requireConsent())) return false;
     consent=true;
     if(!me) me=(await rpc('member','profile')).item;
