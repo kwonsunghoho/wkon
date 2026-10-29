@@ -7,6 +7,7 @@
     ['면접 준비', [
       ['challenges.html', '2주 챌린지'],
       ['apply.html', '챌린지 신청'],
+      ['online-courses.html', '온라인 강의'],
       ['lectures.html', '특강'],
       ['tools.html', '내 답변 준비'],
       ['answers.html', '저장한 답변'],

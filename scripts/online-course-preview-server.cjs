@@ -1,6 +1,6 @@
 // 실제 화면에서 외부 SDK·회원 설정을 제거한 로컬 전용 검증 서버.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
-const root=path.resolve(__dirname,'..'),pages=new Set(['course.html','classroom.html','classroom-watch.html','mypage.html','admin.html']);
+const root=path.resolve(__dirname,'..'),pages=new Set(['course.html','classroom.html','classroom-watch.html','mypage.html','admin.html','online-courses.html','index.html']);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.woff2':'font/woff2','.webp':'image/webp','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.mp4':'video/mp4','.txt':'text/plain; charset=utf-8','.ico':'image/x-icon'};
 http.createServer((req,res)=>{
  if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);return res.end();}
@@ -9,6 +9,7 @@ http.createServer((req,res)=>{
  if(!file.startsWith(root+path.sep)||name.includes('supabase-config')||name.startsWith('.')||name.startsWith('supabase/')||name.startsWith('outputs/')&&!['outputs/course-test-runtime/test-video.mp4','outputs/course-test-runtime/test-material.txt'].includes(name)||path.extname(name)==='.html'&&!pages.has(name)){res.writeHead(403);return res.end('검증 화면에서 지원하지 않는 주소입니다.');}
  if(pages.has(name)){
   let html=fs.readFileSync(file,'utf8').replace(/<script\b[^>]*src="(?:https:[^"]+|supabase-config\.js[^\"]*|pay-methods\.js[^\"]*)"[^>]*><\/script>/g,'');
+  html=html.replace(/<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?clarity\.ms(?:(?!<\/script>)[\s\S])*?<\/script>/g,'');
   html=html.replace(/<head>/,'<head><script src="scripts/'+(name==='admin.html'?'online-course-admin-fixture.js':'online-course-fixture.js')+'"></script>');
   res.writeHead(200,{'Content-Type':types['.html'],'Cache-Control':'no-store','Content-Security-Policy':"connect-src 'self'; media-src 'self' blob:; form-action 'none'"});return res.end(html);
  }

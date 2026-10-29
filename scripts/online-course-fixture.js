@@ -1,6 +1,6 @@
 /* 5521 로컬 검증 서버에서만 주입한다. 운영 화면에서 로드하지 않는다. */
 (() => {
- if(location.hostname!=='127.0.0.1'||!['5521','5531'].includes(location.port))throw new Error('로컬 검증 전용');
+ if(location.hostname!=='127.0.0.1'||!['5521','5531','5532'].includes(location.port))throw new Error('로컬 검증 전용');
  const key='monc_course_fixture_v1',uid='00000000-0000-4000-8000-000000000001',eid='00000000-0000-4000-8000-000000000010';
  const qs=new URLSearchParams(location.search);if(qs.has('reset'))localStorage.removeItem(key);
  let state=JSON.parse(localStorage.getItem(key)||'{"enrollment":null,"progress":[]}');
@@ -27,7 +27,7 @@
    const notes=Object.entries(state.notes).filter(([id])=>!b.lessonId||id===b.lessonId).map(([id,n])=>{const l=lessons.find(l=>l.id===id);return {...n,lessonId:id,lessonTitle:l.title,courseTitle:course.title,courseId:course.id,duration:l.duration,enrollmentId:ended()?null:eid};});
    return {data:{ok:true,notes,hasCourses:!!state.enrollment},error:null};
   }
-  if(b.action==='catalog')data={...data,course,lessons};
+  if(b.action==='catalog'){if(qs.has('catalogFailure'))return {data:null,error:{message:'검증용 연결 실패'}};if(qs.has('catalogPrivate'))return {data:{ok:false,error:'not_published'},error:null};data={...data,course:{...course,description:'승무원 영상면접을 준비하며 답변과 표현을 구체적으로 점검하는 심화과정입니다. 답변 구성부터 미소와 시선, 호흡과 억양, 촬영 구도와 이미지까지 다룹니다.',saleOpen:false},lessons};}
   else if(b.action==='order')data=state.enrollment&&!ended()?{ok:false,error:'already_enrolled'}:{ok:true,paymentId:'local-course-payment',courseId:course.id,title:course.title,amount:10000,accessDays:course.accessDays};
   else if(b.action==='library')data.enrollments=state.enrollment?[{...state.enrollment,progress:state.progress}]:[];
   else if(!state.enrollment)data={ok:false,error:'not_enrolled'};
@@ -44,5 +44,5 @@
  window.MONC={getSession:async()=>({user:{id:uid}}),requireSession:async()=>({user:{id:uid}}),getMyProfile:async()=>({name:'검증용 수강생',role:'member'}),getMyApplications:async()=>[],getMyWallet:async()=>({balance:0}),studentStatus:async()=>null,requireConsent:async()=>true,sb:{from:query,rpc:async()=>({data:null,error:{message:'검증 범위 밖'}}),functions:{invoke},auth:{getSession:async()=>({data:{session:{user:{id:uid}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}}};
  window.moncPay={storeId:'local-only',choose:async()=>'local-only'};
  window.PortOne={requestPayment:async()=>{enroll();return {paymentId:'local-course-payment'};}};
- document.addEventListener('DOMContentLoaded',()=>{const banner=document.createElement('div');banner.className='oc-test-banner';banner.innerHTML='<strong>기능 검증 · 실제 결제 없음</strong><span>가격·목차는 예시 · 수강 기간 10일</span><a href="course.html?reset=1">처음부터</a><a href="classroom-watch.html?enrollment='+eid+'&scenario=expired">만료 확인</a>';(document.querySelector('main')||document.querySelector('#main')||document.body).prepend(banner);const style=document.createElement('style');style.textContent='.oc-test-banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12px;padding:12px 0;margin-bottom:20px;border-bottom:1px solid #ddd;color:#454c55}.oc-test-banner strong{font-weight:700}.oc-test-banner a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline}';document.head.append(style);if(new URLSearchParams(location.search).get('layout')==='1'){banner.textContent='로컬 검증 · 예시 영상/목차';banner.style.cssText='position:fixed;right:8px;bottom:8px;z-index:1000;padding:4px 8px;margin:0;border:1px solid #ddd;background:#fff;font-size:12px;pointer-events:none';}});
+ document.addEventListener('DOMContentLoaded',()=>{const banner=document.createElement('div');banner.className='oc-test-banner';banner.innerHTML='<strong>기능 검증 · 실제 결제 없음</strong><span>가격·목차는 예시 · 수강 기간 10일</span><a href="course.html?reset=1">처음부터</a><a href="classroom-watch.html?enrollment='+eid+'&scenario=expired">만료 확인</a>';(document.querySelector('main')||document.querySelector('#main')||document.body).prepend(banner);const style=document.createElement('style');style.textContent='.oc-test-banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12px;padding:12px 0;margin-bottom:20px;border-bottom:1px solid #ddd;color:#454c55}.oc-test-banner strong{font-weight:700}.oc-test-banner a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline}';document.head.append(style);if(new URLSearchParams(location.search).get('layout')==='1'){banner.textContent='로컬 시안 · 가격·목차는 예시';banner.style.cssText='position:fixed;right:8px;bottom:8px;z-index:1000;padding:4px 8px;margin:0;border:1px solid #ddd;background:#fff;font-size:12px;pointer-events:none';}});
 })();

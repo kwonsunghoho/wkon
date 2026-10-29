@@ -41,7 +41,7 @@ MONC(몬크 챌린지) 작업의 공통 지침. 과거 문서의 `CLAUDE.md`는 
 | 페이지 공통: `inapp.js`, `scroll-keep.js`, 메타·제목 | `docs/notes/page-common.md` |
 | 신청·결제·환불·모집: `apply.html`, `recruit.js`, `waitlist.js`, `pay-methods.js`, `pay-pending.js`, `refund-details.*`, verify/cancel-payment, portone-webhook | `docs/notes/apply-and-payment.md` |
 | 특강: `lecture.html`, `lectures.html`, `lecture-common.js` | `docs/notes/lectures.md` |
-| 온라인 강의: `course.html`, `classroom.html`, `classroom-watch.html`, `online-course.*`, `online-course-admin.*`, online-course 함수 | `docs/notes/online-courses.md` + 결제 변경 시 `docs/notes/apply-and-payment.md` |
+| 온라인 강의: `online-courses.html`, `online-course-catalog.*`, `course.html`, `classroom.html`, `classroom-watch.html`, `online-course.*`, `online-course-admin.*`, online-course 함수 | `docs/notes/online-courses.md` + 결제 변경 시 `docs/notes/apply-and-payment.md` |
 | 코스·도구 허브: `briefing.html`, `tools.html` | `docs/notes/briefing.md` |
 | 역량검사: `games.html`, `games.js` | `docs/notes/games.md` |
 | 연구실: `lab*`, `researchers-data.js`, lab-file | `docs/notes/lab.md` |
