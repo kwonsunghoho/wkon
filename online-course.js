@@ -96,7 +96,7 @@
   try{
    const r=await call('play',enrollmentArgs());if(selected.id!==id)return;
    view.enrollment.started_at=r.startedAt;view.enrollment.expires_at=r.expiresAt;period();mediaExpires=Date.parse(r.urlExpiresAt)-offset;
-   await mediaEvent('loadedmetadata',()=>{video.preload='metadata';video.src=r.url;video.load();});
+   await mediaEvent('loadedmetadata',()=>{video.preload='auto';video.src=r.url;video.load();});
    const target=resume>=video.duration-1?0:Math.max(0,resume);
    if(target>0)await mediaEvent('seeked',()=>{video.currentTime=target;});
    loadedLesson=selected;mediaReady=true;initialJump=null;savedTime=Date.now();video.playbackRate=Number($('#oc-speed').value);
@@ -109,7 +109,7 @@
   if(busy||!mediaReady||!Number.isFinite(video.duration))return;
   const target=Math.max(0,Math.min(video.duration,position));
   if(Date.now()>=mediaExpires){const autoplay=!video.paused;await save();await play(target,autoplay);save();}
-  else video.currentTime=target;
+  else {message('선택한 구간을 불러오고 있습니다.');video.currentTime=target;}
  }
  async function switchLesson(l){if(busy||switching||!l||l===selected)return;switching=true;try{video.pause();if(await save()===false)return;if(!await noteEditor.flush()){message('메모 저장을 확인한 뒤 이동할 수 있습니다. 아래 내 메모의 저장 상태를 확인해 주세요.');return;}if(!await noteEditor.select(l)){message('다음 강의의 메모를 불러오지 못했습니다. 잠시 후 다시 이동해 주세요.');return;}selectLesson(l);}finally{switching=false;}}
  async function recoverVideo(){
@@ -127,7 +127,7 @@
   $('#watch-lessons').addEventListener('click',e=>{const chapter=e.target.closest('[data-chapter-seconds]');if(chapter){if(!busy&&!switching)jump(Number(chapter.dataset.chapterSeconds));return;}const button=e.target.closest('[data-lesson]');if(!button||busy||switching)return;switchLesson(view.lessons.find(l=>l.id===button.dataset.lesson));});
   $('#oc-start').addEventListener('click',play);$('#oc-play').addEventListener('click',async()=>{if(video.paused){if(Date.now()>=mediaExpires)await play();else video.play().catch(()=>message('재생 버튼을 다시 눌러 주세요.'));}else video.pause();});
   video.addEventListener('play',()=>{$('#oc-play').textContent='Ⅱ';$('#oc-play').setAttribute('aria-label','일시정지');});
-  video.addEventListener('pause',()=>{$('#oc-play').textContent='▶';$('#oc-play').setAttribute('aria-label','재생');save();});video.addEventListener('ended',save);video.addEventListener('seeked',save);video.addEventListener('error',()=>{if(busy)return;if(mediaReady&&Date.now()>=mediaExpires){recoverVideo();return;}video.pause();$('#oc-video-cover').hidden=false;$('#first-play-note').textContent='영상 연결이 끊겼습니다. 재생 버튼을 눌러 이어서 시청하세요.';});
+  video.addEventListener('pause',()=>{$('#oc-play').textContent='▶';$('#oc-play').setAttribute('aria-label','재생');save();});video.addEventListener('ended',save);video.addEventListener('seeked',()=>{if(mediaReady&&!busy)message('');save();});video.addEventListener('error',()=>{if(busy)return;if(mediaReady&&Date.now()>=mediaExpires){recoverVideo();return;}video.pause();$('#oc-video-cover').hidden=false;$('#first-play-note').textContent='영상 연결이 끊겼습니다. 재생 버튼을 눌러 이어서 시청하세요.';});
   video.addEventListener('stalled',recoverVideo);video.addEventListener('waiting',()=>{setTimeout(()=>{if(!video.paused&&video.readyState<3)recoverVideo();},3000);});
   video.addEventListener('timeupdate',()=>{if(!mediaReady||busy)return;markChapter();if(ended(view.enrollment)){stopAccess();return;}if(repeatA!==null&&repeatB!==null&&video.currentTime>=repeatB)seekTo(repeatA);$('#oc-seek').max=Number.isFinite(video.duration)?video.duration:selected.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);if(Date.now()-savedTime>15000){savedTime=Date.now();save();}});
   $('#oc-seek').addEventListener('change',()=>seekTo(Number($('#oc-seek').value))); 
