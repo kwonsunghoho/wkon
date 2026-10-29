@@ -1,8 +1,16 @@
 // 온라인 강의 지급 전용. verify-payment와 웹훅만 service_role로 호출한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION='2026-10-28a'
+const FN_VERSION='2026-10-29-context'
 const STORE='store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})
+// 기존 SDK에 문자열로 넘긴 주문은 두 번 인코딩되어 있어 최대 두 번만 해석한다.
+const courseContext=(raw:unknown):Record<string,unknown>=>{
+ try{
+  for(let depth=0;depth<2&&typeof raw==='string';depth++)raw=JSON.parse(raw)
+  if(raw&&typeof raw==='object'&&!Array.isArray(raw))return raw as Record<string,unknown>
+ }catch{ /* 유효하지 않은 주문 맥락은 지급하지 않는다. */ }
+ return {}
+}
 Deno.serve(async req=>{
  if(req.method!=='POST')return json({ok:false,error:'method_not_allowed'},405)
  try{
@@ -35,8 +43,7 @@ Deno.serve(async req=>{
   }
   if(pay.status!=='PAID')return json({ok:false,error:'not_paid'})
   // 조회 상점·주문 표식·금액·통화가 모두 일치해야 지급한다.
-  let cd:Record<string,unknown>={}
-  try{cd=typeof pay.customData==='string'?JSON.parse(pay.customData):pay.customData||{}}catch{ /* 지급하지 않는다. */ }
+  const cd=courseContext(pay.customData)
   if(Number(pay.amount?.total)!==o.amount||!['KRW','CURRENCY_KRW'].includes(pay.currency)||pay.storeId&&pay.storeId!==STORE)
    return json({ok:false,error:'amount_mismatch'})
   const contextOk=cd.k==='online-course'&&cd.oid===o.payment_id&&cd.cid===o.course_id&&cd.uid===o.member_id&&pay.customer?.id===o.member_id

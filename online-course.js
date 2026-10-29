@@ -65,7 +65,7 @@
     moncPends.add(pendingKey(),{paymentId:order.paymentId,courseId:order.courseId});
     const profile=await MONC.getMyProfile();
     const redirectUrl=new URL('course.html',location.href);redirectUrl.searchParams.set('course',order.courseId);redirectUrl.searchParams.set('payresult','1');
-    const res=await PortOne.requestPayment({storeId:moncPay.storeId,channelKey,paymentId:order.paymentId,orderName:'몬크 · '+order.title,totalAmount:order.amount,currency:'KRW',payMethod:'EASY_PAY',customer:{customerId:session.user.id,fullName:profile?.name||undefined,phoneNumber:profile?.phone||undefined},customData:JSON.stringify({k:'online-course',oid:order.paymentId,cid:order.courseId,uid:session.user.id}),redirectUrl:redirectUrl.href});
+    const res=await PortOne.requestPayment({storeId:moncPay.storeId,channelKey,paymentId:order.paymentId,orderName:'몬크 · '+order.title,totalAmount:order.amount,currency:'KRW',payMethod:'EASY_PAY',customer:{customerId:session.user.id,fullName:profile?.name||undefined,phoneNumber:profile?.phone||undefined},customData:{k:'online-course',oid:order.paymentId,cid:order.courseId,uid:session.user.id},redirectUrl:redirectUrl.href});
     if(res?.code){message('결제창이 종료되었습니다. 결제 여부는 내 강의실에서 다시 확인할 수 있습니다.');return;}
     if(await verify(order.paymentId,order.courseId))location.href='classroom.html';
    }catch(e){message(errorText(e));}finally{busy=false;$('#purchase-button').disabled=false;}
