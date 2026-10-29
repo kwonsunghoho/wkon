@@ -11,6 +11,9 @@
  let session=null, offset=0, library=[], filter='active', view=null, selected=null, busy=false, saveQueue=Promise.resolve(), savedTime=0, mediaExpires=0, repeatA=null,repeatB=null,loadedLesson=null,mediaReady=false,lastRecovery=0;
  let noteEditor=null,switching=false,initialJump=null;
  const video=$('#course-video');
+ let seekNoticeTimer;
+ function playerNotice(text){const el=$('#oc-player-notice');if(el){el.textContent=text||'';el.hidden=!text;}}
+ function seekNotice(seconds){const el=$('#oc-seek-notice');if(!el)return;clearTimeout(seekNoticeTimer);el.textContent=seconds<0?'↶ 10초':'10초 ↷';el.dataset.direction=seconds<0?'back':'forward';el.hidden=false;seekNoticeTimer=setTimeout(()=>{el.hidden=true;},700);}
  if(video)video.addEventListener('contextmenu',e=>e.preventDefault());
  function message(text,id='course-message'){const el=$('#'+id);if(el){el.textContent=text||'';el.hidden=!text;}}
  function errorText(e){return messages[e?.code]||'연결을 확인한 뒤 다시 시도해 주세요.';}
@@ -110,7 +113,7 @@
  async function play(resumeOverride,autoplay=true){
   if(busy||switching||!selected||ended(view.enrollment))return;
   const id=selected.id,resume=typeof resumeOverride==='number'?resumeOverride:loadedLesson?.id===id&&mediaReady?video.currentTime:initialJump??view.progress.find(p=>p.lesson_id===id)?.position_seconds??0;
-  busy=true;mediaReady=false;$('#oc-start').disabled=true;message('영상을 불러오고 있습니다.');
+  busy=true;mediaReady=false;$('#oc-start').disabled=true;playerNotice('영상을 불러오는 중…');
   try{
    const r=await call('play',enrollmentArgs());if(selected.id!==id)return;
    view.enrollment.started_at=r.startedAt;view.enrollment.expires_at=r.expiresAt;period();mediaExpires=Date.parse(r.urlExpiresAt)-offset;
@@ -121,13 +124,13 @@
    $('#oc-video-cover').hidden=true;$('#oc-controls').hidden=false;message('');period();
    if(autoplay)await video.play();
   }catch(e){mediaReady=false;message(errorText(e));$('#oc-video-cover').hidden=false;$('#first-play-note').textContent='영상을 불러오지 못했습니다. 다시 재생해 주세요.';if(e.code==='access_expired')stopAccess();}
-  finally{busy=false;if(mediaReady){$('#oc-seek').max=video.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);}$('#oc-start').disabled=ended(view.enrollment)||!selected.hasVideo;}
+  finally{playerNotice('');busy=false;if(mediaReady){$('#oc-seek').max=video.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);}$('#oc-start').disabled=ended(view.enrollment)||!selected.hasVideo;}
  }
  async function seekTo(position){
   if(busy||!mediaReady||!Number.isFinite(video.duration))return;
   const target=Math.max(0,Math.min(video.duration,position));
   if(Date.now()>=mediaExpires){const autoplay=!video.paused;await save();await play(target,autoplay);save();}
-  else {message('선택한 구간을 불러오고 있습니다.');video.currentTime=target;}
+  else {video.currentTime=target;}
  }
  async function switchLesson(l){if(busy||switching||!l||l===selected)return;switching=true;try{video.pause();if(await save()===false)return;if(!await noteEditor.flush()){message('메모 저장을 확인한 뒤 이동할 수 있습니다. 아래 내 메모의 저장 상태를 확인해 주세요.');return;}if(!await noteEditor.select(l)){message('다음 강의의 메모를 불러오지 못했습니다. 잠시 후 다시 이동해 주세요.');return;}selectLesson(l);}finally{switching=false;}}
  async function recoverVideo(){
@@ -135,6 +138,11 @@
   lastRecovery=Date.now();const position=video.currentTime;await save();await play(position);
  }
  async function watch(){
+  const stage=$('.oc-video-stage');
+  stage.insertAdjacentHTML('beforeend','<div id="oc-seek-notice" class="oc-seek-notice" aria-hidden="true" hidden></div><div id="oc-player-notice" class="oc-player-notice" role="status" hidden></div>');
+  video.addEventListener('waiting',()=>playerNotice('불러오는 중…'));
+  video.addEventListener('playing',()=>playerNotice(''));
+  video.addEventListener('seeked',()=>{if(video.readyState>=3||video.paused)playerNotice('');});
   if(!(await guard()))return;const eid=params.get('enrollment');if(!eid)throw {code:'not_enrolled'};
   view=await call('view',{enrollmentId:eid});$('#watch-course-name').textContent=view.course.title;$('.list-course>span').textContent=view.course.title;
   if(!view.lessons.length){message('강의가 아직 등록되지 않았습니다.');$('#oc-start').disabled=true;$('#first-play-note').textContent='강의 등록 준비 중입니다.';return;}
@@ -149,7 +157,7 @@
   video.addEventListener('stalled',recoverVideo);video.addEventListener('waiting',()=>{setTimeout(()=>{if(!video.paused&&video.readyState<3)recoverVideo();},3000);});
   video.addEventListener('timeupdate',()=>{if(!mediaReady||busy)return;markChapter();if(ended(view.enrollment)){stopAccess();return;}if(repeatA!==null&&repeatB!==null&&video.currentTime>=repeatB)seekTo(repeatA);$('#oc-seek').max=Number.isFinite(video.duration)?video.duration:selected.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);if(Date.now()-savedTime>15000){savedTime=Date.now();save();}});
   $('#oc-seek').addEventListener('change',()=>seekTo(Number($('#oc-seek').value))); 
-  $('#oc-back').addEventListener('click',()=>{seekTo(video.currentTime-10);});$('#oc-forward').addEventListener('click',()=>{seekTo(video.currentTime+10);});$('#oc-speed').addEventListener('change',()=>{video.playbackRate=Number($('#oc-speed').value);});
+  $('#oc-back').addEventListener('click',()=>{if(!busy&&mediaReady){seekNotice(-10);seekTo(video.currentTime-10);}});$('#oc-forward').addEventListener('click',()=>{if(!busy&&mediaReady){seekNotice(10);seekTo(video.currentTime+10);}});$('#oc-speed').addEventListener('change',()=>{video.playbackRate=Number($('#oc-speed').value);});
   $('#oc-next').addEventListener('click',()=>{if(busy)return;switchLesson(view.lessons[view.lessons.indexOf(selected)+1]);});
   $('#oc-outline').addEventListener('click',()=>{const collapsed=$('.watch-grid').classList.toggle('is-outline-collapsed');$('#oc-outline').setAttribute('aria-expanded',String(!collapsed));$('#oc-outline').textContent=collapsed?'목차 펼치기':'목차 접기';});
   $('#oc-fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('.oc-video-stage').requestFullscreen();}catch{message('이 브라우저에서는 전체 화면을 사용할 수 없습니다.');}});
