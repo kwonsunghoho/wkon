@@ -15,7 +15,7 @@
  function playerNotice(text){const el=$('#oc-player-notice');if(el){el.textContent=text||'';el.hidden=!text;}}
  function seekNotice(seconds){const el=$('#oc-seek-notice');if(!el)return;clearTimeout(seekNoticeTimer);el.textContent=seconds<0?'↶ 10초':'10초 ↷';el.dataset.direction=seconds<0?'back':'forward';el.hidden=false;seekNoticeTimer=setTimeout(()=>{el.hidden=true;},700);}
  if(video)video.addEventListener('contextmenu',e=>e.preventDefault());
- function message(text,id='course-message'){const el=$('#'+id);if(el){el.textContent=text||'';el.hidden=!text;}}
+ function message(text,id='course-message'){const el=$('#'+id);if(el){el.textContent=text||'';el.hidden=!text;}if(id==='course-message'&&$('#purchase-message')){$('#purchase-message').textContent=text||'';$('#purchase-message').hidden=!text;}}
  function errorText(e){return messages[e?.code]||'연결을 확인한 뒤 다시 시도해 주세요.';}
  async function call(action,args={}){const r=await MONC.sb.functions.invoke('online-course',{body:{action,courseId,...args}});if(r.error)throw Object.assign(new Error('network'),{code:'network'});if(!r.data?.ok)throw Object.assign(new Error(r.data?.error||'unavailable'),{code:r.data?.error});if(r.data.serverNow)offset=Date.parse(r.data.serverNow)-Date.now();return r.data;}
  async function guard(){session=await MONC.getSession();if(!session){location.href='login.html?returnTo='+encodeURIComponent(location.pathname+location.search);return false;}return await MONC.requireConsent();}
@@ -29,7 +29,10 @@
  }
  async function recover(){if(!session||!window.moncPends)return;for(const p of moncPends.load(pendingKey()))await verify(p.paymentId,p.courseId,true);}
  async function catalog(){
-  let c=null,access=null;
+  let c=null,access=null,confirming=false;
+  const purchaseDialog=$('#purchase-dialog');
+  $('#purchase-close')?.addEventListener('click',()=>purchaseDialog.close());
+  $('#purchase-confirm')?.addEventListener('click',()=>{confirming=true;$('#purchase-button').click();});
   async function refreshAccess(){
    session=await MONC.getSession();
    access=session?await call('access'):null;
@@ -40,10 +43,19 @@
    if(direct)$('#course-sale-note').textContent=access.kind==='student'?'재학생 무료 · 첫 재생일부터 수강 기간이 시작됩니다.':'결제 없이 강의실로 바로 이동합니다.';
   }
   try{const r=await call('catalog');c=r.course;$('#course-description').textContent=c.description;$('#course-price').textContent=c.price?money(c.price):'준비 중';$('#course-period').textContent=c.accessDays?`첫 재생일부터 ${c.accessDays}일`:'준비 중';$('#purchase-consent-wrap').hidden=!c.saleOpen;$('#course-purchase-notice').textContent=c.purchaseNotice||'';$('#course-purchase-notice').hidden=!c.purchaseNotice;$('#course-sale-note').textContent=c.saleOpen?'결제 후 내 강의실에서 시작할 수 있습니다.':'판매 준비 중입니다.';
-   if(r.lessons.length){const groups=[...new Set(r.lessons.map(l=>l.chapter))];$('#course-curriculum').innerHTML=groups.map((g,i)=>`<details ${i===0?'open':''}><summary>${esc(g)}</summary><ol>${r.lessons.filter(l=>l.chapter===g).map(l=>`<li>${esc(l.title)}<span>${fmt(l.duration)}</span></li>`).join('')}</ol></details>`).join('');}
+   if($('#purchase-price')){$('#purchase-price').textContent=c.price?money(c.price):'준비 중';$('#purchase-period').textContent=$('#course-period').textContent;$('#purchase-confirm').textContent=c.price?money(c.price)+' 결제하기':'결제하기';}
+   if(r.lessons.length){
+    if($('#course-count')){
+     const seconds=r.lessons.reduce((sum,l)=>sum+(Number(l.duration)||0),0);
+     const total=`${Math.floor(seconds/60)}분 ${Math.floor(seconds%60)}초`;
+     $('#course-count').textContent=`${r.lessons.length}개 강의 · 총 ${total}`;$('#course-duration').textContent=total;
+     $('#course-curriculum').innerHTML=r.lessons.map((l,i)=>`<article class="lesson"><span class="number">${String(i+1).padStart(2,'0')}</span><div><h3>${esc(l.title)}</h3><p>${esc(l.chapter||'영상면접 심화과정')}</p></div><span class="duration">${fmt(l.duration)}</span></article>`).join('');
+    }else{const groups=[...new Set(r.lessons.map(l=>l.chapter))];$('#course-curriculum').innerHTML=groups.map((g,i)=>`<details ${i===0?'open':''}><summary>${esc(g)}</summary><ol>${r.lessons.filter(l=>l.chapter===g).map(l=>`<li>${esc(l.title)}<span>${fmt(l.duration)}</span></li>`).join('')}</ol></details>`).join('');}
+   }
   }catch(e){if(e.code!=='not_published')message(errorText(e));}
   $('#purchase-button').addEventListener('click',async()=>{
    if(busy)return;
+   const fromConfirmation=confirming;confirming=false;
    try{await refreshAccess();}catch(e){message(errorText(e));return;}
    if(access&&(access.enrollmentId||['admin','student'].includes(access.kind))){
     if(!(await guard()))return;
@@ -52,8 +64,10 @@
     catch(e){message(errorText(e));}finally{busy=false;$('#purchase-button').disabled=false;}return;
    }
    if(!c?.saleOpen){message('현재 판매 준비 중입니다. 가격·기간·강의가 확정되면 신청할 수 있습니다.');return;}
+   if(purchaseDialog&&!fromConfirmation){message('');$('#purchase-consent').checked=false;purchaseDialog.showModal();return;}
    if(!$('#purchase-consent').checked){message(messages.purchase_consent_required);$('#purchase-consent').focus();return;}
    if(!(await guard()))return;
+   if(purchaseDialog?.open)purchaseDialog.close();
    const channelKey=await moncPay.choose();if(!channelKey)return;
    busy=true;$('#purchase-button').disabled=true;message('결제를 준비하고 있습니다.');
    try{
