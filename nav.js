@@ -4,34 +4,11 @@
   if (document.getElementById('navbar')) return;
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
   var groups = [
-    ['면접 준비', [
-      ['challenges.html', '챌린지'],
-      ['apply.html', '챌린지 신청'],
-      ['online-courses.html', '온라인 강의'],
-      ['lectures.html', '특강'],
-      ['tools.html', '내 답변 준비'],
-      ['answers.html', '저장한 답변'],
-      ['sojae.html', '답변 소재 발굴'],
-      ['polish.html', '답변 첨삭'],
-      ['games.html', '역량검사 연습']
-    ]],
-    ['자료·정보', [
-      ['lab-airline.html', '면접 자료·기출'],
-      ['news.html', '항공사 뉴스·산업분석']
-    ]],
-    ['커뮤니티', [
-      ['community.html', '커뮤니티 홈'],
-      ['community.html?view=board&topic=prep', '승준정보'],
-      ['community.html?view=studies', '스터디 찾기'],
-      ['community.html?view=board&topic=hair', '헤메&샵'],
-      ['community.html?view=board&topic=free', '자유게시판'],
-      ['community.html?view=activity', '커뮤니티 내 활동'],
-      ['tools.html#community', '카카오톡 오픈채팅']
-    ]],
-    ['후기', [
-      ['reviews-list.html?kind=challenge', '챌린지 후기'],
-      ['reviews-list.html?kind=ke20', '수업 후기']
-    ]]
+    ['교육 과정', [['challenges.html','챌린지'],['online-courses.html','온라인 강의'],['lectures.html','특강']]],
+    ['면접 연습', [['sojae.html','답변 소재 발굴'],['polish.html','답변 첨삭'],['games.html','역량검사 연습']]],
+    ['자료·정보', [['lab-airline.html','면접 자료·기출'],['news.html','항공사 뉴스·산업분석']]],
+    ['커뮤니티', [['community.html?view=board&topic=prep','게시판'],['community.html?view=studies','스터디'],['tools.html#community','카카오톡 오픈채팅']]],
+    ['수강 후기', [['reviews-list.html?kind=challenge','챌린지 후기'],['reviews-list.html?kind=ke20','수업 후기']]]
   ];
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
@@ -141,7 +118,7 @@
       '<div class="nav-right">' + myHtml(authHint) + '</div>' +
       '<button type="button" class="hamburger" id="hamburger" aria-label="전체 메뉴 열기" aria-controls="mobileMenu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18"/></svg></button></div></nav>' +
       '<dialog id="mobileMenu" aria-label="전체 메뉴"><div class="mm-head"><a class="logo" href="index.html" aria-label="MONC 메인"><img src="' + LOGO + '" alt="MONC" width="96" height="32"></a><button id="menuClose" type="button" aria-label="전체 메뉴 닫기" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></div>' +
-      '<div class="mm-scroll"><div class="mm-account">' + accountHtml(authHint) + '</div><nav aria-label="전체 기능">' + menuHtml() + '</nav>' +
+      '<div class="mm-scroll"><div class="mm-account">' + accountHtml(authHint) + '</div><nav class="mm-personal" aria-label="내 학습"><a href="classroom.html" data-menu-destination>내 강의실</a><a href="answers.html" data-menu-destination>저장한 답변</a><a href="mypage.html" data-menu-destination>마이페이지</a></nav><nav aria-label="전체 기능">' + menuHtml() + '</nav>' +
       '<nav class="mm-support" aria-label="소개 및 문의"><a href="researchers.html" data-menu-destination>몬크·연구진 소개</a><a href="consult.html" data-menu-destination>1:1 상담 예약</a><a href="https://pf.kakao.com/_iajxnX/chat" target="_blank" rel="noopener" data-menu-destination>카카오톡 문의</a><a href="admin.html" id="menuAdmin" hidden data-menu-destination>관리자</a></nav>' +
       '<div class="mm-social">' + SOCIAL.slice(0,3).map(function (s) { return '<a href="' + s[0] + '" target="_blank" rel="noopener">' + esc(s[1]) + '</a>'; }).join('') + '</div></div></dialog>';
     var anchor = document.body.firstChild;
