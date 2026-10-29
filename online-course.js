@@ -9,6 +9,7 @@
  const money=v=>Number(v).toLocaleString('ko-KR')+'원';
  const messages={not_ready:'강의를 준비하고 있습니다. 잠시 후 다시 확인해 주세요.',not_published:'아직 판매 준비 중인 과정입니다.',not_for_sale:'아직 판매가 시작되지 않았습니다.',content_not_ready:'영상 또는 자료를 준비하고 있습니다.',not_authenticated:'로그인이 필요합니다.',consent_required:'로그인 화면에서 이용 동의를 확인해 주세요.',purchase_consent_required:'가격·기간과 이용 안내를 확인하고 체크해 주세요.',offer_changed:'판매 조건이 변경되었습니다. 새로고침 후 다시 확인해 주세요.',already_enrolled:'이미 수강 중인 과정입니다. 내 강의실에서 확인해 주세요.',not_enrolled:'이 계정에 해당하는 수강권을 찾을 수 없습니다.',access_expired:'수강 기간이 종료되었거나 이용이 취소되었습니다.',lesson_unavailable:'이 강의는 현재 이용할 수 없습니다.',start_video_first:'첫 영상을 재생하면 연습 자료도 이용할 수 있습니다.',not_paid:'결제 완료를 아직 확인하지 못했습니다. 다시 결제하지 말고 잠시 후 내 강의실에서 확인해 주세요.',payment_failed:'결제가 완료되지 않았습니다.',refunded:'결제가 취소되어 수강권이 지급되지 않았습니다.',refund_required:'결제 취소를 확인 중입니다. 추가로 결제하지 말아 주세요.',refund_pending:'결제 취소를 확인 중입니다. 잠시 후 다시 확인해 주세요.',save_failed:'진도를 저장하지 못했습니다. 연결이 회복되면 다시 저장합니다.'};
  let session=null, offset=0, library=[], filter='active', view=null, selected=null, busy=false, saveQueue=Promise.resolve(), savedTime=0, mediaExpires=0, repeatA=null,repeatB=null,loadedLesson=null,mediaReady=false,lastRecovery=0;
+ let noteEditor=null,switching=false,initialJump=null;
  const video=$('#course-video');
  if(video)video.addEventListener('contextmenu',e=>e.preventDefault());
  function message(text,id='course-message'){const el=$('#'+id);if(el){el.textContent=text||'';el.hidden=!text;}}
@@ -67,8 +68,10 @@
  function enrollmentArgs(){return {enrollmentId:view.enrollment.id,lessonId:selected?.id};}
  function period(){const e=view.enrollment;$('#watch-period').textContent=(e.admin_preview?'관리자 테스트 · ':'')+(e.revoked_at?'이용이 취소된 수강권입니다.':ended(e)?'수강 기간이 종료되었습니다.':e.started_at?`${day(e.expires_at)}까지 수강 가능`:`첫 재생일부터 ${e.access_days}일 동안 수강`); }
  function stopAccess(){view.expired=true;mediaReady=false;loadedLesson=null;video.pause();video.removeAttribute('src');video.load();$('#oc-controls').hidden=true;$('#oc-video-cover').hidden=false;$('#first-play-note').textContent=messages.access_expired;$('#oc-start').disabled=true;$('#oc-material').disabled=true;period();}
- function drawLessons(){const groups=[...new Set(view.lessons.map(l=>l.chapter))];$('#watch-lessons').innerHTML=groups.map(g=>`<details class="chapter" ${view.lessons.some(l=>l.chapter===g&&l.id===selected?.id)?'open':''}><summary>${esc(g)}</summary><div class="chapter-content">${view.lessons.filter(l=>l.chapter===g).map(l=>`<button class="lesson-row" data-lesson="${esc(l.id)}" aria-current="${l.id===selected?.id}"><span>${l.position}</span><span><strong>${esc(l.title)}</strong><small>${fmt(l.duration)}</small></span><span class="lesson-state">${view.progress.some(p=>p.lesson_id===l.id&&p.completed)?'완료':l.id===selected?.id?'현재':''}</span></button>`).join('')}</div></details>`).join('');}
- function selectLesson(l){message('');message('','progress-status');mediaReady=false;loadedLesson=null;video.pause();video.removeAttribute('src');video.load();selected=l;repeatA=null;repeatB=null;$('#oc-repeat-panel').hidden=true;$('#oc-repeat').setAttribute('aria-expanded','false');$('#oc-repeat-status').textContent='';$('#oc-controls').hidden=true;$('#oc-video-cover').hidden=false;$('#watch-lesson-title').textContent=l.title;$('#video-lesson-title').textContent=l.title;$('#watch-lesson-number').textContent=`${view.lessons.indexOf(l)+1} / ${view.lessons.length}강`;$('#first-play-note').textContent=view.enrollment.started_at?'재생 버튼을 누르면 이어서 학습합니다.':`처음 재생하면 ${view.enrollment.access_days}일의 수강 기간이 시작됩니다.`;$('#watch-material-title').textContent=l.title+' · 연습 자료';$('#oc-start').disabled=!l.hasVideo||ended(view.enrollment);$('#oc-material').disabled=!l.hasMaterial||ended(view.enrollment);$('#material-status').textContent=l.hasMaterial?'':'등록된 연습 자료가 없습니다.';$('#oc-next').disabled=view.lessons.indexOf(l)===view.lessons.length-1;period();drawLessons();if(ended(view.enrollment))stopAccess();}
+ function drawLessons(){const groups=[...new Set(view.lessons.map(l=>l.chapter))];$('#watch-lessons').innerHTML=groups.map(g=>`<details class="chapter" ${view.lessons.some(l=>l.chapter===g&&l.id===selected?.id)?'open':''}><summary>${esc(g)}</summary><div class="chapter-content">${view.lessons.filter(l=>l.chapter===g).map(l=>`<button class="lesson-row" data-lesson="${esc(l.id)}" aria-current="${l.id===selected?.id}"><span>${l.position}</span><span><strong>${esc(l.title)}</strong><small>${fmt(l.duration)}</small></span><span class="lesson-state">${view.progress.some(p=>p.lesson_id===l.id&&p.completed)?'완료':l.id===selected?.id?'현재':''}</span></button>${l.id===selected?.id&&l.chapters?.length?`<div class="oc-chapters" aria-label="영상 구간">${l.chapters.map(c=>`<button data-chapter-seconds="${Number(c.seconds)}"><span>${fmt(c.seconds)}</span><strong>${esc(c.title)}</strong></button>`).join('')}</div>`:''}`).join('')}</div></details>`).join('');markChapter();}
+ function markChapter(){const list=[...document.querySelectorAll("[data-chapter-seconds]")];const last=mediaReady?list.filter(b=>Number(b.dataset.chapterSeconds)<=video.currentTime).at(-1):null;list.forEach(b=>b.setAttribute("aria-current",String(b===last)));}
+ async function jump(seconds){if(ended(view.enrollment)){message(messages.access_expired);return;}repeatA=null;repeatB=null;if(mediaReady)await seekTo(seconds);else await play(seconds);}
+ function selectLesson(l){initialJump=null;message('');message('','progress-status');mediaReady=false;loadedLesson=null;video.pause();video.removeAttribute('src');video.load();selected=l;repeatA=null;repeatB=null;$('#oc-repeat-panel').hidden=true;$('#oc-repeat').setAttribute('aria-expanded','false');$('#oc-repeat-status').textContent='';$('#oc-controls').hidden=true;$('#oc-video-cover').hidden=false;$('#watch-lesson-title').textContent=l.title;$('#video-lesson-title').textContent=l.title;$('#watch-lesson-number').textContent=`${view.lessons.indexOf(l)+1} / ${view.lessons.length}강`;$('#first-play-note').textContent=view.enrollment.started_at?'재생 버튼을 누르면 이어서 학습합니다.':`처음 재생하면 ${view.enrollment.access_days}일의 수강 기간이 시작됩니다.`;$('#watch-material-title').textContent=l.title+' · 연습 자료';$('#watch-material-action').textContent=l.hasMaterial?'연습 자료 받기':'자료 미등록';$('#oc-start').disabled=!l.hasVideo||ended(view.enrollment);$('#oc-material').disabled=!l.hasMaterial||ended(view.enrollment);$('#material-status').textContent=l.hasMaterial?'':'등록된 연습 자료가 없습니다.';$('#oc-next').disabled=view.lessons.indexOf(l)===view.lessons.length-1;period();drawLessons();if(ended(view.enrollment))stopAccess();}
  // 현재 선택 항목과 실제로 로드된 영상의 신원을 분리한다.
  function save(){
   if(!view||!loadedLesson||!mediaReady||busy||!video.currentSrc||!view.enrollment.started_at||ended(view.enrollment))return saveQueue;
@@ -87,8 +90,8 @@
   const timer=setTimeout(failed,60000);video.addEventListener(name,ready,{once:true});video.addEventListener('error',failed,{once:true});run();
  });}
  async function play(resumeOverride,autoplay=true){
-  if(busy||!selected||ended(view.enrollment))return;
-  const id=selected.id,resume=typeof resumeOverride==='number'?resumeOverride:loadedLesson?.id===id&&mediaReady?video.currentTime:view.progress.find(p=>p.lesson_id===id)?.position_seconds||0;
+  if(busy||switching||!selected||ended(view.enrollment))return;
+  const id=selected.id,resume=typeof resumeOverride==='number'?resumeOverride:loadedLesson?.id===id&&mediaReady?video.currentTime:initialJump??view.progress.find(p=>p.lesson_id===id)?.position_seconds??0;
   busy=true;mediaReady=false;$('#oc-start').disabled=true;message('영상을 불러오고 있습니다.');
   try{
    const r=await call('play',enrollmentArgs());if(selected.id!==id)return;
@@ -96,7 +99,7 @@
    await mediaEvent('loadedmetadata',()=>{video.preload='metadata';video.src=r.url;video.load();});
    const target=resume>=video.duration-1?0:Math.max(0,resume);
    if(target>0)await mediaEvent('seeked',()=>{video.currentTime=target;});
-   loadedLesson=selected;mediaReady=true;savedTime=Date.now();video.playbackRate=Number($('#oc-speed').value);
+   loadedLesson=selected;mediaReady=true;initialJump=null;savedTime=Date.now();video.playbackRate=Number($('#oc-speed').value);
    $('#oc-video-cover').hidden=true;$('#oc-controls').hidden=false;message('');period();
    if(autoplay)await video.play();
   }catch(e){mediaReady=false;message(errorText(e));$('#oc-video-cover').hidden=false;$('#first-play-note').textContent='영상을 불러오지 못했습니다. 다시 재생해 주세요.';if(e.code==='access_expired')stopAccess();}
@@ -108,7 +111,7 @@
   if(Date.now()>=mediaExpires){const autoplay=!video.paused;await save();await play(target,autoplay);save();}
   else video.currentTime=target;
  }
- async function switchLesson(l){if(busy||!l||l===selected)return;video.pause();if(await save()===false)return;selectLesson(l);}
+ async function switchLesson(l){if(busy||switching||!l||l===selected)return;switching=true;try{video.pause();if(await save()===false)return;if(!await noteEditor.flush()){message('메모 저장을 확인한 뒤 이동할 수 있습니다. 내 메모 탭을 확인해 주세요.');return;}if(!await noteEditor.select(l)){message('다음 강의의 메모를 불러오지 못했습니다. 잠시 후 다시 이동해 주세요.');return;}selectLesson(l);}finally{switching=false;}}
  async function recoverVideo(){
   if(busy||!mediaReady||Date.now()<mediaExpires||Date.now()-lastRecovery<30000)return;
   lastRecovery=Date.now();const position=video.currentTime;await save();await play(position);
@@ -117,13 +120,16 @@
   if(!(await guard()))return;const eid=params.get('enrollment');if(!eid)throw {code:'not_enrolled'};
   view=await call('view',{enrollmentId:eid});$('#watch-course-name').textContent=view.course.title;$('.list-course>span').textContent=view.course.title;
   if(!view.lessons.length){message('강의가 아직 등록되지 않았습니다.');$('#oc-start').disabled=true;$('#first-play-note').textContent='강의 등록 준비 중입니다.';return;}
+  noteEditor=MONCCourseNotes.editor($('#watch-notes'),{ownerId:session.user.id,getTime:()=>mediaReady&&loadedLesson?.id===selected?.id?video.currentTime:null,onJump:jump});
   selectLesson(view.lessons.find(l=>l.id===params.get('lesson'))||view.lessons[0]);
-  $('#watch-lessons').addEventListener('click',e=>{const button=e.target.closest('[data-lesson]');if(!button||busy)return;switchLesson(view.lessons.find(l=>l.id===button.dataset.lesson));});
+  noteEditor.select(selected);
+  const at=Number(params.get('at'));if(params.has('at')&&Number.isFinite(at)&&at>=0&&at<selected.duration)initialJump=at;
+  $('#watch-lessons').addEventListener('click',e=>{const chapter=e.target.closest('[data-chapter-seconds]');if(chapter){if(!busy&&!switching)jump(Number(chapter.dataset.chapterSeconds));return;}const button=e.target.closest('[data-lesson]');if(!button||busy||switching)return;switchLesson(view.lessons.find(l=>l.id===button.dataset.lesson));});
   $('#oc-start').addEventListener('click',play);$('#oc-play').addEventListener('click',async()=>{if(video.paused){if(Date.now()>=mediaExpires)await play();else video.play().catch(()=>message('재생 버튼을 다시 눌러 주세요.'));}else video.pause();});
   video.addEventListener('play',()=>{$('#oc-play').textContent='Ⅱ';$('#oc-play').setAttribute('aria-label','일시정지');});
   video.addEventListener('pause',()=>{$('#oc-play').textContent='▶';$('#oc-play').setAttribute('aria-label','재생');save();});video.addEventListener('ended',save);video.addEventListener('seeked',save);video.addEventListener('error',()=>{if(busy)return;if(mediaReady&&Date.now()>=mediaExpires){recoverVideo();return;}video.pause();$('#oc-video-cover').hidden=false;$('#first-play-note').textContent='영상 연결이 끊겼습니다. 재생 버튼을 눌러 이어서 시청하세요.';});
   video.addEventListener('stalled',recoverVideo);video.addEventListener('waiting',()=>{setTimeout(()=>{if(!video.paused&&video.readyState<3)recoverVideo();},3000);});
-  video.addEventListener('timeupdate',()=>{if(!mediaReady||busy)return;if(ended(view.enrollment)){stopAccess();return;}if(repeatA!==null&&repeatB!==null&&video.currentTime>=repeatB)seekTo(repeatA);$('#oc-seek').max=Number.isFinite(video.duration)?video.duration:selected.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);if(Date.now()-savedTime>15000){savedTime=Date.now();save();}});
+  video.addEventListener('timeupdate',()=>{if(!mediaReady||busy)return;markChapter();if(ended(view.enrollment)){stopAccess();return;}if(repeatA!==null&&repeatB!==null&&video.currentTime>=repeatB)seekTo(repeatA);$('#oc-seek').max=Number.isFinite(video.duration)?video.duration:selected.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);if(Date.now()-savedTime>15000){savedTime=Date.now();save();}});
   $('#oc-seek').addEventListener('change',()=>seekTo(Number($('#oc-seek').value))); 
   $('#oc-back').addEventListener('click',()=>{seekTo(video.currentTime-10);});$('#oc-forward').addEventListener('click',()=>{seekTo(video.currentTime+10);});$('#oc-speed').addEventListener('change',()=>{video.playbackRate=Number($('#oc-speed').value);});
   $('#oc-next').addEventListener('click',()=>{if(busy)return;switchLesson(view.lessons[view.lessons.indexOf(selected)+1]);});
@@ -134,10 +140,12 @@
   $('#oc-mark-b').addEventListener('click',()=>{if(repeatA===null){$('#oc-repeat-status').textContent='먼저 시작점을 지정하세요.';return;}if(video.currentTime<=repeatA){$('#oc-repeat-status').textContent='끝점은 시작점보다 뒤에 지정하세요.';return;}repeatB=video.currentTime;$('#oc-repeat-status').textContent=fmt(repeatA)+'–'+fmt(repeatB)+' 구간을 반복합니다.';});
   $('#oc-repeat-clear').addEventListener('click',()=>{repeatA=null;repeatB=null;$('#oc-repeat-status').textContent='구간 반복을 해제했습니다.';});
   $('#oc-material').addEventListener('click',async()=>{try{const r=await call('material',enrollmentArgs());location.href=r.url;}catch(e){message(errorText(e),'material-status');}});
-  const tabs=[...document.querySelectorAll('[data-course-tab]')];const tab=b=>{$('.watch-grid').dataset.tab=b.dataset.courseTab;tabs.forEach(t=>{t.setAttribute('aria-selected',String(t===b));t.tabIndex=t===b?0:-1;});};tabs.forEach((b,i)=>{b.addEventListener('click',()=>tab(b));b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?tabs.length-1:1-i;tab(tabs[n]);tabs[n].focus();}});});
+  const mobileTabs=[...document.querySelectorAll('[data-course-tab]')],sideTabs=[...document.querySelectorAll('[data-side-tab]')];
+  function showTab(name){$('.watch-grid').dataset.tab=name;if(name!=='materials'){$('#oc-side-lessons').hidden=name==='notes';$('#watch-notes').hidden=name!=='notes';sideTabs.forEach(t=>{const on=t.dataset.sideTab===name;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1;});}mobileTabs.forEach(t=>{const on=t.dataset.courseTab===name;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1;});}
+  [mobileTabs,sideTabs].forEach(tabs=>tabs.forEach((b,i)=>{const activate=()=>showTab(b.dataset.courseTab||b.dataset.sideTab);b.addEventListener('click',activate);b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length;tabs[n].click();tabs[n].focus();}});}));
   setInterval(()=>{if(ended(view.enrollment)&&video.currentSrc)stopAccess();},1000);
   setInterval(async()=>{try{const r=await call('view',{enrollmentId:view.enrollment.id});view.enrollment=r.enrollment;if(r.expired)stopAccess();}catch{video.pause();message('수강 권한을 확인하지 못했습니다. 연결을 확인해 주세요.');}},60000);
-  document.querySelectorAll('a[href="classroom.html"]').forEach(a=>a.addEventListener('click',async e=>{e.preventDefault();if(busy)return;video.pause();if(await save()!==false)location.href=a.href;}));
+  document.querySelectorAll('a[href="classroom.html"]').forEach(a=>a.addEventListener('click',async e=>{e.preventDefault();if(busy)return;video.pause();if(await save()===false)return;if(await noteEditor.flush())location.href=a.href;else message('메모 저장을 확인한 뒤 이동할 수 있습니다. 내 메모 탭을 확인해 주세요.');}));
   document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
  }
  window.addEventListener('pageshow',e=>{if(e.persisted){if(page==='catalog'){busy=false;$('#purchase-button').disabled=false;recover();}else location.reload();}});

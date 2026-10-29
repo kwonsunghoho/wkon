@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-10-29c'
+const FN_VERSION = '2026-10-29d'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -27,6 +27,29 @@ Deno.serve(async(req)=>{
   if(authError||!user)return reply({ok:false,error:'not_authenticated'},401)
   const {data:member,error:me}=await supa.from('members').select('*').eq('id',user.id).maybeSingle()
   if(me||!member?.agreed_at||member.terms_version!=='2026-10-05')return fail('consent_required')
+  if(b.action==='note-save'){
+   if(typeof b.body!=='string'||b.body.length>12000||!Number.isInteger(b.revision)||b.revision<0||!/^[-0-9a-f]{36}$/i.test(String(b.lessonId)))return fail('invalid_note')
+   const {data,error}=await supa.rpc('oc_save_note',{p_member:user.id,p_lesson:b.lessonId,p_body:b.body,p_revision:b.revision})
+   return error?fail('save_failed'):reply(data)
+  }
+  if(b.action==='notes'){
+   let query=supa.from('online_course_notes').select('*').eq('member_id',user.id)
+   if(b.lessonId)query=query.eq('lesson_id',b.lessonId)
+   const {data:notes,error}=await query.order('updated_at',{ascending:false})
+   let eq=supa.from('online_enrollments').select('*').eq('member_id',user.id)
+   if(member.role!=='admin')eq=eq.eq('admin_preview',false)
+   const {data:enrollments,error:ee}=await eq.order('created_at',{ascending:false})
+   if(error||ee)return fail('not_ready')
+   if(!notes?.length)return reply({ok:true,notes:[],hasCourses:!!enrollments?.length})
+   const {data:lessons,error:le}=await supa.from('online_lessons').select('*').in('id',notes.map(n=>n.lesson_id))
+   const {data:courses,error:ce}=await supa.from('online_courses').select('*').in('id',[...new Set((lessons||[]).map(l=>l.course_id))])
+   if(le||ce)return fail('not_ready')
+   return reply({ok:true,hasCourses:!!enrollments?.length,notes:notes.map(n=>{
+    const l=lessons?.find(l=>l.id===n.lesson_id),c=courses?.find(c=>c.id===l?.course_id)
+    const e=enrollments?.find(e=>e.course_id===l?.course_id&&!e.revoked_at&&(!e.expires_at||Date.parse(e.expires_at)>Date.now())&&(l?.published||e.admin_preview))
+    return {lessonId:n.lesson_id,body:n.body,revision:n.revision,updatedAt:n.updated_at,lessonTitle:l?.title||'강의 메모',courseTitle:c?.title||'온라인 강의',courseId:l?.course_id,duration:l?.duration_seconds||0,enrollmentId:e?.id||null}
+   })})
+  }
   // 관리자는 JWT 실사용자와 현재 회원 역할을 매 요청마다 확인한다.
   if(String(b.action).startsWith('admin-')){
    if(member.role!=='admin')return reply({ok:false,error:'forbidden'},403)
@@ -89,6 +112,7 @@ Deno.serve(async(req)=>{
      ||!whole(p.position,1,10000)||!whole(p.duration_seconds,0,86400)||typeof p.published!=='boolean'
      ||!whole(p.revision,1,2147483647))return fail('invalid_fields')
     if(l.revision!==p.revision)return fail('edit_conflict')
+    if(p.chapters!==undefined&&(!Array.isArray(p.chapters)||p.chapters.length>60||p.chapters.some((c:any,i:number)=>!c||!safeText(c.title,100)||!c.title.trim()||!whole(c.seconds,0,p.duration_seconds-1)||(i>0&&c.seconds<=p.chapters[i-1].seconds))))return fail('invalid_chapters')
     for(const kind of ['video','material']){
      const path=p[kind+'_path'],name=p[kind+'_name']
      if(path===null){if(name!==null)return fail('invalid_file');continue}
@@ -134,7 +158,7 @@ Deno.serve(async(req)=>{
    const {data:lessons,error:le}=await lessonQuery.order('position')
    const {data:progress,error:pe}=await supa.from('online_progress').select('*').eq('enrollment_id',e.id)
    if(ce||le||pe)return fail('not_ready')
-   return reply({ok:true,serverNow:new Date().toISOString(),enrollment:e,expired,course:{id:c.id,title:c.title},lessons:(lessons||[]).map(l=>({id:l.id,title:l.title,chapter:l.chapter,position:l.position,duration:l.duration_seconds,hasVideo:!!l.video_path,hasMaterial:!!l.material_path})),progress:progress||[]})
+   return reply({ok:true,serverNow:new Date().toISOString(),enrollment:e,expired,course:{id:c.id,title:c.title},lessons:(lessons||[]).map(l=>({id:l.id,title:l.title,chapter:l.chapter,position:l.position,duration:l.duration_seconds,hasVideo:!!l.video_path,hasMaterial:!!l.material_path,chapters:l.chapters||[]})),progress:progress||[]})
   }
   if(expired)return fail('access_expired')
   if(b.action==='progress'){

@@ -1,0 +1,20 @@
+/* 운영 SDK보다 먼저 주입하는 관리자 로컬 검증 데이터. 실제 회원·파일을 읽지 않는다. */
+(() => {
+ if(location.hostname!=='127.0.0.1'||!['5512','5531'].includes(location.port))throw Error('로컬 검증 전용');
+ const key='monc_course_admin_fixture_v1',cid='expression-advanced',uid='00000000-0000-4000-8000-000000000001';
+ const seed={course:{id:cid,title:'영합각 심화',description:'승무원 영상면접 심화과정',price:null,access_days:10,published:false,sale_open:false,purchase_notice:'',revision:1},lessons:[{id:'00000000-0000-4000-8000-000000000021',course_id:cid,title:'재생 확인용 예시 강의',chapter:'검증용 목차',position:1,duration_seconds:30,published:false,video_path:null,material_path:null,video_name:null,material_name:null,revision:1},{id:'00000000-0000-4000-8000-000000000022',course_id:cid,title:'연습 자료 등록 확인용',chapter:'검증용 목차',position:2,duration_seconds:0,published:false,video_path:null,material_path:null,video_name:null,material_name:null,revision:1}]};
+ let state=JSON.parse(localStorage.getItem(key)||'null')||seed;const persist=()=>localStorage.setItem(key,JSON.stringify(state));
+ async function invoke(fn,{body:b}){if(fn!=='online-course')return{data:{ok:true},error:null};let r={ok:true};const p=b.values||{};if(new URLSearchParams(location.search).has('failure'))return{data:{ok:false,error:'not_ready'},error:null};
+ if(b.action==='admin-load')r={ok:true,course:state.course,courses:[state.course],lessons:state.lessons};
+ else if(b.action==='admin-course'){if(p.revision!==state.course.revision)r={ok:false,error:'edit_conflict'};else if(p.sale_open&&(!p.price||!p.published||!p.purchase_notice||!state.lessons.some(l=>l.published)))r={ok:false,error:'sale_not_ready'};else{state.course={...state.course,...p,revision:p.revision+1};r.course=state.course;}}
+ else if(b.action==='admin-add'){const l={...seed.lessons[1],id:crypto.randomUUID(),title:'새 강의',position:Math.max(0,...state.lessons.map(x=>x.position))+1,revision:1};state.lessons.push(l);r.lesson=l;}
+ else if(b.action==='admin-upload')r={ok:true,path:`${cid}/${b.lessonId}/${b.kind}/${crypto.randomUUID()}.${b.name.split('.').pop()}`,token:'local-only',bucket:'local-only',endpoint:'/local-only',contentType:b.kind==='video'?'video/mp4':'application/pdf'};
+ else if(b.action==='admin-preview')r={ok:true,url:'/outputs/course-test-runtime/test-video.mp4'};
+ else if(b.action==='admin-lesson'){const old=state.lessons.find(l=>l.id===b.lessonId);if(old.revision!==p.revision)r={ok:false,error:'edit_conflict'};else if(p.published&&(!p.video_path||p.duration_seconds<1))r={ok:false,error:'lesson_not_ready'};else if(state.lessons.some(l=>l.id!==old.id&&l.position===p.position))r={ok:false,error:'position_taken'};else{r.lesson={...old,...p,revision:p.revision+1};state.lessons=state.lessons.map(l=>l.id===old.id?r.lesson:l);}}
+ persist();return{data:JSON.parse(JSON.stringify(r)),error:null};}
+ const profile={id:uid,name:'로컬 검증 관리자',role:'admin',is_owner:true};const session={user:{id:uid},access_token:'local-only'};
+ const query=()=>{let q=new Proxy({},{get(_t,k){if(k==='then')return(resolve)=>Promise.resolve({data:[],count:0,error:null}).then(resolve);if(k==='single'||k==='maybeSingle')return async()=>({data:null,error:null});return()=>q;}});return q;};
+ window.MONC={getSession:async()=>session,getMyProfile:async()=>profile,requireAdmin:async()=>profile,requireConsent:async()=>true,sb:{from:query,rpc:async()=>({data:[],error:null}),functions:{invoke},auth:{getSession:async()=>({data:{session}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}}};
+ window.tus={Upload:class{constructor(file,options){this.file=file;this.options=options;}start(){this.options.onProgress(this.file.size,this.file.size);Promise.resolve().then(()=>this.options.onSuccess());}abort(){return Promise.resolve();}}};
+ document.addEventListener('DOMContentLoaded',()=>{const banner=document.createElement('p');banner.textContent='관리자 기능 검증 · 실제 저장/업로드 없음 · 목차는 예시';banner.style.cssText='padding:12px 16px;background:#eaf0f7;color:#172b49;font-size:12px;border-bottom:1px solid #a5b2c5';document.getElementById('onlineCourseAdminApp').before(banner);});
+})();

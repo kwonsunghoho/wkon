@@ -27,7 +27,7 @@
   <link rel="mask-icon" href="images/MONC_Logo_Full_Package/assets/favicon/safari-pinned-tab.svg" color="#102B56">
   <link rel="manifest" href="images/MONC_Logo_Full_Package/assets/favicon/site.webmanifest">
   <meta name="theme-color" content="#102B56">
-  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="online-course-notes.css?v=20261029">
   <!-- 공용 상단 메뉴(2026-07-30) — 마크업은 nav.js 가 심는다. 여기에 nav 를 복사해 넣지 말 것. -->
   <link rel="stylesheet" href="nav.css?v=20261020-accordion">
   <script src="nav.js?v=20261020-accordion" defer></script>
@@ -362,6 +362,7 @@
            결제 완료(무료 포함)·미환불 신청의 챌린지마다 카드 1장. 스크립트(renderChSubs)가 채운다.
            구 '2주 미션' 진행 바·14일 격자·코치 코멘트는 같은 날 화면에서 정리(데이터는 보존). -->
       <div id="chSubs" style="display:none;"></div>
+      <section id="onlineLearning" hidden aria-label="온라인 강의와 내 메모"></section>
 
       <!-- 다가오는 일정(예정 특강) -->
       <div id="upWrap"></div>
@@ -625,6 +626,7 @@
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=20261013"></script>
+  <script src="online-course-notes.js?v=20261029"></script>
   <script src="media-storage.js?v=2"></script>
   <script src="refund-details.js?v=1"></script>
   <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
@@ -1452,6 +1454,7 @@
       if (!session) return;
       // 약관 동의(가입 시 1회)가 없으면 로그인 페이지의 동의 게이트로 — 동의 전엔 회원 기능 사용 불가
       if (!(await MONC.requireConsent())) return;
+      window.MONCCourseNotes?.mountMyPage(session.user.id);
       loadTodayQuestion();
 
       const me = session.user.id;

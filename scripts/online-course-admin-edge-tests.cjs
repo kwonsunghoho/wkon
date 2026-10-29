@@ -9,4 +9,8 @@ const values={revision:1,title:'제목',chapter:'묶음',position:1,duration_sec
 h=setup();assert.equal((await h.run({action:'admin-lesson',lessonId:lid,values:{...values,video_path:'another/secret.mp4'}})).error,'invalid_file');assert.equal(h.saves.length,0);
 h=setup({missing:true});assert.equal((await h.run({action:'admin-lesson',lessonId:lid,values})).error,'upload_incomplete');assert.equal(h.saves.length,0);
 h=setup({mime:'text/html'});assert.equal((await h.run({action:'admin-lesson',lessonId:lid,values})).error,'invalid_file');
+for(const chapters of [null,{},[{seconds:30,title:'길이 초과'}],[{seconds:0,title:''}],[{seconds:0,title:'첫 구간'},{seconds:0,title:'중복'}],[{seconds:'0',title:'문자 시간'}]]){
+ h=setup();assert.equal((await h.run({action:'admin-lesson',lessonId:lid,values:{...values,chapters}})).error,'invalid_chapters');assert.equal(h.saves.length,0);
+}
+h=setup();assert.equal((await h.run({action:'admin-lesson',lessonId:lid,values:{...values,chapters:[{seconds:0,title:'시작'},{seconds:15,title:'연습'}]}})).ok,true);assert.equal(h.saves[0].p.chapters[1].seconds,15);
 h=setup();assert.equal((await h.run({action:'admin-course',values:{revision:1,title:'제목',description:'',price:0,access_days:10,purchase_notice:'',published:false,sale_open:false}})).error,'invalid_fields');console.log('관리자 Edge 검증 통과: 인증·역할·파일 형식/크기·업로드 서명·경로 조작·파일 누락·실사용자 저장');})().catch(e=>{console.error(e);process.exitCode=1});

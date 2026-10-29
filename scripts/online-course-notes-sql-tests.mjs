@@ -1,0 +1,45 @@
+// 실제 SQL로 본인 필기 보존·수정 충돌·챕터 입력 경계를 검증한다.
+import {PGlite} from '../outputs/course-test-runtime/node_modules/@electric-sql/pglite/dist/index.js';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create table public.members(id uuid primary key,role text,agreed_at timestamptz,terms_version text);grant select on public.members to service_role;create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint);create table storage.objects(id uuid,bucket_id text);alter table storage.objects enable row level security;`);
+for(const f of ['20261028102851_online_courses.sql','20261029052754_online_course_admin.sql','20261029065133_online_course_student_preview.sql','20261029072157_online_course_notes_chapters.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+f,import.meta.url),'utf8'));
+const admin='00000000-0000-4000-8000-000000000001',other='00000000-0000-4000-8000-000000000002',cid='expression-advanced';
+await db.query(`insert into auth.users values($1),($2)`,[admin,other]);
+await db.query(`insert into members values($1,'admin',now(),'2026-10-05'),($2,'member',now(),'2026-10-05')`,[admin,other]);
+const rpc=async(n,a)=>(await db.query(`select ${n}(${a.map((_,i)=>'$'+(i+1)).join(',')}) v`,a)).rows[0].v;
+const save=p=>rpc('oc_admin_save',[admin,cid,'lesson',p]);
+let l=(await rpc('oc_admin_save',[admin,cid,'add',{}])).lesson;
+const valid=[{seconds:0,title:'시작'},{seconds:15,title:'연습'}];
+l=(await save({...l,duration_seconds:30,chapters:valid})).lesson;
+assert.deepEqual(l.chapters,valid);
+for(const chapters of [null,{},[{title:'누락'}],[{seconds:'0',title:'문자'}],[{seconds:0,title:' '}],[{seconds:-1,title:'음수'}],[{seconds:30,title:'끝 초과'}],[{seconds:.1,title:'소수'}],[{seconds:2,title:'중복'},{seconds:2,title:'중복'}],[{seconds:3,title:'역순'},{seconds:1,title:'역순'}],Array.from({length:61},(_,i)=>({seconds:i,title:'개수 초과'}))])assert.equal((await save({...l,chapters})).error,'invalid_chapters');
+const legacy={...l,title:'기존 화면 수정'};delete legacy.chapters;
+l=(await save(legacy)).lesson;assert.deepEqual(l.chapters,valid);
+assert.equal((await save({...l,revision:l.revision-1,chapters:[]})).error,'edit_conflict');
+assert.equal((await save({...l,duration_seconds:10})).error,'invalid_chapters');
+assert.equal((await rpc('oc_save_note',[admin,l.id,'권한 없음',0])).error,'not_enrolled');
+const e=await rpc('oc_admin_preview',[admin,cid]);
+const note=(uid,body,rev)=>rpc('oc_save_note',[uid,l.id,body,rev]);
+await db.exec('set role service_role');
+let r=await note(admin,'[00:15] 중요한 내용',0);assert.equal(r.ok,true);assert.equal(r.note.revision,1);
+assert.equal((await note(admin,'[00:15] 중요한 내용',0)).ok,true);
+assert.equal((await note(admin,'다른 탭의 오래된 수정',0)).error,'note_conflict');
+assert.equal((await note(other,'타인',0)).error,'not_enrolled');
+assert.equal((await note(admin,'a'.repeat(12001),1)).error,'invalid_note');
+await db.exec('reset role');
+await db.query(`update online_enrollments set started_at=now()-interval '11 days',expires_at=now()-interval '1 day',revoked_at=now() where id=$1`,[e.enrollmentId]);
+assert.equal((await note(admin,'종료 후 필기 수정',1)).ok,true);
+assert.equal((await note(admin,'',2)).note.body,'');
+assert.equal((await db.query('select sale_open from online_courses')).rows[0].sale_open,false);
+assert.equal((await db.query('select count(*)::int n from online_orders')).rows[0].n,0);
+await db.query(`update members set terms_version='old' where id=$1`,[admin]);
+assert.equal((await note(admin,'동의 없음',3)).error,'consent_required');
+for(const role of ['anon','authenticated']){
+ await db.exec('set role '+role);
+ await assert.rejects(()=>db.query('select * from online_course_notes'),/permission denied/);
+ await assert.rejects(()=>note(admin,'직접 저장',3),/permission denied/);
+ await db.exec('reset role');
+}
+await db.close();console.log('메모/챕터 SQL 통과: 본인 이력·동의·서비스 전용·만료 후 보존·충돌/재시도·길이·시간/순서·기존 편집 호환·판매 닫힘');
