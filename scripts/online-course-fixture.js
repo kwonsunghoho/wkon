@@ -16,6 +16,7 @@
   if(fn!=='online-course'&&fn!=='verify-payment')return {data:{ok:true,programs:[]},error:null};
   if(fn==='verify-payment'){enroll();return {data:{ok:true},error:null};}
   let data={ok:true,serverNow:new Date().toISOString()};
+  if(b.action==='access'){const kind=qs.get('access')||'purchase';if(b.claim&&['admin','student','enrolled'].includes(kind)){enroll();return {data:{ok:true,enrollmentId:eid},error:null};}return {data:{ok:true,kind,...(kind==='enrolled'?{enrollmentId:eid}:{})},error:null};}
   if(b.action==='notes'||b.action==='note-save'){
    state=JSON.parse(localStorage.getItem(key)||'null')||state;state.notes=state.notes||{};
    if(qs.has('noteFailure')||b.action==='note-save'&&qs.has('noteSaveFailure'))return {data:{ok:false,error:'save_failed'},error:null};

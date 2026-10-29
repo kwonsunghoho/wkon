@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-10-29d'
+const FN_VERSION = '2026-10-29-access'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -27,6 +27,15 @@ Deno.serve(async(req)=>{
   if(authError||!user)return reply({ok:false,error:'not_authenticated'},401)
   const {data:member,error:me}=await supa.from('members').select('*').eq('id',user.id).maybeSingle()
   if(me||!member?.agreed_at||member.terms_version!=='2026-10-05')return fail('consent_required')
+  if(b.action==='access'){
+   if(member.role==='admin'){
+    if(b.claim!==true)return reply({ok:true,kind:'admin'})
+    const {data,error}=await supa.rpc('oc_admin_preview',{p_actor:user.id,p_course:courseId})
+    return error?fail('not_ready'):reply(data)
+   }
+   const {data,error}=await supa.rpc('oc_course_access',{p_member:user.id,p_course:courseId,p_claim:b.claim===true})
+   return error?fail('not_ready'):reply(data)
+  }
   if(b.action==='note-save'){
    if(typeof b.body!=='string'||b.body.length>12000||!Number.isInteger(b.revision)||b.revision<0||!/^[-0-9a-f]{36}$/i.test(String(b.lessonId)))return fail('invalid_note')
    const {data,error}=await supa.rpc('oc_save_note',{p_member:user.id,p_lesson:b.lessonId,p_body:b.body,p_revision:b.revision})

@@ -26,12 +26,29 @@
  }
  async function recover(){if(!session||!window.moncPends)return;for(const p of moncPends.load(pendingKey()))await verify(p.paymentId,p.courseId,true);}
  async function catalog(){
-  let c=null;
+  let c=null,access=null;
+  async function refreshAccess(){
+   session=await MONC.getSession();
+   access=session?await call('access'):null;
+   const direct=access&&(access.enrollmentId||['admin','student'].includes(access.kind));
+   $('#purchase-button').textContent=direct?(access.kind==='admin'?'관리자 바로보기':access.kind==='student'?'재학생 무료 수강':'강의 바로보기'):'수강 신청';
+   $('#purchase-consent-wrap').hidden=!!direct||!c?.saleOpen;
+   $('#course-price').textContent=direct?(access.kind==='student'?'재학생 무료':access.kind==='admin'?'관리자 무료 열람':'수강권 보유'):c?.price?money(c.price):'준비 중';
+   if(direct)$('#course-sale-note').textContent=access.kind==='student'?'재학생 무료 · 첫 재생일부터 수강 기간이 시작됩니다.':'결제 없이 강의실로 바로 이동합니다.';
+  }
   try{const r=await call('catalog');c=r.course;$('#course-description').textContent=c.description;$('#course-price').textContent=c.price?money(c.price):'준비 중';$('#course-period').textContent=c.accessDays?`첫 재생일부터 ${c.accessDays}일`:'준비 중';$('#purchase-consent-wrap').hidden=!c.saleOpen;$('#course-purchase-notice').textContent=c.purchaseNotice||'';$('#course-purchase-notice').hidden=!c.purchaseNotice;$('#course-sale-note').textContent=c.saleOpen?'결제 후 내 강의실에서 시작할 수 있습니다.':'판매 준비 중입니다.';
    if(r.lessons.length){const groups=[...new Set(r.lessons.map(l=>l.chapter))];$('#course-curriculum').innerHTML=groups.map((g,i)=>`<details ${i===0?'open':''}><summary>${esc(g)}</summary><ol>${r.lessons.filter(l=>l.chapter===g).map(l=>`<li>${esc(l.title)}<span>${fmt(l.duration)}</span></li>`).join('')}</ol></details>`).join('');}
   }catch(e){if(e.code!=='not_published')message(errorText(e));}
   $('#purchase-button').addEventListener('click',async()=>{
-   if(busy)return;if(!c?.saleOpen){message('현재 판매 준비 중입니다. 가격·기간·강의가 확정되면 신청할 수 있습니다.');return;}
+   if(busy)return;
+   try{await refreshAccess();}catch(e){message(errorText(e));return;}
+   if(access&&(access.enrollmentId||['admin','student'].includes(access.kind))){
+    if(!(await guard()))return;
+    busy=true;$('#purchase-button').disabled=true;
+    try{const r=await call('access',{claim:true});if(!r.enrollmentId)throw {code:'not_enrolled'};location.href='classroom-watch.html?enrollment='+encodeURIComponent(r.enrollmentId);}
+    catch(e){message(errorText(e));}finally{busy=false;$('#purchase-button').disabled=false;}return;
+   }
+   if(!c?.saleOpen){message('현재 판매 준비 중입니다. 가격·기간·강의가 확정되면 신청할 수 있습니다.');return;}
    if(!$('#purchase-consent').checked){message(messages.purchase_consent_required);$('#purchase-consent').focus();return;}
    if(!(await guard()))return;
    const channelKey=await moncPay.choose();if(!channelKey)return;
@@ -52,6 +69,7 @@
   });
   session=await MONC.getSession();
   if(session){if(params.get('paymentId')){moncPends.add(pendingKey(),{paymentId:params.get('paymentId'),courseId});if(await verify(params.get('paymentId'))){location.href='classroom.html';return;}}await recover();}
+  try{await refreshAccess();}catch(e){message('수강 권한을 확인하지 못했습니다. 새로고침 후 다시 확인해 주세요.');return;}
   $('#purchase-button').disabled=false;
  }
  const ended=e=>!!(view&&view.enrollment===e&&view.expired)||!!e.revoked_at||!!e.expires_at&&Date.parse(e.expires_at)<=Date.now()+offset;
