@@ -1,11 +1,27 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-10-29-access'
+const FN_VERSION = '2026-10-29-cleanup'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
 const bucket = 'online-course-assets'
+// 저장 성공과 파일 정리 성공을 구분한다. 실패·중단된 작업은 DB 임대 만료 후 재시도한다.
+async function cleanupVideos(supa:any){
+ try{
+  const {data:jobs,error}=await supa.rpc('oc_claim_video_cleanup')
+  if(error)return {pending:true}
+  let pending=false
+  for(const job of jobs||[]){
+   let success=false
+   try{const r=await supa.storage.from(bucket).remove([job.path]);success=!r.error}catch{ /* 다음 조회에서 재시도 */ }
+   const done=await supa.rpc('oc_finish_video_cleanup',{p_path:job.path,p_lease:job.lease,p_success:success})
+   if(!success||done.error)pending=true
+  }
+  const remaining=await supa.from('online_video_cleanup').select('path').neq('state','deleted').limit(1)
+  return {pending:pending||!!remaining.error||!!remaining.data?.length}
+ }catch{return {pending:true}}
+}
 Deno.serve(async(req)=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:CORS})
  if(req.method!=='POST')return reply({ok:false,error:'method_not_allowed'},405)
@@ -72,7 +88,8 @@ Deno.serve(async(req)=>{
     const {data:courses,error:cs}=await supa.from('online_courses').select('*').order('created_at')
     const {data:lessons,error:ls}=await supa.from('online_lessons').select('*').eq('course_id',courseId).order('position')
     if(cs||ls)return fail('not_ready')
-    return reply({ok:true,course:c,courses,lessons})
+    const cleanup=await cleanupVideos(supa)
+    return reply({ok:true,course:c,courses,lessons,cleanup})
    }
    const safeText=(v:unknown,max:number)=>typeof v==='string'&&v.length<=max
    const whole=(v:unknown,min:number,max:number)=>typeof v==='number'&&Number.isInteger(v)&&v>=min&&v<=max
@@ -135,7 +152,10 @@ Deno.serve(async(req)=>{
     }
     // 화면에서 넘긴 다른 키나 구매자 조건을 갱신하지 않는다.
     const {data,error}=await supa.rpc('oc_admin_save',{p_actor:user.id,p_course:courseId,p_action:'lesson',p:{...p,id:l.id}})
-    return error?fail('save_failed'):reply(data)
+    if(error)return fail('save_failed')
+    if(!data?.ok)return reply(data)
+    const cleanup=await cleanupVideos(supa)
+    return reply({...data,cleanup})
    }
    return fail('unknown_action')
   }
