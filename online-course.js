@@ -93,7 +93,7 @@
   try{
    const r=await call('play',enrollmentArgs());if(selected.id!==id)return;
    view.enrollment.started_at=r.startedAt;view.enrollment.expires_at=r.expiresAt;mediaExpires=Date.parse(r.urlExpiresAt)-offset;
-   await mediaEvent('loadedmetadata',()=>{video.src=r.url;video.load();});
+   await mediaEvent('loadedmetadata',()=>{video.preload='metadata';video.src=r.url;video.load();});
    const target=resume>=video.duration-1?0:Math.max(0,resume);
    if(target>0)await mediaEvent('seeked',()=>{video.currentTime=target;});
    loadedLesson=selected;mediaReady=true;savedTime=Date.now();video.playbackRate=Number($('#oc-speed').value);
