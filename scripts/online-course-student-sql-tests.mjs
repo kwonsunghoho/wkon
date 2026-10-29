@@ -32,6 +32,12 @@ assert.equal((await rpc('oc_save_progress',[admin,eid,lesson,2])).error,'access_
 const renewed=await rpc('oc_admin_preview',[admin,cid]);assert.notEqual(renewed.enrollmentId,eid);
 assert.equal((await db.query('select count(*)::int n from online_orders')).rows[0].n,0);
 assert.equal((await db.query('select sale_open from online_courses')).rows[0].sale_open,false);
+// 테스트 수강권은 이후 실제 구매를 막거나 결제 취소를 유도하지 않는다.
+await db.exec("update online_courses set price=10000,purchase_notice='검증용',published=true,sale_open=true;update online_lessons set published=true;");
+const order=await rpc('oc_prepare_order',[admin,cid,10000,10,true]);assert.equal(order.ok,true);
+const paid=await rpc('oc_settle',[order.paymentId,10000,new Date().toISOString()]);assert.equal(paid.ok,true);
+await db.exec('update online_lessons set published=false');
+assert.equal((await rpc('oc_start',[admin,paid.enrollmentId,lesson])).error,'lesson_unavailable');
 await db.exec('set role authenticated');
 await assert.rejects(()=>rpc('oc_admin_preview',[admin,cid]),/permission denied/);
 await assert.rejects(()=>db.query('select * from online_progress'),/permission denied/);

@@ -68,7 +68,7 @@
  function period(){const e=view.enrollment;$('#watch-period').textContent=(e.admin_preview?'관리자 테스트 · ':'')+(e.revoked_at?'이용이 취소된 수강권입니다.':ended(e)?'수강 기간이 종료되었습니다.':e.started_at?`${day(e.expires_at)}까지 수강 가능`:`첫 재생일부터 ${e.access_days}일 동안 수강`); }
  function stopAccess(){view.expired=true;mediaReady=false;loadedLesson=null;video.pause();video.removeAttribute('src');video.load();$('#oc-controls').hidden=true;$('#oc-video-cover').hidden=false;$('#first-play-note').textContent=messages.access_expired;$('#oc-start').disabled=true;$('#oc-material').disabled=true;period();}
  function drawLessons(){const groups=[...new Set(view.lessons.map(l=>l.chapter))];$('#watch-lessons').innerHTML=groups.map(g=>`<details class="chapter" ${view.lessons.some(l=>l.chapter===g&&l.id===selected?.id)?'open':''}><summary>${esc(g)}</summary><div class="chapter-content">${view.lessons.filter(l=>l.chapter===g).map(l=>`<button class="lesson-row" data-lesson="${esc(l.id)}" aria-current="${l.id===selected?.id}"><span>${l.position}</span><span><strong>${esc(l.title)}</strong><small>${fmt(l.duration)}</small></span><span class="lesson-state">${view.progress.some(p=>p.lesson_id===l.id&&p.completed)?'완료':l.id===selected?.id?'현재':''}</span></button>`).join('')}</div></details>`).join('');}
- function selectLesson(l){mediaReady=false;loadedLesson=null;video.pause();video.removeAttribute('src');video.load();selected=l;repeatA=null;repeatB=null;$('#oc-repeat-panel').hidden=true;$('#oc-repeat').setAttribute('aria-expanded','false');$('#oc-repeat-status').textContent='';$('#oc-controls').hidden=true;$('#oc-video-cover').hidden=false;$('#watch-lesson-title').textContent=l.title;$('#video-lesson-title').textContent=l.title;$('#watch-lesson-number').textContent=`${view.lessons.indexOf(l)+1} / ${view.lessons.length}강`;$('#first-play-note').textContent=view.enrollment.started_at?'재생 버튼을 누르면 이어서 학습합니다.':`처음 재생하면 ${view.enrollment.access_days}일의 수강 기간이 시작됩니다.`;$('#watch-material-title').textContent=l.title+' · 연습 자료';$('#oc-start').disabled=!l.hasVideo||ended(view.enrollment);$('#oc-material').disabled=!l.hasMaterial||ended(view.enrollment);$('#material-status').textContent=l.hasMaterial?'':'등록된 연습 자료가 없습니다.';$('#oc-next').disabled=view.lessons.indexOf(l)===view.lessons.length-1;period();drawLessons();if(ended(view.enrollment))stopAccess();}
+ function selectLesson(l){message('');message('','progress-status');mediaReady=false;loadedLesson=null;video.pause();video.removeAttribute('src');video.load();selected=l;repeatA=null;repeatB=null;$('#oc-repeat-panel').hidden=true;$('#oc-repeat').setAttribute('aria-expanded','false');$('#oc-repeat-status').textContent='';$('#oc-controls').hidden=true;$('#oc-video-cover').hidden=false;$('#watch-lesson-title').textContent=l.title;$('#video-lesson-title').textContent=l.title;$('#watch-lesson-number').textContent=`${view.lessons.indexOf(l)+1} / ${view.lessons.length}강`;$('#first-play-note').textContent=view.enrollment.started_at?'재생 버튼을 누르면 이어서 학습합니다.':`처음 재생하면 ${view.enrollment.access_days}일의 수강 기간이 시작됩니다.`;$('#watch-material-title').textContent=l.title+' · 연습 자료';$('#oc-start').disabled=!l.hasVideo||ended(view.enrollment);$('#oc-material').disabled=!l.hasMaterial||ended(view.enrollment);$('#material-status').textContent=l.hasMaterial?'':'등록된 연습 자료가 없습니다.';$('#oc-next').disabled=view.lessons.indexOf(l)===view.lessons.length-1;period();drawLessons();if(ended(view.enrollment))stopAccess();}
  // 현재 선택 항목과 실제로 로드된 영상의 신원을 분리한다.
  function save(){
   if(!view||!loadedLesson||!mediaReady||busy||!video.currentSrc||!view.enrollment.started_at||ended(view.enrollment))return saveQueue;
@@ -92,7 +92,7 @@
   busy=true;mediaReady=false;$('#oc-start').disabled=true;message('영상을 불러오고 있습니다.');
   try{
    const r=await call('play',enrollmentArgs());if(selected.id!==id)return;
-   view.enrollment.started_at=r.startedAt;view.enrollment.expires_at=r.expiresAt;mediaExpires=Date.parse(r.urlExpiresAt)-offset;
+   view.enrollment.started_at=r.startedAt;view.enrollment.expires_at=r.expiresAt;period();mediaExpires=Date.parse(r.urlExpiresAt)-offset;
    await mediaEvent('loadedmetadata',()=>{video.preload='metadata';video.src=r.url;video.load();});
    const target=resume>=video.duration-1?0:Math.max(0,resume);
    if(target>0)await mediaEvent('seeked',()=>{video.currentTime=target;});
@@ -100,7 +100,7 @@
    $('#oc-video-cover').hidden=true;$('#oc-controls').hidden=false;message('');period();
    if(autoplay)await video.play();
   }catch(e){mediaReady=false;message(errorText(e));$('#oc-video-cover').hidden=false;$('#first-play-note').textContent='영상을 불러오지 못했습니다. 다시 재생해 주세요.';if(e.code==='access_expired')stopAccess();}
-  finally{busy=false;$('#oc-start').disabled=ended(view.enrollment)||!selected.hasVideo;}
+  finally{busy=false;if(mediaReady){$('#oc-seek').max=video.duration;$('#oc-seek').value=video.currentTime;$('#oc-time').textContent=fmt(video.currentTime)+' / '+fmt(video.duration);}$('#oc-start').disabled=ended(view.enrollment)||!selected.hasVideo;}
  }
  async function seekTo(position){
   if(busy||!mediaReady||!Number.isFinite(video.duration))return;
