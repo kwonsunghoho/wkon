@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-10-29-cleanup'
+const FN_VERSION = '2026-10-29-refunds'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -80,6 +80,51 @@ Deno.serve(async(req)=>{
    if(member.role!=='admin')return reply({ok:false,error:'forbidden'},403)
    const {data:c,error:ce}=await supa.from('online_courses').select('*').eq('id',courseId).maybeSingle()
    if(ce||!c||!Number.isInteger(c.revision))return fail('not_ready')
+   if(b.action==='admin-orders'){
+    const page=Number.isInteger(b.page)&&b.page>=0?Math.min(b.page,10000):0
+    const {data:orders,error}=await supa.from('online_orders').select('*').eq('course_id',courseId).order('created_at',{ascending:false}).order('payment_id').range(page*20,page*20+20)
+    if(error)return fail('not_ready')
+    const rows=(orders||[]).slice(0,20),ids=rows.map(o=>o.payment_id)
+    if(!ids.length)return reply({ok:true,orders:[],more:false})
+    const [members,enrollments,refunds]=await Promise.all([
+     supa.from('members').select('id,name').in('id',rows.map(o=>o.member_id).filter(Boolean)),
+     supa.from('online_enrollments').select('payment_id,started_at,expires_at,revoked_at').in('payment_id',ids),
+     supa.from('online_refunds').select('*').in('payment_id',ids).order('created_at',{ascending:false})
+    ])
+    if(members.error||enrollments.error||refunds.error)return fail('not_ready')
+    return reply({ok:true,more:orders.length>20,orders:rows.map(o=>({...o,memberName:members.data?.find(m=>m.id===o.member_id)?.name||'탈퇴 또는 이름 미등록',enrollment:enrollments.data?.find(e=>e.payment_id===o.payment_id)||null,refunds:refunds.data?.filter(r=>r.payment_id===o.payment_id)||[]}))})
+   }
+   if(b.action==='admin-refund'){
+    if(typeof b.paymentId!=='string'||b.paymentId.length>100||!/^[-0-9a-f]{36}$/i.test(String(b.requestId))||!Number.isInteger(b.amount)||b.amount<=0||typeof b.reason!=='string'||!b.reason.trim()||b.reason.length>300)return fail('invalid_fields')
+    const {data:o,error:oe}=await supa.from('online_orders').select('*').eq('payment_id',b.paymentId).eq('course_id',courseId).maybeSingle()
+    if(oe||!o)return fail('order_not_found')
+    const secret=Deno.env.get('PORTONE_API_SECRET')
+    if(!secret)return fail('not_ready')
+    const store='store-a2a17822-a4c8-4d25-ac38-939772dfb6d5',url=`https://api.portone.io/payments/${encodeURIComponent(o.payment_id)}`
+    const headers={Authorization:`PortOne ${secret}`}
+    const response=await fetch(`${url}?storeId=${encodeURIComponent(store)}`,{headers,signal:AbortSignal.timeout(15000)})
+    if(!response.ok)return fail('payment_lookup_failed')
+    const pay=await response.json(),cancelled=Number(pay.amount?.cancelled||0)
+    if(Number(pay.amount?.total)!==o.amount||!['KRW','CURRENCY_KRW'].includes(pay.currency)||(pay.storeId&&pay.storeId!==store)||!Number.isInteger(cancelled)||cancelled<0||cancelled>o.amount||!['PAID','PARTIAL_CANCELLED','CANCELLED'].includes(pay.status))return fail('payment_mismatch')
+    const reason=b.reason.trim()
+    const {data:begun,error:be}=await supa.rpc('oc_begin_refund',{p_actor:user.id,p_payment:o.payment_id,p_request:b.requestId,p_amount:b.amount,p_base:cancelled,p_reason:reason})
+    if(be)return fail('refund_prepare_failed')
+    if(!begun?.ok)return reply(begun)
+    const r=begun.refund,target=r.base_refunded+r.amount
+    const finish=async(total:number)=>{
+     try{const done=await supa.rpc('oc_finish_refund',{p_request:r.id,p_refunded:total});if(!done.error&&done.data?.ok)return reply({ok:true,refunded:true})}catch{ /* 취소 성공을 실패로 바꾸지 않는다. */ }
+     return reply({ok:true,refunded:true,warning:'환불은 완료됐지만 수강권 기록 반영이 지연되고 있습니다. 상태 확인을 눌러 주세요.'})
+    }
+    if(cancelled>=target)return await finish(cancelled)
+    if(r.state==='succeeded'||cancelled!==r.base_refunded)return reply({ok:true,pending:true,warning:'결제사 취소 내역이 변경되었습니다. 상태 확인 후 처리해 주세요.'})
+    // 같은 환불 요청은 항상 같은 멱등 키·금액·잔액 조건으로 재시도한다.
+    try{
+     const cancel=await fetch(`${url}/cancel`,{method:'POST',headers:{...headers,'Content-Type':'application/json','Idempotency-Key':`"monc-course-admin-${r.id}"`},signal:AbortSignal.timeout(15000),body:JSON.stringify({storeId:store,amount:r.amount,currentCancellableAmount:o.amount-r.base_refunded,reason:r.reason,requester:'ADMIN'})})
+     const body=await cancel.json().catch(()=>({}))
+     if(!cancel.ok||body.cancellation?.status!=='SUCCEEDED')return reply({ok:true,pending:true,warning:'환불 완료를 아직 확인하지 못했습니다. 새 환불을 만들지 말고 상태 확인을 눌러 주세요.'})
+     return await finish(target)
+    }catch{return reply({ok:true,pending:true,warning:'결제사 응답이 지연되고 있습니다. 상태 확인으로 같은 요청을 이어서 확인해 주세요.'})}
+   }
    if(b.action==='admin-classroom'){
     const {data,error}=await supa.rpc('oc_admin_preview',{p_actor:user.id,p_course:courseId})
     return error?fail('not_ready'):reply(data)
