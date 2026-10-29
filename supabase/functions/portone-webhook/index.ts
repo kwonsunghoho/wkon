@@ -28,7 +28,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const FN_VERSION = '2026-09-18a'
+const FN_VERSION = '2026-10-29-course'
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 const PRICE_PER_CHALLENGE_FALLBACK = 33000   // ⚠️ apply.html·verify-payment 와 같은 값 유지
 
@@ -124,10 +124,18 @@ Deno.serve(async (req) => {
     if (res.status === 404) return json({ ok: true, skip: 'unknown_payment' })
     if (!res.ok) return json({ ok: false, error: 'lookup_failed' }, 502)   // 포트원이 재시도한다
     const pay = await res.json()
+    // 서버가 미리 생성한 온라인 강의 주문은 취소 통보도 처리해 수강권을 회수한다.
+    // 신규 테이블이 없는 환경에서는 기존 상품 경로를 그대로 유지한다.
+    const { data: courseOrder, error: courseOrderError } = await supa.from('online_orders').select('payment_id').eq('payment_id', paymentId).maybeSingle()
+    if (courseOrderError && !['PGRST205', '42P01'].includes(courseOrderError.code)) return json({ ok: false, error: 'course_lookup_failed' }, 503)
+    if (courseOrder) {
+      const result = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/online-course-payment`, {
+        method: 'POST', headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+      })
+      return json(await result.json(), result.status)
+    }
     if (pay.status !== 'PAID') return json({ ok: true, skip: pay.status })   // 취소·대기 통보는 접는다
-    // 테스트 채널 결제(돈이 안 오감)는 웹훅이 지급하지 않는다 — 수락 여부(pg_test_open)는
-    // verify-payment 가 판정한다(2026-09-18 KPN 심사). 여기서 지급하면 스위치를 우회한다.
-    if (pay?.channel?.type === 'TEST') return json({ ok: true, skip: 'test_channel' })
     const paid = Number(pay?.amount?.total)
 
     // ── 2. 결제 생성 때 실어 둔 주문 맥락(customData) — 무엇을 지급할지 여기서 안다

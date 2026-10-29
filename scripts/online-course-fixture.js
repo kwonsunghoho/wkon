@@ -27,7 +27,7 @@
    const notes=Object.entries(state.notes).filter(([id])=>!b.lessonId||id===b.lessonId).map(([id,n])=>{const l=lessons.find(l=>l.id===id);return {...n,lessonId:id,lessonTitle:l.title,courseTitle:course.title,courseId:course.id,duration:l.duration,enrollmentId:ended()?null:eid};});
    return {data:{ok:true,notes,hasCourses:!!state.enrollment},error:null};
   }
-  if(b.action==='catalog'){if(qs.has('catalogFailure'))return {data:null,error:{message:'검증용 연결 실패'}};if(qs.has('catalogPrivate'))return {data:{ok:false,error:'not_published'},error:null};data={...data,course:{...course,description:'승무원 영상면접을 준비하며 답변과 표현을 구체적으로 점검하는 심화과정입니다. 답변 구성부터 미소와 시선, 호흡과 억양, 촬영 구도와 이미지까지 다룹니다.',saleOpen:false},lessons};}
+  if(b.action==='catalog'){if(qs.has('catalogFailure'))return {data:null,error:{message:'검증용 연결 실패'}};if(qs.has('catalogPrivate'))return {data:{ok:false,error:'not_published'},error:null};data={...data,course:{...course,description:'승무원 영상면접을 준비하며 답변과 표현을 구체적으로 점검하는 심화과정입니다. 답변 구성부터 미소와 시선, 호흡과 억양, 촬영 구도와 이미지까지 다룹니다.',saleOpen:!qs.has('saleClosed')},lessons};}
   else if(b.action==='order')data=state.enrollment&&!ended()?{ok:false,error:'already_enrolled'}:{ok:true,paymentId:'local-course-payment',courseId:course.id,title:course.title,amount:10000,accessDays:course.accessDays};
   else if(b.action==='library')data.enrollments=state.enrollment?[{...state.enrollment,progress:state.progress}]:[];
   else if(!state.enrollment)data={ok:false,error:'not_enrolled'};

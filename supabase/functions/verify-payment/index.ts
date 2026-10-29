@@ -9,7 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-09-18a'
+const FN_VERSION = '2026-10-28a'
 
 // site_config.challenge_price 미설정 시 기본값.
 // ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId, resourceId, probe } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId, resourceId, courseId, probe } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -100,6 +100,17 @@ Deno.serve(async (req) => {
     // 크레딧 충전 (2026-07-25) — 신청 저장이 아니라 원장에 크레딧을 넣는다.
     // 아래 챌린지·특강 경로와 완전히 다른 일이라 여기서 갈라져 끝낸다.
     // ═══════════════════════════════════════════════════════════════════
+    if (courseId) {
+      const caller = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: req.headers.get('Authorization') || '' } } })
+      const { data: { user } } = await caller.auth.getUser()
+      if (!user) return json({ ok: false, error: 'not_authenticated' }, 401)
+      const result = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/online-course-payment`, {
+        method: 'POST', headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId, courseId, memberId: user.id }),
+      })
+      return json(await result.json(), result.status)
+    }
     if (creditPack) {
       // ⚠️ 누구에게 넣을지는 **브라우저가 아니라 JWT 로 정한다.**
       //    body 의 memberId 를 믿으면 남의 계정에 넣거나 남의 결제를 가로챌 수 있다.
