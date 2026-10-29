@@ -1192,6 +1192,7 @@
   </style>
   <link rel="stylesheet" href="refund-details.css?v=1">
 <link rel="stylesheet" href="community-admin.css?v=20261015a">
+<link rel="stylesheet" href="online-course-admin.css?v=20261029a">
   <link rel="stylesheet" href="admin-ui.css?v=20261015c">
 </head>
 <body>
@@ -1248,7 +1249,7 @@
     </div>
 <details class="ad-menu-group" open><summary>운영<svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg></summary><div class="ad-menu-items"><button class="tabbtn active" data-tab="today"><svg aria-hidden="true" class="ic"><use href="#i-home"/></svg>대시보드</button><button class="tabbtn" data-tab="apps"><svg aria-hidden="true" class="ic"><use href="#i-inbox"/></svg>신청자 현황</button><button class="tabbtn" data-tab="waitlist"><svg aria-hidden="true" class="ic"><use href="#i-bell"/></svg>오픈 알림</button><a class="tabbtn" href="talent-admin.html">인재 채용 지원서</a></div></details>
 <details class="ad-menu-group" open><summary>회원·수업<svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg></summary><div class="ad-menu-items"><button class="tabbtn" data-tab="members"><svg aria-hidden="true" class="ic"><use href="#i-users"/></svg>회원 관리</button><button class="tabbtn" data-tab="community"><svg aria-hidden="true" class="ic"><use href="#i-users"/></svg>커뮤니티 관리</button><a class="tabbtn" href="academy-desk.html">수업 · 과제 피드백</a><a class="tabbtn" href="operations.html">학원 일정 · 업무</a></div></details>
-<details class="ad-menu-group" open><summary>상품·결제<svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg></summary><div class="ad-menu-items"><button class="tabbtn" data-tab="rounds"><svg aria-hidden="true" class="ic"><use href="#i-flag"/></svg>챌린지</button><button class="tabbtn" data-tab="lectures"><svg aria-hidden="true" class="ic"><use href="#i-screen"/></svg>특강</button><button class="tabbtn" data-tab="approgram"><svg aria-hidden="true" class="ic"><use href="#i-pen"/></svg>일문일답</button><button class="tabbtn" data-tab="credits"><svg aria-hidden="true" class="ic"><use href="#i-coin"/></svg>크레딧</button></div></details>
+<details class="ad-menu-group" open><summary>상품·결제<svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg></summary><div class="ad-menu-items"><button class="tabbtn" data-tab="rounds"><svg aria-hidden="true" class="ic"><use href="#i-flag"/></svg>챌린지</button><button class="tabbtn" data-tab="onlinecourses"><svg aria-hidden="true" class="ic"><use href="#i-screen"/></svg>온라인 강의</button><button class="tabbtn" data-tab="lectures"><svg aria-hidden="true" class="ic"><use href="#i-screen"/></svg>특강</button><button class="tabbtn" data-tab="approgram"><svg aria-hidden="true" class="ic"><use href="#i-pen"/></svg>일문일답</button><button class="tabbtn" data-tab="credits"><svg aria-hidden="true" class="ic"><use href="#i-coin"/></svg>크레딧</button></div></details>
 <details class="ad-menu-group" open><summary>콘텐츠<svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg></summary><div class="ad-menu-items"><button class="tabbtn" data-tab="labfiles"><svg aria-hidden="true" class="ic"><use href="#i-folder"/></svg>연구실 자료</button><button class="tabbtn" data-tab="reviews"><svg aria-hidden="true" class="ic"><use href="#i-star"/></svg>후기 관리</button><button class="tabbtn" data-tab="terms"><svg aria-hidden="true" class="ic"><use href="#i-book"/></svg>AI킬러</button><button class="tabbtn" data-tab="questions"><svg aria-hidden="true" class="ic"><use href="#i-q"/></svg>소재 문제</button><button class="tabbtn" data-tab="reccal"><svg aria-hidden="true" class="ic"><use href="#i-flag"/></svg>채용 캘린더</button></div></details>
     <div class="sn-me">
       <span class="sn-who" id="snWho">관리자</span>
@@ -1263,6 +1264,7 @@
        신문 1면 문법: 헤드라인 문장(실데이터로 생성) + 좌(지금 처리·최근 신청) / 우(숫자 스택).
        숫자는 이미 로드된 _apps/_wl/members 를 재사용하고 검수 대기만 count 쿼리 하나를 더 쓴다.
        모바일은 숫자 스택이 먼저 온다(간결 우선 — 오너 확정). id(td*)는 구 카드 시절 그대로다. -->
+  <div class="tab-panel" id="panel-onlinecourses"><div id="onlineCourseAdminApp" class="oca-root"></div></div>
   <div class="tab-panel" id="panel-community"><div id="communityAdminApp" class="ca-root"></div></div>
   <div class="tab-panel active" id="panel-today">
     <div class="today-wrap ad-dashboard">
@@ -2520,6 +2522,7 @@
   <dialog id="caDialog" class="ca-root" aria-labelledby="caDialogTitle"><header class="ca-dialog-head"><h2 id="caDialogTitle"></h2><button type="button" class="op-btn secondary" data-ca="close">닫기</button></header><div id="caDialogBody"></div></dialog>
   <div id="caToast" role="status" hidden></div>
   <script src="community-admin.js?v=20261015b"></script>
+  <script src="online-course-admin.js?v=20261029a"></script>
   <script src="admin-ui.js?v=20261015b"></script>
 
   <script src="media-storage.js?v=2"></script>
@@ -4099,6 +4102,7 @@
            단정했다(원칙 11). 캐시(_apps·_wl·members)만 다시 읽으므로 추가 조회는 검수 count 하나뿐. */
         if (b.dataset.tab === 'today' && _appsLoaded) loadToday();
         ensureTab(b.dataset.tab);
+        if (b.dataset.tab === 'onlinecourses') window.MONCOnlineCourseAdmin.mount();
         if (b.dataset.tab === 'community') window.MONCCommunityAdmin.mount();   // 이 탭 데이터를 아직 안 받았으면 지금 받는다(아래 ensureTab)
         /* ⚠️ 새 화면은 맨 위에서 시작한다(2026-08-02 5차).
            전에는 스크롤 위치가 그대로여서, 연구실 자료를 아래까지 내려 보다가 메뉴에서
@@ -9518,10 +9522,11 @@
     });
     function restoreDesk() {
       const requested = new URLSearchParams(location.search);
-      if (requested.get('tab') === 'community') {
+      if (['community','onlinecourses'].includes(requested.get('tab'))) {
+        const requestedTab = requested.get('tab');
         requested.delete('tab');
         history.replaceState(null,'',location.pathname+(requested.size?'?'+requested.toString():'')+location.hash);
-        activateTab('community');
+        activateTab(requestedTab);
         return;
       }
       const SK = window.moncScrollKeep;
