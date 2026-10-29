@@ -5,7 +5,7 @@
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
   var groups = [
     ['면접 준비', [
-      ['challenges.html', '2주 챌린지'],
+      ['challenges.html', '챌린지'],
       ['apply.html', '챌린지 신청'],
       ['online-courses.html', '온라인 강의'],
       ['lectures.html', '특강'],
