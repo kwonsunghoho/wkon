@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-10-29b'
+const FN_VERSION = '2026-10-29c'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -32,6 +32,10 @@ Deno.serve(async(req)=>{
    if(member.role!=='admin')return reply({ok:false,error:'forbidden'},403)
    const {data:c,error:ce}=await supa.from('online_courses').select('*').eq('id',courseId).maybeSingle()
    if(ce||!c||!Number.isInteger(c.revision))return fail('not_ready')
+   if(b.action==='admin-classroom'){
+    const {data,error}=await supa.rpc('oc_admin_preview',{p_actor:user.id,p_course:courseId})
+    return error?fail('not_ready'):reply(data)
+   }
    if(b.action==='admin-load'){
     const {data:courses,error:cs}=await supa.from('online_courses').select('*').order('created_at')
     const {data:lessons,error:ls}=await supa.from('online_lessons').select('*').eq('course_id',courseId).order('position')
@@ -107,8 +111,11 @@ Deno.serve(async(req)=>{
    return error?fail('not_ready'):reply(data)
   }
   if(b.action==='library'){
-   const {data:rows,error}=await supa.from('online_enrollments').select('*').eq('member_id',user.id).order('created_at',{ascending:false})
+   let libraryQuery=supa.from('online_enrollments').select('*').eq('member_id',user.id)
+   if(member.role!=='admin')libraryQuery=libraryQuery.eq('admin_preview',false)
+   const {data:rows,error}=await libraryQuery.order('created_at',{ascending:false})
    if(error)return fail('not_ready')
+   if(!rows?.length)return reply({ok:true,serverNow:new Date().toISOString(),enrollments:[]})
    const {data:courses,error:ce}=await supa.from('online_courses').select('*').in('id',[...new Set((rows||[]).map(r=>r.course_id))])
    if(ce)return fail('not_ready')
    const ids=(rows||[]).map(r=>r.id)
@@ -118,11 +125,13 @@ Deno.serve(async(req)=>{
   }
   const {data:e,error:ee}=await supa.from('online_enrollments').select('*').eq('id',b.enrollmentId).eq('member_id',user.id).maybeSingle()
   if(ee)return fail('not_ready')
-  if(!e)return fail('not_enrolled')
+  if(!e||e.admin_preview&&member.role!=='admin')return fail('not_enrolled')
   const expired=!!e.revoked_at||(e.expires_at&&Date.parse(e.expires_at)<=Date.now())
   if(b.action==='view'){
    const {data:c,error:ce}=await supa.from('online_courses').select('*').eq('id',e.course_id).single()
-   const {data:lessons,error:le}=await supa.from('online_lessons').select('*').eq('course_id',e.course_id).eq('published',true).order('position')
+   let lessonQuery=supa.from('online_lessons').select('*').eq('course_id',e.course_id)
+   if(!e.admin_preview)lessonQuery=lessonQuery.eq('published',true)
+   const {data:lessons,error:le}=await lessonQuery.order('position')
    const {data:progress,error:pe}=await supa.from('online_progress').select('*').eq('enrollment_id',e.id)
    if(ce||le||pe)return fail('not_ready')
    return reply({ok:true,serverNow:new Date().toISOString(),enrollment:e,expired,course:{id:c.id,title:c.title},lessons:(lessons||[]).map(l=>({id:l.id,title:l.title,chapter:l.chapter,position:l.position,duration:l.duration_seconds,hasVideo:!!l.video_path,hasMaterial:!!l.material_path})),progress:progress||[]})
@@ -135,7 +144,9 @@ Deno.serve(async(req)=>{
    return error?fail('save_failed'):reply(data)
   }
   if(!['play','material'].includes(b.action))return fail('unknown_action')
-  const {data:l,error:le}=await supa.from('online_lessons').select('*').eq('id',b.lessonId).eq('course_id',e.course_id).eq('published',true).maybeSingle()
+  let lessonQuery=supa.from('online_lessons').select('*').eq('id',b.lessonId).eq('course_id',e.course_id)
+  if(!e.admin_preview)lessonQuery=lessonQuery.eq('published',true)
+  const {data:l,error:le}=await lessonQuery.maybeSingle()
   if(le||!l)return fail('lesson_unavailable')
   if(b.action==='material'&&!e.started_at)return fail('start_video_first')
   const path=b.action==='play'?l.video_path:l.material_path
