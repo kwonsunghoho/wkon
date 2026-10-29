@@ -16,16 +16,17 @@
     var quote = window.moncReview ? window.moncReview.plain(row.quote || '') : (row.quote || '');
     var body = '';
     if (quote.trim()) {
-      // 최신 공개 후기의 첫 부분만 발췌한다. 내용이나 어조를 새로 쓰지 않는다.
-      var text=quote.trim(), preview=Array.from(text).slice(0,120).join('');
-      if (preview.length<text.length) {
-        var sentence=preview.match(/^[\s\S]*[.!?。！？](?=\s|$)/);
-        if (sentence && sentence[0].length>=40) preview=sentence[0];
-        preview=preview.trimEnd()+'…';
+      // 원문 앞부분만 발췌하며 전체 내용도 사용자가 펼쳐 볼 수 있게 한다.
+      var text = quote.trim(), preview = Array.from(text).slice(0,120).join('');
+      var shortened = preview.length < text.length;
+      if (shortened) {
+        var sentence = preview.match(/^[\s\S]*[.!?。！？](?=\s|$)/);
+        if (sentence && sentence[0].length >= 40) preview = sentence[0];
+        preview = preview.trimEnd() + '…';
       }
-      body = '<p class="home-review-quote">' + esc(preview) + '</p>';
-    }
-    else {
+      body = '<span class="review-quote-mark" aria-hidden="true">“</span><blockquote class="home-review-quote">' + esc(preview) + '</blockquote>';
+      if (shortened) body += '<details class="review-original"><summary>후기 원문 더 읽기 <span aria-hidden="true">＋</span></summary><p>' + esc(text) + '</p></details>';
+    } else {
       var src = row.image_path || row.url;
       if (!src) return '';
       if (!/^https?:/i.test(src)) {
@@ -35,9 +36,9 @@
       if (!/^https?:\/\//i.test(src)) return '';
       body = '<img src="' + esc(src) + '" alt="' + esc(label) + ' 원문" loading="lazy" decoding="async">';
     }
-    return '<a class="home-review" data-review-kind="' + kind + '" href="reviews-list.html?kind=' + kind + '"><div class="home-review-heading"><h3>' + label + '</h3>' +
-      (course ? '<span>' + esc(course) + '</span>' : '') + '</div>' + body +
-      '<span class="home-review-more">' + label + ' 더 보기 <span aria-hidden="true">→</span></span></a>';
+    return '<article class="home-review" data-review-kind="' + kind + '"><div class="home-review-heading"><h3>' + label + '</h3>' +
+      (course ? '<span>' + esc(course) + '</span>' : '<span>공개 원문 발췌</span>') + '</div>' + body +
+      '<p class="review-source">공개 ' + label + '에서</p><a class="home-review-more" href="reviews-list.html?kind=' + kind + '">' + label + ' 더 보기 <span aria-hidden="true">↗</span></a></article>';
   }
   function syncLinks() {
     document.querySelectorAll('[data-review-list]').forEach(function (link) {
