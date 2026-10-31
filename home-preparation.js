@@ -24,8 +24,8 @@
         if (sentence && sentence[0].length >= 40) preview = sentence[0];
         preview = preview.trimEnd() + '…';
       }
-      body = '<span class="review-quote-mark" aria-hidden="true">“</span><blockquote class="home-review-quote">' + esc(preview) + '</blockquote>';
-      if (shortened) body += '<details class="review-original"><summary>후기 원문 더 읽기 <span aria-hidden="true">＋</span></summary><p>' + esc(text) + '</p></details>';
+      body = '<span class="review-quote-mark quote-mark" aria-hidden="true">“</span><blockquote class="home-review-quote">' + esc(preview) + '</blockquote>';
+      if (shortened) body += '<details class="review-original review-details"><summary>후기 원문 더 읽기 <span aria-hidden="true">＋</span></summary><p>' + esc(text) + '</p></details>';
     } else {
       var src = row.image_path || row.url;
       if (!src) return '';
@@ -36,9 +36,9 @@
       if (!/^https?:\/\//i.test(src)) return '';
       body = '<img src="' + esc(src) + '" alt="' + esc(label) + ' 원문" loading="lazy" decoding="async">';
     }
-    return '<article class="home-review" data-review-kind="' + kind + '"><div class="home-review-heading"><h3>' + label + '</h3>' +
+    return '<article class="home-review review-card" data-review-kind="' + kind + '"><div class="home-review-heading review-meta"><h3>' + label + '</h3>' +
       (course ? '<span>' + esc(course) + '</span>' : '<span>공개 원문 발췌</span>') + '</div>' + body +
-      '<p class="review-source">공개 ' + label + '에서</p><a class="home-review-more" href="reviews-list.html?kind=' + kind + '">' + label + ' 더 보기 <span aria-hidden="true">↗</span></a></article>';
+      '<a class="home-review-more text-link" href="reviews-list.html?kind=' + kind + '">' + label + ' 더 보기 <span aria-hidden="true">→</span></a></article>';
   }
   function syncLinks() {
     document.querySelectorAll('[data-review-list]').forEach(function (link) {
@@ -70,7 +70,7 @@
       ]);
       if (result.error || !Array.isArray(result.data)) throw new Error('후기 조회 실패');
       var rows = result.data.filter(function (row) { return !row.kind || row.kind==='challenge' || row.kind==='ke20'; });
-      var cards = ['challenge','ke20'].map(function (kind) {
+      var cards = ['ke20','challenge'].map(function (kind) {
         var candidates=rows.filter(function (row) { return (row.kind==='ke20'?'ke20':'challenge')===kind; });
         for(var i=0;i<candidates.length;i++) { var card=reviewHtml(candidates[i]); if(card) return card; }
         return '';

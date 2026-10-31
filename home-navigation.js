@@ -80,7 +80,7 @@
       if (intro && typeof window.moncBeacon === 'function') window.moncBeacon('hero_cta', {});
       var link = event.target.closest('a[data-home-action]');
       if (link && typeof window.moncBeacon === 'function') {
-        window.moncBeacon(link.dataset.homeAction, { destination: link.getAttribute('href') });
+        window.moncBeacon(link.dataset.homeAction, { destination: link.getAttribute('href'), placement: link.dataset.homePlacement || '' });
       }
     });
   }
