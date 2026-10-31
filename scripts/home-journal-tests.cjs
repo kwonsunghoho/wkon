@@ -1,4 +1,4 @@
-// 승인된 C안의 화면·이동·공개 데이터 상태를 운영 통신 없이 검증한다.
+// 승인된 차콜 메인의 화면·이동·공개 데이터 상태를 운영 통신 없이 검증한다.
 // 실행: node scripts/home-journal-tests.cjs --deps <node_modules> --out <출력 폴더>
 const fs=require('fs'),path=require('path'),assert=require('assert/strict'),cp=require('child_process');
 const args=process.argv.slice(2),opt=(n,d)=>args.includes(n)?args[args.indexOf(n)+1]:d;
@@ -8,6 +8,7 @@ const {chromium}=require(path.join(deps,'playwright'));
 const root=path.resolve(__dirname,'..');
 const original=cp.execFileSync('git',['show','origin/main:index.html'],{cwd:root,encoding:'utf8'});
 const current=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const naverBooking=fs.readFileSync(path.join(root,'consult.html'),'utf8').match(/id="csBookBtn" href="([^"]+)"/)[1];
 const intro=s=>s.match(/<section class="hero-intro"[\s\S]*?<\/section>/)[0];
 assert.equal(intro(current).replace(/\r\n/g,'\n'),intro(original).replace(/\r\n/g,'\n'),'창문 인트로 마크업 보존');
 for(const file of ['home-intro.js','home-intro.css','nav.js','nav.css']){
@@ -24,6 +25,7 @@ async function result(key){
  if(key==='reviews'){
   var rows=[{kind:'challenge',challenge:'영합각',quote:'검증용 챌린지 후기입니다. '+('직접 연습하며 남긴 공개 후기의 원문을 확인하는 검증 문장입니다. ').repeat(6)},{kind:'ke20',quote:'검증용 수업 후기입니다. '+('원문을 바꾸지 않고 공개 후기를 보여주는지 확인합니다. ').repeat(6)},{kind:'consult',quote:'노출하면 안 되는 상담 후기'}];
   if(window.__mode==='keonly')rows=rows.filter(r=>r.kind==='ke20');
+  if(window.__mode==='short')rows=[{kind:'ke20',quote:'짧은 원문 표시를 확인하는 검증 문장입니다.'}];
   if(window.__mode==='image')rows=[{kind:'ke20',url:'${base}/images/og-image.png'}];
   return{data:rows};
  }
@@ -36,11 +38,14 @@ fs.mkdirSync(out,{recursive:true});
 const report={widths:[],checks:[],errors:[]};
 (async()=>{
 const browser=await chromium.launch({headless:true,executablePath:opt('--browser','C:/Program Files (x86)/Google/Chrome/Application/chrome.exe')});
-async function make(width=375,auth='guest'){
+async function make(width=375,auth='guest',bookingFailure=false){
  const context=await browser.newContext({viewport:{width,height:812},reducedMotion:'reduce'});
  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
- await page.route('**/*',r=>{const url=r.request().url();if(url.startsWith(base+'/supabase-config.js'))return r.fulfill({contentType:'text/javascript',body:stub(auth)});if(!url.startsWith(base+'/'))return r.abort();if(!['GET','HEAD'].includes(r.request().method()))throw Error('운영 쓰기 차단');return r.continue()});
- await page.goto(base+'/index.html');await page.evaluate(()=>document.fonts.ready);return{page,context};
+ await page.route('**/*',r=>{const url=r.request().url();if(url.startsWith(base+'/supabase-config.js'))return r.fulfill({contentType:'text/javascript',body:stub(auth)});if(url===base+'/consult.html')return bookingFailure?r.abort():r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(path.join(root,'consult.html'),'utf8')});if(!url.startsWith(base+'/'))return r.abort();if(!['GET','HEAD'].includes(r.request().method()))throw Error('운영 쓰기 차단');return r.continue()});
+ await page.goto(base+'/index.html');await page.evaluate(()=>document.fonts.ready);
+ await page.waitForFunction(()=>document.querySelectorAll('.monc-person').length===6,{},{timeout:10000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({ready:document.readyState,researchers:typeof window.MONC_RESEARCHERS,host:!!document.getElementById('homeResearchers'),scripts:[...document.scripts].map(s=>s.src)}))));console.error(report.errors);throw error});
+ if(!bookingFailure)await page.waitForFunction(()=>document.querySelector('[data-consult-booking]').href.startsWith('https://m.booking.naver.com/'),{},{timeout:7000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({booking:document.querySelector('[data-consult-booking]')?.href,resources:performance.getEntriesByType('resource').filter(r=>r.name.includes('consult')||r.name.includes('home-contact')).map(r=>({name:r.name,duration:r.duration,size:r.transferSize}))}))));console.error(report.errors);throw error});
+ return{page,context};
 }
 async function loadData(page){await page.locator('#doors').scrollIntoViewIfNeeded();await page.locator('#homeReviews[aria-busy=false]').waitFor();await page.locator('#homeCommunity').scrollIntoViewIfNeeded();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor()}
 async function layout(page){
@@ -49,23 +54,40 @@ async function layout(page){
 }
 try{
  for(const width of [320,375,768,1280]){
+  console.log(width+'px 화면·동작 검증');
   const {page,context}=await make(width);await loadData(page);report.widths.push(await layout(page));
   assert.equal(await page.locator('#heroIntro').evaluate(e=>e.clientHeight),812);
-  assert.equal(await page.locator('.scene-actions a').count(),1);
-  assert.equal(await page.locator('.course-photo figcaption').count(),0);
+  assert.equal(await page.locator('.home-journal>section').first().getAttribute('id'),'researchFeatures');
+  assert.equal(await page.locator('.home-journal h1').textContent(),'나에게 맞는 준비.');
+  assert.equal(await page.locator('.journal-scene,.opening-copy').count(),0);
+  assert.equal(await page.locator('.journal-online figcaption').count(),0);
+  assert.equal(await page.locator('.journal-online img').getAttribute('src'),'images/hero-expression.webp');
+  assert.equal(await page.locator('.home-journal').evaluate(e=>e.innerText.includes('↗')),false);
+  assert.equal(await page.locator('.service-card').first().evaluate(e=>e.offsetHeight),await page.locator('.service-card').last().evaluate(e=>e.offsetHeight));
   assert.equal(await page.locator('.monc-person img').first().evaluate(e=>getComputedStyle(e).filter),'none');
   assert.equal(await page.locator('.home-review').count(),2);assert.equal(await page.locator('.home-program-links').isVisible(),false);
+  assert.ok((await page.locator('.home-review-quote').allTextContents()).every(text=>Array.from(text).length<=51),'짧은 후기 미리보기');
+  assert.equal(await page.locator('.home-review-quote').first().evaluate(e=>getComputedStyle(e).fontSize),width<=600?'18px':'20px');
+  assert.equal(await page.locator('.review-original>p').first().isVisible(),false,'원문은 처음에 접힘');
   assert.deepEqual(await page.locator('.monc-person h3').allTextContents(),await page.evaluate(()=>MONC_RESEARCHERS.map(p=>p.name)));
   await page.locator('#homeResearcherNext').click();await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='2 / 6');
   await page.locator('#homeResearchers').press('ArrowLeft');await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='1 / 6');
   await page.locator('.person-details summary').first().click();assert.ok(await page.locator('.person-details').first().evaluate(e=>e.open));await page.locator('.person-details summary').first().click();
-  await page.locator('.review-original summary').first().click();assert.ok(await page.locator('.review-original').first().evaluate(e=>e.open));await layout(page);await page.locator('.review-original summary').first().click();
+  await page.locator('.review-original summary').first().click();assert.ok(await page.locator('.review-original').first().evaluate(e=>e.open));assert.equal(await page.locator('.review-original>p').first().isVisible(),true);assert.equal(await page.locator('.review-original>p').first().textContent(),await page.evaluate(async()=>(await result('reviews')).data.find(row=>row.kind==='ke20').quote.trim()));await layout(page);await page.locator('.review-original summary').first().click();
   assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
   assert.deepEqual(await page.locator('#homeCommunityStudies .home-community-tag').allTextContents(),['모집 중','정원 마감','모집 종료']);
   assert.deepEqual(await page.evaluate(()=>window.__rpcs.find(r=>r.args.p_action==='posts').args.p_data),{limit:3,topic:'prep'});
+  await page.evaluate(()=>scrollTo(0,0));await page.waitForFunction(()=>document.querySelector('.home-contact-float').hidden);assert.equal(await page.locator('.home-contact-float').isVisible(),false);
   await page.locator('.hcta-main').click();assert.equal(new URL(page.url()).hash,'#researchFeatures');
-  await page.locator('.scene-actions .cta').click();assert.equal(new URL(page.url()).hash,'#learningOptions');assert.ok((await page.locator('#learningOptions').boundingBox()).y>=55);
-  const small=await page.locator('.home-journal a,.home-journal button,.home-journal summary').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').filter(e=>{var r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.textContent.trim()));assert.deepEqual(small,[],'터치 영역');
+  await page.waitForFunction(()=>Math.abs(document.getElementById('researchFeatures').getBoundingClientRect().top-88)<3);
+  await page.waitForFunction(()=>!document.querySelector('.home-contact-float').hidden);assert.equal(await page.locator('.home-contact-float').isVisible(),true);
+  await page.locator('#homeContact').scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.home-contact-float').hidden);
+  assert.equal(await page.locator('.home-kakao-button').getAttribute('href'),'https://pf.kakao.com/_iajxnX/chat');
+  assert.equal(await page.locator('.home-kakao-button').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
+  assert.equal(await page.locator('.home-booking-button').getAttribute('href'),naverBooking);
+  assert.equal(await page.locator('.closing-photo a').count(),0);
+  assert.equal(await page.locator('#homeContact .contact-action').count(),2);
+  const small=await page.locator('.home-journal a,.home-journal button,.home-journal summary,.home-contact-float').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').filter(e=>{var r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.textContent.trim()));assert.deepEqual(small,[],'터치 영역');
   await page.locator('#hamburger').click();assert.ok(await page.locator('#mobileMenu').evaluate(e=>e.open));
   for(const name of ['교육 과정','면접 연습','자료·정보','커뮤니티','수강 후기']){await page.getByRole('button',{name,exact:true}).click();assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),1)}
   await page.keyboard.press('Escape');assert.equal(await page.locator('#mobileMenu').evaluate(e=>e.open),false);assert.equal(await page.evaluate(()=>document.activeElement.id),'hamburger');
@@ -75,17 +97,27 @@ try{
  }
  report.checks.push('4개 폭·창문 원본·사진 컬러·캡션 제거·연구진/후기 펼침·메뉴·공개 목록·44px');
  for(const auth of ['guest','member','admin']){const {page,context}=await make(375,auth);await page.waitForFunction(()=>document.querySelector('.nav-my').getAttribute('href'));assert.match(await page.locator('.nav-my').getAttribute('href'),auth==='guest'?/^login.html/:/^mypage.html/);assert.equal(await page.locator('.nav-admin').isVisible(),auth==='admin');await context.close()}
- for(const mode of ['empty','error','keonly','image']){
+ {const {page,context}=await make(375,'guest',true);await page.waitForLoadState('networkidle');assert.equal(await page.locator('.home-booking-button').getAttribute('href'),'consult.html');await context.close()}
+ for(const mode of ['empty','error','keonly','image','short']){
   const {page,context}=await make();await page.evaluate(m=>window.__mode=m,mode);await loadData(page);
   if(mode==='error'){assert.ok(await page.locator('.home-retry').isVisible());await page.evaluate(()=>window.__mode='normal');await page.locator('.home-retry').click();await page.locator('#homeReviews[aria-busy=false]').waitFor();assert.equal(await page.locator('.home-review').count(),2);await page.locator('#homeCommunityPosts .home-community-retry').click();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();assert.equal(await page.locator('#homeCommunityPosts article').count(),3)}
   if(mode==='empty'){assert.equal(await page.locator('.home-review').count(),0);assert.ok(await page.locator('.home-program-links').isVisible())}
   if(mode==='keonly'){assert.equal(await page.locator('.home-review').count(),1);assert.ok(await page.locator('[data-review-list=challenge]').isVisible())}
   if(mode==='image'){assert.equal(await page.locator('.home-review img').count(),1);await page.locator('.home-review img').evaluate(e=>e.dispatchEvent(new Event('error')));assert.equal(await page.locator('.home-review img').count(),0)}
+  if(mode==='short'){assert.equal(await page.locator('.home-review-quote').textContent(),'짧은 원문 표시를 확인하는 검증 문장입니다.');assert.equal(await page.locator('.review-original').count(),0)}
   await layout(page);await context.close();
  }
  const {page,context}=await make();await loadData(page);
- const linkChecks=[['.journal-online .cta','online-courses.html'],['.journal-challenge .cta','challenges.html'],['.journal-tools a','sojae.html'],['.journal-ending .cta','consult.html']];
- for(const [selector,destination] of linkChecks){await page.route(base+'/'+destination,r=>r.fulfill({contentType:'text/html',body:'<p>이동 검증</p>'}));await page.locator(selector).first().click();assert.equal(new URL(page.url()).pathname,'/'+destination);await page.goBack()}
+ const linkChecks=[['.journal-online .button','online-courses.html'],['.journal-challenge .button','challenges.html'],['.tool-card[href="sojae.html"]','sojae.html'],['.tool-card[href="polish.html"]','polish.html'],['.tool-card[href="lab-airline.html"]','lab-airline.html'],['.tool-card[href="games.html"]','games.html'],['.people-section .text-link','researchers.html'],['.community-links a[href="community.html?view=studies"]','community.html?view=studies'],['.community-links a[href="community.html?view=board&topic=prep"]','community.html?view=board&topic=prep'],['.community-links a[href="lectures.html"]','lectures.html']];
+ for(const [selector,destination] of linkChecks){await page.route(base+'/'+destination,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>이동 검증</p>'}));await page.locator(selector).first().click();assert.equal(new URL(page.url()).pathname+new URL(page.url()).search,'/'+destination);assert.equal(await page.locator('p').textContent(),'이동 검증');await page.goBack()}
+ const kakao='https://pf.kakao.com/_iajxnX/chat';
+ await context.route(kakao,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>카카오채널 이동 검증</p>'}));
+ await context.route(naverBooking,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>네이버 예약 이동 검증</p>'}));
+ {const popupPromise=page.waitForEvent('popup');await page.locator('.home-booking-button').click();const popup=await popupPromise;await popup.waitForLoadState();assert.equal(popup.url(),naverBooking);assert.equal(await popup.locator('p').textContent(),'네이버 예약 이동 검증');await popup.close()}
+ for(const selector of ['.home-kakao-button','.home-contact-float']){
+  if(selector.includes('float')){await page.locator('#tools').scrollIntoViewIfNeeded();await page.waitForFunction(()=>!document.querySelector('.home-contact-float').hidden)}
+  const popupPromise=page.waitForEvent('popup');await page.locator(selector).click();const popup=await popupPromise;await popup.waitForLoadState();assert.equal(popup.url(),kakao);assert.equal(await popup.locator('p').textContent(),'카카오채널 이동 검증');await popup.close();
+ }
  await page.evaluate(()=>{document.querySelectorAll('.home-journal *').forEach(e=>e.style.fontSize=(parseFloat(getComputedStyle(e).fontSize)*2)+'px')});await layout(page);await context.close();
  report.checks.push('회원별 메뉴·빈 후기·오류 재시도·한 종류 후기·이미지 오류·실제 목적지 이동·글자 200%');
  assert.deepEqual(report.errors,[]);

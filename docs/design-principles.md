@@ -50,7 +50,7 @@ Linked by index + detail/legal pages + member pages(login/mypage/admin).
 - **타이포:** 섹션 제목은 `h2.section-title`에 `var(--serif)`(=SUIT, 이름만 명조 시절 흔적) 800 + `--fs-h2 clamp(30px,4.2vw,46px)` (tokens.css 오버라이드, h2 접두 특이도로 `index.css`의 `.section-title` 규칙을 이김).
 - **UI 9대 원칙**(docs/design-principles.md): 가독성 12pt+ / 터치 44px+ / 대비 4.5:1 / 아이콘 통일 / 라운드 / 계층 / 여백 / 그룹핑 / 큼직. **375px 우선 검증.**
 - Typography(`--fs-*`)·spacing(`--space-*`, 8px)·radius(8/14/20/24)·섹션 배경 리듬 전부 토큰화 — 하드코딩보다 토큰 우선. **`--fs-body-sm: 15px`(2026-07-25 신설)는 본문 17과 캡션 14 사이의 '카드 설명줄' 칸** — 캡션 14px는 보조 정보용이라 카드의 유일한 설명 줄에는 작다(홈 `.msn-lead`·`.dr-ds`, 챌린지 허브 `.chb-sub`, 상세 4종 `.lesson-item`·`.benefit-desc` 가 쓴다 — 구 예시 `.bf-desc`·`.bp-desc` 는 승준노트 코스형·홈 스토리형 개편으로 라이브에서 사라졌고 `outputs/` 목업에만 남아 있다). ⚠️ 별도 파일에서 쓸 땐 `var(--fs-body-sm, 15px)` 폴백을 붙일 것(캐시 분리 대비 — 위 briefing.html 항목 참조).
-- 아이콘은 `currentColor` 선형 SVG를 사용한다. **홈 하단 스티키 CTA바는 2026-10-20 개편에서 제거**했다(home.md). 상세 페이지의 기존 신청 바는 유지한다.
+- 아이콘은 `currentColor` 선형 SVG를 사용한다. **홈 전체 폭 신청 CTA바는 2026-10-20 개편에서 제거**했다. 2026-10-31 오너 요청의 작은 카카오 상담 버튼은 창문·마지막 문의가 보일 때 숨기는 별도 문의 동작이다(home.md). 상세 페이지의 기존 신청 바는 유지한다.
 
 ### 2026-07-14 목업 리디자인
 ⚠️ 소스오브트루스로 적혀 있던 `outputs/monc-font-mockup.html`·`monc-mockup-2.html`은 **커밋된 적이 없어 어디에도 남아 있지 않다**(2026-07-30 확인 — main·전 브랜치·히스토리 전부 없음). 아래 규칙 자체가 유일한 기록이니 여기서 지우지 말 것.
