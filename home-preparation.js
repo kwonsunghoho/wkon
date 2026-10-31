@@ -26,7 +26,7 @@
           var wordEnd = preview.lastIndexOf(' ');
           if (wordEnd >= 30) preview = preview.slice(0,wordEnd);
         }
-        preview = preview.trimEnd() + '…';
+        preview = preview.trimEnd().replace(/[.。…]+$/,'') + '…';
       }
       body = '<span class="review-quote-mark quote-mark" aria-hidden="true">“</span><blockquote class="home-review-quote">' + esc(preview) + '</blockquote>';
       if (shortened) body += '<details class="review-original review-details"><summary>원문 더보기 <span aria-hidden="true">＋</span></summary><p>' + esc(text) + '</p></details>';
