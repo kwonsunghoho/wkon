@@ -8,6 +8,7 @@ const {chromium}=require(path.join(deps,'playwright'));
 const root=path.resolve(__dirname,'..');
 const original=cp.execFileSync('git',['show','origin/main:index.html'],{cwd:root,encoding:'utf8'});
 const current=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const naverBooking=fs.readFileSync(path.join(root,'consult.html'),'utf8').match(/id="csBookBtn" href="([^"]+)"/)[1];
 const intro=s=>s.match(/<section class="hero-intro"[\s\S]*?<\/section>/)[0];
 assert.equal(intro(current).replace(/\r\n/g,'\n'),intro(original).replace(/\r\n/g,'\n'),'창문 인트로 마크업 보존');
 for(const file of ['home-intro.js','home-intro.css','nav.js','nav.css']){
@@ -36,12 +37,13 @@ fs.mkdirSync(out,{recursive:true});
 const report={widths:[],checks:[],errors:[]};
 (async()=>{
 const browser=await chromium.launch({headless:true,executablePath:opt('--browser','C:/Program Files (x86)/Google/Chrome/Application/chrome.exe')});
-async function make(width=375,auth='guest'){
+async function make(width=375,auth='guest',bookingFailure=false){
  const context=await browser.newContext({viewport:{width,height:812},reducedMotion:'reduce'});
  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
- await page.route('**/*',r=>{const url=r.request().url();if(url.startsWith(base+'/supabase-config.js'))return r.fulfill({contentType:'text/javascript',body:stub(auth)});if(!url.startsWith(base+'/'))return r.abort();if(!['GET','HEAD'].includes(r.request().method()))throw Error('운영 쓰기 차단');return r.continue()});
+ await page.route('**/*',r=>{const url=r.request().url();if(url.startsWith(base+'/supabase-config.js'))return r.fulfill({contentType:'text/javascript',body:stub(auth)});if(url===base+'/consult.html')return bookingFailure?r.abort():r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(path.join(root,'consult.html'),'utf8')});if(!url.startsWith(base+'/'))return r.abort();if(!['GET','HEAD'].includes(r.request().method()))throw Error('운영 쓰기 차단');return r.continue()});
  await page.goto(base+'/index.html');await page.evaluate(()=>document.fonts.ready);
  await page.waitForFunction(()=>document.querySelectorAll('.monc-person').length===6,{},{timeout:10000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({ready:document.readyState,researchers:typeof window.MONC_RESEARCHERS,host:!!document.getElementById('homeResearchers'),scripts:[...document.scripts].map(s=>s.src)}))));console.error(report.errors);throw error});
+ if(!bookingFailure)await page.waitForFunction(()=>document.querySelector('[data-consult-booking]').href.startsWith('https://m.booking.naver.com/'),{},{timeout:7000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({booking:document.querySelector('[data-consult-booking]')?.href,resources:performance.getEntriesByType('resource').filter(r=>r.name.includes('consult')||r.name.includes('home-contact')).map(r=>({name:r.name,duration:r.duration,size:r.transferSize}))}))));console.error(report.errors);throw error});
  return{page,context};
 }
 async function loadData(page){await page.locator('#doors').scrollIntoViewIfNeeded();await page.locator('#homeReviews[aria-busy=false]').waitFor();await page.locator('#homeCommunity').scrollIntoViewIfNeeded();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor()}
@@ -77,7 +79,10 @@ try{
   await page.waitForFunction(()=>!document.querySelector('.home-contact-float').hidden);assert.equal(await page.locator('.home-contact-float').isVisible(),true);
   await page.locator('#homeContact').scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.home-contact-float').hidden);
   assert.equal(await page.locator('.home-kakao-button').getAttribute('href'),'https://pf.kakao.com/_iajxnX/chat');
-  assert.equal(await page.locator('.home-kakao-button').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(254, 229, 0)');
+  assert.equal(await page.locator('.home-kakao-button').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
+  assert.equal(await page.locator('.home-booking-button').getAttribute('href'),naverBooking);
+  assert.equal(await page.locator('.closing-photo a').count(),0);
+  assert.equal(await page.locator('#homeContact .contact-action').count(),2);
   const small=await page.locator('.home-journal a,.home-journal button,.home-journal summary,.home-contact-float').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').filter(e=>{var r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.textContent.trim()));assert.deepEqual(small,[],'터치 영역');
   await page.locator('#hamburger').click();assert.ok(await page.locator('#mobileMenu').evaluate(e=>e.open));
   for(const name of ['교육 과정','면접 연습','자료·정보','커뮤니티','수강 후기']){await page.getByRole('button',{name,exact:true}).click();assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),1)}
@@ -88,6 +93,7 @@ try{
  }
  report.checks.push('4개 폭·창문 원본·사진 컬러·캡션 제거·연구진/후기 펼침·메뉴·공개 목록·44px');
  for(const auth of ['guest','member','admin']){const {page,context}=await make(375,auth);await page.waitForFunction(()=>document.querySelector('.nav-my').getAttribute('href'));assert.match(await page.locator('.nav-my').getAttribute('href'),auth==='guest'?/^login.html/:/^mypage.html/);assert.equal(await page.locator('.nav-admin').isVisible(),auth==='admin');await context.close()}
+ {const {page,context}=await make(375,'guest',true);await page.waitForLoadState('networkidle');assert.equal(await page.locator('.home-booking-button').getAttribute('href'),'consult.html');await context.close()}
  for(const mode of ['empty','error','keonly','image']){
   const {page,context}=await make();await page.evaluate(m=>window.__mode=m,mode);await loadData(page);
   if(mode==='error'){assert.ok(await page.locator('.home-retry').isVisible());await page.evaluate(()=>window.__mode='normal');await page.locator('.home-retry').click();await page.locator('#homeReviews[aria-busy=false]').waitFor();assert.equal(await page.locator('.home-review').count(),2);await page.locator('#homeCommunityPosts .home-community-retry').click();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();assert.equal(await page.locator('#homeCommunityPosts article').count(),3)}
@@ -101,6 +107,8 @@ try{
  for(const [selector,destination] of linkChecks){await page.route(base+'/'+destination,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>이동 검증</p>'}));await page.locator(selector).first().click();assert.equal(new URL(page.url()).pathname+new URL(page.url()).search,'/'+destination);assert.equal(await page.locator('p').textContent(),'이동 검증');await page.goBack()}
  const kakao='https://pf.kakao.com/_iajxnX/chat';
  await context.route(kakao,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>카카오채널 이동 검증</p>'}));
+ await context.route(naverBooking,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>네이버 예약 이동 검증</p>'}));
+ {const popupPromise=page.waitForEvent('popup');await page.locator('.home-booking-button').click();const popup=await popupPromise;await popup.waitForLoadState();assert.equal(popup.url(),naverBooking);assert.equal(await popup.locator('p').textContent(),'네이버 예약 이동 검증');await popup.close()}
  for(const selector of ['.home-kakao-button','.home-contact-float']){
   if(selector.includes('float')){await page.locator('#tools').scrollIntoViewIfNeeded();await page.waitForFunction(()=>!document.querySelector('.home-contact-float').hidden)}
   const popupPromise=page.waitForEvent('popup');await page.locator(selector).click();const popup=await popupPromise;await popup.waitForLoadState();assert.equal(popup.url(),kakao);assert.equal(await popup.locator('p').textContent(),'카카오채널 이동 검증');await popup.close();
