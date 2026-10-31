@@ -25,6 +25,7 @@ async function result(key){
  if(key==='reviews'){
   var rows=[{kind:'challenge',challenge:'영합각',quote:'검증용 챌린지 후기입니다. '+('직접 연습하며 남긴 공개 후기의 원문을 확인하는 검증 문장입니다. ').repeat(6)},{kind:'ke20',quote:'검증용 수업 후기입니다. '+('원문을 바꾸지 않고 공개 후기를 보여주는지 확인합니다. ').repeat(6)},{kind:'consult',quote:'노출하면 안 되는 상담 후기'}];
   if(window.__mode==='keonly')rows=rows.filter(r=>r.kind==='ke20');
+  if(window.__mode==='short')rows=[{kind:'ke20',quote:'짧은 원문 표시를 확인하는 검증 문장입니다.'}];
   if(window.__mode==='image')rows=[{kind:'ke20',url:'${base}/images/og-image.png'}];
   return{data:rows};
  }
@@ -65,11 +66,14 @@ try{
   assert.equal(await page.locator('.service-card').first().evaluate(e=>e.offsetHeight),await page.locator('.service-card').last().evaluate(e=>e.offsetHeight));
   assert.equal(await page.locator('.monc-person img').first().evaluate(e=>getComputedStyle(e).filter),'none');
   assert.equal(await page.locator('.home-review').count(),2);assert.equal(await page.locator('.home-program-links').isVisible(),false);
+  assert.ok((await page.locator('.home-review-quote').allTextContents()).every(text=>Array.from(text).length<=51),'짧은 후기 미리보기');
+  assert.equal(await page.locator('.home-review-quote').first().evaluate(e=>getComputedStyle(e).fontSize),width<=600?'18px':'20px');
+  assert.equal(await page.locator('.review-original>p').first().isVisible(),false,'원문은 처음에 접힘');
   assert.deepEqual(await page.locator('.monc-person h3').allTextContents(),await page.evaluate(()=>MONC_RESEARCHERS.map(p=>p.name)));
   await page.locator('#homeResearcherNext').click();await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='2 / 6');
   await page.locator('#homeResearchers').press('ArrowLeft');await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='1 / 6');
   await page.locator('.person-details summary').first().click();assert.ok(await page.locator('.person-details').first().evaluate(e=>e.open));await page.locator('.person-details summary').first().click();
-  await page.locator('.review-original summary').first().click();assert.ok(await page.locator('.review-original').first().evaluate(e=>e.open));await layout(page);await page.locator('.review-original summary').first().click();
+  await page.locator('.review-original summary').first().click();assert.ok(await page.locator('.review-original').first().evaluate(e=>e.open));assert.equal(await page.locator('.review-original>p').first().isVisible(),true);assert.equal(await page.locator('.review-original>p').first().textContent(),await page.evaluate(async()=>(await result('reviews')).data.find(row=>row.kind==='ke20').quote.trim()));await layout(page);await page.locator('.review-original summary').first().click();
   assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
   assert.deepEqual(await page.locator('#homeCommunityStudies .home-community-tag').allTextContents(),['모집 중','정원 마감','모집 종료']);
   assert.deepEqual(await page.evaluate(()=>window.__rpcs.find(r=>r.args.p_action==='posts').args.p_data),{limit:3,topic:'prep'});
@@ -94,12 +98,13 @@ try{
  report.checks.push('4개 폭·창문 원본·사진 컬러·캡션 제거·연구진/후기 펼침·메뉴·공개 목록·44px');
  for(const auth of ['guest','member','admin']){const {page,context}=await make(375,auth);await page.waitForFunction(()=>document.querySelector('.nav-my').getAttribute('href'));assert.match(await page.locator('.nav-my').getAttribute('href'),auth==='guest'?/^login.html/:/^mypage.html/);assert.equal(await page.locator('.nav-admin').isVisible(),auth==='admin');await context.close()}
  {const {page,context}=await make(375,'guest',true);await page.waitForLoadState('networkidle');assert.equal(await page.locator('.home-booking-button').getAttribute('href'),'consult.html');await context.close()}
- for(const mode of ['empty','error','keonly','image']){
+ for(const mode of ['empty','error','keonly','image','short']){
   const {page,context}=await make();await page.evaluate(m=>window.__mode=m,mode);await loadData(page);
   if(mode==='error'){assert.ok(await page.locator('.home-retry').isVisible());await page.evaluate(()=>window.__mode='normal');await page.locator('.home-retry').click();await page.locator('#homeReviews[aria-busy=false]').waitFor();assert.equal(await page.locator('.home-review').count(),2);await page.locator('#homeCommunityPosts .home-community-retry').click();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();assert.equal(await page.locator('#homeCommunityPosts article').count(),3)}
   if(mode==='empty'){assert.equal(await page.locator('.home-review').count(),0);assert.ok(await page.locator('.home-program-links').isVisible())}
   if(mode==='keonly'){assert.equal(await page.locator('.home-review').count(),1);assert.ok(await page.locator('[data-review-list=challenge]').isVisible())}
   if(mode==='image'){assert.equal(await page.locator('.home-review img').count(),1);await page.locator('.home-review img').evaluate(e=>e.dispatchEvent(new Event('error')));assert.equal(await page.locator('.home-review img').count(),0)}
+  if(mode==='short'){assert.equal(await page.locator('.home-review-quote').textContent(),'짧은 원문 표시를 확인하는 검증 문장입니다.');assert.equal(await page.locator('.review-original').count(),0)}
   await layout(page);await context.close();
  }
  const {page,context}=await make();await loadData(page);

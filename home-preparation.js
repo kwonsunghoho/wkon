@@ -17,15 +17,19 @@
     var body = '';
     if (quote.trim()) {
       // 원문 앞부분만 발췌하며 전체 내용도 사용자가 펼쳐 볼 수 있게 한다.
-      var text = quote.trim(), preview = Array.from(text).slice(0,120).join('');
-      var shortened = preview.length < text.length;
+      var text = quote.trim(), characters = Array.from(text), preview = characters.slice(0,50).join('');
+      var shortened = characters.length > 50;
       if (shortened) {
         var sentence = preview.match(/^[\s\S]*[.!?。！？](?=\s|$)/);
-        if (sentence && sentence[0].length >= 40) preview = sentence[0];
+        if (sentence && sentence[0].length >= 20) preview = sentence[0];
+        else {
+          var wordEnd = preview.lastIndexOf(' ');
+          if (wordEnd >= 30) preview = preview.slice(0,wordEnd);
+        }
         preview = preview.trimEnd() + '…';
       }
       body = '<span class="review-quote-mark quote-mark" aria-hidden="true">“</span><blockquote class="home-review-quote">' + esc(preview) + '</blockquote>';
-      if (shortened) body += '<details class="review-original review-details"><summary>후기 원문 더 읽기 <span aria-hidden="true">＋</span></summary><p>' + esc(text) + '</p></details>';
+      if (shortened) body += '<details class="review-original review-details"><summary>원문 더보기 <span aria-hidden="true">＋</span></summary><p>' + esc(text) + '</p></details>';
     } else {
       var src = row.image_path || row.url;
       if (!src) return '';
@@ -38,7 +42,7 @@
     }
     return '<article class="home-review review-card" data-review-kind="' + kind + '"><div class="home-review-heading review-meta"><h3>' + label + '</h3>' +
       (course ? '<span>' + esc(course) + '</span>' : '<span>공개 원문 발췌</span>') + '</div>' + body +
-      '<a class="home-review-more text-link" href="reviews-list.html?kind=' + kind + '">' + label + ' 더 보기 <span aria-hidden="true">→</span></a></article>';
+      '<a class="home-review-more text-link" href="reviews-list.html?kind=' + kind + '">' + label + ' 전체 보기 <span aria-hidden="true">→</span></a></article>';
   }
   function syncLinks() {
     document.querySelectorAll('[data-review-list]').forEach(function (link) {
