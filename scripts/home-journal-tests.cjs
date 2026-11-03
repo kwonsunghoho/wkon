@@ -38,6 +38,12 @@ function query(table){window.__reads.push(table);var q={select:()=>q,in:()=>q,eq
 window.MONC={getSession:async()=>${JSON.stringify(auth)}==='guest'?null:{user:{id:'local-test'}},getMyProfile:async()=>({name:'검증용 회원',role:${JSON.stringify(auth)}==='admin'?'admin':'member'}),sb:{from:query,rpc:async(name,args)=>{window.__rpcs.push({name,args});return result(args.p_action)}}};
 `;
 fs.mkdirSync(out,{recursive:true});
+// 검토용 화면도 같은 합성 자료를 사용하고 회원·계측 호출은 제거한다.
+const preview=current.replace(/<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?clarity\.ms(?:(?!<\/script>)[\s\S])*?<\/script>/g,'')
+ .replace(/<script\b[^>]*src="https:[^"]+"[^>]*><\/script>/g,'')
+ .replace(/<script src="supabase-config\.js"><\/script>/,()=>'<script>'+stub('guest')+'</script>')
+ .replace('<head>','<head><base href="/"><meta http-equiv="Content-Security-Policy" content="connect-src &#39;self&#39;; form-action &#39;none&#39;">');
+fs.writeFileSync(path.join(out,'preview.html'),preview);
 const report={widths:[],checks:[],errors:[]};
 (async()=>{
 const browser=await chromium.launch({headless:true,executablePath:opt('--browser','C:/Program Files (x86)/Google/Chrome/Application/chrome.exe')});
@@ -111,7 +117,7 @@ try{
   await layout(page);await context.close();
  }
  const {page,context}=await make();await loadData(page);
- const linkChecks=[['.journal-online .button','online-courses.html'],['.journal-challenge .button','challenges.html'],['.tool-card[href="sojae.html"]','sojae.html'],['.tool-card[href="polish.html"]','polish.html'],['.tool-card[href="lab-airline.html"]','lab-airline.html'],['.tool-card[href="games.html"]','games.html'],['.people-section .text-link','researchers.html'],['.community-links a[href="community.html?view=studies"]','community.html?view=studies'],['.community-links a[href="community.html?view=board&topic=prep"]','community.html?view=board&topic=prep'],['.community-links a[href="lectures.html"]','lectures.html']];
+ const linkChecks=[['.journal-online .button','online-courses.html'],['.journal-challenge .button','challenges.html'],['.tool-card[href="sojae.html"]','sojae.html'],['.tools-section .text-link','tools.html'],['.tool-card[href="lab-airline.html"]','lab-airline.html'],['.tool-card[href="games.html"]','games.html'],['.people-section .text-link','researchers.html'],['.community-links a[href="community.html?view=studies"]','community.html?view=studies'],['.community-links a[href="community.html?view=board&topic=prep"]','community.html?view=board&topic=prep'],['.community-links a[href="lectures.html"]','lectures.html']];
  for(const [selector,destination] of linkChecks){await page.route(base+'/'+destination,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>이동 검증</p>'}));await page.locator(selector).first().click();assert.equal(new URL(page.url()).pathname+new URL(page.url()).search,'/'+destination);assert.equal(await page.locator('p').textContent(),'이동 검증');await page.goBack()}
  const kakao='https://pf.kakao.com/_iajxnX/chat';
  await context.route(kakao,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<p>카카오채널 이동 검증</p>'}));
