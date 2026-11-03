@@ -50,19 +50,44 @@
     const date=new Date(value);
     return !value||Number.isNaN(date.getTime())?'':'<time datetime="'+esc(date.toISOString())+'">'+esc(new Intl.DateTimeFormat('ko-KR',{year:'numeric',month:'numeric',day:'numeric',timeZone:'Asia/Seoul'}).format(date))+'</time>';
   }
+  function activeLectures(rows){
+    const now=Date.now(),parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(now));
+    const part=type=>parts.find(item=>item.type===type).value,today=part('year')+'-'+part('month')+'-'+part('day');
+    const day=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:null;
+    return rows.filter(row=>{
+      if(row.visible===false||day(row.recruit_end)&&row.recruit_end<today)return false;
+      const slots=row._slots||[];
+      if(slots.length){
+        const next=slots.filter(slot=>day(slot.slot_date)&&slot.slot_date>=today&&slot.seats_left!==0&&(!slot.end_time||Date.parse(slot.slot_date+'T'+slot.end_time+'+09:00')>=now)).sort((a,b)=>a.slot_date.localeCompare(b.slot_date));
+        if(!next.length)return false;
+        row._home_date=next[0].slot_date;return true;
+      }
+      return row.seats_left!==0&&(!day(row.lecture_date)||row.lecture_date>=today);
+    });
+  }
+  async function lectureRequest(){
+    const result=await MONC.sb.from('special_lectures').select('*').eq('visible',true).order('created_at',{ascending:false});
+    if(result.error||!Array.isArray(result.data)||!result.data.length)return result;
+    const ids=result.data.map(row=>row.id).filter(validId);
+    if(!ids.length)return result;
+    const slots=await MONC.sb.from('lecture_slots').select('lecture_id,slot_date,end_time,seats_left').in('lecture_id',ids);
+    if(slots.error||!Array.isArray(slots.data))throw new Error('특강 일정 조회 실패');
+    return {data:result.data.map(row=>({...row,_slots:slots.data.filter(slot=>slot.lecture_id===row.id)}))};
+  }
   function rowHtml(row,action){
     let status='',date=dateHtml(row.created_at);
     if(action==='studies'){
       if(row.status==='closed')status='모집 종료';
       else if(row.status==='open')status=row.members!=null&&row.capacity!=null&&Number.isFinite(Number(row.members))&&Number.isFinite(Number(row.capacity))&&Number(row.members)>=Number(row.capacity)?'정원 마감':'모집 중';
     }
-    if(action==='lectures'){date=dateHtml(row.lecture_date);status=date?'일정':'일정은 상세에서 확인';}
+    if(action==='lectures'){date=dateHtml(row._home_date||row.lecture_date);status=date?'일정':'일정은 상세에서 확인';}
     const href=action==='lectures'?'lecture.html?id='+encodeURIComponent(row.id):'community.html?view='+(action==='posts'?'thread':'study')+'&id='+encodeURIComponent(row.id)+(action==='posts'?'&topic=prep':'');
     return '<article class="home-community-row"><a class="home-community-title" href="'+esc(href)+'" data-feed-action="'+action+'" data-feed-item="'+esc(row.id)+'" title="'+esc(row.title)+'"'+(action==='lectures'?' data-home-action="home_lecture_service"':'')+'><span>'+esc(row.title)+'</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a><div class="home-community-meta">'+(status?'<span class="home-community-tag">'+status+'</span>':'')+date+'</div></article>';
   }
   function render(action,rows){
     const node=nodes[action],snapshot=JSON.stringify(rows),shell=node.closest('.choice-feed-shell');
     node.querySelector('.home-community-stale')?.remove();shell.dataset.empty=String(rows.length===0);
+    if(action==='lectures')shell.hidden=rows.length===0;
     if(rendered[action]!==snapshot){
       const open=node.querySelector('details')?.open,active=document.activeElement,href=node.contains(active)?active.getAttribute('href'):null,summary=node.contains(active)&&active.tagName==='SUMMARY';
       node.innerHTML=rows.length?rowHtml(rows[0],action)+(rows.length>1?'<details class="community-feed"'+(open?' open':'')+'><summary><span>소식 더보기</span><span aria-hidden="true">＋</span></summary>'+rows.slice(1).map(row=>rowHtml(row,action)).join('')+'</details>':''):'<p class="home-community-status" role="status">'+empty[action]+'</p>';
@@ -83,14 +108,20 @@
     let timeout;
     try{
       if(!window.MONC?.sb)throw new Error('연결 없음');
-      const request=action==='lectures'?MONC.sb.from('special_lectures').select('*').eq('visible',true).order('created_at',{ascending:false}).limit(3):MONC.sb.rpc('community_read',{p_action:action,p_data:action==='posts'?{limit:3,topic:'prep'}:{limit:3}});
+      const request=action==='lectures'?lectureRequest():MONC.sb.rpc('community_read',{p_action:action,p_data:action==='posts'?{limit:3,topic:'prep'}:{limit:3}});
       const result=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('시간 초과')),12000);})]);
       if(result.error||(action==='lectures'?!Array.isArray(result.data):!result.data?.ok||!Array.isArray(result.data.items)))throw new Error('목록 오류');
-      const rows=(action==='lectures'?result.data:result.data.items).filter(row=>row&&validId(row.id)&&typeof row.title==='string'&&row.title.trim()&&(action!=='lectures'||row.visible!==false)).slice(0,3);
+      let rows=(action==='lectures'?result.data:result.data.items).filter(row=>row&&validId(row.id)&&typeof row.title==='string'&&row.title.trim());
+      rows=(action==='lectures'?activeLectures(rows):rows).slice(0,3);
       const hadData=rendered[action]!==undefined,arrivals=notice(action,rows);current[action]=rows;render(action,rows);
       if(hadData&&arrivals)node.closest('.choice-feed-shell').querySelector('.feed-announcement').textContent='새 '+labels[action]+'이 도착했습니다.';
     }catch(_){
       const shell=node.closest('.choice-feed-shell');shell.dataset.empty='false';
+      if(action==='lectures'){
+        const remaining=activeLectures(current[action]||[]);current[action]=remaining;
+        if(rendered[action]!==undefined)render(action,remaining);
+        shell.hidden=false;shell.dataset.empty='false';
+      }
       if(rendered[action]===undefined)retry(node,action,labels[action]+'을 불러오지 못했습니다.');
       else if(!node.querySelector('.home-community-stale')){
         const message=document.createElement('div');message.className='home-community-stale';
