@@ -153,12 +153,14 @@
     input.value='';input.focus();
   }
   function studyForm(s={}) {
+    const timeRange=/^(\d{2}:\d{2})\s*[~～–-]\s*(\d{2}:\d{2})$/.exec(s.schedule||'');
     const isTime=/^\d{2}:\d{2}$/.test(s.schedule||'');
+    const legacySchedule=!timeRange&&!isTime?s.schedule||'':'';
     form(s.id?'모집글 수정':'스터디 모집하기','study',
       `<input type="hidden" name="id" value="${esc(s.id||'')}">`+
       field('title','스터디 이름',s.title,'text',100,true)+field('goals','목표 항공사·면접',s.goals)+
       select('mode','진행 방식',{online:'온라인',offline:'오프라인'},s.mode||'online')+field('location','지역·장소 (오프라인 필수)',s.location)+
-      `<div class="cm-field"><label class="cm-label" for="f-schedule">모임 시간</label><input id="f-schedule" name="schedule" type="time" step="60" value="${isTime?esc(s.schedule):''}" data-existing-schedule="${esc(!isTime?s.schedule||'':'')}" aria-describedby="cm-time-help"><p id="cm-time-help" class="cm-help">${!isTime&&s.schedule?`기존 일정: ${esc(s.schedule)}. 시간을 선택하면 새 시간으로 변경됩니다. `:''}요일·반복 일정은 모집 소개에 적어 주세요.</p></div>`+
+      `<div class="cm-time-range"><div class="cm-field"><label class="cm-label" for="f-schedule">시작 시간</label><input id="f-schedule" name="schedule" type="time" step="60" value="${esc(timeRange?timeRange[1]:isTime?s.schedule:'')}" data-existing-schedule="${esc(legacySchedule)}" aria-describedby="cm-time-help"></div><div class="cm-field"><label class="cm-label" for="f-schedule-end">종료 시간</label><input id="f-schedule-end" name="schedule_end" type="time" step="60" value="${esc(timeRange?timeRange[2]:'')}" aria-describedby="cm-time-help"></div></div><p id="cm-time-help" class="cm-help">${legacySchedule?`기존 일정: ${esc(legacySchedule)}. 시간을 변경하려면 시작·종료 시간을 모두 선택해 주세요. `:''}종료는 시작보다 늦은 시간으로 선택해 주세요. 요일·반복 일정은 모집 소개에 적어 주세요.</p>`+
       select('capacity','전체 인원 (모집자 포함)',Object.fromEntries(Array.from({length:11},(_,i)=>[i+2,(i+2)+'명'])),s.capacity||'4')+
       field('description','진행 방식·모집 소개',s.description,'textarea',5000,true)+
       `<section class="cm-study-options" aria-labelledby="cm-conditions-label"><h3 id="cm-conditions-label">모집 조건 <span>(선택)</span></h3><p class="cm-help">함께할 분에게 바라는 점을 직접 적어 주세요. 조건 없이도 모집할 수 있어요.</p><div data-study-conditions>${(s.recruitment_conditions||[]).map(conditionRow).join('')}</div>${btn('condition-add','+ 조건 추가','',true)}</section>`+
@@ -173,7 +175,12 @@
     length('title','스터디 이름을',4,100);
     length('goals','목표 항공사·면접을',0,100);
     length('description','모집 소개를',10,5000);
-    if(f.elements.schedule.validity.badInput||(!value('schedule')&&!f.elements.schedule.dataset.existingSchedule))errors.push(['schedule','모임 시간을 선택해 주세요.']);
+    const start=value('schedule'),end=value('schedule_end'),keepLegacy=!start&&!end&&f.elements.schedule.dataset.existingSchedule&&!f.elements.schedule.validity.badInput&&!f.elements.schedule_end.validity.badInput;
+    if(!keepLegacy){
+      if(!start||f.elements.schedule.validity.badInput)errors.push(['schedule','시작 시간을 선택해 주세요.']);
+      if(!end||f.elements.schedule_end.validity.badInput)errors.push(['schedule_end','종료 시간을 선택해 주세요.']);
+      else if(start&&end<=start)errors.push(['schedule_end','종료 시간은 시작 시간보다 늦게 선택해 주세요.']);
+    }
     if(value('mode')==='offline'&&!value('location'))errors.push(['location','오프라인 모임의 지역·장소를 입력해 주세요.']);
     else length('location','지역·장소를',0,100);
     if(!['online','offline'].includes(value('mode')))errors.push(['mode','온라인 또는 오프라인을 선택해 주세요.']);
@@ -242,7 +249,8 @@
       if(f.dataset.form==='study') {
         const problems=studyErrors(f);showStudyErrors(f,problems);
         if(problems.length){error.textContent=`수정할 항목이 ${problems.length}개 있어요. 각 입력칸 아래 안내를 확인해 주세요.`;error.hidden=false;return;}
-        d.schedule=d.schedule||f.elements.schedule.dataset.existingSchedule;
+        d.schedule=d.schedule?`${d.schedule} ~ ${d.schedule_end}`:f.elements.schedule.dataset.existingSchedule;
+        delete d.schedule_end;
       }
       if(!(await member()))return;
       switch(f.dataset.form) {
