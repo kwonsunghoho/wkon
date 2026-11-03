@@ -1,4 +1,4 @@
-/* ── 특강(lectures.html · lecture.html · index 홈 섹션) 공용 헬퍼 ──
+/* ── 특강 목록·상세·관리자 공용 헬퍼 ──
    날짜·상태·이스케이프 등 순수 유틸 + 항공사 매핑 + 카드 마크업 빌더.
    카드 스타일은 lectures.css 한 곳에서 관리(세 페이지 공용). Supabase 접근은 각 페이지가 MONC.sb로 직접. */
 (function () {
@@ -24,6 +24,33 @@
     if (s && today < s) return 'upcoming';
     if (e) { const ee = new Date(e); ee.setHours(23, 59, 59, 999); if (today > ee) return 'closed'; }
     return 'open';
+  }
+
+  // 목록 표시 전용 상태. 신청·결제의 모집 판정(status)과 서버 권한은 바꾸지 않는다.
+  function cardState(l, now = new Date()) {
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    const day = value => {
+      const text = String(value || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return '';
+      const stamp = Date.parse(text + 'T00:00:00Z');
+      return Number.isFinite(stamp) && new Date(stamp).toISOString().slice(0, 10) === text ? text : '';
+    };
+    const slots = sortSlots(l._slots);
+    // 시간대 조회가 실패하면 최초 진행일만으로 여러 일정 전체가 끝났다고 단정하지 않는다.
+    const schedule = Array.isArray(l._slots) ? (slots.length ? slots : [{ slot_date: l.lecture_date }]) : [];
+    const ended = schedule.length && schedule.every(s => {
+      const date = day(s.slot_date);
+      if (!date) return false;
+      if (date < today) return true;
+      if (date !== today || !/^\d{2}:\d{2}(:\d{2})?$/.test(String(s.end_time || ''))) return false;
+      return Date.parse(date + 'T' + s.end_time + '+09:00') < now.getTime();
+    });
+    if (ended) return { state: 'ended', label: '특강 종료', endedOn: schedule.map(s => day(s.slot_date)).sort().at(-1) };
+    if (l.seats_left === 0) return { state: 'closed', label: '정원 마감' };
+    if (day(l.recruit_end) && l.recruit_end < today) return { state: 'closed', label: '신청 마감' };
+    if (day(l.recruit_start) && l.recruit_start > today) return { state: 'upcoming', label: '모집 예정' };
+    if ((!Array.isArray(l._slots) && day(l.lecture_date) && l.lecture_date < today) || slots.some(s => !day(s.slot_date))) return { state: 'unknown', label: '일정 확인 필요' };
+    return { state: 'open', label: '모집 중' };
   }
 
   function ddaySuffix(end) {
@@ -159,9 +186,9 @@
       shot ? '--lx-shot:url(&quot;' + esc(shot) + '&quot;)' : '',
     ].filter(Boolean).join(';');
     const accentStyle = vars ? ' style="' + vars + '"' : '';
-    const st = status(l.recruit_start, l.recruit_end);
-    const soldOut = l.seats_left === 0;
-    const isOut = soldOut || st === 'closed';
+    const availability = cardState(l);
+    const st = availability.state;
+    const isOut = st === 'ended' || st === 'closed';
     // 가격은 커버 배지가 아니라 정보부 맨 아래 한 줄로 말한다(2026-07-24 A안).
     // 무료도 이 줄 하나로만 — 배지와 두 번 말하지 않는다.
     // 초록 강조는 '무료'라는 단어에만 — '상담 시 안내' 같은 관리자 문구는 금액처럼 네이비.
@@ -172,10 +199,8 @@
 
     let third = '';
     if (st === 'upcoming') third = mi(IC.seat, '신청 예정');
-    // 자리가 찬 것과 기간이 끝난 것은 다른 사정이라 문구를 나눈다(잔여석은 신청마다 자동 계산)
-    else if (isOut) third = mi(IC.seat, soldOut ? '정원 마감' : '신청 마감');
     // 잔여석 숨김 특강은 이 줄을 비운다(마감 문구는 위에서 이미 처리 — 숨겨도 마감은 말한다)
-    else if (seatsVisible(l) && l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
+    else if (st === 'open' && seatsVisible(l) && l.seats_left != null) third = mi(IC.seat, '잔여 ' + l.seats_left + '석', l.seats_left <= 5 ? 'seats-low' : '');
 
     // 시간대가 여럿이면 '7월 24일(금) · 3개 타임'(날짜가 갈리면 '… 외 · N개 타임').
     // 호출부가 l._slots 를 붙여줬을 때만 — 없으면 지금까지처럼 진행일 한 줄이다.
@@ -195,19 +220,22 @@
       third,
     ].filter(Boolean).join('');
 
-    return '<a class="lx-card' + (isOut ? ' is-out' : '') + (shot ? ' has-shot' : '') + '"' + accentStyle
+    const cover = isOut
+      ? '<div class="lx-closed-cover"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg>'
+        + '<strong>' + esc(availability.label) + '</strong><span>'
+        + (st === 'ended' ? esc(fmtDate(availability.endedOn)) + ' 진행' : '신청이 마감된 특강입니다.') + '</span></div>'
+      : '<span class="lx-availability">' + esc(availability.label) + '</span><div class="lx-txt">'
+        + (air ? '<div class="lx-en">' + esc(air.en) + '</div>' : '')
+        + '<div class="lx-ko">' + esc(l.title) + '</div><hr class="lx-rule"></div>';
+    return '<a class="lx-card' + (isOut ? ' is-out' : '') + (shot ? ' has-shot' : '') + '" data-lecture-state="' + st + '"' + accentStyle
+      + (isOut ? ' aria-label="' + esc(l.title + ' · ' + availability.label + ' · 특강 안내 보기') + '"' : '')
       + ' href="lecture.html?id=' + encodeURIComponent(l.id) + '">'
-      + '<div class="lx-cover">'
-      +   '<div class="lx-txt">'
-      +     (air ? '<div class="lx-en">' + esc(air.en) + '</div>' : '')
-      +     '<div class="lx-ko">' + esc(l.title) + '</div>'
-      +     '<hr class="lx-rule">'
-      +   '</div>'
-      + '</div>'
+      + '<div class="lx-cover">' + cover + '</div>'
       + '<div class="lx-info">'
+      +   (isOut ? '<h2 class="lx-closed-title">' + esc(l.title) + '</h2>' : '')
       +   (l.subtitle ? '<div class="lx-copy">' + esc(l.subtitle) + '</div>' : '')
       +   (meta ? '<div class="lx-meta">' + meta + '</div>' : '')
-      +   priceLine
+      +   (isOut ? '<div class="lx-closed-link"><span>특강 안내 보기</span><span aria-hidden="true">→</span></div>' : priceLine)
       + '</div>'
       + '</a>';
   }
@@ -241,7 +269,7 @@
   }
 
   window.LEC = {
-    esc, parseDate, status, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl,
+    esc, parseDate, status, cardState, ddaySuffix, fmtDate, fmtPeriod, AIRLINES, airline, shotUrl,
     cardHtml, skeletonHtml,
     fmtTime, slotWhen, slotShort, slotFull, seatsVisible, priceText, isDeposit, priceLabel, DEPOSIT_NOTE, sortSlots, attachSlots,
   };
