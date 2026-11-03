@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-11-03-curriculum'
+const FN_VERSION = '2026-11-03-multi-course'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -30,6 +30,17 @@ Deno.serve(async(req)=>{
   if(b.probe===true)return reply({ok:true,fn:'online-course',version:FN_VERSION})
   const supa=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const courseId=String(b.courseId||'expression-advanced')
+  if(b.action==='catalog-list'){
+   // 공개 과정과 공개 회차만 반환한다. 영상 경로와 관리자 필드는 노출하지 않는다.
+   const courses=[]
+   for(let offset=0;;offset+=100){
+    const {data:rows,error}=await supa.from('online_courses').select('*').eq('published',true).order('created_at').order('id').range(offset,offset+99)
+    if(error)return fail('not_ready')
+    for(const c of rows||[])courses.push({id:c.id,title:c.title,description:c.description,price:c.price,accessDays:c.access_days,saleOpen:c.sale_open})
+    if(!rows||rows.length<100)break
+   }
+   return reply({ok:true,courses})
+  }
   if(b.action==='catalog'){
    const {data:c,error}=await supa.from('online_courses').select('*').eq('id',courseId).eq('published',true).maybeSingle()
    if(error)return fail('not_ready')
@@ -78,6 +89,15 @@ Deno.serve(async(req)=>{
   // 관리자는 JWT 실사용자와 현재 회원 역할을 매 요청마다 확인한다.
   if(String(b.action).startsWith('admin-')){
    if(member.role!=='admin')return reply({ok:false,error:'forbidden'},403)
+   if(b.action==='admin-create-course'){
+    if(typeof b.title!=='string'||!b.title.trim()||b.title.length>100||!/^([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.test(String(b.requestId)))return fail('invalid_fields')
+    // 같은 등록 요청을 재시도해도 새 과정을 중복 생성하거나 기존 내용을 덮어쓰지 않는다.
+    const id='course-'+b.requestId.toLowerCase()
+    const {error}=await supa.from('online_courses').insert({id,title:b.title.trim(),access_days:14,published:false,sale_open:false,price:null})
+    if(error&&error.code!=='23505')return fail('save_failed')
+    const {data:created,error:ce}=await supa.from('online_courses').select('*').eq('id',id).maybeSingle()
+    return ce||!created?fail('save_failed'):reply({ok:true,course:created})
+   }
    const {data:c,error:ce}=await supa.from('online_courses').select('*').eq('id',courseId).maybeSingle()
    if(ce||!c||!Number.isInteger(c.revision))return fail('not_ready')
    if(b.action==='admin-orders'){

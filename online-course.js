@@ -49,17 +49,25 @@
    if($('#purchase-scope'))$('#purchase-scope').textContent='수강권은 ‘'+c.title+'’ 과정에만 적용됩니다.';
    for(const name of ['og:title','twitter:title'])document.querySelector('meta[property="'+name+'"],meta[name="'+name+'"]')?.setAttribute('content',document.title);
    document.querySelector('meta[property="og:url"]')?.setAttribute('content','https://monc.ai.kr/course.html?course='+encodeURIComponent(c.id));
+   $('.cover')?.removeAttribute('hidden');
+   if(c.id==='expression-advanced'&&$('.intro .lead'))$('.intro .lead').textContent='답변 구성부터 표정·시선·촬영까지. 승무원 영상면접을 더 구체적으로 준비하세요.';
    // 다른 과정에서 영합각 전용 장면·소개를 재사용하지 않는다.
-   if(c.id!=='expression-advanced'){$('.cover')?.setAttribute('hidden','');if($('.intro .lead'))$('.intro .lead').textContent=c.description;document.querySelectorAll('.terms dt').forEach(el=>{if(el.textContent==='개별 피드백')el.parentElement.hidden=true;});if($('.purchase .policy'))$('.purchase .policy').textContent=c.purchaseNotice||'구매 전 과정별 안내를 확인해 주세요.';}
+   if(c.id!=='expression-advanced'){
+    const cover=$('.cover');if(cover){cover.classList.add('generic-cover');cover.innerHTML='<span>MONC ONLINE CLASS</span><strong>'+esc(c.title)+'</strong><span>승무원 면접 전문 브랜드</span>';cover.hidden=false;}
+    if($('.intro .lead'))$('.intro .lead').textContent=c.description||'내 속도에 맞춰 학습하는 온라인 과정입니다.';
+    if($('.crumb b'))$('.crumb b').textContent='승무원 면접';
+    if($('.purchase .policy'))$('.purchase .policy').textContent='개별 피드백은 과정 전체 1회 제공됩니다. 첫 재생일부터 '+Math.min(14,c.accessDays||14)+'일 이내에 과제·피드백에서 제출해 주세요. 답변은 영업일 5일 이내 제공되며, 받은 피드백 글은 수강 종료 후에도 확인할 수 있습니다. 과정별 구매·환불 조건은 결제 전 안내를 확인해 주세요.';
+   }
    $('#course-description').textContent=c.description;$('#course-price').textContent=c.price?money(c.price):'준비 중';$('#course-period').textContent=c.accessDays?`첫 재생일부터 ${c.accessDays}일`:'준비 중';$('#purchase-consent-wrap').hidden=!c.saleOpen;$('#course-purchase-notice').textContent=c.purchaseNotice||'';$('#course-purchase-notice').hidden=!c.purchaseNotice;$('#course-sale-note').textContent=c.saleOpen?'결제 후 내 강의실에서 시작할 수 있습니다.':'판매 준비 중입니다.';
    if($('#purchase-price')){$('#purchase-price').textContent=c.price?money(c.price):'준비 중';$('#purchase-period').textContent=$('#course-period').textContent;$('#purchase-confirm').textContent=c.price?money(c.price)+' 결제하기':'결제하기';}
+   if(!r.lessons.length){$('#course-count').textContent='강의 준비 중';$('#course-curriculum').innerHTML='<p>강의 구성을 준비하고 있습니다.</p>';}
    if(r.lessons.length){
     if($('#course-count')){
      const seconds=r.lessons.reduce((sum,l)=>sum+(Number(l.duration)||0),0);
      const total=`${Math.floor(seconds/60)}분 ${Math.floor(seconds%60)}초`;
      $('#course-count').textContent=`${r.lessons.length}개 강의 · 총 ${total}`;$('#course-duration').textContent=total;
      const count=r.lessons.reduce((n,l)=>n+(Array.isArray(l.chapters)?l.chapters.length:0),0);$('#course-duration').textContent=r.lessons.length+'개 강의 · 총 '+total;
-     $('#course-curriculum').innerHTML=(count?'<p class="curriculum-lead">답변 구성부터 실전 모의촬영까지, '+count+'개 챕터로 학습합니다.</p>':'')+r.lessons.map((l,i)=>{const chapters=Array.isArray(l.chapters)?l.chapters:[];const part=/[（(]([상하])[）)]/.exec(l.title);return '<details class="curriculum-part" '+(!matchMedia('(max-width:800px)').matches||i===0?'open':'')+'><summary><span class="part-tag">'+esc(part?part[1]+'편':(i+1)+'강')+'</span><span class="part-name">'+esc(part?l.title.replace(/\s*[（(][상하][）)]/,''):l.title)+'<span class="part-meta">'+(chapters.length?chapters.length+'개 챕터 · ':'')+Math.floor(l.duration/60)+'분 '+Math.floor(l.duration%60)+'초</span></span><span class="part-toggle" aria-hidden="true"></span></summary>'+(chapters.length?'<ul class="chapter-list">'+chapters.map(ch=>'<li><span class="chapter-order" aria-hidden="true">•</span><span class="chapter-title">'+esc(ch.title)+'</span></li>').join('')+'</ul>':'<p class="curriculum-empty">'+esc(l.chapter||'세부 커리큘럼 준비 중')+'</p>')+'</details>'}).join('');
+     $('#course-curriculum').innerHTML=(count?'<p class="curriculum-lead">'+count+'개 챕터로 학습합니다.</p>':'')+r.lessons.map((l,i)=>{const chapters=Array.isArray(l.chapters)?l.chapters:[];const part=/[（(]([상하])[）)]/.exec(l.title);return '<details class="curriculum-part" '+(!matchMedia('(max-width:800px)').matches||i===0?'open':'')+'><summary><span class="part-tag">'+esc(part?part[1]+'편':(i+1)+'강')+'</span><span class="part-name">'+esc(part?l.title.replace(/\s*[（(][상하][）)]/,''):l.title)+'<span class="part-meta">'+(chapters.length?chapters.length+'개 챕터 · ':'')+Math.floor(l.duration/60)+'분 '+Math.floor(l.duration%60)+'초</span></span><span class="part-toggle" aria-hidden="true"></span></summary>'+(chapters.length?'<ul class="chapter-list">'+chapters.map(ch=>'<li><span class="chapter-order" aria-hidden="true">•</span><span class="chapter-title">'+esc(ch.title)+'</span></li>').join('')+'</ul>':'<p class="curriculum-empty">'+esc(l.chapter||'세부 커리큘럼 준비 중')+'</p>')+'</details>'}).join('');
     }else{const groups=[...new Set(r.lessons.map(l=>l.chapter))];$('#course-curriculum').innerHTML=groups.map((g,i)=>`<details ${i===0?'open':''}><summary>${esc(g)}</summary><ol>${r.lessons.filter(l=>l.chapter===g).map(l=>`<li>${esc(l.title)}<span>${fmt(l.duration)}</span></li>`).join('')}</ol></details>`).join('');}
    }
   }catch(e){c=null;if($('#course-heading'))$('#course-heading').textContent='강의를 확인할 수 없습니다.';$('.cover')?.setAttribute('hidden','');message(errorText(e));}

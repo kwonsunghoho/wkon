@@ -5,8 +5,8 @@
  const qs=new URLSearchParams(location.search);if(qs.has('reset'))localStorage.removeItem(key);
  let state=JSON.parse(localStorage.getItem(key)||'{"enrollment":null,"progress":[]}');
  const persist=()=>localStorage.setItem(key,JSON.stringify(state));
- const course={id:'expression-advanced',title:'영합각 심화',description:'영상과 연습 자료로 혼자 학습하는 승무원 영상면접 심화과정입니다.',price:10000,accessDays:10,saleOpen:true,purchaseNotice:'수강 기간은 첫 재생일부터 10일입니다. 가격·강의 구성·구매 안내는 검증용 예시이며 결제가 발생하지 않습니다.'};
- if(qs.get('testCourse')==='second'){course.id='interview-test';course.title='검증용 면접 심화';course.description='과정 분리 확인용 설명';}
+ const course={id:'expression-advanced',title:'영합각 심화',description:'영상으로 학습하고 개별 피드백을 받는 승무원 면접 심화과정입니다.',price:10000,accessDays:10,saleOpen:true,purchaseNotice:'수강 기간은 첫 재생일부터 10일입니다. 가격·강의 구성·구매 안내는 검증용 예시이며 결제가 발생하지 않습니다.'};
+ if(qs.get('testCourse')==='second'||qs.get('course')==='interview-test'){course.id='interview-test';course.title='검증용 면접 심화';course.description='과정 분리 확인용 설명';course.price=49000;course.accessDays=21;course.purchaseNotice='첫 재생일부터 21일 수강 · 과정 전체 피드백 1회 · 검증용 예시이며 실제 결제 없음';}
  const lessons=[{id:'00000000-0000-4000-8000-000000000021',position:1,title:'재생 동작 확인용 영상',chapter:'기능 검증용 목차',duration:30,hasVideo:true,hasMaterial:true},{id:'00000000-0000-4000-8000-000000000022',position:2,title:'회차 이동 확인용 영상',chapter:'기능 검증용 목차',duration:30,hasVideo:true,hasMaterial:false}];
  const enroll=()=>{if(!state.enrollment)state.enrollment={id:eid,course_id:course.id,title:course.title,access_days:course.accessDays,started_at:null,expires_at:null,revoked_at:null,created_at:new Date().toISOString()};persist();};
  lessons[0].chapters=[{seconds:0,title:'시작 구간 (검증용)'},{seconds:10,title:'연습 구간 (검증용)'},{seconds:20,title:'정리 구간 (검증용)'}];
@@ -29,8 +29,9 @@
    const notes=Object.entries(state.notes).filter(([id])=>!b.lessonId||id===b.lessonId).map(([id,n])=>{const l=lessons.find(l=>l.id===id);return {...n,lessonId:id,lessonTitle:l.title,courseTitle:course.title,courseId:course.id,duration:l.duration,enrollmentId:ended()?null:eid};});
    return {data:{ok:true,notes,hasCourses:!!state.enrollment},error:null};
   }
-  if(b.action==='catalog'){if(qs.has('catalogFailure'))return {data:null,error:{message:'검증용 연결 실패'}};if(qs.has('catalogPrivate'))return {data:{ok:false,error:'not_published'},error:null};data={...data,course:{...course,description:'승무원 영상면접을 준비하며 답변과 표현을 구체적으로 점검하는 심화과정입니다. 답변 구성부터 미소와 시선, 호흡과 억양, 촬영 구도와 이미지까지 다룹니다.',saleOpen:!qs.has('saleClosed')},lessons};}
-  else if(b.action==='order')data=state.enrollment&&!ended()?{ok:false,error:'already_enrolled'}:{ok:true,paymentId:'local-course-payment',courseId:qs.has('wrongCourseOrder')?'wrong-course':course.id,title:course.title,amount:10000,accessDays:course.accessDays};
+  if(b.action==='catalog-list')return {data:{ok:true,courses:qs.has('catalogPrivate')?[]:[course,{...course,id:'interview-test',title:'검증용 면접 심화',price:49000,accessDays:21}]},error:qs.has('catalogFailure')?{}:null};
+  if(b.action==='catalog'){if(qs.has('catalogFailure'))return {data:null,error:{message:'검증용 연결 실패'}};if(qs.has('catalogPrivate'))return {data:{ok:false,error:'not_published'},error:null};data={...data,course:{...course,description:course.description,saleOpen:!qs.has('saleClosed')},lessons};}
+  else if(b.action==='order')data=state.enrollment&&!ended()?{ok:false,error:'already_enrolled'}:{ok:true,paymentId:'local-course-payment',courseId:qs.has('wrongCourseOrder')?'wrong-course':course.id,title:course.title,amount:course.price,accessDays:course.accessDays};
   else if(b.action==='library')data.enrollments=state.enrollment?[{...state.enrollment,progress:state.progress}]:[];
   else if(!state.enrollment)data={ok:false,error:'not_enrolled'};
   else if(b.action==='view')data={...data,course,enrollment:{...state.enrollment},lessons,progress:state.progress.map(p=>({...p})),expired:!!ended()};
