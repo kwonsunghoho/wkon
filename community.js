@@ -52,7 +52,7 @@
   function close() { dialog.close(); }
   dialog.addEventListener('close',()=>{document.body.classList.remove('cm-sheet-open');previousFocus?.focus();});
   dialog.addEventListener('click',e=>{if(e.target===dialog || e.target.closest('[data-close]')) close();});
-  function form(label,name,html,submit='저장하기') { open(label,`<form data-form="${name}">${html}<p class="cm-form-error" role="alert" hidden></p><button class="cm-btn cm-full" type="submit">${esc(submit)}</button></form>`); }
+  function form(label,name,html,submit='저장하기') { open(label,`<form data-form="${name}" ${name==='study'?'novalidate':''}>${html}<p class="cm-form-error" role="alert" hidden></p><button class="cm-btn cm-full" type="submit">${esc(submit)}</button></form>`); }
   async function member(profileNeeded=false) {
     const previousUser=session?.user.id;
     session=await MONC.getSession();
@@ -153,11 +153,12 @@
     input.value='';input.focus();
   }
   function studyForm(s={}) {
+    const isTime=/^\d{2}:\d{2}$/.test(s.schedule||'');
     form(s.id?'모집글 수정':'스터디 모집하기','study',
       `<input type="hidden" name="id" value="${esc(s.id||'')}">`+
       field('title','스터디 이름',s.title,'text',100,true)+field('goals','목표 항공사·면접',s.goals)+
       select('mode','진행 방식',{online:'온라인',offline:'오프라인'},s.mode||'online')+field('location','지역·장소 (오프라인 필수)',s.location)+
-      field('schedule','모임 시간',s.schedule,'text',100,true)+
+      `<div class="cm-field"><label class="cm-label" for="f-schedule">모임 시간</label><input id="f-schedule" name="schedule" type="time" step="60" value="${isTime?esc(s.schedule):''}" data-existing-schedule="${esc(!isTime?s.schedule||'':'')}" aria-describedby="cm-time-help"><p id="cm-time-help" class="cm-help">${!isTime&&s.schedule?`기존 일정: ${esc(s.schedule)}. 시간을 선택하면 새 시간으로 변경됩니다. `:''}요일·반복 일정은 모집 소개에 적어 주세요.</p></div>`+
       select('capacity','전체 인원 (모집자 포함)',Object.fromEntries(Array.from({length:11},(_,i)=>[i+2,(i+2)+'명'])),s.capacity||'4')+
       field('description','진행 방식·모집 소개',s.description,'textarea',5000,true)+
       `<section class="cm-study-options" aria-labelledby="cm-conditions-label"><h3 id="cm-conditions-label">모집 조건 <span>(선택)</span></h3><p class="cm-help">함께할 분에게 바라는 점을 직접 적어 주세요. 조건 없이도 모집할 수 있어요.</p><div data-study-conditions>${(s.recruitment_conditions||[]).map(conditionRow).join('')}</div>${btn('condition-add','+ 조건 추가','',true)}</section>`+
@@ -165,6 +166,38 @@
       `<details class="cm-study-advanced" ${s.min_level||s.require_experience||(s.required_skills||[]).length?'open':''}><summary>인증 조건 설정 (선택)</summary><p class="cm-help">설정하면 모집자와 지원자 모두 해당 조건을 충족해야 해요.</p>`+
       select('min_level','몬크 실력 레벨 조건',{0:'조건 없음',1:'몬크 Lv.1 이상',2:'몬크 Lv.2 이상',3:'몬크 Lv.3'},s.min_level||'0')+
       `<label class="cm-check"><input type="checkbox" name="require_experience" ${s.require_experience?'checked':''}>면접 진출 경험 인증 필수</label>${(s.required_skills||[]).length?`<fieldset><legend class="cm-label">기존 모집에 설정된 준비 조건</legend><p class="cm-help">기존 조건은 유지돼요. 필요하지 않은 항목은 해제할 수 있어요.</p><div class="cm-radio-list">${s.required_skills.map(v=>`<label class="cm-check"><input type="checkbox" name="required_skills" value="${esc(v)}" checked>${esc(skills[v])}</label>`).join('')}</div></fieldset>`:''}</details><p class="cm-help">지원 내용을 보고 모집자가 참여를 승인해 주세요. 연락처는 공개 모집글 대신 참여자 안내에 적어 주세요.</p>`,s.id?'수정하기':'모집 시작하기');
+  }
+  function studyErrors(f) {
+    const errors=[],value=name=>f.elements.namedItem(name)?.value?.trim()||'';
+    const length=(name,label,min,max)=>{const n=Array.from(value(name)).length;if(n<min||n>max)errors.push([name,`${label} ${min?min+'~'+max+'자로':max+'자 이하로'} 입력해 주세요. (현재 ${n}자)`]);};
+    length('title','스터디 이름을',4,100);
+    length('goals','목표 항공사·면접을',0,100);
+    length('description','모집 소개를',10,5000);
+    if(f.elements.schedule.validity.badInput||(!value('schedule')&&!f.elements.schedule.dataset.existingSchedule))errors.push(['schedule','모임 시간을 선택해 주세요.']);
+    if(value('mode')==='offline'&&!value('location'))errors.push(['location','오프라인 모임의 지역·장소를 입력해 주세요.']);
+    else length('location','지역·장소를',0,100);
+    if(!['online','offline'].includes(value('mode')))errors.push(['mode','온라인 또는 오프라인을 선택해 주세요.']);
+    if(!Number.isInteger(+value('capacity'))||+value('capacity')<2||+value('capacity')>12)errors.push(['capacity','전체 인원은 모집자를 포함해 2~12명으로 선택해 주세요.']);
+    const conditions=Array.from(f.querySelectorAll('[name=recruitment_conditions]'));
+    conditions.forEach(el=>{if(Array.from(el.value.trim()).length>200)errors.push([el,'모집 조건은 항목당 200자 이하로 입력해 주세요.']);});
+    if(conditions.length>10)errors.push([conditions[0],'모집 조건은 최대 10개까지 추가할 수 있어요.']);
+    const tags=Array.from(f.querySelectorAll('[name=tags]'),el=>el.value),pending=f.querySelector('#f-study-tag').value.trim().replace(/^#+/,'').trim();
+    if(pending&&!tags.some(v=>v.toLocaleLowerCase()===pending.toLocaleLowerCase()))tags.push(pending);
+    if(tags.length>5)errors.push(['f-study-tag','태그는 최대 5개예요. 기존 태그를 삭제한 뒤 추가해 주세요.']);
+    if(tags.some(v=>Array.from(v).length>20))errors.push(['f-study-tag','태그는 하나당 20자 이하로 입력해 주세요.']);
+    return errors;
+  }
+  function showStudyErrors(f,errors,focus=true) {
+    f.querySelectorAll('[data-field-error]').forEach(el=>el.remove());
+    f.querySelectorAll('[aria-invalid=true]').forEach(el=>{el.removeAttribute('aria-invalid');const ids=(el.getAttribute('aria-describedby')||'').split(' ').filter(id=>!id.startsWith('cm-error-'));if(ids.length)el.setAttribute('aria-describedby',ids.join(' '));else el.removeAttribute('aria-describedby');});
+    let first;
+    errors.forEach(([name,message],index)=>{
+      const el=typeof name==='string'?(f.elements.namedItem(name)||f.querySelector('#'+name)):name;if(!el)return;
+      const p=document.createElement('p');p.id='cm-error-'+index;p.className='cm-form-error';p.dataset.fieldError='';p.textContent=message;
+      el.setAttribute('aria-invalid','true');el.setAttribute('aria-describedby',((el.getAttribute('aria-describedby')||'')+' '+p.id).trim());
+      (el.closest('.cm-field,.cm-condition-row')||el.parentElement).append(p);first=first||el;
+    });
+    if(focus&&first){first.closest('details')?.setAttribute('open','');first.focus();first.scrollIntoView({block:'center',behavior:'instant'});}
   }
   function fileForm(proof=false) { form(proof?'면접 진출 경험 인증':'샘플 첨부',proof?'proof':'sample',(proof?field('airline','항공사','','text',40,true)+field('year','채용 연도',new Date().getFullYear(),'number',4,true)+field('stage','진출 전형','','text',60,true):field('title','샘플 제목','','text',100,true)+select('kind','파일 종류',{text:'답변 텍스트 (.txt)',audio:'음성 (.mp3, .wav, .m4a, .webm)',video:'영상 (.mp4, .webm)'},'text')+select('scope','공개 범위',scopes,me?.sample_scope||'organizer'))+`<div class="cm-field"><label class="cm-label" for="f-file">${proof?'합격 메일·합격증 (PDF, PNG, JPG, 8MB 이하)':'샘플 파일 (텍스트 40KB · 음성 20MB · 영상 40MB 이하)'}</label><input id="f-file" name="file" type="file" ${proof?'accept=".pdf,.png,.jpg,.jpeg"':''} required></div><label class="cm-check"><input type="checkbox" name="file_confirm" required>${proof?'본인·항공사·전형을 확인할 수 있는 자료이며 불필요한 개인정보를 가렸습니다.':'직접 작성·녹음한 자료이며 다른 사람의 개인정보와 몬크 비공개 교재가 포함되어 있지 않습니다.'}</label>${proof?'<p class="cm-help">몬크가 서류를 확인한 뒤 승인하면 인증이 반영됩니다. 승인·반려 후 원본은 30일 보관하고 삭제하며, 인증 결과는 유지합니다.</p>':''}`,proof?'인증 신청하기':'첨부하기'); }
   async function act(action,id,node) {
@@ -206,6 +239,11 @@
     if(f.matches('[data-search]')) {e.preventDefault();filters.q=new FormData(f).get('q').trim();if(route().view==='home')history.pushState(null,'',path('board'));syncFilters();next=null;render();return;}
     if(!f.dataset.form)return;e.preventDefault();const submit=f.querySelector('[type=submit]'),error=f.querySelector('[role=alert]');if(submit.disabled)return;submit.disabled=true;error.hidden=true;const fd=new FormData(f),d=Object.fromEntries(fd);let after=()=>render();
     try {
+      if(f.dataset.form==='study') {
+        const problems=studyErrors(f);showStudyErrors(f,problems);
+        if(problems.length){error.textContent=`수정할 항목이 ${problems.length}개 있어요. 각 입력칸 아래 안내를 확인해 주세요.`;error.hidden=false;return;}
+        d.schedule=d.schedule||f.elements.schedule.dataset.existingSchedule;
+      }
       if(!(await member()))return;
       switch(f.dataset.form) {
         case 'profile': d.skills=fd.getAll('skills');me=(await rpc('member','profile-save',d)).item;break;
@@ -220,7 +258,11 @@
       }
       const messages={profile:'프로필을 저장했어요.',post:d.id?'글을 수정했어요.':'글을 올렸어요.',comment:'댓글을 남겼어요.',guide:'참여자 안내를 저장했어요.',study:d.id?'모집글을 수정했어요.':'스터디 모집을 시작했어요.',apply:'지원을 보냈어요. 지원 결과는 내 활동에서 확인하세요.',report:'신고를 접수했어요.',scope:'샘플 공개 범위를 변경했어요.',sample:'샘플을 첨부했어요.',proof:'인증 신청을 보냈어요. 몬크 확인 후 결과를 알려드려요.','proof-reject':'인증을 반려했어요.',assessment:'실력검증 결과를 등록했어요.'};
       close();toast(messages[f.dataset.form]||'저장했어요.');after();
-    }catch(err){error.textContent=errorText(err);error.hidden=false;}finally{submit.disabled=false;}
+    }catch(err){
+      const constraints={studies_title_check:['title','스터디 이름을 4~100자로 입력해 주세요.'],studies_description_check:['description','모집 소개를 10~5000자로 입력해 주세요.'],studies_schedule_check:['schedule','모임 시간을 선택해 주세요.'],studies_location_check:['location','지역·장소를 100자 이하로 입력해 주세요.'],studies_check:['location','오프라인 모임의 지역·장소를 입력해 주세요.'],studies_capacity_check:['capacity','전체 인원은 모집자를 포함해 2~12명으로 선택해 주세요.'],studies_goals_check:['goals','목표 항공사·면접을 100자 이하로 입력해 주세요.'],studies_mode_check:['mode','온라인 또는 오프라인을 선택해 주세요.'],studies_min_level_check:['min_level','실력 레벨 조건을 다시 선택해 주세요.']};
+      const problem=f.dataset.form==='study'?Object.entries(constraints).find(([key])=>String(err?.message||err).includes('"'+key+'"'))?.[1]:null;
+      if(problem)showStudyErrors(f,[problem]);error.textContent=problem?problem[1]:errorText(err);error.hidden=false;
+    }finally{submit.disabled=false;}
   });
   document.addEventListener('keydown',e=>{if(e.target.id==='f-study-tag'&&e.key==='Enter'&&!e.isComposing){e.preventDefault();addStudyTag(e.target.value);}});
   addEventListener('popstate',()=>{close();filters=readFilters();next=null;render();});
