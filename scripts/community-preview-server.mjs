@@ -22,6 +22,8 @@ await db.exec(await fs.readFile(path.join(root,'supabase/migrations/202610130900
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103102312_community_study_custom_fields.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115108_community_optional_application_message.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115812_community_remove_study_member.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103130738_community_study_reopen.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103131442_community_study_contact_consent.sql'),'utf8'));
 let chain=Promise.resolve();
 function lock(task){const r=chain.then(task);chain=r.catch(()=>{});return r;}
 async function rpc(who,fn,a,d={}){

@@ -21,6 +21,8 @@ await db.exec(await fs.readFile(path.join(root,'supabase/migrations/202610130900
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103102312_community_study_custom_fields.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115108_community_optional_application_message.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115812_community_remove_study_member.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103130738_community_study_reopen.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103131442_community_study_contact_consent.sql'),'utf8'));
 let checks=0;
 async function call(role,uid,fn,action,data={}){
   await db.exec(`reset role;set request.jwt.claim.sub='${uid||''}';set role ${role};`);
@@ -28,7 +30,7 @@ async function call(role,uid,fn,action,data={}){
 }
 async function ok(name,fn){await fn();checks++;process.stdout.write('통과: '+name+'\n');}
 async function denied(fn,part){await assert.rejects(fn,err=>!part||String(err.message).includes(part));}
-const member=(u,a,d)=>call('authenticated',u,'community_member',a,d);
+const member=async(u,a,d)=>{if(a==='apply'&&d.contact_consent===undefined){const s=(await db.query('select owner_id from monc_community.studies where id=$1',[d.id])).rows[0];d={...d,contact_consent:true,contact_owner:s?.owner_id};}return call('authenticated',u,'community_member',a,d);};
 const admin=(a,d)=>call('authenticated',ids.admin,'community_admin',a,d);
 const read=(a,d)=>call('anon',null,'community_read',a,d);
 const profiles={};
@@ -96,6 +98,67 @@ await ok('지원 제외·참여자 내보내기 권한과 안내 접근 회수',
  const state=await member(ids.b,'study-state',{id});assert.equal(state.joined,false);assert.equal(state.member_guide,null);assert.equal(state.application.status,'removed');
  await denied(()=>member(ids.a,'study-remove-member',{id,profile_id:profiles.b.id}),'bad_member');
  assert.equal((await member(ids.a,'study-state',{id})).members.length,1);
+});
+await ok('마감 유지·결원 알림·재모집·활동 종료 구분',async()=>{
+ const id=(await member(ids.a,'study-save-custom',{...customDraft,capacity:2})).id;
+ const app=(await member(ids.b,'apply',{id,message:''})).id;
+ await member(ids.a,'application-decide',{id:app,decision:'accept'});
+ await member(ids.a,'study-guide',{id,guide:'마감 후 유지할 안내'});
+ await member(ids.a,'study-close',{id});
+ assert.equal((await member(ids.b,'study-state',{id})).member_guide,'마감 후 유지할 안내');
+ assert.ok((await read('studies',{recruitment:'closed'})).items.some(v=>v.id===id));
+ assert.ok(!(await read('studies',{recruitment:'open'})).items.some(v=>v.id===id));
+ await denied(()=>member(ids.a,'study-reopen',{id}),'study_full');
+ await denied(()=>member(ids.b,'study-reopen',{id}),'forbidden');
+ await member(ids.b,'study-leave',{id});
+ assert.ok((await db.query("select 1 from monc_community.notices where user_id=$1 and target_id=$2 and title like '%빈자리%'",[ids.a,id])).rows.length);
+ assert.equal((await read('study',{id})).item.status,'closed');
+ await member(ids.a,'study-save-custom',{...customDraft,id,capacity:2});
+ await member(ids.a,'study-reopen',{id});
+ assert.equal((await read('study',{id})).item.status,'open');
+ assert.equal((await member(ids.a,'study-state',{id})).member_guide,'마감 후 유지할 안내');
+ const again=(await member(ids.b,'apply',{id,message:''})).id;
+ await member(ids.a,'application-decide',{id:again,decision:'accept'});
+ await member(ids.a,'study-close',{id});
+ await member(ids.a,'study-remove-member',{id,profile_id:profiles.b.id});
+ assert.equal((await read('study',{id})).item.status,'closed');
+ await member(ids.a,'study-reopen',{id});
+ await member(ids.a,'study-end',{id});
+ assert.equal((await read('study',{id})).item.status,'ended');
+ await denied(()=>member(ids.a,'study-reopen',{id}),'study_closed');
+ await denied(()=>member(ids.a,'study-close',{id}),'study_closed');
+ await denied(()=>member(ids.b,'apply',{id,message:''}),'study_closed');
+ await db.query("update monc_community.studies set status='hidden' where id=$1",[id]);
+ await denied(()=>member(ids.a,'study-reopen',{id}),'study_closed');
+ assert.ok(!(await read('studies',{recruitment:'all'})).items.some(v=>v.id===id));
+});
+await ok('실명·연락처 동의·조장 한정·철회·인계·종료 접근 차단',async()=>{
+ const id=(await member(ids.a,'study-save-custom',{...customDraft,title:'연락처 보호 검사',capacity:5})).id;
+ const raw=(u,data)=>call('authenticated',u,'community_member','apply',{id,message:'',...data});
+ await denied(()=>raw(ids.b,{}),'contact_consent_required');
+ await denied(()=>raw(ids.b,{contact_consent:true,contact_owner:ids.c}),'contact_owner_changed');
+ await db.query("update public.members set phone='invalid' where id=$1",[ids.b]);
+ await denied(()=>member(ids.b,'apply',{id,message:''}),'contact_incomplete');
+ await db.query("update public.members set phone='010-0000-0000' where id=$1",[ids.b]);
+ let aid=(await member(ids.b,'apply',{id,message:''})).id;
+ let state=await member(ids.a,'study-state',{id});assert.equal(state.applications[0].contact.name,'테스트 회원');
+ assert.ok(!JSON.stringify(await member(ids.c,'study-state',{id})).includes('010-0000'));
+ assert.ok(!JSON.stringify(await read('study',{id})).includes('010-0000'));
+ await db.exec('set role authenticated');await denied(()=>db.query('select * from monc_community.study_contact_consents'));await denied(()=>db.query('select monc_community.study_contact($1,$2,$3)',[id,ids.b,ids.a]));await db.exec('reset role');
+ await member(ids.b,'application-withdraw',{id:aid});assert.equal((await member(ids.a,'study-state',{id})).applications.length,0);
+ aid=(await member(ids.b,'apply',{id,message:''})).id;await member(ids.a,'application-decide',{id:aid,decision:'reject'});
+ assert.equal((await member(ids.a,'study-state',{id})).applications.length,0);
+ aid=(await member(ids.b,'apply',{id,message:''})).id;await member(ids.a,'application-decide',{id:aid,decision:'accept'});
+ const cid=(await member(ids.c,'apply',{id,message:''})).id;await member(ids.a,'application-decide',{id:cid,decision:'accept'});
+ await member(ids.a,'study-transfer',{id,profile_id:profiles.c.id});
+ state=await member(ids.c,'study-state',{id});assert.ok(state.members.every(m=>m.contact===null));
+ await member(ids.b,'study-contact-consent',{id,contact_consent:true,contact_owner:ids.c});
+ state=await member(ids.c,'study-state',{id});assert.equal(state.members.find(m=>m.profile.id===profiles.b.id).contact.phone,'010-0000-0000');
+ assert.ok((await member(ids.a,'study-state',{id})).members.every(m=>m.contact===null));
+ await member(ids.c,'study-close',{id});assert.ok((await member(ids.c,'study-state',{id})).members.some(m=>m.contact));
+ await member(ids.c,'study-remove-member',{id,profile_id:profiles.b.id});assert.ok(!(await member(ids.c,'study-state',{id})).members.some(m=>m.contact));
+ await member(ids.c,'study-end',{id});assert.ok((await member(ids.c,'study-state',{id})).members.every(m=>m.contact===null));
+ await denied(()=>member(ids.b,'study-contact-consent',{id,contact_consent:true,contact_owner:ids.c}),'study_closed');
 });
 await ok('게시글 공개 검색·댓글 검색과 타인 수정 차단',async()=>{
  post=(await member(ids.a,'post-save',{category:'question',title:'지원서 경력 질문',body:'회차 안내를 확인하고 싶습니다.'})).id;
