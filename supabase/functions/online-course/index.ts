@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-10-29-refunds'
+const FN_VERSION = '2026-11-03-curriculum'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -36,7 +36,7 @@ Deno.serve(async(req)=>{
    if(!c)return fail('not_published')
    const {data:lessons,error:le}=await supa.from('online_lessons').select('*').eq('course_id',c.id).eq('published',true).order('position')
    if(le)return fail('not_ready')
-   return reply({ok:true,course:{id:c.id,title:c.title,description:c.description,price:c.price,accessDays:c.access_days,saleOpen:c.sale_open,purchaseNotice:c.purchase_notice},lessons:(lessons||[]).map(l=>({id:l.id,title:l.title,chapter:l.chapter,position:l.position,duration:l.duration_seconds}))})
+   return reply({ok:true,course:{id:c.id,title:c.title,description:c.description,price:c.price,accessDays:c.access_days,saleOpen:c.sale_open,purchaseNotice:c.purchase_notice},lessons:(lessons||[]).map(l=>({id:l.id,title:l.title,chapter:l.chapter,position:l.position,duration:l.duration_seconds,chapters:Array.isArray(l.chapters)?l.chapters.map((ch:any)=>({title:ch.title})):[]}))})
   }
   const token=(req.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'')
   const {data:{user},error:authError}=await supa.auth.getUser(token)
