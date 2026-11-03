@@ -19,6 +19,7 @@ create table storage.buckets(id text primary key,name text,public boolean,file_s
 insert into auth.users values ${Object.values(ids).map(v=>`('${v}')`).join(',')};
 insert into public.members select id,'가상 회원','010-0000-0000',now(),'2026-10-05',case when id='${ids.admin}' then 'admin' else 'member' end from auth.users;`);
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261013090000_community.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103102312_community_study_custom_fields.sql'),'utf8'));
 let chain=Promise.resolve();
 function lock(task){const r=chain.then(task);chain=r.catch(()=>{});return r;}
 async function rpc(who,fn,a,d={}){

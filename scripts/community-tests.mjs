@@ -18,6 +18,7 @@ create table storage.buckets(id text primary key,name text,public boolean,file_s
 insert into auth.users values ${Object.values(ids).map(v=>`('${v}')`).join(',')};
 insert into public.members select id,'테스트 회원','010-0000-0000',now(),'2026-10-05',case when id='${ids.admin}' then 'admin' else 'member' end from auth.users;`);
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261013090000_community.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103102312_community_study_custom_fields.sql'),'utf8'));
 let checks=0;
 async function call(role,uid,fn,action,data={}){
   await db.exec(`reset role;set request.jwt.claim.sub='${uid||''}';set role ${role};`);
@@ -41,6 +42,31 @@ await ok('프로필 저장과 닉네임 중복 방지',async()=>{
  await denied(()=>member(ids.a,'profile-save',{nickname:'테스트a',skills:['invalid']}),'bad_skills');
 });
 let post,comment,study,proof,asset;
+const customDraft={title:'직접 모집 조건 검사',mode:'online',schedule:'매주 수요일',capacity:4,description:'직접 작성한 조건을 보고 지원합니다.',min_level:0,required_skills:[]};
+let customStudy;
+await ok('선택 조건·태그 없이 개설하고 직접 조건·태그 저장·검색·수정',async()=>{
+ customStudy=(await member(ids.c,'study-save-custom',customDraft)).id;
+ assert.deepEqual((await read('study',{id:customStudy})).item.tags,[]);
+ await member(ids.c,'study-save-custom',{...customDraft,id:customStudy,recruitment_conditions:['  수요일 참석  ','','수요일 참석'],tags:['즉흥질문','초보환영']});
+ const item=(await read('study',{id:customStudy})).item;
+ assert.deepEqual(item.recruitment_conditions,['수요일 참석']);
+ assert.deepEqual(item.tags,['즉흥질문','초보환영']);
+ assert.ok((await read('studies',{q:'즉흥질문'})).items.some(v=>v.id===customStudy));
+ await member(ids.c,'study-save',{...customDraft,id:customStudy});
+ assert.deepEqual((await read('study',{id:customStudy})).item.tags,item.tags);
+});
+await ok('직접 조건·태그는 지원을 막지 않고 타인 수정·잘못된 입력은 차단',async()=>{
+ await member(ids.b,'apply',{id:customStudy,message:'함께 연습하고 싶습니다.'});
+ await denied(()=>member(ids.a,'study-save-custom',{...customDraft,id:customStudy,tags:['타인수정']}),'forbidden');
+ for(const extra of [{tags:Array(6).fill('태그')},{tags:['가'.repeat(21)]},{tags:[1]},{tags:null},{recruitment_conditions:Array(11).fill('조건')},{recruitment_conditions:['가'.repeat(201)]}]){
+   await denied(()=>member(ids.c,'study-save-custom',{...customDraft,id:customStudy,...extra}),'bad_study_texts');
+ }
+ assert.deepEqual((await read('study',{id:customStudy})).item.tags,['즉흥질문','초보환영']);
+ await member(ids.c,'study-save-custom',{...customDraft,id:customStudy,tags:[],recruitment_conditions:[]});
+ assert.deepEqual((await read('study',{id:customStudy})).item.tags,[]);
+ assert.deepEqual((await read('study',{id:customStudy})).item.recruitment_conditions,[]);
+ await member(ids.c,'study-close',{id:customStudy});
+});
 await ok('게시글 공개 검색·댓글 검색과 타인 수정 차단',async()=>{
  post=(await member(ids.a,'post-save',{category:'question',title:'지원서 경력 질문',body:'회차 안내를 확인하고 싶습니다.'})).id;
  comment=(await member(ids.b,'comment-save',{post_id:post,body:'댓글에서만 나오는 검색어 테스트단어'})).id;
@@ -127,6 +153,11 @@ await ok('신고 후 숨김과 게시자 수정으로 공개 복구 금지',asyn
  assert.equal((await read('thread',{id:post})).item,null);
 });
 await ok('계정 파기 즉시 원본 차단·본문 파기·파일 정리 대상 반영',async()=>{
+ await db.query("update monc_community.studies set recruitment_conditions=ARRAY['정리할 조건'],tags=ARRAY['정리할 태그'] where id=$1",[customStudy]);
+ await db.query('delete from auth.users where id=$1',[ids.c]);
+ const removed=(await read('study',{id:customStudy})).item;
+ assert.deepEqual(removed.recruitment_conditions,[]);
+ assert.deepEqual(removed.tags,[]);
  await db.query('delete from auth.users where id=$1',[ids.b]);
  assert.equal((await db.query('select count(*)::int n from monc_community.profiles where user_id=$1',[ids.b])).rows[0].n,0);
  await denied(()=>member(ids.b,'profile'),'login_required');
