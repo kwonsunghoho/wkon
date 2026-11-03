@@ -19,6 +19,7 @@ insert into auth.users values ${Object.values(ids).map(v=>`('${v}')`).join(',')}
 insert into public.members select id,'테스트 회원','010-0000-0000',now(),'2026-10-05',case when id='${ids.admin}' then 'admin' else 'member' end from auth.users;`);
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261013090000_community.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103102312_community_study_custom_fields.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115108_community_optional_application_message.sql'),'utf8'));
 let checks=0;
 async function call(role,uid,fn,action,data={}){
   await db.exec(`reset role;set request.jwt.claim.sub='${uid||''}';set role ${role};`);
@@ -54,6 +55,15 @@ await ok('선택 조건·태그 없이 개설하고 직접 조건·태그 저장
  assert.ok((await read('studies',{q:'즉흥질문'})).items.some(v=>v.id===customStudy));
  await member(ids.c,'study-save',{...customDraft,id:customStudy});
  assert.deepEqual((await read('study',{id:customStudy})).item.tags,item.tags);
+});
+await ok('지원 이유는 빈칸·짧은 글 허용, 1500자 상한 유지',async()=>{
+ await denied(()=>member(ids.a,'apply',{id:customStudy,message:'가'.repeat(1501)}),'applications_message_check');
+ const empty=(await member(ids.a,'apply',{id:customStudy,message:''})).id;
+ assert.equal((await db.query('select message from monc_community.applications where id=$1',[empty])).rows[0].message,'');
+ await member(ids.a,'application-withdraw',{id:empty});
+ const short=(await member(ids.a,'apply',{id:customStudy,message:'함께'})).id;
+ assert.equal((await db.query('select message from monc_community.applications where id=$1',[short])).rows[0].message,'함께');
+ await member(ids.a,'application-withdraw',{id:short});
 });
 await ok('직접 조건·태그는 지원을 막지 않고 타인 수정·잘못된 입력은 차단',async()=>{
  await member(ids.b,'apply',{id:customStudy,message:'함께 연습하고 싶습니다.'});
