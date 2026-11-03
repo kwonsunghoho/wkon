@@ -29,6 +29,7 @@
  }
  async function recover(){if(!session||!window.moncPends)return;for(const p of moncPends.load(pendingKey()))await verify(p.paymentId,p.courseId,true);}
  async function catalog(){
+  if(!params.get('course')){location.replace('online-courses.html');return;}
   let c=null,access=null,confirming=false;
   const purchaseDialog=$('#purchase-dialog');
   $('#purchase-close')?.addEventListener('click',()=>purchaseDialog.close());
@@ -42,7 +43,15 @@
    $('#course-price').textContent=direct?(access.kind==='student'?'재학생 무료':access.kind==='admin'?'관리자 무료 열람':'수강권 보유'):c?.price?money(c.price):'준비 중';
    if(direct)$('#course-sale-note').textContent=access.kind==='student'?'재학생 무료 · 첫 재생일부터 수강 기간이 시작됩니다.':'결제 없이 강의실로 바로 이동합니다.';
   }
-  try{const r=await call('catalog');c=r.course;$('#course-description').textContent=c.description;$('#course-price').textContent=c.price?money(c.price):'준비 중';$('#course-period').textContent=c.accessDays?`첫 재생일부터 ${c.accessDays}일`:'준비 중';$('#purchase-consent-wrap').hidden=!c.saleOpen;$('#course-purchase-notice').textContent=c.purchaseNotice||'';$('#course-purchase-notice').hidden=!c.purchaseNotice;$('#course-sale-note').textContent=c.saleOpen?'결제 후 내 강의실에서 시작할 수 있습니다.':'판매 준비 중입니다.';
+  try{const r=await call('catalog');c=r.course;if(!c||c.id!==courseId)throw {code:'not_ready'};
+   document.title=c.title+' — MONC 몬크';
+   for(const id of ['course-heading','course-purchase-title','purchase-course-title']){const el=$('#'+id);if(el){if(id==='course-heading'){const words=c.title.trim().split(/\s+/);el.innerHTML=words.length>1?esc(words.slice(0,-1).join(' '))+' <span>'+esc(words.at(-1))+'</span>':esc(c.title);}else el.textContent=c.title;}}
+   if($('#purchase-scope'))$('#purchase-scope').textContent='수강권은 ‘'+c.title+'’ 과정에만 적용됩니다.';
+   for(const name of ['og:title','twitter:title'])document.querySelector('meta[property="'+name+'"],meta[name="'+name+'"]')?.setAttribute('content',document.title);
+   document.querySelector('meta[property="og:url"]')?.setAttribute('content','https://monc.ai.kr/course.html?course='+encodeURIComponent(c.id));
+   // 다른 과정에서 영합각 전용 장면·소개를 재사용하지 않는다.
+   if(c.id!=='expression-advanced'){$('.cover')?.setAttribute('hidden','');if($('.intro .lead'))$('.intro .lead').textContent=c.description;document.querySelectorAll('.terms dt').forEach(el=>{if(el.textContent==='개별 피드백')el.parentElement.hidden=true;});if($('.purchase .policy'))$('.purchase .policy').textContent=c.purchaseNotice||'구매 전 과정별 안내를 확인해 주세요.';}
+   $('#course-description').textContent=c.description;$('#course-price').textContent=c.price?money(c.price):'준비 중';$('#course-period').textContent=c.accessDays?`첫 재생일부터 ${c.accessDays}일`:'준비 중';$('#purchase-consent-wrap').hidden=!c.saleOpen;$('#course-purchase-notice').textContent=c.purchaseNotice||'';$('#course-purchase-notice').hidden=!c.purchaseNotice;$('#course-sale-note').textContent=c.saleOpen?'결제 후 내 강의실에서 시작할 수 있습니다.':'판매 준비 중입니다.';
    if($('#purchase-price')){$('#purchase-price').textContent=c.price?money(c.price):'준비 중';$('#purchase-period').textContent=$('#course-period').textContent;$('#purchase-confirm').textContent=c.price?money(c.price)+' 결제하기':'결제하기';}
    if(r.lessons.length){
     if($('#course-count')){
@@ -53,7 +62,7 @@
      $('#course-curriculum').innerHTML=(count?'<p class="curriculum-lead">답변 구성부터 실전 모의촬영까지, '+count+'개 챕터로 학습합니다.</p>':'')+r.lessons.map((l,i)=>{const chapters=Array.isArray(l.chapters)?l.chapters:[];const part=/[（(]([상하])[）)]/.exec(l.title);return '<details class="curriculum-part" '+(!matchMedia('(max-width:800px)').matches||i===0?'open':'')+'><summary><span class="part-tag">'+esc(part?part[1]+'편':(i+1)+'강')+'</span><span class="part-name">'+esc(part?l.title.replace(/\s*[（(][상하][）)]/,''):l.title)+'<span class="part-meta">'+(chapters.length?chapters.length+'개 챕터 · ':'')+Math.floor(l.duration/60)+'분 '+Math.floor(l.duration%60)+'초</span></span><span class="part-toggle" aria-hidden="true"></span></summary>'+(chapters.length?'<ul class="chapter-list">'+chapters.map(ch=>'<li><span class="chapter-order" aria-hidden="true">•</span><span class="chapter-title">'+esc(ch.title)+'</span></li>').join('')+'</ul>':'<p class="curriculum-empty">'+esc(l.chapter||'세부 커리큘럼 준비 중')+'</p>')+'</details>'}).join('');
     }else{const groups=[...new Set(r.lessons.map(l=>l.chapter))];$('#course-curriculum').innerHTML=groups.map((g,i)=>`<details ${i===0?'open':''}><summary>${esc(g)}</summary><ol>${r.lessons.filter(l=>l.chapter===g).map(l=>`<li>${esc(l.title)}<span>${fmt(l.duration)}</span></li>`).join('')}</ol></details>`).join('');}
    }
-  }catch(e){if(e.code!=='not_published')message(errorText(e));}
+  }catch(e){c=null;if($('#course-heading'))$('#course-heading').textContent='강의를 확인할 수 없습니다.';$('.cover')?.setAttribute('hidden','');message(errorText(e));}
   $('#purchase-button').addEventListener('click',async()=>{
    if(busy)return;
    const fromConfirmation=confirming;confirming=false;
@@ -76,7 +85,7 @@
     const order=await call('order',{amount:c.price,accessDays:c.accessDays,accepted:true});
     if(order.reused){const checked=await verify(order.paymentId,order.courseId,true);if(checked){location.href='classroom.html';return;}if(checked===null){message('이전 결제 확인이 지연되고 있습니다. 잠시 후 내 강의실에서 확인해 주세요.');return;}}
     // 이전 주문의 조건을 숨긴 채 결제하지 않는다.
-    if(order.amount!==c.price||order.accessDays!==c.accessDays){message('이전 미결 주문의 조건이 달라 확인이 필요합니다. 고객센터로 문의해 주세요.');return;}
+    if(order.courseId!==c.id||order.amount!==c.price||order.accessDays!==c.accessDays){message('이전 미결 주문의 조건이 달라 확인이 필요합니다. 고객센터로 문의해 주세요.');return;}
     moncPends.add(pendingKey(),{paymentId:order.paymentId,courseId:order.courseId});
     const profile=await MONC.getMyProfile();
     const redirectUrl=new URL('course.html',location.href);redirectUrl.searchParams.set('course',order.courseId);redirectUrl.searchParams.set('payresult','1');
