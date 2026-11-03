@@ -20,6 +20,7 @@ insert into public.members select id,'테스트 회원','010-0000-0000',now(),'2
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261013090000_community.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103102312_community_study_custom_fields.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115108_community_optional_application_message.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115812_community_remove_study_member.sql'),'utf8'));
 let checks=0;
 async function call(role,uid,fn,action,data={}){
   await db.exec(`reset role;set request.jwt.claim.sub='${uid||''}';set role ${role};`);
@@ -76,6 +77,25 @@ await ok('직접 조건·태그는 지원을 막지 않고 타인 수정·잘못
  assert.deepEqual((await read('study',{id:customStudy})).item.tags,[]);
  assert.deepEqual((await read('study',{id:customStudy})).item.recruitment_conditions,[]);
  await member(ids.c,'study-close',{id:customStudy});
+});
+await ok('지원 제외·참여자 내보내기 권한과 안내 접근 회수',async()=>{
+ const id=(await member(ids.a,'study-save-custom',customDraft)).id;
+ const pending=(await member(ids.b,'apply',{id,message:''})).id;
+ await denied(()=>member(ids.c,'application-decide',{id:pending,decision:'reject'}),'forbidden');
+ await member(ids.a,'application-decide',{id:pending,decision:'reject'});
+ assert.equal((await member(ids.a,'study-state',{id})).applications.length,0);
+ const next=(await member(ids.b,'apply',{id,message:''})).id;
+ await member(ids.a,'application-decide',{id:next,decision:'accept'});
+ await member(ids.a,'study-guide',{id,guide:'참여자 전용 안내'});
+ await denied(()=>member(ids.c,'study-remove-member',{id,profile_id:profiles.b.id}),'forbidden');
+ await denied(()=>member(ids.a,'study-remove-member',{id,profile_id:profiles.a.id}),'bad_member');
+ await denied(()=>member(ids.a,'study-remove-member',{id,profile_id:profiles.c.id}),'bad_member');
+ await denied(()=>call('anon',null,'community_member','study-remove-member',{id,profile_id:profiles.b.id}));
+ await member(ids.a,'study-remove-member',{id,profile_id:profiles.b.id});
+ assert.equal((await read('study',{id})).item.members,1);
+ const state=await member(ids.b,'study-state',{id});assert.equal(state.joined,false);assert.equal(state.member_guide,null);assert.equal(state.application.status,'removed');
+ await denied(()=>member(ids.a,'study-remove-member',{id,profile_id:profiles.b.id}),'bad_member');
+ assert.equal((await member(ids.a,'study-state',{id})).members.length,1);
 });
 await ok('게시글 공개 검색·댓글 검색과 타인 수정 차단',async()=>{
  post=(await member(ids.a,'post-save',{category:'question',title:'지원서 경력 질문',body:'회차 안내를 확인하고 싶습니다.'})).id;
