@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-11-03-multi-course'
+const FN_VERSION = '2026-11-03-admin-applicants'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -98,21 +98,27 @@ Deno.serve(async(req)=>{
     const {data:created,error:ce}=await supa.from('online_courses').select('*').eq('id',id).maybeSingle()
     return ce||!created?fail('save_failed'):reply({ok:true,course:created})
    }
-   const {data:c,error:ce}=await supa.from('online_courses').select('*').eq('id',courseId).maybeSingle()
-   if(ce||!c||!Number.isInteger(c.revision))return fail('not_ready')
+   let c:any=null
+   if(!(b.action==='admin-orders'&&b.scope==='all')){
+    const course=await supa.from('online_courses').select('*').eq('id',courseId).maybeSingle()
+    c=course.data
+    if(course.error||!c||!Number.isInteger(c.revision))return fail('not_ready')
+   }
    if(b.action==='admin-orders'){
     const page=Number.isInteger(b.page)&&b.page>=0?Math.min(b.page,10000):0
-    const {data:orders,error}=await supa.from('online_orders').select('*').eq('course_id',courseId).order('created_at',{ascending:false}).order('payment_id').range(page*20,page*20+20)
+    let query=supa.from('online_orders').select('*')
+    if(b.scope!=='all')query=query.eq('course_id',courseId)
+    const {data:orders,error}=await query.order('created_at',{ascending:false}).order('payment_id').range(page*20,page*20+20)
     if(error)return fail('not_ready')
     const rows=(orders||[]).slice(0,20),ids=rows.map(o=>o.payment_id)
-    if(!ids.length)return reply({ok:true,orders:[],more:false})
+    if(!ids.length)return reply({ok:true,orders:[],more:false,scope:b.scope==='all'?'all':'course'})
     const [members,enrollments,refunds]=await Promise.all([
-     supa.from('members').select('id,name').in('id',rows.map(o=>o.member_id).filter(Boolean)),
+     supa.from('members').select('id,name,phone').in('id',rows.map(o=>o.member_id).filter(Boolean)),
      supa.from('online_enrollments').select('payment_id,started_at,expires_at,revoked_at').in('payment_id',ids),
      supa.from('online_refunds').select('*').in('payment_id',ids).order('created_at',{ascending:false})
     ])
     if(members.error||enrollments.error||refunds.error)return fail('not_ready')
-    return reply({ok:true,more:orders.length>20,orders:rows.map(o=>({...o,memberName:members.data?.find(m=>m.id===o.member_id)?.name||'탈퇴 또는 이름 미등록',enrollment:enrollments.data?.find(e=>e.payment_id===o.payment_id)||null,refunds:refunds.data?.filter(r=>r.payment_id===o.payment_id)||[]}))})
+    return reply({ok:true,scope:b.scope==='all'?'all':'course',more:orders.length>20,orders:rows.map(o=>({...o,memberName:members.data?.find(m=>m.id===o.member_id)?.name||'탈퇴 또는 이름 미등록',memberPhone:members.data?.find(m=>m.id===o.member_id)?.phone||'',enrollment:enrollments.data?.find(e=>e.payment_id===o.payment_id)||null,refunds:refunds.data?.filter(r=>r.payment_id===o.payment_id)||[]}))})
    }
    if(b.action==='admin-refund'){
     if(typeof b.paymentId!=='string'||b.paymentId.length>100||!/^[-0-9a-f]{36}$/i.test(String(b.requestId))||!Number.isInteger(b.amount)||b.amount<=0||typeof b.reason!=='string'||!b.reason.trim()||b.reason.length>300)return fail('invalid_fields')
