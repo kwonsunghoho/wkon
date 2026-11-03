@@ -22,6 +22,7 @@ window.moncBeacon=(event,meta)=>window.__events.push({event,meta});
 async function result(key){
  if(window.__mode==='error'||window.__failFeeds.includes(key))return {error:{message:'검증용 연결 실패'}};
  if(window.__mode==='empty')return {data:['reviews','special_lectures'].includes(key)?[]:{ok:true,items:[]}};
+ if(key==='lecture_slots')return {data:[]};
  if(key==='special_lectures')return {data:window.__feeds.lectures||Array.from({length:3},(_,i)=>({id:'lectures-'+i,title:'검증용 특강 '+i,visible:true,created_at:'2026-09-01T00:00:00Z',lecture_date:'2026-12-01'}))};
  if(window.__feeds[key])return {data:{ok:true,items:window.__feeds[key]}};
  if(key==='reviews'){
@@ -33,7 +34,7 @@ async function result(key){
  }
  return{data:{ok:true,items:Array.from({length:4},(_,i)=>({id:key+'-'+i,title:'검증용 공개 '+key+' '+i,status:i===2?'closed':'open',members:i===1?4:1,capacity:4,created_at:'2026-10-29T00:00:00Z'}))}};
 }
-function query(table){window.__reads.push(table);var q={select:()=>q,eq:(key,value)=>{window.__reads.push([key,value]);return q},order:(key,value)=>{window.__reads.push(['order',key,value]);return q},limit:value=>{window.__reads.push(['limit',value]);return q},then:(resolve,reject)=>result(table).then(resolve,reject)};return q}
+function query(table){window.__reads.push(table);var q={select:()=>q,in:()=>q,eq:(key,value)=>{window.__reads.push([key,value]);return q},order:(key,value)=>{window.__reads.push(['order',key,value]);return q},limit:value=>{window.__reads.push(['limit',value]);return q},then:(resolve,reject)=>result(table).then(resolve,reject)};return q}
 window.MONC={getSession:async()=>${JSON.stringify(auth)}==='guest'?null:{user:{id:'local-test'}},getMyProfile:async()=>({name:'검증용 회원',role:${JSON.stringify(auth)}==='admin'?'admin':'member'}),sb:{from:query,rpc:async(name,args)=>{window.__rpcs.push({name,args});return result(args.p_action)}}};
 `;
 fs.mkdirSync(out,{recursive:true});
@@ -49,7 +50,7 @@ async function make(width=375,auth='guest',bookingFailure=false){
  if(!bookingFailure)await page.waitForFunction(()=>document.querySelector('[data-consult-booking]').href.startsWith('https://m.booking.naver.com/'),{},{timeout:7000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({booking:document.querySelector('[data-consult-booking]')?.href,resources:performance.getEntriesByType('resource').filter(r=>r.name.includes('consult')||r.name.includes('home-contact')).map(r=>({name:r.name,duration:r.duration,size:r.transferSize}))}))));console.error(report.errors);throw error});
  return{page,context};
 }
-async function loadData(page){await page.locator('#doors').scrollIntoViewIfNeeded();await page.locator('#homeReviews[aria-busy=false]').waitFor();await page.locator('#homeCommunity').scrollIntoViewIfNeeded();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();await page.locator('#homeCommunityLectures[aria-busy=false]').waitFor()}
+async function loadData(page){await page.locator('#doors').scrollIntoViewIfNeeded();await page.locator('#homeReviews[aria-busy=false]').waitFor();await page.locator('#homeCommunity').scrollIntoViewIfNeeded();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();await page.locator('#homeCommunityLectures[aria-busy=false]').waitFor({state:'attached'})}
 async function layout(page){
  const m=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,small:[...document.querySelectorAll('.home-journal *')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(e).fontSize)<12).map(e=>e.className),sections:[...document.querySelectorAll('.home-journal>section')].map(e=>({id:e.id||e.className,top:Math.round(e.getBoundingClientRect().top+scrollY)}))}));
  assert.ok(m.scroll<=m.width,'가로 넘침 '+JSON.stringify(m));assert.deepEqual(m.small,[]);return m;

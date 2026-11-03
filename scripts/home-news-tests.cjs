@@ -5,8 +5,9 @@ const {chromium}=require(path.join(opt('--deps'),'playwright'));
 const base=opt('--url','http://127.0.0.1:5511'),root=path.resolve(__dirname,'..'),output=path.resolve(opt('--out','outputs/home-full/news-checks'));
 const actions=['studies','posts','lectures'],ids={studies:'homeCommunityStudies',posts:'homeCommunityPosts',lectures:'homeCommunityLectures'};
 const stub=`window.__feeds=Object.fromEntries(['studies','posts','lectures'].map(action=>[action,Array.from({length:3},(_,i)=>({id:action+'-old-'+i,title:'검증용 기존 소식 '+i,visible:true,status:'open',members:1,capacity:4,created_at:new Date(Date.now()-30*86400000).toISOString()}))]));window.__fail=[];window.__counts={};window.__query=[];
+window.__slots=[];
 async function feed(action){window.__counts[action]=(window.__counts[action]||0)+1;if(window.__fail.includes(action))return {error:{message:'검증용 실패'}};return{data:action==='lectures'?window.__feeds[action]:{ok:true,items:window.__feeds[action]}};}
-function query(table){var q={select:()=>q,eq:(key,value)=>{window.__query.push([table,key,value]);return q},order:(key,value)=>{window.__query.push([table,key,value]);return q},limit:value=>{window.__query.push([table,'limit',value]);return q},then:(resolve,reject)=>(table==='special_lectures'?feed('lectures'):Promise.resolve({data:[]})).then(resolve,reject)};return q;}
+function query(table){var q={select:()=>q,in:()=>q,eq:(key,value)=>{window.__query.push([table,key,value]);return q},order:(key,value)=>{window.__query.push([table,key,value]);return q},limit:value=>{window.__query.push([table,'limit',value]);return q},then:(resolve,reject)=>(table==='special_lectures'?feed('lectures'):Promise.resolve(window.__fail.includes('slots')?{error:{message:'일정 조회 실패'}}:{data:table==='lecture_slots'?window.__slots:[]})).then(resolve,reject)};return q;}
 window.MONC={getSession:async()=>null,getMyProfile:async()=>null,sb:{from:query,rpc:async(name,args)=>feed(args.p_action)}};window.moncBeacon=()=>{};`;
 fs.mkdirSync(output,{recursive:true});
 (async()=>{
@@ -17,7 +18,7 @@ fs.mkdirSync(output,{recursive:true});
   await context.route('**/*',route=>{const url=route.request().url();if(url.startsWith(base+'/supabase-config.js'))return route.fulfill({contentType:'text/javascript',body:stub+extra});if(!url.startsWith(base+'/'))return route.abort();if(!['GET','HEAD'].includes(route.request().method()))throw Error('외부 쓰기 차단');if(url===base+'/consult.html')return route.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(path.join(root,'consult.html'),'utf8')});return route.continue()});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.clock.install();await page.goto(base+'/index.html');return{context,page};
  }
- async function settle(page){await page.locator('#homeCommunity').scrollIntoViewIfNeeded();for(const id of Object.values(ids))await page.locator('#'+id+'[aria-busy=false]').waitFor();}
+ async function settle(page){await page.locator('#homeCommunity').scrollIntoViewIfNeeded();for(const id of Object.values(ids))await page.locator('#'+id+'[aria-busy=false]').waitFor({state:'attached'});}
  async function tick(page){await page.clock.fastForward(31000);await settle(page);}
  try{
   const {context,page}=await make();await settle(page);
@@ -56,7 +57,33 @@ fs.mkdirSync(output,{recursive:true});
   await settle(second.page);assert.equal(await second.page.locator('.new-indicator:visible').count(),3,'첫 방문 최근 7일 글과 특강 NEW, 저장 차단에도 정상');
   await second.page.clock.fastForward(7*86400000+1000);await settle(second.page);assert.equal(await second.page.locator('.new-indicator:visible').count(),0,'7일 뒤 NEW 만료');
   await second.context.close();assert.deepEqual(errors,[]);
-  fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({checks:['세 종류 실제 조회 경로·30초 갱신','처음 방문한 과거 글은 NEW 제외·새로 공개된 특강 NEW','최신 제목 상시 노출·더보기와 초점 유지','읽음 해제·새로고침 유지·저장 차단','갱신 실패·재시도·숨은 탭 중지·7일 만료','스터디·게시글·특강 상세 이동·제목 HTML 무해화'],errors},null,2));
+  const third=await make();await third.page.clock.setSystemTime(new Date('2026-11-03T15:05:00Z'));
+  await third.page.evaluate(()=>{
+    __feeds.lectures=[
+      {id:'past-a',title:'이미 종료된 특강',lecture_date:'2026-11-02'},
+      {id:'past-b',title:'한국 시간으로 어제 끝난 특강',lecture_date:'2026-11-03'},
+      {id:'closed',title:'모집 종료',lecture_date:'2026-12-01',recruit_end:'2026-11-03'},
+      {id:'full',title:'정원 마감',lecture_date:'2026-12-01',seats_left:0},
+      {id:'open',title:'모집 중 특강',lecture_date:'2026-12-01',recruit_start:'2026-11-01',recruit_end:'2026-11-30'},
+      {id:'upcoming',title:'예정된 특강',lecture_date:'2026-12-02',recruit_start:'2026-11-20'},
+      {id:'multi',title:'다음 일정이 남은 특강',lecture_date:'2026-10-01'},
+      {id:'old-slots',title:'모든 일정이 끝난 특강',lecture_date:'2026-10-01'}
+    ].map(row=>({...row,visible:true,created_at:new Date().toISOString()}));
+    __slots=[{lecture_id:'multi',slot_date:'2026-10-01'},{lecture_id:'multi',slot_date:'2026-12-03'},{lecture_id:'old-slots',slot_date:'2026-11-04',end_time:'00:01:00'}];
+  });await settle(third.page);
+  assert.deepEqual(await third.page.locator('#homeCommunityLectures a[data-feed-item]').evaluateAll(es=>es.map(e=>e.dataset.feedItem)),['open','upcoming','multi'],'종료·모집 마감·정원 마감 제외 후 세 개 선별');
+  assert.ok((await third.page.locator('#homeCommunityLectures').textContent()).includes('2026. 12. 3.'),'여러 일정 중 남은 일정 표시');
+  await third.page.evaluate(()=>{__feeds.lectures=__feeds.lectures.filter(row=>['past-a','past-b','closed','full','old-slots'].includes(row.id))});await tick(third.page);
+  assert.equal(await third.page.locator('[data-feed-kind=lectures]').isVisible(),false,'해당 특강 없으면 소식 영역 숨김');
+  assert.equal(await third.page.locator('.community-choice-link[href="lectures.html"]').isVisible(),true,'특강 둘러보기 유지');
+  await third.page.evaluate(()=>{__feeds.lectures=[{id:'arrived',title:'새로 예정된 특강',visible:true,created_at:new Date().toISOString(),lecture_date:'2026-12-10'}]});await tick(third.page);
+  assert.equal(await third.page.locator('[data-feed-kind=lectures]').isVisible(),true,'새 특강 자동 표시');
+  assert.equal(await third.page.locator('[data-feed-kind=lectures] .new-indicator').isVisible(),true,'새 예정 특강 NEW');
+  await third.page.clock.setSystemTime(new Date('2026-12-11T00:00:00+09:00'));await third.page.evaluate(()=>{__fail=['slots']});await tick(third.page);
+  assert.equal(await third.page.locator('#homeCommunityLectures a[data-feed-item]').count(),0,'일정 조회 실패 중에도 이미 끝난 이전 특강 제거');
+  assert.equal(await third.page.locator('#homeCommunityLectures .home-community-retry').isVisible(),true,'실패를 빈 목록으로 숨기지 않음');
+  await third.context.close();assert.deepEqual(errors,[]);
+  fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({checks:['세 종류 실제 조회 경로·30초 갱신','처음 방문한 과거 글은 NEW 제외·새로 공개된 특강 NEW','최신 제목 상시 노출·더보기와 초점 유지','읽음 해제·새로고침 유지·저장 차단','갱신 실패·재시도·숨은 탭 중지·7일 만료','스터디·게시글·특강 상세 이동·제목 HTML 무해화','끝난 일정·모집/정원 마감 제외·여러 일정의 다음 날짜·한국 날짜/종료시각 경계·없으면 소식만 숨김·새 특강 자동 표시'],errors},null,2));
   console.log('홈 소식 3종: 갱신·NEW·읽음·오류·저장 차단·상세 이동 통과');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1});
