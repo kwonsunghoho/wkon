@@ -1,22 +1,86 @@
 // 온라인 강의 전용 제출·피드백. 기존 결제와 학원 수업 권한을 변경하지 않는다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION='2026-10-30-feedback'
+const FN_VERSION='2026-11-03-feedback-operations'
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail=(error:string,status=200)=>reply({ok:false,error},status)
 const bucket='online-course-assets',uuid=(v:unknown)=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
-const publicRow=(f:any)=>f?{id:f.id,body:f.body,submittedAt:f.submitted_at,feedback:f.replied_at?f.feedback:null,repliedAt:f.replied_at,hasVideo:!!f.upload_id}:null
+const videoUntil=(f:any)=>f.replied_at?new Date(Date.parse(f.replied_at)+30*864e5).toISOString():null
+const publicRow=(f:any)=>f?{id:f.id,body:f.body,submittedAt:f.submitted_at,replyDueAt:f.reply_due_at,feedback:f.replied_at?f.feedback:null,repliedAt:f.replied_at,videoUntil:videoUntil(f),videoExpired:!!f.upload_id&&!!f.replied_at&&Date.parse(videoUntil(f)!)<=Date.now(),hasVideo:!!f.upload_id&&(!f.replied_at||Date.parse(videoUntil(f)!)>Date.now())}:null
+
+// 일정 실행은 서버 키만 허용한다. 메일 연결 전에는 알림을 발송 성공으로 표시하지 않는다.
+async function runOperations(sb:any){
+ const {data:job,error:je}=await sb.from('online_feedback_jobs').insert({}).select('id').single()
+ if(je||!job)return fail('job_log_failed',500)
+ let deleted=0,sent=0;const issues:string[]=[]
+ const {error:re}=await sb.rpc('oc_feedback_remind');if(re)issues.push('reminder_failed')
+ const {data:files,error:ce}=await sb.rpc('oc_feedback_cleanup_claim')
+ if(ce)issues.push('cleanup_claim_failed')
+ for(const u of files||[]){
+  // 생성 시 서버가 발급한 피드백 전용 경로만 삭제한다. 강의 영상·자료는 접근하지 않는다.
+  if(!new RegExp('^feedback/'+u.member_id+'/'+u.id+'\\.(mp4|mov|webm)$').test(u.path)){issues.push('invalid_cleanup_path');continue}
+  const {error}=await sb.storage.from(bucket).remove([u.path])
+  const {error:saveError}=await sb.from('online_feedback_uploads').update(error?{cleanup_error:'storage_delete_failed'}:{deleted_at:new Date().toISOString(),cleanup_error:null}).eq('id',u.id).eq('cleanup_started_at',u.cleanup_started_at)
+  if(error||saveError)issues.push('cleanup_retry_pending');else deleted++
+ }
+ const apiKey=Deno.env.get('RESEND_API_KEY'),from=Deno.env.get('ONLINE_FEEDBACK_MAIL_FROM')
+ if(apiKey&&from){
+  // 제공사 중복 방지 키의 24시간 범위를 넘긴 알림은 뒤늦게 재발송하지 않는다.
+  const {data:notes,error:ne}=await sb.rpc('oc_feedback_email_claim');if(ne)issues.push('email_claim_failed')
+  for(const n of notes||[]){
+   let state='failed',errorCode='email_send_failed'
+   try{
+    const {data:member,error:me}=await sb.from('members').select('role').eq('id',n.member_id).maybeSingle()
+    if(me)throw new Error('member_lookup_failed')
+    if(n.admin_only&&member?.role!=='admin'){state='skipped';errorCode='role_changed'}
+    else{
+     const {data,error:ae}=await sb.auth.admin.getUserById(n.member_id)
+     if(ae||!data?.user?.email)throw new Error('recipient_missing')
+     const url='https://monc.ai.kr/course-feedback.html'+(n.admin_only?'?admin=1':'')
+     const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json','Idempotency-Key':'monc-feedback-'+n.id},body:JSON.stringify({from,to:[data.user.email],subject:'[MONC] '+n.title,text:n.body+'\n\n로그인 후 확인해 주세요.\n'+url}),signal:AbortSignal.timeout(10000)})
+     if(r.ok){state='sent';errorCode='';sent++}await r.body?.cancel()
+    }
+   }catch{errorCode='email_send_failed'}
+   const {error}=await sb.from('online_feedback_notifications').update({email_state:state,email_error:errorCode||null,...(state==='sent'?{email_sent_at:new Date().toISOString()}:{})}).eq('id',n.id).eq('email_claimed_at',n.email_claimed_at)
+   if(error||state==='failed')issues.push('email_retry_pending')
+  }
+ }
+ const {error:done}=await sb.from('online_feedback_jobs').update({finished_at:new Date().toISOString(),deleted,sent,error:[...new Set(issues)].join(',')||null}).eq('id',job.id)
+ return reply({ok:!done&&!issues.length,deleted,sent,emailConfigured:!!(apiKey&&from),error:done?'job_log_failed':issues[0]||null},done||issues.length?500:200)
+}
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:cors})
  if(req.method!=='POST')return fail('method_not_allowed',405)
  try{
   const b=await req.json();if(b.probe===true)return reply({ok:true,version:FN_VERSION})
   const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  if(b.action==='scheduled'){
+   const authorization=req.headers.get('Authorization')||''
+   let authorized=authorization==='Bearer '+Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+   if(!authorized&&/^Bearer eyJ[\w.-]+$/.test(authorization)){
+    const r=await fetch(Deno.env.get('SUPABASE_URL')+'/auth/v1/admin/users?page=1&per_page=1',{headers:{Authorization:authorization,apikey:authorization.slice(7)},signal:AbortSignal.timeout(10000)})
+    authorized=r.ok;await r.body?.cancel()
+   }
+   if(!authorized)return fail('forbidden',403)
+   return await runOperations(sb)
+  }
   const {data:{user},error:ue}=await sb.auth.getUser((req.headers.get('Authorization')||'').replace(/^Bearer\s+/i,''))
   if(ue||!user)return fail('not_authenticated',401)
   const {data:m,error:me}=await sb.from('members').select('*').eq('id',user.id).maybeSingle()
   if(me||!m?.agreed_at||m.terms_version!=='2026-10-05')return fail('consent_required')
   const admin=m.role==='admin',action=String(b.action||'view')
+  if(action==='notifications'){
+   let q=sb.from('online_feedback_notifications').select('id,title,body,created_at,read_at,admin_only').eq('member_id',user.id)
+   if(!admin)q=q.eq('admin_only',false)
+   const {data:rows,error}=await q.order('created_at',{ascending:false}).limit(30)
+   return error?fail('not_ready'):reply({ok:true,rows})
+  }
+  if(action==='notification-read'){
+   if(!uuid(b.id))return fail('not_found')
+   let q=sb.from('online_feedback_notifications').update({read_at:new Date().toISOString()}).eq('member_id',user.id).eq('id',b.id)
+   if(!admin)q=q.eq('admin_only',false)
+   const {error}=await q;return error?fail('save_failed'):reply({ok:true})
+  }
   if(action.startsWith('admin-')&&!admin)return fail('forbidden',403)
   if(action==='admin-reply'){
    if(!uuid(b.id)||typeof b.body!=='string'||b.body.length>12000||!Number.isInteger(b.revision)||b.revision<0||typeof b.publish!=='boolean')return fail('invalid_feedback')
@@ -27,9 +91,12 @@ Deno.serve(async req=>{
    if(!uuid(b.id))return fail('not_found')
    const {data:f,error}=await sb.from('online_course_feedback').select('*').eq('id',b.id).maybeSingle()
    if(error||!f||!admin&&f.member_id!==user.id)return fail('not_found')
+   if(f.replied_at&&Date.parse(videoUntil(f)!)<=Date.now())return fail('video_expired')
    const {data:u,error:up}=await sb.from('online_feedback_uploads').select('*').eq('id',f.upload_id).maybeSingle()
    if(up||!u||u.member_id!==f.member_id||u.course_id!==f.course_id)return fail('not_found')
-   const {data:s,error:se}=await sb.storage.from(bucket).createSignedUrl(u.path,300)
+   if(u.deleted_at||u.cleanup_started_at)return fail('video_expired')
+   const ttl=f.replied_at?Math.max(1,Math.min(300,Math.floor((Date.parse(videoUntil(f)!)-Date.now())/1000))):300
+   const {data:s,error:se}=await sb.storage.from(bucket).createSignedUrl(u.path,ttl)
    return se||!s?fail('not_ready'):reply({ok:true,url:s.signedUrl,name:u.name})
   }
   const courseId=String(b.courseId||'expression-advanced')
