@@ -207,7 +207,7 @@ try{
    await page.setViewportSize({width:375,height:812});
   }
   await page.locator('#hamburger').click();
-  assert.equal(await page.locator('#menuAdmin').isVisible(),auth==='admin');
+  assert.equal(await page.locator('#menuAdmin').count(),0);
   if(auth==='admin')await page.screenshot({path:path.join(output,'menu-admin-375.png')});
   await page.getByRole('button',{name:'커뮤니티',exact:true}).click();
   await page.locator('#mobileMenu a[href="community.html?view=board&topic=hair"]').click();
@@ -345,7 +345,7 @@ try{
   const {page,context}=await makePage({profileFail:true,auth:'member'});
   assert.equal(await page.locator('.nav-admin').isVisible(),false);
   await page.locator('#hamburger').click();
-  assert.equal(await page.locator('#menuAdmin').isVisible(),false);
+  assert.equal(await page.locator('#menuAdmin').count(),0);
   await context.close();
  }
  report.checks.push('키보드와 동일한 click 계측·관리자 프로필 조회 실패 시 비노출');

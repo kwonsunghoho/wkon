@@ -1,5 +1,6 @@
 // 승인된 차콜 메인의 화면·이동·공개 데이터 상태를 운영 통신 없이 검증한다.
 // 실행: node scripts/home-journal-tests.cjs --deps <node_modules> --out <출력 폴더>
+// 승인된 공용 메뉴 변경을 함께 검사할 때만 --allow-nav-change를 지정한다.
 const fs=require('fs'),path=require('path'),assert=require('assert/strict'),cp=require('child_process');
 const args=process.argv.slice(2),opt=(n,d)=>args.includes(n)?args[args.indexOf(n)+1]:d;
 const deps=opt('--deps'),base=opt('--url','http://127.0.0.1:5511'),out=path.resolve(opt('--out','outputs/home-full/approved-checks'));
@@ -12,6 +13,7 @@ const naverBooking=fs.readFileSync(path.join(root,'consult.html'),'utf8').match(
 const intro=s=>s.match(/<section class="hero-intro"[\s\S]*?<\/section>/)[0];
 assert.equal(intro(current).replace(/\r\n/g,'\n'),intro(original).replace(/\r\n/g,'\n'),'창문 인트로 마크업 보존');
 for(const file of ['home-intro.js','home-intro.css','nav.js','nav.css']){
+ if(file==='nav.js'&&args.includes('--allow-nav-change'))continue;
  assert.equal(fs.readFileSync(path.join(root,file),'utf8').replace(/\r\n/g,'\n'),cp.execFileSync('git',['show','origin/main:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'),file+' 원본 보존');
 }
 assert.ok(!current.includes('outputs/home-full'),'시안 파일 참조 없음');
