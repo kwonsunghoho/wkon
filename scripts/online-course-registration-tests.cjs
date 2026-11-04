@@ -25,5 +25,9 @@ function setup(options={}){
  h=setup({courses:[]});assert.deepEqual((await h.run({action:'catalog-list'})).courses,[]);
  h=setup({readFailure:true});assert.equal((await h.run({action:'catalog-list'})).ok,false);
  h=setup({writeFailure:true});assert.equal((await h.run(request)).error,'save_failed');assert.equal(h.tables.online_courses.length,2);
+ h=setup({noUser:true});assert.equal((await h.run({action:'admin-delete-course',courseId:'first',revision:1,title:'기존 강의'})).status,401);
+ h=setup({role:'member'});assert.equal((await h.run({action:'admin-delete-course',courseId:'first',revision:1,title:'기존 강의'})).status,403);assert.equal(h.calls.length,0);
+ h=setup();assert.equal((await h.run({action:'admin-delete-course',courseId:'first',revision:1,title:'기존 강의',actor:'other'})).ok,true);assert.equal(h.calls[0].n,'oc_admin_delete_course');assert.equal(h.calls[0].a.p_actor,'actor');assert.equal(h.calls[0].a.p_course,'first');
+ h=setup({courses:[]});const empty=await h.run({action:'admin-load'});assert.equal(empty.ok,true);assert.equal(empty.course,null);assert.deepEqual(empty.lessons,[]);
  console.log('새 과정 등록·공개 목록 검증 통과: 관리자/동의·비공개 기본값·중복 재시도·기존 과정 보존·과정별 결제·205개 조회·오류 처리');
 })().catch(e=>{console.error(e);process.exitCode=1});

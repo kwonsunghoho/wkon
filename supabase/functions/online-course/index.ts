@@ -1,7 +1,7 @@
 // 영합각 심화: 공개 소개 / 본인 수강권 / 최초 재생 / 비공개 자산 / 진도.
 // 콘솔 한 파일 배포. Verify JWT는 켜둔다. 운영 데이터는 서버에서만 접근한다.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0'
-const FN_VERSION = '2026-11-03-admin-applicants'
+const FN_VERSION = '2026-11-04-course-delete'
 const CORS = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
 const reply = (body: unknown,status=200) => new Response(JSON.stringify(body),{status,headers:{...CORS,'Content-Type':'application/json','Cache-Control':'no-store'}})
 const fail = (error:string) => reply({ok:false,error})
@@ -98,6 +98,21 @@ Deno.serve(async(req)=>{
     const {data:created,error:ce}=await supa.from('online_courses').select('*').eq('id',id).maybeSingle()
     return ce||!created?fail('save_failed'):reply({ok:true,course:created})
    }
+   if(b.action==='admin-delete-course'){
+    if(!b.courseId||!Number.isInteger(b.revision)||b.revision<1||typeof b.title!=='string'||!b.title.trim()||b.title.length>100)return fail('invalid_fields')
+    const {data,error}=await supa.rpc('oc_admin_delete_course',{p_actor:user.id,p_course:courseId,p_revision:b.revision,p_title:b.title})
+    if(error)return fail('save_failed')
+    if(!data?.ok)return reply(data)
+    return reply({...data,cleanup:await cleanupVideos(supa)})
+   }
+   if(b.action==='admin-load'){
+    const {data:courses,error}=await supa.from('online_courses').select('*').order('created_at')
+    if(error)return fail('not_ready')
+    const current=courses?.find(c=>c.id===courseId)||courses?.[0]||null
+    const result=current?await supa.from('online_lessons').select('*').eq('course_id',current.id).order('position'):{data:[],error:null}
+    if(result.error)return fail('not_ready')
+    return reply({ok:true,course:current,courses:courses||[],lessons:result.data||[],cleanup:await cleanupVideos(supa)})
+   }
    let c:any=null
    if(!(b.action==='admin-orders'&&b.scope==='all')){
     const course=await supa.from('online_courses').select('*').eq('id',courseId).maybeSingle()
@@ -154,13 +169,6 @@ Deno.serve(async(req)=>{
    if(b.action==='admin-classroom'){
     const {data,error}=await supa.rpc('oc_admin_preview',{p_actor:user.id,p_course:courseId})
     return error?fail('not_ready'):reply(data)
-   }
-   if(b.action==='admin-load'){
-    const {data:courses,error:cs}=await supa.from('online_courses').select('*').order('created_at')
-    const {data:lessons,error:ls}=await supa.from('online_lessons').select('*').eq('course_id',courseId).order('position')
-    if(cs||ls)return fail('not_ready')
-    const cleanup=await cleanupVideos(supa)
-    return reply({ok:true,course:c,courses,lessons,cleanup})
    }
    const safeText=(v:unknown,max:number)=>typeof v==='string'&&v.length<=max
    const whole=(v:unknown,min:number,max:number)=>typeof v==='number'&&Number.isInteger(v)&&v>=min&&v<=max
