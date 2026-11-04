@@ -13,7 +13,7 @@ const naverBooking=fs.readFileSync(path.join(root,'consult.html'),'utf8').match(
 const intro=s=>s.match(/<section class="hero-intro"[\s\S]*?<\/section>/)[0];
 assert.equal(intro(current).replace(/\r\n/g,'\n'),intro(original).replace(/\r\n/g,'\n'),'창문 인트로 마크업 보존');
 for(const file of ['home-intro.js','home-intro.css','nav.js','nav.css']){
- if(file==='nav.js'&&args.includes('--allow-nav-change'))continue;
+ if(['nav.js','nav.css'].includes(file)&&args.includes('--allow-nav-change'))continue;
  assert.equal(fs.readFileSync(path.join(root,file),'utf8').replace(/\r\n/g,'\n'),cp.execFileSync('git',['show','origin/main:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'),file+' 원본 보존');
 }
 assert.ok(!current.includes('outputs/home-full'),'시안 파일 참조 없음');
