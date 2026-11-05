@@ -24,6 +24,7 @@ await db.exec(await fs.readFile(path.join(root,'supabase/migrations/202611031151
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103115812_community_remove_study_member.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103130738_community_study_reopen.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103131442_community_study_contact_consent.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261105062252_community_study_management.sql'),'utf8'));
 let chain=Promise.resolve();
 function lock(task){const r=chain.then(task);chain=r.catch(()=>{});return r;}
 async function rpc(who,fn,a,d={}){
@@ -58,6 +59,10 @@ for(const s of [
  {title:'주말 온라인 영상면접 스터디',goals:'시선·속도·전달력',mode:'online',schedule:'토요일 오전 10시',capacity:5,min_level:0,required_skills:['basic']},
  {title:'기본 답변부터 함께 준비해요',goals:'자기소개 · 지원동기',mode:'offline',location:'서울 홍대',schedule:'일요일 오후 2시',capacity:4,min_level:0,required_skills:[]}
 ].reverse()){await rpc('owner','community_member','study-save',{...s,description:'각자 준비한 답변을 나누고 서로 추가 질문과 피드백을 주고받습니다. 시간에 맞춰 참여해 주세요.'});}
+// 운영 데이터 없이 목록·상세·승인 이동을 확인하는 가상 신청자다.
+const managementStudy=(await db.query("select id from monc_community.studies where title='기본 답변부터 함께 준비해요'")).rows[0].id;
+await rpc('member','community_member','apply',{id:managementStudy,message:'준비한 답변을 서로 점검하고 매주 꾸준히 연습하고 싶어요. 추가 질문에 자연스럽게 답하는 연습이 필요합니다.',contact_consent:true,contact_owner:ids.owner});
+await rpc('beginner','community_member','apply',{id:managementStudy,message:'',contact_consent:true,contact_owner:ids.owner});
 const stub=`<script>
 const who=new URLSearchParams(location.search).get('as')||'member';
 const uid=${JSON.stringify(ids)}[who];
@@ -97,7 +102,7 @@ const server=http.createServer(async(req,res)=>{try{
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;
   }
   const name=decodeURIComponent(url.pathname).slice(1);if(name.includes('..')||name.includes('\\'))throw new Error('경로');
-  const local=['community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
+  const local=['community-study-management.js','community-study-management.css','community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
   const p=path.join(local.includes(name)?root:source,name);const content=await fs.readFile(p);res.writeHead(200,{'Content-Type':mime[path.extname(p)]||'application/octet-stream'});res.end(content);
 }catch(e){res.writeHead(500);res.end('로컬 확인 서버 오류');}});
 const downloads=new Map();server.listen(port,'127.0.0.1',()=>process.stdout.write('운영 호출이 차단된 확인 화면: http://127.0.0.1:'+port+'/selected.html\n'));
