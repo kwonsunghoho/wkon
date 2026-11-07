@@ -271,10 +271,16 @@
        한 트랙에 넣으면 접히지 않고 삐져나온다(크로미움은 date 가 좁아 재현 안 됨 — 눈검사로 못 잡는다).
        ⚠️ 새 날짜 입력을 만들면 감싸는 .field 에 field-date 를 같이 단다. */
     .round-form .field-date, .field-date { grid-column: span 2; min-width: 170px; }
-    /* '4개 한번에' 줄 — 인라인 display 금지([hidden] 짝 규칙, 2026-08-06). */
+    /* 선택 등록 줄 — 인라인 display 금지([hidden] 짝 규칙). */
     #rfAllRow { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; padding: 10px 0; }
     #rfAllRow[hidden] { display: none; }
     #rfAllRow input { width: 24px; height: 24px; accent-color: var(--action); flex: none; }
+    #rfTargets { grid-column: 1 / -1; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-xs); }
+    #rfTargets[hidden] { display: none; }
+    #rfTargets legend { font-size: 14px; font-weight: 700; padding: 0 4px; }
+    #rfTargetList { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+    #rfTargetList label { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; cursor: pointer; }
+    #rfTargetList input { width: 24px; height: 24px; flex: none; accent-color: var(--action); }
     /* 연구실 자료 수정 모드의 '비밀번호 풀기' 줄 — 같은 규칙(인라인 display 금지 · [hidden] 짝, 2026-08-09). */
     #lrPwClearRow { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--accent-ink); padding: 2px 0; }
     #lrPwClearRow[hidden] { display: none; }
@@ -1486,13 +1492,17 @@
         <!-- 학생 화면(마이페이지·제출 입구)의 문항·제출 칸은 이 시작일부터 열린다(2026-09-03).
              비우면 '개강일 지정'은 모집 마감 다음 날, 선착순은 바로 열린다 — recruit.js roundStartDate. -->
         <p class="rf-note">마이페이지의 문항·제출 칸은 <b>프로그램 시작일부터</b> 열려요. 비우면 <b>모집 마감 다음 날</b>에 열리고, 마감도 없는 선착순은 다음 기수가 등록되기 전까지 <b>잠겨</b> 있어요 — 시작이 정해지면 날짜를 넣어 주세요. 아래 목록의 '학생 화면' 표시가 지금 상태예요.</p>
-        <!-- 4개 한번에 — 같은 날짜로 4개 챌린지 기수를 한 번에 등록(오너 요청 2026-08-06).
+        <!-- 선택 등록 — 체크한 챌린지만 같은 일정으로 등록한다.
              기수는 챌린지마다 '기존 최고 기수 + 1' 로 자동 매긴다(아래 안내 줄이 미리 보여 준다). -->
         <label id="rfAllRow">
           <input type="checkbox" id="rfAll">
-          4개 챌린지 한번에 등록 — 같은 일정으로
+          여러 챌린지 선택 등록 — 같은 일정으로
         </label>
-        <div id="rfAllHint" hidden></div>
+        <fieldset id="rfTargets" hidden>
+          <legend>등록할 챌린지 선택</legend>
+          <div id="rfTargetList"></div>
+        </fieldset>
+        <div id="rfAllHint" role="status" hidden></div>
         <button class="btn btn-action" type="submit" id="roundSubmitBtn">추가/수정</button>
       </form>
       <!-- 기수 목록 — 상태별 두 묶음(모집 중·예정 판 + 지난 기수 접이). loadRounds 가 안에 판을 그린다(2026-09-13). -->
@@ -4404,19 +4414,40 @@
       return rs.length ? Math.max.apply(null, rs) + 1 : 1;
     }
 
-    /* '4개 한번에' 토글 — 켜면 챌린지·기수 칸을 잠그고, 무엇이 만들어질지 미리 보여 준다.
+    // 단일 등록과 같은 챌린지 목록을 쓴다. 기본은 모두 미선택이다.
+    const rfTargetList = document.getElementById('rfTargetList');
+    Array.from(document.getElementById('rfChallenge').options).forEach(option => {
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'checkbox'; input.value = option.value; input.name = 'rfTarget';
+      label.append(input, document.createTextNode(CH_LABEL[option.value] || option.textContent));
+      rfTargetList.appendChild(label);
+    });
+    function selectedRoundChallenges() {
+      return Array.from(rfTargetList.querySelectorAll('input:checked')).map(input => input.value);
+    }
+
+    /* 선택 등록 토글 — 켜면 챌린지·기수 칸을 잠그고, 무엇이 만들어질지 미리 보여 준다.
        기수를 하나로 통일하지 않는 이유: 챌린지마다 진행 기수가 다르다(보신각 4기 vs 승자각 2기).
        같은 숫자로 밀면 학생에게 틀린 기수가 보인다. */
     function updateBulkUi() {
       const on = document.getElementById('rfAll').checked && !editingRoundId;
       document.getElementById('rfChallenge').disabled = on || !!editingRoundId;
       document.getElementById('rfRound').disabled = on || !!editingRoundId;
+      document.getElementById('rfTargets').hidden = !on;
+      document.getElementById('rfTargets').disabled = !on;
       const hint = document.getElementById('rfAllHint');
       hint.hidden = !on;
-      if (on) hint.textContent =
-        Object.keys(CH_LABEL).map(ch => CH_LABEL[ch] + ' ' + nextRound(ch) + '기').join(' · ') + ' 로 등록됩니다';
+      if (on) {
+        const targets = selectedRoundChallenges();
+        hint.textContent = targets.length
+          ? targets.map(ch => CH_LABEL[ch] + ' ' + nextRound(ch) + '기').join(' · ') + '로 등록됩니다'
+          : '운영할 챌린지를 하나 이상 선택해 주세요.';
+      }
     }
     document.getElementById('rfAll').addEventListener('change', updateBulkUi);
+    rfTargetList.addEventListener('change', updateBulkUi);
+    updateBulkUi();
 
     // 시작 방식 토글 — 선착순이면 마감은 선택이 되고, 개강일 칸은 잠근다(인원이 모이면 시작이라 날짜가 없다)
     function updateModeUi() {
@@ -4803,9 +4834,12 @@
 
       // 추가 모드(같은 챌린지+기수면 upsert가 덮어씀)
       let rows;
-      if (document.getElementById('rfAll').checked) {
-        // 4개 한번에 — 챌린지마다 다음 기수로. 어떤 기수가 되는지는 rfAllHint 가 미리 보여 줬다.
-        rows = Object.keys(CH_LABEL).map(ch => Object.assign({ challenge: ch, round: nextRound(ch) }, dates));
+      const bulk = document.getElementById('rfAll').checked;
+      if (bulk) {
+        const targets = selectedRoundChallenges();
+        if (!targets.length) { toast('등록할 챌린지를 하나 이상 선택해 주세요.'); return; }
+        // 고른 챌린지만 각자의 다음 기수로 등록한다.
+        rows = targets.map(ch => Object.assign({ challenge: ch, round: nextRound(ch) }, dates));
       } else {
         const round = parseInt(document.getElementById('rfRound').value, 10);
         if (!round) { alert('기수를 입력하세요.'); return; }
@@ -4814,11 +4848,15 @@
       const error = await writeRound(mode,
         payload => MONC.sb.from('challenge_rounds').upsert(payload, { onConflict: 'challenge,round' }), rows);
       if (error) { alert('저장 실패: ' + error.message); return; }
-      toast(rows.length > 1 ? '4개 챌린지 모두 저장됨' : '저장됨 — 날짜는 남겨 뒀어요');
+      toast(bulk ? rows.length + '개 챌린지 저장됨 — 날짜는 남겨 뒀어요' : '저장됨 — 날짜는 남겨 뒀어요');
       /* ⚠️ 날짜·방식은 비우지 않는다(2026-08-06 오너 "일정 복사가 안 되네").
          챌린지만 바꿔 다시 저장하면 같은 일정이 복사된다. 실수로 두 번 눌러도
          같은 챌린지+기수는 upsert 가 덮어써서 중복 행이 안 생긴다. */
-      if (rows.length > 1) document.getElementById('rfAll').checked = false;   // 한 번 더 누르면 다음 기수가 또 생기는 것만 막는다
+      if (bulk) {
+        document.getElementById('rfAll').checked = false;
+        rfTargetList.querySelectorAll('input').forEach(input => { input.checked = false; });
+        updateBulkUi();   // 하나만 선택했어도 성공 후 해제해 다음 기수 연속 생성을 막는다
+      }
       loadRounds();
     });
 
