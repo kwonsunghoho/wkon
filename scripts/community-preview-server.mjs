@@ -25,6 +25,7 @@ await db.exec(await fs.readFile(path.join(root,'supabase/migrations/202611031158
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103130738_community_study_reopen.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103131442_community_study_contact_consent.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261105062252_community_study_management.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261110102840_community_activity_categories.sql'),'utf8'));
 let chain=Promise.resolve();
 function lock(task){const r=chain.then(task);chain=r.catch(()=>{});return r;}
 async function rpc(who,fn,a,d={}){
@@ -63,12 +64,25 @@ for(const s of [
 const managementStudy=(await db.query("select id from monc_community.studies where title='기본 답변부터 함께 준비해요'")).rows[0].id;
 await rpc('member','community_member','apply',{id:managementStudy,message:'준비한 답변을 서로 점검하고 매주 꾸준히 연습하고 싶어요. 추가 질문에 자연스럽게 답하는 연습이 필요합니다.',contact_consent:true,contact_owner:ids.owner});
 await rpc('beginner','community_member','apply',{id:managementStudy,message:'',contact_consent:true,contact_owner:ids.owner});
+if(process.argv.includes('--activity-test')){
+ const assert=(ok,label)=>{if(!ok)throw new Error(label);process.stdout.write('통과: '+label+'\n');};
+ const draft={title:'가상 어학 모임',description:'함께 영어 회화를 연습하는 가상 모임입니다.',goals:'영어 회화',mode:'online',schedule:'2026-11-21 (토) · 09:00 ~ 12:00',capacity:4,study_category:'language',activity_date:'2026-11-21',min_level:3,require_experience:true,required_skills:['lead']};
+ const created=(await rpc('beginner','community_member','study-save-activity',draft)).id;
+ const get=()=>rpc('guest','community_read','study',{id:created});
+ const item=(await get()).item;assert(item.study_category==='language'&&item.activity_date==='2026-11-21','카테고리·특정 날짜 저장');assert(item.min_level===0&&!item.require_experience&&!item.required_skills.length,'비면접 인증 조건 서버 제거');
+ const listed=await rpc('guest','community_read','studies',{study_category:'language',recruitment:'all'});assert(listed.items.length===1&&listed.items[0].id===created,'카테고리 서버 필터');
+ assert((await rpc('guest','community_read','study',{id:managementStudy})).item.study_category==='interview','기존 모집글 면접 준비 유지');
+ for(const [label,who,data] of [['타인 수정 차단','member',{...draft,id:created}],['잘못된 카테고리 차단','beginner',{...draft,study_category:'other'}],['비봉사 공고 연결 차단','beginner',{...draft,volunteer_id:'123'}],['잘못된 날짜 차단','beginner',{...draft,activity_date:'2026-02-30'}]]){let rejected=false;try{await rpc(who,'community_member','study-save-activity',data);}catch{rejected=true;}assert(rejected,label);}
+ const v=(await rpc('beginner','community_member','study-save-activity',{...draft,study_category:'volunteer',volunteer_id:'123'})).id;assert((await rpc('guest','community_read','study',{id:v})).item.volunteer_id==='123','봉사 공고 식별자 저장');
+ assert((await rpc('beginner','community_member','volunteer-access')).ok,'회원 조회 자격');let denied=false;try{await rpc('guest','community_member','volunteer-access');}catch{denied=true;}assert(denied,'비회원 조회 차단');
+ await db.close();process.exit(0);
+}
 const stub=`<script>
 const who=new URLSearchParams(location.search).get('as')||'member';
 const uid=${JSON.stringify(ids)}[who];
 const session=uid?{user:{id:uid,user_metadata:{name:'가상 회원'}}}:null;
 async function localRpc(fn,data){try{const r=await fetch('/__api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({who,fn,...data})});return await r.json();}catch(e){return{data:null,error:{message:e.message}};}}
-window.MONC={getSession:async()=>session,getMyProfile:async()=>session?{name:'가상 회원',role:who==='admin'?'admin':'member'}:null,requireConsent:async()=>!!session,requireAdmin:async()=>who==='admin'?{role:'admin'}:null,sb:{rpc:localRpc,functions:{invoke:async(fn,{body})=>{const form=body instanceof FormData;const r=await fetch('/__api/file?who='+who,{method:'POST',headers:form?{}:{'Content-Type':'application/json'},body:form?body:JSON.stringify(body)});return await r.json();}}}};
+window.MONC={getSession:async()=>session,getMyProfile:async()=>session?{name:'가상 회원',role:who==='admin'?'admin':'member'}:null,requireConsent:async()=>!!session,requireAdmin:async()=>who==='admin'?{role:'admin'}:null,sb:{rpc:localRpc,functions:{invoke:async(fn,{body})=>{if(fn==="volunteer-search")return body.keyword==="미등록"?{data:{ok:false,code:"not_configured"},error:null}:{data:{ok:true,checked_at:new Date().toISOString(),total:1,items:[{id:"123",title:"가상 하천 정화 봉사",organization:"가상 기관",location:"서울 마포",start_date:"2026-11-21",end_date:"2026-11-21",start_time:"09:00",end_time:"12:00",status:"2",recruit_end:"2026-11-20",url:""}]},error:null};const form=body instanceof FormData;const r=await fetch('/__api/file?who='+who,{method:'POST',headers:form?{}:{'Content-Type':'application/json'},body:form?body:JSON.stringify(body)});return await r.json();}}}};
 </script>`;
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.webp':'image/webp','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2'};
 const json=(res,v)=>{res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(v));};
@@ -102,7 +116,7 @@ const server=http.createServer(async(req,res)=>{try{
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;
   }
   const name=decodeURIComponent(url.pathname).slice(1);if(name.includes('..')||name.includes('\\'))throw new Error('경로');
-  const local=['community-study-management.js','community-study-management.css','community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
+  const local=['community-activity.js','community-activity.css','community-study-management.js','community-study-management.css','community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
   const p=path.join(local.includes(name)?root:source,name);const content=await fs.readFile(p);res.writeHead(200,{'Content-Type':mime[path.extname(p)]||'application/octet-stream'});res.end(content);
 }catch(e){res.writeHead(500);res.end('로컬 확인 서버 오류');}});
 const downloads=new Map();server.listen(port,'127.0.0.1',()=>process.stdout.write('운영 호출이 차단된 확인 화면: http://127.0.0.1:'+port+'/selected.html\n'));
