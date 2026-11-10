@@ -124,7 +124,7 @@ window.MONC_RESEARCHERS = [
   {
     id:'hyun',
     role:'선임 연구원',
-    name:'현형빈',
+    name:'제이크',
     position:'해외 경력 · 글로벌 커뮤니케이션 전문가',
     photo:'images/instructor-hyun.webp',
     tags:['글로벌 커뮤니케이션','영어 교육','해외 실무','팀 리드'],
