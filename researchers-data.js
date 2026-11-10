@@ -95,7 +95,7 @@ window.MONC_RESEARCHERS = [
   {
     id:'kim-yongwi',
     role:'책임 연구원',
-    name:'김용위',
+    name:'에릭킴',
     position:'항공사 기장 · CRM & 항공 커뮤니케이션 전문가',
     photo:'images/instructor-kim-yongwi.jpg',
     tags:['CRM·팀워크','항공사 취업 전략','면접·자기소개','항공 전문 커뮤니케이션'],
