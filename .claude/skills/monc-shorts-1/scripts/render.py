@@ -130,7 +130,7 @@ def graph(plan,preview=False):
 
 def invoke(command,out):
  flags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0
- with (out/'render.log').open('a',encoding='utf-8') as log:result=subprocess.run(command,stdout=log,stderr=log,creationflags=flags)
+ with (out/'render.log').open('a',encoding='utf-8') as log:result=subprocess.run(command,stdout=log,stderr=log,cwd=out,creationflags=flags)
  if result.returncode:raise RuntimeError('FFmpeg 실행 실패. '+str(out/'render.log')+'를 확인하십시오.')
 
 def main():
@@ -147,7 +147,7 @@ def main():
   cmd+=['-filter_complex',graph(plan,True),'-map','[out]','-frames:v','1','-y',str(out/f'preview-{i:02d}.png')];invoke(cmd,out)
  print('프리뷰 생성 완료: '+str(out),flush=True)
  if args.preview_only:return
- cmd=[args.ffmpeg,'-hide_banner','-loglevel','warning','-i',str(source),'-f','concat','-safe','0','-i',str(out/'overlays.ffconcat')]
+ cmd=[args.ffmpeg,'-hide_banner','-loglevel','warning','-i',str(source),'-f','concat','-safe','0','-i','overlays.ffconcat']
  if shift:cmd+=['-loop','1','-framerate',str(FPS),'-i',str(out/'reframe-mask.png')]
  e=S['encoding'];cmd+=['-filter_complex',graph(plan),'-map','[out]','-map','0:a:0?','-t',str(duration),'-r',str(FPS),'-c:v','libx264','-preset',e['preset'],'-crf',str(e['crf']),'-maxrate',e['maxrate'],'-bufsize',e['bufsize'],'-pix_fmt','yuv420p','-c:a',args.audio_mode]
  if args.audio_mode=='aac':cmd+=['-b:a','160k']
