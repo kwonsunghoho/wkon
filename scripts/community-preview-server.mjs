@@ -26,6 +26,7 @@ await db.exec(await fs.readFile(path.join(root,'supabase/migrations/202611031307
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103131442_community_study_contact_consent.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261105062252_community_study_management.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261110102840_community_activity_categories.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261111131238_volunteer_companions.sql'),'utf8'));
 let chain=Promise.resolve();
 function lock(task){const r=chain.then(task);chain=r.catch(()=>{});return r;}
 async function rpc(who,fn,a,d={}){
@@ -75,6 +76,12 @@ if(process.argv.includes('--activity-test')){
  for(const [label,who,data] of [['타인 수정 차단','member',{...draft,id:created}],['잘못된 카테고리 차단','beginner',{...draft,study_category:'other'}],['비봉사 공고 연결 차단','beginner',{...draft,volunteer_id:'123'}],['잘못된 날짜 차단','beginner',{...draft,activity_date:'2026-02-30'}]]){let rejected=false;try{await rpc(who,'community_member','study-save-activity',data);}catch{rejected=true;}assert(rejected,label);}
  const v=(await rpc('beginner','community_member','study-save-activity',{...draft,study_category:'volunteer',volunteer_id:'123'})).id;assert((await rpc('guest','community_read','study',{id:v})).item.volunteer_id==='123','봉사 공고 식별자 저장');
  assert((await rpc('beginner','community_member','volunteer-access')).ok,'회원 조회 자격');let denied=false;try{await rpc('guest','community_member','volunteer-access');}catch{denied=true;}assert(denied,'비회원 조회 차단');
+ const saved=(await rpc('beginner','community_member','study-save-companion',{...draft,study_category:'volunteer',volunteer_id:'456',meetup_time:'08:40',meetup_place:'가상 집결 장소'})).id;
+ const stored=(await rpc('guest','community_read','study',{id:saved})).item;assert(stored.meetup_time==='08:40'&&stored.meetup_place==='가상 집결 장소','집결 정보 저장');
+ const exact=await rpc('guest','community_read','studies',{study_category:'volunteer',volunteer_id:'456',recruitment:'all'});assert(exact.items.length===1&&exact.items[0].id===saved,'공고별 동행 정확한 연결');
+ const counts=await rpc('guest','community_read','volunteer-counts',{ids:['123','456']});assert(counts.counts['456']===1,'공고별 모집 중 동행 수');
+ await db.exec("update monc_community.studies set status='hidden' where id='"+saved+"'");assert(!(await rpc('guest','community_read','volunteer-counts',{ids:['456']})).counts['456'],'숨긴 동행 수 비노출');assert((await rpc('guest','community_read','studies',{volunteer_id:'456',recruitment:'all'})).items.length===0,'숨긴 동행 목록 비노출');
+ let bad=false;try{await rpc('beginner','community_member','study-save-companion',{...draft,meetup_time:'25:00'});}catch{bad=true;}assert(bad,'잘못된 집결 시간 서버 차단');
  await db.close();process.exit(0);
 }
 const stub=`<script>
@@ -116,7 +123,7 @@ const server=http.createServer(async(req,res)=>{try{
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;
   }
   const name=decodeURIComponent(url.pathname).slice(1);if(name.includes('..')||name.includes('\\'))throw new Error('경로');
-  const local=['community-activity.js','community-activity.css','community-study-management.js','community-study-management.css','community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
+  const local=['community-volunteer.js','community-activity.js','community-activity.css','community-study-management.js','community-study-management.css','community.js','community.css','community-home.js','community-home.css','nav.js','nav.css','index.css'];const shared=['tokens.css','inapp.js'];if(!local.includes(name)&&!shared.includes(name)&&!name.endsWith('.css')&&!name.startsWith('images/')&&!name.startsWith('fonts/')){res.writeHead(404);res.end();return;}
   const p=path.join(local.includes(name)?root:source,name);const content=await fs.readFile(p);res.writeHead(200,{'Content-Type':mime[path.extname(p)]||'application/octet-stream'});res.end(content);
 }catch(e){res.writeHead(500);res.end('로컬 확인 서버 오류');}});
 const downloads=new Map();server.listen(port,'127.0.0.1',()=>process.stdout.write('운영 호출이 차단된 확인 화면: http://127.0.0.1:'+port+'/selected.html\n'));

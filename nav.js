@@ -7,7 +7,7 @@
     ['교육 과정', [['challenges.html','챌린지'],['online-courses.html','온라인 강의'],['lectures.html','특강']]],
     ['면접 연습', [['sojae.html','답변 소재 발굴'],['polish.html','답변 첨삭'],['games.html','역량검사 연습']]],
     ['자료·정보', [['lab-airline.html','면접 자료·기출'],['news.html','항공사 뉴스·산업분석']]],
-    ['커뮤니티', [['community.html?view=board&topic=prep','게시판'],['community.html?view=studies','스터디·활동 전체'],['community.html?view=studies&study_category=interview','면접 준비'],['community.html?view=studies&study_category=language','어학 스터디'],['community.html?view=studies&study_category=volunteer','봉사활동'],['tools.html#community','카카오톡 오픈채팅']]],
+    ['커뮤니티', [['community.html?view=board&topic=prep','게시판'],['community.html?view=studies&study_category=interview','면접 스터디'],['community.html?view=studies&study_category=language','어학 스터디'],['community.html?view=studies&study_category=volunteer','봉사활동']]],
     ['수강 후기', [['reviews-list.html?kind=challenge','챌린지 후기'],['reviews-list.html?kind=ke20','수업 후기']]]
   ];
   function esc(value) {
