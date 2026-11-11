@@ -3,7 +3,7 @@
  'use strict';
  const A=window.MONCActivity,e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const rootURL='community.html?view=studies&study_category=volunteer';
- const facts=i=>'<dl class="ca-facts"><dt>일정</dt><dd><strong>'+e(A.dateLabel(i.start_date))+(i.end_date!==i.start_date?' ~ '+e(A.dateLabel(i.end_date)):'')+'</strong></dd><dt>시간</dt><dd>'+e(i.start_time&&i.end_time?i.start_time+' – '+i.end_time:'원문에서 확인')+'</dd><dt>장소</dt><dd>'+e(i.location||'원문에서 확인')+'</dd></dl>';
+ const facts=i=>'<dl class="ca-facts"><dt>일정</dt><dd><strong>'+e(A.dateLabel(i.start_date))+(i.end_date!==i.start_date?' ~ '+e(A.dateLabel(i.end_date)):'')+'</strong></dd><dt>시간</dt><dd>'+e(i.start_time&&i.end_time?i.start_time.slice(0,2)+'시 ~ '+i.end_time.slice(0,2)+'시 · 정확한 시간은 원문 확인':'원문에서 확인')+'</dd><dt>장소</dt><dd>'+e(i.location||'원문에서 확인')+'</dd></dl>';
  const state=i=>'<span class="ca-status '+(A.available(i)?'':'ca-status-muted')+'">'+(A.available(i)?'모집 중':'모집 상태 확인 필요')+'</span>';
  async function render(main,ctx){
   const id=new URLSearchParams(location.search).get('volunteer_id');
