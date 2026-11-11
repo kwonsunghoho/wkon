@@ -1,5 +1,12 @@
 # 배포·적용 시점 상태 (사이트 전반)
 
+## 스터디·활동 및 1365 연동 (2026-11-11 · 운영 확인 완료)
+
+- 몬크 apzwauiumhmsvrgffjis에 20261110102840_community_activity_categories.sql 실행 성공. VOLUNTEER_1365_SERVICE_KEY 등록 확인 후 volunteer-search 버전 2026-11-10a 배포. JWT 검증 유지, 공개 프로브 200·비회원 검색 401 확인.
+- main 3b08c21, Pages 42995253039 성공. community HTML/JS, activity JS/CSS, management JS 5개 HTTP 200·원본 일치. 기존 모집글 면접 준비 유지.
+- 운영 회원 화면에서 실제 공고 조회 및 공고 3548960 선택 성공. 2026-11-25·13:00~15:00·장소 자동 입력 확인. 원문 링크·조회 시각·선택 불가 상태 표시 확인. 375px 문서·작성창 가로 넘침 0. 운영 모집글 게시나 기관 신청은 하지 않았다.
+
+
 ## 스터디 운영 목록·설정 바로가기 (2026-11-06 · 운영 검증 완료)
 
 - 승인 후 main 1735f33 배포, Pages 42036153859 성공. community HTML/JS와 management JS/CSS 4개 운영 HTTP 200·원본 일치. 서버 변경 없음.
