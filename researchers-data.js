@@ -93,9 +93,38 @@ window.MONC_RESEARCHERS = [
     ]
   },
   {
+    id:'kim-yongwi',
+    role:'책임 연구원',
+    name:'에릭킴',
+    position:'항공사 기장 · CRM & 항공 커뮤니케이션 전문가',
+    photo:'images/instructor-kim-yongwi.jpg',
+    tags:['CRM·팀워크','항공사 취업 전략','면접·자기소개','항공 전문 커뮤니케이션'],
+    bio:'대한민국 공군 <strong>F-4E 전투조종사</strong>와 국내 주요 항공사 <strong>B737·B787 기장</strong> 운항 경력을 바탕으로 항공 현장의 팀워크와 의사소통을 전합니다. <strong>항공사 CRM 전문교관</strong>으로서 조종사·객실승무원 채용 준비부터 면접·자기소개, 조직 적응을 위한 커뮤니케이션까지 지도합니다.',
+    stats:[
+      {num:'B737', suffix:'', label:'기장 운항 경력'},
+      {num:'B787', suffix:'', label:'기장 운항 경력'},
+      {num:'CRM', suffix:'', label:'항공사 전문교관'}
+    ],
+    key:[
+      '대한민국 공군 <strong>전투조종사(F-4E)</strong>',
+      '국내 주요 항공사 <strong>B737 / B787 운항 경력 기장</strong>',
+      '항공사 <strong>CRM 전문교관</strong>',
+      '<strong>항공 위험물(Dangerous Goods) 교관</strong>',
+      '<strong>FTD(Flight Training Device) 교관</strong>',
+      '<strong>운항관리사 자격증</strong> 보유',
+      '<strong>무인멀티콥터(드론) 1종 자격증</strong> 보유'
+    ],
+    more:[
+      '<strong>CRM (Crew Resource Management)</strong> – 승무원 자원관리 및 팀워크',
+      '<strong>항공사 취업 전략</strong> – 조종사 및 객실승무원 채용 준비',
+      '<strong>항공사 면접 및 자기소개</strong> – 서류전형부터 최종면접까지 실전 노하우',
+      '<strong>항공 전문 커뮤니케이션</strong> – 조직 적응력 및 의사소통 역량'
+    ]
+  },
+  {
     id:'hyun',
     role:'선임 연구원',
-    name:'현형빈',
+    name:'제이크',
     position:'해외 경력 · 글로벌 커뮤니케이션 전문가',
     photo:'images/instructor-hyun.webp',
     tags:['글로벌 커뮤니케이션','영어 교육','해외 실무','팀 리드'],
