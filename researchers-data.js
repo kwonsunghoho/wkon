@@ -8,6 +8,7 @@
    ⚠️ 연구원 정보를 페이지에 복사해 넣지 말 것 — nav 가 세 페이지에 복사돼
       자주 어긋났던 것과 같은 사고를 막으려고 이 파일 하나로 모았다.
    연구원 수를 화면에 쓸 땐 이 배열 길이가 원본이다(lab.html 허브 카드 '연구원 6명').
+   visible:false인 연구원은 공개 배열에서 제외한다. 임시 비노출 시 프로필·사진은 보관한다.
    photoPos: 사진을 잘라 넣을 때의 초점(CSS object-position). 없으면 'center 18%'.
    ⚠️ researchers.html 은 같은 값을 자기 CSS 에 하드코딩해 두고 있다(확정 디자인이라
       건드리지 않았다) — 값을 바꾸면 두 곳을 같이 본다.
@@ -94,6 +95,7 @@ window.MONC_RESEARCHERS = [
   },
   {
     id:'kim-yongwi',
+    visible:false, // 2026-11-12 오너 요청으로 임시 비노출. 재공개는 이 값을 true로 변경한다.
     role:'책임 연구원',
     name:'에릭킴',
     position:'항공사 기장 · CRM & 항공 커뮤니케이션 전문가',
@@ -198,4 +200,4 @@ window.MONC_RESEARCHERS = [
       '승무원 면접 스피치 및 표현력 지도'
     ]
   }
-];
+].filter(function (person) { return person.visible !== false; });
