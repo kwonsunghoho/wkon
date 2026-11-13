@@ -28,7 +28,17 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const FN_VERSION = '2026-11-13-lecture-multi'
+const FN_VERSION = '2026-11-14-payment-context'
+
+// SDK는 주문정보를 JSON으로 직렬화한다. 기존 이중 직렬화 주문도 두 번까지만 해석한다.
+// 결제사에서 재조회한 값에만 사용하며, 대상·금액·회원 검증은 호출부에서 유지한다.
+function paymentContext(value: unknown): Record<string, any> {
+  try {
+    for (let i = 0; i < 2 && typeof value === 'string'; i++) value = JSON.parse(value)
+  } catch (_) { return {} }
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, any> : {}
+}
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 const PRICE_PER_CHALLENGE_FALLBACK = 33000   // ⚠️ apply.html·verify-payment 와 같은 값 유지
 
@@ -156,8 +166,7 @@ Deno.serve(async (req) => {
 
     // ── 2. 결제 생성 때 실어 둔 주문 맥락(customData) — 무엇을 지급할지 여기서 안다
     // deno-lint-ignore no-explicit-any
-    let cd: any = {}
-    try { cd = JSON.parse(String(pay?.customData ?? '') || '{}') } catch (_) { cd = {} }
+    const cd = paymentContext(pay?.customData)
     const kind = String(cd.k || '')
     if (!kind) return json({ ok: true, skip: 'no_context' })   // 맥락 없는 옛 결제 — 기존 경로가 처리
 

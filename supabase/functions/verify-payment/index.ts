@@ -9,7 +9,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-11-13-lecture-multi'
+const FN_VERSION = '2026-11-14-payment-context'
+
+// SDK는 주문정보를 JSON으로 직렬화한다. 기존 이중 직렬화 주문도 두 번까지만 해석한다.
+// 결제사에서 재조회한 값에만 사용하며, 대상·금액·회원 검증은 호출부에서 유지한다.
+function paymentContext(value: unknown): Record<string, any> {
+  try {
+    for (let i = 0; i < 2 && typeof value === 'string'; i++) value = JSON.parse(value)
+  } catch (_) { return {} }
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, any> : {}
+}
 
 // site_config.challenge_price 미설정 시 기본값.
 // ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
@@ -305,7 +315,7 @@ Deno.serve(async (req) => {
       // 결제를 연 계정 표식(customData.uid) 대조 — 복귀 주소(paymentId·rid)가 새어도
       // 남의 계정으로 확인해 자료를 가로채지 못하게(2026-08-10). 표식 없는 옛 결제는 통과.
       try {
-        const cd = JSON.parse(String(rPay?.customData ?? '') || '{}')
+        const cd = paymentContext(rPay?.customData)
         if (cd && cd.uid && cd.uid !== user.id) return json({ ok: false, error: 'wrong_account' })
       } catch (_) { /* 표식이 JSON 이 아니면 옛 형식 — 통과 */ }
 
@@ -415,8 +425,7 @@ Deno.serve(async (req) => {
     if (pay.status !== 'PAID') return json({ ok: false, error: 'not_paid', status: pay.status }, 402)
     // 새 주문은 포트원에서 재조회한 주문 맥락과 대조한다. 결제 후 시간대를 바꿀 수 없다.
     if (lectureId && slotIds !== undefined) {
-      let cd = pay.customData
-      try { if (typeof cd === 'string') cd = JSON.parse(cd) } catch (_) { cd = null }
+      const cd = paymentContext(pay.customData)
       if (!cd || cd.k !== 'lecture' || cd.lid !== lectureId || cd.uid !== caller?.id || !Array.isArray(cd.slots)
         || JSON.stringify([...cd.slots].sort()) !== JSON.stringify([...selectedSlots].sort())) {
         return json({ ok: false, error: 'order_mismatch' }, 400)

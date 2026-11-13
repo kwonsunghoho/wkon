@@ -2,6 +2,8 @@
 
 ## 작업 전 핵심 규칙
 
+- **포트원 주문정보 형식(2026-11-14 오류 수정)**: Browser SDK의 `customData`는 객체로 전달한다. `JSON.stringify`한 문자열을 넣으면 SDK가 다시 직렬화해 서버에서 한 번 파싱해도 문자열이 남는다. 특강은 객체 전달로 수정했고, `verify-payment`·`portone-webhook`의 `paymentContext`는 결제사 재조회 결과에 한해 객체·JSON 문자열·기존 이중 JSON 문자열을 최대 두 번 해석한다. 배열·null·잘못된 JSON은 빈 맥락으로 처리한다. 기존 다른 상품의 문자열 주문도 서버에서 호환하되 새 결제 경로에 문자열 전달을 추가하지 않는다. 회원·회차·금액·중복 검증은 그대로 유지한다. 웹훅의 HTTP 200만 보고 접수 성공으로 판단하지 말고 `granted`/`already`와 실제 지급 기록까지 확인한다(`skip:no_context`는 지급하지 않은 상태).
+
 - 챌린지 중간 점검·1:1 개별 점검 제공 약속 — 홈페이지 전체에서 삭제(2026-10-05 오너 지시, apply-and-payment.md). 보신각·영합각·스피닝은 최종 점검 피드백을 챌린지 완료 후 후기 작성 시 제공한다. 후기 조건은 FAQ·신청 전 안내·약관에 남기고 상세 카드·진행 단계·코치 소개에서는 생략한다. 실제 제출물 피드백 기능은 유지한다.
 - **신청·결제·모집일정·오픈 알림**: 참가비는 `site_config.challenge_price` 단일 소스, 모든 신청 CTA 는 apply.html 로. 취소선 정가 `challenge_list_price` 는 표시 전용(판정은 `MONC.loadChallengePricing()` 한 곳)
 - **회귀 금지**: `application-modal.js`·구 index 인라인 신청 모달 — 상세 안 신청은 `lecture.html` 인라인 폼이 정본 (apply-and-payment.md)

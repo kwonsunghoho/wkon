@@ -31,6 +31,14 @@ async function run(kind='verify',extra={},cfg={}) {
 (async()=>{
  let checks=0;
  for(const kind of ['verify','webhook']){
+  const context={k:'lecture',uid,lid,slots,name:'검증 회원',phone:'synthetic-phone'};
+  // 정상 SDK 응답·기존 이중 직렬화 결제·객체 입력 모두 같은 주문으로 처리한다.
+  for(const customData of [context,JSON.stringify(context),JSON.stringify(JSON.stringify(context))]) {
+   const r=await run(kind,{}, {pay:{customData}});assert.equal(r.body.ok,true);assert.equal(r.saved.member_id,uid);assert.equal(r.saved.total_price,220000);assert.equal(r.cancels,0);checks+=4;
+  }
+  for(const customData of [null,'null','[]','"broken"','{',JSON.stringify(JSON.stringify(JSON.stringify(context)))]) {
+   const r=await run(kind,{}, {pay:{customData}});assert.equal(r.saved,undefined);assert.equal(r.cancels,0);assert.equal(kind==='verify'?r.body.error:r.body.skip,kind==='verify'?'order_mismatch':'no_context');checks+=3;
+  }
   let r=await run(kind);assert.equal(r.body.ok,true);assert.equal(r.saved.total_price,220000);assert.deepEqual(Array.from(r.saved.slot_ids),slots);assert.equal(r.saved.challenges.length,2);assert.equal(r.saved.member_id,uid);checks+=5;
   r=await run(kind,{}, {already:true});assert.equal(r.saved,undefined);assert.equal(r.cancels,0);checks+=2;
   r=await run(kind,{}, {pay:{amount:{total:110000}}});assert.equal(r.saved,undefined);checks++;
@@ -40,6 +48,10 @@ async function run(kind='verify',extra={},cfg={}) {
  }
  for(const ids of [[slots[0],slots[0]],[slots[0],id(999)],[null],[], 'invalid']){const r=await run('verify',{slotIds:ids});assert.equal(r.body.error,'slot_not_found');assert.equal(r.saved,undefined);checks+=2;}
  let r=await run('verify',{slotIds:[slots[0]]},{pay:{amount:{total:110000}}});assert.equal(r.body.error,'order_mismatch');assert.equal(r.saved,undefined);checks+=2;
+ for(const changed of [{uid:id(999)},{lid:id(999)},{slots:[slots[0]]}]) {
+  const customData=JSON.stringify(JSON.stringify({k:'lecture',uid,lid,slots,...changed}));
+  const r=await run('verify',{}, {pay:{customData}});assert.equal(r.body.error,'order_mismatch');assert.equal(r.saved,undefined);assert.equal(r.cancels,0);checks+=3;
+ }
  r=await run('verify',{}, {noUser:true});assert.equal(r.body.error,'login_required');assert.equal(r.saved,undefined);checks+=2;
  // 구 단일 시간대 주문과 과거 미결 기록의 복귀도 받는다.
  r=await run('verify',{slotIds:undefined,slotId:slots[0]}, {pay:{amount:{total:110000},customData:JSON.stringify({k:'lecture',uid,lid,slot:slots[0]})}});
