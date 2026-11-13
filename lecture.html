@@ -111,21 +111,27 @@
     .lc-err { display: none; margin-top: 6px; font-size: 14px; line-height: 1.5; color: #C0392B; }
     .lc-err.on { display: block; }
     .lc-field label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-    /* 시간대 선택 — 정원·잔여석이 타임마다 따로라 신청 전에 반드시 하나를 고른다.
-       라디오는 시각적으로 숨기고 라벨 전체를 44px+ 터치 타깃으로 쓴다(키보드 포커스는 :focus-visible 링으로). */
+    /* 시간대 선택 — 여러 일정을 체크하고 합산 결제한다.
+       체크박스는 시각적으로 숨기고 라벨 전체를 44px+ 터치 타깃으로 쓴다(키보드 포커스는 :focus-visible 링으로). */
     .lc-slots { margin-bottom: 14px; }
     .lc-slots > .cap { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
     .lc-slot { display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-bottom: 8px; cursor: pointer;
                border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg); }
     .lc-slot:last-child { margin-bottom: 0; }
     .lc-slot input { position: absolute; opacity: 0; width: 0; height: 0; }
-    .lc-slot .dot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); position: relative; }
+    .lc-slot .dot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 5px; border: 2px solid #7A8798; position: relative; }
     .lc-slot .txt { flex: 1 1 auto; min-width: 0; }
     .lc-slot .when { display: block; font-size: 15px; font-weight: 800; line-height: 1.35; word-break: keep-all; }
     .lc-slot .seat { display: block; font-size: 14px; color: var(--text-muted); margin-top: 2px; }
     .lc-slot.is-on { border-color: var(--accent-dark); background: var(--accent-tint); }
     .lc-slot.is-on .dot { border-color: var(--accent-dark); }
-    .lc-slot.is-on .dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-dark); }
+    .lc-slot.is-on .dot { background: var(--accent-dark); }
+    .lc-slot.is-on .dot::after { content: ''; position: absolute; width: 5px; height: 9px; left: 5px; top: 1px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+    .lc-slot.is-applied { background: var(--bg2); cursor: default; }
+    .lc-slot.is-applied .seat { color: var(--accent-ink); font-weight: 700; }
+    .lc-slots .slot-hint, .lc-selected { margin: 6px 0 10px; font-size: 14px; line-height: 1.5; color: var(--text-muted); }
+    .lc-selected { margin: 8px 0 16px; }
+    .lc-appliednote { padding: 12px 14px; margin: 0 0 16px; background: var(--accent-tint); font-size: 14px; line-height: 1.6; border-radius: 10px; }
     .lc-slot.is-full { opacity: .55; cursor: not-allowed; }
     .lc-slot.is-full .seat { color: var(--accent-ink); font-weight: 700; }
     .lc-slot:has(input:focus-visible) { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
@@ -211,7 +217,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
+  <script src="supabase-config.js?v=20261113-lecture-multi"></script>
   <!-- 미결 결제 기록 공용 창구 — 결제 복귀 유실 자가 회복(2026-08-10) -->
   <script src="pay-pending.js?v=1"></script>
   <!-- 결제수단(포트원 채널) 공용 창구 — 상점·채널 키는 이 파일 한 곳(2026-08-19) -->
@@ -234,7 +240,7 @@
 
     let LECTURE = null;
     let SLOTS = [];        // 시간대(lecture_slots). 없으면 빈 배열 = 단일 일정 특강
-    let _slotId = null;    // 사용자가 고른 시간대
+    let _slotIds = new Set(); // 선택한 시간대. 결제 한 건에 여러 일정을 담는다.
     let _memberId = null, _profileHadPhone = false;
     /* 재학생 무료(2026-09-09 오너 확정) — 판정은 서버 한 곳(MONC.studentStatus).
        ⚠️ 조회 실패는 '재학생 아님'(유료 화면)이다. 무료가 장애로 열리면 안 된다. */
@@ -263,9 +269,9 @@
       try {
         const { data, error } = await window.MONC.sb
           .from('lecture_slots').select('*').eq('lecture_id', LECTURE_ID);
-        if (error || !data) return [];
+        if (error || !data) return SLOTS; // 갱신 실패로 이미 선택한 일정이 사라지면 안 된다.
         return LEC.sortSlots(data);
-      } catch (e) { return []; }
+      } catch (e) { return SLOTS; }
     }
 
     function descHtml(text) {
@@ -383,7 +389,7 @@
         + (note ? '<small class="lc-deposit-note">' + LEC.esc(note) + '</small>' : '') + '</div></div>';
     }
 
-    /* 시간대 한 줄. readOnly면 라디오 없이 안내용으로만 그린다(신청 예정·마감 상태). */
+    /* 시간대 한 줄. readOnly면 체크박스 없이 안내용으로만 그린다(신청 예정·마감 상태). */
     function slotRowHtml(s, readOnly) {
       const full = LEC.slotFull(s);
       // 잔여석 숨김이어도 '정원 마감'은 남긴다 — 못 고르는 타임인 이유를 말해야 한다
@@ -395,7 +401,7 @@
         + '</span>';
       if (readOnly) return '<div class="lc-slot' + (full ? ' is-full' : '') + '">' + body + '</div>';
       return '<label class="lc-slot' + (full ? ' is-full' : '') + '">'
-        + '<input type="radio" name="lcSlot" value="' + LEC.esc(s.id) + '"' + (full ? ' disabled' : '') + '>'
+        + '<input type="checkbox" name="lcSlot" value="' + LEC.esc(s.id) + '"' + (full ? ' disabled' : '') + '>'
         + '<span class="dot"></span>' + body + '</label>';
     }
 
@@ -425,13 +431,15 @@
           + '<button type="button" class="btn-bank" id="bankBtn">계좌이체로 신청하기</button>';
       // 시간대는 정원·마감이 타임마다 따로라, 이름·연락처보다 먼저 고르게 둔다
       const slotPicker = SLOTS.length
-        ? '<div class="lc-slots" id="slotPicker"><span class="cap">시간대 선택</span>'
+        ? '<div class="lc-appliednote" id="appliedNote" hidden></div>'
+          + '<div class="lc-slots" id="slotPicker"><span class="cap">시간대 선택 <span style="font-weight:400">· 여러 개 선택 가능</span></span>'
+          + '<p class="slot-hint">원하는 일정을 모두 선택해 주세요.' + (stuFree || free ? '' : ' 선택한 시간대 수만큼 합산돼요.') + '</p>'
           + SLOTS.map(s => slotRowHtml(s, false)).join('') + '</div>'
           + '<p class="lc-err" id="lcErrSlot"></p>'
         : '';
       return '<section class="lc-apply" id="applyBox">'
         + '<h2>신청하기</h2>'
-        + '<p class="hint">' + (SLOTS.length ? '원하는 시간대를 고르고 ' : '') + '이름·연락처를 남기면 신청이 접수돼요.</p>'
+        + '<p class="hint">' + (SLOTS.length ? '원하는 시간대를 선택하고 ' : '') + '이름·연락처를 남기면 신청이 접수돼요.</p>'
         + '<div class="member-badge" id="memberBadge"><span data-name></span>님, 회원으로 신청해요. (마이페이지에서 내역 확인)</div>'
         + slotPicker
         + '<div class="lc-field" id="rowName"><label>이름</label><input type="text" id="appName" class="inp" placeholder="홍길동" autocomplete="name" maxlength="20" aria-describedby="lcErrName"><p class="lc-err" id="lcErrName"></p></div>'
@@ -439,9 +447,10 @@
         + '<label class="consent" for="appConsent"><input type="checkbox" id="appConsent"><span>(필수) 만 14세 이상이며, 신청 접수를 위한 <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a>에 동의합니다.</span></label>'
         + '<p class="lc-err" id="lcErrConsent"></p>'
         // 재학생(stuFree)은 금액 자리가 '무료' — 예약금 잔금 안내도 낼 돈이 없으니 붙이지 않는다.
-        + (free ? '' : '<div class="pay-total"><span class="l">' + LEC.priceLabel(l) + '</span><span class="a">'
+        + (free ? '' : '<div class="pay-total" aria-live="polite"><span class="l">총 ' + LEC.priceLabel(l) + '</span><span class="a">'
             + (stuFree ? '무료' : LEC.esc(priceStr)) + '</span></div>'
           + (!stuFree && LEC.isDeposit(l) ? '<small class="lc-deposit-note">' + LEC.esc(LEC.DEPOSIT_NOTE) + '</small>' : ''))
+        + (SLOTS.length ? '<p class="lc-selected" id="selectionSummary" aria-live="polite"></p>' : '')
         + payButtons
         + '<a class="kakao-ask" href="https://pf.kakao.com/_iajxnX/chat" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.2c0 2.5 1.7 4.7 4.2 6l-1 3.6c-.1.3.3.6.6.4l4.3-2.8c.4 0 .7.1 1.1.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z"/></svg>궁금한 점은 카카오톡으로 물어보세요</a>'
         + '<p class="lc-refund">신청 후 환불은 「콘텐츠 이용자 보호지침」에 따릅니다. 특강 시작 전 취소는 전액 환불되며, 자세한 내용은 <a href="terms.html" target="_blank" rel="noopener">이용약관</a>을 참고해 주세요.</p>'
@@ -544,34 +553,52 @@
     /* ── 시간대 선택 ── */
     function wireSlots() {
       const box = document.getElementById('slotPicker');
-      if (!box) { _slotId = null; return; }
-
-      // 고를 게 하나뿐이면 미리 골라둔다(선택이랄 게 없다). 여럿이면 직접 고르게 —
-      // 시간대는 되돌리기 어려운 선택이라 임의로 찍어두지 않는다.
+      if (!box) { _slotIds.clear(); return; }
       const open = SLOTS.filter(s => !LEC.slotFull(s));
-      if (!open.some(s => s.id === _slotId)) _slotId = (open.length === 1 ? open[0].id : null);
-
+      _slotIds = new Set([..._slotIds].filter(id => open.some(s => s.id === id)));
+      if (open.length === 1 && !_slotIds.size) _slotIds.add(open[0].id);
       box.querySelectorAll('input[name="lcSlot"]').forEach(input => {
-        input.checked = (input.value === _slotId);
         input.addEventListener('change', () => {
-          if (!input.checked) return;
-          _slotId = input.value;
+          if (_busy) { input.checked = _slotIds.has(input.value); return; }
+          if (input.checked) _slotIds.add(input.value); else _slotIds.delete(input.value);
+          setBlockErr('lcErrSlot', '');
           paintSlots();
         });
       });
       paintSlots();
     }
 
+    function selectedSlots() { return SLOTS.filter(s => _slotIds.has(s.id)); }
+    function selectedIds() { return selectedSlots().map(s => s.id); }
+    function selectedTotal() { return _isStudent ? 0 : (LECTURE.price || 0) * (SLOTS.length ? _slotIds.size : 1); }
+    function selectionKey(slotId) { return 'lecture:' + LECTURE_ID + (slotId ? '#slot:' + slotId : ''); }
+    function slotApplied(id) { return !!_appliedKeys && (_appliedKeys.has(selectionKey(id)) || _appliedKeys.has(selectionKey(null))); }
+
     function paintSlots() {
       const box = document.getElementById('slotPicker');
-      if (!box) return;
-      box.querySelectorAll('.lc-slot').forEach(row => {
+      if (box) box.querySelectorAll('.lc-slot').forEach(row => {
         const input = row.querySelector('input');
-        row.classList.toggle('is-on', !!input && input.value === _slotId);
+        if (!input) return;
+        const applied = slotApplied(input.value);
+        if (applied) _slotIds.delete(input.value);
+        input.disabled = applied || LEC.slotFull(SLOTS.find(s => s.id === input.value));
+        input.checked = _slotIds.has(input.value);
+        row.classList.toggle('is-on', input.checked);
+        row.classList.toggle('is-applied', applied);
+        if (applied) {
+          let seat = row.querySelector('.seat');
+          if (!seat) { seat = document.createElement('span'); seat.className = 'seat'; row.querySelector('.txt').append(seat); }
+          seat.textContent = '신청 완료';
+        }
       });
+      const amount = _isStudent ? '무료' : LEC.priceText({ ...LECTURE, price: selectedTotal() });
+      const total = document.querySelector('.pay-total .a'); if (total) total.textContent = selectedTotal() === 0 && LECTURE.price > 0 && !_isStudent ? '0원' : amount;
+      const sum = document.getElementById('selectionSummary');
+      if (sum) sum.textContent = _slotIds.size ? (_isStudent || !(LECTURE.price > 0) ? _slotIds.size + '개 시간대 선택' : LECTURE.price.toLocaleString('ko-KR') + '원 × ' + _slotIds.size + '개 시간대') : '신청할 시간대를 선택해 주세요.';
+      const sticky = document.querySelector('.lc-sticky .info .p');
+      if (sticky && SLOTS.length) sticky.textContent = _slotIds.size ? (LEC.isDeposit(LECTURE) ? '예약금 ' : '') + (selectedTotal() === 0 && !_isStudent && LECTURE.price > 0 ? '0원' : amount) : '시간대 선택';
+      const bankAmount = document.querySelector('.bt-amount .v'); if (bankAmount) bankAmount.textContent = selectedTotal().toLocaleString('ko-KR') + '원';
     }
-
-    function currentSlot() { return SLOTS.find(s => s.id === _slotId) || null; }
 
     /* ── 회원 연동 ── */
     async function initMember() {
@@ -607,58 +634,60 @@
       if (sticky) sticky.textContent = '로그인하고 신청하기';
     }
 
-    /* ── 중복 신청 차단 ──
-       최종 방어는 DB 트리거(마이그레이션 20260725120000)다. ⚠️ 시간대가 달라도 같은 특강은
-       한 번만 신청할 수 있다(시간대는 '같은 내용을 여는 다른 타임'이라 두 번 들을 이유가 없다).
-       ⚠️ 비회원은 RLS 로 사전 조회가 불가능하다(전화번호로 신청 여부를 캐낼 수 있게 열 수 없다)
-          → 비회원 중복은 트리거가 막고, 결제까지 끝난 건은 verify-payment 가 전액 환불한다. */
+    /* ── 시간대별 중복 신청 ── 최종 판정은 DB 트리거가 맡는다. */
     let _appliedKeys = null, _appliedReq = null;
-
-    function loadAppliedKeys() {
-      if (_appliedKeys) return Promise.resolve(_appliedKeys);
-      // ⚠️ 비회원 결과(null)는 캐시하지 않는다 — initMember 가 늦게 끝나는 순서가 있어서,
-      //    캐시하면 회원인데도 영영 검사를 안 하게 된다.
-      if (!_memberId || !window.MONC.myAppliedPrograms) return Promise.resolve(null);
+    async function loadAppliedKeys(force) {
+      if (!_memberId || !window.MONC.myAppliedPrograms) return null;
+      if (force) { _appliedReq = null; _appliedKeys = null; }
+      if (_appliedKeys) return _appliedKeys;
       if (!_appliedReq) _appliedReq = window.MONC.myAppliedPrograms(_memberId);
-      return _appliedReq;
+      const keys = await _appliedReq;
+      if (keys) _appliedKeys = keys; else _appliedReq = null;
+      return keys;
     }
-
-    async function alreadyApplied() {
-      const keys = await loadAppliedKeys();
-      return !!keys && keys.has('lecture:' + LECTURE_ID);
-    }
-
-    /* 이미 신청한 특강이면 신청 폼을 안내문으로 바꾼다(결제까지 가서 막히지 않게). */
     async function markAlreadyApplied() {
-      if (!(await alreadyApplied())) return;
-      const box = document.getElementById('applyBox');
-      if (box) {
-        box.innerHTML = '<div class="lc-closednote">이미 신청하신 특강이에요.'
-          + ' 같은 특강을 두 번 신청할 수는 없어요.<br>신청 내역은 '
-          + '<a href="mypage.html">마이페이지</a>에서 확인할 수 있어요.</div>';
+      await loadAppliedKeys();
+      if (!_appliedKeys) return;
+      if (!SLOTS.length) {
+        if (!_appliedKeys.has(selectionKey(null))) return;
+        const box = document.getElementById('applyBox');
+        if (box && box.querySelector('#appConsent')) box.innerHTML = '<div class="lc-closednote">이미 신청하신 특강이에요.<br>신청 내역은 <a href="mypage.html">마이페이지</a>에서 확인할 수 있어요.</div>';
+      } else {
+        paintSlots();
+        const count = SLOTS.filter(s => slotApplied(s.id)).length;
+        const available = SLOTS.some(s => !slotApplied(s.id) && !LEC.slotFull(s));
+        const note = document.getElementById('appliedNote');
+        if (note) { note.hidden = !count; note.innerHTML = count + '개 시간대를 신청하셨어요.' + (available ? ' 다른 시간대도 추가로 신청할 수 있어요.' : '') + ' <a href="mypage.html">내역 보기</a>'; }
       }
+      const all = SLOTS.length ? SLOTS.some(s => slotApplied(s.id)) && SLOTS.every(s => slotApplied(s.id) || LEC.slotFull(s)) : true;
       const sticky = document.getElementById('stickyGo');
-      if (sticky) { sticky.disabled = true; sticky.textContent = '신청 완료'; }
+      if (sticky && all) { sticky.disabled = true; sticky.textContent = '신청 완료'; }
     }
-
-    /* 접수 성공·트리거 차단 후 — 이 특강을 '신청함'으로 기억한다(비회원도 이 세션 동안) */
-    function noteApplied() {
+    function noteApplied(ids) {
       if (!_appliedKeys) _appliedKeys = new Set();
-      _appliedKeys.add('lecture:' + LECTURE_ID);
+      (ids && ids.length ? ids : [null]).forEach(id => _appliedKeys.add(selectionKey(id)));
     }
-    async function rememberApplied() { noteApplied(); await markAlreadyApplied(); }
-
-    /* DB 트리거가 막은 중복인지 (마이그레이션 20260725120000 의 errcode MC002) */
     function isDuplicate(e) { return window.MONC.isDuplicateError(e); }
-
-    /* 신청 직전 마지막 확인. 중복이면 안내하고 true. */
     async function dupBlocked() {
-      if (!(await alreadyApplied())) return false;
+      await loadAppliedKeys(true);
+      const duplicate = SLOTS.length ? selectedIds().some(slotApplied) : slotApplied(null);
+      if (!duplicate) return false;
       hideBankModal();
-      alert('이미 신청하신 특강이에요.\n같은 특강을 두 번 신청할 수는 없어요.'
-        + '\n신청 내역은 마이페이지에서 확인할 수 있어요.');
+      alert('이미 신청한 시간대가 포함되어 있어요. 다른 시간대를 선택해 주세요.');
       await markAlreadyApplied();
       return true;
+    }
+    async function ensureMultiReady(payment) {
+      if (_slotIds.size < 2) return true;
+      try {
+        const { data, error } = payment
+          ? await MONC.sb.functions.invoke('verify-payment', { body: { probe: true } })
+          : await MONC.sb.rpc('lecture_multislot_ready');
+        if (!error && (payment ? data && data.lectureMultiSlot === true : data === true)) return true;
+      } catch (_) {}
+      setBlockErr('lcErrSlot', '여러 시간대 신청을 준비 중이에요. 잠시 후 다시 시도해 주세요.');
+      document.getElementById('lcErrSlot')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
     }
 
     /* ── 입력 검증(공통) ── */
@@ -677,8 +706,8 @@
         location.href = window.moncLoginHref ? window.moncLoginHref() : 'login.html';
         return null;
       }
-      // 시간대가 있는 특강은 반드시 하나를 골라야 한다(정원·마감이 타임마다 따로라서)
-      if (SLOTS.length && !_slotId) {
+      // 시간대가 있는 특강은 하나 이상 골라야 한다(정원·마감이 타임마다 따로라서)
+      if (SLOTS.length && !_slotIds.size) {
         // 오류는 고를 대상 바로 아래 인라인 — alert 은 닫으면 문구가 사라진다(진단 D-6)
         setBlockErr('lcErrSlot', '신청할 시간대를 골라주세요.');
         const box = document.getElementById('slotPicker');
@@ -719,10 +748,7 @@
 
     function lectureChallengeEntry() {
       const entry = { type: 'lecture', lecture_id: LECTURE.id, name: LECTURE.title, price: LECTURE.price || 0 };
-      // 관리자 신청자 현황이 challenges 만 보고도 어느 타임인지 알 수 있게 같이 담는다
-      const s = currentSlot();
-      if (s) { entry.slot_id = s.id; entry.slot = LEC.slotShort(s); }
-      return [entry];
+      return SLOTS.length ? selectedSlots().map(s => ({ ...entry, slot_id: s.id, slot: LEC.slotShort(s) })) : [entry];
     }
 
     /* ── 잔여석 재확인 ──
@@ -739,6 +765,8 @@
     }
 
     async function ensureSeatOpen() {
+      const oldPrice = LECTURE.price;
+      const hadSlots = SLOTS.length > 0;
       const fresh = await fetchLecture();
       if (!fresh) return true;   // 조회 실패로 신청을 막지 않는다(최종 방어는 DB 트리거)
       LECTURE = fresh;
@@ -746,15 +774,17 @@
 
       const st = LEC.status(fresh.recruit_start, fresh.recruit_end);
       const soldOut = SLOTS.length ? SLOTS.every(LEC.slotFull) : fresh.seats_left === 0;
-      const picked = currentSlot();
+      const picked = selectedSlots();
 
       let msg = null;
-      if (st !== 'open') msg = '신청 기간이 종료되었어요.';
+      if (fresh.price !== oldPrice) msg = '참가비가 변경되어 금액을 다시 표시했어요. 확인 후 다시 신청해 주세요.';
+      else if (hadSlots && !SLOTS.length) msg = '특강 일정이 변경됐어요. 신청 정보를 다시 확인해 주세요.';
+      else if (st !== 'open') msg = '신청 기간이 종료되었어요.';
       else if (soldOut) msg = '아쉽게도 방금 정원이 모두 찼어요.\n다음 특강을 기다려 주세요.';
-      else if (SLOTS.length && (!picked || LEC.slotFull(picked))) {
+      else if (SLOTS.length && (picked.length !== _slotIds.size || picked.some(LEC.slotFull))) {
         // 특강 전체는 자리가 남았지만 '고른 타임'만 찬 경우 — 다른 타임을 고르면 된다
         msg = '아쉽게도 방금 이 시간대의 정원이 모두 찼어요.\n남은 시간대를 확인해 주세요.';
-        _slotId = null;
+        _slotIds = new Set(picked.filter(s => !LEC.slotFull(s)).map(s => s.id));
       }
       if (!msg) return true;
 
@@ -815,6 +845,8 @@
       if (!readApplicant()) return;
       // 접수될 수 없는 신청에 입금 계좌를 먼저 보여주면 안 된다(입금부터 하고 막히는 사고)
       if (await dupBlocked()) return;
+      if (!(await ensureSeatOpen()) || !(await ensureMultiReady(false))) return;
+      paintSlots();
       const m = document.getElementById('bankModal');
       m.classList.add('open'); m.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
     }
@@ -857,15 +889,17 @@
       try {
         if (await dupBlocked()) return;
         if (!(await ensureSeatOpen())) return;   // 마감이면 화면을 다시 그리고 멈춘다
-        const r = await window.MONC.applyFreeLecture(LECTURE.id, _slotId || null) || {};
+        if (!(await ensureMultiReady(false))) return;
+        const orderSlots = selectedIds();
+        const r = await window.MONC.applyFreeLecture(LECTURE.id, orderSlots) || {};
         if (r.ok) {
-          await rememberApplied();
+          noteApplied(orderSlots);
           done = true;
           return;
         }
         if (r.code === 'duplicate') {
-          alert('이미 신청하신 특강이에요.\n같은 특강을 두 번 신청할 수는 없어요.');
-          await rememberApplied();
+          alert('이미 신청하신 특강이에요.\n이미 신청한 시간대는 다시 신청할 수 없어요.');
+          await loadAppliedKeys(true); await markAlreadyApplied();
         } else if (r.code === 'lecture_full') {
           alert('아쉽게도 방금 정원이 모두 찼어요.\n결제 전이라 빠져나간 금액은 없습니다.');
           await refreshLecture();
@@ -895,16 +929,19 @@
       const payload = {
         name: applicant.name, phone: applicant.phone,
         challenges: lectureChallengeEntry(),
-        total_price: LECTURE.price || 0,
+        total_price: selectedTotal(),
         lecture_id: LECTURE.id,
       };
-      if (_slotId) payload.slot_id = _slotId;
+      const orderSlots = selectedIds();
+      if (orderSlots.length === 1) payload.slot_id = orderSlots[0];
+      if (orderSlots.length > 1) payload.slot_ids = orderSlots;
+      if (!(await ensureMultiReady(false))) return false;
       if (applicant.member_id) payload.member_id = applicant.member_id;
       try {
         const { error } = await window.MONC.sb.from('applications').insert(payload);
         if (error) throw error;
         await maybeSavePhone(applicant);
-        await rememberApplied();   // 같은 특강을 또 넣지 못하게 화면 잠금
+        noteApplied(orderSlots);
         return true;
       } catch (e) {
         // 마지막 한 자리를 동시에 노린 경우 — DB 트리거가 막는다(결제 전이라 손해 없음)
@@ -918,9 +955,9 @@
         // 무료·계좌이체는 결제 전이라 돈이 나가지 않았으므로 안내만 한다.
         if (isDuplicate(e)) {
           hideBankModal();
-          alert('이미 신청하신 특강이에요.\n같은 특강을 두 번 신청할 수는 없어요.'
+          alert('이미 신청하신 특강이에요.\n이미 신청한 시간대는 다시 신청할 수 없어요.'
             + '\n문의는 고객센터(070-4032-0015)로 연락 주세요.');
-          await rememberApplied();
+          await loadAppliedKeys(true); await markAlreadyApplied();
           return false;
         }
         // RLS 가 막은 경우(세션 만료 등 비로그인) — 20260805140000 특강 로그인 필수
@@ -955,11 +992,13 @@
         return;
       }
       try {
-        const total = LECTURE.price;
+        if (!(await ensureMultiReady(true))) return;
+        const orderSlots = selectedIds();
+        const total = selectedTotal();
         const paymentId = 'monc-lec-' + (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
         // 미결 기록은 결제창을 열기 전에 남기고 확답 전엔 지우지 않는다(pay-pending.js —
         // sessionStorage 는 탭 단위라 인앱 복귀에서 유실돼 돈만 나가는 사고가 났다).
-        moncPends.add('monc_pending_lecture_pay', { paymentId, applicant, lectureId: LECTURE.id, slotId: _slotId });
+        moncPends.add('monc_pending_lecture_pay', { paymentId, applicant, lectureId: LECTURE.id, slotIds: orderSlots, slotId: orderSlots.length === 1 ? orderSlots[0] : null });
         if (window.moncBeacon) moncBeacon('pay_open', { k: 'lecture' }); // 결제 시도 계측(퍼널)
         const rp = new URLSearchParams(location.search); rp.set('payresult', '1');
         const redirectUrl = location.origin + location.pathname + '?' + rp.toString();
@@ -971,7 +1010,7 @@
           totalAmount: total, currency: 'CURRENCY_KRW', payMethod: 'EASY_PAY',
           customer: { fullName: applicant.name, phoneNumber: applicant.phone },
           // 주문 맥락 — 웹훅(portone-webhook)이 브라우저 없이도 접수를 끝내는 데 쓴다.
-          customData: JSON.stringify({ k: 'lecture', uid: applicant.member_id || _memberId || null, lid: LECTURE.id, slot: _slotId || null, name: applicant.name, phone: applicant.phone }),
+          customData: JSON.stringify({ k: 'lecture', uid: applicant.member_id || _memberId || null, lid: LECTURE.id, slot: orderSlots.length === 1 ? orderSlots[0] : null, slots: orderSlots, name: applicant.name, phone: applicant.phone }),
           redirectUrl,
         });
         // 여기부터 PC(팝업) 경로. 모바일은 위에서 페이지가 떠나 도달하지 않는다.
@@ -981,7 +1020,7 @@
           alert('결제가 완료되지 않았어요.\n' + (res.message || res.code)); return;
         }
         btn.textContent = '결제 확인 중…';
-        const ok = await completePayment(paymentId, applicant, _slotId);
+        const ok = await completePayment(paymentId, applicant, orderSlots);
         if (ok) afterApplied(null, true);
       } catch (e) {
         console.error('결제 오류', e);
@@ -1005,13 +1044,13 @@
     /* quiet = 자가 회복 경로 — 결제 직후가 아니므로 '확인 실패' 알림·로그인 이동은 하지 않는다.
        확답(200 본문)일 때만 미결 기록을 지운다(pay-pending.js 규칙).
        ⚠️ lectureId 는 기록의 것을 쓴다 — 다른 특강 화면에서 회복해도 맞는 특강에 접수되게. */
-    async function completePayment(paymentId, applicant, slotId, lectureId, quiet) {
+    async function completePayment(paymentId, applicant, slotIds, lectureId, quiet) {
       // 시도 표시(n)를 먼저 남긴다 — 서버가 접수한 뒤 응답만 유실되면, 다음 확인이
       // '재확인'으로 취급돼 appsRetrySafe() 가드를 타야 한다(구버전 서버의 MC002 오환불 방지).
       const _rec = moncPends.load('monc_pending_lecture_pay').filter(r => r.paymentId === paymentId)[0];
       if (_rec) { _rec.n = (_rec.n || 0) + 1; moncPends.drop('monc_pending_lecture_pay', paymentId); moncPends.add('monc_pending_lecture_pay', _rec); }
       const { data, error } = await window.MONC.sb.functions.invoke('verify-payment', {
-        body: { paymentId, lectureId: lectureId || LECTURE_ID, slotId: slotId || null, applicant },
+        body: { paymentId, lectureId: lectureId || LECTURE_ID, slotId: Array.isArray(slotIds) ? slotIds.length === 1 ? slotIds[0] : null : slotIds || null, slotIds: Array.isArray(slotIds) ? slotIds : undefined, applicant },
       });
       if (data) moncPends.drop('monc_pending_lecture_pay', paymentId);
       // 로그인 없이 결제까지 간 경우(결제 도중 세션 만료 등) — 서버가 전액 자동 환불한다
@@ -1029,7 +1068,7 @@
         alert('이미 신청하신 특강이에요.\n\n' + (data.refunded
           ? '중복 접수가 되지 않아 결제 금액은 전액 자동 환불 처리했습니다.\n(카드사에 따라 3~5영업일 정도 걸릴 수 있어요)'
           : '환불 처리에 문제가 생겼어요. 고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.'));
-        await rememberApplied();
+        await loadAppliedKeys(true); await markAlreadyApplied();
         return false;
       }
       // 결제 승인과 신청 저장 사이에 마지막 자리가 나간 경우 — 서버가 전액 자동 환불한다
@@ -1040,11 +1079,19 @@
         await refreshLecture();
         return false;
       }
+      if (data && data.error === 'invalid_lecture_selection') {
+        if (!quiet) alert('신청 정보를 다시 확인해야 해요.\n' + (data.refunded
+          ? '결제 금액은 전액 자동 환불했습니다. 시간대를 다시 선택해 주세요.'
+          : '환불 확인이 필요해요. 고객센터(070-4032-0015)로 연락 주세요.'));
+        if (!lectureId || lectureId === LECTURE_ID) await refreshLecture();
+        return false;
+      }
       if (error || !data || !data.ok) {
         console.error('결제 검증 실패', error, data);
         if (!quiet) alert('결제는 완료됐지만 신청 확인에 문제가 생겼어요.\n고객센터(070-4032-0015)로 연락 주시면 바로 처리해 드릴게요.');
         return false;
       }
+      if (!lectureId || lectureId === LECTURE_ID) noteApplied(Array.isArray(slotIds) ? slotIds : slotIds ? [slotIds] : []);
       await maybeSavePhone(applicant);
       alert('결제가 완료되어 신청이 정상 접수되었습니다! 🎉\n시작 안내를 곧 보내드릴게요.' + (applicant.member_id ? '\n마이페이지에서 신청 내역을 확인할 수 있어요.' : ''));
       return true;
@@ -1083,7 +1130,7 @@
           if (!retryOk) continue;   // 서버가 아직 구버전 — 기록은 남겨 두고 다음에 본다
         }
         // 모바일은 결제사 페이지를 다녀오며 페이지가 새로 뜨므로 시간대도 보관해 둔 값을 쓴다
-        const ok = await completePayment(rec.paymentId, rec.applicant, rec.slotId, rec.lectureId, !loud);
+        const ok = await completePayment(rec.paymentId, rec.applicant, rec.slotIds || rec.slotId, rec.lectureId, !loud);
         if (ok && (!rec.lectureId || rec.lectureId === LECTURE_ID)) afterApplied(null, true);
       }
     }
@@ -1097,21 +1144,21 @@
 
     async function afterApplied(msg, isPaid) {
       if (msg) alert(msg);
-      noteApplied();   // 방금 신청한 특강 → 아래 재렌더에서 신청 폼이 '이미 신청' 안내로 바뀐다
+      // 방금 접수한 시간대는 각 성공 경로에서 기억했다. 다른 시간대는 계속 신청 가능하다.
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // 방금 줄어든 잔여석을 바로 보여준다 — 화면을 다시 그리면서 폼도 초기화된다
       const fresh = await fetchLecture();
       if (fresh) {
         LECTURE = fresh;
         if (SLOTS.length) SLOTS = await fetchSlots();
-        _slotId = null;               // 접수 끝 — 시간대 선택도 처음 상태로
+        _slotIds.clear();             // 접수 끝 — 추가 신청할 시간대를 다시 고른다
         await rerender(fresh);
         return;
       }
       // 조회 실패 시엔 폼만 손으로 정리(잔여석은 다음 방문에 맞춰진다)
       const c = document.getElementById('appConsent'); if (c) c.checked = false;
       if (!_memberId) { const n = document.getElementById('appName'), ph = document.getElementById('appPhone'); if (n) n.value = ''; if (ph) ph.value = ''; }
-      await markAlreadyApplied();   // 재렌더를 못 했으니 여기서 폼을 잠근다
+      await markAlreadyApplied();   // 재렌더 실패 시에도 방금 신청한 시간대는 잠근다.
     }
 
     function copyAccount() {

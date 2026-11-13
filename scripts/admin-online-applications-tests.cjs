@@ -8,7 +8,8 @@ window.__onlineOrders=Array.from({length:23},(_,i)=>({payment_id:'order-'+i,cour
 const origInvoke=MONC.sb.functions.invoke;MONC.sb.functions.invoke=async(fn,args)=>{window.__orderCalls.push(args.body);if(args.body.action==='admin-orders'&&window.__orderFail)return{data:{ok:false,error:'not_ready'}};if(args.body.action==='admin-orders'&&window.__orderSlow)await new Promise(r=>setTimeout(r,1000));return origInvoke(fn,args);};
 const tableData={members:[],applications:[{id:'app-one',name:'챌린지 검증',phone:'01099990000',challenges:[{challenge:'expression',round:'4'}],created_at:new Date(Date.now()-3600000).toISOString(),total_price:79000,paid:false,payment_status:'pending'}]};const origFrom=MONC.sb.from;
 MONC.sb.from=table=>{if(!(table in tableData))return origFrom(table);let range=null;var q=new Proxy({},{get(_t,key){if(key==='then')return resolve=>Promise.resolve({data:range?tableData[table].slice(range[0],range[1]+1):tableData[table],error:null}).then(resolve);if(key==='range')return(a,b)=>{range=[a,b];return q};if(key==='single'||key==='maybeSingle')return async()=>({data:null,error:null});return()=>q;}});return q;};
-MONC.programKey=c=>c?.lecture_id?'lecture:'+c.lecture_id:c?.challenge?'ch:'+c.challenge+':'+(c.round||''):'';
+${fs.readFileSync(path.join(root,'supabase-config.js'),'utf8').match(/  function programKey\(entry\) \{[\s\S]*?(?=  \/\/ 로그인 회원)/)[0]}
+Object.assign(MONC,{programKey,applicationProgramKeys});
 MONC.isLiveApplication=a=>!a.refunded&&!['refunded','cancelled'].includes(a.payment_status);
 window.XLSX={utils:{book_new:()=>({sheets:[]}),aoa_to_sheet:data=>({data}),book_append_sheet:(book,sheet,name)=>book.sheets.push({name,data:sheet.data})},writeFile:book=>window.__xlsx.push(book)};
 window.__authCallbacks=[];MONC.sb.auth.onAuthStateChange=callback=>{window.__authCallbacks.push(callback);return{data:{subscription:{unsubscribe(){}}}}};

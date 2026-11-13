@@ -9,7 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-10-28a'
+const FN_VERSION = '2026-11-13-lecture-multi'
 
 // site_config.challenge_price 미설정 시 기본값.
 // ⚠️ **apply.html 의 폴백과 같은 값을 유지한다.** 어긋나면 DB 를 못 읽는 순간 화면에 보이는
@@ -70,12 +70,28 @@ async function testGate(supa: any, pay: any, paymentId: string): Promise<Respons
   return json({ ok: false, error: 'test_payment_closed', refunded })
 }
 
+// 구 단일 시간대와 새 여러 시간대를 같은 형식으로 검증한다. 금액·소속은 DB가 원장이다.
+// deno-lint-ignore no-explicit-any
+async function lectureSelection(supa: any, lec: any, ids: unknown, legacy: unknown) {
+  const slots = ids === undefined ? (legacy ? [legacy] : []) : ids
+  if (!Array.isArray(slots) || slots.some(s => typeof s !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) || new Set(slots).size !== slots.length) return null
+  const { data, error } = await supa.from('lecture_slots').select('*').eq('lecture_id', lec.id)
+  if (error || !data) throw new Error('lecture_slot_lookup_failed')
+  if (data.length > 0 && !slots.length) return null
+  // deno-lint-ignore no-explicit-any
+  const selected = slots.map(id => data.find((s: any) => s.id === id))
+  if (selected.some(s => !s)) return null
+  const base = { type: 'lecture', lecture_id: lec.id, name: lec.title, price: Number(lec.price) }
+  return { ids: slots as string[], list: selected.length ? selected.map(s => ({ ...base, slot_id: s.id,
+    slot: [s.slot_date, String(s.start_time || '').slice(0, 5)].filter(Boolean).join(' ') || s.label || '' })) : [base] }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
 
   try {
-    const { paymentId, challenges, applicant, lectureId, slotId, creditPack, programId, resourceId, courseId, probe } = await req.json()
+    const { paymentId, challenges, applicant, lectureId, slotId, slotIds, creditPack, programId, resourceId, courseId, probe } = await req.json()
 
     // service role 클라이언트 — 특강 금액 조회(신뢰 소스)와 신청 저장 둘 다에 쓴다.
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -88,7 +104,9 @@ Deno.serve(async (req) => {
       const raw = cfg?.value
       const price = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10)
       const { data: tcfg } = await supa.from('site_config').select('value').eq('key', 'pg_test_open').maybeSingle()
+      const { data: multiReady } = await supa.rpc('lecture_multislot_ready')
       return json({
+        lectureMultiSlot: multiReady === true,
         ok: true, fn: 'verify-payment', version: FN_VERSION,
         challengePrice: Number.isFinite(price) ? price : null,
         priceFallback: PRICE_PER_CHALLENGE_FALLBACK,
@@ -311,7 +329,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, resource: res0.title })
     }
 
-    // 결제 대상 판별: lectureId 가 있으면 '특강 1건', 없으면 기존 '챌린지 N개'.
+    // 결제 대상 판별: lectureId 가 있으면 '특강의 선택 시간대', 없으면 기존 '챌린지 N개'.
     // ⚠️ 금액은 브라우저를 믿지 않고 서버가 DB(특강)·상수(챌린지)에서 다시 계산한다.
     // 호출자 확인 — 특강은 로그인 필수, 챌린지는 member_id 검증에 쓴다(아래 참조).
     const callerAuth = req.headers.get('Authorization') || ''
@@ -338,6 +356,7 @@ Deno.serve(async (req) => {
     let list: unknown[]
     let lectureIdCol: string | null = null
     let slotIdCol: string | null = null
+    let selectedSlots: string[] = []
     if (lectureId) {
       // ⚠️ 특강 신청은 로그인 필수(2026-08-05 오너 확정) — 대상은 body 가 아니라 JWT 가 정한다.
       //    UI 게이트·RLS(20260805140000)를 우회해 로그인 없이 결제까지 온 경우,
@@ -363,23 +382,12 @@ Deno.serve(async (req) => {
       const { data: lec, error: lecErr } = await supa
         .from('special_lectures').select('id, title, price').eq('id', lectureId).single()
       if (lecErr || !lec) return json({ ok: false, error: 'lecture_not_found' }, 400)
-      expected = lec.price
-      const entry: Record<string, unknown> =
-        { type: 'lecture', lecture_id: lec.id, name: lec.title, price: lec.price }
-
-      // 시간대 — ⚠️ 브라우저가 보낸 slotId 가 정말 이 특강의 것인지 서버가 확인한다.
-      // (다른 특강의 시간대를 밀어넣어 남의 자리를 잡는 걸 막는다)
-      if (slotId) {
-        const { data: slot } = await supa
-          .from('lecture_slots').select('id, lecture_id, slot_date, start_time, label')
-          .eq('id', slotId).eq('lecture_id', lec.id).maybeSingle()
-        if (!slot) return json({ ok: false, error: 'slot_not_found' }, 400)
-        slotIdCol = slot.id
-        entry.slot_id = slot.id
-        entry.slot = [slot.slot_date, String(slot.start_time || '').slice(0, 5)]
-          .filter(Boolean).join(' ') || (slot.label || '')
-      }
-      list = [entry]
+      const selection = await lectureSelection(supa, lec, slotIds, slotId)
+      if (!selection) return json({ ok: false, error: 'slot_not_found' }, 400)
+      selectedSlots = selection.ids
+      expected = Number(lec.price) * Math.max(selectedSlots.length, 1)
+      list = selection.list
+      slotIdCol = selectedSlots.length === 1 ? selectedSlots[0] : null
       lectureIdCol = lec.id
     } else {
       list = Array.isArray(challenges) ? challenges : []
@@ -405,6 +413,15 @@ Deno.serve(async (req) => {
 
     // 2) 검증: 결제 완료(PAID) + 금액 일치
     if (pay.status !== 'PAID') return json({ ok: false, error: 'not_paid', status: pay.status }, 402)
+    // 새 주문은 포트원에서 재조회한 주문 맥락과 대조한다. 결제 후 시간대를 바꿀 수 없다.
+    if (lectureId && slotIds !== undefined) {
+      let cd = pay.customData
+      try { if (typeof cd === 'string') cd = JSON.parse(cd) } catch (_) { cd = null }
+      if (!cd || cd.k !== 'lecture' || cd.lid !== lectureId || cd.uid !== caller?.id || !Array.isArray(cd.slots)
+        || JSON.stringify([...cd.slots].sort()) !== JSON.stringify([...selectedSlots].sort())) {
+        return json({ ok: false, error: 'order_mismatch' }, 400)
+      }
+    }
     const paid = pay?.amount?.total
     if (paid !== expected) return json({ ok: false, error: 'amount_mismatch', paid, expected }, 402)
     const tgA = await testGate(supa, pay, paymentId)
@@ -425,6 +442,7 @@ Deno.serve(async (req) => {
     }
     if (lectureIdCol) payload.lecture_id = lectureIdCol
     if (slotIdCol) payload.slot_id = slotIdCol
+    if (selectedSlots.length) payload.slot_ids = selectedSlots
     // member_id 는 body 가 아니라 JWT 가 정한다(2026-08-05).
     //   특강: 로그인 필수라 caller 가 반드시 있다 — 항상 caller 명의로 적는다.
     //   챌린지: 비회원 결제가 있어 로그인은 선택 — body 의 member_id 는 본인 JWT 와
@@ -444,6 +462,10 @@ Deno.serve(async (req) => {
       //    null 로 만들고 본문을 error.context 안에 숨겨, 브라우저가 사유를 구분할 수 없다
       //    (= 환불됐다는 안내를 못 띄운다). 실패 여부는 ok:false 로 전한다.
 
+      if (error.code === 'MC003') {
+        const refunded = await refundAll(supa, paymentId, paid, '특강 신청 정보 변경 · 자동 환불')
+        return json({ ok: false, error: 'invalid_lecture_selection', refunded })
+      }
       // 특강 정원 마감(MC001) — 결제하는 사이에 마지막 자리가 나갔다 → 전액 자동 환불.
       if (error.code === 'MC001' || String(error.message).includes('lecture_full')) {
         const refunded = await refundAll(supa, paymentId, paid, '특강 정원 마감 · 자동 환불')

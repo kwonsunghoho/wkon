@@ -300,15 +300,30 @@
   }
 
   // 프로그램 식별 키 — 챌린지는 '챌린지+기수'(기수가 다르면 다른 프로그램),
-  // 특강은 lecture_id(시간대가 달라도 같은 특강). 트리거의 판정과 같은 기준.
+  // 특강은 '특강+시간대'. 다른 시간대의 추가 신청은 허용한다.
   function programKey(entry) {
     if (!entry) return null;
     if (entry.type === 'lecture' || entry.lecture_id) {
-      return entry.lecture_id ? 'lecture:' + entry.lecture_id : null;
+      return entry.lecture_id ? 'lecture:' + entry.lecture_id + (entry.slot_id ? '#slot:' + entry.slot_id : '') : null;
     }
     if (!entry.challenge) return null;
     const r = (entry.round == null || entry.round === '') ? '' : entry.round;
     return 'ch:' + entry.challenge + '#' + r;
+  }
+
+  // 한 결제에 여러 시간대를 담아도 각 시간대를 한 번씩만 센다. 구 단일 신청도 지원한다.
+  function applicationProgramKeys(a) {
+    const keys = new Set();
+    if (a.lecture_id) {
+      const slots = Array.isArray(a.slot_ids) && a.slot_ids.length ? a.slot_ids : (a.slot_id ? [a.slot_id] : []);
+      if (slots.length) slots.forEach(id => keys.add(programKey({ lecture_id: a.lecture_id, slot_id: id })));
+      else keys.add(programKey(a));
+    }
+    (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
+      const k = programKey(c && c.lecture_id === a.lecture_id && !c.slot_id && a.slot_id ? { ...c, slot_id: a.slot_id } : c);
+      if (k) keys.add(k);
+    });
+    return keys;
   }
 
   // 로그인 회원이 이미 신청한 프로그램 키 Set. 비회원·조회 실패는 null(= 사전 검사 불가).
@@ -321,11 +336,7 @@
       if (error || !data) return null;
       const keys = new Set();
       data.filter(isLiveApplication).forEach(a => {
-        if (a.lecture_id) keys.add('lecture:' + a.lecture_id);
-        (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
-          const k = programKey(c);
-          if (k) keys.add(k);
-        });
+        applicationProgramKeys(a).forEach(k => keys.add(k));
       });
       return keys;
     } catch (e) { return null; }
@@ -409,8 +420,9 @@
     } catch (e) { return { ok: false, code: 'error', message: String(e) }; }
   }
   const applyFreeChallenges = (ids) => callFree('apply_free_challenges', { p_ids: ids || [] });
-  const applyFreeLecture = (lectureId, slotId) =>
-    callFree('apply_free_lecture', { p_lecture: lectureId, p_slot: slotId || null });
+  const applyFreeLecture = (lectureId, slots) => Array.isArray(slots) && slots.length > 1
+    ? callFree('apply_free_lecture_slots', { p_lecture: lectureId, p_slots: slots })
+    : callFree('apply_free_lecture', { p_lecture: lectureId, p_slot: Array.isArray(slots) ? slots[0] || null : slots || null });
   const claimFreeResource = (resourceId) => callFree('claim_free_resource', { p_resource: resourceId });
 
   // 챌린지 파일 재생은 서버에서 보관기간·권한을 확인한다(최대 10분, 만료일을 넘지 않음).
@@ -430,7 +442,7 @@
     signOut, getSession, requireSession,
     getMyProfile, saveMyProfile, requireAdmin, getSignedUrl, loadChallengePricing,
     getConsent, recordConsent, hasConsented, requireConsent, requireVerified, deleteMyAccount,
-    isDuplicateError, isLiveApplication, programKey, myAppliedPrograms,
+    isDuplicateError, isLiveApplication, programKey, applicationProgramKeys, myAppliedPrograms,
     studentStatus, requestStudent, applyFreeChallenges, applyFreeLecture, claimFreeResource,
   };
 })();

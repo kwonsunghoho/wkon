@@ -28,7 +28,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const FN_VERSION = '2026-10-29-course'
+const FN_VERSION = '2026-11-13-lecture-multi'
 const PORTONE_STORE_ID = 'store-a2a17822-a4c8-4d25-ac38-939772dfb6d5'
 const PRICE_PER_CHALLENGE_FALLBACK = 33000   // ⚠️ apply.html·verify-payment 와 같은 값 유지
 
@@ -87,6 +87,22 @@ async function sigOk(secretRaw: string, req: Request, rawBody: string): Promise<
   } catch (_) { return false }
 }
 
+// 구 단일 시간대와 새 여러 시간대를 같은 형식으로 검증한다. 금액·소속은 DB가 원장이다.
+// deno-lint-ignore no-explicit-any
+async function lectureSelection(supa: any, lec: any, ids: unknown, legacy: unknown) {
+  const slots = ids === undefined ? (legacy ? [legacy] : []) : ids
+  if (!Array.isArray(slots) || slots.some(s => typeof s !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) || new Set(slots).size !== slots.length) return null
+  const { data, error } = await supa.from('lecture_slots').select('*').eq('lecture_id', lec.id)
+  if (error || !data) throw new Error('lecture_slot_lookup_failed')
+  if (data.length > 0 && !slots.length) return null
+  // deno-lint-ignore no-explicit-any
+  const selected = slots.map(id => data.find((s: any) => s.id === id))
+  if (selected.some(s => !s)) return null
+  const base = { type: 'lecture', lecture_id: lec.id, name: lec.title, price: Number(lec.price) }
+  return { ids: slots as string[], list: selected.length ? selected.map(s => ({ ...base, slot_id: s.id,
+    slot: [s.slot_date, String(s.start_time || '').slice(0, 5)].filter(Boolean).join(' ') || s.label || '' })) : [base] }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ ok: false, error: 'method_not_allowed' }, 405)
@@ -97,7 +113,7 @@ Deno.serve(async (req) => {
   try { body = JSON.parse(raw || '{}') } catch (_) { /* 빈 본문도 아래에서 접힌다 */ }
 
   if (body.probe === true) {
-    return json({ ok: true, fn: 'portone-webhook', version: FN_VERSION,
+    return json({ ok: true, fn: 'portone-webhook', version: FN_VERSION, lectureMultiSlot: true,
       has_secret: !!Deno.env.get('PORTONE_WEBHOOK_SECRET') })
   }
 
@@ -235,24 +251,22 @@ Deno.serve(async (req) => {
       let list: any[] = []
       let lectureIdCol: string | null = null
       let slotIdCol: string | null = null
+      let selectedSlots: string[] = []
       if (kind === 'lecture') {
         const lid = String(cd.lid || '')
         if (!lid) return json({ ok: true, skip: 'lecture_no_id' })
         const { data: lec } = await supa.from('special_lectures').select('id, title, price').eq('id', lid).maybeSingle()
         if (!lec) return json({ ok: true, skip: 'lecture_not_found' })
-        expected = Number(lec.price)
-        const entry: Record<string, unknown> = { type: 'lecture', lecture_id: lec.id, name: lec.title, price: lec.price }
-        if (cd.slot) {
-          const { data: slot } = await supa.from('lecture_slots')
-            .select('id, lecture_id, slot_date, start_time, label')
-            .eq('id', String(cd.slot)).eq('lecture_id', lec.id).maybeSingle()
-          if (slot) {
-            slotIdCol = slot.id
-            entry.slot_id = slot.id
-            entry.slot = [slot.slot_date, String(slot.start_time || '').slice(0, 5)].filter(Boolean).join(' ') || (slot.label || '')
-          }
+        if (!cd.uid) return json({ ok: true, skip: 'lecture_no_member' })
+        const selection = await lectureSelection(supa, lec, cd.slots, cd.slot)
+        if (!selection) {
+          const refunded = await refundAll(supa, paymentId, paid, '특강 시간대 확인 실패(웹훅) · 자동 환불')
+          return json({ ok: true, refunded })
         }
-        list = [entry]
+        selectedSlots = selection.ids
+        expected = Number(lec.price) * Math.max(selectedSlots.length, 1)
+        list = selection.list
+        slotIdCol = selectedSlots.length === 1 ? selectedSlots[0] : null
         lectureIdCol = lid
       } else {
         list = Array.isArray(cd.ch) ? cd.ch : []
@@ -273,6 +287,7 @@ Deno.serve(async (req) => {
       }
       if (lectureIdCol) payload.lecture_id = lectureIdCol
       if (slotIdCol) payload.slot_id = slotIdCol
+      if (selectedSlots.length) payload.slot_ids = selectedSlots
       // member_id — 결제 생성 때 실어 둔 계정. 브라우저 경로처럼 JWT 대조는 못 하지만,
       // customData 는 우리 결제창이 만든 값이고 남의 계정을 넣어 봐야 그 계정에 '선물'이
       // 될 뿐이라 가로채기가 안 된다.
@@ -280,6 +295,10 @@ Deno.serve(async (req) => {
 
       const { error } = await supa.from('applications').insert(payload)
       if (error) {
+        if (error.code === 'MC003') {
+          const refunded = await refundAll(supa, paymentId, paid, '특강 신청 정보 변경(웹훅) · 자동 환불')
+          return json({ ok: true, refunded })
+        }
         // 확정 실패(정원 마감·중복 신청)는 verify-payment 와 같은 규칙 — 전액 자동 환불
         if (error.code === 'MC001' || String(error.message).includes('lecture_full')) {
           const refunded = await refundAll(supa, paymentId, paid, '특강 정원 마감(웹훅) · 자동 환불')
