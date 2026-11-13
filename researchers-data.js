@@ -95,7 +95,7 @@ window.MONC_RESEARCHERS = [
   },
   {
     id:'kim-yongwi',
-    visible:false, // 2026-11-12 오너 요청으로 임시 비노출. 재공개는 이 값을 true로 변경한다.
+    visible:true, // 2026-11-13 오너 요청으로 다시 공개한다.
     role:'책임 연구원',
     name:'에릭킴',
     position:'항공사 기장 · CRM & 항공 커뮤니케이션 전문가',
