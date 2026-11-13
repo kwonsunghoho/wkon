@@ -102,10 +102,11 @@ window.MONC_RESEARCHERS = [
     photo:'images/instructor-kim-yongwi.jpg',
     tags:['CRM·팀워크','항공사 취업 전략','면접·자기소개','항공 전문 커뮤니케이션'],
     bio:'대한민국 공군 <strong>F-4E 전투조종사</strong>와 국내 주요 항공사 <strong>B737·B787 기장</strong> 운항 경력을 바탕으로 항공 현장의 팀워크와 의사소통을 전합니다. <strong>항공사 CRM 전문교관</strong>으로서 조종사·객실승무원 채용 준비부터 면접·자기소개, 조직 적응을 위한 커뮤니케이션까지 지도합니다.',
+    statsTitle:'보유 기종 자격 · TYPE RATING',
     stats:[
-      {num:'B737', suffix:'', label:'기장 운항 경력'},
-      {num:'B787', suffix:'', label:'기장 운항 경력'},
-      {num:'CRM', suffix:'', label:'항공사 전문교관'}
+      {num:'B737', suffix:'', label:'Type Rating'},
+      {num:'B777', suffix:'', label:'Type Rating'},
+      {num:'B787', suffix:'', label:'Type Rating'}
     ],
     key:[
       '대한민국 공군 <strong>전투조종사(F-4E)</strong>',
