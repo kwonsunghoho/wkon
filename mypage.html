@@ -951,7 +951,30 @@
       if (!m) return '';
       return (+m[2]) + '월 ' + (+m[3]) + '일(' + LEC_WEEK[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ')';
     }
-    async function loadMyLectures(lectureIds) {
+    async function loadMyApplications(me) {
+      try {
+        const { data, error } = await MONC.sb.from('applications').select('*')
+          .eq('member_id', me).order('created_at', { ascending: false });
+        if (error || !Array.isArray(data)) throw error || new Error('신청 조회 실패');
+        return data;
+      } catch (_) {
+        const section = document.getElementById('sec-apps');
+        section.style.display = ''; section.open = true;
+        document.getElementById('appsCount').textContent = '확인 필요';
+        document.getElementById('myApps').innerHTML = '<li class="v2-item"><p role="alert">신청 내역을 불러오지 못했어요. 다시 확인해 주세요.</p><button type="button" class="v2-cs-btn ghost" id="retryMyApps">다시 확인</button></li>';
+        document.getElementById('retryMyApps').addEventListener('click', () => location.reload());
+        return [];
+      }
+    }
+    async function loadMyLectures(apps) {
+      // 환불·취소 신청은 일정에서 제외하되 신청·결제 내역에는 그대로 남긴다.
+      const active = apps.filter(a => !a.refunded && !['refunded', 'partial_refunded', 'cancelled', 'failed'].includes(a.payment_status));
+      const entries = active.flatMap(a => {
+        const cs = (Array.isArray(a.challenges) ? a.challenges : []).filter(c => c && c.lecture_id);
+        const ids = a.slot_ids && a.slot_ids.length ? a.slot_ids : a.slot_id ? [a.slot_id] : [];
+        return cs.length ? cs.flatMap(c => c.slot_id || c.slot || !ids.length ? [c] : ids.map(id => ({ ...c, slot_id: id }))) : a.lecture_id ? (ids.length ? ids.map(id => ({ lecture_id: a.lecture_id, slot_id: id })) : [{ lecture_id: a.lecture_id }]) : [];
+      });
+      const lectureIds = [...new Set(entries.map(c => c.lecture_id))];
       if (!lectureIds.length) return [];
       try {
         // ⚠️ select('*') — 구 컬럼 나열이 존재하지 않는 schedule 을 집어 조회 전체가 400,
@@ -959,23 +982,41 @@
         //    컬럼명은 schedule_text). 나열로 되돌리지 말 것.
         const { data, error } = await MONC.sb.from('special_lectures')
           .select('*').in('id', lectureIds);
-        if (error || !data || !data.length) return [];
-        const today = window.SOJAE ? window.SOJAE.todayStr() : new Date().toISOString().slice(0, 10);
-        const up = data.filter(l => l.lecture_date && String(l.lecture_date) >= today)
-          .sort((a, b) => String(a.lecture_date) < String(b.lecture_date) ? -1 : 1);
+        if (error || !data || !data.length) throw error || new Error('특강 조회 실패');
+        const slotIds = [...new Set(entries.map(c => c.slot_id).filter(Boolean))];
+        const slots = slotIds.length ? await MONC.sb.from('lecture_slots').select('*').in('id', slotIds) : { data: [] };
+        const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const seen = new Set();
+        const up = entries.flatMap(c => {
+          const l = data.find(l => l.id === c.lecture_id);
+          const key = c.lecture_id + ':' + (c.slot_id || c.slot || '');
+          if (!l || seen.has(key)) return [];
+          seen.add(key);
+          const s = (slots.data || []).find(s => s.id === c.slot_id && s.lecture_id === c.lecture_id);
+          // 시간대 조회 실패·삭제 때도 저장된 신청 명세로 복구한다. 대표 날짜로 바꾸지 않는다.
+          const saved = String(c.slot || '').match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?/);
+          const hasSlot = !!(c.slot_id || c.slot);
+          const date = s ? s.slot_date : hasSlot ? saved && saved[1] : l.lecture_date;
+          const time = s ? [s.start_time, s.end_time].filter(Boolean).map(t => String(t).slice(0, 5)).join('–') : hasSlot ? saved && saved[2] : l.schedule_text;
+          if (date && date < today) return [];
+          return [{ ...l, date, time }];
+        }).sort((a, b) => String(a.date || '9999').localeCompare(String(b.date || '9999')) || String(a.time || '').localeCompare(String(b.time || '')));
         document.getElementById('upWrap').innerHTML = up.map(l => {
-          const meta = [fmtLecDate(l.lecture_date), l.schedule_text, l.instructor].filter(Boolean).join(' · ');
-          const d = Math.round((Date.parse(l.lecture_date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
+          const meta = [l.date ? fmtLecDate(l.date) : '일정을 확인하지 못했어요. 신청 내역을 확인해 주세요.', l.time, l.instructor].filter(Boolean).join(' · ');
+          const d = l.date ? Math.round((Date.parse(l.date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000) : null;
           return `<div class="v2-card"><div class="v2-up">
               <div class="v2-up-body">
                 <div class="v2-up-t">${esc(l.title || '특강')}</div>
                 ${meta ? `<div class="v2-up-d">${esc(meta)}</div>` : ''}
               </div>
-              <span class="v2-dday">${d === 0 ? '오늘' : 'D-' + d}</span>
+              <span class="v2-dday">${d === null ? '확인 필요' : d === 0 ? '오늘' : 'D-' + d}</span>
             </div></div>`;
         }).join('');
         return data;
-      } catch (_) { return []; }
+      } catch (_) {
+        document.getElementById('upWrap').innerHTML = '<div class="v2-card"><p role="alert">특강 일정을 불러오지 못했어요. 신청·결제 내역에서 신청 정보를 확인해 주세요.</p><a class="v2-cs-btn ghost" href="#sec-apps">신청 내역 확인</a></div>';
+        return [];
+      }
     }
 
     // ── 크레딧 지갑 + 충전 (2026-08-02 오너 "재구매도 만들어줘라") ──────────────
@@ -1612,10 +1653,7 @@
       // 내 신청 내역 (RLS: member_id = 본인)
       // 신청과 환불에 같은 챌린지명·기수·특강 시간대를 표시한다.
       const plainLabel = MONC_REFUNDS.label;
-      const { data: myApps } = await MONC.sb.from('applications')
-        .select('*')
-        .eq('member_id', me)
-        .order('created_at', { ascending: false });
+      const myApps = await loadMyApplications(me);
 
       await MONC_REFUNDS.load(myApps || []);
 
@@ -1676,11 +1714,7 @@
       }
 
       // 내가 신청한 특강 → 다가오는 일정 카드 + 상태 판정 재료
-      const lectureIds = [];
-      (myApps || []).forEach(a => (Array.isArray(a.challenges) ? a.challenges : []).forEach(c => {
-        if (c && c.lecture_id) lectureIds.push(c.lecture_id);
-      }));
-      const myLectures = await loadMyLectures(Array.from(new Set(lectureIds)));
+      const myLectures = await loadMyLectures(myApps);
 
       // ── 회원 상태별 배치 ──────────────────────────────────────────────
       const state = memberState(profile, Object.keys(partOf).length > 0, myLectures.length > 0);
