@@ -152,6 +152,7 @@ window.MONC_RESEARCHERS = [
   },
   {
     id:'koh',
+    visible:false, // 2026-11-17 오너 요청으로 공개 연구진 명단에서 제외한다.
     role:'선임 연구원',
     name:'고은지',
     position:'브랜딩 · 스피치 · 라이브커머스 전문가',
