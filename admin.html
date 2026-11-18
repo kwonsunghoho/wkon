@@ -495,6 +495,35 @@
     .apl-sum .st .ok b { color: var(--st-ok); }
     .apl-sum .st .al b { color: var(--st-alert); }
     .apl-list { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); overflow: hidden; box-shadow: var(--shadow); }
+    .af-lecture-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 12px 0 8px; }
+    .af-lecture-controls #afSubField { grid-column: 1 / -1; }
+    .af-lecture-controls :is(#afSubField, #afLectureSlotField) { gap: 3px; align-items: stretch; }
+    .af-lecture-controls :is(#afSub, #afLectureSlot) { width: 100%; min-width: 0; }
+    .af-lecture-controls #afLectureFilters { padding: 0 12px; gap: 5px; }
+    #afLectureFilters[data-active="true"] { color: var(--ink); border-color: var(--accent-ink); background: var(--action-tint); }
+    .af-lecture-controls #afPeriodField { grid-column: 1; }
+    .af-lecture-controls #afPayWrap { grid-column: 2; white-space: nowrap; }
+    .af-lecture-controls #afPeriod { min-width: 0; width: 100%; }
+    @media (min-width: 961px) {
+      .af-lecture-controls { grid-template-columns: minmax(230px, 360px) minmax(240px, 360px) auto; justify-content: start; }
+      .af-lecture-controls #afSubField { grid-column: 1; }
+      .af-lecture-controls #afLectureSlotField { grid-column: 2; }
+    }
+    .apl-lecture-counts { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin: 2px 0 10px; padding: 4px 0; color: var(--text-muted); font-size: 13px; }
+    .apl-lecture-counts strong { color: var(--ink); font-size: 15px; font-weight: 800; }
+    .apl-lecture-counts .al { color: var(--st-alert); }
+    .apl-lecture-time { margin: 0; padding: 9px 14px; background: var(--bg2); color: var(--ink); border-bottom: 1px solid var(--border-soft); font-size: 16px; overflow-wrap: anywhere; }
+    .apl-lecture-audience { display: flex; gap: 6px; margin: 0; padding: 8px 14px 4px; color: var(--ink); font-size: 14px; }
+    .apl-lecture-audience span { color: var(--text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+    .apl-list .apl-lecture-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .apl-lecture-row .ph, .apl-lecture-details { grid-column: 1 / -1; }
+    .apl-lecture-row .nm { overflow-wrap: anywhere; }
+    .apl-lecture-details summary { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; min-height: 44px; list-style: none; cursor: pointer; }
+    .apl-lecture-details summary::-webkit-details-marker { display: none; }
+    .apl-lecture-details summary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+    .apl-lecture-details .apl-manage { display: inline-flex; align-items: center; gap: 5px; color: var(--accent-ink); font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .apl-manage svg { width: 14px; height: 14px; }
+    .apl-lecture-details[open] .apl-manage svg { transform: rotate(180deg); }
     .apl-row { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: start; }
     .apl-row:last-child { border-bottom: 0; }
     .apl-row.is-dup { background: var(--action-tint); }
@@ -1626,7 +1655,7 @@
         <button class="ad-sq" id="appRefresh" type="button" title="새로고침" aria-label="새로고침"><svg aria-hidden="true"><use href="#i-refresh"/></svg><span class="lg">새로고침</span></button>
         <!-- 내려받기는 보조 행동이다 — 채움(btn-action)으로 두면 이 화면에서 가장 무거운 버튼이 된다(원칙 6 · 2026-08-02 5차).
              엑셀 = 챌린지·기수마다 시트 한 장(2026-08-22 오너) — 라이브러리를 못 받으면 CSV 폴백. -->
-        <button class="ad-sq xl" id="appCsv" type="button" title="상품·기수별로 시트 한 장"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="sm">엑셀</span><span class="lg">엑셀로 내려받기</span></button>
+        <button class="ad-sq xl" id="appCsv" type="button" title="상품·기수·특강 회차별로 시트 한 장"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="sm">엑셀</span><span class="lg">엑셀로 내려받기</span></button>
       </div>
       <!-- 범위 탭(2026-08-22 오너 A안 "챌린지 5개 고정 + 기수는 드롭다운" → 같은 날 "죄다 알약" 지적으로 밑줄 탭) — 온라인 강의 포함
            (전체·챌린지·특강·온라인 강의·자료). 기수·특강·자료는 아래 셀렉트 하나. 기수와 특강은 계속 쌓이므로 칩·아코디언으로
@@ -1648,11 +1677,11 @@
               한 번에 신청한 줄이 '승자각 3기'로 걸린다.
            ⚠️ '미입금' 판정식은 loadToday 의 unpaid 와 **같아야 한다**(appIsUnpaid) — '오늘'의 [입금 확인 필요]가
               이 화면으로 보내면서 같이 켠다. '자료'에서는 숨긴다(결제는 전부 완료 건이라 설 자리가 없다). -->
-      <div class="af-cond">
+      <div class="af-cond" id="appFilters">
         <!-- 기간(2026-09-10 오너 "너무 예전것까지 있어서 혼란스럽네") — 신청일(created_at) 기준 최근 N.
              기수·특강 셀렉트의 옵션·인원도 이 기간 안에서 센다. '오늘'의 [입금 확인 필요]는 '전체 기간'으로 연다. -->
-        <div class="af-field">
-          <label for="afPeriod">기간</label>
+        <div class="af-field" id="afPeriodField">
+          <label for="afPeriod">신청 기간</label>
           <select id="afPeriod" class="af-select af-period">
             <option value="w1">최근 1주일</option>
             <option value="m1" selected>최근 1개월</option>
@@ -1664,6 +1693,13 @@
           <label for="afSub" id="afSubLabel">기수</label>
           <select id="afSub" class="af-select"></select>
         </div>
+        <div class="af-field" id="afLectureSlotField" hidden>
+          <label for="afLectureSlot">진행 회차</label>
+          <select id="afLectureSlot" class="af-select"></select>
+        </div>
+        <button class="ad-sq" id="afLectureFilters" type="button" aria-expanded="false" aria-controls="afPeriodField afPayWrap" hidden>
+          <span>필터</span><span class="af-filter-count" aria-hidden="true"></span>
+        </button>
         <label class="af-chk" id="afPayWrap"><input type="checkbox" id="afUnpaid"> 미입금만 보기</label>
       </div>
       <div id="appsBody"><div class="loading">불러오는 중…</div></div>
@@ -5419,7 +5455,7 @@
       // 블랙리스트는 같이 받는다 — 실패해도 신청 목록은 그대로 그린다(라벨만 빠진다).
       const [appsRes] = await Promise.all([
         fetchAll(() => MONC.sb.from('applications')
-          .select('*').order('created_at', { ascending: false })),
+          .select('*').order('created_at', { ascending: false }).order('id')),
         loadBlacklist()
       ]);
       const { data, error, truncated } = appsRes;
@@ -5570,7 +5606,17 @@
       return opts.length ? opts[0][0] : '';
     }
     function setAppKind(kind) {
-      _appKind = kind; _appSub = defaultAppSub(kind); resetAppPage();
+      const wasLecture = _appKind === 'lecture';
+      _appKind = kind;
+      if (kind === 'lecture' && !wasLecture) {
+        _appOtherPeriod = _appPeriod;
+        setAppPeriod('all');
+      } else if (kind !== 'lecture' && wasLecture) {
+        setAppPeriod(_appOtherPeriod);
+      }
+      _appSlot = '';
+      _appSub = defaultAppSub(kind);
+      resetAppPage();
       document.querySelectorAll('#afKind .af-tab').forEach(x => {
         const on = x.dataset.kind === kind;
         x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -5588,15 +5634,9 @@
       if (_appKind === 'all') return true;
       if (_appKind === 'online') return !!a._onlineOrder && (!_appSub || a._onlineOrder.course_id === _appSub);
       if (a._onlineOrder) return false;
-      const isLec = appIsLecture(a);
+      if (_appKind === 'lecture') return appMatchesLecture(a);
+      if (appIsLecture(a)) return false;
       const list = Array.isArray(a.challenges) ? a.challenges : [];
-      if (_appKind === 'lecture') {
-        if (!isLec) return false;
-        if (!_appSub) return true;
-        if (a.lecture_id === _appSub) return true;
-        return list.some(c => c && (c.type === 'lecture' || c.lecture_id) && appLectureKey(a, c) === _appSub);
-      }
-      if (isLec) return false;
       /* ⚠️ 챌린지와 기수를 **한 항목 안에서** 함께 본다 — 조건을 따로 걸면 '승자각 2기 + 스피닝 3기'를
          한 번에 신청한 줄이 '승자각 3기'로 걸린다(한 신청 행에 챌린지가 여러 개 들어간다). */
       return list.some(c => c && c.challenge === _appKind
@@ -5665,7 +5705,7 @@
             : '');
     }
     document.getElementById('afSub').addEventListener('change', e => {
-      _appSub = e.target.value; resetAppPage(); renderApps();
+      _appSub = e.target.value; _appSlot = ''; resetAppPage(); renderApps();
     });
     // 목록 위 머리 줄 — 지금 보는 범위 이름. '영합각 4기' · '영합각 모든 기수' · '특강 · 대감집으로' · '전체'
     function appScopeLabel() {
@@ -5677,6 +5717,149 @@
       return CH_LABEL[_appKind] + (sub ? ' ' + sub : ' 모든 기수');
     }
 
+
+    let _appSlot = '', _appOtherPeriod = 'm1', _appSchedule = null, _appScheduleLoading = false;
+    let _appLectureFiltersOpen = false;
+
+    function appMatchesLecture(a) {
+      if (!appIsLecture(a)) return false;
+      if (!_appSub || a.lecture_id === _appSub) return true;
+      return (Array.isArray(a.challenges) ? a.challenges : [])
+        .some(c => c && (c.type === 'lecture' || c.lecture_id) && appLectureKey(a, c) === _appSub);
+    }
+
+    function renderAppFilterControls() {
+      const lecture = _appKind === 'lecture';
+      const expanded = lecture && _appLectureFiltersOpen;
+      const filters = document.getElementById('appFilters');
+      const period = document.getElementById('afPeriodField');
+      const pay = document.getElementById('afPayWrap');
+      if (filters.classList.contains('af-lecture-controls') !== lecture) {
+        filters.classList.toggle('af-lecture-controls', lecture);
+        filters.insertBefore(period, lecture ? pay : document.getElementById('afSubField'));
+      }
+      period.hidden = lecture && !expanded;
+      pay.hidden = (lecture && !expanded) || _appKind === 'lab' || _appKind === 'online';
+      const button = document.getElementById('afLectureFilters');
+      button.hidden = !lecture;
+      button.setAttribute('aria-expanded', String(expanded));
+      const count = Number(_appPeriod !== 'all') + Number(_appPay === 'unpaid');
+      button.dataset.active = String(count > 0);
+      button.querySelector('.af-filter-count').textContent = count || '';
+      button.setAttribute('aria-label', count ? '필터 ' + count + '개 적용 중' : '필터');
+    }
+
+    document.getElementById('afLectureFilters').addEventListener('click', () => {
+      _appLectureFiltersOpen = !_appLectureFiltersOpen;
+      renderAppFilterControls();
+    });
+
+    async function loadAppSchedule() {
+      _appScheduleLoading = true;
+      const [lectures, slots] = await Promise.all([
+        fetchAll(() => MONC.sb.from('special_lectures').select('id,title,lecture_date,schedule_text').order('id')),
+        fetchAll(() => MONC.sb.from('lecture_slots').select('id,lecture_id,slot_date,start_time,end_time').order('id'))
+      ]);
+      const slotsByLecture = new Map();
+      for (const slot of slots.data || []) {
+        if (!slotsByLecture.has(slot.lecture_id)) slotsByLecture.set(slot.lecture_id, []);
+        slotsByLecture.get(slot.lecture_id).push(slot);
+      }
+      _appSchedule = {
+        slotsByLecture,
+        lectures: new Map((lectures.data || []).map(l => [l.id, l])),
+        slots: new Map((slots.data || []).map(s => [s.id, s])),
+        warning: !!(lectures.error || slots.error || lectures.truncated || slots.truncated)
+      };
+      _appScheduleLoading = false;
+      if (_appKind === 'lecture') renderApps();
+    }
+
+    // 주문의 회차 ID와 구 신청 명세를 함께 사용하고 같은 회차는 한 번만 표시한다.
+    function appScheduleEntries(a) {
+      const items = (Array.isArray(a.challenges) ? a.challenges : [])
+        .filter(c => c && (c.type === 'lecture' || c.lecture_id));
+      const ids = [...new Set([...(Array.isArray(a.slot_ids) ? a.slot_ids : []), a.slot_id].filter(Boolean))];
+      const entries = items.map(c => ({
+        lecture: appLectureKey(a, c), id: c.slot_id, saved: c.slot, title: c.name
+      }));
+      for (const id of ids) {
+        if (entries.some(e => e.id === id)) continue;
+        const lecture = _appSchedule?.slots.get(id)?.lecture_id || a.lecture_id || entries[0]?.lecture;
+        const same = entries.find(e => e.lecture === lecture && !e.id);
+        if (same && ids.length === 1) same.id = id;
+        else entries.push({ lecture, id, title: same?.title });
+      }
+      if (a.lecture_id && !entries.some(e => e.lecture === a.lecture_id)) entries.push({ lecture: a.lecture_id });
+      const groups = new Map();
+      for (const e of entries) {
+        if (_appSub && _appSub !== e.lecture) continue;
+        if (!e.id && !e.saved && entries.some(other => other.lecture === e.lecture && (other.id || other.saved))) continue;
+        const l = _appSchedule?.lectures.get(e.lecture);
+        const known = _appSchedule?.slotsByLecture.get(e.lecture) || [];
+        const iso = String(e.saved || '').match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?/);
+        const short = String(e.saved || '').match(/^(\d{1,2})\/(\d{1,2})\s+(\d{2}:\d{2})/);
+        const md = short ? '-' + short.slice(1, 3).map(n => n.padStart(2, '0')).join('-') : '';
+        const start = iso?.[2] || short?.[3] || '';
+        const matches = known.filter(s => (iso ? s.slot_date === iso[1] : md && s.slot_date.endsWith(md))
+          && (!start || String(s.start_time || '').slice(0, 5) === start));
+        const slot = known.find(s => s.id === e.id) || (!e.id && matches.length === 1 ? matches[0] : null);
+        const single = !e.id && !e.saved && !known.length && !_appSchedule?.warning;
+        const date = slot?.slot_date || iso?.[1] || (single && l?.lecture_date) || '';
+        const time = slot ? [slot.start_time, slot.end_time].filter(Boolean).map(t => t.slice(0, 5)).join('–')
+          : start || (single && l?.schedule_text?.match(/\b\d{1,2}:\d{2}\b/)?.[0]) || '';
+        const schedule = date ? [date, time].filter(Boolean).join(' · ') : e.saved || '진행 일정 미기록';
+        const key = JSON.stringify([e.lecture, slot?.id || e.id || schedule]);
+        groups.set(key, { key, schedule, title: l?.title || e.title || '특강', sort: (date || '9999' + md) + ' ' + time });
+      }
+      return [...groups.values()];
+    }
+
+    function appScheduleGroups(list, selected = _appSlot) {
+      const groups = new Map();
+      for (const a of list) {
+        for (const e of appScheduleEntries(a)) {
+          if (selected && selected !== e.key) continue;
+          if (!groups.has(e.key)) groups.set(e.key, { ...e, apps: [] });
+          groups.get(e.key).apps.push(a);
+        }
+      }
+      return [...groups.values()].sort((a, b) => a.sort.localeCompare(b.sort) || a.title.localeCompare(b.title));
+    }
+
+    function renderAppScheduleFilter() {
+      const wrap = document.getElementById('afLectureSlotField');
+      wrap.hidden = _appKind !== 'lecture';
+      if (wrap.hidden) return;
+      if (!_appSchedule && !_appScheduleLoading) loadAppSchedule();
+      const select = document.getElementById('afLectureSlot');
+      if (_appScheduleLoading) {
+        select.disabled = true;
+        select.innerHTML = '<option>일정 불러오는 중…</option>';
+        return;
+      }
+      const groups = appScheduleGroups(periodApps().filter(appMatchesLecture), '');
+      select.disabled = !groups.length;
+      if (!groups.some(g => g.key === _appSlot)) _appSlot = '';
+      select.innerHTML = '<option value="">모든 회차</option>' + groups.map(g =>
+        '<option value="' + esc(g.key) + '">' + esc(appScheduleLabel(g)) + ' (' + g.apps.length + '건)</option>'
+      ).join('');
+      select.value = _appSlot;
+    }
+
+    function appScheduleLabel(g) {
+      const time = g.schedule.replace(/^(\d{4})-(\d{2})-(\d{2})/, (date, year, month, day) =>
+        Number(year) === new Date().getFullYear() ? Number(month) + '/' + Number(day) : date);
+      return time + (_appSub ? '' : ' · ' + g.title);
+    }
+
+    document.getElementById('afLectureSlot').addEventListener('change', e => {
+      _appSlot = e.target.value;
+      resetAppPage();
+      renderApps();
+    });
+
+
     // 화면에 보이는 목록 = 종류 필터 + 검색어. CSV 도 이걸 쓴다(보이는 대로 내려받게).
     function visibleApps() {
       const q = (document.getElementById('appSearch').value || '').trim().toLowerCase();
@@ -5686,7 +5869,8 @@
       return [...periodApps(), ...periodOnlineApps()].sort((a, b) => (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0)).filter(a => appMatchesFilter(a)).filter(a => !q
         || (a.name && a.name.toLowerCase().includes(q))
         || (a.phone && (a.phone.includes(q) || (qd && String(a.phone).replace(/\D/g, '').includes(qd))))
-        || chSummary(a.challenges).toLowerCase().includes(q));
+        || chSummary(a.challenges).toLowerCase().includes(q))
+        .filter(a => _appKind !== 'lecture' || !_appSlot || _appScheduleLoading || appScheduleEntries(a).some(e => e.key === _appSlot));
     }
 
     /* ── 자료 결제 내역(lab_purchases) — '자료' 칩 전용(2026-08-09 오너 "자료 결제내역도 따로").
@@ -5937,14 +6121,51 @@
         <button type="button" class="ad-sq" id="chSubRetry">다시 불러오기</button></div>`;
     }
 
+    function renderAppScheduleCards(groups, appCard) {
+      let remaining = _aShown;
+      let cards = '';
+      for (const g of groups) {
+        if (!remaining) break;
+        if (!_appSlot) cards += '<h3 class="apl-lecture-time">' + esc(appScheduleLabel(g)) + '</h3>';
+        const external = g.apps.filter(a => !appFree(a));
+        const students = g.apps.filter(appFree);
+        for (const [label, rows] of [['외부 신청', external], ['재학생 무료 신청', students]]) {
+          if (!rows.length || !remaining) continue;
+          const shown = rows.slice(0, remaining);
+          const level = _appSlot ? 'h3' : 'h4';
+          cards += '<' + level + ' class="apl-lecture-audience">' + label + ' <span>' + rows.length + '건</span></' + level + '>'
+            + shown.map(appCard).join('');
+          remaining -= shown.length;
+        }
+      }
+      return cards;
+    }
+
+    function appLectureSummary(stats) {
+      const [total, ...rest] = stats;
+      return '<div class="apl-lecture-counts"><strong>신청 ' + total[0].toLocaleString() + '건</strong>'
+        + rest.map(([count, label, tone]) => '<span class="' + (tone || '') + '">' + label + ' ' + count.toLocaleString() + '</span>').join('')
+        + '</div>';
+    }
+
+    function appLecturePayText(a) {
+      if (a.payment_id) return payLine(a);
+      if (a.refunded || a.payment_status === 'refunded') return '계좌이체 · 환불 완료';
+      if (appFree(a)) return '무료 신청';
+      const amount = (a.total_price || 0).toLocaleString() + '원';
+      return amount + ' · ' + (appPaid(a) ? '입금 완료' : '미입금');
+    }
+
     function renderApps() {
       // '자료' 탭이면 결제 목록을 그린다 — 입금 체크는 설 자리가 없어 숨긴다(죽은 필터 금지)
       const isLab = _appKind === 'lab';
       const hasOnline = _appKind === 'all' || _appKind === 'online';
       const onlineReady = window.MONCOnlineRefunds.ready();
-      document.getElementById('appCsv').disabled = hasOnline && !onlineReady;
-      document.getElementById('afPayWrap').hidden = isLab || _appKind === 'online';
+      document.getElementById('appCsv').disabled = (hasOnline && !onlineReady) || (_appKind === 'lecture' && (!_appSchedule || _appScheduleLoading));
+      const isLecture = _appKind === 'lecture';
+      renderAppFilterControls();
       renderSubFilter();   // ⚠️ 목록을 계산하기 전에 — 고른 값이 옵션에서 사라졌으면 여기서 기본값으로 되돌린다
+      renderAppScheduleFilter();
       if (isLab) { renderAppLab(); return; }
       /* 제출물 접이 재료 — 챌린지 탭 첫 진입에 표를 한 번 받고, 도착하면 loadChSubs 가 다시 그린다 */
       const showSubs = isFileCh(_appKind);
@@ -5961,7 +6182,8 @@
       const wireOnline = () => window.MONCOnlineRefunds.bind(body, () => { if (_appKind === 'all' || _appKind === 'online') renderApps(); });
       if (!list.length) {
         if (hasOnline && !onlineReady) { body.innerHTML = onlineNote; wireOnline(); return; }
-        body.innerHTML = onlineNote + apSummary(appScopeLabel(), esc(periodPrefix().replace(/ · $/, '')), [[list.length, '신청']])
+        const emptyStats = [[0, '신청']];
+        body.innerHTML = onlineNote + (isLecture ? appLectureSummary(emptyStats) : apSummary(appScopeLabel(), esc(periodPrefix().replace(/ · $/, '')), emptyStats))
           + '<div class="empty" style="color:var(--text-dim);padding:24px">신청 내역이 없습니다.</div>'
           + chSubmitLinksHtml(_appKind)    // 새 기수 0명이어도 링크는 필요하다
           + chReviewLinkHtml(_appKind);
@@ -5986,12 +6208,10 @@
       if (unpaid) stats.push([unpaid, '미입금', 'al']);
       const blkCount = _blkReady ? list.filter(a => !a._onlineOrder && blkOf(a)).length : 0;
       if (blkCount) stats.push([blkCount, '블랙', 'al']);   // 0이면 칸을 안 그린다(무료·미입금과 같은 규칙)
-      const shown = list.slice(0, _aShown);
+      const scheduleGroups = isLecture && !_appScheduleLoading ? appScheduleGroups(list) : null;
+      const totalCards = scheduleGroups ? scheduleGroups.reduce((n, g) => n + g.apps.length, 0) : list.length;
       const trash = '<svg aria-hidden="true"><use href="#i-trash"/></svg>';
-      body.innerHTML = onlineNote + apSummary(appScopeLabel(),
-          `${periodPrefix()}${fmtDay(String(oldest.created_at || '').slice(0, 10))}부터 신청<span class="lg"> · 최근 ${esc(fmtDate(newest.created_at))}</span>`, stats)
-        + '<div class="apl-list">'
-        + shown.map(a => {
+      const appCard = a => {
           if (a._onlineOrder) return window.MONCOnlineRefunds.row(a, fmtDate);
           const ms = appMembership(a, phoneSet);
           const tag = ms === 'guest' ? '<span class="apl-tag g">비회원</span>'
@@ -6002,15 +6222,7 @@
           const acct = !a.payment_id && a.refund_account ? ` · 환불계좌 ${esc(a.refund_account)}` : '';
           const payTxt = a.payment_id ? payLine(a) : '계좌이체';
           const bk = blkOf(a);
-          return `
-        <div class="apl-row${dups.has(a.id) ? ' is-dup' : ''}" data-id="${a.id}">
-          <div class="nm">${esc(a.name)} ${tag}${dups.has(a.id) ? '<span class="apl-tag dup">중복</span>' : ''}${bk ? `<span class="apl-tag blk" title="${esc(bk.reason || '사유 미기록')}">블랙</span>` : ''}</div>
-          <div class="dt">${fmtDate(a.created_at)}</div>
-          <div class="ph"><b>${esc(a.phone)}</b>${acct}</div>
-          <div class="ch">${esc(chSummary(a.challenges))} <em>· ${(a.total_price||0).toLocaleString()}원 · </em>${payTxt}</div>
-          ${MONC_REFUNDS.history(a)}
-          ${bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : ''}
-          <div class="act">
+          const actions = `<div class="act">
             ${a.payment_id
               ? (appPaid(a) && ((a.paid_amount||0) - (a.refunded_amount||0)) > 0 ? `<span class="apl-seg"><button type="button" class="apl-refundbtn">환불</button></span>` : '')
               : `<span class="apl-seg">
@@ -6023,11 +6235,31 @@
               <button type="button" class="apl-txt apl-blkbtn">${bk ? '블랙 해제' : '블랙 등록'}</button>
               <button type="button" class="apl-txt apl-del">${trash}삭제</button>
             </span>
-          </div>
+          </div>`;
+          return `
+        <div class="apl-row${isLecture ? ' apl-lecture-row' : ''}${dups.has(a.id) ? ' is-dup' : ''}" data-id="${a.id}">
+          <div class="nm">${esc(a.name)} ${isLecture ? '' : tag}${dups.has(a.id) ? '<span class="apl-tag dup">중복</span>' : ''}${bk ? `<span class="apl-tag blk" title="${esc(bk.reason || '사유 미기록')}">블랙</span>` : ''}</div>
+          <div class="dt">${fmtDate(a.created_at)}</div>
+          <div class="ph"><b>${esc(a.phone)}</b>${acct}</div>
+          ${isLecture ? `<details class="apl-lecture-details">
+            <summary><span class="ch">${appLecturePayText(a)}</span><span class="apl-manage">관리<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 6 4 4 4-4"/></svg></span></summary>
+            <div class="ch">${tag} ${esc(chSummary(a.challenges)) || '신청 명세 미기록'}</div>
+            ${MONC_REFUNDS.history(a)}
+            ${bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : ''}
+            ${actions}
+          </details>` : `<div class="ch">${esc(chSummary(a.challenges))} <em>· ${(a.total_price||0).toLocaleString()}원 · </em>${payTxt}</div>
+          ${MONC_REFUNDS.history(a)}
+          ${bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : ''}${actions}`}
           ${aplSubsHtml(a, phoneMap, subIdx)}
-        </div>`; }).join('')
-        + (list.length > shown.length
-            ? `<div class="apl-more"><span>${shown.length.toLocaleString()} / ${list.length.toLocaleString()}명 표시</span>`
+        </div>`;
+      };
+      body.innerHTML = onlineNote + (isLecture ? appLectureSummary(stats) : apSummary(appScopeLabel(),
+          `${periodPrefix()}${fmtDay(String(oldest.created_at || '').slice(0, 10))}부터 신청<span class="lg"> · 최근 ${esc(fmtDate(newest.created_at))}</span>`, stats))
+        + (_appKind === 'lecture' && _appSchedule?.warning
+            ? '<div class="apl-note">일정 일부를 불러오지 못했습니다. 저장된 신청 명세를 표시합니다.</div>' : '')
+        + '<div class="apl-list">' + (scheduleGroups ? renderAppScheduleCards(scheduleGroups, appCard) : list.slice(0, _aShown).map(appCard).join(''))
+        + (totalCards > _aShown
+            ? `<div class="apl-more"><span>${_aShown.toLocaleString()} / ${totalCards.toLocaleString()}건 표시</span>`
               + `<button class="ad-sq" type="button" id="appMoreBtn">더 보기</button></div>`
             : '')
         + (_appsTruncated
@@ -6219,6 +6451,10 @@
         : isChKind(_appKind) ? CH_LABEL[_appKind] : '전체';
       const subLabel = _appSub ? (appSubOptions(_appKind).find(([k]) => k === _appSub) || [, ''])[1] : '';
       const parts = [subLabel ? kindLabel + '-' + subLabel : kindLabel];
+      if (_appKind === 'lecture' && _appSlot) {
+        const group = appScheduleGroups(visibleApps()).find(g => g.key === _appSlot);
+        if (group) parts.push(group.schedule);
+      }
       if (_appPeriod !== 'all') parts.push(PERIOD_LABEL[_appPeriod].replace(/\s/g, ''));
       if (_appPay === 'unpaid' && !['lab','online'].includes(_appKind)) parts.push('미입금만');
       const q = (document.getElementById('appSearch').value || '').trim();
@@ -6301,6 +6537,11 @@
       const phoneSet = memberPhoneSet();
       const list = visibleApps();
       add('전체', APP_HEAD, list.map(a => appRow(a, phoneSet, true)));
+      if (_appKind === 'lecture' && !_appScheduleLoading) {
+        const groups = appScheduleGroups(list);
+        groups.forEach(g => add(_appSub ? g.schedule : g.schedule + ' ' + g.title, APP_HEAD, g.apps.map(a => appRow(a, phoneSet, true))));
+        return { wb, sheets: 1 + groups.length, rows: list.length };
+      }
       const groups = appGroupList(list);
       groups.forEach(g => add(g.label, APP_HEAD, g.apps.map(a => appRow(a, phoneSet, true))));
       return { wb, sheets: 1 + groups.length, rows: list.length };
@@ -6324,6 +6565,7 @@
     document.getElementById('appSearch').addEventListener('input', () => { resetAppPage(); renderApps(); });
     // 새로고침 시 회원 목록도 다시 읽어, 그 사이 가입/전화등록한 사람이 '회원'으로 즉시 반영되게 한다.
     document.getElementById('appRefresh').addEventListener('click', async () => {
+      if (_appKind === 'lecture' && !_appScheduleLoading) _appSchedule = null;
       await loadMembers(); await loadApplications();
       await loadOnlineApplications(true);
       if (_appLabLoaded || _appKind === 'lab') await loadAppLab();   // 자료 결제도 보고 있었으면 같이 새로
