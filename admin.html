@@ -524,6 +524,26 @@
     .apl-lecture-details .apl-manage { display: inline-flex; align-items: center; gap: 5px; color: var(--accent-ink); font-size: 13px; font-weight: 700; white-space: nowrap; }
     .apl-manage svg { width: 14px; height: 14px; }
     .apl-lecture-details[open] .apl-manage svg { transform: rotate(180deg); }
+    .apl-lecture-details .apl-manage-close, .apl-lecture-details[open] .apl-manage-open { display: none; }
+    .apl-lecture-details[open] .apl-manage-close { display: inline; }
+    .apl-manage-panel { margin: 2px 0 4px; padding: 0 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--bg2); }
+    .apl-manage-section { padding: 11px 0; }
+    .apl-manage-section + .apl-manage-section { border-top: 1px solid var(--border); }
+    .apl-manage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .apl-manage-label { margin: 0; color: var(--ink); font-size: 14px; font-weight: 800; }
+    .apl-manage-lecture { color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+    .apl-manage-lecture + .apl-manage-lecture { margin-top: 8px; }
+    .apl-manage-slots { display: grid; gap: 2px; margin: 4px 0 0; padding-left: 17px; color: var(--text-muted); font-size: 13px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .apl-manage-payment .apl-seg { max-width: 100%; }
+    .apl-manage-payment .apl-office-payment { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 340px); box-sizing: border-box; }
+    .apl-manage-payment .apl-seg button { min-height: 44px; min-width: 0; justify-content: center; padding: 0 8px; text-align: center; line-height: 1.3; white-space: normal; }
+    .apl-manage-payment .apl-seg button.on::before { content: "✓" / ""; }
+    .apl-manage-payment .refund-history { margin-top: 8px; overflow-wrap: anywhere; }
+    .apl-manage-tools { padding: 2px 0; }
+    .apl-manage-panel .apl-txts { display: flex; justify-content: space-between; gap: 8px; }
+    .apl-manage-panel .apl-txt { margin-left: 0; min-height: 44px; padding: 0 5px; }
+    .apl-manage-panel .apl-del { color: var(--st-alert); }
+    .apl-manage-panel .blk-why { margin: 2px 0 6px; overflow-wrap: anywhere; }
     .apl-row { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: start; }
     .apl-row:last-child { border-bottom: 0; }
     .apl-row.is-dup { background: var(--action-tint); }
@@ -5776,7 +5796,7 @@
     }
 
     // 주문의 회차 ID와 구 신청 명세를 함께 사용하고 같은 회차는 한 번만 표시한다.
-    function appScheduleEntries(a) {
+    function appScheduleEntries(a, lecture = _appSub) {
       const items = (Array.isArray(a.challenges) ? a.challenges : [])
         .filter(c => c && (c.type === 'lecture' || c.lecture_id));
       const ids = [...new Set([...(Array.isArray(a.slot_ids) ? a.slot_ids : []), a.slot_id].filter(Boolean))];
@@ -5793,7 +5813,7 @@
       if (a.lecture_id && !entries.some(e => e.lecture === a.lecture_id)) entries.push({ lecture: a.lecture_id });
       const groups = new Map();
       for (const e of entries) {
-        if (_appSub && _appSub !== e.lecture) continue;
+        if (lecture && lecture !== e.lecture) continue;
         if (!e.id && !e.saved && entries.some(other => other.lecture === e.lecture && (other.id || other.saved))) continue;
         const l = _appSchedule?.lectures.get(e.lecture);
         const known = _appSchedule?.slotsByLecture.get(e.lecture) || [];
@@ -5810,7 +5830,7 @@
           : start || (single && l?.schedule_text?.match(/\b\d{1,2}:\d{2}\b/)?.[0]) || '';
         const schedule = date ? [date, time].filter(Boolean).join(' · ') : e.saved || '진행 일정 미기록';
         const key = JSON.stringify([e.lecture, slot?.id || e.id || schedule]);
-        groups.set(key, { key, schedule, title: l?.title || e.title || '특강', sort: (date || '9999' + md) + ' ' + time });
+        groups.set(key, { key, lecture: e.lecture, schedule, title: l?.title || e.title || '특강', sort: (date || '9999' + md) + ' ' + time });
       }
       return [...groups.values()];
     }
@@ -5847,10 +5867,13 @@
       select.value = _appSlot;
     }
 
-    function appScheduleLabel(g) {
-      const time = g.schedule.replace(/^(\d{4})-(\d{2})-(\d{2})/, (date, year, month, day) =>
+    function appShortSchedule(schedule) {
+      return schedule.replace(/^(\d{4})-(\d{2})-(\d{2})/, (date, year, month, day) =>
         Number(year) === new Date().getFullYear() ? Number(month) + '/' + Number(day) : date);
-      return time + (_appSub ? '' : ' · ' + g.title);
+    }
+
+    function appScheduleLabel(g) {
+      return appShortSchedule(g.schedule) + (_appSub ? '' : ' · ' + g.title);
     }
 
     document.getElementById('afLectureSlot').addEventListener('change', e => {
@@ -6134,7 +6157,7 @@
           const shown = rows.slice(0, remaining);
           const level = _appSlot ? 'h3' : 'h4';
           cards += '<' + level + ' class="apl-lecture-audience">' + label + ' <span>' + rows.length + '건</span></' + level + '>'
-            + shown.map(appCard).join('');
+            + shown.map(a => appCard(a, g.key)).join('');
           remaining -= shown.length;
         }
       }
@@ -6154,6 +6177,20 @@
       if (appFree(a)) return '무료 신청';
       const amount = (a.total_price || 0).toLocaleString() + '원';
       return amount + ' · ' + (appPaid(a) ? '입금 완료' : '미입금');
+    }
+
+    function appManageSchedule(a) {
+      const entries = appScheduleEntries(a, '').sort((x, y) => x.sort.localeCompare(y.sort));
+      const lectures = new Map();
+      for (const entry of entries) {
+        if (!lectures.has(entry.lecture)) lectures.set(entry.lecture, { title: entry.title, times: [] });
+        lectures.get(entry.lecture).times.push(entry.schedule);
+      }
+      if (!lectures.size) return '<div class="apl-manage-lecture">신청 명세 미기록</div>';
+      return [...lectures.values()].map(({title, times}) => `
+        <div class="apl-manage-lecture"><strong>${esc(title)}</strong>
+          <ul class="apl-manage-slots">${times.map(t => '<li>' + esc(appShortSchedule(t)) + '</li>').join('')}</ul>
+        </div>`).join('');
     }
 
     function renderApps() {
@@ -6210,8 +6247,11 @@
       if (blkCount) stats.push([blkCount, '블랙', 'al']);   // 0이면 칸을 안 그린다(무료·미입금과 같은 규칙)
       const scheduleGroups = isLecture && !_appScheduleLoading ? appScheduleGroups(list) : null;
       const totalCards = scheduleGroups ? scheduleGroups.reduce((n, g) => n + g.apps.length, 0) : list.length;
+      const openDetails = body.querySelector('.apl-lecture-details[open]');
+      const openKey = openDetails?.dataset.manageKey;
+      const restoreFocus = openDetails?.contains(document.activeElement);
       const trash = '<svg aria-hidden="true"><use href="#i-trash"/></svg>';
-      const appCard = a => {
+      const appCard = (a, group = '') => {
           if (a._onlineOrder) return window.MONCOnlineRefunds.row(a, fmtDate);
           const ms = appMembership(a, phoneSet);
           const tag = ms === 'guest' ? '<span class="apl-tag g">비회원</span>'
@@ -6222,34 +6262,42 @@
           const acct = !a.payment_id && a.refund_account ? ` · 환불계좌 ${esc(a.refund_account)}` : '';
           const payTxt = a.payment_id ? payLine(a) : '계좌이체';
           const bk = blkOf(a);
-          const actions = `<div class="act">
-            ${a.payment_id
-              ? (appPaid(a) && ((a.paid_amount||0) - (a.refunded_amount||0)) > 0 ? `<span class="apl-seg"><button type="button" class="apl-refundbtn">환불</button></span>` : '')
-              : `<span class="apl-seg">
-              <button type="button" class="${a.paid ? 'on' : ''}" data-field="paid">입금</button>
-              <button type="button" class="${a.refunded ? 'on rf' : ''}" data-field="refunded">환불</button>
-              <button type="button" class="${appFree(a) ? 'on' : ''}" data-field="free">무료(재학생)</button>
-            </span>`}
-            <span class="apl-txts">
-              ${canFreeReenroll(a) ? '<button type="button" class="apl-txt apl-freebtn">무료 재등록</button>' : ''}
-              <button type="button" class="apl-txt apl-blkbtn">${bk ? '블랙 해제' : '블랙 등록'}</button>
-              <button type="button" class="apl-txt apl-del">${trash}삭제</button>
-            </span>
-          </div>`;
+          const paymentActions = a.payment_id
+            ? (appPaid(a) && ((a.paid_amount||0) - (a.refunded_amount||0)) > 0
+              ? `<span class="apl-seg"><button type="button" class="apl-refundbtn">${isLecture ? '환불하기' : '환불'}</button></span>` : '')
+            : `<span class="apl-seg${isLecture ? ' apl-office-payment' : ''}">
+                <button type="button" class="${a.paid ? 'on' : ''}" data-field="paid" aria-pressed="${!!a.paid}">${isLecture ? '입금 확인' : '입금'}</button>
+                <button type="button" class="${a.refunded ? 'on rf' : ''}" data-field="refunded" aria-pressed="${!!a.refunded}">${isLecture ? '환불 표시' : '환불'}</button>
+                <button type="button" class="${appFree(a) ? 'on' : ''}" data-field="free" aria-pressed="${appFree(a)}">${isLecture ? '재학생 무료' : '무료(재학생)'}</button>
+              </span>`;
+          const recordActions = `<span class="apl-txts">
+            ${canFreeReenroll(a) ? '<button type="button" class="apl-txt apl-freebtn">무료 재등록</button>' : ''}
+            <button type="button" class="apl-txt apl-blkbtn">${bk ? '블랙 해제' : isLecture ? '블랙리스트 등록' : '블랙 등록'}</button>
+            <button type="button" class="apl-txt apl-del">${trash}${isLecture ? '신청 삭제' : '삭제'}</button>
+          </span>`;
+          const refundHistory = MONC_REFUNDS.history(a);
+          const blockReason = bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : '';
+          const manageKey = JSON.stringify([a.id, group]);
           return `
         <div class="apl-row${isLecture ? ' apl-lecture-row' : ''}${dups.has(a.id) ? ' is-dup' : ''}" data-id="${a.id}">
           <div class="nm">${esc(a.name)} ${isLecture ? '' : tag}${dups.has(a.id) ? '<span class="apl-tag dup">중복</span>' : ''}${bk ? `<span class="apl-tag blk" title="${esc(bk.reason || '사유 미기록')}">블랙</span>` : ''}</div>
           <div class="dt">${fmtDate(a.created_at)}</div>
           <div class="ph"><b>${esc(a.phone)}</b>${acct}</div>
-          ${isLecture ? `<details class="apl-lecture-details">
-            <summary><span class="ch">${appLecturePayText(a)}</span><span class="apl-manage">관리<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 6 4 4 4-4"/></svg></span></summary>
-            <div class="ch">${tag} ${esc(chSummary(a.challenges)) || '신청 명세 미기록'}</div>
-            ${MONC_REFUNDS.history(a)}
-            ${bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : ''}
-            ${actions}
+          ${isLecture ? `<details class="apl-lecture-details" name="lecture-app-manage" data-manage-key="${esc(manageKey)}"${manageKey === openKey ? ' open' : ''}>
+            <summary><span class="ch">${appLecturePayText(a)}</span><span class="apl-manage"><span class="apl-manage-open">관리</span><span class="apl-manage-close">닫기</span><svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 6 4 4 4-4"/></svg></span></summary>
+            <div class="apl-manage-panel">
+              <section class="apl-manage-section" aria-label="신청 회차">
+                <div class="apl-manage-head"><p class="apl-manage-label">신청 회차</p>${tag}</div>
+                ${appManageSchedule(a)}
+              </section>
+              ${paymentActions || refundHistory ? `<section class="apl-manage-section apl-manage-payment" aria-label="결제·환불">
+                <div class="apl-manage-head"><p class="apl-manage-label">결제·환불</p></div>
+                ${paymentActions}${refundHistory}
+              </section>` : ''}
+              <div class="apl-manage-section apl-manage-tools">${recordActions}${blockReason}</div>
+            </div>
           </details>` : `<div class="ch">${esc(chSummary(a.challenges))} <em>· ${(a.total_price||0).toLocaleString()}원 · </em>${payTxt}</div>
-          ${MONC_REFUNDS.history(a)}
-          ${bk && bk.reason ? `<div class="blk-why">블랙 사유 · ${esc(bk.reason)}</div>` : ''}${actions}`}
+            ${refundHistory}${blockReason}<div class="act">${paymentActions}${recordActions}</div>`}
           ${aplSubsHtml(a, phoneMap, subIdx)}
         </div>`;
       };
@@ -6257,7 +6305,7 @@
           `${periodPrefix()}${fmtDay(String(oldest.created_at || '').slice(0, 10))}부터 신청<span class="lg"> · 최근 ${esc(fmtDate(newest.created_at))}</span>`, stats))
         + (_appKind === 'lecture' && _appSchedule?.warning
             ? '<div class="apl-note">일정 일부를 불러오지 못했습니다. 저장된 신청 명세를 표시합니다.</div>' : '')
-        + '<div class="apl-list">' + (scheduleGroups ? renderAppScheduleCards(scheduleGroups, appCard) : list.slice(0, _aShown).map(appCard).join(''))
+        + '<div class="apl-list">' + (scheduleGroups ? renderAppScheduleCards(scheduleGroups, appCard) : list.slice(0, _aShown).map(a => appCard(a)).join(''))
         + (totalCards > _aShown
             ? `<div class="apl-more"><span>${_aShown.toLocaleString()} / ${totalCards.toLocaleString()}건 표시</span>`
               + `<button class="ad-sq" type="button" id="appMoreBtn">더 보기</button></div>`
@@ -6269,6 +6317,7 @@
         + '</div>'
         + chSubmitLinksHtml(_appKind)    // 챌린지 탭이면 목록 아래 제출 링크(오픈챗 공유용)
         + chReviewLinkHtml(_appKind);    // 그 아래 후기 링크(챌린지 4종 · 전체 탭)
+      if (restoreFocus) body.querySelector('.apl-lecture-details[open] > summary')?.focus({ preventScroll: true });
       wireCopyLinks(body);
       wireOnline();
       wireSubsFolds(body);
