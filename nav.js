@@ -106,7 +106,9 @@
   function menuHtml() {
     return groups.map(function (group,index) {
       return '<section class="mm-group"><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + esc(group[0]) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
-        return '<li><a href="' + esc(item[0]) + '" data-menu-destination>' + esc(item[1]) + (item[2] ? '<span class="tool-hot-badge" aria-hidden="true">HOT</span>' : '') + '</a></li>';
+        var label = esc(item[1]);
+        if (item[2]) label = '<span class="mm-feature-label">' + label + '</span><span class="tool-hot-badge" aria-hidden="true">HOT</span>';
+        return '<li><a href="' + esc(item[0]) + '"' + (item[2] ? ' class="mm-feature-link"' : '') + ' data-menu-destination>' + label + '</a></li>';
       }).join('') + '</ul></section>';
     }).join('');
   }
