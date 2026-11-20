@@ -104,10 +104,15 @@
       : '<a href="' + loginHref() + '">로그인 / 회원가입 <span aria-hidden="true">→</span></a>';
   }
   function menuHtml() {
+    var hotBadge = '<span class="tool-hot-badge" aria-hidden="true">HOT</span>';
     return groups.map(function (group,index) {
-      return '<section class="mm-group"><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + esc(group[0]) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
+      var heading = esc(group[0]);
+      if (group[1].some(function (item) { return item[2]; })) {
+        heading = '<span class="mm-tool-group-label">' + heading + ' ' + hotBadge + '</span>';
+      }
+      return '<section class="mm-group"><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + heading + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
         var label = esc(item[1]);
-        if (item[2]) label = '<span class="mm-feature-label">' + label + '</span><span class="tool-hot-badge" aria-hidden="true">HOT</span>';
+        if (item[2]) label = '<span class="mm-feature-label">' + label + '</span>' + hotBadge;
         return '<li><a href="' + esc(item[0]) + '"' + (item[2] ? ' class="mm-feature-link"' : '') + ' data-menu-destination>' + label + '</a></li>';
       }).join('') + '</ul></section>';
     }).join('');
@@ -165,6 +170,8 @@
       dialog.querySelectorAll('.mm-group-toggle').forEach(function (button) {
         var expanded=button===selected;
         button.setAttribute('aria-expanded',String(expanded));
+        var badge = button.querySelector('.tool-hot-badge');
+        if (badge) badge.hidden = expanded;
         document.getElementById(button.getAttribute('aria-controls')).hidden=!expanded;
       });
     }

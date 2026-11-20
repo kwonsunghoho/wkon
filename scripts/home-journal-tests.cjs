@@ -61,7 +61,11 @@ async function make(width=375,auth='guest',bookingFailure=false){
 async function loadData(page){await page.locator('#doors').scrollIntoViewIfNeeded();await page.locator('#homeReviews[aria-busy=false]').waitFor();await page.locator('#homeCommunity').scrollIntoViewIfNeeded();await page.locator('#homeCommunityPosts[aria-busy=false]').waitFor();await page.locator('#homeCommunityStudies[aria-busy=false]').waitFor();await page.locator('#homeCommunityLectures[aria-busy=false]').waitFor({state:'attached'})}
 async function layout(page){
  const m=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,small:[...document.querySelectorAll('.home-journal *')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(e).fontSize)<12).map(e=>e.className),sections:[...document.querySelectorAll('.home-journal>section')].map(e=>({id:e.id||e.className,top:Math.round(e.getBoundingClientRect().top+scrollY)}))}));
- assert.ok(m.scroll<=m.width,'가로 넘침 '+JSON.stringify(m));assert.deepEqual(m.small,[]);return m;
+ assert.ok(m.scroll<=m.width,'가로 넘침 '+JSON.stringify(m));assert.deepEqual(m.small,[]);
+ const services=m.sections.filter(x=>['challenges','tools','doors'].includes(x.id));
+ assert.deepEqual(services.map(x=>x.id),['challenges','tools','doors']);
+ assert.ok(services[0].top<services[1].top&&services[1].top<services[2].top,'교육·도구·후기의 표시 순서');
+ return m;
 }
 try{
  for(const width of [320,375,768,1280]){
