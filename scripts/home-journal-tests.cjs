@@ -54,7 +54,7 @@ async function make(width=375,auth='guest',bookingFailure=false){
  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
  await page.route('**/*',r=>{const url=r.request().url();if(url.startsWith(base+'/supabase-config.js'))return r.fulfill({contentType:'text/javascript',body:stub(auth)});if(url===base+'/consult.html')return bookingFailure?r.abort():r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(path.join(root,'consult.html'),'utf8')});if(!url.startsWith(base+'/'))return r.abort();if(!['GET','HEAD'].includes(r.request().method()))throw Error('운영 쓰기 차단');return r.continue()});
  await page.goto(base+'/index.html');await page.evaluate(()=>document.fonts.ready);
- await page.waitForFunction(()=>document.querySelectorAll('.monc-person').length===6,{},{timeout:10000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({ready:document.readyState,researchers:typeof window.MONC_RESEARCHERS,host:!!document.getElementById('homeResearchers'),scripts:[...document.scripts].map(s=>s.src)}))));console.error(report.errors);throw error});
+ await page.waitForFunction(()=>Array.isArray(window.MONC_RESEARCHERS)&&window.MONC_RESEARCHERS.length>0&&document.querySelectorAll('.monc-person').length===window.MONC_RESEARCHERS.length,{},{timeout:10000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({ready:document.readyState,researchers:typeof window.MONC_RESEARCHERS,host:!!document.getElementById('homeResearchers'),scripts:[...document.scripts].map(s=>s.src)}))));console.error(report.errors);throw error});
  if(!bookingFailure)await page.waitForFunction(()=>document.querySelector('[data-consult-booking]').href.startsWith('https://m.booking.naver.com/'),{},{timeout:7000}).catch(async error=>{console.error(JSON.stringify(await page.evaluate(()=>({booking:document.querySelector('[data-consult-booking]')?.href,resources:performance.getEntriesByType('resource').filter(r=>r.name.includes('consult')||r.name.includes('home-contact')).map(r=>({name:r.name,duration:r.duration,size:r.transferSize}))}))));console.error(report.errors);throw error});
  return{page,context};
 }
@@ -81,8 +81,8 @@ try{
   assert.equal(await page.locator('.home-review-quote').first().evaluate(e=>getComputedStyle(e).fontSize),width<=600?'18px':'20px');
   assert.equal(await page.locator('.review-original>p').first().isVisible(),false,'원문은 처음에 접힘');
   assert.deepEqual(await page.locator('.monc-person h3').allTextContents(),await page.evaluate(()=>MONC_RESEARCHERS.map(p=>p.name)));
-  await page.locator('#homeResearcherNext').click();await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='2 / 6');
-  await page.locator('#homeResearchers').press('ArrowLeft');await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='1 / 6');
+  await page.locator('#homeResearcherNext').click();await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='2 / '+window.MONC_RESEARCHERS.length);
+  await page.locator('#homeResearchers').press('ArrowLeft');await page.waitForFunction(()=>document.getElementById('homeResearcherCount').textContent==='1 / '+window.MONC_RESEARCHERS.length);
   await page.locator('.person-details summary').first().click();assert.ok(await page.locator('.person-details').first().evaluate(e=>e.open));await page.locator('.person-details summary').first().click();
   await page.locator('.review-original summary').first().click();assert.ok(await page.locator('.review-original').first().evaluate(e=>e.open));assert.equal(await page.locator('.review-original>p').first().isVisible(),true);assert.equal(await page.locator('.review-original>p').first().textContent(),await page.evaluate(async()=>(await result('reviews')).data.find(row=>row.kind==='ke20').quote.trim()));await layout(page);await page.locator('.review-original summary').first().click();
   assert.equal(await page.locator('#homeCommunityPosts article').count(),3);
@@ -100,7 +100,7 @@ try{
   assert.equal(await page.locator('#homeContact .contact-action').count(),2);
   const small=await page.locator('.home-journal a,.home-journal button,.home-journal summary,.home-contact-float').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').filter(e=>{var r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.textContent.trim()));assert.deepEqual(small,[],'터치 영역');
   await page.locator('#hamburger').click();assert.ok(await page.locator('#mobileMenu').evaluate(e=>e.open));
-  for(const name of ['교육 과정','면접 연습','자료·정보','커뮤니티','수강 후기']){await page.getByRole('button',{name,exact:true}).click();assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),1)}
+  for(const name of ['교육 과정','승준 도구','자료·정보','커뮤니티','수강 후기']){await page.getByRole('button',{name,exact:true}).click();assert.equal(await page.locator('.mm-group-toggle[aria-expanded=true]').count(),1)}
   await page.keyboard.press('Escape');assert.equal(await page.locator('#mobileMenu').evaluate(e=>e.open),false);assert.equal(await page.evaluate(()=>document.activeElement.id),'hamburger');
   await page.locator('.home-journal').evaluate(async e=>{for(const img of e.querySelectorAll('img'))img.loading='eager';await Promise.all([...e.querySelectorAll('img')].map(i=>i.decode().catch(()=>{})))});
   await page.evaluate(()=>scrollTo(0,0));if([375,1280].includes(width))await page.screenshot({path:path.join(out,'home-'+width+'.png'),fullPage:true});

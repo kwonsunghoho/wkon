@@ -5,7 +5,7 @@
   var LOGO = 'images/MONC_Logo_Full_Package/assets/web/monc-logo-transparent-640.webp';
   var groups = [
     ['교육 과정', [['challenges.html','챌린지'],['online-courses.html','온라인 강의'],['lectures.html','특강']]],
-    ['면접 연습', [['sojae.html','답변 소재 발굴'],['polish.html','답변 첨삭'],['games.html','역량검사 연습']]],
+    ['승준 도구', [['sojae.html','답변 소재 발굴',true],['polish.html','답변 첨삭'],['games.html','역량검사 연습']]],
     ['자료·정보', [['lab-airline.html','면접 자료·기출'],['news.html','항공사 뉴스·산업분석']]],
     ['커뮤니티', [['community.html?view=board&topic=prep','게시판'],['community.html?view=studies&study_category=interview','면접 스터디'],['community.html?view=studies&study_category=language','어학 스터디'],['community.html?view=studies&study_category=volunteer','봉사활동']]],
     ['수강 후기', [['reviews-list.html?kind=challenge','챌린지 후기'],['reviews-list.html?kind=ke20','수업 후기']]]
@@ -106,7 +106,7 @@
   function menuHtml() {
     return groups.map(function (group,index) {
       return '<section class="mm-group"><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + esc(group[0]) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
-        return '<li><a href="' + esc(item[0]) + '" data-menu-destination>' + esc(item[1]) + '</a></li>';
+        return '<li><a href="' + esc(item[0]) + '" data-menu-destination>' + esc(item[1]) + (item[2] ? '<span class="tool-hot-badge" aria-hidden="true">HOT</span>' : '') + '</a></li>';
       }).join('') + '</ul></section>';
     }).join('');
   }
@@ -124,6 +124,7 @@
     var anchor = document.body.firstChild;
     while (holder.firstChild) document.body.insertBefore(holder.firstChild,anchor);
     markMain();
+    initToolBadges();
     mountFooterSocial();
     upgradeLoginLinks();
     syncCurrent();
@@ -246,6 +247,28 @@
     if (inner && getComputedStyle(inner).flexDirection !== 'column') box.classList.add('is-row');
   }
 
+
+  // 화면에 들어온 배지만 강조하고, 같은 페이지에서는 다시 재생하지 않는다.
+  function initToolBadges() {
+    var badges = document.querySelectorAll('.tool-hot-badge');
+    if (!badges.length || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.intersectionRatio < 0.5) return;
+        var badge = entry.target;
+        function stopPulse() {
+          badge.classList.remove('is-pulsing');
+          badge.removeEventListener('animationend', stopPulse);
+          badge.removeEventListener('animationcancel', stopPulse);
+        }
+        badge.addEventListener('animationend', stopPulse);
+        badge.addEventListener('animationcancel', stopPulse);
+        badge.classList.add('is-pulsing');
+        observer.unobserve(badge);
+      });
+    }, { threshold: 0.5 });
+    badges.forEach(function (badge) { observer.observe(badge); });
+  }
 
   function markMain() {
     if (document.getElementById('main')) return;
