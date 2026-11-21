@@ -5,7 +5,7 @@
   const airlines = ['대한항공', '아시아나항공', '제주항공', '진에어', '트리니티항공', '에어부산',
     '에어서울', '이스타항공', '에어프레미아', '에어로케이', '파라타항공', '국내 공통'];
   const stages = ['서류', '영상', '임원', '최종'];
-  const subjects = ['자소서 소재', '답변 구성', '보이스', '이미지', '재지원'];
+  const recruitmentPeriods = ['상반기', '중반기', '하반기'];
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char =>
     ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
   const listURL = 'community.html?view=experiences';
@@ -85,9 +85,8 @@
       q:(values.get('q') || '').trim().slice(0, 120),
       airline:choice('airline', airlines),
       stage:choice('stage', stages),
-      subject:choice('subject', subjects),
       year:/^20\d{2}$|^2100$/.test(year) ? year : '',
-      half:['상반기', '하반기'].includes(half) && /^\d{4}$/.test(year) ? half : '',
+      half:recruitmentPeriods.includes(half) && /^\d{4}$/.test(year) ? half : '',
       recent:period === 'recent',
       verified:kind === 'note' && values.get('verified') === '1',
       sort:values.get('sort') === 'latest' ? 'latest' : 'popular'
@@ -97,14 +96,14 @@
   function periodOptions(filters) {
     const options = [['recent', '최근 1년']];
     for (const [year, label] of years(filters.year)) {
-      options.push([year, label], [year + '-상반기', label + ' 상반기'], [year + '-하반기', label + ' 하반기']);
+      options.push([year, label], ...recruitmentPeriods.map(period => [year + '-' + period, label + ' ' + period]));
     }
     return options;
   }
 
   function paramsFor(filters) {
     const params = new URLSearchParams({ view:'experiences' });
-    for (const key of ['q', 'airline', 'stage', 'subject']) {
+    for (const key of ['q', 'airline', 'stage']) {
       if (filters[key]) params.set(key, filters[key]);
     }
     if (filters.kind === 'request') params.set('kind', 'request');
@@ -129,12 +128,9 @@
         ${select('airline', '항공사', airlines, filters.airline, '전체 항공사')}
         ${select('stage', '전형', stages, filters.stage, '전체 전형')}
       </div>
-      <details ${filters.subject || filters.year || filters.recent || filters.verified ? 'open' : ''}>
+      <details ${filters.year || filters.recent || filters.verified ? 'open' : ''}>
         <summary>상세 필터 <span data-experience-filter-count></span></summary>
-        <div class="cex-pair">
-          ${select('subject', '준비 고민', subjects, filters.subject, '전체 주제')}
-          ${select('period', '채용 시기', periodOptions(filters), filters.recent ? 'recent' : [filters.year, filters.half].filter(Boolean).join('-'), '전체 시기')}
-        </div>
+        ${select('period', '채용 시기', periodOptions(filters), filters.recent ? 'recent' : [filters.year, filters.half].filter(Boolean).join('-'), '전체 시기')}
         <label class="cm-check cex-verified-filter"><input type="checkbox" name="verified" value="1" ${filters.verified ? 'checked' : ''}>최종합격 확인 글</label>
       </details>
       <div class="cm-toolbar cex-toolbar">
@@ -161,7 +157,7 @@
       compose.textContent = filters.kind === 'request' ? '노하우 요청하기' : '노하우 공유하기';
       verified.disabled = filters.kind === 'request';
       verified.closest('label').hidden = verified.disabled;
-      const count = Number(Boolean(filters.subject)) + Number(Boolean(filters.year || filters.recent)) + Number(filters.verified);
+      const count = Number(Boolean(filters.year || filters.recent)) + Number(filters.verified);
       form.querySelector('[data-experience-filter-count]').textContent = count ? `${count}개 적용` : '';
     }
 
@@ -235,6 +231,96 @@
     load();
   }
 
+  function applicantForm(specs, field) {
+    return `<fieldset class="cex-applicant-form">
+      <legend>지원 당시 스펙 (선택)</legend>
+      <p class="cm-help">입력한 항목은 게시글에 공개돼요.</p>
+      <div class="cex-pair">
+        ${field('spec_major','전공',specs.major,'text',80)}
+        ${field('spec_gpa','학점',specs.gpa,'text',24)}
+      </div>
+      <div class="cex-pair">
+        ${field('spec_language','어학 스펙',specs.language,'text',120)}
+        ${field('spec_height','키 (cm)',specs.height,'text',24)}
+      </div>
+    </fieldset>`;
+  }
+
+  function videoForm(values, field, choice) {
+    const input = (name,label,type='textarea',max=500,required=false) =>
+      field('video_'+name,label,values[name] || '',type,max,required);
+    const pick = (name,label,entries,prompt,required=false) =>
+      choice('video_'+name,label,entries,values[name],prompt,required);
+    return `<fieldset class="cex-video-form" data-cex-video hidden disabled>
+      <legend>영상면접 준비와 결과</legend>
+      <div class="cex-pair">
+        ${pick('result','영상면접 결과',['합격','미합격','결과 대기'],'결과 선택',true)}
+        ${pick('attempt','지원 횟수',['첫 지원','2회','3회','4회 이상'],'횟수 선택')}
+      </div>
+      ${input('duration','첫 지원부터 걸린 기간','text',80)}
+      ${input('focus','촬영하면서 가장 많이 고친 건 무엇인가요?','textarea',500,true)}
+      <div class="cex-video-group">
+        <h3>촬영 준비</h3>
+        ${input('place','어디에서 촬영했나요?','text',120)}
+        ${input('setup','도움이 된 카메라·조명 세팅')}
+        ${input('styling','헤어·메이크업은 어떻게 했나요?')}
+        ${input('outfit','어떤 의상을 입었나요?')}
+      </div>
+      <div class="cex-video-group">
+        <h3>답변과 느낀 점</h3>
+        ${input('question','기억나는 질문 1개','text',500)}
+        ${input('answer_direction','그 질문에 어떻게 답했나요?')}
+        ${input('impact','영상면접 합격에 도움이 됐다고 느낀 점은 무엇인가요?')}
+        ${input('encouragement','영상면접에 다시 도전하는 승준생에게 한마디')}
+      </div>
+    </fieldset>`;
+  }
+
+  function nicknameProblem(value) {
+    const name=value.trim();
+    if (!name) return '글에 표시할 닉네임을 입력해 주세요.';
+    if ([...name].length<2 || [...name].length>16 || /[<>@\p{Cc}]/u.test(name)) return '닉네임을 2~16자로 입력해 주세요. <, >, @는 사용할 수 없어요.';
+    return '';
+  }
+
+  function mountPostForm(form) {
+    const {stage,body,author_nickname:nickname,video_result:result}=form.elements;
+    const video=form.querySelector('[data-cex-video]');
+    const warning=form.querySelector('#cex-nickname-warning');
+    function syncVideo() {
+      const shown=Boolean(video && stage.value==='영상');
+      if (video) {
+        video.hidden=!shown;
+        video.disabled=!shown;
+        form.querySelector('[for=f-video_impact]').textContent=result.value==='합격'
+          ? '영상면접 합격에 도움이 됐다고 느낀 점은 무엇인가요?'
+          : '다시 찍는다면 뭘 바꾸고 싶나요?';
+      }
+      body.required=!shown;
+      form.querySelector('[for=f-body]').textContent=shown?'추가로 남길 내용 (선택)':'내용';
+      form.querySelector('[data-cex-body-prompt]').hidden=shown;
+    }
+    function checkNickname(show) {
+      const problem=nicknameProblem(nickname.value);
+      nickname.setCustomValidity(problem);
+      if (!show) return;
+      warning.textContent=problem;
+      warning.hidden=!problem;
+      if (problem) nickname.setAttribute('aria-invalid','true');
+      else nickname.removeAttribute('aria-invalid');
+    }
+    nickname.addEventListener('input',()=>checkNickname(!warning.hidden));
+    nickname.addEventListener('invalid',event=>{
+      event.preventDefault();
+      checkNickname(true);
+      nickname.focus();
+    });
+    stage.addEventListener('change',syncVideo);
+    result?.addEventListener('change',syncVideo);
+    syncVideo();
+    checkNickname(false);
+  }
+
   function postForm(item, fields) {
     const { field } = fields;
     const request = item.kind === 'request';
@@ -244,6 +330,13 @@
     const html = `<input type="hidden" name="id" value="${escape(item.id || '')}">
       <input type="hidden" name="kind" value="${request ? 'request' : 'note'}">
       <input type="hidden" name="request_id" value="${escape(item.request_id || '')}">
+      <div class="cm-field">
+        <label class="cm-label" for="cex-author-nickname">공개 닉네임</label>
+        <input id="cex-author-nickname" name="author_nickname" type="text" maxlength="16" required
+          value="${escape(item.nickname || '')}" aria-describedby="cex-nickname-help cex-nickname-warning">
+        <p class="cm-help" id="cex-nickname-help">이 글에 표시되는 이름이에요.</p>
+        <p class="cm-form-error" id="cex-nickname-warning" role="alert" hidden></p>
+      </div>
       ${field('title', '제목', item.title || '', 'text', 100, true)}
       <div class="cex-pair">
         ${formSelect('airline', '항공사', airlines, item.airline, '항공사 선택', true)}
@@ -251,10 +344,11 @@
       </div>
       <div class="cex-pair">
         ${formSelect('year', '채용 연도 (선택)', years(item.recruit_year), item.recruit_year, '연도 선택')}
-        ${formSelect('half', '채용 시기 (선택)', ['상반기', '하반기'], item.half, '시기 선택')}
+        ${formSelect('half', '채용 시기 (선택)', recruitmentPeriods, item.half, '시기 선택')}
       </div>
-      ${formSelect('subject', '준비 고민 (선택)', subjects, item.subject, '주제 선택')}
-      <p class="cm-help">${prompt}</p>${field('body', '내용', item.body || '', 'textarea', 10000, true)}
+      ${request?'':applicantForm(item.applicant_specs || {},field)}
+      ${request?'':videoForm(item.video_fields || {},field,formSelect)}
+      <p class="cm-help" data-cex-body-prompt>${prompt}</p>${field('body', '내용', item.body || '', 'textarea', 10000, true)}
       <p class="cm-help">글은 누구나 읽을 수 있어요. 연락처·인증 자료·자소서 원문은 빼고 작성해 주세요.</p>`;
     return { label:item.id ? kindLabels[item.kind] + ' 수정' : request ? '노하우 요청하기' : '노하우 공유하기', html };
   }
@@ -277,13 +371,26 @@
   async function vote(id, active) { await write('vote', { id, active }); }
 
   async function save(data) {
-    if (data.title.trim().length < 2 || data.body.trim().length < 2) throw new Error('check constraint');
-    if (data.half && !data.year) throw new Error('community:experience_year_required');
-    return write('save', data);
+    const entries=Object.entries(data);
+    const writtenFields=prefix=>Object.fromEntries(entries
+      .filter(([key,value])=>key.startsWith(prefix) && value.trim())
+      .map(([key,value])=>[key.slice(prefix.length),value.trim()]));
+    const draft=Object.fromEntries(entries.filter(([key])=>!key.startsWith('video_') && !key.startsWith('spec_')));
+    draft.author_nickname=draft.author_nickname.trim();
+    const video=draft.kind==='note' && draft.stage==='영상';
+    if (draft.title.trim().length<2 || (!video && draft.body.trim().length<2)) throw new Error('check constraint');
+    if (draft.half && !draft.year) throw new Error('community:experience_year_required');
+    if (video) draft.video_fields=writtenFields('video_');
+    if (draft.kind==='note') draft.applicant_specs=writtenFields('spec_');
+    return rpc('author',{p_action:'save',p_data:draft});
+  }
+
+  async function draft(id) {
+    return (await rpc('author',{p_action:'draft',p_data:{id}})).item;
   }
 
   window.MONCExperiences = {
-    mount, homeHTML, item, vote, save, postForm, threadHTML, period,
+    mount, homeHTML, item, vote, save, draft, postForm, mountPostForm, threadHTML, period,
     popular:() => read({ sort:'popular', popular_only:true, limit:3 }),
     answers:async request_id => (await read({ request_id, limit:20 })).items.slice(0, 20),
     answersHTML:(items, params) => items.length ? `<section class="cm-section"><div class="cm-section-head"><h2>공유된 노하우</h2></div>

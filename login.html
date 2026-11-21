@@ -280,7 +280,10 @@
        반환 true = OAuth 로 넘어가면 안 된다는 뜻. */
     function inappGoogleDetour() {
       if (!window.MONC_INAPP) return false;
-      if (window.MONC_INAPP_OPEN && window.MONC_INAPP_OPEN(location.origin + location.pathname)) return true;
+      const browserLogin = new URL(location.pathname, location.origin);
+      const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
+      if (returnTo) browserLogin.searchParams.set('returnTo', returnTo);
+      if (window.MONC_INAPP_OPEN && window.MONC_INAPP_OPEN(browserLogin.href)) return true;
       alert('앱 안 브라우저에서는 구글 로그인이 막혀 있어요.\n\n'
         + (window.MONC_INAPP_HOWTO || '브라우저에서 열어 주세요.')
         + '\n\n또는 카카오로 로그인하세요.');

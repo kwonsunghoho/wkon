@@ -47,6 +47,11 @@
   const errorText = e => { if(e?.activityMessage)return e.message;
     if(String(e?.message||e).includes('bad_study_texts')) return '모집 조건은 10개·각 200자, 태그는 5개·각 20자까지 입력해 주세요.';
     if(String(e?.message||e).includes('experience_year_required')) return '채용 시기를 선택하려면 연도도 골라 주세요.';
+    if(String(e?.message||e).includes('nickname_required')) return '글에 표시할 닉네임을 입력해 주세요.';
+    if(String(e?.message||e).includes('nickname_invalid')) return '닉네임을 2~16자로 다시 입력해 주세요.';
+    if(String(e?.message||e).includes('video_required')) return '영상면접 결과와 가장 많이 고친 점을 입력해 주세요.';
+    if(String(e?.message||e).includes('specs_invalid')) return '입력한 지원 당시 스펙을 다시 확인해 주세요.';
+    if(String(e?.message||e).includes('video_invalid')) return '영상면접 항목을 확인해 주세요. 각 답변은 500자까지 입력할 수 있어요.';
     if(String(e?.message||e).includes('bad_experience')) return '국내 항공사와 서류·영상·임원·최종 중 전형을 확인해 주세요.';
     if(String(e?.message||e).includes('bad_action')) return '새 모집 기능을 준비 중입니다. 입력 내용은 그대로 두고 잠시 후 다시 시도해 주세요.';
     const s=String(e?.message||e||'');
@@ -188,7 +193,15 @@
     try {
       if(['profile','activity','admin','study-admin'].includes(view)&&!(await member())) { main.innerHTML='<div class="cm-empty">회원만 볼 수 있는 화면입니다.</div>';return; }
       if(view==='home') { await overview(main,turn); }
-      else if(view==='experiences') { experience.mount(main,openExperienceForm); }
+      else if(view==='experiences') {
+        experience.mount(main,openExperienceForm);
+        const url=new URL(location.href);
+        if(url.searchParams.get('compose')==='share' && await member(true) && turn===sequence) {
+          await showExperienceForm({kind:'note'});
+          url.searchParams.delete('compose');
+          history.replaceState(history.state,'',url);
+        }
+      }
       else if(view==='admin') { if(!(await MONC.requireAdmin())) return;location.replace('admin.html?tab=community');return; }
       else if(view==='study-admin') { await adminStudies(main,turn); }
       else if(view==='profile') { const p=(await rpc('member','profile',id?{id}:{})).item;if(turn!==sequence)return;current=p;main.innerHTML=p?profileHTML(p):`<div class="cm-empty">${id?'볼 수 없는 프로필입니다.':`스터디에 보여줄 내 프로필을 만들어 보세요.<br><br>${btn('profile-edit','프로필 만들기')}`}</div>`;
@@ -362,12 +375,19 @@
       (apply?field('message','지원 이유 (선택)','','textarea',1500,false):'')+
       '<section class="cm-contact-consent"><h3>실명·연락처 제공 동의</h3><p>제공받는 사람: 이 스터디 조장 '+esc(d.owner_nickname||'모집자')+'</p><p>항목: 회원 정보의 실명·휴대폰 번호<br>목적: 참여 확인 및 스터디 일정 안내<br>이용 기간: 지원·참여 중. 지원 제외·철회·탈퇴·활동 종료 시 열람이 종료됩니다.</p><p>동의를 거부할 수 있으나, 동의하지 않으면 스터디에 지원할 수 없습니다. 조장이 바뀌면 다시 동의해야 합니다.</p><input type="hidden" name="contact_owner" value="'+esc(d.owner_id)+'"><label class="cm-check"><input type="checkbox" name="contact_consent" required>위 내용을 확인했으며 실명·연락처 제공에 동의합니다. (필수)</label></section>',apply?'동의하고 지원하기':'동의하고 제공하기');
   }
+  async function showExperienceForm(item) {
+    const turn=sequence;
+    const values=item.id?{...item,...await experience.draft(item.id)}:{...item,nickname:me?.nickname || ''};
+    if(turn!==sequence)return;
+    const draft=experience.postForm(values,{field});
+    form(draft.label,'experience',draft.html,item.id?'저장하기':'등록하기');
+    experience.mountPostForm(body.querySelector('[data-form=experience]'));
+  }
   async function openExperienceForm(node,item) {
     node.disabled=true;
     try {
       if(!(await member(true)))return;
-      const draft=experience.postForm(item,{field});
-      form(draft.label,'experience',draft.html,'등록하기');
+      await showExperienceForm(item);
     } catch(error) {
       toast(errorText(error));
     } finally {
@@ -394,17 +414,15 @@
     if(!(await member(!['notices','asset-read','proof-withdraw','application-withdraw'].includes(action))))return;
     if(action==='profile-edit') { editProfile(me);return; }
     if(action==='post-edit'&&currentExperience) {
-      const draft=experience.postForm({...currentExperience,body:current.body},{field});
-      form(draft.label,'experience',draft.html,'저장하기');return;
+      await showExperienceForm(currentExperience);return;
     }
     if(action==='post-create'||action==='post-edit') { postForm(action==='post-edit'?current:{});return; }
     if(action==='experience-vote'&&currentExperience?.id===id) {
       await experience.vote(id,!currentExperience.voted);render();return;
     }
     if(action==='experience-answer'&&currentExperience?.kind==='request') {
-      const {airline,stage,subject,recruit_year,half}=currentExperience;
-      const draft=experience.postForm({kind:'note',airline,stage,subject,recruit_year,half,request_id:currentExperience.id},{field});
-      form(draft.label,'experience',draft.html,'등록하기');return;
+      const {airline,stage,recruit_year,half}=currentExperience;
+      await showExperienceForm({kind:'note',airline,stage,recruit_year,half,request_id:currentExperience.id});return;
     }
     if(action==='study-create'||action==='study-edit') { studyForm(action==='study-edit'?current:{study_category:filters.study_category||'interview'});if(action==='study-edit'&&ownState.administrator)body.querySelector('[type=submit]').insertAdjacentHTML('beforebegin',field('note','처리 사유 (관리 이력에 기록)','','textarea',500,true));return; }
     if(action==='study-guide') { form('참여자 안내','guide',field('guide','승인된 참여자에게만 보이는 시간·장소·연락 방법',ownState.member_guide,'textarea',1500)+(ownState.administrator?field('note','처리 사유 (관리 이력에 기록)','','textarea',500,true):''));return; }
