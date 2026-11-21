@@ -7,16 +7,10 @@
     ['교육 과정', [['challenges.html','챌린지'],['online-courses.html','온라인 강의'],['lectures.html','특강']]],
     ['승준 도구', [['sojae.html','답변 소재 발굴',true],['polish.html','답변 첨삭'],['games.html','역량검사 연습']]],
     ['자료·정보', [['lab-airline.html','면접 자료·기출'],['news.html','항공사 뉴스·산업분석']]],
-    ['커뮤니티', [['community.html?view=board&topic=prep','게시판'],['community.html?view=studies&study_category=interview','면접 스터디'],['community.html?view=studies&study_category=language','어학 스터디'],['community.html?view=studies&study_category=volunteer','봉사활동']]],
+    ['커뮤니티', [['community.html','커뮤니티 홈'],['community.html?view=board','게시판'],['community.html?view=experiences','합격 노하우'],['community.html?view=studies&study_category=interview','면접 스터디'],['community.html?view=studies&study_category=language','어학 스터디'],['community.html?view=studies&study_category=volunteer','봉사활동'],['community.html?view=activity','내 활동']]],
     ['수강 후기', [['reviews-list.html?kind=challenge','챌린지 후기'],['reviews-list.html?kind=ke20','수업 후기']]]
   ];
   var onCommunity = /(?:^|\/)community\.html$/.test(location.pathname);
-  if (onCommunity) {
-    var communityLinks = groups.find(function (group) { return group[0] === '커뮤니티'; })[1];
-    communityLinks.splice(1,0,['community.html?view=experiences','합격 노하우']);
-    communityLinks.unshift(['community.html','커뮤니티 홈']);
-    communityLinks.push(['community.html?view=activity','내 활동']);
-  }
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -152,9 +146,6 @@
     var now = new URLSearchParams(location.search);
     document.querySelectorAll('#mobileMenu [data-menu-destination]').forEach(function (link) {
       var url = new URL(link.href,location.href);
-      if (onCommunity && url.searchParams.get('view') === 'experiences') {
-        link.closest('li').hidden = document.documentElement.dataset.communityKnowhow !== 'ready';
-      }
       var matches = url.origin === location.origin && url.pathname.split('/').pop() === here;
       if (matches && here === 'community.html') {
         var view = now.get('view') || 'home';

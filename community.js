@@ -21,16 +21,6 @@
   const activity=window.MONCActivity;
   const studySections = { ...activity.categories, interview:'면접 스터디' };
   const experience=window.MONCExperiences;
-  let experiencePreview;
-  function checkExperienceAvailability() {
-    if (experiencePreview) return experiencePreview;
-    experiencePreview=experience.popular().then(result=>{
-      document.documentElement.dataset.communityKnowhow='ready';
-      window.dispatchEvent(new Event('monc:community-route'));
-      return result;
-    }).catch(()=>null);
-    return experiencePreview;
-  }
   let currentExperience=null;
   const cats = { question:'질문', info:'정보 공유', free:'자유글' };
   const levels = ['실력검증 전','기본 준비','실전 대응','스터디 리딩'];
@@ -147,7 +137,7 @@
   async function overview(main,turn) {
     const [posts,popular] = await Promise.all([
       rpc('read','posts',{limit:2}),
-      checkExperienceAvailability()
+      experience.popular().catch(()=>null)
     ]);
     if (turn !== sequence) return;
 
@@ -194,7 +184,6 @@
   });
   async function render() {
     const turn=++sequence,{view,id}=route();shell(view);const main=document.getElementById('main');
-    checkExperienceAvailability();
     currentExperience=null;
     try {
       if(['profile','activity','admin','study-admin'].includes(view)&&!(await member())) { main.innerHTML='<div class="cm-empty">회원만 볼 수 있는 화면입니다.</div>';return; }
