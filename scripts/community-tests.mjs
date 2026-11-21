@@ -24,6 +24,7 @@ await db.exec(await fs.readFile(path.join(root,'supabase/migrations/202611031158
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103130738_community_study_reopen.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261103131442_community_study_contact_consent.sql'),'utf8'));
 await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261105062252_community_study_management.sql'),'utf8'));
+await db.exec(await fs.readFile(path.join(root,'supabase/migrations/20261121100000_community_interview_experiences.sql'),'utf8'));
 let checks=0;
 async function call(role,uid,fn,action,data={}){
   await db.exec(`reset role;set request.jwt.claim.sub='${uid||''}';set role ${role};`);
@@ -301,6 +302,67 @@ await ok('신고 후 숨김과 게시자 수정으로 공개 복구 금지',asyn
  const r=(await admin('queue')).reports[0];await admin('report-resolve',{id:r.id,decision:'hide'});
  await member(ids.a,'post-save',{id:post,category:'question',title:'수정한 제목',body:'내용을 수정해도 자동으로 공개되지 않습니다.'});
  assert.equal((await read('thread',{id:post})).item,null);
+});
+const experience=(u,action,data)=>call('authenticated',u,'community_experience_member',action,data);
+async function experienceRead(data={},uid=''){
+ await db.exec(`reset role;set request.jwt.claim.sub='${uid}';set role ${uid?'authenticated':'anon'};`);
+ try{return (await db.query('select public.community_experience_read($1::jsonb) result',[JSON.stringify(data)])).rows[0].result.items;}
+ finally{await db.exec('reset role');}
+}
+const draftExperience={kind:'note',airline:'대한항공',stage:'영상',subject:'답변 구성',year:2026,half:'하반기',title:'영상 답변 연습 기록',body:'답변을 녹화하고 첫 문장에 핵심을 넣는 연습을 했어요.'};
+let interviewNote, interviewRequest;
+await ok('국내 항공사·4개 전형만 작성하고 목록 필터·검색·기존 상세에서 확인',async()=>{
+ await denied(()=>call('anon',null,'community_experience_member','save',draftExperience));
+ await denied(()=>experience(ids.a,'save',{...draftExperience,airline:'에미레이트'}),'bad_experience');
+ await denied(()=>experience(ids.a,'save',{...draftExperience,stage:'영어면접'}),'bad_experience');
+ interviewNote=(await experience(ids.a,'save',draftExperience)).id;
+ for(const stage of ['서류','임원','최종']) await experience(ids.a,'save',{...draftExperience,stage,title:stage+' 준비 경험'});
+ const results=await experienceRead({airline:'대한항공',stage:'영상',subject:'답변 구성',year:2026,half:'하반기',q:'녹화'});
+ assert.deepEqual(results.map(i=>i.id),[interviewNote]);
+ assert.equal(results[0].verified,false);
+ assert.equal(results[0].user_id,undefined);
+ assert.equal((await read('thread',{id:interviewNote})).item.title,draftExperience.title);
+ await denied(()=>experience(ids.b,'save',{...draftExperience,id:interviewNote}),'forbidden');
+ await member(ids.a,'post-save',{...draftExperience,id:interviewNote,topic:'free',category:'free',stage:'영어면접'});
+ assert.equal((await read('thread',{id:interviewNote})).item.stage,'영상');
+ await experience(ids.a,'save',{...draftExperience,id:interviewNote,subject:'보이스'});
+ assert.equal((await experienceRead({id:interviewNote}))[0].subject,'보이스');
+});
+await ok('추천 1회·취소·최근 7일 순위와 최종합격 확인 필터',async()=>{
+ await denied(()=>experience(ids.a,'vote',{id:interviewNote,active:true}),'forbidden');
+ await experience(ids.b,'vote',{id:interviewNote,active:true});
+ await experience(ids.b,'vote',{id:interviewNote,active:true});
+ assert.equal((await experienceRead({sort:'popular'},ids.b))[0].id,interviewNote);
+ assert.equal((await experienceRead({id:interviewNote},ids.b))[0].votes,1);
+ assert.equal((await experienceRead({id:interviewNote},ids.b))[0].voted,true);
+ assert.equal((await experienceRead({id:interviewNote}))[0].voted,false);
+ await db.query("update monc_community.interview_experience_votes set created_at=now()-interval '8 days' where post_id=$1",[interviewNote]);
+ await experience(ids.b,'vote',{id:interviewNote,active:false});
+ assert.equal((await experienceRead({id:interviewNote}))[0].votes,0);
+ await experience(ids.b,'vote',{id:interviewNote,active:true});
+ assert.equal((await experienceRead({id:interviewNote}))[0].recent_votes,0);
+ assert.deepEqual(await experienceRead({sort:'popular',popular_only:true}),[]);
+ await db.query('update monc_community.certificates set airline=$1 where user_id=$2',['대한항공',ids.a]);
+ assert.deepEqual(await experienceRead({verified:true}),[]);
+ await db.query('update monc_community.certificates set stage=$1 where user_id=$2',['최종 합격',ids.a]);
+ assert.deepEqual((await experienceRead({verified:true,stage:'영상'})).map(i=>i.id),[interviewNote]);
+});
+await ok('경험담 요청과 답변 연결·기존 신고 숨김·비공개 원장 접근 제한',async()=>{
+ interviewRequest=(await experience(ids.b,'save',{...draftExperience,kind:'request',title:'영상 경험을 들려주세요'})).id;
+ await experience(ids.a,'vote',{id:interviewRequest,active:true});
+ await denied(()=>experience(ids.a,'save',{...draftExperience,request_id:interviewRequest,stage:'임원'}),'bad_experience');
+ const answer=(await experience(ids.a,'save',{...draftExperience,request_id:interviewRequest})).id;
+ assert.equal((await experienceRead({kind:'request'}))[0].answer_count,1);
+ assert.deepEqual((await experienceRead({request_id:interviewRequest})).map(i=>i.id),[answer]);
+ await member(ids.b,'report',{id:answer,type:'post',reason:'신고 숨김 검사입니다.'});
+ const report=(await admin('queue')).reports.find(r=>r.target_id===answer);
+ await admin('report-resolve',{id:report.id,decision:'hide'});
+ assert.deepEqual(await experienceRead({id:answer}),[]);
+ assert.equal((await experienceRead({id:interviewRequest}))[0].answer_count,0);
+ await denied(()=>experience(ids.b,'vote',{id:answer,active:true}),'not_found');
+ await db.exec('set role authenticated');
+ await denied(()=>db.query('select * from monc_community.interview_experience_votes'));
+ await db.exec('reset role');
 });
 await ok('계정 파기 즉시 원본 차단·본문 파기·파일 정리 대상 반영',async()=>{
  await db.query("update monc_community.studies set recruitment_conditions=ARRAY['정리할 조건'],tags=ARRAY['정리할 태그'] where id=$1",[customStudy]);

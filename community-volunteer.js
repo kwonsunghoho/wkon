@@ -7,7 +7,7 @@
  const state=i=>'<span class="ca-status '+(A.available(i)?'':'ca-status-muted')+'">'+(A.available(i)?'모집 중':'모집 상태 확인 필요')+'</span>';
  async function render(main,ctx){
   const id=new URLSearchParams(location.search).get('volunteer_id');
-  main.innerHTML='<nav class="cm-recruitment-tabs ca-filter" aria-label="모임 종류">'+[['interview','면접 스터디'],['language','어학 스터디'],['volunteer','봉사활동']].map(([k,v])=>'<a class="cm-btn-ghost" href="community.html?view=studies&study_category='+k+'" '+(k==='volunteer'?'aria-current="page"':'')+'>'+v+'</a>').join('')+'</nav><div class="cv-content"></div>';
+  main.innerHTML='<div class="cv-content"></div>';
   const out=main.querySelector('.cv-content');
   if(!ctx.loggedIn){out.innerHTML='<section class="cm-empty"><h2>1365 봉사 공고 둘러보기</h2><p>로그인하면 지역·기간별 공고를 보고 함께 갈 사람을 구할 수 있어요.</p><button type="button" class="cm-btn" data-cv-login>로그인하고 공고 보기</button></section>';out.querySelector('button').onclick=ctx.login;return;}
   if(id){if(!/^\d{1,20}$/.test(id)){out.textContent='공고 번호를 확인해 주세요.';return;}await detail(out,id,ctx);return;}

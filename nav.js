@@ -10,6 +10,13 @@
     ['커뮤니티', [['community.html?view=board&topic=prep','게시판'],['community.html?view=studies&study_category=interview','면접 스터디'],['community.html?view=studies&study_category=language','어학 스터디'],['community.html?view=studies&study_category=volunteer','봉사활동']]],
     ['수강 후기', [['reviews-list.html?kind=challenge','챌린지 후기'],['reviews-list.html?kind=ke20','수업 후기']]]
   ];
+  var onCommunity = /(?:^|\/)community\.html$/.test(location.pathname);
+  if (onCommunity) {
+    var communityLinks = groups.find(function (group) { return group[0] === '커뮤니티'; })[1];
+    communityLinks.splice(1,0,['community.html?view=experiences','합격 노하우']);
+    communityLinks.unshift(['community.html','커뮤니티 홈']);
+    communityLinks.push(['community.html?view=activity','내 활동']);
+  }
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -110,7 +117,7 @@
       if (group[1].some(function (item) { return item[2]; })) {
         heading = '<span class="mm-tool-group-label">' + heading + ' ' + hotBadge + '</span>';
       }
-      return '<section class="mm-group"><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + heading + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
+      return '<section class="mm-group"' + (group[0] === '커뮤니티' ? ' data-community-menu' : '') + '><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + heading + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
         var label = esc(item[1]);
         if (item[2]) label = '<span class="mm-feature-label">' + label + '</span>' + hotBadge;
         return '<li><a href="' + esc(item[0]) + '"' + (item[2] ? ' class="mm-feature-link"' : '') + ' data-menu-destination>' + label + '</a></li>';
@@ -145,13 +152,18 @@
     var now = new URLSearchParams(location.search);
     document.querySelectorAll('#mobileMenu [data-menu-destination]').forEach(function (link) {
       var url = new URL(link.href,location.href);
+      if (onCommunity && url.searchParams.get('view') === 'experiences') {
+        link.closest('li').hidden = document.documentElement.dataset.communityKnowhow !== 'ready';
+      }
       var matches = url.origin === location.origin && url.pathname.split('/').pop() === here;
       if (matches && here === 'community.html') {
         var view = now.get('view') || 'home';
-        view = ({thread:'board',study:'studies',profile:'activity'})[view] || view;
+        view = ({thread:now.get('source')==='experiences'?'experiences':'board',study:'studies',profile:'activity','study-admin':'studies'})[view] || view;
         matches = (url.searchParams.get('view') || 'home') === view;
-        if (matches && view === 'studies') matches = (url.searchParams.get('study_category') || '') === (now.get('study_category') || '');
-        if (matches && view === 'board') matches = (url.searchParams.get('topic') || '') === (now.get('topic') || '');
+        if (matches && view === 'studies') {
+          var current = document.querySelector('.cm-category-nav a[aria-current=page]');
+          matches = url.searchParams.get('study_category') === (current ? current.dataset.category : now.get('study_category'));
+        }
       } else if (matches && here === 'reviews-list.html') {
         var kind = now.get('kind');
         if (['challenge','ke20','consult'].indexOf(kind) < 0) kind = 'challenge';
@@ -181,12 +193,14 @@
       var gap = window.innerWidth - document.documentElement.clientWidth;
       if (gap) document.body.style.paddingRight = (parseFloat(getComputedStyle(document.body).paddingRight) + gap) + 'px';
       document.body.style.overflow = 'hidden';
-      // 메뉴를 열 때는 전체 분류를 먼저 보여주고, 선택한 그룹 하나만 펼친다.
-      expandGroup(null);
+      // 커뮤니티에서는 같은 공간의 링크가 바로 보이게 한다.
+      var group = onCommunity && dialog.querySelector('[data-community-menu]');
+      expandGroup(group ? group.querySelector('.mm-group-toggle') : null);
       dialog.showModal();
       dialog.querySelector('.mm-scroll').scrollTop=0;
       opener.setAttribute('aria-expanded','true');
       document.getElementById('menuClose').focus();
+      if (group) (group.querySelector('[aria-current=page]') || group).scrollIntoView({block:'nearest'});
     });
     dialog.addEventListener('close',function () {
       document.body.style.overflow = savedOverflow;
@@ -207,6 +221,10 @@
       if (link) {
         if (typeof window.moncBeacon === 'function') window.moncBeacon('menu_destination',{destination:link.getAttribute('href')});
         close();
+        if (onCommunity && link.closest('[data-community-menu]') && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+          var navigation = new CustomEvent('monc:community-navigate',{detail:link.href,cancelable:true});
+          if (!window.dispatchEvent(navigation)) event.preventDefault();
+        }
       } else if (event.target === dialog) {
         var r=dialog.getBoundingClientRect();
         if(event.clientX<r.left || event.clientX>r.right || event.clientY<r.top || event.clientY>r.bottom) close();
