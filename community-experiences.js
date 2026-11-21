@@ -11,6 +11,27 @@
   const listURL = 'community.html?view=experiences';
   const kindLabels = { note:'노하우', request:'노하우 요청' };
 
+  // 공개 본문에 저장된 작성창 레이블이다. 순서나 모양이 다르면 자유글로 읽는다.
+  const videoBodyFields = [
+    ['지원 횟수', 'attempt'],
+    ['첫 지원부터 영상면접 결과까지 걸린 기간', 'duration'],
+    ['영상면접 결과', 'result'],
+    ['촬영 장소', 'place'],
+    ['촬영 세팅', 'setup'],
+    ['헤어·메이크업', 'styling'],
+    ['의상', 'outfit'],
+    ['촬영하면서 가장 많이 고친 점', 'focus'],
+    ['영상면접 합격에 도움이 됐다고 느낀 점', 'passImpact'],
+    ['다시 찍는다면 바꾸고 싶은 점', 'retryImpact'],
+    ['기억나는 영상면접 질문', 'question'],
+    ['답변 방향', 'answerDirection'],
+    ['영상면접에 다시 도전하는 승준생에게 한마디', 'encouragement'],
+    ['추가 내용', 'extra']
+  ];
+  const specBodyLabels = ['전공', '학점', '어학', '키'];
+  const videoResults = ['합격', '미합격', '결과 대기'];
+  const attemptCounts = ['첫 지원', '2회', '3회', '4회 이상'];
+
   async function rpc(name, args) {
     const { data, error } = await MONC.sb.rpc('community_experience_' + name, args);
     if (error) throw error;
@@ -33,6 +54,18 @@
     return item.recruit_year ? `${item.recruit_year}년${item.half ? ' ' + item.half : ''}` : '';
   }
 
+  function cardPreview(item) {
+    const text = String(item.excerpt ?? '').replace(/\r\n?/g, '\n');
+    if (item.kind !== 'note' || item.stage !== '영상') return text;
+    const first = text.split('\n', 1)[0];
+    if (!videoBodyFields.slice(0, 3).some(([label]) => label === first)) return text;
+    const result = text.match(/(?:^|\n\n)영상면접 결과\n([^\n]+)(?:\n|$)/)?.[1];
+    if (!videoResults.includes(result)) return text;
+    const attempt = text.match(/^지원 횟수\n([^\n]+)\n/)?.[1];
+    return ['영상면접 ' + result,
+      attemptCounts.includes(attempt) ? (attempt === '첫 지원' ? attempt : '지원 ' + attempt) : ''
+    ].filter(Boolean).join(' · ');
+  }
   function card(item, filters = '', compact = false) {
     const meta = [item.airline, item.stage, period(item)].filter(Boolean).map(escape).join(' · ');
     const voteLabel = item.kind === 'request' ? '저도 궁금해요' : '도움됐어요';
@@ -42,7 +75,7 @@
     return `<article class="cm-post cex-card">
       <div class="cex-meta"><span>${meta}</span>${item.verified ? '<span class="cm-tag" title="항공사·연도 기준">최종합격 확인</span>' : ''}</div>
       <a class="cm-post-title" href="${href}" data-experience-thread="${escape(item.id)}">${escape(item.title)}</a>
-      ${compact ? '' : `<p class="cm-post-excerpt">${escape(item.excerpt)}</p>`}
+      ${compact ? '' : `<p class="cm-post-excerpt">${escape(cardPreview(item))}</p>`}
       <div class="cm-post-foot"><span>${escape(item.nickname)} · ${escape(date)}</span><span>${voteLabel} ${Number(item.votes)}${count}</span></div>
     </article>`;
   }
@@ -254,8 +287,8 @@
     return `<fieldset class="cex-video-form" data-cex-video hidden disabled>
       <legend>영상면접 준비와 결과</legend>
       <div class="cex-pair">
-        ${pick('result','영상면접 결과',['합격','미합격','결과 대기'],'결과 선택',true)}
-        ${pick('attempt','지원 횟수',['첫 지원','2회','3회','4회 이상'],'횟수 선택')}
+        ${pick('result','영상면접 결과',videoResults,'결과 선택',true)}
+        ${pick('attempt','지원 횟수',attemptCounts,'횟수 선택')}
       </div>
       ${input('duration','첫 지원부터 걸린 기간','text',80)}
       ${input('focus','촬영하면서 가장 많이 고친 건 무엇인가요?','textarea',500,true)}
@@ -353,6 +386,97 @@
     return { label:item.id ? kindLabels[item.kind] + ' 수정' : request ? '노하우 요청하기' : '노하우 공유하기', html };
   }
 
+  function splitApplicantSpecs(text) {
+    const heading = '지원 당시 스펙\n';
+    const separator = text.lastIndexOf('\n\n' + heading);
+    const start = separator >= 0 ? separator + 2 : text.startsWith(heading) ? 0 : -1;
+    if (start < 0) return { text, specs:[] };
+    const lines = text.slice(start + heading.length).split('\n');
+    const specs = [];
+    let previous = -1;
+    for (const line of lines) {
+      const delimiter = line.indexOf(': ');
+      const label = line.slice(0, delimiter);
+      const value = line.slice(delimiter + 2);
+      const index = specBodyLabels.indexOf(label);
+      if (delimiter < 0 || index <= previous || !value.trim()) return { text, specs:[] };
+      specs.push([label === '어학' ? '어학 스펙' : label, value]);
+      previous = index;
+    }
+    return { text:separator >= 0 ? text.slice(0, separator) : '', specs };
+  }
+
+  function videoAnswers(text) {
+    const answers = {};
+    let last = -1;
+    for (const chunk of text.split('\n\n')) {
+      const newline = chunk.indexOf('\n');
+      const heading = newline < 0 ? '' : chunk.slice(0, newline);
+      const index = videoBodyFields.findIndex(([label]) => label === heading);
+      if (index < 0) {
+        if (last < 0) return null;
+        answers[videoBodyFields[last][1]] += '\n\n' + chunk;
+        continue;
+      }
+      if (index <= last) return null;
+      answers[videoBodyFields[index][1]] = chunk.slice(newline + 1);
+      last = index;
+    }
+    if (Object.values(answers).some(value => !value.trim()) || !videoResults.includes(answers.result) || !answers.focus) return null;
+    if ((answers.attempt && !attemptCounts.includes(answers.attempt))
+        || (answers.passImpact && answers.result !== '합격')
+        || (answers.retryImpact && answers.result === '합격')) return null;
+    return answers;
+  }
+
+  function paragraphs(text) {
+    return text.trim().split(/\n(?:[ \t]*\n)+/).filter(Boolean)
+      .map(paragraph => '<p>' + escape(paragraph) + '</p>').join('');
+  }
+
+  function readingSection(title, content, modifier = '') {
+    return content ? `<section class="cex-reading-section${modifier ? ' ' + modifier : ''}"><h3>${title}</h3>${content}</section>` : '';
+  }
+
+  function readingFields(fields, grid = false) {
+    const items = fields.filter(([, value]) => value).map(([label, value]) =>
+      `<div><dt>${label}</dt><dd>${paragraphs(value)}</dd></div>`).join('');
+    return items ? `<dl class="cex-reading-fields${grid ? ' cex-reading-grid' : ''}">${items}</dl>` : '';
+  }
+
+  function readingBodyHTML(item, body) {
+    const original = String(body ?? '').replace(/\r\n?/g, '\n').trim();
+    const { text, specs } = splitApplicantSpecs(original);
+    const video = item.stage === '영상' ? videoAnswers(text) : null;
+    const profile = readingSection('지원 당시 스펙', readingFields(specs, true));
+    if (!video) return `<div class="cex-reading-content">
+      ${text ? `<div class="cex-reading-prose">${paragraphs(text)}</div>` : ''}${profile}</div>`;
+
+    const summary = readingFields([
+      ['영상면접 결과', video.result], ['지원 횟수', video.attempt], ['소요 기간', video.duration]
+    ], true);
+    const keyPoints = readingFields([
+      ['촬영하면서 가장 많이 고친 점', video.focus],
+      ['합격에 도움이 됐다고 느낀 점', video.passImpact],
+      ['다시 찍는다면 바꾸고 싶은 점', video.retryImpact]
+    ]);
+    const setup = readingFields([
+      ['촬영 장소', video.place], ['카메라·조명 세팅', video.setup],
+      ['헤어·메이크업', video.styling], ['의상', video.outfit]
+    ]);
+    const interview = readingFields([
+      ['기억나는 질문', video.question], ['답변 방향', video.answerDirection]
+    ]);
+    return `<div class="cex-reading-content">
+      <div class="cex-reading-summary" role="group" aria-label="지원 결과 요약">${summary}</div>
+      ${readingSection('핵심 노하우', keyPoints, 'cex-reading-key')}
+      ${readingSection('촬영 준비', setup)}
+      ${readingSection('면접 질문과 답변', interview)}
+      ${profile}
+      ${readingSection('추가 내용', paragraphs(video.extra || ''))}
+      ${readingSection('다시 도전하는 승준생에게', paragraphs(video.encouragement || ''), 'cex-reading-encouragement')}
+    </div>`;
+  }
   function threadHTML(item) {
     if (!item) return '';
     const request = item.kind === 'request';
@@ -390,7 +514,7 @@
   }
 
   window.MONCExperiences = {
-    mount, homeHTML, item, vote, save, draft, postForm, mountPostForm, threadHTML, period,
+    mount, homeHTML, item, vote, save, draft, postForm, mountPostForm, threadHTML, readingBodyHTML, period,
     popular:() => read({ sort:'popular', popular_only:true, limit:3 }),
     answers:async request_id => (await read({ request_id, limit:20 })).items.slice(0, 20),
     answersHTML:(items, params) => items.length ? `<section class="cm-section"><div class="cm-section-head"><h2>공유된 노하우</h2></div>

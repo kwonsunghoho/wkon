@@ -267,7 +267,40 @@
     main.innerHTML=(studies&&operator?btn('study-admin','전체 스터디 관리','',true):'')+(studies?`<div class="cm-recruitment-tabs" aria-label="모집 상태">${[['all','전체'],['open','모집 중'],['closed','모집 마감'],['ended','스터디 종료']].map(([v,t])=>btn('recruitment',t,v,true,`aria-pressed="${filters.recruitment===v}"`)).join('')}</div>`+studyHelpHTML()+'<section class="cm-study-search-panel" aria-label="스터디 검색과 필터">':'')+searchHTML(studies)+(studies?`<div class="cm-study-filters">${[['','전체'],['online','온라인'],['offline','오프라인']].map(([v,t])=>btn('mode',t,v,true,`aria-pressed="${filters.mode===v}"`)).join('')}${!filters.study_category||filters.study_category==='interview'?btn('verified','인증 필수','',true,`aria-pressed="${filters.verified}"`):''}</div>${filters.verified?'<p class="cm-help">면접 경험 인증이나 몬크 실력 레벨을 참여 조건으로 둔 스터디만 보여요.</p>':''}</section>`:'')+`<div class="cm-toolbar"><span class="cm-caption">최신순</span>${btn(studies?'study-create':'post-create',studies?'모임 모집하기':'글쓰기')}</div><div id="community-list" class="${studies?'cm-studies-list':'cm-thread-list'}">${items.length?items.map(studies?(s,i)=>studyHTML(s,false,i+1):postHTML).join(''):empty(filters.q||filters.topic||filters.mode||filters.verified?'조건에 맞는 결과가 없어요.':studies?'해당 상태의 스터디가 없어요.':'아직 올라온 글이 없어요.',filters.q||filters.topic||filters.mode||filters.verified?'검색어나 선택한 조건을 바꿔 보세요.':studies?'함께 준비하고 싶은 스터디를 직접 모집할 수 있어요.':'궁금한 점이나 함께 나눌 정보를 첫 글로 남겨 주세요.')}</div>${next?btn('more','더 보기','',true):''}`;
   }
   function postHTML(p) { return `<article class="cm-post"><div class="cm-post-head"><span>${esc(topics[p.topic]||'승준정보')} · ${esc(cats[p.category]||'글')}</span>${esc(p.airline)}${p.stage?' · '+esc(p.stage):''}</div><button type="button" class="cm-post-title" data-action="thread" data-id="${p.id}">${esc(p.title)}</button><div class="cm-post-foot"><span>${esc(p.nickname)} · ${date(p.created_at)}</span><span>댓글 ${p.comments}</span></div></article>`; }
-  function threadHTML(p) { return `${btn(currentExperience?'experiences':'board',currentExperience?'← 합격 노하우':'← 게시판','',true)}<article class="cm-section"><div class="cm-wrap">${currentExperience?tag(currentExperience.kind==='request'?'노하우 요청':'합격 노하우')+tag(currentExperience.airline,true)+tag(currentExperience.stage,true)+(experience.period(currentExperience)?tag(experience.period(currentExperience),true):'')+(currentExperience.verified?tag('최종합격 확인'):''):tag(topics[p.topic]||'승준정보',true)+tag(cats[p.category])+(p.airline?tag(p.airline,true):'')+(p.stage?tag(p.stage,true):'')}</div><h2 class="cm-section">${esc(p.title)}</h2><p class="cm-caption">${esc(p.nickname)} · ${date(p.created_at)}</p><div class="cm-thread-body">${esc(p.body)}</div>${/^https:\/\/[^\s<>]+$/.test(p.source_url)?`<a class="cm-source" href="${esc(p.source_url)}" target="_blank" rel="noopener noreferrer">정보 출처 보기 ↗</a>`:''}${experience.threadHTML(currentExperience)}<div class="cm-wrap">${btn('bookmark',ownState.saved?'저장됨':'글 저장',p.id,true)}${ownState.mine?btn('post-edit','수정',p.id,true)+btn('post-delete','삭제',p.id,true):btn('report','신고',p.id,true,'data-type="post"')}</div></article><section class="cm-section"><div class="cm-section-head"><h2>댓글 ${p.comments.filter(c=>c.status==='published').length}</h2>${btn('comment-create','댓글 쓰기',p.id,true)}</div>${p.comments.map(c=>`<article class="cm-comment" ${c.parent_id?'style="padding-left:20px"':''}><div class="cm-row"><b>${c.status==='deleted'?'삭제된 댓글':esc(c.nickname)}</b><span class="cm-caption">${date(c.created_at)}</span></div><p class="cm-thread-body">${esc(c.body)}</p>${c.status==='published'?`<div class="cm-wrap">${btn('reply','답글',c.id,true)}${ownState.own_comments?.includes(c.id)?btn('comment-delete','삭제',c.id,true):btn('report','신고',c.id,true,'data-type="comment"')}</div>`:''}</article>`).join('')}</section>`; }
+  function threadHTML(p) {
+    const meta = currentExperience;
+    const note = meta?.kind === 'note';
+    const back = btn(meta ? 'experiences' : 'board', meta ? '← 합격 노하우' : '← 게시판', '', true);
+    const title = esc(p.title);
+    const byline = `<p class="cm-caption">${esc(p.nickname)} <span aria-hidden="true">·</span> ${date(p.created_at)}</p>`;
+    const period = meta ? experience.period(meta) : '';
+    const verified = meta?.verified ? tag('최종합격 확인') : '';
+    let header;
+    if (note) {
+      const context = [meta.airline, meta.stage === '영상' ? '영상면접' : meta.stage, period]
+        .filter(Boolean).map(esc).join(' · ');
+      header = `<header class="cex-reading-header">
+        <div class="cex-reading-meta"><span>${context}</span>${verified}</div>
+        <h2>${title}</h2>
+        ${byline}
+      </header>`;
+    } else {
+      const tags = meta
+        ? tag('노하우 요청') + tag(meta.airline,true) + tag(meta.stage,true) + (period ? tag(period,true) : '') + verified
+        : tag(topics[p.topic] || '승준정보',true) + tag(cats[p.category]) + (p.airline ? tag(p.airline,true) : '') + (p.stage ? tag(p.stage,true) : '');
+      header = `<div class="cm-wrap">${tags}</div><h2 class="cm-section">${title}</h2>${byline}`;
+    }
+    const reading = note ? experience.readingBodyHTML(meta,p.body) : `<div class="cm-thread-body">${esc(p.body)}</div>`;
+    const source = /^https:\/\/[^\s<>]+$/.test(p.source_url)
+      ? `<a class="cm-source" href="${esc(p.source_url)}" target="_blank" rel="noopener noreferrer">정보 출처 보기 ↗</a>`
+      : '';
+    const actions = btn('bookmark',ownState.saved ? '저장됨' : '글 저장',p.id,true) + (ownState.mine
+      ? btn('post-edit','수정',p.id,true) + btn('post-delete','삭제',p.id,true)
+      : btn('report','신고',p.id,true,'data-type="post"'));
+    return `${back}<article class="cm-section${note ? ' cex-reading' : ''}">
+      ${header}${reading}${source}${experience.threadHTML(meta)}<div class="cm-wrap">${actions}</div>
+    </article><section class="cm-section"><div class="cm-section-head"><h2>댓글 ${p.comments.filter(c=>c.status==='published').length}</h2>${btn('comment-create','댓글 쓰기',p.id,true)}</div>${p.comments.map(c=>`<article class="cm-comment" ${c.parent_id?'style="padding-left:20px"':''}><div class="cm-row"><b>${c.status==='deleted'?'삭제된 댓글':esc(c.nickname)}</b><span class="cm-caption">${date(c.created_at)}</span></div><p class="cm-thread-body">${esc(c.body)}</p>${c.status==='published'?`<div class="cm-wrap">${btn('reply','답글',c.id,true)}${ownState.own_comments?.includes(c.id)?btn('comment-delete','삭제',c.id,true):btn('report','신고',c.id,true,'data-type="comment"')}</div>`:''}</article>`).join('')}</section>`;
+  }
   function condition(s) { return [s.min_level?`몬크 Lv.${s.min_level} 이상`:'레벨 조건 없음',s.require_experience?'면접 진출 경험 인증':'',...s.required_skills.map(v=>skills[v])].filter(Boolean).join(' · '); }
   function conditionTags(s) { return `<div class="cm-study-tags" aria-label="참여 조건">${s.min_level?tag('몬크 Lv.'+s.min_level+' 이상'):''}${s.require_experience?tag('면접 경험 인증'):''}${(s.required_skills||[]).map(v=>tag(skills[v],true)).join('')}</div>${(s.tags||[]).length?`<div class="cm-study-tags" aria-label="스터디 태그">${s.tags.map(v=>btn('study-tag-search','#'+v,v,true)).join('')}</div>`:''}`; }
   function studySchedule(value) { return /^(\d{2}:\d{2})(\s*[~～–-]\s*\d{2}:\d{2})?$/.test(value||'')?'요일 미정 · '+value:value; }
