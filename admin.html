@@ -374,6 +374,35 @@
     .round-list:has(> .loading:only-child), .round-list:has(> .empty:only-child) { border: 0; box-shadow: none; background: none; }
     .round-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border-soft); }
     .round-item:last-child { border-bottom: 0; }
+    .lec-view[hidden] { display: none; }
+    .lec-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 20px; }
+    .lec-heading h2 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+    .lec-heading button { flex-shrink: 0; min-height: 44px; }
+    #lecEditing { scroll-margin-top: 72px; }
+    #lecEditing .ri-cancel { min-height: 44px; }
+    .lec-group + .lec-group { margin-top: 20px; }
+    .lec-group h3, .lec-group summary { font-size: 16px; font-weight: 700; }
+    .lec-group h3 { margin: 0 0 8px; }
+    .lec-count { margin-left: 6px; color: var(--text-muted); font-size: 14px; }
+    .lec-group summary { min-height: 44px; align-content: center; padding: 0 14px; cursor: pointer; }
+    .lec-group[open] > summary { border-bottom: 1px solid var(--border-soft); }
+    .lec-group.round-list, .lec-group .round-list { box-shadow: none; }
+    #panel-lectures .lec-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; align-items: start; padding: 14px; }
+    .lec-row .ri-main { font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
+    .lec-row .ri-actions { justify-self: end; }
+    .lec-row .ri-actions button { min-height: 44px; min-width: 44px; }
+    .lec-details { display: grid; gap: 8px; grid-column: 1 / -1; font-size: 14px; color: var(--text-muted); }
+    .lec-status { width: fit-content; margin-bottom: 4px; padding: 2px 8px; border-radius: 6px; background: var(--bg2); color: var(--text-muted); font-size: 12px; font-weight: 700; }
+    .lec-status.is-open { color: var(--accent-ink); background: var(--bg3); }
+    .lec-times { display: grid; gap: 6px; margin: 0; padding: 8px 0 0; border-top: 1px solid var(--border-soft); list-style: none; }
+    .lec-times li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+    .lec-times li span:first-child { overflow-wrap: anywhere; }
+    .lec-times .is-past { color: var(--text-dim); }
+    .lec-empty { padding: 12px 14px; color: var(--text-muted); font-size: 14px; }
+    @media (max-width: 600px) {
+      #panel-lectures .lec-row { grid-template-columns: minmax(0, 1fr); }
+      .lec-row .ri-actions { grid-row: 3; }
+    }
     .round-item .ri-main { font-weight: 700; font-size: 15px; }
     .round-item .ri-sub { font-size: 13px; color: var(--text-muted); }
     /* ⚠️ .round-item 자손으로만 정의하면 목록 밖에서 쓸 때 스타일이 하나도 안 먹는다
@@ -1586,85 +1615,88 @@
   <!-- 특강(special_lectures) CRUD — 등록하면 lectures.html·홈 특강 섹션·상세페이지에 자동 반영 -->
   <div class="tab-panel" id="panel-lectures">
     <div class="rounds-wrap">
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;">
-        여기서 등록한 특강은 <b>특강 목록(lectures.html)</b>·<b>홈 특강 섹션</b>에 자동으로 뜨고,
-        <b>상세페이지에서 방문자가 바로 토스결제·계좌이체로 신청</b>합니다. 신청 내역은 <b>신청자 현황</b> 탭에 함께 쌓여요.
-        <b>공개</b>를 끄면 목록에서 숨겨집니다.
-      </p>
-      <div class="round-editing" id="lecEditing" hidden>
-        <span id="lecEditingLabel"></span>
-        <button type="button" class="ri-cancel" id="lecEditCancel">취소하고 새로 추가</button>
+      <div class="lec-view" id="lecOverview">
+        <div class="lec-heading">
+          <h2>특강 관리</h2>
+          <button type="button" class="btn btn-action" id="lecNew">특강 등록</button>
+        </div>
+        <div id="lectureList"><div class="loading">불러오는 중…</div></div>
       </div>
-      <form class="round-form" id="lectureForm" style="grid-template-columns:1fr;">
-        <div class="field"><label for="lfTitle">제목 *</label><input id="lfTitle" type="text" placeholder="예: 대한항공 대비 특강"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="field"><label for="lfAirline">항공사</label>
-            <select id="lfAirline">
-              <option value="">일반(항공사 없음)</option>
-              <option value="ke">대한항공 (KOREAN AIR)</option>
-              <option value="lj">진에어 (JIN AIR)</option>
-              <option value="7c">제주항공 (JEJU AIR)</option>
-              <option value="tw">트리니티항공 (TRINITY AIRWAYS)</option>
-              <option value="ze">이스타항공 (EASTAR JET)</option>
-              <option value="yp">에어프레미아 (AIR PREMIA)</option>
-              <option value="rf">에어로케이 (AERO K)</option>
-            </select></div>
-          <div class="field"><label for="lfSubtitle">한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드에 뜨는 짧은 소개"></div>
+      <div class="lec-view" id="lecEditor" hidden>
+        <div class="lec-heading" id="lecEditing">
+          <h2 id="lecEditingLabel" tabindex="-1">특강 등록</h2>
+          <button type="button" class="ri-cancel" id="lecEditCancel">목록으로</button>
         </div>
-        <div class="field"><label for="lfDesc">상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
-        <div class="field"><label for="lfHigh">핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-          <div class="field"><label for="lfPrice">금액(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
-          <!-- 금액 이름(price_kind · 20260912120000) — 예약금이면 카드·상세·신청 폼 라벨이 '예약금'이 되고
-               '잔금은 별도로 안내드려요' 한 줄이 붙는다. 청구 금액은 위 금액 그대로(잔금은 사이트가 안 받는다). -->
-          <div class="field"><label for="lfPriceKind">금액 이름</label>
-            <select id="lfPriceKind">
-              <option value="fee">참가비 (전액)</option>
-              <option value="deposit">예약금 (잔금 별도 안내)</option>
-            </select></div>
-          <div class="field"><label for="lfPriceLabel">0원일 때 표시</label><input id="lfPriceLabel" type="text" maxlength="20" placeholder="무료 (예: 상담 시 안내)"></div>
-          <div class="field"><label for="lfCapacity">정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
-          <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
-          <div class="field"><label for="lfSort">정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
-        </div>
-        <div class="field">
-          <label class="lf-check"><input id="lfShowSeats" type="checkbox" checked> 신청 페이지에 잔여석 보이기</label>
-          <div class="lf-thumb-spec">끄면 카드·상세·시간대 목록에서 <b>남은 자리 수를 감춥니다</b>. 정원이 다 차면 '정원 마감'은 그대로 나오고, 정원 초과 신청 차단도 그대로예요.</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-          <div class="field field-date"><label for="lfRStart">신청 시작</label><input id="lfRStart" type="date"></div>
-          <div class="field field-date"><label for="lfREnd">신청 마감</label><input id="lfREnd" type="date"></div>
-          <div class="field field-date"><label for="lfDate">특강 진행일</label><input id="lfDate" type="date"></div>
-        </div>
-        <div class="field">
-          <label>시간대 (같은 특강을 여러 날·여러 타임으로 열 때)</label>
-          <div class="lf-slots" id="lfSlots"></div>
-          <button type="button" class="lf-slot-add" id="lfSlotAdd">+ 시간대 추가</button>
-          <div class="lf-thumb-spec">순서대로 <b>날짜 · 시작 · 종료 · 정원 · 메모</b>. 시간은 <b>24시간으로 직접 입력</b>(14:00 — 1400, 14 로 적어도 알아서 맞춰줍니다). 시간대를 하나라도 넣으면 <b>정원·진행일이 시간대에서 자동 계산</b>되고, 신청자는 상세페이지에서 시간대를 골라 신청합니다. 안 넣으면 지금처럼 특강 하나에 일정 하나예요.</div>
-        </div>
-        <div class="field"><label for="lfSchedule">시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
-        <div class="field"><label for="lfInstructor">강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
-        <div class="field">
-          <label>카드 사진(선택)</label>
-          <div class="lf-thumb">
-            <div class="lf-thumb-prev" id="lfThumbPrev" hidden><img id="lfThumbImg" alt="카드 사진 미리보기"></div>
-            <div class="lf-thumb-act">
-              <input type="file" id="lfThumbFile" accept="image/*" style="display:none;" aria-label="특강 카드 사진 고르기">
-              <button type="button" class="btn btn-ghost btn-sm" id="lfThumbPick">사진 고르기</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="lfThumbClear" hidden>사진 빼기</button>
-              <span class="lf-thumb-msg" id="lfThumbMsg">안 넣으면 지금까지의 아이보리 카드로 나가요.</span>
-            </div>
+        <form class="round-form" id="lectureForm" style="grid-template-columns:1fr;">
+          <div class="field"><label for="lfTitle">제목 *</label><input id="lfTitle" type="text" placeholder="예: 대한항공 대비 특강"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="field"><label for="lfAirline">항공사</label>
+              <select id="lfAirline">
+                <option value="">일반(항공사 없음)</option>
+                <option value="ke">대한항공 (KOREAN AIR)</option>
+                <option value="lj">진에어 (JIN AIR)</option>
+                <option value="7c">제주항공 (JEJU AIR)</option>
+                <option value="tw">트리니티항공 (TRINITY AIRWAYS)</option>
+                <option value="ze">이스타항공 (EASTAR JET)</option>
+                <option value="yp">에어프레미아 (AIR PREMIA)</option>
+                <option value="rf">에어로케이 (AERO K)</option>
+              </select></div>
+            <div class="field"><label for="lfSubtitle">한 줄 소개</label><input id="lfSubtitle" type="text" placeholder="카드에 뜨는 짧은 소개"></div>
           </div>
-          <p class="lf-thumb-spec">
-            권장 <b>1600 × 900</b> (16:9 가로 사진) · 인물은 <b>가운데·위쪽</b>에 두세요 — 카드에선 사진 위쪽만 보입니다.<br>
-            크기·용량은 올릴 때 자동으로 줄어드니 큰 사진 그대로 올리셔도 됩니다.
-          </p>
-          <input id="lfThumb" type="text" placeholder="또는 사진 주소(https://...) 직접 붙여넣기" style="margin-top:8px;" aria-label="카드 사진 주소 직접 입력">
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked> 공개(목록에 노출)</label>
-        <button class="btn btn-action" type="submit" id="lecSubmitBtn">추가</button>
-      </form>
-      <div class="round-list" id="lectureList"><div class="loading">불러오는 중…</div></div>
+          <div class="field"><label for="lfDesc">상세 소개</label><textarea id="lfDesc" rows="4" placeholder="특강 소개 본문. 빈 줄로 문단을 나눠요."></textarea></div>
+          <div class="field"><label for="lfHigh">핵심 포인트 (한 줄에 하나)</label><textarea id="lfHigh" rows="3" placeholder="면접관 시선에서 보는 첫인상&#10;나에게 맞는 헤어·메이크업"></textarea></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+            <div class="field"><label for="lfPrice">금액(원) *</label><input id="lfPrice" type="number" min="0" placeholder="30000 (0=무료)"></div>
+            <!-- 금액 이름(price_kind · 20260912120000) — 예약금이면 카드·상세·신청 폼 라벨이 '예약금'이 되고
+                 '잔금은 별도로 안내드려요' 한 줄이 붙는다. 청구 금액은 위 금액 그대로(잔금은 사이트가 안 받는다). -->
+            <div class="field"><label for="lfPriceKind">금액 이름</label>
+              <select id="lfPriceKind">
+                <option value="fee">참가비 (전액)</option>
+                <option value="deposit">예약금 (잔금 별도 안내)</option>
+              </select></div>
+            <div class="field"><label for="lfPriceLabel">0원일 때 표시</label><input id="lfPriceLabel" type="text" maxlength="20" placeholder="무료 (예: 상담 시 안내)"></div>
+            <div class="field"><label for="lfCapacity">정원(선택)</label><input id="lfCapacity" type="number" min="1" placeholder="예: 20"></div>
+            <div class="field"><label>잔여석</label><div class="lf-seats" id="lfSeats">정원을 넣으면 자동 계산돼요</div></div>
+            <div class="field"><label for="lfSort">정렬(작을수록 앞)</label><input id="lfSort" type="number" placeholder="0"></div>
+          </div>
+          <div class="field">
+            <label class="lf-check"><input id="lfShowSeats" type="checkbox" checked> 신청 페이지에 잔여석 보이기</label>
+            <div class="lf-thumb-spec">끄면 카드·상세·시간대 목록에서 <b>남은 자리 수를 감춥니다</b>. 정원이 다 차면 '정원 마감'은 그대로 나오고, 정원 초과 신청 차단도 그대로예요.</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+            <div class="field field-date"><label for="lfRStart">신청 시작</label><input id="lfRStart" type="date"></div>
+            <div class="field field-date"><label for="lfREnd">신청 마감</label><input id="lfREnd" type="date"></div>
+            <div class="field field-date"><label for="lfDate">특강 진행일</label><input id="lfDate" type="date"></div>
+          </div>
+          <div class="field">
+            <label>시간대 (같은 특강을 여러 날·여러 타임으로 열 때)</label>
+            <div class="lf-slots" id="lfSlots"></div>
+            <button type="button" class="lf-slot-add" id="lfSlotAdd">+ 시간대 추가</button>
+            <div class="lf-thumb-spec">순서대로 <b>날짜 · 시작 · 종료 · 정원 · 메모</b>. 시간은 <b>24시간으로 직접 입력</b>(14:00 — 1400, 14 로 적어도 알아서 맞춰줍니다). 시간대를 하나라도 넣으면 <b>정원·진행일이 시간대에서 자동 계산</b>되고, 신청자는 상세페이지에서 시간대를 골라 신청합니다. 안 넣으면 지금처럼 특강 하나에 일정 하나예요.</div>
+          </div>
+          <div class="field"><label for="lfSchedule">시간·장소·방식</label><input id="lfSchedule" type="text" placeholder="예: 오후 2시 · Zoom 온라인 · 90분"></div>
+          <div class="field"><label for="lfInstructor">강사(선택)</label><input id="lfInstructor" type="text" placeholder="예: 박새암 코치"></div>
+          <div class="field">
+            <label>카드 사진(선택)</label>
+            <div class="lf-thumb">
+              <div class="lf-thumb-prev" id="lfThumbPrev" hidden><img id="lfThumbImg" alt="카드 사진 미리보기"></div>
+              <div class="lf-thumb-act">
+                <input type="file" id="lfThumbFile" accept="image/*" style="display:none;" aria-label="특강 카드 사진 고르기">
+                <button type="button" class="btn btn-ghost btn-sm" id="lfThumbPick">사진 고르기</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="lfThumbClear" hidden>사진 빼기</button>
+                <span class="lf-thumb-msg" id="lfThumbMsg">안 넣으면 지금까지의 아이보리 카드로 나가요.</span>
+              </div>
+            </div>
+            <p class="lf-thumb-spec">
+              권장 <b>1600 × 900</b> (16:9 가로 사진) · 인물은 <b>가운데·위쪽</b>에 두세요 — 카드에선 사진 위쪽만 보입니다.<br>
+              크기·용량은 올릴 때 자동으로 줄어드니 큰 사진 그대로 올리셔도 됩니다.
+            </p>
+            <input id="lfThumb" type="text" placeholder="또는 사진 주소(https://...) 직접 붙여넣기" style="margin-top:8px;" aria-label="카드 사진 주소 직접 입력">
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;"><input id="lfVisible" type="checkbox" checked> 공개(목록에 노출)</label>
+          <button class="btn btn-action" type="submit" id="lecSubmitBtn">등록</button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -5020,31 +5052,46 @@
       pick.disabled = false; lfThumbFile.value = '';
     });
 
-    function enterLectureEdit(l) {
+    let lecEditorTrigger = null;
+    function openLectureEditor(trigger, title) {
+      lecEditorTrigger = trigger;
+      document.getElementById('lecOverview').hidden = true;
+      document.getElementById('lecEditor').hidden = false;
+      const heading = document.getElementById('lecEditingLabel');
+      heading.textContent = title;
+      document.getElementById('lecSubmitBtn').textContent = editingLectureId ? '수정 저장' : '등록';
+      document.getElementById('lecEditing').scrollIntoView({ block: 'start' });
+      heading.focus({ preventScroll: true });
+    }
+
+    function enterLectureEdit(l, trigger) {
       editingLectureId = l.id;
       fillLectureForm(l);
-      loadSlotRows(l.id);            // 시간대는 별도 테이블이라 따로 읽어온다
-      document.getElementById('lecEditingLabel').textContent = '「' + (l.title || '특강') + '」 수정 중 — 고치고 저장하세요';
-      document.getElementById('lecEditing').hidden = false;
-      document.getElementById('lecSubmitBtn').textContent = '수정 저장';
-      document.getElementById('lectureForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (Array.isArray(l._slots)) renderSlotRows(LEC.sortSlots(l._slots));
+      else loadSlotRows(l.id);
+      openLectureEditor(trigger, '특강 수정');
     }
-    function exitLectureEdit() {
+
+    function exitLectureEdit(restoreFocus = true) {
       editingLectureId = null;
       document.getElementById('lectureForm').reset();
       document.getElementById('lfVisible').checked = true;
-      document.getElementById('lfShowSeats').checked = true;   // 새 특강 기본값 = 잔여석 보이기
-      document.getElementById('lecEditing').hidden = true;
-      document.getElementById('lecSubmitBtn').textContent = '추가';
-      renderSeatsInfo(null); // 잔여석은 div 라 form.reset() 이 못 지운다
-      renderSlotRows([]);   // 시간대 행도 마찬가지
-      // ⚠️ 삭제 예약도 반드시 비운다 — 안 비우면 '수정 중 시간대 삭제 → 취소 → 새 특강 추가'
-      //    에서 남아 있던 id 로 남의 시간대를 지운다.
+      document.getElementById('lfShowSeats').checked = true;
+      document.getElementById('lecEditor').hidden = true;
+      document.getElementById('lecOverview').hidden = false;
+      renderSeatsInfo(null);
+      renderSlotRows([]);
       _slotRemoved = [];
-      syncThumbPreview();   // form.reset()으로 비워진 주소칸에 미리보기를 맞춘다
+      syncThumbPreview();
       thumbMsg(THUMB_HINT, false);
+      if (restoreFocus) (lecEditorTrigger?.isConnected ? lecEditorTrigger : document.getElementById('lecNew')).focus();
+      lecEditorTrigger = null;
     }
-    document.getElementById('lecEditCancel').addEventListener('click', exitLectureEdit);
+
+    document.getElementById('lecNew').addEventListener('click', e => openLectureEditor(e.currentTarget, '특강 등록'));
+    document.getElementById('lecEditCancel').addEventListener('click', () => {
+      if (document.getElementById('lectureForm').dataset.busy !== '1') exitLectureEdit();
+    });
 
     const AIR_KO = { ke:'대한항공', lj:'진에어', '7c':'제주항공', tw:'트리니티', ze:'이스타', yp:'에어프레미아', rf:'에어로케이' };
 
@@ -5078,7 +5125,7 @@
       try {
         const { data, error } = await MONC.sb.from('lecture_slots')
           .select('*').eq('lecture_id', lectureId);
-        if (error || !data) return;
+        if (error || !data || String(editingLectureId) !== String(lectureId)) return;
         renderSlotRows(LEC.sortSlots(data));
       } catch (e) { /* 미적용 환경 — 편집기 없이 종전대로 */ }
     }
@@ -5229,54 +5276,105 @@
       }
     }
 
-    // 목록 한 줄 요약용 잔여석 — 정원이 있으면 '잔여 7/20석'(자동), 없으면 구 수동값만.
-    // 관리자에겐 숨김 특강도 실제 숫자를 그대로 보여주고, 대신 '학생에겐 숨김'을 덧붙인다.
-    function seatsSummary(l) {
-      const hidden = l.show_seats === false ? '(학생에겐 숨김)' : '';
-      if (l.capacity != null) {
-        const left = (l.seats_left != null ? l.seats_left : l.capacity);
-        return ' · 잔여 ' + left + '/' + l.capacity + '석' + hidden;
-      }
-      return l.seats_left != null ? ' · 잔여 ' + l.seats_left + '석' + hidden : '';
+    function lectureSeats(l) {
+      if (l.seats_left != null && l.capacity != null) return '잔여 ' + l.seats_left + ' / ' + l.capacity + '석';
+      if (l.seats_left != null) return '잔여 ' + l.seats_left + '석';
+      if (l.capacity != null) return '정원 ' + l.capacity + '석';
+      return '';
     }
 
-    // 관리자 목록용 신청 상태 라벨(공개 페이지 lecture-common.js status와 동일 규칙)
-    function lectureStatusLabel(l) {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const p = s => { if (!s) return null; const m = String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
-      const s = p(l.recruit_start), e = p(l.recruit_end);
-      if (s && today < s) return '신청예정';
-      if (e) { const ee = new Date(e); ee.setHours(23,59,59,999); if (today > ee) return '마감'; }
-      return '신청중';
+    function lectureSlotEnded(slot, today, now) {
+      return Boolean(slot.slot_date && (slot.slot_date < today || (slot.slot_date === today &&
+        slot.end_time && Date.parse(slot.slot_date + 'T' + slot.end_time + '+09:00') < now)));
+    }
+
+    function lectureListRow({ lecture, state, slots, today, now }) {
+      const l = lecture;
+      const formatDate = value => value?.slice(0, 4) === today.slice(0, 4) ? LEC.fmtDate(value) : fmtDay(value);
+      const seats = lectureSeats(l);
+      const schedule = slots.map(s => {
+        const past = lectureSlotEnded(s, today, now);
+        const time = [s.start_time, s.end_time].filter(Boolean).map(t => t.slice(0, 5)).join('–');
+        const when = [formatDate(s.slot_date), time || '시간 미정', s.label].filter(Boolean).join(' · ');
+        return '<li' + (past ? ' class="is-past"' : '') + '><span>' + esc(when) + '</span><span>' + esc(past ? '진행 종료' : lectureSeats(s)) + '</span></li>';
+      }).join('');
+      const single = ['진행일 ' + formatDate(l.lecture_date), l.schedule_text,
+        Array.isArray(l._slots) ? '' : '시간대 확인 필요'].filter(Boolean).join(' · ');
+      const price = (LEC.isDeposit(l) ? '예약금 ' : '') + LEC.priceText(l);
+      const meta = [price, seats, seats && l.show_seats === false ? '잔여석 비공개' : ''].filter(Boolean).join(' · ');
+      const recruitment = [l.recruit_start && '모집 시작 ' + formatDate(l.recruit_start),
+        l.recruit_end && '모집 마감 ' + formatDate(l.recruit_end)].filter(Boolean).join(' · ');
+      return `<article class="round-item lec-row">
+        <div>
+          <div class="lec-status${l.visible !== false && state.state === 'open' ? ' is-open' : ''}">${esc(l.visible === false ? '비공개 · ' + state.label : state.label)}</div>
+          <div class="ri-main">${esc(l.title)}</div>
+        </div>
+        <div class="ri-actions">
+          <button type="button" class="ri-edit" data-id="${esc(l.id)}" aria-label="${esc(l.title)} 수정">수정</button>
+          <button type="button" class="ri-del is-danger" data-id="${esc(l.id)}" aria-label="${esc(l.title)} 삭제">삭제</button>
+        </div>
+        <div class="lec-details">
+          <div>${esc(meta)}</div>
+          ${recruitment ? '<div>' + esc(recruitment) + '</div>' : ''}
+          ${schedule ? '<ul class="lec-times" aria-label="진행 일정">' + schedule + '</ul>' : '<div>' + esc(single) + '</div>'}
+        </div>
+      </article>`;
     }
 
     async function loadLectures() {
       const listEl = document.getElementById('lectureList');
       const { data, error } = await MONC.sb.from('special_lectures')
         .select('*').order('sort_order').order('lecture_date', { nullsFirst: false });
-      if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
-      if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 특강이 없습니다. 위 폼에서 추가하세요.</div>'; return; }
-      await LEC.attachSlots(MONC.sb, data);   // 목록에 'N개 타임' 표시용(미적용 환경이면 조용히 생략)
-      listEl.innerHTML = data.map(l => `
-        <div class="round-item">
-          <div>
-            <div class="ri-main">${l.airline ? '<span style="color:var(--accent-ink)">[' + esc(AIR_KO[l.airline] || l.airline) + ']</span> ' : ''}${esc(l.title)}${l.visible === false ? ' <span style="color:var(--text-dim);font-weight:600">· 숨김</span>' : ''}</div>
-            <div class="ri-sub">${esc(lectureStatusLabel(l))} · ${LEC.isDeposit(l) ? '예약금 ' : ''}${esc(LEC.priceText(l))}${seatsSummary(l)}${(l._slots && l._slots.length) ? ' · ' + l._slots.length + '개 타임' : ''}${l.lecture_date ? ' · 진행 ' + fmtDay(l.lecture_date) : ''}${(l.recruit_start || l.recruit_end) ? ' · 신청 ' + fmtDay(l.recruit_start) + '~' + fmtDay(l.recruit_end) : ''}</div>
-          </div>
-          <div class="ri-actions">
-            <button class="ri-edit" data-id="${l.id}">수정</button>
-            <button class="ri-del is-danger" data-id="${l.id}">삭제</button>
-          </div>
-        </div>`).join('');
+      if (error) {
+        listEl.innerHTML = '<div class="lec-empty" role="alert">특강 목록을 불러오지 못했습니다.</div><button type="button" class="ri-cancel">다시 불러오기</button>';
+        listEl.querySelector('button').addEventListener('click', loadLectures);
+        return;
+      }
+      if (!data.length) {
+        listEl.innerHTML = '<p class="lec-empty">등록된 특강이 없습니다.</p>';
+        return;
+      }
+      await LEC.attachSlots(MONC.sb, data);
+      const expanded = new Set([...listEl.querySelectorAll('details[open]')].map(el => el.id));
+      const now = new Date();
+      const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+      const groups = { recruiting: [], scheduled: [], ended: [], hidden: [] };
+      for (const lecture of data) {
+        const state = LEC.cardState(lecture, now);
+        const slots = LEC.sortSlots(lecture._slots);
+        const next = slots.find(s => s.slot_date >= today && !lectureSlotEnded(s, today, now));
+        const key = lecture.visible === false ? 'hidden' : state.state === 'ended' ? 'ended'
+          : ['closed', 'unknown'].includes(state.state) ? 'scheduled' : 'recruiting';
+        groups[key].push({ lecture, state, slots, today, now,
+          order: state.endedOn || (next ? next.slot_date + 'T' + (next.start_time || '') : lecture.lecture_date >= today ? lecture.lecture_date : '') });
+      }
+      const groupHtml = (key, title, collapsed = false) => {
+        const rows = groups[key];
+        if (!rows.length) return '';
+        const id = 'lec-group-' + key;
+        rows.sort((a, b) => collapsed
+          ? b.order.localeCompare(a.order)
+          : (a.order || '9999').localeCompare(b.order || '9999'));
+        const label = title + ' <span class="lec-count">' + rows.length + '개</span>';
+        const cards = rows.map(lectureListRow).join('');
+        return collapsed
+          ? `<details class="lec-group round-list" id="${id}"${expanded.has(id) ? ' open' : ''}><summary>${label}</summary>${cards}</details>`
+          : `<section class="lec-group" aria-labelledby="${id}"><h3 id="${id}">${label}</h3><div class="round-list">${cards}</div></section>`;
+      };
+      const active = groupHtml('recruiting', '모집 중 · 모집 예정') + groupHtml('scheduled', '진행 대기 · 일정 확인');
+      listEl.innerHTML = (active || '<p class="lec-empty">현재 모집하거나 진행을 기다리는 특강이 없습니다.</p>') +
+        groupHtml('ended', '종료된 특강', true) + groupHtml('hidden', '비공개 특강', true);
       listEl.querySelectorAll('.ri-edit').forEach(b => b.addEventListener('click', () => {
-        const l = data.find(x => String(x.id) === b.dataset.id); if (l) enterLectureEdit(l);
+        const l = data.find(x => String(x.id) === b.dataset.id);
+        if (l) enterLectureEdit(l, b);
       }));
       listEl.querySelectorAll('.ri-del').forEach(b => b.addEventListener('click', async () => {
         if (!confirm('이 특강을 삭제할까요? (이미 신청한 내역은 남습니다)')) return;
+        b.disabled = true;
         const { error } = await MONC.sb.from('special_lectures').delete().eq('id', b.dataset.id);
-        if (error) { alert('삭제 실패: ' + error.message); return; }
-        if (String(editingLectureId) === b.dataset.id) exitLectureEdit();
-        toast('삭제됨'); loadLectures();
+        if (error) { b.disabled = false; alert('삭제 실패: ' + error.message); return; }
+        toast('삭제됨'); await loadLectures();
+        document.getElementById('lecNew').focus();
       }));
     }
 
@@ -5353,7 +5451,10 @@
           + '\n\n목록에서 이 특강을 다시 열어 시간대를 확인해 주세요.');
         exitLectureEdit(); loadLectures(); return;
       }
-      toast(editingLectureId ? '수정됨' : '추가됨'); exitLectureEdit(); loadLectures();
+      toast(editingLectureId ? '수정됨' : '등록됨');
+      exitLectureEdit(false);
+      document.getElementById('lecNew').focus();
+      await loadLectures();
     });
 
     // ── 신청자 현황(applications) ──
