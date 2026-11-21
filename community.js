@@ -94,6 +94,9 @@
     if (view==='thread') return new URLSearchParams(location.search).get('source')==='experiences'?'experiences':'board';
     return ({study:'studies','study-admin':'studies',profile:'activity'})[view]||view;
   }
+  function boardNewsBadge(topic='') {
+    return `<span class="board-news-badge" data-board-news data-topic="${esc(topic)}" hidden>NEW</span>`;
+  }
   function categoryNavigation(section, current) {
     if (section!=='board' && section!=='studies') return '';
     const study=section==='studies';
@@ -112,13 +115,16 @@
         }
         if (value) params.set(key,value);
         else params.delete(key);
-        return `<a href="community.html?${esc(params.toString())}" data-community-category data-category="${value}" ${value===current?'aria-current="page"':''}>${label}</a>`;
+        return `<a href="community.html?${esc(params.toString())}" data-community-category data-category="${value}" ${value===current?'aria-current="page"':''}>${label}${study?'':boardNewsBadge(value)}</a>`;
       }).join('')}</nav>`;
   }
   function sectionNavigation(active) {
     const category=active==='studies'?filters.study_category:filters.topic;
     return `<div class="cm-navigation"><nav class="cm-section-nav" aria-label="커뮤니티">
-      ${communitySections.map(([view,label])=>`<a href="${path(view)}" data-route="${view}" ${view===active?'aria-current="page"':''}>${icon(view)}<span>${label}</span></a>`).join('')}
+      ${communitySections.map(([view,label])=>{
+        const symbol=view==='experiences'?`<span class="cm-knowhow-icon">${icon(view)}${boardNewsBadge('knowhow')}</span>`:icon(view);
+        return `<a href="${path(view)}" data-route="${view}" ${view===active?'aria-current="page"':''}>${symbol}<span class="board-news-label">${label}${view==='board'?boardNewsBadge():''}</span></a>`;
+      }).join('')}
     </nav>${categoryNavigation(active,category)}</div>`;
   }
   function shell(view) {
@@ -132,7 +138,11 @@
   function icon(type) { const paths={experiences:'M5 4h14v16H5V4Zm3 4h8m-8 4h8m-8 4h5',bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',user:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2',activity:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2',search:'M15 15l5 5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',home:'M3 10l9-7 9 7v11h-6v-7H9v7H3Z',board:'M4 4h16v13H9l-5 4ZM8 8h8M8 12h6',studies:'M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0M7 21v-3a5 5 0 0 1 10 0v3M3 21v-3a4 4 0 0 1 3-4M21 21v-3a4 4 0 0 0-3-4M4 5a3 3 0 0 1 1 6M20 5a3 3 0 0 0-1 6'};return `<svg aria-hidden="true" class="cm-icon" viewBox="0 0 24 24"><path d="${paths[type]||paths.user}"/></svg>`; }
   function studyHelpHTML() { return `<details class="cm-study-help"><summary>스터디·활동은 어떻게 이용하나요?</summary><ol><li>일정과 참여 조건이 맞는 모집글을 찾아요.</li><li>참여자의 프로필·준비 항목·인증을 확인해요.</li><li>지원 후 모집자가 승인하면 함께 시작해요.</li></ol><p>면접 경험 인증은 합격 메일·합격증을 몬크가 확인한 결과예요. 실력검증은 수업 평가·레벨테스트 결과예요. 뱃지는 참여자 개인에게 부여하며, 팀을 자동으로 편성하지는 않아요.</p></details>`; }
   function searchHTML(studies=false) { return `<form data-search class="cm-search"><label for="community-search" class="cm-sr-only">${studies?'스터디 검색':'글과 댓글 검색'}</label><input id="community-search" class="cm-input" name="q" value="${esc(filters.q)}" placeholder="${studies?'지역·항공사·태그 검색':'궁금한 내용을 글·댓글에서 검색'}" maxlength="120"><button type="submit" class="cm-icon-btn" aria-label="검색">${icon('search')}</button></form>`; }
-  function topicsHTML() { return `<div class="cm-filter-tabs">${[['','전체'],...Object.entries(topics)].map(([v,t])=>btn('topic',t,v,true,`aria-pressed="${filters.topic===v}"`)).join('')}</div>`; }
+  function topicsHTML() {
+    return `<div class="cm-filter-tabs">${[['','전체'],...Object.entries(topics)].map(([value,label])=>
+      `<button type="button" class="cm-btn-ghost cm-topic-button" data-action="topic" data-id="${esc(value)}" aria-pressed="${filters.topic===value}">${label}${boardNewsBadge(value)}</button>`
+    ).join('')}</div>`;
+  }
   function entryHTML() {
     return '<nav class="cm-entry-nav" aria-label="게시판과 합격 노하우">'
       + '<a href="community.html?view=board" data-route="board"><strong>게시판 <span aria-hidden="true">→</span></strong><span>질문과 정보 공유</span></a>'
@@ -158,6 +168,7 @@
         <div class="cm-thread-list">${recentPosts}</div>
       </section>
       <a class="cm-program-entry" href="index.html">면접 준비 둘러보기 →</a>`;
+    window.dispatchEvent(new Event('monc:board-news-layout'));
   }
   function navigate(view,id='',fromExperiences=false) {
     const from=route().view;
@@ -218,6 +229,12 @@
         if(turn!==sequence)return;
         ownState=state;
         main.innerHTML=current?threadHTML(current)+experience.answersHTML(answers,location.search):empty('볼 수 없는 글입니다.');
+        if (current) {
+          const seenTopics=currentExperience?.kind==='note'?[current.topic,'knowhow']:[current.topic];
+          for (const topic of seenTopics) window.dispatchEvent(new CustomEvent('monc:board-thread-read',{
+            detail:{topic,created_at:current.created_at}
+          }));
+        }
       }
       else if(view==='study') {
         ownState={};

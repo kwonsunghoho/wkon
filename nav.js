@@ -104,6 +104,75 @@
     return hint ? '<a href="mypage.html"><span class="mm-name">' + esc(hint.name || '회원') + ' 님</span><span>내 정보 →</span></a>'
       : '<a href="' + loginHref() + '">로그인 / 회원가입 <span aria-hidden="true">→</span></a>';
   }
+  // 공개 게시판의 최근 글 시각만 메뉴에 사용한다.
+  var BOARD_NEWS_SECTIONS = ['prep','hair','free','knowhow'];
+  var BOARD_NEWS_KEY = 'monc_board_seen_v1';
+  var BOARD_NEWS_WEEK = 7*24*60*60*1000;
+  var BOARD_NEWS_INTERVAL = 60*1000;
+  var boardNewsLatest = {};
+  var boardNewsSeen = {};
+  var boardNewsPending = null;
+  var boardNewsCheckedAt = 0;
+  var boardNewsPulsed = new Set();
+  var boardNewsObserver = createBadgeObserver(function (badge) {
+    var section = badge.closest('#mobileMenu, .cm-section-nav, .cm-category-nav, .cm-filter-tabs');
+    var key = (section?.id || section?.className || '') + ':' + badge.dataset.topic;
+    if (boardNewsPulsed.has(key)) return false;
+    boardNewsPulsed.add(key);
+    return true;
+  });
+
+  function syncBoardNews() {
+    var stored = {};
+    try { stored = JSON.parse(localStorage.getItem(BOARD_NEWS_KEY)) || {}; } catch (_) {}
+    var now = Date.now();
+    var fresh = BOARD_NEWS_SECTIONS.filter(function (topic) {
+      var latest = boardNewsLatest[topic];
+      var seen = Math.max(Number(stored[topic]) || 0, boardNewsSeen[topic] || 0);
+      return latest > seen && latest <= now && now-latest <= BOARD_NEWS_WEEK;
+    });
+    var hasBoardNews = fresh.some(function (topic) { return topic !== 'knowhow'; });
+    document.querySelectorAll('[data-board-news]').forEach(function (badge) {
+      var topic = badge.dataset.topic;
+      var hidden = topic ? !fresh.includes(topic) : !hasBoardNews;
+      if (badge.hidden === hidden) return;
+      badge.hidden = hidden;
+      if (hidden) boardNewsObserver?.unobserve(badge);
+      else boardNewsObserver?.observe(badge);
+    });
+  }
+  function refreshBoardNews() {
+    if (boardNewsPending || !window.MONC?.sb || Date.now()-boardNewsCheckedAt < BOARD_NEWS_INTERVAL) return;
+    boardNewsCheckedAt = Date.now();
+    boardNewsPending = Promise.allSettled(BOARD_NEWS_SECTIONS.map(function (topic) {
+      return Promise.resolve().then(function () {
+        if (topic === 'knowhow') {
+          return window.MONC.sb.rpc('community_experience_read',{p_data:{kind:'note',sort:'latest',limit:1}});
+        }
+        return window.MONC.sb.rpc('community_read',{p_action:'posts',p_data:{topic:topic,limit:1}});
+      });
+    })).then(function (results) {
+      results.forEach(function (result, index) {
+        var response = result.value;
+        if (result.status !== 'fulfilled' || response?.error || !response?.data?.ok) return;
+        var topic = BOARD_NEWS_SECTIONS[index];
+        boardNewsLatest[topic] = Date.parse(response.data.items?.[0]?.created_at) || 0;
+      });
+      syncBoardNews();
+    }).finally(function () { boardNewsPending = null; });
+  }
+  function markBoardNewsRead(event) {
+    var topic = event.detail?.topic;
+    var time = Date.parse(event.detail?.created_at);
+    if (!BOARD_NEWS_SECTIONS.includes(topic) || !Number.isFinite(time) || time > Date.now()) return;
+    boardNewsSeen[topic] = Math.max(boardNewsSeen[topic] || 0,time);
+    try {
+      var stored = JSON.parse(localStorage.getItem(BOARD_NEWS_KEY)) || {};
+      stored[topic] = Math.max(Number(stored[topic]) || 0,boardNewsSeen[topic]);
+      localStorage.setItem(BOARD_NEWS_KEY,JSON.stringify(stored));
+    } catch (_) {}
+    syncBoardNews();
+  }
   function menuHtml() {
     var hotBadge = '<span class="tool-hot-badge" aria-hidden="true">HOT</span>';
     return groups.map(function (group,index) {
@@ -113,6 +182,10 @@
       }
       return '<section class="mm-group"' + (group[0] === '커뮤니티' ? ' data-community-menu' : '') + '><h2><button type="button" class="mm-group-toggle" aria-expanded="false" aria-controls="menuGroup' + index + '">' + heading + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><ul id="menuGroup' + index + '" hidden>' + group[1].map(function (item) {
         var label = esc(item[1]);
+        var newsTopics = {'community.html?view=board':'','community.html?view=experiences':'knowhow'};
+        if (Object.hasOwn(newsTopics,item[0])) {
+          label += '<span class="board-news-badge" data-board-news data-topic="' + newsTopics[item[0]] + '" hidden>NEW</span>';
+        }
         if (item[2]) label = '<span class="mm-feature-label">' + label + '</span>' + hotBadge;
         return '<li><a href="' + esc(item[0]) + '"' + (item[2] ? ' class="mm-feature-link"' : '') + ' data-menu-destination>' + label + '</a></li>';
       }).join('') + '</ul></section>';
@@ -136,7 +209,16 @@
     mountFooterSocial();
     upgradeLoginLinks();
     syncCurrent();
-    window.addEventListener('monc:community-route',syncCurrent);
+    window.addEventListener('monc:community-route',function () {
+      syncCurrent();
+      syncBoardNews();
+      refreshBoardNews();
+    });
+    window.addEventListener('monc:board-news-layout',syncBoardNews);
+    window.addEventListener('monc:board-thread-read',markBoardNewsRead);
+    window.addEventListener('storage',function (event) {
+      if (event.key === BOARD_NEWS_KEY || event.key === null) syncBoardNews();
+    });
     window.addEventListener('hashchange',syncCurrent);
     wire();
     initAuth();
@@ -178,7 +260,12 @@
         document.getElementById(button.getAttribute('aria-controls')).hidden=!expanded;
       });
     }
+    window.setInterval(function () {
+      if (document.visibilityState === 'visible' && (onCommunity || dialog.open)) refreshBoardNews();
+    },BOARD_NEWS_INTERVAL);
     opener.addEventListener('click',function () {
+      syncBoardNews();
+      refreshBoardNews();
       savedOverflow = document.body.style.overflow;
       savedPadding = document.body.style.paddingRight;
       var gap = window.innerWidth - document.documentElement.clientWidth;
@@ -267,13 +354,14 @@
 
 
   // 화면에 들어온 배지만 강조하고, 같은 페이지에서는 다시 재생하지 않는다.
-  function initToolBadges() {
-    var badges = document.querySelectorAll('.tool-hot-badge');
-    if (!badges.length || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  function createBadgeObserver(shouldPulse) {
+    if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
     var observer = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
-        if (entry.intersectionRatio < 0.5) return;
+        if (!entry.isIntersecting || entry.intersectionRatio < 0.5) return;
         var badge = entry.target;
+        observer.unobserve(badge);
+        if (shouldPulse && !shouldPulse(badge)) return;
         function stopPulse() {
           badge.classList.remove('is-pulsing');
           badge.removeEventListener('animationend', stopPulse);
@@ -282,10 +370,14 @@
         badge.addEventListener('animationend', stopPulse);
         badge.addEventListener('animationcancel', stopPulse);
         badge.classList.add('is-pulsing');
-        observer.unobserve(badge);
       });
     }, { threshold: 0.5 });
-    badges.forEach(function (badge) { observer.observe(badge); });
+    return observer;
+  }
+
+  function initToolBadges() {
+    var observer = createBadgeObserver();
+    if (observer) document.querySelectorAll('.tool-hot-badge').forEach(function (badge) { observer.observe(badge); });
   }
 
   function markMain() {
