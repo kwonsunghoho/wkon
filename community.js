@@ -139,11 +139,30 @@
   function searchHTML(studies=false) { return `<form data-search class="cm-search"><label for="community-search" class="cm-sr-only">${studies?'스터디 검색':'글과 댓글 검색'}</label><input id="community-search" class="cm-input" name="q" value="${esc(filters.q)}" placeholder="${studies?'지역·항공사·태그 검색':'궁금한 내용을 글·댓글에서 검색'}" maxlength="120"><button type="submit" class="cm-icon-btn" aria-label="검색">${icon('search')}</button></form>`; }
   function topicsHTML() { return `<div class="cm-filter-tabs">${[['','전체'],...Object.entries(topics)].map(([v,t])=>btn('topic',t,v,true,`aria-pressed="${filters.topic===v}"`)).join('')}</div>`; }
   function entryHTML() {
-    return '<nav class="cm-entry-nav" aria-label="커뮤니티 둘러보기"><a href="community.html?view=board" data-route="board"><strong>게시판 <span aria-hidden="true">→</span></strong><span>질문하고 정보를 나누세요.</span></a><a href="community.html?view=studies" data-route="studies"><strong>스터디·활동 <span aria-hidden="true">→</span></strong><span>모집 조건을 보고 함께 준비하세요.</span></a><a class="cex-entry" href="community.html?view=experiences" data-route="experiences"><strong>합격 노하우 <span aria-hidden="true">→</span></strong><span>국내 항공사 전형별 준비법과 지원 정보를 나눠요.</span></a></nav>';
+    return '<nav class="cm-entry-nav" aria-label="게시판과 합격 노하우">'
+      + '<a href="community.html?view=board" data-route="board"><strong>게시판 <span aria-hidden="true">→</span></strong><span>질문과 정보 공유</span></a>'
+      + '<a class="cex-entry" href="community.html?view=experiences" data-route="experiences"><strong>합격 노하우 <span aria-hidden="true">→</span></strong><span>전형별 준비 팁</span></a>'
+      + '</nav>';
   }
   async function overview(main,turn) {
-    const [posts,studies,popular]=await Promise.all([rpc('read','posts',{limit:2}),rpc('read','studies',{limit:2}),checkExperienceAvailability()]);if(turn!==sequence)return;
-    main.innerHTML=entryHTML()+searchHTML()+topicsHTML()+experience.homeHTML(popular?.items||[])+`<section class="cm-section"><div class="cm-section-head"><h2>최근 올라온 글</h2><a class="cm-text-link" href="${path('board')}" data-route="board">전체 보기 →</a></div><div class="cm-thread-list">${posts.items.slice(0,2).map(postHTML).join('')||empty('아직 올라온 글이 없어요.','궁금한 점이나 함께 나눌 정보를 첫 글로 남겨 주세요.')}</div></section><section class="cm-section"><div class="cm-section-head"><h2>모집 중인 스터디</h2><a class="cm-text-link" href="${path('studies')}" data-route="studies">전체 보기 →</a></div><div class="cm-studies-list">${studies.items.slice(0,2).map((s,i)=>studyHTML(s,false,i+1)).join('')||empty('모집 중인 스터디가 없어요.','함께 준비하고 싶은 스터디를 직접 모집할 수 있어요.')}</div></section><a class="cm-program-entry" href="index.html">면접 준비 둘러보기 →</a>`;
+    const [posts,popular] = await Promise.all([
+      rpc('read','posts',{limit:2}),
+      checkExperienceAvailability()
+    ]);
+    if (turn !== sequence) return;
+
+    const recentPosts = posts.items.slice(0,2).map(postHTML).join('')
+      || empty('아직 올라온 글이 없어요.','궁금한 점이나 함께 나눌 정보를 첫 글로 남겨 주세요.');
+    main.classList.add('cm-overview');
+    main.innerHTML = entryHTML() + searchHTML() + topicsHTML() + experience.homeHTML(popular?.items || []) + `
+      <section class="cm-section" aria-labelledby="cm-recent-heading">
+        <div class="cm-section-head">
+          <h2 id="cm-recent-heading">최근 올라온 글</h2>
+          <a class="cm-text-link" href="${path('board')}" data-route="board">전체 보기 →</a>
+        </div>
+        <div class="cm-thread-list">${recentPosts}</div>
+      </section>
+      <a class="cm-program-entry" href="index.html">면접 준비 둘러보기 →</a>`;
   }
   function navigate(view,id='',fromExperiences=false) {
     const from=route().view;
