@@ -98,7 +98,8 @@
 
 
   function myHtml(hint) {
-    return '<a class="nav-my" aria-label="' + (hint ? '마이페이지' : '마이: 로그인') + '" href="' + (hint ? 'mypage.html' : loginHref()) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>마이</span></a>';
+    var platform = document.body.hasAttribute('data-platform');
+    return '<a class="nav-my" aria-label="' + (platform ? (hint ? '내 정보' : '내 정보 로그인') : (hint ? '마이페이지' : '마이: 로그인')) + '" href="' + (hint ? 'mypage.html' : loginHref()) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>' + (platform ? '내 정보' : '마이') + '</span></a>';
   }
   function accountHtml(hint) {
     return hint ? '<a href="mypage.html"><span class="mm-name">' + esc(hint.name || '회원') + ' 님</span><span>내 정보 →</span></a>'
