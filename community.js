@@ -22,6 +22,7 @@
   const studySections = { ...activity.categories, interview:'면접 스터디' };
   const experience=window.MONCExperiences;
   let currentExperience=null;
+  const pendingVotes=new Set();
   const cats = { question:'질문', info:'정보 공유', free:'자유글' };
   const levels = ['실력검증 전','기본 준비','실전 대응','스터디 리딩'];
   const statuses = { pending:'확인 중', approved:'승인', rejected:'반려', withdrawn:'철회', accepted:'참여 승인', removed:'참여 종료', closed:'모집 마감', ended:'스터디 종료', published:'공개', hidden:'숨김', open:'모집 중' };
@@ -168,6 +169,7 @@
         <div class="cm-thread-list">${recentPosts}</div>
       </section>
       <a class="cm-program-entry" href="index.html">면접 준비 둘러보기 →</a>`;
+    experience.hydrateMetrics(main);
     window.dispatchEvent(new Event('monc:board-news-layout'));
   }
   function navigate(view,id='',fromExperiences=false) {
@@ -229,6 +231,9 @@
         if(turn!==sequence)return;
         ownState=state;
         main.innerHTML=current?threadHTML(current)+experience.answersHTML(answers,location.search):empty('볼 수 없는 글입니다.');
+        if (currentExperience?.kind==='note') {
+          experience.recordView(main,currentExperience,!operator&&!currentExperience.mine&&!ownState.mine);
+        } else if (answers.length) experience.hydrateMetrics(main);
         if (current) {
           const seenTopics=currentExperience?.kind==='note'?[current.topic,'knowhow']:[current.topic];
           for (const topic of seenTopics) window.dispatchEvent(new CustomEvent('monc:board-thread-read',{
@@ -265,8 +270,17 @@
     ownedStudies=new Set();if(studies&&session&&consent&&!operator){try{const mine=await rpc('member','activity');if(turn!==sequence)return;ownedStudies=new Set((mine.studies||[]).filter(s=>s.role==='owner').map(s=>s.id));}catch(_){/* 권한 확인 실패 시 관리 바로가기를 표시하지 않는다. */}}
     items=data.items.slice(0,data.limit);next=data.items.length>data.limit?items.at(-1):null;
     main.innerHTML=(studies&&operator?btn('study-admin','전체 스터디 관리','',true):'')+(studies?`<div class="cm-recruitment-tabs" aria-label="모집 상태">${[['all','전체'],['open','모집 중'],['closed','모집 마감'],['ended','스터디 종료']].map(([v,t])=>btn('recruitment',t,v,true,`aria-pressed="${filters.recruitment===v}"`)).join('')}</div>`+studyHelpHTML()+'<section class="cm-study-search-panel" aria-label="스터디 검색과 필터">':'')+searchHTML(studies)+(studies?`<div class="cm-study-filters">${[['','전체'],['online','온라인'],['offline','오프라인']].map(([v,t])=>btn('mode',t,v,true,`aria-pressed="${filters.mode===v}"`)).join('')}${!filters.study_category||filters.study_category==='interview'?btn('verified','인증 필수','',true,`aria-pressed="${filters.verified}"`):''}</div>${filters.verified?'<p class="cm-help">면접 경험 인증이나 몬크 실력 레벨을 참여 조건으로 둔 스터디만 보여요.</p>':''}</section>`:'')+`<div class="cm-toolbar"><span class="cm-caption">최신순</span>${btn(studies?'study-create':'post-create',studies?'모임 모집하기':'글쓰기')}</div><div id="community-list" class="${studies?'cm-studies-list':'cm-thread-list'}">${items.length?items.map(studies?(s,i)=>studyHTML(s,false,i+1):postHTML).join(''):empty(filters.q||filters.topic||filters.mode||filters.verified?'조건에 맞는 결과가 없어요.':studies?'해당 상태의 스터디가 없어요.':'아직 올라온 글이 없어요.',filters.q||filters.topic||filters.mode||filters.verified?'검색어나 선택한 조건을 바꿔 보세요.':studies?'함께 준비하고 싶은 스터디를 직접 모집할 수 있어요.':'궁금한 점이나 함께 나눌 정보를 첫 글로 남겨 주세요.')}</div>${next?btn('more','더 보기','',true):''}`;
+    if (!studies) experience.hydrateMetrics(main);
   }
-  function postHTML(p) { return `<article class="cm-post"><div class="cm-post-head"><span>${esc(topics[p.topic]||'승준정보')} · ${esc(cats[p.category]||'글')}</span>${esc(p.airline)}${p.stage?' · '+esc(p.stage):''}</div><button type="button" class="cm-post-title" data-action="thread" data-id="${p.id}">${esc(p.title)}</button><div class="cm-post-foot"><span>${esc(p.nickname)} · ${date(p.created_at)}</span><span>댓글 ${p.comments}</span></div></article>`; }
+  function postHTML(p) {
+    const metrics=p.topic==='prep'&&p.category==='info' ? experience.metricsHTML(p.id,true) : '';
+    return `<article class="cm-post">
+      <div class="cm-post-head"><span>${esc(topics[p.topic]||'승준정보')} · ${esc(cats[p.category]||'글')}</span>${esc(p.airline)}${p.stage?' · '+esc(p.stage):''}</div>
+      <button type="button" class="cm-post-title" data-action="thread" data-id="${esc(p.id)}">${esc(p.title)}</button>
+      <div class="cm-post-foot cex-board-foot"><span>${esc(p.nickname)} · ${date(p.created_at)}</span>
+        <span class="cex-metrics">${metrics}<span>댓글 ${esc(p.comments)}</span></span></div>
+    </article>`;
+  }
   function threadHTML(p) {
     const meta = currentExperience;
     const note = meta?.kind === 'note';
@@ -282,7 +296,7 @@
       header = `<header class="cex-reading-header">
         <div class="cex-reading-meta"><span>${context}</span>${verified}</div>
         <h2>${title}</h2>
-        ${byline}
+        <div class="cex-reading-byline">${byline}${experience.metricsHTML(p.id)}</div>
       </header>`;
     } else {
       const tags = meta
@@ -460,15 +474,45 @@
     if(['home','board','studies','profile','thread','study','study-admin','activity','experiences'].includes(action)) { navigate(action,id);return; }
     if(action==='retry') { render();return; }
     if(['topic','category','mode','verified','recruitment'].includes(action)) { if(action==='verified')filters.verified=!filters.verified;else filters[action]=id;if(route().view==='home'){history.pushState(null,'',path('board'));}syncFilters();next=null;render();return; }
-    if(action==='more') { if(!next)return;const data=await rpc('read',route().view==='studies'?'studies':'posts',{...filters,before:next.created_at,before_id:next.id});items.push(...data.items.slice(0,data.limit));next=data.items.length>data.limit?data.items[data.limit-1]:null;document.getElementById('community-list').innerHTML=items.map(route().view==='studies'?(s,i)=>studyHTML(s,false,i+1):postHTML).join('');node.hidden=!next;return; }
+    if(action==='more') {
+      if(!next)return;
+      const list=document.getElementById('community-list');
+      const studies=route().view==='studies', turn=sequence;
+      const data=await rpc('read',studies?'studies':'posts',{...filters,before:next.created_at,before_id:next.id});
+      if(turn!==sequence || !list?.isConnected)return;
+      const page=data.items.slice(0,data.limit);
+      list.insertAdjacentHTML('beforeend',page.map(studies?(s,i)=>studyHTML(s,false,items.length+i+1):postHTML).join(''));
+      items.push(...page);
+      next=data.items.length>data.limit?page.at(-1):null;
+      node.hidden=!next;
+      if(!studies)experience.hydrateMetrics(list);
+      return;
+    }
     if(!(await member(!['notices','asset-read','proof-withdraw','application-withdraw'].includes(action))))return;
     if(action==='profile-edit') { editProfile(me);return; }
     if(action==='post-edit'&&currentExperience) {
       await showExperienceForm(currentExperience);return;
     }
     if(action==='post-create'||action==='post-edit') { postForm(action==='post-edit'?current:{});return; }
-    if(action==='experience-vote'&&currentExperience?.id===id) {
-      await experience.vote(id,!currentExperience.voted);render();return;
+    if(action==='experience-vote') {
+      const item=currentExperience;
+      if(item?.id!==id || !node.isConnected)return;
+      const active=!item.voted, previous=Number(item.votes)||0;
+      experience.updateVote(node,item,active,Math.max(0,previous+(active?1:-1)));
+      try {
+        await experience.vote(id,active);
+      } catch (_) {
+        if(node.isConnected)experience.updateVote(node,item,!active,previous);
+        toast('반응을 반영하지 못했어요. 다시 시도해 주세요.');
+        return;
+      }
+      try {
+        const saved=await experience.item(id);
+        if(saved && currentExperience===item && node.isConnected) {
+          experience.updateVote(node,item,Boolean(saved.voted),saved.votes);
+        }
+      } catch (_) { /* 저장에 성공했으면 나중에 상세를 다시 열 때 숫자를 확인한다. */ }
+      return;
     }
     if(action==='experience-answer'&&currentExperience?.kind==='request') {
       const {airline,stage,recruit_year,half}=currentExperience;
@@ -511,7 +555,23 @@
       return;
     }
     if(!node||node.disabled)return;
-    node.disabled=true;try{await act(node.dataset.action,node.dataset.id||'',node);}catch(err){toast(errorText(err));}finally{node.disabled=false;}
+    const action=node.dataset.action, id=node.dataset.id||'';
+    const vote=action==='experience-vote';
+    if(vote) {
+      if(pendingVotes.has(id))return;
+      pendingVotes.add(id);
+      node.setAttribute('aria-busy','true');
+    } else node.disabled=true;
+    try {
+      await act(action,id,node);
+    } catch(err) {
+      toast(errorText(err));
+    } finally {
+      if(vote) {
+        pendingVotes.delete(id);
+        node.removeAttribute('aria-busy');
+      } else node.disabled=false;
+    }
   });
   document.addEventListener('submit',async e=>{
     const f=e.target;

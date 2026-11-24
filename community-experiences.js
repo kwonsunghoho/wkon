@@ -42,6 +42,81 @@
   const read = data => rpc('read', { p_data:data });
   const write = (action, data) => rpc('member', { p_action:action, p_data:data });
 
+  const number = new Intl.NumberFormat('ko-KR');
+  const visitorStorageKey = 'monc-community-visitor';
+  const uuid = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
+  let visitorId;
+
+  function viewVisitor() {
+    if (visitorId) return visitorId;
+    try {
+      const saved = localStorage.getItem(visitorStorageKey);
+      if (uuid.test(saved || '')) return visitorId = saved;
+    } catch (_) { /* 브라우저 저장소를 사용할 수 없으면 현재 화면에서만 보관한다. */ }
+    visitorId = globalThis.crypto?.randomUUID?.();
+    if (visitorId) {
+      try { localStorage.setItem(visitorStorageKey, visitorId); } catch (_) {}
+    }
+    return visitorId;
+  }
+
+  function metricsHTML(id, withVotes = false) {
+    return `<span class="cex-metrics" data-experience-metrics="${escape(id)}" hidden>
+      <span data-experience-views></span>${withVotes ? '<span data-experience-votes></span>' : ''}</span>`;
+  }
+
+  function setViews(slot, views) {
+    if (views == null || !Number.isSafeInteger(Number(views)) || Number(views) < 0) return;
+    slot.querySelector('[data-experience-views]').textContent = '조회 ' + number.format(views);
+    slot.hidden = false;
+  }
+
+  async function hydrateMetrics(root) {
+    if (!root) return;
+    const slots = [...root.querySelectorAll('[data-experience-metrics]:not([data-metrics-requested])')];
+    const groups = new Map();
+    for (const slot of slots) {
+      slot.dataset.metricsRequested = '';
+      const id = slot.dataset.experienceMetrics;
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(slot);
+    }
+    const ids = [...groups.keys()];
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const batch = ids.slice(offset, offset + 100);
+      try {
+        const { items } = await rpc('metrics', { p_ids:batch });
+        for (const item of items) {
+          for (const slot of groups.get(item.id) || []) {
+            if (!slot.isConnected) continue;
+            setViews(slot, item.views);
+            const votes = slot.querySelector('[data-experience-votes]');
+            if (votes) votes.textContent = '도움됐어요 ' + number.format(item.votes);
+          }
+        }
+      } catch (_) {
+        for (const id of batch) {
+          for (const slot of groups.get(id)) delete slot.dataset.metricsRequested;
+        }
+      }
+    }
+  }
+
+  async function recordView(root, item, count) {
+    const slot = root.querySelector('[data-experience-metrics]');
+    const visitor = count && viewVisitor();
+    if (visitor && slot) {
+      try {
+        const { views } = await rpc('record_view', { p_id:item.id, p_visit_id:visitor });
+        if (slot.isConnected && views != null) {
+          setViews(slot, views);
+          return;
+        }
+      } catch (_) { /* 조회수 기록 실패가 읽기를 방해하지 않게 한다. */ }
+    }
+    hydrateMetrics(root);
+  }
+
   function linkToThread(id, filters = '') {
     const params = new URLSearchParams(filters);
     params.set('view', 'thread');
@@ -76,7 +151,9 @@
       <div class="cex-meta"><span>${meta}</span>${item.verified ? '<span class="cm-tag" title="항공사·연도 기준">최종합격 확인</span>' : ''}</div>
       <a class="cm-post-title" href="${href}" data-experience-thread="${escape(item.id)}">${escape(item.title)}</a>
       ${compact ? '' : `<p class="cm-post-excerpt">${escape(cardPreview(item))}</p>`}
-      <div class="cm-post-foot"><span>${escape(item.nickname)} · ${escape(date)}</span><span>${voteLabel} ${Number(item.votes)}${count}</span></div>
+      <div class="cm-post-foot"><span>${escape(item.nickname)} · ${escape(date)}</span><span class="cex-metrics">
+        ${item.kind === 'note' ? metricsHTML(item.id) : ''}<span>${voteLabel} ${number.format(item.votes)}${count}</span>
+      </span></div>
     </article>`;
   }
 
@@ -221,6 +298,7 @@
         }
         if (append) results.insertAdjacentHTML('beforeend', cards.join(''));
         else results.innerHTML = cards.join('') || emptyHTML();
+        hydrateMetrics(results);
         offset += items.length;
         more.hidden = data.items.length <= data.limit;
         ready = true;
@@ -484,12 +562,19 @@
     const origin = item.request_id ? `<p class="cex-reference"><a href="${escape(linkToThread(item.request_id))}" data-experience-thread="${escape(item.request_id)}">답변한 요청 · ${escape(item.request_title)}</a></p>` : '';
     return `${origin}<div class="cm-wrap cex-thread-actions">
       <button type="button" class="cm-btn-ghost cex-vote" data-action="experience-vote" data-id="${escape(item.id)}"
-        aria-pressed="${Boolean(item.voted)}" ${item.mine ? 'disabled' : ''}>${label} <span>${Number(item.votes)}</span></button>
+        aria-pressed="${Boolean(item.voted)}" ${item.mine ? 'disabled' : ''}>${label} <span data-experience-vote-count>${number.format(item.votes)}</span></button>
       ${request ? '<button type="button" class="cm-btn" data-action="experience-answer">관련 노하우 공유하기</button>' : ''}</div>`;
   }
 
   async function item(id) {
     return (await read({ id })).items[0] || null;
+  }
+
+  function updateVote(button, item, active, votes) {
+    item.voted = active;
+    item.votes = votes;
+    button.setAttribute('aria-pressed', String(active));
+    button.querySelector('[data-experience-vote-count]').textContent = number.format(votes);
   }
 
   async function vote(id, active) { await write('vote', { id, active }); }
@@ -515,6 +600,7 @@
 
   window.MONCExperiences = {
     mount, homeHTML, item, vote, save, draft, postForm, mountPostForm, threadHTML, readingBodyHTML, period,
+    metricsHTML, hydrateMetrics, recordView, updateVote,
     popular:() => read({ sort:'popular', popular_only:true, limit:3 }),
     answers:async request_id => (await read({ request_id, limit:20 })).items.slice(0, 20),
     answersHTML:(items, params) => items.length ? `<section class="cm-section"><div class="cm-section-head"><h2>공유된 노하우</h2></div>
