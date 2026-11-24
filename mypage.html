@@ -120,8 +120,10 @@
     .v2-folds-h b { font-family: var(--serif); font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
     .v2-folds-h em { font-style: normal; font-size: 12px; color: var(--text-dim); }
     .v2-fold { border-bottom: 1px solid var(--border-soft); scroll-margin-top: 72px; }
-    .v2-fold:last-of-type { border-bottom: 0; }
-    .v2-fold > summary { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 2px;
+    details.v2-fold:last-of-type { border-bottom: 0; }
+    .v2-log-link { text-decoration: none; }
+    .v2-log-link .v2-fold-ar { transform: rotate(-90deg); }
+    .v2-log-link, .v2-fold > summary { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 2px;
       cursor: pointer; list-style: none; min-width: 0; }
     .v2-fold > summary::-webkit-details-marker { display: none; }
     /* 아이콘은 연네이비 사각 배지 — padding 으로 안쪽 그림은 20px 유지 */
@@ -459,6 +461,16 @@
           </div>
         </details>
 
+        <details class="v2-fold" id="sec-study-log" hidden>
+          <summary>
+            <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6C9 4 5 4 2.5 5v14c2.5-1 6.5-1 9.5 1 3-2 7-2 9.5-1V5C19 4 15 4 12 6Zm0 0v14"/></svg>
+            <span class="v2-fold-t">스터디 성장일지</span>
+            <span class="v2-fold-c" id="studyLogCount"></span>
+            <svg class="v2-fold-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="v2-fold-body"><ul class="v2-list" id="studyLogRooms"></ul></div>
+        </details>
+
         <details class="v2-fold" id="sec-news" style="display:none;">
           <summary>
             <svg class="v2-fold-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h13v14a1 1 0 0 0 1 1H5a1 1 0 0 1-1-1V5z"/><path d="M17 9h3v10a1 1 0 0 1-1 1M7 9h6M7 13h6M7 17h4"/></svg>
@@ -759,6 +771,44 @@
         } catch (_) { /* 미리보기 없이 제목만 보여준다 */ }
         return open;
       } catch (_) { return []; }
+    }
+
+    async function loadStudyFeedback(memberId) {
+      const fold = document.getElementById('sec-study-log');
+      let current = true;
+      MONC.sb.auth.onAuthStateChange((_event, session) => {
+        if (session?.user.id !== memberId) {
+          current = false;
+          document.getElementById('sec-study-log')?.remove();
+        }
+      });
+      try {
+        const { data: rooms, error } = await MONC.sb.rpc('my_study_feedback');
+        if (!current || error || !rooms?.length) return;
+        const roomUrl = room => 'study-room.html?id=' + encodeURIComponent(room.room_id) + '&tab=log';
+        const count = rooms.reduce((total, room) => total + room.note_count, 0);
+        document.getElementById('studyLogCount').textContent = '피드백 ' + count + '개';
+        if (rooms.length === 1) {
+          const link = document.createElement('a');
+          link.id = fold.id;
+          link.className = 'v2-fold v2-log-link';
+          link.href = roomUrl(rooms[0]);
+          link.append(...fold.querySelector('summary').children);
+          fold.replaceWith(link);
+          if (location.hash === '#sec-study-log') openHashFold();
+          return;
+        }
+        const list = document.getElementById('studyLogRooms');
+        for (const room of rooms) {
+          const link = document.createElement('a');
+          link.className = 'v2-item';
+          link.href = roomUrl(room);
+          link.textContent = room.title + ' · 피드백 ' + room.note_count + '개';
+          list.appendChild(document.createElement('li')).appendChild(link);
+        }
+        fold.hidden = false;
+        if (location.hash === '#sec-study-log') openHashFold();
+      } catch (_) { /* 미적용 또는 조회 실패 시 기존 마이페이지를 계속 사용한다. */ }
     }
 
     // ── 내 답변노트 접이 (answers + questions 조인, RLS 상 내 것만) ──
@@ -1512,6 +1562,7 @@
       }).catch(() => {});
       // 승자각 제출 카드가 답변 제목을 재사용하므로 promise 를 들고 있는다(추가 요청 없이 한 번만 조회)
       const ansLoad = loadAnswerNotes(me);
+      loadStudyFeedback(me);
       loadNewsScraps();
       loadLabPurchases();
       // 결제사 복귀(?payresult=1) — 지갑을 그리기 전에 먼저 시작. 끝나면 대기 화면을 내린다.
@@ -1829,7 +1880,8 @@
       const id = location.hash.slice(1);
       if (!id) return;
       const el = document.getElementById(id);
-      if (el && el.tagName === 'DETAILS' && el.style.display !== 'none') {
+      if (el?.matches('a.v2-log-link')) { el.scrollIntoView({ block: 'start' }); return; }
+      if (el && !el.hidden && el.tagName === 'DETAILS' && el.style.display !== 'none') {
         el.open = true;
         el.scrollIntoView({ block: 'start' });
       }

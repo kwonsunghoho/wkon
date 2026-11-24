@@ -252,7 +252,18 @@
       }
       else if(view==='study') {
         ownState={};
-        if(session&&consent){ownState=await rpc('member','study-state',{id});if(turn!==sequence)return;}
+        if(session&&consent){
+          const state=await rpc('member','study-state',{id});
+          if(turn!==sequence)return;
+          if(state.joined||state.owner||state.can_manage){
+            try {
+              const room=await MONC.sb.rpc('study_room',{p_room:id,p_action:'available',p_data:{}});
+              state.room_available=!room.error && room.data===true;
+            } catch (_) { /* 스터디룸 조회가 지연돼도 모집 상세를 열 수 있다. */ }
+            if(turn!==sequence)return;
+          }
+          ownState=state;
+        }
         const data=ownState.item?{item:ownState.item}:await rpc('read','study',{id});if(turn!==sequence)return;current=data.item;
         if(!filters.study_category&&studySections[current?.study_category]) {
           app.querySelector('.cm-category-nav').outerHTML=categoryNavigation('studies',current.study_category);
@@ -339,7 +350,7 @@
     if(st.can_manage)return MONCStudyManagement.render(s,st);
     const restrictions=[s.min_level?`몬크 Lv.${s.min_level} 이상`:'',s.require_experience?'면접 진출 경험 인증 필수':'',...(s.required_skills||[]).map(v=>skills[v])].filter(Boolean);
     const unavailable=s.status!=='open'?(s.status==='ended'?'스터디 활동이 종료됐어요':'모집이 마감됐어요'):s.members>=s.capacity?'정원이 찼어요':'';
-    const action=st.owner?'':st.joined?'<span class="cm-detail-state">참여 중인 스터디</span>':st.application?.status==='pending'?'<span class="cm-detail-state">참여 승인 대기 중</span>':unavailable?`<span class="cm-detail-state">${unavailable}</span>`:btn(session?'apply':'study-login',session?'스터디 지원하기':'로그인하고 지원하기',s.id);
+    const action=st.room_available?`<a class="cm-btn" href="study-room.html?id=${encodeURIComponent(s.id)}">우리 스터디 열기</a>`:st.owner?'':st.joined?'<span class="cm-detail-state">참여 중인 스터디</span>':st.application?.status==='pending'?'<span class="cm-detail-state">참여 승인 대기 중</span>':unavailable?`<span class="cm-detail-state">${unavailable}</span>`:btn(session?'apply':'study-login',session?'스터디 지원하기':'로그인하고 지원하기',s.id);
     const people=members.map(v=>v.profile?`<div class="cm-detail-person"><span class="cm-avatar" aria-hidden="true">${esc(v.profile.nickname.slice(0,1))}</span><div><strong>${esc(v.profile.nickname)}</strong>${v.role==='owner'?'<span class="cm-person-role">모집자</span>':''}${v.profile.assessment||v.profile.certificates.length?`<p class="cm-caption">${[v.profile.assessment?'몬크 Lv.'+v.profile.assessment.level:'',v.profile.certificates.length?'면접 경험 인증':''].filter(Boolean).join(' · ')}</p>`:''}</div>${btn('profile','프로필',v.profile.id,true)}</div>`:'<p class="cm-muted">이용이 제한된 프로필입니다.</p>').join('');
     const guide=st.joined?`<section class="cm-detail-block"><div class="cm-detail-section-head"><h3>참여 안내</h3><span class="cm-caption">참여자에게만 공개</span></div>${st.member_guide?`<p class="cm-detail-copy">${esc(st.member_guide)}</p>`:!st.owner?'<p class="cm-muted">모집자가 모임 안내를 준비하고 있어요.</p>':''}${st.owner?btn('study-guide',st.member_guide?'안내 수정':'참여 안내 작성',s.id,true):''}</section>`:'';
 
