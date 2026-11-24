@@ -60,9 +60,9 @@
     return visitorId;
   }
 
-  function metricsHTML(id, withVotes = false) {
+  function metricsHTML(id) {
     return `<span class="cex-metrics" data-experience-metrics="${escape(id)}" hidden>
-      <span data-experience-views></span>${withVotes ? '<span data-experience-votes></span>' : ''}</span>`;
+      <span data-experience-views></span></span>`;
   }
 
   function setViews(slot, views) {
@@ -90,8 +90,6 @@
           for (const slot of groups.get(item.id) || []) {
             if (!slot.isConnected) continue;
             setViews(slot, item.views);
-            const votes = slot.querySelector('[data-experience-votes]');
-            if (votes) votes.textContent = '도움됐어요 ' + number.format(item.votes);
           }
         }
       } catch (_) {
