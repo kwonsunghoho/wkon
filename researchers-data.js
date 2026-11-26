@@ -127,29 +127,6 @@ window.MONC_RESEARCHERS = [
     ]
   },
   {
-    id:'huh-soyoung',
-    role:'선임 연구원',
-    name:'허소영',
-    position:'대한항공 출신 · 스피치 & 보이스 트레이닝 전문가',
-    photo:'images/instructor-huh-soyoung.webp',
-    tags:['면접 보이스','스피치 트레이닝','표현력 지도'],
-    bio:'대한항공 국제선 객실승무원으로 8년간 근무하며 <strong>상위 클래스 서비스</strong>를 담당했습니다. 3년간 스피치·보이스 트레이닝 전문 강사로 활동하며, <strong>면접관에게 신뢰감을 주는 목소리</strong>와 자연스러운 표현력을 함께 지도합니다.',
-    stats:[
-      {num:8, suffix:'년', label:'대한항공'},
-      {num:3, suffix:'년', label:'스피치·보이스'},
-      {num:'국제선', suffix:'', label:'상위 클래스'}
-    ],
-    key:[
-      '<strong>대한항공 국제선 객실승무원 8년</strong> 근무',
-      '국제선 <strong>상위 클래스 서비스</strong> 담당',
-      '<strong>스피치·보이스 트레이닝 전문 강사 3년</strong> 활동'
-    ],
-    more:[
-      '면접관에게 신뢰감을 주는 보이스 트레이닝',
-      '면접에서 자연스럽게 말하는 표현력 지도'
-    ]
-  },
-  {
     id:'hyun',
     role:'선임 연구원',
     name:'제이크',
