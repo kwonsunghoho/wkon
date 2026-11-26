@@ -212,6 +212,27 @@
     .tab-panel.active { display: block; }
     .rounds-wrap { padding: 24px; max-width: 900px; }
 
+    /* 기수별 예약은 공개 DAY 문항 편집과 분리된다. */
+    #missionSchedule .ms-toolbar,#missionSchedule .ms-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:end; }
+    #missionSchedule .ms-toolbar .field { flex:1 1 180px; }
+    #missionSchedule .field { display:grid; gap:6px; min-width:0; color:var(--text-muted); font-size:13px; font-weight:650; }
+    #missionSchedule :is(input,select,textarea) { display:block; min-width:0; width:100%; min-height:44px; border:1px solid var(--border-strong); border-radius:var(--radius-xs); background:var(--surface); color:var(--text); font:inherit; font-size:16px; padding:8px 10px; }
+    #missionSchedule textarea { resize:vertical; }
+    #missionSchedule button { min-height:44px; }
+    #msList { margin-top:14px; color:var(--text-muted); font-size:14px; }
+    #missionSchedule .ms-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--border-soft); }
+    #missionSchedule .ms-row > div { min-width:0; }
+    #missionSchedule .ms-row strong { display:block; color:var(--text); overflow-wrap:anywhere; }
+    #missionSchedule .ms-meta { display:block; font-size:12px; margin-top:3px; }
+    #msForm fieldset { display:grid; gap:12px; border:0; border-top:1px solid var(--border-soft); padding:14px 0 0; margin:16px 0 0; min-inline-size:0; }
+    #msForm legend { padding-right:8px; font-size:15px; font-weight:750; }
+    #missionSchedule .ms-dates { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); gap:12px; }
+    #msStatus:not(:empty) { margin-top:12px; }
+    @media(max-width:520px) {
+      #missionSchedule .ms-toolbar .field { flex-basis:100%; }
+      #missionSchedule .ms-dates { grid-template-columns:minmax(0,1fr); }
+    }
+
     /* ── 승자각 DAY 문항(challenge_lessons) — 2026-08-24 오너 "고칠 수 있게 해줘".
        역할 → 모양 표를 따른다: 목록 = 구분선 한 판(.round-list), 주 동작 = .btn-action,
        툴바 = .ad-sq. 알약 금지. */
@@ -1586,6 +1607,34 @@
       <!-- 기수 목록 — 상태별 두 묶음(모집 중·예정 판 + 지난 기수 접이). loadRounds 가 안에 판을 그린다(2026-09-13). -->
       <div id="roundList"><div class="loading">불러오는 중…</div></div>
 
+      <details class="les-wrap" id="missionSchedule">
+        <summary class="les-head">날짜별 미션 예약</summary>
+        <p class="les-lead">보신각 미션은 지정한 평일 0시(한국 시간)에 해당 기수 참가자에게 공개됩니다. 공개 전까지 수정하거나 예약을 취소할 수 있습니다.</p>
+        <div class="ms-toolbar">
+          <label class="field" for="msRound">챌린지·기수<select id="msRound" disabled></select></label>
+          <button class="ad-sq" id="msRefresh" type="button" disabled>새로고침</button>
+          <button class="btn btn-action" id="msAdd" type="button" disabled>미션 추가</button>
+        </div>
+        <div id="msList" aria-label="기수별 미션 목록"></div>
+        <form id="msForm" hidden>
+          <fieldset>
+            <legend>새 미션</legend>
+            <div class="ms-dates">
+              <label class="field">미션 순서<select name="day" required></select></label>
+              <label class="field">공개 날짜<input name="date" type="date" required></label>
+            </div>
+            <label class="field">미션 제목<input name="title" type="text" required maxlength="100"></label>
+            <label class="field">미션 내용<textarea name="body" rows="4" required maxlength="2000"></textarea></label>
+            <div class="ms-actions">
+              <button class="btn btn-action" type="submit">예약 저장</button>
+              <button class="ri-cancel" id="msCancel" type="button">닫기</button>
+              <button class="ri-del is-danger" id="msDelete" type="button" hidden>예약 취소</button>
+            </div>
+          </fieldset>
+        </form>
+        <p class="les-msg" id="msStatus" role="status" aria-live="polite"></p>
+      </details>
+
       <!-- 승자각 DAY 문항 — challenge_lessons 단일 소스(2026-08-24).
            고치면 challenge-answer.html · apply.html · mypage.html 이 같이 바뀐다.
            ⚠️ 표 미생성이면 묶음을 통째로 숨긴다 — 세 화면은 HTML 에 적힌 값으로 그대로 돈다. -->
@@ -2624,6 +2673,7 @@
   <link rel="stylesheet" href="online-course-refunds.css?v=20261103-applicants">
   <script src="online-course-refunds.js?v=20261103-applicants"></script>
 <script src="online-course-admin.js?v=20261104-course-delete"></script>
+  <script src="challenge-mission-admin.js?v=20261126"></script>
   <script src="admin-ui.js?v=20261015b"></script>
 
   <script src="media-storage.js?v=2"></script>
@@ -4839,8 +4889,9 @@
       const listEl = document.getElementById('roundList');
       const { data, error } = await MONC.sb.from('challenge_rounds')
         .select('*').order('challenge').order('round');
-      if (error) { listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
+      if (error) { window.MONCMissionSchedule.setRounds(null); listEl.innerHTML = '<div class="empty">불러오기 실패: ' + esc(error.message) + '</div>'; return; }
       _roundsData = data || [];
+      window.MONCMissionSchedule.setRounds(_roundsData);
       updateBulkUi();   // 기수가 바뀌었으니 '한번에 등록' 안내의 다음 기수도 다시 계산
       if (!data.length) { listEl.innerHTML = '<div class="empty" style="color:var(--text-dim);padding:20px">등록된 기수가 없습니다.</div>'; return; }
       // 학생 화면(마이페이지·제출 입구)에 이 기수가 열려 있는지 — 판정은 round-gate.js(MONC_GATE) 한 곳
