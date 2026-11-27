@@ -42,6 +42,49 @@
   let transferred = null;
   let previewRequest = 0;
   let previewButton = null;
+  let roundsState = 'pending';
+  let requestedRound = '';
+  let missingRound = '';
+  let loadingRound = false;
+  let focusAfterRounds = false;
+  let retryRounds = null;
+
+  function updateUploadUrl() {
+    if (!location.search) return;
+    const url = new URL(location.href);
+    if (url.searchParams.get('focus') !== 'voice-upload' || url.searchParams.get('tab') !== 'rounds') return;
+    if (round) url.searchParams.set('round',round);
+    else if (!missingRound && roundsState === 'ready') url.searchParams.delete('round');
+    history.replaceState(history.state,'',url);
+  }
+  function focusUpload() {
+    const target = saving ? panel.querySelector('summary') :
+      !weekForm.hidden ? videoInput : !form.hidden ? (day.disabled ? title : day) : roundSelect.options.length ? roundSelect :
+      roundsState === 'pending' ? panel.querySelector('summary') : msg;
+    target.focus({preventScroll:true});
+    if (target === videoInput || target === day || target === title) target.scrollIntoView({block:'center'});
+    else panel.scrollIntoView({block:'start'});
+  }
+  function openUpload(value) {
+    if (/^[1-9]\d*$/.test(value || '')) requestedRound = value;
+    if (requestedRound && roundsState === 'ready' && !dirty && !saving) {
+      if ([...roundSelect.options].some(o => o.value === requestedRound)) {
+        if (round !== requestedRound) {
+          roundSelect.value = requestedRound; round = requestedRound; closeEditor(); ready = false;
+        }
+        missingRound = '';
+      } else {
+        roundSelect.selectedIndex = -1; round = ''; missingRound = requestedRound; ready = false;
+      }
+      requestedRound = '';
+    }
+    const wasOpen = panel.open;
+    panel.open = true;
+    if (roundsState === 'pending') msg.textContent = '보신각 기수를 불러오는 중입니다.';
+    else if (wasOpen && roundsState === 'ready' && !ready && !loadingRound && !saving) load();
+    focusAfterRounds = roundsState === 'pending'; focusUpload();
+    if (roundsState === 'ready') updateUploadUrl();
+  }
 
   function koreanDate(stamp = Date.now()) {
     return new Date(stamp + 9 * 3600000).toISOString().slice(0, 10);
@@ -120,7 +163,7 @@
     fields.disabled = saving || !ready;
     weekForm.querySelector('fieldset').disabled = saving || !ready;
     weekList.querySelectorAll('button').forEach(b => { b.disabled = saving || !ready; });
-    refreshButton.disabled = saving || !round;
+    refreshButton.disabled = saving || (!round && !(roundsState === 'error' && retryRounds));
     addButton.disabled = saving || !ready || !availableDays().length;
     list.querySelectorAll('button').forEach(b => { b.disabled = saving || !ready; });
   }
@@ -342,7 +385,12 @@
     const turn = ++sequence;
     closePreview();
     ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls();
-    if (!round) { msg.textContent = '기수 관리에서 보신각 기수를 먼저 등록해 주세요.'; return; }
+    if (!round) {
+      loadingRound = false;
+      msg.textContent = missingRound && roundSelect.options.length ? '요청한 보신각 ' + missingRound + '기를 찾을 수 없습니다. 기수를 확인해 주세요.' : '기수 관리에서 보신각 기수를 먼저 등록해 주세요.';
+      return;
+    }
+    loadingRound = true;
     msg.textContent = '예약 일정을 불러오는 중입니다.';
     try {
       const data = await rpc('admin-list', {challenge:'voice', round:Number(round)});
@@ -352,27 +400,37 @@
       ready = true; showVideos(); showRows(); msg.textContent = after;
     } catch (error) {
       if (turn === sequence) msg.textContent = [after, errorText(error)].filter(Boolean).join(' ');
-    } finally { if (turn === sequence) controls(); }
+    } finally { if (turn === sequence) { loadingRound = false; controls(); } }
   }
-  function setRounds(items) {
+  function setRounds(items, retry) {
+    roundsState = items === null ? 'error' : 'ready';
+    retryRounds = retry || null;
     const options = (items || []).filter(r => r.challenge === 'voice').sort((a,b) => Number(b.round) - Number(a.round));
     const last = round;
     roundSelect.replaceChildren(...options.map(r => {
       const option = new Option('보신각(보이스) ' + r.round + '기', String(r.round));
       option.dataset.start = r.program_start || ''; return option;
     }));
-    if (options.some(r => String(r.round) === last)) roundSelect.value = last;
+    const preferred = requestedRound || missingRound || last;
+    if (options.some(r => String(r.round) === preferred)) { roundSelect.value = preferred; missingRound = ''; }
+    else if (items !== null && (requestedRound || missingRound)) { missingRound = requestedRound || missingRound; roundSelect.selectedIndex = -1; }
+    if (items !== null) requestedRound = '';
+    else if (!requestedRound) requestedRound = last;
     round = roundSelect.value;
     if (items === null) {
+      loadingRound = false;
       uploadAbort?.abort(); closePreview();
       ++sequence; closeEditor(); ready = false; rows = []; videos = []; weekList.replaceChildren(); list.replaceChildren();
-      msg.textContent = '기수 목록을 불러오지 못했습니다. 기수 관리를 다시 열어 주세요.';
+      msg.textContent = '기수 목록을 불러오지 못했습니다. 새로고침해 주세요.';
     } else if (last !== round || !ready) {
       if (last !== round) uploadAbort?.abort();
       closeEditor(); rows = []; ready = false;
-      if (panel.open) load();
+      if (panel.open && (last !== round || !loadingRound)) load();
     }
     controls();
+    if (roundsState === 'ready') updateUploadUrl();
+    if (focusAfterRounds && panel.open && document.activeElement === panel.querySelector('summary')) focusUpload();
+    focusAfterRounds = false;
   }
   function openEditor(row) {
     closeEditor();
@@ -406,10 +464,15 @@
   }
   roundSelect.addEventListener('change', () => {
     if (!canDiscard()) { roundSelect.value = round; return; }
-    round = roundSelect.value; closeEditor(); load();
+    missingRound = ''; round = roundSelect.value; updateUploadUrl(); closeEditor(); load();
   });
-  panel.addEventListener('toggle', () => { if (panel.open && !saving && !dirty && form.hidden && weekForm.hidden) load(); });
-  refreshButton.addEventListener('click', () => { if (canDiscard()) { closeEditor(); load(); } });
+  panel.addEventListener('toggle', () => { if (panel.open && roundsState === 'ready' && !loadingRound && !saving && !dirty && form.hidden && weekForm.hidden) load(); });
+  refreshButton.addEventListener('click', () => {
+    if (roundsState === 'error' && retryRounds) {
+      roundsState = 'pending'; controls(); msg.textContent = '보신각 기수를 불러오는 중입니다.'; retryRounds(); return;
+    }
+    if (canDiscard()) { closeEditor(); load(); }
+  });
   addButton.addEventListener('click', () => { if (canDiscard()) openEditor(); });
   form.addEventListener('input', e => { dirty = true; e.target.setCustomValidity?.(''); });
   videoInput.addEventListener('change', () => {
@@ -471,6 +534,6 @@
     if (editId) payload.id = editId;
     write('admin-save', payload, '미션을 예약했습니다.');
   });
-  window.MONCMissionSchedule = {setRounds};
+  window.MONCMissionSchedule = {setRounds,openUpload,leaveUpload() { focusAfterRounds = false; requestedRound = ''; }};
 })();
 

@@ -55,6 +55,100 @@ function adminFixture() {
   }};
 }
 
+// 관리자 진입 가드, 대시보드 탭 전환, 기수 목록은 실제 페이지에서 동작한다.
+function dashboardDatabase({rounds,slow}) {
+  const stub=window.MONC;
+  stub.requireAdmin=async()=>({id:'qa',name:'운영자'});
+  stub.requireConsent=async()=>true;
+  stub.sb.from=table=>{
+    const query=new Proxy({}, {get(_,key) {
+      if (key!=='then') return ()=>query;
+      return (resolve,reject)=> {
+        if (table==='challenge_rounds') {
+          window.roundRequests=(window.roundRequests||0)+1;
+          if (slow) {
+            const prior=window.releaseRoundList;
+            window.releaseRoundList=()=>{prior?.();resolve({data:rounds,error:null})};
+            return;
+          }
+        }
+        Promise.resolve({data:table==='challenge_rounds'?rounds:[],count:0,error:null}).then(resolve,reject);
+      };
+    }});
+    return query;
+  };
+}
+
+async function dashboardEntry(browser) {
+  const origin='http://127.0.0.1:43239';
+  const assets=path.resolve(process.argv[4]||site);
+  const errors=[];
+  const rounds=[7,8].map(n=>({id:'round-'+n,round:n,challenge:'voice',recruit_start:'2027-01-01',recruit_end:'2027-01-07',program_start:'2027-01-11'}));
+  async function visit(width,query='',items=rounds,slow=false) {
+    const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
+    const page=await context.newPage();
+    page.setDefaultTimeout(5000);
+    page.on('pageerror',e=>errors.push(e.message));
+    await context.route('**/*',async route=>{
+      const url=new URL(route.request().url()), file=decodeURIComponent(url.pathname.slice(1));
+      if (url.origin!==origin) return route.fulfill({body:'',contentType:'text/javascript'});
+      if (file==='supabase-config.js') {
+        const body='('+adminFixture.toString()+')();('+dashboardDatabase.toString()+')('+JSON.stringify({rounds:items,slow})+');';
+        return route.fulfill({body,contentType:'text/javascript; charset=utf-8'});
+      }
+      for (const dir of [site,assets]) {
+        const candidate=path.join(dir,file);
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return route.fulfill({path:candidate});
+      }
+      return route.fulfill({status:404,body:''});
+    });
+    await page.goto(origin+'/admin.html'+query);
+    await page.locator('body.authed').waitFor();
+    return page;
+  }
+  const direct='?tab=rounds&focus=voice-upload';
+  const opened=page=>page.locator('#panel-rounds.active #missionSchedule[open]');
+  for (const width of [375,1280]) {
+    const page=await visit(width);
+    const shortcut=page.locator('#msDashboardUpload');
+    await shortcut.waitFor();
+    const box=await shortcut.boundingBox();
+    assert(box && box.y>=0 && box.y<900 && box.x>=0 && box.x+box.width<=width+1);
+    await shortcut.click();
+    await opened(page).waitFor();
+    await page.getByRole('button',{name:'2주차 영상 등록'}).click();
+    const file=page.locator('#msWeekForm input[type=file]');
+    await file.setInputFiles({name:'대기중.mp4',mimeType:'video/mp4',buffer:Buffer.from('demo')});
+    await page.locator('#msChallengeUpload').click();
+    await file.waitFor();
+    assert.equal(await file.evaluate(el=>el.files[0].name),'대기중.mp4');
+    // 뒤로 가기는 첫 화면, 앞으로 가기는 동일한 업로드 진입점으로 이동한다.
+    await page.goBack();
+    await shortcut.waitFor();
+    await page.goForward();
+    await opened(page).waitFor();
+    await page.close();
+  }
+  const delayed=await visit(375,direct+'&round=7',rounds,true);
+  await opened(delayed).waitFor();
+  await delayed.waitForFunction(()=>typeof window.releaseRoundList==='function');
+  await delayed.locator('#msChallengeUpload').click();
+  await delayed.evaluate(()=>window.releaseRoundList());
+  const select=delayed.locator('#msRound');
+  await delayed.getByRole('button',{name:'2주차 영상 등록'}).waitFor();
+  assert.equal(await select.inputValue(),'7');
+  await select.selectOption('8');
+  await delayed.waitForURL(url=>url.searchParams.get('round')==='8');
+  await delayed.close();
+  const empty=await visit(375,direct,[]);
+  await opened(empty).waitFor();
+  await empty.locator('#msStatus').getByText(/기수.*등록/).waitFor();
+  assert.equal(await empty.locator('#msWeekForm input:visible').count(),0);
+  await empty.close();
+  assert.deepEqual(errors,[]);
+  console.log('PASS 관리자 첫 화면·챌린지 바로가기, 파일 선택 유지, 뒤로/앞으로, 기수 지정/지연/빈 목록, 375·1280px');
+}
+
 (async()=>{
   const browser=await chromium.launch({...(process.argv[3]?{executablePath:process.argv[3]}:{}),args:['--no-sandbox']});
   try {
@@ -112,5 +206,6 @@ function adminFixture() {
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
     console.log('PASS 보신각 관리자 · 파일 검증, 중단·취소, 기존 영상 유지, 완료 재시도, 375px 미리보기');
+    await dashboardEntry(browser);
   } finally {await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
