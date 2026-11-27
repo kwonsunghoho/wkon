@@ -230,6 +230,14 @@
     #missionSchedule .ms-week { display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft); padding:8px 0; }
     #missionSchedule .ms-week strong { color:var(--text); font-size:15px; }
     #missionSchedule .ms-week a { display:inline-block; padding:5px 0; color:var(--action); font-size:13px; text-decoration:underline; text-underline-offset:3px; }
+    #missionSchedule .ms-week > div { min-width:0; overflow-wrap:anywhere; }
+    #missionSchedule input[type="file"] { width:100%; max-width:100%; font-size:14px; }
+    #msTransfer { display:grid; gap:6px; margin:10px 0; }
+    #msTransfer progress { width:100%; accent-color:var(--action); }
+    #msTransfer button { justify-self:start; }
+    #msWeekPreview { display:grid; gap:8px; margin:10px 0; }
+    #msWeekPreview video { display:block; width:100%; max-height:50vh; background:#111; }
+    #msWeekPreview button { justify-self:start; }
     #missionSchedule .ms-week button { flex:none; }
     #missionSchedule .ms-hint { margin:0; color:var(--text-muted); font-size:13px; }
     #missionSchedule .ms-check { display:flex; align-items:center; gap:8px; min-height:44px; cursor:pointer; color:var(--text); }
@@ -1627,16 +1635,27 @@
           <button class="btn btn-action" id="msAdd" type="button" disabled>미션 추가</button>
         </div>
         <div id="msWeekVideos" aria-label="주차별 원본 영상"></div>
+        <div id="msWeekPreview" hidden>
+          <strong id="msPreviewTitle"></strong>
+          <video controls playsinline preload="metadata" aria-labelledby="msPreviewTitle"></video>
+          <span id="msPreviewStatus" class="ms-hint" role="status"></span>
+          <button class="ri-cancel" id="msPreviewClose" type="button">미리보기 닫기</button>
+        </div>
         <form id="msWeekForm" hidden>
           <fieldset>
             <legend>주차 영상 등록</legend>
-            <label class="field">YouTube 주소 또는 영상 ID<input name="video" type="text" required maxlength="500" autocomplete="off" spellcheck="false" placeholder="https://youtu.be/…"></label>
-            <p class="ms-hint">이 주차의 첫 영상 미션이 공개되면 원본 영상이 고정됩니다.</p>
+            <label class="field">주차 원본 파일<input name="video" type="file" required accept=".mp4,.webm,video/mp4,video/webm" aria-describedby="msFileHint"></label>
+            <p class="ms-hint" id="msFileHint">MP4 또는 WebM · 최대 2GB. 이 주차의 첫 영상 미션이 공개되면 원본이 고정됩니다.</p>
             <div class="ms-actions">
-              <button class="btn btn-action" type="submit">원본 영상 저장</button>
+              <button class="btn btn-action" type="submit">원본 영상 업로드</button>
               <button class="ri-cancel" id="msWeekCancel" type="button">닫기</button>
             </div>
           </fieldset>
+          <div id="msTransfer" hidden>
+            <span id="msTransferLabel" class="ms-hint" role="status"></span>
+            <progress max="100" value="0" aria-labelledby="msTransferLabel"></progress>
+            <button id="msStopTransfer" class="ri-cancel" type="button" hidden>업로드 취소</button>
+          </div>
         </form>
         <div id="msList" aria-label="기수별 미션 목록"></div>
         <form id="msForm" hidden>
@@ -2705,7 +2724,7 @@
   <link rel="stylesheet" href="online-course-refunds.css?v=20261103-applicants">
   <script src="online-course-refunds.js?v=20261103-applicants"></script>
 <script src="online-course-admin.js?v=20261104-course-delete"></script>
-  <script src="challenge-mission-admin.js?v=20261127"></script>
+  <script src="challenge-mission-admin.js?v=20261127-file1"></script>
   <script src="admin-ui.js?v=20261015b"></script>
 
   <script src="media-storage.js?v=2"></script>

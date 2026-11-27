@@ -30,7 +30,7 @@ create table monc_community.profiles(user_id uuid,nickname text);
 create table public.challenge_rounds(id uuid primary key,challenge text,round integer,program_start date);
 create table public.applications(id uuid primary key default gen_random_uuid(),member_id uuid,paid bool,payment_status text,refunded bool,challenges jsonb);
 create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
-create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,unique(bucket_id,name));
+create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,metadata jsonb,unique(bucket_id,name));
 alter table storage.objects enable row level security;
 grant insert,select,delete on storage.objects to authenticated;
 create function cron.schedule(text,text,text) returns bigint language sql as $$select 1::bigint$$;
@@ -659,6 +659,124 @@ create function net.http_post(url text,body jsonb default '{}',params jsonb defa
     assertNoVideo(archive);
     assertNoVideo(await rpc("history"));
     assert.deepEqual((await assertServerTime()).cohorts, []);
+
+    // Upgrade a cohort with a scheduled YouTube chapter, then replace its original before release.
+    await root();
+    await db.exec(fs.readFileSync(migration("20261127110000_challenge_week_video_storage.sql"), "utf8"));
+    const media = async (user, action, data) =>
+      (await one("select public.challenge_video_media($1,$2,$3::jsonb) as v", [user, action, JSON.stringify(data)])).v;
+    const target = { challenge: "voice", round: 5, week_no: 1 };
+    const file = { ...target, name: "보신각 1주차.mp4", size: 4096, contentType: "video/mp4" };
+    const videoBucket = "challenge-room-video";
+    const writeObject = (intent, size = file.size) => q(
+      "insert into storage.objects(bucket_id,name,metadata) values($1,$2,$3::jsonb)",
+      [videoBucket, intent.path, JSON.stringify({ size, mimetype: file.contentType })],
+    );
+    assert.deepEqual(await one("select public,file_size_limit::text,allowed_mime_types from storage.buckets where id=$1", [videoBucket]), {
+      public: false, file_size_limit: "2147483648", allowed_mime_types: ["video/mp4", "video/webm"],
+    });
+    const mediaGrants = await one(`select has_function_privilege('anon','public.challenge_video_media(uuid,text,jsonb)','EXECUTE') anon,
+      has_function_privilege('authenticated','public.challenge_video_media(uuid,text,jsonb)','EXECUTE') member,
+      has_function_privilege('service_role','public.challenge_video_media(uuid,text,jsonb)','EXECUTE') service`);
+    assert.deepEqual(mediaGrants, { anon: false, member: false, service: true });
+    const edgeRole = async () => {
+      await root();
+      await db.exec("set role service_role");
+    };
+    await role(admin);
+    assert.equal((await rpc("admin-list", target)).week_videos[0].video_url, watch(weeklyIds[1]));
+    await assert.rejects(() => media(admin, "admin-upload", file), error => error.code === "42501");
+    await edgeRole();
+    await assert.rejects(() => media(outsider, "admin-upload", file));
+    await assert.rejects(() => media(admin, "admin-upload", { ...file, size: 2147483649 }));
+    await assert.rejects(() => media(admin, "admin-upload", { ...file, contentType: "image/png" }));
+    const first = await media(admin, "admin-upload", file);
+    await assert.rejects(() => media(admin, "admin-commit", { upload_id: first.upload_id }));
+    await root();
+    await writeObject(first, file.size - 1);
+    await edgeRole();
+    await assert.rejects(() => media(admin, "admin-commit", { upload_id: first.upload_id }));
+    await media(admin, "admin-cancel", { upload_id: first.upload_id });
+    await role(admin);
+    assert.equal((await rpc("admin-list", target)).week_videos[0].video_url, watch(weeklyIds[1]));
+    await edgeRole();
+    const competing = await media(admin, "admin-upload", { ...file, name: "다른 업로드.mp4" });
+    const good = await media(admin, "admin-upload", file);
+    await root();
+    await writeObject(competing);
+    await writeObject(good);
+    await edgeRole();
+    await media(admin, "admin-commit", { upload_id: good.upload_id });
+    await media(admin, "admin-commit", { upload_id: good.upload_id });
+    await assert.rejects(() => media(admin, "admin-commit", { upload_id: competing.upload_id }));
+    assert.equal((await media(admin, "admin-preview", target)).path, good.path);
+    await assert.rejects(() => media(outsider, "admin-preview", target));
+    await assert.rejects(() => media(outsider, "play", { id: otherDay.id }));
+    await role(admin);
+    const registered = (await rpc("admin-list", target)).week_videos[0];
+    assert.equal(registered.provider, "storage");
+    assert.equal(registered.file_name, file.name);
+    assert.equal(registered.locked, false);
+    await root();
+    await q("update challenge_room_data.missions set release_date=$1::date+2 where id=$2", [dates.past, otherDay.id]);
+    await edgeRole();
+    assert.equal((await media(outsider, "play", { id: otherDay.id })).path, good.path);
+    await assert.rejects(() => media(partial, "play", { id: otherDay.id }));
+    await assert.rejects(() => media(admin, "admin-upload", file));
+    await role(outsider);
+    assert.deepEqual((await rpc("mission", { id: otherDay.id })).mission.chapter, {
+      provider: "storage", week_no: 1, start_seconds: 10, end_seconds: 140,
+    });
+    assert.deepEqual(await q("select name from storage.objects where bucket_id=$1", [videoBucket]), []);
+    await root();
+    await q("update public.applications set refunded=true where member_id=$1", [outsider]);
+    await edgeRole();
+    await assert.rejects(() => media(outsider, "play", { id: otherDay.id }));
+    console.log("PASS private weekly upload, legacy migration, admin/service ACLs, file type/size/actual bytes, cancel/retry, scheduled access, release lock and refund");
+
+    const replaced = await media(admin, "admin-upload", { ...file, week_no: 2 });
+    await root();
+    await writeObject(replaced);
+    await edgeRole();
+    await media(admin, "admin-commit", { upload_id: replaced.upload_id });
+    await role(admin);
+    await rpc("admin-week-save", { ...target, week_no: 2, video_url: weeklyIds[0] });
+    const sweep = async (action, data) =>
+      (await one("select public.challenge_video_cleanup($1,$2::jsonb) as v", [action, JSON.stringify(data)])).v;
+    const claimWithNewTicket = async () => {
+      const token = uuid();
+      await root();
+      await q("insert into challenge_room_data.video_cleanup_tickets values (sha256(convert_to($1,'UTF8')),now()+interval '3 minutes')", [token]);
+      await edgeRole();
+      const {jobs} = await sweep("claim", {token});
+      return {jobs, token};
+    };
+    await assert.rejects(() => sweep("claim", {token:uuid()}), e => e.code==="42501");
+    await root();
+    await db.exec("update challenge_room_data.video_uploads set expires_at=now()-interval '2 hours'");
+    const recent = await claimWithNewTicket();
+    assert.deepEqual(recent.jobs, []);
+    await assert.rejects(() => sweep("claim", {token:recent.token}), /invalid_ticket/);
+    await root();
+    await db.exec("update challenge_room_data.video_uploads set expires_at=now()-interval '2 days'");
+    const expired = await claimWithNewTicket();
+    assert.deepEqual(expired.jobs.map(job=>job.id).sort(), [first.upload_id, competing.upload_id, replaced.upload_id].sort());
+    const cancelledJob = expired.jobs.find(job=>job.id===first.upload_id);
+    assert.deepEqual(await sweep("finish",{...cancelledJob, lease:uuid(), success:true}), {ok:false});
+    assert.deepEqual(await sweep("finish",{...cancelledJob, success:false}), {ok:true});
+    const pending = expired.jobs.find(job=>job.id===competing.upload_id);
+    assert.deepEqual(await sweep("finish",{...pending, success:true}), {ok:true});
+    assert.deepEqual((await claimWithNewTicket()).jobs, []);
+    await root();
+    await q("update challenge_room_data.video_uploads set retry_at=now()-interval '1 minute' where id=$1", [cancelledJob.id]);
+    const retry = (await claimWithNewTicket()).jobs;
+    assert.equal(retry.length,1);
+    assert.equal(retry[0].path,cancelledJob.path);
+    assert.notEqual(retry[0].lease,cancelledJob.lease);
+    assert.deepEqual(await sweep("finish",{...cancelledJob, success:true}), {ok:false});
+    assert.deepEqual(await sweep("finish",{...retry[0], success:true}), {ok:true});
+    assert.equal((await media(admin, "admin-preview", target)).path,good.path);
+    console.log("PASS pending/cancelled/replaced upload expiry, current source protection, single-use cleanup ticket, failed lease and delayed retry");
 
     console.log(
       "PASS combined production migration; guest/private ACL, admin create/locked/delete, KST future, scoped rounds, excluded refunded/failed, free/manual/partial, private/shared/text/audio submits, storage RLS, feedback + idempotency, own archive after refund, per-device opt-in and owner transfer",

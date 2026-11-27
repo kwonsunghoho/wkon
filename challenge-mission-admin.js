@@ -17,6 +17,13 @@
   const weekList = document.getElementById('msWeekVideos');
   const weekForm = document.getElementById('msWeekForm');
   const videoInput = weekForm.elements.video;
+  const transferBox = document.getElementById('msTransfer');
+  const transferLabel = document.getElementById('msTransferLabel');
+  const transferBar = transferBox.querySelector('progress');
+  const stopTransfer = document.getElementById('msStopTransfer');
+  const preview = document.getElementById('msWeekPreview');
+  const previewPlayer = preview.querySelector('video');
+  const previewStatus = document.getElementById('msPreviewStatus');
   const chapter = form.elements.withChapter;
   const startTime = form.elements.chapterStart;
   const endTime = form.elements.chapterEnd;
@@ -30,6 +37,11 @@
   let dirty = false;
   let saving = false;
   let ready = false;
+  let tusLoader = null;
+  let uploadAbort = null;
+  let transferred = null;
+  let previewRequest = 0;
+  let previewButton = null;
 
   function koreanDate(stamp = Date.now()) {
     return new Date(stamp + 9 * 3600000).toISOString().slice(0, 10);
@@ -97,6 +109,7 @@
   function closeEditor() {
     form.hidden = true; form.reset(); editId = null; dirty = false;
     weekForm.hidden = true; weekForm.reset(); editingWeek = null;
+    dropStaged(); transferBox.hidden = true;
     for (const input of [title,body,date,startTime,endTime,chapter,videoInput]) input.setCustomValidity('');
   }
   function canDiscard() {
@@ -116,6 +129,22 @@
     if (result.error) throw result.error;
     return result.data;
   }
+  async function videoApi(action, params) {
+    const result = await MONC.sb.functions.invoke('challenge-week-video',{body:{action,...params}});
+    if (result.data?.ok) return result.data;
+    let reason = result.data?.error;
+    if (!reason && result.error?.context?.clone) {
+      try { reason = (await result.error.context.clone().json()).error; } catch (_) {}
+    }
+    throw new Error(reason || 'video_service_error');
+  }
+  function cancelTicket(id) {
+    if (id) videoApi('admin-cancel',{upload_id:id}).catch(() => {});
+  }
+  function dropStaged() {
+    if (transferred) cancelTicket(transferred.ticket.upload_id);
+    transferred = null;
+  }
   function locked(row) {
     return row.locked || Date.parse(row.opens_at) <= Date.now();
   }
@@ -126,8 +155,113 @@
     if (!ready || saving || video?.locked) return;
     editingWeek = week;
     weekForm.querySelector('legend').textContent = week + '주차 원본 영상 ' + (video ? '수정' : '등록');
-    videoInput.value = video?.video_url || '';
     msg.textContent = ''; weekForm.hidden = false; videoInput.focus();
+  }
+  function closePreview() {
+    ++previewRequest;
+    preview.hidden = true;
+    if (previewPlayer.hasAttribute('src')) {
+      previewPlayer.pause(); previewPlayer.removeAttribute('src'); previewPlayer.load();
+    }
+    previewStatus.textContent = '';
+  }
+  async function previewWeek(week, opener) {
+    closePreview();
+    const turn = previewRequest;
+    previewButton = opener;
+    preview.hidden = false;
+    document.getElementById('msPreviewTitle').textContent = week + '주차 원본 영상';
+    previewStatus.textContent = '영상을 불러오는 중입니다.';
+    document.getElementById('msPreviewClose').focus();
+    try {
+      const data = await videoApi('admin-preview',{challenge:'voice',round:Number(round),week_no:week});
+      if (turn !== previewRequest) return;
+      previewPlayer.src = data.url;
+      previewStatus.textContent = '';
+    } catch (error) {
+      if (turn === previewRequest) previewStatus.textContent = errorText(error);
+    }
+  }
+  function ensureTus() {
+    if (window.tus?.Upload) return Promise.resolve(window.tus);
+    if (!tusLoader) {
+      tusLoader = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js';
+        script.onload = () => window.tus?.Upload ? resolve(window.tus) : reject(new Error('upload_sdk'));
+        script.onerror = () => { script.remove(); reject(new Error('upload_sdk')); };
+        document.head.append(script);
+      }).catch(error => { tusLoader = null; throw error; });
+    }
+    return tusLoader;
+  }
+  async function transferFile(ticket, file, signal) {
+    const [tus, session] = await Promise.all([ensureTus(), MONC.getSession()]);
+    if (signal.aborted) throw new DOMException('upload_cancelled','AbortError');
+    if (!session?.access_token) throw new Error('session_expired');
+    await new Promise((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint:ticket.endpoint,
+        headers:{'x-signature':ticket.token,Authorization:'Bearer ' + session.access_token},
+        chunkSize:6 * 1024 * 1024, retryDelays:[0,1000,3000,5000,10000],
+        uploadDataDuringCreation:true, removeFingerprintOnSuccess:true, storeFingerprintForResuming:false,
+        metadata:{bucketName:ticket.bucket,objectName:ticket.path,contentType:ticket.contentType,cacheControl:'0'},
+        onProgress(sent,total) {
+          if (!signal.aborted && total > 0) {
+            transferBar.value = Math.round(sent / total * 100);
+            transferLabel.textContent = '영상 업로드 ' + transferBar.value + '%';
+          }
+        },
+        onSuccess() { signal.removeEventListener('abort', cancel); resolve(); },
+        onError() { signal.removeEventListener('abort', cancel); reject(new Error('transfer_failed')); }
+      });
+      function cancel() {
+        upload.abort().catch(() => {});
+        reject(new DOMException('upload_cancelled','AbortError'));
+      }
+      signal.addEventListener('abort',cancel,{once:true});
+      upload.start();
+    });
+  }
+  async function uploadWeek() {
+    const file = videoInput.files[0];
+    if (saving || !ready || !editingWeek || weekForm.hidden || !file) return;
+    const extension = file.name.split('.').pop().toLowerCase();
+    const contentType = {mp4:'video/mp4',webm:'video/webm'}[extension];
+    if (!contentType || (file.type && file.type !== contentType)) videoInput.setCustomValidity('MP4 또는 WebM 파일을 선택해 주세요.');
+    else if (!file.size || file.size > 2 * 1024 ** 3) videoInput.setCustomValidity('0바이트보다 크고 2GB 이하인 파일을 선택해 주세요.');
+    if (!weekForm.reportValidity()) return;
+
+    const week = editingWeek, targetRound = round;
+    const controller = new AbortController();
+    uploadAbort = controller; saving = true; controls(); msg.textContent = '';
+    transferBox.hidden = false; stopTransfer.hidden = false;
+    transferBar.value = 0; transferLabel.textContent = '업로드를 준비하고 있습니다.';
+    let ticket = transferred?.file === file ? transferred.ticket : null;
+    let committing = false;
+    try {
+      if (!ticket) {
+        ticket = await videoApi('admin-upload',{challenge:'voice',round:Number(round),week_no:week,name:file.name,size:file.size,contentType});
+        if (controller.signal.aborted) throw new DOMException('upload_cancelled','AbortError');
+        await transferFile(ticket,file,controller.signal);
+        if (controller.signal.aborted) throw new DOMException('upload_cancelled','AbortError');
+        transferred = {file,ticket};
+      }
+      committing = true; stopTransfer.hidden = true; transferBar.value = 100;
+      transferLabel.textContent = '업로드한 영상을 주차 원본으로 저장하고 있습니다.';
+      await videoApi('admin-commit',{upload_id:ticket.upload_id});
+      transferred = null;
+      if (round === targetRound && editingWeek === week) {
+        closeEditor(); await load(week + '주차 원본 영상을 저장했습니다.');
+      }
+    } catch (error) {
+      // 저장 응답이 끊기면 같은 업로드 ID로 완료 여부를 다시 확인한다.
+      if (!committing) cancelTicket(ticket?.upload_id);
+      else if (/expired|not_found|locked|stale|superseded|conflict|invalid_file|invalid_upload|upload_incomplete|size_mismatch|missing_object|upload_missing/.test(error.message)) dropStaged();
+      if (round === targetRound && editingWeek === week) msg.textContent = errorText(error);
+    } finally {
+      uploadAbort = null; saving = false; stopTransfer.hidden = true; transferBox.hidden = true; controls();
+    }
   }
   function showVideos() {
     weekList.replaceChildren();
@@ -140,7 +274,12 @@
       const state = document.createElement('span'); state.className = 'ms-meta';
       state.textContent = (week === 1 ? 'DAY 1–5' : 'DAY 6–10') + ' · ' + (video?.locked ? '공개 후 고정' : video ? '등록됨' : '미등록');
       info.append(heading, state); row.append(info);
-      if (video && /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(video.video_url)) {
+      if (video?.provider === 'storage') {
+        const name = document.createElement('span'); name.className = 'ms-meta'; name.textContent = video.file_name || '업로드한 영상';
+        const open = document.createElement('button'); open.type = 'button'; open.className = 'ri-edit';
+        open.textContent = '원본 보기'; open.setAttribute('aria-label',week + '주차 원본 영상 보기');
+        open.addEventListener('click', () => previewWeek(week,open)); info.append(name,open);
+      } else if (video && /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(video.video_url)) {
         const link = document.createElement('a'); link.href = video.video_url;
         link.textContent = '원본 보기'; link.target = '_blank'; link.rel = 'noopener noreferrer';
         link.setAttribute('aria-label', week + '주차 원본 영상 새 탭에서 보기'); info.append(link);
@@ -180,11 +319,19 @@
   }
   function errorText(error) {
     const reason = String(error?.message || '');
+    if (/unauthoriz|session_expired|unauthenticated|not_authenticated/i.test(reason)) return '다시 로그인한 뒤 영상을 업로드해 주세요.';
+    if (/cancelled|cancelled_upload/i.test(reason) || error?.name === 'AbortError') return '업로드를 취소했습니다.';
+    if (/upload_sdk/.test(reason)) return '파일 전송 도구를 불러오지 못했습니다. 다시 업로드해 주세요.';
+    if (/transfer_failed/.test(reason)) return '파일 전송이 중단됐습니다. 다시 업로드해 주세요.';
+    if (/stale|superseded|edit_conflict|revision_conflict|upload_conflict/.test(reason)) return '주차 원본이 변경되었습니다. 새로고침해 현재 파일을 확인해 주세요.';
+    if (/upload_expired|upload_incomplete|missing_object|invalid_upload|upload_missing/.test(reason)) return '업로드한 파일을 확인할 수 없습니다. 파일을 다시 선택해 업로드해 주세요.';
+    if (/too_large|invalid_size|size_mismatch/.test(reason)) return '최대 2GB 이내의 영상 파일을 선택해 주세요.';
+    if (/invalid_file|content_type|unsupported|bad_video/.test(reason)) return 'MP4 또는 WebM 영상 파일을 선택해 주세요.';
+    if (/video_service_error/.test(reason)) return '영상 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     if (/week_video_missing/.test(reason)) return '이 DAY에 해당하는 주차의 원본 영상을 먼저 등록해 주세요.';
     if (/chapter_order/.test(reason)) return '같은 주차에서 앞 DAY가 끝난 뒤에 시작하고 다음 DAY가 시작되기 전에 끝나도록 구간을 조정해 주세요.';
     if (/bad_chapter_day/.test(reason)) return 'DAY에 지정된 요일과 공개 날짜를 맞춰 주세요.';
     if (/bad_chapter/.test(reason)) return '영상의 시작·끝 시간을 확인해 주세요.';
-    if (/bad_video/.test(reason)) return 'YouTube 영상 주소나 11자리 영상 ID를 확인해 주세요.';
     if (/locked|already.open|already.released|past_date/i.test(reason)) return '이미 공개됐거나 공개 시각이 지났습니다. 일정을 새로고침해 주세요.';
     if (error?.code === '23505' || /duplicate|conflict/i.test(reason)) return '같은 DAY 또는 공개 날짜가 이미 등록되어 있습니다.';
     if (/weekend|weekday|release_date|release_range|bad_schedule|bad_date/i.test(reason)) return '기수 일정에 맞는 미래의 평일을 선택해 주세요.';
@@ -193,6 +340,7 @@
   }
   async function load(after = '') {
     const turn = ++sequence;
+    closePreview();
     ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls();
     if (!round) { msg.textContent = '기수 관리에서 보신각 기수를 먼저 등록해 주세요.'; return; }
     msg.textContent = '예약 일정을 불러오는 중입니다.';
@@ -216,9 +364,11 @@
     if (options.some(r => String(r.round) === last)) roundSelect.value = last;
     round = roundSelect.value;
     if (items === null) {
+      uploadAbort?.abort(); closePreview();
       ++sequence; closeEditor(); ready = false; rows = []; videos = []; weekList.replaceChildren(); list.replaceChildren();
       msg.textContent = '기수 목록을 불러오지 못했습니다. 기수 관리를 다시 열어 주세요.';
     } else if (last !== round || !ready) {
+      if (last !== round) uploadAbort?.abort();
       closeEditor(); rows = []; ready = false;
       if (panel.open) load();
     }
@@ -262,7 +412,16 @@
   refreshButton.addEventListener('click', () => { if (canDiscard()) { closeEditor(); load(); } });
   addButton.addEventListener('click', () => { if (canDiscard()) openEditor(); });
   form.addEventListener('input', e => { dirty = true; e.target.setCustomValidity?.(''); });
-  weekForm.addEventListener('input', () => { dirty = true; videoInput.setCustomValidity(''); });
+  videoInput.addEventListener('change', () => {
+    dirty = true; videoInput.setCustomValidity('');
+    if (transferred?.file !== videoInput.files[0]) dropStaged();
+    msg.textContent = '';
+  });
+  stopTransfer.addEventListener('click', () => { stopTransfer.hidden = true; uploadAbort?.abort(); });
+  document.getElementById('msPreviewClose').addEventListener('click', () => { closePreview(); previewButton?.focus(); });
+  previewPlayer.addEventListener('error', () => {
+    if (!preview.hidden && previewPlayer.hasAttribute('src')) previewStatus.textContent = '영상을 재생하지 못했습니다. 원본 보기를 다시 눌러 주세요.';
+  });
   for (const input of [day, chapter]) input.addEventListener('change', () => {
     syncChapter();
     if (chapter.checked && !date.dataset.userSet) date.value = suggestDate();
@@ -271,10 +430,7 @@
   startTime.addEventListener('input', () => endTime.setCustomValidity(''));
   weekForm.addEventListener('submit', event => {
     event.preventDefault();
-    if (saving || !ready || !editingWeek || weekForm.hidden) return;
-    const value = videoInput.value.trim();
-    if (!value) { videoInput.setCustomValidity('YouTube 영상 주소나 영상 ID를 입력해 주세요.'); weekForm.reportValidity(); return; }
-    write('admin-week-save', {challenge:'voice',round:Number(round),week_no:editingWeek,video_url:value}, editingWeek + '주차 원본 영상을 저장했습니다.');
+    uploadWeek();
   });
   document.getElementById('msWeekCancel').addEventListener('click', () => {
     if (canDiscard()) { const btn = weekList.children[editingWeek - 1]?.querySelector('button'); closeEditor(); btn?.focus(); }

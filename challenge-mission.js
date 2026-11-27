@@ -458,8 +458,18 @@
     const button = e.target.closest('button');
     if (!button) return;
     if (routing) return;
-    if (button.hasAttribute('data-chapter-play')) {
-      await ChallengeChapter.play(button.closest('.chapter-player'),current?.mission.chapter);
+    if (button.matches('[data-chapter-play],[data-chapter-full]')) {
+      const mission = current?.mission;
+      if (!activeCohort || !mission?.chapter) return;
+      const full = button.hasAttribute('data-chapter-full') ? button.dataset.mode!=='full' : button.dataset.chapterPlay==='full';
+      await ChallengeChapter.play(button.closest('.chapter-player'),mission.chapter,{
+        full, resume:button.dataset.resume ? Number(button.dataset.resume) : undefined,
+        async loadURL() {
+          const {data,error} = await MONC.sb.functions.invoke('challenge-week-video',{body:{action:'play',id:mission.id}});
+          if (error || data?.ok!==true || !data.url) throw new Error('video unavailable');
+          return data.url;
+        }
+      });
       return;
     }
     if (button.hasAttribute('data-retry')) { location.reload(); return; }
@@ -511,6 +521,11 @@
       await readHome();
       if (user.user.id !== session.user.id || (activeCohort && !home.cohorts.some(c => c.round === activeCohort.round))) {
         location.reload(); return;
+      }
+      // 뒤로 돌아온 입력 화면에서는 닫힌 플레이어만 복원하고 기존 답변 초안은 유지한다.
+      const chapterPanel = root.querySelector('.chapter-player');
+      if (chapterPanel && current && activeCohort) {
+        chapterPanel.outerHTML = ChallengeChapter.render(current.mission.chapter,current.mission.day_no);
       }
       const record = document.getElementById('mission-record');
       if (record) {
