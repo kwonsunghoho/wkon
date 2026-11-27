@@ -364,6 +364,7 @@
            결제 완료(무료 포함)·미환불 신청의 챌린지마다 카드 1장. 스크립트(renderChSubs)가 채운다.
            구 '2주 미션' 진행 바·14일 격자·코치 코멘트는 같은 날 화면에서 정리(데이터는 보존). -->
       <div id="chSubs" style="display:none;"></div>
+      <a id="voiceMissionHistory" class="v2-outline" style="display:none;margin:16px auto" href="challenge-mission.html?view=history">보신각 미션 · 내 제출 기록</a>
       <section id="onlineLearning" hidden aria-label="온라인 강의와 내 메모"></section>
 
       <!-- 다가오는 일정(예정 특강) -->
@@ -1839,6 +1840,26 @@
       syncTodayQ();
 
       // 내 챌린지 제출 — 결제한 챌린지가 있으면 카드가 뜬다(기수 배정 여부와 무관).
+      // 예약한 기수만 미션으로 연결한다. 수료·환불 뒤에도 내 기록을 다시 볼 수 있다.
+      MONC.sb.rpc('challenge_room', { p_action: 'home', p_data: {} }).then(({ data, error }) => {
+        if (error || !data) return;
+        if (data.history?.length) document.getElementById('voiceMissionHistory').style.display = '';
+        if (!data.cohorts?.length) return;
+        const cohort = data.cohorts.find(row => row.round === partOf.voice) || data.cohorts[0];
+        if (phase === 'tools' || phase === 'lecture' || phase === 'done') {
+          const entry = document.getElementById('voiceMissionHistory');
+          entry.href = 'challenge-mission.html?round=' + encodeURIComponent(cohort.round);
+          entry.textContent = '보신각 미션과 내 기록';
+          entry.style.display = '';
+          return;
+        }
+        const missions = cohort.missions || [];
+        tagEl.innerHTML = TAG_CLOCK + '보신각 ' + esc(String(cohort.round)) + '기';
+        headEl.textContent = missions.length ? '보신각 미션이 열렸어요' : '보신각 미션을 준비하고 있어요';
+        descEl.textContent = missions.length ? '미션을 확인하고 내 답변을 남겨 보세요.' : '첫 미션이 열리면 이 기기로 알림을 받을 수 있어요.';
+        ctaEl.href = 'challenge-mission.html?round=' + encodeURIComponent(cohort.round);
+        ctaTEl.textContent = missions.length ? '보신각 미션 열기' : '보신각 미션 알림 설정';
+      }).catch(() => {});
       // 시작 전 기수(lockOf)는 문항·제출 칸 대신 '시작일 안내'만.
       await renderChSubs(me, partOf, ansLoad, lockOf);
 
