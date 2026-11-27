@@ -224,8 +224,19 @@
     #missionSchedule .ms-row > div { min-width:0; }
     #missionSchedule .ms-row strong { display:block; color:var(--text); overflow-wrap:anywhere; }
     #missionSchedule .ms-meta { display:block; font-size:12px; margin-top:3px; }
-    #msForm fieldset { display:grid; gap:12px; border:0; border-top:1px solid var(--border-soft); padding:14px 0 0; margin:16px 0 0; min-inline-size:0; }
-    #msForm legend { padding-right:8px; font-size:15px; font-weight:750; }
+    #missionSchedule fieldset { display:grid; gap:12px; border:0; border-top:1px solid var(--border-soft); padding:14px 0 0; margin:16px 0 0; min-inline-size:0; }
+    #missionSchedule legend { padding-right:8px; font-size:15px; font-weight:750; }
+    #msWeekVideos { display:grid; gap:0; margin:16px 0; }
+    #missionSchedule .ms-week { display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft); padding:8px 0; }
+    #missionSchedule .ms-week strong { color:var(--text); font-size:15px; }
+    #missionSchedule .ms-week a { display:inline-block; padding:5px 0; color:var(--action); font-size:13px; text-decoration:underline; text-underline-offset:3px; }
+    #missionSchedule .ms-week button { flex:none; }
+    #missionSchedule .ms-hint { margin:0; color:var(--text-muted); font-size:13px; }
+    #missionSchedule .ms-check { display:flex; align-items:center; gap:8px; min-height:44px; cursor:pointer; color:var(--text); }
+    #missionSchedule .ms-check input[type="checkbox"] { flex:none; width:22px; height:22px; min-height:0; padding:0; }
+    #missionSchedule .ms-chapter-fields { display:grid; gap:8px; }
+    #missionSchedule .ms-times { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    #missionSchedule [hidden] { display:none !important; }
     #missionSchedule .ms-dates { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); gap:12px; }
     #msStatus:not(:empty) { margin-top:12px; }
     @media(max-width:520px) {
@@ -1609,12 +1620,24 @@
 
       <details class="les-wrap" id="missionSchedule">
         <summary class="les-head">날짜별 미션 예약</summary>
-        <p class="les-lead">보신각 미션은 지정한 평일 0시(한국 시간)에 해당 기수 참가자에게 공개됩니다. 공개 전까지 수정하거나 예약을 취소할 수 있습니다.</p>
+        <p class="les-lead">보신각 미션은 지정한 평일 0시(한국 시간)에 공개됩니다. 영상 미션은 주차별 원본을 등록한 뒤 DAY별 재생 구간을 지정하세요.</p>
         <div class="ms-toolbar">
           <label class="field" for="msRound">챌린지·기수<select id="msRound" disabled></select></label>
           <button class="ad-sq" id="msRefresh" type="button" disabled>새로고침</button>
           <button class="btn btn-action" id="msAdd" type="button" disabled>미션 추가</button>
         </div>
+        <div id="msWeekVideos" aria-label="주차별 원본 영상"></div>
+        <form id="msWeekForm" hidden>
+          <fieldset>
+            <legend>주차 영상 등록</legend>
+            <label class="field">YouTube 주소 또는 영상 ID<input name="video" type="text" required maxlength="500" autocomplete="off" spellcheck="false" placeholder="https://youtu.be/…"></label>
+            <p class="ms-hint">이 주차의 첫 영상 미션이 공개되면 원본 영상이 고정됩니다.</p>
+            <div class="ms-actions">
+              <button class="btn btn-action" type="submit">원본 영상 저장</button>
+              <button class="ri-cancel" id="msWeekCancel" type="button">닫기</button>
+            </div>
+          </fieldset>
+        </form>
         <div id="msList" aria-label="기수별 미션 목록"></div>
         <form id="msForm" hidden>
           <fieldset>
@@ -1625,6 +1648,15 @@
             </div>
             <label class="field">미션 제목<input name="title" type="text" required maxlength="100"></label>
             <label class="field">미션 내용<textarea name="body" rows="4" required maxlength="2000"></textarea></label>
+            <label class="ms-check"><input name="withChapter" type="checkbox">주차 영상의 재생 구간 지정</label>
+            <div id="msChapterFields" class="ms-chapter-fields" hidden>
+              <p id="msChapterHint" class="ms-hint"></p>
+              <div class="ms-times">
+                <label class="field">시작 시간<input name="chapterStart" type="text" placeholder="0:00" maxlength="12" aria-describedby="msTimeHint"></label>
+                <label class="field">끝 시간<input name="chapterEnd" type="text" placeholder="3:20" maxlength="12" aria-describedby="msTimeHint"></label>
+              </div>
+              <p id="msTimeHint" class="ms-hint">분:초로 입력하세요. 1시간 이상은 시:분:초로 입력할 수 있습니다.</p>
+            </div>
             <div class="ms-actions">
               <button class="btn btn-action" type="submit">예약 저장</button>
               <button class="ri-cancel" id="msCancel" type="button">닫기</button>
@@ -2673,7 +2705,7 @@
   <link rel="stylesheet" href="online-course-refunds.css?v=20261103-applicants">
   <script src="online-course-refunds.js?v=20261103-applicants"></script>
 <script src="online-course-admin.js?v=20261104-course-delete"></script>
-  <script src="challenge-mission-admin.js?v=20261126"></script>
+  <script src="challenge-mission-admin.js?v=20261127"></script>
   <script src="admin-ui.js?v=20261015b"></script>
 
   <script src="media-storage.js?v=2"></script>

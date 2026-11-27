@@ -14,8 +14,17 @@
   const date = form.elements.date;
   const title = form.elements.title;
   const body = form.elements.body;
+  const weekList = document.getElementById('msWeekVideos');
+  const weekForm = document.getElementById('msWeekForm');
+  const videoInput = weekForm.elements.video;
+  const chapter = form.elements.withChapter;
+  const startTime = form.elements.chapterStart;
+  const endTime = form.elements.chapterEnd;
+  const weekdayLabels = ['월', '화', '수', '목', '금'];
   let round = '';
   let rows = [];
+  let videos = [];
+  let editingWeek = null;
   let sequence = 0;
   let editId = null;
   let dirty = false;
@@ -45,16 +54,59 @@
   function availableDays() {
     return Array.from({length:10}, (_, i) => i + 1).filter(n => !rows.some(r => r.day_no === n));
   }
+  function weekOf(n) { return Math.floor((Number(n) - 1) / 5) + 1; }
+  function weekdayOf(n) { return ((Number(n) - 1) % 5) + 1; }
+  function timeLabel(seconds) {
+    if (seconds == null) return '';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds / 60) % 60;
+    const pad = n => String(n).padStart(2, '0');
+    return (hours ? hours + ':' + pad(minutes) : String(minutes)) + ':' + pad(seconds % 60);
+  }
+  function parseTime(input) {
+    const parts = input.trim().split(':');
+    if (parts.length < 2 || parts.length > 3 || !/^\d+$/.test(parts[0])
+      || !parts.slice(1).every(p => /^[0-5]\d$/.test(p))) return NaN;
+    return parts.reduce((n, p) => n * 60 + Number(p), 0);
+  }
+  function suggestDate() {
+    const n = Number(day.value);
+    const peers = rows.filter(r => r.id !== editId && r.chapter_start_seconds != null);
+    const peer = peers.find(r => weekOf(r.day_no) === weekOf(n)) || peers[0];
+    const offset = d => (weekOf(d) - 1) * 7 + weekdayOf(d) - 1;
+    const startOfWeek = new Date((roundSelect.selectedOptions[0]?.dataset.start || koreanDate(Date.now() + 86400000)) + 'T00:00:00Z');
+    startOfWeek.setUTCDate(startOfWeek.getUTCDate() + (8 - startOfWeek.getUTCDay()) % 7);
+    const base = peer ? Date.parse(peer.release_date + 'T00:00:00Z') - offset(peer.day_no) * 86400000 : startOfWeek.getTime();
+    const suggested = new Date(base + offset(n) * 86400000).toISOString().slice(0,10);
+    if (suggested > koreanDate()) return suggested;
+    const first = new Date(defaultDate() + 'T00:00:00Z');
+    first.setUTCDate(first.getUTCDate() + (weekdayOf(n) - first.getUTCDay() + 7) % 7);
+    return first.toISOString().slice(0,10);
+  }
+  function syncChapter() {
+    document.getElementById('msChapterFields').hidden = !chapter.checked;
+    startTime.disabled = endTime.disabled = !chapter.checked;
+    startTime.required = endTime.required = chapter.checked;
+    const week = weekOf(day.value);
+    const hint = document.getElementById('msChapterHint');
+    hint.textContent = videos.some(v => v.week_no === week)
+      ? week + '주차 원본 · ' + weekdayLabels[weekdayOf(day.value)-1] + '요일 공개 구간'
+      : week + '주차 원본 영상을 먼저 등록해 주세요.';
+    for (const input of [chapter,date,startTime,endTime]) input.setCustomValidity('');
+  }
   function closeEditor() {
     form.hidden = true; form.reset(); editId = null; dirty = false;
-    title.setCustomValidity(''); body.setCustomValidity(''); date.setCustomValidity('');
+    weekForm.hidden = true; weekForm.reset(); editingWeek = null;
+    for (const input of [title,body,date,startTime,endTime,chapter,videoInput]) input.setCustomValidity('');
   }
   function canDiscard() {
-    return !dirty || window.confirm('작성 중인 미션을 저장하지 않고 이동할까요?');
+    return !dirty || window.confirm('작성 중인 내용을 저장하지 않고 이동할까요?');
   }
   function controls() {
     roundSelect.disabled = saving || roundSelect.options.length < 1;
     fields.disabled = saving || !ready;
+    weekForm.querySelector('fieldset').disabled = saving || !ready;
+    weekList.querySelectorAll('button').forEach(b => { b.disabled = saving || !ready; });
     refreshButton.disabled = saving || !round;
     addButton.disabled = saving || !ready || !availableDays().length;
     list.querySelectorAll('button').forEach(b => { b.disabled = saving || !ready; });
@@ -67,6 +119,41 @@
   function locked(row) {
     return row.locked || Date.parse(row.opens_at) <= Date.now();
   }
+  function editWeek(week) {
+    if (!canDiscard()) return;
+    closeEditor();
+    const video = videos.find(v => v.week_no === week);
+    if (!ready || saving || video?.locked) return;
+    editingWeek = week;
+    weekForm.querySelector('legend').textContent = week + '주차 원본 영상 ' + (video ? '수정' : '등록');
+    videoInput.value = video?.video_url || '';
+    msg.textContent = ''; weekForm.hidden = false; videoInput.focus();
+  }
+  function showVideos() {
+    weekList.replaceChildren();
+    for (const week of [1, 2]) {
+      const video = videos.find(v => v.week_no === week);
+      const row = document.createElement('div'); row.className = 'ms-week';
+      const info = document.createElement('div');
+      const heading = document.createElement('strong');
+      heading.textContent = week + '주차 원본 영상';
+      const state = document.createElement('span'); state.className = 'ms-meta';
+      state.textContent = (week === 1 ? 'DAY 1–5' : 'DAY 6–10') + ' · ' + (video?.locked ? '공개 후 고정' : video ? '등록됨' : '미등록');
+      info.append(heading, state); row.append(info);
+      if (video && /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(video.video_url)) {
+        const link = document.createElement('a'); link.href = video.video_url;
+        link.textContent = '원본 보기'; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        link.setAttribute('aria-label', week + '주차 원본 영상 새 탭에서 보기'); info.append(link);
+      }
+      if (!video?.locked) {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'ri-edit';
+        btn.textContent = video ? '영상 수정' : '영상 등록';
+        btn.setAttribute('aria-label', week + '주차 ' + btn.textContent);
+        btn.addEventListener('click', () => editWeek(week)); row.append(btn);
+      }
+      weekList.append(row);
+    }
+  }
   function showRows() {
     list.replaceChildren();
     if (!rows.length) { list.textContent = '예약된 미션이 없습니다.'; return; }
@@ -78,6 +165,7 @@
       const state = document.createElement('span');
       state.className = 'ms-meta';
       state.textContent = item.release_date + ' 00:00 · ' + (locked(item) ? '공개됨' : '예약됨');
+      if (item.chapter_start_seconds != null) state.textContent += ' · ' + weekOf(item.day_no) + '주차 ' + timeLabel(item.chapter_start_seconds) + '–' + timeLabel(item.chapter_end_seconds);
       const info = document.createElement('div');
       info.append(heading, state); row.append(info);
       if (!locked(item)) {
@@ -92,6 +180,11 @@
   }
   function errorText(error) {
     const reason = String(error?.message || '');
+    if (/week_video_missing/.test(reason)) return '이 DAY에 해당하는 주차의 원본 영상을 먼저 등록해 주세요.';
+    if (/chapter_order/.test(reason)) return '같은 주차에서 앞 DAY가 끝난 뒤에 시작하고 다음 DAY가 시작되기 전에 끝나도록 구간을 조정해 주세요.';
+    if (/bad_chapter_day/.test(reason)) return 'DAY에 지정된 요일과 공개 날짜를 맞춰 주세요.';
+    if (/bad_chapter/.test(reason)) return '영상의 시작·끝 시간을 확인해 주세요.';
+    if (/bad_video/.test(reason)) return 'YouTube 영상 주소나 11자리 영상 ID를 확인해 주세요.';
     if (/locked|already.open|already.released|past_date/i.test(reason)) return '이미 공개됐거나 공개 시각이 지났습니다. 일정을 새로고침해 주세요.';
     if (error?.code === '23505' || /duplicate|conflict/i.test(reason)) return '같은 DAY 또는 공개 날짜가 이미 등록되어 있습니다.';
     if (/weekend|weekday|release_date|release_range|bad_schedule|bad_date/i.test(reason)) return '기수 일정에 맞는 미래의 평일을 선택해 주세요.';
@@ -100,14 +193,15 @@
   }
   async function load(after = '') {
     const turn = ++sequence;
-    ready = false; rows = []; list.replaceChildren(); controls();
+    ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls();
     if (!round) { msg.textContent = '기수 관리에서 보신각 기수를 먼저 등록해 주세요.'; return; }
     msg.textContent = '예약 일정을 불러오는 중입니다.';
     try {
       const data = await rpc('admin-list', {challenge:'voice', round:Number(round)});
       if (turn !== sequence) return;
       if (!Array.isArray(data?.missions)) throw new Error('missing missions');
-      rows = data.missions; ready = true; showRows(); msg.textContent = after;
+      rows = data.missions; videos = Array.isArray(data.week_videos) ? data.week_videos : [];
+      ready = true; showVideos(); showRows(); msg.textContent = after;
     } catch (error) {
       if (turn === sequence) msg.textContent = [after, errorText(error)].filter(Boolean).join(' ');
     } finally { if (turn === sequence) controls(); }
@@ -122,7 +216,7 @@
     if (options.some(r => String(r.round) === last)) roundSelect.value = last;
     round = roundSelect.value;
     if (items === null) {
-      ++sequence; closeEditor(); ready = false; rows = []; list.replaceChildren();
+      ++sequence; closeEditor(); ready = false; rows = []; videos = []; weekList.replaceChildren(); list.replaceChildren();
       msg.textContent = '기수 목록을 불러오지 못했습니다. 기수 관리를 다시 열어 주세요.';
     } else if (last !== round || !ready) {
       closeEditor(); rows = []; ready = false;
@@ -141,6 +235,10 @@
     date.min = koreanDate(Date.now() + 86400000);
     date.value = row?.release_date || defaultDate();
     title.value = row?.title || ''; body.value = row?.body || '';
+    chapter.checked = row?.chapter_start_seconds != null;
+    startTime.value = timeLabel(row?.chapter_start_seconds);
+    endTime.value = timeLabel(row?.chapter_end_seconds);
+    date.dataset.userSet = row ? '1' : ''; syncChapter();
     form.querySelector('legend').textContent = row ? 'DAY ' + row.day_no + ' 미션 수정' : '새 미션';
     document.getElementById('msDelete').hidden = !row;
     msg.textContent = ''; form.hidden = false; (row ? title : day).focus();
@@ -160,10 +258,27 @@
     if (!canDiscard()) { roundSelect.value = round; return; }
     round = roundSelect.value; closeEditor(); load();
   });
-  panel.addEventListener('toggle', () => { if (panel.open && !saving && !dirty && form.hidden) load(); });
+  panel.addEventListener('toggle', () => { if (panel.open && !saving && !dirty && form.hidden && weekForm.hidden) load(); });
   refreshButton.addEventListener('click', () => { if (canDiscard()) { closeEditor(); load(); } });
   addButton.addEventListener('click', () => { if (canDiscard()) openEditor(); });
   form.addEventListener('input', e => { dirty = true; e.target.setCustomValidity?.(''); });
+  weekForm.addEventListener('input', () => { dirty = true; videoInput.setCustomValidity(''); });
+  for (const input of [day, chapter]) input.addEventListener('change', () => {
+    syncChapter();
+    if (chapter.checked && !date.dataset.userSet) date.value = suggestDate();
+  });
+  date.addEventListener('input', () => { date.dataset.userSet = '1'; });
+  startTime.addEventListener('input', () => endTime.setCustomValidity(''));
+  weekForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (saving || !ready || !editingWeek || weekForm.hidden) return;
+    const value = videoInput.value.trim();
+    if (!value) { videoInput.setCustomValidity('YouTube 영상 주소나 영상 ID를 입력해 주세요.'); weekForm.reportValidity(); return; }
+    write('admin-week-save', {challenge:'voice',round:Number(round),week_no:editingWeek,video_url:value}, editingWeek + '주차 원본 영상을 저장했습니다.');
+  });
+  document.getElementById('msWeekCancel').addEventListener('click', () => {
+    if (canDiscard()) { const btn = weekList.children[editingWeek - 1]?.querySelector('button'); closeEditor(); btn?.focus(); }
+  });
   document.getElementById('msCancel').addEventListener('click', () => { if (canDiscard()) { closeEditor(); addButton.focus(); } });
   document.getElementById('msDelete').addEventListener('click', () => {
     if (!saving && editId && window.confirm('이 기수의 DAY ' + day.value + ' 미션 예약을 취소할까요?')) {
@@ -175,12 +290,28 @@
     if (saving || !ready || form.hidden) return;
     if (date.value < (roundSelect.selectedOptions[0]?.dataset.start || '')) date.setCustomValidity('프로그램 시작일 이후의 평일을 선택해 주세요.');
     else if (!isWeekday(date.value) || date.value <= koreanDate()) date.setCustomValidity('내일 이후의 평일을 선택해 주세요.');
+    else if (chapter.checked && new Date(date.value + 'T00:00:00Z').getUTCDay() !== weekdayOf(day.value)) date.setCustomValidity('DAY ' + day.value + '는 ' + weekdayLabels[weekdayOf(day.value) - 1] + '요일에 공개됩니다.');
     else if (rows.some(r => r.id !== editId && r.release_date === date.value)) date.setCustomValidity('같은 날짜에 예약된 미션이 있습니다.');
     else date.setCustomValidity('');
     title.setCustomValidity(title.value.trim() ? '' : '미션 제목을 입력해 주세요.');
     body.setCustomValidity(body.value.trim() ? '' : '미션 내용을 입력해 주세요.');
+    const start = chapter.checked ? parseTime(startTime.value) : null;
+    const end = chapter.checked ? parseTime(endTime.value) : null;
+    chapter.setCustomValidity(chapter.checked && !videos.some(v => v.week_no === weekOf(day.value)) ? '해당 주차의 원본 영상을 먼저 등록해 주세요.' : '');
+    startTime.setCustomValidity(chapter.checked && (!Number.isFinite(start) || start >= 86400) ? '시작 시간을 분:초로 입력해 주세요.' : '');
+    endTime.setCustomValidity(chapter.checked && (!Number.isFinite(end) || end > 86400 || end <= start) ? '끝 시간은 시작 시간보다 늦게, 24시간 이내로 입력해 주세요.' : '');
+    if (chapter.checked && start >= 0 && end > start) {
+      const n = Number(day.value);
+      const peers = rows.filter(r => r.id !== editId && r.chapter_start_seconds != null && weekOf(r.day_no) === weekOf(n));
+      const before = peers.find(r => r.day_no < n && start < r.chapter_end_seconds);
+      const after = peers.find(r => r.day_no > n && end > r.chapter_start_seconds);
+      if (before) startTime.setCustomValidity('DAY ' + before.day_no + '가 끝나는 ' + timeLabel(before.chapter_end_seconds) + ' 이후로 시작 시간을 지정해 주세요.');
+      if (after) endTime.setCustomValidity('DAY ' + after.day_no + '가 시작하는 ' + timeLabel(after.chapter_start_seconds) + ' 이전으로 끝 시간을 지정해 주세요.');
+    }
     if (!form.reportValidity()) return;
     const payload = {challenge:'voice', round:Number(round), day_no:Number(day.value), release_date:date.value, title:title.value.trim(), body:body.value.trim()};
+    payload.chapter_start_seconds = start;
+    payload.chapter_end_seconds = end;
     if (editId) payload.id = editId;
     write('admin-save', payload, '미션을 예약했습니다.');
   });

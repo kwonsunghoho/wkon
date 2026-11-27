@@ -3,7 +3,11 @@
   const root = document.getElementById('mission-content');
   const notice = document.getElementById('mission-notice');
   const push = document.getElementById('mission-push');
-  const params = new URLSearchParams(location.search);
+  const schedule = document.getElementById('mission-schedule');
+  const drafts = new Map();
+  const lastInWeek = new Map();
+  let week = 1, revision = 0, scheduleTimer, dueAt = 0, offset = 0, homeVersion = 0;
+  let routing = false, requestingMic = false, visibleURL = location.href;
   const maxAudio = 20 * 1024 * 1024;
   const bucketName = 'challenge-room-audio';
   const uuidPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -66,14 +70,97 @@
       : '<p class="mission-hint">아직 제출한 답변이 없어요. 미션에 답하면 이곳에서 다시 볼 수 있어요.</p>') + '</section>';
   }
 
-  function releaseList(cohort, selected) {
-    if (!cohort) return '';
-    const otherRounds = home.cohorts.filter(c => c.round !== cohort.round);
-    const missions = [...cohort.missions].sort((a,b) => b.release_date.localeCompare(a.release_date));
-    const rounds = otherRounds.length ? `<p class="mission-controls">${otherRounds.map(c => `<a class="mission-link" href="${esc(roundLink(c.round))}">보신각 ${esc(c.round)}기</a>`).join('')}</p>` : '';
-    if (!missions.length && !rounds) return '';
-    return `<details class="mission-card"><summary>열린 미션 · ${esc(missions.length)}개</summary><ul class="mission-list">${missions.map(m => `<li><a href="${esc(missionLink(m.id))}" ${m.id === selected ? 'aria-current="page"' : ''}><span class="mission-meta">DAY ${esc(m.day_no)} · ${esc(dateLabel(m.release_date))}</span><strong>${esc(m.title)}</strong><span class="mission-meta">${m.submission_id ? '제출 완료' : '미제출'}</span></a></li>`).join('')}</ul>${rounds}</details>`;
+  const kstDay = () => new Date(Date.now()+offset+9*3600000).toISOString().slice(0,10);
+  const newest = (cohort,weekNumber=0) => cohort && cohort.missions.filter(m=>!weekNumber || weekOf(m.day_no)===weekNumber).sort((a,b) => b.release_date.localeCompare(a.release_date))[0];
+  const weekOf = number => number > 5 ? 2 : 1;
+
+  function drawSchedule() {
+    schedule.hidden = !activeCohort;
+    if (!activeCohort) { schedule.replaceChildren(); return; }
+    const weekdays = ['월','화','수','목','금'];
+    const today = kstDay();
+    const buttons = [1,2].map(n => `<button type="button" data-week="${n}" aria-pressed="${week===n}">${n}주차</button>`).join('');
+    const days = weekdays.map((label,i) => {
+      const n = (week-1)*5+i+1;
+      const item = activeCohort.missions.find(m => m.day_no === n);
+      if (!item) return `<span class="mission-day" aria-disabled="true" aria-label="DAY ${n}, ${label}요일 예정"><strong>${label}</strong><span>DAY ${n}</span><small>예정</small></span>`;
+      const date = new Date(item.release_date+'T00:00:00+09:00');
+      const weekday = new Intl.DateTimeFormat('ko',{weekday:'short',timeZone:'Asia/Seoul'}).format(date);
+      const selected = item.id === current?.mission.id;
+      const state = item.submission_id ? '제출' : '열림';
+      const shortDate = item.release_date.slice(5).replace('-','/');
+      return `<a class="mission-day" href="${esc(missionLink(item.id))}" ${selected?'aria-current="page"':''} aria-label="DAY ${n}, ${esc(dateLabel(item.release_date))}, ${state}"><strong>${esc(weekday)}</strong><span>${esc(shortDate)}</span><small>${item.release_date===today?'오늘':state}</small></a>`;
+    }).join('');
+    const other = home.cohorts.filter(c => c.round !== activeCohort.round);
+    schedule.innerHTML = `<div class="mission-weeks" role="group" aria-label="주차">${buttons}</div><div class="mission-days" role="group" aria-label="${week}주차 요일">${days}</div>` +
+      (other.length ? `<p class="mission-rounds">${other.map(c => `<a href="${esc(roundLink(c.round))}">보신각 ${esc(c.round)}기</a>`).join('')}</p>` : '');
   }
+
+  function captureDraft() {
+    if (!current || !draft) return;
+    draft.text = document.getElementById('mission-body')?.value || '';
+    draft.shared = document.getElementById('mission-share')?.checked || false;
+    draft.comments = [...root.querySelectorAll('[data-comment]')].filter(f=>f.elements.body.value).map(f=>[f.dataset.comment,f.elements.body.value]);
+    if (draft.text || draft.shared || draft.file || draft.comments.length) drafts.set(current.mission.id,draft);
+    else drafts.delete(current.mission.id);
+  }
+
+  function restoreDraft() {
+    if (draft?.file) filePreview();
+    const body = document.getElementById('mission-body'), checkbox = document.getElementById('mission-share');
+    if (body && draft?.text) body.value = draft.text;
+    if (checkbox) checkbox.checked = Boolean(draft?.shared);
+    for (const form of root.querySelectorAll('[data-comment]')) {
+      const value = draft?.comments?.find(([id])=>id===form.dataset.comment);
+      if (value) form.elements.body.value = value[1];
+    }
+  }
+
+  async function readHome() {
+    const version = ++homeVersion;
+    const result = await rpc('home');
+    if (version !== homeVersion) return false;
+    if (!Array.isArray(result?.cohorts) || !Array.isArray(result.history)) throw new Error('home unavailable');
+    home = result;
+    const server = Date.parse(result.server_now);
+    if (Number.isFinite(server)) offset = server-Date.now();
+    const now = Date.now()+offset;
+    const tomorrow = (Math.floor((now+9*3600000)/86400000)+1)*86400000-9*3600000;
+    dueAt = tomorrow-offset+250;
+    clearTimeout(scheduleTimer); scheduleTimer = setTimeout(refreshSchedule,Math.max(250,dueAt-Date.now()));
+    return true;
+  }
+
+  async function refreshSchedule() {
+    if (!session) return;
+    try {
+      if (!await readHome() || !activeCohort) return;
+      const old = activeCohort;
+      activeCohort = home.cohorts.find(c => c.round === old.round && c.challenge === old.challenge);
+      if (!activeCohort) { location.reload(); return; }
+      const waitingWeek = !current && Number(new URL(location.href).searchParams.get('week'));
+      const latest = newest(activeCohort,waitingWeek);
+      if (!current && latest && !routing) { await openRoute(new URL(location.href)); return; }
+      drawSchedule();
+      if (latest && !old.missions.some(m=>m.id===latest.id)) {
+        const url = new URL(location.href);
+        captureDraft();
+        const playing = root.querySelector('.chapter-screen iframe, .chapter-screen video, [data-chapter-play]:disabled') ||
+          [...root.querySelectorAll('audio')].some(el=>!el.paused);
+        const editing = root.contains(document.activeElement) && document.activeElement.matches('input,textarea');
+        if (current?.mission.id===newest(old)?.id && !url.searchParams.has('id') && !url.searchParams.has('week') &&
+          !drafts.has(current.mission.id) && !routing && !busy && !requestingMic && !recorder && !playing && !editing) {
+          await openRoute(url);
+          return;
+        }
+        notice.textContent = '새 미션이 열렸어요. ';
+        const link = document.createElement('a'); link.href = missionLink(latest.id); link.textContent = '오늘 미션 열기'; notice.append(link);
+      }
+    } catch (_) {
+      dueAt = Date.now()+30000; clearTimeout(scheduleTimer); scheduleTimer = setTimeout(refreshSchedule,30000);
+    }
+  }
+
 
   function submissionForm() {
     return `<form id="mission-submit" class="mission-card"><h2>내 답변</h2>
@@ -110,47 +197,122 @@
     const mine = answers.find(a => a.mine);
     const peers = answers.filter(a => !a.mine);
     document.getElementById('mission-context').textContent = '보신각 ' + mission.round + '기 · 평일 자정 공개';
-    root.innerHTML = `<section class="mission-card mission-prompt"><p class="mission-meta">DAY ${esc(mission.day_no)} · ${esc(dateLabel(mission.release_date))}</p><h2>${esc(mission.title)}</h2><p class="mission-body">${esc(mission.body)}</p></section>
+    const chapter = canInteract ? ChallengeChapter.render(mission.chapter,mission.day_no) : '';
+    root.innerHTML = `<section class="mission-card mission-prompt"><p class="mission-meta">${mission.release_date===kstDay()?'오늘의 미션 · ':''}DAY ${esc(mission.day_no)} · ${esc(dateLabel(mission.release_date))}</p><h2>${esc(mission.title)}</h2><p class="mission-body">${esc(mission.body)}</p>${chapter}</section>
       ${mine ? `<section class="mission-card">${answerCard(mine,canInteract)}</section>` : (canInteract ? submissionForm() : '')}
       ${canInteract ? `<section class="mission-card"><h2>기수 동료의 답변</h2>${peers.length ? peers.map(p => answerCard(p,canInteract)).join('') : '<p class="mission-hint">아직 기수에 공유된 답변이 없어요.</p>'}</section>` : ''}
-      ${releaseList(activeCohort,mission.id)}`;
-    if (draft?.file && !mine) filePreview();
+      `;
+    restoreDraft();
+    drawSchedule();
     showPush(activeCohort);
   }
 
-  async function loadMission(id) {
-    current = await rpc('mission', {id});
-    if (!current?.mission || !Array.isArray(current.answers)) throw new Error('mission unavailable');
-    activeCohort = current.mission.eligible === false ? null : home.cohorts.find(c => c.round === current.mission.round && c.challenge === current.mission.challenge);
+  async function loadMission(id,turn=revision) {
+    const result = await rpc('mission', {id});
+    if (turn !== revision) return false;
+    if (!result?.mission || !Array.isArray(result.answers)) throw new Error('mission unavailable');
+    captureDraft();
+    ChallengeChapter.close();
+    current = result;
+    activeCohort = result.mission.eligible === false ? null : home.cohorts.find(c => c.round === result.mission.round && c.challenge === result.mission.challenge);
+    week = weekOf(result.mission.day_no);
+    lastInWeek.set(result.mission.round+'-'+week,id);
+    draft = drafts.get(id) || newDraft();
     renderMission();
+    return true;
+  }
+
+  async function openRoute(url,mode='initial') {
+    const turn = ++revision;
+    const params = url.searchParams;
+    const isHistory = params.get('view') === 'history';
+    routing = true;
+    try {
+      if (!home || isHistory) await readHome();
+      if (turn !== revision) return;
+      const targetCohort = home.cohorts.find(c => String(c.round) === params.get('round')) || [...home.cohorts].sort((a,b)=>
+        (newest(b)?.release_date||'').localeCompare(newest(a)?.release_date||'') || b.round-a.round)[0];
+      const requestedWeek = [1,2].includes(Number(params.get('week'))) ? Number(params.get('week')) : 0;
+      const id = params.get('id') || newest(targetCohort,requestedWeek)?.id;
+      if (!isHistory && id) {
+        if (!uuidPattern.test(id)) throw new Error('mission unavailable');
+        if (!await loadMission(id,turn)) return;
+      } else {
+        captureDraft(); ChallengeChapter.close(); current = null; draft = newDraft(); push.hidden = true;
+        activeCohort = isHistory ? null : targetCohort;
+        week = requestedWeek || 1; drawSchedule();
+        if (isHistory) {
+          document.getElementById('mission-context').textContent = '보신각에서 제출한 답변과 받은 코멘트';
+          historyView();
+        } else {
+          const hint = activeCohort ? '첫 미션이 열리면 이곳에서 연습을 시작할 수 있어요.' : '미션이 예약된 보신각 기수의 참가자는 이곳에서 미션을 확인할 수 있어요.';
+          document.getElementById('mission-context').textContent = activeCohort ? '보신각 '+activeCohort.round+'기 · 평일 자정 공개' : '평일 자정에 열리는 보이스 연습';
+          const heading = requestedWeek && activeCohort ? requestedWeek+'주차 미션은 아직 열리지 않았어요' : '아직 열린 미션이 없어요';
+          root.innerHTML = `<section class="mission-card"><h2>${heading}</h2><p class="mission-hint">${hint}</p></section>`;
+          showPush(activeCohort);
+        }
+      }
+      const nav = document.getElementById('mission-nav');
+      nav.hidden = false; nav.querySelectorAll('a').forEach(a=>a.removeAttribute('aria-current'));
+      document.getElementById(isHistory?'history-link':'mission-link').setAttribute('aria-current','page');
+      notice.textContent = '';
+      if (mode==='push') history.pushState(null,'',url);
+      visibleURL = url.href;
+    } catch (_) {
+      if (turn !== revision) return;
+      if (mode!=='initial' && current) {
+        notice.textContent = '미션을 열지 못했어요. 다시 시도해 주세요.';
+        if (mode==='pop') history.replaceState(null,'',visibleURL);
+      } else root.innerHTML = '<section class="mission-card"><h2>미션을 열 수 없어요</h2><p class="mission-hint">참여 기수와 미션 공개 시간을 확인한 뒤 다시 시도해 주세요.</p><div class="mission-controls"><button type="button" class="mission-action" data-retry>다시 불러오기</button><a class="mission-link" href="challenge-mission.html">미션 목록</a></div></section>';
+    } finally { if(turn===revision) { routing = false; root.setAttribute('aria-busy','false'); } }
   }
 
   async function start() {
     try {
       session = await MONC.requireSession();
       if (!session || !(await MONC.requireConsent())) return;
-      home = await rpc('home');
-      if (!Array.isArray(home?.cohorts) || !Array.isArray(home.history)) throw new Error('home unavailable');
-      document.getElementById('mission-nav').hidden = false;
-      if (params.get('view') === 'history') { historyView(); return; }
-      document.getElementById('mission-link').setAttribute('aria-current','page');
-      const id = params.get('id');
-      if (id) {
-        if (!uuidPattern.test(id)) throw new Error('mission unavailable');
-        await loadMission(id);
-        return;
-      }
-      activeCohort = home.cohorts.find(c => String(c.round) === params.get('round')) || [...home.cohorts].sort((a,b) => b.round-a.round)[0];
-      const newest = activeCohort && [...activeCohort.missions].sort((a,b) => b.release_date.localeCompare(a.release_date))[0];
-      if (newest) { await loadMission(newest.id); return; }
-      const hint = activeCohort ? '첫 미션이 열리면 이곳에서 연습을 시작할 수 있어요.' : '미션이 예약된 보신각 기수의 참가자는 이곳에서 미션을 확인할 수 있어요.';
-      if (activeCohort) document.getElementById('mission-context').textContent = '보신각 ' + activeCohort.round + '기 · 평일 자정 공개';
-      root.innerHTML = `<section class="mission-card"><h2>아직 열린 미션이 없어요</h2><p class="mission-hint">${hint}</p></section>${releaseList(activeCohort)}`;
-      showPush(activeCohort);
-    } catch (_) {
-      root.innerHTML = '<section class="mission-card"><h2>미션을 열 수 없어요</h2><p class="mission-hint">참여 기수와 미션 공개 시간을 확인한 뒤 다시 시도해 주세요.</p><div class="mission-controls"><button type="button" class="mission-action" data-retry>다시 불러오기</button><a class="mission-link" href="challenge-mission.html">미션 목록</a></div></section>';
-    } finally { root.setAttribute('aria-busy','false'); }
+      await openRoute(new URL(location.href));
+    } catch (_) { root.textContent = '로그인 정보를 확인하지 못했어요. 새로고침 후 다시 시도해 주세요.'; root.setAttribute('aria-busy','false'); }
   }
+
+  function canNavigate() {
+    if (busy || requestingMic || (recorder && recorder.state !== 'inactive')) {
+      notice.textContent = busy ? '저장이 끝난 뒤 미션을 옮겨 주세요.' : '녹음을 마친 뒤 다른 미션을 선택해 주세요.';
+      return false;
+    }
+    return true;
+  }
+
+  document.querySelector('.mission-layout').addEventListener('click',event=>{
+    const weekButton = event.target.closest('button[data-week]');
+    if (weekButton) {
+      const chosen = Number(weekButton.dataset.week);
+      if (week===chosen || !canNavigate() || !activeCohort) return;
+      const prior = lastInWeek.get(activeCohort.round+'-'+chosen);
+      const item = activeCohort.missions.find(m=>m.id===prior) || newest(activeCohort,chosen);
+      const url = item ? missionLink(item.id) : roundLink(activeCohort.round)+'&week='+chosen;
+      openRoute(new URL(url,location.href),'push').then(()=>schedule.querySelector('[data-week="'+chosen+'"]')?.focus());
+      return;
+    }
+    const link = event.target.closest('a[href]');
+    if (!link || event.defaultPrevented || event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target==='_blank') return;
+    const url = new URL(link.href);
+    if (url.origin!==location.origin || url.pathname!==location.pathname) return;
+    event.preventDefault();
+    if (canNavigate()) openRoute(url,'push');
+  });
+  window.addEventListener('popstate',()=>{
+    if (!canNavigate()) { history.pushState(null,'',visibleURL); return; }
+    openRoute(new URL(location.href),'pop');
+  });
+  document.addEventListener('visibilitychange',()=>{
+    if (!document.hidden && dueAt && Date.now()>=dueAt) refreshSchedule();
+  });
+  window.addEventListener('beforeunload',e=>{
+    captureDraft();
+    if (drafts.size || recorder?.state==='recording' || requestingMic) { e.preventDefault(); e.returnValue=''; }
+  });
+
 
   function filePreview() {
     const info = document.getElementById('mission-file-info');
@@ -189,6 +351,7 @@
     button.disabled = submit.disabled = input.disabled = true;
     let started = false;
     try {
+      requestingMic = true;
       const media = await navigator.mediaDevices.getUserMedia({audio:true});
       if (key !== recordingTask) { media.getTracks().forEach(t=>t.stop()); return; }
       stream = media;
@@ -217,7 +380,7 @@
       releaseMic(); recorder = null;
       textError(feedback,'녹음을 시작하지 못했어요. 마이크 권한을 확인하거나 음성 파일을 선택해 주세요.');
     } finally {
-      button.disabled = false;
+      requestingMic = false; button.disabled = false;
       if (!started) submit.disabled = input.disabled = false;
     }
   }
@@ -254,6 +417,8 @@
       textError(feedback,'제출을 완료하지 못했어요. 작성한 답변을 유지했으니 다시 시도해 주세요.');
       return;
     } finally { busy = false; controls.forEach(el => { el.disabled = false; }); }
+    drafts.delete(current.mission.id);
+    const item = activeCohort?.missions.find(m=>m.id===current.mission.id); if (item) item.submission_id = 'saved';
     freshDraft(); notice.textContent = '내 답변을 제출했어요.';
     // 저장 후 조회 실패는 재제출로 이어지지 않도록 입력칸을 닫는다.
     form.replaceWith(Object.assign(document.createElement('p'),{textContent:'제출을 완료했어요.'}));
@@ -282,6 +447,7 @@
 
   root.addEventListener('submit', e => {
     e.preventDefault();
+    if (routing) { notice.textContent = '미션을 불러온 뒤 다시 시도해 주세요.'; return; }
     if (e.target.id === 'mission-submit') submitAnswer(e.target);
     if (e.target.matches('[data-comment]')) saveComment(e.target);
   });
@@ -291,6 +457,11 @@
   root.addEventListener('click', async e => {
     const button = e.target.closest('button');
     if (!button) return;
+    if (routing) return;
+    if (button.hasAttribute('data-chapter-play')) {
+      await ChallengeChapter.play(button.closest('.chapter-player'),current?.mission.chapter);
+      return;
+    }
     if (button.hasAttribute('data-retry')) { location.reload(); return; }
     if (button.id === 'mission-record') { await toggleRecord(button); return; }
     if (button.id === 'mission-remove-file') { freshDraft(); filePreview(); return; }
@@ -324,20 +495,21 @@
     }
   });
   window.addEventListener('pagehide',() => {
-    recordingTask++;
+    recordingTask++; ChallengeChapter.close();
     if (recorder?.state === 'recording') recorder.stop();
     releaseMic();
   });
   // 입력 중 기기 권한 창이나 다른 페이지에 다녀와도 같은 계정의 초안을 보존한다.
   window.addEventListener('pageshow',async e => {
     if (!e.persisted) return;
-    const hasDraft = draft?.file || [...root.querySelectorAll('textarea,input[type=text]')].some(field => field.value);
+    captureDraft();
+    const hasDraft = drafts.size > 0;
     if (!hasDraft) { location.reload(); return; }
     try {
       const user = await MONC.requireSession();
       if (!user || !(await MONC.requireConsent())) return;
-      const access = await rpc('home');
-      if (user.user.id !== session.user.id || !access.cohorts.some(c => c.round === activeCohort?.round)) {
+      await readHome();
+      if (user.user.id !== session.user.id || (activeCohort && !home.cohorts.some(c => c.round === activeCohort.round))) {
         location.reload(); return;
       }
       const record = document.getElementById('mission-record');
