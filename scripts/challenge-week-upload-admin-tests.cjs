@@ -11,11 +11,13 @@ function adminFixture() {
   window.registered = [old];
   window.operations = [];
   window.transfers = [];
+  window.listedRounds = [];
   window.MONC = {
     getSession:async () => ({access_token:'test-session'}),
     sb:{
-      rpc:async (name,{p_action}) => {
+      rpc:async (name,{p_action,p_data}) => {
         if (name!=='challenge_room' || p_action!=='admin-list') throw Error(name+' '+p_action);
+        window.listedRounds.push(p_data.round);
         return {data:{missions:[],week_videos:structuredClone(registered)}};
       },
       functions:{invoke:async (name,{body}) => {
@@ -137,6 +139,7 @@ async function dashboardEntry(browser) {
   const select=delayed.locator('#msRound');
   await delayed.getByRole('button',{name:'2주차 영상 등록'}).waitFor();
   assert.equal(await select.inputValue(),'7');
+  assert.deepEqual(await delayed.evaluate(()=>window.listedRounds),[7]);
   await select.selectOption('8');
   await delayed.waitForURL(url=>url.searchParams.get('round')==='8');
   await delayed.close();

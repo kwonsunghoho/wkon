@@ -46,6 +46,7 @@
   let requestedRound = '';
   let missingRound = '';
   let loadingRound = false;
+  let loadedForOpening = false;
   let focusAfterRounds = false;
   let retryRounds = null;
 
@@ -383,6 +384,7 @@
   }
   async function load(after = '') {
     const turn = ++sequence;
+    loadedForOpening = panel.open;
     closePreview();
     ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls();
     if (!round) {
@@ -466,7 +468,10 @@
     if (!canDiscard()) { roundSelect.value = round; return; }
     missingRound = ''; round = roundSelect.value; updateUploadUrl(); closeEditor(); load();
   });
-  panel.addEventListener('toggle', () => { if (panel.open && roundsState === 'ready' && !loadingRound && !saving && !dirty && form.hidden && weekForm.hidden) load(); });
+  panel.addEventListener('toggle', () => {
+    if (!panel.open) { loadedForOpening = false; return; }
+    if (!loadedForOpening && roundsState === 'ready' && !loadingRound && !saving && !dirty && form.hidden && weekForm.hidden) load();
+  });
   refreshButton.addEventListener('click', () => {
     if (roundsState === 'error' && retryRounds) {
       roundsState = 'pending'; controls(); msg.textContent = '보신각 기수를 불러오는 중입니다.'; retryRounds(); return;
