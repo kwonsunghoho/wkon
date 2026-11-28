@@ -19,7 +19,9 @@ function failure(message: string) {
   return reply({ ok: false, error: code }, code === 'invalid_ticket' ? 403 : 200);
 }
 
-async function playbackUrl(db: ReturnType<typeof createClient>, original: string) {
+type VideoStorageClient = Pick<ReturnType<typeof createClient>, 'storage'>;
+
+async function playbackUrl(db: VideoStorageClient, original: string) {
   const storage = db.storage.from(bucket);
   const web = original.replace(/\.(mp4|webm)$/i, '.web-720p.mp4');
   // The caller supplies the path returned by the enrollment/admin RPC.
@@ -71,7 +73,7 @@ async function makeIntro(sourceUrl: string) {
   } finally { input.dispose(); }
 }
 
-async function ensureFirstPreview(db: ReturnType<typeof createClient>, original: string) {
+async function ensureFirstPreview(db: VideoStorageClient, original: string) {
   const storage = db.storage.from(bucket);
   const path = previewPath(original);
   if (path === original) return null;
