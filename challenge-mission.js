@@ -110,8 +110,8 @@
   const weekOf = number => number > 5 ? 2 : 1;
 
   function drawSchedule() {
-    schedule.hidden = !activeCohort;
-    if (!activeCohort) { schedule.replaceChildren(); return; }
+    schedule.hidden = !activeCohort || (activeCohort.weekly_start > kstDay() && !activeCohort.missions.length);
+    if (schedule.hidden) { schedule.replaceChildren(); return; }
     const weekdays = ['월','화','수','목','금'];
     const today = kstDay();
     const buttons = [1,2].map(n => `<button type="button" data-week="${n}" aria-pressed="${week===n}">${n}주차</button>`).join('');
@@ -227,6 +227,45 @@
       <p class="mission-feedback" role="status"></p></article>`;
   }
 
+  let stopMicCheck = null;
+  async function checkMicrophone(button) {
+    stopMicCheck?.();
+    const result = document.getElementById('mic-check-result');
+    let stream, context, timer, closed = false, peak = 0;
+    const stop = () => {
+      closed = true; clearInterval(timer);
+      stream?.getTracks().forEach(track => track.stop());
+      context?.close().catch(() => {});
+      if (stopMicCheck === stop) stopMicCheck = null;
+      button.disabled = false;
+    };
+    stopMicCheck = stop; button.disabled = true;
+    result.textContent = '마이크 사용을 허용한 뒤 한 문장을 말해 주세요.';
+    try {
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      context = new Audio();
+      await context.resume();
+      if (closed) return;
+      stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      if (closed || !button.isConnected) { stream.getTracks().forEach(t => t.stop()); return; }
+      const analyser = context.createAnalyser();
+      context.createMediaStreamSource(stream).connect(analyser);
+      const samples = new Uint8Array(analyser.fftSize), until = Date.now() + 4000;
+      result.textContent = '소리를 확인하고 있어요. 평소 목소리로 말해 보세요.';
+      timer = setInterval(() => {
+        analyser.getByteTimeDomainData(samples);
+        for (const value of samples) peak = Math.max(peak, Math.abs(value - 128));
+        if (Date.now() >= until || !button.isConnected) {
+          result.textContent = peak > 3 ? '목소리가 잘 들어와요.' : '소리가 작아요. 마이크를 가까이 두고 다시 확인해 주세요.';
+          stop();
+        }
+      }, 80);
+    } catch (_) {
+      if (!closed) result.textContent = '마이크를 사용할 수 없어요. 브라우저의 마이크 권한을 확인해 주세요.';
+      stop();
+    }
+  }
+
   function renderMission() {
     const {mission, answers} = current;
     const canInteract = Boolean(activeCohort);
@@ -234,8 +273,9 @@
     const peers = answers.filter(a => !a.mine);
     const kind = family(mission);
     document.getElementById('mission-context').textContent = labelOf(mission) + (canInteract ? ' · 평일 자정 공개' : ' · 제출 기록');
+    const weekdayLabel = activeCohort?.weekly_start ? weekOf(mission.day_no)+'주차 '+['월','화','수','목','금'][(mission.day_no-1)%5]+'요일' : '';
     const chapter = canInteract ? ChallengeChapter.render(mission.chapter,mission.day_no) : '';
-    root.innerHTML = `<section class="mission-card mission-prompt"><p class="mission-meta">${mission.release_date===kstDay()?'오늘의 미션 · ':''}DAY ${esc(mission.day_no)} · ${esc(dateLabel(mission.release_date))}</p><h2>${esc(mission.title)}</h2><p class="mission-body">${esc(mission.body)}</p>${chapter}</section>
+    root.innerHTML = `<section class="mission-card mission-prompt"><p class="mission-meta">${weekdayLabel ? '<strong class="mission-weekday">'+weekdayLabel+'</strong>' : ''}${mission.release_date===kstDay()?'오늘의 미션 · ':''}DAY ${esc(mission.day_no)} · ${esc(dateLabel(mission.release_date))}</p><h2>${esc(mission.title)}</h2><p class="mission-body">${esc(mission.body)}</p>${chapter}</section>
       ${canInteract && kind ? `<section class="mission-card"><h2>${esc(kind.label)} 공식 과제</h2><p class="mission-hint">${esc(kind.hint)}</p><p class="mission-controls"><a class="mission-link" href="submit.html?ch=${esc(challengeOf(mission))}">${esc(kind.task)}</a></p></section>` : ''}
       ${mine ? `<section class="mission-card">${answerCard(mine,canInteract)}</section>` : (canInteract && kind ? submissionForm(kind) : '')}
       ${canInteract ? `<section class="mission-card"><h2>기수 동료의 답변</h2>${peers.length ? peers.map(p => answerCard(p,canInteract)).join('') : '<p class="mission-hint">아직 기수에 공유된 답변이 없어요.</p>'}</section>` : ''}
@@ -261,6 +301,7 @@
   }
 
   async function openRoute(url,mode='initial') {
+    stopMicCheck?.();
     const turn = ++revision;
     const params = url.searchParams;
     const isHistory = params.get('view') === 'history';
@@ -273,6 +314,7 @@
       const requested= params.get('challenge') || (hasRound?'voice':'');
       const match=c=>(!scoped || challengeOf(c)===requested) && (!hasRound || String(c.round)===params.get('round'));
       const targetCohort = home.cohorts.filter(c=>family(c) && match(c)).sort((a,b)=>
+        (params.get('enrollment')==='latest' ? (b.weekly_start||'').localeCompare(a.weekly_start||'') : 0) ||
         (newest(b)?.release_date||'').localeCompare(newest(a)?.release_date||'') || b.round-a.round)[0];
       const requestedScope = Object.hasOwn(kinds,requested) && /^[1-9]\d*$/.test(params.get('round'))
         ? {challenge:requested,round:params.get('round')} : null;
@@ -295,7 +337,9 @@
           scope = activeCohort || scope;
           document.getElementById('mission-context').textContent = scope ? labelOf(scope)+' · 평일 자정 공개' : '평일 자정에 열리는 챌린지 연습';
           const heading = requestedWeek && activeCohort ? requestedWeek+'주차 미션은 아직 열리지 않았어요' : '아직 열린 미션이 없어요';
-          root.innerHTML = `<section class="mission-card"><h2>${heading}</h2><p class="mission-hint">${hint}</p></section>`;
+          const waiting = activeCohort?.weekly_start && activeCohort.weekly_start > kstDay();
+          root.innerHTML = waiting ? `<section class="mission-card"><p class="mission-meta">보신각 · 시작 전</p><h2>${esc(dateLabel(activeCohort.weekly_start))} 시작</h2><p class="mission-hint">1주차 월요일 미션이 한국시간 0시에 열려요. 미리 마이크를 확인하고 미션 알림을 설정해 보세요.</p><div class="mission-controls"><button type="button" class="mission-action" data-mic-check>마이크 테스트</button></div><p id="mic-check-result" class="mission-hint" role="status"></p></section>`
+            : `<section class="mission-card"><h2>${heading}</h2><p class="mission-hint">${hint}</p></section>`;
           showPush(activeCohort);
         }
       }
@@ -518,6 +562,7 @@
     const button = e.target.closest('button');
     if (!button) return;
     if (routing) return;
+    if (button.hasAttribute('data-mic-check')) { await checkMicrophone(button); return; }
     if (button.matches('[data-chapter-play],[data-chapter-full]')) {
       const mission = current?.mission;
       if (!activeCohort || !mission?.chapter) return;
@@ -565,7 +610,7 @@
     }
   });
   window.addEventListener('pagehide',() => {
-    recordingTask++; ChallengeChapter.close();
+    stopMicCheck?.(); recordingTask++; ChallengeChapter.close();
     if (recorder?.state === 'recording') recorder.stop();
     releaseMic();
   });
