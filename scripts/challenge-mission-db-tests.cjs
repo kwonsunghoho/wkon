@@ -523,7 +523,7 @@ create function net.http_post(url text,body jsonb default '{}',params jsonb defa
         chapter_end_seconds: end,
         ...fields,
       });
-    // Day 3 must fit after Day 2 and before Day 5, even when Day 4 is unassigned.
+    // The original weekly migration enforces chronological segments before the later reuse migration.
     for (const [start, end] of [[89, 110], [100, 131], [160, 170], [0, 10]]) {
       await assert.rejects(
         () => saveWednesday(start, end),
@@ -868,6 +868,47 @@ create function net.http_post(url text,body jsonb default '{}',params jsonb defa
     await assert.rejects(()=>rpc("mission",{id:hiddenMission}),/not_found/);
     assert.deepEqual(await q("select name from storage.objects where name=$1",[hiddenAudio]),[]);
     console.log("PASS 네 챌린지 같은 41기·주차 원본 격리, 미션/개인 이력/구독, 잘못 조합한 상품·기수 접근 거부, 기존 보신각 원본");
+
+    await root();
+    await db.exec(fs.readFileSync(migration("20261128110000_challenge_chapter_reuse.sql"),"utf8"));
+    const practice={challenge:"spinning",round:41};
+    const weekdays=await one("select ($1::date+3)::text as thu,($1::date+4)::text as fri",[dates.future]);
+    const saveSegment=(day,start,end,extra={})=>rpc("admin-save",{...practice,day_no:day,
+      title:"반복 연습 "+day,body:"같은 구간으로 연습",release_date:day===4?weekdays.thu:weekdays.fri,
+      chapter_start_seconds:start,chapter_end_seconds:end,...extra});
+    await role(admin);
+    const thursdayPractice=await saveSegment(4,30,38);
+    const fridayPractice=await saveSegment(5,30,38);
+    assert.notEqual(thursdayPractice.id,fridayPractice.id);
+    for (const [start,end] of [[34,42],[1,3],[30,38]]) {
+      await saveSegment(5,start,end,{id:fridayPractice.id});
+      const list=(await rpc("admin-list",practice)).missions.filter(day=>day.day_no>=4);
+      assert.deepEqual(list.map(day=>[day.day_no,day.release_date,day.chapter_start_seconds,day.chapter_end_seconds]),
+        [[4,weekdays.thu,30,38],[5,weekdays.fri,start,end]]);
+    }
+    for (const [start,end] of [[30,30],[38,30],[-1,8],[30,86401]]) {
+      await assert.rejects(()=>saveSegment(5,start,end,{id:fridayPractice.id}),/bad_chapter/);
+    }
+    await role(mixedCourses);
+    await assert.rejects(()=>rpc("mission",thursdayPractice),/not_found/);
+    await assert.rejects(()=>rpc("mission",fridayPractice),/not_found/);
+    // Advance each fixture's release separately so Friday remains private when Thursday opens.
+    for (const [entry,day] of [[thursdayPractice,4],[fridayPractice,5]]) {
+      await root();
+      await q("update challenge_room_data.missions set release_date=$1::date+$2::int where id=$3",[dates.past,day-1,entry.id]);
+      await role(mixedCourses);
+      const {mission}=await rpc("mission",entry);
+      assert.equal(mission.day_no,day);
+      assert.deepEqual(mission.chapter,{provider:"storage",week_no:1,start_seconds:30,end_seconds:38});
+      await edgeRole();
+      assert.equal((await media(mixedCourses,"play",entry)).path,sources.get("spinning"));
+      if (day===4) {
+        await assert.rejects(()=>media(mixedCourses,"play",fridayPractice));
+        await role(mixedCourses);
+        await assert.rejects(()=>rpc("mission",fridayPractice),/not_found/);
+      }
+    }
+    console.log("PASS DAY 4·5 동일/부분 겹침/앞 구간 재사용, 잘못된 개별 구간 거절, 목·금 독립 공개와 같은 원본 재생");
 
     console.log(
       "PASS combined production migration; guest/private ACL, admin create/locked/delete, KST future, scoped rounds, excluded refunded/failed, free/manual/partial, private/shared/text/audio submits, storage RLS, feedback + idempotency, own archive after refund, per-device opt-in and owner transfer",

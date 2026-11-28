@@ -135,8 +135,9 @@ function memberFixture() {
     await archive.getByRole('heading',{name:'연습 3'}).waitFor();
     assert.equal(await archive.locator('.chapter-full,[data-chapter-play],#mission-submit').count(),0);
     const native = await freshPage();
-    await native.clock.setFixedTime(new Date(fixtureNow));
-    await native.goto(origin+'/challenge-mission.html?uploaded=1');
+    // 금요일 자정 이후에는 목요일 DAY 4와 금요일 DAY 5가 모두 열려 있다.
+    await native.clock.setFixedTime(new Date('2026-11-27T00:10:00+09:00'));
+    await native.goto(origin+'/challenge-mission.html?uploaded=1&id='+id(3));
     const play = native.locator('[data-chapter-play]'), full = native.locator('[data-chapter-full]');
     await play.waitFor();
     assert.equal(await full.getAttribute('href'),null);
@@ -162,12 +163,36 @@ function memberFixture() {
       const v=document.querySelector('.chapter-screen video');
       return commands.length===count+1 && v && !v.paused && v.currentTime>=7;
     },beforeRenewal);
-    await native.getByRole('link',{name:/DAY 1,/}).click();
-    await native.getByRole('heading',{name:'연습 1'}).waitFor();
-    assert.equal(await video.count(),0);
-    await play.click();
-    await native.waitForFunction(()=>{const v=document.querySelector('.chapter-screen video'); return v && !v.paused && v.currentTime>=2});
-    assert.deepEqual(await native.evaluate(()=>commands.at(-1)),{action:'play',id:id(1)});
+    // 같은 원본의 동일 구간을 사용하는 두 DAY를 각각 선택하고 다시 연다.
+    const sharedSegmentStarted = () => native.waitForFunction(()=>{
+      const v=document.querySelector('.chapter-screen video');
+      return v && !v.paused && v.currentTime>=2 && v.currentTime<5;
+    });
+    for (const day of [4,5]) {
+      await native.getByRole('link',{name:new RegExp('DAY '+day+',')}).click();
+      const heading = native.getByRole('heading',{name:'연습 '+day,exact:true});
+      await heading.waitFor();
+      const dayUrl = new URL(native.url());
+      assert.equal(dayUrl.searchParams.get('id'),id(day));
+      dayUrl.searchParams.set('uploaded','1');
+      for (const reopen of [false,true]) {
+        if (reopen) { await native.goto(dayUrl.href); await heading.waitFor(); }
+        const panel = native.getByRole('region',{name:'DAY '+day+' 영상'});
+        assert.equal(await panel.locator('.chapter-caption span').textContent(),'0:02 – 0:05');
+        assert(await panel.getByRole('button',{name:'이번 주 영상 전체 보기'}).isVisible());
+        assert.equal(await video.count(),0);
+        await panel.getByRole('button',{name:'챕터 재생'}).click();
+        await sharedSegmentStarted();
+        assert.deepEqual(await native.evaluate(()=>commands.at(-1)),{action:'play',id:id(day)});
+        await video.evaluate(v=>{v.currentTime=4.75;});
+        const replay = panel.getByRole('button',{name:'챕터 다시 보기'});
+        await replay.waitFor();
+        assert.equal(await video.count(),0);
+        await replay.click();
+        await sharedSegmentStarted();
+        assert.deepEqual(await native.evaluate(()=>commands.at(-1)),{action:'play',id:id(day)});
+      }
+    }
     const simultaneous=await freshPage();
     await simultaneous.clock.setFixedTime(new Date(fixtureNow));
     await simultaneous.goto(origin+'/challenge-mission.html?round=7&same_round=1');
@@ -205,6 +230,6 @@ function memberFixture() {
     assert.equal(await unavailable.locator('[data-chapter-play],#mission-submit').count(),0);
     assert.deepEqual(await unavailable.evaluate(()=>mountedPush),[]);
     assert.deepEqual(external,[]); assert.deepEqual(errors,[]);
-    console.log('통과: 주차·요일 이동, 초안, KST 자정/잠금, 기존 YouTube 챕터 및 업로드 MP4 구간/전체 재생, 접근 거부/재서명/복습');
+    console.log('통과: 주차·요일 이동, 초안, KST 자정/잠금, YouTube 챕터, 업로드 MP4 구간/전체 재생, 다른 DAY의 같은 구간 재생·다시 열기, 접근 거부/재서명/복습');
   } finally { await browser.close(); }
 })().catch(err=>{console.error(err);process.exitCode=1;});

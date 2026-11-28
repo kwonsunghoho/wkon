@@ -19,8 +19,9 @@ function adminFixture() {
       rpc:async (name,{p_action,p_data}) => {
         if (name!=='challenge_room') throw Error(name);
         if (p_action==='admin-save') {
-          missions.push({...p_data,id:'new-day',opens_at:p_data.release_date+'T00:00:00+09:00'});
-          return {data:{id:'new-day'}};
+          const id='day-'+p_data.challenge+'-'+p_data.round+'-'+p_data.day_no;
+          missions.push({...p_data,id,opens_at:p_data.release_date+'T00:00:00+09:00'});
+          return {data:{id}};
         }
         if (p_action!=='admin-list') throw Error(name+' '+p_action);
         window.listedCohorts.push([p_data.challenge,p_data.round]);
@@ -193,6 +194,28 @@ async function dashboardEntry(browser) {
   await dayForm.locator('[name=chapterEnd]').fill('0:15');
   await dayForm.locator('[type=submit]').click();
   await expanded.locator('#msList').getByText(/스피닝 연습/).waitFor();
+  for (const [day,date,start,end] of [[3,'2027-01-13','0:12','0:20'],[4,'2027-01-14','0:02','0:05'],[5,'2027-01-15','0:02','0:05']]) {
+    await expanded.getByRole('button',{name:'미션 추가'}).click();
+    await dayForm.locator('[name=day]').selectOption(String(day));
+    await dayForm.locator('[name=title]').fill('반복 듣기 '+day);
+    await dayForm.locator('[name=body]').fill('오늘의 구간을 연습하세요.');
+    await dayForm.locator('[name=withChapter]').check();
+    await dayForm.locator('[name=date]').fill(date);
+    await dayForm.locator('[name=chapterStart]').fill(start);
+    const endField=dayForm.locator('[name=chapterEnd]');
+    if (day===5) {
+      await endField.fill(start);
+      await dayForm.locator('[type=submit]').click();
+      assert.equal(await endField.evaluate(input=>input.validity.valid),false);
+      assert(await dayForm.isVisible());
+    }
+    await endField.fill(end);
+    await dayForm.locator('[type=submit]').click();
+    const saved=expanded.locator('#msList .ms-row').filter({hasText:'DAY '+day+' · 반복 듣기 '+day});
+    await saved.waitFor();
+    const metadata=await saved.locator('.ms-meta').innerText();
+    assert(metadata.includes(date) && metadata.includes(start+'–'+end));
+  }
   await programs.selectOption('expression');
   await weekOne.waitFor();
   assert.equal(await expanded.locator('#msWeekVideos').getByText('스피닝.mp4').count(),0);

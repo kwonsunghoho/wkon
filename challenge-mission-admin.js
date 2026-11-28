@@ -385,7 +385,6 @@
     if (/invalid_file|content_type|unsupported|bad_video/.test(reason)) return 'MP4 또는 WebM 영상 파일을 선택해 주세요.';
     if (/video_service_error/.test(reason)) return '영상 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
     if (/week_video_missing/.test(reason)) return '이 DAY에 해당하는 주차의 원본 영상을 먼저 등록해 주세요.';
-    if (/chapter_order/.test(reason)) return '같은 주차에서 앞 DAY가 끝난 뒤에 시작하고 다음 DAY가 시작되기 전에 끝나도록 구간을 조정해 주세요.';
     if (/bad_chapter_day/.test(reason)) return 'DAY에 지정된 요일과 공개 날짜를 맞춰 주세요.';
     if (/bad_chapter/.test(reason)) return '영상의 시작·끝 시간을 확인해 주세요.';
     if (/locked|already.open|already.released|past_date/i.test(reason)) return '이미 공개됐거나 공개 시각이 지났습니다. 일정을 새로고침해 주세요.';
@@ -544,14 +543,6 @@
     chapter.setCustomValidity(chapter.checked && !videos.some(v => v.week_no === weekOf(day.value)) ? '해당 주차의 원본 영상을 먼저 등록해 주세요.' : '');
     startTime.setCustomValidity(chapter.checked && (!Number.isFinite(start) || start >= 86400) ? '시작 시간을 분:초로 입력해 주세요.' : '');
     endTime.setCustomValidity(chapter.checked && (!Number.isFinite(end) || end > 86400 || end <= start) ? '끝 시간은 시작 시간보다 늦게, 24시간 이내로 입력해 주세요.' : '');
-    if (chapter.checked && start >= 0 && end > start) {
-      const n = Number(day.value);
-      const peers = rows.filter(r => r.id !== editId && r.chapter_start_seconds != null && weekOf(r.day_no) === weekOf(n));
-      const before = peers.find(r => r.day_no < n && start < r.chapter_end_seconds);
-      const after = peers.find(r => r.day_no > n && end > r.chapter_start_seconds);
-      if (before) startTime.setCustomValidity('DAY ' + before.day_no + '가 끝나는 ' + timeLabel(before.chapter_end_seconds) + ' 이후로 시작 시간을 지정해 주세요.');
-      if (after) endTime.setCustomValidity('DAY ' + after.day_no + '가 시작하는 ' + timeLabel(after.chapter_start_seconds) + ' 이전으로 끝 시간을 지정해 주세요.');
-    }
     if (!form.reportValidity()) return;
     const payload = {challenge, round:Number(round), day_no:Number(day.value), release_date:date.value, title:title.value.trim(), body:body.value.trim()};
     payload.chapter_start_seconds = start;
