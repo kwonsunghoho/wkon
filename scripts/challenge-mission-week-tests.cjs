@@ -10,11 +10,14 @@ const fixtureNow = Date.parse('2026-11-25T14:59:50Z');
 const id = n => 'a0000000-0000-4000-8000-'+String(n).padStart(12,'0');
 const privateClip = 'https://media.example.test/storage/v1/object/sign/challenge-room-video/sample.mp4';
 
+const privateIntro = privateClip.replace('sample.mp4','intro-54.mp4');
+
 function memberFixture() {
   const uid = 'b0000000-0000-4000-8000-000000000001';
   const id = n => 'a0000000-0000-4000-8000-'+String(n).padStart(12,'0');
   const archived = location.search.includes('archived');
   const uploaded = location.search.includes('uploaded');
+  const intro = new URLSearchParams(location.search).has('first-preview');
   const sameRound = location.search.includes('same_round');
   const courses = sameRound ? ['spinning','expression','answer','voice'] : ['voice'];
   const dates = ['2026-11-23','2026-11-24','2026-11-25','2026-11-26','2026-11-27','2026-11-30'];
@@ -31,10 +34,11 @@ function memberFixture() {
   }};
   window.MONC = {requireSession:async()=>session,requireConsent:async()=>true,getSession:async()=>session,
     sb:{functions:{invoke:async(name,{body})=>{
-      if (name!=='challenge-week-video' || body.action!=='play') throw new Error(name);
+      if (name!=='challenge-week-video' || !['play','admin-first-preview'].includes(body.action)) throw new Error(name);
       window.commands.push(body);
       if (window.denyVideo) return {error:{message:'forbidden'}};
-      return {data:{ok:true,url:'https://media.example.test/storage/v1/object/sign/challenge-room-video/sample.mp4?token=fixture',urlExpiresAt:new Date(Date.now()+600000).toISOString()}};
+      const file=body.action==='admin-first-preview'?'intro-54.mp4':'sample.mp4';
+      return {data:{ok:true,url:'https://media.example.test/storage/v1/object/sign/challenge-room-video/'+file+'?token=fixture',urlExpiresAt:new Date(Date.now()+600000).toISOString()}};
     }},rpc:async(name,{p_action:a,p_data:p})=>{
       if (name!=='challenge_room') throw new Error(name);
       const cohorts=courses.map((code,i)=>({round:7,challenge:code,missions:opened().map(m=>({...m,
@@ -43,9 +47,9 @@ function memberFixture() {
       if (a==='home') return {data:{server_now:new Date().toISOString(),
         history:sameRound?cohorts.map(c=>({challenge:c.challenge,round:7,day_no:1,mission_id:c.missions[0].id,
           title:c.challenge+' 제출',created_at:'2026-11-24T01:00:00Z'})):[],cohorts:archived?[]:cohorts}};
-      if (a==='mission' && m) return {data:{mission:{...m,body:'연습',round:7,challenge:cohort.challenge,eligible:!archived,
+      if (a==='mission' && m) return {data:{mission:{...m,body:'연습',round:7,challenge:cohort.challenge,eligible:!archived,admin_preview:intro&&m.day_no===1,
         chapter:(!archived&&m.day_no!==2)?(uploaded
-          ? {provider:'storage',week_no:1,start_seconds:2,end_seconds:5}
+          ? {provider:'storage',week_no:1,start_seconds:intro?0:2,end_seconds:intro?519:5}
           : {provider:'youtube',video_id:'abcdef12345',week_no:1,start_seconds:8,end_seconds:12}):null},answers:[]}};
       return {error:{message:'미공개'}};
     }}};
@@ -59,8 +63,8 @@ function memberFixture() {
     const external=[],errors=[];
     const fixtureRoute=async route=>{
       const url=new URL(route.request().url());
-      if (url.origin+url.pathname===privateClip) {
-        const fixturePath = process.argv[4] || path.join(site,'video/bq-candidate.mp4');
+      if ([privateClip,privateIntro].includes(url.origin+url.pathname)) {
+        const fixturePath = (url.origin+url.pathname===privateIntro ? process.argv[5] : process.argv[4]) || path.join(site,'video/bq-candidate.mp4');
         const bytes = fs.readFileSync(fixturePath);
         const match = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range || '');
         if (!match) return route.fulfill({contentType:'video/mp4',body:bytes,headers:{'accept-ranges':'bytes'}});
@@ -134,6 +138,23 @@ function memberFixture() {
     await archive.goto(origin+'/challenge-mission.html?id='+id(3)+'&archived=1');
     await archive.getByRole('heading',{name:'연습 3'}).waitFor();
     assert.equal(await archive.locator('.chapter-full,[data-chapter-play],#mission-submit').count(),0);
+    const preview=await freshPage();
+    await preview.goto(origin+'/challenge-mission.html?first-preview=1&uploaded=1&id='+id(1));
+    await preview.getByRole('button',{name:'미리보기 재생'}).waitFor();
+    assert.match(await preview.locator('.chapter-caption').innerText(),/0:00 – 0:54/);
+    assert.equal(await preview.locator('.chapter-full').count(),0);
+    await preview.getByRole('button',{name:'미리보기 재생'}).click();
+    await preview.waitForFunction(()=>{const v=document.querySelector('video');return v && !v.paused && v.currentTime>0 && v.currentTime<2});
+    assert.deepEqual(await preview.evaluate(()=>commands),[{action:'admin-first-preview',challenge:'voice',round:7,week_no:1}]);
+    const introVideo=preview.locator('.chapter-screen video');
+    const length=await introVideo.evaluate(v=>v.duration);
+    assert(length>0 && length<=54.001);
+    if (process.argv[5]) assert(Math.abs(length-54)<.01);
+    await introVideo.evaluate(v=>{v.currentTime=v.duration-.2});
+    await preview.getByRole('button',{name:'미리보기 다시 보기'}).waitFor();
+    await preview.getByRole('button',{name:'미리보기 다시 보기'}).click();
+    await preview.waitForFunction(()=>{const v=document.querySelector('video');return v && !v.paused && v.currentTime>0 && v.currentTime<2});
+    await preview.close();
     const native = await freshPage();
     // 금요일 자정 이후에는 목요일 DAY 4와 금요일 DAY 5가 모두 열려 있다.
     await native.clock.setFixedTime(new Date('2026-11-27T00:10:00+09:00'));

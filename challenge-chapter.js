@@ -24,12 +24,13 @@ window.ChallengeChapter = (() => {
   }
   function render(c, day) {
     if (!valid(c)) return '';
-    const full = c.provider === 'youtube'
+    const label = c.preview ? '1일차 미리보기' : 'DAY ' + Number(day) + ' 영상';
+    const full = c.preview ? '' : c.provider === 'youtube'
       ? `<a class="chapter-full" href="https://www.youtube.com/watch?v=${c.video_id}" target="_blank" rel="noopener noreferrer">이번 주 영상 전체 보기</a>`
       : '<button class="chapter-full" type="button" data-chapter-full>이번 주 영상 전체 보기</button>';
-    return `<section class="chapter-player" aria-label="DAY ${Number(day)} 영상"><div class="chapter-screen" data-chapter-screen>
-      <button type="button" data-chapter-play><span class="chapter-triangle" aria-hidden="true"></span><span>챕터 재생</span></button></div>
-      <div class="chapter-caption"><strong>DAY ${Number(day)} 영상</strong><span>${clock(c.start_seconds)} – ${clock(c.end_seconds)}</span></div>
+    return `<section class="chapter-player" aria-label="${label}"><div class="chapter-screen" data-chapter-screen>
+      <button type="button" data-chapter-play><span class="chapter-triangle" aria-hidden="true"></span><span>${c.preview ? '미리보기 재생' : '챕터 재생'}</span></button></div>
+      <div class="chapter-caption"><strong>${label}</strong><span>${clock(c.start_seconds)} – ${clock(c.end_seconds)}</span></div>
       ${full}
       <p data-chapter-status role="status"></p></section>`;
   }
@@ -63,7 +64,10 @@ window.ChallengeChapter = (() => {
     let end = full ? Infinity : c.end_seconds;
     const requestedPosition = Number.isFinite(resume) && resume>=start && resume<end ? resume : start;
     let lastPosition = requestedPosition;
-    const finish = () => again(full ? '이번 주 영상을 끝까지 재생했어요.' : '이 챕터를 끝까지 재생했어요.',full ? '전체 영상 다시 보기' : '챕터 다시 보기');
+    const finish = () => {
+      if (c.preview) again('미리보기가 끝났어요.','미리보기 다시 보기');
+      else again(full ? '이번 주 영상을 끝까지 재생했어요.' : '이 챕터를 끝까지 재생했어요.',full ? '전체 영상 다시 보기' : '챕터 다시 보기');
+    };
     function checkRange() {
       if (turn!==ticket || video.readyState<1 || video.error) return;
       if (video.currentTime>=start && video.currentTime<end) lastPosition = video.currentTime;
@@ -71,16 +75,18 @@ window.ChallengeChapter = (() => {
       if (video.currentTime >= end) finish();
       else if (video.currentTime + .15 < start && !video.seeking) video.currentTime = start;
     }
-    video.controls = true; video.playsInline = true; video.preload = 'auto';
+    video.controls = true;
+    video.playsInline = true; video.preload = 'auto';
     const media = new URL(url);
     if (media.origin === 'https://apzwauiumhmsvrgffjis.supabase.co') video.crossOrigin = 'anonymous';
     const firstChapterPlay = !full && !Number.isFinite(resume);
-    if (firstChapterPlay && start > 0) media.hash = 't=' + start;
-    video.setAttribute('aria-label',full ? '이번 주 전체 영상' : '선택한 챕터 영상');
+    if (c.preview) media.hash = 't=' + requestedPosition + ',' + end;
+    else if (firstChapterPlay && start > 0) media.hash = 't=' + start;
+    video.setAttribute('aria-label',c.preview ? '1일차 미리보기' : full ? '이번 주 전체 영상' : '선택한 챕터 영상');
     listen('loadedmetadata',()=>{
       if (turn!==ticket) return;
       if (Number.isFinite(video.duration)) {
-        if (!full && (start >= video.duration || end > video.duration+.5)) {
+        if (!full && (start >= video.duration || (!c.preview && end > video.duration+.5))) {
           again('설정한 챕터 시간이 영상 길이를 벗어났어요. 운영자에게 알려 주세요.','다시 시도'); return;
         }
         end = Math.min(end,video.duration);
@@ -91,6 +97,7 @@ window.ChallengeChapter = (() => {
     listen('loadeddata',()=>{ clearTimeout(loadTimer); });
     listen('playing',()=>{ clearTimeout(loadTimer); status.textContent=''; clearInterval(poll); if(!full) poll=setInterval(checkRange,100); });
     listen('pause',()=>clearInterval(poll));
+    if (c.preview) { listen('seeking',checkRange); listen('pause',checkRange); }
     listen('seeked',checkRange); listen('timeupdate',checkRange); listen('ended',finish);
     listen('error',()=>{
       if (turn!==ticket) return;
@@ -118,6 +125,7 @@ window.ChallengeChapter = (() => {
   }
   async function play(panel,c,{full=false,loadURL,resume,renewed=false}={}) {
     if (!panel || !valid(c)) return;
+    if (c.preview) full = false;
     close();
     const turn = ticket, screen = panel.querySelector('[data-chapter-screen]'), status = panel.querySelector('[data-chapter-status]');
     const fullButton = panel.querySelector('[data-chapter-full]');
@@ -139,7 +147,7 @@ window.ChallengeChapter = (() => {
     screen.replaceChildren(pendingButton);
     try {
       if (c.provider === 'storage') {
-        loadTimer = setTimeout(()=>again('영상을 열 수 없어요. 연결을 확인한 뒤 다시 시도해 주세요.','다시 시도',resume),20000);
+        loadTimer = setTimeout(()=>again('영상을 열 수 없어요. 연결을 확인한 뒤 다시 시도해 주세요.','다시 시도',resume),c.preview ? 60000 : 20000);
         const href = await loadURL();
         if (turn!==ticket || !panel.isConnected) return;
         clearTimeout(loadTimer);
@@ -158,7 +166,8 @@ window.ChallengeChapter = (() => {
       const host = document.createElement('div'); screen.replaceChildren(host);
       const segment = {videoId:c.video_id,startSeconds:c.start_seconds,endSeconds:c.end_seconds};
       loadTimer = setTimeout(() => again('영상을 열 수 없어요. 연결을 확인한 뒤 다시 시도해 주세요.','다시 시도'),15000);
-      player = new yt.Player(host,{width:'100%',height:'100%',playerVars:{controls:1,origin:location.origin,playsinline:1,rel:0},
+      const finishChapter = () => c.preview ? again('미리보기가 끝났어요.','미리보기 다시 보기') : again('이 챕터를 끝까지 재생했어요.','챕터 다시 보기');
+      player = new yt.Player(host,{width:'100%',height:'100%',playerVars:{controls:c.preview ? 0 : 1,origin:location.origin,playsinline:1,rel:0},
         events:{
           onReady:e => {
             if (turn !== ticket) return;
@@ -171,13 +180,13 @@ window.ChallengeChapter = (() => {
           onStateChange:e => {
             if (turn !== ticket) return;
             clearInterval(poll);
-            if (e.data === yt.PlayerState.ENDED) { again('이 챕터를 끝까지 재생했어요.','챕터 다시 보기'); return; }
+            if (e.data === yt.PlayerState.ENDED) { finishChapter(); return; }
             if (e.data !== yt.PlayerState.PLAYING) return;
             let startedAt = performance.now();
             poll = setInterval(() => {
               if (turn !== ticket) return;
               const time = e.target.getCurrentTime();
-              if (time >= c.end_seconds) { again('이 챕터를 끝까지 재생했어요.','챕터 다시 보기'); return; }
+              if (time >= c.end_seconds) { finishChapter(); return; }
               // 유튜브 키프레임 오차를 허용하되 구간 바깥으로 탐색하면 같은 챕터의 시작으로 돌린다.
               if (time + 2 < c.start_seconds && performance.now()-startedAt > 1500) {
                 startedAt = performance.now(); e.target.loadVideoById(segment);

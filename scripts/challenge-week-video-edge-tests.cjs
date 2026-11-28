@@ -12,7 +12,7 @@ const objectPath = 'round-id/1/upload-id.webm';
 const uid = 'e31dc08a-f1e2-4f54-8a28-f21f9d902e18';
 const sharedPath = 'curriculum/expression/1/' + uid + '.mp4';
 
-function fixture({authorized = true, rpcResult, storageError = false, webReady = false} = {}) {
+function fixture({authorized = true, rpcResult, storageError = false, webReady = false, introReady = false} = {}) {
   const calls = {rpc: [], reads: [], uploads: [], removals: []};
   let serve;
   const client = {
@@ -28,6 +28,7 @@ function fixture({authorized = true, rpcResult, storageError = false, webReady =
       assert.equal(name, bucket);
       return {
         async info(key) {
+          if (key.endsWith('.intro-54.mp4')) return {data: introReady ? {} : null};
           assert.match(key, /\.web-720p\.mp4$/);
           return webReady ? {data: {metadata: {size: 15000, mimetype: 'video/mp4'}}} : {data: null, error: {status: 404}};
         },
@@ -102,6 +103,16 @@ async function verify() {
     assert.equal((await web.post({action, path:'client-supplied.webm'})).body.ok, true);
     assert.deepEqual(web.calls.reads.at(-1), {key: objectPath.replace('.webm','.web-720p.mp4'), seconds:600});
   }
+  const intro = fixture({introReady:true});
+  const early = {action:'admin-first-preview', challenge:'voice', round:7, week_no:1, path:'ignore-client-path'};
+  assert.equal((await intro.post(early)).body.ok, true);
+  assert.equal(intro.calls.rpc[0].p_action,'admin-preview');
+  assert.deepEqual(intro.calls.reads,[{key:objectPath.replace('.webm','.intro-54.mp4'),seconds:600}]);
+  assert.equal((await noSession.post(early)).status,401);
+  assert.equal((await rejected.post(early)).body.error,'forbidden');
+  assert.equal((await intro.post({...early,week_no:2})).status,400);
+  const missing = fixture({storageError:true});
+  assert.equal((await missing.post(early)).status,503);
   const outage = fixture({storageError: true});
   assert.equal((await outage.post(upload)).status, 503);
   assert.equal((await outage.post({action: 'play'})).status, 503);
@@ -145,7 +156,7 @@ async function verify() {
   assert.equal((await cleanup.post({action: 'cleanup', token: 'invalid'})).status, 403);
   const token = '9c0bf4be-9148-497c-b066-45fbfea81f0f';
   assert.equal((await cleanup.post({action: 'cleanup', token}, null)).body.deleted, 1);
-  assert.deepEqual(cleanup.calls.removals, [objectPath, objectPath.replace('.webm', '.web-720p.mp4')]);
+  assert.deepEqual(cleanup.calls.removals, [objectPath, objectPath.replace('.webm', '.web-720p.mp4'), objectPath.replace('.webm','.intro-54.mp4')]);
   assert.equal(cleanup.calls.rpc.at(-1).p_data.success, true);
   console.log('주차 영상 Edge 통과 · 본인 인증, 주차별 권한, 비공개 업로드·재생 서명, 저장·취소, 저장소 장애, 정리');
 }

@@ -291,6 +291,12 @@
     }
   }
 
+  function visibleChapter(mission) {
+    const chapter = mission?.chapter;
+    if (!chapter || mission.admin_preview !== true || mission.day_no !== 1 || challengeOf(mission) !== 'voice') return chapter;
+    return {...chapter, preview: true, start_seconds: 0, end_seconds: Math.min(54, chapter.end_seconds)};
+  }
+
   function renderMission() {
     const {mission, answers} = current;
     const canInteract = Boolean(activeCohort);
@@ -299,7 +305,7 @@
     const kind = family(mission);
     document.getElementById('mission-context').textContent = labelOf(mission) + (canInteract ? ' · 평일 자정 공개' : ' · 제출 기록');
     const weekdayLabel = activeCohort?.weekly_start ? weekOf(mission.day_no)+'주차 '+['월','화','수','목','금'][(mission.day_no-1)%5]+'요일' : '';
-    const chapter = canInteract ? ChallengeChapter.render(mission.chapter,mission.day_no) : '';
+    const chapter = canInteract ? ChallengeChapter.render(visibleChapter(mission),mission.day_no) : '';
     const voice = challengeOf(mission)==='voice';
     const early = mission.admin_preview===true;
     const assignment = mine ? `<section class="mission-card">${answerCard(mine,canInteract && !early)}</section>`
@@ -621,13 +627,13 @@
     if (button.hasAttribute('data-mic-check')) { await checkMicrophone(button); return; }
     if (button.matches('[data-chapter-play],[data-chapter-full]')) {
       const mission = current?.mission;
-      const chapter = mission?.chapter;
+      const chapter = visibleChapter(mission);
       if (!activeCohort || !chapter) return;
       const full = button.hasAttribute('data-chapter-full') ? button.dataset.mode!=='full' : button.dataset.chapterPlay==='full';
       await ChallengeChapter.play(button.closest('.chapter-player'),chapter,{
         full, resume:button.dataset.resume ? Number(button.dataset.resume) : undefined,
         async loadURL() {
-          const body = mission.admin_preview ? {action:'admin-preview',challenge:challengeOf(mission),round:mission.round,week_no:1} : {action:'play',id:mission.id};
+          const body = mission.admin_preview ? {action:chapter.preview ? 'admin-first-preview' : 'admin-preview',challenge:challengeOf(mission),round:mission.round,week_no:1} : {action:'play',id:mission.id};
           const {data,error} = await MONC.sb.functions.invoke('challenge-week-video',{body});
           if (error || data?.ok!==true || !data.url) throw new Error('video unavailable');
           return data.url;
@@ -689,7 +695,7 @@
       // 뒤로 돌아온 입력 화면에서는 닫힌 플레이어만 복원하고 기존 답변 초안은 유지한다.
       const chapterPanel = root.querySelector('.chapter-player');
       if (chapterPanel && current && activeCohort) {
-        chapterPanel.outerHTML = ChallengeChapter.render(current.mission.chapter,current.mission.day_no);
+        chapterPanel.outerHTML = ChallengeChapter.render(visibleChapter(current.mission),current.mission.day_no);
       }
       const record = document.getElementById('mission-record');
       if (record) {
