@@ -8,7 +8,9 @@ const site = path.resolve(__dirname, '..');
 function adminFixture() {
   const intents = new Map();
   const old = {challenge:'voice',round:2,week_no:1,provider:'youtube',video_url:'https://www.youtube.com/watch?v=oldWeek0001',locked:false};
-  const missions=[];
+  const missions=[['voice',7],['voice',8],['spinning',7],['expression',7]].map(([challenge,round])=>({
+    challenge,round,day_no:10,id:'manual-'+challenge+round,title:'기존 미션',release_date:'2027-02-12',opens_at:'2027-02-12T00:00:00+09:00'
+  }));
   window.registered = [old];
   window.operations = [];
   window.transfers = [];
@@ -17,6 +19,10 @@ function adminFixture() {
     getSession:async () => ({access_token:'test-session'}),
     sb:{
       rpc:async (name,{p_action,p_data}) => {
+        if (name==='challenge_curriculum' && p_action==='admin-curriculum') {
+          const manual=missions.concat(registered).some(row=>row.challenge===p_data.challenge && row.round===p_data.round);
+          return {data:{revision:0,days:[],week_videos:[],ready:false,round_schedule:p_data.round?{state:manual?'manual':'empty'}:null}};
+        }
         if (name!=='challenge_room') throw Error(name);
         if (p_action==='admin-save') {
           missions.push({...p_data,id:'new-day',opens_at:p_data.release_date+'T00:00:00+09:00'});
@@ -71,6 +77,16 @@ function dashboardDatabase({rounds,slow}) {
   stub.requireConsent=async()=>true;
   stub.sb.from=table=>{
     const query=new Proxy({}, {get(_,key) {
+      if (table==='challenge_rounds' && key==='upsert' && window.registerChallengeRounds) {
+        return async payload=>{
+          const result=await window.registerChallengeRounds(payload);
+          for (const row of result.data||[]) {
+            const index=rounds.findIndex(existing=>existing.id===row.id);
+            if (index===-1) rounds.push(row); else rounds[index]=row;
+          }
+          return result;
+        };
+      }
       if (key!=='then') return ()=>query;
       return (resolve,reject)=> {
         if (table==='challenge_rounds') {
@@ -129,6 +145,7 @@ async function dashboardEntry(browser) {
     const challenge=page.locator('#msChallenge');
     assert.equal(await challenge.inputValue(),'');
     await challenge.selectOption('voice');
+    await page.locator('#msLegacy > summary').click();
     await page.getByRole('button',{name:'2주차 영상 등록'}).click();
     const file=page.locator('#msWeekForm input[type=file]');
     await file.setInputFiles({name:'대기중.mp4',mimeType:'video/mp4',buffer:Buffer.from('demo')});
@@ -148,6 +165,7 @@ async function dashboardEntry(browser) {
   await delayed.locator('#msChallengeUpload').click();
   await delayed.evaluate(()=>window.releaseRoundList());
   const select=delayed.locator('#msRound');
+  await delayed.locator('#msLegacy > summary').click();
   await delayed.getByRole('button',{name:'2주차 영상 등록'}).waitFor();
   assert.equal(await select.inputValue(),'7');
   assert.deepEqual(await delayed.evaluate(()=>window.listedCohorts),[['voice',7]]);
@@ -156,7 +174,7 @@ async function dashboardEntry(browser) {
   await delayed.close();
   const empty=await visit(375,direct,[]);
   await opened(empty).waitFor();
-  await empty.locator('#msStatus').getByText(/기수.*등록/).waitFor();
+  await empty.locator('#mcScheduleStatus').getByText(/기수.*선택/).waitFor();
   assert.equal(await empty.locator('#msWeekForm input:visible').count(),0);
   await empty.close();
   const codes=['voice','spinning','expression','answer'];
@@ -169,6 +187,7 @@ async function dashboardEntry(browser) {
   await expanded.locator('#msChallengeUpload').click();
   await expanded.evaluate(()=>releaseRoundList());
   const programs=expanded.locator('#msChallenge'), weekOne=expanded.getByRole('button',{name:'1주차 영상 등록'});
+  await expanded.locator('#msLegacy > summary').click();
   await weekOne.waitFor();
   assert.deepEqual(await expanded.evaluate(()=>listedCohorts),[['spinning',7]]);
   assert.deepEqual((await programs.locator('option').evaluateAll(options=>options.map(o=>o.value))).filter(Boolean).sort(),[...codes].sort());
@@ -177,6 +196,7 @@ async function dashboardEntry(browser) {
   await weekForm.locator('input[type=file]').setInputFiles({name:'스피닝.mp4',mimeType:'video/mp4',buffer:Buffer.from('sample')});
   expanded.once('dialog',dialog=>dialog.dismiss());
   await programs.selectOption('expression');
+  assert.equal(await expanded.locator('#msLegacy').evaluate(panel=>panel.open),true);
   assert.equal(await programs.inputValue(),'spinning');
   assert.equal(await weekForm.locator('input[type=file]').evaluate(input=>input.files[0].name),'스피닝.mp4');
   await weekForm.locator('[type=submit]').click();
@@ -194,6 +214,7 @@ async function dashboardEntry(browser) {
   await dayForm.locator('[type=submit]').click();
   await expanded.locator('#msList').getByText(/스피닝 연습/).waitFor();
   await programs.selectOption('expression');
+  await expanded.locator('#msLegacy > summary').click();
   await weekOne.waitFor();
   assert.equal(await expanded.locator('#msWeekVideos').getByText('스피닝.mp4').count(),0);
   assert.equal(await expanded.locator('#msList').getByText(/스피닝 연습/).count(),0);
@@ -202,13 +223,15 @@ async function dashboardEntry(browser) {
   assert.equal(await expanded.locator('#msWeekVideos button:enabled').count(),0);
   assert.equal(await expanded.evaluate(()=>listedCohorts.some(([program])=>program==='answer')),false);
   await programs.selectOption('spinning');
+  await expanded.locator('#msLegacy > summary').click();
   await expanded.locator('#msWeekVideos').getByText('스피닝.mp4').waitFor();
   await expanded.close();
   assert.deepEqual(errors,[]);
   console.log('PASS 관리자 첫 화면·챌린지 바로가기, 파일 선택 유지, 뒤로/앞으로, 기수 지정/지연/빈 목록, 375·1280px');
 }
 
-(async()=>{
+module.exports={dashboardDatabase};
+if (require.main===module) (async()=>{
   const browser=await chromium.launch({...(process.argv[3]?{executablePath:process.argv[3]}:{}),args:['--no-sandbox']});
   try {
     const page=await browser.newPage({viewport:{width:375,height:812},locale:'ko-KR'});
@@ -216,14 +239,16 @@ async function dashboardEntry(browser) {
     page.on('pageerror',e=>errors.push(e.message));
     await page.route(/^https?:/,route=>{requests.push(route.request().url());return route.abort()});
     const html=fs.readFileSync(path.join(site,'admin.html'),'utf8');
-    const panel=html.match(/<details class="les-wrap" id="missionSchedule">[\s\S]*?<\/details>/)[0];
+    const panel=await page.evaluate(raw=>new DOMParser().parseFromString(raw,'text/html').getElementById('missionSchedule').outerHTML,html);
     const css=html.match(/<style>([\s\S]*?)<\/style>/)[1];
     await page.setContent('<style>'+css+'</style><body class="authed"><main class="smain"><div class="rounds-wrap">'+panel+'</div></main>');
     await page.evaluate(adminFixture);
+    await page.addScriptTag({path:path.join(site,'challenge-curriculum-admin.js')});
     await page.addScriptTag({path:path.join(site,'challenge-mission-admin.js')});
     await page.evaluate(()=>MONCMissionSchedule.setRounds([{challenge:'voice',round:2}]));
-    await page.locator('#missionSchedule summary').click();
+    await page.locator('#missionSchedule > summary').click();
     await page.locator('#msChallenge').selectOption('voice');
+    await page.locator('#msLegacy > summary').click();
     await page.getByRole('button',{name:'1주차 영상 수정'}).click();
     const form=page.locator('#msWeekForm'), input=form.locator('input[type=file]'), submit=form.locator('[type=submit]');
     const select=(name,mimeType)=>input.setInputFiles({name,mimeType,buffer:Buffer.from('sample')});

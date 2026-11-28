@@ -10,6 +10,7 @@ const code = stripTypeScriptTypes(source.replace(/^import [^\n]*\n/m, ''));
 const bucket = 'challenge-room-video';
 const objectPath = 'round-id/1/upload-id.webm';
 const uid = 'e31dc08a-f1e2-4f54-8a28-f21f9d902e18';
+const sharedPath = 'curriculum/expression/1/' + uid + '.mp4';
 
 function fixture({authorized = true, rpcResult, storageError = false} = {}) {
   const calls = {rpc: [], reads: [], uploads: [], removals: []};
@@ -20,7 +21,7 @@ function fixture({authorized = true, rpcResult, storageError = false} = {}) {
       return {data: {user: authorized ? {id: uid} : null}};
     }},
     async rpc(name, args) {
-      calls.rpc.push({name, ...args});
+      calls.rpc.push(structuredClone({name, ...args}));
       return rpcResult?.(name, args) || {data: {upload_id: uid, path: objectPath, contentType: 'video/webm'}};
     },
     storage: {from(name) {
@@ -67,7 +68,7 @@ async function verify() {
   assert.equal(noSession.calls.rpc.length, 0);
 
   const rejected = fixture({rpcResult: () => ({error: {message: 'challenge_video:forbidden'}})});
-  for (const action of ['admin-upload', 'admin-preview', 'play']) {
+  for (const action of ['admin-upload', 'admin-preview', 'curriculum-upload', 'curriculum-preview', 'curriculum-commit', 'curriculum-cancel', 'play']) {
     assert.equal((await rejected.post({action})).body.error, 'forbidden');
   }
   assert.equal(rejected.calls.reads.length + rejected.calls.uploads.length, 0);
@@ -79,6 +80,7 @@ async function verify() {
   assert.match(result.body.endpoint, /\/resumable\/sign$/);
   assert.deepEqual(ok.calls.uploads, [{key: objectPath, upsert: false}]);
   assert.equal(ok.calls.rpc[0].p_user, uid);
+  assert.equal(ok.calls.rpc[0].name, 'challenge_video_media');
   for (const action of ['admin-commit', 'admin-cancel']) {
     assert.deepEqual((await ok.post({action, upload_id: uid})).body, {ok: true});
   }
@@ -94,6 +96,40 @@ async function verify() {
   const outage = fixture({storageError: true});
   assert.equal((await outage.post(upload)).status, 503);
   assert.equal((await outage.post({action: 'play'})).status, 503);
+
+  const source = {challenge: 'expression', week_no: 1, name: '첫째 주.mp4', contentType: 'video/mp4',
+    size: 2147483648, expected_source_revision: 0};
+  const library = fixture({rpcResult: (_name, args) => {
+    if (args.p_action === 'curriculum-upload' && args.p_data.expected_source_revision === 3) {
+      return {error: {message: 'challenge_video:edit_conflict'}};
+    }
+    return {data: {upload_id: uid, path: sharedPath, contentType: source.contentType}};
+  }});
+  const newFile = await library.post({action: 'curriculum-upload', ...source});
+  assert.equal(newFile.body.path, sharedPath);
+  assert.equal(newFile.body.bucket, bucket);
+  assert.equal(newFile.body.contentType, source.contentType);
+  assert.deepEqual(library.calls.uploads, [{key: sharedPath, upsert: false}]);
+  assert.deepEqual(library.calls.rpc[0], {name: 'challenge_curriculum_media', p_user: uid,
+    p_action: 'curriculum-upload', p_data: source});
+  const stale = await library.post({action: 'curriculum-upload', ...source, expected_source_revision: 3});
+  assert.equal(stale.body.error, 'edit_conflict');
+  assert.equal(library.calls.uploads.length, 1);
+  for (const action of ['curriculum-commit', 'curriculum-cancel']) {
+    assert.deepEqual((await library.post({action, upload_id: uid})).body, {ok: true});
+    assert.equal(library.calls.rpc.at(-1).name, 'challenge_curriculum_media');
+  }
+  const preview = await library.post({action: 'curriculum-preview', challenge: 'expression', week_no: 1});
+  assert.deepEqual(Object.keys(preview.body).sort(), ['ok', 'url', 'urlExpiresAt']);
+  assert.equal(library.calls.rpc.at(-1).name, 'challenge_curriculum_media');
+  // A released mission signs its materialized week's source through the enrollment RPC on initial playback and renewal.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const played = await library.post({action: 'play', id: uid});
+    assert.deepEqual(Object.keys(played.body).sort(), ['ok', 'url', 'urlExpiresAt']);
+    assert.deepEqual(library.calls.rpc.at(-1), {name: 'challenge_video_media', p_user: uid, p_action: 'play', p_data: {id: uid}});
+    assert.deepEqual(library.calls.reads.at(-1), {key: sharedPath, seconds: 600});
+  }
+  assert.equal(library.calls.removals.length, 0);
 
   const cleanup = fixture({rpcResult: (_name, {p_action}) => p_action === 'claim'
     ? {data: {jobs: [{id: uid, path: objectPath, lease: 'lease'}]}} : {data: {ok: true}}});

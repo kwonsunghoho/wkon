@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
 
 const bucket = 'challenge-room-video';
 const ttl = 600;
+const curriculumActions = ['curriculum-upload', 'curriculum-commit', 'curriculum-cancel', 'curriculum-preview'];
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -45,7 +46,8 @@ Deno.serve(async (request) => {
       }
       return reply({ ok: true, deleted });
     }
-    if (!['admin-upload', 'admin-commit', 'admin-cancel', 'admin-preview', 'play'].includes(body.action)) {
+    const curriculum = curriculumActions.includes(body.action);
+    if (!curriculum && !['admin-upload', 'admin-commit', 'admin-cancel', 'admin-preview', 'play'].includes(body.action)) {
       return reply({ ok: false, error: 'invalid_request' }, 400);
     }
     const token = /^Bearer (.+)$/i.exec(request.headers.get('Authorization') || '')?.[1];
@@ -53,18 +55,18 @@ Deno.serve(async (request) => {
     const user = await db.auth.getUser(token);
     if (user.error || !user.data.user) return reply({ ok: false, error: 'unauthenticated' }, 401);
     const { action, ...input } = body;
-    const { data, error } = await db.rpc('challenge_video_media', {
+    const { data, error } = await db.rpc(curriculum ? 'challenge_curriculum_media' : 'challenge_video_media', {
       p_user: user.data.user.id, p_action: action, p_data: input,
     });
     if (error) return failure(error.message);
-    if (action === 'admin-upload') {
+    if (action === 'admin-upload' || action === 'curriculum-upload') {
       const signed = await db.storage.from(bucket).createSignedUploadUrl(data.path, { upsert: false });
       if (signed.error || !signed.data?.token) return reply({ ok: false, error: 'upload_unavailable' }, 503);
       const endpoint = base.replace('.supabase.co', '.storage.supabase.co') + '/storage/v1/upload/resumable/sign';
       return reply({ ok: true, upload_id: data.upload_id, path: data.path, token: signed.data.token,
         bucket, contentType: data.contentType, endpoint });
     }
-    if (action === 'play' || action === 'admin-preview') {
+    if (action === 'play' || action === 'admin-preview' || action === 'curriculum-preview') {
       const signed = await db.storage.from(bucket).createSignedUrl(data.path, ttl);
       if (signed.error || !signed.data?.signedUrl) return reply({ ok: false, error: 'media_unavailable' }, 503);
       return reply({ ok: true, url: signed.data.signedUrl, urlExpiresAt: new Date(Date.now() + ttl * 1000).toISOString() });

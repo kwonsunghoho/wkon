@@ -25,6 +25,9 @@
   const preview = document.getElementById('msWeekPreview');
   const previewPlayer = preview.querySelector('video');
   const previewStatus = document.getElementById('msPreviewStatus');
+  const workspace = document.getElementById('mcWorkspace');
+  const legacy = document.getElementById('msLegacy');
+  const media = document.getElementById('msMediaFields');
   const chapter = form.elements.withChapter;
   const startTime = form.elements.chapterStart;
   const endTime = form.elements.chapterEnd;
@@ -35,6 +38,11 @@
   let rows = [];
   let videos = [];
   let editingWeek = null;
+  let commonVideo = false;
+  let sourceRevision = 0;
+  let commonBusy = false;
+  let roundState = null;
+  let curriculum;
   let sequence = 0;
   let editId = null;
   let dirty = false;
@@ -44,6 +52,7 @@
   let uploadAbort = null;
   let transferred = null;
   let previewRequest = 0;
+  let previewCommon = false;
   let previewButton = null;
   let roundsState = 'pending';
   let requestedRound = '';
@@ -64,9 +73,9 @@
     history.replaceState(history.state,'',url);
   }
   function focusUpload() {
-    const target = saving ? panel.querySelector('summary') :
-      !weekForm.hidden ? videoInput : !form.hidden ? (day.disabled ? title : day) : !challenge ? challengeSelect : roundSelect.options.length ? roundSelect :
-      roundsState === 'pending' ? panel.querySelector('summary') : msg;
+    if (curriculum?.focusEditor()) return;
+    const target = saving || commonBusy ? panel.querySelector('summary') :
+      !weekForm.hidden ? videoInput : !form.hidden ? (day.disabled ? title : day) : challengeSelect;
     target.focus({preventScroll:true});
     if (target === videoInput || target === day || target === title) target.scrollIntoView({block:'center'});
     else panel.scrollIntoView({block:'start'});
@@ -75,10 +84,11 @@
     ++sequence; loadingRound = false; ready = false;
     challenge = next; challengeSelect.value = next;
     round = ''; requestedRound = desiredRound; missingRound = '';
-    closeEditor(); closePreview(); rows = []; videos = [];
+    closeEditor(); curriculum.closeEditor(); closePreview(); rows = []; videos = [];
+    roundState = null; legacy.open = false; legacy.hidden = true;
     roundSelect.replaceChildren(); list.replaceChildren(); weekList.replaceChildren();
     if (roundsState === 'ready') setRounds(allRounds);
-    else { controls(); updateUploadUrl(); }
+    else { syncCurriculum(); controls(); updateUploadUrl(); }
   }
   function openUpload(code, value) {
     const wasOpen = panel.open;
@@ -88,7 +98,7 @@
       const next = [...challengeSelect.options].some(o => o.value === code) ? code : '';
       const desired = next && /^[1-9]\d*$/.test(value || '') ? value : '';
       if (next !== challenge || (desired && desired !== (round || requestedRound || missingRound))) {
-        if (saving || !canDiscard()) { updateUploadUrl(); focusUpload(); return; }
+        if (saving || commonBusy || !canDiscard()) { updateUploadUrl(); focusUpload(); return; }
         changeChallenge(next,desired);
       }
     }
@@ -165,23 +175,33 @@
     form.hidden = true; form.reset(); editId = null; dirty = false;
     weekForm.hidden = true; weekForm.reset(); editingWeek = null;
     dropStaged(); transferBox.hidden = true;
+    commonVideo = false; sourceRevision = 0;
     for (const input of [title,body,date,startTime,endTime,chapter,videoInput]) input.setCustomValidity('');
   }
   function canDiscard() {
-    return !dirty || window.confirm('작성 중인 내용을 저장하지 않고 이동할까요?');
+    return !(dirty || curriculum?.isDirty()) || window.confirm('작성 중인 내용을 저장하지 않고 이동할까요?');
+  }
+  function updateLegacy() {
+    legacy.hidden = !ready || !(rows.length || videos.length) || roundState === 'scheduled';
+  }
+  function syncCurriculum() {
+    workspace.hidden = !challenge;
+    if (panel.open) curriculum.select(challenge,round,roundSelect.selectedOptions[0]?.dataset.start || '');
   }
   function controls() {
-    challengeSelect.disabled = saving;
-    roundSelect.disabled = saving || roundSelect.options.length < 1;
-    fields.disabled = saving || !ready;
-    weekForm.querySelector('fieldset').disabled = saving || !ready;
-    weekList.querySelectorAll('button').forEach(b => { b.disabled = saving || !ready; });
-    refreshButton.disabled = saving || (!round && !(roundsState === 'error' && retryRounds));
-    addButton.disabled = saving || !ready || !availableDays().length;
-    list.querySelectorAll('button').forEach(b => { b.disabled = saving || !ready; });
+    const busy = saving || commonBusy;
+    challengeSelect.disabled = busy;
+    roundSelect.disabled = busy || roundSelect.options.length < 1;
+    fields.disabled = busy || !ready;
+    weekForm.querySelector('fieldset').disabled = busy || (!commonVideo && !ready);
+    weekList.querySelectorAll('button').forEach(b => { b.disabled = busy || !ready; });
+    refreshButton.disabled = busy || (!round && !(roundsState === 'error' && retryRounds));
+    addButton.disabled = busy || !ready || !availableDays().length;
+    list.querySelectorAll('button').forEach(b => { b.disabled = busy || !ready; });
+    curriculum?.setBusy(saving);
   }
-  async function rpc(action, data) {
-    const result = await MONC.sb.rpc('challenge_room', {p_action:action, p_data:data});
+  async function rpc(action, data, name = 'challenge_room') {
+    const result = await MONC.sb.rpc(name, {p_action:action, p_data:data});
     if (result.error) throw result.error;
     return result.data;
   }
@@ -194,43 +214,54 @@
     }
     throw new Error(reason || 'video_service_error');
   }
-  function cancelTicket(id) {
-    if (id) videoApi('admin-cancel',{upload_id:id}).catch(() => {});
+  function cancelTicket(id, common) {
+    if (id) videoApi(common ? 'curriculum-cancel' : 'admin-cancel',{upload_id:id}).catch(() => {});
   }
   function dropStaged() {
-    if (transferred) cancelTicket(transferred.ticket.upload_id);
+    if (transferred) cancelTicket(transferred.ticket.upload_id,transferred.common);
     transferred = null;
   }
   function locked(row) {
     return row.locked || Date.parse(row.opens_at) <= Date.now();
   }
-  function editWeek(week) {
-    if (!canDiscard()) return;
-    closeEditor();
-    const video = videos.find(v => v.week_no === week);
-    if (!ready || saving || video?.locked) return;
+  function moveMedia(common) {
+    document.getElementById(common ? 'mcMediaHost' : 'msLegacyMedia').append(media);
+  }
+  function editWeek(week, common = false, source = null) {
+    if (saving || commonBusy || (!common && !canDiscard())) return;
+    const video = common ? source : videos.find(v => v.week_no === week);
+    if ((!common && !ready) || video?.locked) return;
+    closeEditor(); closePreview(); curriculum.closeEditor();
+    commonVideo = common; sourceRevision = video?.revision || 0;
+    moveMedia(common);
     editingWeek = week;
-    weekForm.querySelector('legend').textContent = challengeSelect.selectedOptions[0].textContent + ' ' + round + '기 · ' + week + '주차 원본 영상 ' + (video ? '수정' : '등록');
-    msg.textContent = ''; weekForm.hidden = false; videoInput.focus();
+    const label = challengeSelect.selectedOptions[0].textContent + (common ? ' 공통 · ' : ' ' + round + '기 · ');
+    weekForm.querySelector('legend').textContent = label + week + '주차 원본 영상 ' + (video ? '교체' : '등록');
+    document.getElementById('msFileHint').textContent = common ? 'MP4 또는 WebM · 최대 2GB. 교체한 파일은 이후에 예약하는 기수에 적용됩니다.' : 'MP4 또는 WebM · 최대 2GB. 이 기수의 첫 영상 미션이 공개되면 원본이 고정됩니다.';
+    msg.textContent = ''; weekForm.hidden = false; controls(); videoInput.focus();
   }
   function closePreview() {
     ++previewRequest;
+    previewCommon = false;
     preview.hidden = true;
     if (previewPlayer.hasAttribute('src')) {
       previewPlayer.pause(); previewPlayer.removeAttribute('src'); previewPlayer.load();
     }
     previewStatus.textContent = '';
   }
-  async function previewWeek(week, opener) {
+  async function previewWeek(week, opener, common = false) {
     closePreview();
+    previewCommon = common;
+    moveMedia(common);
     const turn = previewRequest;
     previewButton = opener;
     preview.hidden = false;
-    document.getElementById('msPreviewTitle').textContent = challengeSelect.selectedOptions[0].textContent + ' ' + round + '기 · ' + week + '주차 원본 영상';
+    document.getElementById('msPreviewTitle').textContent = challengeSelect.selectedOptions[0].textContent + (common ? ' 공통 · ' : ' ' + round + '기 · ') + week + '주차 원본 영상';
     previewStatus.textContent = '영상을 불러오는 중입니다.';
     document.getElementById('msPreviewClose').focus();
     try {
-      const data = await videoApi('admin-preview',{challenge,round:Number(round),week_no:week});
+      const data = common ? await videoApi('curriculum-preview',{challenge,week_no:week})
+        : await videoApi('admin-preview',{challenge,round:Number(round),week_no:week});
       if (turn !== previewRequest) return;
       previewPlayer.src = data.url;
       previewStatus.textContent = '';
@@ -281,14 +312,14 @@
   }
   async function uploadWeek() {
     const file = videoInput.files[0];
-    if (saving || !ready || !editingWeek || weekForm.hidden || !file) return;
+    if (saving || commonBusy || (!commonVideo && !ready) || !editingWeek || weekForm.hidden || !file) return;
     const extension = file.name.split('.').pop().toLowerCase();
     const contentType = {mp4:'video/mp4',webm:'video/webm'}[extension];
     if (!contentType || (file.type && file.type !== contentType)) videoInput.setCustomValidity('MP4 또는 WebM 파일을 선택해 주세요.');
     else if (!file.size || file.size > 2 * 1024 ** 3) videoInput.setCustomValidity('0바이트보다 크고 2GB 이하인 파일을 선택해 주세요.');
     if (!weekForm.reportValidity()) return;
 
-    const week = editingWeek, targetRound = round, targetChallenge = challenge;
+    const week = editingWeek, targetRound = round, targetChallenge = challenge, common = commonVideo;
     const controller = new AbortController();
     uploadAbort = controller; saving = true; controls(); msg.textContent = '';
     transferBox.hidden = false; stopTransfer.hidden = false;
@@ -297,24 +328,27 @@
     let committing = false;
     try {
       if (!ticket) {
-        ticket = await videoApi('admin-upload',{challenge,round:Number(round),week_no:week,name:file.name,size:file.size,contentType});
+        const scope = common ? {expected_source_revision:sourceRevision} : {round:Number(round)};
+        ticket = await videoApi(common ? 'curriculum-upload' : 'admin-upload',{challenge,...scope,week_no:week,name:file.name,size:file.size,contentType});
         if (controller.signal.aborted) throw new DOMException('upload_cancelled','AbortError');
         await transferFile(ticket,file,controller.signal);
         if (controller.signal.aborted) throw new DOMException('upload_cancelled','AbortError');
-        transferred = {file,ticket};
+        transferred = {file,ticket,common};
       }
       committing = true; stopTransfer.hidden = true; transferBar.value = 100;
       transferLabel.textContent = '업로드한 영상을 주차 원본으로 저장하고 있습니다.';
-      await videoApi('admin-commit',{upload_id:ticket.upload_id});
+      await videoApi(common ? 'curriculum-commit' : 'admin-commit',{upload_id:ticket.upload_id});
       transferred = null;
-      if (challenge === targetChallenge && round === targetRound && editingWeek === week) {
-        closeEditor(); await load(week + '주차 원본 영상을 저장했습니다.');
+      if (challenge === targetChallenge && (common || round === targetRound) && editingWeek === week) {
+        closeEditor();
+        if (common) { await curriculum.refresh(); msg.textContent = week + '주차 공통 원본 영상을 저장했습니다.'; }
+        else await load(week + '주차 원본 영상을 저장했습니다.');
       }
     } catch (error) {
       // 저장 응답이 끊기면 같은 업로드 ID로 완료 여부를 다시 확인한다.
-      if (!committing) cancelTicket(ticket?.upload_id);
+      if (!committing) cancelTicket(ticket?.upload_id,common);
       else if (/expired|not_found|locked|stale|superseded|conflict|invalid_file|invalid_upload|upload_incomplete|size_mismatch|missing_object|upload_missing/.test(error.message)) dropStaged();
-      if (challenge === targetChallenge && round === targetRound && editingWeek === week) msg.textContent = errorText(error);
+      if (challenge === targetChallenge && (common || round === targetRound) && editingWeek === week) msg.textContent = errorText(error);
     } finally {
       uploadAbort = null; saving = false; stopTransfer.hidden = true; transferBox.hidden = true; controls();
     }
@@ -334,7 +368,10 @@
         const name = document.createElement('span'); name.className = 'ms-meta'; name.textContent = video.file_name || '업로드한 영상';
         const open = document.createElement('button'); open.type = 'button'; open.className = 'ri-edit';
         open.textContent = '원본 보기'; open.setAttribute('aria-label',week + '주차 원본 영상 보기');
-        open.addEventListener('click', () => previewWeek(week,open)); info.append(name,open);
+        open.addEventListener('click', () => {
+          if (!canDiscard()) return;
+          closeEditor(); curriculum.closeEditor(); previewWeek(week,open);
+        }); info.append(name,open);
       } else if (video && /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(video.video_url)) {
         const link = document.createElement('a'); link.href = video.video_url;
         link.textContent = '원본 보기'; link.target = '_blank'; link.rel = 'noopener noreferrer';
@@ -397,14 +434,14 @@
   async function load(after = '') {
     const turn = ++sequence;
     loadedForOpening = panel.open;
-    closePreview();
-    ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls();
+    if (!previewCommon) closePreview();
+    ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls(); updateLegacy();
     if (!round) {
       loadingRound = false;
       const label = challengeSelect.selectedOptions[0]?.textContent || '';
       msg.textContent = !challenge ? '먼저 챌린지를 선택해 주세요.' : missingRound && roundSelect.options.length
         ? '요청한 ' + label + ' ' + missingRound + '기를 찾을 수 없습니다. 기수를 확인해 주세요.'
-        : '기수 관리에서 ' + label + ' 기수를 먼저 등록해 주세요.';
+        : label + ' 기수는 아직 없습니다. 공통 영상과 미션을 먼저 준비할 수 있습니다.';
       return;
     }
     loadingRound = true;
@@ -414,7 +451,7 @@
       if (turn !== sequence) return;
       if (!Array.isArray(data?.missions)) throw new Error('missing missions');
       rows = data.missions; videos = Array.isArray(data.week_videos) ? data.week_videos : [];
-      ready = true; showVideos(); showRows(); msg.textContent = after;
+      ready = true; showVideos(); showRows(); updateLegacy(); msg.textContent = after;
     } catch (error) {
       if (turn === sequence) msg.textContent = [after, errorText(error)].filter(Boolean).join(' ');
     } finally { if (turn === sequence) { loadingRound = false; controls(); } }
@@ -437,21 +474,21 @@
     round = roundSelect.value;
     if (items === null) {
       loadingRound = false;
-      uploadAbort?.abort(); closePreview();
-      ++sequence; closeEditor(); ready = false; rows = []; videos = []; weekList.replaceChildren(); list.replaceChildren();
+      if (!commonVideo) { uploadAbort?.abort(); closeEditor(); }
+      ++sequence; ready = false; rows = []; videos = []; weekList.replaceChildren(); list.replaceChildren(); updateLegacy();
       msg.textContent = '기수 목록을 불러오지 못했습니다. 새로고침해 주세요.';
     } else if (last !== round || !ready) {
-      if (last !== round) uploadAbort?.abort();
-      closeEditor(); rows = []; ready = false;
+      if (!commonVideo) { if (last !== round) uploadAbort?.abort(); closeEditor(); }
+      rows = []; ready = false;
       if (panel.open && (last !== round || !loadingRound)) load();
     }
-    controls();
+    syncCurriculum(); controls();
     if (roundsState === 'ready') updateUploadUrl();
     if (focusAfterRounds && panel.open && document.activeElement === panel.querySelector('summary')) focusUpload();
     focusAfterRounds = false;
   }
   function openEditor(row) {
-    closeEditor();
+    closeEditor(); curriculum.closeEditor();
     if (!ready || saving || (row && locked(row))) return;
     editId = row?.id || null;
     const days = row ? [row.day_no] : availableDays();
@@ -481,22 +518,27 @@
     finally { saving = false; controls(); }
   }
   challengeSelect.addEventListener('change', () => {
-    if (saving || !canDiscard()) { challengeSelect.value = challenge; return; }
+    if (saving || commonBusy || !canDiscard()) { challengeSelect.value = challenge; return; }
     changeChallenge(challengeSelect.value);
   });
   roundSelect.addEventListener('change', () => {
-    if (saving || !canDiscard()) { roundSelect.value = round; return; }
-    missingRound = ''; round = roundSelect.value; updateUploadUrl(); closeEditor(); load();
+    if (saving || commonBusy || (!commonVideo && dirty && !window.confirm('작성 중인 기수별 미션을 저장하지 않고 이동할까요?'))) { roundSelect.value = round; return; }
+    if (!commonVideo) closeEditor();
+    roundState = null; legacy.open = false;
+    missingRound = ''; round = roundSelect.value; updateUploadUrl(); syncCurriculum(); load();
   });
   panel.addEventListener('toggle', () => {
     if (!panel.open) { loadedForOpening = false; return; }
-    if (!loadedForOpening && roundsState === 'ready' && !loadingRound && !saving && !dirty && form.hidden && weekForm.hidden) load();
+    syncCurriculum();
+    if (!loadedForOpening && roundsState === 'ready' && !loadingRound && !saving && !commonBusy && !dirty && form.hidden && weekForm.hidden) load();
   });
   refreshButton.addEventListener('click', () => {
     if (roundsState === 'error' && retryRounds) {
       roundsState = 'pending'; controls(); msg.textContent = '기수를 불러오는 중입니다.'; retryRounds(); return;
     }
-    if (canDiscard()) { closeEditor(); load(); }
+    if (!commonVideo && dirty && !window.confirm('작성 중인 기수별 내용을 저장하지 않고 새로고침할까요?')) return;
+    if (!commonVideo) closeEditor();
+    curriculum.refresh(); load();
   });
   addButton.addEventListener('click', () => { if (canDiscard()) openEditor(); });
   form.addEventListener('input', e => { dirty = true; e.target.setCustomValidity?.(''); });
@@ -521,7 +563,10 @@
     uploadWeek();
   });
   document.getElementById('msWeekCancel').addEventListener('click', () => {
-    if (canDiscard()) { const btn = weekList.children[editingWeek - 1]?.querySelector('button'); closeEditor(); btn?.focus(); }
+    if (canDiscard()) {
+      const btn = commonVideo ? document.getElementById('mcWeekVideo').querySelector('button') : weekList.children[editingWeek - 1]?.querySelector('button');
+      closeEditor(); btn?.focus();
+    }
   });
   document.getElementById('msCancel').addEventListener('click', () => { if (canDiscard()) { closeEditor(); addButton.focus(); } });
   document.getElementById('msDelete').addEventListener('click', () => {
@@ -558,6 +603,19 @@
     payload.chapter_end_seconds = end;
     if (editId) payload.id = editId;
     write('admin-save', payload, '미션을 예약했습니다.');
+  });
+  curriculum = window.MONCCurriculumAdmin.create({
+    rpc:(action,data) => rpc(action,data,'challenge_curriculum'),
+    timeLabel,parseTime,
+    editVideo:(week,source) => editWeek(week,true,source),
+    previewVideo:(week,opener) => previewWeek(week,opener,true),
+    canSwitch() {
+      if (saving || (dirty && !window.confirm('작성 중인 내용을 저장하지 않고 이동할까요?'))) return false;
+      closeEditor(); closePreview(); return true;
+    },
+    syncBusy(value) { commonBusy = value; controls(); },
+    onRoundState(state) { roundState = state; updateLegacy(); },
+    onScheduled:() => load()
   });
   window.MONCMissionSchedule = {setRounds,openUpload,leaveUpload() { focusAfterRounds = false; requestedRound = ''; }};
 })();
