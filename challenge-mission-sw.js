@@ -1,4 +1,34 @@
-/* 캐시 또는 일반 페이지 요청 처리는 하지 않는다. 알림을 누르면 해당 미션을 연다. */
+/* 챌린지 영상 구간 요청과 미션 알림을 처리한다. 비공개 영상은 캐시하지 않는다. */
+self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET' || req.destination !== 'video') return;
+  const url = new URL(req.url);
+  if (url.origin !== 'https://apzwauiumhmsvrgffjis.supabase.co' ||
+      !url.pathname.startsWith('/storage/v1/object/sign/challenge-room-video/')) return;
+
+  // 메타데이터와 챕터 시작점을 찾을 때 수 GB의 남은 원본 전체를 요청하지 않는다.
+  const match = /^bytes=(\d+)-(\d*)$/i.exec(req.headers.get('range') || 'bytes=0-');
+  if (!match) return;
+  const start = Number(match[1]), limit = start + 2 * 1024 * 1024 - 1;
+  if (!Number.isSafeInteger(limit) || (match[2] && Number(match[2]) <= limit)) return;
+  event.respondWith((async () => {
+    try {
+      const part = await fetch(url.href, {
+        headers: { Range: 'bytes=' + start + '-' + limit }, credentials: 'omit',
+        cache: 'no-store', signal: req.signal
+      });
+      if (part.status === 206 || part.status === 416) return part;
+      await part.body?.cancel();
+    } catch (error) {
+      if (req.signal.aborted) throw error;
+    }
+    return fetch(req);
+  })());
+});
+
 self.addEventListener('push', event => {
   let value = {};
   try { value = event.data?.json() || {}; } catch {}

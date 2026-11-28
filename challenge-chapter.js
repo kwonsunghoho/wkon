@@ -2,6 +2,9 @@
 window.ChallengeChapter = (() => {
   'use strict';
   let api, player, nativeVideo, nativeEvents, poll, loadTimer, ticket = 0;
+  if ('serviceWorker' in navigator && location.pathname.endsWith('/challenge-mission.html')) {
+    navigator.serviceWorker.register('challenge-mission-sw.js', {scope: 'challenge-mission.html'}).catch(()=>{});
+  }
   const clock = n => Math.floor(n / 60) + ':' + String(n % 60).padStart(2,'0');
   function valid(c) {
     const supported = c?.provider === 'storage' || (c?.provider === 'youtube' && /^[A-Za-z0-9_-]{11}$/.test(c.video_id));
@@ -58,7 +61,8 @@ window.ChallengeChapter = (() => {
     const listen = (name,fn) => video.addEventListener(name,fn,{signal:nativeEvents.signal});
     const start = full ? 0 : c.start_seconds;
     let end = full ? Infinity : c.end_seconds;
-    let lastPosition = Number.isFinite(resume) && resume>=start && resume<end ? resume : start;
+    const requestedPosition = Number.isFinite(resume) && resume>=start && resume<end ? resume : start;
+    let lastPosition = requestedPosition;
     const finish = () => again(full ? '이번 주 영상을 끝까지 재생했어요.' : '이 챕터를 끝까지 재생했어요.',full ? '전체 영상 다시 보기' : '챕터 다시 보기');
     function checkRange() {
       if (turn!==ticket || video.readyState<1 || video.error) return;
@@ -68,6 +72,10 @@ window.ChallengeChapter = (() => {
       else if (video.currentTime + .15 < start && !video.seeking) video.currentTime = start;
     }
     video.controls = true; video.playsInline = true; video.preload = 'auto';
+    const media = new URL(url);
+    if (media.origin === 'https://apzwauiumhmsvrgffjis.supabase.co') video.crossOrigin = 'anonymous';
+    const firstChapterPlay = !full && !Number.isFinite(resume);
+    if (firstChapterPlay && start > 0) media.hash = 't=' + start;
     video.setAttribute('aria-label',full ? '이번 주 전체 영상' : '선택한 챕터 영상');
     listen('loadedmetadata',()=>{
       if (turn!==ticket) return;
@@ -77,16 +85,11 @@ window.ChallengeChapter = (() => {
         }
         end = Math.min(end,video.duration);
       }
-      clearTimeout(loadTimer);
-      const position = Number.isFinite(resume) && resume>=start && resume<end ? resume : start;
-      video.currentTime = position;
-      status.textContent = '';
-      video.play().catch(e=>{
-        if (turn!==ticket || e.name==='AbortError') return;
-        status.textContent = '영상의 재생 버튼을 눌러 주세요.';
-      });
+      if (Math.abs(video.currentTime - requestedPosition) > .15) video.currentTime = requestedPosition;
+      if (video.paused && !needsTap) requestPlayback();
     });
-    listen('playing',()=>{ status.textContent=''; clearInterval(poll); if(!full) poll=setInterval(checkRange,100); });
+    listen('loadeddata',()=>{ clearTimeout(loadTimer); });
+    listen('playing',()=>{ clearTimeout(loadTimer); status.textContent=''; clearInterval(poll); if(!full) poll=setInterval(checkRange,100); });
     listen('pause',()=>clearInterval(poll));
     listen('seeked',checkRange); listen('timeupdate',checkRange); listen('ended',finish);
     listen('error',()=>{
@@ -96,8 +99,22 @@ window.ChallengeChapter = (() => {
       reconnect(position);
     });
     screen.replaceChildren(video);
-    video.src = url;
+    video.src = media.href;
     video.load();
+    let needsTap = false;
+    loadTimer = setTimeout(()=>{
+      if (turn===ticket && !needsTap) status.textContent='영상을 준비하고 있어요. 준비가 끝나면 재생됩니다.';
+    },8000);
+    function requestPlayback() {
+      video.play().catch(error=>{
+        if (turn!==ticket || error.name==='AbortError') return;
+        if (error.name==='NotAllowedError') {
+          needsTap = true;
+          status.textContent = '영상의 ▶ 버튼을 눌러 재생해 주세요.';
+        }
+      });
+    }
+    if (firstChapterPlay) requestPlayback();
   }
   async function play(panel,c,{full=false,loadURL,resume,renewed=false}={}) {
     if (!panel || !valid(c)) return;
@@ -125,6 +142,7 @@ window.ChallengeChapter = (() => {
         loadTimer = setTimeout(()=>again('영상을 열 수 없어요. 연결을 확인한 뒤 다시 시도해 주세요.','다시 시도',resume),20000);
         const href = await loadURL();
         if (turn!==ticket || !panel.isConnected) return;
+        clearTimeout(loadTimer);
         if (typeof href!=='string' || !href.trim()) throw new Error('video url');
         const url = new URL(href,location.href);
         if (url.protocol!=='https:' && !(url.protocol==='http:' && url.origin===location.origin)) throw new Error('video url');
