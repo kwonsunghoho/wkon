@@ -6,8 +6,9 @@ const {randomUUID}=require('node:crypto');
 const {PGlite}=require('@electric-sql/pglite');
 const site=path.resolve(__dirname,'..');
 const migration=name=>fs.readFileSync(path.join(site,'supabase/migrations',name),'utf8');
+const segments=[[0,6],[4,9],[9,15],[2,5],[2,5]];
 const daySpec=day=>({day_no:day,title:'연습 '+day,body:'DAY '+day+' 미션 안내',
-  chapter_start_seconds:((day-1)%5)*30,chapter_end_seconds:((day-1)%5+1)*30});
+  chapter_start_seconds:segments[(day-1)%5][0],chapter_end_seconds:segments[(day-1)%5][1]});
 const offset=(ymd,days)=>new Date(Date.parse(ymd+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
 
 async function run() {
@@ -76,6 +77,7 @@ async function run() {
     await edge();
     await courseMedia('admin-commit',{upload_id:old.upload_id});
     await root();
+    await db.exec(migration('20261128110000_challenge_chapter_reuse.sql'));
     await db.exec(migration('20261128120000_challenge_shared_curriculum.sql'));
     await user(outsider);
     await assert.rejects(()=>rpc('admin-curriculum',course));
@@ -95,7 +97,9 @@ async function run() {
     for(let day=1;day<=9;day++) revision=(await save(day,revision)).revision;
     await assert.rejects(()=>schedule(73,monday,revision),/incomplete/);
     await assert.rejects(()=>save(10,revision-1),/edit_conflict/);
-    await assert.rejects(()=>save(10,revision,{chapter_start_seconds:0,chapter_end_seconds:12}),/chapter_order|bad_chapter/);
+    for (const [start,end] of [[5,5],[5,2],[-1,5],[0,86401]]) {
+      await assert.rejects(()=>save(10,revision,{chapter_start_seconds:start,chapter_end_seconds:end}),/bad_chapter/);
+    }
     revision=(await save(10,revision)).revision;
     state=await readyState();
     assert.equal(state.ready,true);
@@ -114,6 +118,7 @@ async function run() {
       const rows=(await room('admin-list',cohort(number))).missions;
       assert.deepEqual(rows.map(row=>row.day_no),[1,2,3,4,5,6,7,8,9,10]);
       assert.deepEqual(rows.map(row=>row.release_date),rows.map((_,i)=>offset(start,i+(i>4?2:0))));
+      assert.deepEqual(rows.map(row=>[row.chapter_start_seconds,row.chapter_end_seconds]),[...segments,...segments]);
       assert(rows.every(row=>new Date(row.opens_at).getUTCHours()===15));
       await edge();
       for (const [week,source] of [[1,first],[2,second]]) assert.equal((await courseMedia('admin-preview',{...cohort(number),week_no:week})).path,source);
@@ -304,7 +309,14 @@ async function browserTest({admin,rounds,monday,user,edge,rpc,room,commonMedia,s
         await editor.locator('[name=title]').fill(spec.title);
         await editor.locator('[name=body]').fill(spec.body);
         await editor.locator('[name=start]').fill(Math.floor(spec.chapter_start_seconds/60)+':'+String(spec.chapter_start_seconds%60).padStart(2,'0'));
-        await editor.locator('[name=end]').fill(Math.floor(spec.chapter_end_seconds/60)+':'+String(spec.chapter_end_seconds%60).padStart(2,'0'));
+        const endField=editor.locator('[name=end]');
+        if (n===5) {
+          await endField.fill(await editor.locator('[name=start]').inputValue());
+          await editor.locator('[type=submit]').click();
+          assert.equal(await endField.evaluate(input=>input.validity.valid),false);
+          assert(await editor.isVisible());
+        }
+        await endField.fill(Math.floor(spec.chapter_end_seconds/60)+':'+String(spec.chapter_end_seconds%60).padStart(2,'0'));
         await editor.locator('[type=submit]').click();
         await editor.waitFor({state:'hidden'});
       }
@@ -321,7 +333,9 @@ async function browserTest({admin,rounds,monday,user,edge,rpc,room,commonMedia,s
         const snapshot=await rpc('admin-curriculum',{challenge:'answer',round:number});
         assert.equal(snapshot.round_schedule.state,'scheduled');
         assert.equal(snapshot.round_schedule.start_date,start);
-        assert.equal((await room('admin-list',{challenge:'answer',round:number})).missions.length,10);
+        const days=(await room('admin-list',{challenge:'answer',round:number})).missions;
+        assert.deepEqual(days.map(d=>[d.chapter_start_seconds,d.chapter_end_seconds]),[...segments,...segments]);
+        assert.deepEqual(days.slice(3,5).map(d=>d.release_date),[offset(start,3),offset(start,4)]);
       });
     }
     assert.equal(uploads,2);

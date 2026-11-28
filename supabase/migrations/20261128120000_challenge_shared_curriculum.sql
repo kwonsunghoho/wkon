@@ -279,9 +279,6 @@ begin
       return jsonb_build_object('revision',version);
     end if;
     if version<>expected then raise exception 'challenge_curriculum:edit_conflict'; end if;
-    if exists(select 1 from challenge_room_data.curriculum_days d where d.challenge=kind and (d.day_no-1)/5=(day_value-1)/5
-      and ((d.day_no<day_value and d.end_seconds>begin_sec) or (d.day_no>day_value and d.start_seconds<end_sec))) then
-      raise exception 'challenge_curriculum:chapter_order'; end if;
     insert into challenge_room_data.curriculum_days(challenge,day_no,title,body,start_seconds,end_seconds)
     values(kind,day_value,day_title,day_body,begin_sec,end_sec) on conflict(challenge,day_no) do update
       set title=excluded.title,body=excluded.body,start_seconds=excluded.start_seconds,end_seconds=excluded.end_seconds;

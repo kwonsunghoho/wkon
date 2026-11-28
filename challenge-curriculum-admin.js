@@ -22,7 +22,6 @@
       not_found:'선택한 챌린지 또는 기수를 찾을 수 없습니다.',
       invalid_input:'입력한 제목, 미션 내용과 시간을 확인해 주세요.',
       bad_chapter:'시작 시간과 끝 시간을 확인해 주세요.',
-      chapter_order:'같은 주차의 재생 구간을 DAY 순서대로 겹치지 않게 입력해 주세요.',
       bad_schedule:'개강일 이후의 미래 월요일을 선택해 주세요.',
       edit_conflict:'다른 운영자가 공통 자료를 변경했습니다.',
       incomplete:'두 주차의 영상과 DAY 1~10을 모두 등록해 주세요.',
@@ -234,13 +233,6 @@
       fields.body.setCustomValidity(value.body ? '' : '미션 내용을 입력해 주세요.');
       fields.start.setCustomValidity(Number.isInteger(first) && first >= 0 && first < 86400 ? '' : '시작 시간을 분:초로 입력해 주세요.');
       fields.end.setCustomValidity(Number.isInteger(last) && last > first && last <= 86400 ? '' : '끝 시간은 시작 시간보다 늦고 24시간 이내여야 합니다.');
-      if (Number.isInteger(first) && Number.isInteger(last) && first >= 0 && last > first) {
-        const sameWeek = common.days.filter(d => Math.floor((d.day_no - 1) / 5) === Math.floor((n - 1) / 5));
-        const before = sameWeek.find(d => d.day_no < n && first < d.chapter_end_seconds);
-        const after = sameWeek.find(d => d.day_no > n && last > d.chapter_start_seconds);
-        if (before) fields.start.setCustomValidity('DAY ' + before.day_no + '가 끝나는 ' + host.timeLabel(before.chapter_end_seconds) + ' 이후로 시작 시간을 지정해 주세요.');
-        if (after) fields.end.setCustomValidity('DAY ' + after.day_no + '가 시작하는 ' + host.timeLabel(after.chapter_start_seconds) + ' 이전으로 끝 시간을 지정해 주세요.');
-      }
       if (!form.reportValidity()) return;
       setWriting(true);
       try {
