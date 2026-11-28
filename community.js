@@ -344,13 +344,16 @@
     const rooms=new Map(data.map(room=>[room.room_id,room]));
     for(const row of rows)row.room_entry=rooms.get(row.id);
   }
+  function studyDeleteButton(s) {
+    return operator?btn('study-delete','스터디 삭제',s.id,true,`data-study-title="${esc(s.title)}"`):'';
+  }
   function studyHTML(s,detail=false,number=0) {
     if(detail)return studyDetailHTML(s);
     const proof=[s.experience_count?'면접 경험 인증 '+s.experience_count+'명':'',s.skill_count?'실력검증 '+s.skill_count+'명':''].filter(Boolean);
     const raw=studySchedule(s.schedule)||'',match=/^(.*?)\s*·?\s*(\d{2}:\d{2}\s*[~～–-]\s*\d{2}:\d{2})$/.exec(raw);
     const when=match?match[1].replace(/\s*·\s*$/,''):raw,time=match?match[2]:'상세 일정 확인';
     const manage=operator||ownedStudies.has(s.id)||s.role==='owner';
-    return `<article class="cm-study cm-activity-card"><div class="cm-activity-body"><div class="cm-activity-head"><span class="cm-activity-kind">${esc(activity.categories[s.study_category]||'면접 준비')}</span><span class="cm-activity-status ${s.status==='open'?'':'is-closed'}">${esc(statuses[s.status])}</span>${number?'<span class="cm-activity-number" aria-label="목록 순번 '+number+'">No. '+number+'</span>':''}</div><button type="button" data-action="study" data-id="${esc(s.id)}" class="cm-study-title">${esc(s.title)}</button><dl class="cm-activity-facts"><dt>일정</dt><dd><strong>${esc(when||'요일 미정')}</strong></dd><dt>시간</dt><dd>${esc(time)}</dd><dt>장소</dt><dd>${esc(s.location||(s.mode==='online'?'온라인':'장소 미정'))}${s.location?' · '+(s.mode==='online'?'온라인':'오프라인'):''}</dd></dl>${s.room_entry?MONCStudyManagement.roomEntry(s.id):''}${conditionTags(s)}${(!s.study_category||s.study_category==='interview')&&proof.length?`<div class="cm-study-proof">${proof.map(v=>`<span>${v}</span>`).join('')}</div>`:''}</div><div class="cm-activity-footer"><span>참여 <strong>${s.members} / ${s.capacity}</strong>명</span>${btn('study','모집글 보기',s.id,true)}</div>${manage?`<div class="cm-activity-manage"><a class="cm-btn-ghost" href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=applicants">${s.status==='open'?'지원자 관리':'스터디 관리'}</a><a href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=settings">모집 설정</a></div>`:''}</article>`;
+    return `<article class="cm-study cm-activity-card"><div class="cm-activity-body"><div class="cm-activity-head"><span class="cm-activity-kind">${esc(activity.categories[s.study_category]||'면접 준비')}</span><span class="cm-activity-status ${s.status==='open'?'':'is-closed'}">${esc(statuses[s.status])}</span>${number?'<span class="cm-activity-number" aria-label="목록 순번 '+number+'">No. '+number+'</span>':''}</div><button type="button" data-action="study" data-id="${esc(s.id)}" class="cm-study-title">${esc(s.title)}</button><dl class="cm-activity-facts"><dt>일정</dt><dd><strong>${esc(when||'요일 미정')}</strong></dd><dt>시간</dt><dd>${esc(time)}</dd><dt>장소</dt><dd>${esc(s.location||(s.mode==='online'?'온라인':'장소 미정'))}${s.location?' · '+(s.mode==='online'?'온라인':'오프라인'):''}</dd></dl>${s.room_entry?MONCStudyManagement.roomEntry(s.id):''}${conditionTags(s)}${(!s.study_category||s.study_category==='interview')&&proof.length?`<div class="cm-study-proof">${proof.map(v=>`<span>${v}</span>`).join('')}</div>`:''}</div><div class="cm-activity-footer"><span>참여 <strong>${s.members} / ${s.capacity}</strong>명</span>${btn('study','모집글 보기',s.id,true)}</div>${manage?`<div class="cm-activity-manage"><a class="cm-btn-ghost" href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=applicants">${s.status==='open'?'지원자 관리':'스터디 관리'}</a><a href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=settings">모집 설정</a>${studyDeleteButton(s)}</div>`:''}</article>`;
 
   }
 
@@ -371,7 +374,7 @@
     return `<div class="cm-profile-head"><div class="cm-avatar">${esc(p.nickname.slice(0,1))}</div><div><h2 class="cm-profile-name">${esc(p.nickname)}</h2><p class="cm-profile-bio">${esc(p.bio||'아직 한 줄 소개를 작성하지 않았어요.')}</p></div></div>${p.blocked?'<p class="cm-status">커뮤니티 이용이 제한된 계정입니다.</p>':''}${p.mine?`<div class="cm-wrap">${btn('profile-edit','프로필 수정','',true)}${btn('activity','내 활동','',true)}</div>`:''}<div class="cm-proof-grid"><section class="cm-proof"><p class="cm-proof-title">면접 진출 경험</p><div class="cm-proof-value">${certs.length?'경험 인증':'아직 인증 없음'}</div>${certs.map(c=>`<p class="cm-caption">${esc(c.airline)} ${c.year}<br>${esc(c.stage)}</p>`).join('')}${p.mine?btn('proof-create','경험 인증 신청','',true):''}</section><section class="cm-proof"><p class="cm-proof-title">몬크 실력검증</p><div class="cm-proof-value">${a?'Lv.'+a.level+' '+levels[a.level]:'아직 검증 없음'}</div><p class="cm-caption">${a?`${a.method==='class'?'수업 평가':'레벨테스트'} · ${esc(a.date)}${a.valid_until?'<br>유효기간 '+esc(a.valid_until):''}`:'수업·레벨테스트를 통해<br>몬크가 확인한 실력'}</p>${p.mine?btn('assessment-info','실력검증 안내','',true):''}</section></div><section class="cm-section"><div class="cm-section-head"><h2>면접 준비 역량</h2></div><ul class="cm-skill-list">${Array.from(new Set([...p.skills,...(a?.skills||[])])).map(v=>`<li class="cm-skill"><div class="cm-skill-title">${esc(skills[v])}</div><span class="cm-skill-status ${a?.skills.includes(v)?'is-verified':''}">${a?.skills.includes(v)?'몬크 확인':'본인 표시'}</span></li>`).join('')||'<li class="cm-muted">아직 준비 항목을 표시하지 않았어요.</li>'}</ul><p class="cm-help">본인 표시는 직접 선택한 준비 항목이고, 몬크 확인은 평가로 확인한 항목이에요.</p></section><section class="cm-section"><h2>답변·음성·영상 샘플</h2>${p.samples.map(s=>`<div class="cm-list-row"><b>${esc(s.title)}</b><p class="cm-caption">${esc(scopes[s.scope])}</p><div class="cm-wrap">${s.can_read?btn('asset-read','샘플 보기',s.id,true):tag('모집자에게만 공개',true)}${p.mine?btn('asset-scope','공개 범위',s.id,true)+btn('asset-delete','삭제',s.id,true):''}</div></div>`).join('')||'<p class="cm-muted">첨부한 샘플이 없습니다.</p>'}${p.mine?btn('sample-create','샘플 첨부','',true):''}</section><section class="cm-section"><h2>희망하는 스터디</h2><dl class="cm-profile-detail">${[['목표',p.goals],['가능 시간',p.schedule],['진행 방식',p.mode],['보완하고 싶은 점',p.improve]].map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v||'아직 작성하지 않았어요.')}</dd></div>`).join('')}</dl></section>`;
   }
   function adminStudyRow(s,i){
-    return `<article class="sm-admin-row"><div class="sm-row-main"><div class="sm-row-title"><span class="sm-row-number" aria-label="목록 순번 ${adminOffset+i+1}">${String(adminOffset+i+1).padStart(2,'0')}</span><span class="sm-row-status is-${esc(s.status)}">${esc(statuses[s.status])}</span><h3>${btn('study',s.title,s.id,true)}</h3></div><p class="sm-row-schedule">${esc(studySchedule(s.schedule))}${s.location?' · '+esc(s.location):''}</p><p class="sm-meta">조장 ${esc(s.owner_nickname||'정보 없음')}</p></div><dl class="sm-row-counts"><div><dt>참여 인원</dt><dd>${s.members}<span> / ${s.capacity}명</span></dd></div><div><dt>승인 대기</dt><dd class="${s.pending_count?'has-pending':''}">${s.pending_count}<span>명</span></dd></div></dl><div class="sm-row-actions">${s.room_entry?MONCStudyManagement.roomEntry(s.id):''}<a class="cm-btn-ghost" href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=applicants">${s.status==='open'?'지원자 관리':'스터디 관리'}</a><a class="sm-button" href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=settings">모집 설정</a></div></article>`;
+    return `<article class="sm-admin-row"><div class="sm-row-main"><div class="sm-row-title"><span class="sm-row-number" aria-label="목록 순번 ${adminOffset+i+1}">${String(adminOffset+i+1).padStart(2,'0')}</span><span class="sm-row-status is-${esc(s.status)}">${esc(statuses[s.status])}</span><h3>${btn('study',s.title,s.id,true)}</h3></div><p class="sm-row-schedule">${esc(studySchedule(s.schedule))}${s.location?' · '+esc(s.location):''}</p><p class="sm-meta">조장 ${esc(s.owner_nickname||'정보 없음')}</p></div><dl class="sm-row-counts"><div><dt>참여 인원</dt><dd>${s.members}<span> / ${s.capacity}명</span></dd></div><div><dt>승인 대기</dt><dd class="${s.pending_count?'has-pending':''}">${s.pending_count}<span>명</span></dd></div></dl><div class="sm-row-actions">${s.room_entry?MONCStudyManagement.roomEntry(s.id):''}<a class="cm-btn-ghost" href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=applicants">${s.status==='open'?'지원자 관리':'스터디 관리'}</a><a class="sm-button" href="community.html?view=study&id=${encodeURIComponent(s.id)}&panel=settings">모집 설정</a>${studyDeleteButton(s)}</div></article>`;
   }
   async function adminStudies(main,turn){
     const d=await rpc('member','study-manage-list',{q:adminQuery,status:adminStatus,offset:adminOffset});if(turn!==sequence)return;
@@ -488,6 +491,19 @@
     }
   }
   async function act(action,id,node) {
+    if(action==='study-delete') {
+      if(!operator)return;
+      try {
+        if(!await MONCStudyDelete(id,node.dataset.studyTitle))return;
+      } catch(error) {
+        toast(error.message);
+        return;
+      }
+      if(route().view==='study')navigate('studies');
+      else await render();
+      toast('스터디를 삭제했습니다.');
+      return;
+    }
     if(action==='delete-empty-room') {
       if(!ownState.room_deletable || current?.id!==id)return;
       if(!window.confirm('「'+current.title+'」 스터디룸을 삭제할까요? 방에 등록한 과제도 삭제됩니다. 모집글과 지원 내역은 유지됩니다.'))return;

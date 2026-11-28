@@ -67,7 +67,7 @@
       tabs.unshift(['applicants','지원자 '+pending]);
     }
     return `<article class="sm-root ${room?'sm-room-manage':''} ${tab==='applicants'&&detailOpen?'sm-detail-active':''}">
-      <div class="sm-breadcrumb">${button(st.administrator?'study-admin':'studies',st.administrator?'전체 스터디 관리':'스터디 목록')}</div>
+      <div class="sm-breadcrumb">${button(st.administrator?'study-admin':'studies',st.administrator?'전체 스터디 관리':'스터디 목록')}${st.administrator?button('study-delete','스터디 삭제',s.id,`data-study-title="${e(s.title)}"`):''}</div>
       <header class="sm-header"><div><p class="sm-meta">${e(window.MONCActivity?.categories[s.study_category]||'면접 준비')}</p><h2>${e(s.title)}</h2><p>${e(s.schedule)}${s.location?' · '+e(s.location):''}</p></div>${room?'':settingButton}</header>
       ${st.administrator&&!room?'<p class="sm-admin-label">운영 관리자 · 전체 스터디 관리 권한</p>':''}
       <div class="sm-summary"><strong>${e(status[s.status]||s.status)}</strong><span>참여 ${s.members} / ${s.capacity}명</span>${room?'':`<span>승인 대기 ${pending}명</span>`}</div>
