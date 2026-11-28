@@ -44,6 +44,7 @@
     const data=await rpc('read');
     if(!started)return;
     room=data;
+    if(room.role==='observer' && tab==='log')tab='team';
     if(!task()){
       const next=room.tasks.find(t=>!mine(t)&&Date.parse(t.due)>Date.now());
       const latest=room.tasks.at(-1);
@@ -63,6 +64,7 @@
     return `<div data-asset="${esc(a.id)}"><p>${esc(a.file_name)}</p><div class="actions">${button('file-open','첨부 열기',`data-id="${esc(a.id)}"`)}</div><div class="media"></div></div>`;
   }
   function homework(t){
+    if(room.role==='observer')return notice('관리자 열람 중입니다. 팀원 답변에서 제출물과 피드백을 확인할 수 있습니다.');
     const a=mine(t);
     if(a)return `<h3>내가 제출한 답변</h3>${asset(a)}<hr><h3>받은 피드백</h3>${notes(a.notes)||notice('팀원의 첫 피드백을 기다리고 있어요.')}`;
     if(room.status==='ended'||Date.parse(t.due)<=Date.now())return notice('제출이 마감되었습니다.');
@@ -89,7 +91,7 @@
     peerId=a.id;
     return `<h2>팀원 답변</h2><label>확인할 답변<select id="peer">${t.answers.map(v=>`<option value="${esc(v.id)}" ${v.id===a.id?'selected':''}>${esc(v.name)}${v.mine?' (나)':''}</option>`).join('')}</select></label>
       ${asset(a)}<hr><h3>한 줄 피드백</h3>${notes(a.notes)||notice('아직 남긴 피드백이 없습니다.')}
-      ${!a.mine&&room.status!=='ended'?`<form id="note"><label>이 답변에서 어떤 점이 궁금했나요?<textarea name="body" maxlength="300" required></textarea></label><button class="primary">피드백 남기기</button></form>`:''}`;
+      ${room.role!=='observer'&&!a.mine&&room.status!=='ended'?`<form id="note"><label>이 답변에서 어떤 점이 궁금했나요?<textarea name="body" maxlength="300" required></textarea></label><button class="primary">피드백 남기기</button></form>`:''}`;
   }
   function render(){
     if(!room)return;
@@ -97,7 +99,7 @@
     root.innerHTML=`<header><div class="wrap">${back}<p class="meta">우리 스터디</p><h1>${esc(room.title)}</h1>
       <p class="muted">${room.members.length}명 참여 · ${esc(room.schedule)}</p>
       ${t?`<div class="picker" role="group" aria-label="주차 선택"><b>주차 선택</b>${room.tasks.map(v=>button('week',`${v.id===taskId?'✓ ':''}${v.week}주차`,`data-id="${esc(v.id)}" aria-pressed="${v.id===taskId}"`)).join('')}</div>`:''}
-      <nav class="tabs" aria-label="스터디 메뉴">${Object.entries(tabs).map(([k,v])=>button('tab',v,`data-tab="${k}" ${tab===k?'aria-current="page"':''}`)).join('')}</nav></div></header>
+      <nav class="tabs" aria-label="스터디 메뉴">${Object.entries(tabs).filter(([k])=>k!=='log'||room.role!=='observer').map(([k,v])=>button('tab',v,`data-tab="${k}" ${tab===k?'aria-current="page"':''}`)).join('')}</nav></div></header>
       <div class="wrap content"><section class="sheet"><div role="alert" id="error">${esc(error)}</div>${message?notice(message):''}
       ${canEdit&&tab==='task'?`<div class="actions">${button('add','과제 올리기')}${t?button('edit','이번 과제 수정'):''}</div>`:''}${panel(t)}</section>
       <aside><h3>모임 안내</h3><p>${esc(t?.notice||'등록된 공지가 없습니다.')}</p>${t?`<hr><h3>팀 제출 현황</h3><p>${t.answers.filter(a=>room.members.some(m=>m.id===a.member)).length} / ${room.members.length}명</p>
