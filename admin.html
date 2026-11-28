@@ -1398,7 +1398,7 @@
   <div class="tab-panel active" id="panel-today">
     <div class="today-wrap ad-dashboard">
       <header class="ad-page-head"><div><h1>대시보드</h1><p>신청·회원 현황과 지금 처리할 일을 확인하세요.</p></div><time id="tbDate">–</time></header>
-      <a class="ms-upload-entry" href="?tab=rounds&amp;focus=voice-upload" id="msDashboardUpload"><svg class="ic" aria-hidden="true"><use href="#i-screen"/></svg>보신각 영상 업로드</a>
+      <a class="ms-upload-entry" href="?tab=rounds&amp;focus=challenge-upload" id="msDashboardUpload"><svg class="ic" aria-hidden="true"><use href="#i-screen"/></svg>챌린지 영상 업로드</a>
       <section class="ad-work-summary" aria-label="현재 처리 현황"><h2 class="tb-head" id="tbHead">오늘 현황을 불러오고 있어요…</h2><p class="tb-lede" id="tbLede"></p><div class="ad-task-stats"><button class="tb-stat" data-todo="1" data-goto="apps" data-focus="unpaid" id="tdUnpaid"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>입금 확인</span><em>계좌이체 미입금</em></span></button><button class="tb-stat" data-todo="1" data-goto="waitlist" data-focus="waiting" id="tdWaitlist"><span class="n"><b class="td-num">–</b><small>명</small></span><span class="k"><span>오픈 알림</span><em>연락하고 완료 체크</em></span></button><a class="tb-stat" data-todo="1" href="review-desk.html" id="tdReview"><span class="n"><b class="td-num">–</b><small>건</small></span><span class="k"><span>답변 검수</span><em>일문일답 → 검수 데스크</em></span></a></div></section>
       <div class="ad-dashboard-grid">
         <section class="ad-todos"><header class="ad-section-head"><h2 id="tbTodoTitle">지금 처리</h2></header><div id="tbTodos"><div class="tb-empty">불러오는 중…</div></div></section>
@@ -1575,7 +1575,7 @@
 
   <div class="tab-panel" id="panel-rounds">
     <div class="rounds-wrap">
-      <a class="ms-upload-entry" href="?tab=rounds&amp;focus=voice-upload" id="msChallengeUpload"><svg class="ic" aria-hidden="true"><use href="#i-screen"/></svg>보신각 영상 업로드</a>
+      <a class="ms-upload-entry" href="?tab=rounds&amp;focus=challenge-upload" id="msChallengeUpload"><svg class="ic" aria-hidden="true"><use href="#i-screen"/></svg>챌린지 영상 업로드</a>
       <!-- 챌린지 공통 참가비 — site_config.challenge_price. 4개 챌린지 모두에 적용. -->
       <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow);">
         <div class="field" style="flex:1;min-width:150px;">
@@ -1635,9 +1635,16 @@
 
       <details class="les-wrap" id="missionSchedule">
         <summary class="les-head">날짜별 미션 예약</summary>
-        <p class="les-lead">보신각 미션은 지정한 평일 0시(한국 시간)에 공개됩니다. 영상 미션은 주차별 원본을 등록한 뒤 DAY별 재생 구간을 지정하세요.</p>
+        <p class="les-lead">미션은 지정한 평일 0시(한국 시간)에 해당 기수에 공개됩니다. 영상 미션은 주차별 원본을 등록한 뒤 DAY별 재생 구간을 지정하세요.</p>
         <div class="ms-toolbar">
-          <label class="field" for="msRound">챌린지·기수<select id="msRound" disabled></select></label>
+          <label class="field" for="msChallenge">챌린지<select id="msChallenge">
+            <option value="">챌린지 선택</option>
+            <option value="voice">보신각</option>
+            <option value="spinning">스피닝</option>
+            <option value="expression">영합각</option>
+            <option value="answer">승자각</option>
+          </select></label>
+          <label class="field" for="msRound">기수<select id="msRound" disabled></select></label>
           <button class="ad-sq" id="msRefresh" type="button" disabled>새로고침</button>
           <button class="btn btn-action" id="msAdd" type="button" disabled>미션 추가</button>
         </div>
@@ -2731,7 +2738,7 @@
   <link rel="stylesheet" href="online-course-refunds.css?v=20261103-applicants">
   <script src="online-course-refunds.js?v=20261103-applicants"></script>
 <script src="online-course-admin.js?v=20261104-course-delete"></script>
-  <script src="challenge-mission-admin.js?v=20261127-entry1"></script>
+  <script src="challenge-mission-admin.js?v=20261128-challenges"></script>
   <script src="admin-ui.js?v=20261015b"></script>
 
   <script src="media-storage.js?v=2"></script>
@@ -4296,12 +4303,12 @@
         document.getElementById(id).addEventListener('click', event => {
           if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
           event.preventDefault();
-          openVoiceUpload();
+          openChallengeUpload();
         });
       }
       window.addEventListener('popstate', () => {
         const url = new URL(location.href);
-        if (isVoiceUploadRoute(url)) { openVoiceUpload(url.searchParams.get('round') || ''); return; }
+        if (isChallengeUploadRoute(url)) { openChallengeUpload(url); return; }
         const prior = history.state?.moncUploadReturn;
         if (prior && ['today','rounds'].includes(prior.tab)) {
           window.MONCMissionSchedule.leaveUpload();
@@ -4313,8 +4320,8 @@
       document.querySelectorAll('.tabbtn[data-tab]').forEach(b => b.addEventListener('click', () => {
         if (b.dataset.tab !== 'rounds') {
           const url = new URL(location.href);
-          if (isVoiceUploadRoute(url)) {
-            for (const key of ['tab','focus','round']) url.searchParams.delete(key);
+          if (isChallengeUploadRoute(url)) {
+            for (const key of ['tab','focus','challenge','round']) url.searchParams.delete(key);
             history.replaceState(history.state,'',url);
           }
           window.MONCMissionSchedule.leaveUpload();
@@ -4348,26 +4355,28 @@
     /* 탭 이동 + 그 탭에서 볼 것까지 지정한다.
        ⚠️ '오늘'의 [입금 확인 필요 2건]이 신청자 현황으로만 보내고 끝나면, 오너는 전체 목록에서
           그 2건을 눈으로 다시 찾아야 한다. 숫자를 눌렀으면 그 숫자의 목록이 나와야 한다. */
-    function isVoiceUploadRoute(url) {
-      return url.searchParams.get('tab') === 'rounds' && url.searchParams.get('focus') === 'voice-upload';
+    function isChallengeUploadRoute(url) {
+      return url.searchParams.get('tab') === 'rounds' && ['challenge-upload','voice-upload'].includes(url.searchParams.get('focus'));
     }
-    let openedVoiceUpload = false;
-    function openVoiceUpload(requestedRound = '') {
-      openedVoiceUpload = true;
+    let openedChallengeUpload = false;
+    function openChallengeUpload(destination) {
+      openedChallengeUpload = true;
+      const requested = destination?.searchParams;
+      const requestedChallenge = requested && (requested.get('focus') === 'voice-upload' ? 'voice' : requested.get('challenge') || '');
+      const requestedRound = requested?.get('round') || '';
       const url = new URL(location.href);
-      const entering = !isVoiceUploadRoute(url);
+      const entering = !isChallengeUploadRoute(url);
       if (entering) {
         const tab = document.querySelector('.tabbtn.active')?.dataset.tab;
         history.replaceState({...history.state,moncUploadReturn:{tab,panelOpen:document.getElementById('missionSchedule').open}},'',location.href);
       }
-      url.searchParams.set('tab','rounds'); url.searchParams.set('focus','voice-upload');
-      if (requestedRound) url.searchParams.set('round',requestedRound);
+      url.searchParams.set('tab','rounds'); url.searchParams.set('focus','challenge-upload');
       if (entering) {
         const next = {...history.state}; delete next.moncUploadReturn;
         history.pushState(next,'',url);
       } else history.replaceState(history.state,'',url);
       if (!document.getElementById('panel-rounds').classList.contains('active')) activateTab('rounds');
-      window.MONCMissionSchedule.openUpload(requestedRound);
+      window.MONCMissionSchedule.openUpload(requestedChallenge,requestedRound);
     }
     function activateTab(name, focus) {
       const btn = document.querySelector(`.tabbtn[data-tab="${name}"]`);
@@ -10161,9 +10170,9 @@
       initTabs();
       window.MONCAdminUI.init();
       const initialUrl = new URL(location.href);
-      if (isVoiceUploadRoute(initialUrl)) {
+      if (isChallengeUploadRoute(initialUrl)) {
         revealAdmin();
-        openVoiceUpload(initialUrl.searchParams.get('round') || '');
+        openChallengeUpload(initialUrl);
       }
       setTimeout(revealAdmin, 8000);   // 안전망 — 조회 하나가 멈춰도 화면은 뜬다(빈 값으로라도)
       /* ⚠️ 여기서 받는 것은 **첫 화면('오늘')에 필요한 것뿐**이다(2026-08-03).
@@ -10189,7 +10198,7 @@
         console.error('초기 로드 실패', err);
       } finally {
         revealAdmin();       // 실패해도 화면은 켠다 — 흰 화면으로 갇히지 않게
-        if (!openedVoiceUpload) restoreDesk(); // 바로가기를 열었다면 뒤늦은 대시보드 조회가 위치를 되돌리지 않게 한다.
+        if (!openedChallengeUpload) restoreDesk(); // 바로가기를 열었다면 뒤늦은 대시보드 조회가 위치를 되돌리지 않게 한다.
       }
     })();
   </script>

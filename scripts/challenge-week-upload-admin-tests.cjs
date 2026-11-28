@@ -7,18 +7,25 @@ const site = path.resolve(__dirname, '..');
 
 function adminFixture() {
   const intents = new Map();
-  const old = {week_no:1,provider:'youtube',video_url:'https://www.youtube.com/watch?v=oldWeek0001',locked:false};
+  const old = {challenge:'voice',round:2,week_no:1,provider:'youtube',video_url:'https://www.youtube.com/watch?v=oldWeek0001',locked:false};
+  const missions=[];
   window.registered = [old];
   window.operations = [];
   window.transfers = [];
-  window.listedRounds = [];
+  window.listedCohorts = [];
   window.MONC = {
     getSession:async () => ({access_token:'test-session'}),
     sb:{
       rpc:async (name,{p_action,p_data}) => {
-        if (name!=='challenge_room' || p_action!=='admin-list') throw Error(name+' '+p_action);
-        window.listedRounds.push(p_data.round);
-        return {data:{missions:[],week_videos:structuredClone(registered)}};
+        if (name!=='challenge_room') throw Error(name);
+        if (p_action==='admin-save') {
+          missions.push({...p_data,id:'new-day',opens_at:p_data.release_date+'T00:00:00+09:00'});
+          return {data:{id:'new-day'}};
+        }
+        if (p_action!=='admin-list') throw Error(name+' '+p_action);
+        window.listedCohorts.push([p_data.challenge,p_data.round]);
+        const matches=row=>row.challenge===p_data.challenge && row.round===p_data.round;
+        return {data:{missions:structuredClone(missions.filter(matches)),week_videos:structuredClone(registered.filter(matches))}};
       },
       functions:{invoke:async (name,{body}) => {
         if (name!=='challenge-week-video') throw Error(name);
@@ -32,8 +39,8 @@ function adminFixture() {
           case 'admin-commit': {
             if (window.failCommit) return {error:{message:'unavailable'}};
             const intent=intents.get(body.upload_id);
-            registered=registered.filter(row=>row.week_no!==intent.week_no);
-            registered.push({week_no:intent.week_no,file_name:intent.name,provider:'storage',locked:false});
+            registered=registered.filter(row=>row.week_no!==intent.week_no || row.round!==intent.round || row.challenge!==intent.challenge);
+            registered.push({round:intent.round,challenge:intent.challenge,week_no:intent.week_no,file_name:intent.name,provider:'storage',locked:false});
             return {data:{ok:true}};
           }
           case 'admin-cancel': intents.delete(body.upload_id); return {data:{ok:true}};
@@ -116,8 +123,12 @@ async function dashboardEntry(browser) {
     await shortcut.waitFor();
     const box=await shortcut.boundingBox();
     assert(box && box.y>=0 && box.y<900 && box.x>=0 && box.x+box.width<=width+1);
+    assert.equal(await shortcut.innerText(),'챌린지 영상 업로드');
     await shortcut.click();
     await opened(page).waitFor();
+    const challenge=page.locator('#msChallenge');
+    assert.equal(await challenge.inputValue(),'');
+    await challenge.selectOption('voice');
     await page.getByRole('button',{name:'2주차 영상 등록'}).click();
     const file=page.locator('#msWeekForm input[type=file]');
     await file.setInputFiles({name:'대기중.mp4',mimeType:'video/mp4',buffer:Buffer.from('demo')});
@@ -139,7 +150,7 @@ async function dashboardEntry(browser) {
   const select=delayed.locator('#msRound');
   await delayed.getByRole('button',{name:'2주차 영상 등록'}).waitFor();
   assert.equal(await select.inputValue(),'7');
-  assert.deepEqual(await delayed.evaluate(()=>window.listedRounds),[7]);
+  assert.deepEqual(await delayed.evaluate(()=>window.listedCohorts),[['voice',7]]);
   await select.selectOption('8');
   await delayed.waitForURL(url=>url.searchParams.get('round')==='8');
   await delayed.close();
@@ -148,6 +159,51 @@ async function dashboardEntry(browser) {
   await empty.locator('#msStatus').getByText(/기수.*등록/).waitFor();
   assert.equal(await empty.locator('#msWeekForm input:visible').count(),0);
   await empty.close();
+  const codes=['voice','spinning','expression','answer'];
+  // 같은 번호를 가진 기수, 그리고 다른 상품에만 기수가 있는 경우를 함께 재현한다.
+  const items=codes.filter(code=>code!=='answer').map(code=>({...rounds[0],id:'round-'+code,challenge:code}));
+  const expanded=await visit(375,'?tab=rounds&focus=challenge-upload&challenge=spinning&round=7',items,true);
+  await expanded.clock.setFixedTime(new Date('2026-11-27T11:00:00Z'));
+  await opened(expanded).waitFor();
+  await expanded.waitForFunction(()=>typeof window.releaseRoundList==='function');
+  await expanded.locator('#msChallengeUpload').click();
+  await expanded.evaluate(()=>releaseRoundList());
+  const programs=expanded.locator('#msChallenge'), weekOne=expanded.getByRole('button',{name:'1주차 영상 등록'});
+  await weekOne.waitFor();
+  assert.deepEqual(await expanded.evaluate(()=>listedCohorts),[['spinning',7]]);
+  assert.deepEqual((await programs.locator('option').evaluateAll(options=>options.map(o=>o.value))).filter(Boolean).sort(),[...codes].sort());
+  await weekOne.click();
+  const weekForm=expanded.locator('#msWeekForm');
+  await weekForm.locator('input[type=file]').setInputFiles({name:'스피닝.mp4',mimeType:'video/mp4',buffer:Buffer.from('sample')});
+  expanded.once('dialog',dialog=>dialog.dismiss());
+  await programs.selectOption('expression');
+  assert.equal(await programs.inputValue(),'spinning');
+  assert.equal(await weekForm.locator('input[type=file]').evaluate(input=>input.files[0].name),'스피닝.mp4');
+  await weekForm.locator('[type=submit]').click();
+  await expanded.locator('#msWeekVideos').getByText('스피닝.mp4').waitFor();
+  const uploaded=await expanded.evaluate(()=>operations.find(o=>o.action==='admin-upload'));
+  assert.deepEqual([uploaded.challenge,uploaded.round,uploaded.week_no],['spinning',7,1]);
+  await expanded.getByRole('button',{name:'미션 추가'}).click();
+  const dayForm=expanded.locator('#msForm');
+  await dayForm.locator('[name=title]').fill('스피닝 연습');
+  await dayForm.locator('[name=body]').fill('오늘의 문장을 읽어보세요');
+  await dayForm.locator('[name=withChapter]').check();
+  await dayForm.locator('[name=date]').fill('2027-01-11');
+  await dayForm.locator('[name=chapterStart]').fill('0:00');
+  await dayForm.locator('[name=chapterEnd]').fill('0:15');
+  await dayForm.locator('[type=submit]').click();
+  await expanded.locator('#msList').getByText(/스피닝 연습/).waitFor();
+  await programs.selectOption('expression');
+  await weekOne.waitFor();
+  assert.equal(await expanded.locator('#msWeekVideos').getByText('스피닝.mp4').count(),0);
+  assert.equal(await expanded.locator('#msList').getByText(/스피닝 연습/).count(),0);
+  await programs.selectOption('answer');
+  await expanded.waitForFunction(()=>!document.querySelector('#msRound').value);
+  assert.equal(await expanded.locator('#msWeekVideos button:enabled').count(),0);
+  assert.equal(await expanded.evaluate(()=>listedCohorts.some(([program])=>program==='answer')),false);
+  await programs.selectOption('spinning');
+  await expanded.locator('#msWeekVideos').getByText('스피닝.mp4').waitFor();
+  await expanded.close();
   assert.deepEqual(errors,[]);
   console.log('PASS 관리자 첫 화면·챌린지 바로가기, 파일 선택 유지, 뒤로/앞으로, 기수 지정/지연/빈 목록, 375·1280px');
 }
@@ -167,6 +223,7 @@ async function dashboardEntry(browser) {
     await page.addScriptTag({path:path.join(site,'challenge-mission-admin.js')});
     await page.evaluate(()=>MONCMissionSchedule.setRounds([{challenge:'voice',round:2}]));
     await page.locator('#missionSchedule summary').click();
+    await page.locator('#msChallenge').selectOption('voice');
     await page.getByRole('button',{name:'1주차 영상 수정'}).click();
     const form=page.locator('#msWeekForm'), input=form.locator('input[type=file]'), submit=form.locator('[type=submit]');
     const select=(name,mimeType)=>input.setInputFiles({name,mimeType,buffer:Buffer.from('sample')});

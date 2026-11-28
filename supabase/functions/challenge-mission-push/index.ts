@@ -1,6 +1,6 @@
 import webpush from 'npm:web-push@3.6.7';
 
-const FN_VERSION = '2026-11-26.1';
+const FN_VERSION = '2026-11-28.1';
 const base = Deno.env.get('SUPABASE_URL');
 const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const cors = {
@@ -43,14 +43,14 @@ function isPushEndpoint(raw: string) {
   } catch { return false; }
 }
 
-type Delivery = {id:string; lease:string; mission_id:string; day_no:number; endpoint:string;
+type Delivery = {id:string; lease:string; mission_id:string; day_no:number; challenge:string; round:number; endpoint:string;
   keys:{p256dh:string; auth:string}};
 async function deliver(item: Delivery, vapid: Vapid) {
   if (!isPushEndpoint(item.endpoint)) return 'failed';
   let request;
   try {
     request = webpush.generateRequestDetails({endpoint:item.endpoint, keys:item.keys}, JSON.stringify({
-      mission:item.mission_id, day:item.day_no,
+      mission:item.mission_id, day:item.day_no, challenge:item.challenge, round:item.round,
     }), {TTL:1800, urgency:'normal', topic:item.mission_id.replaceAll('-',''),
       vapidDetails:{subject:'https://monc.ai.kr', ...vapid}});
   } catch { return 'failed'; }
