@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
 
 const bucket = 'challenge-room-video';
 const ttl = 600;
+const FN_VERSION = '2026-11-28.web-playback';
 const curriculumActions = ['curriculum-upload', 'curriculum-commit', 'curriculum-cancel', 'curriculum-preview'];
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -18,11 +19,28 @@ function failure(message: string) {
   return reply({ ok: false, error: code }, code === 'invalid_ticket' ? 403 : 200);
 }
 
+async function playbackUrl(db: ReturnType<typeof createClient>, original: string) {
+  const storage = db.storage.from(bucket);
+  const web = original.replace(/\.(mp4|webm)$/i, '.web-720p.mp4');
+  // The caller supplies the path returned by the enrollment/admin RPC.
+  if (web !== original) {
+    try {
+      const info = await storage.info(web);
+      if (!info.error && info.data) {
+        const signed = await storage.createSignedUrl(web, ttl);
+        if (signed.data?.signedUrl) return signed.data.signedUrl;
+      }
+    } catch { /* Keep the original available during a rendition or storage lookup failure. */ }
+  }
+  return (await storage.createSignedUrl(original, ttl)).data?.signedUrl;
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return reply({ ok: false, error: 'method' }, 405);
   try {
     const body = await request.json().catch(() => null);
+    if (body?.probe === true) return reply({ ok: true, version: FN_VERSION });
     if (!body || typeof body.action !== 'string') return reply({ ok: false, error: 'invalid_request' }, 400);
     const base = Deno.env.get('SUPABASE_URL');
     const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -36,7 +54,8 @@ Deno.serve(async (request) => {
       for (const job of claim.data?.jobs || []) {
         let success = false;
         try {
-          const removed = await db.storage.from(bucket).remove([job.path]);
+          const playbackPath = job.path.replace(/\.(mp4|webm)$/i, '.web-720p.mp4');
+          const removed = await db.storage.from(bucket).remove([...new Set([job.path, playbackPath])]);
           success = !removed.error;
         } catch { /* 임대 만료 후 다음 정리에서 재시도한다. */ }
         const done = await db.rpc('challenge_video_cleanup', {
@@ -67,9 +86,9 @@ Deno.serve(async (request) => {
         bucket, contentType: data.contentType, endpoint });
     }
     if (action === 'play' || action === 'admin-preview' || action === 'curriculum-preview') {
-      const signed = await db.storage.from(bucket).createSignedUrl(data.path, ttl);
-      if (signed.error || !signed.data?.signedUrl) return reply({ ok: false, error: 'media_unavailable' }, 503);
-      return reply({ ok: true, url: signed.data.signedUrl, urlExpiresAt: new Date(Date.now() + ttl * 1000).toISOString() });
+      const url = await playbackUrl(db, data.path);
+      if (!url) return reply({ ok: false, error: 'media_unavailable' }, 503);
+      return reply({ ok: true, url, urlExpiresAt: new Date(Date.now() + ttl * 1000).toISOString() });
     }
     return reply({ ok: true });
   } catch { return reply({ ok: false, error: 'temporarily_unavailable' }, 503); }

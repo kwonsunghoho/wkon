@@ -12,7 +12,7 @@ const objectPath = 'round-id/1/upload-id.webm';
 const uid = 'e31dc08a-f1e2-4f54-8a28-f21f9d902e18';
 const sharedPath = 'curriculum/expression/1/' + uid + '.mp4';
 
-function fixture({authorized = true, rpcResult, storageError = false} = {}) {
+function fixture({authorized = true, rpcResult, storageError = false, webReady = false} = {}) {
   const calls = {rpc: [], reads: [], uploads: [], removals: []};
   let serve;
   const client = {
@@ -27,6 +27,10 @@ function fixture({authorized = true, rpcResult, storageError = false} = {}) {
     storage: {from(name) {
       assert.equal(name, bucket);
       return {
+        async info(key) {
+          assert.match(key, /\.web-720p\.mp4$/);
+          return webReady ? {data: {metadata: {size: 15000, mimetype: 'video/mp4'}}} : {data: null, error: {status: 404}};
+        },
         async createSignedUploadUrl(key, options) {
           calls.uploads.push({key, ...options});
           return storageError ? {error: {}} : {data: {token: 'upload-ticket'}};
@@ -93,6 +97,11 @@ async function verify() {
     assert.ok(expires >= 599000 && expires <= 601000);
     assert.deepEqual(ok.calls.reads.at(-1), {key: objectPath, seconds: 600});
   }
+  const web = fixture({webReady:true});
+  for (const action of ['play', 'admin-preview', 'curriculum-preview']) {
+    assert.equal((await web.post({action, path:'client-supplied.webm'})).body.ok, true);
+    assert.deepEqual(web.calls.reads.at(-1), {key: objectPath.replace('.webm','.web-720p.mp4'), seconds:600});
+  }
   const outage = fixture({storageError: true});
   assert.equal((await outage.post(upload)).status, 503);
   assert.equal((await outage.post({action: 'play'})).status, 503);
@@ -136,7 +145,7 @@ async function verify() {
   assert.equal((await cleanup.post({action: 'cleanup', token: 'invalid'})).status, 403);
   const token = '9c0bf4be-9148-497c-b066-45fbfea81f0f';
   assert.equal((await cleanup.post({action: 'cleanup', token}, null)).body.deleted, 1);
-  assert.deepEqual(cleanup.calls.removals, [objectPath]);
+  assert.deepEqual(cleanup.calls.removals, [objectPath, objectPath.replace('.webm', '.web-720p.mp4')]);
   assert.equal(cleanup.calls.rpc.at(-1).p_data.success, true);
   console.log('주차 영상 Edge 통과 · 본인 인증, 주차별 권한, 비공개 업로드·재생 서명, 저장·취소, 저장소 장애, 정리');
 }
