@@ -9,7 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // 배포 확인용 버전 — 코드를 고치면 같이 올리고, 콘솔 배포 뒤 probe 로 확인한다(관리자에게 SQL 을 시키지 않는다).
-const FN_VERSION = '2026-11-14-payment-context'
+const FN_VERSION = '2026-11-28-voice-monday'
 
 // SDK는 주문정보를 JSON으로 직렬화한다. 기존 이중 직렬화 주문도 두 번까지만 해석한다.
 // 결제사에서 재조회한 값에만 사용하며, 대상·금액·회원 검증은 호출부에서 유지한다.
@@ -449,6 +449,8 @@ Deno.serve(async (req) => {
       payment_status: 'paid',
       paid_amount: paid,
     }
+    if (list.some(item => item && typeof item === 'object' && 'challenge' in item && item.challenge === 'voice') &&
+        typeof pay.paidAt === 'string' && Number.isFinite(Date.parse(pay.paidAt))) payload.voice_paid_at = pay.paidAt
     if (lectureIdCol) payload.lecture_id = lectureIdCol
     if (slotIdCol) payload.slot_id = slotIdCol
     if (selectedSlots.length) payload.slot_ids = selectedSlots

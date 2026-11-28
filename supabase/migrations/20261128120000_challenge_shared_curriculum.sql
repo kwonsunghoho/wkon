@@ -35,6 +35,11 @@ revoke all on challenge_room_data.curricula,challenge_room_data.curriculum_sourc
 alter table challenge_room_data.video_uploads add column curriculum_challenge text
   references challenge_room_data.curricula(challenge),
   add constraint challenge_video_one_owner check (curriculum_challenge is null or round_id is null);
+-- 기존 기수 개별 업로드의 유일성을 먼저 보존한다. 공통 커리큘럼 복사본에만 같은 원본 참조를 허용한다.
+alter table challenge_room_data.week_videos add column curriculum_copy boolean not null default false,
+  add constraint curriculum_copy_requires_upload check (not curriculum_copy or upload_id is not null);
+create unique index week_videos_individual_upload_key on challenge_room_data.week_videos(upload_id)
+  where not curriculum_copy and upload_id is not null;
 alter table challenge_room_data.week_videos drop constraint week_videos_upload_id_key;
 create index challenge_week_videos_upload on challenge_room_data.week_videos(upload_id) where upload_id is not null;
 
@@ -156,8 +161,8 @@ begin
     if automatic then return null; end if;
     raise exception 'challenge_curriculum:incomplete';
   end if;
-  insert into challenge_room_data.week_videos(round_id,week_no,upload_id)
-    select cohort.id,s.week_no,s.upload_id from challenge_room_data.curriculum_sources s where s.challenge=cohort.challenge
+  insert into challenge_room_data.week_videos(round_id,week_no,upload_id,curriculum_copy)
+    select cohort.id,s.week_no,s.upload_id,true from challenge_room_data.curriculum_sources s where s.challenge=cohort.challenge
     on conflict(round_id,week_no) do nothing;
   with inserted as (
     insert into challenge_room_data.missions(round_id,day_no,release_date,title,body)
@@ -391,4 +396,7 @@ begin
   raise exception 'challenge_video:not_found';
 end
 $sweep$;
-revoke all on all functions in schema challenge_room_data from public,anon,authenticated;
+revoke all on function challenge_room_data.protect_curriculum_snapshot(),
+  challenge_room_data.curriculum_read(text,uuid), challenge_room_data.assign_curriculum(uuid,date,bigint,boolean),
+  challenge_room_data.first_mission_monday(date), challenge_room_data.move_curriculum(uuid,date),
+  challenge_room_data.schedule_new_round() from public,anon,authenticated;

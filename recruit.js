@@ -18,6 +18,14 @@
    ② ①을 고치면서 'none' 과 null 을 같이 '키 없음'으로 두었더니, 소비처의 `|| 'open'`
       기본값 때문에 **기수가 하나도 없는데 전 챌린지가 신청 가능**해졌다(오너 지적).
    → 하드코딩 날짜 폴백 금지는 그대로. 대신 '모른다'와 '안 한다'를 반드시 가른다. */
+function voiceMonday(date = new Date()) {
+  const seoul = new Date(date.getTime() + 9 * 3600000);
+  seoul.setUTCDate(seoul.getUTCDate() + (8 - seoul.getUTCDay()) % 7);
+  return seoul.toISOString().slice(0,10);
+}
+function voiceStartLabel(ymd) {
+  return Number(ymd.slice(5,7)) + '월 ' + Number(ymd.slice(8,10)) + '일(월)';
+}
 async function loadRecruitDataFromSupabase() {
   if (!window.MONC || !window.MONC.sb) return null;
   // ⚠️ select('*') 유지 — start_mode 등 컬럼을 나열하면 마이그레이션 미적용 환경에서
@@ -37,9 +45,11 @@ async function loadRecruitDataFromSupabase() {
     // 현재 기수 = recruit_end >= 오늘 중 가장 이른 것, 없으면 가장 최근(마지막) 것.
     // 선착순(마감 없음 = recruit_end null)은 항상 '아직 안 끝난 것'으로 친다.
     const upcoming = rounds.filter(r => !r.recruit_end || new Date(r.recruit_end) >= today);
-    const chosen = upcoming.length ? upcoming[0] : rounds[rounds.length - 1];
+    const chosen = ch === 'voice' ? rounds.find(r => r.weekly_voice && r.program_start === voiceMonday())
+      : (upcoming.length ? upcoming[0] : rounds[rounds.length - 1]);
+    if (!chosen) return;
     out[ch] = {
-      start: chosen.recruit_start, end: chosen.recruit_end, round: chosen.round,
+      start: chosen.recruit_start, end: chosen.recruit_end, round: chosen.round, weeklyStart: chosen.weekly_voice ? chosen.program_start : null,
       // 선착순 — 개강일 대신 '인원이 모이면 시작'. 미적용 환경엔 컬럼이 없어 false 로 떨어진다.
       fcfs: chosen.start_mode === 'fcfs',
     };
@@ -49,7 +59,9 @@ async function loadRecruitDataFromSupabase() {
 }
 
 let _recruitDataPromise = null;
+let recruitWeek = '';
 async function loadRecruitData() {
+  if (recruitWeek !== voiceMonday()) { recruitWeek = voiceMonday(); _recruitDataPromise = null; window._challengeStatuses = null; }
   if (_recruitDataPromise) return _recruitDataPromise;
   // 단일 소스 = Supabase challenge_rounds. 조회 실패나 미등록 챌린지는 null/누락으로
   // 두고, 호출부는 그것을 '마감'이 아니라 '모름'으로 다룬다(위 절 참조).
@@ -155,7 +167,7 @@ async function applyIndexRecruit() {
       return;
     }
 
-    const status = getStatus(start, end);
+    const status = d?.weeklyStart ? 'open' : getStatus(start, end);
     window._challengeStatuses = window._challengeStatuses || {};
     window._challengeStatuses[id] = status;
 
@@ -179,6 +191,8 @@ async function applyIndexRecruit() {
          '마감'보다 '다음이 있다'를 말하는 편이 기다리는 사람에게 쓸모 있다. */
       chip.textContent = '다음 기수 준비 중';
       chip.className = 'ch-st is-closed';
+    } else if (d.weeklyStart) {
+      chip.textContent = '매주 월요일 시작'; chip.className = 'ch-st is-open';
     } else if (fcfs && !end) {
       // 선착순 — D-day 가 없다. 마감이 날짜가 아니라 인원이라는 것만 말한다.
       chip.textContent = '모집 중 · 선착순';
@@ -206,7 +220,7 @@ async function applyIndexRecruit() {
 const CHALLENGE_IDS = ['voice', 'expression', 'spinning', 'answer', 'culture'];
 
 async function loadChallengeStatuses() {
-  if (window._challengeStatuses) return;
+  if (window._challengeStatuses && recruitWeek === voiceMonday()) return;
   let data = null;
   try { data = await loadRecruitData(); } catch(e) {}
   window._challengeStatuses = {};
@@ -226,7 +240,7 @@ async function loadChallengeStatuses() {
       if (data) window._challengeStatuses[id] = 'none';
       return;
     }
-    window._challengeStatuses[id] = getStatus(d.start, d.end);
+    window._challengeStatuses[id] = d.weeklyStart ? 'open' : getStatus(d.start, d.end);
 
     window._challengeRounds = window._challengeRounds || {};
     if (d.round != null) window._challengeRounds[id] = d.round;
@@ -258,7 +272,7 @@ async function applyDetailRecruit(challengeId) {
        'open'/'upcoming'/'closed' : 기수가 있고 기간을 안다
        'none'                     : 조회 성공 + 이 챌린지 기수가 없다 = 모집 안 함
        null                       : 조회 실패 = 정말 모른다(버튼 살려 둠) */
-  const status = (start && (end || fcfs)) ? getStatus(start, end) : (data ? 'none' : null);
+  const status = (start && (end || fcfs)) ? (d.weeklyStart ? 'open' : getStatus(start, end)) : (data ? 'none' : null);
   const dday   = (status && status !== 'none') ? getDday(start, end, status) : null;
 
   if (chip) {
@@ -273,7 +287,7 @@ async function applyDetailRecruit(challengeId) {
       chip.textContent = '다음 기수 준비 중';
       chip.style.background = 'rgba(120,120,120,.1)';
     } else if (status === 'open') {
-      chip.innerHTML = (fcfs && !end)
+      chip.innerHTML = d.weeklyStart ? voiceStartLabel(d.weeklyStart) + ' 시작 · 매주 모집' : (fcfs && !end)
         // 선착순 — 기간 대신 마감 방식을 말한다(날짜가 없는데 '~ ?' 를 찍으면 오류처럼 읽힌다)
         ? `선착순 모집 중 · <strong>인원이 모이면 바로 시작</strong>`
         : dday

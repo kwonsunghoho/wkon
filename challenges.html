@@ -435,7 +435,7 @@
 <script src="supabase-config.js"></script>
   <!-- 전화번호·이름 검증 공용(2026-08-02) — 규칙은 phone-check.js 한 곳에만 둔다. -->
   <script src="phone-check.js"></script>
-<script src="recruit.js"></script>
+<script src="recruit.js?v=20261128-monday"></script>
 <script>
   /* ⚠️ nav 드롭다운·햄버거·모바일 아코디언은 nav.js 로 옮겼다(2026-07-30). */
 
@@ -504,7 +504,7 @@
       const fcfs  = !!(d && d.fcfs);   // 선착순 — 마감일이 없어도 그린다
       const meta = card.querySelector('.ch-meta');
       if (!meta || !start || (!end && !fcfs)) return;
-      const status = getStatus(start, end);
+      const status = d?.weeklyStart ? 'open' : getStatus(start, end);
       if (status === 'closed') { meta.textContent = ''; return; }
       const round = window._challengeRounds && window._challengeRounds[id];
       /* 기간은 압축형(7/28~8/6). '모집' 라벨은 유지한다(원칙 15 — 없으면 챌린지 진행
@@ -513,7 +513,7 @@
          통째 nowrap 으로 되돌리면 긴 날짜에서 끝이 또 잘린다). */
       const label = [round ? round + '기' : null, fcfs ? '선착순 모집' : '모집']
         .filter(Boolean).join(' · ');
-      const dates = fmtPeriod(start, end).replace(/ /g, '');
+      const dates = d?.weeklyStart ? voiceStartLabel(d.weeklyStart) + ' 시작' : fmtPeriod(start, end).replace(/ /g, '');
       meta.textContent = '';
       [label, dates].forEach((t, i) => {
         if (i) meta.append(' ');

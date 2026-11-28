@@ -1633,7 +1633,7 @@
         <div class="field field-date"><label for="rfStart">모집 시작</label><input id="rfStart" type="date"></div>
         <div class="field field-date"><label for="rfEnd" id="rfEndLabel">모집 마감</label><input id="rfEnd" type="date"></div>
         <div class="field field-date"><label for="rfProgram" id="rfProgramLabel">프로그램 시작(선택)</label><input id="rfProgram" type="date"></div>
-        <p class="rf-note">보신각·스피닝·영합각·승자각은 <b>공통 영상 2개와 DAY 미션 10개</b>를 한 번 준비하면, 새 기수의 미래 프로그램 시작일을 입력할 때 미션이 자동 예약됩니다.</p>
+        <p class="rf-note">보신각은 매주 월요일 자동 개강하며 별도 기수 등록이 필요 없습니다. 스피닝·영합각·승자각은 <b>공통 영상 2개와 DAY 미션 10개</b>를 한 번 준비하면, 새 기수의 미래 프로그램 시작일을 입력할 때 미션이 자동 예약됩니다.</p>
         <!-- 학생 화면(마이페이지·제출 입구)의 문항·제출 칸은 이 시작일부터 열린다(2026-09-03).
              비우면 '개강일 지정'은 모집 마감 다음 날, 선착순은 바로 열린다 — recruit.js roundStartDate. -->
         <p class="rf-note">마이페이지의 문항·제출 칸은 <b>프로그램 시작일부터</b> 열려요. 비우면 <b>모집 마감 다음 날</b>에 열리고, 마감도 없는 선착순은 다음 기수가 등록되기 전까지 <b>잠겨</b> 있어요 — 시작이 정해지면 날짜를 넣어 주세요. 아래 목록의 '학생 화면' 표시가 지금 상태예요.</p>
@@ -5123,14 +5123,14 @@
         <div class="round-item${isPast ? ' is-done' : ''}">
           <div>
             <div class="ri-main">${esc(CH_LABEL[r.challenge] || r.challenge)} ${r.round}기${isPast ? '' : ' ' + tagOf(r)}</div>
-            <div class="ri-sub">${r.start_mode === 'fcfs'
+            <div class="ri-sub">${r.weekly_voice ? '매주 월요일 자동 개강 · ' : ''}${r.start_mode === 'fcfs'
               ? '선착순 · 모집 ' + fmtDay(r.recruit_start) + ' ~' + (r.recruit_end ? ' ' + fmtDay(r.recruit_end) : '') + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : ' · 인원이 모이면 시작')
               : '모집 ' + fmtDay(r.recruit_start) + ' ~ ' + fmtDay(r.recruit_end) + (r.program_start ? ' · 시작 ' + fmtDay(r.program_start) : '')}</div>
             ${gateOf(r) ? `<div class="ri-sub ri-gate${/잠김/.test(gateOf(r)) ? ' is-locked' : ''}">${esc(gateOf(r))}</div>` : ''}
           </div>
           <div class="ri-actions">
-            <button class="ri-edit" data-id="${r.id}">수정</button>
-            <button class="ri-del is-danger" data-id="${r.id}">삭제</button>
+            ${r.weekly_voice ? '<span class="apl-tag g">자동 편성</span>' : `<button class="ri-edit" data-id="${r.id}">수정</button>
+            <button class="ri-del is-danger" data-id="${r.id}">삭제</button>`}
           </div>
         </div>`;
       // 위 판에 없는 챌린지는 '모집 중인 기수 없음' 한 줄(버튼 없음) — 다음 기수를 등록할 차례라는 표시

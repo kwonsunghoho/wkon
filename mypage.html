@@ -1848,9 +1848,9 @@
         if (!cohorts.length && !records.length) return;
         const box = document.getElementById('challengeRooms');
         const urlOf = row => 'challenge-mission.html?' + new URLSearchParams({challenge:row.challenge,round:row.round});
-        const labelOf = row => CH_SUB_META[row.challenge].roomLabel + ' ' + row.round + '기';
+        const labelOf = row => CH_SUB_META[row.challenge].roomLabel + (row.weekly_start ? ' · '+row.weekly_start.slice(5).replace('-', '/')+'(월) 시작' : ' ' + row.round + '기');
         box.innerHTML = '<div class="v2-cs-h"><h2 class="v2-cs-t">내 챌린지 미션</h2></div>' +
-          '<ul class="v2-cs-days">'+cohorts.map(row=>`<li><a href="${esc(urlOf(row))}"><span class="q">${esc(labelOf(row))}</span><span class="v2-chip">${row.missions?.length?'미션 열기':'알림 설정'}</span></a></li>`).join('')+'</ul>' +
+          '<ul class="v2-cs-days">'+cohorts.map(row=>`<li><a href="${esc(urlOf(row))}"><span class="q">${esc(labelOf(row))}</span><span class="v2-chip">${row.weekly_start?'내 챌린지 입장':row.missions?.length?'미션 열기':'알림 설정'}</span></a></li>`).join('')+'</ul>' +
           (records.length?'<a class="v2-outline" style="margin:12px auto 0" href="challenge-mission.html?view=history">내 미션 제출 기록</a>':'');
         box.style.display = '';
         if (!cohorts.length || phase==='tools' || phase==='lecture' || phase==='done') return;
@@ -1860,10 +1860,10 @@
         const label=CH_SUB_META[cohort.challenge].roomLabel;
         const open=Boolean(cohort.missions?.length);
         tagEl.innerHTML = TAG_CLOCK + esc(labelOf(cohort));
-        headEl.textContent = open ? label+' 미션이 열렸어요' : label+' 미션을 준비하고 있어요';
+        headEl.textContent = open ? label+' 미션이 열렸어요' : cohort.weekly_start ? labelOf(cohort) : label+' 미션을 준비하고 있어요';
         descEl.textContent = open ? '오늘의 미션과 챌린지 과제를 확인해 주세요.' : '첫 미션이 열리면 이 기기로 알림을 받을 수 있어요.';
         ctaEl.href = urlOf(cohort);
-        ctaTEl.textContent = open ? label+' 미션 열기' : label+' 미션 알림 설정';
+        ctaTEl.textContent = cohort.weekly_start ? '내 챌린지 입장' : open ? label+' 미션 열기' : label+' 미션 알림 설정';
       }).catch(() => {});
       // 시작 전 기수(lockOf)는 문항·제출 칸 대신 '시작일 안내'만.
       await renderChSubs(me, partOf, ansLoad, lockOf);
