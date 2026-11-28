@@ -440,6 +440,10 @@
       });
       // 시작 전 기수는 잠근다(2026-09-03) — 기수 선택·시작일 규칙은 round-gate.js(MONC_GATE · mypage 와 한 벌).
       // 스크립트가 못 실렸으면 최신 기수·열림(종전 동작).
+      try {
+        const {data} = await MONC.sb.rpc('admin_voice_participation',{p_action:'rounds'});
+        if (Array.isArray(data) && data.length) roundsOf.voice = [...(roundsOf.voice || []), ...data];
+      } catch (_) { /* 참가 신청으로 확인한 기수는 계속 사용한다. */ }
       const G = window.MONC_GATE;
       const startMap = G ? await G.loadRoundStartMap() : null;
       const partOf = {}, lockOf = {};

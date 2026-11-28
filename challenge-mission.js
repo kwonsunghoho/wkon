@@ -22,7 +22,8 @@
   const mimeExt = { 'audio/webm':'webm', 'audio/ogg':'ogg', 'audio/mp4':'m4a', 'audio/x-m4a':'m4a',
     'audio/mpeg':'mp3', 'audio/wav':'wav', 'audio/x-wav':'wav' };
   let session, home, current, activeCohort, draft, recorder, stream, recordingTask = 0;
-  let busy = false;
+  let busy = false, adminParticipant = false;
+  let firstDayPreview = null;
   const esc = val => String(val ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'})[ch]);
   const missionLink = id => 'challenge-mission.html?id=' + encodeURIComponent(id);
   const challengeOf = row => row?.challenge || 'voice';
@@ -302,6 +303,7 @@
 
   async function openRoute(url,mode='initial') {
     stopMicCheck?.();
+    firstDayPreview = null;
     const turn = ++revision;
     const params = url.searchParams;
     const isHistory = params.get('view') === 'history';
@@ -340,6 +342,12 @@
           const waiting = activeCohort?.weekly_start && activeCohort.weekly_start > kstDay();
           root.innerHTML = waiting ? `<section class="mission-card"><p class="mission-meta">보신각 · 시작 전</p><h2>${esc(dateLabel(activeCohort.weekly_start))} 시작</h2><p class="mission-hint">1주차 월요일 미션이 한국시간 0시에 열려요. 미리 마이크를 확인하고 미션 알림을 설정해 보세요.</p><div class="mission-controls"><button type="button" class="mission-action" data-mic-check>마이크 테스트</button></div><p id="mic-check-result" class="mission-hint" role="status"></p></section>`
             : `<section class="mission-card"><h2>${heading}</h2><p class="mission-hint">${hint}</p></section>`;
+          if (waiting && adminParticipant) {
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'mission-action'; button.dataset.firstPreview = '';
+            button.textContent = '1일차 미리보기';
+            root.querySelector('.mission-controls').append(button);
+          }
           showPush(activeCohort);
         }
       }
@@ -368,7 +376,21 @@
     try {
       session = await MONC.requireSession();
       if (!session || !(await MONC.requireConsent())) return;
-      await openRoute(new URL(location.href));
+      const url = new URL(location.href);
+      if (url.searchParams.get('access') === 'admin') {
+        const {data,error} = await MONC.sb.rpc('admin_voice_participation',{p_action:'join'});
+        if (error || !Number.isInteger(data?.round)) {
+          root.textContent = error?.code === '42501' ? '관리자 계정으로 로그인해야 무료 입장할 수 있어요.'
+            : error?.message?.includes('not_ready') ? '현재 입장할 모집 기수를 준비하고 있어요.' : '관리자 입장을 확인하지 못했어요. 새로고침 후 다시 시도해 주세요.';
+          root.setAttribute('aria-busy','false'); return;
+        }
+        adminParticipant = true;
+        url.search = new URLSearchParams({challenge:'voice',round:data.round});
+        history.replaceState(null,'',url);
+      } else {
+        try { adminParticipant = (await MONC.getMyProfile?.())?.role === 'admin'; } catch (_) {}
+      }
+      await openRoute(url);
     } catch (_) { root.textContent = '로그인 정보를 확인하지 못했어요. 새로고침 후 다시 시도해 주세요.'; root.setAttribute('aria-busy','false'); }
   }
 
@@ -549,6 +571,35 @@
     const item = document.createElement('li'); item.textContent = '나 ' + body; list.appendChild(item);
   }
 
+  async function showFirstDay(button) {
+    const cohort = activeCohort, turn = revision;
+    if (!cohort || !adminParticipant) return;
+    const card = root.querySelector('[data-preview-card]');
+    if (card) {
+      ChallengeChapter.close(); card.remove(); firstDayPreview = null;
+      button.textContent = '1일차 미리보기'; button.setAttribute('aria-expanded','false'); return;
+    }
+    button.disabled = true;
+    try {
+      const data = await rpc('admin-list',{challenge:challengeOf(cohort),round:cohort.round});
+      if (turn !== revision || !button.isConnected) return;
+      const day = data.missions.find(m=>m.day_no===1);
+      if (!day) throw new Error('no day');
+      const source = data.week_videos.find(v=>v.week_no===1);
+      const chapter = source && {provider:source.provider,video_id:source.video_url?.split('v=')[1],
+        start_seconds:day.chapter_start_seconds,end_seconds:day.chapter_end_seconds};
+      const preview = document.createElement('section');
+      preview.className = 'mission-card mission-prompt'; preview.dataset.previewCard = '';
+      preview.innerHTML = '<p class="mission-meta"><strong class="mission-weekday">1주차 월요일</strong>관리자 미리보기 · DAY 1</p><h2>'+esc(day.title)+'</h2><p class="mission-body">'+esc(day.body)+'</p>'+ChallengeChapter.render(chapter,1);
+      firstDayPreview = {chapter,cohort};
+      button.closest('section').after(preview);
+      button.textContent = '미리보기 닫기'; button.setAttribute('aria-expanded','true');
+      preview.scrollIntoView({block:'nearest'});
+    } catch (_) {
+      if (turn === revision) notice.textContent = '1일차 미리보기를 열지 못했어요. 다시 시도해 주세요.';
+    } finally { button.disabled = false; }
+  }
+
   root.addEventListener('submit', e => {
     e.preventDefault();
     if (routing) { notice.textContent = '미션을 불러온 뒤 다시 시도해 주세요.'; return; }
@@ -562,15 +613,19 @@
     const button = e.target.closest('button');
     if (!button) return;
     if (routing) return;
+    if (button.hasAttribute('data-first-preview')) { await showFirstDay(button); return; }
     if (button.hasAttribute('data-mic-check')) { await checkMicrophone(button); return; }
     if (button.matches('[data-chapter-play],[data-chapter-full]')) {
+      const preview = button.closest('[data-preview-card]') ? firstDayPreview : null;
       const mission = current?.mission;
-      if (!activeCohort || !mission?.chapter) return;
+      const chapter = preview?.chapter || mission?.chapter;
+      if (!activeCohort || !chapter) return;
       const full = button.hasAttribute('data-chapter-full') ? button.dataset.mode!=='full' : button.dataset.chapterPlay==='full';
-      await ChallengeChapter.play(button.closest('.chapter-player'),mission.chapter,{
+      await ChallengeChapter.play(button.closest('.chapter-player'),chapter,{
         full, resume:button.dataset.resume ? Number(button.dataset.resume) : undefined,
         async loadURL() {
-          const {data,error} = await MONC.sb.functions.invoke('challenge-week-video',{body:{action:'play',id:mission.id}});
+          const body = preview ? {action:'admin-preview',challenge:challengeOf(preview.cohort),round:preview.cohort.round,week_no:1} : {action:'play',id:mission.id};
+          const {data,error} = await MONC.sb.functions.invoke('challenge-week-video',{body});
           if (error || data?.ok!==true || !data.url) throw new Error('video unavailable');
           return data.url;
         }
