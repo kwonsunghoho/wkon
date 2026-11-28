@@ -79,6 +79,7 @@ async function run() {
     await root();
     await db.exec(migration('20261128110000_challenge_chapter_reuse.sql'));
     await db.exec(migration('20261128120000_challenge_shared_curriculum.sql'));
+    await db.exec(migration('20261128213500_sync_pending_chapter_ranges.sql'));
     await user(outsider);
     await assert.rejects(()=>rpc('admin-curriculum',course));
     await assert.rejects(()=>commonMedia('curriculum-preview',{...course,week_no:1}));
@@ -126,13 +127,21 @@ async function run() {
     }
     await assert.rejects(()=>schedule(73,offset(monday,7),revision),/schedule_conflict/);
     const previousRevision=revision;
+    const startsAt = async number => (await room('admin-list',cohort(number))).missions[0].chapter_start_seconds;
+    // Save twice through the real admin RPC, including the previously missed zero.
+    for (const start of [3,0]) {
+      revision=(await save(1,revision,{chapter_start_seconds:start})).revision;
+      for (const n of [73,74]) assert.equal(await startsAt(n),start);
+    }
     const third=await original(1,'다음 기수용.mp4',state.week_videos.find(v=>v.week_no===1).revision);
     revision=(await readyState()).revision;
-    revision=(await save(1,revision,{title:'다음 기수 미션'})).revision;
+    revision=(await save(1,revision,{title:'다음 기수 미션',chapter_start_seconds:2})).revision;
     assert((await schedule(73,monday,previousRevision)).idempotent);
     await schedule(75,monday,revision);
     const existing=(await room('admin-list',cohort(73))).missions[0];
     assert.equal(existing.title,'연습 1');
+    assert.equal(await startsAt(73),0);
+    assert.equal(await startsAt(75),2);
     assert.equal((await room('admin-list',cohort(75))).missions[0].title,'다음 기수 미션');
     await assert.rejects(()=>room('admin-delete',{...cohort(73),id:existing.id}),/locked/);
     await edge();
