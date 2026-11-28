@@ -345,7 +345,7 @@
     for(const row of rows)row.room_entry=rooms.get(row.id);
   }
   function studyDeleteButton(s) {
-    return operator?btn('study-delete','스터디 삭제',s.id,true,`data-study-title="${esc(s.title)}"`):'';
+    return operator||ownedStudies.has(s.id)||s.role==='owner'?btn('study-delete','스터디 삭제',s.id,true,`data-study-title="${esc(s.title)}"`):'';
   }
   function studyHTML(s,detail=false,number=0) {
     if(detail)return studyDetailHTML(s);
@@ -492,7 +492,8 @@
   }
   async function act(action,id,node) {
     if(action==='study-delete') {
-      if(!operator)return;
+      const owner=route().view==='study'?current?.id===id && ownState.owner:ownedStudies.has(id);
+      if(!operator && !owner)return;
       try {
         if(!await MONCStudyDelete(id,node.dataset.studyTitle))return;
       } catch(error) {
