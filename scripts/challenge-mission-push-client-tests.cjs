@@ -6,7 +6,7 @@ class Element {
   replaceChildren(...children){this.children=children;}
   addEventListener(k,v){this.events[k]=v;}
 }
-async function fixture(mode='default'){
+async function fixture(mode='default',challenge='voice'){
   let permissionCalls=0,local=null,enabled=false;
   const rpcs=[];
   const reg={active:true,pushManager:{getSubscription:async()=>local,subscribe:async()=>local={
@@ -17,7 +17,7 @@ async function fixture(mode='default'){
   }};
   const Notification={async requestPermission(){permissionCalls++;return mode==='denied'?'denied':'granted';}};
   const sb={functions:{invoke:async()=>({data:{publicKey:'Zml4dHVyZQ'}})},rpc:async(fn,args)=>{
-    assert.equal(fn,'challenge_room');assert.equal(args.p_data.round,3);rpcs.push(args.p_action);
+    assert.equal(fn,'challenge_room');assert.equal(args.p_data.round,3);assert.equal(args.p_data.challenge,challenge);rpcs.push(args.p_action);
     if(args.p_action==='push-enable')enabled=true;
     if(args.p_action==='push-disable')enabled=false;
     return {data:{ok:true,enabled}};
@@ -27,7 +27,7 @@ async function fixture(mode='default'){
   },matchMedia:()=>({matches:false}),URL,Notification,atob,Uint8Array};
   vm.runInNewContext(fromSite('challenge-push.js'),context);
   const container=new Element();
-  const run=()=>context.window.ChallengePush.mount(container,{sb,roundId:3});
+  const run=()=>context.window.ChallengePush.mount(container,{sb,roundId:3,challenge});
   await run();
   assert.equal(permissionCalls,0);
   let [btn,hint]=container.children;
@@ -40,14 +40,22 @@ async function fixture(mode='default'){
 }
 (async()=>{
   for(const mode of ['default','denied','ios'])await fixture(mode);
+  for(const program of ['spinning','expression','answer'])await fixture('default',program);
   const handlers={},notes=[],opened=[];
   const self={addEventListener:(name,fn)=>handlers[name]=fn,location:{href:'https://monc.ai.kr/challenge-mission-sw.js'},
-    registration:{showNotification:async(title,opts)=>notes.push(opts)}, clients:{matchAll:async()=>[],openWindow:async u=>opened.push(u)}};
+    registration:{showNotification:async(title,opts)=>notes.push({title,...opts})}, clients:{matchAll:async()=>[],openWindow:async u=>opened.push(u)}};
   vm.runInNewContext(fromSite('challenge-mission-sw.js'),{self,URL});
   const mission='12345678-1111-4111-a111-123456789111';
   let waiting;
   handlers.push({data:{json:()=>({mission,day:1})},waitUntil:p=>waiting=p});await waiting;
   handlers.notificationclick({notification:{data:notes[0].data,close(){}},waitUntil:p=>waiting=p});await waiting;
   assert.equal(opened[0],'https://monc.ai.kr/challenge-mission.html?id='+mission);
+  for (const [challenge,label] of Object.entries({voice:'보신각',spinning:'스피닝',expression:'영합각',answer:'승자각'})) {
+    handlers.push({data:{json:()=>({mission,day:2,challenge,round:3})},waitUntil:p=>waiting=p});
+    await waiting;
+    const notice=notes.at(-1);
+    assert.ok((notice.title+' '+notice.body).includes(label));
+    assert.match(notice.body,/DAY 2/);
+  }
   console.log('Push opt-in, decline, restore state, disable, iOS guidance, direct mission click passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

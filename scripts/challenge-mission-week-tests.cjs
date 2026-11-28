@@ -15,11 +15,14 @@ function memberFixture() {
   const id = n => 'a0000000-0000-4000-8000-'+String(n).padStart(12,'0');
   const archived = location.search.includes('archived');
   const uploaded = location.search.includes('uploaded');
+  const sameRound = location.search.includes('same_round');
+  const courses = sameRound ? ['spinning','expression','answer','voice'] : ['voice'];
   const dates = ['2026-11-23','2026-11-24','2026-11-25','2026-11-26','2026-11-27','2026-11-30'];
   const opened = () => dates.map((date,i)=>({id:id(i+1),day_no:i+1,release_date:date,title:'연습 '+(i+1)}))
     .filter(m=>Date.parse(m.release_date+'T00:00:00+09:00')<=Date.now());
   const session = {user:{id:uid}};
   window.commands = [];
+  window.mountedPush = [];
   window.YT = {PlayerState:{ENDED:0,PLAYING:1},Player:class {
     constructor(el,options) { this.events=options.events; this.time=0; window.testPlayer=this; queueMicrotask(()=>this.events.onReady({target:this})); }
     loadVideoById(selection) { window.commands.push(selection); this.time=selection.startSeconds; this.events.onStateChange({target:this,data:1}); }
@@ -34,15 +37,19 @@ function memberFixture() {
       return {data:{ok:true,url:'https://media.example.test/storage/v1/object/sign/challenge-room-video/sample.mp4?token=fixture',urlExpiresAt:new Date(Date.now()+600000).toISOString()}};
     }},rpc:async(name,{p_action:a,p_data:p})=>{
       if (name!=='challenge_room') throw new Error(name);
-      const ms=opened(), m=ms.find(x=>x.id===p.id);
-      if (a==='home') return {data:{server_now:new Date().toISOString(),history:[],cohorts:archived?[]:[{round:7,challenge:'voice',missions:ms}]}};
-      if (a==='mission' && m) return {data:{mission:{...m,body:'연습',round:7,challenge:'voice',eligible:!archived,
+      const cohorts=courses.map((code,i)=>({round:7,challenge:code,missions:opened().map(m=>({...m,
+        id:id(i*10+m.day_no),title:(sameRound?code+' ':'')+m.title}))}));
+      const cohort=cohorts.find(c=>c.missions.some(m=>m.id===p.id)), m=cohort?.missions.find(m=>m.id===p.id);
+      if (a==='home') return {data:{server_now:new Date().toISOString(),
+        history:sameRound?cohorts.map(c=>({challenge:c.challenge,round:7,day_no:1,mission_id:c.missions[0].id,
+          title:c.challenge+' 제출',created_at:'2026-11-24T01:00:00Z'})):[],cohorts:archived?[]:cohorts}};
+      if (a==='mission' && m) return {data:{mission:{...m,body:'연습',round:7,challenge:cohort.challenge,eligible:!archived,
         chapter:(!archived&&m.day_no!==2)?(uploaded
           ? {provider:'storage',week_no:1,start_seconds:2,end_seconds:5}
           : {provider:'youtube',video_id:'abcdef12345',week_no:1,start_seconds:8,end_seconds:12}):null},answers:[]}};
       return {error:{message:'미공개'}};
     }}};
-  window.ChallengePush = {mount(){}};
+  window.ChallengePush = {mount(el,settings){window.mountedPush.push([settings.challenge,settings.roundId]);}};
 }
 
 (async()=>{
@@ -161,6 +168,42 @@ function memberFixture() {
     await play.click();
     await native.waitForFunction(()=>{const v=document.querySelector('.chapter-screen video'); return v && !v.paused && v.currentTime>=2});
     assert.deepEqual(await native.evaluate(()=>commands.at(-1)),{action:'play',id:id(1)});
+    const simultaneous=await freshPage();
+    await simultaneous.clock.setFixedTime(new Date(fixtureNow));
+    await simultaneous.goto(origin+'/challenge-mission.html?round=7&same_round=1');
+    await simultaneous.getByRole('heading',{name:'voice 연습 3'}).waitFor();
+    assert.deepEqual(await simultaneous.evaluate(()=>mountedPush.at(-1)),['voice',7]);
+    const scopes=simultaneous.locator('#mission-cohort');
+    assert.deepEqual((await scopes.locator('option').evaluateAll(options=>options.map(o=>o.value))).filter(Boolean).sort(),['answer:7','expression:7','spinning:7','voice:7']);
+    await scopes.selectOption('spinning:7');
+    await simultaneous.getByRole('heading',{name:'spinning 연습 3'}).waitFor();
+    assert.deepEqual(await simultaneous.evaluate(()=>mountedPush.at(-1)),['spinning',7]);
+    assert(await simultaneous.locator('a[href="submit.html?ch=spinning"]').isVisible());
+    await simultaneous.locator('#history-link').click();
+    await simultaneous.getByText('spinning 제출').waitFor();
+    assert.equal(await simultaneous.getByText('voice 제출').count(),0);
+    await simultaneous.goBack();
+    await simultaneous.getByRole('heading',{name:'spinning 연습 3'}).waitFor();
+    await simultaneous.getByRole('button',{name:'2주차',exact:true}).click();
+    await simultaneous.getByRole('heading',{name:'2주차 미션은 아직 열리지 않았어요'}).waitFor();
+    const selectedURL=new URL(simultaneous.url());
+    assert.equal(selectedURL.searchParams.get('challenge'),'spinning');
+    assert.equal(selectedURL.searchParams.get('round'),'7');
+    const byId=await freshPage();
+    await byId.clock.setFixedTime(new Date(fixtureNow));
+    await byId.goto(origin+'/challenge-mission.html?id='+id(21)+'&same_round=1');
+    await byId.getByRole('heading',{name:'answer 연습 1'}).waitFor();
+    assert.deepEqual(await byId.evaluate(()=>mountedPush.at(-1)),['answer',7]);
+    assert(await byId.locator('a[href="submit.html?ch=answer"]').isVisible());
+    await byId.locator('#mission-cohort').selectOption('expression:7');
+    await byId.getByRole('heading',{name:'expression 연습 3'}).waitFor();
+    assert(await byId.locator('a[href="submit.html?ch=expression"]').isVisible());
+    const unavailable=await freshPage();
+    await unavailable.clock.setFixedTime(new Date(fixtureNow));
+    await unavailable.goto(origin+'/challenge-mission.html?round=99&challenge=answer&same_round=1');
+    await unavailable.locator('#mission-content[aria-busy="false"]').waitFor();
+    assert.equal(await unavailable.locator('[data-chapter-play],#mission-submit').count(),0);
+    assert.deepEqual(await unavailable.evaluate(()=>mountedPush),[]);
     assert.deepEqual(external,[]); assert.deepEqual(errors,[]);
     console.log('통과: 주차·요일 이동, 초안, KST 자정/잠금, 기존 YouTube 챕터 및 업로드 MP4 구간/전체 재생, 접근 거부/재서명/복습');
   } finally { await browser.close(); }

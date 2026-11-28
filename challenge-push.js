@@ -25,8 +25,8 @@ window.ChallengePush = (() => {
     return reg;
   }
 
-  async function mount(container, {roundId, sb}) {
-    if (!container || !sb || !roundId) return;
+  async function mount(container, {challenge="voice", roundId, sb}) {
+    if (!container || !sb || !roundId || !['voice','spinning','expression','answer'].includes(challenge)) return;
     const view = {};
     views.set(container,view);
     const button = document.createElement('button');
@@ -51,7 +51,7 @@ window.ChallengePush = (() => {
     let subscription;
     async function update(action,extra) {
       const {data,error} = await sb.rpc('challenge_room',{p_action:action,p_data:{
-        challenge:'voice',round:roundId,...extra,
+        challenge,round:roundId,...extra,
       }});
       if (error || data?.ok === false) throw Error('update');
       return data;

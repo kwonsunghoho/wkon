@@ -6,6 +6,13 @@
   const schedule = document.getElementById('mission-schedule');
   const drafts = new Map();
   const lastInWeek = new Map();
+  const picker = document.getElementById('mission-cohort');
+  const kinds = {
+    voice:{label:'보신각',audio:true,task:'처음·마지막 음성 제출',hint:'챌린지 시작과 마지막에 음성을 한 번씩 제출해요.'},
+    spinning:{label:'스피닝',audio:true,task:'처음·마지막 음성 제출',hint:'첫날에는 음성 두 개를, 마지막 날에는 음성 한 개를 제출해요.'},
+    expression:{label:'영합각',task:'처음·마지막 영상 제출',hint:'시작과 마지막에 촬영한 영상을 각각 제출해요.'},
+    answer:{label:'승자각',task:'DAY별 승준노트 열기',hint:'오늘의 공식 문항을 열고 승준노트에 답변을 작성해요.'}
+  };
   let week = 1, revision = 0, scheduleTimer, dueAt = 0, offset = 0, homeVersion = 0;
   let routing = false, requestingMic = false, visibleURL = location.href;
   const maxAudio = 20 * 1024 * 1024;
@@ -18,7 +25,34 @@
   let busy = false;
   const esc = val => String(val ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'})[ch]);
   const missionLink = id => 'challenge-mission.html?id=' + encodeURIComponent(id);
-  const roundLink = round => 'challenge-mission.html?round=' + encodeURIComponent(round);
+  const challengeOf = row => row?.challenge || 'voice';
+  const family = row => kinds[challengeOf(row)];
+  const keyOf = row => row ? challengeOf(row)+':'+row.round : '';
+  const labelOf = row => (family(row)?.label || '챌린지')+' '+row.round+'기';
+  const roundLink = (row,history=false) => {
+    const p = new URLSearchParams();
+    if (history) p.set('view','history');
+    if (row) { p.set('challenge',challengeOf(row)); p.set('round',row.round); }
+    return 'challenge-mission.html' + (p.size ? '?' + p : '');
+  };
+
+  function cohortOptions(history) {
+    const unique = new Map();
+    const rows = history ? [...home.cohorts,...home.history] : [...home.cohorts];
+    for (const row of rows) if (family(row) && !unique.has(keyOf(row))) unique.set(keyOf(row),row);
+    return [...unique.values()];
+  }
+  function updatePicker(scope,isHistory) {
+    const choices = cohortOptions(isHistory);
+    picker.replaceChildren();
+    if (isHistory || !scope || !choices.some(c=>keyOf(c)===keyOf(scope))) picker.add(new Option(isHistory?'모든 챌린지':'챌린지 선택',''));
+    for (const c of choices) picker.add(new Option(labelOf(c),keyOf(c)));
+    picker.value = scope ? keyOf(scope) : '';
+    picker.dataset.previous = picker.value;
+    picker.closest('label').hidden = !choices.length || (choices.length===1 && keyOf(choices[0])===keyOf(scope));
+    document.getElementById('mission-link').href=roundLink(scope);
+    document.getElementById('history-link').href=roundLink(scope,true);
+  }
   const dateLabel = raw => {
     const date = new Date(raw);
     if (!Number.isFinite(date.getTime())) return '';
@@ -48,25 +82,26 @@
     push.hidden = !cohort || !window.ChallengePush;
     if (push.hidden) return;
     root.firstElementChild?.after(push);
-    const round = String(cohort.round);
-    if (push.dataset.round === round) return;
-    push.dataset.round = round;
+    const key = keyOf(cohort);
+    if (push.dataset.cohort === key) return;
+    push.dataset.cohort = key;
     try {
-      Promise.resolve(ChallengePush.mount(push, {roundId:cohort.round, sb:MONC.sb})).catch(() => {
+      Promise.resolve(ChallengePush.mount(push, {challenge:challengeOf(cohort),roundId:cohort.round, sb:MONC.sb})).catch(() => {
+        if (push.dataset.cohort!==key) return;
         push.textContent = '기기 알림 설정을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.';
-        delete push.dataset.round;
+        delete push.dataset.cohort;
       });
     } catch (_) {
       push.textContent = '기기 알림 설정을 불러오지 못했어요.';
-      delete push.dataset.round;
+      delete push.dataset.cohort;
     }
   }
 
-  function historyView() {
+  function historyView(scope,requested=false) {
     document.getElementById('history-link').setAttribute('aria-current','page');
-    const entries = (home.history || []).slice().sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const entries = home.history.filter(row=>!requested || (scope && keyOf(row)===keyOf(scope))).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
     root.innerHTML = '<section class="mission-card"><h2>내 제출 기록</h2>' + (entries.length
-      ? '<ul class="mission-list">' + entries.map(row => `<li><a href="${esc(missionLink(row.mission_id))}"><span class="mission-meta">보신각 ${esc(row.round)}기 · DAY ${esc(row.day_no)}</span><strong>${esc(row.title)}</strong><span class="mission-meta">${esc(dateLabel(row.created_at))} 제출 · ${row.shared ? '기수에 공유' : '나만 보기'} · 코멘트 ${esc(row.comment_count || 0)}개</span></a></li>`).join('') + '</ul>'
+      ? '<ul class="mission-list">' + entries.map(row => `<li><a href="${esc(missionLink(row.mission_id))}"><span class="mission-meta">${esc(labelOf(row))} · DAY ${esc(row.day_no)}</span><strong>${esc(row.title)}</strong><span class="mission-meta">${esc(dateLabel(row.created_at))} 제출 · ${row.shared ? '기수에 공유' : '나만 보기'} · 코멘트 ${esc(row.comment_count || 0)}개</span></a></li>`).join('') + '</ul>'
       : '<p class="mission-hint">아직 제출한 답변이 없어요. 미션에 답하면 이곳에서 다시 볼 수 있어요.</p>') + '</section>';
   }
 
@@ -91,9 +126,7 @@
       const shortDate = item.release_date.slice(5).replace('-','/');
       return `<a class="mission-day" href="${esc(missionLink(item.id))}" ${selected?'aria-current="page"':''} aria-label="DAY ${n}, ${esc(dateLabel(item.release_date))}, ${state}"><strong>${esc(weekday)}</strong><span>${esc(shortDate)}</span><small>${item.release_date===today?'오늘':state}</small></a>`;
     }).join('');
-    const other = home.cohorts.filter(c => c.round !== activeCohort.round);
-    schedule.innerHTML = `<div class="mission-weeks" role="group" aria-label="주차">${buttons}</div><div class="mission-days" role="group" aria-label="${week}주차 요일">${days}</div>` +
-      (other.length ? `<p class="mission-rounds">${other.map(c => `<a href="${esc(roundLink(c.round))}">보신각 ${esc(c.round)}기</a>`).join('')}</p>` : '');
+    schedule.innerHTML = `<div class="mission-weeks" role="group" aria-label="주차">${buttons}</div><div class="mission-days" role="group" aria-label="${week}주차 요일">${days}</div>`;
   }
 
   function captureDraft() {
@@ -136,21 +169,24 @@
     try {
       if (!await readHome() || !activeCohort) return;
       const old = activeCohort;
-      activeCohort = home.cohorts.find(c => c.round === old.round && c.challenge === old.challenge);
+      activeCohort = home.cohorts.find(c => keyOf(c)===keyOf(old));
       if (!activeCohort) { location.reload(); return; }
       const waitingWeek = !current && Number(new URL(location.href).searchParams.get('week'));
       const latest = newest(activeCohort,waitingWeek);
-      if (!current && latest && !routing) { await openRoute(new URL(location.href)); return; }
+      const url = new URL(location.href);
+      if (!url.searchParams.has('id')) {
+        url.searchParams.set('challenge',challengeOf(activeCohort)); url.searchParams.set('round',activeCohort.round);
+      }
+      if (!current && latest && !routing) { await openRoute(url,'refresh'); return; }
       drawSchedule();
       if (latest && !old.missions.some(m=>m.id===latest.id)) {
-        const url = new URL(location.href);
         captureDraft();
         const playing = root.querySelector('.chapter-screen iframe, .chapter-screen video, [data-chapter-play]:disabled') ||
           [...root.querySelectorAll('audio')].some(el=>!el.paused);
         const editing = root.contains(document.activeElement) && document.activeElement.matches('input,textarea');
         if (current?.mission.id===newest(old)?.id && !url.searchParams.has('id') && !url.searchParams.has('week') &&
           !drafts.has(current.mission.id) && !routing && !busy && !requestingMic && !recorder && !playing && !editing) {
-          await openRoute(url);
+          await openRoute(url,'refresh');
           return;
         }
         notice.textContent = '새 미션이 열렸어요. ';
@@ -162,19 +198,19 @@
   }
 
 
-  function submissionForm() {
-    return `<form id="mission-submit" class="mission-card"><h2>내 답변</h2>
-      <p class="mission-hint">녹음이나 글 중 하나를 남겨 주세요. 둘 다 제출할 수도 있어요.</p>
-      <label class="field"><span>답변 글</span><textarea id="mission-body" maxlength="2000" rows="3"></textarea></label>
-      <div class="field"><strong>음성 답변</strong><div class="mission-controls">
+  function submissionForm(kind) {
+    return `<form id="mission-submit" class="mission-card"><h2>${kind.audio ? '내 답변' : '연습 메모'}</h2>
+      <p class="mission-hint">${kind.audio ? '녹음이나 글 중 하나를 남겨 주세요. 둘 다 제출할 수도 있어요.' : '오늘 연습에서 기억해 둘 점을 글로 남겨 보세요.'}</p>
+      <label class="field"><span>${kind.audio ? '답변 글' : '메모 내용'}</span><textarea id="mission-body" maxlength="2000" rows="3"></textarea></label>
+      ${kind.audio ? `<div class="field"><strong>음성 답변</strong><div class="mission-controls">
         <button type="button" id="mission-record" class="mission-action" ${typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia ? 'hidden' : ''}>녹음 시작</button>
         <label class="mission-file"><span>음성 파일 선택</span><input type="file" id="mission-file" aria-label="음성 파일 선택" accept=".webm,.ogg,.mp4,.m4a,.mp3,.wav,audio/*"></label>
       </div><p class="mission-hint" id="mission-file-info" role="status">파일당 최대 20MB</p>
       <audio id="mission-preview" aria-label="제출 전 내 녹음" controls hidden></audio>
-      <button type="button" id="mission-remove-file" class="mission-action" hidden>선택한 음성 지우기</button></div>
+      <button type="button" id="mission-remove-file" class="mission-action" hidden>선택한 음성 지우기</button></div>` : ''}
       <label class="mission-check"><input type="checkbox" id="mission-share">같은 기수에 답변을 공유하고 코멘트 받기</label>
       <p class="mission-feedback" id="mission-submit-feedback" role="status"></p>
-      <button class="mission-action primary" type="submit">답변 제출</button></form>`;
+      <button class="mission-action primary" type="submit">${kind.audio ? '답변 제출' : '메모 저장'}</button></form>`;
   }
 
   function answerCard(answer, canInteract) {
@@ -183,7 +219,7 @@
     const thread = comments.length ? `<ul class="mission-comments">${comments.map(c => `<li><strong>${esc(c.mine ? '나' : c.author_label)}</strong> ${esc(c.body)}</li>`).join('')}</ul>` : '';
     const mayComment = canInteract && !answer.mine && answer.shared && !comments.some(c => c.mine);
     return `<article class="mission-entry" data-answer="${esc(answer.id)}">
-      <h3>${esc(answer.mine ? '내 답변' : answer.author_label)}</h3>
+      <h3>${esc(answer.mine ? (family(current?.mission)?.audio ? '내 답변' : '내 연습 메모') : answer.author_label)}</h3>
       <p class="mission-meta">${esc(dateLabel(answer.created_at))} 제출${answer.mine ? ' · ' + (answer.shared ? '기수에 공유' : '나만 보기') : ''}</p>
       ${answer.body ? `<p class="mission-body">${esc(answer.body)}</p>` : ''}${player}
       ${answer.mine && (canInteract || answer.shared) ? `<div class="mission-controls"><button type="button" class="mission-action" data-share="${esc(answer.id)}">${answer.shared ? '공유 중단' : '같은 기수에 공유하기'}</button></div>` : ''}
@@ -196,10 +232,12 @@
     const canInteract = Boolean(activeCohort);
     const mine = answers.find(a => a.mine);
     const peers = answers.filter(a => !a.mine);
-    document.getElementById('mission-context').textContent = '보신각 ' + mission.round + '기 · 평일 자정 공개';
+    const kind = family(mission);
+    document.getElementById('mission-context').textContent = labelOf(mission) + (canInteract ? ' · 평일 자정 공개' : ' · 제출 기록');
     const chapter = canInteract ? ChallengeChapter.render(mission.chapter,mission.day_no) : '';
     root.innerHTML = `<section class="mission-card mission-prompt"><p class="mission-meta">${mission.release_date===kstDay()?'오늘의 미션 · ':''}DAY ${esc(mission.day_no)} · ${esc(dateLabel(mission.release_date))}</p><h2>${esc(mission.title)}</h2><p class="mission-body">${esc(mission.body)}</p>${chapter}</section>
-      ${mine ? `<section class="mission-card">${answerCard(mine,canInteract)}</section>` : (canInteract ? submissionForm() : '')}
+      ${canInteract && kind ? `<section class="mission-card"><h2>${esc(kind.label)} 공식 과제</h2><p class="mission-hint">${esc(kind.hint)}</p><p class="mission-controls"><a class="mission-link" href="submit.html?ch=${esc(challengeOf(mission))}">${esc(kind.task)}</a></p></section>` : ''}
+      ${mine ? `<section class="mission-card">${answerCard(mine,canInteract)}</section>` : (canInteract && kind ? submissionForm(kind) : '')}
       ${canInteract ? `<section class="mission-card"><h2>기수 동료의 답변</h2>${peers.length ? peers.map(p => answerCard(p,canInteract)).join('') : '<p class="mission-hint">아직 기수에 공유된 답변이 없어요.</p>'}</section>` : ''}
       `;
     restoreDraft();
@@ -214,9 +252,9 @@
     captureDraft();
     ChallengeChapter.close();
     current = result;
-    activeCohort = result.mission.eligible === false ? null : home.cohorts.find(c => c.round === result.mission.round && c.challenge === result.mission.challenge);
+    activeCohort = result.mission.eligible === false ? null : home.cohorts.find(c => keyOf(c)===keyOf(result.mission));
     week = weekOf(result.mission.day_no);
-    lastInWeek.set(result.mission.round+'-'+week,id);
+    lastInWeek.set(keyOf(result.mission)+'-'+week,id);
     draft = drafts.get(id) || newDraft();
     renderMission();
     return true;
@@ -230,37 +268,52 @@
     try {
       if (!home || isHistory) await readHome();
       if (turn !== revision) return;
-      const targetCohort = home.cohorts.find(c => String(c.round) === params.get('round')) || [...home.cohorts].sort((a,b)=>
+      // 과거 ?round=N 공유 주소는 보신각을 가리킨다. 명시된 기수가 없으면 다른 종목으로 넘기지 않는다.
+      const hasRound=params.has('round'), scoped=hasRound || params.has('challenge');
+      const requested= params.get('challenge') || (hasRound?'voice':'');
+      const match=c=>(!scoped || challengeOf(c)===requested) && (!hasRound || String(c.round)===params.get('round'));
+      const targetCohort = home.cohorts.filter(c=>family(c) && match(c)).sort((a,b)=>
         (newest(b)?.release_date||'').localeCompare(newest(a)?.release_date||'') || b.round-a.round)[0];
+      const requestedScope = Object.hasOwn(kinds,requested) && /^[1-9]\d*$/.test(params.get('round'))
+        ? {challenge:requested,round:params.get('round')} : null;
+      let scope = scoped ? targetCohort || cohortOptions(true).find(match) || requestedScope : null;
       const requestedWeek = [1,2].includes(Number(params.get('week'))) ? Number(params.get('week')) : 0;
       const id = params.get('id') || newest(targetCohort,requestedWeek)?.id;
       if (!isHistory && id) {
         if (!uuidPattern.test(id)) throw new Error('mission unavailable');
         if (!await loadMission(id,turn)) return;
+        scope = current.mission;
       } else {
         captureDraft(); ChallengeChapter.close(); current = null; draft = newDraft(); push.hidden = true;
         activeCohort = isHistory ? null : targetCohort;
         week = requestedWeek || 1; drawSchedule();
         if (isHistory) {
-          document.getElementById('mission-context').textContent = '보신각에서 제출한 답변과 받은 코멘트';
-          historyView();
+          document.getElementById('mission-context').textContent = (scope ? labelOf(scope)+' · ' : '')+'제출한 답변과 받은 코멘트';
+          historyView(scope,scoped);
         } else {
-          const hint = activeCohort ? '첫 미션이 열리면 이곳에서 연습을 시작할 수 있어요.' : '미션이 예약된 보신각 기수의 참가자는 이곳에서 미션을 확인할 수 있어요.';
-          document.getElementById('mission-context').textContent = activeCohort ? '보신각 '+activeCohort.round+'기 · 평일 자정 공개' : '평일 자정에 열리는 보이스 연습';
+          const hint = activeCohort ? '첫 미션이 열리면 이곳에서 연습을 시작할 수 있어요.' : '미션이 예약된 챌린지의 참가자는 이곳에서 미션을 확인할 수 있어요.';
+          scope = activeCohort || scope;
+          document.getElementById('mission-context').textContent = scope ? labelOf(scope)+' · 평일 자정 공개' : '평일 자정에 열리는 챌린지 연습';
           const heading = requestedWeek && activeCohort ? requestedWeek+'주차 미션은 아직 열리지 않았어요' : '아직 열린 미션이 없어요';
           root.innerHTML = `<section class="mission-card"><h2>${heading}</h2><p class="mission-hint">${hint}</p></section>`;
           showPush(activeCohort);
         }
       }
       const nav = document.getElementById('mission-nav');
+      updatePicker(scope,isHistory);
       nav.hidden = false; nav.querySelectorAll('a').forEach(a=>a.removeAttribute('aria-current'));
+      const header = document.querySelector('.mission-heading h1');
+      header.textContent = scope && family(scope) ? family(scope).label+' 미션' : '챌린지 미션';
+      document.title = header.textContent+' — MONC 몬크';
       document.getElementById(isHistory?'history-link':'mission-link').setAttribute('aria-current','page');
       notice.textContent = '';
       if (mode==='push') history.pushState(null,'',url);
+      else if (mode==='refresh') history.replaceState(null,'',url);
       visibleURL = url.href;
     } catch (_) {
       if (turn !== revision) return;
       if (mode!=='initial' && current) {
+        picker.value = picker.dataset.previous || '';
         notice.textContent = '미션을 열지 못했어요. 다시 시도해 주세요.';
         if (mode==='pop') history.replaceState(null,'',visibleURL);
       } else root.innerHTML = '<section class="mission-card"><h2>미션을 열 수 없어요</h2><p class="mission-hint">참여 기수와 미션 공개 시간을 확인한 뒤 다시 시도해 주세요.</p><div class="mission-controls"><button type="button" class="mission-action" data-retry>다시 불러오기</button><a class="mission-link" href="challenge-mission.html">미션 목록</a></div></section>';
@@ -283,14 +336,20 @@
     return true;
   }
 
+  picker.addEventListener('change',()=>{
+    const isHistory=document.getElementById('history-link').hasAttribute('aria-current');
+    if (!canNavigate()) { picker.value=picker.dataset.previous || ''; return; }
+    const choice=cohortOptions(isHistory).find(c=>keyOf(c)===picker.value);
+    openRoute(new URL(roundLink(choice,isHistory),location.href),'push');
+  });
   document.querySelector('.mission-layout').addEventListener('click',event=>{
     const weekButton = event.target.closest('button[data-week]');
     if (weekButton) {
       const chosen = Number(weekButton.dataset.week);
       if (week===chosen || !canNavigate() || !activeCohort) return;
-      const prior = lastInWeek.get(activeCohort.round+'-'+chosen);
+      const prior = lastInWeek.get(keyOf(activeCohort)+'-'+chosen);
       const item = activeCohort.missions.find(m=>m.id===prior) || newest(activeCohort,chosen);
-      const url = item ? missionLink(item.id) : roundLink(activeCohort.round)+'&week='+chosen;
+      const url = item ? missionLink(item.id) : roundLink(activeCohort)+'&week='+chosen;
       openRoute(new URL(url,location.href),'push').then(()=>schedule.querySelector('[data-week="'+chosen+'"]')?.focus());
       return;
     }
@@ -390,10 +449,11 @@
     const feedback = document.getElementById('mission-submit-feedback');
     const body = document.getElementById('mission-body').value.trim();
     const shared = document.getElementById('mission-share').checked;
-    if (!body && !draft.file) { textError(feedback,'녹음이나 답변 글을 먼저 추가해 주세요.'); return; }
+    if (!body && !draft.file) { textError(feedback,family(current.mission)?.audio ? '녹음이나 답변 글을 먼저 추가해 주세요.' : '연습 메모를 먼저 작성해 주세요.'); return; }
     const controls = Array.from(form.elements);
     controls.forEach(el => { el.disabled = true; });
-    busy = true; feedback.textContent = '답변을 제출하는 중이에요.';
+    const isMemo = !family(current.mission)?.audio;
+    busy = true; feedback.textContent = isMemo ? '메모를 저장하는 중이에요.' : '답변을 제출하는 중이에요.';
     let path;
     try {
       const payload = {id:current.mission.id, body, shared, request_id:draft.requestId};
@@ -419,7 +479,7 @@
     } finally { busy = false; controls.forEach(el => { el.disabled = false; }); }
     drafts.delete(current.mission.id);
     const item = activeCohort?.missions.find(m=>m.id===current.mission.id); if (item) item.submission_id = 'saved';
-    freshDraft(); notice.textContent = '내 답변을 제출했어요.';
+    freshDraft(); notice.textContent = isMemo ? '연습 메모를 저장했어요.' : '내 답변을 제출했어요.';
     // 저장 후 조회 실패는 재제출로 이어지지 않도록 입력칸을 닫는다.
     form.replaceWith(Object.assign(document.createElement('p'),{textContent:'제출을 완료했어요.'}));
     try { await loadMission(current.mission.id); }
@@ -519,7 +579,7 @@
       const user = await MONC.requireSession();
       if (!user || !(await MONC.requireConsent())) return;
       await readHome();
-      if (user.user.id !== session.user.id || (activeCohort && !home.cohorts.some(c => c.round === activeCohort.round))) {
+      if (user.user.id !== session.user.id || (activeCohort && !home.cohorts.some(c => keyOf(c)===keyOf(activeCohort)))) {
         location.reload(); return;
       }
       // 뒤로 돌아온 입력 화면에서는 닫힌 플레이어만 복원하고 기존 답변 초안은 유지한다.

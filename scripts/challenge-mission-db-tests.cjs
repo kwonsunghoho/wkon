@@ -778,6 +778,97 @@ create function net.http_post(url text,body jsonb default '{}',params jsonb defa
     assert.equal((await media(admin, "admin-preview", target)).path,good.path);
     console.log("PASS pending/cancelled/replaced upload expiry, current source protection, single-use cleanup ticket, failed lease and delayed retry");
 
+    // 같은 기수 번호의 서로 다른 상품은 미션·업로드·구독을 공유하면 안 된다.
+    await root();
+    await db.exec(fs.readFileSync(migration("20261128090000_challenge_room_four_challenges.sql"),"utf8"));
+    const courses=["voice","spinning","expression","answer"];
+    const enrollments=courses.map(challenge=>({challenge,round:41}));
+    const allCourses=uuid(), mixedCourses=uuid();
+    for (const memberId of [allCourses,mixedCourses]) {
+      await q("insert into public.members values($1,now(),'member')",[memberId]);
+    }
+    const mixed=[{challenge:"voice",round:40},{challenge:"spinning",round:41}];
+    for (const [id,selected] of [[allCourses,enrollments],[mixedCourses,mixed]]) {
+      await q("insert into public.applications(member_id,paid,payment_status,refunded,challenges) values($1,true,'paid',false,$2::jsonb)",[id,JSON.stringify(selected)]);
+    }
+    const sources=new Map(), missions=new Map();
+    for (const course of [...enrollments,{challenge:"culture",round:41}]) {
+      await root();
+      await q("insert into public.challenge_rounds values($1,$2,$3,null)",[uuid(),course.challenge,course.round]);
+      await edgeRole();
+      const meta={...file,...course,name:course.challenge+".mp4"};
+      if (course.challenge==="culture") {
+        await assert.rejects(()=>media(admin,"admin-upload",meta));
+        await role(admin);
+        await assert.rejects(()=>rpc("admin-list",course));
+        continue;
+      }
+      const original=await media(admin,"admin-upload",meta);
+      sources.set(course.challenge,original.path);
+      await root();
+      await writeObject(original);
+      await edgeRole();
+      await media(admin,"admin-commit",{upload_id:original.upload_id});
+      await role(admin);
+      const mission=await rpc("admin-save",{...spec,...course,day_no:1,release_date:dates.future,title:course.challenge,chapter_start_seconds:0,chapter_end_seconds:12});
+      missions.set(course.challenge,mission.id);
+      const scheduled=await rpc("admin-list",course);
+      assert.deepEqual(scheduled.missions.map(item=>item.id),[mission.id]);
+      assert.equal(scheduled.week_videos[0].file_name,meta.name);
+    }
+    assert.equal(new Set(sources.values()).size,4);
+    await role(admin);
+    const removeDay=await rpc("admin-save",{...spec,challenge:"spinning",round:41,day_no:2,release_date:dates.future2});
+    await assert.rejects(()=>rpc("admin-delete",{id:removeDay.id}),/not_found/);
+    await assert.rejects(()=>rpc("admin-delete",{id:removeDay.id,challenge:"voice",round:41}),/not_found/);
+    await rpc("admin-delete",{id:removeDay.id,challenge:"spinning",round:41});
+    await role(mixedCourses);
+    assert.deepEqual((await rpc("home")).cohorts.map(row=>row.challenge),["spinning"]);
+    await edgeRole();
+    await assert.rejects(()=>media(allCourses,"play",{id:missions.get("spinning")}));
+    await root();
+    await q("update challenge_room_data.missions set release_date=$1::date where id=any($2::uuid[])",[dates.past,[...missions.values()]]);
+    await role(allCourses);
+    const allHome=(await rpc("home")).cohorts;
+    assert.deepEqual(allHome.map(row=>row.challenge).sort(),[...courses].sort());
+    for (const row of allHome) {
+      assert.equal(row.round,41);
+      assert.deepEqual(row.missions.map(item=>item.id),[missions.get(row.challenge)]);
+      const detail=(await rpc("mission",{id:row.missions[0].id})).mission;
+      assert.equal(detail.challenge,row.challenge);
+      assert.equal(detail.chapter.provider,"storage");
+      await rpc("submit",{id:detail.id,body:row.challenge,request_id:uuid()});
+    }
+    const entries=(await rpc("history")).history;
+    assert.deepEqual(entries.map(row=>row.challenge).sort(),[...courses].sort());
+    assert(entries.every(row=>row.round===41 && missions.get(row.challenge)===row.mission_id));
+    const pushScope={...reg,...enrollments[1],endpoint:reg.endpoint+"/scope"};
+    assert((await rpc("push-enable",pushScope)).enabled);
+    assert.equal((await rpc("push-status",{...pushScope,challenge:"voice"})).enabled,false);
+    assert((await rpc("push-status",pushScope)).enabled);
+    await role(mixedCourses);
+    for (const course of courses.filter(name=>name!=="spinning")) {
+      await assert.rejects(()=>rpc("mission",{id:missions.get(course)}),/not_found/);
+      await assert.rejects(()=>rpc("push-enable",{...pushScope,challenge:course}));
+    }
+    await edgeRole();
+    for (const course of courses) {
+      assert.equal((await media(allCourses,"play",{id:missions.get(course)})).path,sources.get(course));
+      if (course!=="spinning") await assert.rejects(()=>media(mixedCourses,"play",{id:missions.get(course)}));
+    }
+    assert.equal((await media(admin,"admin-preview",target)).path,good.path);
+    // 과거에 운영자가 직접 넣은, 서비스 범위 밖인 종목의 답변도 개인 보관함에서 제외된다.
+    await root();
+    const hiddenMission=uuid(), hiddenAudio=allCourses+"/"+hiddenMission+"/"+uuid()+".webm";
+    await q("insert into challenge_room_data.missions(id,round_id,day_no,release_date,title,body) select $1,id,1,$2,'문화 연습','연습' from public.challenge_rounds where challenge='culture' and round=41",[hiddenMission,dates.past]);
+    await q("insert into challenge_room_data.answers(mission_id,member_id,request_id,audio_path) values($1,$2,$3,$4)",[hiddenMission,allCourses,uuid(),hiddenAudio]);
+    await q("insert into storage.objects(bucket_id,name) values('challenge-room-audio',$1)",[hiddenAudio]);
+    await role(allCourses);
+    assert.equal((await rpc("history")).history.length,4);
+    await assert.rejects(()=>rpc("mission",{id:hiddenMission}),/not_found/);
+    assert.deepEqual(await q("select name from storage.objects where name=$1",[hiddenAudio]),[]);
+    console.log("PASS 네 챌린지 같은 41기·주차 원본 격리, 미션/개인 이력/구독, 잘못 조합한 상품·기수 접근 거부, 기존 보신각 원본");
+
     console.log(
       "PASS combined production migration; guest/private ACL, admin create/locked/delete, KST future, scoped rounds, excluded refunded/failed, free/manual/partial, private/shared/text/audio submits, storage RLS, feedback + idempotency, own archive after refund, per-device opt-in and owner transfer",
     );

@@ -363,8 +363,8 @@
       <!-- 내 챌린지 제출 — 처음/끝 학생 직접 업로드 (2026-08-20 오너 확정).
            결제 완료(무료 포함)·미환불 신청의 챌린지마다 카드 1장. 스크립트(renderChSubs)가 채운다.
            구 '2주 미션' 진행 바·14일 격자·코치 코멘트는 같은 날 화면에서 정리(데이터는 보존). -->
+      <section id="challengeRooms" class="v2-card" aria-label="내 챌린지 미션" style="display:none;"></section>
       <div id="chSubs" style="display:none;"></div>
-      <a id="voiceMissionHistory" class="v2-outline" style="display:none;margin:16px auto" href="challenge-mission.html?view=history">보신각 미션 · 내 제출 기록</a>
       <section id="onlineLearning" hidden aria-label="온라인 강의와 내 메모"></section>
 
       <!-- 다가오는 일정(예정 특강) -->
@@ -1240,10 +1240,10 @@
     // ⚠️ 화면의 참가 판정(partOf)은 카드를 그릴지만 정한다 — 업로드 허용의 원장은
     //    DB RLS(is_challenge_participant)라, 화면을 속여도 서버가 거부한다.
     const CH_SUB_META = {
-      voice:      { label: '보.신.각 · 보이스', media: 'audio', accept: 'audio/*', what: '음성' },
-      expression: { label: '영.합.각 · 표현력', media: 'video', accept: 'video/*', what: '영상' },
-      spinning:   { label: '스.피.닝 · 스피치', media: 'audio', accept: 'audio/*', what: '음성' },
-      answer:     { label: '승.자.각 · 답변', media: 'answers' },
+      voice:      { roomLabel:'보신각', label: '보.신.각 · 보이스', media: 'audio', accept: 'audio/*', what: '음성' },
+      expression: { roomLabel:'영합각', label: '영.합.각 · 표현력', media: 'video', accept: 'video/*', what: '영상' },
+      spinning:   { roomLabel:'스피닝', label: '스.피.닝 · 스피치', media: 'audio', accept: 'audio/*', what: '음성' },
+      answer:     { roomLabel:'승자각', label: '승.자.각 · 답변', media: 'answers' },
       culture:    { label: '댄.특.완 · 대한항공 특화 답변', media: 'answers' },
     };
     const CH_SUB_ORDER = ['voice', 'expression', 'spinning', 'answer', 'culture'];
@@ -1843,22 +1843,27 @@
       // 예약한 기수만 미션으로 연결한다. 수료·환불 뒤에도 내 기록을 다시 볼 수 있다.
       MONC.sb.rpc('challenge_room', { p_action: 'home', p_data: {} }).then(({ data, error }) => {
         if (error || !data) return;
-        if (data.history?.length) document.getElementById('voiceMissionHistory').style.display = '';
-        if (!data.cohorts?.length) return;
-        const cohort = data.cohorts.find(row => row.round === partOf.voice) || data.cohorts[0];
-        if (phase === 'tools' || phase === 'lecture' || phase === 'done') {
-          const entry = document.getElementById('voiceMissionHistory');
-          entry.href = 'challenge-mission.html?round=' + encodeURIComponent(cohort.round);
-          entry.textContent = '보신각 미션과 내 기록';
-          entry.style.display = '';
-          return;
-        }
-        const missions = cohort.missions || [];
-        tagEl.innerHTML = TAG_CLOCK + '보신각 ' + esc(String(cohort.round)) + '기';
-        headEl.textContent = missions.length ? '보신각 미션이 열렸어요' : '보신각 미션을 준비하고 있어요';
-        descEl.textContent = missions.length ? '미션을 확인하고 내 답변을 남겨 보세요.' : '첫 미션이 열리면 이 기기로 알림을 받을 수 있어요.';
-        ctaEl.href = 'challenge-mission.html?round=' + encodeURIComponent(cohort.round);
-        ctaTEl.textContent = missions.length ? '보신각 미션 열기' : '보신각 미션 알림 설정';
+        const cohorts = (data.cohorts || []).filter(row => CH_SUB_META[row.challenge]?.roomLabel);
+        const records = (data.history || []).filter(row => CH_SUB_META[row.challenge || 'voice']?.roomLabel);
+        if (!cohorts.length && !records.length) return;
+        const box = document.getElementById('challengeRooms');
+        const urlOf = row => 'challenge-mission.html?' + new URLSearchParams({challenge:row.challenge,round:row.round});
+        const labelOf = row => CH_SUB_META[row.challenge].roomLabel + ' ' + row.round + '기';
+        box.innerHTML = '<div class="v2-cs-h"><h2 class="v2-cs-t">내 챌린지 미션</h2></div>' +
+          '<ul class="v2-cs-days">'+cohorts.map(row=>`<li><a href="${esc(urlOf(row))}"><span class="q">${esc(labelOf(row))}</span><span class="v2-chip">${row.missions?.length?'미션 열기':'알림 설정'}</span></a></li>`).join('')+'</ul>' +
+          (records.length?'<a class="v2-outline" style="margin:12px auto 0" href="challenge-mission.html?view=history">내 미션 제출 기록</a>':'');
+        box.style.display = '';
+        if (!cohorts.length || phase==='tools' || phase==='lecture' || phase==='done') return;
+        const cohort = cohorts.find(row=>row.round===partOf[row.challenge] && row.missions?.some(m=>m.release_date===todayS))
+          || cohorts.find(row=>row.round===partOf[row.challenge] && row.missions?.length)
+          || cohorts.find(row=>row.round===partOf[row.challenge]) || cohorts[0];
+        const label=CH_SUB_META[cohort.challenge].roomLabel;
+        const open=Boolean(cohort.missions?.length);
+        tagEl.innerHTML = TAG_CLOCK + esc(labelOf(cohort));
+        headEl.textContent = open ? label+' 미션이 열렸어요' : label+' 미션을 준비하고 있어요';
+        descEl.textContent = open ? '오늘의 미션과 챌린지 과제를 확인해 주세요.' : '첫 미션이 열리면 이 기기로 알림을 받을 수 있어요.';
+        ctaEl.href = urlOf(cohort);
+        ctaTEl.textContent = open ? label+' 미션 열기' : label+' 미션 알림 설정';
       }).catch(() => {});
       // 시작 전 기수(lockOf)는 문항·제출 칸 대신 '시작일 안내'만.
       await renderChSubs(me, partOf, ansLoad, lockOf);

@@ -1,8 +1,9 @@
-/* 운영자가 선택한 보신각 기수의 평일 미션 예약. 공개 여부와 변경 권한은 서버에서 판정한다. */
+/* 선택한 챌린지·기수의 평일 미션 예약. 공개 여부와 변경 권한은 서버에서 판정한다. */
 (function () {
   'use strict';
 
   const panel = document.getElementById('missionSchedule');
+  const challengeSelect = document.getElementById('msChallenge');
   const roundSelect = document.getElementById('msRound');
   const list = document.getElementById('msList');
   const msg = document.getElementById('msStatus');
@@ -28,6 +29,8 @@
   const startTime = form.elements.chapterStart;
   const endTime = form.elements.chapterEnd;
   const weekdayLabels = ['월', '화', '수', '목', '금'];
+  let challenge = '';
+  let allRounds = [];
   let round = '';
   let rows = [];
   let videos = [];
@@ -53,38 +56,46 @@
   function updateUploadUrl() {
     if (!location.search) return;
     const url = new URL(location.href);
-    if (url.searchParams.get('focus') !== 'voice-upload' || url.searchParams.get('tab') !== 'rounds') return;
-    if (round) url.searchParams.set('round',round);
-    else if (!missingRound && roundsState === 'ready') url.searchParams.delete('round');
+    if (!['challenge-upload','voice-upload'].includes(url.searchParams.get('focus')) || url.searchParams.get('tab') !== 'rounds') return;
+    url.searchParams.set('focus','challenge-upload');
+    if (challenge) url.searchParams.set('challenge',challenge); else url.searchParams.delete('challenge');
+    const target = challenge && (round || requestedRound || missingRound);
+    if (target) url.searchParams.set('round',target); else url.searchParams.delete('round');
     history.replaceState(history.state,'',url);
   }
   function focusUpload() {
     const target = saving ? panel.querySelector('summary') :
-      !weekForm.hidden ? videoInput : !form.hidden ? (day.disabled ? title : day) : roundSelect.options.length ? roundSelect :
+      !weekForm.hidden ? videoInput : !form.hidden ? (day.disabled ? title : day) : !challenge ? challengeSelect : roundSelect.options.length ? roundSelect :
       roundsState === 'pending' ? panel.querySelector('summary') : msg;
     target.focus({preventScroll:true});
     if (target === videoInput || target === day || target === title) target.scrollIntoView({block:'center'});
     else panel.scrollIntoView({block:'start'});
   }
-  function openUpload(value) {
-    if (/^[1-9]\d*$/.test(value || '')) requestedRound = value;
-    if (requestedRound && roundsState === 'ready' && !dirty && !saving) {
-      if ([...roundSelect.options].some(o => o.value === requestedRound)) {
-        if (round !== requestedRound) {
-          roundSelect.value = requestedRound; round = requestedRound; closeEditor(); ready = false;
-        }
-        missingRound = '';
-      } else {
-        roundSelect.selectedIndex = -1; round = ''; missingRound = requestedRound; ready = false;
-      }
-      requestedRound = '';
-    }
+  function changeChallenge(next, desiredRound = '') {
+    ++sequence; loadingRound = false; ready = false;
+    challenge = next; challengeSelect.value = next;
+    round = ''; requestedRound = desiredRound; missingRound = '';
+    closeEditor(); closePreview(); rows = []; videos = [];
+    roundSelect.replaceChildren(); list.replaceChildren(); weekList.replaceChildren();
+    if (roundsState === 'ready') setRounds(allRounds);
+    else { controls(); updateUploadUrl(); }
+  }
+  function openUpload(code, value) {
     const wasOpen = panel.open;
     panel.open = true;
-    if (roundsState === 'pending') msg.textContent = '보신각 기수를 불러오는 중입니다.';
+    // 화면 안의 바로가기는 작성 중인 내용을 유지하고, 지정된 주소는 해당 챌린지·기수를 연다.
+    if (code != null) {
+      const next = [...challengeSelect.options].some(o => o.value === code) ? code : '';
+      const desired = next && /^[1-9]\d*$/.test(value || '') ? value : '';
+      if (next !== challenge || (desired && desired !== (round || requestedRound || missingRound))) {
+        if (saving || !canDiscard()) { updateUploadUrl(); focusUpload(); return; }
+        changeChallenge(next,desired);
+      }
+    }
+    if (roundsState === 'pending') msg.textContent = challenge ? '기수를 불러오는 중입니다.' : '먼저 챌린지를 선택해 주세요.';
     else if (wasOpen && roundsState === 'ready' && !ready && !loadingRound && !saving) load();
     focusAfterRounds = roundsState === 'pending'; focusUpload();
-    if (roundsState === 'ready') updateUploadUrl();
+    updateUploadUrl();
   }
 
   function koreanDate(stamp = Date.now()) {
@@ -160,6 +171,7 @@
     return !dirty || window.confirm('작성 중인 내용을 저장하지 않고 이동할까요?');
   }
   function controls() {
+    challengeSelect.disabled = saving;
     roundSelect.disabled = saving || roundSelect.options.length < 1;
     fields.disabled = saving || !ready;
     weekForm.querySelector('fieldset').disabled = saving || !ready;
@@ -198,7 +210,7 @@
     const video = videos.find(v => v.week_no === week);
     if (!ready || saving || video?.locked) return;
     editingWeek = week;
-    weekForm.querySelector('legend').textContent = week + '주차 원본 영상 ' + (video ? '수정' : '등록');
+    weekForm.querySelector('legend').textContent = challengeSelect.selectedOptions[0].textContent + ' ' + round + '기 · ' + week + '주차 원본 영상 ' + (video ? '수정' : '등록');
     msg.textContent = ''; weekForm.hidden = false; videoInput.focus();
   }
   function closePreview() {
@@ -214,11 +226,11 @@
     const turn = previewRequest;
     previewButton = opener;
     preview.hidden = false;
-    document.getElementById('msPreviewTitle').textContent = week + '주차 원본 영상';
+    document.getElementById('msPreviewTitle').textContent = challengeSelect.selectedOptions[0].textContent + ' ' + round + '기 · ' + week + '주차 원본 영상';
     previewStatus.textContent = '영상을 불러오는 중입니다.';
     document.getElementById('msPreviewClose').focus();
     try {
-      const data = await videoApi('admin-preview',{challenge:'voice',round:Number(round),week_no:week});
+      const data = await videoApi('admin-preview',{challenge,round:Number(round),week_no:week});
       if (turn !== previewRequest) return;
       previewPlayer.src = data.url;
       previewStatus.textContent = '';
@@ -276,7 +288,7 @@
     else if (!file.size || file.size > 2 * 1024 ** 3) videoInput.setCustomValidity('0바이트보다 크고 2GB 이하인 파일을 선택해 주세요.');
     if (!weekForm.reportValidity()) return;
 
-    const week = editingWeek, targetRound = round;
+    const week = editingWeek, targetRound = round, targetChallenge = challenge;
     const controller = new AbortController();
     uploadAbort = controller; saving = true; controls(); msg.textContent = '';
     transferBox.hidden = false; stopTransfer.hidden = false;
@@ -285,7 +297,7 @@
     let committing = false;
     try {
       if (!ticket) {
-        ticket = await videoApi('admin-upload',{challenge:'voice',round:Number(round),week_no:week,name:file.name,size:file.size,contentType});
+        ticket = await videoApi('admin-upload',{challenge,round:Number(round),week_no:week,name:file.name,size:file.size,contentType});
         if (controller.signal.aborted) throw new DOMException('upload_cancelled','AbortError');
         await transferFile(ticket,file,controller.signal);
         if (controller.signal.aborted) throw new DOMException('upload_cancelled','AbortError');
@@ -295,14 +307,14 @@
       transferLabel.textContent = '업로드한 영상을 주차 원본으로 저장하고 있습니다.';
       await videoApi('admin-commit',{upload_id:ticket.upload_id});
       transferred = null;
-      if (round === targetRound && editingWeek === week) {
+      if (challenge === targetChallenge && round === targetRound && editingWeek === week) {
         closeEditor(); await load(week + '주차 원본 영상을 저장했습니다.');
       }
     } catch (error) {
       // 저장 응답이 끊기면 같은 업로드 ID로 완료 여부를 다시 확인한다.
       if (!committing) cancelTicket(ticket?.upload_id);
       else if (/expired|not_found|locked|stale|superseded|conflict|invalid_file|invalid_upload|upload_incomplete|size_mismatch|missing_object|upload_missing/.test(error.message)) dropStaged();
-      if (round === targetRound && editingWeek === week) msg.textContent = errorText(error);
+      if (challenge === targetChallenge && round === targetRound && editingWeek === week) msg.textContent = errorText(error);
     } finally {
       uploadAbort = null; saving = false; stopTransfer.hidden = true; transferBox.hidden = true; controls();
     }
@@ -389,13 +401,16 @@
     ready = false; rows = []; videos = []; list.replaceChildren(); weekList.replaceChildren(); controls();
     if (!round) {
       loadingRound = false;
-      msg.textContent = missingRound && roundSelect.options.length ? '요청한 보신각 ' + missingRound + '기를 찾을 수 없습니다. 기수를 확인해 주세요.' : '기수 관리에서 보신각 기수를 먼저 등록해 주세요.';
+      const label = challengeSelect.selectedOptions[0]?.textContent || '';
+      msg.textContent = !challenge ? '먼저 챌린지를 선택해 주세요.' : missingRound && roundSelect.options.length
+        ? '요청한 ' + label + ' ' + missingRound + '기를 찾을 수 없습니다. 기수를 확인해 주세요.'
+        : '기수 관리에서 ' + label + ' 기수를 먼저 등록해 주세요.';
       return;
     }
     loadingRound = true;
     msg.textContent = '예약 일정을 불러오는 중입니다.';
     try {
-      const data = await rpc('admin-list', {challenge:'voice', round:Number(round)});
+      const data = await rpc('admin-list', {challenge, round:Number(round)});
       if (turn !== sequence) return;
       if (!Array.isArray(data?.missions)) throw new Error('missing missions');
       rows = data.missions; videos = Array.isArray(data.week_videos) ? data.week_videos : [];
@@ -405,12 +420,13 @@
     } finally { if (turn === sequence) { loadingRound = false; controls(); } }
   }
   function setRounds(items, retry) {
+    allRounds = items || [];
     roundsState = items === null ? 'error' : 'ready';
     retryRounds = retry || null;
-    const options = (items || []).filter(r => r.challenge === 'voice').sort((a,b) => Number(b.round) - Number(a.round));
+    const options = allRounds.filter(r => challenge && r.challenge === challenge).sort((a,b) => Number(b.round) - Number(a.round));
     const last = round;
     roundSelect.replaceChildren(...options.map(r => {
-      const option = new Option('보신각(보이스) ' + r.round + '기', String(r.round));
+      const option = new Option(r.round + '기', String(r.round));
       option.dataset.start = r.program_start || ''; return option;
     }));
     const preferred = requestedRound || missingRound || last;
@@ -454,18 +470,22 @@
     msg.textContent = ''; form.hidden = false; (row ? title : day).focus();
   }
   async function write(action, data, success) {
-    const targetRound = round;
+    const targetRound = round, targetChallenge = challenge;
     saving = true; controls(); msg.textContent = '저장 중입니다.';
     try {
       await rpc(action, data);
-      if (round !== targetRound) return;
+      if (challenge !== targetChallenge || round !== targetRound) return;
       closeEditor(); await load(success);
       if (panel.open) refreshButton.focus();
-    } catch (error) { msg.textContent = errorText(error); }
+    } catch (error) { if (challenge === targetChallenge && round === targetRound) msg.textContent = errorText(error); }
     finally { saving = false; controls(); }
   }
+  challengeSelect.addEventListener('change', () => {
+    if (saving || !canDiscard()) { challengeSelect.value = challenge; return; }
+    changeChallenge(challengeSelect.value);
+  });
   roundSelect.addEventListener('change', () => {
-    if (!canDiscard()) { roundSelect.value = round; return; }
+    if (saving || !canDiscard()) { roundSelect.value = round; return; }
     missingRound = ''; round = roundSelect.value; updateUploadUrl(); closeEditor(); load();
   });
   panel.addEventListener('toggle', () => {
@@ -474,7 +494,7 @@
   });
   refreshButton.addEventListener('click', () => {
     if (roundsState === 'error' && retryRounds) {
-      roundsState = 'pending'; controls(); msg.textContent = '보신각 기수를 불러오는 중입니다.'; retryRounds(); return;
+      roundsState = 'pending'; controls(); msg.textContent = '기수를 불러오는 중입니다.'; retryRounds(); return;
     }
     if (canDiscard()) { closeEditor(); load(); }
   });
@@ -506,7 +526,7 @@
   document.getElementById('msCancel').addEventListener('click', () => { if (canDiscard()) { closeEditor(); addButton.focus(); } });
   document.getElementById('msDelete').addEventListener('click', () => {
     if (!saving && editId && window.confirm('이 기수의 DAY ' + day.value + ' 미션 예약을 취소할까요?')) {
-      write('admin-delete', {id:editId}, '미션 예약을 취소했습니다.');
+      write('admin-delete', {id:editId,challenge,round:Number(round)}, '미션 예약을 취소했습니다.');
     }
   });
   form.addEventListener('submit', event => {
@@ -533,7 +553,7 @@
       if (after) endTime.setCustomValidity('DAY ' + after.day_no + '가 시작하는 ' + timeLabel(after.chapter_start_seconds) + ' 이전으로 끝 시간을 지정해 주세요.');
     }
     if (!form.reportValidity()) return;
-    const payload = {challenge:'voice', round:Number(round), day_no:Number(day.value), release_date:date.value, title:title.value.trim(), body:body.value.trim()};
+    const payload = {challenge, round:Number(round), day_no:Number(day.value), release_date:date.value, title:title.value.trim(), body:body.value.trim()};
     payload.chapter_start_seconds = start;
     payload.chapter_end_seconds = end;
     if (editId) payload.id = editId;
