@@ -79,7 +79,9 @@
   #firstMissionAlimtalk { font-weight: 700; word-break: keep-all; }
   #voiceStartNotice:not([hidden]) + #firstMissionAlimtalk:not([hidden]) { display: block; margin-top: 8px; }
   #voiceStartNotice strong { display: block; font-size: 17px; margin-bottom: 3px; }
-  #voiceReceipt a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; background: #16375c; border-radius: 10px; color: white; text-decoration: none; font-weight: 750; }
+  #adminVoiceEntry { margin: 0 0 16px; scroll-margin-top: 76px; }
+  #adminJoined a { display: inline-block; margin: 8px 12px 4px 0; color: var(--accent-ink); text-decoration: underline; font-weight: 700; }
+  #adminVoiceEntry a, #voiceReceipt a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; background: #16375c; border-radius: 10px; color: white; text-decoration: none; font-weight: 750; }
 
   /* ── 챌린지 카드 ── */
   .card {
@@ -414,6 +416,7 @@
               style="border:0;background:none;padding:8px 6px;margin:-8px -6px;font:inherit;font-weight:700;
                      color:var(--accent-ink);text-decoration:underline;cursor:pointer;">새로고침</button>
     </p>
+    <p id="adminVoiceEntry" hidden><a href="challenge-mission.html?challenge=voice&amp;access=admin">보신각 관리자 무료 입장</a></p>
     <div id="cards"></div>
     <!-- 미선택 오류는 고를 대상 바로 아래에 — 결제 버튼 옆에 두면 무엇을 고르라는 건지 안 읽힌다 -->
     <p class="field-err" id="errPick"></p>
@@ -534,14 +537,15 @@
       </label>
       <p class="field-err" id="errConsent"></p>
 
+      <div id="adminJoined" hidden></div>
       <p id="voiceReceipt" hidden><a class="btn btn-action" href="challenge-mission.html?challenge=voice&amp;enrollment=latest">내 챌린지 입장</a></p>
       <p id="challengeStartNotice" class="sec-sub" role="status" hidden>
-        <span id="voiceStartNotice" hidden><strong></strong>월요일에 결제하면 당일 시작해요. 계좌이체는 입금 확인일을 기준으로 해요.</span>
+        <span id="voiceStartNotice" hidden><strong></strong><span id="voicePaymentTiming">월요일에 결제하면 당일 시작해요. 계좌이체는 입금 확인일을 기준으로 해요.</span></span>
         <span id="firstMissionAlimtalk" hidden><span id="alimtalkChallenges"></span>첫 미션이 열리면 신청하신 번호로 알림톡을 보내드려요.</span>
       </p>
       <!-- 결제 방법 -->
       <!-- 토스페이 간편결제(라이브, 2026-07-23 전환). 계좌이체와 함께 상시 노출. -->
-      <div id="tossWrap">
+      <div id="tossWrap" hidden>
         <button type="button" id="tossBtn" onclick="payEasy('toss')" style="width:100%; margin-top:16px; padding:16px; border:none; border-radius:12px; background:#0064FF; color:#fff; font-size:16px; font-weight:800; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><img src="images/tosspay-logo-white.svg" alt="토스페이" style="height:19px; width:auto; display:block;"><span>로 결제하고 신청하기</span></button>
         <!-- 카카오페이(2026-08-19) — 채널 키가 비어 있으면 숨김 유지(pay-methods.js). 노랑·먹색은 카카오 브랜드 기능색 — 팔레트 통일 대상 아님 -->
         <button type="button" id="kakaoBtn" onclick="payEasy('kakao')" hidden style="width:100%; margin-top:8px; padding:16px; border:none; border-radius:12px; background:#FFEB00; color:#191919; font-size:16px; font-weight:800; font-family:inherit; cursor:pointer;">카카오페이로 결제하고 신청하기</button>
@@ -550,7 +554,7 @@
       </div>
       <!-- 계좌이체: 클릭 시 계좌 안내 모달(바텀시트) 오픈 → 모달에서 실제 접수.
            '— 또는 —' 구분선은 2026-08-19 오너 지시로 삭제 — 결제 3수단은 한 묶음이다. -->
-      <button type="button" class="submit-btn" id="submitBtn" onclick="openBankModal()" style="margin-top:8px;">계좌이체로 신청하기</button>
+      <button type="button" class="submit-btn" id="submitBtn" hidden onclick="openBankModal()" style="margin-top:8px;">계좌이체로 신청하기</button>
       <!-- 재학생 무료 접수(2026-09-09) — 서버가 재학생으로 답한 계정에서만 켜진다(initStudent).
            켜지면 위 결제 버튼 묶음과 환불 고지는 숨는다(낼 돈이 없다). -->
       <div id="freeWrap" hidden>
@@ -745,7 +749,7 @@ const FAQ = [
    ⚠️ 취소선은 시각 효과라 스크린리더가 안 읽는다 — '정가/할인가' 라벨을 .sr-only 로 같이 준다. */
 function priceBlock() {
   // 재학생(2026-09-09)에게는 카드에도 값이 아니라 '무료'가 보인다 — 요약·하단바와 한 벌.
-  if (_isStudent) return `<span class="now">무료</span>`;
+  if (freeRole) return `<span class="now">무료</span>`;
   if (LIST_PRICE == null) return `<span class="now">${priceLabel()}</span>`;
   /* ⚠️ 할인율에 ↓ 같은 기호를 쓰지 말 것 — 이 화면 폰트에 없어 대체 글리프로 떨어지면
      꺾쇠(⌄)처럼 보인다(375px 실측). 부호는 하이픈만 쓴다. */
@@ -766,7 +770,7 @@ function renderCards() {
           <div class="card-sub">${c.sub}</div>
           <div class="card-bullets">${c.bullets.map(b => `<div>${b}</div>`).join('')}</div>
         </div>
-        <div class="card-price">${priceBlock()}<small>참가비</small></div>
+        <div class="card-price">${priceBlock()}<small>${freeRole || '참가비'}</small></div>
       </div>
       <!-- 마감·모집예정일 때만 applyStatuses() 가 켠다(기본 hidden) -->
       <button type="button" class="wl-cta" data-role="waitlist" hidden>오픈 알림 받기</button>
@@ -927,21 +931,20 @@ function updateSummary() {
   updateAlimtalkNotice(selected);
   notice.dataset.start = voiceMonday();
   if (!notice.hidden) notice.querySelector('strong').textContent = '보신각 · ' + voiceStartLabel(notice.dataset.start) + ' 시작';
-  /* 재학생(_isStudent)이면 합계는 언제나 0이다 — 화면 표시일 뿐이고, 실제 접수 금액도
-     서버(apply_free_challenges)가 0으로 적는다. 브라우저가 0을 만들어 보내는 게 아니다. */
-  const total = _isStudent ? 0 : n * PRICE;
+  // 무료 신청 자격과 모집 기수는 계정별로 서버에서 다시 확인한다.
+  const total = freeRole ? 0 : n * PRICE;
   syncLoginReturn();
   document.getElementById('selCount').textContent = n;
   const feeLabel = document.getElementById('feeLabel');
-  if (feeLabel) feeLabel.textContent = _isStudent ? '참가비 (재학생 무료)' : ('참가비 (챌린지당 ' + priceLabel() + ')');
+  if (feeLabel) feeLabel.textContent = freeRole ? '참가비 (' + freeRole + ' 무료)' : ('참가비 (챌린지당 ' + priceLabel() + ')');
   const totalLabel = document.getElementById('feeTotalLabel');
-  if (totalLabel) totalLabel.textContent = _isStudent ? '결제 금액' : '지금 입금할 금액';
+  if (totalLabel) totalLabel.textContent = freeRole ? '결제 금액' : '지금 입금할 금액';
   document.getElementById('feePart').textContent = total.toLocaleString();
   document.getElementById('feeTotal').textContent = total.toLocaleString();
 
   /* 정가·할인 줄 — 정가가 있고 실제로 고른 게 있을 때만. 0개일 때 '할인 -0원'은 의미가 없다.
      재학생에게는 안 그린다(0원 옆의 취소선 정가는 할인 표시가 아니라 혼란이다). */
-  const anchored = !_isStudent && LIST_PRICE != null && n > 0;
+  const anchored = !freeRole && LIST_PRICE != null && n > 0;
   const listTotal = anchored ? n * LIST_PRICE : 0;
   document.getElementById('rowList').hidden = !anchored;
   document.getElementById('rowSave').hidden = !anchored;
@@ -1141,7 +1144,7 @@ function validateOrder(opts) {
     if (scroll) document.getElementById('cards').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;
   }
-  if (!validateApplicant()) return false;
+  if (freeRole !== '관리자' && !validateApplicant()) return false;
   const agreed = document.getElementById('appConsent').checked;
   setBlockErr('errConsent', agreed ? '' : '개인정보 수집·이용에 동의해야 신청할 수 있어요.');
   if (!agreed) {
@@ -1212,45 +1215,84 @@ function fallbackCopy(text, cb) {
   document.body.removeChild(ta);
 }
 
-/* ── 재학생 무료(2026-09-09 오너 확정) ────────────────────────────────────────
-   판정은 서버 한 곳(MONC.studentStatus → my_student_status RPC)이다. 화면은 그 답으로
-   금액과 버튼만 바꾼다.
-   ⚠️ 실패하면 '재학생 아님'으로 떨어진다(유료 화면 그대로) — 무료가 조회 실패로 열려선 안 된다.
-   ⚠️ 비재학생 화면은 한 줄도 바뀌지 않는다. 공개 페이지에 '재학생 무료' 문구를 걸지 않는다는
-      2026-08-11 원칙 그대로다(누구나 무료를 주장하게 되고, PG 심사에도 불리하다). */
-let _isStudent = false;
-async function initStudent() {
-  try { const s = await window.MONC.studentStatus(); _isStudent = !!(s && s.student); } catch (e) { _isStudent = false; }
-  if (!_isStudent) return;
+// 로그인 계정에 맞춰 결제 또는 무료 신청을 표시한다. 무료 참여 권한은 서버에서 재확인한다.
+let freeRole = '';
+async function initFreeAccess(profile) {
+  if (profile.role === 'admin') freeRole = '관리자';
+  else {
+    try { if ((await window.MONC.studentStatus())?.student) freeRole = '재학생'; } catch {}
+  }
+  if (!freeRole) return;
   document.getElementById('tossWrap').hidden = true;
   document.getElementById('submitBtn').hidden = true;
   const refund = document.getElementById('payRefundNote');
   if (refund) refund.hidden = true;      // 낼 돈이 없으면 환불 규정도 할 말이 아니다
   document.getElementById('freeWrap').hidden = false;
+  if (freeRole === '관리자') {
+    document.querySelector('#freeWrap .free-note').textContent = '관리자 계정은 참가비 없이 신청할 수 있어요.';
+    document.getElementById('freeBtn').textContent = '관리자 무료 신청';
+    document.getElementById('stickyGo').textContent = '관리자 무료 신청';
+    document.getElementById('voicePaymentTiming').hidden = true;
+    document.getElementById('rowName').hidden = true;
+    document.getElementById('rowPhone').hidden = true;
+    window.MONC.sb.rpc('admin_challenge_participation').then(({data}) => {
+      if (Array.isArray(data) && !document.getElementById('adminJoined').childElementCount) showAdminEntries(data);
+    }).catch(() => {});
+  }
   const sub = document.querySelector('#applyForm .sec-sub');
   if (sub) sub.textContent = '아래에서 챌린지를 고르고 신청 버튼을 눌러주세요.';
   /* 이미 그려진 카드의 금액도 갈아끼운다 — renderCards() 를 다시 부르면 클릭 리스너가
      날아간다(카드가 안 골라진다). 판정이 카드보다 늦게 끝나는 순서를 위한 자리다. */
   document.querySelectorAll('.card .card-price').forEach(el => {
-    el.innerHTML = '<span class="now">무료</span><small>재학생</small>';
+    el.innerHTML = '<span class="now">무료</span><small>'+freeRole+'</small>';
   });
   updateSummary();
 }
 
 /* 무료 접수 — 금액·기수·신청자는 전부 서버가 정한다(브라우저는 고른 챌린지 id 만 보낸다). */
+function showAdminEntries(entries) {
+  const root = document.getElementById('adminJoined');
+  root.replaceChildren();
+  for (const entry of entries) {
+    const challenge = CHALLENGES.find(c => c.id === entry.challenge);
+    if (!challenge || !Number.isInteger(entry.round)) continue;
+    const link = document.createElement('a');
+    link.textContent = challenge.name.replace(/\./g,'') + ' ' + entry.round + '기 입장';
+    link.href = entry.mission_room
+      ? 'challenge-mission.html?' + new URLSearchParams({challenge:entry.challenge,round:entry.round})
+      : 'submit.html?' + new URLSearchParams({ch:entry.challenge});
+    root.append(link);
+  }
+  root.hidden = !root.childElementCount;
+  return root;
+}
+
 let _isFreeSubmitting = false;
 async function applyFree() {
   if (_isFreeSubmitting) return;
   const ids = selectedIds();
   if (!validateOrder()) return;
   if (!window.MONC || !window.MONC.sb) { alert('신청 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.'); return; }
-  if (await dupBlocked(ids)) return;   // 결제가 없어도 사전 검사는 그대로 — 안내가 빠르다
+  if (freeRole !== '관리자' && await dupBlocked(ids)) return;
 
   _isFreeSubmitting = true;
   const btn = document.getElementById('freeBtn');
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '신청 중...'; btn.style.opacity = '.7';
   try {
+    if (freeRole === '관리자') {
+      const {data,error} = await window.MONC.sb.rpc('admin_challenge_participation',{p_ids:ids});
+      if (error || !Array.isArray(data) || !data.length) {
+        alert(error?.code === '42501' ? '관리자 계정과 약관 동의 상태를 확인해 주세요.' :
+          error?.message?.includes('not_open') ? '선택한 챌린지의 모집 기수를 확인해 주세요.' : '무료 신청을 완료하지 못했어요. 다시 시도해 주세요.');
+        return;
+      }
+      const receipt = showAdminEntries(data);
+      if (receipt.childElementCount === 1) { location.assign(receipt.firstElementChild.href); return; }
+      alert('관리자 무료 신청이 완료됐어요. 참여할 챌린지를 선택해 주세요.');
+      receipt.firstElementChild?.focus();
+      return;
+    }
     const r = await window.MONC.applyFreeChallenges(ids) || {};
     if (r.ok) {
       rememberApplied(Array.isArray(r.items) ? r.items : []);
@@ -1293,11 +1335,16 @@ async function initMember() {
     const badge = document.getElementById('memberBadge');
     badge.querySelector('[data-name]').textContent = profile.name || '회원';
     badge.style.display = 'block';
+    document.getElementById('adminVoiceEntry').hidden = profile.role !== 'admin';
     if (profile.name)  { document.getElementById('appName').value  = profile.name;  document.getElementById('rowName').style.display  = 'none'; }
     if (profile.phone) { document.getElementById('appPhone').value = profile.phone; document.getElementById('rowPhone').style.display = 'none'; }
-    await initStudent();   // 회원일 때만 물어본다(비회원은 무료 대상이 아니다)
+    await initFreeAccess(profile);   // 회원일 때만 물어본다(비회원은 무료 대상이 아니다)
   } else {
     document.getElementById('guestNudge').style.display = 'flex';
+  }
+  if (!freeRole) {
+    document.getElementById('tossWrap').hidden = false;
+    document.getElementById('submitBtn').hidden = false;
   }
   // 회원 판별이 끝난 뒤에야 '이미 신청한 기수'를 조회할 수 있다.
   // (applyStatuses 쪽에서도 부른다 — 둘 중 어느 쪽이 늦게 끝나도 카드가 잠기게)
@@ -1306,6 +1353,8 @@ async function initMember() {
 
 /* ── 계좌이체: 버튼 클릭 → 검증 후 계좌 안내 모달 오픈(토스 결제창처럼) ── */
 async function openBankModal() {
+  await accountReady;
+  if (freeRole) return applyFree();
   const name = document.getElementById('appName').value.trim();
   const phone = document.getElementById('appPhone').value.trim();
   const ids = selectedIds();
@@ -1453,6 +1502,8 @@ async function confirmBankTransfer() {
 let _isPaying = false;
 let _payRestore = null;   // 결제 중 '버튼 되돌리기'를 담아둔다 — 결제사 페이지에서 뒤로 왔을 때 쓴다(아래 pageshow)
 async function payEasy(provider) {
+  await accountReady;
+  if (freeRole) return applyFree();
   if (_isPaying) return;
   const name = document.getElementById('appName').value.trim();
   const phone = document.getElementById('appPhone').value.trim();
@@ -1698,13 +1749,14 @@ document.getElementById('comboBtn').addEventListener('click', () => {
 });
 document.getElementById('stickyGo').addEventListener('click', () => {
   if (selectedIds().length === 0) { document.getElementById('cards').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (freeRole === '관리자' && document.getElementById('appConsent').checked) return applyFree();
   document.getElementById('applyForm').scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => document.getElementById('appName').focus(), 400);
+  setTimeout(() => document.getElementById(freeRole === '관리자' ? 'appConsent' : 'appName').focus(), 400);
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && recruitWeek && recruitWeek !== voiceMonday()) applyStatuses();
 });
-initMember();
+const accountReady = initMember();
 Promise.resolve(handlePayReturn()).finally(function () { if (window.moncPayDone) moncPayDone(); });
 </script>
 </body>
