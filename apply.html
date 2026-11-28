@@ -75,8 +75,9 @@
   .sec { padding: 14px 0; }
   .sec-title { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
   .sec-sub { font-size: 14px; color: var(--text-muted); margin: 0 0 16px; }
-  #voiceStartNotice { margin: 18px 0 6px; padding: 14px 16px; border-radius: 12px; background: #edf3fa; color: #213d5d; line-height: 1.55; }
-  #voiceAlimtalkNotice:not([hidden]) { display: block; margin-top: 8px; font-weight: 700; word-break: keep-all; }
+  #challengeStartNotice { margin: 18px 0 6px; padding: 14px 16px; border-radius: 12px; background: #edf3fa; color: #213d5d; line-height: 1.55; }
+  #firstMissionAlimtalk { font-weight: 700; word-break: keep-all; }
+  #voiceStartNotice:not([hidden]) + #firstMissionAlimtalk:not([hidden]) { display: block; margin-top: 8px; }
   #voiceStartNotice strong { display: block; font-size: 17px; margin-bottom: 3px; }
   #voiceReceipt a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; background: #16375c; border-radius: 10px; color: white; text-decoration: none; font-weight: 750; }
 
@@ -534,8 +535,9 @@
       <p class="field-err" id="errConsent"></p>
 
       <p id="voiceReceipt" hidden><a class="btn btn-action" href="challenge-mission.html?challenge=voice&amp;enrollment=latest">내 챌린지 입장</a></p>
-      <p id="voiceStartNotice" class="sec-sub" role="status" hidden><strong></strong>월요일에 결제하면 당일 시작해요. 계좌이체는 입금 확인일을 기준으로 해요.
-        <span id="voiceAlimtalkNotice" hidden>첫 미션이 열리면 신청하신 번호로 알림톡을 보내드려요.</span>
+      <p id="challengeStartNotice" class="sec-sub" role="status" hidden>
+        <span id="voiceStartNotice" hidden><strong></strong>월요일에 결제하면 당일 시작해요. 계좌이체는 입금 확인일을 기준으로 해요.</span>
+        <span id="firstMissionAlimtalk" hidden><span id="alimtalkChallenges"></span>첫 미션이 열리면 신청하신 번호로 알림톡을 보내드려요.</span>
       </p>
       <!-- 결제 방법 -->
       <!-- 토스페이 간편결제(라이브, 2026-07-23 전환). 계좌이체와 함께 상시 노출. -->
@@ -906,11 +908,23 @@ function syncLoginReturn() {
   document.querySelectorAll('a.js-login-ret').forEach(a => a.setAttribute('href', href));
 }
 
+let enabledAlimtalkKeys = new Set();
+const firstMissionKey = id => id + '_first_mission_alimtalk_enabled';
+
+function updateAlimtalkNotice(selected) {
+  const covered = CHALLENGES.filter(c => selected.includes(c.id) && enabledAlimtalkKeys.has(firstMissionKey(c.id)));
+  document.getElementById('firstMissionAlimtalk').hidden = !covered.length;
+  document.getElementById('alimtalkChallenges').textContent = selected.length > 1 && covered.length
+    ? covered.map(c => c.name.replace(/\./g, '')).join('·') + '의 ' : '';
+  document.getElementById('challengeStartNotice').hidden = !selected.includes('voice') && !covered.length;
+}
+
 function updateSummary() {
   const selected = selectedIds();
   const n = selected.length;
   const notice = document.getElementById('voiceStartNotice');
   notice.hidden = !selected.includes('voice');
+  updateAlimtalkNotice(selected);
   notice.dataset.start = voiceMonday();
   if (!notice.hidden) notice.querySelector('strong').textContent = '보신각 · ' + voiceStartLabel(notice.dataset.start) + ' 시작';
   /* 재학생(_isStudent)이면 합계는 언제나 0이다 — 화면 표시일 뿐이고, 실제 접수 금액도
@@ -1646,14 +1660,16 @@ async function loadLessons() {
 }
 
 // 실제 첫 미션 알림톡 발송이 준비된 뒤에만 결제 안내를 표시한다.
-async function loadVoiceAlimtalkNotice() {
+async function loadAlimtalkNotices() {
   try {
-    const { data, error } = await window.MONC.sb.from('site_config').select('value')
-      .eq('key', 'voice_first_mission_alimtalk_enabled').maybeSingle();
-    document.getElementById('voiceAlimtalkNotice').hidden = !!error || data?.value !== true;
+    const { data, error } = await window.MONC.sb.from('site_config').select('key,value')
+      .in('key', CHALLENGES.map(c => firstMissionKey(c.id)));
+    if (error || !data) return;
+    enabledAlimtalkKeys = new Set(data.filter(row => row.value === true).map(row => row.key));
+    updateAlimtalkNotice(selectedIds());
   } catch { /* 설정을 읽지 못해도 신청은 계속할 수 있다. */ }
 }
-loadVoiceAlimtalkNotice();
+loadAlimtalkNotices();
 
 (async function initPriceThenRender() {
   await loadChallengePrice();
